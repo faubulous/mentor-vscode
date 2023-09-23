@@ -156,7 +156,7 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 	select(uri: string) {
 		if (this.editor && this.tokens[uri]) {
 			const t = this.tokens[uri].sort((a: any, b: any) => a.start - b.start)[0] as any;
-			const r = new vscode.Range(t.line - 1, t.start, t.line - 1, t.end - 1);
+			const r = new vscode.Range(t.line - 1, t.start, t.line - 1, t.end);
 
 			this.editor.selection = new vscode.Selection(r.start, r.end);
 			this.editor.revealRange(r, vscode.TextEditorRevealType.InCenter);
