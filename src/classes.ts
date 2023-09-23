@@ -16,20 +16,12 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 
 	private editor: vscode.TextEditor | undefined;
 
-	private autoRefresh = true;
-
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
 
 	readonly onDidChangeTreeData: vscode.Event<string | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
-		this.autoRefresh = vscode.workspace.getConfiguration('jsonOutline').get('autorefresh', false);
-
-		vscode.workspace.onDidChangeConfiguration(() => {
-			this.autoRefresh = vscode.workspace.getConfiguration('jsonOutline').get('autorefresh', false);
-		});
-
-		vscode.workspace.onDidChangeTextDocument(e => this.onDocumentChanged(e));
+		vscode.workspace.onDidChangeTextDocument((e) => this.onDocumentChanged(e));
 		vscode.window.onDidChangeActiveTextEditor(() => this.onActiveEditorChanged());
 
 		this.onActiveEditorChanged();
@@ -54,26 +46,30 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 						this.refresh();
 					});
 
+					this.tokens = {};
+
 					const text = this.editor.document.getText();
 					const tokens = new n3.Lexer().tokenize(text);
 
-					this.tokens = {};
-					let prefix = '';
-
-					for (let t of tokens) {
+					tokens.forEach((t, i) => {
 						if (!t.value) {
-							continue;
+							return;
 						}
 
 						let v = t.value;
 
 						switch (t.type) {
 							case 'prefix': {
-								prefix = v;
+								let u = tokens[i + 1].value;
+
+								if (u) {
+									this.namespaces[v] = u;
+								}
+
 								break;
 							}
 							case 'prefixed': {
-								if(t.prefix) {
+								if (t.prefix) {
 									v = this.namespaces[t.prefix] + t.value;
 
 									if (!this.tokens[v]) {
@@ -85,22 +81,15 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 								break;
 							}
 							case 'IRI': {
-								if (prefix) {
-									this.namespaces[prefix] = v;
-
-									prefix = '';
+								if (!this.tokens[v]) {
+									this.tokens[v] = [];
 								}
-								else {
-									if (!this.tokens[v]) {
-										this.tokens[v] = [];
-									}
 
-									this.tokens[v].push(t);
-								}
+								this.tokens[v].push(t);
 								break;
 							}
 						}
-					}
+					});
 				}
 			}
 		} else {
@@ -167,10 +156,10 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 	select(uri: string) {
 		if (this.editor && this.tokens[uri]) {
 			const t = this.tokens[uri].sort((a: any, b: any) => a.start - b.start)[0] as any;
-			const r = new vscode.Range(t.line - 1, t.start, t.line -1, t.end -1);
+			const r = new vscode.Range(t.line - 1, t.start, t.line - 1, t.end - 1);
 
 			this.editor.selection = new vscode.Selection(r.start, r.end);
-			this.editor.revealRange(r, vscode.TextEditorRevealType.Default);
+			this.editor.revealRange(r, vscode.TextEditorRevealType.InCenter);
 		}
 	}
 
