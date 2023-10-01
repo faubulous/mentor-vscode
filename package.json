@@ -1,179 +1,190 @@
 {
-	"name": "custom-view-samples",
-	"displayName": "Custom view Samples",
-	"description": "Samples for VSCode's view API",
-	"version": "0.0.1",
-	"publisher": "vscode-samples",
-	"private": true,
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/Microsoft/vscode-extension-samples"
-	},
-	"engines": {
-		"vscode": "^1.74.0"
-	},
-	"categories": [
-		"Other"
-	],
-	"activationEvents": [
-		"onLanguage:json",
-		"onLanguage:jsonc"
-	],
-	"main": "./out/extension.js",
-	"contributes": {
-		"viewsContainers": {
-			"activitybar": [
-				{
-					"id": "class-explorer",
-					"title": "Vocabulary",
-					"icon": "media/dep.svg"
-				}
-			]
-		},
-		"views": {
-			"class-explorer": [
-				{
-					"id": "classExplorer",
-					"name": "Classes",
-					"icon": "media/dep.svg",
-					"contextualTitle": "Classes"
-				}
-			],
-			"explorer": [
-				{
-					"id": "jsonOutline",
-					"name": "Json Outline",
-					"when": "jsonOutlineEnabled"
-				},
-				{
-					"id": "testViewDragAndDrop",
-					"name": "Test View Drag and Drop"
-				}
-			]
-		},
-		"commands": [
-			{
-				"command": "classExplorer.refreshEntry",
-				"title": "Refresh",
-				"icon": {
-					"light": "resources/light/refresh.svg",
-					"dark": "resources/dark/refresh.svg"
-				}
-			},
-			{
-				"command": "classExplorer.addEntry",
-				"title": "Add"
-			},
-			{
-				"command": "classExplorer.editEntry",
-				"title": "Edit",
-				"icon": {
-					"light": "resources/light/edit.svg",
-					"dark": "resources/dark/edit.svg"
-				}
-			},
-			{
-				"command": "classExplorer.deleteEntry",
-				"title": "Delete"
-			},
-			{
-				"command": "jsonOutline.refresh",
-				"title": "Refresh",
-				"icon": {
-					"light": "resources/light/refresh.svg",
-					"dark": "resources/dark/refresh.svg"
-				}
-			},
-			{
-				"command": "jsonOutline.refreshNode",
-				"title": "Refresh",
-				"icon": {
-					"light": "resources/light/refresh.svg",
-					"dark": "resources/dark/refresh.svg"
-				}
-			},
-			{
-				"command": "jsonOutline.renameNode",
-				"title": "Rename"
-			},
-			{
-				"command": "testView.reveal",
-				"title": "Test View: Reveal"
-			},
-			{
-				"command": "testView.changeTitle",
-				"title": "Test View: Change Title"
-			}
-		],
-		"menus": {
-			"view/title": [
-				{
-					"command": "classExplorer.refreshEntry",
-					"when": "view == nodeDependencies",
-					"group": "navigation"
-				},
-				{
-					"command": "jsonOutline.renameNode",
-					"when": "view == jsonOutline"
-				},
-				{
-					"command": "classExplorer.addEntry",
-					"when": "view == nodeDependencies"
-				},
-				{
-					"command": "jsonOutline.refresh",
-					"when": "view == jsonOutline",
-					"group": "navigation"
-				}
-			],
-			"view/item/context": [
-				{
-					"command": "classExplorer.editEntry",
-					"when": "view == nodeDependencies && viewItem == dependency",
-					"group": "inline"
-				},
-				{
-					"command": "classExplorer.deleteEntry",
-					"when": "view == nodeDependencies && viewItem == dependency"
-				},
-				{
-					"command": "jsonOutline.renameNode",
-					"when": "view == jsonOutline"
-				},
-				{
-					"command": "jsonOutline.refreshNode",
-					"when": "view == jsonOutline",
-					"group": "inline"
-				}
-			]
-		}
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"lint": "eslint \"src/**/*.ts\""
-	},
-	"devDependencies": {
-		"@types/ftp": "^0.3.33",
-		"@types/mkdirp": "^0.5.2",
-		"@types/n3": "^1.16.0",
-		"@types/node": "^16.18.34",
-		"@types/rimraf": "^2.0.2",
-		"@types/vscode": "^1.73.0",
-		"@typescript-eslint/eslint-plugin": "^5.42.0",
-		"@typescript-eslint/parser": "^5.42.0",
-		"eslint": "^8.26.0",
-		"typescript": "^5.2.2"
-	},
-	"dependencies": {
-		"@faubulous/mentor-rdf": "^0.1.2",
-		"ftp": "^0.3.10",
-		"jsonc-parser": "^0.4.2",
-		"minimist": "^1.2.6",
-		"mkdirp": "^0.5.1",
-		"n3": "^1.17.1",
-		"rimraf": "^2.6.2"
-	}
+  "name": "mentor",
+  "displayName": "Custom view Samples",
+  "description": "Samples for VSCode's view API",
+  "version": "0.0.1",
+  "publisher": "vscode-samples",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Microsoft/vscode-extension-samples"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:json",
+    "onLanguage:jsonc"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+
+    "icons": {
+      "rdf-class": {
+        "description": "Class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e000"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "class-explorer",
+          "title": "Vocabulary",
+          "icon": "media/dep.svg"
+        }
+      ]
+    },
+    "views": {
+      "class-explorer": [
+        {
+          "id": "classExplorer",
+          "name": "Classes",
+          "icon": "media/dep.svg",
+          "contextualTitle": "Classes"
+        }
+      ],
+      "explorer": [
+        {
+          "id": "jsonOutline",
+          "name": "Json Outline",
+          "when": "jsonOutlineEnabled"
+        },
+        {
+          "id": "testViewDragAndDrop",
+          "name": "Test View Drag and Drop"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "classExplorer.refreshEntry",
+        "title": "Refresh",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "classExplorer.addEntry",
+        "title": "Add"
+      },
+      {
+        "command": "classExplorer.editEntry",
+        "title": "Edit",
+        "icon": {
+          "light": "resources/light/edit.svg",
+          "dark": "resources/dark/edit.svg"
+        }
+      },
+      {
+        "command": "classExplorer.deleteEntry",
+        "title": "Delete"
+      },
+      {
+        "command": "jsonOutline.refresh",
+        "title": "Refresh",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "jsonOutline.refreshNode",
+        "title": "Refresh",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
+      },
+      {
+        "command": "jsonOutline.renameNode",
+        "title": "Rename"
+      },
+      {
+        "command": "testView.reveal",
+        "title": "Test View: Reveal"
+      },
+      {
+        "command": "testView.changeTitle",
+        "title": "Test View: Change Title"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "classExplorer.refreshEntry",
+          "when": "view == nodeDependencies",
+          "group": "navigation"
+        },
+        {
+          "command": "jsonOutline.renameNode",
+          "when": "view == jsonOutline"
+        },
+        {
+          "command": "classExplorer.addEntry",
+          "when": "view == nodeDependencies"
+        },
+        {
+          "command": "jsonOutline.refresh",
+          "when": "view == jsonOutline",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "classExplorer.editEntry",
+          "when": "view == nodeDependencies && viewItem == dependency",
+          "group": "inline"
+        },
+        {
+          "command": "classExplorer.deleteEntry",
+          "when": "view == nodeDependencies && viewItem == dependency"
+        },
+        {
+          "command": "jsonOutline.renameNode",
+          "when": "view == jsonOutline"
+        },
+        {
+          "command": "jsonOutline.refreshNode",
+          "when": "view == jsonOutline",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint \"src/**/*.ts\""
+  },
+  "devDependencies": {
+    "@types/ftp": "^0.3.33",
+    "@types/mkdirp": "^0.5.2",
+    "@types/n3": "^1.16.0",
+    "@types/node": "^16.18.34",
+    "@types/rimraf": "^2.0.2",
+    "@types/vscode": "^1.73.0",
+    "@typescript-eslint/eslint-plugin": "^5.42.0",
+    "@typescript-eslint/parser": "^5.42.0",
+    "eslint": "^8.26.0",
+    "typescript": "^5.2.2",
+    "webfont": "^11.2.26"
+  },
+  "dependencies": {
+    "@faubulous/mentor-rdf": "^0.1.2",
+    "ftp": "^0.3.10",
+    "jsonc-parser": "^0.4.2",
+    "minimist": "^1.2.6",
+    "mkdirp": "^0.5.1",
+    "n3": "^1.17.1",
+    "rimraf": "^2.6.2"
+  }
 }

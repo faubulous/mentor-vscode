@@ -136,9 +136,23 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
 
+		const workbench = vscode.workspace.getConfiguration("workbench");
+
+		const colorCustomizations: any = workbench.get("colorCustomizations");
+
+		workbench.update(
+			"colorCustomizations",
+			{
+				...colorCustomizations,
+				"rdf.ns0": "#006EAE",
+			},
+			1,
+		);
+
 		return {
 			collapsibleState: collapsible,
-			iconPath: new vscode.ThemeIcon('circle-outline'),
+			//iconPath: new vscode.ThemeIcon('rdf-class', new vscode.ThemeColor('rdf.ns0')),
+			iconPath: new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('rdf.ns0')),
 			resourceUri: vscode.Uri.parse(uri),
 			label: {
 				label: this.getLabel(uri),
