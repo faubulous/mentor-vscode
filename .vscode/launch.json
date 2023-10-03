@@ -7,14 +7,13 @@
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
-      "justMyCode": false,
       "args": [
         "--extensionDevelopmentPath=${workspaceRoot}",
         "--enable-proposed-api",
         "vscode-samples.custom-view-samples"
       ],
       "sourceMaps": true,
-      "outFiles": ["${workspaceRoot}/out/**/*.js"],
+      "outFiles": ["${workspaceRoot}/dist/**/*.js"],
       "preLaunchTask": "npm: watch"
     },
     {
@@ -30,7 +29,7 @@
       "name": "Attach to Extension Host",
       "port": 5870,
       "restart": true,
-      "outFiles": ["${workspaceRoot}/out"]
+      "outFiles": ["${workspaceRoot}/dist"]
     }
   ]
 }

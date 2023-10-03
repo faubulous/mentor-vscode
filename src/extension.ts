@@ -1,6 +1,6 @@
 'use strict';
 import * as vscode from 'vscode';
-import { ClassNodeProvider } from './classes';
+import { ClassNodeProvider } from './class-node-provider';
 import { JsonOutlineProvider } from './jsonOutline';
 
 export async function activate(context: vscode.ExtensionContext) {

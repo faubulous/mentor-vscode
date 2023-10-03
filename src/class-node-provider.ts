@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as n3 from 'n3';
 import { ClassRepository, StoreFactory } from '@faubulous/mentor-rdf';
+import { UriHelper } from './uri-helper';
 
 export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 	protected readonly nodes: any = {};
@@ -136,23 +137,25 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
 
-		const workbench = vscode.workspace.getConfiguration("workbench");
+		// const workbench = vscode.workspace.getConfiguration("workbench");
 
-		const colorCustomizations: any = workbench.get("colorCustomizations");
+		// const colorCustomizations: any = workbench.get("colorCustomizations");
 
-		workbench.update(
-			"colorCustomizations",
-			{
-				...colorCustomizations,
-				"rdf.ns0": "#006EAE",
-			},
-			1,
-		);
+		// workbench.update(
+		// 	"colorCustomizations",
+		// 	{
+		// 		...colorCustomizations,
+		// 		"rdf.ns0": "#006EAE",
+		// 	},
+		// 	1,
+		// );
+
+		const id = UriHelper.toJsonId(UriHelper.getNamespaceUri(uri));
+		const color = new vscode.ThemeColor('mentor.colors.' + id);
 
 		return {
 			collapsibleState: collapsible,
-			//iconPath: new vscode.ThemeIcon('rdf-class', new vscode.ThemeColor('rdf.ns0')),
-			iconPath: new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('rdf.ns0')),
+			iconPath: new vscode.ThemeIcon('circle-filled', color),
 			resourceUri: vscode.Uri.parse(uri),
 			label: {
 				label: this.getLabel(uri),
