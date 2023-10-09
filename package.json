@@ -16,6 +16,14 @@
   "categories": [
     "Other"
   ],
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "build-font": "node build/update-font.js",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "npx jest"
+  },
   "activationEvents": [
     "onLanguage:json",
     "onLanguage:jsonc"
@@ -23,11 +31,39 @@
   "main": "./dist/extension.js",
   "contributes": {
     "icons": {
+      "app-mentor": {
+        "description": "Mentor icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e000"
+        }
+      },
       "rdf-class": {
         "description": "Class icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e000"
+          "fontCharacter": "\\e001"
+        }
+      },
+      "rdf-class-eq": {
+        "description": "Equivalent class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e002"
+        }
+      },
+      "rdf-class-ref": {
+        "description": "Referenced class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e003"
+        }
+      },
+      "rdf-class-ref-eq": {
+        "description": "Referenced equivalent class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e004"
         }
       }
     },
@@ -35,8 +71,8 @@
       "activitybar": [
         {
           "id": "class-explorer",
-          "title": "Vocabulary",
-          "icon": "media/dep.svg"
+          "title": "Mentor",
+          "icon": "media/icons/0-mentor.svg"
         }
       ]
     },
@@ -45,7 +81,7 @@
         {
           "id": "classExplorer",
           "name": "Classes",
-          "icon": "media/dep.svg",
+          "icon": "media/icons/0-mentor.svg",
           "contextualTitle": "Classes"
         }
       ],
@@ -297,13 +333,6 @@
         }
       }
     ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "lint": "eslint \"src/**/*.ts\"",
-    "test": "npx jest"
   },
   "devDependencies": {
     "@types/ftp": "^0.3.33",
