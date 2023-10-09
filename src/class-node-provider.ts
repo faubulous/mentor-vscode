@@ -153,9 +153,17 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 		const id = UriHelper.toJsonId(UriHelper.getNamespaceUri(uri));
 		const color = new vscode.ThemeColor('mentor.colors.' + id);
 
+		let icon = 'circle-large-filled';
+	
+		if(this.repository.hasEquivalentClass(uri)) {
+			icon = 'circle-slash';
+		} else if(!this.repository.hasSubject(uri)) {
+			icon = 'circle-large-outline';
+		}
+
 		return {
 			collapsibleState: collapsible,
-			iconPath: new vscode.ThemeIcon('circle-filled', color),
+			iconPath: new vscode.ThemeIcon(icon, color),
 			resourceUri: vscode.Uri.parse(uri),
 			label: {
 				label: this.getLabel(uri),
