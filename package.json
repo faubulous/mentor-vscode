@@ -70,126 +70,79 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "class-explorer",
+          "id": "mentor",
           "title": "Mentor",
           "icon": "media/icons/0-mentor.svg"
         }
       ]
     },
     "views": {
-      "class-explorer": [
+      "mentor": [
         {
           "id": "classExplorer",
           "name": "Classes",
           "icon": "media/icons/0-mentor.svg",
           "contextualTitle": "Classes"
         }
-      ],
-      "explorer": [
-        {
-          "id": "jsonOutline",
-          "name": "Json Outline",
-          "when": "jsonOutlineEnabled"
-        },
-        {
-          "id": "testViewDragAndDrop",
-          "name": "Test View Drag and Drop"
-        }
       ]
     },
     "commands": [
       {
-        "command": "classExplorer.refreshEntry",
-        "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "command": "extension.selectResource",
+        "title": "Open in Editor",
+        "icon": "$(go-to-file)"
       },
       {
-        "command": "classExplorer.addEntry",
-        "title": "Add"
+        "command": "extension.setNamespaceColor",
+        "title": "Select Color"
+      },
+      {
+        "command": "extension.openExternal",
+        "title": "Open in Browser",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "classExplorer.refreshEntry",
+        "title": "Refresh",
+        "icon": "$(refresh)"
       },
       {
         "command": "classExplorer.editEntry",
-        "title": "Edit",
-        "icon": {
-          "light": "resources/light/edit.svg",
-          "dark": "resources/dark/edit.svg"
-        }
+        "title": "Edit"
       },
       {
         "command": "classExplorer.deleteEntry",
         "title": "Delete"
-      },
-      {
-        "command": "jsonOutline.refresh",
-        "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
-      },
-      {
-        "command": "jsonOutline.refreshNode",
-        "title": "Refresh",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
-      },
-      {
-        "command": "jsonOutline.renameNode",
-        "title": "Rename"
-      },
-      {
-        "command": "testView.reveal",
-        "title": "Test View: Reveal"
-      },
-      {
-        "command": "testView.changeTitle",
-        "title": "Test View: Change Title"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "classExplorer.refreshEntry",
-          "when": "view == nodeDependencies",
-          "group": "navigation"
-        },
-        {
-          "command": "jsonOutline.renameNode",
-          "when": "view == jsonOutline"
-        },
-        {
-          "command": "classExplorer.addEntry",
-          "when": "view == nodeDependencies"
-        },
-        {
-          "command": "jsonOutline.refresh",
-          "when": "view == jsonOutline",
+          "when": "view == classExplorer",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "classExplorer.editEntry",
-          "when": "view == nodeDependencies && viewItem == dependency",
+          "command": "extension.openExternal",
+          "when": "view == classExplorer && viewItem == class",
           "group": "inline"
+        },
+        {
+          "command": "extension.selectResource",
+          "when": "view == classExplorer && viewItem == class",
+          "group": "inline"
+        },
+        {
+          "command": "extension.setNamespaceColor",
+          "when": "view == classExplorer && viewItem == class",
+          "group": "2_workspace"
         },
         {
           "command": "classExplorer.deleteEntry",
-          "when": "view == nodeDependencies && viewItem == dependency"
-        },
-        {
-          "command": "jsonOutline.renameNode",
-          "when": "view == jsonOutline"
-        },
-        {
-          "command": "jsonOutline.refreshNode",
-          "when": "view == jsonOutline",
-          "group": "inline"
+          "when": "view == classExplorer && viewItem == class",
+          "group": "7_modification"
         }
       ]
     },
@@ -354,7 +307,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.2",
+    "@faubulous/mentor-rdf": "^0.1.3",
     "ftp": "^0.3.10",
     "jsonc-parser": "^0.4.2",
     "minimist": "^1.2.6",

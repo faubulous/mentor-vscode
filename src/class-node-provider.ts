@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as n3 from 'n3';
 import { ClassRepository, StoreFactory } from '@faubulous/mentor-rdf';
 import { UriHelper } from './uri-helper';
+import { ClassNode } from './class-node';
 
 export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 	protected readonly nodes: any = {};
@@ -126,11 +127,11 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 
 	getTreeItem(uri: string): vscode.TreeItem {
 		if (!this.repository) {
-			throw new Error('Invalid repostory');
+			throw new Error('Invalid repostory.');
 		}
 
 		if (!this.editor) {
-			throw new Error('Invalid editor');
+			throw new Error('Invalid editor.');
 		}
 
 		const collapsible = this.repository.hasSubClasses(uri) ?
@@ -150,34 +151,12 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 		// 	1,
 		// );
 
-		const id = UriHelper.toJsonId(UriHelper.getNamespaceUri(uri));
-		const color = new vscode.ThemeColor('mentor.colors.' + id);
-
-		let icon = 'rdf-class';
-
-		if (!this.repository.hasSubject(uri)) {
-			icon += '-ref';
-		}
-
-		if (this.repository.hasEquivalentClass(uri)) {
-			icon += '-eq';
-		}
-
-		return {
-			collapsibleState: collapsible,
-			iconPath: new vscode.ThemeIcon(icon, color),
-			resourceUri: vscode.Uri.parse(uri),
-			label: {
-				label: this.getLabel(uri),
-				highlights: uri.length > 1 ? [[uri.length - 2, uri.length - 1]] : void 0
-			},
-			tooltip: new vscode.MarkdownString(uri, true),
-			command: {
-				command: 'extension.selectResource',
-				title: '',
-				arguments: [uri]
-			},
-		};
+		return new ClassNode(
+			vscode.Uri.parse(uri),
+			this._getNodeLabel(uri),
+			this._getNodeIcon(uri),
+			collapsible
+		);
 	}
 
 	select(uri: string) {
@@ -194,21 +173,48 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 		return undefined;
 	}
 
-	getLabel(uri: string): string {
-		const n = uri.lastIndexOf('#');
-
-		if (n > -1) {
-			return uri.substring(n + 1);
-		} else {
-			return uri.substring(uri.lastIndexOf('/') + 1);
-		}
-	}
-
 	getNode(uri: string): string {
 		if (!this.nodes[uri]) {
 			this.nodes[uri] = uri;
 		}
 
 		return this.nodes[uri];
+	}
+
+	private _getNodeLabel(uri: string): vscode.TreeItemLabel {
+		let label: string;
+		let n = uri.lastIndexOf('#');
+
+		if (n > -1) {
+			label = uri.substring(n + 1);
+		} else {
+			label = uri.substring(uri.lastIndexOf('/') + 1);
+		}
+
+		return {
+			label: label,
+			highlights: uri.length > 1 ? [[uri.length - 2, uri.length - 1]] : void 0
+		}
+	}
+
+	private _getNodeIcon(uri: string) {
+		const id = UriHelper.toJsonId(UriHelper.getNamespaceUri(uri));
+		const color = new vscode.ThemeColor('mentor.colors.' + id);
+
+		let icon = 'rdf-class';
+
+		if (!this.repository) {
+			return new vscode.ThemeIcon(icon, color);
+		}
+
+		if (!this.repository.hasSubject(uri)) {
+			icon += '-ref';
+		}
+
+		if (this.repository.hasEquivalentClass(uri)) {
+			icon += '-eq';
+		}
+
+		return new vscode.ThemeIcon(icon, color);
 	}
 }

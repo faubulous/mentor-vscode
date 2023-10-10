@@ -11,4 +11,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	// vscode.commands.registerCommand('classes.refreshEntry', () => classProvider.refresh());
 	vscode.commands.registerCommand('extension.browseResource', (uri: string) => vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(uri)));
 	vscode.commands.registerCommand('extension.selectResource', (uri: string) => classProvider.select(uri));
+	vscode.commands.registerCommand('extension.setNamespaceColor', (uri: string) => {
+		vscode.commands.executeCommand('editor.action.showOrFocusStandaloneColorPicker').then((value) => {
+			console.debug(value);
+		});
+	});
+	vscode.commands.registerCommand('extension.openExternal', (uri: string) => {
+		vscode.env.openExternal(vscode.Uri.parse(uri));
+	});
 }
