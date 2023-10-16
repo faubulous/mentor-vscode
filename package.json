@@ -80,9 +80,7 @@
       "mentor": [
         {
           "id": "classExplorer",
-          "name": "Classes",
-          "icon": "media/icons/0-mentor.svg",
-          "contextualTitle": "Classes"
+          "name": "Classes"
         }
       ]
     },
@@ -102,6 +100,11 @@
         "icon": "$(globe)"
       },
       {
+        "command": "classExplorer.toggleReferenced",
+        "title": "Show or hide referenced terms",
+        "icon": "$(activate-breakpoints)"
+      },
+      {
         "command": "classExplorer.refreshEntry",
         "title": "Refresh",
         "icon": "$(refresh)"
@@ -118,6 +121,11 @@
     "menus": {
       "view/title": [
         {
+          "command": "classExplorer.toggleReferenced",
+          "when": "view == classExplorer",
+          "group": "navigation"
+        },
+        {
           "command": "classExplorer.refreshEntry",
           "when": "view == classExplorer",
           "group": "navigation"
@@ -125,14 +133,14 @@
       ],
       "view/item/context": [
         {
-          "command": "extension.openExternal",
+          "command": "extension.selectResource",
           "when": "view == classExplorer && viewItem == class",
           "group": "inline"
         },
         {
-          "command": "extension.selectResource",
+          "command": "extension.openExternal",
           "when": "view == classExplorer && viewItem == class",
-          "group": "inline"
+          "group": "navigation"
         },
         {
           "command": "extension.setNamespaceColor",
@@ -307,7 +315,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.3",
+    "@faubulous/mentor-rdf": "^0.1.4",
     "ftp": "^0.3.10",
     "jsonc-parser": "^0.4.2",
     "minimist": "^1.2.6",

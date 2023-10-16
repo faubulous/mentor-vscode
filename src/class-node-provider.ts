@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as n3 from 'n3';
-import { ClassRepository, StoreFactory } from '@faubulous/mentor-rdf';
+import { ClassRepository, OwlReasoner, StoreFactory, rdfs, skos } from '@faubulous/mentor-rdf';
 import { UriHelper } from './uri-helper';
 import { ClassNode } from './class-node';
 
@@ -15,6 +15,8 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 	protected tokens: { [key: string]: n3.Token[] } = {};
 
 	protected namespaces: { [key: string]: string } = {};
+
+	protected showReferenced: boolean = true;
 
 	private editor: vscode.TextEditor | undefined;
 
@@ -34,14 +36,18 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 
 		if (this.editor) {
 			if (this.editor.document.uri.scheme === 'file') {
-				const file = this.editor.document.uri.fsPath;
-				const ext = path.extname(file);
+				const ext = path.extname(this.editor.document.uri.fsPath);
 				const enabled = ext === '.ttl' || ext === '.nt';
 
 				vscode.commands.executeCommand('setContext', 'jsonOutlineEnabled', enabled);
 
 				if (enabled) {
-					StoreFactory.createFromFile(file).then(store => {
+					const graphUri = this.editor.document.uri.toString();
+					const text = this.editor.document.getText();
+
+					StoreFactory.createFromStream(text, graphUri).then(store => {
+						new OwlReasoner().expand(store, graphUri, graphUri + "#inference");
+
 						this.store = store;
 						this.repository = new ClassRepository(store);
 
@@ -50,7 +56,6 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 
 					this.tokens = {};
 
-					const text = this.editor.document.getText();
 					const tokens = new n3.Lexer().tokenize(text);
 
 					tokens.forEach((t, i) => {
@@ -111,6 +116,10 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 		// }
 	}
 
+	toggleReferenced() {
+		this.showReferenced = !this.showReferenced;
+	}
+
 	refresh(offset?: number): void {
 		this._onDidChangeTreeData.fire(undefined);
 	}
@@ -120,7 +129,11 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 			return [];
 		}
 
-		const result = this.repository.getSubClasses(uri).sort().map(u => this.getNode(u));
+		let result = this.repository.getSubClasses(uri).sort().map(u => this.getNode(u));
+
+		if(!this.showReferenced) {
+			result = result.filter(u => this.repository?.hasSubject(u));
+		}
 
 		return result;
 	}
@@ -153,8 +166,9 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 
 		return new ClassNode(
 			vscode.Uri.parse(uri),
-			this._getNodeLabel(uri),
 			this._getNodeIcon(uri),
+			this._getNodeLabel(uri),
+			this._getNodeDescription(uri),
 			collapsible
 		);
 	}
@@ -195,6 +209,34 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 			label: label,
 			highlights: uri.length > 1 ? [[uri.length - 2, uri.length - 1]] : void 0
 		}
+	}
+
+	private _getNodeDescription(uri: string): vscode.MarkdownString {
+		let result = '';
+
+		if (this.store) {
+			const s = n3.DataFactory.namedNode(uri);
+
+			for (let d of this.store?.match(s, skos.definition, null, null)) {
+				result += d.object.value;
+				break;
+			}
+
+			if (!result) {
+				for (let d of this.store?.match(s, rdfs.comment, null, null)) {
+					result += d.object.value;
+					break;
+				}
+			}
+		}
+
+		if(result) {
+			result += '\n\n';
+		}
+
+		result += uri;
+
+		return new vscode.MarkdownString(result, true);
 	}
 
 	private _getNodeIcon(uri: string) {
