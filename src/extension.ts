@@ -2,9 +2,7 @@
 import * as vscode from 'vscode';
 import { ClassNodeProvider } from './class-node-provider';
 
-export async function activate(context: vscode.ExtensionContext) {
-	vscode.commands.executeCommand('workbench.view.explorer');
-	
+export async function activate(context: vscode.ExtensionContext) {	
 	const classProvider = new ClassNodeProvider();
 	vscode.window.registerTreeDataProvider('classExplorer', classProvider);
 	vscode.commands.registerCommand('classExplorer.addEntry', () => vscode.window.showInformationMessage(`Successfully called add entry.`));
