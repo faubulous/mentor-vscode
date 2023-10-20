@@ -18,6 +18,8 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 
 	protected showReferenced: boolean = true;
 
+	protected autoRefresh: boolean = true;
+
 	private editor: vscode.TextEditor | undefined;
 
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
@@ -105,23 +107,24 @@ export class ClassNodeProvider implements vscode.TreeDataProvider<string> {
 	}
 
 	private onDocumentChanged(changeEvent: vscode.TextDocumentChangeEvent): void {
-		// if (this.tree && this.autoRefresh && changeEvent.document.uri.toString() === this.editor?.document.uri.toString()) {
-		// 	for (const change of changeEvent.contentChanges) {
-		// 		const path = json.getLocation(this.text, this.editor.document.offsetAt(change.range.start)).path;
-		// 		path.pop();
-		// 		const node = path.length ? json.findNodeAtLocation(this.tree, path) : void 0;
-		// 		this.parseTree();
-		// 		this._onDidChangeTreeData.fire(node ? node.offset : void 0);
-		// 	}
-		// }
+		if (this.autoRefresh && changeEvent.document.uri.toString() === this.editor?.document.uri.toString()) {
+			for (const change of changeEvent.contentChanges) {
+				console.warn(change);
+				// const path = json.getLocation(this.text, this.editor.document.offsetAt(change.range.start)).path;
+				// path.pop();
+				// const node = path.length ? json.findNodeAtLocation(this.tree, path) : void 0;
+				// this.parseTree();
+				// this._onDidChangeTreeData.fire(node ? node.offset : void 0);
+			}
+		}
 	}
 
 	toggleReferenced() {
 		this.showReferenced = !this.showReferenced;
 	}
 
-	refresh(offset?: number): void {
-		this._onDidChangeTreeData.fire(undefined);
+	refresh(): void {
+		vscode.workspace.onDidChangeTextDocument((e) => this.onDocumentChanged(e));
 	}
 
 	getChildren(uri: string): string[] {

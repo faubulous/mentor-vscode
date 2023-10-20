@@ -17,12 +17,40 @@
     "Other"
   ],
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "build-font": "node build/update-font.js",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "lint": "eslint \"src/**/*.ts\"",
-    "test": "npx jest"
+    "vscode:prepublish": "npm run package",
+    "compile": "node ./esbuild.js",
+    "package": "NODE_ENV=production node ./esbuild.js",
+    "watch": "node ./esbuild.js --watch",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/ftp": "^0.3.33",
+    "@types/jest": "^29.5.5",
+    "@types/mkdirp": "^0.5.2",
+    "@types/n3": "^1.16.0",
+    "@types/node": "^16.18.34",
+    "@types/rimraf": "^2.0.2",
+    "@types/vscode": "^1.73.0",
+    "@typescript-eslint/eslint-plugin": "^5.42.0",
+    "@typescript-eslint/parser": "^5.42.0",
+    "esbuild": "^0.16.10",
+    "esbuild-plugin-copy": "^2.0.1",
+    "eslint": "^8.26.0",
+    "jest": "^29.7.0",
+    "jest-environment-node": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.2.2",
+    "webfont": "^11.2.26"
+  },
+  "dependencies": {
+    "@faubulous/mentor-rdf": "^0.1.4",
+    "@vscode/webview-ui-toolkit": "^1.2.2",
+    "minimist": "^1.2.6",
+    "mkdirp": "^0.5.1",
+    "n3": "^1.17.1",
+    "rimraf": "^2.6.2"
   },
   "activationEvents": [
     "onLanguage:json",
@@ -98,6 +126,10 @@
         "command": "extension.openExternal",
         "title": "Open in Browser",
         "icon": "$(globe)"
+      },
+      {
+        "command": "mentor.testWebView",
+        "title": "Mentor: Test Web View"
       },
       {
         "command": "classExplorer.toggleReferenced",
@@ -294,33 +326,5 @@
         }
       }
     ]
-  },
-  "devDependencies": {
-    "@types/ftp": "^0.3.33",
-    "@types/jest": "^29.5.5",
-    "@types/mkdirp": "^0.5.2",
-    "@types/n3": "^1.16.0",
-    "@types/node": "^16.18.34",
-    "@types/rimraf": "^2.0.2",
-    "@types/vscode": "^1.73.0",
-    "@typescript-eslint/eslint-plugin": "^5.42.0",
-    "@typescript-eslint/parser": "^5.42.0",
-    "eslint": "^8.26.0",
-    "jest": "^29.7.0",
-    "jest-environment-node": "^29.7.0",
-    "ts-jest": "^29.1.1",
-    "ts-node": "^10.9.1",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.2.2",
-    "webfont": "^11.2.26"
-  },
-  "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.4",
-    "ftp": "^0.3.10",
-    "jsonc-parser": "^0.4.2",
-    "minimist": "^1.2.6",
-    "mkdirp": "^0.5.1",
-    "n3": "^1.17.1",
-    "rimraf": "^2.6.2"
   }
 }

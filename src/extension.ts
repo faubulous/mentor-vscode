@@ -1,24 +1,33 @@
 'use strict';
-import * as vscode from 'vscode';
+import { ExtensionContext, Uri, window, commands, env } from 'vscode';
 import { ClassNodeProvider } from './class-node-provider';
+import { ComponentGalleryPanel } from './panels/ComponentGalleryPanel';
 
-export async function activate(context: vscode.ExtensionContext) {	
+export async function activate(context: ExtensionContext) {
 	const classProvider = new ClassNodeProvider();
-	vscode.window.registerTreeDataProvider('classExplorer', classProvider);
-	vscode.commands.registerCommand('classExplorer.addEntry', () => vscode.window.showInformationMessage(`Successfully called add entry.`));
-	vscode.commands.registerCommand('classExplorer.editEntry', (node: string) => vscode.window.showInformationMessage(`Successfully called edit entry on ${node}.`));
-	vscode.commands.registerCommand('classExplorer.deleteEntry', (node: string) => vscode.window.showInformationMessage(`Successfully called delete entry on ${node}.`));
-	vscode.commands.registerCommand('classExplorer.toggleReferenced', () => {
+	window.registerTreeDataProvider('classExplorer', classProvider);
+	commands.registerCommand('classExplorer.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
+	commands.registerCommand('classExplorer.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
+	commands.registerCommand('classExplorer.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));
+	commands.registerCommand('classExplorer.refreshEntry', () => classProvider.refresh());
+	commands.registerCommand('classExplorer.toggleReferenced', () => {
 		classProvider.toggleReferenced();
 		classProvider.refresh();
 	});
-	// vscode.commands.registerCommand('classes.refreshEntry', () => classProvider.refresh());
-	vscode.commands.registerCommand('extension.browseResource', (uri: string) => vscode.commands.executeCommand('vscode.open', vscode.Uri.parse(uri)));
-	vscode.commands.registerCommand('extension.selectResource', (uri: string) => classProvider.select(uri));
-	vscode.commands.registerCommand('extension.openExternal', (uri: string) => vscode.env.openExternal(vscode.Uri.parse(uri)));
-	vscode.commands.registerCommand('extension.setNamespaceColor', (uri: string) => {
-		vscode.commands.executeCommand('editor.action.showOrFocusStandaloneColorPicker').then((value) => {
+	commands.registerCommand('extension.browseResource', (uri: string) => commands.executeCommand('open', Uri.parse(uri)));
+	commands.registerCommand('extension.selectResource', (uri: string) => classProvider.select(uri));
+	commands.registerCommand('extension.openExternal', (uri: string) => env.openExternal(Uri.parse(uri)));
+	commands.registerCommand('extension.setNamespaceColor', (uri: string) => {
+		commands.executeCommand('editor.action.showOrFocusStandaloneColorPicker').then((value) => {
 			console.debug(value);
 		});
 	});
+
+	// Create the show gallery command
+	const showGalleryCommand = commands.registerCommand("mentor.testWebView", () => {
+		ComponentGalleryPanel.render(context.extensionUri);
+	});
+
+	// Add command to the extension context
+	context.subscriptions.push(showGalleryCommand);
 }
