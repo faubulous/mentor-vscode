@@ -16,61 +16,61 @@ provideVSCodeDesignSystem().register(allComponents);
 window.addEventListener("load", main);
 
 function main() {
-  // Set checkbox indeterminate state
-  const checkbox = document.getElementById("basic-checkbox") as Checkbox;
-  checkbox.indeterminate = true;
+  // // Set checkbox indeterminate state
+  // const checkbox = document.getElementById("basic-checkbox") as Checkbox;
+  // checkbox.indeterminate = true;
 
-  // Define default data grid
-  const defaultDataGrid = document.getElementById("default-grid") as DataGrid;
-  defaultDataGrid.rowsData = [
-    {
-      column1: "Cell Data",
-      column2: "Cell Data",
-      column3: "Cell Data",
-      column4: "Cell Data",
-    },
-    {
-      column1: "Cell Data",
-      column2: "Cell Data",
-      column3: "Cell Data",
-      column4: "Cell Data",
-    },
-    {
-      column1: "Cell Data",
-      column2: "Cell Data",
-      column3: "Cell Data",
-      column4: "Cell Data",
-    },
-  ];
+  // // Define default data grid
+  // const defaultDataGrid = document.getElementById("default-grid") as DataGrid;
+  // defaultDataGrid.rowsData = [
+  //   {
+  //     column1: "Cell Data",
+  //     column2: "Cell Data",
+  //     column3: "Cell Data",
+  //     column4: "Cell Data",
+  //   },
+  //   {
+  //     column1: "Cell Data",
+  //     column2: "Cell Data",
+  //     column3: "Cell Data",
+  //     column4: "Cell Data",
+  //   },
+  //   {
+  //     column1: "Cell Data",
+  //     column2: "Cell Data",
+  //     column3: "Cell Data",
+  //     column4: "Cell Data",
+  //   },
+  // ];
 
-  // Define data grid with custom titles
-  const basicDataGridList = document.querySelectorAll(".basic-grid") as NodeListOf<DataGrid>;
-  for (const basicDataGrid of basicDataGridList) {
-    basicDataGrid.rowsData = [
-      {
-        columnKey1: "Cell Data",
-        columnKey2: "Cell Data",
-        columnKey3: "Cell Data",
-        columnKey4: "Cell Data",
-      },
-      {
-        columnKey1: "Cell Data",
-        columnKey2: "Cell Data",
-        columnKey3: "Cell Data",
-        columnKey4: "Cell Data",
-      },
-      {
-        columnKey1: "Cell Data",
-        columnKey2: "Cell Data",
-        columnKey3: "Cell Data",
-        columnKey4: "Cell Data",
-      },
-    ];
-    basicDataGrid.columnDefinitions = [
-      { columnDataKey: "columnKey1", title: "A Custom Header Title" },
-      { columnDataKey: "columnKey2", title: "Custom Title" },
-      { columnDataKey: "columnKey3", title: "Title Is Custom" },
-      { columnDataKey: "columnKey4", title: "Another Custom Title" },
-    ];
-  }
+  // // Define data grid with custom titles
+  // const basicDataGridList = document.querySelectorAll(".basic-grid") as NodeListOf<DataGrid>;
+  // for (const basicDataGrid of basicDataGridList) {
+  //   basicDataGrid.rowsData = [
+  //     {
+  //       columnKey1: "Cell Data",
+  //       columnKey2: "Cell Data",
+  //       columnKey3: "Cell Data",
+  //       columnKey4: "Cell Data",
+  //     },
+  //     {
+  //       columnKey1: "Cell Data",
+  //       columnKey2: "Cell Data",
+  //       columnKey3: "Cell Data",
+  //       columnKey4: "Cell Data",
+  //     },
+  //     {
+  //       columnKey1: "Cell Data",
+  //       columnKey2: "Cell Data",
+  //       columnKey3: "Cell Data",
+  //       columnKey4: "Cell Data",
+  //     },
+  //   ];
+  //   basicDataGrid.columnDefinitions = [
+  //     { columnDataKey: "columnKey1", title: "A Custom Header Title" },
+  //     { columnDataKey: "columnKey2", title: "Custom Title" },
+  //     { columnDataKey: "columnKey3", title: "Title Is Custom" },
+  //     { columnDataKey: "columnKey4", title: "Another Custom Title" },
+  //   ];
+  // }
 }

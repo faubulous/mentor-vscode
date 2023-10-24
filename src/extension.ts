@@ -2,6 +2,7 @@
 import { ExtensionContext, Uri, window, commands, env } from 'vscode';
 import { ClassNodeProvider } from './class-node-provider';
 import { ComponentGalleryPanel } from './panels/ComponentGalleryPanel';
+import { ComponentGalleryViewProvider } from './panels/ComponentGalleryViewProvider';
 
 export async function activate(context: ExtensionContext) {
 	const classProvider = new ClassNodeProvider();
@@ -23,11 +24,14 @@ export async function activate(context: ExtensionContext) {
 		});
 	});
 
-	// Create the show gallery command
-	const showGalleryCommand = commands.registerCommand("mentor.testWebView", () => {
-		ComponentGalleryPanel.render(context.extensionUri);
-	});
+	// // Create the show gallery command
+	const command = () => { ComponentGalleryPanel.render(context.extensionUri);	}
+	const showGalleryCommand = commands.registerCommand("mentor.testWebView", command);
 
-	// Add command to the extension context
 	context.subscriptions.push(showGalleryCommand);
+
+	const provider = new ComponentGalleryViewProvider(context.extensionUri);
+	const showGalleryProvider = window.registerWebviewViewProvider(ComponentGalleryViewProvider.viewType, provider)
+
+	context.subscriptions.push(showGalleryProvider);
 }

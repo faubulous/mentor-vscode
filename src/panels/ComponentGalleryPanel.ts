@@ -1,19 +1,6 @@
 import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from "vscode";
 import { getUri } from "../utilities/getUri";
 import { getNonce } from "../utilities/getNonce";
-import { badgeDemo } from "./demos/badge";
-import { buttonDemo } from "./demos/button";
-import { checkboxDemo } from "./demos/checkbox";
-import { dataGridDemo } from "./demos/data-grid";
-import { dividerDemo } from "./demos/divider";
-import { dropdownDemo } from "./demos/dropdown";
-import { linkDemo } from "./demos/link";
-import { panelsDemo } from "./demos/panels";
-import { progressRingDemo } from "./demos/progress-ring";
-import { radioGroupDemo } from "./demos/radio-group";
-import { tagDemo } from "./demos/tag";
-import { textAreaDemo } from "./demos/text-area";
-import { textFieldDemo } from "./demos/text-field";
 
 /**
  * This class manages the state and behavior of ComponentGallery webview panels.
@@ -90,6 +77,7 @@ export class ComponentGalleryPanel {
     // Dispose of all disposables (i.e. commands) associated with the current webview panel
     while (this._disposables.length) {
       const disposable = this._disposables.pop();
+
       if (disposable) {
         disposable.dispose();
       }

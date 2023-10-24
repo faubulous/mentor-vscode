@@ -16,8 +16,6 @@
   justify-content: flex-start;
   margin: 1rem;
   padding: 1rem;
-  border: 2px dashed #7b61ff;
-  border-radius: 5px;
 }
 
 .component-container > * {
@@ -31,10 +29,4 @@
 
 .component-example > p {
   margin-bottom: 0.5rem;
-}
-
-vscode-data-grid,
-vscode-panels {
-  border: 2px dashed #7b61ff;
-  border-radius: 5px;
 }
