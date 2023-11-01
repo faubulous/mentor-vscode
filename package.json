@@ -24,7 +24,6 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@types/ftp": "^0.3.33",
     "@types/jest": "^29.5.5",
     "@types/mkdirp": "^0.5.2",
     "@types/n3": "^1.16.0",
@@ -45,7 +44,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.5",
+    "@faubulous/mentor-rdf": "^0.1.6",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "minimist": "^1.2.6",
     "mkdirp": "^0.5.1",

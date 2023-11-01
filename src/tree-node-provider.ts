@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as n3 from 'n3';
 import { OwlReasoner, StoreFactory } from '@faubulous/mentor-rdf';
-import { mentor, VocabularyContext } from './mentor';
+import { mentor, DocumentContext } from './mentor';
 
 export abstract class TreeNodeProvider<T> implements vscode.TreeDataProvider<string> {
 	protected readonly nodes: any = {};
 
-	protected context: VocabularyContext | undefined;
+	protected context: DocumentContext | undefined;
 
 	protected repository: T | undefined;
 
@@ -40,7 +40,7 @@ export abstract class TreeNodeProvider<T> implements vscode.TreeDataProvider<str
 
 			const uri = this.editor.document.uri.toString();
 
-			this.context = mentor.contexts[uri];
+			this.context = mentor.documents[uri];
 
 			if (!this.context) {
 				enabled = this.loadDocument(uri);
@@ -69,9 +69,9 @@ export abstract class TreeNodeProvider<T> implements vscode.TreeDataProvider<str
 			StoreFactory.createFromStream(text, graphUri).then(store => {
 				new OwlReasoner().expand(store, graphUri, graphUri + "#inference");
 
-				this.context = new VocabularyContext(store);
+				this.context = new DocumentContext(store);
 
-				mentor.contexts[uri] = this.context;
+				mentor.documents[uri] = this.context;
 
 				this.onStoreInitialized();
 			});

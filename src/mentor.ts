@@ -4,10 +4,10 @@ export class mentor {
 	/**
 	 * Maps document URIs to a loaded documents.
 	 */
-	static contexts: { [key: string]: VocabularyContext } = {};
+	static documents: { [key: string]: DocumentContext } = {};
 }
 
-export class VocabularyContext {
+export class DocumentContext {
 	/**
 	 * The N3 store for the document.
 	 */
