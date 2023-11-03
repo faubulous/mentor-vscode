@@ -1,9 +1,10 @@
 'use strict';
 import { ExtensionContext, Uri, window, commands, env } from 'vscode';
-import { ClassNodeProvider } from './class-node-provider';
 import { ComponentGalleryPanel } from './panels/ComponentGalleryPanel';
 import { ComponentGalleryViewProvider } from './panels/ComponentGalleryViewProvider';
+import { ClassNodeProvider } from './class-node-provider';
 import { PropertyNodeProvider } from './property-node-provider';
+import { IndividualNodeProvider } from './individual-node-provider';
 
 export async function activate(context: ExtensionContext) {
 	commands.registerCommand('mentor.command.browseResource', (uri: string) => commands.executeCommand('open', Uri.parse(uri)));
@@ -38,6 +39,19 @@ export async function activate(context: ExtensionContext) {
 	commands.registerCommand('mentor.propertyExplorer.command.toggleReferenced', () => {
 		propertyProvider.toggleReferenced();
 		propertyProvider.refresh();
+	});
+
+	const individualProvider = new IndividualNodeProvider();
+	window.registerTreeDataProvider('mentor.individualExplorer', individualProvider);
+
+	commands.registerCommand('mentor.individualExplorer.command.selectEntry', (uri: string) => individualProvider.select(uri));
+	commands.registerCommand('mentor.individualExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
+	commands.registerCommand('mentor.individualExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
+	commands.registerCommand('mentor.individualExplorer.command.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));
+	commands.registerCommand('mentor.individualExplorer.command.refreshEntry', () => classProvider.refresh());
+	commands.registerCommand('mentor.individualExplorer.command.toggleReferenced', () => {
+		individualProvider.toggleReferenced();
+		individualProvider.refresh();
 	});
 
 	// // Create the show gallery command

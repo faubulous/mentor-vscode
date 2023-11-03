@@ -15,6 +15,7 @@ async function generateFont() {
       files: icons,
       formats: ['woff'],
       startUnicode: 0xE000,
+      fontHeight: 1000,
       verbose: true,
       normalize: true,
       sort: false

@@ -5,7 +5,7 @@
    viewBox="0 0 16 16"
    version="1.1"
    id="svg1"
-   sodipodi:docname="class-eq.svg"
+   sodipodi:docname="2-rdf-class-eq.svg"
    inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -24,12 +24,12 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="35.57631"
-     inkscape:cx="8.5731207"
-     inkscape:cy="9.6834101"
+     inkscape:cx="8.587175"
+     inkscape:cy="9.6693558"
      inkscape:window-width="1920"
-     inkscape:window-height="1011"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:window-height="1010"
+     inkscape:window-x="-6"
+     inkscape:window-y="-6"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg1" />
   <!-- Generator: Sketch 40.3 (33839) - http://www.bohemiancoding.com/sketch -->
@@ -48,11 +48,8 @@
       </cc:Work>
     </rdf:RDF>
   </metadata>
-  <g
-     id="path1">
-    <path
-       id="path4"
-       style="color:#000000;fill:#000000;-inkscape-stroke:none"
-       d="M 8 2 C 4.6922272 2 2 4.6922272 2 8 C 2 11.307801 4.6922305 14 8 14 C 11.307798 14 14 11.307798 14 8 C 14 4.6922305 11.307801 2 8 2 z M 5.15625 5.4160156 L 10.84375 5.4160156 L 10.84375 6.4160156 L 5.15625 6.4160156 L 5.15625 5.4160156 z M 5.15625 7.5097656 L 10.84375 7.5097656 L 10.84375 8.5097656 L 5.15625 8.5097656 L 5.15625 7.5097656 z M 5.15625 9.5839844 L 10.84375 9.5839844 L 10.84375 10.583984 L 5.15625 10.583984 L 5.15625 9.5839844 z " />
-  </g>
+  <path
+     id="path1"
+     style="color:#000000;fill:#000000;stroke-width:0.833333;-inkscape-stroke:none"
+     d="M 8 3 C 5.2435173 3 3 5.2435173 3 8 C 3 10.756505 5.24352 13 8 13 C 10.756502 13 13 10.756502 13 8 C 13 5.24352 10.756505 3 8 3 z M 8 4.5 C 9.9295542 4.5 11.5 6.0704638 11.5 8 C 11.5 9.9295512 9.9295512 11.5 8 11.5 C 6.0704638 11.5 4.5 9.9295542 4.5 8 C 4.5 6.0704621 6.0704621 4.5 8 4.5 z M 8 6 C 6.8974058 6 6 6.8974058 6 8 C 6 9.1026034 6.8974068 10 8 10 C 9.1026019 10 10 9.1026019 10 8 C 10 6.8974068 9.1026034 6 8 6 z " />
 </svg>

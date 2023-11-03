@@ -1,20 +1,20 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
 import { VocabularyContext } from './mentor';
-import { PropertyRepository, rdfs, skos, xsd } from '@faubulous/mentor-rdf';
-import { PropertyNode } from './property-node';
+import { IndividualRepository, rdfs, skos } from '@faubulous/mentor-rdf';
+import { IndividualNode } from './individual-node';
 import { getNamespaceUri, toJsonId } from './uri-helper';
 import { TreeNodeProvider } from './tree-node-provider';
 
 /**
  * A tree node provider for RDF properties.
  */
-export class PropertyNodeProvider extends TreeNodeProvider<PropertyRepository> {
+export class IndividualNodeProvider extends TreeNodeProvider<IndividualRepository> {
 
 	protected override onDocumentContextChanged(e: VocabularyContext | undefined): void {
 		if (e) {
 			this.context = e;
-			this.repository = new PropertyRepository(e.store);
+			this.repository = new IndividualRepository(e.store);
 			this.refresh();
 		}
 	}
@@ -28,7 +28,7 @@ export class PropertyNodeProvider extends TreeNodeProvider<PropertyRepository> {
 			return [];
 		}
 
-		let result = this.repository.getSubProperties(uri).sort().map(u => this.getNode(u));
+		let result = this.repository.getIndividuals().sort().map(u => this.getNode(u));
 
 		if (!this.showReferenced) {
 			result = result.filter(u => this.repository?.hasSubject(u));
@@ -42,9 +42,7 @@ export class PropertyNodeProvider extends TreeNodeProvider<PropertyRepository> {
 			throw new Error('Invalid repostory.');
 		}
 
-		const collapsible = this.repository.hasSubProperties(uri) ?
-			vscode.TreeItemCollapsibleState.Collapsed :
-			vscode.TreeItemCollapsibleState.None;
+		const collapsible = vscode.TreeItemCollapsibleState.None;
 
 		// const workbench = vscode.workspace.getConfiguration("workbench");
 
@@ -59,7 +57,7 @@ export class PropertyNodeProvider extends TreeNodeProvider<PropertyRepository> {
 		// 	1,
 		// );
 
-		return new PropertyNode(
+		return new IndividualNode(
 			vscode.Uri.parse(uri),
 			this._getNodeIcon(uri),
 			this._getNodeLabel(uri),
@@ -116,48 +114,6 @@ export class PropertyNodeProvider extends TreeNodeProvider<PropertyRepository> {
 		const id = toJsonId(getNamespaceUri(uri));
 		const color = new vscode.ThemeColor('mentor.color.' + id);
 
-		let icon = 'arrow-right';
-
-		if (!this.repository) {
-			return new vscode.ThemeIcon(icon, color);
-		}
-
-		const range = this.repository.getRange(uri);
-
-		switch (range) {
-			case xsd.date.id:
-			case xsd.dateTime.id: {
-				icon = 'calendar';
-				break;
-			}
-			case xsd.byte.id:
-			case xsd.decimal.id:
-			case xsd.double.id:
-			case xsd.float.id:
-			case xsd.int.id:
-			case xsd.integer.id:
-			case xsd.short.id:
-			case xsd.unsignedInt.id:
-			case xsd.unsignedShort.id:
-			case xsd.unsingedLong.id:
-			case xsd.usignedByte.id: {
-				icon = 'symbol-number';
-				break;
-			}
-			case xsd.boolean.id: {
-				icon = 'symbol-boolean';
-				break;
-			}
-			case xsd.string.id: {
-				icon = 'symbol-text';
-				break;
-			}
-			case xsd.base64Binary.id: {
-				icon = 'file-binary';
-				break;
-			}
-		}
-
-		return new vscode.ThemeIcon(icon, color);
+		return new vscode.ThemeIcon('debug-breakpoint-log-unverified', color);
 	}
 }

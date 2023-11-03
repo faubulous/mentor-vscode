@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
+import { VocabularyContext } from './mentor';
 import { ClassRepository, rdfs, skos } from '@faubulous/mentor-rdf';
 import { ClassNode } from './class-node';
 import { getNamespaceUri, toJsonId } from './uri-helper';
@@ -10,10 +11,10 @@ import { TreeNodeProvider } from './tree-node-provider';
  */
 export class ClassNodeProvider extends TreeNodeProvider<ClassRepository> {
 
-	protected override onStoreInitialized(): void {
-		if (this.context) {
-			this.repository = new ClassRepository(this.context.store);
-
+	protected override onDocumentContextChanged(e: VocabularyContext | undefined): void {
+		if (e) {
+			this.context = e;
+			this.repository = new ClassRepository(e.store);
 			this.refresh();
 		}
 	}
@@ -39,10 +40,6 @@ export class ClassNodeProvider extends TreeNodeProvider<ClassRepository> {
 	override getTreeItem(uri: string): vscode.TreeItem {
 		if (!this.repository) {
 			throw new Error('Invalid repostory.');
-		}
-
-		if (!this.editor) {
-			throw new Error('Invalid editor.');
 		}
 
 		const collapsible = this.repository.hasSubClasses(uri) ?
