@@ -4,19 +4,15 @@ import { VocabularyContext } from './mentor';
 import { ClassRepository, rdfs, skos } from '@faubulous/mentor-rdf';
 import { ClassNode } from './class-node';
 import { getNamespaceUri, toJsonId } from './uri-helper';
-import { TreeNodeProvider } from './tree-node-provider';
+import { ResourceNodeProvider } from './resource-node-provider';
 
 /**
  * A tree node provider for RDF classes.
  */
-export class ClassNodeProvider extends TreeNodeProvider<ClassRepository> {
+export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 
-	protected override onDocumentContextChanged(e: VocabularyContext | undefined): void {
-		if (e) {
-			this.context = e;
-			this.repository = new ClassRepository(e.store);
-			this.refresh();
-		}
+	override getRepository(context: VocabularyContext): ClassRepository | undefined {
+		return new ClassRepository(context.store);
 	}
 
 	override getParent(uri: string): string | undefined {

@@ -90,7 +90,7 @@ class MentorExtension {
 
 	private _onDidChangeDocumentContext = new vscode.EventEmitter<VocabularyContext | undefined>();
 
-	readonly onDidChangeDocumentContext = this._onDidChangeDocumentContext.event;
+	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
 
 	constructor() {
 		vscode.workspace.onDidChangeTextDocument((e) => this.onTextDocumentChanged(e));
@@ -149,7 +149,7 @@ class MentorExtension {
 		return ext === '.ttl' || ext === '.nt';
 	}
 
-	private async _loadDocument(document: vscode.TextDocument, reload: boolean): Promise<VocabularyContext | undefined> {
+	private async _loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<VocabularyContext | undefined> {
 		if (!document) {
 			return;
 		}
