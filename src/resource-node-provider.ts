@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor, VocabularyContext } from './mentor';
 
-export abstract class TreeNodeProvider<T> implements vscode.TreeDataProvider<string> {
+export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider<string> {
 	protected readonly nodes: any = {};
 
 	protected context: VocabularyContext | undefined;
@@ -17,30 +17,22 @@ export abstract class TreeNodeProvider<T> implements vscode.TreeDataProvider<str
 	readonly onDidChangeTreeData: vscode.Event<string | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
-		mentor.onDidChangeDocumentContext((context) => this.onDocumentContextChanged(context));
+		mentor.onDidChangeVocabularyContext((context) => this._onVocabularyChanged(context));
 
-		if(mentor.activeContext) {
-			this.onDocumentContextChanged(mentor.activeContext);
+		if (mentor.activeContext) {
+			this._onVocabularyChanged(mentor.activeContext);
 		}
 	}
 
-	protected abstract onDocumentContextChanged(e: VocabularyContext | undefined): void;
-
-	protected onDocumentChanged(changeEvent: vscode.TextDocumentChangeEvent): void {
-		// if (this.autoRefresh && changeEvent.document.uri === this.editor?.document.uri) {
-		// 	for (const change of changeEvent.contentChanges) {
-		// 		console.warn(change);
-
-		// 		// const path = json.getLocation(this.text, this.editor.document.offsetAt(change.range.start)).path;
-		// 		// path.pop();
-		// 		// const node = path.length ? json.findNodeAtLocation(this.tree, path) : void 0;
-		// 		// this.parseTree();
-		// 		// this._onDidChangeTreeData.fire(node ? node.offset : void 0);
-
-		// 		this._onDidChangeTreeData.fire(void 0);
-		// 	}
-		// }
+	private _onVocabularyChanged(e: VocabularyContext | undefined): void {
+		if (e) {
+			this.context = e;
+			this.repository = this.getRepository(e);
+			this.refresh();
+		}
 	}
+
+	protected abstract getRepository(context: VocabularyContext): T | undefined;
 
 	toggleReferenced() {
 		this.showReferenced = !this.showReferenced;
@@ -51,16 +43,24 @@ export abstract class TreeNodeProvider<T> implements vscode.TreeDataProvider<str
 	}
 
 	select(uri: string) {
-		if (vscode.window.activeTextEditor && this.context && this.context.tokens[uri]) {
-			const tokens = this.context.tokens;
+		if (this.context && this.context.tokens[uri]) {
+			const context = this.context;
 
 			this.activateDocument().then((editor) => {
-				const t = tokens[uri].sort((a: any, b: any) => a.start - b.start)[0] as any;
-				const r = new vscode.Range(t.line - 1, t.start, t.line - 1, t.end);
+				// Todo: This only selects the first occurance, but not necessarily the term definition.
+				const token = context.tokens[uri].sort((a: any, b: any) => a.start - b.start)[0] as any;
+				const text = token.type == 'prefixed' ? `${token.prefix}:${token.value}` : `<${token.value}>`;
+
+				const n = token.line - 1;
+				const line = context.document.lineAt(n);
+				const start = line.text.indexOf(text);
+				const end = start + text.length;
+
+				const range = new vscode.Range(n, start, n, end);
 
 				if (editor) {
-					editor.selection = new vscode.Selection(r.start, r.end);
-					editor.revealRange(r, vscode.TextEditorRevealType.InCenter);
+					editor.selection = new vscode.Selection(range.start, range.end);
+					editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
 				}
 			});
 		}
