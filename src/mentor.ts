@@ -79,21 +79,21 @@ export class VocabularyContext {
 
 class MentorExtension {
 	/**
-	 * The active document context.
-	 */
-	loadedContext: VocabularyContext | undefined;
-
-	/**
 	 * Maps document URIs to loaded document contexts.
 	 */
 	contexts: { [key: string]: VocabularyContext } = {};
+
+	/**
+	 * The active document context.
+	 */
+	activeContext: VocabularyContext | undefined;
 
 	private _onDidChangeDocumentContext = new vscode.EventEmitter<VocabularyContext | undefined>();
 
 	readonly onDidChangeDocumentContext = this._onDidChangeDocumentContext.event;
 
 	constructor() {
-		// vscode.workspace.onDidChangeTextDocument((e) => mentor.onDocumentChanged(e));
+		vscode.workspace.onDidChangeTextDocument((e) => this.onTextDocumentChanged(e));
 		vscode.window.onDidChangeActiveTextEditor(() => this.onActiveEditorChanged());
 
 		this.onActiveEditorChanged();
@@ -106,7 +106,7 @@ class MentorExtension {
 
 		const editor = vscode.window.activeTextEditor;
 
-		if (editor.document == this.loadedContext?.document) {
+		if (editor.document == this.activeContext?.document) {
 			return;
 		}
 
@@ -116,7 +116,19 @@ class MentorExtension {
 
 		this._loadDocument(editor.document).then((context) => {
 			if (context) {
-				this.loadedContext = context;
+				this.activeContext = context;
+				this._onDidChangeDocumentContext?.fire(context);
+			}
+		});
+	}
+
+	onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
+		if (!this._canLoadDocument(e.document.uri)) {
+			return;
+		}
+
+		this._loadDocument(e.document, true).then((context) => {
+			if (context) {
 				this._onDidChangeDocumentContext?.fire(context);
 			}
 		});
@@ -128,11 +140,7 @@ class MentorExtension {
 	 * @returns <c>true</c> if the document can be loaded, <c>false</c> otherwise.
 	 */
 	private _canLoadDocument(uri: vscode.Uri): boolean {
-		if (!uri) {
-			return false;
-		}
-
-		if (uri.scheme !== 'file') {
+		if (!uri || uri.scheme !== 'file') {
 			return false;
 		}
 
@@ -141,7 +149,7 @@ class MentorExtension {
 		return ext === '.ttl' || ext === '.nt';
 	}
 
-	private async _loadDocument(document: vscode.TextDocument): Promise<VocabularyContext | undefined> {
+	private async _loadDocument(document: vscode.TextDocument, reload: boolean): Promise<VocabularyContext | undefined> {
 		if (!document) {
 			return;
 		}
@@ -150,7 +158,7 @@ class MentorExtension {
 
 		let context = this.contexts[uri];
 
-		if (context) {
+		if (context && !reload) {
 			return context;
 		}
 
@@ -161,7 +169,7 @@ class MentorExtension {
 		context = new VocabularyContext(document, store);
 
 		this.contexts[uri] = context;
-		this.loadedContext = context;
+		this.activeContext = context;
 
 		return context;
 	}

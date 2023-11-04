@@ -19,8 +19,8 @@ export abstract class TreeNodeProvider<T> implements vscode.TreeDataProvider<str
 	constructor() {
 		mentor.onDidChangeDocumentContext((context) => this.onDocumentContextChanged(context));
 
-		if(mentor.loadedContext) {
-			this.onDocumentContextChanged(mentor.loadedContext);
+		if(mentor.activeContext) {
+			this.onDocumentContextChanged(mentor.activeContext);
 		}
 	}
 
