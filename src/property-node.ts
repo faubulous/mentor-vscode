@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-export class ClassNode extends vscode.TreeItem {
-	contextValue = 'class';
+export class PropertyNode extends vscode.TreeItem {
+	contextValue = 'property';
 
 	constructor(
 		public readonly uri: vscode.Uri,
@@ -14,7 +14,7 @@ export class ClassNode extends vscode.TreeItem {
 		super(label, collapsibleState);
 		
 		this.command = {
-			command: 'mentor.classExplorer.command.selectEntry',
+			command: 'mentor.propertyExplorer.command.selectEntry',
 			title: '',
 			arguments: [uri]
 		};

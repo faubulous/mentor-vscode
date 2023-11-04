@@ -17,12 +17,40 @@
     "Other"
   ],
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "build-font": "node build/update-font.js",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "lint": "eslint \"src/**/*.ts\"",
-    "test": "npx jest"
+    "vscode:prepublish": "npm run package",
+    "compile": "node ./esbuild.js",
+    "package": "NODE_ENV=production node ./esbuild.js",
+    "watch": "node ./esbuild.js --watch",
+    "test": "npx jest",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/mkdirp": "^0.5.2",
+    "@types/n3": "^1.16.0",
+    "@types/node": "^16.18.34",
+    "@types/rimraf": "^2.0.2",
+    "@types/vscode": "^1.73.0",
+    "@typescript-eslint/eslint-plugin": "^5.42.0",
+    "@typescript-eslint/parser": "^5.42.0",
+    "esbuild": "^0.16.10",
+    "esbuild-plugin-copy": "^2.0.1",
+    "eslint": "^8.26.0",
+    "jest": "^29.7.0",
+    "jest-environment-node": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.2.2",
+    "webfont": "^11.2.26"
+  },
+  "dependencies": {
+    "@faubulous/mentor-rdf": "^0.1.7",
+    "@vscode/webview-ui-toolkit": "^1.2.2",
+    "minimist": "^1.2.6",
+    "mkdirp": "^0.5.1",
+    "n3": "^1.17.1",
+    "rimraf": "^2.6.2"
   },
   "activationEvents": [
     "onLanguage:json",
@@ -78,85 +106,103 @@
     },
     "views": {
       "mentor": [
+				{
+					"type": "webview",
+					"id": "mentor.testView",
+          "name": "Ontology",
+          "visibility": "hidden"
+				},
         {
-          "id": "classExplorer",
+          "id": "mentor.classExplorer",
           "name": "Classes"
+        },
+        {
+          "id": "mentor.propertyExplorer",
+          "name": "Properties"
+        },
+        {
+          "id": "mentor.individualExplorer",
+          "name": "Individuals"
         }
       ]
     },
     "commands": [
       {
-        "command": "extension.selectResource",
+        "command": "mentor.command.selectResource",
         "title": "Open in Editor",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "extension.setNamespaceColor",
+        "command": "mentor.command.setNamespaceColor",
         "title": "Select Color"
       },
       {
-        "command": "extension.openExternal",
+        "command": "mentor.command.openExternal",
         "title": "Open in Browser",
         "icon": "$(globe)"
       },
       {
-        "command": "classExplorer.toggleReferenced",
-        "title": "Show or hide referenced terms",
-        "icon": "$(activate-breakpoints)"
+        "command": "mentor.command.testWebView",
+        "title": "Mentor: Test Web View"
       },
       {
-        "command": "classExplorer.refreshEntry",
+        "command": "mentor.classExplorer.command.toggleReferenced",
+        "title": "Show or hide referenced terms",
+        "icon": "$(color-mode)"
+      },
+      {
+        "command": "mentor.classExplorer.command.refreshEntry",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "classExplorer.editEntry",
+        "command": "mentor.classExplorer.command.editEntry",
         "title": "Edit"
       },
       {
-        "command": "classExplorer.deleteEntry",
+        "command": "mentor.classExplorer.command.deleteEntry",
         "title": "Delete"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "classExplorer.toggleReferenced",
-          "when": "view == classExplorer",
-          "group": "navigation"
+          "command": "mentor.classExplorer.command.toggleReferenced",
+          "when": "view == mentor.classExplorer",
+          "group": "navigation@1"
         },
         {
-          "command": "classExplorer.refreshEntry",
-          "when": "view == classExplorer",
-          "group": "navigation"
+          "command": "mentor.classExplorer.command.refreshEntry",
+          "when": "view == mentor.classExplorer",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
         {
-          "command": "extension.selectResource",
-          "when": "view == classExplorer && viewItem == class",
+          "command": "mentor.command.selectResource",
+          "when": "view == mentor.classExplorer && viewItem == class",
           "group": "inline"
         },
         {
-          "command": "extension.openExternal",
-          "when": "view == classExplorer && viewItem == class",
+          "command": "mentor.command.openExternal",
+          "when": "view == mentor.classExplorer && viewItem == class",
           "group": "navigation"
         },
         {
-          "command": "extension.setNamespaceColor",
-          "when": "view == classExplorer && viewItem == class",
+          "command": "mentor.command.setNamespaceColor",
+          "when": "view == mentor.classExplorer && viewItem == class",
           "group": "2_workspace"
         },
         {
-          "command": "classExplorer.deleteEntry",
-          "when": "view == classExplorer && viewItem == class",
+          "command": "mentor.classExplorer.command.deleteEntry",
+          "when": "view == mentor.classExplorer && viewItem == class",
           "group": "7_modification"
         }
       ]
     },
     "colors": [
       {
-        "id": "mentor.colors.www.w3.org.1999.02.22.rdf.syntax.ns",
+        "id": "mentor.color.www.w3.org.1999.02.22.rdf.syntax.ns",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
           "light": "#0771DE",
@@ -164,7 +210,7 @@
         }
       },
       {
-        "id": "mentor.colors.www.w3.org.2000.01.rdf.schema",
+        "id": "mentor.color.www.w3.org.2000.01.rdf.schema",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
           "light": "#0771DE",
@@ -172,7 +218,7 @@
         }
       },
       {
-        "id": "mentor.colors.www.w3.org.2001.XMLSchema",
+        "id": "mentor.color.www.w3.org.2001.XMLSchema",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
           "light": "#0771DE",
@@ -180,7 +226,7 @@
         }
       },
       {
-        "id": "mentor.colors.www.w3.org.2002.07.owl",
+        "id": "mentor.color.www.w3.org.2002.07.owl",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
           "light": "#0771DE",
@@ -188,7 +234,7 @@
         }
       },
       {
-        "id": "mentor.colors.www.w3.org.ns.rdfa",
+        "id": "mentor.color.www.w3.org.ns.rdfa",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
           "light": "#0771DE",
@@ -196,7 +242,7 @@
         }
       },
       {
-        "id": "mentor.colors.xmlns.com.foaf.0.1",
+        "id": "mentor.color.xmlns.com.foaf.0.1",
         "description": "Color used for the FOAF namespace URIs.",
         "defaults": {
           "light": "#F7D633",
@@ -204,7 +250,7 @@
         }
       },
       {
-        "id": "mentor.colors.purl.org.dc.elements.1.1",
+        "id": "mentor.color.purl.org.dc.elements.1.1",
         "description": "Color used for the Dublin Core namespace URIs.",
         "defaults": {
           "light": "#FF9501",
@@ -212,7 +258,7 @@
         }
       },
       {
-        "id": "mentor.colors.purl.org.dc.dcmitype",
+        "id": "mentor.color.purl.org.dc.dcmitype",
         "description": "Color used for the Dublin Core namespace URIs.",
         "defaults": {
           "light": "#FF9501",
@@ -220,7 +266,7 @@
         }
       },
       {
-        "id": "mentor.colors.schema.org",
+        "id": "mentor.color.schema.org",
         "description": "Color used for the Schema.org namespace URIs.",
         "defaults": {
           "light": "#bc0d0d",
@@ -228,7 +274,7 @@
         }
       },
       {
-        "id": "mentor.colors.w3id.org.semanticarts.ns.ontology.gist",
+        "id": "mentor.color.w3id.org.semanticarts.ns.ontology.gist",
         "description": "Color used for the Gist namespace URIs.",
         "defaults": {
           "light": "#005A7D",
@@ -294,33 +340,5 @@
         }
       }
     ]
-  },
-  "devDependencies": {
-    "@types/ftp": "^0.3.33",
-    "@types/jest": "^29.5.5",
-    "@types/mkdirp": "^0.5.2",
-    "@types/n3": "^1.16.0",
-    "@types/node": "^16.18.34",
-    "@types/rimraf": "^2.0.2",
-    "@types/vscode": "^1.73.0",
-    "@typescript-eslint/eslint-plugin": "^5.42.0",
-    "@typescript-eslint/parser": "^5.42.0",
-    "eslint": "^8.26.0",
-    "jest": "^29.7.0",
-    "jest-environment-node": "^29.7.0",
-    "ts-jest": "^29.1.1",
-    "ts-node": "^10.9.1",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.2.2",
-    "webfont": "^11.2.26"
-  },
-  "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.4",
-    "ftp": "^0.3.10",
-    "jsonc-parser": "^0.4.2",
-    "minimist": "^1.2.6",
-    "mkdirp": "^0.5.1",
-    "n3": "^1.17.1",
-    "rimraf": "^2.6.2"
   }
 }

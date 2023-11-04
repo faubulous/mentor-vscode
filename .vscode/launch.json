@@ -13,8 +13,8 @@
         "vscode-samples.custom-view-samples"
       ],
       "sourceMaps": true,
-      "outFiles": ["${workspaceRoot}/dist/**/*.js"],
-      "preLaunchTask": "npm: watch"
+      "outFiles": ["${workspaceRoot}/dist/**/*.js"]
+      // "preLaunchTask": "npm: watch"
     },
     {
       "name": "Update Font",
