@@ -51,6 +51,7 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 				const token = context.tokens[uri].sort((a: any, b: any) => a.start - b.start)[0] as any;
 				const text = token.type == 'prefixed' ? `${token.prefix}:${token.value}` : `<${token.value}>`;
 
+				// The lexer ignores any tabs in front of the token, so we need to find the actual position in the line.
 				const n = token.line - 1;
 				const line = context.document.lineAt(n);
 				const start = line.text.indexOf(text);

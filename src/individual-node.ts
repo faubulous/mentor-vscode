@@ -1,22 +1,26 @@
 import * as vscode from 'vscode';
+import { IndividualRepository } from '@faubulous/mentor-rdf';
+import { ResourceNode } from './resource-node';
 
-export class IndividualNode extends vscode.TreeItem {
+export class IndividualNode extends ResourceNode {
 	contextValue = 'individual';
 
 	constructor(
-		public readonly uri: vscode.Uri,
-		public readonly iconPath: vscode.ThemeIcon,
-		public readonly label: vscode.TreeItemLabel,
-		public readonly tooltip: vscode.MarkdownString,
-		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-		public readonly command?: vscode.Command
+		protected readonly repository: IndividualRepository,
+		public readonly uri: string
 	) {
-		super(label, collapsibleState);
-		
+		super(repository, uri);
+
+		this.collapsibleState = vscode.TreeItemCollapsibleState.None;
+
 		this.command = {
 			command: 'mentor.individualExplorer.command.selectEntry',
 			title: '',
 			arguments: [uri]
 		};
+	}
+
+	override getIcon(): vscode.ThemeIcon {
+		return new vscode.ThemeIcon('debug-breakpoint-log-unverified', this.getColor());
 	}
 }

@@ -1,6 +1,5 @@
 import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from "vscode";
-import { getUri } from "../utilities/getUri";
-import { getNonce } from "../utilities/getNonce";
+import { getUri, getNonce } from "../utilities";
 
 /**
  * This class manages the state and behavior of ComponentGallery webview panels.

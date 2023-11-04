@@ -45,7 +45,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.7",
+    "@faubulous/mentor-rdf": "^0.1.8",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "minimist": "^1.2.6",
     "mkdirp": "^0.5.1",

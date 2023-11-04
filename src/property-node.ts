@@ -1,22 +1,66 @@
 import * as vscode from 'vscode';
+import { PropertyRepository, xsd } from '@faubulous/mentor-rdf';
+import { ResourceNode } from './resource-node';
 
-export class PropertyNode extends vscode.TreeItem {
+export class PropertyNode extends ResourceNode {
 	contextValue = 'property';
 
 	constructor(
-		public readonly uri: vscode.Uri,
-		public readonly iconPath: vscode.ThemeIcon,
-		public readonly label: vscode.TreeItemLabel,
-		public readonly tooltip: vscode.MarkdownString,
-		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-		public readonly command?: vscode.Command
+		protected readonly repository: PropertyRepository,
+		public readonly uri: string
 	) {
-		super(label, collapsibleState);
-		
+		super(repository, uri);
+
+		this.collapsibleState = this.repository.hasSubProperties(uri) ?
+			vscode.TreeItemCollapsibleState.Collapsed :
+			vscode.TreeItemCollapsibleState.None;
+
 		this.command = {
 			command: 'mentor.propertyExplorer.command.selectEntry',
 			title: '',
-			arguments: [uri]
+			arguments: [vscode.Uri.parse(uri)]
 		};
+	}
+
+	override getIcon(): vscode.ThemeIcon {
+		let icon = 'arrow-right';
+
+		const range = this.repository.getRange(this.uri);
+
+		switch (range) {
+			case xsd.date.id:
+			case xsd.dateTime.id: {
+				icon = 'calendar';
+				break;
+			}
+			case xsd.byte.id:
+			case xsd.decimal.id:
+			case xsd.double.id:
+			case xsd.float.id:
+			case xsd.int.id:
+			case xsd.integer.id:
+			case xsd.short.id:
+			case xsd.unsignedInt.id:
+			case xsd.unsignedShort.id:
+			case xsd.unsingedLong.id:
+			case xsd.usignedByte.id: {
+				icon = 'symbol-number';
+				break;
+			}
+			case xsd.boolean.id: {
+				icon = 'symbol-boolean';
+				break;
+			}
+			case xsd.string.id: {
+				icon = 'symbol-text';
+				break;
+			}
+			case xsd.base64Binary.id: {
+				icon = 'file-binary';
+				break;
+			}
+		}
+
+		return new vscode.ThemeIcon(icon, this.getColor());
 	}
 }

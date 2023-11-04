@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { getUri } from '../utilities/getUri';
-import { getNonce } from '../utilities/getNonce';
+import { getUri, getNonce } from "../utilities";
 
 export class ComponentGalleryViewProvider implements vscode.WebviewViewProvider {
 
