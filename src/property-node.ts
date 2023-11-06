@@ -16,9 +16,9 @@ export class PropertyNode extends ResourceNode {
 			vscode.TreeItemCollapsibleState.None;
 
 		this.command = {
-			command: 'mentor.propertyExplorer.command.selectEntry',
+			command: 'mentor.command.selectProperty',
 			title: '',
-			arguments: [vscode.Uri.parse(uri)]
+			arguments: [uri]
 		};
 	}
 

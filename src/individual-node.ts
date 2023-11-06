@@ -14,13 +14,13 @@ export class IndividualNode extends ResourceNode {
 		this.collapsibleState = vscode.TreeItemCollapsibleState.None;
 
 		this.command = {
-			command: 'mentor.individualExplorer.command.selectEntry',
+			command: 'mentor.command.selectIndividual',
 			title: '',
 			arguments: [uri]
 		};
 	}
 
 	override getIcon(): vscode.ThemeIcon {
-		return new vscode.ThemeIcon('debug-breakpoint-log-unverified', this.getColor());
+		return new vscode.ThemeIcon('rdf-individual', this.getColor());
 	}
 }

@@ -17,6 +17,12 @@ export class ResourceNode extends vscode.TreeItem {
 		this.iconPath = this.getIcon();
 		this.label = this.getLabel();
 		this.tooltip = this.getTooltip();
+
+		this.command = {
+			command: 'mentor.command.selectResource',
+			title: '',
+			arguments: [uri]
+		};
 	}
 
 	protected getLabel(): vscode.TreeItemLabel {

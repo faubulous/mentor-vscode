@@ -18,7 +18,7 @@ export async function activate(context: ExtensionContext) {
 	const classProvider = new ClassNodeProvider();
 	window.registerTreeDataProvider('mentor.classExplorer', classProvider);
 
-	commands.registerCommand('mentor.classExplorer.command.selectEntry', (uri: string) => classProvider.select(uri));
+	commands.registerCommand('mentor.command.selectClass', (uri: string) => classProvider.select(uri));
 	commands.registerCommand('mentor.classExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
 	commands.registerCommand('mentor.classExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
 	commands.registerCommand('mentor.classExplorer.command.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));
@@ -31,7 +31,7 @@ export async function activate(context: ExtensionContext) {
 	const propertyProvider = new PropertyNodeProvider();
 	window.registerTreeDataProvider('mentor.propertyExplorer', propertyProvider);
 
-	commands.registerCommand('mentor.propertyExplorer.command.selectEntry', (uri: string) => propertyProvider.select(uri));
+	commands.registerCommand('mentor.command.selectProperty', (uri: string) => propertyProvider.select(uri));
 	commands.registerCommand('mentor.propertyExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
 	commands.registerCommand('mentor.propertyExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
 	commands.registerCommand('mentor.propertyExplorer.command.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));
@@ -44,7 +44,7 @@ export async function activate(context: ExtensionContext) {
 	const individualProvider = new IndividualNodeProvider();
 	window.registerTreeDataProvider('mentor.individualExplorer', individualProvider);
 
-	commands.registerCommand('mentor.individualExplorer.command.selectEntry', (uri: string) => individualProvider.select(uri));
+	commands.registerCommand('mentor.command.selectIndividual', (uri: string) => individualProvider.select(uri));
 	commands.registerCommand('mentor.individualExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
 	commands.registerCommand('mentor.individualExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
 	commands.registerCommand('mentor.individualExplorer.command.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));

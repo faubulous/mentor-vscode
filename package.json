@@ -87,8 +87,8 @@
           "fontCharacter": "\\e003"
         }
       },
-      "rdf-class-ref-eq": {
-        "description": "Referenced equivalent class icon",
+      "rdf-individual": {
+        "description": "Individual icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e004"
@@ -128,9 +128,22 @@
     },
     "commands": [
       {
-        "command": "mentor.command.selectResource",
+        "command": "mentor.command.selectClass",
         "title": "Open in Editor",
-        "icon": "$(go-to-file)"
+        "icon": "$(go-to-file)",
+        "when": false
+      },
+      {
+        "command": "mentor.command.selectProperty",
+        "title": "Open in Editor",
+        "icon": "$(go-to-file)",
+        "when": false
+      },
+      {
+        "command": "mentor.command.selectIndividual",
+        "title": "Open in Editor",
+        "icon": "$(go-to-file)",
+        "when": false
       },
       {
         "command": "mentor.command.setNamespaceColor",
@@ -179,8 +192,18 @@
       ],
       "view/item/context": [
         {
-          "command": "mentor.command.selectResource",
+          "command": "mentor.command.selectClass",
           "when": "view == mentor.classExplorer && viewItem == class",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.command.selectProperty",
+          "when": "view == mentor.propertyExplorer && viewItem == property",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.command.selectIndividual",
+          "when": "view == mentor.individualExplorer && viewItem == individual",
           "group": "inline"
         },
         {

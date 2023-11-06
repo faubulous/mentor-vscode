@@ -25,7 +25,7 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 		let result = this.repository.getSubClasses(uri).sort().map(u => this.getNode(u));
 
 		if (!this.showReferenced) {
-			result = result.filter(u => this.repository?.hasSubject(u));
+			result = result.filter(u => this.repository?.hasSubject(u) || this.repository?.hasSubClasses(u));
 		}
 
 		return result;

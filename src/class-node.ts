@@ -14,9 +14,9 @@ export class ClassNode extends ResourceNode {
 		this.collapsibleState = this.repository.hasSubClasses(uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
-			
+
 		this.command = {
-			command: 'mentor.classExplorer.command.selectEntry',
+			command: 'mentor.command.selectClass',
 			title: '',
 			arguments: [uri]
 		};
@@ -25,12 +25,11 @@ export class ClassNode extends ResourceNode {
 	override getIcon() {
 		let icon = 'rdf-class';
 
-		if (!this.repository.hasSubject(this.uri)) {
-			icon += '-ref';
-		}
-
 		if (this.repository.hasEquivalentClass(this.uri)) {
 			icon += '-eq';
+		}
+		else if (!this.repository.hasSubject(this.uri)) {
+			icon += '-ref';
 		}
 
 		return new vscode.ThemeIcon(icon, this.getColor());
