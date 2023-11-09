@@ -16,6 +16,7 @@
   "categories": [
     "Other"
   ],
+  "main": "./out/extension/extension.js",
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "node ./esbuild.js",
@@ -47,16 +48,16 @@
   "dependencies": {
     "@faubulous/mentor-rdf": "^0.1.8",
     "@vscode/webview-ui-toolkit": "^1.2.2",
-    "minimist": "^1.2.6",
-    "mkdirp": "^0.5.1",
+    "millan": "^5.3.0",
     "n3": "^1.17.1",
-    "rimraf": "^2.6.2"
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
   },
   "activationEvents": [
     "onLanguage:json",
     "onLanguage:jsonc"
   ],
-  "main": "./dist/extension.js",
   "contributes": {
     "icons": {
       "app-mentor": {
@@ -106,12 +107,6 @@
     },
     "views": {
       "mentor": [
-				{
-					"type": "webview",
-					"id": "mentor.testView",
-          "name": "Ontology",
-          "visibility": "hidden"
-				},
         {
           "id": "mentor.classExplorer",
           "name": "Classes"
@@ -127,6 +122,24 @@
       ]
     },
     "commands": [
+      {
+        "command": "mentor.classExplorer.command.toggleReferenced",
+        "title": "Show or hide referenced terms",
+        "icon": "$(color-mode)"
+      },
+      {
+        "command": "mentor.classExplorer.command.refreshEntry",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mentor.classExplorer.command.editEntry",
+        "title": "Edit"
+      },
+      {
+        "command": "mentor.classExplorer.command.deleteEntry",
+        "title": "Delete"
+      },
       {
         "command": "mentor.command.selectClass",
         "title": "Open in Editor",
@@ -146,35 +159,18 @@
         "when": false
       },
       {
-        "command": "mentor.command.setNamespaceColor",
-        "title": "Select Color"
-      },
-      {
         "command": "mentor.command.openExternal",
         "title": "Open in Browser",
         "icon": "$(globe)"
       },
       {
-        "command": "mentor.command.testWebView",
-        "title": "Mentor: Test Web View"
+        "command": "mentor.command.setNamespaceColor",
+        "title": "Select Color"
       },
       {
-        "command": "mentor.classExplorer.command.toggleReferenced",
-        "title": "Show or hide referenced terms",
-        "icon": "$(color-mode)"
-      },
-      {
-        "command": "mentor.classExplorer.command.refreshEntry",
-        "title": "Refresh",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "mentor.classExplorer.command.editEntry",
-        "title": "Edit"
-      },
-      {
-        "command": "mentor.classExplorer.command.deleteEntry",
-        "title": "Delete"
+        "command": "mentor.command.openSettings",
+        "title": "Mentor: Open Settings",
+        "icon": "$(gear)"
       }
     ],
     "menus": {
@@ -188,6 +184,10 @@
           "command": "mentor.classExplorer.command.refreshEntry",
           "when": "view == mentor.classExplorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "mentor.command.openSettings",
+          "group": "2_configuration"
         }
       ],
       "view/item/context": [

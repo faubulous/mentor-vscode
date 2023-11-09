@@ -2,7 +2,7 @@ import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from "vsco
 import { getUri, getNonce } from "../utilities";
 
 /**
- * This class manages the state and behavior of ComponentGallery webview panels.
+ * This class manages the state and behavior of Settings webview panels.
  *
  * It contains all the data and methods for:
  *
@@ -10,8 +10,8 @@ import { getUri, getNonce } from "../utilities";
  * - Properly cleaning up and disposing of webview resources when the panel is closed
  * - Setting the HTML (and by proxy CSS/JavaScript) content of the webview panel
  */
-export class ComponentGalleryPanel {
-  public static currentPanel: ComponentGalleryPanel | undefined;
+export class SettingsPanel {
+  public static currentPanel: SettingsPanel | undefined;
   private readonly _panel: WebviewPanel;
   private _disposables: Disposable[] = [];
 
@@ -39,28 +39,28 @@ export class ComponentGalleryPanel {
    * @param extensionUri The URI of the directory containing the extension.
    */
   public static render(extensionUri: Uri) {
-    if (ComponentGalleryPanel.currentPanel) {
+    if (SettingsPanel.currentPanel) {
       // If the webview panel already exists reveal it
-      ComponentGalleryPanel.currentPanel._panel.reveal(ViewColumn.One);
+      SettingsPanel.currentPanel._panel.reveal(ViewColumn.One);
     } else {
       // If a webview panel does not already exist create and show a new one
       const panel = window.createWebviewPanel(
         // Panel view type
-        "showGallery",
+        "mentor.view.settings",
         // Panel title
-        "Component Gallery",
+        "Mentor Settings",
         // The editor column the panel should be displayed in
         ViewColumn.One,
         // Extra panel configurations
         {
           // Enable JavaScript in the webview
           enableScripts: true,
-          // Restrict the webview to only load resources from the `dist` directory
-          localResourceRoots: [Uri.joinPath(extensionUri, "dist")],
+          // Restrict the webview to only load resources from the `out` directory
+          localResourceRoots: [Uri.joinPath(extensionUri, "out", "extension")],
         }
       );
 
-      ComponentGalleryPanel.currentPanel = new ComponentGalleryPanel(panel, extensionUri);
+      SettingsPanel.currentPanel = new SettingsPanel(panel, extensionUri);
     }
   }
 
@@ -68,7 +68,7 @@ export class ComponentGalleryPanel {
    * Cleans up and disposes of webview resources when the webview panel is closed.
    */
   public dispose() {
-    ComponentGalleryPanel.currentPanel = undefined;
+    SettingsPanel.currentPanel = undefined;
 
     // Dispose of the current webview panel
     this._panel.dispose();
@@ -95,9 +95,9 @@ export class ComponentGalleryPanel {
    * rendered within the webview panel
    */
   private _getWebviewContent(webview: Webview, extensionUri: Uri) {
-    const webviewUri = getUri(webview, extensionUri, ["dist", "webview.js"]);
-    const styleUri = getUri(webview, extensionUri, ["dist", "style.css"]);
-    const codiconUri = getUri(webview, extensionUri, ["dist", "codicon.css"]);
+    const webviewUri = getUri(webview, extensionUri, ["out", "extension", "webview.js"]);
+    const styleUri = getUri(webview, extensionUri, ["out", "extension", "style.css"]);
+    const codiconUri = getUri(webview, extensionUri, ["out", "extension", "codicon.css"]);
     const nonce = getNonce();
 
     // Note: Since the below HTML is defined within a JavaScript template literal, all of
@@ -114,26 +114,15 @@ export class ComponentGalleryPanel {
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
           <link rel="stylesheet" href="${styleUri}">
           <link rel="stylesheet" href="${codiconUri}">
-          <title>Component Gallery</title>
+          <title>Mentor Settings 2</title>
         </head>
         <body>
-          <vscode-text-field placeholder="Find"></vscode-text-field>
-          <vscode-panels aria-label="With Badge">
-            <vscode-panel-tab id="tab-1">
-              Classes
-              <vscode-badge>1</vscode-badge>
-            </vscode-panel-tab>
-            <vscode-panel-tab id="tab-2">
-              Properties
-              <vscode-badge>1</vscode-badge>
-            </vscode-panel-tab>
-            <vscode-panel-tab id="tab-3">
-              Individuals
-            </vscode-panel-tab>
-            <vscode-panel-view id="view-1"></vscode-panel-view>
-            <vscode-panel-view id="view-2"></vscode-panel-view>
-            <vscode-panel-view id="view-3"></vscode-panel-view>
-          </vscode-panels>
+          <section class="component-container">
+            <h2>Namespaces</h2>
+            <section class="component-example">
+              <vscode-data-grid class="basic-grid" generate-header="sticky" grid-template-columns="100px 1fr 2fr" aria-label="With Sticky Header"></vscode-data-grid>
+            </section>
+          </section>
           <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
         </body>
       </html>
