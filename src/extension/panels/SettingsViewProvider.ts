@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getUri, getNonce } from "../utilities";
+import { getUri, getNonce } from "../../utilities";
 
 export class SettingsViewProvider implements vscode.WebviewViewProvider {
 
@@ -28,11 +28,11 @@ export class SettingsViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
-		const webviewUri = getUri(webview, this._extensionUri, ["out", "extension", "webview.js"]);
-		const styleUri = getUri(webview, this._extensionUri, ["out", "extension", "style.css"]);
-		const codiconUri = getUri(webview, this._extensionUri, ["out", "extension", "codicon.css"]);
+		const webviewUri = getUri(webview, this._extensionUri, ["out", "webview.js"]);
+		const styleUri = getUri(webview, this._extensionUri, ["out", "style.css"]);
+		const codiconUri = getUri(webview, this._extensionUri, ["out", "codicon.css"]);
 		const nonce = getNonce();
-	
+
 		// Note: Since the below HTML is defined within a JavaScript template literal, all of
 		// the HTML for each component demo can be defined elsewhere and then imported/inserted
 		// into the below code. This can help with code readability and organization.

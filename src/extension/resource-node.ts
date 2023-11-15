@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
 import { ResourceRepository, skos, rdfs } from '@faubulous/mentor-rdf';
-import { getNamespaceUri, toJsonId } from './utilities';
+import { getNamespaceUri, toJsonId } from '../utilities';
 
 export class ResourceNode extends vscode.TreeItem {
 	contextValue: string = 'resource';

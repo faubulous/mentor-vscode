@@ -20,6 +20,13 @@ import {
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { IToken, ISemanticError, TurtleParser } from 'millan';
 
+// TODO:
+// * https://code.visualstudio.com/api/language-extensions/syntax-highlight-guide
+// * https://code.visualstudio.com/api/references/vscode-api#DocumentSemanticTokensProvider
+// * https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
+
+console.log('Starting Turtle Language Server');
+
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
@@ -49,6 +56,8 @@ connection.onInitialize((params: InitializeParams) => {
 		capabilities.textDocument.publishDiagnostics &&
 		capabilities.textDocument.publishDiagnostics.relatedInformation
 	);
+
+	connection.console.log(`[Server(${process.pid})] Started and initialize received`);
 
 	const result: InitializeResult = {
 		capabilities: {
@@ -205,6 +214,8 @@ function getParseDiagnostics(document: TextDocument, errors: ISemanticError[]) {
 }
 
 async function validateTextDocument(document: TextDocument): Promise<void> {
+	connection.console.log(`[Server(${process.pid} ${document.uri.toString()})] Validating document.`);
+
 	// In this simple example we get the settings for every validate run.
 	const settings = await getDocumentSettings(document.uri);
 
@@ -222,15 +233,20 @@ async function validateTextDocument(document: TextDocument): Promise<void> {
 	const { cst, errors } = parser.parse(content, 'standard');
 	const tokens = parser.input;
 
+	connection.console.log(JSON.stringify(tokens));
+
 	const lexDiagnostics = getLexDiagnostics(document, tokens);
 	const parseDiagnostics = getParseDiagnostics(document, errors);
+
+	connection.console.log(JSON.stringify(lexDiagnostics));
+	connection.console.log(JSON.stringify(parseDiagnostics));
 
 	return connection.sendDiagnostics({ uri, diagnostics: [...lexDiagnostics, ...parseDiagnostics] });
 }
 
 connection.onDidChangeWatchedFiles(_change => {
 	// Monitored files have change in VSCode
-	connection.console.log('We received an file change event');
+	connection.console.log(`[Server(${process.pid})] Watched files changed.`);
 });
 
 // This handler provides the initial list of the completion items.

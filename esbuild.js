@@ -18,8 +18,8 @@ const extensionConfig = {
   platform: "node",
   mainFields: ["module", "main"],
   format: "cjs",
-  entryPoints: ["./src/extension/extension.ts"],
-  outfile: "./out/extension/extension.js",
+  entryPoints: ["./src/extension.ts"],
+  outfile: "./out/extension.js",
   external: ["vscode"],
 };
 
@@ -30,17 +30,40 @@ const webviewConfig = {
   target: "es2020",
   format: "esm",
   entryPoints: ["./src/extension/webview/main.ts"],
-  outfile: "./out/extension/webview.js",
+  outfile: "./out/webview.js",
   plugins: [
     // Copy webview css and ttf files to `out` directory unaltered
     copy({
       resolveFrom: "cwd",
       assets: {
         from: ["./src/extension/webview/*.css", "./src/extension/webview/*.ttf"],
-        to: ["./out/extension/"],
+        to: ["./out/"],
       },
     }),
   ],
+};
+
+const langConfig = {
+  ...baseConfig,
+  bundle: false,
+  target: "es2020",
+  format: "cjs"
+}
+
+// Config for  the turtle language client
+/** @type BuildOptions */
+const turtleClientConfig = {
+  ...langConfig,
+  entryPoints: ["./src/language-turtle/client.ts"],
+  outfile: "./out/turtle-client.js"
+};
+
+// Config for  the turtle language server
+/** @type BuildOptions */
+const turtleServerConfig = {
+  ...langConfig,
+  entryPoints: ["./src/language-turtle/server.ts"],
+  outfile: "./out/turtle-server.js"
 };
 
 // This watch config adheres to the conventions of the esbuild-problem-matchers
@@ -78,11 +101,21 @@ const watchConfig = {
         ...webviewConfig,
         ...watchConfig,
       });
+      await build({
+        ...turtleClientConfig,
+        ...watchConfig,
+      });
+      await build({
+        ...turtleServerConfig,
+        ...watchConfig,
+      });
       console.log("[watch] build finished");
     } else {
       // Build extension and webview code
       await build(extensionConfig);
       await build(webviewConfig);
+      await build(turtleClientConfig);
+      await build(turtleServerConfig);
       console.log("build complete");
     }
   } catch (err) {

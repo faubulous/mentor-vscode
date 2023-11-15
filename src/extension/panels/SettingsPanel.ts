@@ -1,5 +1,5 @@
 import { Disposable, Webview, WebviewPanel, window, Uri, ViewColumn } from "vscode";
-import { getUri, getNonce } from "../utilities";
+import { getUri, getNonce } from "../../utilities";
 
 /**
  * This class manages the state and behavior of Settings webview panels.
@@ -56,7 +56,7 @@ export class SettingsPanel {
           // Enable JavaScript in the webview
           enableScripts: true,
           // Restrict the webview to only load resources from the `out` directory
-          localResourceRoots: [Uri.joinPath(extensionUri, "out", "extension")],
+          localResourceRoots: [Uri.joinPath(extensionUri, "out")],
         }
       );
 
@@ -95,9 +95,9 @@ export class SettingsPanel {
    * rendered within the webview panel
    */
   private _getWebviewContent(webview: Webview, extensionUri: Uri) {
-    const webviewUri = getUri(webview, extensionUri, ["out", "extension", "webview.js"]);
-    const styleUri = getUri(webview, extensionUri, ["out", "extension", "style.css"]);
-    const codiconUri = getUri(webview, extensionUri, ["out", "extension", "codicon.css"]);
+    const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
+    const styleUri = getUri(webview, extensionUri, ["out", "style.css"]);
+    const codiconUri = getUri(webview, extensionUri, ["out", "codicon.css"]);
     const nonce = getNonce();
 
     // Note: Since the below HTML is defined within a JavaScript template literal, all of
