@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/languages/language-server-sparql.ts"],
+  "sourcesContent": ["import { LanguageServerBase } from './language-server';\r\nimport { IToken, W3SpecSparqlParser } from 'millan';\r\nimport { TextDocumentPositionParams, CompletionItem } from 'vscode-languageclient';\r\n\r\nclass SparqlLanguageServer extends LanguageServerBase<W3SpecSparqlParser> {\r\n\tconstructor() {\r\n\t\tsuper('sparql', 'SPARQL');\r\n\t}\r\n\r\n\tget parser(): W3SpecSparqlParser {\r\n\t\treturn new W3SpecSparqlParser();\r\n\t}\r\n\r\n\tprotected parse(content: string): { tokens: IToken[], errors: any[] } {\r\n\t\tconst { cst, errors } = this.parser.parse(content);\r\n\t\tconst tokens = this.parser.input;\r\n\r\n\t\treturn { tokens, errors };\r\n\t}\r\n\r\n\tprotected onCompletion(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] {\r\n\t\treturn [];\r\n\t}\r\n}\r\n\r\nnew SparqlLanguageServer().start();"],
+  "mappings": ";AAAA,6BAAmC;AACnC,oBAA2C;AAG3C,MAAM,6BAA6B,0CAAuC;AAAA,EACzE,cAAc;AACb,UAAM,UAAU,QAAQ;AAAA,EACzB;AAAA,EAEA,IAAI,SAA6B;AAChC,WAAO,IAAI,iCAAmB;AAAA,EAC/B;AAAA,EAEU,MAAM,SAAsD;AACrE,UAAM,EAAE,KAAK,OAAO,IAAI,KAAK,OAAO,MAAM,OAAO;AACjD,UAAM,SAAS,KAAK,OAAO;AAE3B,WAAO,EAAE,QAAQ,OAAO;AAAA,EACzB;AAAA,EAEU,aAAa,uBAAqE;AAC3F,WAAO,CAAC;AAAA,EACT;AACD;AAEA,IAAI,qBAAqB,EAAE,MAAM;",
+  "names": []
+}

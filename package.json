@@ -65,7 +65,31 @@
           "Turtle",
           "ttl"
         ],
-        "extensions": [".ttl"]
+        "extensions": [
+          ".ttl",
+          ".nt",
+          ".nq"
+        ]
+      },
+      {
+        "id": "trig",
+        "aliases": [
+          "TriG",
+          "trig"
+        ],
+        "extensions": [
+          ".trig"
+        ]
+      },
+      {
+        "id": "sparql",
+        "aliases": [
+          "SPARQL",
+          "sparql"
+        ],
+        "extensions": [
+          ".sparql"
+        ]
       }
     ],
     "icons": {

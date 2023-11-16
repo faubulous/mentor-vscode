@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/languages/language-client-sparql.ts"],
+  "sourcesContent": ["import * as path from 'path';\r\nimport { LanguageClientBase } from './language-client';\r\n\r\nexport class SparqlLanguageClient extends LanguageClientBase {\r\n\tget serverPath(): string {\r\n\t\treturn path.join('out', 'language-server-sparql.js');\r\n\t}\r\n\r\n\tconstructor() {\r\n\t\tsuper('sparql', 'SPARQL');\r\n\t}\r\n}\r\n"],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,WAAsB;AACtB,6BAAmC;AAE5B,MAAM,6BAA6B,0CAAmB;AAAA,EAC5D,IAAI,aAAqB;AACxB,WAAO,KAAK,KAAK,OAAO,2BAA2B;AAAA,EACpD;AAAA,EAEA,cAAc;AACb,UAAM,UAAU,QAAQ;AAAA,EACzB;AACD;",
+  "names": []
+}

@@ -60,6 +60,8 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 							tokensBuilder.push(new vscode.Range(start, end), 'enumMember', ['readonly']);
 						}
 						break;
+					case "STRING_LITERAL_SINGLE_QUOTE":
+					case "STRING_LITERAL_LONG_QUOTE":
 					case "STRING_LITERAL_QUOTE":
 						tokensBuilder.push(new vscode.Range(start, end), 'string');
 						break;
@@ -82,7 +84,7 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 
 				lastToken = token
 			} catch (e) {
-				console.log(e);
+				console.error(e);
 				continue;
 			}
 		}

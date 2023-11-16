@@ -10,22 +10,22 @@ export abstract class LanguageClientBase {
 	/**
 	 * Get the human readably name of the language.
 	 */
-	abstract get languageName(): string;
+	readonly languageName: string;
 
 	/**
 	 * The language ID for the language client.
 	 */
-	abstract get languageId(): string;
+	readonly languageId: string;
 
 	/**
 	 * The channel ID for logging.
 	 */
-	readonly channelName = "Mentor Language";
+	readonly channelName: string;
 
 	/**
 	 * The channel ID for logging.
 	 */
-	readonly channelId = "mentor.language";
+	readonly channelId: string;
 
 	/**
 	 * The output channel.
@@ -33,21 +33,21 @@ export abstract class LanguageClientBase {
 	readonly channel: vscode.OutputChannel;
 
 	/**
-	 * The workspace folder.
-	 */
-	readonly workspaceFolder: vscode.WorkspaceFolder;
-
-	/**
 	 * The VS Code language client.
 	 */
 	client: LanguageClient | undefined;
 
-	constructor(workspaceFolder: vscode.WorkspaceFolder) {
+	constructor(langaugeId: string, languageName: string) {
+		this.languageName = languageName;
+		this.languageId = langaugeId;
+		this.channelName = `Mentor Language (${languageName})`;
+		this.channelId = `mentor.language.${langaugeId}`;
 		this.channel = vscode.window.createOutputChannel(this.channelName, this.channelId);
-		this.workspaceFolder = workspaceFolder;
 	}
 
-	activate(context: vscode.ExtensionContext) {
+	start(context: vscode.ExtensionContext) {
+		console.log(`Starting ${this.languageName} Language Client..`);
+
 		const module = context.asAbsolutePath(this.serverPath);
 
 		const serverOptions = {
@@ -58,7 +58,6 @@ export abstract class LanguageClientBase {
 		const clientOptions: LanguageClientOptions = {
 			diagnosticCollectionName: this.channelId,
 			documentSelector: [{ language: this.languageId }],
-			workspaceFolder: this.workspaceFolder,
 			outputChannel: this.channel
 		};
 
@@ -66,7 +65,7 @@ export abstract class LanguageClientBase {
 		this.client.start();
 	}
 
-	async deactivate() {
+	async stop() {
 		if (this.client) {
 			await this.client.stop();
 		}

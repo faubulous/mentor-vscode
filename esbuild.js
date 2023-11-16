@@ -43,28 +43,20 @@ const webviewConfig = {
   ],
 };
 
-const langConfig = {
-  ...baseConfig,
-  bundle: false,
-  target: "es2020",
-  format: "cjs"
+const getLanguageConfig = (type, language) => {
+  const name = language ? `${type}-${language}` : type;
+  return {
+    ...baseConfig,
+    // Don't bundle the language server or client as this will result in errors.
+    bundle: false,
+    target: "es2020",
+    format: "cjs",
+    entryPoints: [
+      `./src/languages/language-${name}.ts`
+    ],
+    outfile: `./out/language-${name}.js`
+  }
 }
-
-// Config for  the turtle language client
-/** @type BuildOptions */
-const turtleClientConfig = {
-  ...langConfig,
-  entryPoints: ["./src/language-turtle/client.ts"],
-  outfile: "./out/turtle-client.js"
-};
-
-// Config for  the turtle language server
-/** @type BuildOptions */
-const turtleServerConfig = {
-  ...langConfig,
-  entryPoints: ["./src/language-turtle/server.ts"],
-  outfile: "./out/turtle-server.js"
-};
 
 // This watch config adheres to the conventions of the esbuild-problem-matchers
 // extension (https://github.com/connor4312/esbuild-problem-matchers#esbuild-via-js)
@@ -86,37 +78,36 @@ const watchConfig = {
   },
 };
 
-// Build script
 (async () => {
-  const args = process.argv.slice(2);
   try {
+    const args = process.argv.slice(2);
+
     if (args.includes("--watch")) {
-      // Build and watch extension and webview code
       console.log("[watch] build started");
-      await build({
-        ...extensionConfig,
-        ...watchConfig,
-      });
-      await build({
-        ...webviewConfig,
-        ...watchConfig,
-      });
-      await build({
-        ...turtleClientConfig,
-        ...watchConfig,
-      });
-      await build({
-        ...turtleServerConfig,
-        ...watchConfig,
-      });
+      await build({ ...extensionConfig, ...watchConfig });
+      await build({ ...webviewConfig, ...watchConfig });
+      await build({ ...getLanguageConfig('server'), ...watchConfig });
+      await build({ ...getLanguageConfig('server', 'turtle'), ...watchConfig });
+      await build({ ...getLanguageConfig('server', 'trig'), ...watchConfig });
+      await build({ ...getLanguageConfig('server', 'sparql'), ...watchConfig });
+      await build({ ...getLanguageConfig('client'), ...watchConfig });
+      await build({ ...getLanguageConfig('client', 'turtle'), ...watchConfig });
+      await build({ ...getLanguageConfig('client', 'trig'), ...watchConfig });
+      await build({ ...getLanguageConfig('client', 'sparql'), ...watchConfig });
       console.log("[watch] build finished");
     } else {
-      // Build extension and webview code
+      console.log("build started");
       await build(extensionConfig);
       await build(webviewConfig);
-      await build(turtleClientConfig);
-      await build(turtleServerConfig);
-      console.log("build complete");
+      await build(getLanguageConfig('server'));
+      await build(getLanguageConfig('server', 'turtle'));
+      await build(getLanguageConfig('server', 'trig'));
+      await build(getLanguageConfig('server', 'sparql'));
+      await build(getLanguageConfig('client'));
+      await build(getLanguageConfig('client', 'turtle'));
+      await build(getLanguageConfig('client', 'trig'));
+      await build(getLanguageConfig('client', 'sparql'));
+      console.log("build finished");
     }
   } catch (err) {
     process.stderr.write(err.stderr);
