@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../src/languages/language-client-trig.ts"],
-  "sourcesContent": ["import * as path from 'path';\r\nimport { LanguageClientBase } from './language-client';\r\n\r\nexport class TrigLanguageClient extends LanguageClientBase {\r\n\tget serverPath(): string {\r\n\t\treturn path.join('out', 'language-server-trig.js');\r\n\t}\r\n\r\n\tconstructor() {\r\n\t\tsuper('trig', 'TriG');\r\n\t}\r\n}\r\n"],
-  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,WAAsB;AACtB,6BAAmC;AAE5B,MAAM,2BAA2B,0CAAmB;AAAA,EAC1D,IAAI,aAAqB;AACxB,WAAO,KAAK,KAAK,OAAO,yBAAyB;AAAA,EAClD;AAAA,EAEA,cAAc;AACb,UAAM,QAAQ,MAAM;AAAA,EACrB;AACD;",
-  "names": []
-}

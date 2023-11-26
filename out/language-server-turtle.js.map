@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../src/languages/language-server-turtle.ts"],
-  "sourcesContent": ["import { LanguageServerBase } from './language-server';\r\nimport { IToken, TurtleParser } from 'millan';\r\nimport { TextDocumentPositionParams, CompletionItem } from 'vscode-languageclient';\r\n\r\nclass TurtleLanguageServer extends LanguageServerBase<TurtleParser> {\r\n\tget parser(): TurtleParser {\r\n\t\treturn new TurtleParser();\r\n\t}\r\n\r\n\tconstructor() {\r\n\t\tsuper('turtle', 'Turtle');\r\n\t}\r\n\r\n\tprotected parse(content: string): { tokens: IToken[], errors: any[] } {\r\n\t\tconst { cst, errors } = this.parser.parse(content, 'standard');\r\n\t\tconst tokens = this.parser.input;\r\n\r\n\t\treturn { tokens, errors };\r\n\t}\r\n\r\n\tprotected onCompletion(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] {\r\n\t\treturn [];\r\n\t}\r\n}\r\n\r\nnew TurtleLanguageServer().start();"],
-  "mappings": ";AAAA,6BAAmC;AACnC,oBAAqC;AAGrC,MAAM,6BAA6B,0CAAiC;AAAA,EACnE,IAAI,SAAuB;AAC1B,WAAO,IAAI,2BAAa;AAAA,EACzB;AAAA,EAEA,cAAc;AACb,UAAM,UAAU,QAAQ;AAAA,EACzB;AAAA,EAEU,MAAM,SAAsD;AACrE,UAAM,EAAE,KAAK,OAAO,IAAI,KAAK,OAAO,MAAM,SAAS,UAAU;AAC7D,UAAM,SAAS,KAAK,OAAO;AAE3B,WAAO,EAAE,QAAQ,OAAO;AAAA,EACzB;AAAA,EAEU,aAAa,uBAAqE;AAC3F,WAAO,CAAC;AAAA,EACT;AACD;AAEA,IAAI,qBAAqB,EAAE,MAAM;",
-  "names": []
-}

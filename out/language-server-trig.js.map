@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../src/languages/language-server-trig.ts"],
-  "sourcesContent": ["import { LanguageServerBase } from './language-server';\r\nimport { IToken, TrigParser } from 'millan';\r\nimport { TextDocumentPositionParams, CompletionItem } from 'vscode-languageclient';\r\n\r\nclass TrigLanguageServer extends LanguageServerBase<TrigParser> {\r\n\tget parser(): TrigParser {\r\n\t\treturn new TrigParser();\r\n\t}\r\n\r\n\tconstructor() {\r\n\t\tsuper('trig', 'TriG');\r\n\t}\r\n\r\n\tprotected parse(content: string): { tokens: IToken[], errors: any[] } {\r\n\t\tconst { cst, errors } = this.parser.parse(content, 'standard');\r\n\t\tconst tokens = this.parser.input;\r\n\r\n\t\treturn { tokens, errors };\r\n\t}\r\n\r\n\tprotected onCompletion(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] {\r\n\t\treturn [];\r\n\t}\r\n}\r\n\r\nnew TrigLanguageServer().start();"],
-  "mappings": ";AAAA,6BAAmC;AACnC,oBAAmC;AAGnC,MAAM,2BAA2B,0CAA+B;AAAA,EAC/D,IAAI,SAAqB;AACxB,WAAO,IAAI,yBAAW;AAAA,EACvB;AAAA,EAEA,cAAc;AACb,UAAM,QAAQ,MAAM;AAAA,EACrB;AAAA,EAEU,MAAM,SAAsD;AACrE,UAAM,EAAE,KAAK,OAAO,IAAI,KAAK,OAAO,MAAM,SAAS,UAAU;AAC7D,UAAM,SAAS,KAAK,OAAO;AAE3B,WAAO,EAAE,QAAQ,OAAO;AAAA,EACzB;AAAA,EAEU,aAAa,uBAAqE;AAC3F,WAAO,CAAC;AAAA,EACT;AACD;AAEA,IAAI,mBAAmB,EAAE,MAAM;",
-  "names": []
-}
