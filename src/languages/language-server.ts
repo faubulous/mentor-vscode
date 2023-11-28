@@ -16,8 +16,9 @@ import {
 	TextDocumentPositionParams,
 	CompletionItem
 } from 'vscode-languageserver/node';
+import { TokenizerResult } from '@faubulous/mentor-rdf';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { ISemanticError, IStardogParser, IToken } from 'millan';
+import { ISemanticError, IToken } from 'millan';
 
 interface ParserSettings {
 	maxNumberOfProblems: number;
@@ -25,12 +26,10 @@ interface ParserSettings {
 
 const defaultSettings: ParserSettings = { maxNumberOfProblems: 1000 };
 
-export abstract class LanguageServerBase<T extends IStardogParser> {
+export abstract class LanguageServerBase {
 	readonly languageName: string;
 
 	readonly languageId: string;
-
-	abstract get parser(): T;
 
 	readonly connection: Connection;
 
@@ -67,9 +66,9 @@ export abstract class LanguageServerBase<T extends IStardogParser> {
 
 	start() {
 		this.documents.listen(this.connection);
-		
+
 		this.connection.listen();
-		
+
 		this.log(`Started ${this.languageName} Language Server.`);
 	}
 
@@ -188,7 +187,7 @@ export abstract class LanguageServerBase<T extends IStardogParser> {
 		return result;
 	}
 
-	protected abstract parse(content: string): { tokens: IToken[], errors: any[] };
+	protected abstract parse(content: string): Promise<TokenizerResult>;
 
 	async validateTextDocument(document: TextDocument): Promise<void> {
 		this.log(`Validating document: ${document.uri}`);
@@ -201,11 +200,11 @@ export abstract class LanguageServerBase<T extends IStardogParser> {
 		const content = document.getText();
 
 		if (content.length) {
-			const { tokens, errors } = this.parse(content);
+			const { tokens, syntaxErrors, semanticErrors } = await this.parse(content);
 
 			diagnostics = [
 				...this.getLexDiagnostics(document, tokens),
-				...this.getParseDiagnostics(document, errors)
+				...this.getParseDiagnostics(document, syntaxErrors.concat(semanticErrors))
 			];
 		}
 
@@ -235,10 +234,9 @@ export abstract class LanguageServerBase<T extends IStardogParser> {
 				const { message, context, token } = error;
 
 				const ruleStack = context ? context.ruleStack : null;
-				const source =
-					ruleStack && ruleStack.length > 0
-						? ruleStack[ruleStack.length - 1]
-						: undefined;
+				const source = ruleStack && ruleStack.length > 0
+					? ruleStack[ruleStack.length - 1]
+					: undefined;
 
 				const constructedDiagnostic: Partial<Diagnostic> = {
 					message,
@@ -253,6 +251,7 @@ export abstract class LanguageServerBase<T extends IStardogParser> {
 					);
 				} else {
 					const { previousToken = {} } = error as any; // chevrotain doesn't have this typed fully, but it exists for early exit exceptions
+
 					let rangeStart;
 					let rangeEnd;
 

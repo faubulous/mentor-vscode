@@ -60,15 +60,34 @@
   "contributes": {
     "languages": [
       {
+        "id": "ntriples",
+        "aliases": [
+          "N-Triples",
+          "ntriples"
+        ],
+        "extensions": [
+          ".nt",
+          ".n3"
+        ]
+      },
+      {
+        "id": "nquads",
+        "aliases": [
+          "N-Quads",
+          "nquads"
+        ],
+        "extensions": [
+          ".nq"
+        ]
+      },
+      {
         "id": "turtle",
         "aliases": [
           "Turtle",
           "ttl"
         ],
         "extensions": [
-          ".ttl",
-          ".nt",
-          ".nq"
+          ".ttl"
         ]
       },
       {

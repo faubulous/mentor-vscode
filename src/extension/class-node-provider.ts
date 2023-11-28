@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { VocabularyContext } from './mentor';
+import { DocumentContext } from '../mentor';
 import { ClassRepository} from '@faubulous/mentor-rdf';
 import { ClassNode } from './class-node';
 import { ResourceNodeProvider } from './resource-node-provider';
@@ -9,7 +9,7 @@ import { ResourceNodeProvider } from './resource-node-provider';
  */
 export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 
-	override getRepository(context: VocabularyContext): ClassRepository | undefined {
+	override getRepository(context: DocumentContext): ClassRepository | undefined {
 		return new ClassRepository(context.store);
 	}
 

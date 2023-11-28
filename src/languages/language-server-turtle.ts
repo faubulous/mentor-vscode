@@ -1,21 +1,14 @@
+import { RdfSyntax, Tokenizer, TokenizerResult } from '@faubulous/mentor-rdf';
 import { LanguageServerBase } from './language-server';
-import { IToken, TurtleParser } from 'millan';
 import { TextDocumentPositionParams, CompletionItem } from 'vscode-languageclient';
 
-class TurtleLanguageServer extends LanguageServerBase<TurtleParser> {
-	get parser(): TurtleParser {
-		return new TurtleParser();
-	}
-
+class TurtleLanguageServer extends LanguageServerBase {
 	constructor() {
 		super('turtle', 'Turtle');
 	}
 
-	protected parse(content: string): { tokens: IToken[], errors: any[] } {
-		const { cst, errors } = this.parser.parse(content, 'standard');
-		const tokens = this.parser.input;
-
-		return { tokens, errors };
+	protected async parse(content: string): Promise<TokenizerResult> {
+		return await Tokenizer.parseData(content, RdfSyntax.TriG);
 	}
 
 	protected onCompletion(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] {

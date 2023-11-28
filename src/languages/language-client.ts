@@ -1,3 +1,4 @@
+import path = require('path');
 import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, TransportKind } from 'vscode-languageclient/node';
 
@@ -5,7 +6,7 @@ export abstract class LanguageClientBase {
 	/**
 	 * Get the relative path to the compiled language server module.
 	 */
-	abstract get serverPath(): string;
+	readonly serverPath: string;
 
 	/**
 	 * Get the human readably name of the language.
@@ -37,12 +38,13 @@ export abstract class LanguageClientBase {
 	 */
 	client: LanguageClient | undefined;
 
-	constructor(langaugeId: string, languageName: string) {
+	constructor(languageId: string, languageName: string) {
 		this.languageName = languageName;
-		this.languageId = langaugeId;
+		this.languageId = languageId;
 		this.channelName = `Mentor Language (${languageName})`;
-		this.channelId = `mentor.language.${langaugeId}`;
+		this.channelId = `mentor.language.${languageId}`;
 		this.channel = vscode.window.createOutputChannel(this.channelName, this.channelId);
+		this.serverPath = path.join('out', `language-server-${languageId}.js`);
 	}
 
 	start(context: vscode.ExtensionContext) {

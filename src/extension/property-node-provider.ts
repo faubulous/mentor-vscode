@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { VocabularyContext } from './mentor';
+import { DocumentContext } from '../mentor';
 import { PropertyRepository } from '@faubulous/mentor-rdf';
 import { PropertyNode } from './property-node';
 import { ResourceNodeProvider } from './resource-node-provider';
@@ -9,7 +9,7 @@ import { ResourceNodeProvider } from './resource-node-provider';
  */
 export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepository> {
 	
-	override getRepository(context: VocabularyContext): PropertyRepository | undefined {
+	override getRepository(context: DocumentContext): PropertyRepository | undefined {
 		return new PropertyRepository(context.store);
 	}
 

@@ -5,7 +5,7 @@ import { ClassModule } from './extension/class-module';
 import { PropertyModule } from './extension/property-module';
 import { IndividualModule } from './extension/individual-module';
 import { SettingsModule } from './extension/settings-module';
-import * as TurtleTokenProvider from './language-turtle/token-provider';
+import * as TurtleTokenProvider from './languages/token-provider-turtle';
 import {
 	LanguageClientBase,
 	TurtleLanguageClient,

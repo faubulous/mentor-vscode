@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { mentor, VocabularyContext } from './mentor';
+import { mentor, DocumentContext } from '../mentor';
 
 export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider<string> {
 	protected readonly nodes: any = {};
 
-	protected context: VocabularyContext | undefined;
+	protected context: DocumentContext | undefined;
 
 	protected repository: T | undefined;
 
@@ -24,7 +24,7 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 		}
 	}
 
-	private _onVocabularyChanged(e: VocabularyContext | undefined): void {
+	private _onVocabularyChanged(e: DocumentContext | undefined): void {
 		if (e) {
 			this.context = e;
 			this.repository = this.getRepository(e);
@@ -32,7 +32,7 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 		}
 	}
 
-	protected abstract getRepository(context: VocabularyContext): T | undefined;
+	protected abstract getRepository(context: DocumentContext): T | undefined;
 
 	toggleReferenced() {
 		this.showReferenced = !this.showReferenced;
@@ -43,21 +43,24 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 	}
 
 	select(uri: string) {
-		if (this.context && this.context.tokens[uri]) {
+		if (this.context) {
 			const context = this.context;
 
 			this.activateDocument().then((editor) => {
-				// Todo: This only selects the first occurance, but not necessarily the term definition.
-				const token = context.tokens[uri].sort((a: any, b: any) => a.start - b.start)[0] as any;
-				const text = token.type == 'prefixed' ? `${token.prefix}:${token.value}` : `<${token.value}>`;
+				let t;
 
-				// The lexer ignores any tabs in front of the token, so we need to find the actual position in the line.
-				const n = token.line - 1;
-				const line = context.document.lineAt(n);
-				const start = line.text.indexOf(text);
-				const end = start + text.length;
+				if(context.typeAssertions[uri]) {
+					t = context.typeAssertions[uri][0];
+				} else {
+					t = context.references[uri][0];
+				}
 
-				const range = new vscode.Range(n, start, n, end);
+				const startLine = t.startLine ? t.startLine - 1 : 0;
+				const startCharacter = t.startColumn ? t.startColumn - 1 : 0;
+				const endLine = t.endLine ? t.endLine - 1 : 0;
+				const endCharacter = t.endColumn ?? 0;
+
+				const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
 
 				if (editor) {
 					editor.selection = new vscode.Selection(range.start, range.end);

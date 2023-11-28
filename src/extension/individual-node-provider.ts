@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { VocabularyContext } from './mentor';
+import { DocumentContext } from '../mentor';
 import { IndividualRepository } from '@faubulous/mentor-rdf';
 import { IndividualNode } from './individual-node';
 import { ResourceNodeProvider } from './resource-node-provider';
@@ -9,7 +9,7 @@ import { ResourceNodeProvider } from './resource-node-provider';
  */
 export class IndividualNodeProvider extends ResourceNodeProvider<IndividualRepository> {
 
-	override getRepository(context: VocabularyContext): IndividualRepository | undefined {
+	override getRepository(context: DocumentContext): IndividualRepository | undefined {
 		return new IndividualRepository(context.store);
 	}
 
