@@ -112,7 +112,8 @@
         ],
         "extensions": [
           ".sparql"
-        ]
+        ],
+        "configuration": "./src/languages/language-config-sparql.json"
       }
     ],
     "semanticTokenScopes": [
