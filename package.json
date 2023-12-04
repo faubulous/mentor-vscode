@@ -1,14 +1,14 @@
 {
   "name": "mentor",
-  "displayName": "Custom view Samples",
-  "description": "Samples for VSCode's view API",
+  "displayName": "Mentor",
+  "description": "Create ontologies and knowledge graph projects with Visual Studio code.",
   "version": "0.0.1",
-  "publisher": "vscode-samples",
-  "private": true,
-  "license": "MIT",
+  "publisher": "faubulous",
+  "private": false,
+  "license": "GPL",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Microsoft/vscode-extension-samples"
+    "url": "https://github.com/faubulous/mentor-vscode"
   },
   "engines": {
     "vscode": "^1.74.0"
@@ -16,6 +16,7 @@
   "categories": [
     "Other"
   ],
+  "main": "./out/extension.js",
   "scripts": {
     "vscode:prepublish": "npm run package",
     "compile": "node ./esbuild.js",
@@ -45,19 +46,90 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.7",
+    "@faubulous/mentor-rdf": "^0.1.8",
     "@vscode/webview-ui-toolkit": "^1.2.2",
-    "minimist": "^1.2.6",
-    "mkdirp": "^0.5.1",
+    "millan": "^5.3.0",
     "n3": "^1.17.1",
-    "rimraf": "^2.6.2"
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
   },
   "activationEvents": [
-    "onLanguage:json",
-    "onLanguage:jsonc"
+    "onLanguage:plaintext"
   ],
-  "main": "./dist/extension.js",
   "contributes": {
+    "languages": [
+      {
+        "id": "ntriples",
+        "aliases": [
+          "N-Triples",
+          "ntriples"
+        ],
+        "extensions": [
+          ".nt",
+          ".n3"
+        ],
+        "configuration": "./src/languages/language-config-turtle.json"
+      },
+      {
+        "id": "nquads",
+        "aliases": [
+          "N-Quads",
+          "nquads"
+        ],
+        "extensions": [
+          ".nq"
+        ],
+        "configuration": "./src/languages/language-config-turtle.json"
+      },
+      {
+        "id": "turtle",
+        "aliases": [
+          "Turtle",
+          "ttl"
+        ],
+        "extensions": [
+          ".ttl"
+        ],
+        "configuration": "./src/languages/language-config-turtle.json"
+      },
+      {
+        "id": "trig",
+        "aliases": [
+          "TriG",
+          "trig"
+        ],
+        "extensions": [
+          ".trig"
+        ],
+        "configuration": "./src/languages/language-config-trig.json"
+      },
+      {
+        "id": "sparql",
+        "aliases": [
+          "SPARQL",
+          "sparql"
+        ],
+        "extensions": [
+          ".sparql"
+        ],
+        "configuration": "./src/languages/language-config-sparql.json"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "turtle",
+        "scopes": {
+          "namespace": ["storage.modifier.turtle"]
+        }
+      },
+      {
+        "language": "sparql",
+        "scopes": {
+          "namespace": ["storage.modifier.turtle"]
+        }
+      }
+    ],
     "icons": {
       "app-mentor": {
         "description": "Mentor icon",
@@ -87,8 +159,8 @@
           "fontCharacter": "\\e003"
         }
       },
-      "rdf-class-ref-eq": {
-        "description": "Referenced equivalent class icon",
+      "rdf-individual": {
+        "description": "Individual icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e004"
@@ -106,12 +178,6 @@
     },
     "views": {
       "mentor": [
-				{
-					"type": "webview",
-					"id": "mentor.testView",
-          "name": "Ontology",
-          "visibility": "hidden"
-				},
         {
           "id": "mentor.classExplorer",
           "name": "Classes"
@@ -127,24 +193,6 @@
       ]
     },
     "commands": [
-      {
-        "command": "mentor.command.selectResource",
-        "title": "Open in Editor",
-        "icon": "$(go-to-file)"
-      },
-      {
-        "command": "mentor.command.setNamespaceColor",
-        "title": "Select Color"
-      },
-      {
-        "command": "mentor.command.openExternal",
-        "title": "Open in Browser",
-        "icon": "$(globe)"
-      },
-      {
-        "command": "mentor.command.testWebView",
-        "title": "Mentor: Test Web View"
-      },
       {
         "command": "mentor.classExplorer.command.toggleReferenced",
         "title": "Show or hide referenced terms",
@@ -162,6 +210,38 @@
       {
         "command": "mentor.classExplorer.command.deleteEntry",
         "title": "Delete"
+      },
+      {
+        "command": "mentor.command.selectClass",
+        "title": "Open in Editor",
+        "icon": "$(go-to-file)",
+        "when": false
+      },
+      {
+        "command": "mentor.command.selectProperty",
+        "title": "Open in Editor",
+        "icon": "$(go-to-file)",
+        "when": false
+      },
+      {
+        "command": "mentor.command.selectIndividual",
+        "title": "Open in Editor",
+        "icon": "$(go-to-file)",
+        "when": false
+      },
+      {
+        "command": "mentor.command.openExternal",
+        "title": "Open in Browser",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "mentor.command.setNamespaceColor",
+        "title": "Select Color"
+      },
+      {
+        "command": "mentor.command.openSettings",
+        "title": "Mentor: Open Settings",
+        "icon": "$(gear)"
       }
     ],
     "menus": {
@@ -175,12 +255,26 @@
           "command": "mentor.classExplorer.command.refreshEntry",
           "when": "view == mentor.classExplorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "mentor.command.openSettings",
+          "group": "2_configuration"
         }
       ],
       "view/item/context": [
         {
-          "command": "mentor.command.selectResource",
+          "command": "mentor.command.selectClass",
           "when": "view == mentor.classExplorer && viewItem == class",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.command.selectProperty",
+          "when": "view == mentor.propertyExplorer && viewItem == property",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.command.selectIndividual",
+          "when": "view == mentor.individualExplorer && viewItem == individual",
           "group": "inline"
         },
         {
@@ -205,40 +299,40 @@
         "id": "mentor.color.www.w3.org.1999.02.22.rdf.syntax.ns",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
         "id": "mentor.color.www.w3.org.2000.01.rdf.schema",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
         "id": "mentor.color.www.w3.org.2001.XMLSchema",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
         "id": "mentor.color.www.w3.org.2002.07.owl",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
         "id": "mentor.color.www.w3.org.ns.rdfa",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
@@ -282,6 +376,23 @@
         }
       }
     ],
+    "configurationDefaults": {
+      "[sparql]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      },
+      "[turtle]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      },
+      "[trig]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      },
+      "[ntriples]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      },
+      "[nquads]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      }
+    },
     "configuration": [
       {
         "type": "object",
@@ -337,6 +448,12 @@
               }
             ]
           }
+        },
+        "mentor.language.turtle.maxNumberOfProblems": {
+          "scope": "resource",
+          "type": "number",
+          "default": 100,
+          "description": "Controls the maximum number of problems produced by the server."
         }
       }
     ]

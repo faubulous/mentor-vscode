@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as n3 from 'n3';
-import { OwlReasoner, StoreFactory } from '@faubulous/mentor-rdf';
+import { OwlReasoner, StoreFactory, RdfSyntax, Tokenizer, TokenizerResult, rdf } from '@faubulous/mentor-rdf';
+import { IToken } from 'millan';
 
-export class VocabularyContext {
+export class DocumentContext {
+	private _store: n3.Store | undefined;
+
 	/**
 	 * The N3 store for the document.
 	 */
-	readonly store: n3.Store;
+	get store(): n3.Store | undefined { return this._store; };
 
 	/**
 	 * The document.
@@ -20,60 +22,177 @@ export class VocabularyContext {
 	readonly namespaces: { [key: string]: string } = {};
 
 	/**
+	 * All tokens in the document.
+	 */
+	readonly tokens: IToken[] = [];
+
+	/**
 	 * Maps resource URIs to indexed tokens.
 	 */
-	readonly tokens: { [key: string]: n3.Token[] } = {};
+	readonly typeAssertions: { [key: string]: IToken[] } = {};
 
-	constructor(document: vscode.TextDocument, store: n3.Store) {
+	/**
+	 * Maps resource URIs to indexed tokens.
+	 */
+	readonly references: { [key: string]: IToken[] } = {};
+
+	constructor(document: vscode.TextDocument) {
 		this.document = document;
-		this.store = store;
-
-		this._parseTokens(document);
 	}
 
-	private _parseTokens(document: vscode.TextDocument): void {
-		const text = document.getText();
-		const tokens = new n3.Lexer().tokenize(text);
+	public static canLoad(document: vscode.TextDocument): boolean {
+		return document && (this._isSupportedGraphLanguage(document.languageId) || this._isSupportedQueryLanguage(document.languageId));
+	}
 
-		tokens.forEach((t, i) => {
-			if (!t.value) {
-				return;
+	private static _isSupportedGraphLanguage(languageId: string): boolean {
+		switch (languageId) {
+			case 'ntriples':
+			case 'nquads':
+			case 'turtle':
+			case 'trig':
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	private static _isSupportedQueryLanguage(languageId: string): boolean {
+		switch (languageId) {
+			case 'sparql':
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	public async load(document: vscode.TextDocument): Promise<void> {
+		if (!DocumentContext.canLoad(document)) {
+			return;
+		}
+
+		await Promise.all([
+			this._parseGraph(document),
+			this._parseTokens(document)
+		])
+	}
+
+	private async _parseGraph(document: vscode.TextDocument): Promise<void> {
+		if (DocumentContext._isSupportedGraphLanguage(document.languageId)) {
+			const uri = document.uri.toString();
+
+			try {
+				this._store = await StoreFactory.createFromStream(document.getText(), uri);
+
+				new OwlReasoner().expand(this._store, uri, uri + "#inference");
+			} catch (e) {
+				console.error(e);
 			}
+		}
+	}
 
-			let v = t.value;
+	private async _parseTokens(document: vscode.TextDocument): Promise<void> {
+		const data = document.getText();
+		let result: TokenizerResult;
 
-			switch (t.type) {
-				case 'prefix': {
-					let u = tokens[i + 1].value;
+		if (DocumentContext._isSupportedQueryLanguage(document.languageId)) {
+			result = await Tokenizer.parseData(data, RdfSyntax.Sparql);
+		} else {
+			result = await Tokenizer.parseData(data, RdfSyntax.TriG);
+		}
 
-					if (u) {
-						this.namespaces[v] = u;
-					}
+		this.tokens.length = 0;
+		this.tokens.push(...result.tokens);
 
+		result.tokens.forEach((t, i) => {
+			switch (t.tokenType?.tokenName) {
+				case 'PNAME_NS': {
+					const prefix = t.image.substring(0, t.image.length - 1);
+					const uri = this._getUriFromToken(result.tokens[i + 1]);
+
+					if (!uri) break;
+
+					this.namespaces[prefix] = uri;
 					break;
 				}
-				case 'prefixed': {
-					if (t.prefix) {
-						v = this.namespaces[t.prefix] + t.value;
+				case 'PNAME_LN': {
+					const uri = this._getUriFromPrefixedName(t.image);
 
-						if (!this.tokens[v]) {
-							this.tokens[v] = [];
-						}
+					if (!uri) break;
 
-						this.tokens[v].push(t);
-					}
+					this._handleTypeAssertion(result, t, uri, i);
+					this._handleUriReference(result, t, uri);
 					break;
 				}
-				case 'IRI': {
-					if (!this.tokens[v]) {
-						this.tokens[v] = [];
-					}
+				case 'IRIREF': {
+					const uri = this._getUriFromIriReference(t.image);
 
-					this.tokens[v].push(t);
+					this._handleTypeAssertion(result, t, uri, i);
+					this._handleUriReference(result, t, uri);
+					break;
+				}
+				case 'A': {
+					this._handleTypeAssertion(result, t, rdf.type.id, i);
 					break;
 				}
 			}
 		});
+	}
+
+	private _getUriFromToken(token: IToken): string | undefined {
+		if (token.tokenType?.tokenName === 'IRIREF') {
+			return this._getUriFromIriReference(token.image);
+		} else if (token.tokenType?.tokenName === 'PNAME_LN') {
+			return this._getUriFromPrefixedName(token.image);
+		}
+	}
+
+	private _getUriFromIriReference(value: string): string {
+		const v = value.trim();
+
+		if (v.length > 2 && v.startsWith('<') && v.endsWith('>')) {
+			return v.substring(1, v.length - 1);
+		} else {
+			return v;
+		}
+	}
+
+	private _getUriFromPrefixedName(name: string): string | undefined {
+		const parts = name.split(':');
+
+		if (parts.length != 2) {
+			return;
+		}
+
+		const prefix = parts[0];
+		const label = parts[1];
+
+		if (!this.namespaces[prefix]) {
+			return;
+		}
+
+		return this.namespaces[prefix] + label;
+	}
+
+	private _handleUriReference(result: TokenizerResult, token: IToken, uri: string) {
+		if (!this.references[uri]) {
+			this.references[uri] = [];
+		}
+
+		this.references[uri].push(token);
+	}
+
+	private _handleTypeAssertion(result: TokenizerResult, token: IToken, uri: string, index: number) {
+		if (uri != rdf.type.id) return;
+
+		const s = result.tokens[index - 1];
+
+		if (!s) return;
+
+		const u = this._getUriFromToken(s);
+
+		if (!u) return;
+
+		this.typeAssertions[u] = [s];
 	}
 }
 
@@ -81,14 +200,14 @@ class MentorExtension {
 	/**
 	 * Maps document URIs to loaded document contexts.
 	 */
-	contexts: { [key: string]: VocabularyContext } = {};
+	contexts: { [key: string]: DocumentContext } = {};
 
 	/**
 	 * The active document context.
 	 */
-	activeContext: VocabularyContext | undefined;
+	activeContext: DocumentContext | undefined;
 
-	private _onDidChangeDocumentContext = new vscode.EventEmitter<VocabularyContext | undefined>();
+	private _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
 	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
 
@@ -110,7 +229,7 @@ class MentorExtension {
 			return;
 		}
 
-		if (!this._canLoadDocument(editor.document.uri)) {
+		if (!DocumentContext.canLoad(editor.document)) {
 			return;
 		}
 
@@ -123,7 +242,7 @@ class MentorExtension {
 	}
 
 	onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-		if (!this._canLoadDocument(e.document.uri)) {
+		if (!DocumentContext.canLoad(e.document)) {
 			return;
 		}
 
@@ -134,22 +253,7 @@ class MentorExtension {
 		});
 	}
 
-	/**
-	 * Indicates whether a document with the given URI can be loaded.
-	 * @param uri A document URI.
-	 * @returns <c>true</c> if the document can be loaded, <c>false</c> otherwise.
-	 */
-	private _canLoadDocument(uri: vscode.Uri): boolean {
-		if (!uri || uri.scheme !== 'file') {
-			return false;
-		}
-
-		const ext = path.extname(uri.fsPath);
-
-		return ext === '.ttl' || ext === '.nt';
-	}
-
-	private async _loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<VocabularyContext | undefined> {
+	private async _loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext | undefined> {
 		if (!document) {
 			return;
 		}
@@ -162,11 +266,9 @@ class MentorExtension {
 			return context;
 		}
 
-		const store = await StoreFactory.createFromStream(document.getText(), uri);
+		context = new DocumentContext(document);
 
-		new OwlReasoner().expand(store, uri, uri + "#inference");
-
-		context = new VocabularyContext(document, store);
+		await context.load(document);
 
 		this.contexts[uri] = context;
 		this.activeContext = context;

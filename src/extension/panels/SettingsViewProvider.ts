@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
-import { getUri } from '../utilities/getUri';
-import { getNonce } from '../utilities/getNonce';
+import { getUri, getNonce } from "../../utilities";
 
-export class ComponentGalleryViewProvider implements vscode.WebviewViewProvider {
+export class SettingsViewProvider implements vscode.WebviewViewProvider {
 
-	public static readonly viewType = 'mentor.testView';
+	public static readonly viewType = 'mentor.view.settings';
 
 	private _view?: vscode.WebviewView;
 
@@ -29,11 +28,11 @@ export class ComponentGalleryViewProvider implements vscode.WebviewViewProvider 
 	}
 
 	private _getHtmlForWebview(webview: vscode.Webview) {
-		const webviewUri = getUri(webview, this._extensionUri, ["dist", "webview.js"]);
-		const styleUri = getUri(webview, this._extensionUri, ["dist", "style.css"]);
-		const codiconUri = getUri(webview, this._extensionUri, ["dist", "codicon.css"]);
+		const webviewUri = getUri(webview, this._extensionUri, ["out", "webview.js"]);
+		const styleUri = getUri(webview, this._extensionUri, ["out", "style.css"]);
+		const codiconUri = getUri(webview, this._extensionUri, ["out", "codicon.css"]);
 		const nonce = getNonce();
-	
+
 		// Note: Since the below HTML is defined within a JavaScript template literal, all of
 		// the HTML for each component demo can be defined elsewhere and then imported/inserted
 		// into the below code. This can help with code readability and organization.
@@ -48,7 +47,7 @@ export class ComponentGalleryViewProvider implements vscode.WebviewViewProvider 
 			  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
 			  <link rel="stylesheet" href="${styleUri}">
 			  <link rel="stylesheet" href="${codiconUri}">
-			  <title>Component Gallery</title>
+			  <title>Mentor Settings</title>
 			</head>
 			<body>
 			  <vscode-text-field placeholder="Find"></vscode-text-field>

@@ -24,8 +24,8 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="35.57631"
-     inkscape:cx="8.587175"
-     inkscape:cy="9.6693558"
+     inkscape:cx="2.0659815"
+     inkscape:cy="7.4206684"
      inkscape:window-width="1920"
      inkscape:window-height="1010"
      inkscape:window-x="-6"
@@ -49,7 +49,13 @@
     </rdf:RDF>
   </metadata>
   <path
+     id="path2"
+     style="stroke-width:3.10535;stroke-dasharray:3.14806, 3.14806"
+     d="M 8 4 A 4 4 0 0 0 4 8 A 4 4 0 0 0 8 12 A 4 4 0 0 0 12 8 A 4 4 0 0 0 8 4 z M 8 5.25 A 2.75 2.75 0 0 1 10.75 8 A 2.75 2.75 0 0 1 8 10.75 A 2.75 2.75 0 0 1 5.25 8 A 2.75 2.75 0 0 1 8 5.25 z " />
+  <circle
+     style="fill:#000000;stroke-width:1.30195;stroke-dasharray:1.31986, 1.31986"
      id="path1"
-     style="color:#000000;fill:#000000;stroke-width:0.833333;-inkscape-stroke:none"
-     d="M 8 3 C 5.2435173 3 3 5.2435173 3 8 C 3 10.756505 5.24352 13 8 13 C 10.756502 13 13 10.756502 13 8 C 13 5.24352 10.756505 3 8 3 z M 8 4.5 C 9.9295542 4.5 11.5 6.0704638 11.5 8 C 11.5 9.9295512 9.9295512 11.5 8 11.5 C 6.0704638 11.5 4.5 9.9295542 4.5 8 C 4.5 6.0704621 6.0704621 4.5 8 4.5 z M 8 6 C 6.8974058 6 6 6.8974058 6 8 C 6 9.1026034 6.8974068 10 8 10 C 9.1026019 10 10 9.1026019 10 8 C 10 6.8974068 9.1026034 6 8 6 z " />
+     cx="8"
+     cy="8"
+     r="1.5" />
 </svg>
