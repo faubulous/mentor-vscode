@@ -22,6 +22,16 @@ enum SemanticTokenModifier {
 
 const legend = new vscode.SemanticTokensLegend(Object.values(SemanticTokenType), Object.values(SemanticTokenModifier));
 
+function countLeadingSpaces(str: string) {
+	for (var i = 0; i < str.length; i++) {
+		if (str[i] != " " && str[i] != "\t") {
+			return (i);
+		}
+	};
+
+	return (str.length);
+}
+
 const provider: vscode.DocumentSemanticTokensProvider = {
 	provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.ProviderResult<vscode.SemanticTokens> {
 		const uri = document.uri.toString();
@@ -54,7 +64,7 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 						case "PNAME_NS":
 							builder.push(tokenRange, SemanticTokenType.namespace, [SemanticTokenModifier.definition]);
 							break;
-						case "PNAME_LN":
+						case "PNAME_LN": {
 							const p = t.image.split(":")[0];
 
 							if (lastToken === "DoubleCaret") {
@@ -75,6 +85,7 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 								builder.push(labelRange, SemanticTokenType.label);
 							}
 							break;
+						}
 						case "IRIREF":
 							if (lastToken === "DoubleCaret") {
 								builder.push(tokenRange, SemanticTokenType.decorator);
@@ -83,10 +94,28 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 							}
 							break;
 						case "STRING_LITERAL_SINGLE_QUOTE":
-						case "STRING_LITERAL_LONG_QUOTE":
 						case "STRING_LITERAL_QUOTE":
 							builder.push(tokenRange, SemanticTokenType.string);
 							break;
+						case "STRING_LITERAL_LONG_QUOTE": {
+							let p = startColumn;
+							let n = startLine;
+
+							for (const l of t.image.split("\n")) {
+								let s = countLeadingSpaces(l);
+
+								const r = new vscode.Range(
+									new vscode.Position(n, p > -1 ? p : s),
+									new vscode.Position(n, p > -1 ? p + l.length : l.length)
+								);
+
+								builder.push(r, SemanticTokenType.string);
+
+								n++;
+								p = -1;
+							}
+							break;
+						}
 						case "DoubleCaret":
 						case "LANGTAG":
 							builder.push(tokenRange, SemanticTokenType.decorator);
