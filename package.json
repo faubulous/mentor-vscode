@@ -68,7 +68,8 @@
         "extensions": [
           ".nt",
           ".n3"
-        ]
+        ],
+        "configuration": "./src/languages/language-config-turtle.json"
       },
       {
         "id": "nquads",
@@ -78,7 +79,8 @@
         ],
         "extensions": [
           ".nq"
-        ]
+        ],
+        "configuration": "./src/languages/language-config-turtle.json"
       },
       {
         "id": "turtle",
@@ -88,7 +90,8 @@
         ],
         "extensions": [
           ".ttl"
-        ]
+        ],
+        "configuration": "./src/languages/language-config-turtle.json"
       },
       {
         "id": "trig",
@@ -98,7 +101,8 @@
         ],
         "extensions": [
           ".trig"
-        ]
+        ],
+        "configuration": "./src/languages/language-config-trig.json"
       },
       {
         "id": "sparql",
@@ -109,6 +113,20 @@
         "extensions": [
           ".sparql"
         ]
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "turtle",
+        "scopes": {
+          "namespace": ["storage.modifier.turtle"]
+        }
+      },
+      {
+        "language": "sparql",
+        "scopes": {
+          "namespace": ["storage.modifier.turtle"]
+        }
       }
     ],
     "icons": {
@@ -280,40 +298,40 @@
         "id": "mentor.color.www.w3.org.1999.02.22.rdf.syntax.ns",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
         "id": "mentor.color.www.w3.org.2000.01.rdf.schema",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
         "id": "mentor.color.www.w3.org.2001.XMLSchema",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
         "id": "mentor.color.www.w3.org.2002.07.owl",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
         "id": "mentor.color.www.w3.org.ns.rdfa",
         "description": "Color used for the W3C namespace URIs.",
         "defaults": {
-          "light": "#0771DE",
-          "dark": "#0771DE"
+          "light": "#569CD6",
+          "dark": "#569CD6"
         }
       },
       {
@@ -357,6 +375,23 @@
         }
       }
     ],
+    "configurationDefaults": {
+      "[sparql]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      },
+      "[turtle]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      },
+      "[trig]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      },
+      "[ntriples]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      },
+      "[nquads]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments"
+      }
+    },
     "configuration": [
       {
         "type": "object",

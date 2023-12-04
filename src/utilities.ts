@@ -81,9 +81,14 @@ export function toJsonId(uri: string): string | undefined {
 	}
 
 	let u = uri.split('//')[1];
-	u = u.replace(/[^a-zA-Z0-9]/g, '.');
 
-	return u.endsWith('.') ? u.slice(0, -1) : u;
+	if (u) {
+		u = u.replace(/[^a-zA-Z0-9]/g, '.');
+
+		return u.endsWith('.') ? u.slice(0, -1) : u;
+	} else {
+		return undefined;
+	}
 }
 
 export function getSortedWorkspaceFolders(): string[] {
@@ -121,4 +126,19 @@ export function getOuterMostWorkspaceFolder(folder: WorkspaceFolder): WorkspaceF
 	}
 
 	return folder;
+}
+
+export function findAllParsableDocuments(): Promise<Uri[]> {
+	return new Promise<Uri[]>((resolve, reject) => {
+		if (!workspace.name) {
+			resolve([]);
+		} else {
+			const configuration = workspace.getConfiguration();
+
+			const include = configuration.get("refactor-css.include") as string;
+			const exclude = configuration.get("refactor-css.exclude") as string;
+
+			resolve(workspace.findFiles(include, exclude));
+		}
+	});
 }

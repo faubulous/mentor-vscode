@@ -51,8 +51,10 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 
 				if(context.typeAssertions[uri]) {
 					t = context.typeAssertions[uri][0];
-				} else {
+				} else if(context.references[uri]) {
 					t = context.references[uri][0];
+				} else {
+					return;
 				}
 
 				const startLine = t.startLine ? t.startLine - 1 : 0;

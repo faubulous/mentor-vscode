@@ -109,10 +109,9 @@ export class DocumentContext {
 					const prefix = t.image.substring(0, t.image.length - 1);
 					const uri = this._getUriFromToken(result.tokens[i + 1]);
 
-					if (uri) {
-						this.namespaces[prefix] = uri;
-					}
+					if (!uri) break;
 
+					this.namespaces[prefix] = uri;
 					break;
 				}
 				case 'PNAME_LN': {
@@ -125,7 +124,7 @@ export class DocumentContext {
 					break;
 				}
 				case 'IRIREF': {
-					const uri = t.image.substring(1, t.image.length - 1);
+					const uri = this._getUriFromIriReference(t.image);
 
 					this._handleTypeAssertion(result, t, uri, i);
 					this._handleUriReference(result, t, uri);

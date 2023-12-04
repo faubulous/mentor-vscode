@@ -45,7 +45,7 @@ export class ResourceNode extends vscode.TreeItem {
 	protected getTooltip(): vscode.MarkdownString {
 		let result = '';
 
-		if (this.repository) {
+		if (this.repository?.store) {
 			const s = n3.DataFactory.namedNode(this.uri);
 
 			for (let d of this.repository.store.match(s, skos.definition, null, null)) {
