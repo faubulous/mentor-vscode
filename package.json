@@ -19,6 +19,7 @@
   "main": "./out/extension.js",
   "scripts": {
     "vscode:prepublish": "npm run package",
+    "compile:font": "node ./build/update-font.js",
     "compile": "node ./esbuild.js",
     "package": "NODE_ENV=production node ./esbuild.js",
     "watch": "node ./esbuild.js --watch",
@@ -69,7 +70,11 @@
           ".nt",
           ".n3"
         ],
-        "configuration": "./src/languages/language-config-turtle.json"
+        "configuration": "./src/languages/language-config-turtle.json",
+        "icon": {
+          "light": "./media/icons/ontology-light.svg",
+          "dark": "./media/icons/ontology-dark.svg"
+        }
       },
       {
         "id": "nquads",
@@ -80,7 +85,11 @@
         "extensions": [
           ".nq"
         ],
-        "configuration": "./src/languages/language-config-turtle.json"
+        "configuration": "./src/languages/language-config-turtle.json",
+        "icon": {
+          "light": "./media/icons/ontology-light.svg",
+          "dark": "./media/icons/ontology-dark.svg"
+        }
       },
       {
         "id": "turtle",
@@ -91,7 +100,11 @@
         "extensions": [
           ".ttl"
         ],
-        "configuration": "./src/languages/language-config-turtle.json"
+        "configuration": "./src/languages/language-config-turtle.json",
+        "icon": {
+          "light": "./media/icons/ontology-light.svg",
+          "dark": "./media/icons/ontology-dark.svg"
+        }
       },
       {
         "id": "trig",
@@ -102,7 +115,11 @@
         "extensions": [
           ".trig"
         ],
-        "configuration": "./src/languages/language-config-trig.json"
+        "configuration": "./src/languages/language-config-trig.json",
+        "icon": {
+          "light": "./media/icons/ontology-light.svg",
+          "dark": "./media/icons/ontology-dark.svg"
+        }
       },
       {
         "id": "sparql",
@@ -113,20 +130,28 @@
         "extensions": [
           ".sparql"
         ],
-        "configuration": "./src/languages/language-config-sparql.json"
+        "configuration": "./src/languages/language-config-sparql.json",
+        "icon": {
+          "light": "./media/icons/sparql-light.svg",
+          "dark": "./media/icons/sparql-dark.svg"
+        }
       }
     ],
     "semanticTokenScopes": [
       {
         "language": "turtle",
         "scopes": {
-          "namespace": ["storage.modifier.turtle"]
+          "namespace": [
+            "storage.modifier.turtle"
+          ]
         }
       },
       {
         "language": "sparql",
         "scopes": {
-          "namespace": ["storage.modifier.turtle"]
+          "namespace": [
+            "storage.modifier.turtle"
+          ]
         }
       }
     ],
@@ -213,19 +238,19 @@
       },
       {
         "command": "mentor.command.selectClass",
-        "title": "Open in Editor",
+        "title": "Go to Definition",
         "icon": "$(go-to-file)",
         "when": false
       },
       {
         "command": "mentor.command.selectProperty",
-        "title": "Open in Editor",
+        "title": "Go to Definition",
         "icon": "$(go-to-file)",
         "when": false
       },
       {
         "command": "mentor.command.selectIndividual",
-        "title": "Open in Editor",
+        "title": "Go to Definition",
         "icon": "$(go-to-file)",
         "when": false
       },
@@ -233,10 +258,6 @@
         "command": "mentor.command.openExternal",
         "title": "Open in Browser",
         "icon": "$(globe)"
-      },
-      {
-        "command": "mentor.command.setNamespaceColor",
-        "title": "Select Color"
       },
       {
         "command": "mentor.command.openSettings",
@@ -265,27 +286,22 @@
         {
           "command": "mentor.command.selectClass",
           "when": "view == mentor.classExplorer && viewItem == class",
-          "group": "inline"
+          "group": "navigation"
         },
         {
           "command": "mentor.command.selectProperty",
           "when": "view == mentor.propertyExplorer && viewItem == property",
-          "group": "inline"
+          "group": "navigation"
         },
         {
           "command": "mentor.command.selectIndividual",
           "when": "view == mentor.individualExplorer && viewItem == individual",
-          "group": "inline"
+          "group": "navigation"
         },
         {
           "command": "mentor.command.openExternal",
           "when": "view == mentor.classExplorer && viewItem == class",
           "group": "navigation"
-        },
-        {
-          "command": "mentor.command.setNamespaceColor",
-          "when": "view == mentor.classExplorer && viewItem == class",
-          "group": "2_workspace"
         },
         {
           "command": "mentor.classExplorer.command.deleteEntry",
@@ -294,88 +310,6 @@
         }
       ]
     },
-    "colors": [
-      {
-        "id": "mentor.color.www.w3.org.1999.02.22.rdf.syntax.ns",
-        "description": "Color used for the W3C namespace URIs.",
-        "defaults": {
-          "light": "#569CD6",
-          "dark": "#569CD6"
-        }
-      },
-      {
-        "id": "mentor.color.www.w3.org.2000.01.rdf.schema",
-        "description": "Color used for the W3C namespace URIs.",
-        "defaults": {
-          "light": "#569CD6",
-          "dark": "#569CD6"
-        }
-      },
-      {
-        "id": "mentor.color.www.w3.org.2001.XMLSchema",
-        "description": "Color used for the W3C namespace URIs.",
-        "defaults": {
-          "light": "#569CD6",
-          "dark": "#569CD6"
-        }
-      },
-      {
-        "id": "mentor.color.www.w3.org.2002.07.owl",
-        "description": "Color used for the W3C namespace URIs.",
-        "defaults": {
-          "light": "#569CD6",
-          "dark": "#569CD6"
-        }
-      },
-      {
-        "id": "mentor.color.www.w3.org.ns.rdfa",
-        "description": "Color used for the W3C namespace URIs.",
-        "defaults": {
-          "light": "#569CD6",
-          "dark": "#569CD6"
-        }
-      },
-      {
-        "id": "mentor.color.xmlns.com.foaf.0.1",
-        "description": "Color used for the FOAF namespace URIs.",
-        "defaults": {
-          "light": "#F7D633",
-          "dark": "#F7D633"
-        }
-      },
-      {
-        "id": "mentor.color.purl.org.dc.elements.1.1",
-        "description": "Color used for the Dublin Core namespace URIs.",
-        "defaults": {
-          "light": "#FF9501",
-          "dark": "#FF9501"
-        }
-      },
-      {
-        "id": "mentor.color.purl.org.dc.dcmitype",
-        "description": "Color used for the Dublin Core namespace URIs.",
-        "defaults": {
-          "light": "#FF9501",
-          "dark": "#FF9501"
-        }
-      },
-      {
-        "id": "mentor.color.schema.org",
-        "description": "Color used for the Schema.org namespace URIs.",
-        "defaults": {
-          "light": "#bc0d0d",
-          "dark": "#bc0d0d"
-        }
-      },
-      {
-        "id": "mentor.color.w3id.org.semanticarts.ns.ontology.gist",
-        "description": "Color used for the Gist namespace URIs.",
-        "defaults": {
-          "light": "#005A7D",
-          "dark": "#005A7D"
-        }
-      }
-    ],
     "configurationDefaults": {
       "[sparql]": {
         "editor.wordBasedSuggestionsMode": "allDocuments"

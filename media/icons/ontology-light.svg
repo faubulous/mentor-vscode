@@ -5,7 +5,7 @@
    viewBox="0 0 16 16"
    version="1.1"
    id="svg1"
-   sodipodi:docname="4-rdf-individual.svg"
+   sodipodi:docname="ontology.svg"
    inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -23,15 +23,33 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="35.57631"
-     inkscape:cx="4.0898002"
-     inkscape:cy="5.2844154"
+     inkscape:zoom="25.15625"
+     inkscape:cx="9.6397515"
+     inkscape:cy="10.971429"
      inkscape:window-width="1920"
      inkscape:window-height="1010"
      inkscape:window-x="-6"
      inkscape:window-y="-6"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg1" />
+     inkscape:current-layer="svg1"
+     showgrid="true">
+    <inkscape:grid
+       id="grid2"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="1"
+       spacingy="1"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       dotted="false"
+       gridanglex="30"
+       gridanglez="30"
+       visible="true" />
+  </sodipodi:namedview>
   <!-- Generator: Sketch 40.3 (33839) - http://www.bohemiancoding.com/sketch -->
   <title
      id="title1">Slice</title>
@@ -49,7 +67,8 @@
     </rdf:RDF>
   </metadata>
   <path
-     id="path3"
-     style="stroke-width:0.8"
-     d="M 12,8 A 4,4 0 0 1 8,12 4,4 0 0 1 4,8 4,4 0 0 1 8,4 4,4 0 0 1 12,8 Z" />
+     id="path1"
+     style="fill:#000000;stroke:none;stroke-width:2.66835;stroke-dasharray:5.33669, 2.66835"
+     d="M 0.70249608 -0.22469105 L -1.7484602 6.1554188 L 2.552373 11.467765 L 9.3041625 10.400001 L 11.755119 4.0198914 L 7.4542855 -1.2924547 L 0.70249608 -0.22469105 z M 1.3645081 0.59231203 L 6.4882613 -0.18377473 L 4.6337221 4.5781819 L -0.44896358 5.4108768 L 1.3645081 0.59231203 z M -0.25676768 6.4299792 L 4.7332447 5.6117699 L 8.0107967 9.6782207 L 2.988296 10.438139 L -0.25676768 6.4299792 z M 7.4328548 0.2498482 L 10.657184 4.2325145 L 8.8248357 9.0982002 L 5.5628348 5.0508694 L 7.4328548 0.2498482 z "
+     transform="matrix(0.78532616,0.60005311,-0.63873508,0.73776662,7.3204184,1.2442346)" />
 </svg>

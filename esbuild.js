@@ -44,7 +44,7 @@ const webviewConfig = {
 };
 
 const getLanguageConfig = (type, language) => {
-  const name = language ? `${type}-${language}` : type;
+  const file = language ? `${language}-language-${type}` : `language-${type}`;
   return {
     ...baseConfig,
     // Don't bundle the language server or client as this will result in errors.
@@ -52,9 +52,9 @@ const getLanguageConfig = (type, language) => {
     target: "es2020",
     format: "cjs",
     entryPoints: [
-      `./src/languages/language-${name}.ts`
+      `./src/languages/${file}.ts`
     ],
-    outfile: `./out/language-${name}.js`
+    outfile: `./out/${file}.js`
   }
 }
 
