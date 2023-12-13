@@ -1,4 +1,3 @@
-import path = require('path');
 import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions, TransportKind } from 'vscode-languageclient/node';
 
@@ -44,7 +43,7 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 		this.channelName = `Mentor Language (${languageName})`;
 		this.channelId = `mentor.language.${languageId}`;
 		this.channel = vscode.window.createOutputChannel(this.channelName, this.channelId);
-		this.serverPath = path.join('out', `${languageId}-language-server.js`);
+		this.serverPath = `out/${languageId}-language-server.js`;
 	}
 
 	start(context: vscode.ExtensionContext) {

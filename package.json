@@ -2,7 +2,8 @@
   "name": "mentor",
   "displayName": "Mentor",
   "description": "Create ontologies and knowledge graph projects with Visual Studio code.",
-  "version": "0.0.1",
+  "icon": "media/icons/mentor.png",
+  "version": "0.1.0",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL",
@@ -18,11 +19,11 @@
   ],
   "main": "./out/extension.js",
   "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile:font": "node ./build/update-font.js",
-    "compile": "node ./esbuild.js",
-    "package": "NODE_ENV=production node ./esbuild.js",
-    "watch": "node ./esbuild.js --watch",
+    "build": "node ./build.js",
+    "build:watch": "node ./build.js --watch",
+    "build:font": "node ./build-font.js",
+    "package": "set NODE_ENV=production && npm run build && vsce package --no-dependencies -o out/mentor.vsix",
+    "publish:local": "npm run package && code --install-extension out/mentor.vsix --force",
     "test": "npx jest",
     "lint": "eslint src --ext ts"
   },
@@ -192,6 +193,32 @@
         }
       }
     },
+    "colors": [
+      {
+        "id": "mentor.color.class",
+        "description": "Color used for tree nodes representing class or class references.",
+        "defaults": {
+          "light": "#92638e",
+          "dark": "#c586c0"
+        }
+      },
+      {
+        "id": "mentor.color.individual",
+        "description": "Color used for tree nodes representing literals.",
+        "defaults": {
+          "light": "#4176a3",
+          "dark": "#569cd6"
+        }
+      },
+      {
+        "id": "mentor.color.literal",
+        "description": "Color used for tree nodes representing individuals.",
+        "defaults": {
+          "light": "#9b6d5a",
+          "dark": "#ce9178"
+        }
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {

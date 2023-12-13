@@ -5,6 +5,8 @@ import { ResourceNode } from './resource-node';
 export class PropertyNode extends ResourceNode {
 	contextValue = 'property';
 
+	rangeType: 'class' | 'literal' = 'class';
+
 	constructor(
 		protected readonly repository: PropertyRepository,
 		public readonly uri: string
@@ -22,6 +24,10 @@ export class PropertyNode extends ResourceNode {
 		};
 	}
 
+	override getColor() {
+		return new vscode.ThemeColor(`mentor.color.${this.rangeType}`);
+	}
+
 	override getIcon(): vscode.ThemeIcon {
 		let icon = 'arrow-right';
 
@@ -30,6 +36,7 @@ export class PropertyNode extends ResourceNode {
 		switch (range) {
 			case xsd.date.id:
 			case xsd.dateTime.id: {
+				this.rangeType = 'literal';
 				icon = 'calendar';
 				break;
 			}
@@ -44,21 +51,28 @@ export class PropertyNode extends ResourceNode {
 			case xsd.unsignedShort.id:
 			case xsd.unsingedLong.id:
 			case xsd.usignedByte.id: {
+				this.rangeType = 'literal';
 				icon = 'symbol-number';
 				break;
 			}
 			case xsd.boolean.id: {
+				this.rangeType = 'literal';
 				icon = 'symbol-boolean';
 				break;
 			}
 			case xsd.string.id: {
+				this.rangeType = 'literal';
 				icon = 'symbol-text';
 				break;
 			}
 			case xsd.base64Binary.id: {
+				this.rangeType = 'literal';
 				icon = 'file-binary';
 				break;
 			}
+			default:
+				this.rangeType = 'class';
+				break;
 		}
 
 		return new vscode.ThemeIcon(icon, this.getColor());
