@@ -1,12 +1,21 @@
 {
   "name": "mentor",
   "displayName": "Mentor",
-  "description": "Create ontologies and knowledge graph projects with Visual Studio code.",
+  "description": "Create RDF ontologies and knowledge graph projects with Visual Studio code.",
+  "keywords": [
+    "rdf",
+    "rdfs",
+    "owl",
+    "shacl",
+    "ontology",
+    "vocabulary"
+  ],
   "icon": "media/icons/mentor.png",
   "version": "0.1.0",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL",
+  
   "repository": {
     "type": "git",
     "url": "https://github.com/faubulous/mentor-vscode"
@@ -15,15 +24,15 @@
     "vscode": "^1.74.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages"
   ],
   "main": "./out/extension.js",
   "scripts": {
     "build": "node ./build.js",
     "build:watch": "node ./build.js --watch",
     "build:font": "node ./build-font.js",
-    "package": "set NODE_ENV=production && npm run build && vsce package --no-dependencies -o out/mentor.vsix",
-    "publish:local": "npm run package && code --install-extension out/mentor.vsix --force",
+    "package": "set NODE_ENV=production && npm run build && vsce package --dependencies -o out/mentor.vsix",
+    "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
     "test": "npx jest",
     "lint": "eslint src --ext ts"
   },
@@ -48,7 +57,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.8",
+    "@faubulous/mentor-rdf": "^0.1.9",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -56,9 +65,7 @@
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.11"
   },
-  "activationEvents": [
-    "onLanguage:plaintext"
-  ],
+  "activationEvents": [],
   "contributes": {
     "languages": [
       {
@@ -198,7 +205,7 @@
         "id": "mentor.color.class",
         "description": "Color used for tree nodes representing class or class references.",
         "defaults": {
-          "light": "#92638e",
+          "light": "#af00e2",
           "dark": "#c586c0"
         }
       },
@@ -206,16 +213,32 @@
         "id": "mentor.color.individual",
         "description": "Color used for tree nodes representing literals.",
         "defaults": {
-          "light": "#4176a3",
-          "dark": "#569cd6"
+          "light": "#af00e2",
+          "dark": "#c586c0"
         }
       },
       {
-        "id": "mentor.color.literal",
-        "description": "Color used for tree nodes representing individuals.",
+        "id": "mentor.color.objectProperty",
+        "description": "Color used for tree nodes representing object properties.",
         "defaults": {
-          "light": "#9b6d5a",
+          "light": "#af00e2",
+          "dark": "#c586c0"
+        }
+      },
+      {
+        "id": "mentor.color.dataProperty",
+        "description": "Color used for tree nodes representing data property.",
+        "defaults": {
+          "light": "#a31515",
           "dark": "#ce9178"
+        }
+      },
+      {
+        "id": "mentor.color.annotationProperty",
+        "description": "Color used for tree nodes representing annotation properties.",
+        "defaults": {
+          "light": "#005500",
+          "dark": "#6a9742"
         }
       }
     ],
@@ -224,7 +247,7 @@
         {
           "id": "mentor",
           "title": "Mentor",
-          "icon": "media/icons/0-mentor.svg"
+          "icon": "media/glyphs/0-mentor.svg"
         }
       ]
     },
@@ -288,7 +311,7 @@
       },
       {
         "command": "mentor.command.openSettings",
-        "title": "Mentor: Open Settings",
+        "title": "Settings",
         "icon": "$(gear)"
       }
     ],

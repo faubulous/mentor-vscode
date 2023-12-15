@@ -14,6 +14,7 @@ const baseConfig = {
   bundle: true,
   minify: productionBuild,
   sourcemap: !productionBuild,
+  external: ["vscode"],
 };
 
 console.log("Build options:", baseConfig);
@@ -24,10 +25,10 @@ const extensionConfig = {
   ...baseConfig,
   platform: "node",
   format: "cjs",
+  target: "es2020",
   mainFields: ["module", "main"],
   entryPoints: ["./src/extension.ts"],
-  outfile: "./out/extension.js",
-  external: ["vscode"],
+  outfile: "./out/extension.js"
 };
 
 // Config for webview source code (to be run in a web-based context)
@@ -50,19 +51,18 @@ const webviewConfig = {
   ],
 };
 
+// Note: The platform 'node' is required for the 'vscode-languageserver' functions to work.
 const getLanguageConfig = (type, language) => {
   const file = language ? `${language}-language-${type}` : `language-${type}`;
   return {
     ...baseConfig,
-    // Don't bundle the language server or client as this will result in errors.
-    bundle: false,
+    platform: "node",
     format: "cjs",
     target: "es2020",
     entryPoints: [
       `./src/languages/${file}.ts`
     ],
-    outfile: `./out/${file}.js`,
-    // external: ["vscode"],
+    outfile: `./out/${file}.js`
   }
 }
 
