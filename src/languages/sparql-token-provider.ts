@@ -279,7 +279,7 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 };
 
 export class SparqlTokenProvider {
-	static activate(context: vscode.ExtensionContext) {
+	register(): vscode.Disposable[] {
 		return [
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'sparql' }, provider, legend)
 		];

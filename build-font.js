@@ -2,12 +2,14 @@ const webfont = require('webfont');
 const fs = require('fs');
 const path = require('path');
 
-const targetFile = path.join(__dirname, '..', 'media', 'mentor-icons.woff');
-const sourceFolder = path.join(__dirname, '..', 'media', 'icons');
+const targetFile = path.join(__dirname, 'media', 'mentor-icons.woff');
+const sourceFolder = path.join(__dirname, 'media', 'glyphs');
+
+console.log(`Font source: ${sourceFolder}`);
 
 const icons = fs.readdirSync(sourceFolder)
   .filter(f => f.toLowerCase().endsWith('.svg'))
-  .map(f => path.join(sourceFolder, f));
+  .map(f => path.join(sourceFolder, f).replace(/\\/g, '/'));
 
 async function generateFont() {
   try {
@@ -23,7 +25,7 @@ async function generateFont() {
 
     fs.writeFileSync(targetFile, result.woff, 'binary');
 
-    console.log(`Font created at ${targetFile}`);
+    console.log(`Font output: ${targetFile}`);
   } catch (e) {
     console.error('Font creation failed.', e);
   }

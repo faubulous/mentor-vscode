@@ -21,35 +21,33 @@ const clients: LanguageClientBase[] = [
 	new SparqlLanguageClient()
 ];
 
-let providers: Disposable[] = [];
+const providers: Disposable[] = [
+	...new TurtleTokenProvider().register(),
+	...new SparqlTokenProvider().register()
+];
 
 export function activate(context: ExtensionContext) {
+	// Start the language clients..
+	for (const client of clients) {
+		client.start(context);
+	}
+
+	// Then activate the user interface components..
 	SettingsModule.activate(context);
 	ResourceModule.activate(context);
 	ClassModule.activate(context);
 	PropertyModule.activate(context);
 	IndividualModule.activate(context);
-
-	providers = [
-		...TurtleTokenProvider.activate(context),
-		...SparqlTokenProvider.activate(context)
-	];
-
-	for (const client of clients) {
-		client.start(context);
-	}
 }
 
 export function deactivate(): Thenable<void> {
-	const promises: Thenable<void>[] = [];
+	return new Promise(async () => {
+		for (const client of clients) {
+			await client.dispose();
+		}
 
-	for (const client of clients) {
-		promises.push(client.stop());
-	}
-
-	for (const provider of providers) {
-		provider.dispose();
-	}
-
-	return Promise.all(promises).then(() => undefined);
+		for (const provider of providers) {
+			provider.dispose();
+		}
+	});
 }

@@ -10,7 +10,7 @@ import { ResourceNodeProvider } from './resource-node-provider';
 export class IndividualNodeProvider extends ResourceNodeProvider<IndividualRepository> {
 
 	override getRepository(context: DocumentContext): IndividualRepository | undefined {
-		return new IndividualRepository(context.store);
+		return context.store ? new IndividualRepository(context.store) : undefined;
 	}
 
 	override getParent(uri: string): string | undefined {

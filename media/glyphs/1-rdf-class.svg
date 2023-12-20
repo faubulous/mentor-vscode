@@ -5,7 +5,7 @@
    viewBox="0 0 16 16"
    version="1.1"
    id="svg1"
-   sodipodi:docname="4-rdf-individual.svg"
+   sodipodi:docname="1-rdf-class.svg"
    inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -24,8 +24,8 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:zoom="35.57631"
-     inkscape:cx="4.0898002"
-     inkscape:cy="7.5331028"
+     inkscape:cx="8.587175"
+     inkscape:cy="9.6693558"
      inkscape:window-width="1920"
      inkscape:window-height="1010"
      inkscape:window-x="-6"
@@ -39,14 +39,6 @@
      id="desc1">Created with Sketch.</desc>
   <defs
      id="defs1" />
-  <rect
-     style="fill:#000000;stroke-width:1.125;stroke-dasharray:1.14047, 1.14047"
-     id="rect1"
-     width="6"
-     height="6"
-     x="5"
-     y="5"
-     ry="0.75" />
   <metadata
      id="metadata1">
     <rdf:RDF>
@@ -56,4 +48,8 @@
       </cc:Work>
     </rdf:RDF>
   </metadata>
+  <path
+     id="path2"
+     style="stroke-width:4.65802;stroke-dasharray:4.72209, 4.72209"
+     d="M 8 2 A 6 6 0 0 0 2 8 A 6 6 0 0 0 8 14 A 6 6 0 0 0 14 8 A 6 6 0 0 0 8 2 z M 8 3 A 5 5 0 0 1 13 8 A 5 5 0 0 1 8 13 A 5 5 0 0 1 3 8 A 5 5 0 0 1 8 3 z " />
 </svg>

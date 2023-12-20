@@ -1,34 +1,42 @@
 const { build } = require("esbuild");
 const { copy } = require("esbuild-plugin-copy");
+const fs = require("fs");
 
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
 
+var productionBuild = process.env.NODE_ENV?.trim() === "production";
+
+console.log("Environment:", productionBuild ? "production" : "development");
+
 /** @type BuildOptions */
 const baseConfig = {
   bundle: true,
-  minify: process.env.NODE_ENV === "production",
-  sourcemap: process.env.NODE_ENV !== "production",
+  minify: productionBuild,
+  sourcemap: !productionBuild,
+  external: ["vscode"],
 };
+
+console.log("Build options:", baseConfig);
 
 // Config for extension source code (to be run in a Node-based context)
 /** @type BuildOptions */
 const extensionConfig = {
   ...baseConfig,
   platform: "node",
-  mainFields: ["module", "main"],
   format: "cjs",
+  target: "es2020",
+  mainFields: ["module", "main"],
   entryPoints: ["./src/extension.ts"],
-  outfile: "./out/extension.js",
-  external: ["vscode"],
+  outfile: "./out/extension.js"
 };
 
 // Config for webview source code (to be run in a web-based context)
 /** @type BuildOptions */
 const webviewConfig = {
   ...baseConfig,
-  target: "es2020",
   format: "esm",
+  target: "es2020",
   entryPoints: ["./src/extension/webview/main.ts"],
   outfile: "./out/webview.js",
   plugins: [
@@ -43,18 +51,18 @@ const webviewConfig = {
   ],
 };
 
+// Note: The platform 'node' is required for the 'vscode-languageserver' functions to work.
 const getLanguageConfig = (type, language) => {
-  const name = language ? `${type}-${language}` : type;
+  const file = language ? `${language}-language-${type}` : `language-${type}`;
   return {
     ...baseConfig,
-    // Don't bundle the language server or client as this will result in errors.
-    bundle: false,
-    target: "es2020",
+    platform: "node",
     format: "cjs",
+    target: "es2020",
     entryPoints: [
-      `./src/languages/language-${name}.ts`
+      `./src/languages/${file}.ts`
     ],
-    outfile: `./out/language-${name}.js`
+    outfile: `./out/${file}.js`
   }
 }
 
@@ -64,15 +72,13 @@ const getLanguageConfig = (type, language) => {
 const watchConfig = {
   watch: {
     onRebuild(error, result) {
-      console.log("[watch] build started");
+      console.log("[watch] Build started..");
       if (error) {
         error.errors.forEach((error) =>
-          console.error(
-            `> ${error.location.file}:${error.location.line}:${error.location.column}: error: ${error.text}`
-          )
+          console.error(`> ${error.location.file}:${error.location.line}:${error.location.column}: error: ${error.text}`)
         );
       } else {
-        console.log("[watch] build finished");
+        console.log("[watch] Build finished.");
       }
     },
   },
@@ -80,10 +86,16 @@ const watchConfig = {
 
 (async () => {
   try {
+    if (fs.existsSync('./out')) {
+      console.log("Deleting existing out directory..");
+
+      fs.rmSync('./out', { recursive: true });
+    }
+
     const args = process.argv.slice(2);
 
     if (args.includes("--watch")) {
-      console.log("[watch] build started");
+      console.log("[watch] Build started..");
       await build({ ...extensionConfig, ...watchConfig });
       await build({ ...webviewConfig, ...watchConfig });
       await build({ ...getLanguageConfig('server'), ...watchConfig });
@@ -94,9 +106,9 @@ const watchConfig = {
       await build({ ...getLanguageConfig('client', 'turtle'), ...watchConfig });
       await build({ ...getLanguageConfig('client', 'trig'), ...watchConfig });
       await build({ ...getLanguageConfig('client', 'sparql'), ...watchConfig });
-      console.log("[watch] build finished");
+      console.log("[watch] Build finished.");
     } else {
-      console.log("build started");
+      console.log("Build started..");
       await build(extensionConfig);
       await build(webviewConfig);
       await build(getLanguageConfig('server'));
@@ -107,7 +119,7 @@ const watchConfig = {
       await build(getLanguageConfig('client', 'turtle'));
       await build(getLanguageConfig('client', 'trig'));
       await build(getLanguageConfig('client', 'sparql'));
-      console.log("build finished");
+      console.log("Build finished.");
     }
   } catch (err) {
     process.stderr.write(err.stderr);

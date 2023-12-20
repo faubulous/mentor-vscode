@@ -22,16 +22,6 @@ enum SemanticTokenModifier {
 
 const legend = new vscode.SemanticTokensLegend(Object.values(SemanticTokenType), Object.values(SemanticTokenModifier));
 
-function countLeadingSpaces(str: string) {
-	for (var i = 0; i < str.length; i++) {
-		if (str[i] != " " && str[i] != "\t") {
-			return (i);
-		}
-	};
-
-	return (str.length);
-}
-
 const provider: vscode.DocumentSemanticTokensProvider = {
 	provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.ProviderResult<vscode.SemanticTokens> {
 		const uri = document.uri.toString();
@@ -144,8 +134,18 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 	}
 };
 
+function countLeadingSpaces(str: string) {
+	for (var i = 0; i < str.length; i++) {
+		if (str[i] != " " && str[i] != "\t") {
+			return (i);
+		}
+	};
+
+	return (str.length);
+}
+
 export class TurtleTokenProvider {
-	static activate(context: vscode.ExtensionContext) {
+	register(): vscode.Disposable[] {
 		return [
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'turtle' }, provider, legend),
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'trig' }, provider, legend),

@@ -1,6 +1,5 @@
 import { RdfSyntax, Tokenizer, TokenizerResult } from '@faubulous/mentor-rdf';
 import { LanguageServerBase } from './language-server';
-import { IToken, TrigParser } from 'millan';
 import { TextDocumentPositionParams, CompletionItem } from 'vscode-languageclient';
 
 class TrigLanguageServer extends LanguageServerBase {

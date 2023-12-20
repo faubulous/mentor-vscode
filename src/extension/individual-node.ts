@@ -20,6 +20,10 @@ export class IndividualNode extends ResourceNode {
 		};
 	}
 
+	override getColor() {
+		return new vscode.ThemeColor("mentor.color.individual");
+	}
+
 	override getIcon(): vscode.ThemeIcon {
 		return new vscode.ThemeIcon('rdf-individual', this.getColor());
 	}

@@ -71,9 +71,7 @@ export class ResourceNode extends vscode.TreeItem {
 	}
 
 	getColor(): vscode.ThemeColor {
-		const id = toJsonId(getNamespaceUri(this.uri));
-
-		return new vscode.ThemeColor('mentor.color.' + id);
+		return new vscode.ThemeColor('descriptionForeground');
 	}
 
 	getIcon(): vscode.ThemeIcon {

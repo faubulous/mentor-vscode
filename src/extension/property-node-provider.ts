@@ -10,7 +10,7 @@ import { ResourceNodeProvider } from './resource-node-provider';
 export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepository> {
 	
 	override getRepository(context: DocumentContext): PropertyRepository | undefined {
-		return new PropertyRepository(context.store);
+		return context?.store ? new PropertyRepository(context.store) : undefined;
 	}
 
 	override getParent(uri: string): string | undefined {

@@ -260,7 +260,7 @@ class MentorExtension {
 
 		const uri = document.uri.toString();
 
-		let context = this.contexts[uri];
+		let context = this.contexts[uri]; 
 
 		if (context && !reload) {
 			return context;
@@ -272,6 +272,12 @@ class MentorExtension {
 
 		this.contexts[uri] = context;
 		this.activeContext = context;
+
+		for(let d of Object.values(this.contexts).filter(c => c.document.isClosed)) {
+			const uri = d.document.uri.toString();
+
+			delete this.contexts[uri];
+		}
 
 		return context;
 	}

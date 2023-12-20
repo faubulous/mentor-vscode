@@ -22,6 +22,10 @@ export class ClassNode extends ResourceNode {
 		};
 	}
 
+	override getColor() {
+		return new vscode.ThemeColor("mentor.color.class");
+	}
+
 	override getIcon() {
 		let icon = 'rdf-class';
 
