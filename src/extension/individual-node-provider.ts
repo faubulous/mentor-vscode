@@ -24,10 +24,6 @@ export class IndividualNodeProvider extends ResourceNodeProvider<IndividualRepos
 
 		let result = this.repository.getIndividuals().sort().map(u => this.getNode(u));
 
-		if (!this.showReferenced) {
-			result = result.filter(u => this.repository?.hasSubject(u));
-		}
-
 		return result;
 	}
 

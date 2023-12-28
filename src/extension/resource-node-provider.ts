@@ -8,8 +8,6 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 
 	protected repository: T | undefined;
 
-	protected showReferenced: boolean = false;
-
 	protected autoRefresh: boolean = true;
 
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
@@ -34,10 +32,6 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 
 	protected abstract getRepository(context: DocumentContext): T | undefined;
 
-	toggleReferenced() {
-		this.showReferenced = !this.showReferenced;
-	}
-
 	refresh(): void {
 		this._onDidChangeTreeData.fire(void 0);
 	}
@@ -49,9 +43,9 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 			this.activateDocument().then((editor) => {
 				let t;
 
-				if(context.typeAssertions[uri]) {
+				if (context.typeAssertions[uri]) {
 					t = context.typeAssertions[uri][0];
-				} else if(context.references[uri]) {
+				} else if (context.references[uri]) {
 					t = context.references[uri][0];
 				} else {
 					return;

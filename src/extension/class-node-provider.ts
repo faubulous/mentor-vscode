@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DocumentContext } from '../mentor';
-import { ClassRepository} from '@faubulous/mentor-rdf';
+import { ClassRepository } from '@faubulous/mentor-rdf';
 import { ClassNode } from './class-node';
 import { ResourceNodeProvider } from './resource-node-provider';
 
@@ -8,6 +8,11 @@ import { ResourceNodeProvider } from './resource-node-provider';
  * A tree node provider for RDF classes.
  */
 export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
+
+	/**
+	 * Indicates whether classes should be included in the tree that are not explicitly defined in the ontology.
+	 */
+	public includeReferenced: boolean = true;
 
 	override getRepository(context: DocumentContext): ClassRepository | undefined {
 		return context?.store ? new ClassRepository(context.store) : undefined;
@@ -22,11 +27,8 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 			return [];
 		}
 
-		let result = this.repository.getSubClasses(uri).sort().map(u => this.getNode(u));
-
-		if (!this.showReferenced) {
-			result = result.filter(u => this.repository?.hasSubject(u) || this.repository?.hasSubClasses(u));
-		}
+		let options = { includeReferencedClasses: this.includeReferenced };
+		let result = this.repository.getSubClasses(uri, options).sort().map(u => this.getNode(u));
 
 		return result;
 	}

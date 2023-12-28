@@ -61,7 +61,13 @@ export abstract class LanguageServerBase {
 	}
 
 	protected log(message: string) {
-		this.connection.console.log(`[Server(${process.pid})] ${message}`);
+		const msg = `[Server(${process.pid})] ${message}`;
+
+		if (this.connection.console) {
+			this.connection.console.log(msg);
+		} else {
+			console.log(msg);
+		}
 	}
 
 	start() {
@@ -190,10 +196,13 @@ export abstract class LanguageServerBase {
 	protected abstract parse(content: string): Promise<TokenizerResult>;
 
 	async validateTextDocument(document: TextDocument): Promise<void> {
+		// The conncetion may not yet be initialized.
+		if(!this.connection) return;
+
 		this.log(`Validating document: ${document.uri}`);
 
 		// In this simple example we get the settings for every validate run.
-		const settings = await this._getDocumentSettings(document.uri);
+		// const settings = await this._getDocumentSettings(document.uri);
 
 		let diagnostics: Diagnostic[] = [];
 

@@ -5,6 +5,7 @@ const path = require('path');
 const targetFile = path.join(__dirname, 'media', 'mentor-icons.woff');
 const sourceFolder = path.join(__dirname, 'media', 'glyphs');
 
+console.log("Building icon font...");
 console.log(`Font source: ${sourceFolder}`);
 
 const icons = fs.readdirSync(sourceFolder)
@@ -29,6 +30,8 @@ async function generateFont() {
   } catch (e) {
     console.error('Font creation failed.', e);
   }
+  
+  console.log();
 }
 
 generateFont();

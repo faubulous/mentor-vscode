@@ -81,9 +81,18 @@ export class DocumentContext {
 			const uri = document.uri.toString();
 
 			try {
-				this._store = await StoreFactory.createFromStream(document.getText(), uri);
+				const text = document.getText();
 
-				new OwlReasoner().expand(this._store, uri, uri + "#inference");
+				const options = { reasoner: new OwlReasoner() };
+				this._store = await StoreFactory.createFromStream(text, uri, options);
+
+				let graph = "";
+
+				for (let q of this._store.readQuads(null, null, null, uri + "#inference")) {
+					graph += `<${q.subject.value}> <${q.predicate.value}> <${q.object.value}> .\n`;
+				}
+
+				console.log(graph);
 			} catch (e) {
 				console.error(e);
 			}
@@ -260,7 +269,7 @@ class MentorExtension {
 
 		const uri = document.uri.toString();
 
-		let context = this.contexts[uri]; 
+		let context = this.contexts[uri];
 
 		if (context && !reload) {
 			return context;
@@ -273,7 +282,7 @@ class MentorExtension {
 		this.contexts[uri] = context;
 		this.activeContext = context;
 
-		for(let d of Object.values(this.contexts).filter(c => c.document.isClosed)) {
+		for (let d of Object.values(this.contexts).filter(c => c.document.isClosed)) {
 			const uri = d.document.uri.toString();
 
 			delete this.contexts[uri];

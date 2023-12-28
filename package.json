@@ -15,7 +15,6 @@
   "publisher": "faubulous",
   "private": false,
   "license": "GPL",
-  
   "repository": {
     "type": "git",
     "url": "https://github.com/faubulous/mentor-vscode"
@@ -28,8 +27,8 @@
   ],
   "main": "./out/extension.js",
   "scripts": {
-    "build": "node ./build.js",
-    "build:watch": "node ./build.js --watch",
+    "build": "node ./build-font.js && node ./build.js",
+    "build:watch": "node ./build-font.js && node ./build.js --watch",
     "build:font": "node ./build-font.js",
     "package": "set NODE_ENV=production && npm run build && vsce package --dependencies -o out/mentor.vsix",
     "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
@@ -57,7 +56,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.9",
+    "@faubulous/mentor-rdf": "^0.1.14",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -192,11 +191,25 @@
           "fontCharacter": "\\e003"
         }
       },
+      "rdf-class-ref-on": {
+        "description": "Referenced class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e004"
+        }
+      },
+      "rdf-class-ref-off": {
+        "description": "Referenced class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e005"
+        }
+      },
       "rdf-individual": {
         "description": "Individual icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e004"
+          "fontCharacter": "\\e006"
         }
       }
     },
@@ -254,24 +267,29 @@
     "views": {
       "mentor": [
         {
-          "id": "mentor.classExplorer",
+          "id": "mentor.view.classTree",
           "name": "Classes"
         },
         {
-          "id": "mentor.propertyExplorer",
+          "id": "mentor.view.propertyTree",
           "name": "Properties"
         },
         {
-          "id": "mentor.individualExplorer",
+          "id": "mentor.view.individualTree",
           "name": "Individuals"
         }
       ]
     },
     "commands": [
       {
-        "command": "mentor.classExplorer.command.toggleReferenced",
-        "title": "Show or hide referenced terms",
-        "icon": "$(color-mode)"
+        "command": "mentor.command.showReferencedClasses",
+        "title": "Show referenced classes",
+        "icon": "$(rdf-class-ref)"
+      },
+      {
+        "command": "mentor.command.hideReferencedClasses",
+        "title": "Hide referenced classes",
+        "icon": "$(rdf-class-ref-off)"
       },
       {
         "command": "mentor.classExplorer.command.refreshEntry",
@@ -318,44 +336,50 @@
     "menus": {
       "view/title": [
         {
-          "command": "mentor.classExplorer.command.toggleReferenced",
-          "when": "view == mentor.classExplorer",
+          "command": "mentor.command.showReferencedClasses",
+          "when": "view == mentor.view.classTree && classTree.showReferenced == false",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.command.hideReferencedClasses",
+          "when": "view == mentor.view.classTree && classTree.showReferenced == true",
           "group": "navigation@1"
         },
         {
           "command": "mentor.classExplorer.command.refreshEntry",
-          "when": "view == mentor.classExplorer",
+          "when": "view == mentor.view.classTree",
           "group": "navigation@2"
         },
         {
           "command": "mentor.command.openSettings",
-          "group": "2_configuration"
+          "group": "2_configuration",
+          "when": "view == mentor.view.classTree || view == mentor.view.propertyTree || view == mentor.view.individualTree"
         }
       ],
       "view/item/context": [
         {
           "command": "mentor.command.selectClass",
-          "when": "view == mentor.classExplorer && viewItem == class",
+          "when": "view == mentor.view.classTree && viewItem == class",
           "group": "navigation"
         },
         {
           "command": "mentor.command.selectProperty",
-          "when": "view == mentor.propertyExplorer && viewItem == property",
+          "when": "view == mentorview.propertyTree && viewItem == property",
           "group": "navigation"
         },
         {
           "command": "mentor.command.selectIndividual",
-          "when": "view == mentor.individualExplorer && viewItem == individual",
+          "when": "view == mentor.view.individualTree && viewItem == individual",
           "group": "navigation"
         },
         {
           "command": "mentor.command.openExternal",
-          "when": "view == mentor.classExplorer && viewItem == class",
+          "when": "view == mentor.view.classTree && viewItem == class",
           "group": "navigation"
         },
         {
           "command": "mentor.classExplorer.command.deleteEntry",
-          "when": "view == mentor.classExplorer && viewItem == class",
+          "when": "view == mentor.view.classTree && viewItem == class",
           "group": "7_modification"
         }
       ]

@@ -5,6 +5,8 @@ const fs = require("fs");
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
 
+console.log("Building extension..");
+
 var productionBuild = process.env.NODE_ENV?.trim() === "production";
 
 console.log("Environment:", productionBuild ? "production" : "development");
@@ -17,7 +19,7 @@ const baseConfig = {
   external: ["vscode"],
 };
 
-console.log("Build options:", baseConfig);
+console.log("Options:", baseConfig);
 
 // Config for extension source code (to be run in a Node-based context)
 /** @type BuildOptions */
