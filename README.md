@@ -1,6 +1,7 @@
-# Mentor
+# Mentor RDF for Visual Studio Code
+[![License: GPL-V3](https://img.shields.io/badge/license-GPL3-brightgree)](./LICENSE)
 
-Powerful editing support for RDF ontologies and knowledge graph projects in Visual Studio Code.
+This extension provides powerful editing support for RDF ontologies and knowledge graph projects in Visual Studio Code.
 
 ## Features
 
@@ -33,22 +34,39 @@ After installation, you may need to reload Visual Studio Code to activate the ex
 
 ## Contributing
 
-Contributions are always welcome! Please read the contribution guidelines first.
+Contributions are always welcome! To start off, fork this repository on GitHub and then clone the fork to your local computer.
 
 ### Building
+
+Once cloned, add an upstream remote pointing to the primary toolkit repo.
+
 ```bash
 git clone https://github.com/faubulous/mentor-vscode.git
-```
-```bash
 cd mentor-vscode
 ```
+
+Install the project dependencies.
+
 ```bash
 npm install
 ```
+
+Create a development build of the extension.
+
 ```bash
 npm run build:watch
 ```
-Start debugging.
+
+### Debugging
+
+To start debugging the 'Launch Extension' configuration, follow these steps:
+
+1. Open Visual Studio Code.
+2. Click on the Run view icon on the Sidebar (or press `Ctrl+Shift+D`).
+3. At the top of the Run view, in the dropdown list of debug configurations, select 'Launch Extension'.
+5. After the configuration is set, you can start debugging by clicking on the green 'Start Debugging' button (or press `F5`).
+
+This will start a new instance of Visual Studio Code with the Mentor extension loaded. You can set breakpoints in your code to stop execution and inspect variables, call stack, and so on.
 
 ### Packaging 
 ```bash
@@ -60,4 +78,4 @@ npm run package:install
 ```
 
 # License
-Distributed under the GPL Verison 3 License. See LICENSE for more information.
+Distributed under the [GPL Verison 3 License](LICENSE). See LICENSE for more information.
