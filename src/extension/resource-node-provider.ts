@@ -4,7 +4,7 @@ import { mentor, DocumentContext } from '../mentor';
 export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider<string> {
 	protected readonly nodes: any = {};
 
-	protected context: DocumentContext | undefined;
+	public context: DocumentContext | undefined;
 
 	protected repository: T | undefined;
 
@@ -15,7 +15,9 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 	readonly onDidChangeTreeData: vscode.Event<string | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
-		mentor.onDidChangeVocabularyContext((context) => this._onVocabularyChanged(context));
+		mentor.onDidChangeVocabularyContext((context) => {
+			this._onVocabularyChanged(context);
+		});
 
 		if (mentor.activeContext) {
 			this._onVocabularyChanged(mentor.activeContext);
@@ -26,14 +28,16 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 		if (e) {
 			this.context = e;
 			this.repository = this.getRepository(e);
-			this.refresh();
+			this._onDidChangeTreeData.fire(void 0);
 		}
 	}
 
 	protected abstract getRepository(context: DocumentContext): T | undefined;
 
 	refresh(): void {
-		this._onDidChangeTreeData.fire(void 0);
+		if (this.context) {
+			this._onVocabularyChanged(this.context);
+		}
 	}
 
 	select(uri: string) {
@@ -89,4 +93,6 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 	abstract getChildren(uri: string): string[];
 
 	abstract getTreeItem(uri: string): vscode.TreeItem;
+
+	abstract getTotalItemCount(): number;
 }

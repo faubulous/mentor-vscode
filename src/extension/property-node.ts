@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { Quad, NamedNode } from 'n3';
-import { PropertyRepository, xsd, rdf, owl } from '@faubulous/mentor-rdf';
+import { NamedNode } from 'n3';
+import { PropertyRepository, xsd, rdf, rdfs, owl } from '@faubulous/mentor-rdf';
 import { ResourceNode } from './resource-node';
 
 export class PropertyNode extends ResourceNode {
@@ -66,6 +66,7 @@ export class PropertyNode extends ResourceNode {
 				icon = 'symbol-boolean';
 				break;
 			}
+			case rdfs.Literal.id:
 			case xsd.string.id: {
 				this.propertyType = 'dataProperty';
 				icon = 'symbol-text';

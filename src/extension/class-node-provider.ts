@@ -19,7 +19,13 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 	}
 
 	override getParent(uri: string): string | undefined {
-		return undefined;
+		if (!this.repository) {
+			return undefined;
+		}
+
+		let result = this.repository.getSuperClasses(uri).sort().slice(0, 1).map(u => this.getNode(u));
+
+		return result.length > 0 ? result[0] : undefined;
 	}
 
 	override getChildren(uri: string): string[] {
@@ -52,5 +58,9 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 		// );
 
 		return new ClassNode(this.repository, uri);
+	}
+
+	override getTotalItemCount(): number {
+		return this.repository ? this.repository.getClasses({ includeReferencedClasses: false }).length : 0;
 	}
 }

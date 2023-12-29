@@ -1,34 +1,49 @@
-import { ExtensionContext, commands, window } from "vscode";
+import { ExtensionContext, TreeView, commands, window, workspace } from "vscode";
 import { ClassNodeProvider } from "./class-node-provider";
 
 /**
  * Provides the class explorer and related commands.
  */
 export class ClassModule {
+	static updateItemCount(tree: TreeView<string>, provider: ClassNodeProvider) {
+		tree.description = provider.getTotalItemCount() + " definitions";
+	}
+
 	static activate(context: ExtensionContext): void {
-		const classProvider = new ClassNodeProvider();
-		window.registerTreeDataProvider('mentor.view.classTree', classProvider);
+		const provider = new ClassNodeProvider();
 
-		commands.executeCommand('setContext', 'classTree.showReferenced', classProvider.includeReferenced);
+		window.registerTreeDataProvider('mentor.view.classTree', provider);
 
-		commands.registerCommand('mentor.command.selectClass', (uri: string) => classProvider.select(uri));
+		const tree = window.createTreeView('mentor.view.classTree', { treeDataProvider: provider, showCollapseAll: true });
+
+		this.updateItemCount(tree, provider);
+		
+		workspace.onDidChangeTextDocument((e) => {
+			if (e.document === provider.context?.document) {
+				this.updateItemCount(tree, provider);
+			}
+		});
+
+		commands.executeCommand('setContext', 'classTree.showReferenced', provider.includeReferenced);
+
+		commands.registerCommand('mentor.command.selectClass', (uri: string) => provider.select(uri));
 		commands.registerCommand('mentor.classExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
 		commands.registerCommand('mentor.classExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
 		commands.registerCommand('mentor.classExplorer.command.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));
-		commands.registerCommand('mentor.classExplorer.command.refreshEntry', () => classProvider.refresh());
+		commands.registerCommand('mentor.classExplorer.command.refreshEntry', () => provider.refresh());
 
 		commands.registerCommand('mentor.command.showReferencedClasses', () => {
-			classProvider.includeReferenced = true;
-			classProvider.refresh();
+			provider.includeReferenced = true;
+			provider.refresh();
 
-			commands.executeCommand('setContext', 'classTree.showReferenced', classProvider.includeReferenced);
+			commands.executeCommand('setContext', 'classTree.showReferenced', provider.includeReferenced);
 		});
 
 		commands.registerCommand('mentor.command.hideReferencedClasses', () => {
-			classProvider.includeReferenced = false;
-			classProvider.refresh();
+			provider.includeReferenced = false;
+			provider.refresh();
 
-			commands.executeCommand('setContext', 'classTree.showReferenced', classProvider.includeReferenced);
+			commands.executeCommand('setContext', 'classTree.showReferenced', provider.includeReferenced);
 		});
 	}
 }

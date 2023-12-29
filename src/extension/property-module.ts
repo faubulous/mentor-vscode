@@ -1,18 +1,32 @@
-import { ExtensionContext, commands, window } from "vscode";
+import { ExtensionContext, TreeView, commands, window, workspace } from "vscode";
 import { PropertyNodeProvider } from "./property-node-provider";
 
 /**
  * Provides the property explorer and related commands.
  */
 export class PropertyModule {
-	static activate(context: ExtensionContext): void {
-		const propertyProvider = new PropertyNodeProvider();
-		window.registerTreeDataProvider('mentor.view.propertyTree', propertyProvider);
+	static updateItemCount(tree: TreeView<string>, provider: PropertyNodeProvider) {
+		tree.description = provider.getTotalItemCount() + " definitions";
+	}
 
-		commands.registerCommand('mentor.command.selectProperty', (uri: string) => propertyProvider.select(uri));
+	static activate(context: ExtensionContext): void {
+		const provider = new PropertyNodeProvider();
+		window.registerTreeDataProvider('mentor.view.propertyTree', provider);
+
+		const tree = window.createTreeView('mentor.view.propertyTree', { treeDataProvider: provider, showCollapseAll: true });
+
+		this.updateItemCount(tree, provider);
+
+		workspace.onDidChangeTextDocument((e) => {
+			if (e.document === provider.context?.document) {
+				this.updateItemCount(tree, provider);
+			}
+		});
+
+		commands.registerCommand('mentor.command.selectProperty', (uri: string) => provider.select(uri));
 		commands.registerCommand('mentor.propertyExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
 		commands.registerCommand('mentor.propertyExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
 		commands.registerCommand('mentor.propertyExplorer.command.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));
-		commands.registerCommand('mentor.propertyExplorer.command.refreshEntry', () => propertyProvider.refresh());
+		commands.registerCommand('mentor.propertyExplorer.command.refreshEntry', () => provider.refresh());
 	}
 }

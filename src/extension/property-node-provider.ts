@@ -8,7 +8,7 @@ import { ResourceNodeProvider } from './resource-node-provider';
  * A tree node provider for RDF properties.
  */
 export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepository> {
-	
+
 	override getRepository(context: DocumentContext): PropertyRepository | undefined {
 		return context?.store ? new PropertyRepository(context.store) : undefined;
 	}
@@ -46,5 +46,9 @@ export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepositor
 		// );
 
 		return new PropertyNode(this.repository, uri);
+	}
+
+	override getTotalItemCount(): number {
+		return this.repository ? this.repository.getProperties().length : 0;
 	}
 }

@@ -47,4 +47,8 @@ export class IndividualNodeProvider extends ResourceNodeProvider<IndividualRepos
 
 		return new IndividualNode(this.repository, uri);
 	}
+
+	override getTotalItemCount(): number {
+		return this.repository ? this.repository.getIndividuals().length : 0;
+	}
 }
