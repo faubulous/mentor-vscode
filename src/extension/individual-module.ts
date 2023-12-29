@@ -1,5 +1,6 @@
-import { ExtensionContext, TreeView, commands, window, workspace } from "vscode";
+import { ExtensionContext, TreeView, commands, window } from "vscode";
 import { IndividualNodeProvider } from "./individual-node-provider";
+import { mentor } from "../mentor";
 
 /**
  * Provides the individual explorer and related commands.
@@ -18,11 +19,10 @@ export class IndividualModule {
 
 		this.updateItemCount(tree, provider);
 
-		workspace.onDidChangeTextDocument((e) => {
-			if (e.document === provider.context?.document) {
-				this.updateItemCount(tree, provider);
-			}
+		mentor.onDidChangeVocabularyContext((context) => {
+			this.updateItemCount(tree, provider);
 		});
+
 		commands.registerCommand('mentor.command.selectIndividual', (uri: string) => provider.select(uri));
 		commands.registerCommand('mentor.individualExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
 		commands.registerCommand('mentor.individualExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));

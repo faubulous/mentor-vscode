@@ -1,5 +1,6 @@
-import { ExtensionContext, TreeView, commands, window, workspace } from "vscode";
+import { ExtensionContext, TreeView, commands, window } from "vscode";
 import { PropertyNodeProvider } from "./property-node-provider";
+import { mentor } from "../mentor";
 
 /**
  * Provides the property explorer and related commands.
@@ -11,16 +12,15 @@ export class PropertyModule {
 
 	static activate(context: ExtensionContext): void {
 		const provider = new PropertyNodeProvider();
+		
 		window.registerTreeDataProvider('mentor.view.propertyTree', provider);
 
 		const tree = window.createTreeView('mentor.view.propertyTree', { treeDataProvider: provider, showCollapseAll: true });
 
 		this.updateItemCount(tree, provider);
 
-		workspace.onDidChangeTextDocument((e) => {
-			if (e.document === provider.context?.document) {
-				this.updateItemCount(tree, provider);
-			}
+		mentor.onDidChangeVocabularyContext((context) => {
+			this.updateItemCount(tree, provider);
 		});
 
 		commands.registerCommand('mentor.command.selectProperty', (uri: string) => provider.select(uri));

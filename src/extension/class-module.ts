@@ -1,5 +1,6 @@
-import { ExtensionContext, TreeView, commands, window, workspace } from "vscode";
+import { ExtensionContext, TreeView, commands, window } from "vscode";
 import { ClassNodeProvider } from "./class-node-provider";
+import { mentor } from "../mentor";
 
 /**
  * Provides the class explorer and related commands.
@@ -17,11 +18,9 @@ export class ClassModule {
 		const tree = window.createTreeView('mentor.view.classTree', { treeDataProvider: provider, showCollapseAll: true });
 
 		this.updateItemCount(tree, provider);
-		
-		workspace.onDidChangeTextDocument((e) => {
-			if (e.document === provider.context?.document) {
-				this.updateItemCount(tree, provider);
-			}
+
+		mentor.onDidChangeVocabularyContext((context) => {
+			this.updateItemCount(tree, provider);
 		});
 
 		commands.executeCommand('setContext', 'classTree.showReferenced', provider.includeReferenced);
