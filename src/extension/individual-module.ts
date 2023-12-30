@@ -23,10 +23,7 @@ export class IndividualModule {
 			this.updateItemCount(tree, provider);
 		});
 
-		commands.registerCommand('mentor.command.selectIndividual', (uri: string) => provider.select(uri));
-		commands.registerCommand('mentor.individualExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
-		commands.registerCommand('mentor.individualExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
-		commands.registerCommand('mentor.individualExplorer.command.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));
-		commands.registerCommand('mentor.individualExplorer.command.refreshEntry', () => provider.refresh());
+		commands.registerCommand('mentor.command.individualTree.selectItem', (uri: string) => provider.select(uri));
+		commands.registerCommand('mentor.command.individualTree.refresh', () => provider.refresh());
 	}
 }

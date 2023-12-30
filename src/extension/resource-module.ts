@@ -1,16 +1,18 @@
-import { ExtensionContext, commands, env, Uri } from "vscode";
+import { ExtensionContext, commands, Uri, env, workspace } from "vscode";
 
 /**
  * Provides commands for browsing resources.
  */
 export class ResourceModule {
 	static activate(context: ExtensionContext): void {
-		commands.registerCommand('mentor.command.browseResource', (uri: string) => commands.executeCommand('open', Uri.parse(uri)));
-		commands.registerCommand('mentor.command.openExternal', (uri: string) => env.openExternal(Uri.parse(uri)));
-		commands.registerCommand('mentor.command.setNamespaceColor', (uri: string) => {
-			commands.executeCommand('editor.action.showOrFocusStandaloneColorPicker').then((value) => {
-				console.debug(value);
-			});
+		commands.registerCommand('mentor.command.openInBrowser', (uri: string) => {
+			const internalBrowser = workspace.getConfiguration('mentor').get('internalBrowserEnabled');
+
+			if (internalBrowser === true) {
+				commands.executeCommand('simpleBrowser.show', uri);
+			} else {
+				env.openExternal(Uri.parse(uri));
+			}
 		});
 	}
 }

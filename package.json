@@ -282,48 +282,40 @@
     },
     "commands": [
       {
-        "command": "mentor.command.showReferencedClasses",
+        "command": "mentor.command.classTree.showReferenced",
         "title": "Show referenced classes",
         "icon": "$(rdf-class-ref)"
       },
       {
-        "command": "mentor.command.hideReferencedClasses",
+        "command": "mentor.command.classTree.hideReferenced",
         "title": "Hide referenced classes",
         "icon": "$(rdf-class-ref-off)"
       },
       {
-        "command": "mentor.classExplorer.command.refreshEntry",
+        "command": "mentor.command.classTree.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "mentor.classExplorer.command.editEntry",
-        "title": "Edit"
-      },
-      {
-        "command": "mentor.classExplorer.command.deleteEntry",
-        "title": "Delete"
-      },
-      {
-        "command": "mentor.command.selectClass",
+        "command": "mentor.command.classTree.selectItem",
         "title": "Go to Definition",
         "icon": "$(go-to-file)",
         "when": false
       },
       {
-        "command": "mentor.command.selectProperty",
+        "command": "mentor.command.propertyTree.selectItem",
         "title": "Go to Definition",
         "icon": "$(go-to-file)",
         "when": false
       },
       {
-        "command": "mentor.command.selectIndividual",
+        "command": "mentor.command.individualTree.selectItem",
         "title": "Go to Definition",
         "icon": "$(go-to-file)",
         "when": false
       },
       {
-        "command": "mentor.command.openExternal",
+        "command": "mentor.command.openInBrowser",
         "title": "Open in Browser",
         "icon": "$(globe)"
       },
@@ -336,17 +328,17 @@
     "menus": {
       "view/title": [
         {
-          "command": "mentor.command.showReferencedClasses",
+          "command": "mentor.command.classTree.showReferenced",
           "when": "view == mentor.view.classTree && classTree.showReferenced == false",
           "group": "navigation@1"
         },
         {
-          "command": "mentor.command.hideReferencedClasses",
+          "command": "mentor.command.classTree.hideReferenced",
           "when": "view == mentor.view.classTree && classTree.showReferenced == true",
           "group": "navigation@1"
         },
         {
-          "command": "mentor.classExplorer.command.refreshEntry",
+          "command": "mentor.command.classTree.refresh",
           "when": "view == mentor.view.classTree",
           "group": "navigation@2"
         },
@@ -358,29 +350,24 @@
       ],
       "view/item/context": [
         {
-          "command": "mentor.command.selectClass",
+          "command": "mentor.command.classTree.selectItem",
           "when": "view == mentor.view.classTree && viewItem == class",
           "group": "navigation"
         },
         {
-          "command": "mentor.command.selectProperty",
-          "when": "view == mentorview.propertyTree && viewItem == property",
+          "command": "mentor.command.propertyTree.selectItem",
+          "when": "view == mentor.view.propertyTree && viewItem == property",
           "group": "navigation"
         },
         {
-          "command": "mentor.command.selectIndividual",
+          "command": "mentor.command.individualTree.selectItem",
           "when": "view == mentor.view.individualTree && viewItem == individual",
           "group": "navigation"
         },
         {
-          "command": "mentor.command.openExternal",
-          "when": "view == mentor.view.classTree && viewItem == class",
+          "command": "mentor.command.openInBrowser",
+          "when": "view == mentor.view.classTree || view == mentor.view.propertyTree || view == mentor.view.individualTree",
           "group": "navigation"
-        },
-        {
-          "command": "mentor.classExplorer.command.deleteEntry",
-          "when": "view == mentor.view.classTree && viewItem == class",
-          "group": "7_modification"
         }
       ]
     },
@@ -408,6 +395,12 @@
         "title": "Mentor",
         "order": 1,
         "properties": {
+          "mentor.internalBrowserEnabled": {
+            "type": "boolean",
+            "title": "Open URLs in interal browser",
+            "description": "If enabled, URLs will be opened in the internal browser instead of the default browser.",
+            "default": true
+          },
           "mentor.namespaces": {
             "type": "array",
             "title": "Namespaces",

@@ -23,10 +23,7 @@ export class PropertyModule {
 			this.updateItemCount(tree, provider);
 		});
 
-		commands.registerCommand('mentor.command.selectProperty', (uri: string) => provider.select(uri));
-		commands.registerCommand('mentor.propertyExplorer.command.addEntry', () => window.showInformationMessage(`Successfully called add entry.`));
-		commands.registerCommand('mentor.propertyExplorer.command.editEntry', (node: string) => window.showInformationMessage(`Successfully called edit entry on ${node}.`));
-		commands.registerCommand('mentor.propertyExplorer.command.deleteEntry', (node: string) => window.showInformationMessage(`Successfully called delete entry on ${node}.`));
-		commands.registerCommand('mentor.propertyExplorer.command.refreshEntry', () => provider.refresh());
+		commands.registerCommand('mentor.command.propertyTree.selectItem', (uri: string) => provider.select(uri));
+		commands.registerCommand('mentor.command.propertyTree.refresh', () => provider.refresh());
 	}
 }

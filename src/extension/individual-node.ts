@@ -14,7 +14,7 @@ export class IndividualNode extends ResourceNode {
 		this.collapsibleState = vscode.TreeItemCollapsibleState.None;
 
 		this.command = {
-			command: 'mentor.command.selectIndividual',
+			command: 'mentor.command.propertyTree.selectItem',
 			title: '',
 			arguments: [uri]
 		};

@@ -16,7 +16,7 @@ export class ClassNode extends ResourceNode {
 			vscode.TreeItemCollapsibleState.None;
 
 		this.command = {
-			command: 'mentor.command.selectClass',
+			command: 'mentor.command.classTree.selectItem',
 			title: '',
 			arguments: [uri]
 		};
