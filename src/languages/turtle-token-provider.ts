@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
+import { RenameProvider } from './rename-provider';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -22,7 +23,7 @@ enum SemanticTokenModifier {
 
 const legend = new vscode.SemanticTokensLegend(Object.values(SemanticTokenType), Object.values(SemanticTokenModifier));
 
-const provider: vscode.DocumentSemanticTokensProvider = {
+const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 	provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.ProviderResult<vscode.SemanticTokens> {
 		const uri = document.uri.toString();
 
@@ -144,13 +145,19 @@ function countLeadingSpaces(str: string) {
 	return (str.length);
 }
 
+const renameProvider: vscode.RenameProvider = new RenameProvider();
+
 export class TurtleTokenProvider {
 	register(): vscode.Disposable[] {
 		return [
-			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'turtle' }, provider, legend),
-			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'trig' }, provider, legend),
-			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'ntriples' }, provider, legend),
-			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'nquads' }, provider, legend)
+			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'turtle' }, tokenProvider, legend),
+			vscode.languages.registerRenameProvider({ language: 'turtle' }, renameProvider),
+			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'trig' }, tokenProvider, legend),
+			vscode.languages.registerRenameProvider({ language: 'trig' }, renameProvider),
+			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'ntriples' }, tokenProvider, legend),
+			vscode.languages.registerRenameProvider({ language: 'ntriples' }, renameProvider),
+			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'nquads' }, tokenProvider, legend),
+			vscode.languages.registerRenameProvider({ language: 'nquads' }, renameProvider),
 		];
 	}
 }

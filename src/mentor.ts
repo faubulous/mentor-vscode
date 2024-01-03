@@ -203,6 +203,46 @@ export class DocumentContext {
 
 		this.typeAssertions[u] = [s];
 	}
+
+	/**
+	 * Gets all tokens at a given position.
+	 * @param position A position in the document.
+	 * @returns An non-empty array of tokens on success, an empty array otherwise.
+	 */
+	public getTokensAtPosition(position: vscode.Position): IToken[] {
+		// The tokens are 0-based, but the position is 1-based.
+		const l = position.line + 1;
+		const n = position.character + 1;
+
+		return this.tokens.filter(t =>
+			t.startLine &&
+			t.startLine <= l &&
+			t.endLine &&
+			t.endLine >= l &&
+			t.startColumn &&
+			t.startColumn <= n &&
+			t.endColumn &&
+			t.endColumn >= (n - 1)
+		);
+	}
+
+	public getUriFromToken(token: IToken): string | undefined {
+		if (token.tokenType?.tokenName === 'IRIREF') {
+			return this._getUriFromIriReference(token.image);
+		} else if (token.tokenType?.tokenName === 'PNAME_LN') {
+			return this._getUriFromPrefixedName(token.image);
+		}
+	}
+
+	public updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
+		const uri = this.namespaces[oldPrefix];
+
+		if (!uri) return;
+
+		delete this.namespaces[oldPrefix];
+
+		this.namespaces[newPrefix] = uri;
+	}
 }
 
 class MentorExtension {

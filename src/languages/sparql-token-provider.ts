@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
+import { RenameProvider } from './rename-provider';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -24,7 +25,7 @@ enum SemanticTokenModifier {
 
 const legend = new vscode.SemanticTokensLegend(Object.values(SemanticTokenType), Object.values(SemanticTokenModifier));
 
-const provider: vscode.DocumentSemanticTokensProvider = {
+const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 	provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.ProviderResult<vscode.SemanticTokens> {
 		const uri = document.uri.toString();
 
@@ -278,10 +279,13 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 	}
 };
 
+const renameProvider = new RenameProvider();
+
 export class SparqlTokenProvider {
 	register(): vscode.Disposable[] {
 		return [
-			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'sparql' }, provider, legend)
+			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'sparql' }, tokenProvider, legend),
+			vscode.languages.registerRenameProvider({ language: 'sparql' }, renameProvider)
 		];
 	}
 }
