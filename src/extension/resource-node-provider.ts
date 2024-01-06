@@ -2,13 +2,13 @@ import * as vscode from 'vscode';
 import { mentor, DocumentContext } from '../mentor';
 
 export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider<string> {
-	protected readonly nodes: any = {};
-
 	public context: DocumentContext | undefined;
 
 	protected repository: T | undefined;
 
 	protected autoRefresh: boolean = true;
+
+	protected readonly nodeCache = new Map<string, vscode.TreeItem>();
 
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
 
@@ -27,12 +27,12 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 	private _onVocabularyChanged(e: DocumentContext | undefined): void {
 		if (e) {
 			this.context = e;
-			this.repository = this.getRepository(e);
+			this.onDidChangeVocabularyContext(e);
 			this._onDidChangeTreeData.fire(void 0);
 		}
 	}
 
-	protected abstract getRepository(context: DocumentContext): T | undefined;
+	protected abstract onDidChangeVocabularyContext(context: DocumentContext): void;
 
 	refresh(): void {
 		if (this.context) {
@@ -78,14 +78,6 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 		}
 
 		return activeTextEditor;
-	}
-
-	getNode(uri: string): string {
-		if (!this.nodes[uri]) {
-			this.nodes[uri] = uri;
-		}
-
-		return this.nodes[uri];
 	}
 
 	abstract getParent(uri: string): string | undefined;

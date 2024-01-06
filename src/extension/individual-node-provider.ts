@@ -1,20 +1,39 @@
 import * as vscode from 'vscode';
 import { DocumentContext } from '../mentor';
-import { IndividualRepository } from '@faubulous/mentor-rdf';
+import { ClassRepository, IndividualRepository } from '@faubulous/mentor-rdf';
 import { IndividualNode } from './individual-node';
 import { ResourceNodeProvider } from './resource-node-provider';
+import { ClassNode } from './class-node';
 
 /**
  * A tree node provider for RDF properties.
  */
 export class IndividualNodeProvider extends ResourceNodeProvider<IndividualRepository> {
 
-	override getRepository(context: DocumentContext): IndividualRepository | undefined {
-		return context.store ? new IndividualRepository(context.store) : undefined;
+	/**
+	 * Indicates whether the individual type should be shown as root nodes in the tree.
+	 */
+	showTypes: boolean = true;
+
+	/**
+	 * A class repository that is used for creating individual type nodes.
+	 */
+	classRepository: ClassRepository | undefined;
+
+	classNodes: any = {};
+
+	override onDidChangeVocabularyContext(context: DocumentContext): void {
+		if (context?.store) {
+			this.repository = new IndividualRepository(context.store);
+			this.classRepository = new ClassRepository(context.store);
+		} else {
+			this.repository = undefined;
+			this.classRepository = undefined;
+		}
 	}
 
 	override getParent(uri: string): string | undefined {
-		return undefined;
+		return this.repository?.getIndividualTypes(uri).sort().slice(0, 1)[0];
 	}
 
 	override getChildren(uri: string): string[] {
@@ -22,30 +41,26 @@ export class IndividualNodeProvider extends ResourceNodeProvider<IndividualRepos
 			return [];
 		}
 
-		let result = this.repository.getIndividuals().sort().map(u => this.getNode(u));
+		let result;
+
+		if (!this.showTypes || uri) {
+			result = this.repository.getIndividuals(uri).sort();
+		} else {
+			result = this.repository.getIndividualTypes().sort();
+
+			// Mark the nodes as classes for the getTreeItem method.
+			result.forEach((type: string) => this.classNodes[type] = true);
+		}
 
 		return result;
 	}
 
 	override getTreeItem(uri: string): vscode.TreeItem {
-		if (!this.repository) {
-			throw new Error('Invalid repostory.');
+		if (this.classNodes[uri]) {
+			return new ClassNode(this.classRepository!, uri, vscode.TreeItemCollapsibleState.Collapsed);
+		} else {
+			return new IndividualNode(this.repository!, uri);
 		}
-
-		// const workbench = vscode.workspace.getConfiguration("workbench");
-
-		// const colorCustomizations: any = workbench.get("colorCustomizations");
-
-		// workbench.update(
-		// 	"colorCustomizations",
-		// 	{
-		// 		...colorCustomizations,
-		// 		"rdf.ns0": "#006EAE",
-		// 	},
-		// 	1,
-		// );
-
-		return new IndividualNode(this.repository, uri);
 	}
 
 	override getTotalItemCount(): number {

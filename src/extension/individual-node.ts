@@ -5,6 +5,8 @@ import { ResourceNode } from './resource-node';
 export class IndividualNode extends ResourceNode {
 	contextValue = 'individual';
 
+	type: 'individual' | 'class' = 'individual';
+
 	constructor(
 		protected readonly repository: IndividualRepository,
 		public readonly uri: string

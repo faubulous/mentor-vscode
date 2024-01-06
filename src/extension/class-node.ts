@@ -7,13 +7,18 @@ export class ClassNode extends ResourceNode {
 
 	constructor(
 		protected readonly repository: ClassRepository,
-		public readonly uri: string
+		public readonly uri: string,
+		collapsibleState?: vscode.TreeItemCollapsibleState
 	) {
 		super(repository, uri);
 
-		this.collapsibleState = this.repository.hasSubClasses(uri) ?
-			vscode.TreeItemCollapsibleState.Collapsed :
-			vscode.TreeItemCollapsibleState.None;
+		if (collapsibleState) {
+			this.collapsibleState = collapsibleState;
+		} else {
+			this.collapsibleState = this.repository.hasSubClasses(uri) ?
+				vscode.TreeItemCollapsibleState.Collapsed :
+				vscode.TreeItemCollapsibleState.None;
+		}
 
 		this.command = {
 			command: 'mentor.command.classTree.selectItem',

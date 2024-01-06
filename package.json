@@ -56,7 +56,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.16",
+    "@faubulous/mentor-rdf": "^0.1.18",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -315,6 +315,16 @@
         "when": false
       },
       {
+        "command": "mentor.command.individualTree.showTypes",
+        "title": "Show individual types",
+        "icon": "$(rdf-class-ref)"
+      },
+      {
+        "command": "mentor.command.individualTree.hideTypes",
+        "title": "Hide individual types",
+        "icon": "$(rdf-class-ref-off)"
+      },
+      {
         "command": "mentor.command.openInBrowser",
         "title": "Open in Browser",
         "icon": "$(globe)"
@@ -341,6 +351,16 @@
           "command": "mentor.command.classTree.refresh",
           "when": "view == mentor.view.classTree",
           "group": "navigation@2"
+        },
+        {
+          "command": "mentor.command.individualTree.showTypes",
+          "when": "view == mentor.view.individualTree && individualTree.showTypes == false",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.command.individualTree.hideTypes",
+          "when": "view == mentor.view.individualTree && individualTree.showTypes == true",
+          "group": "navigation@1"
         },
         {
           "command": "mentor.command.openSettings",

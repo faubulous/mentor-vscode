@@ -23,23 +23,23 @@ export class ClassModule {
 			this.updateItemCount(tree, provider);
 		});
 
-		commands.executeCommand('setContext', 'classTree.showReferenced', provider.includeReferenced);
+		commands.executeCommand('setContext', 'classTree.showReferenced', provider.showReferenced);
 
 		commands.registerCommand('mentor.command.classTree.selectItem', (uri: string) => provider.select(uri));
 		commands.registerCommand('mentor.command.classTree.refresh', () => provider.refresh());
 
 		commands.registerCommand('mentor.command.classTree.showReferenced', () => {
-			provider.includeReferenced = true;
+			provider.showReferenced = true;
 			provider.refresh();
 
-			commands.executeCommand('setContext', 'classTree.showReferenced', provider.includeReferenced);
+			commands.executeCommand('setContext', 'classTree.showReferenced', provider.showReferenced);
 		});
 
 		commands.registerCommand('mentor.command.classTree.hideReferenced', () => {
-			provider.includeReferenced = false;
+			provider.showReferenced = false;
 			provider.refresh();
 
-			commands.executeCommand('setContext', 'classTree.showReferenced', provider.includeReferenced);
+			commands.executeCommand('setContext', 'classTree.showReferenced', provider.showReferenced);
 		});
 	}
 }

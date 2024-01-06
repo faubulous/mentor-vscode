@@ -12,10 +12,14 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 	/**
 	 * Indicates whether classes should be included in the tree that are not explicitly defined in the ontology.
 	 */
-	public includeReferenced: boolean = true;
+	public showReferenced: boolean = true;
 
-	override getRepository(context: DocumentContext): ClassRepository | undefined {
-		return context?.store ? new ClassRepository(context.store) : undefined;
+	override onDidChangeVocabularyContext(context: DocumentContext): void {
+		if (context?.store) {
+			this.repository = new ClassRepository(context.store);
+		} else {
+			this.repository = undefined;
+		}
 	}
 
 	override getParent(uri: string): string | undefined {
@@ -23,7 +27,7 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 			return undefined;
 		}
 
-		let result = this.repository.getSuperClasses(uri).sort().slice(0, 1).map(u => this.getNode(u));
+		let result = this.repository.getSuperClasses(uri).sort().slice(0, 1);
 
 		return result.length > 0 ? result[0] : undefined;
 	}
@@ -33,8 +37,8 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 			return [];
 		}
 
-		let options = { includeReferencedClasses: this.includeReferenced };
-		let result = this.repository.getSubClasses(uri, options).sort().map(u => this.getNode(u));
+		let options = { includeReferencedClasses: this.showReferenced };
+		let result = this.repository.getSubClasses(uri, options).sort();
 
 		return result;
 	}
@@ -43,19 +47,6 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 		if (!this.repository) {
 			throw new Error('Invalid repostory.');
 		}
-
-		// const workbench = vscode.workspace.getConfiguration("workbench");
-
-		// const colorCustomizations: any = workbench.get("colorCustomizations");
-
-		// workbench.update(
-		// 	"colorCustomizations",
-		// 	{
-		// 		...colorCustomizations,
-		// 		"rdf.ns0": "#006EAE",
-		// 	},
-		// 	1,
-		// );
 
 		return new ClassNode(this.repository, uri);
 	}

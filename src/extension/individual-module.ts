@@ -19,11 +19,27 @@ export class IndividualModule {
 
 		this.updateItemCount(tree, provider);
 
+		commands.executeCommand('setContext', 'individualTree.showTypes', provider.showTypes);
+
 		mentor.onDidChangeVocabularyContext((context) => {
 			this.updateItemCount(tree, provider);
 		});
 
 		commands.registerCommand('mentor.command.individualTree.selectItem', (uri: string) => provider.select(uri));
 		commands.registerCommand('mentor.command.individualTree.refresh', () => provider.refresh());
+
+		commands.registerCommand('mentor.command.individualTree.showTypes', () => {
+			provider.showTypes = true;
+			provider.refresh();
+
+			commands.executeCommand('setContext', 'individualTree.showTypes', provider.showTypes);
+		});
+
+		commands.registerCommand('mentor.command.individualTree.hideTypes', () => {
+			provider.showTypes = false;
+			provider.refresh();
+
+			commands.executeCommand('setContext', 'individualTree.showTypes', provider.showTypes);
+		});
 	}
 }

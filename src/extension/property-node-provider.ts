@@ -9,8 +9,12 @@ import { ResourceNodeProvider } from './resource-node-provider';
  */
 export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepository> {
 
-	override getRepository(context: DocumentContext): PropertyRepository | undefined {
-		return context?.store ? new PropertyRepository(context.store) : undefined;
+	override onDidChangeVocabularyContext(context: DocumentContext): void {
+		if (context?.store) {
+			this.repository = new PropertyRepository(context.store);
+		} else {
+			this.repository = undefined;
+		}
 	}
 
 	override getParent(uri: string): string | undefined {
@@ -22,7 +26,7 @@ export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepositor
 			return [];
 		}
 
-		let result = this.repository.getSubProperties(uri).sort().map(u => this.getNode(u));
+		let result = this.repository.getSubProperties(uri).sort();
 
 		return result;
 	}
@@ -31,19 +35,6 @@ export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepositor
 		if (!this.repository) {
 			throw new Error('Invalid repostory.');
 		}
-
-		// const workbench = vscode.workspace.getConfiguration("workbench");
-
-		// const colorCustomizations: any = workbench.get("colorCustomizations");
-
-		// workbench.update(
-		// 	"colorCustomizations",
-		// 	{
-		// 		...colorCustomizations,
-		// 		"rdf.ns0": "#006EAE",
-		// 	},
-		// 	1,
-		// );
 
 		return new PropertyNode(this.repository, uri);
 	}
