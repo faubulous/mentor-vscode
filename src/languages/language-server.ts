@@ -14,7 +14,10 @@ import {
 	DidChangeWatchedFilesParams,
 	DidChangeConfigurationParams,
 	TextDocumentPositionParams,
-	CompletionItem
+	CompletionItem,
+	Location,
+	Definition,
+	DefinitionParams
 } from 'vscode-languageserver/node';
 import { TokenizerResult } from '@faubulous/mentor-rdf';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -55,6 +58,7 @@ export abstract class LanguageServerBase {
 		this.connection.onDidChangeConfiguration(this.onDidChangeConfiguration.bind(this));
 		this.connection.onCompletion(this.onCompletion.bind(this));
 		this.connection.onCompletionResolve(this.onCompletionResolve.bind(this));
+		this.connection.onDefinition(this.onDefinition.bind(this));
 
 		this.documents.onDidClose(this.onDidClose.bind(this));
 		this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
@@ -100,6 +104,8 @@ export abstract class LanguageServerBase {
 		const result: InitializeResult = {
 			capabilities: {
 				textDocumentSync: TextDocumentSyncKind.Incremental,
+				// This server supports 'go to definition' commands.
+				definitionProvider: true,
 				// This server supports code completion.
 				completionProvider: {
 					resolveProvider: true
@@ -130,6 +136,13 @@ export abstract class LanguageServerBase {
 			});
 		}
 	}
+
+	protected onDefinition(definitionParams: DefinitionParams): Definition {
+		return Location.create(definitionParams.textDocument.uri, {
+			start: { line: 0, character: 0 },
+			end: { line: 0, character: 1 }
+		});
+	};
 
 	protected onDidChangeConfiguration(change: DidChangeConfigurationParams) {
 		this.log(`Configuration changed.`);
@@ -174,30 +187,11 @@ export abstract class LanguageServerBase {
 		return item;
 	}
 
-	private _getDocumentSettings(resource: string): Thenable<ParserSettings> {
-		if (!this.hasConfigurationCapability) {
-			return Promise.resolve(this.globalSettings);
-		}
-
-		let result = this.documentSettings.get(resource);
-
-		if (!result) {
-			result = this.connection.workspace.getConfiguration({
-				scopeUri: resource,
-				section: 'mentor.config.languageServer'
-			});
-
-			this.documentSettings.set(resource, result);
-		}
-
-		return result;
-	}
-
 	protected abstract parse(content: string): Promise<TokenizerResult>;
 
 	async validateTextDocument(document: TextDocument): Promise<void> {
 		// The conncetion may not yet be initialized.
-		if(!this.connection) return;
+		if (!this.connection) return;
 
 		this.log(`Validating document: ${document.uri}`);
 

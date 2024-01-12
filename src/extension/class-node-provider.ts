@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '../mentor';
+import { mentor, DocumentContext } from '../mentor';
 import { ClassRepository } from '@faubulous/mentor-rdf';
 import { ClassNode } from './class-node';
 import { ResourceNodeProvider } from './resource-node-provider';
@@ -13,6 +13,11 @@ export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
 	 * Indicates whether classes should be included in the tree that are not explicitly defined in the ontology.
 	 */
 	public showReferenced: boolean = true;
+
+	/**
+	 * Indicates whether related tree views (properties and individuals) should be filtered when the selection changes.
+	 */
+	public filterEnabled: boolean = false;
 
 	override onDidChangeVocabularyContext(context: DocumentContext): void {
 		if (context?.store) {

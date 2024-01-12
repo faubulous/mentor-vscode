@@ -91,8 +91,6 @@ export class DocumentContext {
 				for (let q of this._store.readQuads(null, null, null, uri + "#inference")) {
 					graph += `<${q.subject.value}> <${q.predicate.value}> <${q.object.value}> .\n`;
 				}
-
-				console.log(graph);
 			} catch (e) {
 				console.error(e);
 			}
@@ -260,6 +258,10 @@ class MentorExtension {
 
 	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
 
+	private _onDidChangeClassFilter = new vscode.EventEmitter<{ classUri: string | undefined }>();
+
+	readonly onDidChangeClassFilter = this._onDidChangeClassFilter.event;
+
 	constructor() {
 		vscode.workspace.onDidChangeTextDocument((e) => this.onTextDocumentChanged(e));
 		vscode.window.onDidChangeActiveTextEditor(() => this.onActiveEditorChanged());
@@ -329,6 +331,14 @@ class MentorExtension {
 		}
 
 		return context;
+	}
+
+	/**
+	 * Applies filtering in views to only show properties and individuals related to the class.
+	 * @param classUri URI of a class. Set to undefined to reset the filter.
+	 */
+	filterByClass(classUri: string | undefined) {
+		this._onDidChangeClassFilter.fire({ classUri });
 	}
 }
 

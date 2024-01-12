@@ -8,6 +8,8 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 
 	protected autoRefresh: boolean = true;
 
+	public selectedNode: string | undefined;
+
 	protected readonly nodeCache = new Map<string, vscode.TreeItem>();
 
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
@@ -43,6 +45,8 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 	select(uri: string) {
 		if (this.context) {
 			const context = this.context;
+
+			this.selectedNode = uri;
 
 			this.activateDocument().then((editor) => {
 				let t;

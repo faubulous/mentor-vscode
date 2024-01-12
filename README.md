@@ -40,22 +40,22 @@ Contributions are always welcome! To start off, fork this repository on GitHub a
 
 Once cloned, add an upstream remote pointing to the primary toolkit repo.
 
-```bash
+<code>
 git clone https://github.com/faubulous/mentor-vscode.git
 cd mentor-vscode
-```
+</code>
 
 Install the project dependencies.
 
-```bash
+<code>
 npm install
-```
+</code>
 
 Create a development build of the extension.
 
-```bash
+<code>
 npm run build:watch
-```
+</code>
 
 ### Debugging
 
@@ -64,18 +64,18 @@ To start debugging the 'Launch Extension' configuration, follow these steps:
 1. Open Visual Studio Code.
 2. Click on the Run view icon on the Sidebar (or press `Ctrl+Shift+D`).
 3. At the top of the Run view, in the dropdown list of debug configurations, select 'Launch Extension'.
-5. After the configuration is set, you can start debugging by clicking on the green 'Start Debugging' button (or press `F5`).
+4. After the configuration is set, you can start debugging by clicking on the green 'Start Debugging' button (or press `F5`).
 
 This will start a new instance of Visual Studio Code with the Mentor extension loaded. You can set breakpoints in your code to stop execution and inspect variables, call stack, and so on.
 
 ### Packaging 
-```bash
+<code>
 npm install --global @vscode/vsce
-```
+</code>
 
-```bash
+<code>
 npm run package:install
-```
+</code>
 
 # License
 Distributed under the [GPL Verison 3 License](LICENSE). See LICENSE for more information.

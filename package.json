@@ -56,7 +56,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.18",
+    "@faubulous/mentor-rdf": "^0.1.20",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -282,31 +282,56 @@
     },
     "commands": [
       {
-        "command": "mentor.command.classTree.showReferenced",
-        "title": "Show referenced classes",
-        "icon": "$(rdf-class-ref)"
+        "command": "mentor.command.openSettings",
+        "title": "Settings",
+        "icon": "$(gear)"
       },
       {
-        "command": "mentor.command.classTree.hideReferenced",
-        "title": "Hide referenced classes",
-        "icon": "$(rdf-class-ref-off)"
-      },
-      {
-        "command": "mentor.command.classTree.refresh",
+        "command": "mentor.command.refreshClassTree",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "mentor.command.classTree.selectItem",
+        "command": "mentor.command.selectClass",
         "title": "Go to Definition",
         "icon": "$(go-to-file)",
         "when": false
       },
       {
-        "command": "mentor.command.propertyTree.selectItem",
+        "command": "mentor.command.showReferencedClasses",
+        "title": "Show Referenced Classes",
+        "icon": "$(rdf-class-ref)"
+      },
+      {
+        "command": "mentor.command.hideReferencedClasses",
+        "title": "Hide Referenced Classes",
+        "icon": "$(rdf-class-ref-off)"
+      },
+      {
+        "command": "mentor.command.enableFilterByClass",
+        "title": "Enable Filter on Properties and Individuals",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "mentor.command.disableFilterByClass",
+        "title": "Disable Filter on Properties and Individuals",
+        "icon": "$(filter-filled)"
+      },
+      {
+        "command": "mentor.command.selectProperty",
         "title": "Go to Definition",
         "icon": "$(go-to-file)",
         "when": false
+      },
+      {
+        "command": "mentor.command.showPropertyTypes",
+        "title": "Show Property Types",
+        "icon": "$(rdf-class-ref)"
+      },
+      {
+        "command": "mentor.command.hidePropertyTypes",
+        "title": "Hide Property Types",
+        "icon": "$(rdf-class-ref-off)"
       },
       {
         "command": "mentor.command.individualTree.selectItem",
@@ -316,41 +341,56 @@
       },
       {
         "command": "mentor.command.individualTree.showTypes",
-        "title": "Show individual types",
+        "title": "Show Individual Types",
         "icon": "$(rdf-class-ref)"
       },
       {
         "command": "mentor.command.individualTree.hideTypes",
-        "title": "Hide individual types",
+        "title": "Hide Individual Types",
         "icon": "$(rdf-class-ref-off)"
       },
       {
         "command": "mentor.command.openInBrowser",
         "title": "Open in Browser",
         "icon": "$(globe)"
-      },
-      {
-        "command": "mentor.command.openSettings",
-        "title": "Settings",
-        "icon": "$(gear)"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "mentor.command.classTree.showReferenced",
+          "command": "mentor.command.enableFilterByClass",
+          "when": "view == mentor.view.classTree && classTree.filterByClass == false",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.command.disableFilterByClass",
+          "when": "view == mentor.view.classTree && classTree.filterByClass == true",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.command.showReferencedClasses",
           "when": "view == mentor.view.classTree && classTree.showReferenced == false",
-          "group": "navigation@1"
-        },
-        {
-          "command": "mentor.command.classTree.hideReferenced",
-          "when": "view == mentor.view.classTree && classTree.showReferenced == true",
-          "group": "navigation@1"
-        },
-        {
-          "command": "mentor.command.classTree.refresh",
-          "when": "view == mentor.view.classTree",
           "group": "navigation@2"
+        },
+        {
+          "command": "mentor.command.hideReferencedClasses",
+          "when": "view == mentor.view.classTree && classTree.showReferenced == true",
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.command.refreshClassTree",
+          "when": "view == mentor.view.classTree",
+          "group": "navigation@3"
+        },
+        {
+          "command": "mentor.command.showPropertyTypes",
+          "when": "view == mentor.view.propertyTree && propertyTree.showTypes == false",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.command.hidePropertyTypes",
+          "when": "view == mentor.view.propertyTree && propertyTree.showTypes == true",
+          "group": "navigation@1"
         },
         {
           "command": "mentor.command.individualTree.showTypes",
@@ -370,12 +410,12 @@
       ],
       "view/item/context": [
         {
-          "command": "mentor.command.classTree.selectItem",
+          "command": "mentor.command.selectClass",
           "when": "view == mentor.view.classTree && viewItem == class",
           "group": "navigation"
         },
         {
-          "command": "mentor.command.propertyTree.selectItem",
+          "command": "mentor.command.selectProperty",
           "when": "view == mentor.view.propertyTree && viewItem == property",
           "group": "navigation"
         },

@@ -19,7 +19,7 @@ export class PropertyNode extends ResourceNode {
 			vscode.TreeItemCollapsibleState.None;
 
 		this.command = {
-			command: 'mentor.command.propertyTree.selectItem',
+			command: 'mentor.command.selectProperty',
 			title: '',
 			arguments: [uri]
 		};
@@ -32,6 +32,27 @@ export class PropertyNode extends ResourceNode {
 	override getIcon(): vscode.ThemeIcon {
 		let icon = 'arrow-right';
 
+		// 1. Determine the property type.
+		this.propertyType = 'objectProperty';
+		
+		let s = new NamedNode(this.uri);
+		let p = new NamedNode(rdf.type.id);
+		let o = new NamedNode(owl.AnnotationProperty.id);
+
+		for (let q of this.repository.store.match(s, p, o)) {
+			this.propertyType = 'annotationProperty';
+			break;
+		}
+
+		o = new NamedNode(owl.DatatypeProperty.id);
+
+		for (let q of this.repository.store.match(s, p, o)) {
+			this.propertyType = 'dataProperty';
+			icon = 'symbol-text';
+			break;
+		}
+
+		// 2. Derive the icon from the property type.
 		const range = this.repository.getRange(this.uri);
 
 		switch (range) {
@@ -77,19 +98,10 @@ export class PropertyNode extends ResourceNode {
 				icon = 'file-binary';
 				break;
 			}
-			default: {
-				this.propertyType = 'objectProperty';
+			case xsd.anyURI.id: {
+				icon = 'arrow-right';
 				break;
 			}
-		}
-
-		const s = new NamedNode(this.uri);
-		const p = new NamedNode(rdf.type.id);
-		const o = new NamedNode(owl.AnnotationProperty.id);
-
-		for (let q of this.repository.store.match(s, p, o)) {
-			this.propertyType = 'annotationProperty';
-			break;
 		}
 
 		return new vscode.ThemeIcon(icon, this.getColor());

@@ -16,10 +16,18 @@ export class IndividualNodeProvider extends ResourceNodeProvider<IndividualRepos
 	showTypes: boolean = true;
 
 	/**
+	 * If defined, show only individuals of this type.
+	 */
+	typeFilter: string | undefined;
+
+	/**
 	 * A class repository that is used for creating individual type nodes.
 	 */
 	classRepository: ClassRepository | undefined;
 
+	/**
+	 * A set of URIs that are used for marking the nodes as classes for the getTreeItem method.
+	 */
 	classNodes: any = {};
 
 	override onDidChangeVocabularyContext(context: DocumentContext): void {
@@ -43,8 +51,10 @@ export class IndividualNodeProvider extends ResourceNodeProvider<IndividualRepos
 
 		let result;
 
-		if (!this.showTypes || uri) {
-			result = this.repository.getIndividuals(uri).sort();
+		if (uri || !this.showTypes || this.typeFilter) {
+			const u = uri ?? this.typeFilter;
+
+			result = this.repository.getIndividuals(u).sort();
 		} else {
 			result = this.repository.getIndividualTypes().sort();
 
