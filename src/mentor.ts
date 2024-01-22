@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
-import { OwlReasoner, StoreFactory, RdfSyntax, Tokenizer, TokenizerResult, rdf } from '@faubulous/mentor-rdf';
+import { OwlReasoner, StoreFactory, RdfSyntax, Tokenizer, TokenizerResult, rdf, skos, rdfs } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 
 export class DocumentContext {
@@ -30,6 +30,11 @@ export class DocumentContext {
 	 * Maps resource URIs to indexed tokens.
 	 */
 	readonly typeAssertions: { [key: string]: IToken[] } = {};
+
+	/**
+	 * Maps resource URIs to indexed tokens.
+	 */
+	readonly namespaceDefinitions: { [key: string]: IToken } = {};
 
 	/**
 	 * Maps resource URIs to indexed tokens.
@@ -119,6 +124,7 @@ export class DocumentContext {
 					if (!uri) break;
 
 					this.namespaces[prefix] = uri;
+					this.namespaceDefinitions[uri] = t;
 					break;
 				}
 				case 'PNAME_LN': {
@@ -200,6 +206,31 @@ export class DocumentContext {
 		if (!u) return;
 
 		this.typeAssertions[u] = [s];
+	}
+
+	public getResourceDescription(subjectUri: string): string | undefined {
+		const predicates = [skos.definition, rdfs.comment];
+		const s = new n3.NamedNode(subjectUri);
+
+		for (let p of predicates) {
+			const o = this.store?.getObjects(s, p, null) ?? [];
+
+			for (let d of o) {
+				return d.value;
+			}
+		}
+	}
+
+	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
+		let result = this.getResourceDescription(subjectUri) ?? '';
+
+		if (result) {
+			result += '\n\n';
+		}
+
+		result += subjectUri;
+
+		return new vscode.MarkdownString(result, true);
 	}
 
 	/**
@@ -331,6 +362,16 @@ class MentorExtension {
 		}
 
 		return context;
+	}
+
+	async activateDocument(): Promise<vscode.TextEditor | undefined> {
+		const activeTextEditor = vscode.window.activeTextEditor;
+
+		if (this.activeContext && this.activeContext.document != activeTextEditor?.document) {
+			await vscode.commands.executeCommand<vscode.TextDocumentShowOptions>("vscode.open", this.activeContext.document.uri);
+		}
+
+		return activeTextEditor;
 	}
 
 	/**

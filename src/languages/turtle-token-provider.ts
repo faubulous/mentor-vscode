@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { RenameProvider } from './rename-provider';
+import { RenameProvider, DefinitionProvider } from '../providers';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -146,18 +146,23 @@ function countLeadingSpaces(str: string) {
 }
 
 const renameProvider: vscode.RenameProvider = new RenameProvider();
+const definitionProvider: vscode.DefinitionProvider = new DefinitionProvider();
 
 export class TurtleTokenProvider {
 	register(): vscode.Disposable[] {
 		return [
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'turtle' }, tokenProvider, legend),
 			vscode.languages.registerRenameProvider({ language: 'turtle' }, renameProvider),
+			vscode.languages.registerDefinitionProvider({ language: 'turtle' }, definitionProvider),
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'trig' }, tokenProvider, legend),
 			vscode.languages.registerRenameProvider({ language: 'trig' }, renameProvider),
+			vscode.languages.registerDefinitionProvider({ language: 'trig' }, definitionProvider),
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'ntriples' }, tokenProvider, legend),
 			vscode.languages.registerRenameProvider({ language: 'ntriples' }, renameProvider),
+			vscode.languages.registerDefinitionProvider({ language: 'ntriples' }, definitionProvider),
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'nquads' }, tokenProvider, legend),
 			vscode.languages.registerRenameProvider({ language: 'nquads' }, renameProvider),
+			vscode.languages.registerDefinitionProvider({ language: 'nquads' }, definitionProvider),
 		];
 	}
 }

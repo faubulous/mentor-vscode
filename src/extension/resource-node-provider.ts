@@ -43,45 +43,7 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 	}
 
 	select(uri: string) {
-		if (this.context) {
-			const context = this.context;
-
-			this.selectedNode = uri;
-
-			this.activateDocument().then((editor) => {
-				let t;
-
-				if (context.typeAssertions[uri]) {
-					t = context.typeAssertions[uri][0];
-				} else if (context.references[uri]) {
-					t = context.references[uri][0];
-				} else {
-					return;
-				}
-
-				const startLine = t.startLine ? t.startLine - 1 : 0;
-				const startCharacter = t.startColumn ? t.startColumn - 1 : 0;
-				const endLine = t.endLine ? t.endLine - 1 : 0;
-				const endCharacter = t.endColumn ?? 0;
-
-				const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
-
-				if (editor) {
-					editor.selection = new vscode.Selection(range.start, range.end);
-					editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-				}
-			});
-		}
-	}
-
-	private async activateDocument(): Promise<vscode.TextEditor | undefined> {
-		const activeTextEditor = vscode.window.activeTextEditor;
-
-		if (activeTextEditor?.document != this.context?.document) {
-			await vscode.commands.executeCommand<vscode.TextDocumentShowOptions>("vscode.open", this.context?.document.uri);
-		}
-
-		return activeTextEditor;
+		this.selectedNode = uri;
 	}
 
 	abstract getParent(uri: string): string | undefined;

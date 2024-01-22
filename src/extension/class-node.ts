@@ -21,7 +21,7 @@ export class ClassNode extends ResourceNode {
 		}
 
 		this.command = {
-			command: 'mentor.command.selectClass',
+			command: 'mentor.command.goToDefinition',
 			title: '',
 			arguments: [uri]
 		};

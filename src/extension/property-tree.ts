@@ -42,8 +42,10 @@ export class PropertyTree {
 	}
 
 	private registerCommands() {
-		commands.registerCommand('mentor.command.selectProperty', (uri: string) => this.treeDataProvider.select(uri));
-		commands.registerCommand('mentor.command.refreshPropertyTree', () => this.treeDataProvider.refresh());
+		commands.registerCommand('mentor.command.refreshPropertyTree', () => {
+			this.treeDataProvider.domainFilter = undefined;
+			this.treeDataProvider.refresh();
+		});
 
 		commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
 

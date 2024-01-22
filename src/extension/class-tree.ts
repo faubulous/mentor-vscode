@@ -42,15 +42,9 @@ export class ClassTree {
 	}
 
 	private registerCommands() {
-		commands.registerCommand('mentor.command.selectClass', (uri: string) => {
-			this.treeDataProvider.select(uri)
-
-			if (this.filterEnabled) {
-				mentor.filterByClass(this.treeDataProvider.selectedNode);
-			}
+		commands.registerCommand('mentor.command.refreshClassTree', () => {
+			this.treeDataProvider.refresh();
 		});
-
-		commands.registerCommand('mentor.command.refreshClassTree', () => this.treeDataProvider.refresh());
 
 		commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
 
@@ -69,7 +63,7 @@ export class ClassTree {
 		});
 
 		commands.executeCommand('setContext', 'classTree.filterByClass', this.filterEnabled);
-		
+
 		commands.registerCommand('mentor.command.enableFilterByClass', () => {
 			this.filterEnabled = true;
 

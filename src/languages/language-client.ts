@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { LanguageClient, LanguageClientOptions, TransportKind } from 'vscode-languageclient/node';
+import { mentor } from '../mentor';
+import { LanguageClient, LanguageClientOptions, TextDocumentPositionParams, TransportKind } from 'vscode-languageclient/node';
 
 export abstract class LanguageClientBase implements vscode.Disposable {
 	/**
@@ -64,11 +65,33 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 
 		this.client = new LanguageClient(this.channelId, `${this.languageName} Language Client`, serverOptions, clientOptions);
 		this.client.start();
+
+		this.registerProviders();
 	}
 
 	async dispose() {
 		if (this.client) {
 			await this.client.stop();
 		}
+	}
+
+	async provideHover(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Hover | undefined> {
+		const context = mentor.contexts[document.uri.toString()];
+
+		if(!context) return;
+
+		const token = context.getTokensAtPosition(position)[0];
+
+		if(!token) return;
+
+		const uri = context.getUriFromToken(token);
+
+		if(!uri) return;
+		
+		return new vscode.Hover(context.getResourceTooltip(uri));
+	}
+
+	protected registerProviders() {
+		vscode.languages.registerHoverProvider(this.languageId, this);
 	}
 }

@@ -1,10 +1,12 @@
 'use strict';
-import { ExtensionContext, commands, Uri, env, workspace, window } from 'vscode';
+import * as vscode from 'vscode';
+import { Disposable } from 'vscode-languageclient';
 import { ClassTree } from './extension/class-tree';
 import { PropertyTree } from './extension/property-tree';
 import { IndividualTree } from './extension/individual-tree';
 import { SettingsPanel } from "./extension/panels/SettingsPanel";
 import { SettingsViewProvider } from "./extension/panels/SettingsViewProvider";
+import { mentor } from './mentor'
 import {
 	LanguageClientBase,
 	TurtleLanguageClient,
@@ -13,7 +15,7 @@ import {
 	SparqlLanguageClient,
 	SparqlTokenProvider
 } from './languages';
-import { Disposable } from 'vscode-languageclient';
+import { DefinitionProvider } from './providers';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -28,7 +30,10 @@ const providers: Disposable[] = [
 
 const disposables: Disposable[] = [];
 
-export function activate(context: ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
+	// Open the settings view as a webview; will use this for the tree view once React components are implemented.
+	disposables.push(vscode.window.registerWebviewViewProvider(SettingsViewProvider.viewType, new SettingsViewProvider(context.extensionUri)));
+
 	// Start the language clients..
 	for (const client of clients) {
 		client.start(context);
@@ -53,22 +58,36 @@ export function deactivate(): Thenable<void> {
 	});
 }
 
-function registerCommands(context: ExtensionContext) {
-	disposables.push(commands.registerCommand('mentor.command.openInBrowser', (uri: string) => {
-		const internalBrowser = workspace.getConfiguration('mentor').get('internalBrowserEnabled');
+function registerCommands(context: vscode.ExtensionContext) {
+	// Open the settings view via command
+	disposables.push(vscode.commands.registerCommand("mentor.command.openSettings", () => {
+		SettingsPanel.render(context.extensionUri);
+	}));
+
+	disposables.push(vscode.commands.registerCommand('mentor.command.openInBrowser', (uri: string) => {
+		const internalBrowser = vscode.workspace.getConfiguration('mentor').get('internalBrowserEnabled');
 
 		if (internalBrowser === true) {
-			commands.executeCommand('simpleBrowser.show', uri);
+			vscode.commands.executeCommand('simpleBrowser.show', uri);
 		} else {
-			env.openExternal(Uri.parse(uri));
+			vscode.env.openExternal(vscode.Uri.parse(uri));
 		}
 	}));
 
-	// Open the settings view as a webview; will use this for the tree view once React components are implemented.
-	disposables.push(window.registerWebviewViewProvider(SettingsViewProvider.viewType, new SettingsViewProvider(context.extensionUri)));
+	disposables.push(vscode.commands.registerCommand('mentor.command.goToDefinition', (uri: string) => {
+		mentor.activateDocument().then((editor) => {
+			if (mentor.activeContext && editor) {
+				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
-	// Open the settings view via command
-	disposables.push(commands.registerCommand("mentor.command.openSettings", () => {
-		SettingsPanel.render(context.extensionUri);
+				if (location instanceof vscode.Location) {
+					editor.selection = new vscode.Selection(location.range.start, location.range.end);
+					editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
+				}
+			}
+		});
+	}));
+
+	disposables.push(vscode.commands.registerCommand('mentor.command.showUsages', (uri: string) => {
+		mentor.filterByClass(uri);
 	}));
 }

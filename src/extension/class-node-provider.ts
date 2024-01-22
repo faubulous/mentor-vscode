@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor, DocumentContext } from '../mentor';
+import { DocumentContext } from '../mentor';
 import { ClassRepository } from '@faubulous/mentor-rdf';
 import { ClassNode } from './class-node';
 import { ResourceNodeProvider } from './resource-node-provider';

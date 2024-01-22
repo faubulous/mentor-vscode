@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
+import { mentor } from '../mentor';
 import { ResourceRepository, skos, rdfs } from '@faubulous/mentor-rdf';
-import { getNamespaceUri, toJsonId } from '../utilities';
 
 export class ResourceNode extends vscode.TreeItem {
 	contextValue: string = 'resource';
@@ -13,7 +13,7 @@ export class ResourceNode extends vscode.TreeItem {
 		public readonly uri: string
 	) {
 		super('');
-		
+
 		this.iconPath = this.getIcon();
 		this.label = this.getLabel();
 		this.tooltip = this.getTooltip();
@@ -42,32 +42,8 @@ export class ResourceNode extends vscode.TreeItem {
 		}
 	}
 
-	protected getTooltip(): vscode.MarkdownString {
-		let result = '';
-
-		if (this.repository?.store) {
-			const s = n3.DataFactory.namedNode(this.uri);
-
-			for (let d of this.repository.store.match(s, skos.definition, null, null)) {
-				result += d.object.value;
-				break;
-			}
-
-			if (!result) {
-				for (let d of this.repository.store.match(s, rdfs.comment, null, null)) {
-					result += d.object.value;
-					break;
-				}
-			}
-		}
-
-		if (result) {
-			result += '\n\n';
-		}
-
-		result += this.uri;
-
-		return new vscode.MarkdownString(result, true);
+	protected getTooltip(): vscode.MarkdownString | undefined {
+		return mentor.activeContext?.getResourceTooltip(this.uri);
 	}
 
 	getColor(): vscode.ThemeColor {
