@@ -1,25 +1,26 @@
 import * as vscode from 'vscode';
 import { NamedNode } from 'n3';
-import { PropertyRepository, xsd, rdf, rdfs, owl } from '@faubulous/mentor-rdf';
+import { OntologyRepository, xsd, rdf, rdfs, owl } from '@faubulous/mentor-rdf';
 import { ResourceNode } from './resource-node';
+import { DocumentContext } from '../document-context';
 
-export class PropertyNode extends ResourceNode {
+export class PropertyNode extends ResourceNode<OntologyRepository> {
 	contextValue = 'property';
 
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
 	constructor(
-		protected readonly repository: PropertyRepository,
+		protected readonly context: DocumentContext<OntologyRepository>,
 		public readonly uri: string
 	) {
-		super(repository, uri);
+		super(context, uri);
 
-		this.collapsibleState = this.repository.hasSubProperties(uri) ?
+		this.collapsibleState = this.context.repository.hasSubProperties(this.context.graphs, uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
 
 		this.command = {
-			command: 'mentor.command.goToDefinition',
+			command: 'mentor.action.goToDefinition',
 			title: '',
 			arguments: [uri]
 		};
@@ -34,26 +35,26 @@ export class PropertyNode extends ResourceNode {
 
 		// 1. Determine the property type.
 		this.propertyType = 'objectProperty';
-		
+
 		let s = new NamedNode(this.uri);
 		let p = new NamedNode(rdf.type.id);
 		let o = new NamedNode(owl.AnnotationProperty.id);
 
-		for (let q of this.repository.store.match(s, p, o)) {
+		for (let q of this.context.repository.store.match(this.context.graphs, s, p, o)) {
 			this.propertyType = 'annotationProperty';
 			break;
 		}
 
 		o = new NamedNode(owl.DatatypeProperty.id);
 
-		for (let q of this.repository.store.match(s, p, o)) {
+		for (let q of this.context.repository.store.match(this.context.graphs, s, p, o)) {
 			this.propertyType = 'dataProperty';
 			icon = 'symbol-text';
 			break;
 		}
 
 		// 2. Derive the icon from the property type.
-		const range = this.repository.getRange(this.uri);
+		const range = this.context.repository.getRange(this.context.graphs, this.uri);
 
 		switch (range) {
 			case xsd.date.id:

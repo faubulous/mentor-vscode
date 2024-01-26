@@ -12,12 +12,7 @@ import {
 	DiagnosticSeverity,
 	Range,
 	DidChangeWatchedFilesParams,
-	DidChangeConfigurationParams,
-	TextDocumentPositionParams,
-	CompletionItem,
-	Location,
-	Definition,
-	DefinitionParams
+	DidChangeConfigurationParams
 } from 'vscode-languageserver/node';
 import { TokenizerResult } from '@faubulous/mentor-rdf';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -56,8 +51,6 @@ export abstract class LanguageServerBase {
 		this.connection.onInitialize(this.onInitializeConnection.bind(this));
 		this.connection.onInitialized(this.onConnectionInitialized.bind(this));
 		this.connection.onDidChangeConfiguration(this.onDidChangeConfiguration.bind(this));
-		this.connection.onCompletion(this.onCompletion.bind(this));
-		this.connection.onCompletionResolve(this.onCompletionResolve.bind(this));
 
 		this.documents.onDidClose(this.onDidClose.bind(this));
 		this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
@@ -102,11 +95,7 @@ export abstract class LanguageServerBase {
 
 		const result: InitializeResult = {
 			capabilities: {
-				textDocumentSync: TextDocumentSyncKind.Incremental,
-				// This server supports code completion.
-				completionProvider: {
-					resolveProvider: true
-				}
+				textDocumentSync: TextDocumentSyncKind.Incremental
 			}
 		};
 
@@ -161,20 +150,6 @@ export abstract class LanguageServerBase {
 		// The content of a text document has changed. This event is emitted
 		// when the text document first opened or when its content has changed.
 		this.validateTextDocument(change.document);
-	}
-
-	/**
-	 * Event handler that provides the initial list of the completion items.
-	 * @param _textDocumentPosition 
-	 */
-	protected abstract onCompletion(_textDocumentPosition: TextDocumentPositionParams): CompletionItem[];
-
-	/**
-	 * Event handler that resolvesd additional information for the item selected 
-	 * in the completion list.
-	 */
-	protected onCompletionResolve(item: CompletionItem): CompletionItem {
-		return item;
 	}
 
 	protected abstract parse(content: string): Promise<TokenizerResult>;

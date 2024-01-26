@@ -1,27 +1,28 @@
 import * as vscode from 'vscode';
-import { ClassRepository } from '@faubulous/mentor-rdf';
+import { DocumentContext } from '../document-context';
 import { ResourceNode } from './resource-node';
+import { OntologyRepository } from '@faubulous/mentor-rdf';
 
-export class ClassNode extends ResourceNode {
+export class ClassNode extends ResourceNode<OntologyRepository> {
 	contextValue = 'class';
 
 	constructor(
-		protected readonly repository: ClassRepository,
+		protected readonly context: DocumentContext<OntologyRepository>,
 		public readonly uri: string,
 		collapsibleState?: vscode.TreeItemCollapsibleState
 	) {
-		super(repository, uri);
+		super(context, uri);
 
 		if (collapsibleState) {
 			this.collapsibleState = collapsibleState;
 		} else {
-			this.collapsibleState = this.repository.hasSubClasses(uri) ?
+			this.collapsibleState = this.context.repository.hasSubClasses(this.context.graphs, uri) ?
 				vscode.TreeItemCollapsibleState.Collapsed :
 				vscode.TreeItemCollapsibleState.None;
 		}
 
 		this.command = {
-			command: 'mentor.command.goToDefinition',
+			command: 'mentor.action.goToDefinition',
 			title: '',
 			arguments: [uri]
 		};
@@ -34,10 +35,10 @@ export class ClassNode extends ResourceNode {
 	override getIcon() {
 		let icon = 'rdf-class';
 
-		if (this.repository.hasEquivalentClass(this.uri)) {
+		if (this.context.repository.hasEquivalentClass(this.context.graphs, this.uri)) {
 			icon += '-eq';
 		}
-		else if (!this.repository.hasSubject(this.uri)) {
+		else if (!this.context.repository.hasSubject(this.context.graphs, this.uri)) {
 			icon += '-ref';
 		}
 

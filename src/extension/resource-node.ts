@@ -1,15 +1,14 @@
 import * as vscode from 'vscode';
-import * as n3 from 'n3';
-import { mentor } from '../mentor';
-import { ResourceRepository, skos, rdfs } from '@faubulous/mentor-rdf';
+import { ResourceRepository } from '@faubulous/mentor-rdf';
+import { DocumentContext } from '../document-context';
 
-export class ResourceNode extends vscode.TreeItem {
+export class ResourceNode<T extends ResourceRepository> extends vscode.TreeItem {
 	contextValue: string = 'resource';
 
 	command: vscode.Command | undefined;
 
 	constructor(
-		protected readonly repository: ResourceRepository,
+		protected readonly context: DocumentContext<T>,
 		public readonly uri: string
 	) {
 		super('');
@@ -19,7 +18,7 @@ export class ResourceNode extends vscode.TreeItem {
 		this.tooltip = this.getTooltip();
 
 		this.command = {
-			command: 'mentor.command.selectResource',
+			command: 'mentor.action.selectResource',
 			title: '',
 			arguments: [uri]
 		};
@@ -43,7 +42,7 @@ export class ResourceNode extends vscode.TreeItem {
 	}
 
 	protected getTooltip(): vscode.MarkdownString | undefined {
-		return mentor.activeContext?.getResourceTooltip(this.uri);
+		return this.context.getResourceTooltip(this.uri);
 	}
 
 	getColor(): vscode.ThemeColor {

@@ -1,90 +1,18 @@
 import * as vscode from 'vscode';
-import { DocumentContext, mentor } from '../mentor';
-import { IToken } from 'chevrotain';
-import { getNamespaceUri } from '../utilities';
+import { DocumentContext } from '../document-context';
+import { FeatureProvider } from './feature-provider';
 
-interface TokenPosition {
-	startLine: number;
-	startColumn: number;
-	endLine: number;
-	endColumn: number;
-}
-
-export class DefinitionProvider implements vscode.DefinitionProvider {
-	private _getTokenPosition(token: IToken): TokenPosition {
-		return {
-			startLine: token.startLine ? token.startLine - 1 : 0,
-			startColumn: token.startColumn ? token.startColumn - 1 : 0,
-			endLine: token.endLine ? token.endLine - 1 : 0,
-			endColumn: token.endColumn ? token.endColumn : 0
-		};
-	}
-
-	private _isCursorOnPrefix(token: IToken, position: vscode.Position) {
-		const tokenType = token.tokenType?.tokenName;
-		const p = this._getTokenPosition(token);
-
-		switch (tokenType) {
-			case "PNAME_NS":
-			case "PNAME_LN": {
-				const i = token.image.indexOf(":");
-				const n = position.character - p.startColumn;
-
-				return n <= i;
-			}
-			default: {
-				return false;
-			}
-		}
-	}
-
-	private _getLabelEditRange(token: IToken) {
-		const tokenType = token.tokenType?.tokenName;
-		const p = this._getTokenPosition(token);
-
-		switch (tokenType) {
-			case "PNAME_LN": {
-				const i = token.image.indexOf(":");
-
-				return new vscode.Range(
-					new vscode.Position(p.startLine, p.startColumn + i + 1),
-					new vscode.Position(p.endLine, p.endColumn)
-				);
-			}
-			case "IRIREF": {
-				let uri = token.image.trim();
-				uri = uri.substring(1, uri.length - 1)
-
-				const namespace = getNamespaceUri(uri);
-				const label = uri.substring(namespace.length);
-
-				const i = token.image.indexOf(label);
-
-				return new vscode.Range(
-					new vscode.Position(p.startLine, p.startColumn + i),
-					new vscode.Position(p.endLine, p.startColumn + i + label.length)
-				);
-			}
-			case "VAR1": {
-				return new vscode.Range(
-					new vscode.Position(p.startLine, p.startColumn + 1),
-					new vscode.Position(p.endLine, p.endColumn)
-				);
-			}
-			default: {
-				return null;
-			}
-		}
-	}
-
+/**
+ * Provides resource definitions for Turtle documents.
+ */
+export class DefinitionProvider extends FeatureProvider {
 	public provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
-		const uri = document.uri.toString();
+		const context = this.getDocumentContext(document);
 
-		if (!mentor.contexts[uri]) {
+		if(!context) {
 			return null;
 		}
 
-		const context = mentor.contexts[uri];
 		const token = context.getTokensAtPosition(position)[0];
 
 		if (!token) {
@@ -93,7 +21,7 @@ export class DefinitionProvider implements vscode.DefinitionProvider {
 
 		let u;
 
-		if (this._isCursorOnPrefix(token, position)) {
+		if (context.isCursorOnPrefix(token, position)) {
 			u = context.namespaces[token.image.split(":")[0]];
 		} else {
 			u = context.getUriFromToken(token);
@@ -110,7 +38,7 @@ export class DefinitionProvider implements vscode.DefinitionProvider {
 		let t;
 
 		if (context.namespaceDefinitions[uri]) {
-			t = context.references[uri][0];
+			t = context.namespaceDefinitions[uri];
 		} else if (context.typeAssertions[uri]) {
 			t = context.typeAssertions[uri][0];
 		} else if (context.references[uri]) {

@@ -33,30 +33,24 @@ export class PropertyTree {
 
 		mentor.onDidChangeVocabularyContext((context) => this.updateItemCount());
 
-		mentor.onDidChangeClassFilter((params) => {
-			this.treeDataProvider.domainFilter = params.classUri;
-			this.treeDataProvider.refresh();
-		});
-
 		this.registerCommands();
 	}
 
 	private registerCommands() {
-		commands.registerCommand('mentor.command.refreshPropertyTree', () => {
-			this.treeDataProvider.domainFilter = undefined;
+		commands.registerCommand('mentor.action.refreshPropertyTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
 		commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
 
-		commands.registerCommand('mentor.command.showPropertyTypes', () => {
+		commands.registerCommand('mentor.action.showPropertyTypes', () => {
 			this.treeDataProvider.showTypes = true;
 			this.treeDataProvider.refresh();
 
 			commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
 		});
 
-		commands.registerCommand('mentor.command.hidePropertyTypes', () => {
+		commands.registerCommand('mentor.action.hidePropertyTypes', () => {
 			this.treeDataProvider.showTypes = false;
 			this.treeDataProvider.refresh();
 

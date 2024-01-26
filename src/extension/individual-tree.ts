@@ -30,30 +30,24 @@ export class IndividualTree {
 
 		mentor.onDidChangeVocabularyContext(() => this.updateItemCount());
 
-		mentor.onDidChangeClassFilter((params) => {
-			this.treeDataProvider.typeFilter = params.classUri;
-			this.treeDataProvider.refresh();
-		});
-
 		this.registerCommands();
 	}
 
 	private registerCommands() {
-		commands.registerCommand('mentor.command.refreshIndividualTree', () => {
-			this.treeDataProvider.typeFilter = undefined;
+		commands.registerCommand('mentor.action.refreshIndividualTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
 		commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
 
-		commands.registerCommand('mentor.command.showIndividualTypes', () => {
+		commands.registerCommand('mentor.action.showIndividualTypes', () => {
 			this.treeDataProvider.showTypes = true;
 			this.treeDataProvider.refresh();
 
 			commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
 		});
 
-		commands.registerCommand('mentor.command.hideIndividualTypes', () => {
+		commands.registerCommand('mentor.action.hideIndividualTypes', () => {
 			this.treeDataProvider.showTypes = false;
 			this.treeDataProvider.refresh();
 

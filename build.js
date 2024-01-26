@@ -16,7 +16,7 @@ const baseConfig = {
   bundle: true,
   minify: productionBuild,
   sourcemap: !productionBuild,
-  external: ["vscode"],
+  external: ["vscode"]
 };
 
 console.log("Options:", baseConfig);

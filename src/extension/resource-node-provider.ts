@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { mentor, DocumentContext } from '../mentor';
+import { mentor } from '../mentor';
+import { DocumentContext } from '../document-context';
+import { ResourceRepository } from '@faubulous/mentor-rdf';
 
-export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider<string> {
-	public context: DocumentContext | undefined;
-
-	protected repository: T | undefined;
+export abstract class ResourceNodeProvider<T extends ResourceRepository> implements vscode.TreeDataProvider<string> {
+	public context: DocumentContext<T> | undefined;
 
 	protected autoRefresh: boolean = true;
 
@@ -26,7 +26,7 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 		}
 	}
 
-	private _onVocabularyChanged(e: DocumentContext | undefined): void {
+	private _onVocabularyChanged(e: DocumentContext<T> | undefined): void {
 		if (e) {
 			this.context = e;
 			this.onDidChangeVocabularyContext(e);
@@ -34,7 +34,7 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 		}
 	}
 
-	protected abstract onDidChangeVocabularyContext(context: DocumentContext): void;
+	protected onDidChangeVocabularyContext(context: DocumentContext<T>) {}
 
 	refresh(): void {
 		if (this.context) {

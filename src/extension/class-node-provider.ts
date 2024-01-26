@@ -1,62 +1,51 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '../mentor';
-import { ClassRepository } from '@faubulous/mentor-rdf';
+import { OntologyRepository } from '@faubulous/mentor-rdf';
 import { ClassNode } from './class-node';
 import { ResourceNodeProvider } from './resource-node-provider';
 
 /**
  * A tree node provider for RDF classes.
  */
-export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
-
+export class ClassNodeProvider extends ResourceNodeProvider<OntologyRepository> {
 	/**
 	 * Indicates whether classes should be included in the tree that are not explicitly defined in the ontology.
 	 */
-	public showReferenced: boolean = true;
-
-	/**
-	 * Indicates whether related tree views (properties and individuals) should be filtered when the selection changes.
-	 */
-	public filterEnabled: boolean = false;
-
-	override onDidChangeVocabularyContext(context: DocumentContext): void {
-		if (context?.store) {
-			this.repository = new ClassRepository(context.store);
-		} else {
-			this.repository = undefined;
-		}
-	}
+	public showReferenced: boolean = false;
 
 	override getParent(uri: string): string | undefined {
-		if (!this.repository) {
+		if (this.context) {
+			let result = this.context.repository.getSuperClasses(this.context.graphs, uri).sort().slice(0, 1);
+
+			return result.length > 0 ? result[0] : undefined;
+		} else {
 			return undefined;
 		}
-
-		let result = this.repository.getSuperClasses(uri).sort().slice(0, 1);
-
-		return result.length > 0 ? result[0] : undefined;
 	}
 
 	override getChildren(uri: string): string[] {
-		if (!this.repository) {
+		if (this.context) {
+			let options = { includeReferencedClasses: this.showReferenced };
+			let result = this.context.repository.getSubClasses(this.context.graphs, uri, options).sort();
+
+			return result;
+		} else {
 			return [];
 		}
-
-		let options = { includeReferencedClasses: this.showReferenced };
-		let result = this.repository.getSubClasses(uri, options).sort();
-
-		return result;
 	}
 
 	override getTreeItem(uri: string): vscode.TreeItem {
-		if (!this.repository) {
-			throw new Error('Invalid repostory.');
+		if (this.context) {
+			return new ClassNode(this.context, uri);
+		} else {
+			throw new Error('Invalid context.');
 		}
-
-		return new ClassNode(this.repository, uri);
 	}
 
 	override getTotalItemCount(): number {
-		return this.repository ? this.repository.getClasses({ includeReferencedClasses: false }).length : 0;
+		if (this.context) {
+			return this.context.repository.getClasses(this.context.graphs, { includeReferencedClasses: false }).length;
+		} else {
+			return 0;
+		}
 	}
 }

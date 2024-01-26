@@ -42,42 +42,24 @@ export class ClassTree {
 	}
 
 	private registerCommands() {
-		commands.registerCommand('mentor.command.refreshClassTree', () => {
+		commands.registerCommand('mentor.action.refreshClassTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
 		commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
 
-		commands.registerCommand('mentor.command.showReferencedClasses', () => {
+		commands.registerCommand('mentor.action.showReferencedClasses', () => {
 			this.treeDataProvider.showReferenced = true;
 			this.treeDataProvider.refresh();
 
 			commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
 		});
 
-		commands.registerCommand('mentor.command.hideReferencedClasses', () => {
+		commands.registerCommand('mentor.action.hideReferencedClasses', () => {
 			this.treeDataProvider.showReferenced = false;
 			this.treeDataProvider.refresh();
 
 			commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
-		});
-
-		commands.executeCommand('setContext', 'classTree.filterByClass', this.filterEnabled);
-
-		commands.registerCommand('mentor.command.enableFilterByClass', () => {
-			this.filterEnabled = true;
-
-			mentor.filterByClass(this.treeDataProvider.selectedNode);
-
-			commands.executeCommand('setContext', 'classTree.filterByClass', this.filterEnabled);
-		});
-
-		commands.registerCommand('mentor.command.disableFilterByClass', () => {
-			this.filterEnabled = false;
-
-			mentor.filterByClass(this.treeDataProvider.selectedNode);
-
-			commands.executeCommand('setContext', 'classTree.filterByClass', this.filterEnabled);
 		});
 	}
 

@@ -60,11 +60,11 @@ export function deactivate(): Thenable<void> {
 
 function registerCommands(context: vscode.ExtensionContext) {
 	// Open the settings view via command
-	disposables.push(vscode.commands.registerCommand("mentor.command.openSettings", () => {
+	disposables.push(vscode.commands.registerCommand("mentor.action.openSettings", () => {
 		SettingsPanel.render(context.extensionUri);
 	}));
 
-	disposables.push(vscode.commands.registerCommand('mentor.command.openInBrowser', (uri: string) => {
+	disposables.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (uri: string) => {
 		const internalBrowser = vscode.workspace.getConfiguration('mentor').get('internalBrowserEnabled');
 
 		if (internalBrowser === true) {
@@ -74,7 +74,21 @@ function registerCommands(context: vscode.ExtensionContext) {
 		}
 	}));
 
-	disposables.push(vscode.commands.registerCommand('mentor.command.goToDefinition', (uri: string) => {
+	disposables.push(vscode.commands.registerCommand('mentor.action.findReferences', (uri: string) => {
+		mentor.activateDocument().then((editor) => {
+			if (mentor.activeContext && editor) {
+				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
+
+				if (location instanceof vscode.Location) {
+					editor.selection = new vscode.Selection(location.range.start, location.range.end);
+					
+					vscode.commands.executeCommand('references-view.findReferences', editor.document.uri, editor.selection.active);
+				}
+			}
+		});
+	}));
+
+	disposables.push(vscode.commands.registerCommand('mentor.action.goToDefinition', (uri: string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
@@ -85,9 +99,5 @@ function registerCommands(context: vscode.ExtensionContext) {
 				}
 			}
 		});
-	}));
-
-	disposables.push(vscode.commands.registerCommand('mentor.command.showUsages', (uri: string) => {
-		mentor.filterByClass(uri);
 	}));
 }
