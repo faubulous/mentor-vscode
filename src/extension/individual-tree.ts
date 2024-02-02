@@ -1,6 +1,6 @@
-import { ExtensionContext, TreeView, commands, window } from "vscode";
+import * as vscode from "vscode";
+import * as mentor from "../mentor";
 import { IndividualNodeProvider } from "./individual-node-provider";
-import { mentor } from "../mentor";
 
 /**
  * Provides the individual explorer and related commands.
@@ -19,12 +19,12 @@ export class IndividualTree {
 	/**
 	 * The tree view.
 	 */
-	readonly treeView: TreeView<string>;
+	readonly treeView: vscode.TreeView<string>;
 
-	constructor(context: ExtensionContext) {
-		window.registerTreeDataProvider(this.id, this.treeDataProvider);
+	constructor(context: vscode.ExtensionContext) {
+		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
 
-		this.treeView = window.createTreeView(this.id, { treeDataProvider: this.treeDataProvider, showCollapseAll: true });
+		this.treeView = vscode.window.createTreeView(this.id, { treeDataProvider: this.treeDataProvider, showCollapseAll: true });
 
 		this.updateItemCount();
 
@@ -34,24 +34,24 @@ export class IndividualTree {
 	}
 
 	private registerCommands() {
-		commands.registerCommand('mentor.action.refreshIndividualTree', () => {
+		vscode.commands.registerCommand('mentor.action.refreshIndividualTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
-		commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
+		vscode.commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
 
-		commands.registerCommand('mentor.action.showIndividualTypes', () => {
+		vscode.commands.registerCommand('mentor.action.showIndividualTypes', () => {
 			this.treeDataProvider.showTypes = true;
 			this.treeDataProvider.refresh();
 
-			commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
+			vscode.commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
 		});
 
-		commands.registerCommand('mentor.action.hideIndividualTypes', () => {
+		vscode.commands.registerCommand('mentor.action.hideIndividualTypes', () => {
 			this.treeDataProvider.showTypes = false;
 			this.treeDataProvider.refresh();
 
-			commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
+			vscode.commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
 		});
 	}
 

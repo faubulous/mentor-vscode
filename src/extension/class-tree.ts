@@ -1,11 +1,12 @@
-import { ExtensionContext, TreeView, commands, window } from "vscode";
+import * as vscode from 'vscode';
+import * as mentor from '../mentor'
 import { ClassNodeProvider } from "./class-node-provider";
-import { mentor } from "../mentor";
+import { TreeView } from './tree-view';
 
 /**
  * Provides the class explorer and related commands.
  */
-export class ClassTree {
+export class ClassTree implements TreeView {
 	/**
 	 * The ID which is used to register the view and make it visible in VS Code.
 	 */
@@ -19,17 +20,12 @@ export class ClassTree {
 	/**
 	 * The tree view.
 	 */
-	readonly treeView: TreeView<string>;
+	readonly treeView: vscode.TreeView<string>;
 
-	/**
-	 * Indicates class filtering should be applied when the selected node changes.
-	 */
-	filterEnabled: boolean = false;
+	constructor(protected context: vscode.ExtensionContext) {
+		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
 
-	constructor(protected context: ExtensionContext) {
-		window.registerTreeDataProvider(this.id, this.treeDataProvider);
-
-		this.treeView = window.createTreeView(this.id, {
+		this.treeView = vscode.window.createTreeView(this.id, {
 			treeDataProvider: this.treeDataProvider,
 			showCollapseAll: true
 		});
@@ -42,24 +38,24 @@ export class ClassTree {
 	}
 
 	private registerCommands() {
-		commands.registerCommand('mentor.action.refreshClassTree', () => {
+		vscode.commands.registerCommand('mentor.action.refreshClassTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
-		commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
+		vscode.commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
 
-		commands.registerCommand('mentor.action.showReferencedClasses', () => {
+		vscode.commands.registerCommand('mentor.action.showReferencedClasses', () => {
 			this.treeDataProvider.showReferenced = true;
 			this.treeDataProvider.refresh();
 
-			commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
+			vscode.commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
 		});
 
-		commands.registerCommand('mentor.action.hideReferencedClasses', () => {
+		vscode.commands.registerCommand('mentor.action.hideReferencedClasses', () => {
 			this.treeDataProvider.showReferenced = false;
 			this.treeDataProvider.refresh();
 
-			commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
+			vscode.commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
 		});
 	}
 

@@ -1,15 +1,14 @@
 import * as vscode from 'vscode';
-import { OntologyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { ResourceNode } from './resource-node';
 
-export class IndividualNode extends ResourceNode<OntologyRepository> {
+export class IndividualNode extends ResourceNode {
 	contextValue = 'individual';
 
 	type: 'individual' | 'class' = 'individual';
 
 	constructor(
-		protected readonly context: DocumentContext<OntologyRepository>,
+		protected readonly context: DocumentContext,
 		public readonly uri: string
 	) {
 		super(context, uri);

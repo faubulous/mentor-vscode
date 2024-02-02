@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { OntologyRepository } from '@faubulous/mentor-rdf';
-import { DocumentContext } from '../document-context';
+import * as mentor from '../mentor';
 import { PropertyNode } from './property-node';
 import { ResourceNodeProvider } from './resource-node-provider';
 import { ClassNode } from './class-node';
@@ -8,7 +7,7 @@ import { ClassNode } from './class-node';
 /**
  * A tree node provider for RDF properties.
  */
-export class PropertyNodeProvider extends ResourceNodeProvider<OntologyRepository> {
+export class PropertyNodeProvider extends ResourceNodeProvider {
 	/**
 	 * Indicates whether the property type should be shown as root nodes in the tree.
 	 */
@@ -29,17 +28,17 @@ export class PropertyNodeProvider extends ResourceNodeProvider<OntologyRepositor
 
 			if (!uri) {
 				if (this.showTypes) {
-					result = this.context.repository.getPropertyTypes(this.context.graphs).sort();
+					result = mentor.ontology.getPropertyTypes(this.context.graphs).sort();
 
 					// Mark the nodes as classes for the getTreeItem method.
 					result.forEach((type: string) => this.classNodes[type] = true);
 				} else {
-					result = this.context.repository.getProperties(this.context.graphs).sort();
+					result = mentor.ontology.getProperties(this.context.graphs).sort();
 				}
 			} else if (this.classNodes[uri]) {
-				result = this.context.repository.getPropertiesOfType(this.context.graphs, uri, false).sort();
+				result = mentor.ontology.getPropertiesOfType(this.context.graphs, uri, false).sort();
 			} else {
-				result = this.context.repository.getSubProperties(this.context.graphs, uri).sort();
+				result = mentor.ontology.getSubProperties(this.context.graphs, uri).sort();
 			}
 
 			return result;
@@ -62,7 +61,7 @@ export class PropertyNodeProvider extends ResourceNodeProvider<OntologyRepositor
 
 	override getTotalItemCount(): number {
 		if (this.context) {
-			return this.context.repository.getProperties(this.context.graphs).length;
+			return mentor.ontology.getProperties(this.context.graphs).length;
 		} else {
 			return 0;
 		}

@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
+import * as mentor from '../mentor';
 import { DocumentContext } from '../document-context';
 import { ResourceNode } from './resource-node';
-import { OntologyRepository } from '@faubulous/mentor-rdf';
 
-export class ClassNode extends ResourceNode<OntologyRepository> {
+export class ClassNode extends ResourceNode {
 	contextValue = 'class';
 
 	constructor(
-		protected readonly context: DocumentContext<OntologyRepository>,
+		protected readonly context: DocumentContext,
 		public readonly uri: string,
 		collapsibleState?: vscode.TreeItemCollapsibleState
 	) {
@@ -16,7 +16,7 @@ export class ClassNode extends ResourceNode<OntologyRepository> {
 		if (collapsibleState) {
 			this.collapsibleState = collapsibleState;
 		} else {
-			this.collapsibleState = this.context.repository.hasSubClasses(this.context.graphs, uri) ?
+			this.collapsibleState = mentor.ontology.hasSubClasses(this.context.graphs, uri) ?
 				vscode.TreeItemCollapsibleState.Collapsed :
 				vscode.TreeItemCollapsibleState.None;
 		}
@@ -35,10 +35,10 @@ export class ClassNode extends ResourceNode<OntologyRepository> {
 	override getIcon() {
 		let icon = 'rdf-class';
 
-		if (this.context.repository.hasEquivalentClass(this.context.graphs, this.uri)) {
+		if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
 			icon += '-eq';
 		}
-		else if (!this.context.repository.hasSubject(this.context.graphs, this.uri)) {
+		else if (!mentor.ontology.hasSubject(this.context.graphs, this.uri)) {
 			icon += '-ref';
 		}
 

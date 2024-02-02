@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { mentor } from "../mentor";
+import * as mentor from "../mentor";
 
 export class FeatureProvider {
 	/**

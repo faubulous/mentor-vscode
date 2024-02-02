@@ -1,6 +1,7 @@
-import * as vscode from 'vscode';
 import * as n3 from 'n3';
-import { Store, RdfSyntax, Tokenizer, TokenizerResult, rdf, ResourceRepository } from '@faubulous/mentor-rdf';
+import * as vscode from 'vscode';
+import * as mentor from './mentor';
+import { RdfSyntax, Tokenizer, TokenizerResult, rdf } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { getNamespaceUri } from './utilities';
 import { integer } from 'vscode-languageclient';
@@ -12,21 +13,11 @@ interface TokenPosition {
 	endColumn: number;
 }
 
-export class DocumentContext<T extends ResourceRepository> {
-	/**
-	 * The triple store for the document.
-	 */
-	readonly store: Store;
-
+export class DocumentContext {
 	/**
 	 * The graphs in the triple store associated with the document.
 	 */
 	readonly graphs: string[] = [];
-
-	/**
-	 * The repository for the document.
-	 */
-	readonly repository: T;
 
 	/**
 	 * The document.
@@ -66,10 +57,8 @@ export class DocumentContext<T extends ResourceRepository> {
 			description: []
 		};
 
-	constructor(document: vscode.TextDocument, store: Store, repository: T) {
+	constructor(document: vscode.TextDocument) {
 		this.document = document;
-		this.store = store;
-		this.repository = repository;
 
 		this.predicates.label = vscode.workspace.getConfiguration('mentor').get('predicates.label') ?? [];
 		this.predicates.description = vscode.workspace.getConfiguration('mentor').get('predicates.description') ?? [];
@@ -105,26 +94,29 @@ export class DocumentContext<T extends ResourceRepository> {
 			return;
 		}
 
-		await Promise.all([
-			this._parseGraph(document),
-			this._parseTokens(document)
-		])
+		// Parse the tokens *before* parsing the graph because the graph parsing might fail but we need to update the tokens.
+		await this._parseTokens(document);
+
+		try {
+			await this._parseGraph(document);
+		}
+		catch (e) {
+			console.error(e);
+		}
 	}
 
 	private async _parseGraph(document: vscode.TextDocument): Promise<void> {
 		if (DocumentContext._isSupportedGraphLanguage(document.languageId)) {
 			const uri = document.uri.toString();
 
-			try {
-				const text = document.getText();
+			// Initilaize the graphs *before* trying to load the document so 
+			// that they are initialized even when loading the document fails.
+			this.graphs.length = 0;
+			this.graphs.push(...mentor.store.getContextGraphs(uri, true));
 
-				this.graphs.length = 0;
-				this.graphs.push(...this.store.getContextGraphs(uri, true));
-
-				await this.store.loadFromStream(text, uri);
-			} catch (e) {
-				console.error(e);
-			}
+			// The loadFromStream function only updates the existing graphs 
+			// when the document was parsed successfully.
+			await mentor.store.loadFromStream(document.getText(), uri);
 		}
 	}
 
@@ -147,10 +139,17 @@ export class DocumentContext<T extends ResourceRepository> {
 					const prefix = t.image.substring(0, t.image.length - 1);
 					const uri = this.getUriFromToken(result.tokens[i + 1]);
 
-					if (!uri) break;
+					if (!uri) {
+						break;
+					}
 
-					this.namespaces[prefix] = uri;
-					this.namespaceDefinitions[uri] = t;
+					const previousType = this.getPreviousToken(t)?.tokenType?.tokenName;
+
+					// Only set the namespace if it is preceeded by a prefix keyword.
+					if (previousType == "PREFIX" || previousType == "TTL_PREFIX") {
+						this.namespaces[prefix] = uri;
+						this.namespaceDefinitions[uri] = t;
+					}
 					break;
 				}
 				case 'PNAME_LN': {
@@ -199,21 +198,49 @@ export class DocumentContext<T extends ResourceRepository> {
 		this.typeAssertions[u] = [s];
 	}
 
-	public getResourceDescription(subjectUri: string): string | undefined {
-		const s = new n3.NamedNode(subjectUri);
+	public getResourceLabel(subjectUri: string): string {
+		if (mentor.showAnnotatedLabels) {
+			const subject = new n3.NamedNode(subjectUri);
+			const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
 
+			// First, try to find a description in the current graph.
+			for (let p of predicates) {
+				for (let q of mentor.store.match(this.graphs, subject, p)) {
+					return q.object.value;
+				}
+			}
+
+			// If none is found, try to find a description in the default graph.
+			for (let p of predicates) {
+				for (let q of mentor.store.match(undefined, subject, p)) {
+					return q.object.value;
+				}
+			}
+		}
+
+		const n = subjectUri.lastIndexOf('#');
+
+		if (n > -1) {
+			return subjectUri.substring(n + 1);
+		} else {
+			return subjectUri.substring(subjectUri.lastIndexOf('/') + 1);
+		}
+	}
+
+	public getResourceDescription(subjectUri: string): string | undefined {
+		const subject = new n3.NamedNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
 
 		// First, try to find a description in the current graph.
 		for (let p of predicates) {
-			for (let q of this.store.match(this.graphs, s, p)) {
+			for (let q of mentor.store.match(this.graphs, subject, p)) {
 				return q.object.value;
 			}
 		}
 
 		// If none is found, try to find a description in the default graph.
 		for (let p of predicates) {
-			for (let q of this.store.match(undefined, s, p)) {
+			for (let q of mentor.store.match(undefined, subject, p)) {
 				return q.object.value;
 			}
 		}
@@ -395,6 +422,78 @@ export class DocumentContext<T extends ResourceRepository> {
 
 			if (this.namespaces[prefix]) {
 				return this.namespaces[prefix] + label;
+			}
+		}
+	}
+
+	/*
+	 * Get the URI from a prefixed name.
+	 * @param name A prefixed name.
+	 * @returns A URI string.
+	 */
+	public getNamespaceUriFromPrefixedName(name: string): string | undefined {
+		const parts = name.split(':');
+
+		if (parts.length == 2) {
+			const prefix = parts[0];
+
+			return this.namespaces[prefix];
+		}
+	}
+
+	/**
+	 * Get the previous token.
+	 * @param token A token.
+	 * @returns The previous token or undefined.
+	 */
+	public getPreviousToken(token: IToken): IToken | undefined {
+		const index = this.tokens.indexOf(token);
+
+		if (index > 0) {
+			return this.tokens[index - 1];
+		}
+	}
+
+	public getCurrentTripleComponent(token: IToken): "subject" | "predicate" | "object" | undefined {
+		const p = this.getPreviousToken(token);
+
+		if (!p) {
+			// If there is no previous token, we are at the beginning of the document.
+			// It must either be followed by a prefix declaration or a subject.
+			return "subject";
+		}
+
+		switch (p.tokenType?.tokenName) {
+			case "Period":
+			case "Dot": {
+				// A dot is always followed by a subject.
+				return "subject";
+			}
+			case "Semicolon": {
+				// A semicolon is always followed by a predicate.
+				return "predicate";
+			}
+			case "A": {
+				// A type assertion is always followed by an object.
+				return "object";
+			}
+			case "PNAME_LN":
+			case "IRIREF": {
+				// This could either be a predicate or an object.
+				const q = this.getPreviousToken(p);
+
+				switch (q?.tokenType?.tokenName) {
+					case "Semicolon":
+					case "LBracket":
+					case "PNAME_LN":
+					case "IRIREF": {
+						return "object";
+					}
+					case "Period":
+					case "Dot": {
+						return "predicate";
+					}
+				}
 			}
 		}
 	}

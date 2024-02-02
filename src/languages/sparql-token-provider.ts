@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import * as mentor from '../mentor';
 import { RenameProvider } from '../providers/rename-provider';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider

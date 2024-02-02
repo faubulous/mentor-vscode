@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { OntologyRepository } from '@faubulous/mentor-rdf';
+import * as mentor from '../mentor';
 import { IndividualNode } from './individual-node';
 import { ResourceNodeProvider } from './resource-node-provider';
 import { ClassNode } from './class-node';
@@ -7,7 +7,7 @@ import { ClassNode } from './class-node';
 /**
  * A tree node provider for RDF properties.
  */
-export class IndividualNodeProvider extends ResourceNodeProvider<OntologyRepository> {
+export class IndividualNodeProvider extends ResourceNodeProvider {
 	/**
 	 * Indicates whether the individual type should be shown as root nodes in the tree.
 	 */
@@ -20,7 +20,7 @@ export class IndividualNodeProvider extends ResourceNodeProvider<OntologyReposit
 
 	override getParent(uri: string): string | undefined {
 		if (this.context) {
-			return this.context.repository.getIndividualTypes(uri).sort().slice(0, 1)[0];
+			return mentor.ontology.getIndividualTypes(this.context.graphs, uri).sort().slice(0, 1)[0];
 		} else {
 			return undefined;
 		}
@@ -31,9 +31,9 @@ export class IndividualNodeProvider extends ResourceNodeProvider<OntologyReposit
 			let result;
 
 			if (uri || !this.showTypes) {
-				result = this.context.repository.getIndividuals(this.context.graphs, uri).sort();
+				result = mentor.ontology.getIndividuals(this.context.graphs, uri).sort();
 			} else {
-				result = this.context.repository.getIndividualTypes(this.context.graphs).sort();
+				result = mentor.ontology.getIndividualTypes(this.context.graphs).sort();
 
 				// Mark the nodes as classes for the getTreeItem method.
 				result.forEach((type: string) => this.classNodes[type] = true);
@@ -59,7 +59,7 @@ export class IndividualNodeProvider extends ResourceNodeProvider<OntologyReposit
 
 	override getTotalItemCount(): number {
 		if (this.context) {
-			return this.context.repository.getIndividuals(this.context.graphs).length;
+			return mentor.ontology.getIndividuals(this.context.graphs).length;
 		} else {
 			return 0;
 		}

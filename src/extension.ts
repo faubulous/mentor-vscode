@@ -1,12 +1,10 @@
 'use strict';
 import * as vscode from 'vscode';
+import * as mentor from './mentor'
 import { Disposable } from 'vscode-languageclient';
 import { ClassTree } from './extension/class-tree';
 import { PropertyTree } from './extension/property-tree';
 import { IndividualTree } from './extension/individual-tree';
-import { SettingsPanel } from "./extension/panels/SettingsPanel";
-import { SettingsViewProvider } from "./extension/panels/SettingsViewProvider";
-import { mentor } from './mentor'
 import {
 	LanguageClientBase,
 	TurtleLanguageClient,
@@ -31,9 +29,6 @@ const providers: Disposable[] = [
 const disposables: Disposable[] = [];
 
 export function activate(context: vscode.ExtensionContext) {
-	// Open the settings view as a webview; will use this for the tree view once React components are implemented.
-	disposables.push(vscode.window.registerWebviewViewProvider(SettingsViewProvider.viewType, new SettingsViewProvider(context.extensionUri)));
-
 	// Start the language clients..
 	for (const client of clients) {
 		client.start(context);
@@ -41,9 +36,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 	registerCommands(context);
 
-	new ClassTree(context);
-	new PropertyTree(context);
-	new IndividualTree(context);
+	// Register the tree views.
+	disposables.push(new ClassTree(context).treeView);
+	disposables.push(new PropertyTree(context).treeView);
+	disposables.push(new IndividualTree(context).treeView);
 }
 
 export function deactivate(): Thenable<void> {
@@ -61,7 +57,7 @@ export function deactivate(): Thenable<void> {
 function registerCommands(context: vscode.ExtensionContext) {
 	// Open the settings view via command
 	disposables.push(vscode.commands.registerCommand("mentor.action.openSettings", () => {
-		SettingsPanel.render(context.extensionUri);
+		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:faubulous.mentor');
 	}));
 
 	disposables.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (uri: string) => {
@@ -81,7 +77,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
-					
+
 					vscode.commands.executeCommand('references-view.findReferences', editor.document.uri, editor.selection.active);
 				}
 			}

@@ -1,21 +1,22 @@
 import * as vscode from 'vscode';
+import * as mentor from '../mentor';
 import { NamedNode } from 'n3';
-import { OntologyRepository, xsd, rdf, rdfs, owl } from '@faubulous/mentor-rdf';
+import { xsd, rdf, rdfs, owl } from '@faubulous/mentor-rdf';
 import { ResourceNode } from './resource-node';
 import { DocumentContext } from '../document-context';
 
-export class PropertyNode extends ResourceNode<OntologyRepository> {
+export class PropertyNode extends ResourceNode {
 	contextValue = 'property';
 
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
 	constructor(
-		protected readonly context: DocumentContext<OntologyRepository>,
+		protected readonly context: DocumentContext,
 		public readonly uri: string
 	) {
 		super(context, uri);
 
-		this.collapsibleState = this.context.repository.hasSubProperties(this.context.graphs, uri) ?
+		this.collapsibleState = mentor.ontology.hasSubProperties(this.context.graphs, uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
 
@@ -40,21 +41,21 @@ export class PropertyNode extends ResourceNode<OntologyRepository> {
 		let p = new NamedNode(rdf.type.id);
 		let o = new NamedNode(owl.AnnotationProperty.id);
 
-		for (let q of this.context.repository.store.match(this.context.graphs, s, p, o)) {
+		for (let q of mentor.ontology.store.match(this.context.graphs, s, p, o)) {
 			this.propertyType = 'annotationProperty';
 			break;
 		}
 
 		o = new NamedNode(owl.DatatypeProperty.id);
 
-		for (let q of this.context.repository.store.match(this.context.graphs, s, p, o)) {
+		for (let q of mentor.ontology.store.match(this.context.graphs, s, p, o)) {
 			this.propertyType = 'dataProperty';
 			icon = 'symbol-text';
 			break;
 		}
 
 		// 2. Derive the icon from the property type.
-		const range = this.context.repository.getRange(this.context.graphs, this.uri);
+		const range = mentor.ontology.getRange(this.context.graphs, this.uri);
 
 		switch (range) {
 			case xsd.date.id:

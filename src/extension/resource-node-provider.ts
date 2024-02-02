@@ -1,22 +1,24 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import * as mentor from '../mentor';
 import { DocumentContext } from '../document-context';
-import { ResourceRepository } from '@faubulous/mentor-rdf';
+import { ResourceNode } from './resource-node';
 
-export abstract class ResourceNodeProvider<T extends ResourceRepository> implements vscode.TreeDataProvider<string> {
-	public context: DocumentContext<T> | undefined;
+export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<string> {
+	public context: DocumentContext | undefined;
 
 	protected autoRefresh: boolean = true;
 
 	public selectedNode: string | undefined;
-
-	protected readonly nodeCache = new Map<string, vscode.TreeItem>();
 
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
 
 	readonly onDidChangeTreeData: vscode.Event<string | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
+		mentor.onDidChangeTreeLabelSettings(() => {
+			this.refresh();
+		});
+
 		mentor.onDidChangeVocabularyContext((context) => {
 			this._onVocabularyChanged(context);
 		});
@@ -26,7 +28,7 @@ export abstract class ResourceNodeProvider<T extends ResourceRepository> impleme
 		}
 	}
 
-	private _onVocabularyChanged(e: DocumentContext<T> | undefined): void {
+	private _onVocabularyChanged(e: DocumentContext | undefined): void {
 		if (e) {
 			this.context = e;
 			this.onDidChangeVocabularyContext(e);
@@ -34,12 +36,10 @@ export abstract class ResourceNodeProvider<T extends ResourceRepository> impleme
 		}
 	}
 
-	protected onDidChangeVocabularyContext(context: DocumentContext<T>) {}
+	protected onDidChangeVocabularyContext(context: DocumentContext) { }
 
 	refresh(): void {
-		if (this.context) {
-			this._onVocabularyChanged(this.context);
-		}
+		this._onVocabularyChanged(this.context);
 	}
 
 	select(uri: string) {

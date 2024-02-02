@@ -1,5 +1,4 @@
 const { build } = require("esbuild");
-const { copy } = require("esbuild-plugin-copy");
 const fs = require("fs");
 
 //@ts-check
@@ -31,26 +30,6 @@ const extensionConfig = {
   mainFields: ["module", "main"],
   entryPoints: ["./src/extension.ts"],
   outfile: "./out/extension.js"
-};
-
-// Config for webview source code (to be run in a web-based context)
-/** @type BuildOptions */
-const webviewConfig = {
-  ...baseConfig,
-  format: "esm",
-  target: "es2020",
-  entryPoints: ["./src/extension/webview/main.ts"],
-  outfile: "./out/webview.js",
-  plugins: [
-    // Copy webview css and ttf files to `out` directory unaltered
-    copy({
-      resolveFrom: "cwd",
-      assets: {
-        from: ["./src/extension/webview/*.css", "./src/extension/webview/*.ttf"],
-        to: ["./out/"],
-      },
-    }),
-  ],
 };
 
 // Note: The platform 'node' is required for the 'vscode-languageserver' functions to work.
@@ -99,7 +78,6 @@ const watchConfig = {
     if (args.includes("--watch")) {
       console.log("[watch] Build started..");
       await build({ ...extensionConfig, ...watchConfig });
-      await build({ ...webviewConfig, ...watchConfig });
       await build({ ...getLanguageConfig('server'), ...watchConfig });
       await build({ ...getLanguageConfig('server', 'turtle'), ...watchConfig });
       await build({ ...getLanguageConfig('server', 'trig'), ...watchConfig });
@@ -112,7 +90,6 @@ const watchConfig = {
     } else {
       console.log("Build started..");
       await build(extensionConfig);
-      await build(webviewConfig);
       await build(getLanguageConfig('server'));
       await build(getLanguageConfig('server', 'turtle'));
       await build(getLanguageConfig('server', 'trig'));

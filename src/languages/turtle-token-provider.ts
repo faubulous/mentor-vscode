@@ -1,11 +1,20 @@
 import * as vscode from 'vscode';
-import { RenameProvider, DefinitionProvider, ReferenceProvider, HoverProvider, SemanticTokensProvider, SemanticTokensLegend } from '../providers';
+import {
+	RenameProvider,
+	DefinitionProvider,
+	ReferenceProvider,
+	HoverProvider,
+	SemanticTokensProvider,
+	SemanticTokensLegend,
+	CompletionItemProvider
+} from '../providers';
 
 const tokenProvider = new SemanticTokensProvider();
 const renameProvider = new RenameProvider();
 const referenceProvider = new ReferenceProvider();
 const definitionProvider = new DefinitionProvider();
 const hoverProvider = new HoverProvider();
+const completionProvider = new CompletionItemProvider();
 
 export class TurtleTokenProvider {
 	register(): vscode.Disposable[] {
@@ -18,6 +27,7 @@ export class TurtleTokenProvider {
 			result.push(vscode.languages.registerDefinitionProvider({ language }, definitionProvider));
 			result.push(vscode.languages.registerHoverProvider({ language }, hoverProvider));
 			result.push(vscode.languages.registerReferenceProvider({ language }, referenceProvider));
+			result.push(vscode.languages.registerCompletionItemProvider({ language }, completionProvider, ':'));
 		}
 
 		return result;

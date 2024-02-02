@@ -1,14 +1,13 @@
 import * as vscode from 'vscode';
-import { ResourceRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 
-export class ResourceNode<T extends ResourceRepository> extends vscode.TreeItem {
+export class ResourceNode extends vscode.TreeItem {
 	contextValue: string = 'resource';
 
 	command: vscode.Command | undefined;
 
 	constructor(
-		protected readonly context: DocumentContext<T>,
+		protected readonly context: DocumentContext,
 		public readonly uri: string
 	) {
 		super('');
@@ -24,16 +23,8 @@ export class ResourceNode<T extends ResourceRepository> extends vscode.TreeItem 
 		};
 	}
 
-	protected getLabel(): vscode.TreeItemLabel {
-		let label: string;
-
-		const n = this.uri.lastIndexOf('#');
-
-		if (n > -1) {
-			label = this.uri.substring(n + 1);
-		} else {
-			label = this.uri.substring(this.uri.lastIndexOf('/') + 1);
-		}
+	getLabel(): vscode.TreeItemLabel {
+		let label = this.context.getResourceLabel(this.uri);
 
 		return {
 			label: label,
@@ -41,7 +32,7 @@ export class ResourceNode<T extends ResourceRepository> extends vscode.TreeItem 
 		}
 	}
 
-	protected getTooltip(): vscode.MarkdownString | undefined {
+	getTooltip(): vscode.MarkdownString | undefined {
 		return this.context.getResourceTooltip(this.uri);
 	}
 

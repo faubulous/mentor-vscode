@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
-import { OntologyRepository } from '@faubulous/mentor-rdf';
+import * as mentor from '../mentor';
 import { ClassNode } from './class-node';
 import { ResourceNodeProvider } from './resource-node-provider';
 
 /**
  * A tree node provider for RDF classes.
  */
-export class ClassNodeProvider extends ResourceNodeProvider<OntologyRepository> {
+export class ClassNodeProvider extends ResourceNodeProvider {
 	/**
 	 * Indicates whether classes should be included in the tree that are not explicitly defined in the ontology.
 	 */
@@ -14,7 +14,7 @@ export class ClassNodeProvider extends ResourceNodeProvider<OntologyRepository> 
 
 	override getParent(uri: string): string | undefined {
 		if (this.context) {
-			let result = this.context.repository.getSuperClasses(this.context.graphs, uri).sort().slice(0, 1);
+			let result = mentor.ontology.getSuperClasses(this.context.graphs, uri).sort().slice(0, 1);
 
 			return result.length > 0 ? result[0] : undefined;
 		} else {
@@ -25,7 +25,7 @@ export class ClassNodeProvider extends ResourceNodeProvider<OntologyRepository> 
 	override getChildren(uri: string): string[] {
 		if (this.context) {
 			let options = { includeReferencedClasses: this.showReferenced };
-			let result = this.context.repository.getSubClasses(this.context.graphs, uri, options).sort();
+			let result = mentor.ontology.getSubClasses(this.context.graphs, uri, options).sort();
 
 			return result;
 		} else {
@@ -43,7 +43,7 @@ export class ClassNodeProvider extends ResourceNodeProvider<OntologyRepository> 
 
 	override getTotalItemCount(): number {
 		if (this.context) {
-			return this.context.repository.getClasses(this.context.graphs, { includeReferencedClasses: false }).length;
+			return mentor.ontology.getClasses(this.context.graphs, { includeReferencedClasses: false }).length;
 		} else {
 			return 0;
 		}

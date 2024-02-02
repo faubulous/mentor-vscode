@@ -2,113 +2,145 @@ import * as vscode from 'vscode';
 import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, OntologyRepository } from '@faubulous/mentor-rdf';
 
-class MentorExtension {
-	/**
-	 * Maps document URIs to loaded document contexts.
-	 */
-	contexts: { [key: string]: DocumentContext<OntologyRepository> } = {};
+/**
+ * Maps document URIs to loaded document contexts.
+ */
+export const contexts: { [key: string]: DocumentContext } = {};
 
-	/**
-	 * The active document context.
-	 */
-	activeContext: DocumentContext<OntologyRepository> | undefined;
+/**
+ * The currently active document context or `undefined`.
+ */
+export let activeContext: DocumentContext | undefined;
 
-	/**
-	 * The triple store.
-	 */
-	store = new Store(new OwlReasoner());
+/**
+ * Idicates whether to show annotated labels in tree views, e.g. rdfs:label.
+ */
+export let showAnnotatedLabels: boolean = true;
 
-	/**
-	 * The ontology repository.
-	 */
-	repository = new OntologyRepository(this.store);
+/**
+ * The Mentor RDF extension triple store.
+ */
+export const store = new Store(new OwlReasoner());
 
-	private _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext<OntologyRepository> | undefined>();
+/**
+ * A repository for retrieving ontology resources.
+ */
+export const ontology = new OntologyRepository(store);
 
-	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
+const _onDidChangeTreeLabelSettings = new vscode.EventEmitter<void>();
 
-	constructor() {
-		vscode.workspace.onDidChangeTextDocument((e) => this.onTextDocumentChanged(e));
-		vscode.window.onDidChangeActiveTextEditor(() => this.onActiveEditorChanged());
+export const onDidChangeTreeLabelSettings = _onDidChangeTreeLabelSettings.event;
 
-		this.store.loadFrameworkOntologies().then(() => {});
+const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
-		this.onActiveEditorChanged();
+export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
+
+function onActiveEditorChanged(): void {
+	if (!vscode.window.activeTextEditor) {
+		return;
 	}
 
-	onActiveEditorChanged(): void {
-		if (!vscode.window.activeTextEditor) {
-			return;
-		}
+	const editor = vscode.window.activeTextEditor;
 
-		const editor = vscode.window.activeTextEditor;
-
-		if (editor.document == this.activeContext?.document) {
-			return;
-		}
-
-		if (!DocumentContext.canLoad(editor.document)) {
-			return;
-		}
-
-		this._loadDocument(editor.document).then((context) => {
-			if (context) {
-				this.activeContext = context;
-				this._onDidChangeDocumentContext?.fire(context);
-			}
-		});
+	if (editor.document == activeContext?.document) {
+		return;
 	}
 
-	onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-		if (!DocumentContext.canLoad(e.document)) {
-			return;
-		}
-
-		this._loadDocument(e.document, true).then((context) => {
-			if (context) {
-				this._onDidChangeDocumentContext?.fire(context);
-			}
-		});
+	if (!DocumentContext.canLoad(editor.document)) {
+		return;
 	}
 
-	private async _loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext<OntologyRepository> | undefined> {
-		if (!document) {
-			return;
+	loadDocument(editor.document).then((context) => {
+		if (context) {
+			activeContext = context;
+			_onDidChangeDocumentContext?.fire(context);
 		}
+	});
+}
 
-		const uri = document.uri.toString();
+vscode.window.onDidChangeActiveTextEditor(() => onActiveEditorChanged());
 
-		let context = this.contexts[uri];
+function onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
+	if (!DocumentContext.canLoad(e.document)) {
+		return;
+	}
 
-		if (context && !reload) {
-			return context;
+	loadDocument(e.document, true).then((context) => {
+		if (context) {
+			_onDidChangeDocumentContext?.fire(context);
 		}
+	});
+}
 
-		context = new DocumentContext(document, this.store, this.repository);
+vscode.workspace.onDidChangeTextDocument((e) => onTextDocumentChanged(e));
 
-		await context.load(document);
+async function loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext | undefined> {
+	if (!document) {
+		return;
+	}
 
-		this.contexts[uri] = context;
-		this.activeContext = context;
+	const uri = document.uri.toString();
 
-		for (let d of Object.values(this.contexts).filter(c => c.document.isClosed)) {
-			const uri = d.document.uri.toString();
+	let context = contexts[uri];
 
-			delete this.contexts[uri];
-		}
-
+	if (context && !reload) {
 		return context;
 	}
 
-	async activateDocument(): Promise<vscode.TextEditor | undefined> {
-		const activeTextEditor = vscode.window.activeTextEditor;
+	context = new DocumentContext(document);
 
-		if (this.activeContext && this.activeContext.document != activeTextEditor?.document) {
-			await vscode.commands.executeCommand<vscode.TextDocumentShowOptions>("vscode.open", this.activeContext.document.uri);
-		}
+	await context.load(document);
 
-		return activeTextEditor;
+	contexts[uri] = context;
+	activeContext = context;
+
+	for (let d of Object.values(contexts).filter(c => c.document.isClosed)) {
+		const uri = d.document.uri.toString();
+
+		delete contexts[uri];
 	}
+
+	return context;
 }
 
-export const mentor: MentorExtension = new MentorExtension();
+export async function activateDocument(): Promise<vscode.TextEditor | undefined> {
+	const activeTextEditor = vscode.window.activeTextEditor;
+
+	if (activeContext && activeContext.document != activeTextEditor?.document) {
+		await vscode.commands.executeCommand<vscode.TextDocumentShowOptions>("vscode.open", activeContext.document.uri);
+	}
+
+	return activeTextEditor;
+}
+
+function initialize() {
+	store.loadFrameworkOntologies().then(() => { });
+
+	onActiveEditorChanged();
+
+	let annotatedLabelsEnabled = vscode.workspace.getConfiguration('mentor').get('annotatedLabelsEnabled');
+
+	vscode.commands.executeCommand('setContext', 'showAnnotatedLabels', annotatedLabelsEnabled);
+
+	vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
+		showAnnotatedLabels = true;
+
+		vscode.commands.executeCommand('setContext', 'showAnnotatedLabels', showAnnotatedLabels);
+
+		if(activeContext) {
+			_onDidChangeTreeLabelSettings.fire();
+		}
+	});
+
+	vscode.commands.registerCommand('mentor.action.showUriLabels', () => {
+		showAnnotatedLabels = false;
+
+		vscode.commands.executeCommand('setContext', 'showAnnotatedLabels', showAnnotatedLabels);
+		
+		if(activeContext) {
+			_onDidChangeTreeLabelSettings.fire();
+		}
+	});
+}
+
+initialize();

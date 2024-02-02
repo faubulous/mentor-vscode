@@ -1,6 +1,6 @@
-import { ExtensionContext, TreeView, commands, window } from "vscode";
+import * as vscode from 'vscode';
+import * as mentor from '../mentor';
 import { PropertyNodeProvider } from "./property-node-provider";
-import { mentor } from "../mentor";
 
 /**
  * Provides the property explorer and related commands.
@@ -19,12 +19,12 @@ export class PropertyTree {
 	/**
 	 * The tree view.
 	 */
-	readonly treeView: TreeView<string>;
+	readonly treeView: vscode.TreeView<string>;
 
-	constructor(readonly context: ExtensionContext) {
-		window.registerTreeDataProvider(this.id, this.treeDataProvider);
+	constructor(readonly context: vscode.ExtensionContext) {
+		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
 
-		this.treeView = window.createTreeView(this.id, {
+		this.treeView = vscode.window.createTreeView(this.id, {
 			treeDataProvider: this.treeDataProvider,
 			showCollapseAll: true
 		});
@@ -37,24 +37,24 @@ export class PropertyTree {
 	}
 
 	private registerCommands() {
-		commands.registerCommand('mentor.action.refreshPropertyTree', () => {
+		vscode.commands.registerCommand('mentor.action.refreshPropertyTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
-		commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
+		vscode.commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
 
-		commands.registerCommand('mentor.action.showPropertyTypes', () => {
+		vscode.commands.registerCommand('mentor.action.showPropertyTypes', () => {
 			this.treeDataProvider.showTypes = true;
 			this.treeDataProvider.refresh();
 
-			commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
+			vscode.commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
 		});
 
-		commands.registerCommand('mentor.action.hidePropertyTypes', () => {
+		vscode.commands.registerCommand('mentor.action.hidePropertyTypes', () => {
 			this.treeDataProvider.showTypes = false;
 			this.treeDataProvider.refresh();
 
-			commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
+			vscode.commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
 		});
 	}
 
