@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { DocumentContext } from '../document-context';
-import { ResourceNode } from './resource-node';
 
 export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<string> {
 	public context: DocumentContext | undefined;
