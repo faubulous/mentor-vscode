@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from './document-context';
+import { DocumentContext } from './languages/document-context';
 import { Store, OwlReasoner, OntologyRepository } from '@faubulous/mentor-rdf';
+import { DocumentFactory } from './languages';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -35,41 +36,31 @@ const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | un
 
 export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
 
-function onActiveEditorChanged(): void {
-	if (!vscode.window.activeTextEditor) {
-		return;
-	}
+const documentFactory = new DocumentFactory();
 
+function onActiveEditorChanged(): void {
 	const editor = vscode.window.activeTextEditor;
 
-	if (editor.document == activeContext?.document) {
-		return;
+	if (editor && editor.document != activeContext?.document) {
+		loadDocument(editor.document).then((context) => {
+			if (context) {
+				activeContext = context;
+				_onDidChangeDocumentContext?.fire(context);
+			}
+		});
 	}
-
-	if (!DocumentContext.canLoad(editor.document)) {
-		return;
-	}
-
-	loadDocument(editor.document).then((context) => {
-		if (context) {
-			activeContext = context;
-			_onDidChangeDocumentContext?.fire(context);
-		}
-	});
 }
 
 vscode.window.onDidChangeActiveTextEditor(() => onActiveEditorChanged());
 
 function onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-	if (!DocumentContext.canLoad(e.document)) {
-		return;
+	if (documentFactory.isSupported(e.document.languageId)) {
+		loadDocument(e.document, true).then((context) => {
+			if (context) {
+				_onDidChangeDocumentContext?.fire(context);
+			}
+		});
 	}
-
-	loadDocument(e.document, true).then((context) => {
-		if (context) {
-			_onDidChangeDocumentContext?.fire(context);
-		}
-	});
 }
 
 vscode.workspace.onDidChangeTextDocument((e) => onTextDocumentChanged(e));
@@ -87,7 +78,7 @@ async function loadDocument(document: vscode.TextDocument, reload: boolean = fal
 		return context;
 	}
 
-	context = new DocumentContext(document);
+	context = documentFactory.create(document);
 
 	await context.load(document);
 
@@ -127,7 +118,7 @@ function initialize() {
 
 		vscode.commands.executeCommand('setContext', 'showAnnotatedLabels', showAnnotatedLabels);
 
-		if(activeContext) {
+		if (activeContext) {
 			_onDidChangeTreeLabelSettings.fire();
 		}
 	});
@@ -136,8 +127,8 @@ function initialize() {
 		showAnnotatedLabels = false;
 
 		vscode.commands.executeCommand('setContext', 'showAnnotatedLabels', showAnnotatedLabels);
-		
-		if(activeContext) {
+
+		if (activeContext) {
 			_onDidChangeTreeLabelSettings.fire();
 		}
 	});

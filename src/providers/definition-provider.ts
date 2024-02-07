@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '../document-context';
+import { DocumentContext } from '../languages/document-context';
 import { FeatureProvider } from './feature-provider';
+import { getUriFromToken } from '../utilities';
 
 /**
  * Provides resource definitions for Turtle documents.
@@ -9,11 +10,11 @@ export class DefinitionProvider extends FeatureProvider {
 	public provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
 		const context = this.getDocumentContext(document);
 
-		if(!context) {
+		if (!context) {
 			return null;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
+		const token = this.getTokensAtPosition(context.tokens, position)[0];
 
 		if (!token) {
 			return null;
@@ -21,10 +22,10 @@ export class DefinitionProvider extends FeatureProvider {
 
 		let u;
 
-		if (context.isCursorOnPrefix(token, position)) {
+		if (this.isCursorOnPrefix(token, position)) {
 			u = context.namespaces[token.image.split(":")[0]];
 		} else {
-			u = context.getUriFromToken(token);
+			u = getUriFromToken(context.namespaces, token);
 		}
 
 		if (!u) {

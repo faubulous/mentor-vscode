@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as mentor from "../mentor";
-import { getLabel } from "../utilities";
 import { FeatureProvider } from "./feature-provider";
+import { getUriLabel, getNamespaceUriFromPrefixedName, getTripleComponentType } from "../utilities";
 
 export class CompletionItemProvider extends FeatureProvider implements vscode.CompletionItemProvider<vscode.CompletionItem> {
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
@@ -11,7 +11,7 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 			return null;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
+		const token = this.getTokensAtPosition(context.tokens, position)[0];
 
 		if (!token) {
 			return null;
@@ -26,12 +26,13 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 				result.push(new vscode.CompletionItem(prefix, vscode.CompletionItemKind.Module));
 			}
 		} else if (tokenType == "PNAME_LN" || tokenType == "PNAME_NS") {
-			const component = context.getCurrentTripleComponent(token);
-			const namespace = context.getNamespaceUriFromPrefixedName(token.image);
+			const component = getTripleComponentType(context.tokens, token);
+			const namespace = getNamespaceUriFromPrefixedName(context.namespaces, token.image);
 			const label = token.image.split(":")[1];
 
 			// TODOs
 			// - Add support for returning completions for prefixed names that are not defined in the document.
+			//  - However, need a proper solution for indexing the project (imported) ontologies first.
 
 			if (namespace) {
 				const uri = (namespace + label).toLowerCase();
@@ -41,14 +42,14 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 
 				if (component == "subject" || component == "object") {
 					for (let c of mentor.ontology.getClasses(graphs).filter(c => c.toLowerCase().startsWith(uri))) {
-						const item = new vscode.CompletionItem(getLabel(c), vscode.CompletionItemKind.Class);
+						const item = new vscode.CompletionItem(getUriLabel(c), vscode.CompletionItemKind.Class);
 						item.detail = context.getResourceDescription(c);
 
 						result.push(item);
 					}
 
 					for (let x of mentor.ontology.getIndividuals(graphs).filter(x => x.toLowerCase().startsWith(uri))) {
-						const item = new vscode.CompletionItem(getLabel(x), vscode.CompletionItemKind.Field);
+						const item = new vscode.CompletionItem(getUriLabel(x), vscode.CompletionItemKind.Field);
 						item.detail = context.getResourceDescription(x);
 
 						result.push(item);
@@ -56,7 +57,7 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 				}
 
 				for (let p of mentor.ontology.getProperties(graphs).filter(p => p.toLowerCase().startsWith(uri))) {
-					const item = new vscode.CompletionItem(getLabel(p), vscode.CompletionItemKind.Value);
+					const item = new vscode.CompletionItem(getUriLabel(p), vscode.CompletionItemKind.Value);
 					item.detail = context.getResourceDescription(p);
 
 					result.push(item);

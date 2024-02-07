@@ -3,7 +3,7 @@ import * as mentor from '../mentor';
 import { NamedNode } from 'n3';
 import { xsd, rdf, rdfs, owl } from '@faubulous/mentor-rdf';
 import { ResourceNode } from './resource-node';
-import { DocumentContext } from '../document-context';
+import { DocumentContext } from '../languages/document-context';
 
 export class PropertyNode extends ResourceNode {
 	contextValue = 'property';

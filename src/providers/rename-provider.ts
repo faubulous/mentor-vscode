@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { FeatureProvider } from './feature-provider';
+import { isVariable, getUriFromToken } from '../utilities';
 
 /**
  * Provides renaming for URIs, resources labels and prefixes.
@@ -12,16 +13,16 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 			return null;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
+		const token = this.getTokensAtPosition(context.tokens, position)[0];
 
 		if (!token) {
 			throw new Error('No token found at the given position.');
 		}
 
-		if (context.isCursorOnPrefix(token, position)) {
-			return context.getPrefixEditRange(token);
+		if (this.isCursorOnPrefix(token, position)) {
+			return this.getPrefixEditRange(token);
 		} else {
-			return context.getLabelEditRange(token);
+			return this.getLabelEditRange(token);
 		}
 	}
 
@@ -33,13 +34,13 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 			return edits;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
+		const token = this.getTokensAtPosition(context.tokens, position)[0];
 
 		if (!token) {
 			return edits;
 		}
 
-		if (context.isCursorOnPrefix(token, position)) {
+		if (this.isCursorOnPrefix(token, position)) {
 			const i = token.image.indexOf(":");
 			const prefix = token.image.substring(0, i);
 
@@ -52,7 +53,7 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 						const p = t.image.split(":")[0];
 
 						if (p === prefix) {
-							const r = context.getPrefixEditRange(t);
+							const r = this.getPrefixEditRange(t);
 
 							if (!r) continue;
 
@@ -67,19 +68,19 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 			if (edits.size > 0) {
 				context.updateNamespacePrefix(prefix, newName);
 			}
-		} else if (context.isVariable(token)) {
+		} else if (isVariable(token)) {
 			for (const t of context.tokens.filter(t => t.image === token.image)) {
-				const r = context.getLabelEditRange(t);
+				const r = this.getLabelEditRange(t);
 
 				if (!r) continue;
 
 				edits.replace(document.uri, r, newName);
 			}
 		} else {
-			const u = context.getUriFromToken(token);
+			const u = getUriFromToken(context.namespaces, token);
 
 			if (u && context.references[u]) {
-				for (const r of context.references[u].map(t => context.getLabelEditRange(t))) {
+				for (const r of context.references[u].map(t => this.getLabelEditRange(t))) {
 					if (!r) continue;
 
 					edits.replace(document.uri, r, newName);

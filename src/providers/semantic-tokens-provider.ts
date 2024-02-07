@@ -83,8 +83,8 @@ export class SemanticTokensProvider extends FeatureProvider implements vscode.Do
 							builder.push(tokenRange, SemanticTokenType.enumMember, [SemanticTokenModifier.readonly]);
 						}
 						break;
-					case "STRING_LITERAL_SINGLE_QUOTE":
 					case "STRING_LITERAL_QUOTE":
+					case "STRING_LITERAL_SINGLE_QUOTE":
 						builder.push(tokenRange, SemanticTokenType.string);
 						break;
 					case "STRING_LITERAL_LONG_QUOTE": {

@@ -15,7 +15,7 @@ const baseConfig = {
   bundle: true,
   minify: productionBuild,
   sourcemap: !productionBuild,
-  external: ["vscode"]
+  external: ["vscode"],
 };
 
 console.log("Options:", baseConfig);
@@ -40,9 +40,7 @@ const getLanguageConfig = (type, language) => {
     platform: "node",
     format: "cjs",
     target: "es2020",
-    entryPoints: [
-      `./src/languages/${file}.ts`
-    ],
+    entryPoints: [`./src/languages/${file}.ts`],
     outfile: `./out/${file}.js`
   }
 }

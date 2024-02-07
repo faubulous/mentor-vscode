@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { FeatureProvider } from './feature-provider';
+import { getUriFromToken } from '../utilities';
 
 /**
  * Provides hover information for tokens.
@@ -12,7 +13,7 @@ export class HoverProvider extends FeatureProvider implements vscode.HoverProvid
 			return null;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
+		const token = this.getTokensAtPosition(context.tokens, position)[0];
 
 		if (!token) {
 			return null;
@@ -22,7 +23,8 @@ export class HoverProvider extends FeatureProvider implements vscode.HoverProvid
 
 		switch(t) {
 			// Display the literal strings without the quotes for improved readability for long strings.
-			case 'STRING_LITERAL_QUOTE': {
+			case 'STRING_LITERAL_QUOTE':
+			case "STRING_LITERAL_SINGLE_QUOTE": {
 				return new vscode.Hover(token.image.slice(1, -1));
 			}
 			case 'STRING_LITERAL_LONG_QUOTE': {
@@ -30,7 +32,7 @@ export class HoverProvider extends FeatureProvider implements vscode.HoverProvid
 			}
 			// Display a the description for the concept for URIs, if it exists.
 			default: {
-				const uri = context.getUriFromToken(token);
+				const uri = getUriFromToken(context.namespaces, token);
 
 				if (!uri) {
 					return null;

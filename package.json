@@ -499,10 +499,11 @@
           "mentor.predicates.label": {
             "type": "array",
             "title": "Label Predicates",
-            "description": "Manage the predicates to be used for labels in the tree view for classes, properties and individuals. The order of the predicates is important. The first predicate that is found in the resource will be used.",
+            "description": "Manage the predicates to be used for labels in the tree view for classes, properties and individuals. The first matching predicate will be used.",
             "default": ["http://purl.org/dc/terms/title",
-              "http://www.w3.org/2000/01/rdf-schema#label",
+              "http://purl.org/dc/elements/1.1/title",
               "http://www.w3.org/2004/02/skos/core#prefLabel",
+              "http://www.w3.org/2000/01/rdf-schema#label",
               "https://schema.org/name",
               "http://schema.org/name"
             ]
@@ -510,9 +511,9 @@
           "mentor.predicates.description": {
             "type": "array",
             "title": "Description Predicates",
-            "description": "Manage the predicates to be used for descriptions in the tree view for classes, properties and individuals. The order of the predicates is important. The first predicate that is found in the resource will be used.",
-            "default": ["http://www.w3.org/2000/01/rdf-schema#comment",
-              "http://www.w3.org/2004/02/skos/core#definition",
+            "description": "Manage the predicates to be used for descriptions in the tree view for classes, properties and individuals. The first matching predicate will be used.",
+            "default": ["http://www.w3.org/2004/02/skos/core#definition",
+              "http://www.w3.org/2000/01/rdf-schema#comment",
               "http://purl.org/dc/terms/description",
               "http://purl.org/dc/terms/abstract",
               "https://schema.org/description",

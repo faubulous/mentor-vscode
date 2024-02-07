@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '../document-context';
+import { DocumentContext } from '../languages/document-context';
 
 export class ResourceNode extends vscode.TreeItem {
 	contextValue: string = 'resource';

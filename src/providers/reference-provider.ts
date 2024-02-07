@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
-import { DocumentContext } from '../document-context';
+import { DocumentContext } from '../languages/document-context';
 import { FeatureProvider } from './feature-provider';
+import { getUriFromToken, getPrefixFromToken } from '../utilities';
 
 /**
  * Provides references to resources.
@@ -10,11 +11,11 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
 		const context = this.getDocumentContext(document);
 
-		if(!context) {
+		if (!context) {
 			return null;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
+		const token = this.getTokensAtPosition(context.tokens, position)[0];
 
 		if (!token) {
 			return null;
@@ -22,10 +23,10 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 
 		let u;
 
-		if (context.isCursorOnPrefix(token, position)) {
-			u = context.namespaces[context.getPrefixFromToken(token)];
+		if (this.isCursorOnPrefix(token, position)) {
+			u = context.namespaces[getPrefixFromToken(token)];
 		} else {
-			u = context.getUriFromToken(token);
+			u = getUriFromToken(context.namespaces, token);
 		}
 
 		if (!u) {
@@ -44,6 +45,6 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 			return null;
 		}
 
-		return tokens.map(t => context.getLocationFromToken(t));
+		return tokens.map(t => this.getLocationFromToken(context.document, t));
 	}
 }
