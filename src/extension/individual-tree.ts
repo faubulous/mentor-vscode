@@ -34,24 +34,16 @@ export class IndividualTree {
 	}
 
 	private registerCommands() {
+		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
+		
 		vscode.commands.registerCommand('mentor.action.refreshIndividualTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
-		vscode.commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
-
-		vscode.commands.registerCommand('mentor.action.showIndividualTypes', () => {
-			this.treeDataProvider.showTypes = true;
+		mentor.settings.set("view.showIndividualTypes", this.treeDataProvider.showTypes);
+		mentor.settings.onDidChange("view.showIndividualTypes", (e) => {
+			this.treeDataProvider.showTypes = e.newValue;
 			this.treeDataProvider.refresh();
-
-			vscode.commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
-		});
-
-		vscode.commands.registerCommand('mentor.action.hideIndividualTypes', () => {
-			this.treeDataProvider.showTypes = false;
-			this.treeDataProvider.refresh();
-
-			vscode.commands.executeCommand('setContext', 'individualTree.showTypes', this.treeDataProvider.showTypes);
 		});
 	}
 

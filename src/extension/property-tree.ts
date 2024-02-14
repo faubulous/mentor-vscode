@@ -37,24 +37,16 @@ export class PropertyTree {
 	}
 
 	private registerCommands() {
+		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
+		
 		vscode.commands.registerCommand('mentor.action.refreshPropertyTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
-		vscode.commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
-
-		vscode.commands.registerCommand('mentor.action.showPropertyTypes', () => {
-			this.treeDataProvider.showTypes = true;
+		mentor.settings.set("view.showPropertyTypes", this.treeDataProvider.showTypes);
+		mentor.settings.onDidChange("view.showPropertyTypes", (e) => {
+			this.treeDataProvider.showTypes = e.newValue;
 			this.treeDataProvider.refresh();
-
-			vscode.commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
-		});
-
-		vscode.commands.registerCommand('mentor.action.hidePropertyTypes', () => {
-			this.treeDataProvider.showTypes = false;
-			this.treeDataProvider.refresh();
-
-			vscode.commands.executeCommand('setContext', 'propertyTree.showTypes', this.treeDataProvider.showTypes);
 		});
 	}
 

@@ -233,6 +233,48 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e009"
         }
+      },
+      "rdf-class-tree": {
+        "description": "Class tree icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00a"
+        }
+      },
+      "rdf-class-tree-active": {
+        "description": "Class tree active icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00b"
+        }
+      },
+      "rdf-property-tree": {
+        "description": "Property tree icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00c"
+        }
+      },
+      "rdf-property-tree-active": {
+        "description": "Property tree active icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00d"
+        }
+      },
+      "rdf-individual-tree": {
+        "description": "Individual tree icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00e"
+        }
+      },
+      "rdf-individual-tree-active": {
+        "description": "Individual tree active icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00f"
+        }
       }
     },
     "colors": [
@@ -240,24 +282,24 @@
         "id": "mentor.color.class",
         "description": "Color used for tree nodes representing class or class references.",
         "defaults": {
-          "light": "#af00e2",
-          "dark": "#c586c0"
+          "light": "#0000ff",
+          "dark": "#4e94ce"
         }
       },
       {
         "id": "mentor.color.individual",
         "description": "Color used for tree nodes representing literals.",
         "defaults": {
-          "light": "#af00e2",
-          "dark": "#c586c0"
+          "light": "#0000ff",
+          "dark": "#4e94ce"
         }
       },
       {
         "id": "mentor.color.objectProperty",
         "description": "Color used for tree nodes representing object properties.",
         "defaults": {
-          "light": "#af00e2",
-          "dark": "#c586c0"
+          "light": "#0000ff",
+          "dark": "#4e94ce"
         }
       },
       {
@@ -266,14 +308,6 @@
         "defaults": {
           "light": "#a31515",
           "dark": "#ce9178"
-        }
-      },
-      {
-        "id": "mentor.color.annotationProperty",
-        "description": "Color used for tree nodes representing annotation properties.",
-        "defaults": {
-          "light": "#005500",
-          "dark": "#6a9742"
         }
       }
     ],
@@ -288,6 +322,10 @@
     },
     "views": {
       "mentor": [
+        {
+          "id": "mentor.view.combinedTree",
+          "name": "Combined"
+        },
         {
           "id": "mentor.view.classTree",
           "name": "Classes"
@@ -325,12 +363,17 @@
       },
       {
         "command": "mentor.action.showAnnotatedLabels",
-        "title": "Show annotated labels",
+        "title": "Show Annotated Labels",
         "icon": "$(rdf-label-tag)"
       },
       {
         "command": "mentor.action.showUriLabels",
-        "title": "Show URI labels",
+        "title": "Show URI Labels",
+        "icon": "$(rdf-label-uri)"
+      },
+      {
+        "command": "mentor.action.showUriLabelsWithPrefix",
+        "title": "Show URI Labels with Prefix",
         "icon": "$(rdf-label-uri)"
       },
       {
@@ -345,7 +388,7 @@
       },
       {
         "command": "mentor.action.hideReferencedClasses",
-        "title": "Show Defined Classes Only",
+        "title": "Hide Referenced Classes",
         "icon": "$(rdf-class)"
       },
       {
@@ -377,29 +420,64 @@
         "command": "mentor.action.hideIndividualTypes",
         "title": "Hide Individual Types",
         "icon": "$(rdf-class-off)"
+      },
+      {
+        "command": "mentor.action.showClassTree",
+        "title": "Show Classes",
+        "icon": "$(rdf-class-tree)"
+      },
+      {
+        "command": "mentor.action.showClassTreeActive",
+        "title": "Reload Classes",
+        "icon": "$(rdf-class-tree-active)"
+      },
+      {
+        "command": "mentor.action.showPropertyTree",
+        "title": "Show Properties",
+        "icon": "$(rdf-property-tree)"
+      },
+      {
+        "command": "mentor.action.showPropertyTreeActive",
+        "title": "Reload Properties",
+        "icon": "$(rdf-property-tree-active)"
+      },
+      {
+        "command": "mentor.action.showIndividualTree",
+        "title": "Show Individuals",
+        "icon": "$(rdf-individual-tree)"
+      },
+      {
+        "command": "mentor.action.showIndividualTreeActive",
+        "title": "Reload Individuals",
+        "icon": "$(rdf-individual-tree-active)"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "mentor.action.showAnnotatedLabels",
-          "when": "showAnnotatedLabels == false && (view == mentor.view.classTree || view == mentor.view.propertyTree || view == mentor.view.individualTree)",
-          "group": "navigation@3"
+          "when": "viewType == 'treeView'",
+          "group": "4_search"
         },
         {
           "command": "mentor.action.showUriLabels",
-          "when": "showAnnotatedLabels == true && (view == mentor.view.classTree || view == mentor.view.propertyTree || view == mentor.view.individualTree)",
-          "group": "navigation@3"
+          "when": "viewType == 'treeView'",
+          "group": "4_search"
+        },
+        {
+          "command": "mentor.action.showUriLabelsWithPrefix",
+          "when": "viewType == 'treeView'",
+          "group": "4_search"
         },
         {
           "command": "mentor.action.showReferencedClasses",
-          "when": "view == mentor.view.classTree && classTree.showReferenced == false",
-          "group": "navigation@2"
+          "when": "viewType == 'treeView' && view.showReferencedClasses == false",
+          "group": "2_workspace"
         },
         {
           "command": "mentor.action.hideReferencedClasses",
-          "when": "view == mentor.view.classTree && classTree.showReferenced == true",
-          "group": "navigation@2"
+          "when": "viewType == 'treeView' && view.showReferencedClasses == true",
+          "group": "2_workspace"
         },
         {
           "command": "mentor.action.refreshClassTree",
@@ -408,13 +486,13 @@
         },
         {
           "command": "mentor.action.showPropertyTypes",
-          "when": "view == mentor.view.propertyTree && propertyTree.showTypes == false",
-          "group": "navigation@2"
+          "when": "viewType == 'treeView' && view.showPropertyTypes == false",
+          "group": "2_workspace"
         },
         {
           "command": "mentor.action.hidePropertyTypes",
-          "when": "view == mentor.view.propertyTree && propertyTree.showTypes == true",
-          "group": "navigation@2"
+          "when": "viewType == 'treeView' && view.showPropertyTypes == true",
+          "group": "2_workspace"
         },
         {
           "command": "mentor.action.refreshPropertyTree",
@@ -423,13 +501,13 @@
         },
         {
           "command": "mentor.action.showIndividualTypes",
-          "when": "view == mentor.view.individualTree && individualTree.showTypes == false",
-          "group": "navigation@2"
+          "when": "viewType == 'treeView' && view.showIndividualTypes == false",
+          "group": "2_workspace"
         },
         {
           "command": "mentor.action.hideIndividualTypes",
-          "when": "view == mentor.view.individualTree && individualTree.showTypes == true",
-          "group": "navigation@2"
+          "when": "viewType == 'treeView' && view.showIndividualTypes == true",
+          "group": "2_workspace"
         },
         {
           "command": "mentor.action.refreshIndividualTree",
@@ -437,26 +515,56 @@
           "group": "navigation@4"
         },
         {
+          "command": "mentor.action.showClassTree",
+          "when": "view == mentor.view.combinedTree && itemType != 'class'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.action.showClassTreeActive",
+          "when": "view == mentor.view.combinedTree && itemType == 'class'",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.action.showPropertyTree",
+          "when": "view == mentor.view.combinedTree && itemType != 'property'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.action.showPropertyTreeActive",
+          "when": "view == mentor.view.combinedTree && itemType == 'property'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.action.showIndividualTree",
+          "when": "view == mentor.view.combinedTree && itemType != 'individual'",
+          "group": "navigation@3"
+        },
+        {
+          "command": "mentor.action.showIndividualTreeActive",
+          "when": "view == mentor.view.combinedTree && itemType == 'individual'",
+          "group": "navigation@3"
+        },
+        {
           "command": "mentor.action.openSettings",
-          "group": "2_configuration",
-          "when": "view == mentor.view.classTree || view == mentor.view.propertyTree || view == mentor.view.individualTree"
+          "group": "z_commands",
+          "when": "viewType == 'treeView'"
         }
       ],
       "view/item/context": [
         {
           "command": "mentor.action.revealDefinition",
           "when": "viewItem == class || viewItem == property || viewItem == individual",
-          "group": "navigation@1"
+          "group": "navigation"
         },
         {
           "command": "mentor.action.findReferences",
-          "when": "view == mentor.view.classTree || view == mentor.view.propertyTree || view == mentor.view.individualTree",
-          "group": "navigation@2"
+          "when": "viewItem == class || viewItem == property || viewItem == individual",
+          "group": "4_search"
         },
         {
           "command": "mentor.action.openInBrowser",
-          "when": "view == mentor.view.classTree || view == mentor.view.propertyTree || view == mentor.view.individualTree",
-          "group": "navigation@3"
+          "when": "viewItem == class || viewItem == property || viewItem == individual",
+          "group": "z_commands"
         }
       ]
     },
@@ -484,11 +592,17 @@
         "title": "Mentor",
         "order": 1,
         "properties": {
-          "mentor.annotatedLabelsEnabled": {
-            "type": "boolean",
-            "title": "Show annotated labels by default",
-            "description": "If enabled, the tree views will show the annotated labels instead of the URIs by default. This can be toggled in the context menu of the tree views.",
-            "default": true
+          "mentor.treeLabelStyle": {
+            "type": "string",
+            "title": "Default Tree Label Style",
+            "description": "Default style for rendering of tree labels.",
+            "enum": ["AnnotatedLabels", "UriLabels", "UriLabelsWithPrefix"],
+            "enumDescriptions": [
+              "Render labels from the annotated label predicates.",
+              "Render the URI path element or fragment of the URI.",
+              "Render the URI path element or fragment with namespace prefix."
+            ],
+            "default": "AnnotatedLabels"
           },
           "mentor.internalBrowserEnabled": {
             "type": "boolean",
@@ -500,7 +614,8 @@
             "type": "array",
             "title": "Label Predicates",
             "description": "Manage the predicates to be used for labels in the tree view for classes, properties and individuals. The first matching predicate will be used.",
-            "default": ["http://purl.org/dc/terms/title",
+            "default": [
+              "http://purl.org/dc/terms/title",
               "http://purl.org/dc/elements/1.1/title",
               "http://www.w3.org/2004/02/skos/core#prefLabel",
               "http://www.w3.org/2000/01/rdf-schema#label",
@@ -512,7 +627,8 @@
             "type": "array",
             "title": "Description Predicates",
             "description": "Manage the predicates to be used for descriptions in the tree view for classes, properties and individuals. The first matching predicate will be used.",
-            "default": ["http://www.w3.org/2004/02/skos/core#definition",
+            "default": [
+              "http://www.w3.org/2004/02/skos/core#definition",
               "http://www.w3.org/2000/01/rdf-schema#comment",
               "http://purl.org/dc/terms/description",
               "http://purl.org/dc/terms/abstract",

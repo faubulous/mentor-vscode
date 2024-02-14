@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="16"
+   height="16"
+   viewBox="0 0 16 16"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="15-rdf-individual-tree-active.svg"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="25.15625"
+     inkscape:cx="4.9093168"
+     inkscape:cy="11.806211"
+     inkscape:window-width="1920"
+     inkscape:window-height="1010"
+     inkscape:window-x="-6"
+     inkscape:window-y="-6"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1"
+     showgrid="true">
+    <inkscape:grid
+       id="grid5"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="1"
+       spacingy="1"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       dotted="false"
+       gridanglex="30"
+       gridanglez="30"
+       visible="true" />
+  </sodipodi:namedview>
+  <!-- Generator: Sketch 40.3 (33839) - http://www.bohemiancoding.com/sketch -->
+  <title
+     id="title1">Slice</title>
+  <desc
+     id="desc1">Created with Sketch.</desc>
+  <defs
+     id="defs1" />
+  <path
+     id="rect3"
+     style="fill:#000000;stroke:none;stroke-width:1.5;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0"
+     d="M 2.0039062 0 C 0.89423436 0 -2.9605918e-16 0.89423406 0 2.0039062 L 0 13.996094 C 0 15.105766 0.89423436 16 2.0039062 16 L 13.996094 16 C 15.105766 16 16 15.105766 16 13.996094 L 16 2.0039062 C 16 0.89423406 15.105766 2.9605918e-16 13.996094 0 L 2.0039062 0 z M 4.5 2 C 5.8718242 2 7 3.1281758 7 4.5 C 7 5.8718242 5.8718242 7 4.5 7 C 3.1281758 7 2 5.8718242 2 4.5 C 2 3.1281758 3.1281758 2 4.5 2 z M 11.5 2 C 12.871825 2 14 3.1281758 14 4.5 C 14 5.8718242 12.871825 7 11.5 7 C 10.128175 7 9 5.8718242 9 4.5 C 9 3.1281758 10.128175 2 11.5 2 z M 4.5 9 C 5.8718242 9 7 10.128175 7 11.5 C 7 12.871825 5.8718242 14 4.5 14 C 3.1281758 14 2 12.871825 2 11.5 C 2 10.128175 3.1281758 9 4.5 9 z M 11.5 9 C 12.871825 9 14 10.128175 14 11.5 C 14 12.871825 12.871825 14 11.5 14 C 10.128175 14 9 12.871825 9 11.5 C 9 10.128175 10.128175 9 11.5 9 z " />
+  <metadata
+     id="metadata1">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>Slice</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="path7" />
+  <g
+     id="circle7" />
+  <g
+     id="circle8" />
+  <g
+     id="circle9" />
+</svg>

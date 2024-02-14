@@ -7,14 +7,12 @@ export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<st
 
 	protected autoRefresh: boolean = true;
 
-	public selectedNode: string | undefined;
-
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
 
 	readonly onDidChangeTreeData: vscode.Event<string | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
-		mentor.onDidChangeTreeLabelSettings(() => {
+		mentor.settings.onDidChange("view.treeLabelStyle", () => {
 			this.refresh();
 		});
 
@@ -39,10 +37,6 @@ export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<st
 
 	refresh(): void {
 		this._onVocabularyChanged(this.context);
-	}
-
-	select(uri: string) {
-		this.selectedNode = uri;
 	}
 
 	abstract getParent(uri: string): string | undefined;

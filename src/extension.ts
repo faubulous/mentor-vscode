@@ -2,6 +2,7 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor'
 import { Disposable } from 'vscode-languageclient';
+import { TermTree } from './extension/term-tree';
 import { ClassTree } from './extension/class-tree';
 import { PropertyTree } from './extension/property-tree';
 import { IndividualTree } from './extension/individual-tree';
@@ -37,6 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommands(context);
 
 	// Register the tree views.
+	disposables.push(new TermTree(context).treeView);
 	disposables.push(new ClassTree(context).treeView);
 	disposables.push(new PropertyTree(context).treeView);
 	disposables.push(new IndividualTree(context).treeView);
@@ -61,12 +63,12 @@ function registerCommands(context: vscode.ExtensionContext) {
 	}));
 
 	disposables.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (uri: string) => {
-		const internalBrowser = vscode.workspace.getConfiguration('mentor').get('internalBrowserEnabled');
+		const internalBrowser = mentor.configuration.get('internalBrowserEnabled');
 
 		if (internalBrowser === true) {
 			vscode.commands.executeCommand('simpleBrowser.show', uri);
 		} else {
-			vscode.env.openExternal(vscode.Uri.parse(uri));
+			vscode.env.openExternal(vscode.Uri.parse(uri, true));
 		}
 	}));
 

@@ -1,4 +1,4 @@
-import { getNamespaceUri, toJsonId } from "./resource";
+import { getNamespaceUri, toJsonId } from "./uri";
 
 describe("Resource Utilities", () => {
 	it('can get namespace URIs', async () => {

@@ -39,14 +39,7 @@ export class PropertyNode extends ResourceNode {
 
 		let s = new NamedNode(this.uri);
 		let p = new NamedNode(rdf.type.id);
-		let o = new NamedNode(owl.AnnotationProperty.id);
-
-		for (let q of mentor.ontology.store.match(this.context.graphs, s, p, o)) {
-			this.propertyType = 'annotationProperty';
-			break;
-		}
-
-		o = new NamedNode(owl.DatatypeProperty.id);
+		let o = new NamedNode(owl.DatatypeProperty.id);
 
 		for (let q of mentor.ontology.store.match(this.context.graphs, s, p, o)) {
 			this.propertyType = 'dataProperty';

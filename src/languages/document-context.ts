@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { TokenizerResult, rdf } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
-import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition } from '../utilities';
+import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from '../utilities';
+import { TreeLabelStyle } from '../settings';
 
 export abstract class DocumentContext {
 	/**
@@ -51,8 +52,8 @@ export abstract class DocumentContext {
 
 	constructor(document: vscode.TextDocument) {
 		this.document = document;
-		this.predicates.label = vscode.workspace.getConfiguration('mentor').get('predicates.label') ?? [];
-		this.predicates.description = vscode.workspace.getConfiguration('mentor').get('predicates.description') ?? [];
+		this.predicates.label = mentor.configuration.get('predicates.label') ?? [];
+		this.predicates.description = mentor.configuration.get('predicates.description') ?? [];
 	}
 
 	abstract load(document: vscode.TextDocument): Promise<void>;
@@ -134,23 +135,38 @@ export abstract class DocumentContext {
 		this.namespaces[newPrefix] = uri;
 	}
 
-	public getResourceLabel(subjectUri: string): string {
-		if (mentor.showAnnotatedLabels) {
-			const subject = new n3.NamedNode(subjectUri);
-			const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
+	public getResourceLabel(subjectUri: string): string {		
+		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
 
-			// First, try to find a description in the current graph.
-			for (let p of predicates) {
-				for (let q of mentor.store.match(this.graphs, subject, p)) {
-					return q.object.value;
+		switch (treeLabelStyle) {
+			case TreeLabelStyle.AnnotatedLabels: {
+				const subject = new n3.NamedNode(subjectUri);
+				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
+
+				// First, try to find a description in the current graph.
+				for (let p of predicates) {
+					for (let q of mentor.store.match(this.graphs, subject, p)) {
+						return q.object.value;
+					}
+				}
+
+				// If none is found, try to find a description in the default graph.
+				for (let p of predicates) {
+					for (let q of mentor.store.match(undefined, subject, p)) {
+						return q.object.value;
+					}
 				}
 			}
+			case TreeLabelStyle.UriLabelsWithPrefix: {
+				const namespace = getNamespaceUri(subjectUri);
+				let prefix = "?";
 
-			// If none is found, try to find a description in the default graph.
-			for (let p of predicates) {
-				for (let q of mentor.store.match(undefined, subject, p)) {
-					return q.object.value;
+				for (let [p] of Object.entries(this.namespaces).filter(([_, ns]) => ns == namespace)) {
+					prefix = p;
+					break;
 				}
+
+				return `${prefix}:${getUriLabel(subjectUri)}`;
 			}
 		}
 

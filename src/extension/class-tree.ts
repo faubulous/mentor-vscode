@@ -38,24 +38,16 @@ export class ClassTree implements TreeView {
 	}
 
 	private registerCommands() {
+		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
+
 		vscode.commands.registerCommand('mentor.action.refreshClassTree', () => {
 			this.treeDataProvider.refresh();
 		});
 
-		vscode.commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
-
-		vscode.commands.registerCommand('mentor.action.showReferencedClasses', () => {
-			this.treeDataProvider.showReferenced = true;
+		mentor.settings.set("view.showReferencedClasses", this.treeDataProvider.showReferenced);
+		mentor.settings.onDidChange("view.showReferencedClasses", (e) => {
+			this.treeDataProvider.showReferenced = e.newValue;
 			this.treeDataProvider.refresh();
-
-			vscode.commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
-		});
-
-		vscode.commands.registerCommand('mentor.action.hideReferencedClasses', () => {
-			this.treeDataProvider.showReferenced = false;
-			this.treeDataProvider.refresh();
-
-			vscode.commands.executeCommand('setContext', 'classTree.showReferenced', this.treeDataProvider.showReferenced);
 		});
 	}
 

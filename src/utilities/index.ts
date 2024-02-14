@@ -1,2 +1,2 @@
 export * from './tokens';
-export * from './resource';
+export * from './uri';
