@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import * as mentor from '../mentor';
+import { RenameProvider } from '../providers/rename-provider';
+import { CompletionItemProvider, DefinitionProvider, HoverProvider, ReferenceProvider } from '../providers';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -24,7 +26,7 @@ enum SemanticTokenModifier {
 
 const legend = new vscode.SemanticTokensLegend(Object.values(SemanticTokenType), Object.values(SemanticTokenModifier));
 
-const provider: vscode.DocumentSemanticTokensProvider = {
+const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 	provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.ProviderResult<vscode.SemanticTokens> {
 		const uri = document.uri.toString();
 
@@ -240,9 +242,9 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 								builder.push(tokenRange, SemanticTokenType.enumMember, [SemanticTokenModifier.readonly]);
 							}
 							break;
+						case "STRING_LITERAL_QUOTE":
 						case "STRING_LITERAL_SINGLE_QUOTE":
 						case "STRING_LITERAL_LONG_QUOTE":
-						case "STRING_LITERAL_QUOTE":
 							builder.push(tokenRange, SemanticTokenType.string);
 							break;
 						case "DoubleCaret":
@@ -278,10 +280,21 @@ const provider: vscode.DocumentSemanticTokensProvider = {
 	}
 };
 
+const renameProvider = new RenameProvider();
+const referenceProvider = new ReferenceProvider();
+const definitionProvider = new DefinitionProvider();
+const hoverProvider = new HoverProvider();
+const completionProvider = new CompletionItemProvider();
+
 export class SparqlTokenProvider {
 	register(): vscode.Disposable[] {
 		return [
-			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'sparql' }, provider, legend)
+			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'sparql' }, tokenProvider, legend),
+			vscode.languages.registerRenameProvider({ language: 'sparql' }, renameProvider),
+			vscode.languages.registerReferenceProvider({ language: 'sparql' }, referenceProvider),
+			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, definitionProvider),
+			vscode.languages.registerHoverProvider({ language: 'sparql' }, hoverProvider),
+			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':')
 		];
 	}
 }

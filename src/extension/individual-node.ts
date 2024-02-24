@@ -1,30 +1,27 @@
 import * as vscode from 'vscode';
-import { IndividualRepository } from '@faubulous/mentor-rdf';
+import { DocumentContext } from '../languages/document-context';
 import { ResourceNode } from './resource-node';
 
+/**
+ * Represents an individual in the ontology tree view.
+ */
 export class IndividualNode extends ResourceNode {
 	contextValue = 'individual';
 
+	type: 'individual' | 'class' = 'individual';
+
 	constructor(
-		protected readonly repository: IndividualRepository,
+		protected readonly context: DocumentContext,
 		public readonly uri: string
 	) {
-		super(repository, uri);
-
-		this.collapsibleState = vscode.TreeItemCollapsibleState.None;
-
-		this.command = {
-			command: 'mentor.command.selectIndividual',
-			title: '',
-			arguments: [uri]
-		};
+		super(context, uri);
 	}
 
-	override getColor() {
+	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.individual");
 	}
 
 	override getIcon(): vscode.ThemeIcon {
-		return new vscode.ThemeIcon('rdf-individual', this.getColor());
+		return new vscode.ThemeIcon('rdf-individual', this.getIconColor());
 	}
 }

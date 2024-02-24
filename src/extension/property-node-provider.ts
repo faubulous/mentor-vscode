@@ -1,16 +1,27 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '../mentor';
-import { PropertyRepository } from '@faubulous/mentor-rdf';
+import * as mentor from '../mentor';
 import { PropertyNode } from './property-node';
 import { ResourceNodeProvider } from './resource-node-provider';
+import { ClassNode } from './class-node';
 
 /**
  * A tree node provider for RDF properties.
  */
-export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepository> {
-	
-	override getRepository(context: DocumentContext): PropertyRepository | undefined {
-		return context?.store ? new PropertyRepository(context.store) : undefined;
+export class PropertyNodeProvider extends ResourceNodeProvider {
+	id = 'property';
+
+	/**
+	 * Indicates whether the property type should be shown as root nodes in the tree.
+	 */
+	public showTypes: boolean = true;
+
+	/**
+	 * A set of URIs that are used for marking the nodes as classes for the getTreeItem method.
+	 */
+	classNodes: any = {};
+
+	override getTitle(): string {
+		return "Properties";
 	}
 
 	override getParent(uri: string): string | undefined {
@@ -18,37 +29,47 @@ export class PropertyNodeProvider extends ResourceNodeProvider<PropertyRepositor
 	}
 
 	override getChildren(uri: string): string[] {
-		if (!this.repository) {
+		if (this.context) {
+			let result;
+
+			if (!uri) {
+				if (this.showTypes) {
+					result = mentor.ontology.getPropertyTypes(this.context.graphs).sort();
+
+					// Mark the nodes as classes for the getTreeItem method.
+					result.forEach((type: string) => this.classNodes[type] = true);
+				} else {
+					result = mentor.ontology.getProperties(this.context.graphs).sort();
+				}
+			} else if (this.classNodes[uri]) {
+				result = mentor.ontology.getPropertiesOfType(this.context.graphs, uri, false).sort();
+			} else {
+				result = mentor.ontology.getSubProperties(this.context.graphs, uri).sort();
+			}
+
+			return result;
+		} else {
 			return [];
 		}
-
-		let result = this.repository.getSubProperties(uri).sort().map(u => this.getNode(u));
-
-		if (!this.showReferenced) {
-			result = result.filter(u => this.repository?.hasSubject(u));
-		}
-
-		return result;
 	}
 
 	override getTreeItem(uri: string): vscode.TreeItem {
-		if (!this.repository) {
-			throw new Error('Invalid repostory.');
+		if (this.context) {
+			if (this.classNodes[uri]) {
+				return new ClassNode(this.context, uri, vscode.TreeItemCollapsibleState.Collapsed);
+			} else {
+				return new PropertyNode(this.context, uri);
+			}
+		} else {
+			throw new Error('Invalid context.');
 		}
+	}
 
-		// const workbench = vscode.workspace.getConfiguration("workbench");
-
-		// const colorCustomizations: any = workbench.get("colorCustomizations");
-
-		// workbench.update(
-		// 	"colorCustomizations",
-		// 	{
-		// 		...colorCustomizations,
-		// 		"rdf.ns0": "#006EAE",
-		// 	},
-		// 	1,
-		// );
-
-		return new PropertyNode(this.repository, uri);
+	override getTotalItemCount(): number {
+		if (this.context) {
+			return mentor.ontology.getProperties(this.context.graphs).length;
+		} else {
+			return 0;
+		}
 	}
 }

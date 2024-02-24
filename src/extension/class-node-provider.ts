@@ -1,54 +1,57 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '../mentor';
-import { ClassRepository} from '@faubulous/mentor-rdf';
+import * as mentor from '../mentor';
 import { ClassNode } from './class-node';
 import { ResourceNodeProvider } from './resource-node-provider';
 
 /**
- * A tree node provider for RDF classes.
+ * A tree node provider for RDFS or OWL classes.
  */
-export class ClassNodeProvider extends ResourceNodeProvider<ClassRepository> {
+export class ClassNodeProvider extends ResourceNodeProvider {
+	id = "class";
 
-	override getRepository(context: DocumentContext): ClassRepository | undefined {
-		return context?.store ? new ClassRepository(context.store) : undefined;
+	/**
+	 * Indicates whether classes should be included in the tree that are not explicitly defined in the ontology.
+	 */
+	showReferenced: boolean = false;
+
+	override getTitle(): string {
+		return "Classes";
 	}
 
 	override getParent(uri: string): string | undefined {
-		return undefined;
+		if (this.context) {
+			let result = mentor.ontology.getSuperClasses(this.context.graphs, uri).sort().slice(0, 1);
+
+			return result.length > 0 ? result[0] : undefined;
+		} else {
+			return undefined;
+		}
 	}
 
 	override getChildren(uri: string): string[] {
-		if (!this.repository) {
+		if (this.context) {
+			let options = { includeReferencedClasses: this.showReferenced };
+			let result = mentor.ontology.getSubClasses(this.context.graphs, uri, options).sort();
+
+			return result;
+		} else {
 			return [];
 		}
-
-		let result = this.repository.getSubClasses(uri).sort().map(u => this.getNode(u));
-
-		if (!this.showReferenced) {
-			result = result.filter(u => this.repository?.hasSubject(u) || this.repository?.hasSubClasses(u));
-		}
-
-		return result;
 	}
 
 	override getTreeItem(uri: string): vscode.TreeItem {
-		if (!this.repository) {
-			throw new Error('Invalid repostory.');
+		if (this.context) {
+			return new ClassNode(this.context, uri);
+		} else {
+			throw new Error('Invalid context.');
 		}
+	}
 
-		// const workbench = vscode.workspace.getConfiguration("workbench");
-
-		// const colorCustomizations: any = workbench.get("colorCustomizations");
-
-		// workbench.update(
-		// 	"colorCustomizations",
-		// 	{
-		// 		...colorCustomizations,
-		// 		"rdf.ns0": "#006EAE",
-		// 	},
-		// 	1,
-		// );
-
-		return new ClassNode(this.repository, uri);
+	override getTotalItemCount(): number {
+		if (this.context) {
+			return mentor.ontology.getClasses(this.context.graphs, { includeReferencedClasses: false }).length;
+		} else {
+			return 0;
+		}
 	}
 }

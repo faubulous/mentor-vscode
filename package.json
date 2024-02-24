@@ -12,10 +12,10 @@
   ],
   "icon": "media/icons/mentor.png",
   "version": "0.1.0",
+  "preview": true,
   "publisher": "faubulous",
   "private": false,
   "license": "GPL",
-  
   "repository": {
     "type": "git",
     "url": "https://github.com/faubulous/mentor-vscode"
@@ -28,8 +28,8 @@
   ],
   "main": "./out/extension.js",
   "scripts": {
-    "build": "node ./build.js",
-    "build:watch": "node ./build.js --watch",
+    "build": "node ./build-font.js && node ./build.js",
+    "build:watch": "node ./build-font.js && node ./build.js --watch",
     "build:font": "node ./build-font.js",
     "package": "set NODE_ENV=production && npm run build && vsce package --dependencies -o out/mentor.vsix",
     "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
@@ -57,7 +57,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.1.9",
+    "@faubulous/mentor-rdf": "^0.2.5",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -178,6 +178,13 @@
           "fontCharacter": "\\e001"
         }
       },
+      "rdf-class-off": {
+        "description": "Class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e007"
+        }
+      },
       "rdf-class-eq": {
         "description": "Equivalent class icon",
         "default": {
@@ -192,11 +199,46 @@
           "fontCharacter": "\\e003"
         }
       },
+      "rdf-class-ref-on": {
+        "description": "Referenced class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e004"
+        }
+      },
+      "rdf-class-ref-off": {
+        "description": "Referenced class icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e005"
+        }
+      },
       "rdf-individual": {
         "description": "Individual icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e004"
+          "fontCharacter": "\\e006"
+        }
+      },
+      "rdf-label-tag": {
+        "description": "Tag label icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e008"
+        }
+      },
+      "rdf-label-uri": {
+        "description": "URI label icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e009"
+        }
+      },
+      "rdf-ontology": {
+        "description": "Ontology icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00a"
         }
       }
     },
@@ -205,24 +247,24 @@
         "id": "mentor.color.class",
         "description": "Color used for tree nodes representing class or class references.",
         "defaults": {
-          "light": "#af00e2",
-          "dark": "#c586c0"
+          "light": "#0000ff",
+          "dark": "#4e94ce"
         }
       },
       {
         "id": "mentor.color.individual",
         "description": "Color used for tree nodes representing literals.",
         "defaults": {
-          "light": "#af00e2",
-          "dark": "#c586c0"
+          "light": "#0000ff",
+          "dark": "#4e94ce"
         }
       },
       {
         "id": "mentor.color.objectProperty",
         "description": "Color used for tree nodes representing object properties.",
         "defaults": {
-          "light": "#af00e2",
-          "dark": "#c586c0"
+          "light": "#0000ff",
+          "dark": "#4e94ce"
         }
       },
       {
@@ -232,14 +274,37 @@
           "light": "#a31515",
           "dark": "#ce9178"
         }
-      },
-      {
-        "id": "mentor.color.annotationProperty",
-        "description": "Color used for tree nodes representing annotation properties.",
-        "defaults": {
-          "light": "#005500",
-          "dark": "#6a9742"
+      }
+    ],
+    "views": {
+      "mentor": [
+        {
+          "id": "mentor.view.workspaceTree",
+          "name": "Workspace"
+        },
+        {
+          "id": "mentor.view.combinedTree",
+          "name": "Definitions"
+        },
+        {
+          "id": "mentor.view.classTree",
+          "name": "Classes"
+        },
+        {
+          "id": "mentor.view.propertyTree",
+          "name": "Properties"
+        },
+        {
+          "id": "mentor.view.individualTree",
+          "name": "Individuals"
         }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "mentor.view.workspaceTree",
+        "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.sparql",
+        "when": "view == mentor.view.workspaceTree"
       }
     ],
     "viewsContainers": {
@@ -251,112 +316,206 @@
         }
       ]
     },
-    "views": {
-      "mentor": [
-        {
-          "id": "mentor.classExplorer",
-          "name": "Classes"
-        },
-        {
-          "id": "mentor.propertyExplorer",
-          "name": "Properties"
-        },
-        {
-          "id": "mentor.individualExplorer",
-          "name": "Individuals"
-        }
-      ]
-    },
     "commands": [
       {
-        "command": "mentor.classExplorer.command.toggleReferenced",
-        "title": "Show or hide referenced terms",
-        "icon": "$(color-mode)"
+        "command": "mentor.action.openSettings",
+        "title": "Settings",
+        "icon": "$(gear)"
       },
       {
-        "command": "mentor.classExplorer.command.refreshEntry",
-        "title": "Refresh",
-        "icon": "$(refresh)"
+        "command": "mentor.action.findReferences",
+        "title": "Find All References",
+        "group": "navigation"
       },
       {
-        "command": "mentor.classExplorer.command.editEntry",
-        "title": "Edit"
-      },
-      {
-        "command": "mentor.classExplorer.command.deleteEntry",
-        "title": "Delete"
-      },
-      {
-        "command": "mentor.command.selectClass",
+        "command": "mentor.action.revealDefinition",
         "title": "Go to Definition",
-        "icon": "$(go-to-file)",
-        "when": false
+        "icon": "$(go-to-file)"
       },
       {
-        "command": "mentor.command.selectProperty",
-        "title": "Go to Definition",
-        "icon": "$(go-to-file)",
-        "when": false
-      },
-      {
-        "command": "mentor.command.selectIndividual",
-        "title": "Go to Definition",
-        "icon": "$(go-to-file)",
-        "when": false
-      },
-      {
-        "command": "mentor.command.openExternal",
+        "command": "mentor.action.openInBrowser",
         "title": "Open in Browser",
         "icon": "$(globe)"
       },
       {
-        "command": "mentor.command.openSettings",
-        "title": "Settings",
-        "icon": "$(gear)"
+        "command": "mentor.action.showAnnotatedLabels",
+        "title": "Show Annotated Labels",
+        "icon": "$(rdf-label-tag)"
+      },
+      {
+        "command": "mentor.action.showUriLabels",
+        "title": "Show URI Labels",
+        "icon": "$(rdf-label-uri)"
+      },
+      {
+        "command": "mentor.action.showUriLabelsWithPrefix",
+        "title": "Show URI Labels with Prefix",
+        "icon": "$(rdf-label-uri)"
+      },
+      {
+        "command": "mentor.action.refreshClassTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mentor.action.showReferencedClasses",
+        "title": "Show Referenced Classes",
+        "icon": "$(rdf-class-ref)"
+      },
+      {
+        "command": "mentor.action.hideReferencedClasses",
+        "title": "Hide Referenced Classes",
+        "icon": "$(rdf-class)"
+      },
+      {
+        "command": "mentor.action.refreshPropertyTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mentor.action.showPropertyTypes",
+        "title": "Show Property Types",
+        "icon": "$(rdf-class)"
+      },
+      {
+        "command": "mentor.action.hidePropertyTypes",
+        "title": "Hide Property Types",
+        "icon": "$(rdf-class-off)"
+      },
+      {
+        "command": "mentor.action.refreshIndividualTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mentor.action.showIndividualTypes",
+        "title": "Show Individual Types",
+        "icon": "$(rdf-class)"
+      },
+      {
+        "command": "mentor.action.hideIndividualTypes",
+        "title": "Hide Individual Types",
+        "icon": "$(rdf-class-off)"
+      },
+      {
+        "command": "mentor.action.showClassTree",
+        "title": "Show Classes",
+        "icon": "$(rdf-class-tree)"
+      },
+      {
+        "command": "mentor.action.showClassTreeActive",
+        "title": "Reload Classes",
+        "icon": "$(rdf-class-tree-active)"
+      },
+      {
+        "command": "mentor.action.showPropertyTree",
+        "title": "Show Properties",
+        "icon": "$(rdf-property-tree)"
+      },
+      {
+        "command": "mentor.action.showPropertyTreeActive",
+        "title": "Reload Properties",
+        "icon": "$(rdf-property-tree-active)"
+      },
+      {
+        "command": "mentor.action.showIndividualTree",
+        "title": "Show Individuals",
+        "icon": "$(rdf-individual-tree)"
+      },
+      {
+        "command": "mentor.action.showIndividualTreeActive",
+        "title": "Reload Individuals",
+        "icon": "$(rdf-individual-tree-active)"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "mentor.classExplorer.command.toggleReferenced",
-          "when": "view == mentor.classExplorer",
-          "group": "navigation@1"
+          "command": "mentor.action.showAnnotatedLabels",
+          "when": "viewType == treeView",
+          "group": "4_search"
         },
         {
-          "command": "mentor.classExplorer.command.refreshEntry",
-          "when": "view == mentor.classExplorer",
-          "group": "navigation@2"
+          "command": "mentor.action.showUriLabels",
+          "when": "viewType == treeView",
+          "group": "4_search"
         },
         {
-          "command": "mentor.command.openSettings",
-          "group": "2_configuration"
+          "command": "mentor.action.showUriLabelsWithPrefix",
+          "when": "viewType == treeView",
+          "group": "4_search"
+        },
+        {
+          "command": "mentor.action.showReferencedClasses",
+          "when": "viewType == treeView && view.showReferencedClasses == false",
+          "group": "2_workspace"
+        },
+        {
+          "command": "mentor.action.hideReferencedClasses",
+          "when": "viewType == treeView && view.showReferencedClasses == true",
+          "group": "2_workspace"
+        },
+        {
+          "command": "mentor.action.refreshClassTree",
+          "when": "view == mentor.view.classTree",
+          "group": "navigation@4"
+        },
+        {
+          "command": "mentor.action.showPropertyTypes",
+          "when": "viewType == 'treeView' && view.showPropertyTypes == false",
+          "group": "2_workspace"
+        },
+        {
+          "command": "mentor.action.hidePropertyTypes",
+          "when": "viewType == 'treeView' && view.showPropertyTypes == true",
+          "group": "2_workspace"
+        },
+        {
+          "command": "mentor.action.refreshPropertyTree",
+          "when": "view == mentor.view.propertyTree",
+          "group": "navigation@4"
+        },
+        {
+          "command": "mentor.action.showIndividualTypes",
+          "when": "viewType == treeView && view.showIndividualTypes == false",
+          "group": "2_workspace"
+        },
+        {
+          "command": "mentor.action.hideIndividualTypes",
+          "when": "viewType == treeView && view.showIndividualTypes == true",
+          "group": "2_workspace"
+        },
+        {
+          "command": "mentor.action.refreshIndividualTree",
+          "when": "view == mentor.view.individualTree",
+          "group": "navigation@4"
+        },
+        {
+          "command": "mentor.action.openSettings",
+          "group": "z_commands",
+          "when": "viewType == treeView"
         }
       ],
       "view/item/context": [
         {
-          "command": "mentor.command.selectClass",
-          "when": "view == mentor.classExplorer && viewItem == class",
+          "command": "mentor.action.revealDefinition",
+          "when": "viewItem == class || viewItem == property || viewItem == individual",
           "group": "navigation"
         },
         {
-          "command": "mentor.command.selectProperty",
-          "when": "view == mentor.propertyExplorer && viewItem == property",
-          "group": "navigation"
+          "command": "mentor.action.findReferences",
+          "when": "viewItem == class || viewItem == property || viewItem == individual",
+          "group": "4_search"
         },
         {
-          "command": "mentor.command.selectIndividual",
-          "when": "view == mentor.individualExplorer && viewItem == individual",
-          "group": "navigation"
+          "command": "mentor.action.openInBrowser",
+          "when": "viewItem == class || viewItem == property || viewItem == individual",
+          "group": "z_commands"
         },
         {
-          "command": "mentor.command.openExternal",
-          "when": "view == mentor.classExplorer && viewItem == class",
-          "group": "navigation"
-        },
-        {
-          "command": "mentor.classExplorer.command.deleteEntry",
-          "when": "view == mentor.classExplorer && viewItem == class",
-          "group": "7_modification"
+          "command": "mentor.action.hidePropertyTypes",
+          "when": "viewItem == provider",
+          "group": "inline"
         }
       ]
     },
@@ -384,6 +543,54 @@
         "title": "Mentor",
         "order": 1,
         "properties": {
+          "mentor.treeLabelStyle": {
+            "type": "string",
+            "title": "Default Tree Label Style",
+            "description": "Set the standard style for rendering of tree labels.",
+            "enum": [
+              "AnnotatedLabels",
+              "UriLabels",
+              "UriLabelsWithPrefix"
+            ],
+            "enumDescriptions": [
+              "Render labels from the annotated label predicates.",
+              "Render the URI path element or fragment of the URI.",
+              "Render the URI path element or fragment with namespace prefix."
+            ],
+            "default": "AnnotatedLabels"
+          },
+          "mentor.internalBrowserEnabled": {
+            "type": "boolean",
+            "title": "Open URLs in interal browser",
+            "description": "If enabled, URLs will be opened in the internal browser instead of the default browser.",
+            "default": true
+          },
+          "mentor.predicates.label": {
+            "type": "array",
+            "title": "Label Predicates",
+            "description": "Manage the predicates to be used for labels in the tree view for classes, properties and individuals. The first matching predicate will be used.",
+            "default": [
+              "http://purl.org/dc/terms/title",
+              "http://purl.org/dc/elements/1.1/title",
+              "http://www.w3.org/2004/02/skos/core#prefLabel",
+              "http://www.w3.org/2000/01/rdf-schema#label",
+              "https://schema.org/name",
+              "http://schema.org/name"
+            ]
+          },
+          "mentor.predicates.description": {
+            "type": "array",
+            "title": "Description Predicates",
+            "description": "Manage the predicates to be used for descriptions in the tree view for classes, properties and individuals. The first matching predicate will be used.",
+            "default": [
+              "http://www.w3.org/2004/02/skos/core#definition",
+              "http://www.w3.org/2000/01/rdf-schema#comment",
+              "http://purl.org/dc/terms/description",
+              "http://purl.org/dc/terms/abstract",
+              "https://schema.org/description",
+              "http://schema.org/description"
+            ]
+          },
           "mentor.namespaces": {
             "type": "array",
             "title": "Namespaces",

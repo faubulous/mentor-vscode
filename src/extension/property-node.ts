@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
-import { Quad, NamedNode } from 'n3';
-import { PropertyRepository, xsd, rdf, owl } from '@faubulous/mentor-rdf';
+import * as mentor from '../mentor';
+import { NamedNode } from 'n3';
+import { xsd, rdf, rdfs, owl } from '@faubulous/mentor-rdf';
 import { ResourceNode } from './resource-node';
+import { DocumentContext } from '../languages/document-context';
 
 export class PropertyNode extends ResourceNode {
 	contextValue = 'property';
@@ -9,30 +11,38 @@ export class PropertyNode extends ResourceNode {
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
 	constructor(
-		protected readonly repository: PropertyRepository,
+		protected readonly context: DocumentContext,
 		public readonly uri: string
 	) {
-		super(repository, uri);
+		super(context, uri);
 
-		this.collapsibleState = this.repository.hasSubProperties(uri) ?
+		this.collapsibleState = mentor.ontology.hasSubProperties(this.context.graphs, uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
-
-		this.command = {
-			command: 'mentor.command.selectProperty',
-			title: '',
-			arguments: [uri]
-		};
 	}
 
-	override getColor() {
+	override getIconColor() {
 		return new vscode.ThemeColor(`mentor.color.${this.propertyType}`);
 	}
 
 	override getIcon(): vscode.ThemeIcon {
 		let icon = 'arrow-right';
 
-		const range = this.repository.getRange(this.uri);
+		// 1. Determine the property type.
+		this.propertyType = 'objectProperty';
+
+		let s = new NamedNode(this.uri);
+		let p = new NamedNode(rdf.type.id);
+		let o = new NamedNode(owl.DatatypeProperty.id);
+
+		for (let q of mentor.ontology.store.match(this.context.graphs, s, p, o)) {
+			this.propertyType = 'dataProperty';
+			icon = 'symbol-text';
+			break;
+		}
+
+		// 2. Derive the icon from the property type.
+		const range = mentor.ontology.getRange(this.context.graphs, this.uri);
 
 		switch (range) {
 			case xsd.date.id:
@@ -66,6 +76,7 @@ export class PropertyNode extends ResourceNode {
 				icon = 'symbol-boolean';
 				break;
 			}
+			case rdfs.Literal.id:
 			case xsd.string.id: {
 				this.propertyType = 'dataProperty';
 				icon = 'symbol-text';
@@ -76,21 +87,12 @@ export class PropertyNode extends ResourceNode {
 				icon = 'file-binary';
 				break;
 			}
-			default: {
-				this.propertyType = 'objectProperty';
+			case xsd.anyURI.id: {
+				icon = 'arrow-right';
 				break;
 			}
 		}
 
-		const s = new NamedNode(this.uri);
-		const p = new NamedNode(rdf.type.id);
-		const o = new NamedNode(owl.AnnotationProperty.id);
-
-		for (let q of this.repository.store.match(s, p, o)) {
-			this.propertyType = 'annotationProperty';
-			break;
-		}
-
-		return new vscode.ThemeIcon(icon, this.getColor());
+		return new vscode.ThemeIcon(icon, this.getIconColor());
 	}
 }

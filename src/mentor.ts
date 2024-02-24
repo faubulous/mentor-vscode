@@ -1,286 +1,166 @@
 import * as vscode from 'vscode';
-import * as n3 from 'n3';
-import { OwlReasoner, StoreFactory, RdfSyntax, Tokenizer, TokenizerResult, rdf } from '@faubulous/mentor-rdf';
-import { IToken } from 'millan';
+import { DocumentContext } from './languages/document-context';
+import { Store, OwlReasoner, OntologyRepository } from '@faubulous/mentor-rdf';
+import { DocumentFactory } from './languages';
+import { Settings, TreeLabelStyle } from './settings';
 
-export class DocumentContext {
-	private _store: n3.Store | undefined;
+/**
+ * Maps document URIs to loaded document contexts.
+ */
+export const contexts: { [key: string]: DocumentContext } = {};
 
-	/**
-	 * The N3 store for the document.
-	 */
-	get store(): n3.Store | undefined { return this._store; };
+/**
+ * The currently active document context or `undefined`.
+ */
+export let activeContext: DocumentContext | undefined;
 
-	/**
-	 * The document.
-	 */
-	readonly document: vscode.TextDocument;
+/**
+ * The Visual Studio Code configuration section for the extension.
+ */
+export const configuration = vscode.workspace.getConfiguration('mentor');
 
-	/**
-	 * All namespaces defined in the document.
-	 */
-	readonly namespaces: { [key: string]: string } = {};
+/**
+ * The appliation state of the extension.
+ */
+export const settings = new Settings();
 
-	/**
-	 * All tokens in the document.
-	 */
-	readonly tokens: IToken[] = [];
+/**
+ * The Mentor RDF extension triple store.
+ */
+export const store = new Store(new OwlReasoner());
 
-	/**
-	 * Maps resource URIs to indexed tokens.
-	 */
-	readonly typeAssertions: { [key: string]: IToken[] } = {};
+/**
+ * A repository for retrieving ontology resources.
+ */
+export const ontology = new OntologyRepository(store);
 
-	/**
-	 * Maps resource URIs to indexed tokens.
-	 */
-	readonly references: { [key: string]: IToken[] } = {};
+const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
-	constructor(document: vscode.TextDocument) {
-		this.document = document;
-	}
+export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
 
-	public static canLoad(document: vscode.TextDocument): boolean {
-		return document && (this._isSupportedGraphLanguage(document.languageId) || this._isSupportedQueryLanguage(document.languageId));
-	}
+function onActiveEditorChanged(): void {
+	const editor = vscode.window.activeTextEditor;
 
-	private static _isSupportedGraphLanguage(languageId: string): boolean {
-		switch (languageId) {
-			case 'ntriples':
-			case 'nquads':
-			case 'turtle':
-			case 'trig':
-				return true;
-			default:
-				return false;
-		}
-	}
-
-	private static _isSupportedQueryLanguage(languageId: string): boolean {
-		switch (languageId) {
-			case 'sparql':
-				return true;
-			default:
-				return false;
-		}
-	}
-
-	public async load(document: vscode.TextDocument): Promise<void> {
-		if (!DocumentContext.canLoad(document)) {
-			return;
-		}
-
-		await Promise.all([
-			this._parseGraph(document),
-			this._parseTokens(document)
-		])
-	}
-
-	private async _parseGraph(document: vscode.TextDocument): Promise<void> {
-		if (DocumentContext._isSupportedGraphLanguage(document.languageId)) {
-			const uri = document.uri.toString();
-
-			try {
-				this._store = await StoreFactory.createFromStream(document.getText(), uri);
-
-				new OwlReasoner().expand(this._store, uri, uri + "#inference");
-			} catch (e) {
-				console.error(e);
-			}
-		}
-	}
-
-	private async _parseTokens(document: vscode.TextDocument): Promise<void> {
-		const data = document.getText();
-		let result: TokenizerResult;
-
-		if (DocumentContext._isSupportedQueryLanguage(document.languageId)) {
-			result = await Tokenizer.parseData(data, RdfSyntax.Sparql);
-		} else {
-			result = await Tokenizer.parseData(data, RdfSyntax.TriG);
-		}
-
-		this.tokens.length = 0;
-		this.tokens.push(...result.tokens);
-
-		result.tokens.forEach((t, i) => {
-			switch (t.tokenType?.tokenName) {
-				case 'PNAME_NS': {
-					const prefix = t.image.substring(0, t.image.length - 1);
-					const uri = this._getUriFromToken(result.tokens[i + 1]);
-
-					if (!uri) break;
-
-					this.namespaces[prefix] = uri;
-					break;
-				}
-				case 'PNAME_LN': {
-					const uri = this._getUriFromPrefixedName(t.image);
-
-					if (!uri) break;
-
-					this._handleTypeAssertion(result, t, uri, i);
-					this._handleUriReference(result, t, uri);
-					break;
-				}
-				case 'IRIREF': {
-					const uri = this._getUriFromIriReference(t.image);
-
-					this._handleTypeAssertion(result, t, uri, i);
-					this._handleUriReference(result, t, uri);
-					break;
-				}
-				case 'A': {
-					this._handleTypeAssertion(result, t, rdf.type.id, i);
-					break;
-				}
+	if (editor && editor.document != activeContext?.document) {
+		loadDocument(editor.document).then((context) => {
+			if (context) {
+				activeContext = context;
+				_onDidChangeDocumentContext?.fire(context);
 			}
 		});
-	}
-
-	private _getUriFromToken(token: IToken): string | undefined {
-		if (token.tokenType?.tokenName === 'IRIREF') {
-			return this._getUriFromIriReference(token.image);
-		} else if (token.tokenType?.tokenName === 'PNAME_LN') {
-			return this._getUriFromPrefixedName(token.image);
-		}
-	}
-
-	private _getUriFromIriReference(value: string): string {
-		const v = value.trim();
-
-		if (v.length > 2 && v.startsWith('<') && v.endsWith('>')) {
-			return v.substring(1, v.length - 1);
-		} else {
-			return v;
-		}
-	}
-
-	private _getUriFromPrefixedName(name: string): string | undefined {
-		const parts = name.split(':');
-
-		if (parts.length != 2) {
-			return;
-		}
-
-		const prefix = parts[0];
-		const label = parts[1];
-
-		if (!this.namespaces[prefix]) {
-			return;
-		}
-
-		return this.namespaces[prefix] + label;
-	}
-
-	private _handleUriReference(result: TokenizerResult, token: IToken, uri: string) {
-		if (!this.references[uri]) {
-			this.references[uri] = [];
-		}
-
-		this.references[uri].push(token);
-	}
-
-	private _handleTypeAssertion(result: TokenizerResult, token: IToken, uri: string, index: number) {
-		if (uri != rdf.type.id) return;
-
-		const s = result.tokens[index - 1];
-
-		if (!s) return;
-
-		const u = this._getUriFromToken(s);
-
-		if (!u) return;
-
-		this.typeAssertions[u] = [s];
 	}
 }
 
-class MentorExtension {
-	/**
-	 * Maps document URIs to loaded document contexts.
-	 */
-	contexts: { [key: string]: DocumentContext } = {};
+vscode.window.onDidChangeActiveTextEditor(() => onActiveEditorChanged());
 
-	/**
-	 * The active document context.
-	 */
-	activeContext: DocumentContext | undefined;
+function onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
+	loadDocument(e.document, true).then((context) => {
+		if (context) {
+			_onDidChangeDocumentContext?.fire(context);
+		}
+	});
+}
 
-	private _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
+vscode.workspace.onDidChangeTextDocument((e) => onTextDocumentChanged(e));
 
-	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
+/**
+ * A factory for loading and creating document contexts.
+ */
+const documentFactory = new DocumentFactory();
 
-	constructor() {
-		vscode.workspace.onDidChangeTextDocument((e) => this.onTextDocumentChanged(e));
-		vscode.window.onDidChangeActiveTextEditor(() => this.onActiveEditorChanged());
-
-		this.onActiveEditorChanged();
+async function loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext | undefined> {
+	if (!document || !documentFactory.isSupported(document.languageId)) {
+		return;
 	}
 
-	onActiveEditorChanged(): void {
-		if (!vscode.window.activeTextEditor) {
-			return;
-		}
+	const uri = document.uri.toString();
 
-		const editor = vscode.window.activeTextEditor;
+	let context = contexts[uri];
 
-		if (editor.document == this.activeContext?.document) {
-			return;
-		}
-
-		if (!DocumentContext.canLoad(editor.document)) {
-			return;
-		}
-
-		this._loadDocument(editor.document).then((context) => {
-			if (context) {
-				this.activeContext = context;
-				this._onDidChangeDocumentContext?.fire(context);
-			}
-		});
-	}
-
-	onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-		if (!DocumentContext.canLoad(e.document)) {
-			return;
-		}
-
-		this._loadDocument(e.document, true).then((context) => {
-			if (context) {
-				this._onDidChangeDocumentContext?.fire(context);
-			}
-		});
-	}
-
-	private async _loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext | undefined> {
-		if (!document) {
-			return;
-		}
-
-		const uri = document.uri.toString();
-
-		let context = this.contexts[uri]; 
-
-		if (context && !reload) {
-			return context;
-		}
-
-		context = new DocumentContext(document);
-
-		await context.load(document);
-
-		this.contexts[uri] = context;
-		this.activeContext = context;
-
-		for(let d of Object.values(this.contexts).filter(c => c.document.isClosed)) {
-			const uri = d.document.uri.toString();
-
-			delete this.contexts[uri];
-		}
-
+	if (context && !reload) {
 		return context;
 	}
+
+	context = documentFactory.create(document);
+
+	await context.load(document);
+
+	contexts[uri] = context;
+	activeContext = context;
+
+	for (let d of Object.values(contexts).filter(c => c.document.isClosed)) {
+		const uri = d.document.uri.toString();
+
+		delete contexts[uri];
+	}
+
+	return context;
 }
 
-export const mentor: MentorExtension = new MentorExtension();
+export async function activateDocument(): Promise<vscode.TextEditor | undefined> {
+	const activeTextEditor = vscode.window.activeTextEditor;
+
+	if (activeContext && activeContext.document != activeTextEditor?.document) {
+		await vscode.commands.executeCommand("vscode.open", activeContext.document.uri);
+	}
+
+	return activeTextEditor;
+}
+
+function initialize() {
+	store.loadFrameworkOntologies().then(() => { });
+
+	let defaultStyle = configuration.get('treeLabelStyle');
+
+	switch (defaultStyle) {
+		case 'AnnotatedLabels':
+			settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
+			break;
+		case 'UriLabelsWithPrefix':
+			settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
+			break;
+		default:
+			settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
+			break;
+	}
+
+	vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
+		settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
+	});
+
+	vscode.commands.registerCommand('mentor.action.showUriLabels', () => {
+		settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
+	});
+
+	vscode.commands.registerCommand('mentor.action.showUriLabelsWithPrefix', () => {
+		settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
+	});
+
+	vscode.commands.registerCommand('mentor.action.showReferencedClasses', () => {
+		settings.set('view.showReferencedClasses', true);
+	});
+
+	vscode.commands.registerCommand('mentor.action.hideReferencedClasses', () => {
+		settings.set('view.showReferencedClasses', false);
+	});
+
+	vscode.commands.registerCommand('mentor.action.showPropertyTypes', () => {
+		settings.set('view.showPropertyTypes', true);
+	});
+
+	vscode.commands.registerCommand('mentor.action.hidePropertyTypes', () => {
+		settings.set('view.showPropertyTypes', false);
+	});
+
+	vscode.commands.registerCommand('mentor.action.showIndividualTypes', () => {
+		settings.set('view.showIndividualTypes', true);
+	});
+
+	vscode.commands.registerCommand('mentor.action.hideIndividualTypes', () => {
+		settings.set('view.showIndividualTypes', false);
+	});
+
+	onActiveEditorChanged();
+}
+
+initialize();

@@ -1,15 +1,24 @@
 import * as vscode from 'vscode';
-import { mentor, DocumentContext } from '../mentor';
+import * as mentor from '../mentor';
+import { DocumentContext } from '../languages/document-context';
 
-export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider<string> {
-	protected readonly nodes: any = {};
+/**
+ * A generic tree node provider for RDF resources.
+ */
+export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<string> {
+	/**
+	 * The unique identifier of the tree data provider.
+	 */
+	abstract get id(): string;
 
-	protected context: DocumentContext | undefined;
+	/**
+	 * The vocabulary document context.
+	 */
+	public context: DocumentContext | undefined;
 
-	protected repository: T | undefined;
-
-	protected showReferenced: boolean = false;
-
+	/**
+	 * Indicates whether the tree view should automatically refresh when the vocabulary context changes.
+	 */
 	protected autoRefresh: boolean = true;
 
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
@@ -17,82 +26,65 @@ export abstract class ResourceNodeProvider<T> implements vscode.TreeDataProvider
 	readonly onDidChangeTreeData: vscode.Event<string | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
-		mentor.onDidChangeVocabularyContext((context) => this._onVocabularyChanged(context));
-
 		if (mentor.activeContext) {
 			this._onVocabularyChanged(mentor.activeContext);
 		}
+
+		mentor.onDidChangeVocabularyContext((context) => {
+			this._onVocabularyChanged(context);
+		});
+
+		mentor.settings.onDidChange("view.treeLabelStyle", () => {
+			this.refresh();
+		});
 	}
 
 	private _onVocabularyChanged(e: DocumentContext | undefined): void {
 		if (e) {
 			this.context = e;
-			this.repository = this.getRepository(e);
-			this.refresh();
+			this.onDidChangeVocabularyContext(e);
+			this._onDidChangeTreeData.fire(void 0);
 		}
 	}
 
-	protected abstract getRepository(context: DocumentContext): T | undefined;
+	/**
+	 * A callback that is called when the vocabulary document context has changed.
+	 * @param context The new vocabulary document context.
+	 */
+	protected onDidChangeVocabularyContext(context: DocumentContext) { }
 
-	toggleReferenced() {
-		this.showReferenced = !this.showReferenced;
-	}
-
+	/**
+	 * Refresh the tree view.
+	 */
 	refresh(): void {
-		this._onDidChangeTreeData.fire(void 0);
+		this._onVocabularyChanged(this.context);
 	}
 
-	select(uri: string) {
-		if (this.context) {
-			const context = this.context;
+	/**
+	 * Get the title of the tree view.
+	 */
+	abstract getTitle(): string;
 
-			this.activateDocument().then((editor) => {
-				let t;
+	/**
+	 * Get the parent of a tree node.
+	 * @param id The tree node identifier.
+	 */
+	abstract getParent(id: string): string | undefined;
 
-				if(context.typeAssertions[uri]) {
-					t = context.typeAssertions[uri][0];
-				} else if(context.references[uri]) {
-					t = context.references[uri][0];
-				} else {
-					return;
-				}
+	/**
+	 * Get the children of a tree node.
+	 * @param id The tree node identifier.
+	 */
+	abstract getChildren(id: string | undefined): string[];
 
-				const startLine = t.startLine ? t.startLine - 1 : 0;
-				const startCharacter = t.startColumn ? t.startColumn - 1 : 0;
-				const endLine = t.endLine ? t.endLine - 1 : 0;
-				const endCharacter = t.endColumn ?? 0;
+	/**
+	 * Get the tree item for a tree node.
+	 * @param id The tree node identifier.
+	 */
+	abstract getTreeItem(id: string): vscode.TreeItem;
 
-				const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
-
-				if (editor) {
-					editor.selection = new vscode.Selection(range.start, range.end);
-					editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-				}
-			});
-		}
-	}
-
-	private async activateDocument(): Promise<vscode.TextEditor | undefined> {
-		const activeTextEditor = vscode.window.activeTextEditor;
-
-		if (activeTextEditor?.document != this.context?.document) {
-			await vscode.commands.executeCommand<vscode.TextDocumentShowOptions>("vscode.open", this.context?.document.uri);
-		}
-
-		return activeTextEditor;
-	}
-
-	getNode(uri: string): string {
-		if (!this.nodes[uri]) {
-			this.nodes[uri] = uri;
-		}
-
-		return this.nodes[uri];
-	}
-
-	abstract getParent(uri: string): string | undefined;
-
-	abstract getChildren(uri: string): string[];
-
-	abstract getTreeItem(uri: string): vscode.TreeItem;
+	/**
+	 * Get the number of all items in the tree view.
+	 */
+	abstract getTotalItemCount(): number;
 }

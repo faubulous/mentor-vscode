@@ -1,41 +1,48 @@
 import * as vscode from 'vscode';
-import { ClassRepository } from '@faubulous/mentor-rdf';
+import * as mentor from '../mentor';
+import { DocumentContext } from '../languages/document-context';
 import { ResourceNode } from './resource-node';
 
+/**
+ * Represents a class in the ontology tree view.
+ */
 export class ClassNode extends ResourceNode {
 	contextValue = 'class';
 
 	constructor(
-		protected readonly repository: ClassRepository,
-		public readonly uri: string
+		protected readonly context: DocumentContext,
+		public readonly uri: string,
+		collapsibleState?: vscode.TreeItemCollapsibleState
 	) {
-		super(repository, uri);
+		super(context, uri, collapsibleState);
+	}
 
-		this.collapsibleState = this.repository.hasSubClasses(uri) ?
+	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
+		return mentor.ontology.hasSubClasses(this.context.graphs, this.uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
 
-		this.command = {
-			command: 'mentor.command.selectClass',
-			title: '',
-			arguments: [uri]
-		};
 	}
 
-	override getColor() {
-		return new vscode.ThemeColor("mentor.color.class");
+	override getDescription(): string | undefined {
+		// Todo:
+		// - Intersections (∩)
+		// - Unions (∪)
+
+		return mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri) ? "≡" : undefined;
 	}
 
 	override getIcon() {
 		let icon = 'rdf-class';
 
-		if (this.repository.hasEquivalentClass(this.uri)) {
-			icon += '-eq';
-		}
-		else if (!this.repository.hasSubject(this.uri)) {
+		if (!mentor.ontology.hasSubject(this.context.graphs, this.uri)) {
 			icon += '-ref';
 		}
 
-		return new vscode.ThemeIcon(icon, this.getColor());
+		return new vscode.ThemeIcon(icon, this.getIconColor());
+	}
+
+	override getIconColor() {
+		return new vscode.ThemeColor("mentor.color.class");
 	}
 }

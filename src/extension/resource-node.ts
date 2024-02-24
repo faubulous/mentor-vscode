@@ -1,40 +1,45 @@
 import * as vscode from 'vscode';
-import * as n3 from 'n3';
-import { ResourceRepository, skos, rdfs } from '@faubulous/mentor-rdf';
-import { getNamespaceUri, toJsonId } from '../utilities';
+import { DocumentContext } from '../languages/document-context';
 
+/**
+ * Represents an RDF resource in a tree view.
+ */
 export class ResourceNode extends vscode.TreeItem {
 	contextValue: string = 'resource';
 
-	command: vscode.Command | undefined;
-
 	constructor(
-		protected readonly repository: ResourceRepository,
-		public readonly uri: string
+		protected readonly context: DocumentContext,
+		public readonly uri: string,
+		collapsibleState?: vscode.TreeItemCollapsibleState
 	) {
 		super('');
-		
+
 		this.iconPath = this.getIcon();
 		this.label = this.getLabel();
+		this.description = this.getDescription();
 		this.tooltip = this.getTooltip();
+		this.command = this.getCommand();
+		this.collapsibleState = collapsibleState ?? this.getCollapsibleState();
+	}
 
-		this.command = {
-			command: 'mentor.command.selectResource',
+	/**
+	 * Get the command that is executed when the tree item is clicked.
+	 * @returns A command that is executed when the tree item is clicked.
+	 */
+	getCommand(): vscode.Command | undefined {
+		return {
+			command: 'mentor.action.goToDefinition',
 			title: '',
-			arguments: [uri]
+			arguments: [this.uri]
 		};
 	}
 
-	protected getLabel(): vscode.TreeItemLabel {
-		let label: string;
-
-		const n = this.uri.lastIndexOf('#');
-
-		if (n > -1) {
-			label = this.uri.substring(n + 1);
-		} else {
-			label = this.uri.substring(this.uri.lastIndexOf('/') + 1);
-		}
+	/**
+	 * Get the label of the tree item.
+	 * @returns The label of the tree item.
+	 */
+	getLabel(): vscode.TreeItemLabel {
+		let label = this.context.getResourceLabel(this.uri);
 
 		return {
 			label: label,
@@ -42,39 +47,43 @@ export class ResourceNode extends vscode.TreeItem {
 		}
 	}
 
-	protected getTooltip(): vscode.MarkdownString {
-		let result = '';
-
-		if (this.repository?.store) {
-			const s = n3.DataFactory.namedNode(this.uri);
-
-			for (let d of this.repository.store.match(s, skos.definition, null, null)) {
-				result += d.object.value;
-				break;
-			}
-
-			if (!result) {
-				for (let d of this.repository.store.match(s, rdfs.comment, null, null)) {
-					result += d.object.value;
-					break;
-				}
-			}
-		}
-
-		if (result) {
-			result += '\n\n';
-		}
-
-		result += this.uri;
-
-		return new vscode.MarkdownString(result, true);
+	/**
+	 * Get the description of the tree item.
+	 * @returns A description string or undefined if no description should be shown.
+	 */
+	getDescription(): string | undefined {
+		return undefined;
 	}
 
-	getColor(): vscode.ThemeColor {
+	/**
+	 * Get the tooltip of the tree item.
+	 * @returns A markdown string or undefined if no tooltip should be shown.
+	 */
+	getTooltip(): vscode.MarkdownString | undefined {
+		return this.context.getResourceTooltip(this.uri);
+	}
+
+	/**
+	 * Get the icon of the tree item.
+	 * @returns A theme icon or undefined if no icon should be shown.
+	 */
+	getIcon(): vscode.ThemeIcon | undefined {
+		return new vscode.ThemeIcon('primitive-square', this.getIconColor());
+	}
+
+	/**
+	 * Get the theme color for the icon of the tree item.
+	 * @returns A theme color or undefined for the default icon color.
+	 */
+	getIconColor(): vscode.ThemeColor | undefined {
 		return new vscode.ThemeColor('descriptionForeground');
 	}
 
-	getIcon(): vscode.ThemeIcon {
-		return new vscode.ThemeIcon('primitive-square', this.getColor());
+	/**
+	 * Get the collapsible state of the tree item.
+	 * @returns The collapsible state of the tree item.
+	 */
+	getCollapsibleState(): vscode.TreeItemCollapsibleState {
+		return vscode.TreeItemCollapsibleState.None;
 	}
 }
