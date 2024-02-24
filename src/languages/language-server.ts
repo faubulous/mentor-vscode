@@ -268,7 +268,7 @@ export abstract class LanguageServerBase {
 
 							result.push({
 								severity: DiagnosticSeverity.Warning,
-								message: `A namespace URI should end with a '/', '#', '=' or ':' character.`,
+								message: `An RDF namespace URI should end with a '/', '#', '=' or ':' character.`,
 								range: {
 									start: document.positionAt(u.startOffset),
 									end: document.positionAt(u.endOffset ?? 0)

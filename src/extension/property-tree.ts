@@ -29,16 +29,16 @@ export class PropertyTree {
 			showCollapseAll: true
 		});
 
-		this.updateItemCount();
+		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
 
-		mentor.onDidChangeVocabularyContext((context) => this.updateItemCount());
+		this.updateView();
+
+		mentor.onDidChangeVocabularyContext((context) => this.updateView());
 
 		this.registerCommands();
 	}
 
-	private registerCommands() {
-		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
-		
+	private registerCommands() {		
 		vscode.commands.registerCommand('mentor.action.refreshPropertyTree', () => {
 			this.treeDataProvider.refresh();
 		});
@@ -50,7 +50,7 @@ export class PropertyTree {
 		});
 	}
 
-	private updateItemCount() {
-		this.treeView.description = this.treeDataProvider.getTotalItemCount() + " definitions";
+	private updateView() {
+		this.treeView.description = this.treeDataProvider.getTotalItemCount().toString();
 	}
 }

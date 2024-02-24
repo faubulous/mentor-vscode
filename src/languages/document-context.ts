@@ -64,7 +64,11 @@ export abstract class DocumentContext {
 		const result = await this.parseData(document);
 
 		this.tokens.length = 0;
-		this.tokens.push(...result.tokens);
+
+		// Note: Using this.tokens.push(...result.tokens) throws an error for very large files.
+		for(let t of result.tokens) {
+			this.tokens.push(t);
+		}
 
 		result.tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType?.tokenName) {
@@ -135,7 +139,7 @@ export abstract class DocumentContext {
 		this.namespaces[newPrefix] = uri;
 	}
 
-	public getResourceLabel(subjectUri: string): string {		
+	public getResourceLabel(subjectUri: string): string {
 		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
@@ -193,14 +197,11 @@ export abstract class DocumentContext {
 	}
 
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
-		let result = this.getResourceDescription(subjectUri) ?? '';
+		let lines = [
+			this.getResourceDescription(subjectUri),
+			subjectUri
+		];
 
-		if (result) {
-			result += '\n\n';
-		}
-
-		result += subjectUri;
-
-		return new vscode.MarkdownString(result, true);
+		return new vscode.MarkdownString(lines.filter(line => line).join('\n\n'), true);
 	}
 }

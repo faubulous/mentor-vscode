@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import { DocumentContext } from '../languages/document-context';
 import { ResourceNode } from './resource-node';
 
+/**
+ * Represents an individual in the ontology tree view.
+ */
 export class IndividualNode extends ResourceNode {
 	contextValue = 'individual';
 
@@ -12,21 +15,13 @@ export class IndividualNode extends ResourceNode {
 		public readonly uri: string
 	) {
 		super(context, uri);
-
-		this.collapsibleState = vscode.TreeItemCollapsibleState.None;
-
-		this.command = {
-			command: 'mentor.action.goToDefinition',
-			title: '',
-			arguments: [uri]
-		};
 	}
 
-	override getColor() {
+	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.individual");
 	}
 
 	override getIcon(): vscode.ThemeIcon {
-		return new vscode.ThemeIcon('rdf-individual', this.getColor());
+		return new vscode.ThemeIcon('rdf-individual', this.getIconColor());
 	}
 }

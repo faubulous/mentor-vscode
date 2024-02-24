@@ -38,10 +38,11 @@ export class DefinitionProvider extends FeatureProvider {
 	public provideDefintionForUri(context: DocumentContext, uri: string): vscode.Definition | null {
 		let t;
 
-		if (context.namespaceDefinitions[uri]) {
-			t = context.namespaceDefinitions[uri];
-		} else if (context.typeAssertions[uri]) {
+		if (context.typeAssertions[uri]) {
+			// Look for type assertions first, because sometimes namespaces are defined owl:Ontology.
 			t = context.typeAssertions[uri][0];
+		} else if (context.namespaceDefinitions[uri]) {
+			t = context.namespaceDefinitions[uri];
 		} else if (context.references[uri]) {
 			t = context.references[uri][0];
 		} else {

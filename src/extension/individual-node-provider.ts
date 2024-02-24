@@ -5,9 +5,11 @@ import { ResourceNodeProvider } from './resource-node-provider';
 import { ClassNode } from './class-node';
 
 /**
- * A tree node provider for RDF properties.
+ * A tree node provider for RDFS or OWL properties.
  */
 export class IndividualNodeProvider extends ResourceNodeProvider {
+	id = 'individual';
+
 	/**
 	 * Indicates whether the individual type should be shown as root nodes in the tree.
 	 */
@@ -17,6 +19,10 @@ export class IndividualNodeProvider extends ResourceNodeProvider {
 	 * A set of URIs that are used for marking the nodes as classes for the getTreeItem method.
 	 */
 	classNodes: any = {};
+
+	override getTitle(): string {
+		return "Individuals";
+	}
 
 	override getParent(uri: string): string | undefined {
 		if (this.context) {

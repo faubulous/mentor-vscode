@@ -115,6 +115,9 @@ export class SemanticTokensProvider extends FeatureProvider implements vscode.Do
 					case "DOUBLE":
 						builder.push(tokenRange, SemanticTokenType.number);
 						break;
+					case "TRUE":
+					case "FALSE":
+						builder.push(tokenRange, SemanticTokenType.number);
 					case "Comment":
 						builder.push(tokenRange, SemanticTokenType.comment);
 						break;

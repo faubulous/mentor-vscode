@@ -30,9 +30,9 @@ export class ClassTree implements TreeView {
 			showCollapseAll: true
 		});
 
-		this.updateItemCount();
+		this.updateView();
 
-		mentor.onDidChangeVocabularyContext(() => this.updateItemCount());
+		mentor.onDidChangeVocabularyContext(() => this.updateView());
 
 		this.registerCommands();
 	}
@@ -51,7 +51,13 @@ export class ClassTree implements TreeView {
 		});
 	}
 
-	private updateItemCount() {
-		this.treeView.description = this.treeDataProvider.getTotalItemCount() + " definitions";
+	private updateView() {
+		this.treeView.description = this.treeDataProvider.getTotalItemCount().toString();
+
+		if(mentor.activeContext) {
+			this.treeView.message = "No classes found.";
+		} else {
+			this.treeView.message = "No file selected.";
+		}
 	}
 }

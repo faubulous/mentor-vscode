@@ -4,13 +4,19 @@ import { ClassNode } from './class-node';
 import { ResourceNodeProvider } from './resource-node-provider';
 
 /**
- * A tree node provider for RDF classes.
+ * A tree node provider for RDFS or OWL classes.
  */
 export class ClassNodeProvider extends ResourceNodeProvider {
+	id = "class";
+
 	/**
 	 * Indicates whether classes should be included in the tree that are not explicitly defined in the ontology.
 	 */
-	public showReferenced: boolean = false;
+	showReferenced: boolean = false;
+
+	override getTitle(): string {
+		return "Classes";
+	}
 
 	override getParent(uri: string): string | undefined {
 		if (this.context) {

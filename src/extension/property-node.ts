@@ -19,15 +19,9 @@ export class PropertyNode extends ResourceNode {
 		this.collapsibleState = mentor.ontology.hasSubProperties(this.context.graphs, uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
-
-		this.command = {
-			command: 'mentor.action.goToDefinition',
-			title: '',
-			arguments: [uri]
-		};
 	}
 
-	override getColor() {
+	override getIconColor() {
 		return new vscode.ThemeColor(`mentor.color.${this.propertyType}`);
 	}
 
@@ -99,6 +93,6 @@ export class PropertyNode extends ResourceNode {
 			}
 		}
 
-		return new vscode.ThemeIcon(icon, this.getColor());
+		return new vscode.ThemeIcon(icon, this.getIconColor());
 	}
 }

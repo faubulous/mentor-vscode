@@ -2,9 +2,23 @@ import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { DocumentContext } from '../languages/document-context';
 
+/**
+ * A generic tree node provider for RDF resources.
+ */
 export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<string> {
+	/**
+	 * The unique identifier of the tree data provider.
+	 */
+	abstract get id(): string;
+
+	/**
+	 * The vocabulary document context.
+	 */
 	public context: DocumentContext | undefined;
 
+	/**
+	 * Indicates whether the tree view should automatically refresh when the vocabulary context changes.
+	 */
 	protected autoRefresh: boolean = true;
 
 	private _onDidChangeTreeData: vscode.EventEmitter<string | undefined> = new vscode.EventEmitter<string | undefined>();
@@ -12,17 +26,17 @@ export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<st
 	readonly onDidChangeTreeData: vscode.Event<string | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
-		mentor.settings.onDidChange("view.treeLabelStyle", () => {
-			this.refresh();
-		});
+		if (mentor.activeContext) {
+			this._onVocabularyChanged(mentor.activeContext);
+		}
 
 		mentor.onDidChangeVocabularyContext((context) => {
 			this._onVocabularyChanged(context);
 		});
 
-		if (mentor.activeContext) {
-			this._onVocabularyChanged(mentor.activeContext);
-		}
+		mentor.settings.onDidChange("view.treeLabelStyle", () => {
+			this.refresh();
+		});
 	}
 
 	private _onVocabularyChanged(e: DocumentContext | undefined): void {
@@ -33,17 +47,44 @@ export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<st
 		}
 	}
 
+	/**
+	 * A callback that is called when the vocabulary document context has changed.
+	 * @param context The new vocabulary document context.
+	 */
 	protected onDidChangeVocabularyContext(context: DocumentContext) { }
 
+	/**
+	 * Refresh the tree view.
+	 */
 	refresh(): void {
 		this._onVocabularyChanged(this.context);
 	}
 
-	abstract getParent(uri: string): string | undefined;
+	/**
+	 * Get the title of the tree view.
+	 */
+	abstract getTitle(): string;
 
-	abstract getChildren(uri: string): string[];
+	/**
+	 * Get the parent of a tree node.
+	 * @param id The tree node identifier.
+	 */
+	abstract getParent(id: string): string | undefined;
 
-	abstract getTreeItem(uri: string): vscode.TreeItem;
+	/**
+	 * Get the children of a tree node.
+	 * @param id The tree node identifier.
+	 */
+	abstract getChildren(id: string | undefined): string[];
 
+	/**
+	 * Get the tree item for a tree node.
+	 * @param id The tree node identifier.
+	 */
+	abstract getTreeItem(id: string): vscode.TreeItem;
+
+	/**
+	 * Get the number of all items in the tree view.
+	 */
 	abstract getTotalItemCount(): number;
 }

@@ -15,6 +15,7 @@ import {
 	SparqlTokenProvider
 } from './languages';
 import { DefinitionProvider } from './providers';
+import { WorkspaceTree } from './extension/workspace-tree';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -38,6 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCommands(context);
 
 	// Register the tree views.
+	disposables.push(new WorkspaceTree(context).treeView);
 	disposables.push(new TermTree(context).treeView);
 	disposables.push(new ClassTree(context).treeView);
 	disposables.push(new PropertyTree(context).treeView);
@@ -72,9 +74,10 @@ function registerCommands(context: vscode.ExtensionContext) {
 		}
 	}));
 
-	disposables.push(vscode.commands.registerCommand('mentor.action.findReferences', (uri: string) => {
+	disposables.push(vscode.commands.registerCommand('mentor.action.findReferences', (id: string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
+				const uri = id.substring(id.indexOf(':') + 1);
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {

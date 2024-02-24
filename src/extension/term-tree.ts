@@ -5,6 +5,7 @@ import { TermNodeProvider } from './term-node-provider';
 import { ClassNodeProvider } from './class-node-provider';
 import { PropertyNodeProvider } from './property-node-provider';
 import { IndividualNodeProvider } from './individual-node-provider';
+import { OntologyNodeProvider } from './ontology-node-provider';
 
 /**
  * Provides a combined explorer for classes, properties and individuals.
@@ -14,6 +15,11 @@ export class TermTree implements TreeView {
 	 * The ID which is used to register the view and make it visible in VS Code.
 	 */
 	readonly id = "mentor.view.combinedTree";
+
+	/**
+	 * The node provider for ontologies.
+	 */
+	readonly ontologyProvider = new OntologyNodeProvider();
 
 	/**
 	 * The node provider for classes.
@@ -33,7 +39,7 @@ export class TermTree implements TreeView {
 	/**
 	 * The tree node provider.
 	 */
-	readonly treeDataProvider = new TermNodeProvider(this.classProvider);
+	readonly treeDataProvider = new TermNodeProvider();
 
 	/**
 	 * The tree view.
@@ -41,6 +47,11 @@ export class TermTree implements TreeView {
 	readonly treeView: vscode.TreeView<string>;
 
 	constructor(protected context: vscode.ExtensionContext) {
+		this.treeDataProvider.registerProvider(this.ontologyProvider);
+		this.treeDataProvider.registerProvider(this.classProvider);
+		this.treeDataProvider.registerProvider(this.propertyProvider);
+		this.treeDataProvider.registerProvider(this.individualProvider);
+
 		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
 
 		this.treeView = vscode.window.createTreeView(this.id, {
@@ -48,52 +59,11 @@ export class TermTree implements TreeView {
 			showCollapseAll: true
 		});
 
-
-		this.updateItemCount();
-
-		mentor.onDidChangeVocabularyContext(() => this.updateItemCount());
-
-		this.registerCommands();
-	}
-
-	private registerCommands() {
 		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
-		vscode.commands.executeCommand('setContext', 'itemType', 'class');
 
-		this.treeView.title = 'Classes';
+		this.updateView();
 
-		vscode.commands.registerCommand('mentor.action.showClassTree', () => {
-			this.treeView.title = 'Classes';
-			this.treeDataProvider.setProvider(this.classProvider);
-
-			vscode.commands.executeCommand('setContext', 'itemType', 'class');
-		});
-
-		vscode.commands.registerCommand('mentor.action.showClassTreeActive', () => {
-			this.treeDataProvider.refresh();
-		});
-
-		vscode.commands.registerCommand('mentor.action.showPropertyTree', () => {
-			this.treeView.title = 'Properties';
-			this.treeDataProvider.setProvider(this.propertyProvider);
-
-			vscode.commands.executeCommand('setContext', 'itemType', 'property');
-		});
-
-		vscode.commands.registerCommand('mentor.action.showPropertyTreeActive', () => {
-			this.treeDataProvider.refresh();
-		});
-
-		vscode.commands.registerCommand('mentor.action.showIndividualTree', () => {
-			this.treeView.title = 'Individuals';
-			this.treeDataProvider.setProvider(this.individualProvider);
-
-			vscode.commands.executeCommand('setContext', 'itemType', 'individual');
-		});
-
-		vscode.commands.registerCommand('mentor.action.showIndividualTreeActive', () => {
-			this.treeDataProvider.refresh();
-		});
+		mentor.onDidChangeVocabularyContext(() => this.updateView());
 
 		mentor.settings.onDidChange("view.showReferencedClasses", (e) => {
 			this.classProvider.showReferenced = e.newValue;
@@ -111,7 +81,13 @@ export class TermTree implements TreeView {
 		});
 	}
 
-	private updateItemCount() {
-		this.treeView.description = this.treeDataProvider.getTotalItemCount() + " definitions";
+	private updateView() {
+		if (!mentor.activeContext) {
+			this.treeView.message = "No file selected.";
+		} else if(!this.treeDataProvider.hasProviders()) {
+			this.treeView.message = "No definition providers registered.";
+		} else {
+			this.treeView.message = undefined;
+		}
 	}
 }

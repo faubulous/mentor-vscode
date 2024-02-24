@@ -3,6 +3,9 @@ import * as mentor from '../mentor';
 import { DocumentContext } from '../languages/document-context';
 import { ResourceNode } from './resource-node';
 
+/**
+ * Represents a class in the ontology tree view.
+ */
 export class ClassNode extends ResourceNode {
 	contextValue = 'class';
 
@@ -11,37 +14,35 @@ export class ClassNode extends ResourceNode {
 		public readonly uri: string,
 		collapsibleState?: vscode.TreeItemCollapsibleState
 	) {
-		super(context, uri);
-
-		if (collapsibleState) {
-			this.collapsibleState = collapsibleState;
-		} else {
-			this.collapsibleState = mentor.ontology.hasSubClasses(this.context.graphs, uri) ?
-				vscode.TreeItemCollapsibleState.Collapsed :
-				vscode.TreeItemCollapsibleState.None;
-		}
-
-		this.command = {
-			command: 'mentor.action.goToDefinition',
-			title: '',
-			arguments: [uri]
-		};
+		super(context, uri, collapsibleState);
 	}
 
-	override getColor() {
-		return new vscode.ThemeColor("mentor.color.class");
+	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
+		return mentor.ontology.hasSubClasses(this.context.graphs, this.uri) ?
+			vscode.TreeItemCollapsibleState.Collapsed :
+			vscode.TreeItemCollapsibleState.None;
+
+	}
+
+	override getDescription(): string | undefined {
+		// Todo:
+		// - Intersections (∩)
+		// - Unions (∪)
+
+		return mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri) ? "≡" : undefined;
 	}
 
 	override getIcon() {
 		let icon = 'rdf-class';
 
-		if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
-			icon += '-eq';
-		}
-		else if (!mentor.ontology.hasSubject(this.context.graphs, this.uri)) {
+		if (!mentor.ontology.hasSubject(this.context.graphs, this.uri)) {
 			icon += '-ref';
 		}
 
-		return new vscode.ThemeIcon(icon, this.getColor());
+		return new vscode.ThemeIcon(icon, this.getIconColor());
+	}
+
+	override getIconColor() {
+		return new vscode.ThemeColor("mentor.color.class");
 	}
 }

@@ -57,7 +57,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.2",
+    "@faubulous/mentor-rdf": "^0.2.5",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -234,46 +234,11 @@
           "fontCharacter": "\\e009"
         }
       },
-      "rdf-class-tree": {
-        "description": "Class tree icon",
+      "rdf-ontology": {
+        "description": "Ontology icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e00a"
-        }
-      },
-      "rdf-class-tree-active": {
-        "description": "Class tree active icon",
-        "default": {
-          "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00b"
-        }
-      },
-      "rdf-property-tree": {
-        "description": "Property tree icon",
-        "default": {
-          "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00c"
-        }
-      },
-      "rdf-property-tree-active": {
-        "description": "Property tree active icon",
-        "default": {
-          "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00d"
-        }
-      },
-      "rdf-individual-tree": {
-        "description": "Individual tree icon",
-        "default": {
-          "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00e"
-        }
-      },
-      "rdf-individual-tree-active": {
-        "description": "Individual tree active icon",
-        "default": {
-          "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00f"
         }
       }
     },
@@ -311,20 +276,15 @@
         }
       }
     ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "mentor",
-          "title": "Mentor",
-          "icon": "media/glyphs/0-mentor.svg"
-        }
-      ]
-    },
     "views": {
       "mentor": [
         {
+          "id": "mentor.view.workspaceTree",
+          "name": "Workspace"
+        },
+        {
           "id": "mentor.view.combinedTree",
-          "name": "Combined"
+          "name": "Definitions"
         },
         {
           "id": "mentor.view.classTree",
@@ -337,6 +297,22 @@
         {
           "id": "mentor.view.individualTree",
           "name": "Individuals"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "mentor.view.workspaceTree",
+        "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.sparql",
+        "when": "view == mentor.view.workspaceTree"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mentor",
+          "title": "Mentor",
+          "icon": "media/glyphs/0-mentor.svg"
         }
       ]
     },
@@ -456,27 +432,27 @@
       "view/title": [
         {
           "command": "mentor.action.showAnnotatedLabels",
-          "when": "viewType == 'treeView'",
+          "when": "viewType == treeView",
           "group": "4_search"
         },
         {
           "command": "mentor.action.showUriLabels",
-          "when": "viewType == 'treeView'",
+          "when": "viewType == treeView",
           "group": "4_search"
         },
         {
           "command": "mentor.action.showUriLabelsWithPrefix",
-          "when": "viewType == 'treeView'",
+          "when": "viewType == treeView",
           "group": "4_search"
         },
         {
           "command": "mentor.action.showReferencedClasses",
-          "when": "viewType == 'treeView' && view.showReferencedClasses == false",
+          "when": "viewType == treeView && view.showReferencedClasses == false",
           "group": "2_workspace"
         },
         {
           "command": "mentor.action.hideReferencedClasses",
-          "when": "viewType == 'treeView' && view.showReferencedClasses == true",
+          "when": "viewType == treeView && view.showReferencedClasses == true",
           "group": "2_workspace"
         },
         {
@@ -501,12 +477,12 @@
         },
         {
           "command": "mentor.action.showIndividualTypes",
-          "when": "viewType == 'treeView' && view.showIndividualTypes == false",
+          "when": "viewType == treeView && view.showIndividualTypes == false",
           "group": "2_workspace"
         },
         {
           "command": "mentor.action.hideIndividualTypes",
-          "when": "viewType == 'treeView' && view.showIndividualTypes == true",
+          "when": "viewType == treeView && view.showIndividualTypes == true",
           "group": "2_workspace"
         },
         {
@@ -515,39 +491,9 @@
           "group": "navigation@4"
         },
         {
-          "command": "mentor.action.showClassTree",
-          "when": "view == mentor.view.combinedTree && itemType != 'class'",
-          "group": "navigation@1"
-        },
-        {
-          "command": "mentor.action.showClassTreeActive",
-          "when": "view == mentor.view.combinedTree && itemType == 'class'",
-          "group": "navigation@1"
-        },
-        {
-          "command": "mentor.action.showPropertyTree",
-          "when": "view == mentor.view.combinedTree && itemType != 'property'",
-          "group": "navigation@2"
-        },
-        {
-          "command": "mentor.action.showPropertyTreeActive",
-          "when": "view == mentor.view.combinedTree && itemType == 'property'",
-          "group": "navigation@2"
-        },
-        {
-          "command": "mentor.action.showIndividualTree",
-          "when": "view == mentor.view.combinedTree && itemType != 'individual'",
-          "group": "navigation@3"
-        },
-        {
-          "command": "mentor.action.showIndividualTreeActive",
-          "when": "view == mentor.view.combinedTree && itemType == 'individual'",
-          "group": "navigation@3"
-        },
-        {
           "command": "mentor.action.openSettings",
           "group": "z_commands",
-          "when": "viewType == 'treeView'"
+          "when": "viewType == treeView"
         }
       ],
       "view/item/context": [
@@ -565,6 +511,11 @@
           "command": "mentor.action.openInBrowser",
           "when": "viewItem == class || viewItem == property || viewItem == individual",
           "group": "z_commands"
+        },
+        {
+          "command": "mentor.action.hidePropertyTypes",
+          "when": "viewItem == provider",
+          "group": "inline"
         }
       ]
     },
@@ -595,8 +546,12 @@
           "mentor.treeLabelStyle": {
             "type": "string",
             "title": "Default Tree Label Style",
-            "description": "Default style for rendering of tree labels.",
-            "enum": ["AnnotatedLabels", "UriLabels", "UriLabelsWithPrefix"],
+            "description": "Set the standard style for rendering of tree labels.",
+            "enum": [
+              "AnnotatedLabels",
+              "UriLabels",
+              "UriLabelsWithPrefix"
+            ],
             "enumDescriptions": [
               "Render labels from the annotated label predicates.",
               "Render the URI path element or fragment of the URI.",

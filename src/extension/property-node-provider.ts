@@ -8,6 +8,8 @@ import { ClassNode } from './class-node';
  * A tree node provider for RDF properties.
  */
 export class PropertyNodeProvider extends ResourceNodeProvider {
+	id = 'property';
+
 	/**
 	 * Indicates whether the property type should be shown as root nodes in the tree.
 	 */
@@ -17,6 +19,10 @@ export class PropertyNodeProvider extends ResourceNodeProvider {
 	 * A set of URIs that are used for marking the nodes as classes for the getTreeItem method.
 	 */
 	classNodes: any = {};
+
+	override getTitle(): string {
+		return "Properties";
+	}
 
 	override getParent(uri: string): string | undefined {
 		return undefined;

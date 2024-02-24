@@ -94,10 +94,14 @@ export function getPrefixFromToken(token: IToken): string {
  * @returns A URI or undefined.
  */
 export function getUriFromToken(namespaces: NamespaceMap, token: IToken): string | undefined {
-	if (token?.tokenType?.tokenName === 'IRIREF') {
-		return getUriFromIriReference(token.image);
-	} else if (token?.tokenType?.tokenName === 'PNAME_LN') {
-		return getUriFromPrefixedName(namespaces, token.image);
+	const tokenName = token.tokenType?.tokenName;
+
+	switch(tokenName) {
+		case 'IRIREF':
+			return getUriFromIriReference(token.image);
+		case 'PNAME_LN':
+		case 'PNAME_NS':
+			return getUriFromPrefixedName(namespaces, token.image);
 	}
 }
 

@@ -24,18 +24,21 @@ export class IndividualTree {
 	constructor(context: vscode.ExtensionContext) {
 		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
 
-		this.treeView = vscode.window.createTreeView(this.id, { treeDataProvider: this.treeDataProvider, showCollapseAll: true });
+		this.treeView = vscode.window.createTreeView(this.id, {
+			treeDataProvider: this.treeDataProvider,
+			showCollapseAll: true
+		});
 
-		this.updateItemCount();
+		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
+		
+		this.updateView();
 
-		mentor.onDidChangeVocabularyContext(() => this.updateItemCount());
+		mentor.onDidChangeVocabularyContext(() => this.updateView());
 
 		this.registerCommands();
 	}
 
-	private registerCommands() {
-		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
-		
+	private registerCommands() {		
 		vscode.commands.registerCommand('mentor.action.refreshIndividualTree', () => {
 			this.treeDataProvider.refresh();
 		});
@@ -47,7 +50,13 @@ export class IndividualTree {
 		});
 	}
 
-	private updateItemCount() {
-		this.treeView.description = this.treeDataProvider.getTotalItemCount() + " definitions";
+	private updateView() {
+		this.treeView.description = this.treeDataProvider.getTotalItemCount().toString();
+
+		if(mentor.activeContext) {
+			this.treeView.message = "No individuals found.";
+		} else {
+			this.treeView.message = "No file selected.";
+		}
 	}
 }
