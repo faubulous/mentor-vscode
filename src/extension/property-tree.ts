@@ -1,44 +1,21 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { PropertyNodeProvider } from "./property-node-provider";
+import { ResourceTree } from './resource-tree';
 
 /**
  * Provides the property explorer and related commands.
  */
-export class PropertyTree {
-	/**
-	 * The ID which is used to register the view and make it visible in VS Code.
-	 */
-	readonly id = "mentor.view.propertyTree";
-
-	/**
-	 * The tree node provider.
-	 */
-	readonly treeDataProvider = new PropertyNodeProvider();
-
-	/**
-	 * The tree view.
-	 */
-	readonly treeView: vscode.TreeView<string>;
-
-	constructor(readonly context: vscode.ExtensionContext) {
-		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
-
-		this.treeView = vscode.window.createTreeView(this.id, {
-			treeDataProvider: this.treeDataProvider,
-			showCollapseAll: true
-		});
-
-		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
-
-		this.updateView();
-
-		mentor.onDidChangeVocabularyContext((context) => this.updateView());
-
-		this.registerCommands();
+export class PropertyTree extends ResourceTree {
+	get noItemsMessage(): string {
+		return "No properties found.";
 	}
 
-	private registerCommands() {		
+	constructor() {
+		super("mentor.view.propertyTree", new PropertyNodeProvider());
+	}
+
+	protected registerCommands() {
 		vscode.commands.registerCommand('mentor.action.refreshPropertyTree', () => {
 			this.treeDataProvider.refresh();
 		});
@@ -48,9 +25,5 @@ export class PropertyTree {
 			this.treeDataProvider.showTypes = e.newValue;
 			this.treeDataProvider.refresh();
 		});
-	}
-
-	private updateView() {
-		this.treeView.description = this.treeDataProvider.getTotalItemCount().toString();
 	}
 }

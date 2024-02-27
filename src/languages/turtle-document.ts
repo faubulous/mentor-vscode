@@ -11,9 +11,8 @@ export class TurtleDocument extends DocumentContext {
 
 		try {
 			await this.parseGraph(document);
-		}
-		catch (e) {
-			console.error(e);
+		} catch (e) {
+			// This is not a critical error because the graph might be invalid.
 		}
 	}
 
@@ -31,6 +30,8 @@ export class TurtleDocument extends DocumentContext {
 
 		// The loadFromStream function only updates the existing graphs 
 		// when the document was parsed successfully.
-		await mentor.store.loadFromStream(document.getText(), uri);
+		const text = document.getText();
+
+		await mentor.store.loadFromStream(text, uri);
 	}
 }

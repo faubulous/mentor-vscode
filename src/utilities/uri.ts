@@ -69,3 +69,15 @@ export function toJsonId(uri: string): string | undefined {
 		return undefined;
 	}
 }
+
+export function getNodeIdFromUri(provider: string, uri: string): string {
+	return provider + ':' + uri;
+}
+
+export function getUriFromNodeId(id: string): string {
+	return id.substring(id.indexOf(':') + 1);
+}
+
+export function getProviderFromNodeId(id: string): string {
+	return id.split(':')[0];
+}

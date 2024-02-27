@@ -7,21 +7,18 @@ import { ResourceNode } from './resource-node';
  * Represents a class in the ontology tree view.
  */
 export class ClassNode extends ResourceNode {
-	contextValue = 'class';
-
 	constructor(
 		protected readonly context: DocumentContext,
-		public readonly uri: string,
+		id: string,
 		collapsibleState?: vscode.TreeItemCollapsibleState
 	) {
-		super(context, uri, collapsibleState);
+		super(context, id, collapsibleState);
 	}
 
 	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
 		return mentor.ontology.hasSubClasses(this.context.graphs, this.uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
-
 	}
 
 	override getDescription(): string | undefined {

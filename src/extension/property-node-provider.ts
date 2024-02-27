@@ -24,44 +24,44 @@ export class PropertyNodeProvider extends ResourceNodeProvider {
 		return "Properties";
 	}
 
-	override getParent(uri: string): string | undefined {
+	override getParent(id: string): string | undefined {
 		return undefined;
 	}
 
-	override getChildren(uri: string): string[] {
+	override getChildren(id: string): string[] {
 		if (this.context) {
 			let result;
 
-			if (!uri) {
+			if (!id) {
 				if (this.showTypes) {
 					result = mentor.ontology.getPropertyTypes(this.context.graphs).sort();
 
 					// Mark the nodes as classes for the getTreeItem method.
-					result.forEach((type: string) => this.classNodes[type] = true);
+					result.forEach((typeUri: string) => this.classNodes[this.getId(typeUri)] = true);
 				} else {
 					result = mentor.ontology.getProperties(this.context.graphs).sort();
 				}
-			} else if (this.classNodes[uri]) {
+			} else if (this.classNodes[id]) {
+				const uri = this.getUri(id)!;
+
 				result = mentor.ontology.getPropertiesOfType(this.context.graphs, uri, false).sort();
 			} else {
+				const uri = this.getUri(id)!;
+
 				result = mentor.ontology.getSubProperties(this.context.graphs, uri).sort();
 			}
 
-			return result;
+			return this.sortByLabel(result).map(uri => this.getId(uri));
 		} else {
 			return [];
 		}
 	}
 
-	override getTreeItem(uri: string): vscode.TreeItem {
-		if (this.context) {
-			if (this.classNodes[uri]) {
-				return new ClassNode(this.context, uri, vscode.TreeItemCollapsibleState.Collapsed);
-			} else {
-				return new PropertyNode(this.context, uri);
-			}
+	override getTreeItem(id: string): vscode.TreeItem {
+		if (this.classNodes[id]) {
+			return new ClassNode(this.context!, id, vscode.TreeItemCollapsibleState.Collapsed);
 		} else {
-			throw new Error('Invalid context.');
+			return new PropertyNode(this.context!, id);
 		}
 	}
 

@@ -57,7 +57,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.5",
+    "@faubulous/mentor-rdf": "^0.2.7",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -78,7 +78,7 @@
           ".nt",
           ".n3"
         ],
-        "configuration": "./src/languages/language-config-turtle.json",
+        "configuration": "./src/languages/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -93,7 +93,7 @@
         "extensions": [
           ".nq"
         ],
-        "configuration": "./src/languages/language-config-turtle.json",
+        "configuration": "./src/languages/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -108,7 +108,7 @@
         "extensions": [
           ".ttl"
         ],
-        "configuration": "./src/languages/language-config-turtle.json",
+        "configuration": "./src/languages/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -123,7 +123,7 @@
         "extensions": [
           ".trig"
         ],
-        "configuration": "./src/languages/language-config-trig.json",
+        "configuration": "./src/languages/trig-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -138,7 +138,7 @@
         "extensions": [
           ".sparql"
         ],
-        "configuration": "./src/languages/language-config-sparql.json",
+        "configuration": "./src/languages/sparql-language-config.json",
         "icon": {
           "light": "./media/icons/sparql-light.svg",
           "dark": "./media/icons/sparql-dark.svg"
@@ -288,15 +288,18 @@
         },
         {
           "id": "mentor.view.classTree",
-          "name": "Classes"
+          "name": "Classes",
+          "visibility": "hidden"
         },
         {
           "id": "mentor.view.propertyTree",
-          "name": "Properties"
+          "name": "Properties",
+          "visibility": "hidden"
         },
         {
           "id": "mentor.view.individualTree",
-          "name": "Individuals"
+          "name": "Individuals",
+          "visibility": "hidden"
         }
       ]
     },
@@ -304,7 +307,7 @@
       {
         "view": "mentor.view.workspaceTree",
         "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.sparql",
-        "when": "view == mentor.view.workspaceTree"
+        "when": "mentor.initializing === false && mentor.workspace.hasFiles === false"
       }
     ],
     "viewsContainers": {
@@ -432,27 +435,27 @@
       "view/title": [
         {
           "command": "mentor.action.showAnnotatedLabels",
-          "when": "viewType == treeView",
+          "when": "view in mentor.resourceTreeViews",
           "group": "4_search"
         },
         {
           "command": "mentor.action.showUriLabels",
-          "when": "viewType == treeView",
+          "when": "view in mentor.resourceTreeViews",
           "group": "4_search"
         },
         {
           "command": "mentor.action.showUriLabelsWithPrefix",
-          "when": "viewType == treeView",
+          "when": "view in mentor.resourceTreeViews",
           "group": "4_search"
         },
         {
           "command": "mentor.action.showReferencedClasses",
-          "when": "viewType == treeView && view.showReferencedClasses == false",
+          "when": "view in mentor.resourceTreeViews && view.showReferencedClasses == false",
           "group": "2_workspace"
         },
         {
           "command": "mentor.action.hideReferencedClasses",
-          "when": "viewType == treeView && view.showReferencedClasses == true",
+          "when": "view in mentor.resourceTreeViews && view.showReferencedClasses == true",
           "group": "2_workspace"
         },
         {
@@ -462,12 +465,12 @@
         },
         {
           "command": "mentor.action.showPropertyTypes",
-          "when": "viewType == 'treeView' && view.showPropertyTypes == false",
+          "when": "view in mentor.resourceTreeViews && view.showPropertyTypes == false",
           "group": "2_workspace"
         },
         {
           "command": "mentor.action.hidePropertyTypes",
-          "when": "viewType == 'treeView' && view.showPropertyTypes == true",
+          "when": "view in mentor.resourceTreeViews && view.showPropertyTypes == true",
           "group": "2_workspace"
         },
         {
@@ -477,12 +480,12 @@
         },
         {
           "command": "mentor.action.showIndividualTypes",
-          "when": "viewType == treeView && view.showIndividualTypes == false",
+          "when": "view in mentor.resourceTreeViews && view.showIndividualTypes == false",
           "group": "2_workspace"
         },
         {
           "command": "mentor.action.hideIndividualTypes",
-          "when": "viewType == treeView && view.showIndividualTypes == true",
+          "when": "view in mentor.resourceTreeViews && view.showIndividualTypes == true",
           "group": "2_workspace"
         },
         {
@@ -493,23 +496,18 @@
         {
           "command": "mentor.action.openSettings",
           "group": "z_commands",
-          "when": "viewType == treeView"
+          "when": "view in mentor.treeViews"
         }
       ],
       "view/item/context": [
         {
-          "command": "mentor.action.revealDefinition",
-          "when": "viewItem == class || viewItem == property || viewItem == individual",
-          "group": "navigation"
-        },
-        {
           "command": "mentor.action.findReferences",
-          "when": "viewItem == class || viewItem == property || viewItem == individual",
+          "when": "viewItem =~ /resource.*/",
           "group": "4_search"
         },
         {
           "command": "mentor.action.openInBrowser",
-          "when": "viewItem == class || viewItem == property || viewItem == individual",
+          "when": "viewItem =~ /resource.*/",
           "group": "z_commands"
         },
         {

@@ -76,10 +76,7 @@ export class TermNodeProvider extends ResourceNodeProvider {
 			const provider = this.getProvider(id);
 
 			// The URI may be undefined. The provider will return the root nodes in this case.
-			const uri = id.endsWith(':') ? undefined : id.substring(id.indexOf(':') + 1);
-
-			// The resource providers will return URIs, so we need to prefix them with the provider id.
-			const result = provider.getChildren(uri).map(u => provider.id + ':' + u);
+			const result = provider.getChildren(id.endsWith(':') ? undefined : id);
 
 			return result;
 		} else if (this.hasItems()) {
@@ -102,7 +99,7 @@ export class TermNodeProvider extends ResourceNodeProvider {
 		if (n == id.length - 1) {
 			return new TermNode(provider);
 		} else {
-			return provider.getTreeItem(id.substring(n + 1));
+			return provider.getTreeItem(id);
 		}
 	}
 

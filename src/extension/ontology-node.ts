@@ -4,13 +4,11 @@ import { DocumentContext } from '../languages/document-context';
 import { ResourceNode } from './resource-node';
 
 export class OntologyNode extends ResourceNode {
-	contextValue = 'ontology';
-
 	constructor(
 		protected readonly context: DocumentContext,
-		public readonly uri: string
+		id: string
 	) {
-		super(context, uri);
+		super(context, id);
 	}
 
 	override getIcon(): vscode.ThemeIcon {

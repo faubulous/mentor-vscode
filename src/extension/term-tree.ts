@@ -59,8 +59,6 @@ export class TermTree implements TreeView {
 			showCollapseAll: true
 		});
 
-		vscode.commands.executeCommand('setContext', 'viewType', 'treeView');
-
 		this.updateView();
 
 		mentor.onDidChangeVocabularyContext(() => this.updateView());

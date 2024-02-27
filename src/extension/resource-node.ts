@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { DocumentContext } from '../languages/document-context';
+import { getUriFromNodeId, getProviderFromNodeId } from '../utilities';
 
 /**
  * Represents an RDF resource in a tree view.
@@ -7,13 +8,21 @@ import { DocumentContext } from '../languages/document-context';
 export class ResourceNode extends vscode.TreeItem {
 	contextValue: string = 'resource';
 
+	provider: string;
+
+	uri: string;
+
 	constructor(
 		protected readonly context: DocumentContext,
-		public readonly uri: string,
+		id: string,
 		collapsibleState?: vscode.TreeItemCollapsibleState
 	) {
 		super('');
 
+		this.id = id;
+		this.uri = getUriFromNodeId(id);
+		this.provider = getProviderFromNodeId(id);
+		this.contextValue = 'resource.' + this.provider;
 		this.iconPath = this.getIcon();
 		this.label = this.getLabel();
 		this.description = this.getDescription();
@@ -28,9 +37,9 @@ export class ResourceNode extends vscode.TreeItem {
 	 */
 	getCommand(): vscode.Command | undefined {
 		return {
-			command: 'mentor.action.goToDefinition',
+			command: 'mentor.action.revealDefinition',
 			title: '',
-			arguments: [this.uri]
+			arguments: [this.id]
 		};
 	}
 

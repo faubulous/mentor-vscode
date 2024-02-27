@@ -18,9 +18,10 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 		return "Classes";
 	}
 
-	override getParent(uri: string): string | undefined {
-		if (this.context) {
-			let result = mentor.ontology.getSuperClasses(this.context.graphs, uri).sort().slice(0, 1);
+	override getParent(id: string): string | undefined {
+		if (this.context && id) {
+			const uri = this.getUri(id)!;
+			const result = mentor.ontology.getSuperClasses(this.context.graphs, uri).sort().slice(0, 1);
 
 			return result.length > 0 ? result[0] : undefined;
 		} else {
@@ -28,23 +29,20 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 		}
 	}
 
-	override getChildren(uri: string): string[] {
+	override getChildren(id: string): string[] {
 		if (this.context) {
-			let options = { includeReferencedClasses: this.showReferenced };
-			let result = mentor.ontology.getSubClasses(this.context.graphs, uri, options).sort();
+			const uri = this.getUri(id);
+			const options = { includeReferencedClasses: this.showReferenced };
+			const result = mentor.ontology.getSubClasses(this.context.graphs, uri, options);
 
-			return result;
+			return this.sortByLabel(result).map(uri => this.getId(uri));
 		} else {
 			return [];
 		}
 	}
 
-	override getTreeItem(uri: string): vscode.TreeItem {
-		if (this.context) {
-			return new ClassNode(this.context, uri);
-		} else {
-			throw new Error('Invalid context.');
-		}
+	override getTreeItem(id: string): vscode.TreeItem {
+		return new ClassNode(this.context!, id);
 	}
 
 	override getTotalItemCount(): number {

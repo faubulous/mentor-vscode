@@ -2,6 +2,7 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor'
 import { Disposable } from 'vscode-languageclient';
+import { TreeView } from './extension/tree-view';
 import { TermTree } from './extension/term-tree';
 import { ClassTree } from './extension/class-tree';
 import { PropertyTree } from './extension/property-tree';
@@ -28,22 +29,38 @@ const providers: Disposable[] = [
 	...new SparqlTokenProvider().register()
 ];
 
-const disposables: Disposable[] = [];
+const commands: Disposable[] = [];
+
+const views: TreeView[] = [];
 
 export function activate(context: vscode.ExtensionContext) {
+	vscode.commands.executeCommand('setContext', 'mentor.initializing', true);
+
 	// Start the language clients..
 	for (const client of clients) {
 		client.start(context);
 	}
 
 	registerCommands(context);
-
 	// Register the tree views.
-	disposables.push(new WorkspaceTree(context).treeView);
-	disposables.push(new TermTree(context).treeView);
-	disposables.push(new ClassTree(context).treeView);
-	disposables.push(new PropertyTree(context).treeView);
-	disposables.push(new IndividualTree(context).treeView);
+	views.push(new WorkspaceTree(context));
+	views.push(new TermTree(context));
+	views.push(new ClassTree(context));
+	views.push(new PropertyTree(context));
+	views.push(new IndividualTree(context));
+
+	// Make the tree view ids available for usage in package.json.
+	vscode.commands.executeCommand('setContext', 'mentor.treeViews', views.map(view => view.id));
+
+	vscode.commands.executeCommand('setContext', 'mentor.resourceTreeViews', [
+		"mentor.view.combinedTree",
+		"mentor.view.ontologyTree",
+		"mentor.view.classTree",
+		"mentor.view.propertyTree",
+		"mentor.view.individualTree"
+	]);
+
+	vscode.commands.executeCommand('setContext', 'mentor.initializing', false);
 }
 
 export function deactivate(): Thenable<void> {
@@ -55,16 +72,24 @@ export function deactivate(): Thenable<void> {
 		for (const provider of providers) {
 			provider.dispose();
 		}
+
+		for (const command of commands) {
+			command.dispose();
+		}
+
+		for (const view of views) {
+			view.treeView.dispose();
+		}
 	});
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
 	// Open the settings view via command
-	disposables.push(vscode.commands.registerCommand("mentor.action.openSettings", () => {
+	commands.push(vscode.commands.registerCommand("mentor.action.openSettings", () => {
 		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:faubulous.mentor');
 	}));
 
-	disposables.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (uri: string) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (uri: string) => {
 		const internalBrowser = mentor.configuration.get('internalBrowserEnabled');
 
 		if (internalBrowser === true) {
@@ -74,7 +99,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 		}
 	}));
 
-	disposables.push(vscode.commands.registerCommand('mentor.action.findReferences', (id: string) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (id: string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
 				const uri = id.substring(id.indexOf(':') + 1);
@@ -89,14 +114,17 @@ function registerCommands(context: vscode.ExtensionContext) {
 		});
 	}));
 
-	disposables.push(vscode.commands.registerCommand('mentor.action.goToDefinition', (uri: string) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (id: string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
+				const uri = id.substring(id.indexOf(':') + 1);
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
 					editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
+				} else {
+					vscode.window.showErrorMessage('No definition found for: ' + uri);
 				}
 			}
 		});

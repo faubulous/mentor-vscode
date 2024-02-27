@@ -11,7 +11,6 @@ export class TermNode extends vscode.TreeItem {
 
 		this.id = provider.id + ':';
 		this.description = n.toString();
-		this.contextValue = provider.id;
 
 		if(n == 0) {
 			this.collapsibleState = vscode.TreeItemCollapsibleState.None;

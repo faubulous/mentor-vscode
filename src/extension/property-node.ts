@@ -6,17 +6,15 @@ import { ResourceNode } from './resource-node';
 import { DocumentContext } from '../languages/document-context';
 
 export class PropertyNode extends ResourceNode {
-	contextValue = 'property';
-
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
 	constructor(
 		protected readonly context: DocumentContext,
-		public readonly uri: string
+		id: string
 	) {
-		super(context, uri);
+		super(context, id);
 
-		this.collapsibleState = mentor.ontology.hasSubProperties(this.context.graphs, uri) ?
+		this.collapsibleState = mentor.ontology.hasSubProperties(this.context.graphs, this.uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
 	}

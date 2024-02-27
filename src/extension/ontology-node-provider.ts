@@ -13,24 +13,22 @@ export class OntologyNodeProvider extends ResourceNodeProvider {
 		return "Ontologies";
 	}
 
-	override getParent(uri: string): string | undefined {
+	override getParent(id: string): string | undefined {
 		return undefined;
 	}
 
-	override getChildren(uri: string): string[] {
+	override getChildren(id: string): string[] {
 		if (this.context) {
-			return mentor.ontology.getOntologies(this.context.graphs).sort();
+			const result = mentor.ontology.getOntologies(this.context.graphs);
+
+			return this.sortByLabel(result).map(uri => this.getId(uri));
 		} else {
 			return [];
 		}
 	}
 
-	override getTreeItem(uri: string): vscode.TreeItem {
-		if (this.context) {
-			return new OntologyNode(this.context, uri);
-		} else {
-			throw new Error('Invalid context.');
-		}
+	override getTreeItem(id: string): vscode.TreeItem {
+		return new OntologyNode(this.context!, id);
 	}
 
 	override getTotalItemCount(): number {

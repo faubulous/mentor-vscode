@@ -6,15 +6,13 @@ import { ResourceNode } from './resource-node';
  * Represents an individual in the ontology tree view.
  */
 export class IndividualNode extends ResourceNode {
-	contextValue = 'individual';
-
 	type: 'individual' | 'class' = 'individual';
 
 	constructor(
 		protected readonly context: DocumentContext,
-		public readonly uri: string
+		id: string
 	) {
-		super(context, uri);
+		super(context, id);
 	}
 
 	override getIconColor() {

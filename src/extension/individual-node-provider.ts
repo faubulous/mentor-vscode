@@ -24,19 +24,23 @@ export class IndividualNodeProvider extends ResourceNodeProvider {
 		return "Individuals";
 	}
 
-	override getParent(uri: string): string | undefined {
-		if (this.context) {
+	override getParent(id: string): string | undefined {
+		if (this.context && id) {
+			const uri = this.getUri(id)!;
+			
 			return mentor.ontology.getIndividualTypes(this.context.graphs, uri).sort().slice(0, 1)[0];
 		} else {
 			return undefined;
 		}
 	}
 
-	override getChildren(uri: string): string[] {
+	override getChildren(id: string): string[] {
 		if (this.context) {
 			let result;
 
-			if (uri || !this.showTypes) {
+			if (id || !this.showTypes) {
+				const uri = this.getUri(id);
+
 				result = mentor.ontology.getIndividuals(this.context.graphs, uri).sort();
 			} else {
 				result = mentor.ontology.getIndividualTypes(this.context.graphs).sort();
@@ -45,18 +49,18 @@ export class IndividualNodeProvider extends ResourceNodeProvider {
 				result.forEach((type: string) => this.classNodes[type] = true);
 			}
 
-			return result;
+			return this.sortByLabel(result).map(uri => this.getId(uri));
 		} else {
 			return [];
 		}
 	}
 
-	override getTreeItem(uri: string): vscode.TreeItem {
+	override getTreeItem(id: string): vscode.TreeItem {
 		if (this.context) {
-			if (this.classNodes[uri]) {
-				return new ClassNode(this.context, uri, vscode.TreeItemCollapsibleState.Collapsed);
+			if (this.classNodes[id]) {
+				return new ClassNode(this.context, id, vscode.TreeItemCollapsibleState.Collapsed);
 			} else {
-				return new IndividualNode(this.context, uri);
+				return new IndividualNode(this.context, id);
 			}
 		} else {
 			throw new Error('Invalid context.');
