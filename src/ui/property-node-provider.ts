@@ -32,7 +32,9 @@ export class PropertyNodeProvider extends ResourceNodeProvider {
 		if (this.context) {
 			let result;
 
-			if (!id) {
+			const uri = this.getUri(id);
+
+			if (!uri) {
 				if (this.showTypes) {
 					result = mentor.ontology.getPropertyTypes(this.context.graphs).sort();
 
@@ -42,16 +44,12 @@ export class PropertyNodeProvider extends ResourceNodeProvider {
 					result = mentor.ontology.getProperties(this.context.graphs).sort();
 				}
 			} else if (this.classNodes[id]) {
-				const uri = this.getUri(id)!;
-
 				result = mentor.ontology.getPropertiesOfType(this.context.graphs, uri, false).sort();
 			} else {
-				const uri = this.getUri(id)!;
-
 				result = mentor.ontology.getSubProperties(this.context.graphs, uri).sort();
 			}
 
-			return this.sortByLabel(result).map(uri => this.getId(uri));
+			return this.sortByLabel(result).map(u => this.getId(u, uri));
 		} else {
 			return [];
 		}

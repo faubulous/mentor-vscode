@@ -81,7 +81,7 @@ export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<st
 	 * @param id A tree node identifier.
 	 * @returns A URI without the tree node identifier prefix.
 	 */
-	protected getUri(id: string | undefined): string | undefined {
+	protected getUri(id?: string): string | undefined {
 		return id ? getUriFromNodeId(id) : undefined;
 	}
 
@@ -90,8 +90,8 @@ export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<st
 	 * @param uri A URI.
 	 * @returns A tree node identifier with the identifier prefix.
 	 */
-	protected getId(uri: string): string {
-		return getNodeIdFromUri(this.id, uri);
+	protected getId(uri: string, parentUri?: string): string {
+		return getNodeIdFromUri(this.id, uri, parentUri);
 	}
 
 	/**

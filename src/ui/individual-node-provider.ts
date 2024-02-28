@@ -38,18 +38,18 @@ export class IndividualNodeProvider extends ResourceNodeProvider {
 		if (this.context) {
 			let result;
 
-			if (id || !this.showTypes) {
-				const uri = this.getUri(id);
+			const uri = this.getUri(id);
 
-				result = mentor.ontology.getIndividuals(this.context.graphs, uri).sort();
+			if (id || !this.showTypes) {
+				result = mentor.ontology.getIndividuals(this.context.graphs, uri);
 			} else {
-				result = mentor.ontology.getIndividualTypes(this.context.graphs).sort();
+				result = mentor.ontology.getIndividualTypes(this.context.graphs);
 
 				// Mark the nodes as classes for the getTreeItem method.
-				result.forEach((type: string) => this.classNodes[type] = true);
+				result.forEach((type: string) => this.classNodes[this.getId(type)] = true);
 			}
 
-			return this.sortByLabel(result).map(uri => this.getId(uri));
+			return this.sortByLabel(result).map(u => this.getId(u, uri));
 		} else {
 			return [];
 		}

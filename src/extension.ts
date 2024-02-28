@@ -2,11 +2,12 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor'
 import { Disposable } from 'vscode-languageclient';
-import { TreeView } from './extension/tree-view';
-import { TermTree } from './extension/term-tree';
-import { ClassTree } from './extension/class-tree';
-import { PropertyTree } from './extension/property-tree';
-import { IndividualTree } from './extension/individual-tree';
+import { TreeView } from './ui/tree-view';
+import { WorkspaceTree } from './ui/workspace-tree';
+import { TermTree } from './ui/term-tree';
+import { ClassTree } from './ui/class-tree';
+import { PropertyTree } from './ui/property-tree';
+import { IndividualTree } from './ui/individual-tree';
 import {
 	LanguageClientBase,
 	TurtleLanguageClient,
@@ -16,7 +17,7 @@ import {
 	SparqlTokenProvider
 } from './languages';
 import { DefinitionProvider } from './providers';
-import { WorkspaceTree } from './extension/workspace-tree';
+import { getUriFromNodeId } from './utilities';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -42,12 +43,13 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	registerCommands(context);
+
 	// Register the tree views.
-	views.push(new WorkspaceTree(context));
-	views.push(new TermTree(context));
-	views.push(new ClassTree(context));
-	views.push(new PropertyTree(context));
-	views.push(new IndividualTree(context));
+	views.push(new WorkspaceTree());
+	views.push(new TermTree());
+	views.push(new ClassTree());
+	views.push(new PropertyTree());
+	views.push(new IndividualTree());
 
 	// Make the tree view ids available for usage in package.json.
 	vscode.commands.executeCommand('setContext', 'mentor.treeViews', views.map(view => view.id));
@@ -102,7 +104,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (id: string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
-				const uri = id.substring(id.indexOf(':') + 1);
+				const uri = getUriFromNodeId(id);
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {
@@ -117,7 +119,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (id: string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
-				const uri = id.substring(id.indexOf(':') + 1);
+				const uri = getUriFromNodeId(id);
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {

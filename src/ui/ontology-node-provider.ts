@@ -19,9 +19,10 @@ export class OntologyNodeProvider extends ResourceNodeProvider {
 
 	override getChildren(id: string): string[] {
 		if (this.context) {
+			const uri = this.getUri(id);
 			const result = mentor.ontology.getOntologies(this.context.graphs);
 
-			return this.sortByLabel(result).map(uri => this.getId(uri));
+			return this.sortByLabel(result).map(u => this.getId(u, uri));
 		} else {
 			return [];
 		}

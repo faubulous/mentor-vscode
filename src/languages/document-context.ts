@@ -160,6 +160,9 @@ export abstract class DocumentContext {
 						return q.object.value;
 					}
 				}
+
+				// Fallback to URI labels without prefixes.
+				break;
 			}
 			case TreeLabelStyle.UriLabelsWithPrefix: {
 				const namespace = getNamespaceUri(subjectUri);

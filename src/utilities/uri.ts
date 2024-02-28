@@ -70,14 +70,25 @@ export function toJsonId(uri: string): string | undefined {
 	}
 }
 
-export function getNodeIdFromUri(provider: string, uri: string): string {
-	return provider + ':' + uri;
+// TODO: Move this into an node id class and make the tree node providers use it.
+export function hasUri(id?: string): boolean {
+	return id ? id.indexOf('|') > -1 : false;
+}
+
+export function getNodeIdFromUri(provider: string, uri: string, parentUri?: string): string {
+	if (parentUri) {
+		return provider + '|' + parentUri + '|' + uri;
+	} else {
+		return provider + '|' + uri;
+	}
 }
 
 export function getUriFromNodeId(id: string): string {
-	return id.substring(id.indexOf(':') + 1);
+	const n = id.lastIndexOf('|');
+
+	return id.substring(n + 1);
 }
 
 export function getProviderFromNodeId(id: string): string {
-	return id.split(':')[0];
+	return id.split('|')[0];
 }

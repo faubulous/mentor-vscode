@@ -11,7 +11,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "preview": true,
   "publisher": "faubulous",
   "private": false,
@@ -240,6 +240,20 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e00a"
         }
+      },
+      "rdf-list": {
+        "description": "List icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00b"
+        }
+      },
+      "rdf-tree": {
+        "description": "Tree icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00c"
+        }
       }
     },
     "colors": [
@@ -368,7 +382,7 @@
       {
         "command": "mentor.action.hideReferencedClasses",
         "title": "Hide Referenced Classes",
-        "icon": "$(rdf-class)"
+        "icon": "$(rdf-class-ref-off)"
       },
       {
         "command": "mentor.action.refreshPropertyTree",
@@ -378,12 +392,12 @@
       {
         "command": "mentor.action.showPropertyTypes",
         "title": "Show Property Types",
-        "icon": "$(rdf-class)"
+        "icon": "$(rdf-tree)"
       },
       {
         "command": "mentor.action.hidePropertyTypes",
         "title": "Hide Property Types",
-        "icon": "$(rdf-class-off)"
+        "icon": "$(rdf-list)"
       },
       {
         "command": "mentor.action.refreshIndividualTree",
@@ -393,42 +407,12 @@
       {
         "command": "mentor.action.showIndividualTypes",
         "title": "Show Individual Types",
-        "icon": "$(rdf-class)"
+        "icon": "$(rdf-tree)"
       },
       {
         "command": "mentor.action.hideIndividualTypes",
         "title": "Hide Individual Types",
-        "icon": "$(rdf-class-off)"
-      },
-      {
-        "command": "mentor.action.showClassTree",
-        "title": "Show Classes",
-        "icon": "$(rdf-class-tree)"
-      },
-      {
-        "command": "mentor.action.showClassTreeActive",
-        "title": "Reload Classes",
-        "icon": "$(rdf-class-tree-active)"
-      },
-      {
-        "command": "mentor.action.showPropertyTree",
-        "title": "Show Properties",
-        "icon": "$(rdf-property-tree)"
-      },
-      {
-        "command": "mentor.action.showPropertyTreeActive",
-        "title": "Reload Properties",
-        "icon": "$(rdf-property-tree-active)"
-      },
-      {
-        "command": "mentor.action.showIndividualTree",
-        "title": "Show Individuals",
-        "icon": "$(rdf-individual-tree)"
-      },
-      {
-        "command": "mentor.action.showIndividualTreeActive",
-        "title": "Reload Individuals",
-        "icon": "$(rdf-individual-tree-active)"
+        "icon": "$(rdf-list)"
       }
     ],
     "menus": {
@@ -450,13 +434,13 @@
         },
         {
           "command": "mentor.action.showReferencedClasses",
-          "when": "view in mentor.resourceTreeViews && view.showReferencedClasses == false",
-          "group": "2_workspace"
+          "when": "view == mentor.view.classTree && view.showReferencedClasses == false",
+          "group": "navigation@3"
         },
         {
           "command": "mentor.action.hideReferencedClasses",
-          "when": "view in mentor.resourceTreeViews && view.showReferencedClasses == true",
-          "group": "2_workspace"
+          "when": "view == mentor.view.classTree && view.showReferencedClasses == true",
+          "group": "navigation@3"
         },
         {
           "command": "mentor.action.refreshClassTree",
@@ -465,13 +449,13 @@
         },
         {
           "command": "mentor.action.showPropertyTypes",
-          "when": "view in mentor.resourceTreeViews && view.showPropertyTypes == false",
-          "group": "2_workspace"
+          "when": "view == mentor.view.propertyTree && view.showPropertyTypes == false",
+          "group": "navigation@3"
         },
         {
           "command": "mentor.action.hidePropertyTypes",
-          "when": "view in mentor.resourceTreeViews && view.showPropertyTypes == true",
-          "group": "2_workspace"
+          "when": "view == mentor.view.propertyTree && view.showPropertyTypes == true",
+          "group": "navigation@3"
         },
         {
           "command": "mentor.action.refreshPropertyTree",
@@ -480,13 +464,13 @@
         },
         {
           "command": "mentor.action.showIndividualTypes",
-          "when": "view in mentor.resourceTreeViews && view.showIndividualTypes == false",
-          "group": "2_workspace"
+          "when": "view == mentor.view.individualTree && !view.showIndividualTypes",
+          "group": "navigation@3"
         },
         {
           "command": "mentor.action.hideIndividualTypes",
-          "when": "view in mentor.resourceTreeViews && view.showIndividualTypes == true",
-          "group": "2_workspace"
+          "when": "view == mentor.view.individualTree && view.showIndividualTypes",
+          "group": "navigation@3"
         },
         {
           "command": "mentor.action.refreshIndividualTree",
@@ -511,8 +495,33 @@
           "group": "z_commands"
         },
         {
+          "command": "mentor.action.showReferencedClasses",
+          "when": "viewItem == provider.class && !view.showReferencedClasses",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.action.hideReferencedClasses",
+          "when": "viewItem == provider.class && view.showReferencedClasses",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.action.showPropertyTypes",
+          "when": "viewItem == provider.property && !view.showPropertyTypes",
+          "group": "inline"
+        },
+        {
           "command": "mentor.action.hidePropertyTypes",
-          "when": "viewItem == provider",
+          "when": "viewItem == provider.property && view.showPropertyTypes",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.action.showIndividualTypes",
+          "when": "viewItem == provider.individual && !view.showIndividualTypes",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.action.hideIndividualTypes",
+          "when": "viewItem == provider.individual && view.showIndividualTypes",
           "group": "inline"
         }
       ]

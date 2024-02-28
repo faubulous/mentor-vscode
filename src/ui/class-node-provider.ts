@@ -35,7 +35,7 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 			const options = { includeReferencedClasses: this.showReferenced };
 			const result = mentor.ontology.getSubClasses(this.context.graphs, uri, options);
 
-			return this.sortByLabel(result).map(uri => this.getId(uri));
+			return this.sortByLabel(result).map(u => this.getId(u, uri));
 		} else {
 			return [];
 		}

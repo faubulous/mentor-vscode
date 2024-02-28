@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ResourceNodeProvider } from './resource-node-provider';
 import { TermNode } from './term-node';
+import { getNodeIdFromUri, getProviderFromNodeId, hasUri } from '../utilities';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
@@ -24,7 +25,7 @@ export class TermNodeProvider extends ResourceNodeProvider {
 	 * Selects the provider for the given node id.
 	 */
 	protected getProvider(id: string): ResourceNodeProvider {
-		let key = id.substring(0, id.indexOf(':'));
+		let key = getProviderFromNodeId(id);
 		let provider = this._providers[key];
 
 		if (!provider) {
@@ -62,10 +63,8 @@ export class TermNodeProvider extends ResourceNodeProvider {
 
 	override getParent(nodeId: string): string | undefined {
 		// If we get a provider id, we return undefined, because the provider is the root node.
-		if (nodeId && !nodeId.endsWith(':')) {
-			const provider = this.getProvider(nodeId);
-
-			return provider.id + ":" + provider.getParent(nodeId) ?? '';
+		if (hasUri(nodeId)) {
+			return this.getProvider(nodeId).getParent(nodeId);
 		} else {
 			return undefined;
 		}
@@ -76,31 +75,25 @@ export class TermNodeProvider extends ResourceNodeProvider {
 			const provider = this.getProvider(id);
 
 			// The URI may be undefined. The provider will return the root nodes in this case.
-			const result = provider.getChildren(id.endsWith(':') ? undefined : id);
+			const result = provider.getChildren(hasUri(id) ? id : undefined);
 
 			return result;
 		} else if (this.hasItems()) {
-			return Object.keys(this._providers).map(id => id + ':');
+			return Object.keys(this._providers);
 		} else {
 			return [];
 		}
 	}
 
 	override getTreeItem(id: string): vscode.TreeItem {
-		const n = id.indexOf(':');
-
-		if (n < 0) {
-			throw new Error(`Invalid tree item id: '${id}'`);
-		}
-
 		const provider = this.getProvider(id);
 
-		// If the only colon is at the end of the string, we return a tree item for the provider.
-		if (n == id.length - 1) {
-			return new TermNode(provider);
-		} else {
-			return provider.getTreeItem(id);
+		if (!provider) {
+			throw new Error(`No provider found for id '${id}'.`);
 		}
+
+		// If the only colon is at the end of the string, we return a tree item for the provider.
+		return hasUri(id) ? provider.getTreeItem(id) : new TermNode(provider);
 	}
 
 	override getTotalItemCount(): number {

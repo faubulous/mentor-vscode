@@ -46,7 +46,7 @@ export class TermTree implements TreeView {
 	 */
 	readonly treeView: vscode.TreeView<string>;
 
-	constructor(protected context: vscode.ExtensionContext) {
+	constructor() {
 		this.treeDataProvider.registerProvider(this.ontologyProvider);
 		this.treeDataProvider.registerProvider(this.classProvider);
 		this.treeDataProvider.registerProvider(this.propertyProvider);
@@ -64,16 +64,22 @@ export class TermTree implements TreeView {
 		mentor.onDidChangeVocabularyContext(() => this.updateView());
 
 		mentor.settings.onDidChange("view.showReferencedClasses", (e) => {
+			vscode.commands.executeCommand("setContext", "view.showReferencedClasses", e.newValue);
+
 			this.classProvider.showReferenced = e.newValue;
 			this.treeDataProvider.refresh();
 		});
 
 		mentor.settings.onDidChange("view.showPropertyTypes", (e) => {
+			vscode.commands.executeCommand("setContext", "view.showPropertyTypes", e.newValue);
+
 			this.propertyProvider.showTypes = e.newValue;
 			this.treeDataProvider.refresh();
 		});
 
 		mentor.settings.onDidChange("view.showIndividualTypes", (e) => {
+			vscode.commands.executeCommand("setContext", "view.showIndividualTypes", e.newValue);
+
 			this.individualProvider.showTypes = e.newValue;
 			this.treeDataProvider.refresh();
 		});
