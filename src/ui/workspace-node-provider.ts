@@ -28,7 +28,7 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<vscode.Uri
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', true);
 
 		let workspace = id ?? vscode.workspace.workspaceFolders[0].uri;
-		let extensions = /\.ttl$|\.nt$|\.owl$|\.trig$|\.nq$|\.n3$/;
+		let extensions = /\.ttl$|\.nt$|\.owl$|\.trig$|\.nq$|\.n3|\.sparql$/;
 		let exclude = /node_modules/;
 
 		let result = await this._findMatchingFilesOrFolders(workspace, extensions, exclude);

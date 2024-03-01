@@ -3,16 +3,29 @@
 
 This extension provides powerful editing support for RDF ontologies and knowledge graph projects in Visual Studio Code.
 
-## Features
+<img src="media/screenshot.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
 
-- Tree View for Classes, Properties and Individuals
-  - RDFS and OWL reasoning
+## Features
+> **Tip:** Try it with <a href="https://marketplace.visualstudio.com/items?itemName=GitHub.copilot">GitHub Copilot</a> for best in code editing experience.
+
+This extension provides the following features:
+
+- **Workspace Tree**
+  - Navigate all ontology and SPARQL files in the project
+- **Ontology Tree**
+  - Showing definitions of classes, properties and individuals
   - Quickly jump to definitions
+  - RDFS and limited OWL reasoning
+  - Find all references in the current document
   - Open URIs in browser
-- Supports N3, Turtle, Trig and SPARQL
+- **Supports N3, Turtle, Trig and SPARQL**
   - Syntax highlighting
   - Syntax validation
-- Refactoring (TODO)
+  - Checking conformance of literal values to XSD specifications
+  - Checking if namespace IRIs end with separator (`/`,`#`, `:`)
+- **Refactoring**
+  - Rename prefixes
+  - Rename resource labels in prefixed names and URIs
 
 ## Installation
 
@@ -40,22 +53,22 @@ Contributions are always welcome! To start off, fork this repository on GitHub a
 
 Once cloned, add an upstream remote pointing to the primary toolkit repo.
 
-<code>
+```bash
 git clone https://github.com/faubulous/mentor-vscode.git
 cd mentor-vscode
-</code>
+```
 
 Install the project dependencies.
 
-<code>
+```bash
 npm install
-</code>
+```
 
 Create a development build of the extension.
 
-<code>
+```bash
 npm run build:watch
-</code>
+```
 
 ### Debugging
 
@@ -69,13 +82,13 @@ To start debugging the 'Launch Extension' configuration, follow these steps:
 This will start a new instance of Visual Studio Code with the Mentor extension loaded. You can set breakpoints in your code to stop execution and inspect variables, call stack, and so on.
 
 ### Packaging 
-<code>
+```bash
 npm install --global @vscode/vsce
-</code>
+```
 
-<code>
+```bash
 npm run package:install
-</code>
+```
 
 # License
-Distributed under the [GPL Verison 3 License](LICENSE). See LICENSE for more information.
+Distributed under the [GPL Version 3 License](LICENSE). See LICENSE for more information.
