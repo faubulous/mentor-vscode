@@ -3,11 +3,12 @@ import { DocumentContext } from './languages/document-context';
 import { Store, OwlReasoner, OntologyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
 import { Settings, TreeLabelStyle } from './settings';
+import { DocumentIndexer, DocumentIndex } from './languages/document-indexer';
 
 /**
  * Maps document URIs to loaded document contexts.
  */
-export const contexts: { [key: string]: DocumentContext } = {};
+export const contexts: DocumentIndex = {};
 
 /**
  * The currently active document context or `undefined`.
@@ -88,12 +89,6 @@ async function loadDocument(document: vscode.TextDocument, reload: boolean = fal
 	contexts[uri] = context;
 	activeContext = context;
 
-	for (let d of Object.values(contexts).filter(c => c.document.isClosed)) {
-		const uri = d.document.uri.toString();
-
-		delete contexts[uri];
-	}
-
 	return context;
 }
 
@@ -107,9 +102,7 @@ export async function activateDocument(): Promise<vscode.TextEditor | undefined>
 	return activeTextEditor;
 }
 
-function initialize() {
-	store.loadFrameworkOntologies().then(() => { });
-
+export async function initialize() {
 	let defaultStyle = configuration.get('treeLabelStyle');
 
 	switch (defaultStyle) {
@@ -160,7 +153,11 @@ function initialize() {
 		settings.set('view.showIndividualTypes', false);
 	});
 
-	onActiveEditorChanged();
-}
+	vscode.commands.registerCommand('mentor.action.indexWorkspace', async () => {
+		await new DocumentIndexer().indexWorkspace();
+	});
 
-initialize();
+	store.loadFrameworkOntologies().then(() => {
+		onActiveEditorChanged();
+	});
+}

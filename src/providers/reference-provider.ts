@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as mentor from '../mentor';
 import { IToken } from 'chevrotain';
 import { DocumentContext } from '../languages/document-context';
 import { FeatureProvider } from './feature-provider';
@@ -33,18 +34,22 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 			return null;
 		}
 
-		return this.provideReferencesForUri(context, u);
+		return this.provideReferencesForUri(u);
 	}
 
-	public provideReferencesForUri(context: DocumentContext, uri: string): vscode.Location[] | null {
-		let tokens: IToken[];
+	public provideReferencesForUri(uri: string): vscode.Location[] | null {
+		let result: vscode.Location[] = [];
 
-		if (context.references[uri]) {
-			tokens = context.references[uri];
-		} else {
-			return null;
+		for (const context of Object.values(mentor.contexts)) {
+			if (!context.references[uri]) {
+				continue;
+			}
+
+			for (const t of context.references[uri]) {
+				result.push(this.getLocationFromToken(context.document, t));
+			}
 		}
 
-		return tokens.map(t => this.getLocationFromToken(context.document, t));
+		return result;
 	}
 }

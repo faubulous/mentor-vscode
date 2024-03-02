@@ -157,7 +157,7 @@ export abstract class LanguageServerBase {
 
 	async validateTextDocument(document: TextDocument): Promise<void> {
 		// The conncetion may not yet be initialized.
-		if (!this.connection) return;
+		if (!this?.connection) return;
 
 		this.log(`Validating document: ${document.uri}`);
 

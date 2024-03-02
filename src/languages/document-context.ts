@@ -66,7 +66,7 @@ export abstract class DocumentContext {
 		this.tokens.length = 0;
 
 		// Note: Using this.tokens.push(...result.tokens) throws an error for very large files.
-		for(let t of result.tokens) {
+		for (let t of result.tokens) {
 			this.tokens.push(t);
 		}
 

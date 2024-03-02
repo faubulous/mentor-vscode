@@ -32,6 +32,7 @@ export class DefinitionProvider extends FeatureProvider {
 			return null;
 		}
 
+		// Todo: Search for definitions in this context and then the other documents.
 		return this.provideDefintionForUri(context, u);
 	}
 
@@ -39,7 +40,7 @@ export class DefinitionProvider extends FeatureProvider {
 		let t;
 
 		if (context.typeAssertions[uri]) {
-			// Look for type assertions first, because sometimes namespaces are defined owl:Ontology.
+			// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
 			t = context.typeAssertions[uri][0];
 		} else if (context.namespaceDefinitions[uri]) {
 			t = context.namespaceDefinitions[uri];

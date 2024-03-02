@@ -34,7 +34,7 @@ const commands: Disposable[] = [];
 
 const views: TreeView[] = [];
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.initializing', true);
 
 	// Start the language clients..
@@ -61,6 +61,8 @@ export function activate(context: vscode.ExtensionContext) {
 		"mentor.view.propertyTree",
 		"mentor.view.individualTree"
 	]);
+
+	mentor.initialize();
 
 	vscode.commands.executeCommand('setContext', 'mentor.initializing', false);
 }

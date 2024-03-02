@@ -335,6 +335,10 @@
     },
     "commands": [
       {
+        "command": "mentor.action.indexWorkspace",
+        "title": "Index Workspace"
+      },
+      {
         "command": "mentor.action.openSettings",
         "title": "Settings",
         "icon": "$(gear)"

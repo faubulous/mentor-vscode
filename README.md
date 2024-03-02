@@ -6,7 +6,7 @@ This extension provides powerful editing support for RDF ontologies and knowledg
 <img src="media/screenshot.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
 
 ## Features
-> **Tip:** Try it with <a href="https://marketplace.visualstudio.com/items?itemName=GitHub.copilot">GitHub Copilot</a> for best in code editing experience.
+> **Tip:** Try it with <a href="https://marketplace.visualstudio.com/items?itemName=GitHub.copilot">GitHub Copilot</a> for the best code editing experience.
 
 This extension provides the following features:
 

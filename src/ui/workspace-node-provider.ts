@@ -24,8 +24,10 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<vscode.Uri
 			return [];
 		}
 
-		vscode.commands.executeCommand('setContext', 'mentor.workspace.isLoading', true);
-		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', true);
+		if(!id) {
+			vscode.commands.executeCommand('setContext', 'mentor.workspace.isLoading', true);
+			vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', true);
+		}
 
 		let workspace = id ?? vscode.workspace.workspaceFolders[0].uri;
 		let extensions = /\.ttl$|\.nt$|\.owl$|\.trig$|\.nq$|\.n3|\.sparql$/;
@@ -33,8 +35,14 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<vscode.Uri
 
 		let result = await this._findMatchingFilesOrFolders(workspace, extensions, exclude);
 
-		vscode.commands.executeCommand('setContext', 'mentor.workspace.isLoading', false);
-		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', result.length === 0);
+		if(!id) {
+			vscode.commands.executeCommand('setContext', 'mentor.workspace.isLoading', false);
+			vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', result.length === 0);
+
+			if(result.length > 0) {
+				vscode.commands.executeCommand('mentor.action.indexWorkspace');
+			}
+		}
 
 		return result;
 	}
