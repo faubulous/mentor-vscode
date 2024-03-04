@@ -1,9 +1,17 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { RdfSyntax, Tokenizer, TokenizerResult } from '@faubulous/mentor-rdf';
-import { DocumentContext } from './document-context';
+import { DocumentContext } from '../document-context';
 
 export class TurtleDocument extends DocumentContext {
+	readonly syntax: RdfSyntax;
+
+	constructor(document: vscode.TextDocument, syntax: RdfSyntax) {
+		super(document);
+
+		this.syntax = syntax;
+	}
+
 	public async load(document: vscode.TextDocument): Promise<void> {
 		// Parse the tokens *before* parsing the graph because the graph parsing 
 		// might fail but we need to update the tokens.
@@ -17,7 +25,7 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	protected async parseData(document: vscode.TextDocument): Promise<TokenizerResult> {
-		return await Tokenizer.parseData(document.getText(), RdfSyntax.Turtle);
+		return await Tokenizer.parseData(document.getText(), this.syntax);
 	}
 
 	protected async parseGraph(document: vscode.TextDocument): Promise<void> {

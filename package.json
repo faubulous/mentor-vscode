@@ -60,6 +60,7 @@
     "@faubulous/mentor-rdf": "^0.2.8",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
+    "minimatch": "^9.0.3",
     "n3": "^1.17.1",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
@@ -321,7 +322,7 @@
       {
         "view": "mentor.view.workspaceTree",
         "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.sparql",
-        "when": "mentor.initializing === false && mentor.workspace.hasFiles === false"
+        "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
       }
     ],
     "viewsContainers": {
@@ -334,6 +335,10 @@
       ]
     },
     "commands": [
+      {
+        "command": "mentor.action.initiliaze",
+        "title": "Initialize"
+      },
       {
         "command": "mentor.action.indexWorkspace",
         "title": "Index Workspace"
@@ -648,6 +653,22 @@
                 "uri": "https://schema.org/",
                 "defaultPrefix": "schema"
               }
+            ]
+          },
+          "mentor.workspace.useGitIgnore": {
+            "type": "boolean",
+            "title": "Use .gitignore",
+            "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
+            "default": true
+          },
+          "mentor.workspace.ignoreFolders": {
+            "type": "array",
+            "title": "Excluded Folders",
+            "description": "Manage the folders that should be skipped when indexing the workspace.",
+            "default": [
+              ".vscode",
+              ".git",
+              "node_modules"
             ]
           }
         },

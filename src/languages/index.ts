@@ -1,5 +1,5 @@
-export * from './document-context';
-export * from './document-factory';
+export * from '../document-context';
+export * from '../document-factory';
 export * from './language-client';
 export * from './sparql-document';
 export * from './sparql-language-client';

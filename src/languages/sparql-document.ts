@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { RdfSyntax, Tokenizer, TokenizerResult } from '@faubulous/mentor-rdf';
-import { DocumentContext } from './document-context';
+import { DocumentContext } from '../document-context';
 
 export class SparqlDocument extends DocumentContext {
 	public async load(document: vscode.TextDocument): Promise<void> {

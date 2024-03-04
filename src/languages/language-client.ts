@@ -47,8 +47,6 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 	}
 
 	start(context: vscode.ExtensionContext) {
-		console.log(`Starting ${this.languageName} Language Client..`);
-
 		const module = context.asAbsolutePath(this.serverPath);
 
 		const serverOptions = {

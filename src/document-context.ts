@@ -1,10 +1,10 @@
 import * as n3 from 'n3';
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import * as mentor from './mentor';
 import { TokenizerResult, rdf } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
-import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from '../utilities';
-import { TreeLabelStyle } from '../settings';
+import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from './utilities';
+import { TreeLabelStyle } from './settings';
 
 export abstract class DocumentContext {
 	/**
@@ -56,7 +56,7 @@ export abstract class DocumentContext {
 		this.predicates.description = mentor.configuration.get('predicates.description') ?? [];
 	}
 
-	abstract load(document: vscode.TextDocument): Promise<void>;
+	abstract load(document: vscode.TextDocument, tokensOnly?: boolean): Promise<void>;
 
 	protected abstract parseData(document: vscode.TextDocument): Promise<TokenizerResult>;
 

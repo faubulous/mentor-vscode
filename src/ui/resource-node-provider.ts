@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
-import { DocumentContext } from '../languages/document-context';
+import { DocumentContext } from '../document-context';
 import { getNodeIdFromUri, getUriFromNodeId } from '../utilities';
 
 /**

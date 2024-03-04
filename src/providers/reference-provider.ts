@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { IToken } from 'chevrotain';
-import { DocumentContext } from '../languages/document-context';
+import { DocumentContext } from '../document-context';
 import { FeatureProvider } from './feature-provider';
 import { getUriFromToken, getPrefixFromToken } from '../utilities';
 

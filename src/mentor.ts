@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from './languages/document-context';
+import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, OntologyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
 import { Settings, TreeLabelStyle } from './settings';
-import { DocumentIndexer, DocumentIndex } from './languages/document-indexer';
+import { DocumentIndexer, DocumentIndex } from './document-indexer';
+import { WorkspaceRepository } from './workspace-repository';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -34,6 +35,11 @@ export const store = new Store(new OwlReasoner());
  * A repository for retrieving ontology resources.
  */
 export const ontology = new OntologyRepository(store);
+
+/**
+ * A repository for retrieving workspace resources such as files and folders.
+ */
+export const workspace = new WorkspaceRepository();
 
 const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
@@ -153,11 +159,59 @@ export async function initialize() {
 		settings.set('view.showIndividualTypes', false);
 	});
 
-	vscode.commands.registerCommand('mentor.action.indexWorkspace', async () => {
+	vscode.commands.registerCommand('mentor.action.initialize', async () => {
+		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
+
+		// If there is a document opened in the editor, load it.
+		onActiveEditorChanged();
+
+		// Load the workspace files and folders for the explorer tree view.
+		await workspace.initialize();
+
+		// Load the W3C and other common ontologies for providing hovers, completions and definitions.
+		await store.loadFrameworkOntologies();
+
+		// Index the entire workspace for providing hovers, completions and definitions.
 		await new DocumentIndexer().indexWorkspace();
+
+		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 	});
 
-	store.loadFrameworkOntologies().then(() => {
-		onActiveEditorChanged();
-	});
+	vscode.commands.executeCommand('mentor.action.initialize');
+}
+
+/**
+ * Get the glob patterns to exclude files and folders from the workspace.
+ * @param workspaceUri A workspace folder URI.
+ * @returns A list of glob patterns to exclude files and folders.
+ */
+export async function getExcludePatterns(workspaceUri: vscode.Uri): Promise<string[]> {
+	let result = new Set<string>();
+
+	// Add the patterns from the configuration.
+	for (let pattern of configuration.get('workspace.ignoreFolders', [])) {
+		result.add(pattern);
+	}
+
+	// Add the patterns from the .gitignore file if it is enabled.
+	if (configuration.get('workspace.useGitIgnore')) {
+		const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
+
+		try {
+			const content = await vscode.workspace.fs.readFile(gitignore);
+
+			const excludePatterns = new TextDecoder().decode(content)
+				.split('\n')
+				.filter(line => !line.startsWith('#') && line.trim() !== '');
+
+			for (const pattern of excludePatterns) {
+				result.add(pattern);
+			}
+		} catch {
+			// If the .gitignore file does not exists, ingore it.
+			console.warn(`File not found: ${gitignore.fsPath}`);
+		}
+	}
+
+	return Array.from(result);
 }

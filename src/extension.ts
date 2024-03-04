@@ -35,13 +35,6 @@ const commands: Disposable[] = [];
 const views: TreeView[] = [];
 
 export async function activate(context: vscode.ExtensionContext) {
-	vscode.commands.executeCommand('setContext', 'mentor.initializing', true);
-
-	// Start the language clients..
-	for (const client of clients) {
-		client.start(context);
-	}
-
 	registerCommands(context);
 
 	// Register the tree views.
@@ -62,9 +55,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		"mentor.view.individualTree"
 	]);
 
-	mentor.initialize();
+	// Start the language clients..
+	for (const client of clients) {
+		client.start(context);
+	}
 
-	vscode.commands.executeCommand('setContext', 'mentor.initializing', false);
+	mentor.initialize();
 }
 
 export function deactivate(): Thenable<void> {

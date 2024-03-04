@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '../languages/document-context';
+import { DocumentContext } from '../document-context';
 import { FeatureProvider } from './feature-provider';
 import { getUriFromToken } from '../utilities';
 

@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { DocumentContext } from './document-context';
-import { TurtleDocument } from './turtle-document';
-import { SparqlDocument } from './sparql-document';
+import { TurtleDocument } from './languages/turtle-document';
+import { SparqlDocument } from './languages/sparql-document';
+import { RdfSyntax } from '@faubulous/mentor-rdf';
 
 /**
  * A factory for creating RDF document contexts.
@@ -27,12 +29,19 @@ export class DocumentFactory {
 	 * @returns A document context.
 	 */
 	public create(document: vscode.TextDocument): DocumentContext {
-		if (['ntriples', 'nquads', 'turtle', 'trig'].includes(document.languageId)) {
-			return new TurtleDocument(document);
-		} else if (document.languageId === 'sparql') {
-			return new SparqlDocument(document);
-		} else {
-			throw new Error('Unsupported language:' + document.languageId);
+		switch (document.languageId) {
+			case 'ntriples':
+				return new TurtleDocument(document, RdfSyntax.NTriples);
+			case 'nquads':
+				return new TurtleDocument(document, RdfSyntax.NQuads);
+			case 'turtle':
+				return new TurtleDocument(document, RdfSyntax.Turtle);
+			case 'trig':
+				return new TurtleDocument(document, RdfSyntax.TriG);
+			case 'sparql':
+				return new SparqlDocument(document);
+			default:
+				throw new Error('Unsupported language:' + document.languageId);
 		}
 	}
 }
