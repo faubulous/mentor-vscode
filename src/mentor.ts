@@ -46,10 +46,11 @@ const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | un
 export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
 
 function onActiveEditorChanged(): void {
-	const editor = vscode.window.activeTextEditor;
+	const activeEditor = vscode.window.activeTextEditor;
+	const uri = activeEditor?.document.uri;
 
-	if (editor && editor.document != activeContext?.document) {
-		loadDocument(editor.document).then((context) => {
+	if (activeEditor && uri && uri != activeContext?.uri) {
+		loadDocument(activeEditor.document).then((context) => {
 			if (context) {
 				activeContext = context;
 				_onDidChangeDocumentContext?.fire(context);
@@ -85,12 +86,15 @@ async function loadDocument(document: vscode.TextDocument, reload: boolean = fal
 	let context = contexts[uri];
 
 	if (context && !reload) {
+		// Compute the inference graph on the document, if it does not exist.
+		context.infer();
+
 		return context;
 	}
 
-	context = documentFactory.create(document);
+	context = documentFactory.create(document.uri);
 
-	await context.load(document);
+	await context.load(document.uri, document.getText(), true);
 
 	contexts[uri] = context;
 	activeContext = context;
@@ -99,13 +103,13 @@ async function loadDocument(document: vscode.TextDocument, reload: boolean = fal
 }
 
 export async function activateDocument(): Promise<vscode.TextEditor | undefined> {
-	const activeTextEditor = vscode.window.activeTextEditor;
+	const documentUri = vscode.window.activeTextEditor?.document.uri;
 
-	if (activeContext && activeContext.document != activeTextEditor?.document) {
-		await vscode.commands.executeCommand("vscode.open", activeContext.document.uri);
+	if (activeContext && activeContext.uri != documentUri) {
+		await vscode.commands.executeCommand("vscode.open", activeContext.uri);
 	}
 
-	return activeTextEditor;
+	return vscode.window.activeTextEditor;
 }
 
 export async function initialize() {

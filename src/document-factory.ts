@@ -28,20 +28,22 @@ export class DocumentFactory {
 	 * @param document A text document.
 	 * @returns A document context.
 	 */
-	public create(document: vscode.TextDocument): DocumentContext {
-		switch (document.languageId) {
-			case 'ntriples':
-				return new TurtleDocument(document, RdfSyntax.NTriples);
-			case 'nquads':
-				return new TurtleDocument(document, RdfSyntax.NQuads);
-			case 'turtle':
-				return new TurtleDocument(document, RdfSyntax.Turtle);
-			case 'trig':
-				return new TurtleDocument(document, RdfSyntax.TriG);
-			case 'sparql':
-				return new SparqlDocument(document);
+	public create(uri: vscode.Uri): DocumentContext {
+		const ext = path.extname(uri.fsPath).toLowerCase();
+
+		switch (ext) {
+			case '.ttl':
+				return new TurtleDocument(uri, RdfSyntax.Turtle);
+			case '.nt':
+				return new TurtleDocument(uri, RdfSyntax.NTriples);
+			case '.nq':
+				return new TurtleDocument(uri, RdfSyntax.NQuads);
+			case '.trig':
+				return new TurtleDocument(uri, RdfSyntax.TriG);
+			case '.sparql':
+				return new SparqlDocument(uri);
 			default:
-				throw new Error('Unsupported language:' + document.languageId);
+				throw new Error('Unsupported file extension:' + ext);
 		}
 	}
 }

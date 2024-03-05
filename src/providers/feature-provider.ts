@@ -20,10 +20,11 @@ export class FeatureProvider {
 	}
 
 	/**
- * Get the location of a token in a document.
- * @param token A token.
- */
-	protected getLocationFromToken(document: vscode.TextDocument, token: IToken) {
+	 * Get the location of a token in a document.
+	 * @param uri The URI of the document.
+	 * @param token A token.
+	 */
+	protected getLocationFromToken(uri: vscode.Uri, token: IToken) {
 		const startLine = token.startLine ? token.startLine - 1 : 0;
 		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
 		const endLine = token.endLine ? token.endLine - 1 : 0;
@@ -31,7 +32,7 @@ export class FeatureProvider {
 
 		const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
 
-		return new vscode.Location(document.uri, range);
+		return new vscode.Location(uri, range);
 	}
 
 	/**

@@ -57,6 +57,6 @@ export class DefinitionProvider extends FeatureProvider {
 
 		const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
 
-		return new vscode.Location(context.document.uri, range);
+		return new vscode.Location(context.uri, range);
 	}
 }

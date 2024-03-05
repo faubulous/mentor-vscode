@@ -8,9 +8,9 @@ import { TreeLabelStyle } from './settings';
 
 export abstract class DocumentContext {
 	/**
-	 * The document.
+	 * The URI of the document.
 	 */
-	readonly document: vscode.TextDocument;
+	readonly uri: vscode.Uri;
 
 	/**
 	 * The graphs in the triple store associated with the document.
@@ -50,18 +50,33 @@ export abstract class DocumentContext {
 			description: []
 		};
 
-	constructor(document: vscode.TextDocument) {
-		this.document = document;
+	constructor(documentUri: vscode.Uri) {
+		this.uri = documentUri;
 		this.predicates.label = mentor.configuration.get('predicates.label') ?? [];
 		this.predicates.description = mentor.configuration.get('predicates.description') ?? [];
 	}
 
-	abstract load(document: vscode.TextDocument, tokensOnly?: boolean): Promise<void>;
+	/**
+	 * Loads the document from the given URI and data.
+	 * @param uri The file URI.
+	 * @param data The file content.
+	 * @param executeInference Indicates whether inference should be executed.
+	 */
+	async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
+		this.parseTokens(data);
+	}
 
-	protected abstract parseData(document: vscode.TextDocument): Promise<TokenizerResult>;
+	/**
+	 * Infers new triples from the document, if not already done.
+	 */
+	async infer(): Promise<void> {
+		// Do nothing.
+	}
 
-	protected async parseTokens(document: vscode.TextDocument): Promise<void> {
-		const result = await this.parseData(document);
+	protected abstract parseData(data: string): Promise<TokenizerResult>;
+
+	protected async parseTokens(data: string): Promise<void> {
+		const result = await this.parseData(data);
 
 		this.tokens.length = 0;
 

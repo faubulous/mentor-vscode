@@ -46,7 +46,7 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 			}
 
 			for (const t of context.references[uri]) {
-				result.push(this.getLocationFromToken(context.document, t));
+				result.push(this.getLocationFromToken(context.uri, t));
 			}
 		}
 

@@ -31,10 +31,11 @@ export class DocumentIndexer {
 				const uris = await vscode.workspace.findFiles("**/*.{ttl,nt,owl,trig,nq,n3,sparql}", excludedFolders);
 
 				const tasks = uris.map(uri => async (n: number) => {
-					const document = await vscode.workspace.openTextDocument(uri);
-					const context = this.factory.create(document);
+					const data = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
+					
+					const context = this.factory.create(uri);
 
-					await context.load(document);
+					await context.load(uri, data, false);
 
 					this.reportProgress(progress, Math.round((n / tasks.length) * 100));
 
