@@ -4,15 +4,24 @@ import { DocumentFactory } from './document-factory';
 import { DocumentContext } from './document-context';
 
 /**
- * Maps document URIs to document contexts.
+ * Maps document URIs to RDF document contexts.
  */
 export interface DocumentIndex {
 	[key: string]: DocumentContext;
 }
 
+/**
+ * Indexes RDF documents in the current workspace.
+ */
 export class DocumentIndexer {
+	/**
+	 * The document factory for creating document contexts.
+	 */
 	readonly factory = new DocumentFactory();
 
+	/**
+	 * Builds an index of all RDF resources the current workspace.
+	 */
 	async indexWorkspace(): Promise<void> {
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification,
@@ -32,7 +41,7 @@ export class DocumentIndexer {
 
 				const tasks = uris.map(uri => async (n: number) => {
 					const data = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
-					
+
 					const context = this.factory.create(uri);
 
 					await context.load(uri, data, false);
@@ -42,7 +51,7 @@ export class DocumentIndexer {
 					return { uri: uri.toString(), context };
 				});
 
-				const results = await this.runInParallel(tasks, 1);
+				const results = await this.runInParallel(tasks, 2);
 
 				for (const { uri, context } of results) {
 					mentor.contexts[uri] = context;
@@ -57,6 +66,12 @@ export class DocumentIndexer {
 		});
 	}
 
+	/**
+	 * Executes a set of tasks in parallel.
+	 * @param tasks The tasks to be executed.
+	 * @param maxParallel The maximum number of tasks to run in parallel.
+	 * @returns The results of the tasks.
+	 */
 	async runInParallel<T>(tasks: ((n: number) => Promise<T>)[], maxParallel: number): Promise<T[]> {
 		let results: T[] = [];
 
@@ -70,6 +85,11 @@ export class DocumentIndexer {
 		return results;
 	}
 
+	/**
+	 * Reports progress to the user.
+	 * @param progress The progress to report.
+	 * @param increment The increment to report.
+	 */
 	reportProgress(progress: vscode.Progress<{ message?: string, increment?: number }>, increment: number): void {
 		progress.report({ message: increment + "%" });
 	}

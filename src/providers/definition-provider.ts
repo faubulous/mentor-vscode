@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as mentor from '../mentor';
 import { DocumentContext } from '../document-context';
 import { FeatureProvider } from './feature-provider';
 import { getUriFromToken } from '../utilities';
@@ -36,27 +37,55 @@ export class DefinitionProvider extends FeatureProvider {
 		return this.provideDefintionForUri(context, u);
 	}
 
-	public provideDefintionForUri(context: DocumentContext, uri: string): vscode.Definition | null {
-		let t;
+	public provideDefintionForUri(primaryContext: DocumentContext, uri: string): vscode.Definition | null {
+		let token;
+		let tokenContext = primaryContext;
 
-		if (context.typeAssertions[uri]) {
+		// Find all contexts that define the URI.
+		const contexts = this._getContextsDefiningUri(uri, primaryContext);
+
+		for (let c of contexts.filter(c => c.typeDefinitions[uri])) {
 			// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
-			t = context.typeAssertions[uri][0];
-		} else if (context.namespaceDefinitions[uri]) {
-			t = context.namespaceDefinitions[uri];
-		} else if (context.references[uri]) {
-			t = context.references[uri][0];
+			token = c.typeDefinitions[uri][0];
+			tokenContext = c;
+
+			break;
+		}
+
+		// If no class or property definition was found, look for namespace definitions or references in the primary document.
+		if (!token) {
+			if (primaryContext.namespaceDefinitions[uri]) {
+				token = primaryContext.namespaceDefinitions[uri];
+			} else if (primaryContext.references[uri]) {
+				token = primaryContext.references[uri][0];
+			}
+		}
+
+		if (token) {
+			const startLine = token.startLine ? token.startLine - 1 : 0;
+			const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
+			const endLine = token.endLine ? token.endLine - 1 : 0;
+			const endCharacter = token.endColumn ?? 0;
+
+			const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
+
+			return new vscode.Location(tokenContext.uri, range);
 		} else {
 			return null;
 		}
+	}
 
-		const startLine = t.startLine ? t.startLine - 1 : 0;
-		const startCharacter = t.startColumn ? t.startColumn - 1 : 0;
-		const endLine = t.endLine ? t.endLine - 1 : 0;
-		const endCharacter = t.endColumn ?? 0;
+	private _getContextsDefiningUri(uri: string, primaryContext?: DocumentContext): DocumentContext[] {
+		const contexts: DocumentContext[] = [];
 
-		const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
+		for (const c of Object.values(mentor.contexts).filter(c => c.typeDefinitions[uri])) {
+			if (primaryContext && c == primaryContext) {
+				contexts.unshift(c);
+			} else {
+				contexts.push(c);
+			}
+		}
 
-		return new vscode.Location(context.uri, range);
+		return contexts;
 	}
 }
