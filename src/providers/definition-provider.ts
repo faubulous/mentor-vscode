@@ -8,7 +8,7 @@ import { getUriFromToken } from '../utilities';
  * Provides resource definitions for Turtle documents.
  */
 export class DefinitionProvider extends FeatureProvider {
-	public provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
+	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
 		const context = this.getDocumentContext(document);
 
 		if (!context) {
@@ -37,7 +37,7 @@ export class DefinitionProvider extends FeatureProvider {
 		return this.provideDefintionForUri(context, u);
 	}
 
-	public provideDefintionForUri(primaryContext: DocumentContext, uri: string): vscode.Definition | null {
+	provideDefintionForUri(primaryContext: DocumentContext, uri: string): vscode.Definition | null {
 		let token;
 		let tokenContext = primaryContext;
 

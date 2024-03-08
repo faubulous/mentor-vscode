@@ -55,7 +55,7 @@ export class WorkspaceRepository {
 	/**
 	 * An event that is fired when the workspace has been initialized.
 	 */
-	private readonly _onInitialized = new vscode.EventEmitter<boolean>();
+	private readonly _onDidFinishInitializing = new vscode.EventEmitter<boolean>();
 
 	/**
 	 * An event that is fired when the workspace contents have changed.
@@ -98,7 +98,7 @@ export class WorkspaceRepository {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isInitializing', false);
 
 		this._initialized = true;
-		this._onInitialized.fire(true);
+		this._onDidFinishInitializing.fire(true);
 
 		return this.rootItems;
 	}
@@ -163,13 +163,13 @@ export class WorkspaceRepository {
 	 * Wait for the workspace root folders to be initialized.
 	 * @returns A promise that resolves when the workspace has been initialized.
 	 */
-	async waitForInitialization(): Promise<void> {
+	async waitForInitialized(): Promise<void> {
 		if (this._initialized) {
 			return;
 		}
 
 		return new Promise((resolve) => {
-			const listener = this._onInitialized.event(() => {
+			const listener = this._onDidFinishInitializing.event(() => {
 				listener.dispose();
 				resolve();
 			});

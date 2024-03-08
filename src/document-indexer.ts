@@ -20,6 +20,20 @@ export class DocumentIndexer {
 	readonly factory = new DocumentFactory();
 
 	/**
+	 * Indicates if all workspace files have been indexed.
+	 */
+	private _indexed = false;
+
+	/**
+	 * An event that is fired when all workspace files have been indexed.
+	 */
+	private readonly _onDidFinishIndexing = new vscode.EventEmitter<boolean>();
+
+	constructor() {
+		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
+	}
+
+	/**
 	 * Builds an index of all RDF resources the current workspace.
 	 */
 	async indexWorkspace(): Promise<void> {
@@ -28,6 +42,8 @@ export class DocumentIndexer {
 			title: "Indexing workspace",
 			cancellable: false
 		}, async (progress) => {
+			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
+
 			this.reportProgress(progress, 0);
 
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
@@ -63,6 +79,10 @@ export class DocumentIndexer {
 			}
 
 			this.reportProgress(progress, 100);
+
+			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
+
+			this._onDidFinishIndexing.fire(true);
 		});
 	}
 
@@ -92,5 +112,22 @@ export class DocumentIndexer {
 	 */
 	reportProgress(progress: vscode.Progress<{ message?: string, increment?: number }>, increment: number): void {
 		progress.report({ message: increment + "%" });
+	}
+
+	/**
+	 * Wait for all workspace files to be indexed.
+	 * @returns A promise that resolves when all workspace files were indexed.
+	 */
+	async waitForIndexed(): Promise<void> {
+		if (this._indexed) {
+			return;
+		}
+
+		return new Promise((resolve) => {
+			const listener = this._onDidFinishIndexing.event(() => {
+				listener.dispose();
+				resolve();
+			});
+		});
 	}
 }

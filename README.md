@@ -12,6 +12,11 @@ This extension provides the following features:
 
 - **Workspace Tree**
   - Navigate all ontology and SPARQL files in the project
+  - Easily find problems in all ontologies in the workspace
+- **Workspace Index**
+  - Creates an index of all ontologies in the workspace
+  - Find all references to a subject in the workspace
+  - Provides code lenses that show reference statistics for a subject
 - **Ontology Tree**
   - Showing definitions of classes, properties and individuals
   - Quickly jump to definitions
@@ -26,6 +31,10 @@ This extension provides the following features:
 - **Refactoring**
   - Rename prefixes
   - Rename resource labels in prefixed names and URIs
+
+## News
+### Version 0.1.3: Global Workspace Index
+Added support for indexing all ontology files in the workspace. This enables finding references, retrieving descriptions and going to defintions of subjects accross the entire workspace. A newly added code lens shows the number of references of a subject in the workspace. In addition, the workspace tree gained a new command for opening all the ontologies in the workspace to identify problems and show them in the problems tab.
 
 ## Installation
 

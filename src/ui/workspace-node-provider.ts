@@ -26,7 +26,7 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<vscode.Uri
 		let result = [];
 
 		if (id == null) {
-			await mentor.workspace.waitForInitialization();
+			await mentor.workspace.waitForInitialized();
 
 			result = mentor.workspace.rootItems;
 		} else {

@@ -41,6 +41,11 @@ export const ontology = new OntologyRepository(store);
  */
 export const workspace = new WorkspaceRepository();
 
+/**
+ * A document indexer for indexing the entire workspace.
+ */
+export const indexer = new DocumentIndexer();
+
 const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
 export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
@@ -176,7 +181,7 @@ export async function initialize() {
 		await store.loadFrameworkOntologies();
 
 		// Index the entire workspace for providing hovers, completions and definitions.
-		await new DocumentIndexer().indexWorkspace();
+		await indexer.indexWorkspace();
 
 		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 	});

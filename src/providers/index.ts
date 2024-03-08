@@ -1,3 +1,4 @@
+export * from './codelens-provider';
 export * from './completion-item-provider';
 export * from './definition-provider';
 export * from './feature-provider';

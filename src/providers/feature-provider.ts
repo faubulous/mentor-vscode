@@ -129,10 +129,10 @@ export class FeatureProvider {
 	}
 
 	/**
- * Gets all tokens at a given position.
- * @param position A position in the document.
- * @returns An non-empty array of tokens on success, an empty array otherwise.
- */
+	 * Gets all tokens at a given position.
+	 * @param position A position in the document.
+	 * @returns An non-empty array of tokens on success, an empty array otherwise.
+	 */
 	protected getTokensAtPosition(tokens: IToken[], position: vscode.Position): IToken[] {
 		// The tokens are 0-based, but the position is 1-based.
 		const l = position.line + 1;

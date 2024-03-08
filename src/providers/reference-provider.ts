@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
+import { IToken } from "millan";
 import { FeatureProvider } from './feature-provider';
 import { getUriFromToken, getPrefixFromToken } from '../utilities';
+import { DocumentContext } from '../languages';
 
 /**
  * Provides references to resources.
@@ -20,6 +22,10 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 			return null;
 		}
 
+		return this.provideReferencesForToken(context, position, token);
+	}
+
+	provideReferencesForToken(context: DocumentContext, position: vscode.Position, token: IToken) {
 		let u;
 
 		if (this.isCursorOnPrefix(token, position)) {
@@ -35,7 +41,7 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 		return this.provideReferencesForUri(u);
 	}
 
-	public provideReferencesForUri(uri: string): vscode.Location[] | null {
+	provideReferencesForUri(uri: string): vscode.Location[] {
 		let result: vscode.Location[] = [];
 
 		for (const context of Object.values(mentor.contexts)) {

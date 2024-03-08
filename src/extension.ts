@@ -18,6 +18,7 @@ import {
 } from './languages';
 import { DefinitionProvider } from './providers';
 import { getUriFromNodeId } from './utilities';
+import { WorkspaceAnalyzer } from './workspace-analyzer';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -128,5 +129,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				}
 			}
 		});
+	}));
+
+	commands.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', async () => {
+		await new WorkspaceAnalyzer().analyzeWorkspace();
 	}));
 }
