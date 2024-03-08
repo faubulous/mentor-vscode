@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from './languages/document-context';
+import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, OntologyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
 import { Settings, TreeLabelStyle } from './settings';
+import { DocumentIndexer, DocumentIndex } from './document-indexer';
+import { WorkspaceRepository } from './workspace-repository';
 
 /**
  * Maps document URIs to loaded document contexts.
  */
-export const contexts: { [key: string]: DocumentContext } = {};
+export const contexts: DocumentIndex = {};
 
 /**
  * The currently active document context or `undefined`.
@@ -34,15 +36,26 @@ export const store = new Store(new OwlReasoner());
  */
 export const ontology = new OntologyRepository(store);
 
+/**
+ * A repository for retrieving workspace resources such as files and folders.
+ */
+export const workspace = new WorkspaceRepository();
+
+/**
+ * A document indexer for indexing the entire workspace.
+ */
+export const indexer = new DocumentIndexer();
+
 const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
 export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
 
 function onActiveEditorChanged(): void {
-	const editor = vscode.window.activeTextEditor;
+	const activeEditor = vscode.window.activeTextEditor;
+	const uri = activeEditor?.document.uri;
 
-	if (editor && editor.document != activeContext?.document) {
-		loadDocument(editor.document).then((context) => {
+	if (activeEditor && uri && uri != activeContext?.uri) {
+		loadDocument(activeEditor.document).then((context) => {
 			if (context) {
 				activeContext = context;
 				_onDidChangeDocumentContext?.fire(context);
@@ -78,38 +91,33 @@ async function loadDocument(document: vscode.TextDocument, reload: boolean = fal
 	let context = contexts[uri];
 
 	if (context && !reload) {
+		// Compute the inference graph on the document, if it does not exist.
+		context.infer();
+
 		return context;
 	}
 
-	context = documentFactory.create(document);
+	context = documentFactory.create(document.uri);
 
-	await context.load(document);
+	await context.load(document.uri, document.getText(), true);
 
 	contexts[uri] = context;
 	activeContext = context;
-
-	for (let d of Object.values(contexts).filter(c => c.document.isClosed)) {
-		const uri = d.document.uri.toString();
-
-		delete contexts[uri];
-	}
 
 	return context;
 }
 
 export async function activateDocument(): Promise<vscode.TextEditor | undefined> {
-	const activeTextEditor = vscode.window.activeTextEditor;
+	const documentUri = vscode.window.activeTextEditor?.document.uri;
 
-	if (activeContext && activeContext.document != activeTextEditor?.document) {
-		await vscode.commands.executeCommand("vscode.open", activeContext.document.uri);
+	if (activeContext && activeContext.uri != documentUri) {
+		await vscode.commands.executeCommand("vscode.open", activeContext.uri);
 	}
 
-	return activeTextEditor;
+	return vscode.window.activeTextEditor;
 }
 
-function initialize() {
-	store.loadFrameworkOntologies().then(() => { });
-
+export async function initialize() {
 	let defaultStyle = configuration.get('treeLabelStyle');
 
 	switch (defaultStyle) {
@@ -160,7 +168,59 @@ function initialize() {
 		settings.set('view.showIndividualTypes', false);
 	});
 
-	onActiveEditorChanged();
+	vscode.commands.registerCommand('mentor.action.initialize', async () => {
+		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
+
+		// If there is a document opened in the editor, load it.
+		onActiveEditorChanged();
+
+		// Load the workspace files and folders for the explorer tree view.
+		await workspace.initialize();
+
+		// Load the W3C and other common ontologies for providing hovers, completions and definitions.
+		await store.loadFrameworkOntologies();
+
+		// Index the entire workspace for providing hovers, completions and definitions.
+		await indexer.indexWorkspace();
+
+		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
+	});
+
+	vscode.commands.executeCommand('mentor.action.initialize');
 }
 
-initialize();
+/**
+ * Get the glob patterns to exclude files and folders from the workspace.
+ * @param workspaceUri A workspace folder URI.
+ * @returns A list of glob patterns to exclude files and folders.
+ */
+export async function getExcludePatterns(workspaceUri: vscode.Uri): Promise<string[]> {
+	let result = new Set<string>();
+
+	// Add the patterns from the configuration.
+	for (let pattern of configuration.get('workspace.ignoreFolders', [])) {
+		result.add(pattern);
+	}
+
+	// Add the patterns from the .gitignore file if it is enabled.
+	if (configuration.get('workspace.useGitIgnore')) {
+		const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
+
+		try {
+			const content = await vscode.workspace.fs.readFile(gitignore);
+
+			const excludePatterns = new TextDecoder().decode(content)
+				.split('\n')
+				.filter(line => !line.startsWith('#') && line.trim() !== '');
+
+			for (const pattern of excludePatterns) {
+				result.add(pattern);
+			}
+		} catch {
+			// If the .gitignore file does not exists, ingore it.
+			console.warn(`File not found: ${gitignore.fsPath}`);
+		}
+	}
+
+	return Array.from(result);
+}

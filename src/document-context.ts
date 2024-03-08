@@ -1,16 +1,19 @@
 import * as n3 from 'n3';
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import * as mentor from './mentor';
 import { TokenizerResult, rdf } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
-import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from '../utilities';
-import { TreeLabelStyle } from '../settings';
+import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from './utilities';
+import { TreeLabelStyle } from './settings';
 
+/**
+ * A class that provides access to RDF document specific data such as namespaces, graphs and token maps.
+ */
 export abstract class DocumentContext {
 	/**
-	 * The document.
+	 * The URI of the document.
 	 */
-	readonly document: vscode.TextDocument;
+	readonly uri: vscode.Uri;
 
 	/**
 	 * The graphs in the triple store associated with the document.
@@ -23,6 +26,11 @@ export abstract class DocumentContext {
 	readonly namespaces: { [key: string]: string } = {};
 
 	/**
+	 * Maps resource URIs to indexed tokens.
+	 */
+	readonly namespaceDefinitions: { [key: string]: IToken } = {};
+
+	/**
 	 * All tokens in the document.
 	 */
 	readonly tokens: IToken[] = [];
@@ -30,17 +38,17 @@ export abstract class DocumentContext {
 	/**
 	 * Maps resource URIs to indexed tokens.
 	 */
+	readonly references: { [key: string]: IToken[] } = {};
+
+	/**
+	 * Maps resource URIs to tokens of subjects that have an asserted rdf:type.
+	 */
 	readonly typeAssertions: { [key: string]: IToken[] } = {};
 
 	/**
-	 * Maps resource URIs to indexed tokens.
+	 * Maps resource URIs to tokens of subjects that are class or property definitions.
 	 */
-	readonly namespaceDefinitions: { [key: string]: IToken } = {};
-
-	/**
-	 * Maps resource URIs to indexed tokens.
-	 */
-	readonly references: { [key: string]: IToken[] } = {};
+	readonly typeDefinitions: { [key: string]: IToken[] } = {};
 
 	readonly predicates: {
 		label: string[];
@@ -50,23 +58,38 @@ export abstract class DocumentContext {
 			description: []
 		};
 
-	constructor(document: vscode.TextDocument) {
-		this.document = document;
+	constructor(documentUri: vscode.Uri) {
+		this.uri = documentUri;
 		this.predicates.label = mentor.configuration.get('predicates.label') ?? [];
 		this.predicates.description = mentor.configuration.get('predicates.description') ?? [];
 	}
 
-	abstract load(document: vscode.TextDocument): Promise<void>;
+	/**
+	 * Loads the document from the given URI and data.
+	 * @param uri The file URI.
+	 * @param data The file content.
+	 * @param executeInference Indicates whether inference should be executed.
+	 */
+	async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
+		this.parseTokens(data);
+	}
 
-	protected abstract parseData(document: vscode.TextDocument): Promise<TokenizerResult>;
+	/**
+	 * Infers new triples from the document, if not already done.
+	 */
+	async infer(): Promise<void> {
+		// Do nothing.
+	}
 
-	protected async parseTokens(document: vscode.TextDocument): Promise<void> {
-		const result = await this.parseData(document);
+	protected abstract parseData(data: string): Promise<TokenizerResult>;
+
+	protected async parseTokens(data: string): Promise<void> {
+		const result = await this.parseData(data);
 
 		this.tokens.length = 0;
 
 		// Note: Using this.tokens.push(...result.tokens) throws an error for very large files.
-		for(let t of result.tokens) {
+		for (let t of result.tokens) {
 			this.tokens.push(t);
 		}
 
@@ -101,6 +124,7 @@ export abstract class DocumentContext {
 				}
 				case 'A': {
 					this._handleTypeAssertion(result, t, rdf.type.id, i);
+					this._handleTypeDefinition(result, t, rdf.type.id, i);
 					break;
 				}
 			}
@@ -118,15 +142,46 @@ export abstract class DocumentContext {
 	private _handleTypeAssertion(result: TokenizerResult, token: IToken, uri: string, index: number) {
 		if (uri != rdf.type.id) return;
 
-		const s = result.tokens[index - 1];
+		const subjectToken = result.tokens[index - 1];
 
-		if (!s) return;
+		if (!subjectToken) return;
 
-		const u = getUriFromToken(this.namespaces, s);
+		const subjectUri = getUriFromToken(this.namespaces, subjectToken);
 
-		if (!u) return;
+		if (!subjectUri) return;
 
-		this.typeAssertions[u] = [s];
+		this.typeAssertions[subjectUri] = [subjectToken];
+	}
+
+	private _handleTypeDefinition(result: TokenizerResult, token: IToken, uri: string, index: number) {
+		if (uri != rdf.type.id) return;
+
+		const subjectToken = result.tokens[index - 1];
+
+		if (!subjectToken) return;
+
+		const subjectUri = getUriFromToken(this.namespaces, subjectToken);
+
+		if (!subjectUri) return;
+
+		const objectToken = result.tokens[index + 1];
+
+		if (!objectToken) return;
+
+		const objectUri = getUriFromToken(this.namespaces, objectToken);
+
+		if (!objectUri) return;
+
+		const namespaceUri = getNamespaceUri(objectUri);
+
+		// Todo: Make this more explicit to reduce false positives.
+		switch (namespaceUri) {
+			case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
+			case "http://www.w3.org/2000/01/rdf-schema#":
+			case "http://www.w3.org/2002/07/owl#":
+			case "http://www.w3.org/ns/shacl#":
+				this.typeDefinitions[subjectUri] = [subjectToken];
+		}
 	}
 
 	public updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
@@ -201,6 +256,7 @@ export abstract class DocumentContext {
 
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		let lines = [
+			`**${this.getResourceLabel(subjectUri)}**`,
 			this.getResourceDescription(subjectUri),
 			subjectUri
 		];

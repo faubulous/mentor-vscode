@@ -18,6 +18,7 @@ import {
 } from './languages';
 import { DefinitionProvider } from './providers';
 import { getUriFromNodeId } from './utilities';
+import { WorkspaceAnalyzer } from './workspace-analyzer';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -34,14 +35,7 @@ const commands: Disposable[] = [];
 
 const views: TreeView[] = [];
 
-export function activate(context: vscode.ExtensionContext) {
-	vscode.commands.executeCommand('setContext', 'mentor.initializing', true);
-
-	// Start the language clients..
-	for (const client of clients) {
-		client.start(context);
-	}
-
+export async function activate(context: vscode.ExtensionContext) {
 	registerCommands(context);
 
 	// Register the tree views.
@@ -62,7 +56,12 @@ export function activate(context: vscode.ExtensionContext) {
 		"mentor.view.individualTree"
 	]);
 
-	vscode.commands.executeCommand('setContext', 'mentor.initializing', false);
+	// Start the language clients..
+	for (const client of clients) {
+		client.start(context);
+	}
+
+	mentor.initialize();
 }
 
 export function deactivate(): Thenable<void> {
@@ -130,5 +129,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				}
 			}
 		});
+	}));
+
+	commands.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', async () => {
+		await new WorkspaceAnalyzer().analyzeWorkspace();
 	}));
 }

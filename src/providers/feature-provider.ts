@@ -20,10 +20,11 @@ export class FeatureProvider {
 	}
 
 	/**
- * Get the location of a token in a document.
- * @param token A token.
- */
-	protected getLocationFromToken(document: vscode.TextDocument, token: IToken) {
+	 * Get the location of a token in a document.
+	 * @param uri The URI of the document.
+	 * @param token A token.
+	 */
+	protected getLocationFromToken(uri: vscode.Uri, token: IToken) {
 		const startLine = token.startLine ? token.startLine - 1 : 0;
 		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
 		const endLine = token.endLine ? token.endLine - 1 : 0;
@@ -31,7 +32,7 @@ export class FeatureProvider {
 
 		const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
 
-		return new vscode.Location(document.uri, range);
+		return new vscode.Location(uri, range);
 	}
 
 	/**
@@ -128,10 +129,10 @@ export class FeatureProvider {
 	}
 
 	/**
- * Gets all tokens at a given position.
- * @param position A position in the document.
- * @returns An non-empty array of tokens on success, an empty array otherwise.
- */
+	 * Gets all tokens at a given position.
+	 * @param position A position in the document.
+	 * @returns An non-empty array of tokens on success, an empty array otherwise.
+	 */
 	protected getTokensAtPosition(tokens: IToken[], position: vscode.Position): IToken[] {
 		// The tokens are 0-based, but the position is 1-based.
 		const l = position.line + 1;

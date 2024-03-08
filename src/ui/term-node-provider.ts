@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { ResourceNodeProvider } from './resource-node-provider';
 import { TermNode } from './term-node';
-import { getNodeIdFromUri, getProviderFromNodeId, hasUri } from '../utilities';
+import { getProviderFromNodeId, hasUri } from '../utilities';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.

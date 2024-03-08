@@ -11,7 +11,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "preview": true,
   "publisher": "faubulous",
   "private": false,
@@ -57,9 +57,10 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.8",
+    "@faubulous/mentor-rdf": "^0.2.11",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
+    "minimatch": "^9.0.3",
     "n3": "^1.17.1",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
@@ -321,7 +322,7 @@
       {
         "view": "mentor.view.workspaceTree",
         "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.sparql",
-        "when": "mentor.initializing === false && mentor.workspace.hasFiles === false"
+        "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
       }
     ],
     "viewsContainers": {
@@ -334,6 +335,19 @@
       ]
     },
     "commands": [
+      {
+        "command": "mentor.action.initiliaze",
+        "title": "Initialize"
+      },
+      {
+        "command": "mentor.action.indexWorkspace",
+        "title": "Index Workspace"
+      },
+      {
+        "command": "mentor.action.analyzeWorkspace",
+        "title": "Find Problems",
+        "icon": "$(debug-alt)"
+      },
       {
         "command": "mentor.action.openSettings",
         "title": "Settings",
@@ -417,6 +431,11 @@
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "mentor.action.analyzeWorkspace",
+          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing && !mentor.workspace.isAnalyzing",
+          "group": "navigation@3"
+        },
         {
           "command": "mentor.action.showAnnotatedLabels",
           "when": "view in mentor.resourceTreeViews",
@@ -645,6 +664,28 @@
                 "defaultPrefix": "schema"
               }
             ]
+          },
+          "mentor.workspace.useGitIgnore": {
+            "type": "boolean",
+            "title": "Use .gitignore",
+            "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
+            "default": true
+          },
+          "mentor.workspace.ignoreFolders": {
+            "type": "array",
+            "title": "Excluded Folders",
+            "description": "Manage the folders that should be skipped when indexing the workspace.",
+            "default": [
+              ".vscode",
+              ".git",
+              "node_modules"
+            ]
+          },
+          "mentor.editor.codeLensEnabled": {
+            "type": "boolean",
+            "title": "Enable Code Lenses",
+            "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
+            "default": true
           }
         },
         "mentor.language.turtle.maxNumberOfProblems": {
