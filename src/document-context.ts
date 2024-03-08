@@ -256,7 +256,7 @@ export abstract class DocumentContext {
 
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		let lines = [
-			this.getResourceLabel(subjectUri),
+			`**${this.getResourceLabel(subjectUri)}**`,
 			this.getResourceDescription(subjectUri),
 			subjectUri
 		];
