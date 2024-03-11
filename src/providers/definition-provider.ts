@@ -76,16 +76,17 @@ export class DefinitionProvider extends FeatureProvider {
 	}
 
 	private _getContextsDefiningUri(uri: string, primaryContext?: DocumentContext): DocumentContext[] {
-		const contexts: DocumentContext[] = [];
+		const result: DocumentContext[] = [];
+		const contexts = Object.values(mentor.contexts);
 
-		for (const c of Object.values(mentor.contexts).filter(c => c.typeDefinitions[uri])) {
+		for (const c of contexts.filter(c => c.typeDefinitions[uri])) {
 			if (primaryContext && c == primaryContext) {
-				contexts.unshift(c);
+				result.unshift(c);
 			} else {
-				contexts.push(c);
+				result.push(c);
 			}
 		}
 
-		return contexts;
+		return result;
 	}
 }

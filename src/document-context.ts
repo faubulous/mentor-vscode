@@ -112,6 +112,7 @@ export abstract class DocumentContext {
 					if (!uri) break;
 
 					this._handleTypeAssertion(result, t, uri, i);
+					this._handleTypeDefinition(result, t, uri, i);
 					this._handleUriReference(result, t, uri);
 					break;
 				}
@@ -119,6 +120,7 @@ export abstract class DocumentContext {
 					const uri = getUriFromIriReference(t.image);
 
 					this._handleTypeAssertion(result, t, uri, i);
+					this._handleTypeDefinition(result, t, uri, i);
 					this._handleUriReference(result, t, uri);
 					break;
 				}
