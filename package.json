@@ -186,8 +186,8 @@
           "fontCharacter": "\\e007"
         }
       },
-      "rdf-class-eq": {
-        "description": "Equivalent class icon",
+      "rdf-class-i": {
+        "description": "Instanced class icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e002"
@@ -200,8 +200,8 @@
           "fontCharacter": "\\e003"
         }
       },
-      "rdf-class-ref-on": {
-        "description": "Referenced class icon",
+      "rdf-class-ref-i": {
+        "description": "Instanced referenced class icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e004"

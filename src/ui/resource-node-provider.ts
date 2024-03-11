@@ -35,6 +35,10 @@ export abstract class ResourceNodeProvider implements vscode.TreeDataProvider<st
 			this._onVocabularyChanged(context);
 		});
 
+		mentor.indexer.waitForIndexed().then(() => {
+			this.refresh();
+		});
+
 		mentor.settings.onDidChange("view.treeLabelStyle", () => {
 			this.refresh();
 		});

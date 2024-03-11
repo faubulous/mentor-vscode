@@ -35,9 +35,8 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
 				this._enabled = mentor.configuration.get('editor.codeLensEnabled', true);
 
-				if (this._enabled) {
-					this._onDidChangeCodeLenses.fire();
-				}
+				// Fire the event to refresh the code lenses.
+				this._onDidChangeCodeLenses.fire();
 			}
 		});
 	}
@@ -50,13 +49,15 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 
 		if (this._enabled) {
 			await mentor.indexer.waitForIndexed();
-
-			mentor.onDidChangeVocabularyContext(() => {
-				if (this._enabled) {
-					this._onDidChangeCodeLenses.fire();
-				}
-			});
+			
+			this._onDidChangeCodeLenses.fire();
 		}
+
+		mentor.onDidChangeVocabularyContext(() => {
+			if (this._enabled) {
+				this._onDidChangeCodeLenses.fire();
+			}
+		});
 
 		this._initialized = true;
 		this._initializing = false;

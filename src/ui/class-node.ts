@@ -26,7 +26,13 @@ export class ClassNode extends ResourceNode {
 		// - Intersections (∩)
 		// - Unions (∪)
 
-		return mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri) ? "≡" : undefined;
+		let result = "";
+
+		if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
+			result += "≡";
+		}
+
+		return result;
 	}
 
 	override getIcon() {
@@ -34,6 +40,10 @@ export class ClassNode extends ResourceNode {
 
 		if (!mentor.ontology.hasSubject(this.context.graphs, this.uri)) {
 			icon += '-ref';
+		}
+
+		if(mentor.ontology.hasIndividuals(this.context.graphs, this.uri)) {
+			icon += "-i";
 		}
 
 		return new vscode.ThemeIcon(icon, this.getIconColor());
