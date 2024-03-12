@@ -28,7 +28,11 @@ export class ClassNode extends ResourceNode {
 
 		let result = "";
 
-		if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
+		if (mentor.ontology.isIntersectionOfClasses(this.context.graphs, this.uri)) {
+			result += "⋂";
+		} else if (mentor.ontology.isUnionOfClasses(this.context.graphs, this.uri)) {
+			result += "⋃";
+		} else if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
 			result += "≡";
 		}
 
@@ -42,7 +46,7 @@ export class ClassNode extends ResourceNode {
 			icon += '-ref';
 		}
 
-		if(mentor.ontology.hasIndividuals(this.context.graphs, this.uri)) {
+		if (mentor.ontology.hasIndividuals(this.context.graphs, this.uri)) {
 			icon += "-i";
 		}
 
