@@ -47,11 +47,11 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 
 		this._enabled = mentor.configuration.get('editor.codeLensEnabled', true);
 
-		if (this._enabled) {
-			await mentor.indexer.waitForIndexed();
-			
-			this._onDidChangeCodeLenses.fire();
-		}
+		mentor.indexer.waitForIndexed().then(() => {
+			if (this._enabled) {
+				this._onDidChangeCodeLenses.fire();
+			}
+		});
 
 		mentor.onDidChangeVocabularyContext(() => {
 			if (this._enabled) {

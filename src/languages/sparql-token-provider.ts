@@ -65,6 +65,7 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 						case 'CREATE':
 						case 'DEFAULT':
 						case 'DELETE':
+						case 'DELETE_DATA':
 						case 'DATA':
 						case 'DESC':
 						case 'DESCRIBE':
@@ -78,6 +79,7 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 						case 'HAVING':
 						case 'IN':
 						case 'INSERT':
+						case 'INSERT_DATA':
 						case 'LIMIT':
 						case 'LOAD':
 						case 'MINUS':
@@ -242,6 +244,8 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 								builder.push(tokenRange, SemanticTokenType.enumMember, [SemanticTokenModifier.readonly]);
 							}
 							break;
+						case "STRING_LITERAL":
+						case "STRING_LITERAL2":
 						case "STRING_LITERAL_QUOTE":
 						case "STRING_LITERAL_SINGLE_QUOTE":
 						case "STRING_LITERAL_LONG_QUOTE":
