@@ -61,7 +61,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		client.start(context);
 	}
 
-	mentor.initialize();
+	mentor.initialize(context);
 }
 
 export function deactivate(): Thenable<void> {

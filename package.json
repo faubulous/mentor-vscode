@@ -57,7 +57,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.15",
+    "@faubulous/mentor-rdf": "^0.2.16",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "minimatch": "^9.0.3",
@@ -347,6 +347,11 @@
         "command": "mentor.action.analyzeWorkspace",
         "title": "Find Problems",
         "icon": "$(debug-alt)"
+      },
+      {
+        "command": "mentor.action.updatePrefixes",
+        "title": "Mentor: Update prefix definitions from prefix.cc",
+        "icon": "$(cloud-download)"
       },
       {
         "command": "mentor.action.openSettings",

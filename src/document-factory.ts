@@ -28,22 +28,42 @@ export class DocumentFactory {
 	 * @param document A text document.
 	 * @returns A document context.
 	 */
-	public create(uri: vscode.Uri): DocumentContext {
-		const ext = path.extname(uri.fsPath).toLowerCase();
+	public create(documentUri: vscode.Uri, languageId?: string): DocumentContext {
+		// If the language ID is provided, use it to create the document context
+		// as this is more reliable than the file extension. For unsaved documents,
+		// the file extension is not available.
+		if (languageId) {
+			switch (languageId) {
+				case 'turtle':
+					return new TurtleDocument(documentUri, RdfSyntax.Turtle);
+				case 'ntriples':
+					return new TurtleDocument(documentUri, RdfSyntax.NTriples);
+				case 'nquads':
+					return new TurtleDocument(documentUri, RdfSyntax.NQuads);
+				case 'trig':
+					return new TurtleDocument(documentUri, RdfSyntax.TriG);
+				case 'sparql':
+					return new SparqlDocument(documentUri);
+				default:
+					throw new Error('Unsupported language:' + languageId);
+			}
+		} else {
+			const extension = path.extname(documentUri.fsPath).toLowerCase();
 
-		switch (ext) {
-			case '.ttl':
-				return new TurtleDocument(uri, RdfSyntax.Turtle);
-			case '.nt':
-				return new TurtleDocument(uri, RdfSyntax.NTriples);
-			case '.nq':
-				return new TurtleDocument(uri, RdfSyntax.NQuads);
-			case '.trig':
-				return new TurtleDocument(uri, RdfSyntax.TriG);
-			case '.sparql':
-				return new SparqlDocument(uri);
-			default:
-				throw new Error('Unsupported file extension:' + ext);
+			switch (extension) {
+				case '.ttl':
+					return new TurtleDocument(documentUri, RdfSyntax.Turtle);
+				case '.nt':
+					return new TurtleDocument(documentUri, RdfSyntax.NTriples);
+				case '.nq':
+					return new TurtleDocument(documentUri, RdfSyntax.NQuads);
+				case '.trig':
+					return new TurtleDocument(documentUri, RdfSyntax.TriG);
+				case '.sparql':
+					return new SparqlDocument(documentUri);
+				default:
+					throw new Error('Unsupported file extension:' + extension);
+			}
 		}
 	}
 }

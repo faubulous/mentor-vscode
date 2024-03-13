@@ -22,19 +22,19 @@ export class ClassNode extends ResourceNode {
 	}
 
 	override getDescription(): string | undefined {
-		// Todo:
-		// - Intersections (∩)
-		// - Unions (∪)
-
 		let result = "";
 
-		if (mentor.ontology.isIntersectionOfClasses(this.context.graphs, this.uri)) {
-			result += "⋂";
-		} else if (mentor.ontology.isUnionOfClasses(this.context.graphs, this.uri)) {
-			result += "⋃";
-		} else if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
+		if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
 			result += "≡";
 		}
+
+		// if (mentor.ontology.isIntersectionOfClasses(this.context.graphs, this.uri)) {
+		// 	result += "⋂";
+		// } else if (mentor.ontology.isUnionOfClasses(this.context.graphs, this.uri)) {
+		// 	result += "⋃";
+		// } else if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
+		// 	result += "≡";
+		// }
 
 		return result;
 	}

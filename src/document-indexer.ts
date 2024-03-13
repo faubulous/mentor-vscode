@@ -38,7 +38,7 @@ export class DocumentIndexer {
 	 */
 	async indexWorkspace(): Promise<void> {
 		vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
+			location: vscode.ProgressLocation.Window,
 			title: "Indexing workspace",
 			cancellable: false
 		}, async (progress) => {

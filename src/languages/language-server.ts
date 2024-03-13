@@ -372,7 +372,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.dateTime: {
 							// See: https://www.w3.org/TR/xmlschema-2/#dateTime
-							const regex = /-?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?/;
+							const regex = /-?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/;
 
 							if (!regex.test(getUnquotedLiteralValue(value))) {
 								result.push({
@@ -420,7 +420,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.duration: {
 							// See: https://www.w3.org/TR/xmlschema-2/#duration
-							const regex = /(-)?P(\d+Y)?(\d+M)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?/;
+							const regex = /(-)?P(\d+Y)?(\d+M)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$/;
 
 							if (!regex.test(getUnquotedLiteralValue(value))) {
 								result.push({

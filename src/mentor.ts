@@ -5,6 +5,8 @@ import { DocumentFactory } from './languages';
 import { Settings, TreeLabelStyle } from './settings';
 import { DocumentIndexer, DocumentIndex } from './document-indexer';
 import { WorkspaceRepository } from './workspace-repository';
+import { LocalStorageService } from './services/local-storage-service';
+import { PrefixDownloaderService } from './services/prefix-downloader-service';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -45,6 +47,11 @@ export const workspace = new WorkspaceRepository();
  * A document indexer for indexing the entire workspace.
  */
 export const indexer = new DocumentIndexer();
+
+/**
+ * A service for storing and retrieving data from the local storage with extension scope.
+ */
+export const globalStorage = new LocalStorageService();
 
 const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
@@ -97,7 +104,7 @@ async function loadDocument(document: vscode.TextDocument, reload: boolean = fal
 		return context;
 	}
 
-	context = documentFactory.create(document.uri);
+	context = documentFactory.create(document.uri, document.languageId);
 
 	await context.load(document.uri, document.getText(), true);
 
@@ -117,7 +124,11 @@ export async function activateDocument(): Promise<vscode.TextEditor | undefined>
 	return vscode.window.activeTextEditor;
 }
 
-export async function initialize() {
+export async function initialize(context: vscode.ExtensionContext) {
+	// Initialize the extension persistence service.
+	globalStorage.initialize(context.globalState);
+
+	// Initialize the default label rendering style.
 	let defaultStyle = configuration.get('treeLabelStyle');
 
 	switch (defaultStyle) {
@@ -131,6 +142,29 @@ export async function initialize() {
 			settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
 			break;
 	}
+
+	// Register commands..
+	vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {
+		const service = new PrefixDownloaderService();
+
+		vscode.window.withProgress({
+			location: vscode.ProgressLocation.Window,
+			title: `Downloading prefixes from ${service.enpointUrl}...`,
+			cancellable: false
+		}, async (progress) => {
+			progress.report({ increment: 0 });
+
+			try {
+				let result = await service.fetchPrefixes();
+
+				globalStorage.setValue('prefixes', result);
+
+				progress.report({ increment: 100 });
+			} catch (error: any) {
+				vscode.window.showErrorMessage(`Failed to download prefixes: ${error.message}`);
+			}
+		});
+	});
 
 	vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
 		settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
