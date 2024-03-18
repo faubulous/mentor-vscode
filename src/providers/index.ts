@@ -1,3 +1,4 @@
+export * from './code-actions-provider';
 export * from './codelens-provider';
 export * from './completion-item-provider';
 export * from './definition-provider';

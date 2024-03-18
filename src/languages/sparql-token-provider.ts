@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { RenameProvider } from '../providers/rename-provider';
 import { CompletionItemProvider, DefinitionProvider, HoverProvider, ReferenceProvider } from '../providers';
+import { SparqlActionsProvider } from './sparql-actions-provider';
+import { PrefixLookupService } from '../services/prefix-lookup-service';
+import { getLastTokenOfType } from '../utilities';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -289,16 +292,41 @@ const referenceProvider = new ReferenceProvider();
 const definitionProvider = new DefinitionProvider();
 const hoverProvider = new HoverProvider();
 const completionProvider = new CompletionItemProvider();
+const condeActionsProvider = new SparqlActionsProvider();
 
 export class SparqlTokenProvider {
+	private _prefixLookupService = new PrefixLookupService();
+
 	register(): vscode.Disposable[] {
+		this.registerCommands();
+
 		return [
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'sparql' }, tokenProvider, legend),
 			vscode.languages.registerRenameProvider({ language: 'sparql' }, renameProvider),
 			vscode.languages.registerReferenceProvider({ language: 'sparql' }, referenceProvider),
 			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, definitionProvider),
 			vscode.languages.registerHoverProvider({ language: 'sparql' }, hoverProvider),
-			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':')
+			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':'),
+			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, condeActionsProvider)
 		];
+	}
+
+	registerCommands() {
+		vscode.commands.registerCommand('mentor.action.fixMissingPrefix.sparql', (documentUri, prefix) => {
+			const document = mentor.contexts[documentUri];
+
+			if (document) {
+				const uri = this._prefixLookupService.getUriForPrefix(prefix);
+
+				// Insert the new prefix declaration after the last prefix declaration in the document.
+				const token = getLastTokenOfType(document.tokens, 'PREFIX');
+				const line = token ? (token.endLine ?? 0) : 0;
+
+				const edit = new vscode.WorkspaceEdit();
+				edit.insert(documentUri, new vscode.Position(line, 0), `prefix ${prefix}: <${uri}>\n`);
+
+				vscode.workspace.applyEdit(edit);
+			}
+		});
 	}
 }

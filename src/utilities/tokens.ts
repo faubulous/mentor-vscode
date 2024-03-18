@@ -96,7 +96,7 @@ export function getPrefixFromToken(token: IToken): string {
 export function getUriFromToken(namespaces: NamespaceMap, token: IToken): string | undefined {
 	const tokenName = token.tokenType?.tokenName;
 
-	switch(tokenName) {
+	switch (tokenName) {
 		case 'IRIREF':
 			return getUriFromIriReference(token.image);
 		case 'PNAME_LN':
@@ -135,6 +135,20 @@ export function getUriFromPrefixedName(namespaces: NamespaceMap, name: string): 
 		if (namespaces[prefix]) {
 			return namespaces[prefix] + label;
 		}
+	}
+}
+
+/**
+ * Get the last token of a given type.
+ * @param tokens A list of tokens.
+ * @param type The type name of the token.
+ * @returns The last token of the given type, if it exists, undefined otherwise.
+ */
+export function getLastTokenOfType(tokens: IToken[], type: string): IToken | undefined {
+	const result = tokens.filter(t => t.tokenType?.tokenName === type);
+
+	if (result.length > 0) {
+		return result[result.length - 1];
 	}
 }
 

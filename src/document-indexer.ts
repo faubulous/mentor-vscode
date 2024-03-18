@@ -78,6 +78,8 @@ export class DocumentIndexer {
 				console.log(`Indexing took ${endTime - startTime} ms`);
 			}
 
+			this._indexed = true;
+
 			this.reportProgress(progress, 100);
 
 			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);

@@ -130,6 +130,7 @@ export class FeatureProvider {
 
 	/**
 	 * Gets all tokens at a given position.
+	 * @param tokens A list of tokens.
 	 * @param position A position in the document.
 	 * @returns An non-empty array of tokens on success, an empty array otherwise.
 	 */

@@ -1,13 +1,35 @@
 {
   "name": "mentor",
   "displayName": "Mentor",
-  "description": "Create RDF ontologies and knowledge graph projects with Visual Studio code.",
+  "description": "Create RDF ontologies and knowledge graphs with Visual Studio Code.",
   "keywords": [
-    "rdf",
-    "rdfs",
-    "owl",
-    "shacl",
+    "anzo",
+    "blazegraph",
+    "graphdb",
+    "jena",
+    "json-ld",
+    "knowledge graph",
+    "linked data",
+    "n3",
+    "neptune",
+    "nquads",
+    "ntriples",
     "ontology",
+    "owl",
+    "protege",
+    "rdf",
+    "rdf4j",
+    "rdfa",
+    "rdfox",
+    "rdfs",
+    "semantic web",
+    "shacl",
+    "skos",
+    "sparql",
+    "stardog",
+    "taxonomy",
+    "trig",
+    "turtle",
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
@@ -432,6 +454,14 @@
         "command": "mentor.action.hideIndividualTypes",
         "title": "Hide Individual Types",
         "icon": "$(rdf-list)"
+      },
+      {
+        "command": "mentor.action.fixMissingPrefix.sparql",
+        "title": "Define missing SPARQL Prefix"
+      },
+      {
+        "command": "mentor.action.fixMissingPrefix.turtle",
+        "title": "Define missing Turtle Prefix"
       }
     ],
     "menus": {

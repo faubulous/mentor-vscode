@@ -201,7 +201,7 @@ export abstract class LanguageServerBase {
 
 		return errors.map(
 			(error): Diagnostic => {
-				const { message, context, token } = error;
+				const { message, name, context, token } = error;
 
 				const ruleStack = context ? context.ruleStack : null;
 				const source = ruleStack && ruleStack.length > 0
@@ -209,6 +209,7 @@ export abstract class LanguageServerBase {
 					: undefined;
 
 				const constructedDiagnostic: Partial<Diagnostic> = {
+					code: name,
 					message,
 					source,
 					severity: DiagnosticSeverity.Error,

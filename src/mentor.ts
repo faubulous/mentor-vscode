@@ -76,6 +76,7 @@ vscode.window.onDidChangeActiveTextEditor(() => onActiveEditorChanged());
 function onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
 	loadDocument(e.document, true).then((context) => {
 		if (context) {
+			activeContext = context;
 			_onDidChangeDocumentContext?.fire(context);
 		}
 	});
