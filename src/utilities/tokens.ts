@@ -78,6 +78,23 @@ export function isVariable(token: IToken) {
 }
 
 /**
+ * Indicates whether a token is upper case.
+ * @param token A token.
+ * @returns `true` if the token is upper case. `false` otherwise.
+ */
+export function isUpperCase(token?: IToken): boolean {
+	if (token) {
+		const image = token.image;
+
+		if (image) {
+			return image === image.toUpperCase();
+		}
+	}
+
+	return false;
+}
+
+/**
  * Get the prefix name from a prefixed name token.
  */
 export function getPrefixFromToken(token: IToken): string {
@@ -113,7 +130,7 @@ export function getUriFromToken(namespaces: NamespaceMap, token: IToken): string
 export function getUriFromIriReference(value: string): string {
 	const v = value.trim();
 
-	if (v.length > 2 && v.startsWith('<') && v.endsWith('>')) {
+	if (v.length >= 2 && v.startsWith('<') && v.endsWith('>')) {
 		return v.substring(1, v.length - 1);
 	} else {
 		return v;
@@ -185,6 +202,7 @@ export function getNamespaceDefinition(tokens: IToken[], token: IToken): Namespa
 	}
 
 	const prefixToken = tokens[n + 1];
+
 	if (prefixToken?.tokenType?.tokenName != "PNAME_NS") {
 		return;
 	}

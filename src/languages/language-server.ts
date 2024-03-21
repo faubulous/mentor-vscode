@@ -264,9 +264,19 @@ export abstract class LanguageServerBase {
 					if (ns) {
 						namespaces[ns.prefix] = ns.uri;
 
-						if (!ns.uri.endsWith('/') && !ns.uri.endsWith('#')) {
-							const u = tokens[i + 2];
+						const u = tokens[i + 2];
 
+						if(ns.uri == '') {
+							result.push({
+								severity: DiagnosticSeverity.Error,
+								message: `Invalid namespace URI.`,
+								range: {
+									start: document.positionAt(u.startOffset),
+									end: document.positionAt(u.endOffset ?? 0)
+								}
+							});
+						}
+						else if (!ns.uri.endsWith('/') && !ns.uri.endsWith('#')) {
 							result.push({
 								severity: DiagnosticSeverity.Warning,
 								message: `An RDF namespace URI should end with a '/', '#', '=' or ':' character.`,

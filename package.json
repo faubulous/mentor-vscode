@@ -456,12 +456,12 @@
         "icon": "$(rdf-list)"
       },
       {
-        "command": "mentor.action.fixMissingPrefix.sparql",
-        "title": "Define missing SPARQL Prefix"
+        "command": "mentor.action.sparql.fixMissingPrefixes",
+        "title": "Implement Missing SPARQL Prefixes"
       },
       {
-        "command": "mentor.action.fixMissingPrefix.turtle",
-        "title": "Define missing Turtle Prefix"
+        "command": "mentor.action.turtle.fixMissingPrefixes",
+        "title": "Implement Missing Turtle Prefixes"
       }
     ],
     "menus": {

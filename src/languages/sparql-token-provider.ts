@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { RenameProvider } from '../providers/rename-provider';
-import { CompletionItemProvider, DefinitionProvider, HoverProvider, ReferenceProvider } from '../providers';
-import { SparqlActionsProvider } from './sparql-actions-provider';
-import { PrefixLookupService } from '../services/prefix-lookup-service';
-import { getLastTokenOfType } from '../utilities';
+import { CodeActionsProvider, CompletionItemProvider, DefinitionProvider, HoverProvider, ReferenceProvider } from '../providers';
+import { getLastTokenOfType, isUpperCase } from '../utilities';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -292,11 +290,11 @@ const referenceProvider = new ReferenceProvider();
 const definitionProvider = new DefinitionProvider();
 const hoverProvider = new HoverProvider();
 const completionProvider = new CompletionItemProvider();
-const condeActionsProvider = new SparqlActionsProvider();
+const codeActionsProvider = new CodeActionsProvider({
+	fixMissingPrefixes: 'mentor.action.sparql.fixMissingPrefixes'
+});
 
 export class SparqlTokenProvider {
-	private _prefixLookupService = new PrefixLookupService();
-
 	register(): vscode.Disposable[] {
 		this.registerCommands();
 
@@ -307,26 +305,26 @@ export class SparqlTokenProvider {
 			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, definitionProvider),
 			vscode.languages.registerHoverProvider({ language: 'sparql' }, hoverProvider),
 			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':'),
-			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, condeActionsProvider)
+			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider)
 		];
 	}
 
 	registerCommands() {
-		vscode.commands.registerCommand('mentor.action.fixMissingPrefix.sparql', (documentUri, prefix) => {
+		vscode.commands.registerCommand(codeActionsProvider.commands.fixMissingPrefixes, (documentUri, prefixes) => {
 			const document = mentor.contexts[documentUri];
 
-			if (document) {
-				const uri = this._prefixLookupService.getUriForPrefix(prefix);
+			let upperCase = false;
+			upperCase = upperCase || isUpperCase(getLastTokenOfType(document.tokens, 'PREFIX'));
+			upperCase = upperCase || isUpperCase(document.tokens[0]);
 
-				// Insert the new prefix declaration after the last prefix declaration in the document.
-				const token = getLastTokenOfType(document.tokens, 'PREFIX');
-				const line = token ? (token.endLine ?? 0) : 0;
-
-				const edit = new vscode.WorkspaceEdit();
-				edit.insert(documentUri, new vscode.Position(line, 0), `prefix ${prefix}: <${uri}>\n`);
-
-				vscode.workspace.applyEdit(edit);
-			}
+			codeActionsProvider.fixMissingPrefixes(documentUri, prefixes, 'PREFIX', (prefix, uri) => {
+				if (upperCase) {
+					return `PREFIX ${prefix}: <${uri}>\n`;
+				}
+				else {
+					return `prefix ${prefix}: <${uri}>\n`;
+				}
+			});
 		});
 	}
 }
