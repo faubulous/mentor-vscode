@@ -158,7 +158,7 @@ export async function initialize(context: vscode.ExtensionContext) {
 			try {
 				let result = await service.fetchPrefixes();
 
-				globalStorage.setValue('prefixes', result);
+				globalStorage.setValue('defaultPrefixes', result);
 
 				progress.report({ increment: 100 });
 			} catch (error: any) {

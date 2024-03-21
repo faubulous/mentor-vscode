@@ -34,9 +34,9 @@ export class PrefixLookupService {
 		}
 
 		// Alternatively use the default prefixes if the prefix is not declared in the project.
-		const defaultPrefixes = mentor.configuration.get('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+		const defaultPrefixes = mentor.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES);
 
-		const uri = result ?? defaultPrefixes[prefix];
+		const uri = result ?? defaultPrefixes.prefixes[prefix];
 
 		// Returning an empty string will produce empty URI declarations which  will trigger 
 		// a diagnostic error in the document so users can enter it manually.
