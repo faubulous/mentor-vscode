@@ -39,7 +39,7 @@ export class PrefixDownloaderService {
 
 					resolve({
 						lastUpdated: new Date(),
-						prefixes: result
+						prefixes: result['@context']
 					});
 				});
 

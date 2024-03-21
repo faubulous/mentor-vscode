@@ -22,7 +22,7 @@ const codelensProvider = new CodeLensProvider();
 const codeActionsProvider = new CodeActionsProvider({
 	fixMissingPrefixes: 'mentor.action.turtle.fixMissingPrefixes'
 });
-const prefixCompletionProvider = new PrefixCompletionProvider();
+const prefixCompletionProvider = new PrefixCompletionProvider((uri) => ` <${uri}> .`);
 
 export class TurtleTokenProvider {
 	register(): vscode.Disposable[] {

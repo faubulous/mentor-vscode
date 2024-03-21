@@ -33,13 +33,15 @@ export class PrefixLookupService {
 			}
 		}
 
-		// Alternatively use the default prefixes if the prefix is not declared in the project.
-		const defaultPrefixes = mentor.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES);
+		if(result) {
+			return result;
+		}
 
-		const uri = result ?? defaultPrefixes.prefixes[prefix];
+		// Alternatively use the default prefixes if the prefix is not declared in the project.
+		const defaultPrefixes = mentor.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
 
 		// Returning an empty string will produce empty URI declarations which  will trigger 
 		// a diagnostic error in the document so users can enter it manually.
-		return uri ?? '';
+		return defaultPrefixes[prefix] ?? '';
 	}
 }

@@ -3,6 +3,7 @@ import * as mentor from '../mentor';
 import { RenameProvider } from '../providers/rename-provider';
 import { CodeActionsProvider, CompletionItemProvider, DefinitionProvider, HoverProvider, ReferenceProvider } from '../providers';
 import { getLastTokenOfType, isUpperCase } from '../utilities';
+import { PrefixCompletionProvider } from '../providers/prefix-completion-provider';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -293,6 +294,7 @@ const completionProvider = new CompletionItemProvider();
 const codeActionsProvider = new CodeActionsProvider({
 	fixMissingPrefixes: 'mentor.action.sparql.fixMissingPrefixes'
 });
+const prefixCompletionProvider = new PrefixCompletionProvider((uri) => ` <${uri}>`);
 
 export class SparqlTokenProvider {
 	register(): vscode.Disposable[] {
@@ -305,7 +307,8 @@ export class SparqlTokenProvider {
 			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, definitionProvider),
 			vscode.languages.registerHoverProvider({ language: 'sparql' }, hoverProvider),
 			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':'),
-			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider)
+			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider),
+			vscode.languages.registerInlineCompletionItemProvider({ language: 'sparql' }, prefixCompletionProvider)
 		];
 	}
 

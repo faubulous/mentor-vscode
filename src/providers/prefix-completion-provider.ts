@@ -8,6 +8,10 @@ export class PrefixCompletionProvider extends FeatureProvider implements vscode.
 
 	protected readonly prefixTokenTypes = new Set(["PREFIX", "TTL_PREFIX"]);
 
+	constructor(readonly onComplete: (uri: string) => string) {
+		super();
+	}
+
 	provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, completion: vscode.InlineCompletionContext): vscode.ProviderResult<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
 		const context = this.getDocumentContext(document);
 
@@ -45,7 +49,7 @@ export class PrefixCompletionProvider extends FeatureProvider implements vscode.
 
 		if (uri) {
 			return [{
-				insertText: ` <${uri}> .`,
+				insertText: this.onComplete(uri),
 				range: new vscode.Range(position, position)
 			}];
 		} else {
