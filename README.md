@@ -33,6 +33,9 @@ This extension provides the following features:
   - Rename resource labels in prefixed names and URIs
 
 ## News
+### Version 0.1.5: Prefix Definition Support
+Added inline completion support for prefix definitions and quick fixes for implementing missing prefix definitions. The prefix URIs are resolved from the indexed files in the workspace as well as from a local database downloaded from prefix.cc. The local database can be updated manually using a built-in command.
+
 ### Version 0.1.3: Global Workspace Index
 Added support for indexing all ontology files in the workspace. This enables finding references, retrieving descriptions and going to defintions of subjects accross the entire workspace. A newly added code lens shows the number of references of a subject in the workspace. In addition, the workspace tree gained a new command for opening all the ontologies in the workspace to identify problems and show them in the problems tab.
 
