@@ -13,6 +13,5 @@ export class OntologyTree extends ResourceTree {
 		super("mentor.view.ontologyTree", new OntologyNodeProvider());
 	}
 
-	protected registerCommands(): void {
-	}
+	protected registerCommands(): void { }
 }

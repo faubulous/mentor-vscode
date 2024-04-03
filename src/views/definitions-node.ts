@@ -15,7 +15,7 @@ export class TermNode extends vscode.TreeItem {
 
 		if (n == 0) {
 			this.collapsibleState = vscode.TreeItemCollapsibleState.None;
-		} else if (provider.id == 'ontology') {
+		} else if (provider.id == 'ontology' || provider.id == 'concept') {
 			this.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 		}
 	}

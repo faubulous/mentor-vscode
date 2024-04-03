@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DocumentContext } from './document-context';
-import { Store, OwlReasoner, OntologyRepository } from '@faubulous/mentor-rdf';
+import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
 import { Settings, TreeLabelStyle } from './settings';
 import { DocumentIndexer, DocumentIndex } from './document-indexer';
@@ -36,7 +36,7 @@ export const store = new Store(new OwlReasoner());
 /**
  * A repository for retrieving ontology resources.
  */
-export const ontology = new OntologyRepository(store);
+export const vocabulary = new VocabularyRepository(store);
 
 /**
  * A repository for retrieving workspace resources such as files and folders.

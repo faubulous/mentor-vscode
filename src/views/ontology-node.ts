@@ -16,7 +16,7 @@ export class OntologyNode extends ResourceNode {
 	}
 
 	override getDescription(): string | undefined {
-		return mentor.ontology.getOntologyVersionInfo(this.context.graphs, this.uri);
+		return mentor.vocabulary.getOntologyVersionInfo(this.context.graphs, this.uri);
 	}
 
 	override getIconColor() {

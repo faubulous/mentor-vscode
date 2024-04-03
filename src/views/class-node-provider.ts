@@ -21,7 +21,7 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 	override getParent(id: string): string | undefined {
 		if (this.context && id) {
 			const uri = this.getUri(id)!;
-			const result = mentor.ontology.getSuperClasses(this.context.graphs, uri).sort().slice(0, 1);
+			const result = mentor.vocabulary.getSuperClasses(this.context.graphs, uri).sort().slice(0, 1);
 
 			return result.length > 0 ? result[0] : undefined;
 		} else {
@@ -33,7 +33,7 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 		if (this.context) {
 			const uri = this.getUri(id);
 			const options = { includeReferencedClasses: this.showReferenced };
-			const result = mentor.ontology.getSubClasses(this.context.graphs, uri, options);
+			const result = mentor.vocabulary.getSubClasses(this.context.graphs, uri, options);
 
 			return this.sortByLabel(result).map(u => this.getId(u, uri));
 		} else {
@@ -47,7 +47,7 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 
 	override getTotalItemCount(): number {
 		if (this.context) {
-			return mentor.ontology.getClasses(this.context.graphs, { includeReferencedClasses: false }).length;
+			return mentor.vocabulary.getClasses(this.context.graphs, { includeReferencedClasses: false }).length;
 		} else {
 			return 0;
 		}

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
+import * as mentor from '../mentor';
 import { ResourceNodeProvider } from './resource-node-provider';
-import { TermNode } from './term-node';
+import { TermNode } from './definitions-node';
 import { getProviderFromNodeId, hasUri } from '../utilities';
 
 /**
@@ -79,7 +80,20 @@ export class TermNodeProvider extends ResourceNodeProvider {
 
 			return result;
 		} else if (this.hasItems()) {
-			return Object.keys(this._providers);
+			const result: string[] = [];
+
+			if(mentor.vocabulary.hasOntologies(this.context?.graphs)) {
+				result.push('ontology');
+				result.push('class');
+				result.push('property');
+				result.push('individual');
+			}
+
+			if(mentor.vocabulary.hasConceptSchemes(this.context?.graphs)) {
+				result.push('concept');
+			}
+
+			return result;
 		} else {
 			return [];
 		}

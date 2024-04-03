@@ -60,7 +60,7 @@ export class WorkspaceRepository {
 	/**
 	 * An event that is fired when the workspace contents have changed.
 	 */
-	private readonly _onDidChangeWorkspaceContents = new vscode.EventEmitter<vscode.Uri | undefined>();
+	private readonly _onDidChangeWorkspaceContents = new vscode.EventEmitter<vscode.FileChangeEvent>();
 
 	/**
 	 * An event that is fired when the workspace contents have changed.
@@ -68,8 +68,15 @@ export class WorkspaceRepository {
 	readonly onDidChangeWorkspaceFolder = this._onDidChangeWorkspaceContents.event;
 
 	constructor() {
-		this.watcher.onDidCreate((e) => this._onDidChangeWorkspaceContents.fire(_getDirectoryUri(e)));
-		this.watcher.onDidDelete((e) => this._onDidChangeWorkspaceContents.fire(_getDirectoryUri(e)));
+		this.watcher.onDidCreate((e) => this._onDidChangeWorkspaceContents.fire({
+			type: vscode.FileChangeType.Created,
+			uri: _getDirectoryUri(e)
+		}));
+
+		this.watcher.onDidDelete((e) => this._onDidChangeWorkspaceContents.fire({
+			type: vscode.FileChangeType.Deleted,
+			uri: _getDirectoryUri(e)
+		}));
 	}
 
 	/**
@@ -91,7 +98,10 @@ export class WorkspaceRepository {
 				this.rootItems.push(item);
 			}
 
-			this._onDidChangeWorkspaceContents.fire(undefined);
+			this._onDidChangeWorkspaceContents.fire({
+				type: vscode.FileChangeType.Changed,
+				uri: workspaceUri
+			});
 		}
 
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', this.rootItems.length === 0);

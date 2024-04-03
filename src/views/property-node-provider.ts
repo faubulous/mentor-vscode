@@ -36,17 +36,17 @@ export class PropertyNodeProvider extends ResourceNodeProvider {
 
 			if (!uri) {
 				if (this.showTypes) {
-					result = mentor.ontology.getPropertyTypes(this.context.graphs).sort();
+					result = mentor.vocabulary.getPropertyTypes(this.context.graphs).sort();
 
 					// Mark the nodes as classes for the getTreeItem method.
 					result.forEach((typeUri: string) => this.classNodes[this.getId(typeUri)] = true);
 				} else {
-					result = mentor.ontology.getProperties(this.context.graphs).sort();
+					result = mentor.vocabulary.getProperties(this.context.graphs).sort();
 				}
 			} else if (this.classNodes[id]) {
-				result = mentor.ontology.getPropertiesOfType(this.context.graphs, uri, false).sort();
+				result = mentor.vocabulary.getPropertiesOfType(this.context.graphs, uri, false).sort();
 			} else {
-				result = mentor.ontology.getSubProperties(this.context.graphs, uri).sort();
+				result = mentor.vocabulary.getSubProperties(this.context.graphs, uri).sort();
 			}
 
 			return this.sortByLabel(result).map(u => this.getId(u, uri));
@@ -65,7 +65,7 @@ export class PropertyNodeProvider extends ResourceNodeProvider {
 
 	override getTotalItemCount(): number {
 		if (this.context) {
-			return mentor.ontology.getProperties(this.context.graphs).length;
+			return mentor.vocabulary.getProperties(this.context.graphs).length;
 		} else {
 			return 0;
 		}

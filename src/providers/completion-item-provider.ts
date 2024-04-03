@@ -58,14 +58,14 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 		let result = [];
 
 		if (component == "subject" || component == "object") {
-			for (let c of mentor.ontology.getClasses(graphs).filter(c => c.toLowerCase().startsWith(uri))) {
+			for (let c of mentor.vocabulary.getClasses(graphs).filter(c => c.toLowerCase().startsWith(uri))) {
 				const item = new vscode.CompletionItem(getUriLabel(c), vscode.CompletionItemKind.Class);
 				item.detail = context.getResourceDescription(c);
 
 				result.push(item);
 			}
 
-			for (let x of mentor.ontology.getIndividuals(graphs).sort().filter(x => x.toLowerCase().startsWith(uri))) {
+			for (let x of mentor.vocabulary.getIndividuals(graphs).sort().filter(x => x.toLowerCase().startsWith(uri))) {
 				const item = new vscode.CompletionItem(getUriLabel(x), vscode.CompletionItemKind.Field);
 				item.detail = context.getResourceDescription(x);
 
@@ -73,7 +73,7 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 			}
 		}
 
-		for (let p of mentor.ontology.getProperties(graphs).sort().filter(p => p.toLowerCase().startsWith(uri))) {
+		for (let p of mentor.vocabulary.getProperties(graphs).sort().filter(p => p.toLowerCase().startsWith(uri))) {
 			const item = new vscode.CompletionItem(getUriLabel(p), vscode.CompletionItemKind.Value);
 			item.detail = context.getResourceDescription(p);
 

@@ -181,6 +181,8 @@ export abstract class DocumentContext {
 			case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
 			case "http://www.w3.org/2000/01/rdf-schema#":
 			case "http://www.w3.org/2002/07/owl#":
+			case "http://www.w3.org/2004/02/skos/core#":
+			case "http://www.w3.org/2008/05/skos-xl#":
 			case "http://www.w3.org/ns/shacl#":
 				this.typeDefinitions[subjectUri] = [subjectToken];
 		}

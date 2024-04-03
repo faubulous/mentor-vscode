@@ -20,7 +20,7 @@ export class OntologyNodeProvider extends ResourceNodeProvider {
 	override getChildren(id: string): string[] {
 		if (this.context) {
 			const uri = this.getUri(id);
-			const result = mentor.ontology.getOntologies(this.context.graphs);
+			const result = mentor.vocabulary.getOntologies(this.context.graphs);
 
 			return this.sortByLabel(result).map(u => this.getId(u, uri));
 		} else {
@@ -34,7 +34,7 @@ export class OntologyNodeProvider extends ResourceNodeProvider {
 
 	override getTotalItemCount(): number {
 		if (this.context) {
-			return mentor.ontology.getOntologies(this.context.graphs).length;
+			return mentor.vocabulary.getOntologies(this.context.graphs).length;
 		} else {
 			return 0;
 		}

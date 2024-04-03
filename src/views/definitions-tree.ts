@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor'
 import { TreeView } from './tree-view';
-import { TermNodeProvider } from './term-node-provider';
+import { TermNodeProvider } from './definitions-node-provider';
 import { ClassNodeProvider } from './class-node-provider';
 import { PropertyNodeProvider } from './property-node-provider';
 import { IndividualNodeProvider } from './individual-node-provider';
 import { OntologyNodeProvider } from './ontology-node-provider';
+import { ConceptNodeProvider } from './concept-node-provider';
 
 /**
  * Provides a combined explorer for classes, properties and individuals.
@@ -14,7 +15,7 @@ export class TermTree implements TreeView {
 	/**
 	 * The ID which is used to register the view and make it visible in VS Code.
 	 */
-	readonly id = "mentor.view.combinedTree";
+	readonly id = "mentor.view.definitionsTree";
 
 	/**
 	 * The node provider for ontologies.
@@ -37,6 +38,11 @@ export class TermTree implements TreeView {
 	readonly individualProvider = new IndividualNodeProvider();
 
 	/**
+	 * The node provider for concepts.
+	 */
+	readonly conceptProvider = new ConceptNodeProvider();
+
+	/**
 	 * The tree node provider.
 	 */
 	readonly treeDataProvider = new TermNodeProvider();
@@ -51,6 +57,7 @@ export class TermTree implements TreeView {
 		this.treeDataProvider.registerProvider(this.classProvider);
 		this.treeDataProvider.registerProvider(this.propertyProvider);
 		this.treeDataProvider.registerProvider(this.individualProvider);
+		this.treeDataProvider.registerProvider(this.conceptProvider);
 
 		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
 

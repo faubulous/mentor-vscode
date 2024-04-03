@@ -16,7 +16,7 @@ export class ClassNode extends ResourceNode {
 	}
 
 	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		return mentor.ontology.hasSubClasses(this.context.graphs, this.uri) ?
+		return mentor.vocabulary.hasSubClasses(this.context.graphs, this.uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
 	}
@@ -24,7 +24,7 @@ export class ClassNode extends ResourceNode {
 	override getDescription(): string | undefined {
 		let result = "";
 
-		if (mentor.ontology.hasEquivalentClass(this.context.graphs, this.uri)) {
+		if (mentor.vocabulary.hasEquivalentClass(this.context.graphs, this.uri)) {
 			result += "≡";
 		}
 
@@ -42,11 +42,11 @@ export class ClassNode extends ResourceNode {
 	override getIcon() {
 		let icon = 'rdf-class';
 
-		if (!mentor.ontology.hasSubject(this.context.graphs, this.uri)) {
+		if (!mentor.vocabulary.hasSubject(this.context.graphs, this.uri)) {
 			icon += '-ref';
 		}
 
-		if (mentor.ontology.hasIndividuals(this.context.graphs, this.uri)) {
+		if (mentor.vocabulary.hasIndividuals(this.context.graphs, this.uri)) {
 			icon += "-i";
 		}
 
