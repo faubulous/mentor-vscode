@@ -1,19 +1,51 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
 import { ResourceNodeProvider } from './resource-node-provider';
-import { TermNode } from './definitions-node';
-import { getProviderFromNodeId, hasUri } from '../utilities';
+import { getProviderFromNodeId } from '../utilities';
+import { DocumentContext } from '../document-context';
+
+export interface TermTreeNode {
+	/**
+	 * The URI of the resource.
+	 */
+	uri: string | undefined;
+
+	provider: ResourceNodeProvider;
+}
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
  */
-export class TermNodeProvider extends ResourceNodeProvider {
+export class TermNodeProvider implements vscode.TreeDataProvider<TermTreeNode> {
 	id = 'term';
+
+	/**
+	 * The vocabulary document context.
+	 */
+	public context: DocumentContext | undefined;
 
 	/*
 	 * A map of providers that are registered for the different types of nodes.
 	 */
 	private _providers: { [id: string]: ResourceNodeProvider } = {};
+
+	private _onDidChangeTreeData: vscode.EventEmitter<TermTreeNode | undefined> = new vscode.EventEmitter<TermTreeNode | undefined>();
+
+	readonly onDidChangeTreeData: vscode.Event<TermTreeNode | undefined> = this._onDidChangeTreeData.event;
+
+	constructor() {
+		if (mentor.activeContext) {
+			this._onVocabularyChanged(mentor.activeContext);
+		}
+
+		mentor.onDidChangeVocabularyContext((context) => {
+			this._onVocabularyChanged(context);
+		});
+
+		mentor.settings.onDidChange("view.treeLabelStyle", () => {
+			this.refresh();
+		});
+	}
 
 	/*
 	 * Registers a provider for a specific type of node.
@@ -58,40 +90,87 @@ export class TermNodeProvider extends ResourceNodeProvider {
 		return false;
 	}
 
-	override getTitle(): string {
-		return "Terms";
+	private _onVocabularyChanged(e: DocumentContext | undefined): void {
+		if (e) {
+			this.context = e;
+			this.onDidChangeVocabularyContext(e);
+			this._onDidChangeTreeData.fire(void 0);
+		}
 	}
 
-	override getParent(nodeId: string): string | undefined {
+	/**
+	 * A callback that is called when the vocabulary document context has changed.
+	 * @param context The new vocabulary document context.
+	 */
+	protected onDidChangeVocabularyContext(context: DocumentContext) { }
+
+	/**
+	 * Refresh the tree view.
+	 */
+	refresh(): void {
+		this._onVocabularyChanged(this.context);
+	}
+
+	getParent(node: TermTreeNode): TermTreeNode | undefined {
 		// If we get a provider id, we return undefined, because the provider is the root node.
-		if (hasUri(nodeId)) {
-			return this.getProvider(nodeId).getParent(nodeId);
+		if (node && node.uri) {
+			return {
+				uri: node.provider.getParent(node.uri),
+				provider: node.provider
+			};
 		} else {
 			return undefined;
 		}
 	}
 
-	override getChildren(id: string): string[] {
-		if (id) {
-			const provider = this.getProvider(id);
-
+	getChildren(node: TermTreeNode): TermTreeNode[] {
+		if (node) {
 			// The URI may be undefined. The provider will return the root nodes in this case.
-			const result = provider.getChildren(hasUri(id) ? id : undefined);
+			const result = node.provider.getChildren(node.uri).map(uri => ({
+				uri: uri,
+				provider: node.provider
+			}));
 
 			return result;
-		} else if (this.hasItems()) {
-			const result: string[] = [];
+		} else if (this.context) {
+			const result: TermTreeNode[] = [];
 
-			if(mentor.vocabulary.hasOntologies(this.context?.graphs)) {
-				result.push('ontology');
-				result.push('class');
-				result.push('property');
-				result.push('individual');
+			for (let o of mentor.vocabulary.getOntologies(this.context?.graphs)) {
+				result.push({
+					uri: o,
+					provider: this.getProvider('ontology'),
+				});
 			}
 
-			if(mentor.vocabulary.hasConceptSchemes(this.context?.graphs)) {
-				result.push('concept');
+			// for (let s of mentor.vocabulary.getConceptSchemes(this.context?.graphs)) {
+			// 	result.push(s);
+			// }
+
+			const options = { definedBy: null, includeReferenced: false };
+
+			for (let c of mentor.vocabulary.getClasses(this.context?.graphs, options)) {
+				result.push({
+					uri: undefined,
+					provider: this.getProvider('class')
+				});
+				break;
 			}
+
+			for (let p of mentor.vocabulary.getProperties(this.context?.graphs, options)) {
+				result.push({
+					uri: undefined,
+					provider: this.getProvider('property')
+				});
+				break;
+			}
+
+			// for(let i of mentor.vocabulary.getIndividuals(this.context?.graphs, { definedBy: null})) {
+			// 	result.push({
+			// 		uri: undefined,
+			// 		provider: this.getProvider('individual'),
+			// 	});
+			// 	break;
+			// }
 
 			return result;
 		} else {
@@ -99,18 +178,14 @@ export class TermNodeProvider extends ResourceNodeProvider {
 		}
 	}
 
-	override getTreeItem(id: string): vscode.TreeItem {
-		const provider = this.getProvider(id);
+	getTreeItem(node: TermTreeNode): vscode.TreeItem {
+		if (node.uri) {
+			return node.provider.getTreeItem(node.uri);
+		} else {
+			const item = new vscode.TreeItem('No items found', vscode.TreeItemCollapsibleState.None);
+			item.contextValue = 'noItems';
+			return item;
 
-		if (!provider) {
-			throw new Error(`No provider found for id '${id}'.`);
 		}
-
-		// If the only colon is at the end of the string, we return a tree item for the provider.
-		return hasUri(id) ? provider.getTreeItem(id) : new TermNode(provider);
-	}
-
-	override getTotalItemCount(): number {
-		return Object.values(this._providers).length;
 	}
 }

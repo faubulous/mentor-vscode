@@ -34,7 +34,7 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 			if (namespace) {
 				const uri = (namespace + label).toLowerCase();
 
-				const graphs = mentor.store.getContextGraphs(document.uri.toString());
+				const graphs = [document.uri.toString()];
 				graphs.push(namespace);
 
 				// Primarily query the context graph for retrieving completion items.

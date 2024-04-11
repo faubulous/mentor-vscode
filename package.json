@@ -50,7 +50,7 @@
   ],
   "main": "./out/extension.js",
   "scripts": {
-    "build": "node ./build-font.js && node ./build.js",
+    "build": "node ./build-font.js && tsc -p tsconfig.json && node ./build.js",
     "build:watch": "node ./build-font.js && node ./build.js --watch",
     "build:font": "node ./build-font.js",
     "package": "set NODE_ENV=production && npm run build && vsce package --dependencies -o out/mentor.vsix",
@@ -70,6 +70,7 @@
     "esbuild": "^0.17.19",
     "esbuild-plugin-copy": "^2.0.1",
     "eslint": "^8.26.0",
+    "estrella": "^1.4.1",
     "jest": "^29.7.0",
     "jest-environment-node": "^29.7.0",
     "ts-jest": "^29.1.1",
@@ -79,7 +80,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.18",
+    "@faubulous/mentor-rdf": "^0.2.20",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "minimatch": "^9.0.3",

@@ -1,4 +1,4 @@
-const { build } = require("esbuild");
+const { build, context } = require("esbuild");
 const fs = require("fs");
 
 //@ts-check
@@ -16,6 +16,18 @@ const baseConfig = {
   minify: productionBuild,
   sourcemap: !productionBuild,
   external: ["vscode"],
+  plugins: [{
+    name: 'rebuild-notify',
+    setup(build) {
+      build.onStart(() => {
+        console.log("Build started..");
+      });
+
+      build.onEnd(result => {
+        console.log(`Build ended.`);
+      })
+    },
+  }],
 };
 
 console.log("Options:", baseConfig);
@@ -29,7 +41,8 @@ const extensionConfig = {
   target: "es2020",
   mainFields: ["module", "main"],
   entryPoints: ["./src/extension.ts"],
-  outfile: "./out/extension.js"
+  outfile: "./out/extension.js",
+  tsconfig: "./tsconfig.json"
 };
 
 // Note: The platform 'node' is required for the 'vscode-languageserver' functions to work.
@@ -45,24 +58,6 @@ const getLanguageConfig = (type, language) => {
   }
 }
 
-// This watch config adheres to the conventions of the esbuild-problem-matchers
-// extension (https://github.com/connor4312/esbuild-problem-matchers#esbuild-via-js)
-/** @type BuildOptions */
-const watchConfig = {
-  watch: {
-    onRebuild(error, result) {
-      console.log("[watch] Build started..");
-      if (error) {
-        error.errors.forEach((error) =>
-          console.error(`> ${error.location.file}:${error.location.line}:${error.location.column}: error: ${error.text}`)
-        );
-      } else {
-        console.log("[watch] Build finished.");
-      }
-    },
-  },
-};
-
 (async () => {
   try {
     if (fs.existsSync('./out')) {
@@ -73,32 +68,32 @@ const watchConfig = {
 
     const args = process.argv.slice(2);
 
+    const configs = [
+      extensionConfig,
+      getLanguageConfig('server'),
+      getLanguageConfig('server', 'turtle'),
+      getLanguageConfig('server', 'trig'),
+      getLanguageConfig('server', 'sparql'),
+      getLanguageConfig('client'),
+      getLanguageConfig('client', 'turtle'),
+      getLanguageConfig('client', 'trig'),
+      getLanguageConfig('client', 'sparql'),
+    ]
+
     if (args.includes("--watch")) {
-      console.log("[watch] Build started..");
-      await build({ ...extensionConfig, ...watchConfig });
-      await build({ ...getLanguageConfig('server'), ...watchConfig });
-      await build({ ...getLanguageConfig('server', 'turtle'), ...watchConfig });
-      await build({ ...getLanguageConfig('server', 'trig'), ...watchConfig });
-      await build({ ...getLanguageConfig('server', 'sparql'), ...watchConfig });
-      await build({ ...getLanguageConfig('client'), ...watchConfig });
-      await build({ ...getLanguageConfig('client', 'turtle'), ...watchConfig });
-      await build({ ...getLanguageConfig('client', 'trig'), ...watchConfig });
-      await build({ ...getLanguageConfig('client', 'sparql'), ...watchConfig });
-      console.log("[watch] Build finished.");
+      // This is the advanced long-running form of "build" that supports additional
+      // features such as watch mode and a local development server.
+      for (const config of configs) {
+        (await context(config)).watch();
+      }
     } else {
-      console.log("Build started..");
-      await build(extensionConfig);
-      await build(getLanguageConfig('server'));
-      await build(getLanguageConfig('server', 'turtle'));
-      await build(getLanguageConfig('server', 'trig'));
-      await build(getLanguageConfig('server', 'sparql'));
-      await build(getLanguageConfig('client'));
-      await build(getLanguageConfig('client', 'turtle'));
-      await build(getLanguageConfig('client', 'trig'));
-      await build(getLanguageConfig('client', 'sparql'));
-      console.log("Build finished.");
+      for (const config of configs) {
+        build(config);
+      }
     }
   } catch (err) {
+    console.log("Extension config:", extensionConfig);
+
     process.stderr.write(err.stderr);
     process.exit(1);
   }

@@ -6,7 +6,9 @@
     "rootDir": "./src",
     "outDir": "./out",
     "sourceMap": true,
-    "strict": true
+    "strict": true,
+    "emitDeclarationOnly": true,
+    "declaration": true
   },
   "exclude": ["node_modules"],
   "include": ["src/**/*.ts"]

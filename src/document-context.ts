@@ -208,14 +208,14 @@ export abstract class DocumentContext {
 
 				// First, try to find a description in the current graph.
 				for (let p of predicates) {
-					for (let q of mentor.store.match(this.graphs, subject, p)) {
+					for (let q of mentor.store.match(this.graphs, subject, p, null)) {
 						return q.object.value;
 					}
 				}
 
 				// If none is found, try to find a description in the default graph.
 				for (let p of predicates) {
-					for (let q of mentor.store.match(undefined, subject, p)) {
+					for (let q of mentor.store.match(undefined, subject, p, null)) {
 						return q.object.value;
 					}
 				}
@@ -245,14 +245,14 @@ export abstract class DocumentContext {
 
 		// First, try to find a description in the current graph.
 		for (let p of predicates) {
-			for (let q of mentor.store.match(this.graphs, subject, p)) {
+			for (let q of mentor.store.match(this.graphs, subject, p, null)) {
 				return q.object.value;
 			}
 		}
 
 		// If none is found, try to find a description in the default graph.
 		for (let p of predicates) {
-			for (let q of mentor.store.match(undefined, subject, p)) {
+			for (let q of mentor.store.match(undefined, subject, p, null)) {
 				return q.object.value;
 			}
 		}

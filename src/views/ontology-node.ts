@@ -9,6 +9,18 @@ export class OntologyNode extends ResourceNode {
 		id: string
 	) {
 		super(context, id);
+
+		this.collapsibleState = this.getCollapsibleState();
+	}
+
+	getCollapsibleState(): vscode.TreeItemCollapsibleState {
+		if (mentor.vocabulary.getClasses(this.context.graphs, { definedBy: this.uri }).length > 0) {
+			return vscode.TreeItemCollapsibleState.Collapsed;
+		} else if (mentor.vocabulary.getProperties(this.context.graphs, { definedBy: this.uri }).length > 0) {
+			return vscode.TreeItemCollapsibleState.Collapsed;
+		} else {
+			return vscode.TreeItemCollapsibleState.None;
+		}
 	}
 
 	override getIcon(): vscode.ThemeIcon {

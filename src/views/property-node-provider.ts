@@ -44,7 +44,7 @@ export class PropertyNodeProvider extends ResourceNodeProvider {
 					result = mentor.vocabulary.getProperties(this.context.graphs).sort();
 				}
 			} else if (this.classNodes[id]) {
-				result = mentor.vocabulary.getPropertiesOfType(this.context.graphs, uri, false).sort();
+				result = mentor.vocabulary.getPropertiesOfType(this.context.graphs, uri, { includeInferred: false }).sort();
 			} else {
 				result = mentor.vocabulary.getSubProperties(this.context.graphs, uri).sort();
 			}

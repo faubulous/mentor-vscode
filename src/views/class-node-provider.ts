@@ -32,7 +32,7 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 	override getChildren(id: string): string[] {
 		if (this.context) {
 			const uri = this.getUri(id);
-			const options = { includeReferencedClasses: this.showReferenced };
+			const options = { includeReferenced: this.showReferenced };
 			const result = mentor.vocabulary.getSubClasses(this.context.graphs, uri, options);
 
 			return this.sortByLabel(result).map(u => this.getId(u, uri));
@@ -47,7 +47,7 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 
 	override getTotalItemCount(): number {
 		if (this.context) {
-			return mentor.vocabulary.getClasses(this.context.graphs, { includeReferencedClasses: false }).length;
+			return mentor.vocabulary.getClasses(this.context.graphs, { includeReferenced: false }).length;
 		} else {
 			return 0;
 		}

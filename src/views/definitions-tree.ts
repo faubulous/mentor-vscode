@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor'
 import { TreeView } from './tree-view';
-import { TermNodeProvider } from './definitions-node-provider';
+import { TermNodeProvider, TermTreeNode } from './definitions-node-provider';
 import { ClassNodeProvider } from './class-node-provider';
 import { PropertyNodeProvider } from './property-node-provider';
 import { IndividualNodeProvider } from './individual-node-provider';
@@ -50,7 +50,7 @@ export class TermTree implements TreeView {
 	/**
 	 * The tree view.
 	 */
-	readonly treeView: vscode.TreeView<string>;
+	readonly treeView: vscode.TreeView<TermTreeNode>;
 
 	constructor() {
 		this.treeDataProvider.registerProvider(this.ontologyProvider);
@@ -59,9 +59,9 @@ export class TermTree implements TreeView {
 		this.treeDataProvider.registerProvider(this.individualProvider);
 		this.treeDataProvider.registerProvider(this.conceptProvider);
 
-		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
+		vscode.window.registerTreeDataProvider<TermTreeNode>(this.id, this.treeDataProvider);
 
-		this.treeView = vscode.window.createTreeView(this.id, {
+		this.treeView = vscode.window.createTreeView<TermTreeNode>(this.id, {
 			treeDataProvider: this.treeDataProvider,
 			showCollapseAll: true
 		});
@@ -95,7 +95,7 @@ export class TermTree implements TreeView {
 	private updateView() {
 		if (!mentor.activeContext) {
 			this.treeView.message = "No file selected.";
-		} else if(!this.treeDataProvider.hasProviders()) {
+		} else if (!this.treeDataProvider.hasProviders()) {
 			this.treeView.message = "No definition providers registered.";
 		} else {
 			this.treeView.message = undefined;
