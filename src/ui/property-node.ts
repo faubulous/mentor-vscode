@@ -14,7 +14,7 @@ export class PropertyNode extends ResourceNode {
 	) {
 		super(context, id);
 
-		this.collapsibleState = mentor.ontology.hasSubProperties(this.context.graphs, this.uri) ?
+		this.collapsibleState = mentor.vocabulary.hasSubProperties(this.context.graphs, this.uri) ?
 			vscode.TreeItemCollapsibleState.Collapsed :
 			vscode.TreeItemCollapsibleState.None;
 	}
@@ -33,14 +33,14 @@ export class PropertyNode extends ResourceNode {
 		let p = new NamedNode(rdf.type.id);
 		let o = new NamedNode(owl.DatatypeProperty.id);
 
-		for (let q of mentor.ontology.store.match(this.context.graphs, s, p, o)) {
+		for (let q of mentor.vocabulary.store.match(this.context.graphs, s, p, o)) {
 			this.propertyType = 'dataProperty';
 			icon = 'symbol-text';
 			break;
 		}
 
 		// 2. Derive the icon from the property type.
-		const range = mentor.ontology.getRange(this.context.graphs, this.uri);
+		const range = mentor.vocabulary.getRange(this.context.graphs, this.uri);
 
 		switch (range) {
 			case xsd.date.id:

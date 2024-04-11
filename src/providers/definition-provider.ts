@@ -37,24 +37,28 @@ export class DefinitionProvider extends FeatureProvider {
 		return this.provideDefintionForUri(context, u);
 	}
 
-	provideDefintionForUri(primaryContext: DocumentContext, uri: string): vscode.Definition | null {
+	provideDefintionForUri(primaryContext: DocumentContext, uri: string, primaryContextOnly: boolean = false): vscode.Definition | null {
 		let token;
 		let tokenContext = primaryContext;
 
-		// Find all contexts that define the URI.
-		const contexts = this._getContextsDefiningUri(uri, primaryContext);
+		if (!primaryContextOnly) {
+			// Find all contexts that define the URI.
+			const contexts = this._getContextsDefiningUri(uri, primaryContext);
 
-		for (let c of contexts.filter(c => c.typeDefinitions[uri])) {
-			// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
-			token = c.typeDefinitions[uri][0];
-			tokenContext = c;
+			for (let c of contexts.filter(c => c.typeDefinitions[uri])) {
+				// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
+				token = c.typeDefinitions[uri][0];
+				tokenContext = c;
 
-			break;
+				break;
+			}
 		}
 
 		// If no class or property definition was found, look for namespace definitions or references in the primary document.
 		if (!token) {
-			if (primaryContext.namespaceDefinitions[uri]) {
+			if (primaryContext.typeDefinitions[uri]) {
+				token = primaryContext.typeDefinitions[uri][0];
+			} else if (primaryContext.namespaceDefinitions[uri]) {
 				token = primaryContext.namespaceDefinitions[uri];
 			} else if (primaryContext.references[uri]) {
 				token = primaryContext.references[uri][0];
@@ -70,9 +74,9 @@ export class DefinitionProvider extends FeatureProvider {
 			const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
 
 			return new vscode.Location(tokenContext.uri, range);
-		} else {
-			return null;
 		}
+
+		return null;
 	}
 
 	private _getContextsDefiningUri(uri: string, primaryContext?: DocumentContext): DocumentContext[] {

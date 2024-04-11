@@ -50,7 +50,7 @@ export class TurtleDocument extends DocumentContext {
 		// Initilaize the graphs *before* trying to load the document so 
 		// that they are initialized even when loading the document fails.
 		this.graphs.length = 0;
-		this.graphs.push(...mentor.store.getContextGraphs(u));
+		this.graphs.push(u);
 
 		// The loadFromStream function only updates the existing graphs 
 		// when the document was parsed successfully.

@@ -53,6 +53,7 @@ export class DocumentFactory {
 			switch (extension) {
 				case '.ttl':
 					return new TurtleDocument(documentUri, RdfSyntax.Turtle);
+				case '.n3':
 				case '.nt':
 					return new TurtleDocument(documentUri, RdfSyntax.NTriples);
 				case '.nq':

@@ -28,7 +28,7 @@ export class IndividualNodeProvider extends ResourceNodeProvider {
 		if (this.context && id) {
 			const uri = this.getUri(id)!;
 			
-			return mentor.ontology.getIndividualTypes(this.context.graphs, uri).sort().slice(0, 1)[0];
+			return mentor.vocabulary.getIndividualTypes(this.context.graphs, uri).sort().slice(0, 1)[0];
 		} else {
 			return undefined;
 		}
@@ -41,9 +41,9 @@ export class IndividualNodeProvider extends ResourceNodeProvider {
 			const uri = this.getUri(id);
 
 			if (id || !this.showTypes) {
-				result = mentor.ontology.getIndividuals(this.context.graphs, uri);
+				result = mentor.vocabulary.getIndividuals(this.context.graphs, uri);
 			} else {
-				result = mentor.ontology.getIndividualTypes(this.context.graphs);
+				result = mentor.vocabulary.getIndividualTypes(this.context.graphs);
 
 				// Mark the nodes as classes for the getTreeItem method.
 				result.forEach((type: string) => this.classNodes[this.getId(type)] = true);
@@ -69,7 +69,7 @@ export class IndividualNodeProvider extends ResourceNodeProvider {
 
 	override getTotalItemCount(): number {
 		if (this.context) {
-			return mentor.ontology.getIndividuals(this.context.graphs).length;
+			return mentor.vocabulary.getIndividuals(this.context.graphs).length;
 		} else {
 			return 0;
 		}
