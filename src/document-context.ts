@@ -58,6 +58,13 @@ export abstract class DocumentContext {
 			description: []
 		};
 
+	/**
+	 * Indicates whether the document is temporary and not persisted.
+	 */
+	get isTemporary(): boolean {
+		return this.uri.scheme == 'git';
+	}
+
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
 		this.predicates.label = mentor.configuration.get('predicates.label') ?? [];

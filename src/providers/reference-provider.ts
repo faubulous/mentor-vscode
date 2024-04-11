@@ -45,7 +45,8 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 		let result: vscode.Location[] = [];
 
 		for (const context of Object.values(mentor.contexts)) {
-			if (!context.references[uri]) {
+			// Do not provide references for temporary, non-persisted git diff views or other in-memory documents.
+			if (context.isTemporary || !context.references[uri]) {
 				continue;
 			}
 
