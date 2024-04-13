@@ -33,6 +33,11 @@ This extension provides the following features:
   - Rename resource labels in prefixed names and URIs
 
 ## News
+### Version 0.1.6: Bugfixes
+A minor bugfix release. Next release will feature an improved definitions tree view and SKOS support.
+- Fixed syntax support for TriG files
+- Fixed wrong reference counts in code lenses after opening a file in a Git diff view
+
 ### Version 0.1.5: Prefix Definition Support
 Added inline completion support for prefix definitions and quick fixes for implementing missing prefix definitions. The prefix URIs are resolved from the indexed files in the workspace as well as from a local database downloaded from prefix.cc. The local database can be updated manually using a built-in command.
 
