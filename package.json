@@ -50,7 +50,7 @@
   ],
   "main": "./out/extension.js",
   "scripts": {
-    "build": "node ./build-font.js && tsc -p tsconfig.json && node ./build.js",
+    "build": "node ./build-font.js && node ./build.js && tsc -p tsconfig.json",
     "build:watch": "node ./build-font.js && node ./build.js --watch",
     "build:font": "node ./build-font.js",
     "package": "set NODE_ENV=production && npm run build && vsce package --dependencies -o out/mentor.vsix",
