@@ -32,8 +32,7 @@ export class ClassNodeProvider extends ResourceNodeProvider {
 	override getChildren(id: string): string[] {
 		if (this.context) {
 			const uri = this.getUri(id);
-			const options = { includeReferenced: this.showReferenced };
-			const result = mentor.vocabulary.getSubClasses(this.context.graphs, uri, options);
+			const result = mentor.vocabulary.getSubClasses(this.context.graphs, uri, { includeReferenced: this.showReferenced });
 
 			return this.sortByLabel(result).map(u => this.getId(u, uri));
 		} else {

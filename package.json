@@ -33,7 +33,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "preview": true,
   "publisher": "faubulous",
   "private": false,
@@ -80,7 +80,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.20",
+    "@faubulous/mentor-rdf": "^0.2.22",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "minimatch": "^9.0.3",

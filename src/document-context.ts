@@ -1,6 +1,7 @@
 import * as n3 from 'n3';
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
+import * as url from 'url';
 import { TokenizerResult, rdf } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from './utilities';
@@ -57,6 +58,13 @@ export abstract class DocumentContext {
 			label: [],
 			description: []
 		};
+
+	/**
+	 * Indicates whether the document is temporary and not persisted.
+	 */
+	get isTemporary(): boolean {
+		return this.uri.scheme == 'git';
+	}
 
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
@@ -208,14 +216,14 @@ export abstract class DocumentContext {
 
 				// First, try to find a description in the current graph.
 				for (let p of predicates) {
-					for (let q of mentor.store.match(this.graphs, subject, p, null)) {
+					for (let q of mentor.store.match(this.graphs, subject, p, null, false)) {
 						return q.object.value;
 					}
 				}
 
 				// If none is found, try to find a description in the default graph.
 				for (let p of predicates) {
-					for (let q of mentor.store.match(undefined, subject, p, null)) {
+					for (let q of mentor.store.match(undefined, subject, p, null, false)) {
 						return q.object.value;
 					}
 				}
@@ -245,24 +253,43 @@ export abstract class DocumentContext {
 
 		// First, try to find a description in the current graph.
 		for (let p of predicates) {
-			for (let q of mentor.store.match(this.graphs, subject, p, null)) {
+			for (let q of mentor.store.match(this.graphs, subject, p, null, false)) {
 				return q.object.value;
 			}
 		}
 
 		// If none is found, try to find a description in the default graph.
 		for (let p of predicates) {
-			for (let q of mentor.store.match(undefined, subject, p, null)) {
+			for (let q of mentor.store.match(undefined, subject, p, null, false)) {
 				return q.object.value;
 			}
 		}
+	}
+
+	public getResourceUri(subjectUri: string): string {
+		if (subjectUri.startsWith('file')) {
+			const u = new URL(subjectUri);
+
+			// Resolve relative file URIs with regards to the directory of the current document.
+			if (u.hostname == '..') {
+				// For a file URI the namespace is the directory of the current document.
+				const directory = getNamespaceUri(this.uri.toString());
+				const filePath = subjectUri.split('//')[1];
+				const fileUrl = url.resolve(directory, filePath);
+
+				// Allow navigating to the relative file.
+				return '[' + filePath + '](' + fileUrl + ')';
+			}
+		}
+
+		return subjectUri;
 	}
 
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		let lines = [
 			`**${this.getResourceLabel(subjectUri)}**`,
 			this.getResourceDescription(subjectUri),
-			subjectUri
+			this.getResourceUri(subjectUri)
 		];
 
 		return new vscode.MarkdownString(lines.filter(line => line).join('\n\n'), true);

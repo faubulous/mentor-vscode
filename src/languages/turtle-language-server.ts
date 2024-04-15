@@ -7,7 +7,7 @@ class TurtleLanguageServer extends LanguageServerBase {
 	}
 
 	protected async parse(content: string): Promise<TokenizerResult> {
-		return await Tokenizer.parseData(content, RdfSyntax.TriG);
+		return await Tokenizer.parseData(content, RdfSyntax.Turtle);
 	}
 }
 

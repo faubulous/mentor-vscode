@@ -122,7 +122,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
 				const uri = getUriFromNodeId(id);
-				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
+				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri, true);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
