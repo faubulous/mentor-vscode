@@ -56,15 +56,21 @@ export class DocumentIndexer {
 				const uris = await vscode.workspace.findFiles("**/*.{ttl,nt,owl,trig,nq,n3,sparql}", excludedFolders);
 
 				const tasks = uris.map(uri => async (n: number) => {
-					const data = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
+					const u = uri.toString();
 
-					const context = this.factory.create(uri);
+					if (!mentor.contexts[u]) {
+						const data = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
 
-					await context.load(uri, data, false);
+						const context = this.factory.create(uri);
 
-					this.reportProgress(progress, Math.round((n / tasks.length) * 100));
+						await context.load(uri, data, false);
 
-					return { uri: uri.toString(), context };
+						this.reportProgress(progress, Math.round((n / tasks.length) * 100));
+
+						return { uri: u, context };
+					} else {
+						return { uri: u, context: mentor.contexts[u] };
+					}
 				});
 
 				const results = await this.runInParallel(tasks, 2);

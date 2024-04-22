@@ -80,6 +80,10 @@ export abstract class DocumentContext {
 	 */
 	async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
 		this.parseTokens(data);
+
+		if(executeInference) {
+			await this.infer();
+		}
 	}
 
 	/**
