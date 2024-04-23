@@ -4,12 +4,19 @@
  * @returns The label portion of the URI.
  */
 export function getUriLabel(uri: string): string {
-	const ns = getNamespaceUri(uri);
+	let u = uri;
+
+	// If we have namespace URI, return the label of the document or folder.
+	if (u.endsWith('/') || u.endsWith('#')) {
+		u = u.substring(0, u.length - 1);
+	}
+
+	let ns = getNamespaceUri(u);
 
 	if (ns) {
-		return uri.replace(ns, "");
+		return u.replace(ns, "");
 	} else {
-		return uri;
+		return u;
 	}
 }
 
@@ -84,9 +91,19 @@ export function getNodeIdFromUri(provider: string, uri: string, parentUri?: stri
 }
 
 export function getUriFromNodeId(id: string): string {
-	const n = id.lastIndexOf('|');
+	const n = id.lastIndexOf('<');
 
-	return id.substring(n + 1);
+	if (n === -1) {
+		return id;
+	}
+
+	const m = id.lastIndexOf('>');
+
+	if (n < m) {
+		return id.substring(n + 1, m);
+	} else {
+		return id;
+	}
 }
 
 export function getProviderFromNodeId(id: string): string {

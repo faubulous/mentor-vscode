@@ -1,29 +1,19 @@
-import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import * as vscode from "vscode";
+import * as mentor from "../../mentor";
 import { NamedNode } from 'n3';
-import { xsd, rdf, rdfs, owl } from '@faubulous/mentor-rdf';
-import { ResourceNode } from './resource-node';
-import { DocumentContext } from '../document-context';
+import { xsd, rdf, rdfs, owl, RDF } from '@faubulous/mentor-rdf';
+import { ResourceNode } from "./resource-node";
 
 export class PropertyNode extends ResourceNode {
+	type = RDF.Property;
+
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
-	constructor(
-		protected readonly context: DocumentContext,
-		id: string
-	) {
-		super(context, id);
+	override getIcon() {
+		if (!this.uri) {
+			return undefined;
+		}
 
-		this.collapsibleState = mentor.vocabulary.hasSubProperties(this.context.graphs, this.uri) ?
-			vscode.TreeItemCollapsibleState.Collapsed :
-			vscode.TreeItemCollapsibleState.None;
-	}
-
-	override getIconColor() {
-		return new vscode.ThemeColor(`mentor.color.${this.propertyType}`);
-	}
-
-	override getIcon(): vscode.ThemeIcon {
 		let icon = 'arrow-right';
 
 		// 1. Determine the property type.
@@ -92,5 +82,42 @@ export class PropertyNode extends ResourceNode {
 		}
 
 		return new vscode.ThemeIcon(icon, this.getIconColor());
+	}
+
+	override getIconColor() {
+		return new vscode.ThemeColor(`mentor.color.${this.propertyType}`);
+	}
+
+	override getLabel(): vscode.TreeItemLabel {
+		if (!this.uri) {
+			return {
+				label: "Properties"
+			}
+		} else {
+			return {
+				label: this.context.getResourceLabel(this.uri)
+			}
+		}
+
+	}
+
+	override getDescription(): string {
+		let result = "";
+
+		if (!this.uri) {
+			result += mentor.vocabulary.getProperties(this.context.graphs, this.options).length.toString();
+		}
+
+		return result;
+	}
+
+	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
+		let x = mentor.vocabulary.getSubProperties(this.context.graphs, this.uri, this.options);
+		
+		if (mentor.vocabulary.getSubProperties(this.context.graphs, this.uri, this.options).length > 0) {
+			return vscode.TreeItemCollapsibleState.Collapsed;
+		} else {
+			return vscode.TreeItemCollapsibleState.None;
+		}
 	}
 }

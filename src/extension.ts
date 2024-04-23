@@ -4,11 +4,7 @@ import * as mentor from './mentor'
 import { Disposable } from 'vscode-languageclient';
 import { TreeView } from './views/tree-view';
 import { WorkspaceTree } from './views/workspace-tree';
-import { TermTree } from './views/definitions-tree';
-import { ClassTree } from './views/class-tree';
-import { PropertyTree } from './views/property-tree';
-import { IndividualTree } from './views/individual-tree';
-import { ConceptTree } from './views/concept-tree';
+import { DefinitionTree } from './views/definition-tree';
 import {
 	LanguageClientBase,
 	TurtleLanguageClient,
@@ -41,23 +37,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Register the tree views.
 	views.push(new WorkspaceTree());
-	views.push(new TermTree());
-	views.push(new ClassTree());
-	views.push(new PropertyTree());
-	views.push(new IndividualTree());
-	views.push(new ConceptTree());
+	views.push(new DefinitionTree());
 
 	// Make the tree view ids available for usage in package.json.
 	vscode.commands.executeCommand('setContext', 'mentor.treeViews', views.map(view => view.id));
-
-	vscode.commands.executeCommand('setContext', 'mentor.resourceTreeViews', [
-		"mentor.view.definitionsTree",
-		"mentor.view.ontologyTree",
-		"mentor.view.classTree",
-		"mentor.view.propertyTree",
-		"mentor.view.individualTree",
-		"mentor.view.conceptTree"
-	]);
 
 	// Start the language clients..
 	for (const client of clients) {

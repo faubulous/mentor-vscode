@@ -1,34 +1,28 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '../document-context';
-import { getUriFromNodeId, getProviderFromNodeId } from '../utilities';
+import { DefinitionQueryOptions, RDFS } from "@faubulous/mentor-rdf";
+import { DefinitionTreeNode } from "../definition-tree-node";
+import { DocumentContext } from "../../languages";
 
-/**
- * Represents an RDF resource in a tree view.
- */
-export class ResourceNode extends vscode.TreeItem {
+export class ResourceNode implements DefinitionTreeNode {
 	contextValue: string = 'resource';
 
-	provider: string;
+	id: string;
 
-	uri: string;
+	uri: string | undefined;
 
-	constructor(
-		protected readonly context: DocumentContext,
-		id: string,
-		collapsibleState?: vscode.TreeItemCollapsibleState
-	) {
-		super('');
+	context: DocumentContext;
 
+	type: string;
+
+	options?: DefinitionQueryOptions;
+
+	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;
-		this.uri = getUriFromNodeId(id);
-		this.provider = getProviderFromNodeId(id);
-		this.contextValue = 'resource.' + this.provider;
-		this.iconPath = this.getIcon();
-		this.label = this.getLabel();
-		this.description = this.getDescription();
-		this.tooltip = this.getTooltip();
-		this.command = this.getCommand();
-		this.collapsibleState = collapsibleState ?? this.getCollapsibleState();
+		this.uri = uri;
+		this.context = context;
+		this.type = RDFS.Resource;
+		this.contextValue = 'resource.' + this.type;
+		this.options = options;
 	}
 
 	/**
@@ -48,11 +42,14 @@ export class ResourceNode extends vscode.TreeItem {
 	 * @returns The label of the tree item.
 	 */
 	getLabel(): vscode.TreeItemLabel {
-		let label = this.context.getResourceLabel(this.uri);
-
-		return {
-			label: label,
-			highlights: this.uri.length > 1 ? [[this.uri.length - 2, this.uri.length - 1]] : void 0
+		if (this.uri) {
+			return {
+				label: this.context.getResourceLabel(this.uri)
+			}
+		} else {
+			return {
+				label: this.id
+			}
 		}
 	}
 
@@ -69,7 +66,11 @@ export class ResourceNode extends vscode.TreeItem {
 	 * @returns A markdown string or undefined if no tooltip should be shown.
 	 */
 	getTooltip(): vscode.MarkdownString | undefined {
-		return this.context.getResourceTooltip(this.uri);
+		if (this.uri) {
+			return this.context.getResourceTooltip(this.uri);
+		} else {
+			return undefined;
+		}
 	}
 
 	/**
@@ -77,7 +78,7 @@ export class ResourceNode extends vscode.TreeItem {
 	 * @returns A theme icon or undefined if no icon should be shown.
 	 */
 	getIcon(): vscode.ThemeIcon | undefined {
-		return new vscode.ThemeIcon('primitive-square', this.getIconColor());
+		return undefined;
 	}
 
 	/**
