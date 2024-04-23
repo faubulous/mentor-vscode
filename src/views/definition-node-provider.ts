@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
+import { Uri } from '@faubulous/mentor-rdf';
 import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { DefinitionTreeNode } from './definition-tree-node';
@@ -70,15 +71,36 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		let result: DefinitionTreeNode[] = [];
 
 		if (!node) {
-			for (let s of mentor.vocabulary.getDefinitionSources(this.context.graphs)) {
-				result.push(new OntologyNode(this.context, s, s, { definedBy: s }));
+			const ontologyUris = new Set<string>(mentor.vocabulary.getOntologies(this.context.graphs));
+			const ontologyNodes = [];
+
+			for (let ontology of ontologyUris) {
+				ontologyNodes.push(new OntologyNode(this.context, `<${ontology}>`, ontology, { definedBy: ontology }));
 			}
 
-			for (let t of mentor.vocabulary.getConceptSchemes(this.context.graphs)) {
-				result.push(new ConceptSchemeNode(this.context, t, t));
+			const schemeUris = new Set<string>(mentor.vocabulary.getConceptSchemes(this.context.graphs));
+			const schemeNodes = [];
+
+			for (let scheme of schemeUris) {
+				schemeNodes.push(new ConceptSchemeNode(this.context, `<${scheme}>`, scheme));
 			}
 
-			result = this.sortByLabel(result);
+			const sourceUris = mentor.vocabulary.getDefinitionSources(this.context.graphs);
+			const sourceNodes = [];
+
+			for (let source of sourceUris) {
+				if(ontologyUris.has(source) || ontologyUris.has(Uri.getNormalizedUri(source))) {
+					continue;
+				}
+
+				sourceNodes.push(new OntologyNode(this.context, `<${source}>`, source, { definedBy: source }));
+			}
+
+			result = [
+				...this.sortByLabel(ontologyNodes),
+				...this.sortByLabel(schemeNodes),
+				...this.sortByLabel(sourceNodes)
+			];
 
 			let hasUndefined = false;
 
@@ -98,35 +120,35 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			}
 
 			if (hasUndefined) {
-				result.push(new OntologyNode(this.context, '<undefined>', 'undefined', { definedBy: null }));
+				result.push(new OntologyNode(this.context, '<>', undefined, { definedBy: null }));
 			}
 		} else if (node.type === OWL.Ontology) {
 			const options = { ...node.options };
-			
-			result.push(new ClassNode(this.context, `<classes><${node.uri}>`, undefined, options));
-			result.push(new PropertyNode(this.context, `<properties><${node.uri}>`, undefined, options));
-			result.push(new IndividualNode(this.context, `<individuals><${node.uri}>`, undefined, options));
+
+			result.push(new ClassNode(this.context, node.id + '/classes', undefined, options));
+			result.push(new PropertyNode(this.context, node.id + '/properties', undefined, options));
+			result.push(new IndividualNode(this.context, node.id + '/individuals', undefined, options));
 		} else if (node.type === RDFS.Class) {
 			for (let c of mentor.vocabulary.getSubClasses(this.context.graphs, node.uri, node.options)) {
-				result.push(new ClassNode(this.context, `<${node.options?.definedBy}><${c}>`, c, node.options));
+				result.push(new ClassNode(this.context, node.id + `/<${c}>`, c, node.options));
 			}
 
 			result = this.sortByLabel(result);
 		} else if (node.type === RDF.Property) {
 			for (let p of mentor.vocabulary.getSubProperties(this.context.graphs, node.uri, node.options)) {
-				result.push(new PropertyNode(this.context, `<${node.options?.definedBy}><${p}>`, p, node.options));
+				result.push(new PropertyNode(this.context, node.id + `/<${p}>`, p, node.options));
 			}
 
 			result = this.sortByLabel(result);
 		} else if (node.type === OWL.NamedIndividual) {
 			for (let p of mentor.vocabulary.getIndividuals(this.context.graphs, node.uri, node.options)) {
-				result.push(new IndividualNode(this.context, `<${node.options?.definedBy}><${p}>`, p, node.options));
+				result.push(new IndividualNode(this.context, node.id + `/<${p}>`, p, node.options));
 			}
 
 			result = this.sortByLabel(result);
 		} else if (node.type === SKOS.ConceptScheme || node.type === SKOS.Concept) {
 			for (let c of mentor.vocabulary.getNarrowerConcepts(this.context.graphs, node.uri)) {
-				result.push(new ConceptNode(this.context, `<${node.uri}><${c}>`, c, node.options));
+				result.push(new ConceptNode(this.context, node.id + `/<${c}>`, c, node.options));
 			}
 
 			result = this.sortByLabel(result);

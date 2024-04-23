@@ -17,7 +17,7 @@ export class OntologyNode extends ResourceNode {
 	override getLabel(): vscode.TreeItemLabel {
 		if (!this.uri) {
 			return {
-				label: "Classes"
+				label: "Unspecified"
 			}
 		} else {
 			return {
