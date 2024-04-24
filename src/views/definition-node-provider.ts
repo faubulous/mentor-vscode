@@ -89,7 +89,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			const sourceNodes = [];
 
 			for (let source of sourceUris) {
-				if(ontologyUris.has(source) || ontologyUris.has(Uri.getNormalizedUri(source))) {
+				if (ontologyUris.has(source) || ontologyUris.has(Uri.getNormalizedUri(source))) {
 					continue;
 				}
 
@@ -109,14 +109,18 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 				break;
 			}
 
-			for (let _ of mentor.vocabulary.getProperties(this.context.graphs, { definedBy: null })) {
-				hasUndefined = true;
-				break;
+			if (!hasUndefined) {
+				for (let _ of mentor.vocabulary.getProperties(this.context.graphs, { definedBy: null })) {
+					hasUndefined = true;
+					break;
+				}
 			}
 
-			for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined, { definedBy: null })) {
-				hasUndefined = true;
-				break;
+			if (!hasUndefined) {
+				for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined, { definedBy: null })) {
+					hasUndefined = true;
+					break;
+				}
 			}
 
 			if (hasUndefined) {
