@@ -6,6 +6,8 @@ import { OWL } from "@faubulous/mentor-rdf";
 export class OntologyNode extends ResourceNode {
 	type = OWL.Ontology;
 
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+
 	override getIcon() {
 		return new vscode.ThemeIcon('rdf-ontology', this.getIconColor());
 	}
@@ -17,14 +19,13 @@ export class OntologyNode extends ResourceNode {
 	override getLabel(): vscode.TreeItemLabel {
 		if (!this.uri) {
 			return {
-				label: "Unspecified"
+				label: "Unknown"
 			}
 		} else {
 			return {
 				label: this.context.getResourceLabel(this.uri)
 			}
 		}
-
 	}
 
 	override getDescription(): string {
@@ -42,6 +43,6 @@ export class OntologyNode extends ResourceNode {
 	}
 
 	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		return vscode.TreeItemCollapsibleState.Collapsed;
+		return  this.initialCollapsibleState;
 	}
 }

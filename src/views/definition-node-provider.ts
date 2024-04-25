@@ -71,25 +71,31 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		let result: DefinitionTreeNode[] = [];
 
 		if (!node) {
-			const ontologyUris = new Set<string>(mentor.vocabulary.getOntologies(this.context.graphs));
+			const ontologyUris = mentor.vocabulary.getOntologies(this.context.graphs);
 			const ontologyNodes = [];
 
 			for (let ontology of ontologyUris) {
-				ontologyNodes.push(new OntologyNode(this.context, `<${ontology}>`, ontology, { definedBy: ontology }));
+				const n =new OntologyNode(this.context, `<${ontology}>`, ontology, { definedBy: ontology });
+				n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+
+				ontologyNodes.push(n);
 			}
 
-			const schemeUris = new Set<string>(mentor.vocabulary.getConceptSchemes(this.context.graphs));
+			const schemeUris = mentor.vocabulary.getConceptSchemes(this.context.graphs);
 			const schemeNodes = [];
 
 			for (let scheme of schemeUris) {
 				schemeNodes.push(new ConceptSchemeNode(this.context, `<${scheme}>`, scheme));
 			}
 
+			const ontologies = new Set(ontologyUris);
 			const sourceUris = mentor.vocabulary.getDefinitionSources(this.context.graphs);
 			const sourceNodes = [];
 
 			for (let source of sourceUris) {
-				if (ontologyUris.has(source) || ontologyUris.has(Uri.getNormalizedUri(source))) {
+				// Handle the case where rdfs:isDefinedBy refers to the ontology namespace
+				// but the ontology header is annotated with an absolute URI.
+				if (ontologies.has(source) || ontologies.has(Uri.getNormalizedUri(source))) {
 					continue;
 				}
 
@@ -102,29 +108,29 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 				...this.sortByLabel(sourceNodes)
 			];
 
-			let hasUndefined = false;
+			let hasUnknown = false;
 
-			for (let _ of mentor.vocabulary.getClasses(this.context.graphs, { definedBy: null })) {
-				hasUndefined = true;
+			for (let _ of mentor.vocabulary.getClasses(this.context.graphs, { notDefinedBy: ontologyUris })) {
+				hasUnknown = true;
 				break;
 			}
 
-			if (!hasUndefined) {
-				for (let _ of mentor.vocabulary.getProperties(this.context.graphs, { definedBy: null })) {
-					hasUndefined = true;
+			if (!hasUnknown) {
+				for (let _ of mentor.vocabulary.getProperties(this.context.graphs, { notDefinedBy: ontologyUris })) {
+					hasUnknown = true;
 					break;
 				}
 			}
 
-			if (!hasUndefined) {
-				for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined, { definedBy: null })) {
-					hasUndefined = true;
+			if (!hasUnknown) {
+				for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined, { notDefinedBy: ontologyUris })) {
+					hasUnknown = true;
 					break;
 				}
 			}
 
-			if (hasUndefined) {
-				result.push(new OntologyNode(this.context, '<>', undefined, { definedBy: null }));
+			if (hasUnknown) {
+				result.push(new OntologyNode(this.context, '<>', undefined, { notDefinedBy: ontologyUris }));
 			}
 		} else if (node.type === OWL.Ontology) {
 			const options = { ...node.options };

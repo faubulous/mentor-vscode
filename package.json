@@ -50,9 +50,10 @@
   ],
   "main": "./out/extension.js",
   "scripts": {
-    "build": "node ./build-font.js && node ./build.js && tsc -p tsconfig.json",
+    "build": "node ./build-font.js && node ./build.js",
     "build:watch": "node ./build-font.js && node ./build.js --watch",
     "build:font": "node ./build-font.js",
+    "compile": "node ./build-font.js && tsc -p tsconfig.json",
     "package": "set NODE_ENV=production && npm run build && vsce package --dependencies -o out/mentor.vsix",
     "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
     "test": "npx jest",

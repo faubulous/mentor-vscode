@@ -33,7 +33,7 @@ export class ResourceNode implements DefinitionTreeNode {
 		return {
 			command: 'mentor.action.revealDefinition',
 			title: '',
-			arguments: [this.id]
+			arguments: [this.id, true]
 		};
 	}
 
