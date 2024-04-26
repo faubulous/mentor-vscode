@@ -39,9 +39,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	views.push(new WorkspaceTree());
 	views.push(new DefinitionTree());
 
-	// Make the tree view ids available for usage in package.json.
-	vscode.commands.executeCommand('setContext', 'mentor.treeViews', views.map(view => view.id));
-
 	// Start the language clients..
 	for (const client of clients) {
 		client.start(context);

@@ -353,14 +353,6 @@
     },
     "commands": [
       {
-        "command": "mentor.action.initiliaze",
-        "title": "Initialize"
-      },
-      {
-        "command": "mentor.action.indexWorkspace",
-        "title": "Index Workspace"
-      },
-      {
         "command": "mentor.action.analyzeWorkspace",
         "title": "Find Problems",
         "icon": "$(debug-alt)"
@@ -406,11 +398,6 @@
         "icon": "$(rdf-label-uri)"
       },
       {
-        "command": "mentor.action.refreshClassTree",
-        "title": "Refresh",
-        "icon": "$(refresh)"
-      },
-      {
         "command": "mentor.action.showReferencedClasses",
         "title": "Show Referenced Classes",
         "icon": "$(rdf-class-ref)"
@@ -421,11 +408,6 @@
         "icon": "$(rdf-class-ref-off)"
       },
       {
-        "command": "mentor.action.refreshPropertyTree",
-        "title": "Refresh",
-        "icon": "$(refresh)"
-      },
-      {
         "command": "mentor.action.showPropertyTypes",
         "title": "Show Property Types",
         "icon": "$(rdf-tree)"
@@ -434,11 +416,6 @@
         "command": "mentor.action.hidePropertyTypes",
         "title": "Hide Property Types",
         "icon": "$(rdf-list)"
-      },
-      {
-        "command": "mentor.action.refreshIndividualTree",
-        "title": "Refresh",
-        "icon": "$(refresh)"
       },
       {
         "command": "mentor.action.showIndividualTypes",
@@ -480,41 +457,6 @@
           "command": "mentor.action.showUriLabelsWithPrefix",
           "when": "view == mentor.view.definitionTree",
           "group": "4_search"
-        },
-        {
-          "command": "mentor.action.refreshClassTree",
-          "when": "view == mentor.view.classTree",
-          "group": "navigation@4"
-        },
-        {
-          "command": "mentor.action.showPropertyTypes",
-          "when": "view == mentor.view.propertyTree && view.showPropertyTypes == false",
-          "group": "navigation@3"
-        },
-        {
-          "command": "mentor.action.hidePropertyTypes",
-          "when": "view == mentor.view.propertyTree && view.showPropertyTypes == true",
-          "group": "navigation@3"
-        },
-        {
-          "command": "mentor.action.refreshPropertyTree",
-          "when": "view == mentor.view.propertyTree",
-          "group": "navigation@4"
-        },
-        {
-          "command": "mentor.action.showIndividualTypes",
-          "when": "view == mentor.view.individualTree && !view.showIndividualTypes",
-          "group": "navigation@3"
-        },
-        {
-          "command": "mentor.action.hideIndividualTypes",
-          "when": "view == mentor.view.individualTree && view.showIndividualTypes",
-          "group": "navigation@3"
-        },
-        {
-          "command": "mentor.action.refreshIndividualTree",
-          "when": "view == mentor.view.individualTree",
-          "group": "navigation@4"
         },
         {
           "command": "mentor.action.openSettings",
