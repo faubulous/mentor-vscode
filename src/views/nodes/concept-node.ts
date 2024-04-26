@@ -4,7 +4,7 @@ import { ResourceNode } from "./resource-node";
 import { SKOS } from "@faubulous/mentor-rdf";
 
 export class ConceptNode extends ResourceNode {
-	type = SKOS.Concept;
+	contextType = SKOS.Concept;
 
 	override getIcon() {
 		return new vscode.ThemeIcon('rdf-concept', this.getIconColor());

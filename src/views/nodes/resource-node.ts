@@ -12,16 +12,18 @@ export class ResourceNode implements DefinitionTreeNode {
 
 	context: DocumentContext;
 
-	type: string;
+	contextType: string;
 
 	options?: DefinitionQueryOptions;
+
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
 
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;
 		this.uri = uri;
 		this.context = context;
-		this.type = RDFS.Resource;
-		this.contextValue = 'resource.' + this.type;
+		this.contextType = RDFS.Resource;
+		this.contextValue = 'resource.' + this.contextType;
 		this.options = options;
 	}
 
@@ -94,6 +96,6 @@ export class ResourceNode implements DefinitionTreeNode {
 	 * @returns The collapsible state of the tree item.
 	 */
 	getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		return vscode.TreeItemCollapsibleState.None;
+		return  this.initialCollapsibleState;
 	}
 }

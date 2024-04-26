@@ -1,11 +1,18 @@
 import * as vscode from "vscode";
 import * as mentor from "../../mentor";
+import { OWL, DefinitionQueryOptions } from "@faubulous/mentor-rdf";
 import { ResourceNode } from "./resource-node";
-import { OWL } from "@faubulous/mentor-rdf";
+import { DocumentContext } from "../../document-context";
 
 export class IndividualNode extends ResourceNode {
-	type = OWL.NamedIndividual;
+	contextType = OWL.NamedIndividual;
 
+	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions, contextValue = "individual") {
+		super(context, id, uri, options);
+
+		this.contextValue = contextValue;
+	}	
+	
 	override getIcon() {
 		if (this.uri) {
 			return new vscode.ThemeIcon('rdf-individual', this.getIconColor());

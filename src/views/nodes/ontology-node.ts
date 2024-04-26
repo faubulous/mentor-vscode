@@ -4,7 +4,7 @@ import { ResourceNode } from "./resource-node";
 import { OWL } from "@faubulous/mentor-rdf";
 
 export class OntologyNode extends ResourceNode {
-	type = OWL.Ontology;
+	contextType = OWL.Ontology;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
@@ -40,9 +40,5 @@ export class OntologyNode extends ResourceNode {
 		}
 
 		return result;
-	}
-
-	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		return  this.initialCollapsibleState;
 	}
 }

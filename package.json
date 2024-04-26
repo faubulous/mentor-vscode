@@ -482,16 +482,6 @@
           "group": "4_search"
         },
         {
-          "command": "mentor.action.showReferencedClasses",
-          "when": "view == mentor.view.classTree && view.showReferencedClasses == false",
-          "group": "navigation@3"
-        },
-        {
-          "command": "mentor.action.hideReferencedClasses",
-          "when": "view == mentor.view.classTree && view.showReferencedClasses == true",
-          "group": "navigation@3"
-        },
-        {
           "command": "mentor.action.refreshClassTree",
           "when": "view == mentor.view.classTree",
           "group": "navigation@4"
@@ -545,32 +535,32 @@
         },
         {
           "command": "mentor.action.showReferencedClasses",
-          "when": "viewItem == provider.class && !view.showReferencedClasses",
+          "when": "view.showReferencedClasses === false && viewItem == classes",
           "group": "inline"
         },
         {
           "command": "mentor.action.hideReferencedClasses",
-          "when": "viewItem == provider.class && view.showReferencedClasses",
+          "when": "view.showReferencedClasses === true && viewItem == classes",
           "group": "inline"
         },
         {
           "command": "mentor.action.showPropertyTypes",
-          "when": "viewItem == provider.property && !view.showPropertyTypes",
+          "when": "view.showPropertyTypes === false && viewItem == properties",
           "group": "inline"
         },
         {
           "command": "mentor.action.hidePropertyTypes",
-          "when": "viewItem == provider.property && view.showPropertyTypes",
+          "when": "view.showPropertyTypes === true && viewItem == properties",
           "group": "inline"
         },
         {
           "command": "mentor.action.showIndividualTypes",
-          "when": "viewItem == provider.individual && !view.showIndividualTypes",
+          "when": "view.showIndividualTypes === false && viewItem == individuals",
           "group": "inline"
         },
         {
           "command": "mentor.action.hideIndividualTypes",
-          "when": "viewItem == provider.individual && view.showIndividualTypes",
+          "when": "view.showIndividualTypes === true && viewItem == individuals",
           "group": "inline"
         }
       ]

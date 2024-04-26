@@ -35,26 +35,32 @@ export class DefinitionTree implements TreeView {
 
 		mentor.onDidChangeVocabularyContext(() => this.updateView());
 
+		vscode.commands.executeCommand("setContext", "view.showReferencedClasses", this.treeDataProvider.showReferencedClasses);
+
 		mentor.settings.onDidChange("view.showReferencedClasses", (e) => {
 			vscode.commands.executeCommand("setContext", "view.showReferencedClasses", e.newValue);
 
-			// this.classProvider.showReferenced = e.newValue;
+			this.treeDataProvider.showReferencedClasses = e.newValue;
 			this.treeDataProvider.refresh();
 		});
 
-		// mentor.settings.onDidChange("view.showPropertyTypes", (e) => {
-		// 	vscode.commands.executeCommand("setContext", "view.showPropertyTypes", e.newValue);
+		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", this.treeDataProvider.showPropertyTypes);
 
-		// 	this.propertyProvider.showTypes = e.newValue;
-		// 	this.treeDataProvider.refresh();
-		// });
+		mentor.settings.onDidChange("view.showPropertyTypes", (e) => {
+			vscode.commands.executeCommand("setContext", "view.showPropertyTypes", e.newValue);
 
-		// mentor.settings.onDidChange("view.showIndividualTypes", (e) => {
-		// 	vscode.commands.executeCommand("setContext", "view.showIndividualTypes", e.newValue);
+			this.treeDataProvider.showPropertyTypes = e.newValue;
+			this.treeDataProvider.refresh();
+		});
 
-		// 	this.individualProvider.showTypes = e.newValue;
-		// 	this.treeDataProvider.refresh();
-		// });
+		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", this.treeDataProvider.showIndividualTypes);
+
+		mentor.settings.onDidChange("view.showIndividualTypes", (e) => {
+			vscode.commands.executeCommand("setContext", "view.showIndividualTypes", e.newValue);
+
+			this.treeDataProvider.showIndividualTypes = e.newValue;
+			this.treeDataProvider.refresh();
+		});
 	}
 
 	private updateView() {

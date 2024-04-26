@@ -1,10 +1,17 @@
 import * as vscode from "vscode";
 import * as mentor from "../../mentor";
+import { RDFS, DefinitionQueryOptions } from "@faubulous/mentor-rdf";
 import { ResourceNode } from "./resource-node";
-import { RDFS } from "@faubulous/mentor-rdf";
+import { DocumentContext } from "../../document-context";
 
 export class ClassNode extends ResourceNode {
-	type = RDFS.Class;
+	contextType = RDFS.Class;
+
+	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions, contextValue = "class") {
+		super(context, id, uri, options);
+
+		this.contextValue = contextValue;
+	}	
 
 	override getIcon() {
 		if (this.uri) {
@@ -64,7 +71,7 @@ export class ClassNode extends ResourceNode {
 		if (mentor.vocabulary.getSubClasses(this.context.graphs, this.uri, this.options).length > 0) {
 			return vscode.TreeItemCollapsibleState.Collapsed;
 		} else {
-			return vscode.TreeItemCollapsibleState.None;
+			return this.initialCollapsibleState;
 		}
 	}
 }

@@ -1,13 +1,20 @@
 import * as vscode from "vscode";
 import * as mentor from "../../mentor";
 import { NamedNode } from 'n3';
-import { xsd, rdf, rdfs, owl, RDF } from '@faubulous/mentor-rdf';
+import { xsd, rdf, rdfs, owl, RDF, DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { ResourceNode } from "./resource-node";
+import { DocumentContext } from "../../document-context";
 
 export class PropertyNode extends ResourceNode {
-	type = RDF.Property;
+	contextType = RDF.Property;
 
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
+
+	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions, contextValue = "property") {
+		super(context, id, uri, options);
+
+		this.contextValue = contextValue;
+	}	
 
 	override getIcon() {
 		if (!this.uri) {
@@ -111,9 +118,7 @@ export class PropertyNode extends ResourceNode {
 		return result;
 	}
 
-	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		let x = mentor.vocabulary.getSubProperties(this.context.graphs, this.uri, this.options);
-		
+	override getCollapsibleState(): vscode.TreeItemCollapsibleState {		
 		if (mentor.vocabulary.getSubProperties(this.context.graphs, this.uri, this.options).length > 0) {
 			return vscode.TreeItemCollapsibleState.Collapsed;
 		} else {

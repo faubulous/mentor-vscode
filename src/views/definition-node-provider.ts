@@ -24,6 +24,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
 
+	showReferencedClasses = true;
+
+	showPropertyTypes = true;
+
+	showIndividualTypes = true;
+
 	constructor() {
 		if (mentor.activeContext) {
 			this._onVocabularyChanged(mentor.activeContext);
@@ -75,7 +81,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			const ontologyNodes = [];
 
 			for (let ontology of ontologyUris) {
-				const n =new OntologyNode(this.context, `<${ontology}>`, ontology, { definedBy: ontology });
+				const n = new OntologyNode(this.context, `<${ontology}>`, ontology, { definedBy: ontology });
 				n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
 				ontologyNodes.push(n);
@@ -132,31 +138,55 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			if (hasUnknown) {
 				result.push(new OntologyNode(this.context, '<>', undefined, { notDefinedBy: ontologyUris }));
 			}
-		} else if (node.type === OWL.Ontology) {
-			const options = { ...node.options };
+		} else if (node.contextType === OWL.Ontology) {
+			const options = { ...node.options, includeReferenced: this.showReferencedClasses };
 
-			result.push(new ClassNode(this.context, node.id + '/classes', undefined, options));
-			result.push(new PropertyNode(this.context, node.id + '/properties', undefined, options));
-			result.push(new IndividualNode(this.context, node.id + '/individuals', undefined, options));
-		} else if (node.type === RDFS.Class) {
+			result.push(new ClassNode(this.context, node.id + '/classes', undefined, options, "classes"));
+			result.push(new PropertyNode(this.context, node.id + '/properties', undefined, options, "properties"));
+			result.push(new IndividualNode(this.context, node.id + '/individuals', undefined, options, "individuals"));
+		} else if (node.contextType === RDFS.Class) {
 			for (let c of mentor.vocabulary.getSubClasses(this.context.graphs, node.uri, node.options)) {
 				result.push(new ClassNode(this.context, node.id + `/<${c}>`, c, node.options));
 			}
 
 			result = this.sortByLabel(result);
-		} else if (node.type === RDF.Property) {
-			for (let p of mentor.vocabulary.getSubProperties(this.context.graphs, node.uri, node.options)) {
-				result.push(new PropertyNode(this.context, node.id + `/<${p}>`, p, node.options));
+		} else if (node.contextType === RDF.Property) {
+			if (node.contextValue === "properties" && this.showPropertyTypes) {
+				for (let c of mentor.vocabulary.getPropertyTypes(this.context.graphs, node.options)) {
+					const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
+					n.contextType = RDF.Property;
+					n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+
+					result.push(n);
+				}
+			} else if (node.contextValue === "class") {
+				for (let p of mentor.vocabulary.getPropertiesOfType(this.context.graphs, node.uri!, { includeInferred: false })) {
+					result.push(new PropertyNode(this.context, node.id + `/<${p}>`, p, node.options));
+				}
+			} else {
+				for (let p of mentor.vocabulary.getSubProperties(this.context.graphs, node.uri, node.options)) {
+					result.push(new PropertyNode(this.context, node.id + `/<${p}>`, p, node.options));
+				}
 			}
 
 			result = this.sortByLabel(result);
-		} else if (node.type === OWL.NamedIndividual) {
-			for (let p of mentor.vocabulary.getIndividuals(this.context.graphs, node.uri, node.options)) {
-				result.push(new IndividualNode(this.context, node.id + `/<${p}>`, p, node.options));
+		} else if (node.contextType === OWL.NamedIndividual) {
+			if (node.contextValue === "individuals" && this.showIndividualTypes) {
+				for (let c of mentor.vocabulary.getIndividualTypes(this.context.graphs, undefined, node.options)) {
+					const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
+					n.contextType = OWL.NamedIndividual;
+					n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+
+					result.push(n);
+				}
+			} else {
+				for (let p of mentor.vocabulary.getIndividuals(this.context.graphs, node.uri, node.options)) {
+					result.push(new IndividualNode(this.context, node.id + `/<${p}>`, p, node.options));
+				}
 			}
 
 			result = this.sortByLabel(result);
-		} else if (node.type === SKOS.ConceptScheme || node.type === SKOS.Concept) {
+		} else if (node.contextType === SKOS.ConceptScheme || node.contextType === SKOS.Concept) {
 			for (let c of mentor.vocabulary.getNarrowerConcepts(this.context.graphs, node.uri)) {
 				result.push(new ConceptNode(this.context, node.id + `/<${c}>`, c, node.options));
 			}
@@ -171,6 +201,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		if (node && node.id) {
 			return {
 				id: node.id,
+				contextValue: node.contextValue,
 				collapsibleState: node.getCollapsibleState(),
 				iconPath: node.getIcon(),
 				label: node.getLabel(),
