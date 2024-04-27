@@ -8,12 +8,18 @@ export class OntologyNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	isReferenced = false;
+
 	override getIcon() {
-		return new vscode.ThemeIcon('rdf-ontology', this.getIconColor());
+		if (this.isReferenced) {
+			return new vscode.ThemeIcon('rdf-ontology-ref', this.getIconColor());
+		} else {
+			return new vscode.ThemeIcon('rdf-ontology', this.getIconColor());
+		}
 	}
 
 	override getIconColor() {
-		return undefined;
+		return new vscode.ThemeColor("mentor.color.class");
 	}
 
 	override getLabel(): vscode.TreeItemLabel {

@@ -266,6 +266,13 @@
           "fontCharacter": "\\e00a"
         }
       },
+      "rdf-ontology-ref": {
+        "description": "Ontology reference icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00e"
+        }
+      },
       "rdf-list": {
         "description": "List icon",
         "default": {

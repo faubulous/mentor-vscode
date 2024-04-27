@@ -105,7 +105,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 					continue;
 				}
 
-				sourceNodes.push(new OntologyNode(this.context, `<${source}>`, source, { definedBy: source }));
+				const n = new OntologyNode(this.context, `<${source}>`, source, { definedBy: source });
+				n.isReferenced = true;
+
+				sourceNodes.push(n);
 			}
 
 			result = [
@@ -136,7 +139,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			}
 
 			if (hasUnknown) {
-				result.push(new OntologyNode(this.context, '<>', undefined, { notDefinedBy: ontologyUris }));
+				const n = new OntologyNode(this.context, '<>', undefined, { notDefinedBy: ontologyUris });
+				n.isReferenced = true;
+
+				result.push(n);
 			}
 		} else if (node.contextType === OWL.Ontology) {
 			const options = { ...node.options, includeReferenced: this.showReferencedClasses };
