@@ -100,15 +100,19 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (id: string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
-			if (mentor.activeContext && editor) {
-				const uri = getUriFromNodeId(id);
+			if(!id) {
+				// If no id is provided, we fail gracefully.
+				return;
+			}
+			
+			const uri = getUriFromNodeId(id);
+
+			if (mentor.activeContext && editor && uri) {
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri, true);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
 					editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
-
-					// vscode.commands.executeCommand('editor.action.showReferences', editor.document.uri, editor.selection.active, [location]);
 
 					if (restoreFocus) {
 						// Reset the focus to the definition tree.

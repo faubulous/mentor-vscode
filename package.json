@@ -81,7 +81,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.23",
+    "@faubulous/mentor-rdf": "^0.2.26",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "minimatch": "^9.0.3",
