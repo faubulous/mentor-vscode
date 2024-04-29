@@ -10,6 +10,7 @@ import { PropertyNode } from './nodes/property-node';
 import { IndividualNode } from './nodes/individual-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
 import { ConceptNode } from './nodes/concept-node';
+import { ResourceNode } from './nodes/resource-node';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
