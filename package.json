@@ -81,7 +81,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.26",
+    "@faubulous/mentor-rdf": "^0.2.27",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "minimatch": "^9.0.3",
@@ -285,6 +285,20 @@
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e00c"
+        }
+      },
+      "rdf-collection": {
+        "description": "Collection icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e00f"
+        }
+      },
+      "rdf-collection-ordered": {
+        "description": "Ordered collection icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e010"
         }
       }
     },
@@ -583,7 +597,8 @@
               "http://purl.org/dc/terms/description",
               "http://purl.org/dc/terms/abstract",
               "https://schema.org/description",
-              "http://schema.org/description"
+              "http://schema.org/description",
+              "http://www.w3.org/2004/02/skos/core#scopeNote"
             ]
           },
           "mentor.namespaces": {

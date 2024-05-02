@@ -10,7 +10,7 @@ import { PropertyNode } from './nodes/property-node';
 import { IndividualNode } from './nodes/individual-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
 import { ConceptNode } from './nodes/concept-node';
-import { ResourceNode } from './nodes/resource-node';
+import { CollectionNode } from './nodes/collection-node';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
@@ -81,8 +81,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return this.getPropertyNodeChildren(node);
 		} else if (node.contextType === OWL.NamedIndividual) {
 			return this.getIndividualNodeChildren(node);
-		} else if (node.contextType === SKOS.ConceptScheme || node.contextType === SKOS.Concept) {
+		} else if (node.contextType === SKOS.ConceptScheme) {
+			return this.getConceptSchemeNodeChildren(node);
+		} else if (node.contextType === SKOS.Concept) {
 			return this.getConceptNodeChildren(node);
+		} if (node.contextType == SKOS.Collection) {
+			return this.getCollectionNodeChildren(node);
 		} else {
 			return [];
 		}
@@ -278,10 +282,71 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return [];
 		}
 
+		let subject = node.uri;
+
+		if (!subject && node.options?.definedBy) {
+			subject = node.options.definedBy;
+		}
+
 		const result = [];
 
-		for (let c of mentor.vocabulary.getNarrowerConcepts(this.context.graphs, node.uri)) {
+		for (let c of mentor.vocabulary.getNarrowerConcepts(this.context.graphs, subject)) {
 			result.push(new ConceptNode(this.context, node.id + `/<${c}>`, c, node.options));
+		}
+
+		return this.sortByLabel(result);
+	}
+
+	getConceptSchemeNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
+		if (!this.context) {
+			return [];
+		}
+
+		const result = [];
+		const options = { ...node.options, definedBy: node.uri };
+
+		const concepts = new ConceptNode(this.context, node.id + '/concepts', undefined, options);
+
+		if (concepts.getCollapsibleState() !== vscode.TreeItemCollapsibleState.None) {
+			result.push(concepts);
+		}
+
+		const collections = new CollectionNode(this.context, node.id + '/collections', undefined, options);
+
+		if (collections.getCollapsibleState() !== vscode.TreeItemCollapsibleState.None) {
+			result.push(collections);
+		}
+
+		return result;
+	}
+
+	getCollectionNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
+		if (!this.context) {
+			return [];
+		}
+
+		const result = [];
+
+		if (!node.uri) {
+			const collections = mentor.vocabulary.getCollections(this.context.graphs);
+
+			for (let c of collections) {
+				result.push(new CollectionNode(this.context, node.id + `/<${c}>`, c, node.options));
+			}
+		} else if (mentor.vocabulary.isOrderedCollection(this.context.graphs, node.uri)) {
+			const members = mentor.vocabulary.getCollectionMembers(this.context.graphs, node.uri);
+
+			for (let m of members) {
+				result.push(new ConceptNode(this.context, node.id + `/<${m}>`, m, node.options));
+			}
+
+			return result;
+		} else {
+			const members = mentor.vocabulary.getCollectionMembers(this.context.graphs, node.uri);
+
+			for (let m of members) {
+				result.push(new ConceptNode(this.context, node.id + `/<${m}>`, m, node.options));
+			}
 		}
 
 		return this.sortByLabel(result);

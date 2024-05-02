@@ -215,7 +215,8 @@ export abstract class DocumentContext {
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
-				const subject = new n3.NamedNode(subjectUri);
+				// Todo: Fix #10 in mentor-rdf
+				const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
 
 				// First, try to find a description in the current graph.
@@ -252,7 +253,8 @@ export abstract class DocumentContext {
 	}
 
 	public getResourceDescription(subjectUri: string): string | undefined {
-		const subject = new n3.NamedNode(subjectUri);
+		// Todo: This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
+		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
 
 		// First, try to find a description in the current graph.

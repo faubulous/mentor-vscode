@@ -30,7 +30,7 @@ export class ConceptSchemeNode extends ResourceNode {
 		if (this.uri && !mentor.vocabulary.hasNarrowerConcepts(this.context.graphs, this.uri)) {
 			return vscode.TreeItemCollapsibleState.None;
 		} else {
-			return vscode.TreeItemCollapsibleState.Collapsed;
+			return vscode.TreeItemCollapsibleState.Expanded;
 		}
 	}
 }
