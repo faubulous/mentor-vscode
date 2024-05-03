@@ -112,7 +112,9 @@ export class PropertyNode extends ResourceNode {
 		let result = "";
 
 		if (!this.uri) {
-			result += mentor.vocabulary.getProperties(this.context.graphs, this.options).length.toString();
+			const properties = mentor.vocabulary.getProperties(this.context.graphs, this.options);
+			
+			result += properties.length.toString();
 		}
 
 		return result;

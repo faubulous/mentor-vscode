@@ -161,7 +161,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		if (hasUnknown) {
-			const n = new OntologyNode(this.context, '<>', undefined, { notDefinedBy: ontologyUris, includeReferenced: false });
+			const n = new OntologyNode(this.context, '<>', undefined, { notDefinedBy: [...ontologyUris, ...sourceUris], includeReferenced: false });
 			n.isReferenced = true;
 
 			result.push(n);
@@ -175,7 +175,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return [];
 		}
 
-		const options = { ...node.options, includeReferenced: this.showReferencedClasses && node.uri != null };
+		// Note: Do not override the node options includeReferenced setting if it is already set.
+		const includeReferenced = node.options?.includeReferenced === undefined && this.showReferencedClasses && node.uri != null;
+
+		const options = { ...node.options, includeReferenced: includeReferenced };
 
 		const result = [];
 
@@ -233,7 +236,15 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 				result.push(n);
 			}
 		} else if (node.contextValue === "class") {
-			const properties = mentor.vocabulary.getPropertiesOfType(this.context.graphs, node.uri!, { ...node.options, includeInferred: false });
+			// Note: We only want to returen the asserted properties here.
+			let options = { ...node.options, includeInferred: false };
+			let properties = mentor.vocabulary.getPropertiesOfType(this.context.graphs, node.uri!, options);
+
+			if (properties.length == 0) {
+				// As a fallback, we also include inferred properties.
+				options.includeInferred = true;
+				properties = mentor.vocabulary.getProperties(this.context.graphs, options);
+			}
 
 			for (let p of properties) {
 				result.push(new PropertyNode(this.context, node.id + `/<${p}>`, p, node.options));
