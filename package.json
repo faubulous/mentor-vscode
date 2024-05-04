@@ -419,6 +419,14 @@
         "icon": "$(rdf-label-uri)"
       },
       {
+        "command": "mentor.action.groupDefinitionsByType",
+        "title": "Group by Type"
+      },
+      {
+        "command": "mentor.action.groupDefinitionsBySource",
+        "title": "Group by Source"
+      },
+      {
         "command": "mentor.action.showReferencedClasses",
         "title": "Show Referenced Classes",
         "icon": "$(rdf-class-ref)"
@@ -463,6 +471,16 @@
           "command": "mentor.action.analyzeWorkspace",
           "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing && !mentor.workspace.isAnalyzing",
           "group": "navigation@3"
+        },
+        {
+          "command": "mentor.action.groupDefinitionsByType",
+          "when": "view == mentor.view.definitionTree",
+          "group": "2_workspace "
+        },
+        {
+          "command": "mentor.action.groupDefinitionsBySource",
+          "when": "view == mentor.view.definitionTree",
+          "group": "2_workspace "
         },
         {
           "command": "mentor.action.showAnnotatedLabels",
@@ -567,6 +585,20 @@
               "Render the URI path element or fragment with namespace prefix."
             ],
             "default": "AnnotatedLabels"
+          },
+          "mentor.definitionTreeLayout": {
+            "type": "string",
+            "title": "Default Definitions Tree Layout",
+            "description": "Set the standard style for rendering the definitions tree hierarchy.",
+            "enum": [
+              "GroupByType",
+              "GroupBySource"
+            ],
+            "enumDescriptions": [
+              "Group all classes, properties and individuals in the definitions tree under common top level nodes for each type.",
+              "Group classes, properties and invdividuals in the definitions tree under seperate nodes for each ontology or concept scheme."
+            ],
+            "default": "GroupBySource"
           },
           "mentor.internalBrowserEnabled": {
             "type": "boolean",

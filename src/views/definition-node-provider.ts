@@ -11,6 +11,7 @@ import { IndividualNode } from './nodes/individual-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
 import { ConceptNode } from './nodes/concept-node';
 import { CollectionNode } from './nodes/collection-node';
+import { DefinitionTreeLayout } from '../settings';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
@@ -31,21 +32,45 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	showIndividualTypes = true;
 
+	showDefinitionSources = false;
+
 	constructor() {
 		if (mentor.activeContext) {
-			this._onVocabularyChanged(mentor.activeContext);
+			this._onDidChangeVocabulary(mentor.activeContext);
 		}
 
 		mentor.onDidChangeVocabularyContext((context) => {
-			this._onVocabularyChanged(context);
+			this._onDidChangeVocabulary(context);
 		});
 
 		mentor.settings.onDidChange("view.treeLabelStyle", () => {
 			this.refresh();
 		});
+
+		// Initialize the default tree layout from the user preferences.
+		let layout = mentor.configuration.get<DefinitionTreeLayout>('view.definitionTreeLayout');
+
+		this._onDidChangeTreeLayout(layout);
+
+		mentor.settings.onDidChange("view.definitionTreeLayout", (e) => {
+			this._onDidChangeTreeLayout(e.newValue);
+
+			this.refresh();
+		});
 	}
 
-	private _onVocabularyChanged(e: DocumentContext | undefined): void {
+	private _onDidChangeTreeLayout(layout?: DefinitionTreeLayout): void {
+		switch (layout) {
+			case DefinitionTreeLayout.ByType:
+				this.showDefinitionSources = false;
+				break;
+			default:
+				this.showDefinitionSources = true;
+				break;
+		}
+	}
+
+	private _onDidChangeVocabulary(e: DocumentContext | undefined): void {
 		if (e) {
 			this.context = e;
 			this.onDidChangeVocabularyContext(e);
@@ -63,7 +88,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	 * Refresh the tree view.
 	 */
 	refresh(): void {
-		this._onVocabularyChanged(this.context);
+		this._onDidChangeVocabulary(this.context);
 	}
 
 	getParent(node: DefinitionTreeNode): DefinitionTreeNode | null | undefined {
@@ -72,7 +97,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
 		if (!node) {
-			return this.getRootNodes();
+			if (this.showDefinitionSources) {
+				return this.getRootNodesWithSources();
+			} else {
+				return this.getRootNodes();
+			}
 		} else if (node.contextType === OWL.Ontology) {
 			return this.getOntologyNodeChildren(node);
 		} else if (node.contextType === RDFS.Class) {
@@ -93,6 +122,46 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	getRootNodes(): DefinitionTreeNode[] {
+		if (!this.context) {
+			return [];
+		}
+
+		let result = [];
+
+		const ontologyUris = mentor.vocabulary.getOntologies(this.context.graphs);
+
+		for (let ontology of ontologyUris) {
+			const n = new OntologyNode(this.context, `<${ontology}>`, ontology);
+			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
+
+			result.push(n);
+		}
+
+		const schemeUris = mentor.vocabulary.getConceptSchemes(this.context.graphs);
+
+		for (let scheme of schemeUris) {
+			result.push(new ConceptSchemeNode(this.context, `<${scheme}>`, scheme));
+		}
+
+		for (let _ of mentor.vocabulary.getClasses(this.context.graphs)) {
+			result.push(new ClassNode(this.context, '<>/classes', undefined, { includeReferenced: this.showReferencedClasses }, "classes"));
+			break;
+		}
+
+		for (let _ of mentor.vocabulary.getProperties(this.context.graphs)) {
+			result.push(new PropertyNode(this.context, '<>/properties', undefined, undefined, "properties"));
+			break;
+		}
+
+		for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined)) {
+			result.push(new IndividualNode(this.context, '<>/individuals', undefined, undefined, "individuals"));
+			break;
+		}
+
+		return result;
+	}
+
+	getRootNodesWithSources(): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
 		}

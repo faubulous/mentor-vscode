@@ -3,6 +3,8 @@ import { EventEmitter } from 'events'
 
 export enum TreeLabelStyle { AnnotatedLabels, UriLabels, UriLabelsWithPrefix };
 
+export enum DefinitionTreeLayout { ByType, BySource };
+
 export class Settings extends EventEmitter {
 	private _data: { [key: string]: any } = {};
 

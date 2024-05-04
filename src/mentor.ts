@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
-import { Settings, TreeLabelStyle } from './settings';
+import { DefinitionTreeLayout as DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
 import { DocumentIndexer, DocumentIndex } from './document-indexer';
 import { WorkspaceRepository } from './workspace-repository';
 import { LocalStorageService } from './services/local-storage-service';
@@ -175,6 +175,14 @@ export async function initialize(context: vscode.ExtensionContext) {
 				vscode.window.showErrorMessage(`Failed to download prefixes: ${error.message}`);
 			}
 		});
+	});
+
+	vscode.commands.registerCommand('mentor.action.groupDefinitionsByType', () => {
+		settings.set('view.definitionTreeLayout', DefinitionTreeLayout.ByType);
+	});
+
+	vscode.commands.registerCommand('mentor.action.groupDefinitionsBySource', () => {
+		settings.set('view.definitionTreeLayout', DefinitionTreeLayout.BySource);
 	});
 
 	vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
