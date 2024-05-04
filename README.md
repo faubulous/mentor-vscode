@@ -1,7 +1,7 @@
 # Mentor RDF for Visual Studio Code
 [![License: GPL-V3](https://img.shields.io/badge/license-GPL3-brightgree)](./LICENSE)
 
-This extension provides powerful editing support for RDF ontologies and knowledge graph projects in Visual Studio Code.
+This extension provides powerful editing support for RDF ontologies, thesauri and knowledge graph projects in Visual Studio Code.
 
 <img src="media/screenshot.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
 
@@ -17,8 +17,17 @@ This extension provides the following features:
   - Creates an index of all ontologies in the workspace
   - Find all references to a subject in the workspace
   - Provides code lenses that show reference statistics for a subject
-- **Ontology Tree**
-  - Showing definitions of classes, properties and individuals
+- **Definitions Tree**
+  - Showing the definitions in RDFS or OWL ontologies
+    - Ontologies
+    - Classes
+    - Properties
+    - Individuals
+  - Showing the definitions in SKOS thesauri
+    - Concept Schemes
+    - Concepts
+    - Collections
+  - Grouping of definitions by concept scheme, ontology or `rdfs:isDefinedBy`
   - Quickly jump to definitions
   - RDFS and limited OWL reasoning
   - Find all references in the current document
@@ -33,6 +42,13 @@ This extension provides the following features:
   - Rename resource labels in prefixed names and URIs
 
 ## News
+### Version 0.1.7: SKOS + Improved Definitions Tree
+This release includes support for SKOS thesauri resources in the definitions tree: Concept Schemes, Concepts and Collections. To harmonize the user experience of ontologies and thesauri, the definitions tree can now group classes, properties and invidiuals by definition source.
+
+This means that ontology headers are now expandable nodes that show all classes, properties and individuals defined in its namespace. It also considers the `rdfs:isDefinedBy` property to create groups or to explicitly associate a definition with one or more ontologies that have a different namespace. This setting can be changed temporarily in the definitions tree context menu or permanently in the extension settings.
+
+The next release will include support for SHACL shapes.
+
 ### Version 0.1.6: Bugfixes
 A minor bugfix release. Next release will feature an improved definitions tree view and SKOS support.
 - Fixed syntax support for TriG files
