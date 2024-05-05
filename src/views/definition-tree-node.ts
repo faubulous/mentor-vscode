@@ -11,7 +11,7 @@ export interface DefinitionTreeNode {
 
 	context: DocumentContext;
 
-	contextType: string;
+	contextType?: string;
 
 	options?: DefinitionQueryOptions;
 

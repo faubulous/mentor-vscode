@@ -53,6 +53,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		this._onDidChangeTreeLayout(layout);
 
 		mentor.settings.onDidChange("view.definitionTreeLayout", (e) => {
+			// When the layout was changed through a command, refresh the tree.
 			this._onDidChangeTreeLayout(e.newValue);
 
 			this.refresh();
@@ -121,6 +122,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 	}
 
+	/**
+	 * Get the root nodes of the document, grouped by type.
+	 * @returns The root nodes of the document.
+	 */
 	getRootNodes(): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -161,6 +166,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return result;
 	}
 
+	/**
+	 * Get the root nodes of the document, grouped by definition source.
+	 * @returns The root nodes of the document.
+	 */
 	getRootNodesWithSources(): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -195,6 +204,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			}
 
 			const n = new OntologyNode(this.context, `<${source}>`, source, { definedBy: source });
+			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 			n.isReferenced = true;
 
 			sourceNodes.push(n);
@@ -239,6 +249,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return result;
 	}
 
+	/**
+	 * Get the children of an ontology node.
+	 * @param node An ontology node.
+	 * @returns An array of children.
+	 */
 	getOntologyNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -272,6 +287,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return result;
 	}
 
+	/**
+	 * Get the children of a class node.
+	 * @param node A class node.
+	 * @returns An array of children.
+	 */
 	getClassNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -287,6 +307,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return this.sortByLabel(result);
 	}
 
+	/**
+	 * Get the children of a property node.
+	 * @param node A property node.
+	 * @returns An array of children.
+	 */
 	getPropertyNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -329,6 +354,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return this.sortByLabel(result);
 	}
 
+	/**
+	 * Get the children of an invidiual node.
+	 * @param node A invidiual node.
+	 * @returns An array of children.
+	 */
 	getIndividualNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -357,6 +387,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return this.sortByLabel(result);
 	}
 
+	/**
+	 * Get the children of a concept node.
+	 * @param node A concept node.
+	 * @returns An array of children.
+	 */
 	getConceptNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -377,6 +412,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return this.sortByLabel(result);
 	}
 
+	/**
+	 * Get the children of a concept scheme node.
+	 * @param node A concept scheme node.
+	 * @returns An array of children.
+	 */
 	getConceptSchemeNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -400,6 +440,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return result;
 	}
 
+	/**
+	 * Get the children of a collection node.
+	 * @param node A collection node.
+	 * @returns An array of children.
+	 */
 	getCollectionNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
@@ -433,22 +478,16 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	getTreeItem(node: DefinitionTreeNode): vscode.TreeItem {
-		if (node && node.id) {
-			return {
-				id: node.id,
-				contextValue: node.contextValue,
-				collapsibleState: node.getCollapsibleState(),
-				iconPath: node.getIcon(),
-				label: node.getLabel(),
-				description: node.getDescription(),
-				command: node.getCommand(),
-				tooltip: node.getTooltip()
-			};
-		} else {
-			const item = new vscode.TreeItem('No items found', vscode.TreeItemCollapsibleState.None);
-			item.contextValue = 'noItems';
-			return item;
-		}
+		return {
+			id: node.id,
+			contextValue: node.contextValue,
+			collapsibleState: node.getCollapsibleState(),
+			iconPath: node.getIcon(),
+			label: node.getLabel(),
+			description: node.getDescription(),
+			command: node.getCommand(),
+			tooltip: node.getTooltip()
+		};
 	}
 
 	/**

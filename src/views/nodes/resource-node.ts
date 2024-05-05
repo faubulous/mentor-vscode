@@ -12,7 +12,7 @@ export class ResourceNode implements DefinitionTreeNode {
 
 	context: DocumentContext;
 
-	contextType: string;
+	contextType?: string;
 
 	options?: DefinitionQueryOptions;
 
