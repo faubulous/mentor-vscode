@@ -5,12 +5,12 @@ import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { ClassNode } from './nodes/class-node';
+import { CollectionNode } from './nodes/collection-node';
+import { ConceptNode } from './nodes/concept-node';
+import { ConceptSchemeNode } from './nodes/concept-scheme-node';
+import { IndividualNode } from './nodes/individual-node';
 import { OntologyNode } from './nodes/ontology-node';
 import { PropertyNode } from './nodes/property-node';
-import { IndividualNode } from './nodes/individual-node';
-import { ConceptSchemeNode } from './nodes/concept-scheme-node';
-import { ConceptNode } from './nodes/concept-node';
-import { CollectionNode } from './nodes/collection-node';
 import { DefinitionTreeLayout } from '../settings';
 
 /**
@@ -218,29 +218,30 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		// Note: For the root nodes we only want to show sources that actually contain *defined* classses. 
 		// This is why we exclude referenced classes here, independently of the current setting.
+		let options = { notDefinedBy: [...ontologyUris, ...sourceUris], includeReferenced: false };
 		let hasUnknown = false;
 
-		for (let _ of mentor.vocabulary.getClasses(this.context.graphs, { notDefinedBy: ontologyUris, includeReferenced: false })) {
+		for (let _ of mentor.vocabulary.getClasses(this.context.graphs, options)) {
 			hasUnknown = true;
 			break;
 		}
 
 		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getProperties(this.context.graphs, { notDefinedBy: ontologyUris, includeReferenced: false })) {
+			for (let _ of mentor.vocabulary.getProperties(this.context.graphs, options)) {
 				hasUnknown = true;
 				break;
 			}
 		}
 
 		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined, { notDefinedBy: ontologyUris, includeReferenced: false })) {
+			for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined, options)) {
 				hasUnknown = true;
 				break;
 			}
 		}
 
 		if (hasUnknown) {
-			const n = new OntologyNode(this.context, '<>', undefined, { notDefinedBy: [...ontologyUris, ...sourceUris], includeReferenced: false });
+			const n = new OntologyNode(this.context, '<>', undefined, options);
 			n.isReferenced = true;
 
 			result.push(n);
@@ -259,28 +260,27 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return [];
 		}
 
+		const result = [];
+
 		// Note: Do not override the node options includeReferenced setting if it is already set.
 		const includeReferenced = node.options?.includeReferenced === undefined && this.showReferencedClasses && node.uri != null;
-
 		const options = { ...node.options, includeReferenced: includeReferenced };
-
-		const result = [];
 
 		const classes = new ClassNode(this.context, node.id + '/classes', undefined, options, "classes");
 
-		if (classes.getCollapsibleState() !== vscode.TreeItemCollapsibleState.None) {
+		if (this.getClassNodeChildren(classes).length > 0) {
 			result.push(classes);
 		}
 
 		const properties = new PropertyNode(this.context, node.id + '/properties', undefined, options, "properties");
 
-		if (properties.getCollapsibleState() !== vscode.TreeItemCollapsibleState.None) {
+		if (this.getPropertyNodeChildren(properties).length > 0) {
 			result.push(properties);
 		}
 
 		const individuals = new IndividualNode(this.context, node.id + '/individuals', undefined, options, "individuals");
 
-		if (individuals.getCollapsibleState() !== vscode.TreeItemCollapsibleState.None) {
+		if (this.getIndividualNodeChildren(individuals).length > 0) {
 			result.push(individuals);
 		}
 
@@ -325,7 +325,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			for (let t of types) {
 				const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
 				n.contextType = RDF.Property;
-				n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 				result.push(n);
 			}
@@ -372,7 +371,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			for (let t of types) {
 				const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
 				n.contextType = OWL.NamedIndividual;
-				n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 				result.push(n);
 			}
@@ -427,13 +425,13 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		const concepts = new ConceptNode(this.context, node.id + '/concepts', undefined, options);
 
-		if (concepts.getCollapsibleState() !== vscode.TreeItemCollapsibleState.None) {
+		if (this.getConceptNodeChildren(concepts).length > 0) {
 			result.push(concepts);
 		}
 
 		const collections = new CollectionNode(this.context, node.id + '/collections', undefined, options);
 
-		if (collections.getCollapsibleState() !== vscode.TreeItemCollapsibleState.None) {
+		if (this.getCollectionNodeChildren(collections).length > 0) {
 			result.push(collections);
 		}
 
@@ -478,10 +476,13 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	getTreeItem(node: DefinitionTreeNode): vscode.TreeItem {
+		const children = this.getChildren(node);
+		const collapsibleState = children?.length ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None;
+
 		return {
 			id: node.id,
 			contextValue: node.contextValue,
-			collapsibleState: node.getCollapsibleState(),
+			collapsibleState: collapsibleState,
 			iconPath: node.getIcon(),
 			label: node.getLabel(),
 			description: node.getDescription(),

@@ -119,12 +119,4 @@ export class PropertyNode extends ResourceNode {
 
 		return result;
 	}
-
-	override getCollapsibleState(): vscode.TreeItemCollapsibleState {		
-		if (mentor.vocabulary.getSubProperties(this.context.graphs, this.uri, this.options).length > 0) {
-			return vscode.TreeItemCollapsibleState.Collapsed;
-		} else {
-			return vscode.TreeItemCollapsibleState.None;
-		}
-	}
 }

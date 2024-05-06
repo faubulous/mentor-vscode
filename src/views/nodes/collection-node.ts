@@ -39,14 +39,4 @@ export class CollectionNode extends ResourceNode {
 			return members.length.toString();
 		}
 	}
-
-	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		if (this.uri && mentor.vocabulary.hasCollectionMembers(this.context.graphs, this.uri)) {
-			return vscode.TreeItemCollapsibleState.Collapsed;
-		} else if (!this.uri && mentor.vocabulary.getCollections(this.context.graphs).length > 0) {
-			return vscode.TreeItemCollapsibleState.Collapsed;
-		} else {
-			return vscode.TreeItemCollapsibleState.None;
-		}
-	}
 }

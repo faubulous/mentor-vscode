@@ -66,12 +66,4 @@ export class ClassNode extends ResourceNode {
 
 		return result;
 	}
-
-	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		if (mentor.vocabulary.getSubClasses(this.context.graphs, this.uri, this.options).length > 0) {
-			return vscode.TreeItemCollapsibleState.Collapsed;
-		} else {
-			return this.initialCollapsibleState;
-		}
-	}
 }

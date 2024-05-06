@@ -33,12 +33,4 @@ export class ConceptNode extends ResourceNode {
 			return members.length.toString();
 		}
 	}
-
-	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		if (this.uri && !mentor.vocabulary.hasNarrowerConcepts(this.context.graphs, this.uri)) {
-			return vscode.TreeItemCollapsibleState.None;
-		} else {
-			return vscode.TreeItemCollapsibleState.Collapsed;
-		}
-	}
 }

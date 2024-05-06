@@ -40,12 +40,6 @@ export interface DefinitionTreeNode {
 	getIconColor(): vscode.ThemeColor | undefined;
 
 	/**
-	 * Get the collapsible state of the tree item.
-	 * @returns The collapsible state of the tree item.
-	 */
-	getCollapsibleState(): vscode.TreeItemCollapsibleState;
-
-	/**
 	 * Get the command for the tree item.
 	 * @returns A command or undefined if no command should be shown.
 	 */

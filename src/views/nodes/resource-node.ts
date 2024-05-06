@@ -16,8 +16,6 @@ export class ResourceNode implements DefinitionTreeNode {
 
 	options?: DefinitionQueryOptions;
 
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
-
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;
 		this.uri = uri;
@@ -89,13 +87,5 @@ export class ResourceNode implements DefinitionTreeNode {
 	 */
 	getIconColor(): vscode.ThemeColor | undefined {
 		return new vscode.ThemeColor('descriptionForeground');
-	}
-
-	/**
-	 * Get the collapsible state of the tree item.
-	 * @returns The collapsible state of the tree item.
-	 */
-	getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		return  this.initialCollapsibleState;
 	}
 }

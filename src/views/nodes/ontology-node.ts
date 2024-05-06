@@ -47,22 +47,4 @@ export class OntologyNode extends ResourceNode {
 
 		return result;
 	}
-
-	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		let hasChildren = false;
-
-		if (mentor.vocabulary.getClasses(this.context.graphs, { definedBy: this.uri }).length > 0) {
-			hasChildren = true;
-		} else if (mentor.vocabulary.getProperties(this.context.graphs, { definedBy: this.uri }).length > 0) {
-			hasChildren = true;
-		} else if (mentor.vocabulary.getIndividuals(this.context.graphs, undefined, { definedBy: this.uri }).length > 0) {
-			hasChildren = true;
-		}
-
-		if (hasChildren) {
-			return this.initialCollapsibleState;
-		} else {
-			return vscode.TreeItemCollapsibleState.None;
-		}
-	}
 }

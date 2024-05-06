@@ -45,12 +45,4 @@ export class IndividualNode extends ResourceNode {
 
 		return result;
 	}
-
-	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		if (this.uri || mentor.vocabulary.getIndividuals(this.context.graphs, undefined, this.options).length == 0) {
-			return vscode.TreeItemCollapsibleState.None;
-		} else {
-			return vscode.TreeItemCollapsibleState.Collapsed;
-		}
-	}
 }
