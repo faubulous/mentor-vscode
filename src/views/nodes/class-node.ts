@@ -7,6 +7,8 @@ import { DocumentContext } from "../../document-context";
 export class ClassNode extends ResourceNode {
 	contextType = RDFS.Class;
 
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions, contextValue = "class") {
 		super(context, id, uri, options);
 
@@ -17,11 +19,11 @@ export class ClassNode extends ResourceNode {
 		if (this.uri) {
 			let icon = 'rdf-class';
 
-			if (!mentor.vocabulary.hasSubject(this.context.graphs, this.uri)) {
+			if (!mentor.vocabulary.hasSubject(this.document.graphs, this.uri)) {
 				icon += '-ref';
 			}
 
-			if (mentor.vocabulary.hasIndividuals(this.context.graphs, this.uri)) {
+			if (mentor.vocabulary.hasIndividuals(this.document.graphs, this.uri)) {
 				icon += "-i";
 			}
 
@@ -40,7 +42,7 @@ export class ClassNode extends ResourceNode {
 			}
 		} else {
 			return {
-				label: this.context.getResourceLabel(this.uri)
+				label: this.document.getResourceLabel(this.uri)
 			}
 		}
 	}
@@ -49,9 +51,9 @@ export class ClassNode extends ResourceNode {
 		let result = "";
 
 		if (!this.uri) {
-			result += mentor.vocabulary.getClasses(this.context.graphs, this.options).length.toString();
+			result += mentor.vocabulary.getClasses(this.document.graphs, this.options).length.toString();
 		} else {
-			if (mentor.vocabulary.hasEquivalentClass(this.context.graphs, this.uri)) {
+			if (mentor.vocabulary.hasEquivalentClass(this.document.graphs, this.uri)) {
 				result += "≡";
 			}
 

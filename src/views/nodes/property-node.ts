@@ -8,6 +8,8 @@ import { DocumentContext } from "../../document-context";
 export class PropertyNode extends ResourceNode {
 	contextType = RDF.Property;
 
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions, contextValue = "property") {
@@ -30,14 +32,14 @@ export class PropertyNode extends ResourceNode {
 		let p = new NamedNode(rdf.type.id);
 		let o = new NamedNode(owl.DatatypeProperty.id);
 
-		for (let q of mentor.vocabulary.store.match(this.context.graphs, s, p, o)) {
+		for (let q of mentor.vocabulary.store.match(this.document.graphs, s, p, o)) {
 			this.propertyType = 'dataProperty';
 			icon = 'symbol-text';
 			break;
 		}
 
 		// 2. Derive the icon from the property type.
-		const range = mentor.vocabulary.getRange(this.context.graphs, this.uri);
+		const range = mentor.vocabulary.getRange(this.document.graphs, this.uri);
 
 		switch (range) {
 			case xsd.date.id:
@@ -102,7 +104,7 @@ export class PropertyNode extends ResourceNode {
 			}
 		} else {
 			return {
-				label: this.context.getResourceLabel(this.uri)
+				label: this.document.getResourceLabel(this.uri)
 			}
 		}
 
@@ -112,7 +114,7 @@ export class PropertyNode extends ResourceNode {
 		let result = "";
 
 		if (!this.uri) {
-			const properties = mentor.vocabulary.getProperties(this.context.graphs, this.options);
+			const properties = mentor.vocabulary.getProperties(this.document.graphs, this.options);
 			
 			result += properties.length.toString();
 		}

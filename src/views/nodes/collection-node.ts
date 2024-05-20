@@ -6,9 +6,11 @@ import { SKOS } from "@faubulous/mentor-rdf";
 export class CollectionNode extends ResourceNode {
 	contextType = SKOS.Collection;
 
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+
 	override getIcon() {
 		if (this.uri) {
-			let isOrdered = mentor.vocabulary.isOrderedCollection(this.context.graphs, this.uri);
+			let isOrdered = mentor.vocabulary.isOrderedCollection(this.document.graphs, this.uri);
 
 			return new vscode.ThemeIcon(isOrdered ? 'rdf-collection-ordered' : 'rdf-collection', this.getIconColor());
 		} else {
@@ -27,14 +29,14 @@ export class CollectionNode extends ResourceNode {
 			}
 		} else {
 			return {
-				label: this.context.getResourceLabel(this.uri)
+				label: this.document.getResourceLabel(this.uri)
 			}
 		}
 	}
 
 	override getDescription(): string | undefined {
 		if (!this.uri) {
-			const members = mentor.vocabulary.getCollections(this.context.graphs);
+			const members = mentor.vocabulary.getCollections(this.document.graphs);
 
 			return members.length.toString();
 		}

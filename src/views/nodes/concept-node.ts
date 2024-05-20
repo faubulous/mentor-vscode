@@ -6,6 +6,8 @@ import { SKOS } from "@faubulous/mentor-rdf";
 export class ConceptNode extends ResourceNode {
 	contextType = SKOS.Concept;
 
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+
 	override getIcon() {
 		return this.uri ? new vscode.ThemeIcon('rdf-concept', this.getIconColor()) : undefined;
 	}
@@ -21,14 +23,14 @@ export class ConceptNode extends ResourceNode {
 			}
 		} else {
 			return {
-				label: this.context.getResourceLabel(this.uri)
+				label: this.document.getResourceLabel(this.uri)
 			}
 		}
 	}
 
 	override getDescription(): string | undefined {
 		if (!this.uri) {
-			const members = mentor.vocabulary.getConcepts(this.context.graphs);
+			const members = mentor.vocabulary.getConcepts(this.document.graphs);
 
 			return members.length.toString();
 		}

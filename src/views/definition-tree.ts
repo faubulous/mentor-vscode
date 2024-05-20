@@ -35,12 +35,12 @@ export class DefinitionTree implements TreeView {
 
 		mentor.onDidChangeVocabularyContext(() => this.updateView());
 
-		vscode.commands.executeCommand("setContext", "view.showReferencedClasses", this.treeDataProvider.showReferencedClasses);
+		vscode.commands.executeCommand("setContext", "view.showReferences", this.treeDataProvider.showReferences);
 
-		mentor.settings.onDidChange("view.showReferencedClasses", (e) => {
-			vscode.commands.executeCommand("setContext", "view.showReferencedClasses", e.newValue);
+		mentor.settings.onDidChange("view.showReferences", (e) => {
+			vscode.commands.executeCommand("setContext", "view.showReferences", e.newValue);
 
-			this.treeDataProvider.showReferencedClasses = e.newValue;
+			this.treeDataProvider.showReferences = e.newValue;
 			this.treeDataProvider.refresh();
 		});
 

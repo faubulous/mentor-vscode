@@ -7,6 +7,8 @@ import { DocumentContext } from "../../document-context";
 export class IndividualNode extends ResourceNode {
 	contextType = OWL.NamedIndividual;
 
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions, contextValue = "individual") {
 		super(context, id, uri, options);
 
@@ -30,7 +32,7 @@ export class IndividualNode extends ResourceNode {
 			}
 		} else {
 			return {
-				label: this.context.getResourceLabel(this.uri)
+				label: this.document.getResourceLabel(this.uri)
 			}
 		}
 
@@ -40,7 +42,7 @@ export class IndividualNode extends ResourceNode {
 		let result = "";
 
 		if (!this.uri) {
-			result += mentor.vocabulary.getIndividuals(this.context.graphs, undefined, this.options).length.toString();
+			result += mentor.vocabulary.getIndividuals(this.document.graphs, undefined, this.options).length.toString();
 		}
 
 		return result;

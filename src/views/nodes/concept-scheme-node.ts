@@ -1,10 +1,11 @@
 import * as vscode from "vscode";
-import * as mentor from "../../mentor";
 import { ResourceNode } from "./resource-node";
 import { SKOS } from "@faubulous/mentor-rdf";
 
 export class ConceptSchemeNode extends ResourceNode {
 	contextType = SKOS.ConceptScheme;
+
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	override getIcon() {
 		return new vscode.ThemeIcon('rdf-concept-scheme', this.getIconColor());
@@ -21,7 +22,7 @@ export class ConceptSchemeNode extends ResourceNode {
 			}
 		} else {
 			return {
-				label: this.context.getResourceLabel(this.uri)
+				label: this.document.getResourceLabel(this.uri)
 			}
 		}
 	}

@@ -29,7 +29,7 @@ export class OntologyNode extends ResourceNode {
 			}
 		} else {
 			return {
-				label: this.context.getResourceLabel(this.uri)
+				label: this.document.getResourceLabel(this.uri)
 			}
 		}
 	}
@@ -38,7 +38,7 @@ export class OntologyNode extends ResourceNode {
 		let result = "";
 
 		if (this.uri) {
-			const version = mentor.vocabulary.getOntologyVersionInfo(this.context.graphs, this.uri);
+			const version = mentor.vocabulary.getOntologyVersionInfo(this.document.graphs, this.uri);
 
 			if (version) {
 				result += version;

@@ -10,16 +10,18 @@ export class ResourceNode implements DefinitionTreeNode {
 
 	uri: string | undefined;
 
-	context: DocumentContext;
+	document: DocumentContext;
 
 	contextType?: string;
 
 	options?: DefinitionQueryOptions;
 
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
+
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;
 		this.uri = uri;
-		this.context = context;
+		this.document = context;
 		this.contextType = RDFS.Resource;
 		this.contextValue = 'resource.' + this.contextType;
 		this.options = options;
@@ -44,7 +46,7 @@ export class ResourceNode implements DefinitionTreeNode {
 	getLabel(): vscode.TreeItemLabel {
 		if (this.uri) {
 			return {
-				label: this.context.getResourceLabel(this.uri)
+				label: this.document.getResourceLabel(this.uri)
 			}
 		} else {
 			return {
@@ -67,7 +69,7 @@ export class ResourceNode implements DefinitionTreeNode {
 	 */
 	getTooltip(): vscode.MarkdownString | undefined {
 		if (this.uri) {
-			return this.context.getResourceTooltip(this.uri);
+			return this.document.getResourceTooltip(this.uri);
 		} else {
 			return undefined;
 		}

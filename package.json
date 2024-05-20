@@ -81,7 +81,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.31",
+    "@faubulous/mentor-rdf": "^0.2.34",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "minimatch": "^9.0.3",
@@ -427,13 +427,13 @@
         "title": "Group by Definition Source"
       },
       {
-        "command": "mentor.action.showReferencedClasses",
-        "title": "Show Referenced Classes",
+        "command": "mentor.action.showReferences",
+        "title": "Show Referenced Resources",
         "icon": "$(rdf-class-ref)"
       },
       {
-        "command": "mentor.action.hideReferencedClasses",
-        "title": "Hide Referenced Classes",
+        "command": "mentor.action.hideReferences",
+        "title": "Hide Referenced Resources",
         "icon": "$(rdf-class-ref-off)"
       },
       {
@@ -501,6 +501,16 @@
           "command": "mentor.action.openSettings",
           "group": "z_commands",
           "when": "view == mentor.view.workspaceTree || view == mentor.view.definitionTree"
+        },
+        {
+          "command": "mentor.action.showReferences",
+          "when": "view == mentor.view.definitionTree && view.showReferences === false",
+          "group": "navigation"
+        },
+        {
+          "command": "mentor.action.hideReferences",
+          "when": "view == mentor.view.definitionTree && view.showReferences === true",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -513,16 +523,6 @@
           "command": "mentor.action.openInBrowser",
           "when": "viewItem =~ /resource.*/",
           "group": "z_commands"
-        },
-        {
-          "command": "mentor.action.showReferencedClasses",
-          "when": "view.showReferencedClasses === false && viewItem == classes",
-          "group": "inline"
-        },
-        {
-          "command": "mentor.action.hideReferencedClasses",
-          "when": "view.showReferencedClasses === true && viewItem == classes",
-          "group": "inline"
         },
         {
           "command": "mentor.action.showPropertyTypes",

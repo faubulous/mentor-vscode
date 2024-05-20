@@ -3,16 +3,36 @@ import { DefinitionQueryOptions } from "@faubulous/mentor-rdf";
 import { DocumentContext } from "../languages";
 
 export interface DefinitionTreeNode {
-	contextValue: string;
-
+	/**
+	 * The unique identifier of the tree item.
+	 */
 	id: string;
 
+	/**
+	 * The URI of the tree item or undefined if the tree item is not associated with a URI.
+	 */
 	uri: string | undefined;
 
-	context: DocumentContext;
+	/**
+	 * The document context of the tree item.
+	 */
+	document: DocumentContext;
 
+	/**
+	 * The RDF type of the definition context.
+	 */
 	contextType?: string;
 
+	/**
+	 * A value that can be accessed in package.json for the context menu.
+	 */
+	contextValue: string;
+
+	initialCollapsibleState: vscode.TreeItemCollapsibleState;
+
+	/**
+	 * The options for querying the children of the tree item.
+	 */
 	options?: DefinitionQueryOptions;
 
 	/**

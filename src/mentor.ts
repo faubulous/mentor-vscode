@@ -197,12 +197,12 @@ export async function initialize(context: vscode.ExtensionContext) {
 		settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
 	});
 
-	vscode.commands.registerCommand('mentor.action.showReferencedClasses', () => {
-		settings.set('view.showReferencedClasses', true);
+	vscode.commands.registerCommand('mentor.action.showReferences', () => {
+		settings.set('view.showReferences', true);
 	});
 
-	vscode.commands.registerCommand('mentor.action.hideReferencedClasses', () => {
-		settings.set('view.showReferencedClasses', false);
+	vscode.commands.registerCommand('mentor.action.hideReferences', () => {
+		settings.set('view.showReferences', false);
 	});
 
 	vscode.commands.registerCommand('mentor.action.showPropertyTypes', () => {
@@ -271,7 +271,6 @@ export async function getExcludePatterns(workspaceUri: vscode.Uri): Promise<stri
 			}
 		} catch {
 			// If the .gitignore file does not exists, ingore it.
-			console.warn(`File not found: ${gitignore.fsPath}`);
 		}
 	}
 

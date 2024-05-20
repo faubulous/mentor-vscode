@@ -26,12 +26,24 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
 
-	showReferencedClasses = true;
+	/**
+	 * Indicates whether to show referenced classes or properties in the tree view.
+	 */
+	showReferences = true;
 
+	/**
+	 * Indicates whether to show property types in the tree view.
+	 */
 	showPropertyTypes = true;
 
+	/**
+	 * Indicates whether to show individual types in the tree view.
+	 */
 	showIndividualTypes = true;
 
+	/**
+	 * Indicates whether to group the definitions by type or by source (ontology / concept scheme).
+	 */
 	showDefinitionSources = false;
 
 	constructor() {
@@ -149,12 +161,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		for (let _ of mentor.vocabulary.getClasses(this.context.graphs)) {
-			result.push(new ClassNode(this.context, '<>/classes', undefined, { includeReferenced: this.showReferencedClasses }, "classes"));
+			result.push(new ClassNode(this.context, '<>/classes', undefined, { includeReferenced: this.showReferences }, "classes"));
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getProperties(this.context.graphs)) {
-			result.push(new PropertyNode(this.context, '<>/properties', undefined, undefined, "properties"));
+			result.push(new PropertyNode(this.context, '<>/properties', undefined, { includeReferenced: this.showReferences }, "properties"));
 			break;
 		}
 
@@ -247,6 +259,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			result.push(n);
 		}
 
+		// If there is only one definition source, expand it by default.
+		if(result.length === 1) {
+			result[0].initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+		}
+
 		return result;
 	}
 
@@ -263,7 +280,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const result = [];
 
 		// Note: Do not override the node options includeReferenced setting if it is already set.
-		const includeReferenced = node.options?.includeReferenced === undefined && this.showReferencedClasses && node.uri != null;
+		const includeReferenced = node.options?.includeReferenced === undefined && this.showReferences && node.uri != null;
 		const options = { ...node.options, includeReferenced: includeReferenced };
 
 		const classes = new ClassNode(this.context, node.id + '/classes', undefined, options, "classes");
@@ -322,22 +339,15 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		if (node.contextValue === "properties" && this.showPropertyTypes) {
 			const types = mentor.vocabulary.getPropertyTypes(this.context.graphs, node.options);
 
-			for (let t of types) {
-				const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
+			for (let type of types) {
+				const n = new ClassNode(this.context, node.id + `/<${type}>`, type, node.options);
 				n.contextType = RDF.Property;
 
 				result.push(n);
 			}
 		} else if (node.contextValue === "class") {
 			// Note: We only want to returen the asserted properties here.
-			let options = { ...node.options, includeInferred: false };
-			let properties = mentor.vocabulary.getPropertiesOfType(this.context.graphs, node.uri!, options);
-
-			if (properties.length == 0) {
-				// As a fallback, we also include inferred properties.
-				options.includeInferred = true;
-				properties = mentor.vocabulary.getProperties(this.context.graphs, options);
-			}
+			let properties = mentor.vocabulary.getRootPropertiesOfType(this.context.graphs, node.uri!, node.options);
 
 			for (let p of properties) {
 				result.push(new PropertyNode(this.context, node.id + `/<${p}>`, p, node.options));
@@ -477,7 +487,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	getTreeItem(node: DefinitionTreeNode): vscode.TreeItem {
 		const children = this.getChildren(node);
-		const collapsibleState = children?.length ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None;
+		const collapsibleState = children?.length ? node.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
 
 		return {
 			id: node.id,
