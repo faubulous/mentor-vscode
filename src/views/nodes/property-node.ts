@@ -16,23 +16,21 @@ export class PropertyNode extends ResourceNode {
 		super(context, id, uri, options);
 
 		this.contextValue = contextValue;
-	}	
+	}
 
 	override getIcon() {
 		if (!this.uri) {
 			return undefined;
 		}
 
-		let icon = 'arrow-right';
+		let icon = 'rdf-object-property';
 
 		// 1. Determine the property type.
 		this.propertyType = 'objectProperty';
 
 		let s = new NamedNode(this.uri);
-		let p = new NamedNode(rdf.type.id);
-		let o = new NamedNode(owl.DatatypeProperty.id);
 
-		for (let q of mentor.vocabulary.store.match(this.document.graphs, s, p, o)) {
+		for (let _ of mentor.vocabulary.store.match(this.document.graphs, s, rdf.type, owl.DatatypeProperty)) {
 			this.propertyType = 'dataProperty';
 			icon = 'symbol-text';
 			break;
@@ -85,9 +83,13 @@ export class PropertyNode extends ResourceNode {
 				break;
 			}
 			case xsd.anyURI.id: {
-				icon = 'arrow-right';
+				icon = 'rdf-object-property';
 				break;
 			}
+		}
+
+		if (!mentor.vocabulary.hasSubject(this.document.graphs, this.uri)) {
+			icon = 'rdf-object-property-ref';
 		}
 
 		return new vscode.ThemeIcon(icon, this.getIconColor());
@@ -115,7 +117,7 @@ export class PropertyNode extends ResourceNode {
 
 		if (!this.uri) {
 			const properties = mentor.vocabulary.getProperties(this.document.graphs, this.options);
-			
+
 			result += properties.length.toString();
 		}
 

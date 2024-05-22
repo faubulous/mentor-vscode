@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="16"
+   height="16"
+   viewBox="0 0 16 16"
+   fill="none"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="20-arrow-right.svg"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1"
+     inkscape:cx="-547.5"
+     inkscape:cy="120"
+     inkscape:window-width="1920"
+     inkscape:window-height="1010"
+     inkscape:window-x="-6"
+     inkscape:window-y="-6"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1"
+     showguides="true">
+    <inkscape:grid
+       id="grid1"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="1"
+       spacingy="1"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       dotted="false"
+       gridanglex="30"
+       gridanglez="30"
+       visible="false" />
+  </sodipodi:namedview>
+  <path
+     id="rect1"
+     style="fill:#000000;stroke:none;stroke-linejoin:bevel;stroke-dasharray:1.5, 1.5;stroke-dashoffset:1.485"
+     d="M 8.9941406,3.1757812 8.2871094,3.8828125 8.9941406,4.5898438 9.7011719,3.8828125 Z M 10.404297,4.5859375 9.6972656,5.2929688 10.404297,6 11.111328,5.2929688 Z M 11.830078,6.0117188 11.123047,6.71875 11.830078,7.4257812 12.537109,6.71875 Z M 13.240234,7.421875 12.535156,8 13,8.5351562 12.535156,9 13.246094,9.640625 14,8.8867188 V 8.1796875 Z M 3.0078125,8 v 1 h 1 V 8 Z m 1.9960937,0 v 1 h 1 V 8 Z m 1.9941407,0 v 1 h 1 V 8 Z m 1.9960937,0 v 1 h 1 V 8 Z m 2.0136714,0 v 1 h 1 V 8 Z m 0.828126,1.6367188 -0.707032,0.7070312 0.707032,0.707031 0.707031,-0.707031 z m -1.425782,1.4257812 -0.707031,0.707031 0.707031,0.707031 0.707032,-0.707031 z M 9,12.472656 8.2929688,13.179688 9,13.886719 9.7070312,13.179688 Z"
+     sodipodi:nodetypes="ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" />
+</svg>

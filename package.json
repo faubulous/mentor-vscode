@@ -300,6 +300,20 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e010"
         }
+      },
+      "rdf-object-property": {
+        "description": "Object property icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e011"
+        }
+      },
+      "rdf-object-property-ref": {
+        "description": "Object property reference icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e012"
+        }
       }
     },
     "colors": [
@@ -424,17 +438,17 @@
       },
       {
         "command": "mentor.action.groupDefinitionsBySource",
-        "title": "Group by Definition Source"
+        "title": "Group by Source of Definition"
       },
       {
         "command": "mentor.action.showReferences",
         "title": "Show Referenced Resources",
-        "icon": "$(rdf-class-ref)"
+        "icon": "$(rdf-class)"
       },
       {
         "command": "mentor.action.hideReferences",
         "title": "Hide Referenced Resources",
-        "icon": "$(rdf-class-ref-off)"
+        "icon": "$(rdf-class-ref)"
       },
       {
         "command": "mentor.action.showPropertyTypes",
