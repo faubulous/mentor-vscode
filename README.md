@@ -42,6 +42,9 @@ This extension provides the following features:
   - Rename resource labels in prefixed names and URIs
 
 ## News
+### Version 0.1.8: Fixed context menus not working in Definitions Tree
+The context menus for resources in the definitions tree are now working again.
+
 ### Version 0.1.7: SKOS + Improved Definitions Tree
 This release includes support for SKOS thesauri resources in the definitions tree: Concept Schemes, Concepts and Collections. To harmonize the user experience of ontologies and thesauri, the definitions tree can now group classes, properties and invidiuals by definition source.
 
