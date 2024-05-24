@@ -11,13 +11,7 @@ export class PropertyNode extends ResourceNode {
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
-
-	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions, contextValue = "property") {
-		super(context, id, uri, options);
-
-		this.contextValue = contextValue;
-	}
-
+	
 	override getIcon() {
 		if (!this.uri) {
 			return undefined;

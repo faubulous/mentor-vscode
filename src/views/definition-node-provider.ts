@@ -161,17 +161,26 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		for (let _ of mentor.vocabulary.getClasses(this.context.graphs)) {
-			result.push(new ClassNode(this.context, '<>/classes', undefined, { includeReferenced: this.showReferences }, "classes"));
+			const n = new ClassNode(this.context, '<>/classes', undefined, { includeReferenced: this.showReferences });
+			n.contextValue = "classes";
+
+			result.push(n);
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getProperties(this.context.graphs)) {
-			result.push(new PropertyNode(this.context, '<>/properties', undefined, { includeReferenced: this.showReferences }, "properties"));
+			const n = new PropertyNode(this.context, '<>/properties', undefined, { includeReferenced: this.showReferences });
+			n.contextValue = "properties";
+
+			result.push(n);
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined)) {
-			result.push(new IndividualNode(this.context, '<>/individuals', undefined, undefined, "individuals"));
+			const n = new IndividualNode(this.context, '<>/individuals', undefined, undefined);
+			n.contextValue = "individuals";
+
+			result.push(n);
 			break;
 		}
 
@@ -283,19 +292,22 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const includeReferenced = node.options?.includeReferenced === undefined && this.showReferences && node.uri != null;
 		const options = { ...node.options, includeReferenced: includeReferenced };
 
-		const classes = new ClassNode(this.context, node.id + '/classes', undefined, options, "classes");
+		const classes = new ClassNode(this.context, node.id + '/classes', undefined, options);
+		classes.contextValue = "classes";
 
 		if (this.getClassNodeChildren(classes).length > 0) {
 			result.push(classes);
 		}
 
-		const properties = new PropertyNode(this.context, node.id + '/properties', undefined, options, "properties");
+		const properties = new PropertyNode(this.context, node.id + '/properties', undefined, options);
+		properties.contextValue = "properties";
 
 		if (this.getPropertyNodeChildren(properties).length > 0) {
 			result.push(properties);
 		}
 
-		const individuals = new IndividualNode(this.context, node.id + '/individuals', undefined, options, "individuals");
+		const individuals = new IndividualNode(this.context, node.id + '/individuals', undefined, options);
+		individuals.contextValue = "individuals";
 
 		if (this.getIndividualNodeChildren(individuals).length > 0) {
 			result.push(individuals);
@@ -345,7 +357,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 				result.push(n);
 			}
-		} else if (node.contextValue === "class") {
+		} else if (node instanceof ClassNode) {
 			// Note: We only want to returen the asserted properties here.
 			let properties = mentor.vocabulary.getRootPropertiesOfType(this.context.graphs, node.uri!, node.options);
 

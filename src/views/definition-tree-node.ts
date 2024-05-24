@@ -28,6 +28,9 @@ export interface DefinitionTreeNode {
 	 */
 	contextValue: string;
 
+	/**
+	 * The default collapsible state of the tree item.
+	 */
 	initialCollapsibleState: vscode.TreeItemCollapsibleState;
 
 	/**

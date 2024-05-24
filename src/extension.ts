@@ -5,6 +5,7 @@ import { Disposable } from 'vscode-languageclient';
 import { TreeView } from './views/tree-view';
 import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
+import { ResourceNode } from './views/nodes/resource-node';
 import {
 	LanguageClientBase,
 	TurtleLanguageClient,
@@ -67,14 +68,25 @@ export function deactivate(): Thenable<void> {
 	});
 }
 
+function getUriFromArgument(arg: ResourceNode | string): string {
+	if (arg instanceof ResourceNode) {
+		return getUriFromNodeId(arg.id);
+	} else if (typeof arg === 'string') {
+		return arg;
+	} else {
+		throw new Error('Invalid argument type: ' + typeof arg);
+	}
+}
+
 function registerCommands(context: vscode.ExtensionContext) {
 	// Open the settings view via command
 	commands.push(vscode.commands.registerCommand("mentor.action.openSettings", () => {
 		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:faubulous.mentor');
 	}));
 
-	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (uri: string) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (arg: ResourceNode | string) => {
 		const internalBrowser = mentor.configuration.get('internalBrowserEnabled');
+		const uri = getUriFromArgument(arg);
 
 		if (internalBrowser === true) {
 			vscode.commands.executeCommand('simpleBrowser.show', uri);
@@ -83,10 +95,10 @@ function registerCommands(context: vscode.ExtensionContext) {
 		}
 	}));
 
-	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (id: string) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (arg: ResourceNode | string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
-				const uri = getUriFromNodeId(id);
+				const uri = getUriFromArgument(arg);
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {
@@ -100,11 +112,11 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (id: string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
-			if(!id) {
+			if (!id) {
 				// If no id is provided, we fail gracefully.
 				return;
 			}
-			
+
 			const uri = getUriFromNodeId(id);
 
 			if (mentor.activeContext && editor && uri) {

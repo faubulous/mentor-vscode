@@ -9,12 +9,6 @@ export class ClassNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
-	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions, contextValue = "class") {
-		super(context, id, uri, options);
-
-		this.contextValue = contextValue;
-	}	
-
 	override getIcon() {
 		if (this.uri) {
 			let icon = 'rdf-class';
