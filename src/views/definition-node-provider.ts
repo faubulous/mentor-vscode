@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
-import { Uri } from '@faubulous/mentor-rdf';
+import { SHACL, Uri } from '@faubulous/mentor-rdf';
 import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { DefinitionTreeNode } from './definition-tree-node';
@@ -12,6 +12,7 @@ import { IndividualNode } from './nodes/individual-node';
 import { OntologyNode } from './nodes/ontology-node';
 import { PropertyNode } from './nodes/property-node';
 import { DefinitionTreeLayout } from '../settings';
+import { ShapeNode } from './nodes/shape-node';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
@@ -123,6 +124,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return this.getPropertyNodeChildren(node);
 		} else if (node.contextType === OWL.NamedIndividual) {
 			return this.getIndividualNodeChildren(node);
+		} else if (node.contextType === SHACL.Shape) {
+			return this.getShapeNodeChildren(node);
 		} else if (node.contextType === SKOS.ConceptScheme) {
 			return this.getConceptSchemeNodeChildren(node);
 		} else if (node.contextType === SKOS.Concept) {
@@ -179,6 +182,14 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined)) {
 			const n = new IndividualNode(this.context, '<>/individuals', undefined, undefined);
 			n.contextValue = "individuals";
+
+			result.push(n);
+			break;
+		}
+
+		for (let _ of mentor.vocabulary.getShapes(this.context.graphs, undefined)) {
+			const n = new ShapeNode(this.context, '<>/shapes', undefined, undefined);
+			n.contextValue = "shapes";
 
 			result.push(n);
 			break;
@@ -261,6 +272,13 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			}
 		}
 
+		if (!hasUnknown) {
+			for (let _ of mentor.vocabulary.getShapes(this.context.graphs, undefined, options)) {
+				hasUnknown = true;
+				break;
+			}
+		}
+
 		if (hasUnknown) {
 			const n = new OntologyNode(this.context, '<>', undefined, options);
 			n.isReferenced = true;
@@ -269,7 +287,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		// If there is only one definition source, expand it by default.
-		if(result.length === 1) {
+		if (result.length === 1) {
 			result[0].initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 		}
 
@@ -313,6 +331,13 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			result.push(individuals);
 		}
 
+		const shapes = new ShapeNode(this.context, node.id + '/shapes', undefined, options);
+		shapes.contextValue = "shapes";
+
+		if (this.getShapeNodeChildren(shapes).length > 0) {
+			result.push(shapes);
+		}
+
 		return result;
 	}
 
@@ -339,7 +364,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	/**
 	 * Get the children of a property node.
 	 * @param node A property node.
-	 * @returns An array of children.
+	 * @returns An array of child nodes.
 	 */
 	getPropertyNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
@@ -378,7 +403,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	/**
 	 * Get the children of an invidiual node.
 	 * @param node A invidiual node.
-	 * @returns An array of children.
+	 * @returns An array of child nodes.
 	 */
 	getIndividualNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
@@ -401,6 +426,38 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 			for (let x of individuals) {
 				result.push(new IndividualNode(this.context, node.id + `/<${x}>`, x, node.options));
+			}
+		}
+
+		return this.sortByLabel(result);
+	}
+
+	/**
+	 * Get the children of a shape node.
+	 * @param node A shape node.
+	 * @returns An array of child nodes.
+	 */
+	getShapeNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
+		if (!this.context) {
+			return [];
+		}
+
+		const result = [];
+
+		if (node.contextValue === "shapes") {
+			const types = mentor.vocabulary.getShapeTypes(this.context.graphs);
+
+			for (let t of types) {
+				const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
+				n.contextType = SHACL.Shape;
+
+				result.push(n);
+			}
+		} else if (node.uri) {
+			const shapes = mentor.vocabulary.getShapesOfType(this.context.graphs, node.uri, node.options);
+
+			for (let x of shapes) {
+				result.push(new ShapeNode(this.context, node.id + `/<${x}>`, x, node.options));
 			}
 		}
 
@@ -501,6 +558,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const children = this.getChildren(node);
 		const collapsibleState = children?.length ? node.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
 
+		if (this.hasShapes(node) && !(node instanceof ShapeNode)) {
+			node.contextValue += 'shape';
+		}
+
 		return {
 			id: node.id,
 			contextValue: node.contextValue,
@@ -511,6 +572,14 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			command: node.getCommand(),
 			tooltip: node.getTooltip()
 		};
+	}
+
+	hasShapes(node: DefinitionTreeNode): boolean {
+		if (this.context && node.uri) {
+			return mentor.vocabulary.hasShapes(this.context.graphs, node.uri);
+		} else {
+			return false;
+		}
 	}
 
 	/**

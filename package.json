@@ -81,7 +81,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.34",
+    "@faubulous/mentor-rdf": "^0.2.37",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "minimatch": "^9.0.3",
@@ -413,6 +413,11 @@
         "icon": "$(go-to-file)"
       },
       {
+        "command": "mentor.action.revealShapeDefinition",
+        "title": "Go to Shape",
+        "icon": "$(go-to-file)"
+      },
+      {
         "command": "mentor.action.openInBrowser",
         "title": "Open in Browser",
         "icon": "$(globe)"
@@ -530,13 +535,18 @@
       "view/item/context": [
         {
           "command": "mentor.action.findReferences",
-          "when": "viewItem =~ /resource.*/",
+          "when": "viewItem =~ /resource/",
           "group": "4_search"
         },
         {
           "command": "mentor.action.openInBrowser",
-          "when": "viewItem =~ /resource.*/",
+          "when": "viewItem =~ /resource/",
           "group": "z_commands"
+        },
+        {
+          "command": "mentor.action.revealShapeDefinition",
+          "when": "viewItem =~ /shape/",
+          "group": "inline"
         },
         {
           "command": "mentor.action.showPropertyTypes",

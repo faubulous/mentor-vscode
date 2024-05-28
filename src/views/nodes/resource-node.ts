@@ -23,7 +23,6 @@ export class ResourceNode implements DefinitionTreeNode {
 		this.uri = uri;
 		this.document = context;
 		this.contextType = RDFS.Resource;
-		this.contextValue = 'resource.' + this.contextType;
 		this.options = options;
 	}
 

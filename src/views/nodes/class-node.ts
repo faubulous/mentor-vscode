@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
 import * as mentor from "../../mentor";
-import { RDFS, DefinitionQueryOptions } from "@faubulous/mentor-rdf";
+import { RDFS } from "@faubulous/mentor-rdf";
 import { ResourceNode } from "./resource-node";
-import { DocumentContext } from "../../document-context";
 
 export class ClassNode extends ResourceNode {
 	contextType = RDFS.Class;
@@ -47,17 +46,25 @@ export class ClassNode extends ResourceNode {
 		if (!this.uri) {
 			result += mentor.vocabulary.getClasses(this.document.graphs, this.options).length.toString();
 		} else {
+			let indicators = [];
+
 			if (mentor.vocabulary.hasEquivalentClass(this.document.graphs, this.uri)) {
-				result += "≡";
+				indicators.push("≡");
 			}
 
 			// if (mentor.vocabulary.isIntersectionOfClasses(this.context.graphs, this.uri)) {
-			// 	result += "⋂";
+			// 	indicators.push("⋂");
 			// } else if (mentor.vocabulary.isUnionOfClasses(this.context.graphs, this.uri)) {
-			// 	result += "⋃";
+			// 	indicators.push("⋃");
 			// } else if (mentor.vocabulary.hasEquivalentClass(this.context.graphs, this.uri)) {
-			// 	result += "≡";
+			// 	indicators.push("≡");
 			// }
+
+			if(mentor.vocabulary.hasShapes(this.document.graphs, this.uri)) {
+				indicators.push("S");
+			}
+
+			result += indicators.join(" ");
 		}
 
 		return result;

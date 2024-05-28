@@ -72,7 +72,7 @@ function getUriFromArgument(arg: ResourceNode | string): string {
 	if (arg instanceof ResourceNode) {
 		return getUriFromNodeId(arg.id);
 	} else if (typeof arg === 'string') {
-		return arg;
+		return getUriFromNodeId(arg);
 	} else {
 		throw new Error('Invalid argument type: ' + typeof arg);
 	}
@@ -110,17 +110,50 @@ function registerCommands(context: vscode.ExtensionContext) {
 		});
 	}));
 
-	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (id: string, restoreFocus: boolean = false) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (arg: ResourceNode | string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
-			if (!id) {
+			const uri = getUriFromArgument(arg);
+
+			if (!uri) {
 				// If no id is provided, we fail gracefully.
 				return;
 			}
 
-			const uri = getUriFromNodeId(id);
-
 			if (mentor.activeContext && editor && uri) {
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri, true);
+
+				if (location instanceof vscode.Location) {
+					editor.selection = new vscode.Selection(location.range.start, location.range.end);
+					editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
+
+					if (restoreFocus) {
+						// Reset the focus to the definition tree.
+						vscode.commands.executeCommand('mentor.view.definitionTree.focus');
+					}
+				} else {
+					vscode.window.showErrorMessage('No definition found for: ' + uri);
+				}
+			}
+		});
+	}));
+
+	commands.push(vscode.commands.registerCommand('mentor.action.revealShapeDefinition', (arg: ResourceNode | string, restoreFocus: boolean = false) => {
+		mentor.activateDocument().then((editor) => {
+			const uri = getUriFromArgument(arg);
+
+			if (!uri) {
+				// If no id is provided, we fail gracefully.
+				return;
+			}
+
+			if (mentor.activeContext && editor && uri) {
+				const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri)[0];
+
+				if(!shapeUri) {
+					return;
+				}
+
+				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, shapeUri, true);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);

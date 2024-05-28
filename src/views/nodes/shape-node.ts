@@ -1,41 +1,38 @@
 import * as vscode from "vscode";
 import * as mentor from "../../mentor";
-import { OWL } from "@faubulous/mentor-rdf";
+import { SHACL } from "@faubulous/mentor-rdf";
 import { ResourceNode } from "./resource-node";
 
-export class IndividualNode extends ResourceNode {
-	contextType = OWL.NamedIndividual;
+export class ShapeNode extends ResourceNode {
+	contextType = SHACL.Shape;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-	
+
 	override getIcon() {
-		if (this.uri) {
-			return new vscode.ThemeIcon('rdf-individual', this.getIconColor());
-		}
+		return undefined;
 	}
 
 	override getIconColor() {
-		return new vscode.ThemeColor("mentor.color.individual");
+		return new vscode.ThemeColor("mentor.color.class");
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
 		if (!this.uri) {
 			return {
-				label: "Individuals"
+				label: "Shapes"
 			}
 		} else {
 			return {
 				label: this.document.getResourceLabel(this.uri)
 			}
 		}
-
 	}
 
 	override getDescription(): string {
 		let result = "";
 
 		if (!this.uri) {
-			result += mentor.vocabulary.getIndividuals(this.document.graphs, undefined, this.options).length.toString();
+			result += mentor.vocabulary.getShapes(this.document.graphs).length.toString();
 		}
 
 		return result;
