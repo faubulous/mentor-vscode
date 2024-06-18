@@ -60,10 +60,6 @@ export class ClassNode extends ResourceNode {
 			// 	indicators.push("≡");
 			// }
 
-			if(mentor.vocabulary.hasShapes(this.document.graphs, this.uri)) {
-				indicators.push("S");
-			}
-
 			result += indicators.join(" ");
 		}
 

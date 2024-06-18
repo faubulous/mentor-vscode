@@ -112,8 +112,6 @@ export class PropertyNode extends ResourceNode {
 			const properties = mentor.vocabulary.getProperties(this.document.graphs, this.options);
 
 			result += properties.length.toString();
-		} else if (mentor.vocabulary.hasShapes(this.document.graphs, this.uri)) {
-			result += "S";
 		}
 
 		return result;

@@ -314,6 +314,27 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e012"
         }
+      },
+      "rdf-shape-node": {
+        "description": "Node shape icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e015"
+        }
+      },
+      "rdf-shape-property": {
+        "description": "Property shape icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e016"
+        }
+      },
+      "go-to-shape": {
+        "description": "Go to shape icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e017"
+        }
       }
     },
     "colors": [
@@ -414,8 +435,8 @@
       },
       {
         "command": "mentor.action.revealShapeDefinition",
-        "title": "Go to Shape",
-        "icon": "$(go-to-file)"
+        "title": "Go to Shape Definition",
+        "icon": "$(go-to-shape)"
       },
       {
         "command": "mentor.action.openInBrowser",

@@ -9,7 +9,15 @@ export class ShapeNode extends ResourceNode {
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	override getIcon() {
-		return undefined;
+		if (this.uri) {
+			let icon = 'rdf-shape-node';
+
+			if (mentor.vocabulary.hasType(this.document.graphs, this.uri, SHACL.PropertyShape, { includeInferred: true })) {
+				icon = 'rdf-shape-property';
+			}
+
+			return new vscode.ThemeIcon(icon, this.getIconColor());
+		}
 	}
 
 	override getIconColor() {

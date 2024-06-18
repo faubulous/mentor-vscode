@@ -5,6 +5,7 @@ import { Disposable } from 'vscode-languageclient';
 import { TreeView } from './views/tree-view';
 import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
+import { DefinitionNodeDecorationProvider } from './views/definition-node-decoration-provider';
 import { ResourceNode } from './views/nodes/resource-node';
 import {
 	LanguageClientBase,
@@ -44,6 +45,8 @@ export async function activate(context: vscode.ExtensionContext) {
 	for (const client of clients) {
 		client.start(context);
 	}
+
+	providers.push(vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider()));
 
 	mentor.initialize(context);
 }
@@ -149,7 +152,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 			if (mentor.activeContext && editor && uri) {
 				const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri)[0];
 
-				if(!shapeUri) {
+				if (!shapeUri) {
 					return;
 				}
 
