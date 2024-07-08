@@ -442,9 +442,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return [];
 		}
 
-		const result = [];
-
 		if (node.contextValue === "shapes") {
+			const result = [];
 			const types = mentor.vocabulary.getShapeTypes(this.context.graphs, node.options);
 
 			for (let t of types) {
@@ -453,26 +452,34 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 				result.push(n);
 			}
-		} else if (node.uri) {
-			const options = { ...node.options, includeInferred: false };
-			
-			const types = mentor.vocabulary.getSubClasses(undefined, node.uri);
 
-			for (let t of types) {
-				const n = new ClassNode(this.context, node.id + `/<${t}>`, t, options);
+			return this.sortByLabel(result);
+		} else if (node.uri) {
+			const classNodes = [];
+			const classes = mentor.vocabulary.getSubClasses(undefined, node.uri);
+
+			for (let c of classes) {
+				const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
 				n.contextType = SHACL.Shape;
 
-				result.push(n);
+				classNodes.push(n);
 			}
 
-			const shapes = mentor.vocabulary.getShapesOfType(this.context.graphs, node.uri, options);
+			const shapeNodes = [];
+			const shapes = mentor.vocabulary.getShapesOfType(["http://www.w3.org/ns/shacl#", ...this.context.graphs], node.uri, {
+				...node.options,
+				includeBlankNodes: true,
+				includeSubTypes: false
+			});
 
 			for (let x of shapes) {
-				result.push(new ShapeNode(this.context, node.id + `/<${x}>`, x, node.options));
+				shapeNodes.push(new ShapeNode(this.context, node.id + `/<${x}>`, x, node.options));
 			}
-		}
 
-		return this.sortByLabel(result);
+			return [...this.sortByLabel(classNodes), ...this.sortByLabel(shapeNodes)];
+		} else {
+			return [];
+		}
 	}
 
 	/**
@@ -575,9 +582,9 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		return {
 			id: node.id,
-			resourceUri: node.uri ? vscode.Uri.parse(node.uri) : undefined,
 			contextValue: node.contextValue,
 			collapsibleState: collapsibleState,
+			resourceUri: node.getResourceUri(),
 			iconPath: node.getIcon(),
 			label: node.getLabel(),
 			description: node.getDescription(),
@@ -588,7 +595,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	hasShapes(node: DefinitionTreeNode): boolean {
 		if (this.context && node.uri) {
-			return mentor.vocabulary.hasShapes(this.context.graphs, node.uri, node.options);
+			return mentor.vocabulary.hasShapes(this.context.graphs, node.uri, { ...node.options, definedBy: undefined });
 		} else {
 			return false;
 		}

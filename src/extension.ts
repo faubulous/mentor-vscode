@@ -150,7 +150,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 			}
 
 			if (mentor.activeContext && editor && uri) {
-				const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri)[0];
+				const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri, { includeBlankNodes: true })[0];
 
 				if (!shapeUri) {
 					return;

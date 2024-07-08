@@ -227,11 +227,11 @@ export async function initialize(context: vscode.ExtensionContext) {
 		// If there is a document opened in the editor, load it.
 		onActiveEditorChanged();
 
-		// Load the workspace files and folders for the explorer tree view.
-		await workspace.initialize();
-
 		// Load the W3C and other common ontologies for providing hovers, completions and definitions.
 		await store.loadFrameworkOntologies();
+
+		// Load the workspace files and folders for the explorer tree view.
+		await workspace.initialize();
 
 		// Index the entire workspace for providing hovers, completions and definitions.
 		await indexer.indexWorkspace();

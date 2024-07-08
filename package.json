@@ -81,7 +81,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.37",
+    "@faubulous/mentor-rdf": "^0.2.38",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "minimatch": "^9.0.3",
@@ -161,7 +161,8 @@
           "sparql"
         ],
         "extensions": [
-          ".sparql"
+          ".sparql",
+          ".rq"
         ],
         "configuration": "./src/languages/sparql-language-config.json",
         "icon": {
@@ -350,24 +351,24 @@
         "id": "mentor.color.class",
         "description": "Color used for tree nodes representing class or class references.",
         "defaults": {
-          "light": "#0000ff",
-          "dark": "#4e94ce"
+          "light": "#007acc",
+          "dark": "#3399ff"
         }
       },
       {
         "id": "mentor.color.individual",
         "description": "Color used for tree nodes representing literals.",
         "defaults": {
-          "light": "#0000ff",
-          "dark": "#4e94ce"
+          "light": "#007acc",
+          "dark": "#3399ff"
         }
       },
       {
         "id": "mentor.color.objectProperty",
         "description": "Color used for tree nodes representing object properties.",
         "defaults": {
-          "light": "#0000ff",
-          "dark": "#4e94ce"
+          "light": "#006bd5",
+          "dark": "#3399ff"
         }
       },
       {
@@ -566,7 +567,7 @@
         },
         {
           "command": "mentor.action.revealShapeDefinition",
-          "when": "viewItem =~ /shape/",
+          "when": "viewItem != shapes && viewItem =~ /shape/",
           "group": "inline"
         },
         {

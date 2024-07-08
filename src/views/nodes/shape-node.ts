@@ -45,4 +45,8 @@ export class ShapeNode extends ResourceNode {
 
 		return result;
 	}
+
+	override getResourceUri(): vscode.Uri | undefined {
+		return undefined;
+	}
 }

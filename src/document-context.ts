@@ -90,7 +90,7 @@ export abstract class DocumentContext {
 	 * Infers new triples from the document, if not already done.
 	 */
 	async infer(): Promise<void> {
-		// Do nothing.
+		// Do nothing if not overloaded.
 	}
 
 	protected abstract parseData(data: string): Promise<TokenizerResult>;

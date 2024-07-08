@@ -18,6 +18,8 @@ export class ResourceNode implements DefinitionTreeNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
 
+	resourceUri?: vscode.Uri | undefined;
+
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;
 		this.uri = uri;
@@ -76,9 +78,9 @@ export class ResourceNode implements DefinitionTreeNode {
 
 	/**
 	 * Get the icon of the tree item.
-	 * @returns A theme icon or undefined if no icon should be shown.
+	 * @returns A theme icon, a file system path or undefined if no icon should be shown.
 	 */
-	getIcon(): vscode.ThemeIcon | undefined {
+	getIcon(): vscode.ThemeIcon | string | undefined {
 		return undefined;
 	}
 
@@ -88,5 +90,19 @@ export class ResourceNode implements DefinitionTreeNode {
 	 */
 	getIconColor(): vscode.ThemeColor | undefined {
 		return new vscode.ThemeColor('descriptionForeground');
+	}
+
+	/**
+	 * Get the resolved resourceUri of the tree item. This is either the `resourceUri` or the `uri` of the tree item.
+	 * @returns The URI of the tree item or undefined if the tree item is not associated with a URI.
+	 */
+	getResourceUri(): vscode.Uri | undefined {
+		if (this.resourceUri) {
+			return this.resourceUri;
+		} else if (this.uri) {
+			return vscode.Uri.parse(this.uri);
+		} else {
+			return undefined;
+		}
 	}
 }

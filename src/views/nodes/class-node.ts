@@ -52,6 +52,10 @@ export class ClassNode extends ResourceNode {
 				indicators.push("≡");
 			}
 
+			// if (mentor.vocabulary.hasShapes(this.document.graphs, this.uri)) {
+			// 	indicators.push("⬡");
+			// }
+
 			// if (mentor.vocabulary.isIntersectionOfClasses(this.context.graphs, this.uri)) {
 			// 	indicators.push("⋂");
 			// } else if (mentor.vocabulary.isUnionOfClasses(this.context.graphs, this.uri)) {

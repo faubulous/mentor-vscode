@@ -14,6 +14,11 @@ export interface DefinitionTreeNode {
 	uri: string | undefined;
 
 	/**
+	 * The URI of the resource associated with the tree item.
+	 */
+	resourceUri?: vscode.Uri;
+
+	/**
 	 * The document context of the tree item.
 	 */
 	document: DocumentContext;
@@ -39,6 +44,12 @@ export interface DefinitionTreeNode {
 	options?: DefinitionQueryOptions;
 
 	/**
+	 * Get the resolved resourceUri of the tree item. This is either the `resourceUri` or the `uri` of the tree item.
+	 * @returns The URI of the tree item or undefined if the tree item is not associated with a URI.
+	 */
+	getResourceUri(): vscode.Uri | undefined;
+
+	/**
 	 * Get the label of the tree item.
 	 * @returns The label of the tree item.
 	 */
@@ -52,9 +63,9 @@ export interface DefinitionTreeNode {
 
 	/**
 	 * Get the icon of the tree item.
-	 * @returns A theme icon or undefined if no icon should be shown.
+	 * @returns A theme icon, a file system path or undefined if no icon should be shown.
 	 */
-	getIcon(): vscode.ThemeIcon | undefined;
+	getIcon(): vscode.ThemeIcon | string | undefined;
 
 	/**
 	 * Get the theme color for the icon of the tree item.
