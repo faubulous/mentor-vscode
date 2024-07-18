@@ -8,6 +8,7 @@ export class ResourceNode implements DefinitionTreeNode {
 
 	id: string;
 
+	// TODO: Make this a rdfjs.Quad_Subject instead of string.
 	uri: string | undefined;
 
 	document: DocumentContext;

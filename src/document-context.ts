@@ -51,6 +51,11 @@ export abstract class DocumentContext {
 	 */
 	readonly typeDefinitions: { [key: string]: IToken[] } = {};
 
+	/**
+	 * Maps blank node ids to indexed tokens.
+	 */
+	readonly blankNodes: { [key: string]: IToken } = {};
+
 	readonly predicates: {
 		label: string[];
 		description: string[];
@@ -81,7 +86,7 @@ export abstract class DocumentContext {
 	async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
 		this.parseTokens(data);
 
-		if(executeInference) {
+		if (executeInference) {
 			await this.infer();
 		}
 	}
@@ -215,21 +220,29 @@ export abstract class DocumentContext {
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
-				// Todo: Fix #10 in mentor-rdf
+				// TODO: Fix #10 in mentor-rdf
 				const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
 
 				// First, try to find a description in the current graph.
 				for (let p of predicates) {
 					for (let q of mentor.store.match(this.graphs, subject, p, null, false)) {
-						return q.object.value;
+						if (q.object.termType === 'Literal') {
+							return q.object.value;
+						} else {
+							return getUriLabel(q.object.value);
+						}
 					}
 				}
 
 				// If none is found, try to find a description in the default graph.
 				for (let p of predicates) {
 					for (let q of mentor.store.match(undefined, subject, p, null, false)) {
-						return q.object.value;
+						if (q.object.termType === 'Literal') {
+							return q.object.value;
+						} else {
+							return getUriLabel(q.object.value);
+						}
 					}
 				}
 

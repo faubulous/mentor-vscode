@@ -58,5 +58,23 @@ export class TurtleDocument extends DocumentContext {
 
 		// Flag the document as inferred if the inference was enabled.
 		this._inferenceExecuted = executeInference;
+
+		// Make definitions using blank nodes resolvable.
+		this.mapBlankNodes();
+	}
+
+	protected mapBlankNodes() {
+		const blankNodes = this.tokens.filter(t => t.tokenType?.tokenName == 'LBracket');
+
+		let n = 0;
+
+		for (let q of mentor.store.match(this.graphs, null, null, null, false)) {
+			if (q.subject.termType == 'BlankNode' && this.blankNodes[q.subject.value] === undefined) {
+				this.blankNodes[q.subject.value] = blankNodes[n];
+				this.typeDefinitions[q.subject.value] = [blankNodes[n]];
+
+				n += 1;
+			}
+		}
 	}
 }

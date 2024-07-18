@@ -9,22 +9,30 @@ export class ClassNode extends ResourceNode {
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	override getIcon() {
-		if (this.uri) {
+		return ClassNode.getIcon(this.document.graphs, this.uri);
+	}
+
+	static getIcon(graphUris: string | string[] | undefined, subjectUri: string | undefined): vscode.ThemeIcon | undefined {
+		if (subjectUri) {
 			let icon = 'rdf-class';
 
-			if (!mentor.vocabulary.hasSubject(this.document.graphs, this.uri)) {
+			if (!mentor.vocabulary.hasSubject(graphUris, subjectUri)) {
 				icon += '-ref';
 			}
 
-			if (mentor.vocabulary.hasIndividuals(this.document.graphs, this.uri)) {
+			if (mentor.vocabulary.hasIndividuals(graphUris, subjectUri)) {
 				icon += "-i";
 			}
 
-			return new vscode.ThemeIcon(icon, this.getIconColor());
+			return new vscode.ThemeIcon(icon, ClassNode.getIconColor());
 		}
 	}
-
+	
 	override getIconColor() {
+		return ClassNode.getIconColor();
+	}
+
+	static getIconColor(): vscode.ThemeColor {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 

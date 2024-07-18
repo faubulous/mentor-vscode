@@ -14,6 +14,10 @@ import { PropertyNode } from './nodes/property-node';
 import { DefinitionTreeLayout } from '../settings';
 import { ShapeNode } from './nodes/shape-node';
 
+// TODO: Add support for constraint components in PropertyShape nodes.
+// TODO: Add support for validators in PropertyShape nodes.
+// TODO: Implement support for property paths in PropertyShape nodes.
+
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
  */
@@ -466,14 +470,15 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			}
 
 			const shapeNodes = [];
+			// Include the SHACL vocabulary graph in the query to retrieve sub classes of specific shape types.
 			const shapes = mentor.vocabulary.getShapesOfType(["http://www.w3.org/ns/shacl#", ...this.context.graphs], node.uri, {
 				...node.options,
 				includeBlankNodes: true,
 				includeSubTypes: false
 			});
 
-			for (let x of shapes) {
-				shapeNodes.push(new ShapeNode(this.context, node.id + `/<${x}>`, x, node.options));
+			for (let s of shapes) {
+				shapeNodes.push(new ShapeNode(this.context, node.id + `/<${s}>`, s, node.options));
 			}
 
 			return [...this.sortByLabel(classNodes), ...this.sortByLabel(shapeNodes)];

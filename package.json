@@ -662,7 +662,8 @@
               "http://www.w3.org/2004/02/skos/core#prefLabel",
               "http://www.w3.org/2000/01/rdf-schema#label",
               "https://schema.org/name",
-              "http://schema.org/name"
+              "http://schema.org/name",
+              "http://www.w3.org/ns/shacl#path"
             ]
           },
           "mentor.predicates.description": {

@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import * as mentor from "../../mentor";
-import { NamedNode } from 'n3';
-import { xsd, rdf, rdfs, owl, RDF } from '@faubulous/mentor-rdf';
+import { xsd, rdfs, RDF, DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { ResourceNode } from "./resource-node";
+import { DocumentContext } from "../../languages";
 
 export class PropertyNode extends ResourceNode {
 	contextType = RDF.Property;
@@ -11,85 +11,122 @@ export class PropertyNode extends ResourceNode {
 
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
-	override getIcon() {
-		if (!this.uri) {
-			return undefined;
-		}
+	rangeUri?: string | undefined;
 
-		let icon = 'rdf-object-property';
+	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
+		super(context, id, uri, options);
 
-		// 1. Determine the property type.
-		this.propertyType = 'objectProperty';
+		this.rangeUri = PropertyNode.getRangeUri(this.document.graphs, this.uri);
+	}
 
-		let s = new NamedNode(this.uri);
+	static getRangeUri(graphUris: string | string[] | undefined, uri?: string) {
+		if (uri) {
+			let range = mentor.vocabulary.getRange(graphUris, uri);
 
-		for (let _ of mentor.vocabulary.store.match(this.document.graphs, s, rdf.type, owl.DatatypeProperty)) {
-			this.propertyType = 'dataProperty';
-			icon = 'symbol-text';
-			break;
-		}
-
-		// 2. Derive the icon from the property type.
-		const range = mentor.vocabulary.getRange(this.document.graphs, this.uri);
-
-		switch (range) {
-			case xsd.date.id:
-			case xsd.dateTime.id: {
-				this.propertyType = 'dataProperty';
-				icon = 'calendar';
-				break;
+			if (range) {
+				return range;
+			} else {
+				return mentor.vocabulary.getDatatype(graphUris, uri);
 			}
+		}
+	}
+
+	static getPropertyType(rangeUri?: string) {
+		switch (rangeUri) {
+			case rdfs.Literal.id:
+			case xsd.base64Binary.id:
+			case xsd.boolean.id:
 			case xsd.byte.id:
+			case xsd.date.id:
+			case xsd.dateTime.id:
 			case xsd.decimal.id:
 			case xsd.double.id:
 			case xsd.float.id:
 			case xsd.int.id:
 			case xsd.integer.id:
-			case xsd.short.id:
+			case xsd.long.id:
+			case xsd.negativeInteger.id:
 			case xsd.nonNegativeInteger.id:
 			case xsd.nonPositiveInteger.id:
-			case xsd.negativeInteger.id:
 			case xsd.positiveInteger.id:
-			case xsd.long.id:
+			case xsd.short.id:
+			case xsd.string.id:
 			case xsd.unsignedInt.id:
 			case xsd.unsignedShort.id:
 			case xsd.unsingedLong.id:
 			case xsd.usignedByte.id: {
-				this.propertyType = 'dataProperty';
-				icon = 'symbol-number';
-				break;
+				return 'dataProperty';
 			}
-			case xsd.boolean.id: {
-				this.propertyType = 'dataProperty';
-				icon = 'symbol-boolean';
-				break;
-			}
-			case rdfs.Literal.id:
-			case xsd.string.id: {
-				this.propertyType = 'dataProperty';
-				icon = 'symbol-text';
-				break;
-			}
-			case xsd.base64Binary.id: {
-				this.propertyType = 'dataProperty';
-				icon = 'file-binary';
-				break;
-			}
-			case xsd.anyURI.id: {
-				icon = 'rdf-object-property';
-				break;
+			default: {
+				return 'objectProperty';
 			}
 		}
+	}
 
-		if (!mentor.vocabulary.hasSubject(this.document.graphs, this.uri)) {
-			icon = 'rdf-object-property-ref';
+	static getIcon(graphUris: string | string[] | undefined, propertyUri?: string, rangeUri?: string) {
+		if (propertyUri) {
+			const iconColor = PropertyNode.getIconColor(rangeUri);
+
+			switch (rangeUri) {
+				// Dates
+				case xsd.date.id:
+				case xsd.dateTime.id: {
+					return new vscode.ThemeIcon('calendar', iconColor);
+				}
+				// Boolean
+				case xsd.boolean.id: {
+					return new vscode.ThemeIcon('symbol-boolean', iconColor);
+				}
+				// Base64
+				case xsd.base64Binary.id: {
+					return new vscode.ThemeIcon('file-binary', iconColor);
+				}
+				// Numbers
+				case xsd.byte.id:
+				case xsd.decimal.id:
+				case xsd.double.id:
+				case xsd.float.id:
+				case xsd.int.id:
+				case xsd.integer.id:
+				case xsd.short.id:
+				case xsd.nonNegativeInteger.id:
+				case xsd.nonPositiveInteger.id:
+				case xsd.negativeInteger.id:
+				case xsd.positiveInteger.id:
+				case xsd.long.id:
+				case xsd.unsignedInt.id:
+				case xsd.unsignedShort.id:
+				case xsd.unsingedLong.id:
+				case xsd.usignedByte.id: {
+					return new vscode.ThemeIcon('symbol-number', iconColor);
+				}
+				// Text
+				case rdfs.Literal.id:
+				case xsd.string.id: {
+					return new vscode.ThemeIcon('symbol-text', iconColor);
+				}
+				// Resources
+				default: {
+					if (mentor.vocabulary.hasSubject(graphUris, propertyUri)) {
+						return new vscode.ThemeIcon('rdf-object-property', iconColor);
+					} else {
+						return new vscode.ThemeIcon('rdf-object-property-ref', iconColor);
+					}
+				}
+			}
 		}
+	}
 
-		return new vscode.ThemeIcon(icon, this.getIconColor());
+	static getIconColor(rangeUri?: string) {
+		return new vscode.ThemeColor(`mentor.color.${PropertyNode.getPropertyType(rangeUri)}`);
+	}
+
+	override getIcon() {
+		return PropertyNode.getIcon(this.document.graphs, this.uri, this.rangeUri);
 	}
 
 	override getIconColor() {
-		return new vscode.ThemeColor(`mentor.color.${this.propertyType}`);
+		return PropertyNode.getIconColor(this.rangeUri!);
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
