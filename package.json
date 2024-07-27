@@ -1,7 +1,7 @@
 {
   "name": "mentor",
   "displayName": "Mentor",
-  "description": "Create RDF ontologies and knowledge graphs with Visual Studio Code.",
+  "description": "Code editing support for RDF, RDFS, OWL, SKOS, SHACL and SPARQL.",
   "keywords": [
     "anzo",
     "blazegraph",

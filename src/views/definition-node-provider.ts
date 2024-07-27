@@ -14,8 +14,6 @@ import { PropertyNode } from './nodes/property-node';
 import { DefinitionTreeLayout } from '../settings';
 import { ShapeNode } from './nodes/shape-node';
 
-// TODO: Add support for constraint components in PropertyShape nodes.
-// TODO: Add support for validators in PropertyShape nodes.
 // TODO: Implement support for property paths in PropertyShape nodes.
 
 /**
@@ -448,13 +446,15 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		if (node.contextValue === "shapes") {
 			const result = [];
-			const types = mentor.vocabulary.getShapeTypes(this.context.graphs, node.options);
+			const types = [SHACL.NodeShape, SHACL.PropertyShape, SHACL.Validator];
 
 			for (let t of types) {
-				const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
-				n.contextType = SHACL.Shape;
+				if (mentor.vocabulary.hasIndividuals(["http://www.w3.org/ns/shacl#", ...this.context.graphs], t, node.options)) {
+					const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
+					n.contextType = SHACL.Shape;
 
-				result.push(n);
+					result.push(n);
+				}
 			}
 
 			return this.sortByLabel(result);
@@ -463,25 +463,28 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			const classes = mentor.vocabulary.getSubClasses(undefined, node.uri);
 
 			for (let c of classes) {
-				const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
-				n.contextType = SHACL.Shape;
+				if (mentor.vocabulary.hasSubjectsOfType(["http://www.w3.org/ns/shacl#", ...this.context.graphs], c, node.options)) {
+					const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
+					n.contextType = SHACL.Shape;
 
-				classNodes.push(n);
+					classNodes.push(n);
+				}
 			}
 
-			const shapeNodes = [];
+			const subjectNodes = [];
+
 			// Include the SHACL vocabulary graph in the query to retrieve sub classes of specific shape types.
-			const shapes = mentor.vocabulary.getShapesOfType(["http://www.w3.org/ns/shacl#", ...this.context.graphs], node.uri, {
+			const subjects = mentor.vocabulary.getSubjectsOfType(["http://www.w3.org/ns/shacl#", ...this.context.graphs], node.uri, {
 				...node.options,
 				includeBlankNodes: true,
 				includeSubTypes: false
 			});
 
-			for (let s of shapes) {
-				shapeNodes.push(new ShapeNode(this.context, node.id + `/<${s}>`, s, node.options));
+			for (let s of subjects) {
+				subjectNodes.push(new ShapeNode(this.context, node.id + `/<${s}>`, s, node.options));
 			}
 
-			return [...this.sortByLabel(classNodes), ...this.sortByLabel(shapeNodes)];
+			return [...this.sortByLabel(classNodes), ...this.sortByLabel(subjectNodes)];
 		} else {
 			return [];
 		}
