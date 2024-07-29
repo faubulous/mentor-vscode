@@ -395,7 +395,7 @@
     "viewsWelcome": [
       {
         "view": "mentor.view.workspaceTree",
-        "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.sparql",
+        "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.sparql, *.rq",
         "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
       }
     ],

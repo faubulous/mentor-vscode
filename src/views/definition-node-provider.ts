@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
-import { SHACL, Uri } from '@faubulous/mentor-rdf';
+import { SHACL, _SHACL, Uri } from '@faubulous/mentor-rdf';
 import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { DefinitionTreeNode } from './definition-tree-node';
@@ -449,7 +449,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			const types = [SHACL.NodeShape, SHACL.PropertyShape, SHACL.Validator];
 
 			for (let t of types) {
-				if (mentor.vocabulary.hasIndividuals(["http://www.w3.org/ns/shacl#", ...this.context.graphs], t, node.options)) {
+				if (mentor.vocabulary.hasIndividuals([_SHACL, ...this.context.graphs], t, node.options)) {
 					const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
 					n.contextType = SHACL.Shape;
 
@@ -463,7 +463,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			const classes = mentor.vocabulary.getSubClasses(undefined, node.uri);
 
 			for (let c of classes) {
-				if (mentor.vocabulary.hasSubjectsOfType(["http://www.w3.org/ns/shacl#", ...this.context.graphs], c, node.options)) {
+				if (mentor.vocabulary.hasSubjectsOfType([_SHACL, ...this.context.graphs], c, node.options)) {
 					const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
 					n.contextType = SHACL.Shape;
 
@@ -474,7 +474,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			const subjectNodes = [];
 
 			// Include the SHACL vocabulary graph in the query to retrieve sub classes of specific shape types.
-			const subjects = mentor.vocabulary.getSubjectsOfType(["http://www.w3.org/ns/shacl#", ...this.context.graphs], node.uri, {
+			const subjects = mentor.vocabulary.getSubjectsOfType([_SHACL, ...this.context.graphs], node.uri, {
 				...node.options,
 				includeBlankNodes: true,
 				includeSubTypes: false

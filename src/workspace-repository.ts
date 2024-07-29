@@ -30,7 +30,7 @@ export class WorkspaceRepository {
 	/**
 	 * The regular expression for supported file extensions.
 	 */
-	private readonly _include = /\.ttl$|\.nt$|\.owl$|\.trig$|\.nq$|\.n3|\.sparql$/;
+	private readonly _include = /\.ttl$|\.nt$|\.owl$|\.trig$|\.nq$|\.n3|\.sparql|\.rq$/;
 
 	/**
 	 * The regular expression for excluding files and folders from the workspace.

@@ -60,6 +60,7 @@ export class DocumentFactory {
 					return new TurtleDocument(documentUri, RdfSyntax.NQuads);
 				case '.trig':
 					return new TurtleDocument(documentUri, RdfSyntax.TriG);
+				case '.rw':
 				case '.sparql':
 					return new SparqlDocument(documentUri);
 				default:

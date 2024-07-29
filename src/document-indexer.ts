@@ -53,7 +53,7 @@ export class DocumentIndexer {
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				const uris = await vscode.workspace.findFiles("**/*.{ttl,nt,owl,trig,nq,n3,sparql}", excludedFolders);
+				const uris = await vscode.workspace.findFiles("**/*.{ttl,nt,owl,trig,nq,n3,sparql,rq}", excludedFolders);
 
 				const tasks = uris.map(uri => async (n: number) => {
 					const u = uri.toString();
