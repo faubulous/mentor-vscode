@@ -65,7 +65,7 @@ export class PropertyNode extends ResourceNode {
 
 	static getIcon(graphUris: string | string[] | undefined, propertyUri?: string, rangeUri?: string) {
 		if (propertyUri) {
-			const iconColor = PropertyNode.getIconColor(rangeUri);
+			const iconColor = PropertyNode.getIconColor(graphUris, propertyUri, rangeUri);
 
 			switch (rangeUri) {
 				// Dates
@@ -117,8 +117,14 @@ export class PropertyNode extends ResourceNode {
 		}
 	}
 
-	static getIconColor(rangeUri?: string) {
-		return new vscode.ThemeColor(`mentor.color.${PropertyNode.getPropertyType(rangeUri)}`);
+	static getIconColor(graphUris: string | string[] | undefined, propertyUri?: string, rangeUri?: string) {
+		let color = 'mentor.color.' + PropertyNode.getPropertyType(rangeUri);
+
+		if (propertyUri && mentor.vocabulary.hasShapes(graphUris, propertyUri)) {
+			return new vscode.ThemeColor(color + ".shacl");
+		} else {
+			return new vscode.ThemeColor(color);
+		}
 	}
 
 	override getIcon() {
@@ -126,7 +132,7 @@ export class PropertyNode extends ResourceNode {
 	}
 
 	override getIconColor() {
-		return PropertyNode.getIconColor(this.rangeUri!);
+		return PropertyNode.getIconColor(this.document.graphs, this.uri, this.rangeUri!);
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
@@ -148,7 +154,7 @@ export class PropertyNode extends ResourceNode {
 		if (!this.uri) {
 			const properties = mentor.vocabulary.getProperties(this.document.graphs, this.options);
 
-			result += properties.length.toString();
+			result += " " + properties.length.toString();
 		}
 
 		return result;

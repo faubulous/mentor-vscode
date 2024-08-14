@@ -2,7 +2,7 @@ import * as n3 from 'n3';
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
 import * as url from 'url';
-import { TokenizerResult, rdf } from '@faubulous/mentor-rdf';
+import { TokenizerResult, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from './utilities';
 import { TreeLabelStyle } from './settings';
@@ -195,16 +195,21 @@ export abstract class DocumentContext {
 
 		// Todo: Make this more explicit to reduce false positives.
 		switch (namespaceUri) {
-			case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
-			case "http://www.w3.org/2000/01/rdf-schema#":
-			case "http://www.w3.org/2002/07/owl#":
-			case "http://www.w3.org/2004/02/skos/core#":
-			case "http://www.w3.org/2008/05/skos-xl#":
-			case "http://www.w3.org/ns/shacl#":
+			case _RDF:
+			case _RDFS:
+			case _OWL:
+			case _SKOS:
+			case _SKOS_XL:
+			case _SH:
 				this.typeDefinitions[subjectUri] = [subjectToken];
 		}
 	}
 
+	/**
+	 * Updates a namespace prefix definition in the document.
+	 * @param oldPrefix The prefix to be replaced.
+	 * @param newPrefix The prefix to replace the old prefix.
+	 */
 	public updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
 		const uri = this.namespaces[oldPrefix];
 
@@ -215,13 +220,25 @@ export abstract class DocumentContext {
 		this.namespaces[newPrefix] = uri;
 	}
 
+	/**
+	 * Get the label of a resource according to the current user preferences for the display of labels.
+	 * @param subjectUri URI of the resource.
+	 * @returns A label for the resource as a string literal.
+	 */
 	public getResourceLabel(subjectUri: string): string {
+		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
+		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
+
+		// TODO: Add config option to enable/disable SHACL path labels.
+		// If the node has a SHACL path, use it as the label.
+		for (let q of mentor.store.match(this.graphs, subject, sh.path, null, false)) {
+			return this.getPropertyPathLabel(q.object as n3.Quad_Subject);
+		}
+
 		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
-				// TODO: Fix #10 in mentor-rdf
-				const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
 
 				// First, try to find a description in the current graph.
@@ -265,8 +282,36 @@ export abstract class DocumentContext {
 		return getUriLabel(subjectUri);
 	}
 
+	/**
+	 * Get a rendered version of a SHACL path as a string according to the current user preferences for label display.
+	 * @param node The object of a SHACL path triple.
+	 * @returns A rendered version of the SHACL path as a string.
+	 */
+	public getPropertyPathLabel(node: n3.Quad_Subject): string {
+		let result = [];
+
+		for (let c of mentor.vocabulary.getPropertyPathTokens(this.graphs, node)) {
+			if (typeof (c) === 'string') {
+				if (c === '|' || c === '/') {
+					result.push(` ${c} `);
+				} else {
+					result.push(c);
+				}
+			} else {
+				result.push(this.getResourceLabel(c.value));
+			}
+		}
+
+		return result.join('');
+	}
+
+	/**
+	 * Get the description of a resource.
+	 * @param subjectUri URI of the resource.
+	 * @returns A description for the resource as a string literal.
+	 */
 	public getResourceDescription(subjectUri: string): string | undefined {
-		// Todo: This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
+		// Todo: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
 
@@ -285,6 +330,11 @@ export abstract class DocumentContext {
 		}
 	}
 
+	/**
+	 * Get the URI of a resource. Resolves relative file URIs with regards to the directory of the current document.
+	 * @param subjectUri URI of the resource.
+	 * @returns A URI for the resource as a string literal.
+	 */
 	public getResourceUri(subjectUri: string): string {
 		if (subjectUri.startsWith('file')) {
 			const u = new URL(subjectUri);
@@ -304,6 +354,11 @@ export abstract class DocumentContext {
 		return subjectUri;
 	}
 
+	/**
+	 * Get the tooltip for a resource.
+	 * @param subjectUri URI of the resource.
+	 * @returns A markdown string containing the label, description and URI of the resource.
+	 */
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		let lines = [
 			`**${this.getResourceLabel(subjectUri)}**`,

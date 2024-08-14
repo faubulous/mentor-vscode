@@ -66,13 +66,13 @@ const getLanguageConfig = (type, language) => {
       fs.rmSync('./out', { recursive: true });
 
       // Note: Uncomment this if you want to use SVG icons directly.
-      // console.log("Copying media files to out directory..");
+      console.log("Copying media files to out directory..");
       
-      // fs.mkdirSync('./out/media/glyphs', { recursive: true });
+      fs.mkdirSync('./out/media/glyphs', { recursive: true });
 
-      // for(const file of fs.readdirSync('./media/glyphs')) {
-      //   fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
-      // }
+      for(const file of fs.readdirSync('./media/glyphs')) {
+        fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
+      }
     }
 
     const args = process.argv.slice(2);

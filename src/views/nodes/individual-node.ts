@@ -7,7 +7,7 @@ export class IndividualNode extends ResourceNode {
 	contextType = OWL.NamedIndividual;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-	
+
 	override getIcon() {
 		if (this.uri) {
 			return new vscode.ThemeIcon('rdf-individual', this.getIconColor());
@@ -35,7 +35,7 @@ export class IndividualNode extends ResourceNode {
 		let result = "";
 
 		if (!this.uri) {
-			result += mentor.vocabulary.getIndividuals(this.document.graphs, undefined, this.options).length.toString();
+			result += " " + mentor.vocabulary.getIndividuals(this.document.graphs, undefined, this.options).length.toString();
 		}
 
 		return result;

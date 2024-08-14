@@ -8,11 +8,8 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
 		if (!uri || !mentor.activeContext || uri.scheme === 'file') {
 			return undefined;
-		} else if (mentor.vocabulary.hasShapes(mentor.activeContext.graphs, uri.toString())) {
-			return {
-				badge: '⬡',
-				propagate: false
-			};
+		} else {
+			return undefined;
 		}
 	}
 }

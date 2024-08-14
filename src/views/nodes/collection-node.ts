@@ -19,7 +19,7 @@ export class CollectionNode extends ResourceNode {
 	}
 
 	override getIconColor() {
-		return new vscode.ThemeColor("mentor.color.class");
+		return new vscode.ThemeColor("mentor.color.concept");
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
