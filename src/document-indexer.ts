@@ -53,6 +53,7 @@ export class DocumentIndexer {
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
+				// TODO: Filter the URIs that actually *end* with the supported extensions. Glob also matches URIs that contain the extensions.
 				const uris = await vscode.workspace.findFiles("**/*.{ttl,nt,owl,trig,nq,n3,sparql,rq}", excludedFolders);
 
 				const tasks = uris.map(uri => async (n: number) => {

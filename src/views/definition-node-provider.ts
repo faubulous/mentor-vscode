@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
-import { SH, _SH, Uri, _sh } from '@faubulous/mentor-rdf';
-import { OWL, RDF, RDFS, SKOS } from '@faubulous/mentor-rdf';
+import { Uri, OWL, RDF, RDFS, SKOS, SH, _SH } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { ClassNode } from './nodes/class-node';
@@ -13,8 +12,8 @@ import { OntologyNode } from './nodes/ontology-node';
 import { PropertyNode } from './nodes/property-node';
 import { DefinitionTreeLayout } from '../settings';
 import { ShapeNode } from './nodes/shape-node';
-
-// TODO: Implement support for property paths in PropertyShape nodes.
+import { ValidatorNode } from './nodes/validator-node';
+import { RuleNode } from './nodes/rule-node';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
@@ -112,12 +111,9 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
+		// TODO: Refactor into separate node provider classes and associate these with the nodes.
 		if (!node) {
-			if (this.showDefinitionSources) {
-				return this.getRootNodesWithSources();
-			} else {
-				return this.getRootNodes();
-			}
+			return this.showDefinitionSources ? this.getRootNodesWithSources() : this.getRootNodes();
 		} else if (node.contextType === OWL.Ontology) {
 			return this.getOntologyNodeChildren(node);
 		} else if (node.contextType === RDFS.Class) {
@@ -128,6 +124,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return this.getIndividualNodeChildren(node);
 		} else if (node.contextType === SH.Shape) {
 			return this.getShapeNodeChildren(node);
+		} else if (node.contextType === SH.Validator) {
+			return this.getValidatorNodeChildren(node);
+		} else if (node.contextType === SH.Rule) {
+			return this.getRuleNodeChildren(node);
 		} else if (node.contextType === SKOS.ConceptScheme) {
 			return this.getConceptSchemeNodeChildren(node);
 		} else if (node.contextType === SKOS.Concept) {
@@ -192,6 +192,22 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		for (let _ of mentor.vocabulary.getShapes(this.context.graphs, undefined)) {
 			const n = new ShapeNode(this.context, '<>/shapes', undefined, undefined);
 			n.contextValue = "shapes";
+
+			result.push(n);
+			break;
+		}
+
+		for (let _ of mentor.vocabulary.getRules(this.context.graphs, undefined)) {
+			const n = new RuleNode(this.context, '<>/rules', undefined, undefined);
+			n.contextValue = "rules";
+
+			result.push(n);
+			break;
+		}
+
+		for (let _ of mentor.vocabulary.getValidators(this.context.graphs, undefined)) {
+			const n = new ValidatorNode(this.context, '<>/validators', undefined, undefined);
+			n.contextValue = "validators";
 
 			result.push(n);
 			break;
@@ -281,6 +297,20 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			}
 		}
 
+		if (!hasUnknown) {
+			for (let _ of mentor.vocabulary.getRules(this.context.graphs, options)) {
+				hasUnknown = true;
+				break;
+			}
+		}
+
+		if (!hasUnknown) {
+			for (let _ of mentor.vocabulary.getValidators(this.context.graphs, options)) {
+				hasUnknown = true;
+				break;
+			}
+		}
+
 		if (hasUnknown) {
 			const n = new OntologyNode(this.context, '<>', undefined, options);
 			n.isReferenced = true;
@@ -340,6 +370,20 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			result.push(shapes);
 		}
 
+		const rules = new RuleNode(this.context, node.id + '/rules', undefined, options);
+		rules.contextValue = "rules";
+
+		if (this.getRuleNodeChildren(rules).length > 0) {
+			result.push(rules);
+		}
+
+		const validators = new ValidatorNode(this.context, node.id + '/validators', undefined, options);
+		validators.contextValue = "validators";
+
+		if (this.getValidatorNodeChildren(validators).length > 0) {
+			result.push(validators);
+		}
+
 		return result;
 	}
 
@@ -385,7 +429,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 				result.push(n);
 			}
 		} else if (node instanceof ClassNode) {
-			// Note: We only want to returen the asserted properties here.
+			// Note: We only want to return the asserted properties here.
 			let properties = mentor.vocabulary.getRootPropertiesOfType(this.context.graphs, node.uri!, node.options);
 
 			for (let p of properties) {
@@ -434,6 +478,42 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return this.sortByLabel(result);
 	}
 
+	getNodeChildrenOfType(graphUris: string | string[] | undefined, node: DefinitionTreeNode, typeUri: string, createNode: (subjectUri: string) => DefinitionTreeNode): DefinitionTreeNode[] {
+		if (!this.context) {
+			return [];
+		}
+
+		const type = node.uri ? node.uri : typeUri;
+
+		// Include the sub classes of the given type *before* the nodes of the given type.
+		const classNodes = [];
+		const classes = mentor.vocabulary.getSubClasses(undefined, type);
+
+		for (let c of classes) {
+			if (mentor.vocabulary.hasSubjectsOfType(graphUris, c, node.options)) {
+				const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
+				n.contextType = typeUri;
+
+				classNodes.push(n);
+			}
+		}
+
+		// Include the nodes of the given type *after* the sub classes.
+		const subjectNodes = [];
+
+		const subjectUris = mentor.vocabulary.getSubjectsOfType(graphUris, type, {
+			...node.options,
+			includeBlankNodes: true,
+			includeSubTypes: false
+		});
+
+		for (let s of subjectUris) {
+			subjectNodes.push(createNode(s));
+		}
+
+		return [...this.sortByLabel(classNodes), ...this.sortByLabel(subjectNodes)];
+	}
+
 	/**
 	 * Get the children of a shape node.
 	 * @param node A shape node.
@@ -442,51 +522,38 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	getShapeNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (!this.context) {
 			return [];
+		} else {
+			const context = this.context;
+
+			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Shape, (uri) => new ShapeNode(context, node.id + `/<${uri}>`, uri, node.options));
 		}
+	}
 
-		if (node.contextValue === "shapes") {
-			const result = [];
-			const types = [SH.NodeShape, SH.PropertyShape, SH.Validator];
+	/**
+	 * Get the children of a validator node.
+	 * @param node A validator node.
+	 * @returns An array of validator nodes.
+	 */
+	getValidatorNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
+		if (this.context != null) {
+			const context = this.context;
 
-			for (let t of types) {
-				// Include the SHACL vocabulary graph in the query to retrieve sub classes of specific shape types, 
-				// but exclude the resources that are defined in the SHACL ontology itself.
-				if (mentor.vocabulary.hasIndividuals([_SH, ...this.context.graphs], t, { ...node.options, notDefinedBy: [_SH] })) {
-					const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
-					n.contextType = SH.Shape;
+			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Validator, (uri) => new ValidatorNode(context, node.id + `/<${uri}>`, uri, node.options));
+		} else {
+			return [];
+		}
+	}
 
-					result.push(n);
-				}
-			}
+	/**
+	 * Get the children of a validator node.
+	 * @param node A validator node.
+	 * @returns An array of validator nodes.
+	 */
+	getRuleNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
+		if (this.context != null) {
+			const context = this.context;
 
-			return this.sortByLabel(result);
-		} else if (node.uri) {
-			const classNodes = [];
-			const classes = mentor.vocabulary.getSubClasses(undefined, node.uri);
-
-			for (let c of classes) {
-				if (mentor.vocabulary.hasSubjectsOfType([_SH, ...this.context.graphs], c, node.options)) {
-					const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
-					n.contextType = SH.Shape;
-
-					classNodes.push(n);
-				}
-			}
-
-			const subjectNodes = [];
-
-			// Include the SHACL vocabulary graph in the query to retrieve sub classes of specific shape types.
-			const subjects = mentor.vocabulary.getSubjectsOfType([_SH, ...this.context.graphs], node.uri, {
-				...node.options,
-				includeBlankNodes: true,
-				includeSubTypes: false
-			});
-
-			for (let s of subjects) {
-				subjectNodes.push(new ShapeNode(this.context, node.id + `/<${s}>`, s, node.options));
-			}
-
-			return [...this.sortByLabel(classNodes), ...this.sortByLabel(subjectNodes)];
+			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Rule, (uri) => new RuleNode(context, node.id + `/<${uri}>`, uri, node.options));
 		} else {
 			return [];
 		}
@@ -586,7 +653,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const children = this.getChildren(node);
 		const collapsibleState = children?.length ? node.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
 
-		if (this.hasShapes(node) && !(node instanceof ShapeNode)) {
+		if (!(node instanceof ShapeNode) && this.hasShapes(node)) {
 			node.contextValue += 'shape';
 		}
 
@@ -603,7 +670,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		};
 	}
 
-	hasShapes(node: DefinitionTreeNode): boolean {
+	protected hasShapes(node: DefinitionTreeNode): boolean {
 		if (this.context && node.uri) {
 			return mentor.vocabulary.hasShapes(this.context.graphs, node.uri, { ...node.options, definedBy: undefined });
 		} else {
