@@ -64,17 +64,79 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	protected mapBlankNodes() {
-		const blankNodes = this.tokens.filter(t => t.tokenType?.tokenName == 'LBracket');
-
-		let n = 0;
+		const blankNodes = new Set<string>();
 
 		for (let q of mentor.store.match(this.graphs, null, null, null, false)) {
-			if (q.subject.termType == 'BlankNode' && this.blankNodes[q.subject.value] === undefined) {
-				this.blankNodes[q.subject.value] = blankNodes[n];
-				this.typeDefinitions[q.subject.value] = [blankNodes[n]];
+			if (q.subject.termType === 'BlankNode') {
+				if(!blankNodes.has(q.subject.value))
+					console.log(q.subject.value +  " " + q.predicate.value + " " + q.object.value);
 
-				n += 1;
+				blankNodes.add(q.subject.value);
 			}
+		}
+
+		const blankIds = Array.from(blankNodes).sort((a, b) => {
+			const numA = parseInt(a.split('-')[1], 10);
+			const numB = parseInt(b.split('-')[1], 10);
+			return numA - numB;
+		});
+
+		let tokenStack = [];
+		let n = 0;
+
+		for (let t of this.tokens) {
+			switch (t.image) {
+				case '[': {
+					if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
+						// Account for the blank node list element.
+						n++;
+					}
+
+					tokenStack.push(t);
+
+					let s = blankIds[n++];
+
+					console.log(s, t.image);
+
+					this.blankNodes[s] = t;
+					this.typeDefinitions[s] = [t];
+
+					continue;
+				}
+				case '(': {
+					tokenStack.push(t);
+
+					let s = blankIds[n];
+
+					console.log(s, t.image);
+
+					this.blankNodes[s] = t;
+					this.typeDefinitions[s] = [t];
+
+					continue;
+				}
+				case ']': {
+					tokenStack.pop();
+					continue;;
+				}
+				case ')': {
+					tokenStack.pop();
+					continue;;
+				}
+			}
+
+			if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
+				let s = blankIds[n++];
+
+				console.log(s, t.image);
+
+				this.blankNodes[s] = t;
+				this.typeDefinitions[s] = [t];
+			}
+		}
+
+		if (n != blankIds.length) {
+			console.debug('Not all blank node tokens could be mapped to blank ids from the document graph.');
 		}
 	}
 }

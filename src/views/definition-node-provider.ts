@@ -363,21 +363,21 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			result.push(individuals);
 		}
 
-		const shapes = new ShapeNode(this.context, node.id + '/shapes', undefined, options);
+		const shapes = new ShapeNode(this.context, node.id + '/shapes', undefined, { ...options, includeBlankNodes: true });
 		shapes.contextValue = "shapes";
 
 		if (this.getShapeNodeChildren(shapes).length > 0) {
 			result.push(shapes);
 		}
 
-		const rules = new RuleNode(this.context, node.id + '/rules', undefined, options);
+		const rules = new RuleNode(this.context, node.id + '/rules', undefined, { ...options, includeBlankNodes: true });
 		rules.contextValue = "rules";
 
 		if (this.getRuleNodeChildren(rules).length > 0) {
 			result.push(rules);
 		}
 
-		const validators = new ValidatorNode(this.context, node.id + '/validators', undefined, options);
+		const validators = new ValidatorNode(this.context, node.id + '/validators', undefined, { ...options, includeBlankNodes: true });
 		validators.contextValue = "validators";
 
 		if (this.getValidatorNodeChildren(validators).length > 0) {
@@ -487,7 +487,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		// Include the sub classes of the given type *before* the nodes of the given type.
 		const classNodes = [];
-		const classes = mentor.vocabulary.getSubClasses(undefined, type);
+		const classes = mentor.vocabulary.getSubClasses(graphUris, type);
 
 		for (let c of classes) {
 			if (mentor.vocabulary.hasSubjectsOfType(graphUris, c, node.options)) {
@@ -503,7 +503,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		const subjectUris = mentor.vocabulary.getSubjectsOfType(graphUris, type, {
 			...node.options,
-			includeBlankNodes: true,
 			includeSubTypes: false
 		});
 

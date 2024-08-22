@@ -16,7 +16,7 @@ export class ValidatorNode extends ResourceNode {
 	}
 
 	override getIconColor() {
-		return new vscode.ThemeColor("mentor.color.class.shacl");
+		return new vscode.ThemeColor("mentor.color.class");
 	}
 
 	override getLabel(): vscode.TreeItemLabel {

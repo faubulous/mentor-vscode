@@ -33,11 +33,7 @@ export class ClassNode extends ResourceNode {
 	}
 
 	static getIconColor(graphUris: string | string[] | undefined, subjectUri: string | undefined): vscode.ThemeColor {
-		if (subjectUri && mentor.vocabulary.hasShapes(graphUris, subjectUri)) {
-			return new vscode.ThemeColor("mentor.color.class.shacl");
-		} else {
-			return new vscode.ThemeColor("mentor.color.class");
-		}
+		return new vscode.ThemeColor("mentor.color.class");
 	}
 
 	override getLabel(): vscode.TreeItemLabel {

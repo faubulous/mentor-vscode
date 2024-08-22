@@ -385,39 +385,7 @@
         "description": "Color used for tree nodes representing data property.",
         "defaults": {
           "light": "#a31515",
-          "dark": "#569cd6"
-        }
-      },
-      {
-        "id": "mentor.color.class.shacl",
-        "description": "Color used for tree nodes representing class or class references.",
-        "defaults": {
-          "light": "#007acc",
-          "dark": "#9d7ed5"
-        }
-      },
-      {
-        "id": "mentor.color.individual.shacl",
-        "description": "Color used for tree nodes representing literals.",
-        "defaults": {
-          "light": "#007acc",
-          "dark": "#9d7ed5"
-        }
-      },
-      {
-        "id": "mentor.color.dataProperty.shacl",
-        "description": "Color used for tree nodes representing data property.",
-        "defaults": {
-          "light": "#a31515",
-          "dark": "#9d7ed5"
-        }
-      },
-      {
-        "id": "mentor.color.objectProperty.shacl",
-        "description": "Color used for tree nodes representing object properties.",
-        "defaults": {
-          "light": "#006bd5",
-          "dark": "#9d7ed5"
+          "dark": "#ce9178"
         }
       }
     ],

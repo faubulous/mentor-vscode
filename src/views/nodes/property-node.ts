@@ -119,12 +119,8 @@ export class PropertyNode extends ResourceNode {
 
 	static getIconColor(graphUris: string | string[] | undefined, propertyUri?: string, rangeUri?: string) {
 		let color = 'mentor.color.' + PropertyNode.getPropertyType(rangeUri);
-
-		if (propertyUri && mentor.vocabulary.hasShapes(graphUris, propertyUri)) {
-			return new vscode.ThemeColor(color + ".shacl");
-		} else {
-			return new vscode.ThemeColor(color);
-		}
+		
+		return new vscode.ThemeColor(color);
 	}
 
 	override getIcon() {

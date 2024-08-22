@@ -41,7 +41,7 @@ export class ShapeNode extends ResourceNode {
 	}
 
 	override getIconColor() {
-		return new vscode.ThemeColor("mentor.color.class.shacl");
+		return new vscode.ThemeColor("mentor.color.class");
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
@@ -60,7 +60,7 @@ export class ShapeNode extends ResourceNode {
 		let result = "";
 
 		if (!this.uri) {
-			result += " " + mentor.vocabulary.getShapes(this.document.graphs).length.toString();
+			result += " " + mentor.vocabulary.getShapes(this.document.graphs, undefined, { includeBlankNodes: true }).length.toString();
 		}
 
 		return result;
