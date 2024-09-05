@@ -653,7 +653,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const collapsibleState = children?.length ? node.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
 
 		if (!(node instanceof ShapeNode) && this.hasShapes(node)) {
-			node.contextValue += 'shape';
+			node.contextValue += ' shape-target';
 		}
 
 		return {

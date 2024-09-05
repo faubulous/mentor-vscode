@@ -576,7 +576,7 @@
         },
         {
           "command": "mentor.action.revealShapeDefinition",
-          "when": "viewItem != shapes && viewItem =~ /shape/",
+          "when": "viewItem != shapes && viewItem =~ / shape-target/",
           "group": "inline"
         },
         {
@@ -688,6 +688,12 @@
               "http://schema.org/description",
               "http://www.w3.org/2004/02/skos/core#scopeNote"
             ]
+          },
+          "mentor.index.maxFileSize": {
+            "type": "number",
+            "title": "Max File Size",
+            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors. Opening a larger file in an editor or running the 'Analyze Workspace' command will index files above this limit.",
+            "default": 1500000
           },
           "mentor.namespaces": {
             "type": "array",

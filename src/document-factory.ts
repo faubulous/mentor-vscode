@@ -12,15 +12,22 @@ export class DocumentFactory {
 	/**
 	 * The supported languages.
 	 */
-	supportedLanguages: string[] = ['ntriples', 'nquads', 'turtle', 'trig', 'sparql'];
+	readonly supportedLanguages: Set<string> = new Set(['ntriples', 'nquads', 'turtle', 'trig', 'sparql']);
 
 	/**
-	 * Indicates if the given language is supported.
-	 * @param languageId The language ID.
-	 * @returns <code>true</code> if the language is supported, <code>false</code> otherwise.
+	 * The supported file extensions.
 	 */
-	public isSupported(languageId: string): boolean {
-		return this.supportedLanguages.includes(languageId);
+	readonly supportedExtensions: Set<string> = new Set(['.ttl', '.n3', '.nt', '.nq', '.trig', '.sparql', '.rq']);
+
+	/**
+	 * Checks if a file is supported by the factory.
+	 * @param uri The URI of the file.
+	 * @returns `true` if the file is supported, otherwise `false`.
+	 */
+	public isSupportedFile(uri: vscode.Uri): boolean {
+		const extension = path.extname(uri.fsPath).toLowerCase();
+
+		return this.supportedExtensions.has(extension);
 	}
 
 	/**
@@ -60,7 +67,7 @@ export class DocumentFactory {
 					return new TurtleDocument(documentUri, RdfSyntax.NQuads);
 				case '.trig':
 					return new TurtleDocument(documentUri, RdfSyntax.TriG);
-				case '.rw':
+				case '.rq':
 				case '.sparql':
 					return new SparqlDocument(documentUri);
 				default:

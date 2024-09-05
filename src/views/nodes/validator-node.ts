@@ -11,7 +11,7 @@ export class ValidatorNode extends ResourceNode {
 	override getIcon() {
 		if (this.uri) {
 			// Return the ref class icon if target cannot be found.
-			return new vscode.ThemeIcon('rdf-class-ref', this.getIconColor());
+			return new vscode.ThemeIcon('rdf-class', this.getIconColor());
 		}
 	}
 

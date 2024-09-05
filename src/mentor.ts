@@ -100,7 +100,7 @@ vscode.workspace.onDidCloseTextDocument((e) => onTextDocumentClosed(e));
 const documentFactory = new DocumentFactory();
 
 async function loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext | undefined> {
-	if (!document || !documentFactory.isSupported(document.languageId)) {
+	if (!document || !documentFactory.supportedLanguages.has(document.languageId)) {
 		return;
 	}
 

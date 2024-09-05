@@ -16,10 +16,10 @@ export class WorkspaceTree implements TreeView {
 	/**
 	 * The tree view.
 	 */
-	readonly treeView: vscode.TreeView<vscode.Uri>;
+	readonly treeView: vscode.TreeView<string>;
 
 	constructor() {
-		// vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
+		vscode.window.registerTreeDataProvider(this.id, this.treeDataProvider);
 
 		this.treeView = vscode.window.createTreeView(this.id, {
 			treeDataProvider: this.treeDataProvider,

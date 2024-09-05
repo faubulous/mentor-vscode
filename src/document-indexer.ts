@@ -29,6 +29,12 @@ export class DocumentIndexer {
 	 */
 	private readonly _onDidFinishIndexing = new vscode.EventEmitter<boolean>();
 
+	/**
+	 * List of supported file extensions.
+	 */
+	// TODO: Refactor to use the DocumentFactory.
+	private readonly _supportedExtensions = ["ttl", "nt", "owl", "trig", "nq", "n3", "sparql", "rq"];
+
 	constructor() {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 	}
@@ -44,40 +50,55 @@ export class DocumentIndexer {
 		}, async (progress) => {
 			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
 
+			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
+			// file size limit and make issues with the configuration more visible.
+			const maxSize = mentor.configuration.get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
+
 			this.reportProgress(progress, 0);
 
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 				const startTime = performance.now();
 
+				const supportedExtensions = new Set(this._supportedExtensions);
+
 				const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				// TODO: Filter the URIs that actually *end* with the supported extensions. Glob also matches URIs that contain the extensions.
-				const uris = await vscode.workspace.findFiles("**/*.{ttl,nt,owl,trig,nq,n3,sparql,rq}", excludedFolders);
+				let uris = await vscode.workspace.findFiles("**/*.{" + this._supportedExtensions.join(',') + "}", excludedFolders);
 
-				const tasks = uris.map(uri => async (n: number) => {
+				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
+				uris = uris.filter(uri => {
+					const extension = uri.path.split('.').pop();
+
+					return extension && supportedExtensions.has(extension);
+				});
+
+				let n = 0;
+
+				for (const uri of uris) {
 					const u = uri.toString();
 
 					if (!mentor.contexts[u]) {
-						const data = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
-
 						const context = this.factory.create(uri);
+
+						const size = (await vscode.workspace.fs.stat(uri)).size;
+
+						if (size > maxSize) {
+							console.log(`Skipping large file ${uri.toString()} (${size} bytes)`);
+							continue;
+						}
+
+						const document = await vscode.workspace.openTextDocument(uri);
+
+						const data = document.getText();
 
 						await context.load(uri, data, false);
 
-						this.reportProgress(progress, Math.round((n / tasks.length) * 100));
+						mentor.contexts[u] = context;
 
-						return { uri: u, context };
-					} else {
-						return { uri: u, context: mentor.contexts[u] };
+						this.reportProgress(progress, Math.round((n++ / uris.length) * 100));
 					}
-				});
-
-				const results = await this.runInParallel(tasks, 2);
-
-				for (const { uri, context } of results) {
-					mentor.contexts[uri] = context;
 				}
 
 				const endTime = performance.now();
@@ -93,25 +114,6 @@ export class DocumentIndexer {
 
 			this._onDidFinishIndexing.fire(true);
 		});
-	}
-
-	/**
-	 * Executes a set of tasks in parallel.
-	 * @param tasks The tasks to be executed.
-	 * @param maxParallel The maximum number of tasks to run in parallel.
-	 * @returns The results of the tasks.
-	 */
-	async runInParallel<T>(tasks: ((n: number) => Promise<T>)[], maxParallel: number): Promise<T[]> {
-		let results: T[] = [];
-
-		for (let i = 0; i < tasks.length; i += maxParallel) {
-			const chunk = tasks.slice(i, i + maxParallel);
-			const chunkResults = await Promise.all(chunk.map((task, index) => task(i + index)));
-
-			results = [...results, ...chunkResults];
-		}
-
-		return results;
 	}
 
 	/**

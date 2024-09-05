@@ -68,9 +68,6 @@ export class TurtleDocument extends DocumentContext {
 
 		for (let q of mentor.store.match(this.graphs, null, null, null, false)) {
 			if (q.subject.termType === 'BlankNode') {
-				if(!blankNodes.has(q.subject.value))
-					console.log(q.subject.value +  " " + q.predicate.value + " " + q.object.value);
-
 				blankNodes.add(q.subject.value);
 			}
 		}
@@ -96,8 +93,6 @@ export class TurtleDocument extends DocumentContext {
 
 					let s = blankIds[n++];
 
-					console.log(s, t.image);
-
 					this.blankNodes[s] = t;
 					this.typeDefinitions[s] = [t];
 
@@ -107,8 +102,6 @@ export class TurtleDocument extends DocumentContext {
 					tokenStack.push(t);
 
 					let s = blankIds[n];
-
-					console.log(s, t.image);
 
 					this.blankNodes[s] = t;
 					this.typeDefinitions[s] = [t];
@@ -128,15 +121,13 @@ export class TurtleDocument extends DocumentContext {
 			if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
 				let s = blankIds[n++];
 
-				console.log(s, t.image);
-
 				this.blankNodes[s] = t;
 				this.typeDefinitions[s] = [t];
 			}
 		}
 
-		if (n != blankIds.length) {
-			console.debug('Not all blank node tokens could be mapped to blank ids from the document graph.');
-		}
+		// if (n != blankIds.length) {
+		// 	console.debug('Not all blank node tokens could be mapped to blank ids from the document graph.');
+		// }
 	}
 }

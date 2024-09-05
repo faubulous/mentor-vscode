@@ -6,6 +6,12 @@ import * as mentor from './mentor';
  */
 export class WorkspaceAnalyzer {
 	/**
+	 * List of supported file extensions.
+	 */
+	// TODO: Refactor to use the DocumentFactory.
+	private readonly _supportedExtensions = ["ttl", "nt", "owl", "trig", "nq", "n3", "sparql", "rq"];
+
+	/**
 	 * Analyzes the workspace for problems.
 	 */
 	async analyzeWorkspace() {
@@ -19,13 +25,20 @@ export class WorkspaceAnalyzer {
 			this.reportProgress(progress, 0);
 
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-				const startTime = performance.now();
+				const supportedExtensions = new Set(this._supportedExtensions);
 
 				const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				const uris = await vscode.workspace.findFiles("**/*.{ttl,nt,owl,trig,nq,n3,sparql}", excludedFolders);
+				let uris = await vscode.workspace.findFiles("**/*.{" + this._supportedExtensions.join(',') + "}", excludedFolders);
+
+				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
+				uris = uris.filter(uri => {
+					const extension = uri.path.split('.').pop();
+
+					return extension && supportedExtensions.has(extension);
+				});
 
 				for (let i = 0; i < uris.length; i++) {
 					const uri = uris[i];

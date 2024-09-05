@@ -1,6 +1,6 @@
 'use strict';
 import * as vscode from 'vscode';
-import * as mentor from './mentor'
+import * as mentor from './mentor';
 import { Disposable } from 'vscode-languageclient';
 import { TreeView } from './views/tree-view';
 import { WorkspaceTree } from './views/workspace-tree';
