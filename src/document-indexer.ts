@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
+import * as path from 'path';
 import { DocumentFactory } from './document-factory';
 import { DocumentContext } from './document-context';
 
@@ -17,7 +18,7 @@ export class DocumentIndexer {
 	/**
 	 * The document factory for creating document contexts.
 	 */
-	readonly factory = new DocumentFactory();
+	private readonly _documentFactory = new DocumentFactory();
 
 	/**
 	 * Indicates if all workspace files have been indexed.
@@ -28,12 +29,6 @@ export class DocumentIndexer {
 	 * An event that is fired when all workspace files have been indexed.
 	 */
 	private readonly _onDidFinishIndexing = new vscode.EventEmitter<boolean>();
-
-	/**
-	 * List of supported file extensions.
-	 */
-	// TODO: Refactor to use the DocumentFactory.
-	private readonly _supportedExtensions = ["ttl", "nt", "owl", "trig", "nq", "n3", "sparql", "rq"];
 
 	constructor() {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
@@ -59,19 +54,19 @@ export class DocumentIndexer {
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 				const startTime = performance.now();
 
-				const supportedExtensions = new Set(this._supportedExtensions);
-
 				const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				let uris = await vscode.workspace.findFiles("**/*.{" + this._supportedExtensions.join(',') + "}", excludedFolders);
+				const includedExtensions = Array.from(this._documentFactory.supportedExtensions).join(',');
+
+				let uris = await vscode.workspace.findFiles("**/*{" + includedExtensions + "}", excludedFolders);
 
 				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
 				uris = uris.filter(uri => {
-					const extension = uri.path.split('.').pop();
+					const ext = path.extname(uri.fsPath).toLowerCase();
 
-					return extension && supportedExtensions.has(extension);
+					return ext && this._documentFactory.supportedExtensions.has(ext);
 				});
 
 				let n = 0;
@@ -80,7 +75,7 @@ export class DocumentIndexer {
 					const u = uri.toString();
 
 					if (!mentor.contexts[u]) {
-						const context = this.factory.create(uri);
+						const context = this._documentFactory.create(uri);
 
 						const size = (await vscode.workspace.fs.stat(uri)).size;
 

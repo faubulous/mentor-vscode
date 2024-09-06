@@ -7,6 +7,7 @@ import { DocumentIndexer, DocumentIndex } from './document-indexer';
 import { WorkspaceRepository } from './workspace-repository';
 import { LocalStorageService } from './services/local-storage-service';
 import { PrefixDownloaderService } from './services/prefix-downloader-service';
+import { debounce } from './utilities';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -92,7 +93,11 @@ function onTextDocumentClosed(e: vscode.TextDocument): void {
 	}
 }
 
-vscode.workspace.onDidChangeTextDocument((e) => onTextDocumentChanged(e));
+vscode.workspace.onDidChangeTextDocument((e) => {
+	// TODO: Debounce per document URI context. The current implementation might miss changes in other documents.
+	debounce(onTextDocumentChanged, 100)(e);
+});
+
 vscode.workspace.onDidCloseTextDocument((e) => onTextDocumentClosed(e));
 /**
  * A factory for loading and creating document contexts.

@@ -1,15 +1,16 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
+import * as path from 'path';
+import { DocumentFactory } from './document-factory';
 
 /**
  * A helper class that analyzes the workspace for problems.
  */
 export class WorkspaceAnalyzer {
 	/**
-	 * List of supported file extensions.
+	 * The document factory for creating document contexts.
 	 */
-	// TODO: Refactor to use the DocumentFactory.
-	private readonly _supportedExtensions = ["ttl", "nt", "owl", "trig", "nq", "n3", "sparql", "rq"];
+	private readonly _documentFactory = new DocumentFactory();
 
 	/**
 	 * Analyzes the workspace for problems.
@@ -25,19 +26,19 @@ export class WorkspaceAnalyzer {
 			this.reportProgress(progress, 0);
 
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-				const supportedExtensions = new Set(this._supportedExtensions);
-
 				const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				let uris = await vscode.workspace.findFiles("**/*.{" + this._supportedExtensions.join(',') + "}", excludedFolders);
+				const includedExtensions = Array.from(this._documentFactory.supportedExtensions).join(',');
+
+				let uris = await vscode.workspace.findFiles("**/*.{" + includedExtensions + "}", excludedFolders);
 
 				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
 				uris = uris.filter(uri => {
-					const extension = uri.path.split('.').pop();
+					const ext = path.extname(uri.fsPath).toLowerCase();
 
-					return extension && supportedExtensions.has(extension);
+					return ext && this._documentFactory.supportedExtensions.has(ext);
 				});
 
 				for (let i = 0; i < uris.length; i++) {
