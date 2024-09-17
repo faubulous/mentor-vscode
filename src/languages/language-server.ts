@@ -180,7 +180,6 @@ export abstract class LanguageServerBase {
 
 		// In this simple example we get the settings for every validate run.
 		// const settings = await this._getDocumentSettings(document.uri);
-
 		let diagnostics: Diagnostic[] = [];
 		let tokens: IToken[] = [];
 
@@ -188,6 +187,9 @@ export abstract class LanguageServerBase {
 
 		if (content.length) {
 			try {
+				// Validating the document for errors requires fully parsing it, including building the CST.
+				// Since this is a potentially expensive operation, we only do it in the language server and
+				// send the result to the client to not block the UI..
 				const result = await this.parse(content);
 
 				tokens = result.tokens;
@@ -209,8 +211,10 @@ export abstract class LanguageServerBase {
 			}
 		}
 
+		// Send the computed diagnostics to the client.
 		this.connection.sendDiagnostics({ uri: document.uri, diagnostics });
 
+		// This function returns the result to the derived class, which can then perform additional actions.
 		return {
 			uri: document.uri,
 			diagnostics: diagnostics,

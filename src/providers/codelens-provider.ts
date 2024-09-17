@@ -85,6 +85,7 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 
 			const result = [];
 
+			// TODO: Refactor getSubjects into DocumentContext and overload for different languages.
 			for (let subject of this.getSubjects(context)) {
 				let uri = getUriFromToken(context.namespaces, subject);
 

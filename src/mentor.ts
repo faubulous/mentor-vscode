@@ -123,7 +123,8 @@ async function loadDocument(document: vscode.TextDocument, reload: boolean = fal
 
 	context = documentFactory.create(document.uri, document.languageId);
 
-	await context.load(document.uri, document.getText(), true);
+	await context.parse(document.uri, document.getText());
+	await context.infer();
 
 	contexts[uri] = context;
 	activeContext = context;

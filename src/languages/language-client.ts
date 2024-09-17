@@ -66,15 +66,17 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 		this.client.start();
 
 		this.client.onNotification('mentor/updateContext', (params: { uri: string, tokens: IToken[] }) => {
-			console.log('mentor/updateContext', params.uri, params.tokens);
-
 			let context = mentor.contexts[params.uri];
 
-			if (context) {
-				context.setTokens(params.tokens);
-			} else {
-				// TODO: Initialize a new document context with the tokens.
+			if (!context) {
+				const uri = vscode.Uri.parse(params.uri);
+
+				context = mentor.documentFactory.create(uri, this.languageId);
+
+				mentor.contexts[params.uri] = context
 			}
+			
+			context.setTokens(params.tokens);
 		});
 	}
 

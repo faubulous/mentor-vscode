@@ -21,62 +21,27 @@ export abstract class DocumentContext {
 	 */
 	readonly graphs: string[] = [];
 
-	/**
-	 * All namespaces defined in the document.
-	 */
-	readonly namespaces: { [key: string]: string } = {};
+	private _tokens: IToken[] = [];
 
-	/**
-	 * Maps resource URIs to indexed tokens.
-	 */
-	readonly namespaceDefinitions: { [key: string]: IToken } = {};
+	private _namespaces: { [key: string]: string } = {};
 
-	/**
-	 * Maps resource URIs to indexed tokens.
-	 */
-	readonly references: { [key: string]: IToken[] } = {};
+	private _namespaceDefinitions: { [key: string]: IToken } = {};
 
-	/**
-	 * Maps resource URIs to tokens of subjects that have an asserted rdf:type.
-	 */
-	readonly typeAssertions: { [key: string]: IToken[] } = {};
+	private _references: { [key: string]: IToken[] } = {};
 
-	/**
-	 * Maps resource URIs to tokens of subjects that are class or property definitions.
-	 */
-	readonly typeDefinitions: { [key: string]: IToken[] } = {};
+	private _typeAssertions: { [key: string]: IToken[] } = {};
 
-	/**
-	 * Maps blank node ids to indexed tokens.
-	 */
-	readonly blankNodes: { [key: string]: IToken } = {};
+	private _typeDefinitions: { [key: string]: IToken[] } = {};
+
+	private _blankNodes: { [key: string]: IToken } = {};
 
 	/**
 	 * The predicates to be used for retrieving labels and descriptions for resources.
 	 */
-	readonly predicates: {
-		label: string[];
-		description: string[];
-	} = {
-			label: [],
-			description: []
-		};
-
-	/**
-	 * Indicates whether the document is temporary and not persisted.
-	 */
-	get isTemporary(): boolean {
-		return this.uri.scheme == 'git';
-	}
-
-	private _tokens: IToken[] = [];
-
-	/**
-	 * All tokens in the document.
-	 */
-	get tokens(): IToken[] {
-		return this._tokens;
-	}
+	readonly predicates = {
+		label: [],
+		description: []
+	};
 
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
@@ -85,28 +50,81 @@ export abstract class DocumentContext {
 	}
 
 	/**
+	 * Indicates whether the document is temporary and not persisted.
+	 */
+	get isTemporary(): boolean {
+		return this.uri.scheme == 'git';
+	}
+
+	/**
+	 * All tokens in the document.
+	 */
+	get tokens(): IToken[] {
+		return this._tokens;
+	}
+
+	/**
+	* All namespaces defined in the document.
+	*/
+	get namespaces(): { [key: string]: string } {
+		return this._namespaces;
+	}
+
+	/**
+	 * Maps resource URIs to indexed tokens.
+	 */
+	get namespaceDefinitions(): { [key: string]: IToken } {
+		return this._namespaceDefinitions;
+	}
+
+	/**
+	 * Maps resource URIs to indexed tokens.
+	 */
+	get references(): { [key: string]: IToken[] } {
+		return this._references;
+	}
+
+	/**
+	 * Maps resource URIs to tokens of subjects that have an asserted rdf:type.
+	 */
+	get typeAssertions(): { [key: string]: IToken[] } {
+		return this._typeAssertions;
+	}
+
+	/**
+	 * Maps resource URIs to tokens of subjects that are class or property definitions.
+	 */
+	get typeDefinitions(): { [key: string]: IToken[] } {
+		return this._typeDefinitions;
+	}
+
+	/**
+	 * Maps blank node ids to indexed tokens.
+	 */
+	get blankNodes(): { [key: string]: IToken } {
+		return this._blankNodes;
+	}
+
+	/**
 	 * Loads the document from the given URI and data.
 	 * @param uri The file URI.
 	 * @param data The file content.
-	 * @param executeInference Indicates whether inference should be executed.
 	 */
-	async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
-		if (executeInference) {
-			await this.infer();
-		}
-	}
+	abstract parse(uri: vscode.Uri, data: string): Promise<void>;
 
 	/**
 	 * Infers new triples from the document, if not already done.
 	 */
-	async infer(): Promise<void> {
-		// Do nothing if not overloaded.
-	}
-
-	protected abstract tokenize(data: string): IToken[];
+	abstract infer(): Promise<void>;
 
 	setTokens(tokens: IToken[]): void {
 		this._tokens = tokens;
+		this._namespaces = {};
+		this._namespaceDefinitions = {};
+		this._references = {};
+		this._typeAssertions = {};
+		this._typeDefinitions = {};
+		this._blankNodes = {};
 
 		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType?.tokenName) {
