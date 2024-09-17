@@ -54,6 +54,11 @@ export const indexer = new DocumentIndexer();
  */
 export const globalStorage = new LocalStorageService();
 
+/**
+ * A factory for loading and creating document contexts.
+ */
+export const documentFactory = new DocumentFactory();
+
 const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
 export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
@@ -95,14 +100,10 @@ function onTextDocumentClosed(e: vscode.TextDocument): void {
 
 vscode.workspace.onDidChangeTextDocument((e) => {
 	// TODO: Debounce per document URI context. The current implementation might miss changes in other documents.
-	debounce(onTextDocumentChanged, 100)(e);
+	debounce(onTextDocumentChanged, 10)(e);
 });
 
 vscode.workspace.onDidCloseTextDocument((e) => onTextDocumentClosed(e));
-/**
- * A factory for loading and creating document contexts.
- */
-const documentFactory = new DocumentFactory();
 
 async function loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext | undefined> {
 	if (!document || !documentFactory.supportedLanguages.has(document.languageId)) {

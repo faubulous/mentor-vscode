@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
-import { RdfSyntax, Tokenizer, TokenizerResult } from '@faubulous/mentor-rdf';
+import { IToken } from 'millan';
+import { RdfSyntax, TrigSyntaxParser } from '@faubulous/mentor-rdf';
+import { TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 
 export class TurtleDocument extends DocumentContext {
@@ -14,6 +16,14 @@ export class TurtleDocument extends DocumentContext {
 		this.syntax = syntax;
 	}
 
+	protected tokenize(data: string): IToken[] {
+		if (this.syntax === RdfSyntax.TriG) {
+			return new TrigSyntaxParser().tokenize(data);
+		} else {
+			return new TurtleSyntaxParser().tokenize(data)
+		}
+	}
+
 	public override async infer(): Promise<void> {
 		const reasoner = mentor.store.reasoner;
 
@@ -24,24 +34,22 @@ export class TurtleDocument extends DocumentContext {
 		if (!this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			await mentor.store.executeInference(this.uri.toString());
+			mentor.store.executeInference(this.uri.toString());
 		}
 	}
 
 	public override async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
 		// Parse the tokens *before* parsing the graph because the graph parsing 
 		// might fail but we need to update the tokens.
-		await this.parseTokens(data);
+		const tokens = this.tokenize(data);
+
+		this.setTokens(tokens);
 
 		try {
 			await this.parseGraph(uri, data, executeInference);
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 		}
-	}
-
-	protected async parseData(data: string): Promise<TokenizerResult> {
-		return await Tokenizer.parseData(data, this.syntax);
 	}
 
 	protected async parseGraph(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {

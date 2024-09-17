@@ -2,7 +2,7 @@ import * as n3 from 'n3';
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
 import * as url from 'url';
-import { TokenizerResult, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from './utilities';
 import { TreeLabelStyle } from './settings';
@@ -32,11 +32,6 @@ export abstract class DocumentContext {
 	readonly namespaceDefinitions: { [key: string]: IToken } = {};
 
 	/**
-	 * All tokens in the document.
-	 */
-	readonly tokens: IToken[] = [];
-
-	/**
 	 * Maps resource URIs to indexed tokens.
 	 */
 	readonly references: { [key: string]: IToken[] } = {};
@@ -56,6 +51,9 @@ export abstract class DocumentContext {
 	 */
 	readonly blankNodes: { [key: string]: IToken } = {};
 
+	/**
+	 * The predicates to be used for retrieving labels and descriptions for resources.
+	 */
 	readonly predicates: {
 		label: string[];
 		description: string[];
@@ -71,6 +69,15 @@ export abstract class DocumentContext {
 		return this.uri.scheme == 'git';
 	}
 
+	private _tokens: IToken[] = [];
+
+	/**
+	 * All tokens in the document.
+	 */
+	get tokens(): IToken[] {
+		return this._tokens;
+	}
+
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
 		this.predicates.label = mentor.configuration.get('predicates.label') ?? [];
@@ -84,8 +91,6 @@ export abstract class DocumentContext {
 	 * @param executeInference Indicates whether inference should be executed.
 	 */
 	async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
-		this.parseTokens(data);
-
 		if (executeInference) {
 			await this.infer();
 		}
@@ -98,19 +103,12 @@ export abstract class DocumentContext {
 		// Do nothing if not overloaded.
 	}
 
-	protected abstract parseData(data: string): Promise<TokenizerResult>;
+	protected abstract tokenize(data: string): IToken[];
 
-	protected async parseTokens(data: string): Promise<void> {
-		const result = await this.parseData(data);
+	setTokens(tokens: IToken[]): void {
+		this._tokens = tokens;
 
-		this.tokens.length = 0;
-
-		// Note: Using this.tokens.push(...result.tokens) throws an error for very large files.
-		for (let t of result.tokens) {
-			this.tokens.push(t);
-		}
-
-		result.tokens.forEach((t: IToken, i: number) => {
+		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType?.tokenName) {
 				case 'PREFIX':
 				case 'TTL_PREFIX': {
@@ -128,29 +126,29 @@ export abstract class DocumentContext {
 
 					if (!uri) break;
 
-					this._handleTypeAssertion(result, t, uri, i);
-					this._handleTypeDefinition(result, t, uri, i);
-					this._handleUriReference(result, t, uri);
+					this._handleTypeAssertion(tokens, t, uri, i);
+					this._handleTypeDefinition(tokens, t, uri, i);
+					this._handleUriReference(tokens, t, uri);
 					break;
 				}
 				case 'IRIREF': {
 					const uri = getUriFromIriReference(t.image);
 
-					this._handleTypeAssertion(result, t, uri, i);
-					this._handleTypeDefinition(result, t, uri, i);
-					this._handleUriReference(result, t, uri);
+					this._handleTypeAssertion(tokens, t, uri, i);
+					this._handleTypeDefinition(tokens, t, uri, i);
+					this._handleUriReference(tokens, t, uri);
 					break;
 				}
 				case 'A': {
-					this._handleTypeAssertion(result, t, rdf.type.id, i);
-					this._handleTypeDefinition(result, t, rdf.type.id, i);
+					this._handleTypeAssertion(tokens, t, rdf.type.id, i);
+					this._handleTypeDefinition(tokens, t, rdf.type.id, i);
 					break;
 				}
 			}
 		});
 	}
 
-	private _handleUriReference(result: TokenizerResult, token: IToken, uri: string) {
+	private _handleUriReference(tokens: IToken[], token: IToken, uri: string) {
 		if (!this.references[uri]) {
 			this.references[uri] = [];
 		}
@@ -158,10 +156,10 @@ export abstract class DocumentContext {
 		this.references[uri].push(token);
 	}
 
-	private _handleTypeAssertion(result: TokenizerResult, token: IToken, uri: string, index: number) {
+	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
 		if (uri != rdf.type.id) return;
 
-		const subjectToken = result.tokens[index - 1];
+		const subjectToken = tokens[index - 1];
 
 		if (!subjectToken) return;
 
@@ -172,10 +170,10 @@ export abstract class DocumentContext {
 		this.typeAssertions[subjectUri] = [subjectToken];
 	}
 
-	private _handleTypeDefinition(result: TokenizerResult, token: IToken, uri: string, index: number) {
+	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
 		if (uri != rdf.type.id) return;
 
-		const subjectToken = result.tokens[index - 1];
+		const subjectToken = tokens[index - 1];
 
 		if (!subjectToken) return;
 
@@ -183,7 +181,7 @@ export abstract class DocumentContext {
 
 		if (!subjectUri) return;
 
-		const objectToken = result.tokens[index + 1];
+		const objectToken = tokens[index + 1];
 
 		if (!objectToken) return;
 

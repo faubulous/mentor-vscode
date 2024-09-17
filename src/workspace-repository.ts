@@ -35,7 +35,7 @@ export class WorkspaceRepository {
 	/**
 	 * The included file extensions as glob patterns.
 	 */
-	private _includePatterns = Array.from(this._documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
+	private _includePatterns = Object.keys(this._documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
 
 	/**
 	 * The excluded file patterns loaded from the configuration.

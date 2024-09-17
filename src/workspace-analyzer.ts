@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
-import * as path from 'path';
 import { DocumentFactory } from './document-factory';
 
 /**
@@ -30,16 +29,12 @@ export class WorkspaceAnalyzer {
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				const includedExtensions = Array.from(this._documentFactory.supportedExtensions).join(',');
+				const includedExtensions = Object.keys(this._documentFactory.supportedExtensions).join(',');
 
 				let uris = await vscode.workspace.findFiles("**/*.{" + includedExtensions + "}", excludedFolders);
 
 				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
-				uris = uris.filter(uri => {
-					const ext = path.extname(uri.fsPath).toLowerCase();
-
-					return ext && this._documentFactory.supportedExtensions.has(ext);
-				});
+				uris = uris.filter(uri => this._documentFactory.isSupportedFile(uri));
 
 				for (let i = 0; i < uris.length; i++) {
 					const uri = uris[i];

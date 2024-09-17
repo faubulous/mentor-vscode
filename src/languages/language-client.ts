@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as mentor from '../mentor';
+import { IToken } from 'millan';
 import { LanguageClient, LanguageClientOptions, TransportKind } from 'vscode-languageclient/node';
 
 export abstract class LanguageClientBase implements vscode.Disposable {
@@ -62,6 +64,18 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 
 		this.client = new LanguageClient(this.channelId, `${this.languageName} Language Client`, serverOptions, clientOptions);
 		this.client.start();
+
+		this.client.onNotification('mentor/updateContext', (params: { uri: string, tokens: IToken[] }) => {
+			console.log('mentor/updateContext', params.uri, params.tokens);
+
+			let context = mentor.contexts[params.uri];
+
+			if (context) {
+				context.setTokens(params.tokens);
+			} else {
+				// TODO: Initialize a new document context with the tokens.
+			}
+		});
 	}
 
 	async dispose() {

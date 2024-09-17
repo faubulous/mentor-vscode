@@ -39,7 +39,7 @@ export class DocumentIndexer {
 	 */
 	async indexWorkspace(): Promise<void> {
 		vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
+			location: vscode.ProgressLocation.Window,
 			title: "Indexing workspace",
 			cancellable: false
 		}, async (progress) => {
@@ -58,16 +58,12 @@ export class DocumentIndexer {
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				const includedExtensions = Array.from(this._documentFactory.supportedExtensions).join(',');
+				const includedExtensions = Object.keys(this._documentFactory.supportedExtensions).join(',');
 
 				let uris = await vscode.workspace.findFiles("**/*{" + includedExtensions + "}", excludedFolders);
 
 				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
-				uris = uris.filter(uri => {
-					const ext = path.extname(uri.fsPath).toLowerCase();
-
-					return ext && this._documentFactory.supportedExtensions.has(ext);
-				});
+				uris = uris.filter(uri => this._documentFactory.isSupportedFile(uri));
 
 				let n = 0;
 
@@ -86,11 +82,11 @@ export class DocumentIndexer {
 
 						const document = await vscode.workspace.openTextDocument(uri);
 
-						const data = document.getText();
+						// const data = document.getText();
 
-						await context.load(uri, data, false);
+						// await context.load(uri, data, false);
 
-						mentor.contexts[u] = context;
+						// mentor.contexts[u] = context;
 
 						this.reportProgress(progress, Math.round((n++ / uris.length) * 100));
 					}

@@ -1,4 +1,4 @@
-import { RdfSyntax, Tokenizer, TokenizerResult } from '@faubulous/mentor-rdf';
+import { TokenizerResult, TrigSyntaxParser } from '@faubulous/mentor-rdf';
 import { LanguageServerBase } from './language-server';
 
 class TrigLanguageServer extends LanguageServerBase {
@@ -7,7 +7,12 @@ class TrigLanguageServer extends LanguageServerBase {
 	}
 
 	protected async parse(content: string): Promise<TokenizerResult> {
-		return await Tokenizer.parseData(content, RdfSyntax.TriG);
+		const parser = new TrigSyntaxParser();
+
+		const { errors, semanticErrors, comments } = parser.parse(content);
+		const tokens = [...parser.input, ...comments];
+
+		return { tokens, syntaxErrors: errors, semanticErrors };
 	}
 }
 
