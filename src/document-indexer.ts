@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
-import * as path from 'path';
 import { DocumentFactory } from './document-factory';
 import { DocumentContext } from './document-context';
 
@@ -45,11 +44,11 @@ export class DocumentIndexer {
 		}, async (progress) => {
 			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
 
+			this.reportProgress(progress, 0);
+
 			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
 			// file size limit and make issues with the configuration more visible.
 			const maxSize = mentor.configuration.get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
-
-			this.reportProgress(progress, 0);
 
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 				const startTime = performance.now();
@@ -65,31 +64,25 @@ export class DocumentIndexer {
 				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
 				uris = uris.filter(uri => this._documentFactory.isSupportedFile(uri));
 
-				let n = 0;
-
-				for (const uri of uris) {
+				for (let i = 0; i < uris.length; i++) {
+					const uri = uris[i];
 					const u = uri.toString();
 
-					if (!mentor.contexts[u]) {
-						const context = this._documentFactory.create(uri);
-
-						const size = (await vscode.workspace.fs.stat(uri)).size;
-
-						if (size > maxSize) {
-							console.log(`Skipping large file ${uri.toString()} (${size} bytes)`);
-							continue;
-						}
-
-						const document = await vscode.workspace.openTextDocument(uri);
-
-						// const data = document.getText();
-
-						// await context.load(uri, data, false);
-
-						// mentor.contexts[u] = context;
-
-						this.reportProgress(progress, Math.round((n++ / uris.length) * 100));
+					if (mentor.contexts[u]) {
+						continue;
 					}
+
+					const size = (await vscode.workspace.fs.stat(uri)).size;
+
+					if (size > maxSize) {
+						console.log(`Skipping large file ${uri.toString()} (${size} bytes)`);
+						continue;
+					}
+
+					// Open the document to trigger the language server to analyze it.
+					await vscode.workspace.openTextDocument(uri);
+
+					this.reportProgress(progress, Math.round(((i + 1) / uris.length) * 100));
 				}
 
 				const endTime = performance.now();

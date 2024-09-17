@@ -18,6 +18,10 @@ export class TurtleDocument extends DocumentContext {
 		this.syntax = syntax;
 	}
 
+	get isLoaded(): boolean {
+		return super.isLoaded && this.graphs.length > 0;
+	}
+
 	public override async infer(): Promise<void> {
 		const reasoner = mentor.store.reasoner;
 

@@ -4,26 +4,6 @@ import * as path from 'path';
 import { DocumentFactory } from './document-factory';
 
 /**
- * Represents a file or folder in the workspace.
- */
-export interface WorkspaceItem {
-	/**
-	 * The name of the item.
-	 */
-	name: string;
-
-	/**
-	 * The URI of the item provided by the Visual Studio Code API.
-	 */
-	uri: vscode.Uri;
-
-	/**
-	 * The type of the item.
-	 */
-	type: vscode.FileType;
-}
-
-/**
  * A repository for retrieving workspace resources such as files and folders.
  */
 export class WorkspaceRepository {
@@ -131,14 +111,6 @@ export class WorkspaceRepository {
 
 		this._initialized = true;
 		this._onDidFinishInitializing.fire(true);
-	}
-
-	private _debounce(func: Function, wait: number) {
-		let timeout: NodeJS.Timeout;
-		return (...args: any[]) => {
-			clearTimeout(timeout);
-			timeout = setTimeout(() => func.apply(this, args), wait);
-		};
 	}
 
 	/**

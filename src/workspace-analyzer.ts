@@ -16,7 +16,7 @@ export class WorkspaceAnalyzer {
 	 */
 	async analyzeWorkspace() {
 		vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
+			location: vscode.ProgressLocation.Window,
 			title: "Analyzing workspace",
 			cancellable: true
 		}, async (progress) => {
@@ -42,7 +42,7 @@ export class WorkspaceAnalyzer {
 					// Open the document to trigger the language server to analyze it.
 					await vscode.workspace.openTextDocument(uri);
 
-					this.reportProgress(progress, Math.round((i / uris.length) * 100));
+					this.reportProgress(progress, Math.round(((i + 1) / uris.length) * 100));
 				}
 			}
 

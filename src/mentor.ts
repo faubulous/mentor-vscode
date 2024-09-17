@@ -105,33 +105,10 @@ vscode.workspace.onDidChangeTextDocument((e) => {
 
 vscode.workspace.onDidCloseTextDocument((e) => onTextDocumentClosed(e));
 
-async function loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext | undefined> {
-	if (!document || !documentFactory.supportedLanguages.has(document.languageId)) {
-		return;
-	}
-
-	const uri = document.uri.toString();
-
-	let context = contexts[uri];
-
-	if (context && !reload) {
-		// Compute the inference graph on the document, if it does not exist.
-		context.infer();
-
-		return context;
-	}
-
-	context = documentFactory.create(document.uri, document.languageId);
-
-	await context.parse(document.uri, document.getText());
-	await context.infer();
-
-	contexts[uri] = context;
-	activeContext = context;
-
-	return context;
-}
-
+/**
+ * Activate the document in the editor.
+ * @returns A promise that resolves to the active text editor or `undefined`.
+ */
 export async function activateDocument(): Promise<vscode.TextEditor | undefined> {
 	const documentUri = vscode.window.activeTextEditor?.document.uri;
 
@@ -142,6 +119,46 @@ export async function activateDocument(): Promise<vscode.TextEditor | undefined>
 	return vscode.window.activeTextEditor;
 }
 
+/**
+ * Load a text document into a document context.
+ * @param document The text document to load.
+ * @param forceReload Indicates whether a new context should be created for existing contexts.
+ * @returns 
+ */
+async function loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<DocumentContext | undefined> {
+	if (!document || !documentFactory.supportedLanguages.has(document.languageId)) {
+		return;
+	}
+
+	const uri = document.uri.toString();
+
+	let context = contexts[uri];
+
+	if (context?.isLoaded && !forceReload) {
+		// Compute the inference graph on the document, if it does not exist.
+		context.infer();
+
+		return context;
+	}
+
+	context = documentFactory.create(document.uri, document.languageId);
+
+	// Parse the tokens of the document and load the graph.
+	await context.parse(document.uri, document.getText());
+
+	// Compute the inference graph on the document to simplify querying.
+	await context.infer();
+
+	contexts[uri] = context;
+	activeContext = context;
+
+	return context;
+}
+
+/**
+ * Initialize the extension.
+ * @param context The extension context.
+ */
 export async function initialize(context: vscode.ExtensionContext) {
 	// Initialize the extension persistence service.
 	globalStorage.initialize(context.globalState);

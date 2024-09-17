@@ -20,10 +20,6 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ISemanticError, IToken } from 'millan';
 import { NamespaceMap, getUnquotedLiteralValue, getNamespaceDefinition, getUriFromToken } from '../utilities';
 
-interface ParserSettings {
-	maxNumberOfProblems: number;
-}
-
 /**
  * Validation results for a text document.
  */
@@ -31,10 +27,25 @@ export interface ValidationResults extends PublishDiagnosticsParams {
 	/**
 	 * Tokens produced by the parser.
 	 */
-	tokens: IToken[];
+	tokens?: IToken[];
 }
 
-const defaultSettings: ParserSettings = { maxNumberOfProblems: 1000 };
+/**
+ * Parser settings for a text document.
+ */
+interface ParserSettings {
+	/**
+	 * The maximum number of problems to report.
+	 */
+	maxNumberOfProblems: number;
+}
+
+/**
+ * Default parser settings.
+ */
+const defaultSettings: ParserSettings = {
+	maxNumberOfProblems: 1000
+};
 
 export abstract class LanguageServerBase {
 	readonly languageName: string;

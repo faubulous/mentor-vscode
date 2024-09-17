@@ -50,6 +50,13 @@ export abstract class DocumentContext {
 	}
 
 	/**
+	 * Indicates whether the document is fully loaded.
+	 */
+	get isLoaded(): boolean {
+		return this._tokens.length > 0;
+	}
+
+	/**
 	 * Indicates whether the document is temporary and not persisted.
 	 */
 	get isTemporary(): boolean {
@@ -117,6 +124,10 @@ export abstract class DocumentContext {
 	 */
 	abstract infer(): Promise<void>;
 
+	/**
+	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
+	 * @param tokens An array of tokens.
+	 */
 	setTokens(tokens: IToken[]): void {
 		this._tokens = tokens;
 		this._namespaces = {};
