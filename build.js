@@ -1,6 +1,21 @@
 const { build, context } = require("esbuild");
 const fs = require("fs");
 
+const replaceNodeBuiltIns = () => {
+  const replace = {
+    'path': require.resolve('path-browserify')
+  }
+  const filter = RegExp(`^(${Object.keys(replace).join("|")})$`);
+  return {
+    name: "replaceNodeBuiltIns",
+    setup(build) {
+      build.onResolve({ filter }, arg => ({
+        path: replace[arg.path],
+      }));
+    },
+  };
+}
+
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
 
@@ -16,18 +31,24 @@ const baseConfig = {
   minify: productionBuild,
   sourcemap: !productionBuild,
   external: ["vscode"],
-  plugins: [{
-    name: 'rebuild-notify',
-    setup(build) {
-      build.onStart(() => {
-        console.log("Build started..");
-      });
+  define: {
+    // This is not defined in the browser environment, so we need to provide a polyfill.
+    'global': 'globalThis'
+  },
+  plugins: [
+    replaceNodeBuiltIns(),
+    {
+      name: 'rebuild-notify',
+      setup(build) {
+        build.onStart(() => {
+          console.log("Build started..");
+        });
 
-      build.onEnd(result => {
-        console.log(`Build ended.`);
-      })
-    },
-  }],
+        build.onEnd(result => {
+          console.log(`Build ended.`);
+        })
+      },
+    }],
 };
 
 console.log("Options:", baseConfig);
@@ -36,7 +57,6 @@ console.log("Options:", baseConfig);
 /** @type BuildOptions */
 const extensionConfig = {
   ...baseConfig,
-  platform: "node",
   format: "cjs",
   target: "es2020",
   mainFields: ["module", "main"],
@@ -50,7 +70,6 @@ const getLanguageConfig = (type, language) => {
   const file = language ? `${language}-language-${type}` : `language-${type}`;
   return {
     ...baseConfig,
-    platform: "node",
     format: "cjs",
     target: "es2020",
     entryPoints: [`./src/languages/${file}.ts`],
@@ -67,10 +86,10 @@ const getLanguageConfig = (type, language) => {
 
       // Note: Uncomment this if you want to use SVG icons directly.
       console.log("Copying media files to out directory..");
-      
+
       fs.mkdirSync('./out/media/glyphs', { recursive: true });
 
-      for(const file of fs.readdirSync('./media/glyphs')) {
+      for (const file of fs.readdirSync('./media/glyphs')) {
         fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
       }
     }

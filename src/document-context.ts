@@ -1,7 +1,6 @@
 import * as n3 from 'n3';
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
-import * as url from 'url';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from './utilities';
@@ -364,14 +363,14 @@ export abstract class DocumentContext {
 	 */
 	public getResourceUri(subjectUri: string): string {
 		if (subjectUri.startsWith('file')) {
-			const u = new URL(subjectUri);
+			const u = vscode.Uri.parse(subjectUri);
 
 			// Resolve relative file URIs with regards to the directory of the current document.
-			if (u.hostname == '..') {
+			if (u.authority === '..') {
 				// For a file URI the namespace is the directory of the current document.
 				const directory = getNamespaceUri(this.uri.toString());
 				const filePath = subjectUri.split('//')[1];
-				const fileUrl = url.resolve(directory, filePath);
+				const fileUrl = vscode.Uri.joinPath(vscode.Uri.parse(directory), filePath);
 
 				// Allow navigating to the relative file.
 				return '[' + filePath + '](' + fileUrl + ')';

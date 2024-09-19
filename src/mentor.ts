@@ -184,7 +184,7 @@ export async function initialize(context: vscode.ExtensionContext) {
 
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Window,
-			title: `Downloading prefixes from ${service.enpointUrl}...`,
+			title: `Downloading prefixes from ${service.endpointUrl}...`,
 			cancellable: false
 		}, async (progress) => {
 			progress.report({ increment: 0 });

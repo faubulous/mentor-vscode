@@ -1,8 +1,8 @@
+import { IRecognitionException } from 'chevrotain';
 import {
 	Connection,
 	Diagnostic,
 	DidChangeConfigurationNotification,
-	ProposedFeatures,
 	InitializeParams,
 	InitializeResult,
 	TextDocuments,
@@ -13,12 +13,24 @@ import {
 	Range,
 	DidChangeWatchedFilesParams,
 	DidChangeConfigurationParams,
-	PublishDiagnosticsParams
-} from 'vscode-languageserver/node';
-import { TokenizerResult, XSD } from '@faubulous/mentor-rdf';
+	PublishDiagnosticsParams,
+	BrowserMessageReader,
+	BrowserMessageWriter
+} from 'vscode-languageserver/browser';
+import { XSD } from '@faubulous/mentor-rdf';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ISemanticError, IToken } from 'millan';
 import { NamespaceMap, getUnquotedLiteralValue, getNamespaceDefinition, getUriFromToken } from '../utilities';
+
+/**
+ * The result of tokenizing a text document.
+ */
+export interface TokenizationResults {
+	comments: IToken[];
+	errors: IRecognitionException[];
+	semanticErrors: IRecognitionException[];
+	tokens: IToken[];
+}
 
 /**
  * Validation results for a text document.
@@ -70,7 +82,10 @@ export abstract class LanguageServerBase {
 		this.languageName = languageName;
 		this.languageId = langaugeId;
 
-		this.connection = createConnection(ProposedFeatures.all);
+		const messageReader = new BrowserMessageReader(self);
+		const messageWriter = new BrowserMessageWriter(self);
+
+		this.connection = createConnection(messageReader, messageWriter);
 		this.connection.onInitialize(this.onInitializeConnection.bind(this));
 		this.connection.onInitialized(this.onConnectionInitialized.bind(this));
 		this.connection.onDidChangeConfiguration(this.onDidChangeConfiguration.bind(this));
@@ -80,7 +95,7 @@ export abstract class LanguageServerBase {
 	}
 
 	protected log(message: string) {
-		const msg = `[Server(${process.pid})] ${message}`;
+		const msg = `[Server] ${message}`;
 
 		if (this.connection.console) {
 			this.connection.console.log(msg);
@@ -175,7 +190,7 @@ export abstract class LanguageServerBase {
 		this.validateTextDocument(change.document);
 	}
 
-	protected abstract parse(content: string): Promise<TokenizerResult>;
+	protected abstract parse(content: string): Promise<TokenizationResults>;
 
 	async validateTextDocument(document: TextDocument): Promise<ValidationResults> {
 		// The conncetion may not yet be initialized.
@@ -207,7 +222,7 @@ export abstract class LanguageServerBase {
 
 				diagnostics = [
 					...this.getLexDiagnostics(document, result.tokens),
-					...this.getParseDiagnostics(document, result.syntaxErrors.concat(result.semanticErrors)),
+					...this.getParseDiagnostics(document, result.errors.concat(result.semanticErrors)),
 					...this.getLintDiagnostics(document, content, result.tokens)
 				];
 			}
