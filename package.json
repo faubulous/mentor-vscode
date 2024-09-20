@@ -185,6 +185,14 @@
         }
       },
       {
+        "language": "trig",
+        "scopes": {
+          "namespace": [
+            "storage.modifier.trig"
+          ]
+        }
+      },
+      {
         "language": "sparql",
         "scopes": {
           "namespace": [
