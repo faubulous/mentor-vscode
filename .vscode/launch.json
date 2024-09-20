@@ -5,20 +5,6 @@
     {
       "name": "Launch Extension",
       "type": "extensionHost",
-      "debugWebWorkerHost": false,
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "args": [
-        "--extensionDevelopmentPath=${workspaceRoot}",
-        "--enable-proposed-api"
-      ],
-      "sourceMaps": true,
-      "outFiles": ["${workspaceRoot}/out/**/*.js"]
-      // "preLaunchTask": "npm: build:watch"
-    },
-    {
-      "name": "Launch Web Extension",
-      "type": "extensionHost",
       "debugWebWorkerHost": true,
       "request": "launch",
       "runtimeExecutable": "${execPath}",

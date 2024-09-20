@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "preview": true,
   "publisher": "faubulous",
   "private": false,
@@ -50,7 +50,6 @@
   "categories": [
     "Programming Languages"
   ],
-  "main": "./out/extension.js",
   "browser": "./out/extension.js",
   "scripts": {
     "clean": "rm -Rf node_modules && rm -Rf out && rm -Rf media/*.woff",
@@ -86,7 +85,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.42",
+    "@faubulous/mentor-rdf": "^0.2.45",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",

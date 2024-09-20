@@ -17,7 +17,7 @@ import {
 	BrowserMessageReader,
 	BrowserMessageWriter
 } from 'vscode-languageserver/browser';
-import { XSD } from '@faubulous/mentor-rdf';
+import { SyntaxParser, XSD } from '@faubulous/mentor-rdf';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ISemanticError, IToken } from 'millan';
 import { NamespaceMap, getUnquotedLiteralValue, getNamespaceDefinition, getUriFromToken } from '../utilities';
@@ -76,11 +76,23 @@ export abstract class LanguageServerBase {
 
 	globalSettings: ParserSettings = defaultSettings;
 
+	/**
+	 * Indicates whether the language server should provide tokens for the document to the client via 'mentor/updateContext'.
+	 */
+	isDocumentTokenProvider = false;
+
+	/**
+	 * The parser used to tokenize and validate the document.
+	 */
+	parser: SyntaxParser;
+
 	readonly documentSettings: Map<string, Thenable<ParserSettings>> = new Map();
 
-	constructor(langaugeId: string, languageName: string) {
+	constructor(langaugeId: string, languageName: string, parser: SyntaxParser, isDocumentTokenProvider = false) {
 		this.languageName = languageName;
 		this.languageId = langaugeId;
+		this.parser = parser;
+		this.isDocumentTokenProvider = isDocumentTokenProvider;
 
 		const messageReader = new BrowserMessageReader(self);
 		const messageWriter = new BrowserMessageWriter(self);
@@ -190,16 +202,21 @@ export abstract class LanguageServerBase {
 		this.validateTextDocument(change.document);
 	}
 
-	protected abstract parse(content: string): Promise<TokenizationResults>;
+	protected async parse(content: string): Promise<TokenizationResults> {
+		const result = this.parser.parse(content);
 
-	async validateTextDocument(document: TextDocument): Promise<ValidationResults> {
-		// The conncetion may not yet be initialized.
+		return {
+			tokens: [...result.tokens, ...result.comments],
+			errors: result.errors,
+			semanticErrors: result.semanticErrors,
+			comments: result.comments
+		};
+	}
+
+	async validateTextDocument(document: TextDocument): Promise<void> {
+		// The connection may not yet be initialized.
 		if (!this?.connection) {
-			return {
-				uri: document.uri,
-				diagnostics: [],
-				tokens: []
-			};
+			return;
 		}
 
 		this.log(`Validating document: ${document.uri}`);
@@ -240,12 +257,28 @@ export abstract class LanguageServerBase {
 		// Send the computed diagnostics to the client.
 		this.connection.sendDiagnostics({ uri: document.uri, diagnostics });
 
-		// This function returns the result to the derived class, which can then perform additional actions.
-		return {
-			uri: document.uri,
-			diagnostics: diagnostics,
-			tokens: tokens
-		};
+		if (this.isDocumentTokenProvider && tokens) {
+			// This sends the tokens to the client so that they can be used to build a reference index.
+			this.connection.sendNotification('mentor/updateContext', {
+				uri: document.uri,
+				// Important: We need to clone the tokens so that they can be processed by strucutredClone() of the underlying message channel.
+				tokens: tokens.map(t => ({
+					image: t.image,
+					startOffset: t.startOffset,
+					endOffset: t.endOffset,
+					startLine: t.startLine,
+					endLine: t.endLine,
+					startColumn: t.startColumn,
+					endColumn: t.endColumn,
+					tokenTypeIdx: t.tokenTypeIdx,
+					tokenType: {
+						name: t.tokenType?.tokenName ?? '',
+						tokenName: t.tokenType?.tokenName,
+						GROUP: t.tokenType?.GROUP,
+					}
+				}))
+			});
+		}
 	}
 
 	protected getLexDiagnostics(document: TextDocument, tokens: IToken[]) {
