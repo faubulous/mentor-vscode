@@ -699,12 +699,6 @@
               "http://www.w3.org/2004/02/skos/core#scopeNote"
             ]
           },
-          "mentor.index.maxFileSize": {
-            "type": "number",
-            "title": "Max File Size",
-            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors. Opening a larger file in an editor or running the 'Analyze Workspace' command will index files above this limit.",
-            "default": 1500000
-          },
           "mentor.namespaces": {
             "type": "array",
             "title": "Namespaces",
@@ -753,13 +747,13 @@
               }
             ]
           },
-          "mentor.workspace.useGitIgnore": {
+          "mentor.index.useGitIgnore": {
             "type": "boolean",
             "title": "Use .gitignore",
             "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
             "default": true
           },
-          "mentor.workspace.ignoreFolders": {
+          "mentor.index.ignoreFolders": {
             "type": "array",
             "title": "Excluded Folders",
             "description": "Manage the folders that should be skipped when indexing the workspace.",
@@ -768,6 +762,12 @@
               ".git",
               "node_modules"
             ]
+          },
+          "mentor.index.maxFileSize": {
+            "type": "number",
+            "title": "Max File Size",
+            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors. Opening a larger file in an editor or running the 'Analyze Workspace' command will index files above this limit.",
+            "default": 1500000
           },
           "mentor.editor.codeLensEnabled": {
             "type": "boolean",

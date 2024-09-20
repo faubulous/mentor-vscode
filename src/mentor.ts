@@ -275,12 +275,12 @@ export async function getExcludePatterns(workspaceUri: vscode.Uri): Promise<stri
 	let result = new Set<string>();
 
 	// Add the patterns from the configuration.
-	for (let pattern of configuration.get('workspace.ignoreFolders', [])) {
+	for (let pattern of configuration.get('index.ignoreFolders', [])) {
 		result.add(pattern);
 	}
 
 	// Add the patterns from the .gitignore file if it is enabled.
-	if (configuration.get('workspace.useGitIgnore')) {
+	if (configuration.get('index.useGitIgnore')) {
 		const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
 
 		try {
