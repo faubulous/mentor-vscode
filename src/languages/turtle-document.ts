@@ -64,7 +64,7 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
-	protected mapBlankNodes() {
+	override mapBlankNodes() {
 		const blankNodes = new Set<string>();
 
 		for (let q of mentor.store.match(this.graphs, null, null, null, false)) {

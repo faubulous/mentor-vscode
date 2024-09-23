@@ -75,7 +75,11 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 				mentor.contexts[params.uri] = context
 			}
 
+			// Update the document context with the new tokens.
 			context.setTokens(params.tokens);
+
+			// Map the blank nodes in the document to the ones in the triple store.
+			context.mapBlankNodes();
 		});
 	}
 

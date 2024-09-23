@@ -268,7 +268,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		// Note: For the root nodes we only want to show sources that actually contain *defined* classses. 
 		// This is why we exclude referenced classes here, independently of the current setting.
-		let options = { notDefinedBy: [...ontologyUris, ...sourceUris], includeReferenced: false };
+		let options = { notDefinedBy: new Set([...ontologyUris, ...sourceUris]), includeReferenced: false };
 		let hasUnknown = false;
 
 		for (let _ of mentor.vocabulary.getClasses(this.context.graphs, options)) {
@@ -523,6 +523,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return [];
 		} else {
 			const context = this.context;
+			const options = { ...node.options };
+			options.notDefinedBy?.add(_SH);
 
 			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Shape, (uri) => new ShapeNode(context, node.id + `/<${uri}>`, uri, node.options));
 		}
@@ -536,6 +538,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	getValidatorNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (this.context != null) {
 			const context = this.context;
+			const options = { ...node.options };
+			options.notDefinedBy?.add(_SH);
 
 			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Validator, (uri) => new ValidatorNode(context, node.id + `/<${uri}>`, uri, node.options));
 		} else {
@@ -551,6 +555,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	getRuleNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
 		if (this.context != null) {
 			const context = this.context;
+			const options = { ...node.options };
+			options.notDefinedBy?.add(_SH);
 
 			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Rule, (uri) => new RuleNode(context, node.id + `/<${uri}>`, uri, node.options));
 		} else {

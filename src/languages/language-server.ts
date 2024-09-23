@@ -376,10 +376,10 @@ export abstract class LanguageServerBase {
 								}
 							});
 						}
-						else if (!ns.uri.endsWith('/') && !ns.uri.endsWith('#')) {
+						else if (!ns.uri.endsWith('/') && !ns.uri.endsWith('#') && !ns.uri.endsWith('_') && !ns.uri.endsWith('=') && !ns.uri.endsWith(':')) {
 							result.push({
 								severity: DiagnosticSeverity.Warning,
-								message: `An RDF namespace URI should end with a '/', '#', '=' or ':' character.`,
+								message: `An RDF namespace URI should end with a '/', '#', '_', '=' or ':' character.`,
 								range: {
 									start: document.positionAt(u.startOffset),
 									end: document.positionAt(u.endOffset ?? 0)

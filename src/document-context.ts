@@ -124,6 +124,11 @@ export abstract class DocumentContext {
 	abstract infer(): Promise<void>;
 
 	/**
+	 * Maps blank node ids of the parsed documents to the ones in the triple store.
+	 */
+	mapBlankNodes() {}
+
+	/**
 	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
 	 * @param tokens An array of tokens.
 	 */
