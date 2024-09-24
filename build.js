@@ -1,21 +1,6 @@
 const { build, context } = require("esbuild");
 const fs = require("fs");
 
-const replaceNodeBuiltIns = () => {
-  const replace = {
-    'path': require.resolve('path-browserify')
-  }
-  const filter = RegExp(`^(${Object.keys(replace).join("|")})$`);
-  return {
-    name: "replaceNodeBuiltIns",
-    setup(build) {
-      build.onResolve({ filter }, arg => ({
-        path: replace[arg.path],
-      }));
-    },
-  };
-}
-
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
 
@@ -36,7 +21,6 @@ const baseConfig = {
     'global': 'globalThis'
   },
   plugins: [
-    replaceNodeBuiltIns(),
     {
       name: 'rebuild-notify',
       setup(build) {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
-import * as path from 'path';
+import { Utils } from 'vscode-uri';
 import { DocumentFactory } from './document-factory';
 
 /**
@@ -62,7 +62,7 @@ export class WorkspaceRepository {
 
 			this._onDidChangeWorkspaceContents.fire({
 				type: vscode.FileChangeType.Created,
-				uri: uri.with({ path: path.dirname(uri.path) })
+				uri: Utils.dirname(uri)
 			});
 
 		});
@@ -76,7 +76,7 @@ export class WorkspaceRepository {
 
 			this._onDidChangeWorkspaceContents.fire({
 				type: vscode.FileChangeType.Deleted,
-				uri: uri.with({ path: path.dirname(uri.path) })
+				uri: Utils.dirname(uri)
 			});
 		});
 	}
@@ -141,22 +141,26 @@ export class WorkspaceRepository {
 		const seenFiles = new Set<string>();
 		const seenFolders = new Set<string>();
 
+		const folder = folderUri.toString();
+
 		for (let file of this._files) {
 			// Skip files that are not in the requested folder.
-			if (!file.path.startsWith(folderUri.path)) {
+			if (!file.toString().startsWith(folder)) {
 				continue;
 			}
 
-			const relativePath = path.relative(folderUri.path, file.path);
+			// Get the portion of the URI relative to the folder.
+			const relativePath = file.toString().substring(folder.length + 1);
 
-			if (relativePath.includes(path.sep)) {
-				const name = relativePath.substring(0, relativePath.indexOf(path.sep));
-				const uri = vscode.Uri.joinPath(folderUri, name);
+			// If this includes a directory separator, we extract the folder name and add it ot the list of folders.
+			if (relativePath.includes('/')) {
+				const subFolderName = relativePath.substring(0, relativePath.indexOf('/'));
+				const subFolderUri = vscode.Uri.joinPath(folderUri, subFolderName);
 
-				if (!seenFolders.has(name)) {
-					folders.push(uri);
+				if (!seenFolders.has(subFolderName)) {
+					folders.push(subFolderUri);
 
-					seenFolders.add(name);
+					seenFolders.add(subFolderName);
 				}
 			} else if (!seenFiles.has(relativePath)) {
 				// Otherwise we add it to the list of files.

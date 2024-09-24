@@ -1,6 +1,6 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
+import { Utils } from 'vscode-uri';
 
 // For a complete implementation of the FileSystemProvider API, see:
 // https://github.com/boltex/revealRangeTest/blob/main/src/fileExplorer.ts#L185
@@ -17,7 +17,7 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 	constructor() {
 		// Montior for changes in the workspace folders.
 		mentor.workspace.onDidChangeWorkspaceFolder((e) => {
-			this._onDidChangeTreeData.fire(e.uri.path);
+			this._onDidChangeTreeData.fire(e.uri.toString());
 		});
 	}
 
@@ -25,42 +25,45 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 		this._onDidChangeTreeData.fire(undefined);
 	}
 
-	getParent(id: string): string | undefined {
-		return id ? path.dirname(id) : undefined;
+	getParent(uri: string): string | undefined {
+		let resourceUri = vscode.Uri.parse(uri);
+
+		return uri ? Utils.dirname(resourceUri).toString() : undefined;
 	}
 
-	async getChildren(id: string): Promise<string[]> {
+	async getChildren(uri: string): Promise<string[]> {
 		if (!vscode.workspace.name || !vscode.workspace.workspaceFolders?.length) {
 			return [];
 		}
 
-		let uri;
+		let resourceUri;
 
-		if (id == null) {
+		if (uri == null) {
 			await mentor.workspace.waitForInitialized();
 
-			uri = vscode.workspace.workspaceFolders[0].uri;
+			resourceUri = vscode.workspace.workspaceFolders[0].uri;
 		} else {
-			uri = vscode.Uri.file(id);
+			resourceUri = vscode.Uri.parse(uri);
 		}
 
-		const result = await mentor.workspace.getFolderContents(uri);
+		const result = await mentor.workspace.getFolderContents(resourceUri);
 
-		return result.map((item) => item.path);
+		return result.map((resource) => resource.toString());
 	}
 
-	getTreeItem(id: string): vscode.TreeItem {
-		const isDirectory = path.extname(id) == '';
+	getTreeItem(uri: string): vscode.TreeItem {
+		const resourceUri = vscode.Uri.parse(uri);
+		const isDirectory = Utils.extname(resourceUri) == '';
 
-		const item = new vscode.TreeItem(id);
-		item.resourceUri = vscode.Uri.file(id);
-		item.label = path.basename(id);
+		const item = new vscode.TreeItem(uri);
+		item.resourceUri = resourceUri;
+		item.label = Utils.basename(resourceUri);
 		item.collapsibleState = isDirectory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None;
 
 		if (!isDirectory) {
 			item.command = {
 				command: 'vscode.open',
-				arguments: [id],
+				arguments: [uri],
 				title: 'Open File'
 			};
 		}

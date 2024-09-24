@@ -367,6 +367,7 @@ export abstract class DocumentContext {
 	 * @returns A URI for the resource as a string literal.
 	 */
 	public getResourceUri(subjectUri: string): string {
+		// TODO: Add support for virtual file systems provided by vscode such as vscode-vfs.
 		if (subjectUri.startsWith('file')) {
 			const u = vscode.Uri.parse(subjectUri);
 

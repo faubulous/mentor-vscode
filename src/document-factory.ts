@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import { Utils } from 'vscode-uri';
 import { DocumentContext } from './document-context';
 import { TurtleDocument } from './languages/turtle-document';
 import { SparqlDocument } from './languages/sparql-document';
@@ -51,7 +51,7 @@ export class DocumentFactory {
 	 * @returns A language ID if the file is supported, otherwise `undefined`.
 	 */
 	public getDocumentLanguageId(uri: vscode.Uri): string {
-		const extension = path.extname(uri.fsPath).toLowerCase();
+		const extension = Utils.extname(uri).toLowerCase();
 
 		return this.supportedExtensions[extension];
 	}
