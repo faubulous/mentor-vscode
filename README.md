@@ -55,6 +55,8 @@ This extension provides the following features:
 ### Version 0.2.1: Support for SHACL shapes in Definitions Tree and vscode.dev
 This release supports browsing SHACL shapes that are defined in ontologies. You can quickly jump to shape definitions that are associated with classes or properties from the definitions tree. Also supports SHACL datatype definitions for properties.
 
+Greatly improved workspace indexing speed for reference resolution with added options for skipping files above a configurable size limit.
+
 Mentor can be run as a pure web extension and supports collaboration in online portals such as [vscode.dev](https://vscode.dev).
 
 ### Version 0.1.8: Fixed context menus not working in Definitions Tree
