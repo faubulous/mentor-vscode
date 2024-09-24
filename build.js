@@ -76,6 +76,13 @@ const getLanguageConfig = (type, language) => {
       for (const file of fs.readdirSync('./media/glyphs')) {
         fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
       }
+
+      // Copy the language config files to the out directory.
+      for (const file of fs.readdirSync('./src/languages/')) {
+        if (file.endsWith('.json')) {
+          fs.copyFileSync(`./src/languages/${file}`, `./out/${file}`);
+        }
+      }
     }
 
     const args = process.argv.slice(2);

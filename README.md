@@ -12,7 +12,7 @@ This extension provides the following features:
 
 - **Online Collaboration <sup style="color: orange">NEW</sup>**
   - Runnable in the browser on [vscode.dev](https://vscode.dev)
-  - Browse GitHub repositories without installing
+  - Edit GitHub repositories online
 - **Workspace Tree**
   - Navigate all ontology and SPARQL files in the project
   - Easily find problems in all ontologies in the workspace
@@ -26,11 +26,10 @@ This extension provides the following features:
     - Classes
     - Properties
     - Individuals
-  - Showing the definitions of SHACL shapes
+  - Showing the definitions of SHACL shapes <sup style="color: orange">NEW</sup>
     - Quickly jump to shapes associated with a class or property
     - Node Shapes
-    - Property Shapes
-      - With property path labels
+    - Property Shapes with property path labels
     - Rules
     - Validators
   - Showing the definitions in SKOS thesauri

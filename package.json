@@ -85,7 +85,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.47",
+    "@faubulous/mentor-rdf": "^0.2.48",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -107,7 +107,7 @@
           ".nt",
           ".n3"
         ],
-        "configuration": "./src/languages/turtle-language-config.json",
+        "configuration": "./out/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -122,7 +122,7 @@
         "extensions": [
           ".nq"
         ],
-        "configuration": "./src/languages/turtle-language-config.json",
+        "configuration": "./out/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -137,7 +137,7 @@
         "extensions": [
           ".ttl"
         ],
-        "configuration": "./src/languages/turtle-language-config.json",
+        "configuration": "./out/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -152,7 +152,7 @@
         "extensions": [
           ".trig"
         ],
-        "configuration": "./src/languages/trig-language-config.json",
+        "configuration": "./out/trig-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -168,7 +168,7 @@
           ".sparql",
           ".rq"
         ],
-        "configuration": "./src/languages/sparql-language-config.json",
+        "configuration": "./out/sparql-language-config.json",
         "icon": {
           "light": "./media/icons/sparql-light.svg",
           "dark": "./media/icons/sparql-dark.svg"
