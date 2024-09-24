@@ -3,7 +3,7 @@
 
 This extension provides powerful editing support for RDF ontologies, thesauri and knowledge graph projects in Visual Studio Code.
 
-<img src="media/screenshot.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
+<img src="https://raw.githubusercontent.com/faubulous/mentor-vscode/main/media/screenshot.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
 
 ## Features
 > **Tip:** Try it with <a href="https://marketplace.visualstudio.com/items?itemName=GitHub.copilot">GitHub Copilot</a> for the best code editing experience.
