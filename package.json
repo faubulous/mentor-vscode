@@ -28,12 +28,14 @@
     "sparql",
     "stardog",
     "taxonomy",
+    "thesaurus",
+    "terminology",
     "trig",
     "turtle",
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.1.8",
+  "version": "0.2.1",
   "preview": true,
   "publisher": "faubulous",
   "private": false,
@@ -48,8 +50,9 @@
   "categories": [
     "Programming Languages"
   ],
-  "main": "./out/extension.js",
+  "browser": "./out/extension.js",
   "scripts": {
+    "clean": "rm -Rf node_modules && rm -Rf out && rm -Rf media/*.woff",
     "build": "node ./build-font.js && node ./build.js",
     "build:watch": "node ./build-font.js && node ./build.js --watch",
     "build:font": "node ./build-font.js",
@@ -60,6 +63,7 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
+    "@rdfjs/types": "^1.1.2",
     "@types/jest": "^29.5.5",
     "@types/mkdirp": "^0.5.2",
     "@types/n3": "^1.16.0",
@@ -81,14 +85,14 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.38",
+    "@faubulous/mentor-rdf": "^0.2.48",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
-    "minimatch": "^9.0.3",
     "n3": "^1.17.1",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.11"
+    "vscode-languageserver-textdocument": "^1.0.11",
+    "vscode-uri": "^3.0.8"
   },
   "activationEvents": [],
   "contributes": {
@@ -103,7 +107,7 @@
           ".nt",
           ".n3"
         ],
-        "configuration": "./src/languages/turtle-language-config.json",
+        "configuration": "./out/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -118,7 +122,7 @@
         "extensions": [
           ".nq"
         ],
-        "configuration": "./src/languages/turtle-language-config.json",
+        "configuration": "./out/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -133,7 +137,7 @@
         "extensions": [
           ".ttl"
         ],
-        "configuration": "./src/languages/turtle-language-config.json",
+        "configuration": "./out/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -148,7 +152,7 @@
         "extensions": [
           ".trig"
         ],
-        "configuration": "./src/languages/trig-language-config.json",
+        "configuration": "./out/trig-language-config.json",
         "icon": {
           "light": "./media/icons/ontology-light.svg",
           "dark": "./media/icons/ontology-dark.svg"
@@ -164,7 +168,7 @@
           ".sparql",
           ".rq"
         ],
-        "configuration": "./src/languages/sparql-language-config.json",
+        "configuration": "./out/sparql-language-config.json",
         "icon": {
           "light": "./media/icons/sparql-light.svg",
           "dark": "./media/icons/sparql-dark.svg"
@@ -177,6 +181,14 @@
         "scopes": {
           "namespace": [
             "storage.modifier.turtle"
+          ]
+        }
+      },
+      {
+        "language": "trig",
+        "scopes": {
+          "namespace": [
+            "storage.modifier.trig"
           ]
         }
       },
@@ -336,6 +348,13 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e017"
         }
+      },
+      "rdf-tree-classes": {
+        "description": "Classes tree icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e018"
+        }
       }
     },
     "colors": [
@@ -344,7 +363,7 @@
         "description": "Color used for tree nodes representing concepts or concept references.",
         "defaults": {
           "light": "#901485",
-          "dark": "#c586c0"
+          "dark": "#569cd6"
         }
       },
       {
@@ -352,7 +371,7 @@
         "description": "Color used for tree nodes representing class or class references.",
         "defaults": {
           "light": "#007acc",
-          "dark": "#3399ff"
+          "dark": "#569cd6"
         }
       },
       {
@@ -360,7 +379,7 @@
         "description": "Color used for tree nodes representing literals.",
         "defaults": {
           "light": "#007acc",
-          "dark": "#3399ff"
+          "dark": "#569cd6"
         }
       },
       {
@@ -368,7 +387,7 @@
         "description": "Color used for tree nodes representing object properties.",
         "defaults": {
           "light": "#006bd5",
-          "dark": "#3399ff"
+          "dark": "#569cd6"
         }
       },
       {
@@ -567,7 +586,7 @@
         },
         {
           "command": "mentor.action.revealShapeDefinition",
-          "when": "viewItem != shapes && viewItem =~ /shape/",
+          "when": "viewItem != shapes && viewItem =~ / shape-target/",
           "group": "inline"
         },
         {
@@ -728,13 +747,13 @@
               }
             ]
           },
-          "mentor.workspace.useGitIgnore": {
+          "mentor.index.useGitIgnore": {
             "type": "boolean",
             "title": "Use .gitignore",
             "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
             "default": true
           },
-          "mentor.workspace.ignoreFolders": {
+          "mentor.index.ignoreFolders": {
             "type": "array",
             "title": "Excluded Folders",
             "description": "Manage the folders that should be skipped when indexing the workspace.",
@@ -743,6 +762,12 @@
               ".git",
               "node_modules"
             ]
+          },
+          "mentor.index.maxFileSize": {
+            "type": "number",
+            "title": "Max File Size",
+            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors. Opening a larger file in an editor or running the 'Analyze Workspace' command will index files above this limit.",
+            "default": 1500000
           },
           "mentor.editor.codeLensEnabled": {
             "type": "boolean",

@@ -1,2 +1,5 @@
+.vscode
+build*.
 src/**
 node_modules/**
+**/media/screenshot*.png

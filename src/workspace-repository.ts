@@ -1,46 +1,31 @@
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
-import * as minimatch from 'minimatch';
-import * as path from 'path';
-
-/**
- * Represents a file or folder in the workspace.
- */
-export interface WorkspaceItem {
-	/**
-	 * The name of the item.
-	 */
-	name: string;
-
-	/**
-	 * The URI of the item provided by the Visual Studio Code API.
-	 */
-	uri: vscode.Uri;
-
-	/**
-	 * The type of the item.
-	 */
-	type: vscode.FileType;
-}
+import { Utils } from 'vscode-uri';
+import { DocumentFactory } from './document-factory';
 
 /**
  * A repository for retrieving workspace resources such as files and folders.
  */
 export class WorkspaceRepository {
 	/**
-	 * The regular expression for supported file extensions.
+	 * A factory for creating document contexts and checking for supported file formats.
 	 */
-	private readonly _include = /\.ttl$|\.nt$|\.owl$|\.trig$|\.nq$|\.n3|\.sparql|\.rq$/;
+	private readonly _documentFactory = new DocumentFactory();
 
 	/**
-	 * The regular expression for excluding files and folders from the workspace.
+	 * The included file extensions as glob patterns.
 	 */
-	private readonly _excluded: RegExp[] = [];
+	private _includePatterns = Object.keys(this._documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
 
 	/**
-	 * The root items of the workspace.
+	 * The excluded file patterns loaded from the configuration.
 	 */
-	readonly rootItems: WorkspaceItem[] = [];
+	private _excludePatterns: string[] = [];
+
+	/**
+	 * A list of all RDF files in the workspace.
+	 */
+	private _files: vscode.Uri[] = [];
 
 	/**
 	 * A file system watcher for the workspace.
@@ -68,105 +53,64 @@ export class WorkspaceRepository {
 	readonly onDidChangeWorkspaceFolder = this._onDidChangeWorkspaceContents.event;
 
 	constructor() {
-		this.watcher.onDidCreate((e) => this._onDidChangeWorkspaceContents.fire({
-			type: vscode.FileChangeType.Created,
-			uri: _getDirectoryUri(e)
-		}));
+		this.watcher.onDidCreate((uri: vscode.Uri) => {
+			if (!this._documentFactory.isSupportedFile(uri)) {
+				return;
+			}
 
-		this.watcher.onDidDelete((e) => this._onDidChangeWorkspaceContents.fire({
-			type: vscode.FileChangeType.Deleted,
-			uri: _getDirectoryUri(e)
-		}));
+			this._files.push(uri);
+
+			this._onDidChangeWorkspaceContents.fire({
+				type: vscode.FileChangeType.Created,
+				uri: Utils.dirname(uri)
+			});
+
+		});
+
+		this.watcher.onDidDelete((uri: vscode.Uri) => {
+			if (!this._documentFactory.isSupportedFile(uri)) {
+				return;
+			}
+
+			this._files = this._files.filter(f => f.path !== uri.path);
+
+			this._onDidChangeWorkspaceContents.fire({
+				type: vscode.FileChangeType.Deleted,
+				uri: Utils.dirname(uri)
+			});
+		});
 	}
 
 	/**
 	 * Loads the root items of the workspace.
 	 */
-	async initialize(): Promise<WorkspaceItem[]> {
+	async initialize(): Promise<void> {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isInitializing', true);
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', true);
 
 		// Clear the root items.
-		this.rootItems.length = 0;
+		this._files = [];
 
 		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 			const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
 
-			await this._initializeExcludePatterns(workspaceUri);
+			this._excludePatterns = await mentor.getExcludePatterns(workspaceUri);
 
-			for (const item of await this.getFolderContents(workspaceUri)) {
-				this.rootItems.push(item);
-			}
+			// Get the excluded folders pattern relative to the workspace folder.
+			const excludedFolders = new vscode.RelativePattern(workspaceUri, '{' + this._excludePatterns.join(",") + '}');
 
-			this._onDidChangeWorkspaceContents.fire({
-				type: vscode.FileChangeType.Changed,
-				uri: workspaceUri
-			});
+			// Get the included files relative to the requested folder.
+			const includedFiles = new vscode.RelativePattern(workspaceUri, '{' + this._includePatterns.join(",") + '}');
+
+			// This will only return files. We need to extract the subfolders separately.
+			this._files = await vscode.workspace.findFiles(includedFiles, excludedFolders);
 		}
 
-		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', this.rootItems.length === 0);
+		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', this._files.length === 0);
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isInitializing', false);
 
 		this._initialized = true;
 		this._onDidFinishInitializing.fire(true);
-
-		return this.rootItems;
-	}
-
-	private async _initializeExcludePatterns(workspaceUri: vscode.Uri): Promise<void> {
-		// Collect the regex patterns for excluding files and folders in a set to remove duplicates.
-		let result = new Set<string>();
-
-		// Add the patterns from the configuration.
-		let ignoreFolders = await mentor.getExcludePatterns(workspaceUri);
-
-		// Now initialize the dedupliacted patterns as regular expressions.
-		for (const regex of this._getGlobPatternsAsRegExp(Array.from(result))) {
-			this._excluded.push(new RegExp(regex));
-		}
-	}
-
-	/**
-	 * Convert glob patterns to regular expressions.
-	 * @param patterns An array of glob patterns.
-	 * @returns An array of regular expressions for the glob patterns.
-	 */
-	private _getGlobPatternsAsRegExp(patterns: string[]): string[] {
-		let result = [];
-
-		for (const pattern of patterns) {
-			let regex = minimatch.makeRe(pattern);
-
-			if (regex) {
-				result.push(regex.source);
-			}
-		}
-
-		return result;
-	}
-
-	/**
-	 * Indicates if a workspace item shoould be included in the workspace tree.
-	 * @param item A workspace item.
-	 * @returns `true` if the item should be included in the workspace tree, `false` otherwise.
-	 */
-	private _isIncludedItem(item: WorkspaceItem): boolean {
-		return !_isDirectory(item) && this._include.test(item.name);
-	}
-
-	/**
-	 * Indicates if a workspace item should be excluded from the workspace tree.
-	 * @param item A workspace item.
-	 * @returns `true` if the item should be excluded from the workspace tree, `false` otherwise.
-	 */
-	private _isExcludedItem(item: WorkspaceItem): boolean {
-		for (const pattern of this._excluded) {
-			if (pattern.test(item.uri.path)) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	/**
@@ -188,99 +132,47 @@ export class WorkspaceRepository {
 
 	/**
 	 * Retrieves the contents of a folder in the workspace.
-	 */
-	async getFolderContents(uri: vscode.Uri): Promise<WorkspaceItem[]> {
-		return this._findMatchingFilesOrFolders(uri);
-	}
-
-	/**
-	 * Retrieves the contents of a folder in the workspace.
 	 * @param folderUri The URI of the folder to search in.
-	 * @param include A regular expression for including files and folders.
-	 * @param exclude A regular expression for excluding files and folders.
 	 * @returns A list of matching files and folders sorted by type and name.
 	 */
-	private async _findMatchingFilesOrFolders(folderUri: vscode.Uri): Promise<WorkspaceItem[]> {
-		const result: WorkspaceItem[] = [];
-		const entries = await vscode.workspace.fs.readDirectory(folderUri);
+	async getFolderContents(folderUri: vscode.Uri): Promise<vscode.Uri[]> {
+		const files = [];
+		const folders = [];
+		const seenFiles = new Set<string>();
+		const seenFolders = new Set<string>();
 
-		// We look at files first because this can significantly reduce the number of file system operations needed.
-		for (const item of entries.map(e => _mapEntryToWorkspaceItem(folderUri, e)).sort(_sortFilesFirst)) {
-			if (this._isExcludedItem(item)) {
+		const folder = folderUri.toString();
+
+		for (let file of this._files) {
+			// Skip files that are not in the requested folder.
+			if (!file.toString().startsWith(folder)) {
 				continue;
-			} else if (this._isIncludedItem(item) || await this._hasMatchingFiles(item)) {
-				result.push(item);
+			}
+
+			// Get the portion of the URI relative to the folder.
+			const relativePath = file.toString().substring(folder.length + 1);
+
+			// If this includes a directory separator, we extract the folder name and add it ot the list of folders.
+			if (relativePath.includes('/')) {
+				const subFolderName = relativePath.substring(0, relativePath.indexOf('/'));
+				const subFolderUri = vscode.Uri.joinPath(folderUri, subFolderName);
+
+				if (!seenFolders.has(subFolderName)) {
+					folders.push(subFolderUri);
+
+					seenFolders.add(subFolderName);
+				}
+			} else if (!seenFiles.has(relativePath)) {
+				// Otherwise we add it to the list of files.
+				files.push(file);
+
+				seenFiles.add(relativePath);
 			}
 		}
 
-		return result.sort(_sortDirectoriesFirst);
+		return [
+			...folders.sort((a, b) => a.path.localeCompare(b.path)),
+			...files.sort((a, b) => a.path.localeCompare(b.path))
+		];
 	}
-
-	/**
-	 * Indicates if a folder contains matching files.
-	 * @param folder The folder to search in.
-	 * @returns `true` if the folder contains matching files, `false` otherwise.
-	 */
-	private async _hasMatchingFiles(folder: WorkspaceItem): Promise<boolean> {
-		if (!_isDirectory(folder)) {
-			return false;
-		}
-
-		const entries = await vscode.workspace.fs.readDirectory(folder.uri);
-
-		for (const item of entries.map(e => _mapEntryToWorkspaceItem(folder.uri, e)).sort(_sortFilesFirst)) {
-			if (this._isExcludedItem(item)) {
-				continue;
-			} else if (this._isIncludedItem(item) || await this._hasMatchingFiles(item)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-}
-
-/**
- * Indicates if a workspace item is a directory.
- * @param item A workspace item.
- * @returns ´true´ if the item is a directory, ´false´ otherwise.
- */
-function _isDirectory(item: WorkspaceItem): boolean {
-	return item.type === vscode.FileType.Directory;
-}
-
-function _getDirectoryUri(uri: vscode.Uri): vscode.Uri {
-	return uri.with({ path: path.dirname(uri.path) });
-}
-
-function _mapEntryToWorkspaceItem(folderUri: vscode.Uri, entry: [string, vscode.FileType]): WorkspaceItem {
-	return {
-		name: entry[0],
-		uri: vscode.Uri.joinPath(folderUri, entry[0]),
-		type: entry[1]
-	};
-}
-
-function _sortDirectoriesFirst(a: WorkspaceItem, b: WorkspaceItem): number {
-	if (_isDirectory(a) && !_isDirectory(b)) {
-		return -1;
-	}
-
-	if (!_isDirectory(a) && _isDirectory(b)) {
-		return 1;
-	}
-
-	return a.uri.path.localeCompare(b.uri.path);
-}
-
-function _sortFilesFirst(a: WorkspaceItem, b: WorkspaceItem): number {
-	if (!_isDirectory(a) && _isDirectory(b)) {
-		return -1;
-	}
-
-	if (_isDirectory(a) && !_isDirectory(b)) {
-		return 1;
-	}
-
-	return a.uri.path.localeCompare(b.uri.path);
 }

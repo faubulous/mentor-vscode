@@ -7,6 +7,7 @@ import { DocumentIndexer, DocumentIndex } from './document-indexer';
 import { WorkspaceRepository } from './workspace-repository';
 import { LocalStorageService } from './services/local-storage-service';
 import { PrefixDownloaderService } from './services/prefix-downloader-service';
+import { debounce } from './utilities';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -53,6 +54,11 @@ export const indexer = new DocumentIndexer();
  */
 export const globalStorage = new LocalStorageService();
 
+/**
+ * A factory for loading and creating document contexts.
+ */
+export const documentFactory = new DocumentFactory();
+
 const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
 export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
@@ -92,39 +98,17 @@ function onTextDocumentClosed(e: vscode.TextDocument): void {
 	}
 }
 
-vscode.workspace.onDidChangeTextDocument((e) => onTextDocumentChanged(e));
+vscode.workspace.onDidChangeTextDocument((e) => {
+	// TODO: Debounce per document URI context. The current implementation might miss changes in other documents.
+	debounce(onTextDocumentChanged, 10)(e);
+});
+
 vscode.workspace.onDidCloseTextDocument((e) => onTextDocumentClosed(e));
+
 /**
- * A factory for loading and creating document contexts.
+ * Activate the document in the editor.
+ * @returns A promise that resolves to the active text editor or `undefined`.
  */
-const documentFactory = new DocumentFactory();
-
-async function loadDocument(document: vscode.TextDocument, reload: boolean = false): Promise<DocumentContext | undefined> {
-	if (!document || !documentFactory.isSupported(document.languageId)) {
-		return;
-	}
-
-	const uri = document.uri.toString();
-
-	let context = contexts[uri];
-
-	if (context && !reload) {
-		// Compute the inference graph on the document, if it does not exist.
-		context.infer();
-
-		return context;
-	}
-
-	context = documentFactory.create(document.uri, document.languageId);
-
-	await context.load(document.uri, document.getText(), true);
-
-	contexts[uri] = context;
-	activeContext = context;
-
-	return context;
-}
-
 export async function activateDocument(): Promise<vscode.TextEditor | undefined> {
 	const documentUri = vscode.window.activeTextEditor?.document.uri;
 
@@ -135,6 +119,46 @@ export async function activateDocument(): Promise<vscode.TextEditor | undefined>
 	return vscode.window.activeTextEditor;
 }
 
+/**
+ * Load a text document into a document context.
+ * @param document The text document to load.
+ * @param forceReload Indicates whether a new context should be created for existing contexts.
+ * @returns 
+ */
+async function loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<DocumentContext | undefined> {
+	if (!document || !documentFactory.supportedLanguages.has(document.languageId)) {
+		return;
+	}
+
+	const uri = document.uri.toString();
+
+	let context = contexts[uri];
+
+	if (context?.isLoaded && !forceReload) {
+		// Compute the inference graph on the document, if it does not exist.
+		context.infer();
+
+		return context;
+	}
+
+	context = documentFactory.create(document.uri, document.languageId);
+
+	// Parse the tokens of the document and load the graph.
+	await context.parse(document.uri, document.getText());
+
+	// Compute the inference graph on the document to simplify querying.
+	await context.infer();
+
+	contexts[uri] = context;
+	activeContext = context;
+
+	return context;
+}
+
+/**
+ * Initialize the extension.
+ * @param context The extension context.
+ */
 export async function initialize(context: vscode.ExtensionContext) {
 	// Initialize the extension persistence service.
 	globalStorage.initialize(context.globalState);
@@ -160,7 +184,7 @@ export async function initialize(context: vscode.ExtensionContext) {
 
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Window,
-			title: `Downloading prefixes from ${service.enpointUrl}...`,
+			title: `Downloading prefixes from ${service.endpointUrl}...`,
 			cancellable: false
 		}, async (progress) => {
 			progress.report({ increment: 0 });
@@ -251,12 +275,12 @@ export async function getExcludePatterns(workspaceUri: vscode.Uri): Promise<stri
 	let result = new Set<string>();
 
 	// Add the patterns from the configuration.
-	for (let pattern of configuration.get('workspace.ignoreFolders', [])) {
+	for (let pattern of configuration.get('index.ignoreFolders', [])) {
 		result.add(pattern);
 	}
 
 	// Add the patterns from the .gitignore file if it is enabled.
-	if (configuration.get('workspace.useGitIgnore')) {
+	if (configuration.get('index.useGitIgnore')) {
 		const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
 
 		try {

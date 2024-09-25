@@ -24,15 +24,15 @@ export class ClassNode extends ResourceNode {
 				icon += "-i";
 			}
 
-			return new vscode.ThemeIcon(icon, ClassNode.getIconColor());
+			return new vscode.ThemeIcon(icon, ClassNode.getIconColor(graphUris, subjectUri));
 		}
 	}
 	
 	override getIconColor() {
-		return ClassNode.getIconColor();
+		return ClassNode.getIconColor(this.document.graphs, this.uri);
 	}
 
-	static getIconColor(): vscode.ThemeColor {
+	static getIconColor(graphUris: string | string[] | undefined, subjectUri: string | undefined): vscode.ThemeColor {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 
@@ -52,17 +52,13 @@ export class ClassNode extends ResourceNode {
 		let result = "";
 
 		if (!this.uri) {
-			result += mentor.vocabulary.getClasses(this.document.graphs, this.options).length.toString();
+			result += " " + mentor.vocabulary.getClasses(this.document.graphs, this.options).length.toString();
 		} else {
 			let indicators = [];
-
+			
 			if (mentor.vocabulary.hasEquivalentClass(this.document.graphs, this.uri)) {
 				indicators.push("≡");
 			}
-
-			// if (mentor.vocabulary.hasShapes(this.document.graphs, this.uri)) {
-			// 	indicators.push("⬡");
-			// }
 
 			// if (mentor.vocabulary.isIntersectionOfClasses(this.context.graphs, this.uri)) {
 			// 	indicators.push("⋂");

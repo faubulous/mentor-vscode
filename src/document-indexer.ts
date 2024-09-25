@@ -17,7 +17,7 @@ export class DocumentIndexer {
 	/**
 	 * The document factory for creating document contexts.
 	 */
-	readonly factory = new DocumentFactory();
+	private readonly _documentFactory = new DocumentFactory();
 
 	/**
 	 * Indicates if all workspace files have been indexed.
@@ -38,13 +38,17 @@ export class DocumentIndexer {
 	 */
 	async indexWorkspace(): Promise<void> {
 		vscode.window.withProgress({
-			location: vscode.ProgressLocation.Notification,
+			location: vscode.ProgressLocation.Window,
 			title: "Indexing workspace",
 			cancellable: false
 		}, async (progress) => {
 			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
 
 			this.reportProgress(progress, 0);
+
+			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
+			// file size limit and make issues with the configuration more visible.
+			const maxSize = mentor.configuration.get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
 
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 				const startTime = performance.now();
@@ -53,35 +57,37 @@ export class DocumentIndexer {
 
 				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				const uris = await vscode.workspace.findFiles("**/*.{ttl,nt,owl,trig,nq,n3,sparql,rq}", excludedFolders);
+				const includedExtensions = Object.keys(this._documentFactory.supportedExtensions).join(',');
 
-				const tasks = uris.map(uri => async (n: number) => {
+				let uris = await vscode.workspace.findFiles("**/*{" + includedExtensions + "}", excludedFolders);
+
+				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
+				uris = uris.filter(uri => this._documentFactory.isSupportedFile(uri));
+
+				for (let i = 0; i < uris.length; i++) {
+					const uri = uris[i];
 					const u = uri.toString();
 
-					if (!mentor.contexts[u]) {
-						const data = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
-
-						const context = this.factory.create(uri);
-
-						await context.load(uri, data, false);
-
-						this.reportProgress(progress, Math.round((n / tasks.length) * 100));
-
-						return { uri: u, context };
-					} else {
-						return { uri: u, context: mentor.contexts[u] };
+					if (mentor.contexts[u]) {
+						continue;
 					}
-				});
 
-				const results = await this.runInParallel(tasks, 2);
+					const size = (await vscode.workspace.fs.stat(uri)).size;
 
-				for (const { uri, context } of results) {
-					mentor.contexts[uri] = context;
+					if (size > maxSize) {
+						console.log(`Mentor: Skipping large file ${uri.toString()} (${size} bytes)`);
+						continue;
+					}
+
+					// Open the document to trigger the language server to analyze it.
+					await vscode.workspace.openTextDocument(uri);
+
+					this.reportProgress(progress, Math.round(((i + 1) / uris.length) * 100));
 				}
 
 				const endTime = performance.now();
 
-				console.log(`Indexing took ${endTime - startTime} ms`);
+				console.log(`Mentor: Indexing took ${endTime - startTime} ms`);
 			}
 
 			this._indexed = true;
@@ -92,25 +98,6 @@ export class DocumentIndexer {
 
 			this._onDidFinishIndexing.fire(true);
 		});
-	}
-
-	/**
-	 * Executes a set of tasks in parallel.
-	 * @param tasks The tasks to be executed.
-	 * @param maxParallel The maximum number of tasks to run in parallel.
-	 * @returns The results of the tasks.
-	 */
-	async runInParallel<T>(tasks: ((n: number) => Promise<T>)[], maxParallel: number): Promise<T[]> {
-		let results: T[] = [];
-
-		for (let i = 0; i < tasks.length; i += maxParallel) {
-			const chunk = tasks.slice(i, i + maxParallel);
-			const chunkResults = await Promise.all(chunk.map((task, index) => task(i + index)));
-
-			results = [...results, ...chunkResults];
-		}
-
-		return results;
 	}
 
 	/**

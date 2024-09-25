@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { LanguageClient, LanguageClientOptions, TransportKind } from 'vscode-languageclient/node';
+import * as mentor from '../mentor';
+import { IToken } from 'millan';
+import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient/browser';
 
 export abstract class LanguageClientBase implements vscode.Disposable {
 	/**
@@ -47,12 +49,11 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 	}
 
 	start(context: vscode.ExtensionContext) {
-		const module = context.asAbsolutePath(this.serverPath);
+		// Absolute path to the server module.
+		const serverMain = vscode.Uri.joinPath(context.extensionUri, this.serverPath);
 
-		const serverOptions = {
-			run: { module, transport: TransportKind.ipc },
-			debug: { module, transport: TransportKind.ipc }
-		};
+		// Create a new worker for the language server.
+		const worker = new Worker(serverMain.toString(true));
 
 		const clientOptions: LanguageClientOptions = {
 			diagnosticCollectionName: this.channelId,
@@ -60,8 +61,26 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 			outputChannel: this.channel
 		};
 
-		this.client = new LanguageClient(this.channelId, `${this.languageName} Language Client`, serverOptions, clientOptions);
+		this.client = new LanguageClient(this.channelId, `${this.languageName} Language Client`, clientOptions, worker);
 		this.client.start();
+
+		this.client.onNotification('mentor/updateContext', (params: { uri: string, tokens: IToken[] }) => {
+			let context = mentor.contexts[params.uri];
+
+			if (!context) {
+				const uri = vscode.Uri.parse(params.uri);
+
+				context = mentor.documentFactory.create(uri, this.languageId);
+
+				mentor.contexts[params.uri] = context
+			}
+
+			// Update the document context with the new tokens.
+			context.setTokens(params.tokens);
+
+			// Map the blank nodes in the document to the ones in the triple store.
+			context.mapBlankNodes();
+		});
 	}
 
 	async dispose() {

@@ -1,15 +1,20 @@
-import { RdfSyntax, Tokenizer, TokenizerResult } from '@faubulous/mentor-rdf';
+import * as vscode from 'vscode';
+import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 
+/**
+ * A document context for SPARQL documents.
+ */
 export class SparqlDocument extends DocumentContext {
-	protected async parseData(data: string): Promise<TokenizerResult> {
-		try {
-			return await Tokenizer.parseData(data, RdfSyntax.Sparql);
-		} catch (e) {
-			console.debug(data);
-			console.error(e);
+	public override async infer(): Promise<void> {
+		// Inference is not supported for SPARQL documents.
+	}
 
-			throw e;
-		}
+	public override async parse(uri: vscode.Uri, data: string): Promise<void> {
+		// Parse the tokens *before* parsing the graph because the graph parsing 
+		// might fail but we need to update the tokens.
+		const tokens = new SparqlSyntaxParser().tokenize(data);
+
+		this.setTokens(tokens);
 	}
 }

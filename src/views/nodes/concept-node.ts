@@ -13,7 +13,7 @@ export class ConceptNode extends ResourceNode {
 	}
 
 	override getIconColor() {
-		return new vscode.ThemeColor("mentor.color.class");
+		return new vscode.ThemeColor("mentor.color.concept");
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
@@ -32,7 +32,7 @@ export class ConceptNode extends ResourceNode {
 		if (!this.uri) {
 			const members = mentor.vocabulary.getConcepts(this.document.graphs);
 
-			return members.length.toString();
+			return " " + members.length.toString();
 		}
 	}
 }

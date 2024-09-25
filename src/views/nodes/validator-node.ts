@@ -1,43 +1,47 @@
 import * as vscode from "vscode";
 import * as mentor from "../../mentor";
-import { OWL } from "@faubulous/mentor-rdf";
+import { SH } from "@faubulous/mentor-rdf";
 import { ResourceNode } from "./resource-node";
 
-export class IndividualNode extends ResourceNode {
-	contextType = OWL.NamedIndividual;
+export class ValidatorNode extends ResourceNode {
+	contextType = SH.Validator;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	override getIcon() {
 		if (this.uri) {
-			return new vscode.ThemeIcon('rdf-individual', this.getIconColor());
+			// Return the ref class icon if target cannot be found.
+			return new vscode.ThemeIcon('rdf-class', this.getIconColor());
 		}
 	}
 
 	override getIconColor() {
-		return new vscode.ThemeColor("mentor.color.individual");
+		return new vscode.ThemeColor("mentor.color.class");
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
 		if (!this.uri) {
 			return {
-				label: "Individuals"
+				label: "Validators"
 			}
 		} else {
 			return {
 				label: this.document.getResourceLabel(this.uri)
 			}
 		}
-
 	}
 
 	override getDescription(): string {
 		let result = "";
 
 		if (!this.uri) {
-			result += " " + mentor.vocabulary.getIndividuals(this.document.graphs, undefined, this.options).length.toString();
+			result += " " + mentor.vocabulary.getValidators(this.document.graphs).length.toString();
 		}
 
 		return result;
+	}
+
+	override getResourceUri(): vscode.Uri | undefined {
+		return undefined;
 	}
 }

@@ -100,6 +100,8 @@ export function isUpperCase(token?: IToken): boolean {
 export function getPrefixFromToken(token: IToken): string {
 	if (token.tokenType?.tokenName === 'PNAME_LN') {
 		return token.image.split(':')[0];
+	} else if(token.tokenType?.tokenName === 'PNAME_NS') {
+		return token.image.substring(0, token.image.length - 1);
 	} else {
 		throw new Error("Cannot get prefix from token type: " + token.tokenType?.tokenName);
 	}

@@ -5,12 +5,13 @@
     {
       "name": "Launch Extension",
       "type": "extensionHost",
+      "debugWebWorkerHost": true,
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "args": [
         "--extensionDevelopmentPath=${workspaceRoot}",
-        "--enable-proposed-api",
-        "vscode-samples.custom-view-samples"
+        "--extensionDevelopmentKind=web",
+        "--enable-proposed-api"
       ],
       "sourceMaps": true,
       "outFiles": ["${workspaceRoot}/out/**/*.js"]

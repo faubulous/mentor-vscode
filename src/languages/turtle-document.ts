@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
 import * as mentor from '../mentor';
-import { RdfSyntax, Tokenizer, TokenizerResult } from '@faubulous/mentor-rdf';
+import { RdfSyntax, TrigSyntaxParser } from '@faubulous/mentor-rdf';
+import { TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 
+/**
+ * A document context for Turtle and TriG documents.
+ */
 export class TurtleDocument extends DocumentContext {
 	readonly syntax: RdfSyntax;
 
@@ -14,67 +18,117 @@ export class TurtleDocument extends DocumentContext {
 		this.syntax = syntax;
 	}
 
+	get isLoaded(): boolean {
+		return super.isLoaded && this.graphs.length > 0;
+	}
+
 	public override async infer(): Promise<void> {
 		const reasoner = mentor.store.reasoner;
 
-		if (!reasoner) {
-			return;
-		}
-
-		if (!this._inferenceExecuted) {
+		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			await mentor.store.executeInference(this.uri.toString());
+			mentor.store.executeInference(this.uri.toString());
 		}
 	}
 
-	public override async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
+	public override async parse(uri: vscode.Uri, data: string): Promise<void> {
 		// Parse the tokens *before* parsing the graph because the graph parsing 
 		// might fail but we need to update the tokens.
-		await this.parseTokens(data);
+		let tokens;
+
+		if (this.syntax === RdfSyntax.TriG) {
+			tokens = new TrigSyntaxParser().tokenize(data);
+		} else {
+			tokens = new TurtleSyntaxParser().tokenize(data)
+		}
+
+		this.setTokens(tokens);
 
 		try {
-			await this.parseGraph(uri, data, executeInference);
+			const u = uri.toString();
+
+			// Initilaize the graphs *before* trying to load the document so 
+			// that they are initialized even when loading the document fails.
+			this.graphs.length = 0;
+			this.graphs.push(u);
+
+			// The loadFromStream function only updates the existing graphs 
+			// when the document was parsed successfully.
+			await mentor.store.loadFromStream(data, u, false);
+
+			// Make definitions using blank nodes resolvable.
+			this.mapBlankNodes();
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 		}
 	}
 
-	protected async parseData(data: string): Promise<TokenizerResult> {
-		return await Tokenizer.parseData(data, this.syntax);
-	}
-
-	protected async parseGraph(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
-		const u = uri.toString();
-
-		// Initilaize the graphs *before* trying to load the document so 
-		// that they are initialized even when loading the document fails.
-		this.graphs.length = 0;
-		this.graphs.push(u);
-
-		// The loadFromStream function only updates the existing graphs 
-		// when the document was parsed successfully.
-		await mentor.store.loadFromStream(data, u, executeInference);
-
-		// Flag the document as inferred if the inference was enabled.
-		this._inferenceExecuted = executeInference;
-
-		// Make definitions using blank nodes resolvable.
-		this.mapBlankNodes();
-	}
-
-	protected mapBlankNodes() {
-		const blankNodes = this.tokens.filter(t => t.tokenType?.tokenName == 'LBracket');
-
-		let n = 0;
+	override mapBlankNodes() {
+		const blankNodes = new Set<string>();
 
 		for (let q of mentor.store.match(this.graphs, null, null, null, false)) {
-			if (q.subject.termType == 'BlankNode' && this.blankNodes[q.subject.value] === undefined) {
-				this.blankNodes[q.subject.value] = blankNodes[n];
-				this.typeDefinitions[q.subject.value] = [blankNodes[n]];
-
-				n += 1;
+			if (q.subject.termType === 'BlankNode') {
+				blankNodes.add(q.subject.value);
 			}
 		}
+
+		const blankIds = Array.from(blankNodes).sort((a, b) => {
+			const numA = parseInt(a.split('-')[1], 10);
+			const numB = parseInt(b.split('-')[1], 10);
+			return numA - numB;
+		});
+
+		let tokenStack = [];
+		let n = 0;
+
+		for (let t of this.tokens) {
+			switch (t.image) {
+				case '[': {
+					if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
+						// Account for the blank node list element.
+						n++;
+					}
+
+					tokenStack.push(t);
+
+					let s = blankIds[n++];
+
+					this.blankNodes[s] = t;
+					this.typeDefinitions[s] = [t];
+
+					continue;
+				}
+				case '(': {
+					tokenStack.push(t);
+
+					let s = blankIds[n];
+
+					this.blankNodes[s] = t;
+					this.typeDefinitions[s] = [t];
+
+					continue;
+				}
+				case ']': {
+					tokenStack.pop();
+					continue;;
+				}
+				case ')': {
+					tokenStack.pop();
+					continue;;
+				}
+			}
+
+			if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
+				let s = blankIds[n++];
+
+				this.blankNodes[s] = t;
+				this.typeDefinitions[s] = [t];
+			}
+		}
+
+		// if (n != blankIds.length) {
+		// 	console.debug('Not all blank node tokens could be mapped to blank ids from the document graph.');
+		// }
 	}
 }

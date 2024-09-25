@@ -1,8 +1,7 @@
 import * as n3 from 'n3';
 import * as vscode from 'vscode';
 import * as mentor from './mentor';
-import * as url from 'url';
-import { TokenizerResult, rdf } from '@faubulous/mentor-rdf';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from './utilities';
 import { TreeLabelStyle } from './settings';
@@ -21,55 +20,27 @@ export abstract class DocumentContext {
 	 */
 	readonly graphs: string[] = [];
 
-	/**
-	 * All namespaces defined in the document.
-	 */
-	readonly namespaces: { [key: string]: string } = {};
+	private _tokens: IToken[] = [];
+
+	private _namespaces: { [key: string]: string } = {};
+
+	private _namespaceDefinitions: { [key: string]: IToken } = {};
+
+	private _references: { [key: string]: IToken[] } = {};
+
+	private _typeAssertions: { [key: string]: IToken[] } = {};
+
+	private _typeDefinitions: { [key: string]: IToken[] } = {};
+
+	private _blankNodes: { [key: string]: IToken } = {};
 
 	/**
-	 * Maps resource URIs to indexed tokens.
+	 * The predicates to be used for retrieving labels and descriptions for resources.
 	 */
-	readonly namespaceDefinitions: { [key: string]: IToken } = {};
-
-	/**
-	 * All tokens in the document.
-	 */
-	readonly tokens: IToken[] = [];
-
-	/**
-	 * Maps resource URIs to indexed tokens.
-	 */
-	readonly references: { [key: string]: IToken[] } = {};
-
-	/**
-	 * Maps resource URIs to tokens of subjects that have an asserted rdf:type.
-	 */
-	readonly typeAssertions: { [key: string]: IToken[] } = {};
-
-	/**
-	 * Maps resource URIs to tokens of subjects that are class or property definitions.
-	 */
-	readonly typeDefinitions: { [key: string]: IToken[] } = {};
-
-	/**
-	 * Maps blank node ids to indexed tokens.
-	 */
-	readonly blankNodes: { [key: string]: IToken } = {};
-
-	readonly predicates: {
-		label: string[];
-		description: string[];
-	} = {
-			label: [],
-			description: []
-		};
-
-	/**
-	 * Indicates whether the document is temporary and not persisted.
-	 */
-	get isTemporary(): boolean {
-		return this.uri.scheme == 'git';
-	}
+	readonly predicates = {
+		label: [],
+		description: []
+	};
 
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
@@ -78,39 +49,99 @@ export abstract class DocumentContext {
 	}
 
 	/**
+	 * Indicates whether the document is fully loaded.
+	 */
+	get isLoaded(): boolean {
+		return this._tokens.length > 0;
+	}
+
+	/**
+	 * Indicates whether the document is temporary and not persisted.
+	 */
+	get isTemporary(): boolean {
+		return this.uri.scheme == 'git';
+	}
+
+	/**
+	 * All tokens in the document.
+	 */
+	get tokens(): IToken[] {
+		return this._tokens;
+	}
+
+	/**
+	* All namespaces defined in the document.
+	*/
+	get namespaces(): { [key: string]: string } {
+		return this._namespaces;
+	}
+
+	/**
+	 * Maps resource URIs to indexed tokens.
+	 */
+	get namespaceDefinitions(): { [key: string]: IToken } {
+		return this._namespaceDefinitions;
+	}
+
+	/**
+	 * Maps resource URIs to indexed tokens.
+	 */
+	get references(): { [key: string]: IToken[] } {
+		return this._references;
+	}
+
+	/**
+	 * Maps resource URIs to tokens of subjects that have an asserted rdf:type.
+	 */
+	get typeAssertions(): { [key: string]: IToken[] } {
+		return this._typeAssertions;
+	}
+
+	/**
+	 * Maps resource URIs to tokens of subjects that are class or property definitions.
+	 */
+	get typeDefinitions(): { [key: string]: IToken[] } {
+		return this._typeDefinitions;
+	}
+
+	/**
+	 * Maps blank node ids to indexed tokens.
+	 */
+	get blankNodes(): { [key: string]: IToken } {
+		return this._blankNodes;
+	}
+
+	/**
 	 * Loads the document from the given URI and data.
 	 * @param uri The file URI.
 	 * @param data The file content.
-	 * @param executeInference Indicates whether inference should be executed.
 	 */
-	async load(uri: vscode.Uri, data: string, executeInference: boolean): Promise<void> {
-		this.parseTokens(data);
-
-		if (executeInference) {
-			await this.infer();
-		}
-	}
+	abstract parse(uri: vscode.Uri, data: string): Promise<void>;
 
 	/**
 	 * Infers new triples from the document, if not already done.
 	 */
-	async infer(): Promise<void> {
-		// Do nothing if not overloaded.
-	}
+	abstract infer(): Promise<void>;
 
-	protected abstract parseData(data: string): Promise<TokenizerResult>;
+	/**
+	 * Maps blank node ids of the parsed documents to the ones in the triple store.
+	 */
+	mapBlankNodes() {}
 
-	protected async parseTokens(data: string): Promise<void> {
-		const result = await this.parseData(data);
+	/**
+	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
+	 * @param tokens An array of tokens.
+	 */
+	setTokens(tokens: IToken[]): void {
+		this._tokens = tokens;
+		this._namespaces = {};
+		this._namespaceDefinitions = {};
+		this._references = {};
+		this._typeAssertions = {};
+		this._typeDefinitions = {};
+		this._blankNodes = {};
 
-		this.tokens.length = 0;
-
-		// Note: Using this.tokens.push(...result.tokens) throws an error for very large files.
-		for (let t of result.tokens) {
-			this.tokens.push(t);
-		}
-
-		result.tokens.forEach((t: IToken, i: number) => {
+		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType?.tokenName) {
 				case 'PREFIX':
 				case 'TTL_PREFIX': {
@@ -128,29 +159,29 @@ export abstract class DocumentContext {
 
 					if (!uri) break;
 
-					this._handleTypeAssertion(result, t, uri, i);
-					this._handleTypeDefinition(result, t, uri, i);
-					this._handleUriReference(result, t, uri);
+					this._handleTypeAssertion(tokens, t, uri, i);
+					this._handleTypeDefinition(tokens, t, uri, i);
+					this._handleUriReference(tokens, t, uri);
 					break;
 				}
 				case 'IRIREF': {
 					const uri = getUriFromIriReference(t.image);
 
-					this._handleTypeAssertion(result, t, uri, i);
-					this._handleTypeDefinition(result, t, uri, i);
-					this._handleUriReference(result, t, uri);
+					this._handleTypeAssertion(tokens, t, uri, i);
+					this._handleTypeDefinition(tokens, t, uri, i);
+					this._handleUriReference(tokens, t, uri);
 					break;
 				}
 				case 'A': {
-					this._handleTypeAssertion(result, t, rdf.type.id, i);
-					this._handleTypeDefinition(result, t, rdf.type.id, i);
+					this._handleTypeAssertion(tokens, t, rdf.type.id, i);
+					this._handleTypeDefinition(tokens, t, rdf.type.id, i);
 					break;
 				}
 			}
 		});
 	}
 
-	private _handleUriReference(result: TokenizerResult, token: IToken, uri: string) {
+	private _handleUriReference(tokens: IToken[], token: IToken, uri: string) {
 		if (!this.references[uri]) {
 			this.references[uri] = [];
 		}
@@ -158,10 +189,10 @@ export abstract class DocumentContext {
 		this.references[uri].push(token);
 	}
 
-	private _handleTypeAssertion(result: TokenizerResult, token: IToken, uri: string, index: number) {
+	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
 		if (uri != rdf.type.id) return;
 
-		const subjectToken = result.tokens[index - 1];
+		const subjectToken = tokens[index - 1];
 
 		if (!subjectToken) return;
 
@@ -172,10 +203,10 @@ export abstract class DocumentContext {
 		this.typeAssertions[subjectUri] = [subjectToken];
 	}
 
-	private _handleTypeDefinition(result: TokenizerResult, token: IToken, uri: string, index: number) {
+	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
 		if (uri != rdf.type.id) return;
 
-		const subjectToken = result.tokens[index - 1];
+		const subjectToken = tokens[index - 1];
 
 		if (!subjectToken) return;
 
@@ -183,7 +214,7 @@ export abstract class DocumentContext {
 
 		if (!subjectUri) return;
 
-		const objectToken = result.tokens[index + 1];
+		const objectToken = tokens[index + 1];
 
 		if (!objectToken) return;
 
@@ -195,16 +226,21 @@ export abstract class DocumentContext {
 
 		// Todo: Make this more explicit to reduce false positives.
 		switch (namespaceUri) {
-			case "http://www.w3.org/1999/02/22-rdf-syntax-ns#":
-			case "http://www.w3.org/2000/01/rdf-schema#":
-			case "http://www.w3.org/2002/07/owl#":
-			case "http://www.w3.org/2004/02/skos/core#":
-			case "http://www.w3.org/2008/05/skos-xl#":
-			case "http://www.w3.org/ns/shacl#":
+			case _RDF:
+			case _RDFS:
+			case _OWL:
+			case _SKOS:
+			case _SKOS_XL:
+			case _SH:
 				this.typeDefinitions[subjectUri] = [subjectToken];
 		}
 	}
 
+	/**
+	 * Updates a namespace prefix definition in the document.
+	 * @param oldPrefix The prefix to be replaced.
+	 * @param newPrefix The prefix to replace the old prefix.
+	 */
 	public updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
 		const uri = this.namespaces[oldPrefix];
 
@@ -215,13 +251,25 @@ export abstract class DocumentContext {
 		this.namespaces[newPrefix] = uri;
 	}
 
+	/**
+	 * Get the label of a resource according to the current user preferences for the display of labels.
+	 * @param subjectUri URI of the resource.
+	 * @returns A label for the resource as a string literal.
+	 */
 	public getResourceLabel(subjectUri: string): string {
+		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
+		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
+
+		// TODO: Add config option to enable/disable SHACL path labels.
+		// If the node has a SHACL path, use it as the label.
+		for (let q of mentor.store.match(this.graphs, subject, sh.path, null, false)) {
+			return this.getPropertyPathLabel(q.object as n3.Quad_Subject);
+		}
+
 		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
-				// TODO: Fix #10 in mentor-rdf
-				const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
 
 				// First, try to find a description in the current graph.
@@ -265,8 +313,36 @@ export abstract class DocumentContext {
 		return getUriLabel(subjectUri);
 	}
 
+	/**
+	 * Get a rendered version of a SHACL path as a string according to the current user preferences for label display.
+	 * @param node The object of a SHACL path triple.
+	 * @returns A rendered version of the SHACL path as a string.
+	 */
+	public getPropertyPathLabel(node: n3.Quad_Subject): string {
+		let result = [];
+
+		for (let c of mentor.vocabulary.getPropertyPathTokens(this.graphs, node)) {
+			if (typeof (c) === 'string') {
+				if (c === '|' || c === '/') {
+					result.push(` ${c} `);
+				} else {
+					result.push(c);
+				}
+			} else {
+				result.push(this.getResourceLabel(c.value));
+			}
+		}
+
+		return result.join('');
+	}
+
+	/**
+	 * Get the description of a resource.
+	 * @param subjectUri URI of the resource.
+	 * @returns A description for the resource as a string literal.
+	 */
 	public getResourceDescription(subjectUri: string): string | undefined {
-		// Todo: This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
+		// Todo: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
 
@@ -285,16 +361,22 @@ export abstract class DocumentContext {
 		}
 	}
 
+	/**
+	 * Get the URI of a resource. Resolves relative file URIs with regards to the directory of the current document.
+	 * @param subjectUri URI of the resource.
+	 * @returns A URI for the resource as a string literal.
+	 */
 	public getResourceUri(subjectUri: string): string {
+		// TODO: Add support for virtual file systems provided by vscode such as vscode-vfs.
 		if (subjectUri.startsWith('file')) {
-			const u = new URL(subjectUri);
+			const u = vscode.Uri.parse(subjectUri);
 
 			// Resolve relative file URIs with regards to the directory of the current document.
-			if (u.hostname == '..') {
+			if (u.authority === '..') {
 				// For a file URI the namespace is the directory of the current document.
 				const directory = getNamespaceUri(this.uri.toString());
 				const filePath = subjectUri.split('//')[1];
-				const fileUrl = url.resolve(directory, filePath);
+				const fileUrl = vscode.Uri.joinPath(vscode.Uri.parse(directory), filePath);
 
 				// Allow navigating to the relative file.
 				return '[' + filePath + '](' + fileUrl + ')';
@@ -304,6 +386,11 @@ export abstract class DocumentContext {
 		return subjectUri;
 	}
 
+	/**
+	 * Get the tooltip for a resource.
+	 * @param subjectUri URI of the resource.
+	 * @returns A markdown string containing the label, description and URI of the resource.
+	 */
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		let lines = [
 			`**${this.getResourceLabel(subjectUri)}**`,

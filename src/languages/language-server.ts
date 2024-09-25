@@ -1,8 +1,8 @@
+import { IRecognitionException } from 'chevrotain';
 import {
 	Connection,
 	Diagnostic,
 	DidChangeConfigurationNotification,
-	ProposedFeatures,
 	InitializeParams,
 	InitializeResult,
 	TextDocuments,
@@ -12,18 +12,52 @@ import {
 	DiagnosticSeverity,
 	Range,
 	DidChangeWatchedFilesParams,
-	DidChangeConfigurationParams
-} from 'vscode-languageserver/node';
-import { TokenizerResult, XSD } from '@faubulous/mentor-rdf';
+	DidChangeConfigurationParams,
+	PublishDiagnosticsParams,
+	BrowserMessageReader,
+	BrowserMessageWriter
+} from 'vscode-languageserver/browser';
+import { SyntaxParser, XSD } from '@faubulous/mentor-rdf';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ISemanticError, IToken } from 'millan';
 import { NamespaceMap, getUnquotedLiteralValue, getNamespaceDefinition, getUriFromToken } from '../utilities';
 
+/**
+ * The result of tokenizing a text document.
+ */
+export interface TokenizationResults {
+	comments: IToken[];
+	errors: IRecognitionException[];
+	semanticErrors: IRecognitionException[];
+	tokens: IToken[];
+}
+
+/**
+ * Validation results for a text document.
+ */
+export interface ValidationResults extends PublishDiagnosticsParams {
+	/**
+	 * Tokens produced by the parser.
+	 */
+	tokens?: IToken[];
+}
+
+/**
+ * Parser settings for a text document.
+ */
 interface ParserSettings {
+	/**
+	 * The maximum number of problems to report.
+	 */
 	maxNumberOfProblems: number;
 }
 
-const defaultSettings: ParserSettings = { maxNumberOfProblems: 1000 };
+/**
+ * Default parser settings.
+ */
+const defaultSettings: ParserSettings = {
+	maxNumberOfProblems: 1000
+};
 
 export abstract class LanguageServerBase {
 	readonly languageName: string;
@@ -42,13 +76,28 @@ export abstract class LanguageServerBase {
 
 	globalSettings: ParserSettings = defaultSettings;
 
+	/**
+	 * Indicates whether the language server should provide tokens for the document to the client via 'mentor/updateContext'.
+	 */
+	isDocumentTokenProvider = false;
+
+	/**
+	 * The parser used to tokenize and validate the document.
+	 */
+	parser: SyntaxParser;
+
 	readonly documentSettings: Map<string, Thenable<ParserSettings>> = new Map();
 
-	constructor(langaugeId: string, languageName: string) {
+	constructor(langaugeId: string, languageName: string, parser: SyntaxParser, isDocumentTokenProvider = false) {
 		this.languageName = languageName;
 		this.languageId = langaugeId;
+		this.parser = parser;
+		this.isDocumentTokenProvider = isDocumentTokenProvider;
 
-		this.connection = createConnection(ProposedFeatures.all);
+		const messageReader = new BrowserMessageReader(self);
+		const messageWriter = new BrowserMessageWriter(self);
+
+		this.connection = createConnection(messageReader, messageWriter);
 		this.connection.onInitialize(this.onInitializeConnection.bind(this));
 		this.connection.onInitialized(this.onConnectionInitialized.bind(this));
 		this.connection.onDidChangeConfiguration(this.onDidChangeConfiguration.bind(this));
@@ -58,7 +107,7 @@ export abstract class LanguageServerBase {
 	}
 
 	protected log(message: string) {
-		const msg = `[Server(${process.pid})] ${message}`;
+		const msg = `[Server] ${message}`;
 
 		if (this.connection.console) {
 			this.connection.console.log(msg);
@@ -153,32 +202,83 @@ export abstract class LanguageServerBase {
 		this.validateTextDocument(change.document);
 	}
 
-	protected abstract parse(content: string): Promise<TokenizerResult>;
+	protected async parse(content: string): Promise<TokenizationResults> {
+		const result = this.parser.parse(content);
+
+		return {
+			tokens: [...result.tokens, ...result.comments],
+			errors: result.errors,
+			semanticErrors: result.semanticErrors,
+			comments: result.comments
+		};
+	}
 
 	async validateTextDocument(document: TextDocument): Promise<void> {
-		// The conncetion may not yet be initialized.
-		if (!this?.connection) return;
+		// The connection may not yet be initialized.
+		if (!this?.connection) {
+			return;
+		}
 
 		this.log(`Validating document: ${document.uri}`);
 
 		// In this simple example we get the settings for every validate run.
 		// const settings = await this._getDocumentSettings(document.uri);
-
 		let diagnostics: Diagnostic[] = [];
+		let tokens: IToken[] = [];
 
 		const content = document.getText();
 
 		if (content.length) {
-			const { tokens, syntaxErrors, semanticErrors } = await this.parse(content);
+			try {
+				// Validating the document for errors requires fully parsing it, including building the CST.
+				// Since this is a potentially expensive operation, we only do it in the language server and
+				// send the result to the client to not block the UI..
+				const result = await this.parse(content);
 
-			diagnostics = [
-				...this.getLexDiagnostics(document, tokens),
-				...this.getParseDiagnostics(document, syntaxErrors.concat(semanticErrors)),
-				...this.getLintDiagnostics(document, content, tokens)
-			];
+				tokens = result.tokens;
+
+				diagnostics = [
+					...this.getLexDiagnostics(document, result.tokens),
+					...this.getParseDiagnostics(document, result.errors.concat(result.semanticErrors)),
+					...this.getLintDiagnostics(document, content, result.tokens)
+				];
+			}
+			catch (e) {
+				diagnostics = [
+					{
+						severity: DiagnosticSeverity.Error,
+						message: e ? e.toString() : "An error occurred while parsing the document.",
+						range: Range.create(0, 0, 0, 0)
+					}
+				];
+			}
 		}
 
-		return this.connection.sendDiagnostics({ uri: document.uri, diagnostics });
+		// Send the computed diagnostics to the client.
+		this.connection.sendDiagnostics({ uri: document.uri, diagnostics });
+
+		if (this.isDocumentTokenProvider && tokens) {
+			// This sends the tokens to the client so that they can be used to build a reference index.
+			this.connection.sendNotification('mentor/updateContext', {
+				uri: document.uri,
+				// Important: We need to clone the tokens so that they can be processed by strucutredClone() of the underlying message channel.
+				tokens: tokens.map(t => ({
+					image: t.image,
+					startOffset: t.startOffset,
+					endOffset: t.endOffset,
+					startLine: t.startLine,
+					endLine: t.endLine,
+					startColumn: t.startColumn,
+					endColumn: t.endColumn,
+					tokenTypeIdx: t.tokenTypeIdx,
+					tokenType: {
+						name: t.tokenType?.tokenName ?? '',
+						tokenName: t.tokenType?.tokenName,
+						GROUP: t.tokenType?.GROUP,
+					}
+				}))
+			});
+		}
 	}
 
 	protected getLexDiagnostics(document: TextDocument, tokens: IToken[]) {
@@ -266,7 +366,7 @@ export abstract class LanguageServerBase {
 
 						const u = tokens[i + 2];
 
-						if(ns.uri == '') {
+						if (ns.uri == '') {
 							result.push({
 								severity: DiagnosticSeverity.Error,
 								message: `Invalid namespace URI.`,
@@ -276,10 +376,10 @@ export abstract class LanguageServerBase {
 								}
 							});
 						}
-						else if (!ns.uri.endsWith('/') && !ns.uri.endsWith('#')) {
+						else if (!ns.uri.endsWith('/') && !ns.uri.endsWith('#') && !ns.uri.endsWith('_') && !ns.uri.endsWith('=') && !ns.uri.endsWith(':')) {
 							result.push({
 								severity: DiagnosticSeverity.Warning,
-								message: `An RDF namespace URI should end with a '/', '#', '=' or ':' character.`,
+								message: `An RDF namespace URI should end with a '/', '#', '_', '=' or ':' character.`,
 								range: {
 									start: document.positionAt(u.startOffset),
 									end: document.positionAt(u.endOffset ?? 0)
@@ -337,7 +437,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#boolean
 							const v = getUnquotedLiteralValue(value);
 
-							if(v !== 'true' && v !== 'false') {
+							if (v !== 'true' && v !== 'false') {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid boolean: true or false.",
@@ -401,7 +501,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#decimal
 							const n = parseFloat(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid decimal.",
@@ -417,7 +517,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#double
 							const n = parseFloat(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid double.",
@@ -449,7 +549,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#float
 							const n = parseFloat(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid float.",
@@ -465,7 +565,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#int
 							const n = parseInt(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid integer.",
@@ -476,7 +576,7 @@ export abstract class LanguageServerBase {
 								});
 							}
 
-							if(n < -2147483648 || n > 2147483647) {
+							if (n < -2147483648 || n > 2147483647) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the allowed value space: [-2147483648, 2147483647]",
@@ -492,7 +592,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#integer
 							const n = parseInt(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid integer.",
@@ -508,7 +608,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#long
 							const n = parseInt(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid long.",
@@ -519,7 +619,7 @@ export abstract class LanguageServerBase {
 								});
 							}
 
-							if(n < -9223372036854775808 || n > 9223372036854775807) {
+							if (n < -9223372036854775808 || n > 9223372036854775807) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the allowed value space: [-9223372036854775808, 9223372036854775807]",
@@ -535,7 +635,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#negativeInteger
 							const n = parseInt(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid negative integer.",
@@ -546,7 +646,7 @@ export abstract class LanguageServerBase {
 								});
 							}
 
-							if(n >= 0) {
+							if (n >= 0) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the allowed value space: < 0",
@@ -562,7 +662,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#nonNegativeInteger
 							const n = parseInt(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid non-negative integer.",
@@ -573,7 +673,7 @@ export abstract class LanguageServerBase {
 								});
 							}
 
-							if(n < 0) {
+							if (n < 0) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the allowed value space: >= 0",
@@ -589,7 +689,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#nonPositiveInteger
 							const n = parseInt(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid non-positive integer.",
@@ -600,7 +700,7 @@ export abstract class LanguageServerBase {
 								});
 							}
 
-							if(n > 0) {
+							if (n > 0) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the allowed value space: <= 0",
@@ -616,7 +716,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#positiveInteger
 							const n = parseInt(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid positive integer.",
@@ -627,7 +727,7 @@ export abstract class LanguageServerBase {
 								});
 							}
 
-							if(n <= 0) {
+							if (n <= 0) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the allowed value space: > 0",
@@ -643,7 +743,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#short
 							const n = parseInt(getUnquotedLiteralValue(value));
 
-							if(isNaN(n)) {
+							if (isNaN(n)) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is not a valid short.",
@@ -654,7 +754,7 @@ export abstract class LanguageServerBase {
 								});
 							}
 
-							if(n < -32768 || n > 32767) {
+							if (n < -32768 || n > 32767) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the allowed value space: [-32768, 32767]",

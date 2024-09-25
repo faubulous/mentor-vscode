@@ -1,5 +1,3 @@
-import * as https from 'https';
-
 export interface PrefixDefinitions {
 	/**
 	 * The date the prefixes were last updated.
@@ -19,34 +17,25 @@ export class PrefixDownloaderService {
 	/**
 	 * The URL of the endpoint to download prefixes from.
 	 */
-	readonly enpointUrl = 'https://prefix.cc/context';
+	readonly endpointUrl = 'https://prefix.cc/context';
 
 	/**
 	 * Retrieve a dictionary of prefixes and their URIs from the web.
 	 * @returns A promise that resolves to a dictionary of prefixes and their URIs.
 	 */
-	fetchPrefixes(): Promise<PrefixDefinitions> {
-		return new Promise((resolve, reject) => {
-			https.get(this.enpointUrl, (response) => {
-				let data = '';
+	async fetchPrefixes(): Promise<PrefixDefinitions> {
+		const response = await fetch(this.endpointUrl);
 
-				response.on('data', (chunk) => {
-					data += chunk;
-				});
+		if (!response.ok) {
+			throw new Error(`Failed to fetch prefixes: ${response.statusText}`);
+		}
 
-				response.on('end', () => {
-					const result = JSON.parse(data);
+		const data = await response.json();
 
-					resolve({
-						lastUpdated: new Date(),
-						prefixes: result['@context']
-					});
-				});
-
-			}).on("error", (error) => {
-				reject(error);
-			});
-		});
+		return {
+			lastUpdated: new Date(),
+			prefixes: data
+		};
 	}
 }
 

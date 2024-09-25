@@ -3,13 +3,16 @@
 
 This extension provides powerful editing support for RDF ontologies, thesauri and knowledge graph projects in Visual Studio Code.
 
-<img src="media/screenshot.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
+<img src="https://raw.githubusercontent.com/faubulous/mentor-vscode/main/media/screenshot.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
 
 ## Features
 > **Tip:** Try it with <a href="https://marketplace.visualstudio.com/items?itemName=GitHub.copilot">GitHub Copilot</a> for the best code editing experience.
 
 This extension provides the following features:
 
+- **Online Collaboration <sup style="color: orange">NEW</sup>**
+  - Runnable in the browser on [vscode.dev](https://vscode.dev)
+  - Edit GitHub repositories online
 - **Workspace Tree**
   - Navigate all ontology and SPARQL files in the project
   - Easily find problems in all ontologies in the workspace
@@ -23,6 +26,12 @@ This extension provides the following features:
     - Classes
     - Properties
     - Individuals
+  - Showing the definitions of SHACL shapes <sup style="color: orange">NEW</sup>
+    - Quickly jump to shapes associated with a class or property
+    - Node Shapes
+    - Property Shapes with property path labels
+    - Rules
+    - Validators
   - Showing the definitions in SKOS thesauri
     - Concept Schemes
     - Concepts
@@ -42,6 +51,13 @@ This extension provides the following features:
   - Rename resource labels in prefixed names and URIs
 
 ## News
+### Version 0.2.1: Support for SHACL shapes in Definitions Tree and vscode.dev
+This release supports browsing SHACL shapes that are defined in ontologies. You can quickly jump to shape definitions that are associated with classes or properties from the definitions tree. Also supports SHACL datatype definitions for properties.
+
+Greatly improved workspace indexing speed for reference resolution with added options for skipping files above a configurable size limit.
+
+Mentor can be run as a pure web extension and supports collaboration in online portals such as [vscode.dev](https://vscode.dev).
+
 ### Version 0.1.8: Fixed context menus not working in Definitions Tree
 The context menus for resources in the definitions tree are now working again.
 

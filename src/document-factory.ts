@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import { Utils } from 'vscode-uri';
 import { DocumentContext } from './document-context';
 import { TurtleDocument } from './languages/turtle-document';
 import { SparqlDocument } from './languages/sparql-document';
@@ -12,15 +12,48 @@ export class DocumentFactory {
 	/**
 	 * The supported languages.
 	 */
-	supportedLanguages: string[] = ['ntriples', 'nquads', 'turtle', 'trig', 'sparql'];
+	readonly supportedLanguages: Set<string> = new Set(['ntriples', 'nquads', 'turtle', 'trig', 'sparql']);
 
 	/**
-	 * Indicates if the given language is supported.
-	 * @param languageId The language ID.
-	 * @returns <code>true</code> if the language is supported, <code>false</code> otherwise.
+	 * The supported file extensions.
 	 */
-	public isSupported(languageId: string): boolean {
-		return this.supportedLanguages.includes(languageId);
+	readonly supportedExtensions: { [key: string]: string } = {
+		'.ttl': 'turtle',
+		'.n3': 'ntriples',
+		'.nt': 'ntriples',
+		'.nq': 'nquads',
+		'.trig': 'trig',
+		'.sparql': 'sparql',
+		'.rq': 'sparql'
+	}
+
+	/**
+	 * Checks if a file is supported by the factory.
+	 * @param uri The URI of the file.
+	 * @returns `true` if the file is supported, otherwise `false`.
+	 */
+	public isSupportedFile(uri: vscode.Uri): boolean {
+		return this.getDocumentLanguageId(uri) !== undefined;
+	}
+
+	/**
+	 * Checks if a file is supported by the factory.
+	 * @param ext The lower-case file extension including the dot (e.g. '.ttl').
+	 * @returns `true` if the file is supported, otherwise `false`.
+	 */
+	public isSupportedExtension(ext: string): boolean {
+		return this.supportedExtensions[ext] !== undefined;
+	}
+
+	/**
+	 * Get the language ID for a file URI.
+	 * @param uri The URI of the file.
+	 * @returns A language ID if the file is supported, otherwise `undefined`.
+	 */
+	public getDocumentLanguageId(uri: vscode.Uri): string {
+		const extension = Utils.extname(uri).toLowerCase();
+
+		return this.supportedExtensions[extension];
 	}
 
 	/**
@@ -32,40 +65,25 @@ export class DocumentFactory {
 		// If the language ID is provided, use it to create the document context
 		// as this is more reliable than the file extension. For unsaved documents,
 		// the file extension is not available.
-		if (languageId) {
-			switch (languageId) {
-				case 'turtle':
-					return new TurtleDocument(documentUri, RdfSyntax.Turtle);
-				case 'ntriples':
-					return new TurtleDocument(documentUri, RdfSyntax.NTriples);
-				case 'nquads':
-					return new TurtleDocument(documentUri, RdfSyntax.NQuads);
-				case 'trig':
-					return new TurtleDocument(documentUri, RdfSyntax.TriG);
-				case 'sparql':
-					return new SparqlDocument(documentUri);
-				default:
-					throw new Error('Unsupported language:' + languageId);
-			}
-		} else {
-			const extension = path.extname(documentUri.fsPath).toLowerCase();
+		let language = languageId ?? this.getDocumentLanguageId(documentUri);
 
-			switch (extension) {
-				case '.ttl':
-					return new TurtleDocument(documentUri, RdfSyntax.Turtle);
-				case '.n3':
-				case '.nt':
-					return new TurtleDocument(documentUri, RdfSyntax.NTriples);
-				case '.nq':
-					return new TurtleDocument(documentUri, RdfSyntax.NQuads);
-				case '.trig':
-					return new TurtleDocument(documentUri, RdfSyntax.TriG);
-				case '.rw':
-				case '.sparql':
-					return new SparqlDocument(documentUri);
-				default:
-					throw new Error('Unsupported file extension:' + extension);
-			}
+		if (!language) {
+			throw new Error('Unable to determine the document language: ' + documentUri.toString());
+		}
+
+		switch (language) {
+			case 'turtle':
+				return new TurtleDocument(documentUri, RdfSyntax.Turtle);
+			case 'ntriples':
+				return new TurtleDocument(documentUri, RdfSyntax.NTriples);
+			case 'nquads':
+				return new TurtleDocument(documentUri, RdfSyntax.NQuads);
+			case 'trig':
+				return new TurtleDocument(documentUri, RdfSyntax.TriG);
+			case 'sparql':
+				return new SparqlDocument(documentUri);
+			default:
+				throw new Error('Unsupported language:' + language);
 		}
 	}
 }

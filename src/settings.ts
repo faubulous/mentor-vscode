@@ -1,10 +1,41 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events'
 
-export enum TreeLabelStyle { AnnotatedLabels, UriLabels, UriLabelsWithPrefix };
+/**
+ * Supported label styles of the definition tree.
+ */
+export enum TreeLabelStyle {
+	/**
+	 * Show the labels that are annotated with predicate such as `rdfs:label`.
+	 */
+	AnnotatedLabels,
+	/**
+	 * Show the local parts of the URI as labels.
+	 */
+	UriLabels,
+	/**
+	 * Show the local parts of the URI as labels with the prefix defined in the document.
+	 */
+	UriLabelsWithPrefix
+};
 
-export enum DefinitionTreeLayout { ByType, BySource };
+/**
+ * Supported layout types of the definition tree.
+ */
+export enum DefinitionTreeLayout {
+	/**
+	 * Shows all resources in a document grouped by type regardless of their definition source.
+	 */
+	ByType,
+	/**
+	 * Shows all resources in a document grouped by their definition source and then by type.
+	 */
+	BySource
+};
 
+/**
+ * An API for the configuration settings of the Mentor extension.
+ */
 export class Settings extends EventEmitter {
 	private _data: { [key: string]: any } = {};
 
