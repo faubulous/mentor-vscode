@@ -529,7 +529,7 @@
       "view/title": [
         {
           "command": "mentor.action.analyzeWorkspace",
-          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing && !mentor.workspace.isAnalyzing",
+          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
           "group": "navigation@3"
         },
         {

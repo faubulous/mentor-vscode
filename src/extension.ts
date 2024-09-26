@@ -17,7 +17,7 @@ import {
 } from './languages';
 import { DefinitionProvider } from './providers';
 import { getUriFromNodeId } from './utilities';
-import { WorkspaceAnalyzer } from './workspace-analyzer';
+import { DocumentIndexer } from './document-indexer';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -174,6 +174,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 	}));
 
 	commands.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', async () => {
-		await new WorkspaceAnalyzer().analyzeWorkspace();
+		// Force re-indexing of the workspace, including oversized files.
+		await new DocumentIndexer().indexWorkspace(true);
 	}));
 }

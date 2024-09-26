@@ -36,7 +36,7 @@ export class DocumentIndexer {
 	/**
 	 * Builds an index of all RDF resources the current workspace.
 	 */
-	async indexWorkspace(): Promise<void> {
+	async indexWorkspace(force: boolean = false): Promise<void> {
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Window,
 			title: "Indexing workspace",
@@ -68,13 +68,13 @@ export class DocumentIndexer {
 					const uri = uris[i];
 					const u = uri.toString();
 
-					if (mentor.contexts[u]) {
+					if (mentor.contexts[u] && !force) {
 						continue;
 					}
 
 					const size = (await vscode.workspace.fs.stat(uri)).size;
 
-					if (size > maxSize) {
+					if (size > maxSize && !force) {
 						console.log(`Mentor: Skipping large file ${uri.toString()} (${size} bytes)`);
 						continue;
 					}
