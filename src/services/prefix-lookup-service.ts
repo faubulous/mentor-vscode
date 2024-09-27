@@ -7,10 +7,16 @@ import { DEFAULT_PREFIXES } from '../services/prefix-downloader-service';
 export class PrefixLookupService {
 	/**
 	 * Get the most frequently used URI for a given prefix.
+	 * @param documentUri The URI of the document where the prefix is used.
 	 * @param prefix A prefix to look up.
 	 * @returns A URI for the given prefix if it is declared in the project. An empty string otherwise.
 	 */
-	getUriForPrefix(prefix: string): string {
+	getUriForPrefix(documentUri: string, prefix: string): string {
+		// The empty prefix is specific for the document and should not be resolved.
+		if (prefix === '') {
+			return documentUri;
+		}
+
 		// Count the number of times each URI is used for the given prefix.
 		const uriCounts: { [uri: string]: number } = {};
 
@@ -33,7 +39,7 @@ export class PrefixLookupService {
 			}
 		}
 
-		if(result) {
+		if (result) {
 			return result;
 		}
 

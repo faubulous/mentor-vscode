@@ -2,12 +2,16 @@ import * as vscode from 'vscode';
 import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
+import { debounce } from './utilities';
 import { DefinitionTreeLayout as DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
 import { DocumentIndexer, DocumentIndex } from './document-indexer';
 import { WorkspaceRepository } from './workspace-repository';
-import { LocalStorageService } from './services/local-storage-service';
-import { PrefixDownloaderService } from './services/prefix-downloader-service';
-import { debounce } from './utilities';
+import {
+	LocalStorageService,
+	PrefixDownloaderService,
+	PrefixDeclarationService,
+	PrefixLookupService
+} from './services';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -59,9 +63,26 @@ export const globalStorage = new LocalStorageService();
  */
 export const documentFactory = new DocumentFactory();
 
+/**
+ * A service for declaring prefixes in RDF documents.
+ */
+export const prefixDeclarationService = new PrefixDeclarationService();
+
+/**
+ * A service for downloading RDF prefix mappings from the web.
+ */
+export const prefixDownloaderService = new PrefixDownloaderService();
+
+/**
+ * A service for looking up prefixes in RDF documents.
+ */
+export const prefixLookupService = new PrefixLookupService();
+
 const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
 export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
+
+vscode.window.onDidChangeActiveTextEditor(() => onActiveEditorChanged());
 
 function onActiveEditorChanged(): void {
 	const activeEditor = vscode.window.activeTextEditor;
@@ -77,9 +98,21 @@ function onActiveEditorChanged(): void {
 	}
 }
 
-vscode.window.onDidChangeActiveTextEditor(() => onActiveEditorChanged());
+vscode.workspace.onDidChangeTextDocument((e) => {
+	// TODO: Debounce per document URI context. The current implementation might miss changes in other documents.
+	debounce(onTextDocumentChanged, 10)(e);
+});
 
 function onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
+	if (e.reason === vscode.TextDocumentChangeReason.Undo) {
+		// Suspend the prefix declaration service when undoing changes.
+		prefixDeclarationService.suspend();
+	} else {
+		// Re-enable the prefix declaration service when making changes.
+		prefixDeclarationService.resume();
+	}
+
+	// Reload the document context when the document has changed.
 	loadDocument(e.document, true).then((context) => {
 		if (context) {
 			activeContext = context;
@@ -87,6 +120,8 @@ function onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
 		}
 	});
 }
+
+vscode.workspace.onDidCloseTextDocument((e) => onTextDocumentClosed(e));
 
 function onTextDocumentClosed(e: vscode.TextDocument): void {
 	const uri = e.uri.toString();
@@ -97,13 +132,6 @@ function onTextDocumentClosed(e: vscode.TextDocument): void {
 		delete contexts[uri];
 	}
 }
-
-vscode.workspace.onDidChangeTextDocument((e) => {
-	// TODO: Debounce per document URI context. The current implementation might miss changes in other documents.
-	debounce(onTextDocumentChanged, 10)(e);
-});
-
-vscode.workspace.onDidCloseTextDocument((e) => onTextDocumentClosed(e));
 
 /**
  * Activate the document in the editor.
@@ -180,17 +208,15 @@ export async function initialize(context: vscode.ExtensionContext) {
 
 	// Register commands..
 	vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {
-		const service = new PrefixDownloaderService();
-
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Window,
-			title: `Downloading prefixes from ${service.endpointUrl}...`,
+			title: `Downloading prefixes from ${prefixDownloaderService.endpointUrl}...`,
 			cancellable: false
 		}, async (progress) => {
 			progress.report({ increment: 0 });
 
 			try {
-				let result = await service.fetchPrefixes();
+				let result = await prefixDownloaderService.fetchPrefixes();
 
 				globalStorage.setValue('defaultPrefixes', result);
 

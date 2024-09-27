@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as mentor from '../mentor';
 import {
 	RenameProvider,
 	DefinitionProvider,
@@ -48,7 +49,7 @@ export class TurtleTokenProvider {
 
 	registerCommands() {
 		vscode.commands.registerCommand(codeActionsProvider.commands.fixMissingPrefixes, (documentUri, prefixes) => {
-			codeActionsProvider.fixMissingPrefixes(documentUri, prefixes, 'TTL_PREFIX', (prefix, uri) => {
+			mentor.prefixDeclarationService.fixMissingPrefixes(documentUri, prefixes, 'TTL_PREFIX', (prefix, uri) => {
 				// All prefixes keywords are always in lowercase in Turtle.
 				return `@prefix ${prefix}: <${uri}> .\n`;
 			});

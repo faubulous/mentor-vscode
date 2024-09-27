@@ -320,7 +320,7 @@ export class SparqlTokenProvider {
 			upperCase = upperCase || isUpperCase(getLastTokenOfType(document.tokens, 'PREFIX'));
 			upperCase = upperCase || isUpperCase(document.tokens[0]);
 
-			codeActionsProvider.fixMissingPrefixes(documentUri, prefixes, 'PREFIX', (prefix, uri) => {
+			mentor.prefixDeclarationService.fixMissingPrefixes(documentUri, prefixes, 'PREFIX', (prefix, uri) => {
 				if (upperCase) {
 					return `PREFIX ${prefix}: <${uri}>\n`;
 				}

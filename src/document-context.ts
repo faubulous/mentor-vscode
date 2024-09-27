@@ -3,8 +3,15 @@ import * as vscode from 'vscode';
 import * as mentor from './mentor';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
-import { getUriLabel, getUriFromIriReference, getUriFromPrefixedName, getUriFromToken, getNamespaceDefinition, getNamespaceUri } from './utilities';
 import { TreeLabelStyle } from './settings';
+import {
+	getUriLabel,
+	getUriFromIriReference,
+	getUriFromPrefixedName,
+	getUriFromToken,
+	getNamespaceDefinition,
+	getNamespaceUri
+} from './utilities';
 
 /**
  * A class that provides access to RDF document specific data such as namespaces, graphs and token maps.
@@ -126,7 +133,7 @@ export abstract class DocumentContext {
 	/**
 	 * Maps blank node ids of the parsed documents to the ones in the triple store.
 	 */
-	mapBlankNodes() {}
+	mapBlankNodes() { }
 
 	/**
 	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
@@ -224,7 +231,7 @@ export abstract class DocumentContext {
 
 		const namespaceUri = getNamespaceUri(objectUri);
 
-		// Todo: Make this more explicit to reduce false positives.
+		// TODO: Make this more explicit to reduce false positives.
 		switch (namespaceUri) {
 			case _RDF:
 			case _RDFS:
@@ -342,7 +349,7 @@ export abstract class DocumentContext {
 	 * @returns A description for the resource as a string literal.
 	 */
 	public getResourceDescription(subjectUri: string): string | undefined {
-		// Todo: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
+		// TODO: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
 

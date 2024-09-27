@@ -34,7 +34,7 @@ export class PrefixDownloaderService {
 
 		return {
 			lastUpdated: new Date(),
-			prefixes: data
+			prefixes: data['@context']
 		};
 	}
 }
