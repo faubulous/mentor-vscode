@@ -3,7 +3,7 @@ import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
 import { debounce } from './utilities';
-import { DefinitionTreeLayout as DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
+import { DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
 import { DocumentIndexer, DocumentIndex } from './document-indexer';
 import { WorkspaceRepository } from './workspace-repository';
 import {
@@ -14,315 +14,324 @@ import {
 } from './services';
 
 /**
- * Maps document URIs to loaded document contexts.
+ * The Mentor extension instance.
  */
-export const contexts: DocumentIndex = {};
+class MentorExtension {
+	/**
+	 * Maps document URIs to loaded document contexts.
+	 */
+	readonly contexts: DocumentIndex = {};
 
-/**
- * The currently active document context or `undefined`.
- */
-export let activeContext: DocumentContext | undefined;
+	/**
+	 * The currently active document context or `undefined`.
+	 */
+	activeContext: DocumentContext | undefined;
 
-/**
- * The Visual Studio Code configuration section for the extension.
- */
-export const configuration = vscode.workspace.getConfiguration('mentor');
+	/**
+	 * The Visual Studio Code configuration section for the extension.
+	 */
+	readonly configuration = vscode.workspace.getConfiguration('mentor');
 
-/**
- * The appliation state of the extension.
- */
-export const settings = new Settings();
+	/**
+	 * The appliation state of the extension.
+	 */
+	readonly settings = new Settings();
 
-/**
- * The Mentor RDF extension triple store.
- */
-export const store = new Store(new OwlReasoner());
+	/**
+	 * The Mentor RDF extension triple store.
+	 */
+	readonly store = new Store(new OwlReasoner());
 
-/**
- * A repository for retrieving ontology resources.
- */
-export const vocabulary = new VocabularyRepository(store);
+	/**
+	 * A repository for retrieving ontology resources.
+	 */
+	readonly vocabulary = new VocabularyRepository(this.store);
 
-/**
- * A repository for retrieving workspace resources such as files and folders.
- */
-export const workspace = new WorkspaceRepository();
+	/**
+	 * A repository for retrieving workspace resources such as files and folders.
+	 */
+	readonly workspace = new WorkspaceRepository();
 
-/**
- * A document indexer for indexing the entire workspace.
- */
-export const indexer = new DocumentIndexer();
+	/**
+	 * A document indexer for indexing the entire workspace.
+	 */
+	readonly indexer = new DocumentIndexer();
 
-/**
- * A service for storing and retrieving data from the local storage with extension scope.
- */
-export const globalStorage = new LocalStorageService();
+	/**
+	 * A service for storing and retrieving data from the local storage with extension scope.
+	 */
+	readonly globalStorage = new LocalStorageService();
 
-/**
- * A factory for loading and creating document contexts.
- */
-export const documentFactory = new DocumentFactory();
+	/**
+	 * A factory for loading and creating document contexts.
+	 */
+	readonly documentFactory = new DocumentFactory();
 
-/**
- * A service for declaring prefixes in RDF documents.
- */
-export const prefixDeclarationService = new PrefixDeclarationService();
+	/**
+	 * A service for declaring prefixes in RDF documents.
+	 */
+	readonly prefixDeclarationService = new PrefixDeclarationService();
 
-/**
- * A service for downloading RDF prefix mappings from the web.
- */
-export const prefixDownloaderService = new PrefixDownloaderService();
+	/**
+	 * A service for downloading RDF prefix mappings from the web.
+	 */
+	readonly prefixDownloaderService = new PrefixDownloaderService();
 
-/**
- * A service for looking up prefixes in RDF documents.
- */
-export const prefixLookupService = new PrefixLookupService();
+	/**
+	 * A service for looking up prefixes in RDF documents.
+	 */
+	readonly prefixLookupService = new PrefixLookupService();
 
-const _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
+	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
-export const onDidChangeVocabularyContext = _onDidChangeDocumentContext.event;
+	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
 
-vscode.window.onDidChangeActiveTextEditor(() => onActiveEditorChanged());
+	constructor() {
+		vscode.workspace.onDidCloseTextDocument((e) => this.onTextDocumentClosed(e));
 
-function onActiveEditorChanged(): void {
-	const activeEditor = vscode.window.activeTextEditor;
-	const uri = activeEditor?.document.uri;
+		vscode.window.onDidChangeActiveTextEditor(() => this.onActiveEditorChanged());
 
-	if (activeEditor && uri && uri != activeContext?.uri) {
-		loadDocument(activeEditor.document).then((context) => {
+		vscode.workspace.onDidChangeTextDocument((e) => {
+			// TODO: Debounce per document URI context. The current implementation might miss changes in other documents.
+			debounce(this.onTextDocumentChanged, 10)(e);
+		});
+	}
+
+	onActiveEditorChanged(): void {
+		const activeEditor = vscode.window.activeTextEditor;
+		const uri = activeEditor?.document.uri;
+
+		if (activeEditor && uri && uri != this.activeContext?.uri) {
+			this.loadDocument(activeEditor.document).then((context) => {
+				if (context) {
+					this.activeContext = context;
+					this._onDidChangeDocumentContext?.fire(context);
+				}
+			});
+		}
+	}
+
+	onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
+		if (e.reason === vscode.TextDocumentChangeReason.Undo) {
+			// Suspend the prefix declaration service when undoing changes.
+			this.prefixDeclarationService.suspend();
+		} else {
+			// Re-enable the prefix declaration service when making changes.
+			this.prefixDeclarationService.resume();
+		}
+
+		// Reload the document context when the document has changed.
+		this.loadDocument(e.document, true).then((context) => {
 			if (context) {
-				activeContext = context;
-				_onDidChangeDocumentContext?.fire(context);
+				this.activeContext = context;
+				this._onDidChangeDocumentContext?.fire(context);
 			}
 		});
 	}
-}
 
-vscode.workspace.onDidChangeTextDocument((e) => {
-	// TODO: Debounce per document URI context. The current implementation might miss changes in other documents.
-	debounce(onTextDocumentChanged, 10)(e);
-});
+	onTextDocumentClosed(e: vscode.TextDocument): void {
+		const uri = e.uri.toString();
+		const context = this.contexts[uri];
 
-function onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-	if (e.reason === vscode.TextDocumentChangeReason.Undo) {
-		// Suspend the prefix declaration service when undoing changes.
-		prefixDeclarationService.suspend();
-	} else {
-		// Re-enable the prefix declaration service when making changes.
-		prefixDeclarationService.resume();
-	}
-
-	// Reload the document context when the document has changed.
-	loadDocument(e.document, true).then((context) => {
-		if (context) {
-			activeContext = context;
-			_onDidChangeDocumentContext?.fire(context);
+		if (context && context.isTemporary) {
+			// Cleanup temporary / non-persisted document context generated by views.
+			delete this.contexts[uri];
 		}
-	});
-}
-
-vscode.workspace.onDidCloseTextDocument((e) => onTextDocumentClosed(e));
-
-function onTextDocumentClosed(e: vscode.TextDocument): void {
-	const uri = e.uri.toString();
-	const context = contexts[uri];
-
-	if (context && context.isTemporary) {
-		// Cleanup temporary / non-persisted document context generated by views.
-		delete contexts[uri];
-	}
-}
-
-/**
- * Activate the document in the editor.
- * @returns A promise that resolves to the active text editor or `undefined`.
- */
-export async function activateDocument(): Promise<vscode.TextEditor | undefined> {
-	const documentUri = vscode.window.activeTextEditor?.document.uri;
-
-	if (activeContext && activeContext.uri != documentUri) {
-		await vscode.commands.executeCommand("vscode.open", activeContext.uri);
 	}
 
-	return vscode.window.activeTextEditor;
-}
+	/**
+	 * Activate the document in the editor.
+	 * @returns A promise that resolves to the active text editor or `undefined`.
+	 */
+	async activateDocument(): Promise<vscode.TextEditor | undefined> {
+		const documentUri = vscode.window.activeTextEditor?.document.uri;
 
-/**
- * Load a text document into a document context.
- * @param document The text document to load.
- * @param forceReload Indicates whether a new context should be created for existing contexts.
- * @returns 
- */
-async function loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<DocumentContext | undefined> {
-	if (!document || !documentFactory.supportedLanguages.has(document.languageId)) {
-		return;
+		if (this.activeContext && this.activeContext.uri != documentUri) {
+			await vscode.commands.executeCommand("vscode.open", this.activeContext.uri);
+		}
+
+		return vscode.window.activeTextEditor;
 	}
 
-	const uri = document.uri.toString();
+	/**
+	 * Load a text document into a document context.
+	 * @param document The text document to load.
+	 * @param forceReload Indicates whether a new context should be created for existing contexts.
+	 * @returns 
+	 */
+	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<DocumentContext | undefined> {
+		if (!document || !this.documentFactory.supportedLanguages.has(document.languageId)) {
+			return;
+		}
 
-	let context = contexts[uri];
+		const uri = document.uri.toString();
 
-	if (context?.isLoaded && !forceReload) {
-		// Compute the inference graph on the document, if it does not exist.
-		context.infer();
+		let context = this.contexts[uri];
+
+		if (context?.isLoaded && !forceReload) {
+			// Compute the inference graph on the document, if it does not exist.
+			context.infer();
+
+			return context;
+		}
+
+		context = this.documentFactory.create(document.uri, document.languageId);
+
+		// Parse the tokens of the document and load the graph.
+		await context.parse(document.uri, document.getText());
+
+		// Compute the inference graph on the document to simplify querying.
+		await context.infer();
+
+		this.contexts[uri] = context;
+		this.activeContext = context;
 
 		return context;
 	}
 
-	context = documentFactory.create(document.uri, document.languageId);
+	/**
+	 * Initialize the extension.
+	 * @param context The extension context.
+	 */
+	async initialize(context: vscode.ExtensionContext) {
+		// Initialize the extension persistence service.
+		this.globalStorage.initialize(context.globalState);
 
-	// Parse the tokens of the document and load the graph.
-	await context.parse(document.uri, document.getText());
+		// Initialize the default label rendering style.
+		let defaultStyle = this.configuration.get('treeLabelStyle');
 
-	// Compute the inference graph on the document to simplify querying.
-	await context.infer();
+		switch (defaultStyle) {
+			case 'AnnotatedLabels':
+				this.settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
+				break;
+			case 'UriLabelsWithPrefix':
+				this.settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
+				break;
+			default:
+				this.settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
+				break;
+		}
 
-	contexts[uri] = context;
-	activeContext = context;
+		// Register commands..
+		vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {
+			vscode.window.withProgress({
+				location: vscode.ProgressLocation.Window,
+				title: `Downloading prefixes from ${this.prefixDownloaderService.endpointUrl}...`,
+				cancellable: false
+			}, async (progress) => {
+				progress.report({ increment: 0 });
 
-	return context;
-}
+				try {
+					let result = await this.prefixDownloaderService.fetchPrefixes();
 
-/**
- * Initialize the extension.
- * @param context The extension context.
- */
-export async function initialize(context: vscode.ExtensionContext) {
-	// Initialize the extension persistence service.
-	globalStorage.initialize(context.globalState);
+					this.globalStorage.setValue('defaultPrefixes', result);
 
-	// Initialize the default label rendering style.
-	let defaultStyle = configuration.get('treeLabelStyle');
+					progress.report({ increment: 100 });
+				} catch (error: any) {
+					vscode.window.showErrorMessage(`Failed to download prefixes: ${error.message}`);
+				}
+			});
+		});
 
-	switch (defaultStyle) {
-		case 'AnnotatedLabels':
-			settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
-			break;
-		case 'UriLabelsWithPrefix':
-			settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
-			break;
-		default:
-			settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
-			break;
+		vscode.commands.registerCommand('mentor.action.groupDefinitionsByType', () => {
+			this.settings.set('view.definitionTreeLayout', DefinitionTreeLayout.ByType);
+		});
+
+		vscode.commands.registerCommand('mentor.action.groupDefinitionsBySource', () => {
+			this.settings.set('view.definitionTreeLayout', DefinitionTreeLayout.BySource);
+		});
+
+		vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
+			this.settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
+		});
+
+		vscode.commands.registerCommand('mentor.action.showUriLabels', () => {
+			this.settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
+		});
+
+		vscode.commands.registerCommand('mentor.action.showUriLabelsWithPrefix', () => {
+			this.settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
+		});
+
+		vscode.commands.registerCommand('mentor.action.showReferences', () => {
+			this.settings.set('view.showReferences', true);
+		});
+
+		vscode.commands.registerCommand('mentor.action.hideReferences', () => {
+			this.settings.set('view.showReferences', false);
+		});
+
+		vscode.commands.registerCommand('mentor.action.showPropertyTypes', () => {
+			this.settings.set('view.showPropertyTypes', true);
+		});
+
+		vscode.commands.registerCommand('mentor.action.hidePropertyTypes', () => {
+			this.settings.set('view.showPropertyTypes', false);
+		});
+
+		vscode.commands.registerCommand('mentor.action.showIndividualTypes', () => {
+			this.settings.set('view.showIndividualTypes', true);
+		});
+
+		vscode.commands.registerCommand('mentor.action.hideIndividualTypes', () => {
+			this.settings.set('view.showIndividualTypes', false);
+		});
+
+		vscode.commands.registerCommand('mentor.action.initialize', async () => {
+			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
+
+			// If there is a document opened in the editor, load it.
+			this.onActiveEditorChanged();
+
+			// Load the W3C and other common ontologies for providing hovers, completions and definitions.
+			await this.store.loadFrameworkOntologies();
+
+			// Load the workspace files and folders for the explorer tree view.
+			await this.workspace.initialize();
+
+			// Index the entire workspace for providing hovers, completions and definitions.
+			await this.indexer.indexWorkspace();
+
+			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
+		});
+
+		vscode.commands.executeCommand('mentor.action.initialize');
 	}
 
-	// Register commands..
-	vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {
-		vscode.window.withProgress({
-			location: vscode.ProgressLocation.Window,
-			title: `Downloading prefixes from ${prefixDownloaderService.endpointUrl}...`,
-			cancellable: false
-		}, async (progress) => {
-			progress.report({ increment: 0 });
+	/**
+	 * Get the glob patterns to exclude files and folders from the workspace.
+	 * @param workspaceUri A workspace folder URI.
+	 * @returns A list of glob patterns to exclude files and folders.
+	 */
+	async getExcludePatterns(workspaceUri: vscode.Uri): Promise<string[]> {
+		let result = new Set<string>();
+
+		// Add the patterns from the configuration.
+		for (let pattern of this.configuration.get('index.ignoreFolders', [])) {
+			result.add(pattern);
+		}
+
+		// Add the patterns from the .gitignore file if it is enabled.
+		if (this.configuration.get('index.useGitIgnore')) {
+			const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
 
 			try {
-				let result = await prefixDownloaderService.fetchPrefixes();
+				const content = await vscode.workspace.fs.readFile(gitignore);
 
-				globalStorage.setValue('defaultPrefixes', result);
+				const excludePatterns = new TextDecoder().decode(content)
+					.split('\n')
+					.filter(line => !line.startsWith('#') && line.trim() !== '');
 
-				progress.report({ increment: 100 });
-			} catch (error: any) {
-				vscode.window.showErrorMessage(`Failed to download prefixes: ${error.message}`);
+				for (const pattern of excludePatterns) {
+					result.add(pattern);
+				}
+			} catch {
+				// If the .gitignore file does not exists, ingore it.
 			}
-		});
-	});
-
-	vscode.commands.registerCommand('mentor.action.groupDefinitionsByType', () => {
-		settings.set('view.definitionTreeLayout', DefinitionTreeLayout.ByType);
-	});
-
-	vscode.commands.registerCommand('mentor.action.groupDefinitionsBySource', () => {
-		settings.set('view.definitionTreeLayout', DefinitionTreeLayout.BySource);
-	});
-
-	vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
-		settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
-	});
-
-	vscode.commands.registerCommand('mentor.action.showUriLabels', () => {
-		settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
-	});
-
-	vscode.commands.registerCommand('mentor.action.showUriLabelsWithPrefix', () => {
-		settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
-	});
-
-	vscode.commands.registerCommand('mentor.action.showReferences', () => {
-		settings.set('view.showReferences', true);
-	});
-
-	vscode.commands.registerCommand('mentor.action.hideReferences', () => {
-		settings.set('view.showReferences', false);
-	});
-
-	vscode.commands.registerCommand('mentor.action.showPropertyTypes', () => {
-		settings.set('view.showPropertyTypes', true);
-	});
-
-	vscode.commands.registerCommand('mentor.action.hidePropertyTypes', () => {
-		settings.set('view.showPropertyTypes', false);
-	});
-
-	vscode.commands.registerCommand('mentor.action.showIndividualTypes', () => {
-		settings.set('view.showIndividualTypes', true);
-	});
-
-	vscode.commands.registerCommand('mentor.action.hideIndividualTypes', () => {
-		settings.set('view.showIndividualTypes', false);
-	});
-
-	vscode.commands.registerCommand('mentor.action.initialize', async () => {
-		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
-
-		// If there is a document opened in the editor, load it.
-		onActiveEditorChanged();
-
-		// Load the W3C and other common ontologies for providing hovers, completions and definitions.
-		await store.loadFrameworkOntologies();
-
-		// Load the workspace files and folders for the explorer tree view.
-		await workspace.initialize();
-
-		// Index the entire workspace for providing hovers, completions and definitions.
-		await indexer.indexWorkspace();
-
-		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
-	});
-
-	vscode.commands.executeCommand('mentor.action.initialize');
-}
-
-/**
- * Get the glob patterns to exclude files and folders from the workspace.
- * @param workspaceUri A workspace folder URI.
- * @returns A list of glob patterns to exclude files and folders.
- */
-export async function getExcludePatterns(workspaceUri: vscode.Uri): Promise<string[]> {
-	let result = new Set<string>();
-
-	// Add the patterns from the configuration.
-	for (let pattern of configuration.get('index.ignoreFolders', [])) {
-		result.add(pattern);
-	}
-
-	// Add the patterns from the .gitignore file if it is enabled.
-	if (configuration.get('index.useGitIgnore')) {
-		const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
-
-		try {
-			const content = await vscode.workspace.fs.readFile(gitignore);
-
-			const excludePatterns = new TextDecoder().decode(content)
-				.split('\n')
-				.filter(line => !line.startsWith('#') && line.trim() !== '');
-
-			for (const pattern of excludePatterns) {
-				result.add(pattern);
-			}
-		} catch {
-			// If the .gitignore file does not exists, ingore it.
 		}
-	}
 
-	return Array.from(result);
+		return Array.from(result);
+	}
 }
+
+export const mentor = new MentorExtension();

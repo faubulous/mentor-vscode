@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import * as mentor from "../mentor";
+import { mentor } from "../mentor";
 import { IToken } from "millan";
 import { getNamespaceUri, getTokenPosition } from "../utilities";
 

@@ -1,4 +1,4 @@
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { DEFAULT_PREFIXES } from '../services/prefix-downloader-service';
 
 /**

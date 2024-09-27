@@ -1,6 +1,6 @@
 import * as n3 from 'n3';
 import * as vscode from 'vscode';
-import * as mentor from './mentor';
+import { mentor } from './mentor';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { TreeLabelStyle } from './settings';

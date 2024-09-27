@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { PrefixLookupService } from './prefix-lookup-service';
 import { getLastTokenOfType, getNextToken } from '../utilities';
 

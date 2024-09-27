@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { ReferenceProvider } from './reference-provider';
 import { DocumentContext } from '../document-context';
 import { getPreviousToken, getUriFromToken } from '../utilities';

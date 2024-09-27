@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { Uri, OWL, RDF, RDFS, SKOS, SH, _SH } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { DefinitionTreeNode } from './definition-tree-node';

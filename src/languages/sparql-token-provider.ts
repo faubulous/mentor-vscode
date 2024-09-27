@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { RenameProvider } from '../providers/rename-provider';
 import { CodeActionsProvider, CompletionItemProvider, DefinitionProvider, HoverProvider, ReferenceProvider } from '../providers';
 import { getLastTokenOfType, isUpperCase } from '../utilities';

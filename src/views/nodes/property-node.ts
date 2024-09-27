@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import * as mentor from "../../mentor";
+import { mentor } from "../../mentor";
 import { xsd, rdfs, RDF, DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { ResourceNode } from "./resource-node";
 import { DocumentContext } from "../../languages";
