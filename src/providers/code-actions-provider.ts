@@ -37,8 +37,8 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 
 		const prefixes = mentor.prefixDeclarationService.getMissingPrefixes(document, vscode.languages.getDiagnostics(document.uri));
 
-		// The service may be suspended after an Undo event.
-		if (mentor.prefixDeclarationService.enabled && !mentor.prefixDeclarationService.suspended) {
+		// TODO: Only trigger the action if the user has typed a namespace prefix. Move into the document changed event handler.
+		if (actionContext.triggerKind === vscode.CodeActionTriggerKind.Invoke && mentor.prefixDeclarationService.ready) {
 			vscode.commands.executeCommand(this.commands.fixMissingPrefixes, document.uri, prefixes);
 		}
 

@@ -46,6 +46,13 @@ export class PrefixDeclarationService {
 	}
 
 	/**
+	 * Indicates whether the service is enabled and not suspended.
+	 */
+	get ready(): boolean {
+		return this._enabled && !this._suspended;
+	}
+
+	/**
 	 * Suspend automatic prefix declaration.
 	 */
 	suspend() {
@@ -112,7 +119,7 @@ export class PrefixDeclarationService {
 			for (let i = 0; i < sortedPrefixes.length; i++) {
 				const prefix = sortedPrefixes[i];
 
-				if(document.namespaceDefinitions[prefix]) {
+				if (document.namespaceDefinitions[prefix]) {
 					// Do not implment prefixes that are already defined.
 					continue;
 				}

@@ -65,7 +65,7 @@ class MentorExtension {
 	/**
 	 * A service for storing and retrieving data from the local storage with extension scope.
 	 */
-	readonly globalStorage = new LocalStorageService();
+	readonly localStorageService = new LocalStorageService();
 
 	/**
 	 * A service for declaring prefixes in RDF documents.
@@ -84,6 +84,9 @@ class MentorExtension {
 
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
+	/**
+	 * An event that is fired after the active document context has changed.
+	 */
 	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
 
 	constructor() {
@@ -195,7 +198,7 @@ class MentorExtension {
 	 */
 	async initialize(context: vscode.ExtensionContext) {
 		// Initialize the extension persistence service.
-		this.globalStorage.initialize(context.globalState);
+		this.localStorageService.initialize(context.globalState);
 
 		// Initialize the default label rendering style.
 		let defaultStyle = this.configuration.get('treeLabelStyle');
@@ -224,7 +227,7 @@ class MentorExtension {
 				try {
 					let result = await this.prefixDownloaderService.fetchPrefixes();
 
-					this.globalStorage.setValue('defaultPrefixes', result);
+					this.localStorageService.setValue('defaultPrefixes', result);
 
 					progress.report({ increment: 100 });
 				} catch (error: any) {
@@ -334,4 +337,7 @@ class MentorExtension {
 	}
 }
 
+/**
+ * The Mentor extension instance.
+ */
 export const mentor = new MentorExtension();
