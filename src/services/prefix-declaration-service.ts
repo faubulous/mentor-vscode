@@ -111,6 +111,12 @@ export class PrefixDeclarationService {
 
 			for (let i = 0; i < sortedPrefixes.length; i++) {
 				const prefix = sortedPrefixes[i];
+
+				if(document.namespaceDefinitions[prefix]) {
+					// Do not implment prefixes that are already defined.
+					continue;
+				}
+
 				const uri = prefixLookupService.getUriForPrefix(documentUri, prefix);
 
 				edit.insert(document.uri, new vscode.Position(n, 0), defineCallback(prefix, uri));

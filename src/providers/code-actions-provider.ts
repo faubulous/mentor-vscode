@@ -33,7 +33,7 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 
 	async provideCodeActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): Promise<vscode.CodeAction[]> {
 		// Wait until the workspace has been indexed to have access to all prefix definitions.
-		await mentor.indexer.waitForIndexed();
+		await mentor.documentIndexer.waitForIndexed();
 
 		const prefixes = mentor.prefixDeclarationService.getMissingPrefixes(document, vscode.languages.getDiagnostics(document.uri));
 

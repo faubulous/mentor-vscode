@@ -8,14 +8,9 @@ import { DocumentFactory } from './document-factory';
  */
 export class WorkspaceRepository {
 	/**
-	 * A factory for creating document contexts and checking for supported file formats.
-	 */
-	private readonly _documentFactory = new DocumentFactory();
-
-	/**
 	 * The included file extensions as glob patterns.
 	 */
-	private _includePatterns = Object.keys(this._documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
+	private _includePatterns: string[] = [];
 
 	/**
 	 * The excluded file patterns loaded from the configuration.
@@ -52,9 +47,11 @@ export class WorkspaceRepository {
 	 */
 	readonly onDidChangeWorkspaceFolder = this._onDidChangeWorkspaceContents.event;
 
-	constructor() {
+	constructor(documentFactory: DocumentFactory) {
+		this._includePatterns = Object.keys(documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
+
 		this.watcher.onDidCreate((uri: vscode.Uri) => {
-			if (!this._documentFactory.isSupportedFile(uri)) {
+			if (!documentFactory.isSupportedFile(uri)) {
 				return;
 			}
 
@@ -68,7 +65,7 @@ export class WorkspaceRepository {
 		});
 
 		this.watcher.onDidDelete((uri: vscode.Uri) => {
-			if (!this._documentFactory.isSupportedFile(uri)) {
+			if (!documentFactory.isSupportedFile(uri)) {
 				return;
 			}
 
