@@ -2,9 +2,8 @@ import * as vscode from 'vscode';
 import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
-import { debounce } from './utilities';
 import { DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
-import { DocumentIndexer, DocumentIndex } from './document-indexer';
+import { WorkspaceIndexer, DocumentIndex } from './workspace-indexer';
 import { WorkspaceRepository } from './workspace-repository';
 import {
 	LocalStorageService,
@@ -33,11 +32,6 @@ class MentorExtension {
 	readonly documentFactory = new DocumentFactory();
 
 	/**
-	 * A document indexer for indexing RDF files in the entire workspace.
-	 */
-	readonly documentIndexer = new DocumentIndexer();
-
-	/**
 	 * The Visual Studio Code configuration section for the extension.
 	 */
 	readonly configuration = vscode.workspace.getConfiguration('mentor');
@@ -61,6 +55,11 @@ class MentorExtension {
 	 * A repository for retrieving workspace resources such as files and folders.
 	 */
 	readonly workspace = new WorkspaceRepository(this.documentFactory);
+
+	/**
+	 * A document indexer for indexing RDF files in the entire workspace.
+	 */
+	readonly workspaceIndexer = new WorkspaceIndexer();
 
 	/**
 	 * A service for storing and retrieving data from the local storage with extension scope.
@@ -90,14 +89,9 @@ class MentorExtension {
 	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
 
 	constructor() {
-		vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e));
-
 		vscode.window.onDidChangeActiveTextEditor(() => this._onActiveEditorChanged());
-
-		vscode.workspace.onDidChangeTextDocument((e) => {
-			// TODO: Debounce per document URI context. The current implementation might miss changes in other documents.
-			debounce(this._onTextDocumentChanged, 10)(e);
-		});
+		vscode.workspace.onDidChangeTextDocument((e) => this._onTextDocumentChanged(e));
+		vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e));
 	}
 
 	private _onActiveEditorChanged(): void {
@@ -115,12 +109,20 @@ class MentorExtension {
 	}
 
 	private _onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-		if (e.reason === vscode.TextDocumentChangeReason.Undo) {
-			// Suspend the prefix declaration service when undoing changes.
-			this.prefixDeclarationService.suspend();
-		} else {
-			// Re-enable the prefix declaration service when making changes.
-			this.prefixDeclarationService.resume();
+		if (e.contentChanges.length > 0) {
+			const change = e.contentChanges[0];
+
+			if (change.text.endsWith(':')) {
+				const documentUri = e.document.uri.toString();
+				const documentContext = this.contexts[documentUri];
+
+				const changePosition = change.range.start;
+				const documentText = e.document.getText(new vscode.Range(new vscode.Position(changePosition.line, 0), changePosition));
+				const prefixMatch = documentText.match(/(\S+)$/);
+				const prefix = prefixMatch ? prefixMatch[1] : '';
+
+				this.prefixDeclarationService.implementPrefixes(documentContext, [prefix]);
+			}
 		}
 
 		// Reload the document context when the document has changed.
@@ -293,7 +295,7 @@ class MentorExtension {
 			await this.workspace.initialize();
 
 			// Index the entire workspace for providing hovers, completions and definitions.
-			await this.documentIndexer.indexWorkspace();
+			await this.workspaceIndexer.indexWorkspace();
 
 			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 		});

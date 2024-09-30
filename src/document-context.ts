@@ -131,6 +131,19 @@ export abstract class DocumentContext {
 	abstract infer(): Promise<void>;
 
 	/**
+	 * Gets the token type of the prefix keyword.
+	 */
+	abstract getPrefixTokenType(): string;
+
+	/**
+	 * Declares a namespace prefix in the content of the document.
+	 * @param prefix The prefix to declare.
+	 * @param uri The URI to associate with the prefix.
+	 * @param upperCase Indicates whether the prefix keyword should be in uppercase.
+	 */
+	abstract getPrefixDeclaration(prefix: string, uri: string, upperCase: boolean): string;
+
+	/**
 	 * Maps blank node ids of the parsed documents to the ones in the triple store.
 	 */
 	mapBlankNodes() { }

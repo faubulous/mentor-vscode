@@ -64,6 +64,15 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
+	public override getPrefixTokenType(): string {
+		return 'TTL_PREFIX';
+	}
+
+	public override getPrefixDeclaration(prefix: string, uri: string, upperCase: boolean): string {
+		// Note: All prefixes keywords are always in lowercase in Turtle.
+		return `@prefix ${prefix}: <${uri}> .\n`
+	}
+
 	override mapBlankNodes() {
 		const blankNodes = new Set<string>();
 

@@ -7,3 +7,4 @@ export * from './hover-provider';
 export * from './reference-provider';
 export * from './rename-provider';
 export * from './semantic-tokens-provider';
+export * from './prefix-completion-provider';

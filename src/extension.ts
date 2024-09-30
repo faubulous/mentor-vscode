@@ -7,17 +7,17 @@ import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
 import { DefinitionNodeDecorationProvider } from './views/definition-node-decoration-provider';
 import { ResourceNode } from './views/nodes/resource-node';
+import { getUriFromNodeId } from './utilities';
+import { DefinitionProvider } from './providers';
 import {
+	DocumentContext,
 	LanguageClientBase,
+	SparqlLanguageClient,
+	SparqlTokenProvider,
+	TrigLanguageClient,
 	TurtleLanguageClient,
 	TurtleTokenProvider,
-	TrigLanguageClient,
-	SparqlLanguageClient,
-	SparqlTokenProvider
 } from './languages';
-import { DefinitionProvider } from './providers';
-import { getUriFromNodeId } from './utilities';
-import { DocumentIndexer } from './document-indexer';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -175,6 +175,12 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 	commands.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', async () => {
 		// Force re-indexing of the workspace, including oversized files.
-		await new DocumentIndexer().indexWorkspace(true);
+		mentor.workspaceIndexer.indexWorkspace(true);
 	}));
+
+	vscode.commands.registerCommand('mentor.action.fixMissingPrefixes', (documentUri: vscode.Uri, prefixes: string[]) => {
+		const context = mentor.contexts[documentUri.toString()];
+
+		mentor.prefixDeclarationService.implementPrefixes(context, prefixes);
+	});
 }

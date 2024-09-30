@@ -17,4 +17,17 @@ export class SparqlDocument extends DocumentContext {
 
 		this.setTokens(tokens);
 	}
+
+	public override getPrefixTokenType(): string {
+		return 'PREFIX';
+	}
+
+	public override getPrefixDeclaration(prefix: string, uri: string, upperCase: boolean): string {
+		if (upperCase) {
+			return `PREFIX ${prefix}: <${uri}>\n`;
+		}
+		else {
+			return `prefix ${prefix}: <${uri}>\n`;
+		}
+	}
 }

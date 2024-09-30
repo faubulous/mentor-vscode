@@ -13,7 +13,7 @@ export interface DocumentIndex {
 /**
  * Indexes RDF documents in the current workspace.
  */
-export class DocumentIndexer {
+export class WorkspaceIndexer {
 	/**
 	 * The document factory for creating document contexts.
 	 */
