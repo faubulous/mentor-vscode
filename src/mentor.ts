@@ -8,7 +8,7 @@ import { WorkspaceRepository } from './workspace-repository';
 import {
 	LocalStorageService,
 	PrefixDownloaderService,
-	PrefixDeclarationService,
+	PrefixDefinitionService,
 	PrefixLookupService
 } from './services';
 
@@ -34,7 +34,11 @@ class MentorExtension {
 	/**
 	 * The Visual Studio Code configuration section for the extension.
 	 */
-	readonly configuration = vscode.workspace.getConfiguration('mentor');
+	get configuration() {
+		// The value of getConfiguration is a copy of the configuration and not a reference,
+		// so we need to call getConfiguration each time to get the *latest* configuration.
+		return vscode.workspace.getConfiguration('mentor');
+	}
 
 	/**
 	 * The appliation state of the extension.
@@ -69,7 +73,7 @@ class MentorExtension {
 	/**
 	 * A service for declaring prefixes in RDF documents.
 	 */
-	readonly prefixDeclarationService = new PrefixDeclarationService();
+	readonly prefixDeclarationService = new PrefixDefinitionService();
 
 	/**
 	 * A service for downloading RDF prefix mappings from the web.
@@ -94,6 +98,15 @@ class MentorExtension {
 		vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e));
 	}
 
+	/**
+	 * Get the RDF document context for a text document.
+	 * @param document A text document.
+	 * @returns A document context for the given document or `undefined`.
+	 */
+	getDocumentContext(document: vscode.TextDocument): DocumentContext | undefined {
+		return this.contexts[document.uri.toString()];
+	}
+
 	private _onActiveEditorChanged(): void {
 		const activeEditor = vscode.window.activeTextEditor;
 		const uri = activeEditor?.document.uri;
@@ -109,27 +122,30 @@ class MentorExtension {
 	}
 
 	private _onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-		if (e.contentChanges.length > 0) {
-			const change = e.contentChanges[0];
-
-			if (change.text.endsWith(':')) {
-				const documentUri = e.document.uri.toString();
-				const documentContext = this.contexts[documentUri];
-
-				const changePosition = change.range.start;
-				const documentText = e.document.getText(new vscode.Range(new vscode.Position(changePosition.line, 0), changePosition));
-				const prefixMatch = documentText.match(/(\S+)$/);
-				const prefix = prefixMatch ? prefixMatch[1] : '';
-
-				this.prefixDeclarationService.implementPrefixes(documentContext, [prefix]);
-			}
-		}
-
 		// Reload the document context when the document has changed.
 		this.loadDocument(e.document, true).then((context) => {
 			if (context) {
+				// Update the active document context if it has changed.
 				this.activeContext = context;
+
 				this._onDidChangeDocumentContext?.fire(context);
+
+				// Automatically declare prefixes when a colon is typed.
+				const change = e.contentChanges[0];
+
+				if (change?.text.endsWith(':') && this.configuration.get('editor.autoDeclarePrefixes')) {
+					// Determine the token type at the change position.
+					const token = context.getTokensAtPosition(change.range.start)[0];
+
+					if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
+						const prefix = token.image.substring(0, token.image.length - 1);
+
+						// Do not implmenet prefixes that are already defined.
+						if (!context.namespaces[prefix]) {
+							this.prefixDeclarationService.implementPrefixes(context, [prefix]);
+						}
+					}
+				}
 			}
 		});
 	}

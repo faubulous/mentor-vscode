@@ -15,12 +15,18 @@ import {
 	DidChangeConfigurationParams,
 	PublishDiagnosticsParams,
 	BrowserMessageReader,
-	BrowserMessageWriter
+	BrowserMessageWriter,
+	DiagnosticTag
 } from 'vscode-languageserver/browser';
 import { SyntaxParser, XSD } from '@faubulous/mentor-rdf';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ISemanticError, IToken } from 'millan';
-import { NamespaceMap, getUnquotedLiteralValue, getNamespaceDefinition, getUriFromToken } from '../utilities';
+import {
+	getNamespaceDefinition,
+	getUnquotedLiteralValue,
+	getUriFromToken,
+	NamespaceMap,
+} from '../utilities';
 
 /**
  * The result of tokenizing a text document.
@@ -347,6 +353,7 @@ export abstract class LanguageServerBase {
 	protected getLintDiagnostics(document: TextDocument, content: string, tokens: IToken[]): Diagnostic[] {
 		let result: Diagnostic[] = [];
 		let namespaces: NamespaceMap = {};
+		let usedPrefixes: Set<string> = new Set();
 
 		for (let i = 0; i < tokens.length; i++) {
 			const t = tokens[i];
@@ -362,6 +369,19 @@ export abstract class LanguageServerBase {
 					const ns = getNamespaceDefinition(tokens, t);
 
 					if (ns) {
+						if (namespaces[ns.prefix]) {
+							const n = t.startLine ? t.startLine - 1 : 0;
+
+							result.push({
+								severity: DiagnosticSeverity.Warning,
+								message: `The prefix '${ns.prefix}' is already defined.`,
+								range: {
+									start: { line: n, character: 0 },
+									end: { line: n, character: Number.MAX_SAFE_INTEGER },
+								}
+							})
+						}
+
 						namespaces[ns.prefix] = ns.uri;
 
 						const u = tokens[i + 2];
@@ -387,6 +407,13 @@ export abstract class LanguageServerBase {
 							});
 						}
 					}
+
+					break;
+				}
+				case 'PNAME_LN': {
+					const prefix = t.image.split(':')[0];
+
+					usedPrefixes.add(prefix);
 
 					break;
 				}
@@ -785,6 +812,27 @@ export abstract class LanguageServerBase {
 					}
 
 					break;
+			}
+		}
+
+		for (let prefix of Object.keys(namespaces)) {
+			if (!usedPrefixes.has(prefix)) {
+				const prefixToken = tokens.find(t => t.image === `${prefix}:`);
+
+				if (prefixToken) {
+					const n = prefixToken.startLine ? prefixToken.startLine - 1 : 0;
+
+					result.push({
+						code: 'UnusedNamespacePrefixHint',
+						severity: DiagnosticSeverity.Hint,
+						tags: [DiagnosticTag.Unnecessary],
+						message: `Prefix '${prefix}' is declared but never used.`,
+						range: {
+							start: { line: n, character: 0 },
+							end: { line: n, character: Number.MAX_SAFE_INTEGER },
+						}
+					});
+				}
 			}
 		}
 

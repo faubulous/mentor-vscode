@@ -15,7 +15,7 @@ export class DefinitionProvider extends FeatureProvider {
 			return null;
 		}
 
-		const token = this.getTokensAtPosition(context.tokens, position)[0];
+		const token = context.getTokensAtPosition(position)[0];
 
 		if (!token) {
 			return null;

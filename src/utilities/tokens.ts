@@ -100,7 +100,7 @@ export function isUpperCase(token?: IToken): boolean {
 export function getPrefixFromToken(token: IToken): string {
 	if (token.tokenType?.tokenName === 'PNAME_LN') {
 		return token.image.split(':')[0];
-	} else if(token.tokenType?.tokenName === 'PNAME_NS') {
+	} else if (token.tokenType?.tokenName === 'PNAME_NS') {
 		return token.image.substring(0, token.image.length - 1);
 	} else {
 		throw new Error("Cannot get prefix from token type: " + token.tokenType?.tokenName);
@@ -154,6 +154,20 @@ export function getUriFromPrefixedName(namespaces: NamespaceMap, name: string): 
 		if (namespaces[prefix]) {
 			return namespaces[prefix] + label;
 		}
+	}
+}
+
+/**
+ * Get the first token of a given type.
+ * @param tokens A list of tokens.
+ * @param type The type name of the token.
+ * @returns The last token of the given type, if it exists, undefined otherwise.
+ */
+export function getFirstTokenOfType(tokens: IToken[], type: string): IToken | undefined {
+	const n = tokens.findIndex(t => t.tokenType?.tokenName === type);
+
+	if (n > -1) {
+		return tokens[n];
 	}
 }
 

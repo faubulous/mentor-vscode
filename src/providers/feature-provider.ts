@@ -127,27 +127,4 @@ export class FeatureProvider {
 			}
 		}
 	}
-
-	/**
-	 * Gets all tokens at a given position.
-	 * @param tokens A list of tokens.
-	 * @param position A position in the document.
-	 * @returns An non-empty array of tokens on success, an empty array otherwise.
-	 */
-	protected getTokensAtPosition(tokens: IToken[], position: vscode.Position): IToken[] {
-		// The tokens are 0-based, but the position is 1-based.
-		const l = position.line + 1;
-		const n = position.character + 1;
-
-		return tokens.filter(t =>
-			t.startLine &&
-			t.startLine <= l &&
-			t.endLine &&
-			t.endLine >= l &&
-			t.startColumn &&
-			t.startColumn <= n &&
-			t.endColumn &&
-			t.endColumn >= (n - 1)
-		);
-	}
 }

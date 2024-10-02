@@ -20,7 +20,8 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 	 * @returns Code actions for defining missing prefixes.
 	 */
 	provideFixMissingPrefixesActions(document: vscode.TextDocument): vscode.CodeAction[] {
-		const prefixes = new Set<string>();
+		const undefinedPrefixes = new Set<string>();
+		const unusedPrefixes = new Set<string>();
 
 		for (let diagnostic of vscode.languages.getDiagnostics(document.uri)) {
 			if (diagnostic.code === 'NoNamespacePrefixError') {
@@ -28,39 +29,56 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 
 				// Check for undefined includes the empty prefix '' in the result.
 				if (prefix !== undefined) {
-					prefixes.add(prefix);
+					undefinedPrefixes.add(prefix);
+				}
+			} else if (diagnostic.code === 'UnusedNamespacePrefixHint') {
+				const prefix = document.getText(diagnostic.range).split(':')[0];
+
+				if (prefix !== undefined) {
+					unusedPrefixes.add(prefix);
 				}
 			}
 		}
 
-		if (prefixes.size === 0) {
-			return [];
+		const result: vscode.CodeAction[] = [];
+
+		if (undefinedPrefixes.size > 0) {
+			// Fixing missing prefixes is implemented as a command instead of a static edit because 
+			// the document may change in the meantime and the insert range may no longer be valid.
+			result.push({
+				kind: vscode.CodeActionKind.QuickFix,
+				title: 'Implement all missing prefixes',
+				isPreferred: true,
+				command: {
+					title: 'Implement all missing prefixes',
+					command: 'mentor.action.fixMissingPrefixes',
+					arguments: [document.uri, Array.from(undefinedPrefixes)]
+				}
+			});
 		}
 
-		const command = 'mentor.action.fixMissingPrefixes';
-
-		// Fixing missing prefixes is implemented as a command instead of a static edit because 
-		// the document may change in the meantime and the insert range may no longer be valid.
-		const result: vscode.CodeAction[] = [{
-			kind: vscode.CodeActionKind.QuickFix,
-			title: 'Implement all missing prefixes',
-			isPreferred: true,
-			command: {
-				title: 'Implement all missing prefixes',
-				command: command,
-				arguments: [document.uri, Array.from(prefixes)]
-			}
-		}];
-
-		for (let prefix of prefixes) {
+		for (let prefix of undefinedPrefixes) {
 			result.push({
 				kind: vscode.CodeActionKind.QuickFix,
 				title: `Implement missing prefix: ${prefix}`,
 				isPreferred: false,
 				command: {
 					title: `Implement missing prefix: ${prefix}`,
-					command: command,
+					command: 'mentor.action.fixMissingPrefixes',
 					arguments: [document.uri, [prefix]]
+				}
+			});
+		}
+
+		if (unusedPrefixes.size > 0) {
+			result.push({
+				kind: vscode.CodeActionKind.QuickFix,
+				title: `Remove all unused prefixes`,
+				isPreferred: false,
+				command: {
+					title: `Remove all unsued prefixes`,
+					command: 'mentor.action.removeUnusedPrefixes',
+					arguments: [document.uri]
 				}
 			});
 		}

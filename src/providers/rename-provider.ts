@@ -13,7 +13,7 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 			return null;
 		}
 
-		const token = this.getTokensAtPosition(context.tokens, position)[0];
+		const token = context.getTokensAtPosition(position)[0];
 
 		if (!token) {
 			throw new Error('No token found at the given position.');
@@ -34,7 +34,7 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 			return edits;
 		}
 
-		const token = this.getTokensAtPosition(context.tokens, position)[0];
+		const token = context.getTokensAtPosition(position)[0];
 
 		if (!token) {
 			return edits;

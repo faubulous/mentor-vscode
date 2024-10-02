@@ -131,17 +131,17 @@ export abstract class DocumentContext {
 	abstract infer(): Promise<void>;
 
 	/**
-	 * Gets the token type of the prefix keyword.
+	 * Gets the token type of the prefix keyword in the document language.
 	 */
 	abstract getPrefixTokenType(): string;
 
 	/**
-	 * Declares a namespace prefix in the content of the document.
+	 * Get a namespace prefix definition in the serialization of the document language.
 	 * @param prefix The prefix to declare.
 	 * @param uri The URI to associate with the prefix.
 	 * @param upperCase Indicates whether the prefix keyword should be in uppercase.
 	 */
-	abstract getPrefixDeclaration(prefix: string, uri: string, upperCase: boolean): string;
+	abstract getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string;
 
 	/**
 	 * Maps blank node ids of the parsed documents to the ones in the triple store.
@@ -269,6 +269,29 @@ export abstract class DocumentContext {
 		delete this.namespaces[oldPrefix];
 
 		this.namespaces[newPrefix] = uri;
+	}
+
+	/**
+	 * Gets all tokens at a given position.
+	 * @param tokens A list of tokens.
+	 * @param position A position in the document.
+	 * @returns An non-empty array of tokens on success, an empty array otherwise.
+	 */
+	getTokensAtPosition(position: vscode.Position): IToken[] {
+		// The tokens are 0-based, but the position is 1-based.
+		const l = position.line + 1;
+		const n = position.character + 1;
+
+		return this.tokens.filter(t =>
+			t.startLine &&
+			t.startLine <= l &&
+			t.endLine &&
+			t.endLine >= l &&
+			t.startColumn &&
+			t.startColumn <= n &&
+			t.endColumn &&
+			t.endColumn >= (n - 1)
+		);
 	}
 
 	/**

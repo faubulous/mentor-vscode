@@ -14,9 +14,23 @@ export class PrefixLookupService {
 	getUriForPrefix(documentUri: string, prefix: string): string {
 		// The empty prefix is specific for the document and should not be resolved.
 		if (prefix === '') {
-			return documentUri;
+			return documentUri.endsWith('#') ? documentUri : documentUri + '#';
 		}
 
+		let result: string | undefined = undefined;
+
+		// 1. Check if the prefix is declared in the project configuration as a default prefix.
+		const namespaces = mentor.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+
+		if (Array.isArray(namespaces)) {
+			result = namespaces.find(namespace => namespace.defaultPrefix === prefix)?.uri;
+
+			if (result) {
+				return result;
+			}
+		}
+
+		// 2. Retrieve prefixes from declared in the documents of the workspace.
 		// Count the number of times each URI is used for the given prefix.
 		const uriCounts: { [uri: string]: number } = {};
 
@@ -28,7 +42,6 @@ export class PrefixLookupService {
 			}
 		}
 
-		let result: string | undefined = undefined;
 		let maxCount = 0;
 
 		for (let uri in uriCounts) {
@@ -43,7 +56,7 @@ export class PrefixLookupService {
 			return result;
 		}
 
-		// Alternatively use the default prefixes if the prefix is not declared in the project.
+		// 3. Alternatively use the default prefixes if the prefix is not declared in the project.
 		const defaultPrefixes = mentor.localStorageService.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
 
 		// Returning an empty string will produce empty URI declarations which  will trigger 

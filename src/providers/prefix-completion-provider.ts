@@ -17,7 +17,7 @@ export class PrefixCompletionProvider extends FeatureProvider implements vscode.
 			return null;
 		}
 
-		const currentToken = this.getTokensAtPosition(context.tokens, position)[0];
+		const currentToken = context.getTokensAtPosition(position)[0];
 
 		if (!currentToken) {
 			return null;

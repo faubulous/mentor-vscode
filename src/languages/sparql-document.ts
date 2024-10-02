@@ -22,12 +22,12 @@ export class SparqlDocument extends DocumentContext {
 		return 'PREFIX';
 	}
 
-	public override getPrefixDeclaration(prefix: string, uri: string, upperCase: boolean): string {
+	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
 		if (upperCase) {
-			return `PREFIX ${prefix}: <${uri}>\n`;
+			return `PREFIX ${prefix}: <${uri}>`;
 		}
 		else {
-			return `prefix ${prefix}: <${uri}>\n`;
+			return `prefix ${prefix}: <${uri}>`;
 		}
 	}
 }
