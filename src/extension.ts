@@ -10,7 +10,6 @@ import { ResourceNode } from './views/nodes/resource-node';
 import { getUriFromNodeId } from './utilities';
 import { DefinitionProvider } from './providers';
 import {
-	DocumentContext,
 	LanguageClientBase,
 	SparqlLanguageClient,
 	SparqlTokenProvider,
@@ -179,8 +178,10 @@ function registerCommands(context: vscode.ExtensionContext) {
 	}));
 
 	vscode.commands.registerCommand('mentor.action.fixMissingPrefixes', (documentUri: vscode.Uri, prefixes: string[]) => {
-		const context = mentor.contexts[documentUri.toString()];
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
-		mentor.prefixDeclarationService.implementPrefixes(context, prefixes);
+		if (document) {
+			mentor.prefixDeclarationService.implementPrefixes(document, prefixes);
+		}
 	});
 }

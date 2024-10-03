@@ -124,26 +124,26 @@ class MentorExtension {
 	private _onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
 		// Reload the document context when the document has changed.
 		this.loadDocument(e.document, true).then((context) => {
-			if (context) {
-				// Update the active document context if it has changed.
-				this.activeContext = context;
+			if (!context) return;
 
-				this._onDidChangeDocumentContext?.fire(context);
+			// Update the active document context if it has changed.
+			this.activeContext = context;
 
-				// Automatically declare prefixes when a colon is typed.
-				const change = e.contentChanges[0];
+			this._onDidChangeDocumentContext?.fire(context);
 
-				if (change?.text.endsWith(':') && this.configuration.get('editor.autoDeclarePrefixes')) {
-					// Determine the token type at the change position.
-					const token = context.getTokensAtPosition(change.range.start)[0];
+			// Automatically declare prefixes when a colon is typed.
+			const change = e.contentChanges[0];
 
-					if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
-						const prefix = token.image.substring(0, token.image.length - 1);
+			if (change?.text.endsWith(':') && this.configuration.get('editor.autoDefinePrefixes')) {
+				// Determine the token type at the change position.
+				const token = context.getTokensAtPosition(change.range.start)[0];
 
-						// Do not implmenet prefixes that are already defined.
-						if (!context.namespaces[prefix]) {
-							this.prefixDeclarationService.implementPrefixes(context, [prefix]);
-						}
+				if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
+					const prefix = token.image.substring(0, token.image.length - 1);
+
+					// Do not implmenet prefixes that are already defined.
+					if (!context.namespaces[prefix]) {
+						this.prefixDeclarationService.implementPrefixes(e.document, [prefix]);
 					}
 				}
 			}

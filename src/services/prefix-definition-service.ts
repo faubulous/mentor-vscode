@@ -1,89 +1,114 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { getLastTokenOfType, getNextToken, isUpperCase } from '../utilities';
+import { getLastTokenOfType, isUpperCase } from '../utilities';
 import { DocumentContext } from '../languages';
-
-/**
- * The mode of defining prefixes in RDF documents.
- */
-export enum PrefixDefinitionMode {
-	/** Append new prefixes to the end of prefix definition list at the beginning of the document. */
-	Append,
-	/** Maintain a sorted list of prefixes at the beginning of the document. */
-	Sorted
-};
+import { IToken } from 'millan';
 
 /**
  * A service for declaring prefixes in RDF documents.
  */
 export class PrefixDefinitionService {
-
-	/**
-	 * The mode of defining prefixes in RDF documents.
-	 */
-	definitionMode: PrefixDefinitionMode = PrefixDefinitionMode.Sorted;
-
 	/**
 	 * Implement missing prefixes in a document.
 	 * @param context The RDF document context.
 	 * @param prefixes The prefixes to implement.
 	 * @param tokenType The token type of the prefix token.
 	 */
-	public async implementPrefixes(context: DocumentContext, prefixes: string[]) {
-		if (this.definitionMode === PrefixDefinitionMode.Append) {
-			await this.implementAppendedPrefixes(context, prefixes);
-		} else {
-			await this.implementSortedPrefixes(context, prefixes);
+	public async implementPrefixes(document: vscode.TextDocument, prefixes: string[]) {
+		const context = mentor.contexts[document.uri.toString()];
+
+		if (!context) return;
+
+		const mode = await mentor.configuration.get('editor.prefixDefinitionMode');
+
+		switch (mode) {
+			case 'Sorted': {
+				await this.implementPrefixesSorted(document, context, prefixes);
+				break;
+			}
+			default: {
+				await this.implementPrefixesAppended(document, context, prefixes);
+				break;
+			}
 		}
 	}
 
-	protected async implementAppendedPrefixes(context: DocumentContext, prefixes: string[]) {
-		const tokenType = context.getPrefixTokenType();
+	/**
+	 * Delete empty lines after a token in a document.
+	 * @param document The text document.
+	 * @param edit The workspace edit.
+	 * @param token The token after which to delete empty lines.
+	 */
+	protected deleteEmptyLinesAfterToken(document: vscode.TextDocument, edit: vscode.WorkspaceEdit, token: IToken) {
+		let position = new vscode.Position(token.endLine ?? 0, 0);
 
-		// Determine whether the prefixes should be in uppercase.
-		const upperCase = isUpperCase(getLastTokenOfType(context.tokens, tokenType) ?? context.tokens[0]);
+		while (position.line < document.lineCount) {
+			const line = document.lineAt(position.line);
+
+			if (!line.isEmptyOrWhitespace) {
+				break;
+			}
+
+			edit.delete(document.uri, line.rangeIncludingLineBreak);
+
+			position = position.translate(1, 0);
+		}
+	}
+
+	/**
+	 * Implement missing prefixes in a document by appending the new prefixes to the end of the prefix definition list.
+	 * @param document The text document.
+	 * @param context The RDF document context.
+	 * @param prefixes The prefixes to be implemented.
+	 * @param tokenType The token type of the prefix token.
+	 */
+	protected async implementPrefixesAppended(document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
+		const edit = new vscode.WorkspaceEdit();
+
+		// Get the prefix token type name from the language specific context.
+		const tokenType = context.getPrefixTokenType();
 
 		// Insert the new prefix declaration after the last prefix declaration in the document.
 		const lastPrefix = getLastTokenOfType(context.tokens, tokenType);
 
-		// The line number where to insert the new prefix declaration.
-		let n = lastPrefix ? (lastPrefix.endLine ?? 0) : 0;
+		// Determine whether the prefixes should be in uppercase.
+		const upperCase = isUpperCase(lastPrefix ?? context.tokens[0]);
 
-		const edit = new vscode.WorkspaceEdit();
+		let insertPosition = new vscode.Position(lastPrefix ? (lastPrefix.endLine ?? 0) : 0, 0);
 
-		for (let prefix of prefixes.filter(p => !context.namespaces[p])) {
+		// 1. Append the new prefixes to the end of the prefix definition list.
+		prefixes.sort().filter(p => !context.namespaces[p]).forEach(prefix => {
 			const uri = mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), prefix);
 			const definition = context.getPrefixDefinition(prefix, uri, upperCase) + '\n';
 
-			edit.insert(context.uri, new vscode.Position(n, 0), definition);
+			edit.insert(context.uri, insertPosition, definition);
 
-			n += 1;
+			insertPosition = insertPosition.translate(1, 0);
+		});
+
+		// 2. Delete leading new lines if there are any prefixes.
+		if (lastPrefix) {
+			this.deleteEmptyLinesAfterToken(document, edit, lastPrefix);
 		}
 
-		if (lastPrefix) {
-			const nextToken = getNextToken(context.tokens, lastPrefix);
-
-			// Insert a new line between the last prefix declaration and the next token.
-			if (nextToken && nextToken.endLine === n + 1) {
-				edit.insert(context.uri, new vscode.Position(n, 0), '\n');
-			}
-		} else {
-			const firstToken = context.tokens[0];
-
-			// Insert a new line at the beginning of the document.
-			if (firstToken && firstToken.endLine == 1) {
-				edit.insert(context.uri, new vscode.Position(n, 0), '\n');
-			}
+		// 3. Insert a new line at the end of the document if were any edits, this includes the deleted new lines.
+		if (edit.size > 0) {
+			edit.insert(context.uri, insertPosition, '\n');
 		}
 
 		await vscode.workspace.applyEdit(edit);
 	}
 
-	protected async implementSortedPrefixes(context: DocumentContext, prefixes: string[]) {
+	/**
+	 * Implement missing prefixes in a document by maintaining a sorted list of prefixes at the beginning of the document.
+	 * @param document The text document.
+	 * @param context The RDF document context.
+	 * @param prefixes The prefixes to be implemented.
+	 * @param tokenType The token type of the prefix token.
+	 */
+	protected async implementPrefixesSorted(document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
+		// Get the prefix token type name from the language specific context.
 		const tokenType = context.getPrefixTokenType();
-
-		// Determine whether the prefixes should be in uppercase.
-		const upperCase = isUpperCase(getLastTokenOfType(context.tokens, tokenType) ?? context.tokens[0]);
 
 		// 1. Delete the existing prefix definitions.
 		let edit = new vscode.WorkspaceEdit();
@@ -96,8 +121,18 @@ export class PrefixDefinitionService {
 			edit.delete(context.uri, new vscode.Range(start, end));
 		}
 
-		// 2. Implement the prefixes in a sorted order.
+		// 2. Delete leading new lines and insert a new line at the beginning of the document.
+		const lastPrefix = getLastTokenOfType(context.tokens, tokenType);
+
+		if (lastPrefix) {
+			this.deleteEmptyLinesAfterToken(document, edit, lastPrefix);
+		}
+
+		// 3. Implement the prefixes in a sorted order.
 		const sortedPrefixes = [...Object.keys(context.namespaces), ...prefixes].sort();
+
+		// Determine whether the prefixes should be in uppercase.
+		const upperCase = isUpperCase(lastPrefix ?? context.tokens[0]);
 
 		for (let prefix of sortedPrefixes) {
 			const uri = context.namespaces[prefix] ?? mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), prefix);
@@ -105,6 +140,8 @@ export class PrefixDefinitionService {
 
 			edit.insert(context.uri, new vscode.Position(0, 0), definition + '\n');
 		}
+
+		edit.insert(context.uri, new vscode.Position(0, 0), '\n');
 
 		await vscode.workspace.applyEdit(edit);
 	}

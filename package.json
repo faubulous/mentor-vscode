@@ -775,11 +775,25 @@
             "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
             "default": true
           },
-          "mentor.editor.autoDeclarePrefixes": {
+          "mentor.editor.autoDefinePrefixes": {
             "type": "boolean",
-            "title": "Auto Declare Namespaces",
+            "title": "Auto Define Namespaces",
             "description": "If enabled, the extension will automatically declare namespaces in the document header. The namespaces that are defined in workspace documents are used in preference over the ones retrieved from prefix.cc.",
             "default": true
+          },
+          "mentor.editor.prefixDefinitionMode": {
+            "type": "string",
+            "title": "Prefix Definition Mode",
+            "description": "Set the way prefixes are automatically defined in the document header.",
+            "enum": [
+              "Append",
+              "Sorted"
+            ],
+            "enumDescriptions": [
+              "Append new prefixes to the end of the prefix definition list in the document header.",
+              "Maintain an alphabetical order of prefixes in the document header."
+            ],
+            "default": "Sorted"
           }
         },
         "mentor.language.turtle.maxNumberOfProblems": {
