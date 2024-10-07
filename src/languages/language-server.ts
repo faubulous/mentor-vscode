@@ -23,7 +23,6 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ISemanticError, IToken } from 'millan';
 import {
 	getNamespaceDefinition,
-	getUnquotedLiteralValue,
 	getUriFromToken,
 	NamespaceMap,
 } from '../utilities';
@@ -432,7 +431,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#anyURI
 							const regex = /(([^:/?#]+):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
 
-							if (!regex.test(getUnquotedLiteralValue(value))) {
+							if (!regex.test(this.getUnquotedLiteralValue(value))) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the valid lexical space: [scheme:]scheme-specific-part[#fragment]",
@@ -448,7 +447,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#hexBinary
 							const regex = /[0-9a-fA-F]+/;
 
-							if (!regex.test(getUnquotedLiteralValue(value))) {
+							if (!regex.test(this.getUnquotedLiteralValue(value))) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the valid lexical space: [0-9a-fA-F]+",
@@ -462,7 +461,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.boolean: {
 							// See: https://www.w3.org/TR/xmlschema-2/#boolean
-							const v = getUnquotedLiteralValue(value);
+							const v = this.getUnquotedLiteralValue(value);
 
 							if (v !== 'true' && v !== 'false') {
 								result.push({
@@ -480,7 +479,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#byte
 							const regex = /-?0*[0-9]+/;
 
-							if (!regex.test(getUnquotedLiteralValue(value))) {
+							if (!regex.test(this.getUnquotedLiteralValue(value))) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the valid lexical space: [-]0*[0-9]+",
@@ -496,7 +495,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#date
 							const regex = /(-)?\d{4}-\d{2}-\d{2}(Z|[+-]\d{2}:\d{2})?$/;
 
-							if (!regex.test(getUnquotedLiteralValue(value))) {
+							if (!regex.test(this.getUnquotedLiteralValue(value))) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the valid lexical space: [-]YYYY-MM-DD[Z|(+|-)hh:mm]",
@@ -512,7 +511,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#dateTime
 							const regex = /-?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/;
 
-							if (!regex.test(getUnquotedLiteralValue(value))) {
+							if (!regex.test(this.getUnquotedLiteralValue(value))) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the valid the lexical space: [-]YYYY-MM-DDThh:mm:ss[Z|(+|-)hh:mm]",
@@ -526,7 +525,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.decimal: {
 							// See: https://www.w3.org/TR/xmlschema-2/#decimal
-							const n = parseFloat(getUnquotedLiteralValue(value));
+							const n = parseFloat(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -542,7 +541,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.double: {
 							// See: https://www.w3.org/TR/xmlschema-2/#double
-							const n = parseFloat(getUnquotedLiteralValue(value));
+							const n = parseFloat(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -560,7 +559,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#duration
 							const regex = /(-)?P(\d+Y)?(\d+M)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$/;
 
-							if (!regex.test(getUnquotedLiteralValue(value))) {
+							if (!regex.test(this.getUnquotedLiteralValue(value))) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside the valid lexical space: PnYnMnDTnHnMnS",
@@ -574,7 +573,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.float: {
 							// See: https://www.w3.org/TR/xmlschema-2/#float
-							const n = parseFloat(getUnquotedLiteralValue(value));
+							const n = parseFloat(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -590,7 +589,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.int: {
 							// See: https://www.w3.org/TR/xmlschema-2/#int
-							const n = parseInt(getUnquotedLiteralValue(value));
+							const n = parseInt(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -617,7 +616,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.integer: {
 							// See: https://www.w3.org/TR/xmlschema-2/#integer
-							const n = parseInt(getUnquotedLiteralValue(value));
+							const n = parseInt(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -633,7 +632,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.long: {
 							// See: https://www.w3.org/TR/xmlschema-2/#long
-							const n = parseInt(getUnquotedLiteralValue(value));
+							const n = parseInt(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -660,7 +659,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.negativeInteger: {
 							// See: https://www.w3.org/TR/xmlschema-2/#negativeInteger
-							const n = parseInt(getUnquotedLiteralValue(value));
+							const n = parseInt(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -687,7 +686,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.nonNegativeInteger: {
 							// See: https://www.w3.org/TR/xmlschema-2/#nonNegativeInteger
-							const n = parseInt(getUnquotedLiteralValue(value));
+							const n = parseInt(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -714,7 +713,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.nonPositiveInteger: {
 							// See: https://www.w3.org/TR/xmlschema-2/#nonPositiveInteger
-							const n = parseInt(getUnquotedLiteralValue(value));
+							const n = parseInt(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -741,7 +740,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.positiveInteger: {
 							// See: https://www.w3.org/TR/xmlschema-2/#positiveInteger
-							const n = parseInt(getUnquotedLiteralValue(value));
+							const n = parseInt(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -768,7 +767,7 @@ export abstract class LanguageServerBase {
 						}
 						case XSD.short: {
 							// See: https://www.w3.org/TR/xmlschema-2/#short
-							const n = parseInt(getUnquotedLiteralValue(value));
+							const n = parseInt(this.getUnquotedLiteralValue(value));
 
 							if (isNaN(n)) {
 								result.push({
@@ -797,7 +796,7 @@ export abstract class LanguageServerBase {
 							// See: https://www.w3.org/TR/xmlschema-2/#time
 							const regex = /\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})/;
 
-							if (!regex.test(getUnquotedLiteralValue(value))) {
+							if (!regex.test(this.getUnquotedLiteralValue(value))) {
 								result.push({
 									severity: DiagnosticSeverity.Warning,
 									message: "The value is outside valid the lexical space: hh:mm:ss[Z|(+|-)hh:mm].",
@@ -838,4 +837,6 @@ export abstract class LanguageServerBase {
 
 		return result;
 	}
+
+	abstract getUnquotedLiteralValue(token: IToken): string;
 }

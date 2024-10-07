@@ -253,6 +253,8 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 							break;
 						case "STRING_LITERAL":
 						case "STRING_LITERAL2":
+						case "STRING_LITERAL_LONG1":
+						case "STRING_LITERAL_LONG2":
 						case "STRING_LITERAL_QUOTE":
 						case "STRING_LITERAL_SINGLE_QUOTE":
 						case "STRING_LITERAL_LONG_QUOTE":

@@ -21,13 +21,18 @@ export class HoverProvider extends FeatureProvider implements vscode.HoverProvid
 
 		const t = token.tokenType?.name;
 
-		switch(t) {
+		switch (t) {
 			// Display the literal strings without the quotes for improved readability for long strings.
+			case 'STRING_LITERAL1':
+			case 'STRING_LITERAL2':
 			case 'STRING_LITERAL_QUOTE':
 			case "STRING_LITERAL_SINGLE_QUOTE": {
 				return new vscode.Hover(token.image.slice(1, -1));
 			}
-			case 'STRING_LITERAL_LONG_QUOTE': {
+			case 'STRING_LITERAL_LONG1':
+			case 'STRING_LITERAL_LONG2':
+			case 'STRING_LITERAL_LONG_QUOTE':
+			case "STRING_LITERAL_LONG_SINGLE_QUOTE": {
 				return new vscode.Hover(token.image.slice(3, -3));
 			}
 			// Display a the description for the concept for URIs, if it exists.
@@ -37,7 +42,7 @@ export class HoverProvider extends FeatureProvider implements vscode.HoverProvid
 				if (!uri) {
 					return null;
 				}
-	
+
 				return new vscode.Hover(context.getResourceTooltip(uri));
 			}
 		}

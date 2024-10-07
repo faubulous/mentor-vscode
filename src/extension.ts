@@ -177,11 +177,19 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.workspaceIndexer.indexWorkspace(true);
 	}));
 
-	vscode.commands.registerCommand('mentor.action.fixMissingPrefixes', (documentUri: vscode.Uri, prefixes: string[]) => {
+	vscode.commands.registerCommand('mentor.action.implementPrefixDefinitions', (documentUri: vscode.Uri, prefixes: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
-			mentor.prefixDeclarationService.implementPrefixes(document, prefixes);
+			mentor.prefixDeclarationService.implementPrefixDefinitions(document, prefixes);
+		}
+	});
+
+	vscode.commands.registerCommand('mentor.action.deletePrefixDefinitions', (documentUri: vscode.Uri, prefixes: string[]) => {
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
+
+		if (document) {
+			mentor.prefixDeclarationService.deletePrefixDefinitions(document, prefixes);
 		}
 	});
 }

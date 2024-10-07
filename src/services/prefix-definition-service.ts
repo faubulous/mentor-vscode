@@ -9,12 +9,59 @@ import { IToken } from 'millan';
  */
 export class PrefixDefinitionService {
 	/**
+	 * Delete prefix definitions from a document.
+	 * @param document The RDF document.
+	 * @param prefixes The prefixes to delete.
+	 */
+	public async deletePrefixDefinitions(document: vscode.TextDocument, prefixes: string[]) {
+		const context = mentor.contexts[document.uri.toString()];
+
+		if (!context) return;
+
+		const tokenType = context.getPrefixTokenType();
+
+		const edit = new vscode.WorkspaceEdit();
+
+		console.log(prefixes);
+
+		for (let i = 0; i < context.tokens.length; i++) {
+			const currentToken = context.tokens[i];
+
+			if (currentToken.tokenType?.tokenName === tokenType) {
+				const nextToken = context.tokens[i + 1];
+
+				console.log(currentToken, nextToken);
+
+				if (nextToken) {
+					const prefix = nextToken.image.split(':')[0];
+
+					if (prefixes.includes(prefix)) {
+						const line = (nextToken.startLine ?? 1) - 1;
+						const start = new vscode.Position(line, 0);
+						const end = new vscode.Position(line + 1, 0);
+
+						edit.delete(document.uri, new vscode.Range(start, end));
+					}
+				}
+			}
+
+			// Break if all prefixes have been caputred by the edit.
+			if (edit.size === prefixes.length) {
+				break;
+			}
+		}
+
+		if (edit.size > 0) {
+			await vscode.workspace.applyEdit(edit);
+		}
+	}
+
+	/**
 	 * Implement missing prefixes in a document.
 	 * @param context The RDF document context.
 	 * @param prefixes The prefixes to implement.
-	 * @param tokenType The token type of the prefix token.
 	 */
-	public async implementPrefixes(document: vscode.TextDocument, prefixes: string[]) {
+	public async implementPrefixDefinitions(document: vscode.TextDocument, prefixes: string[]) {
 		const context = mentor.contexts[document.uri.toString()];
 
 		if (!context) return;
@@ -23,11 +70,11 @@ export class PrefixDefinitionService {
 
 		switch (mode) {
 			case 'Sorted': {
-				await this.implementPrefixesSorted(document, context, prefixes);
+				await this._implementPrefixesSorted(document, context, prefixes);
 				break;
 			}
 			default: {
-				await this.implementPrefixesAppended(document, context, prefixes);
+				await this._implementPrefixesAppended(document, context, prefixes);
 				break;
 			}
 		}
@@ -39,7 +86,7 @@ export class PrefixDefinitionService {
 	 * @param edit The workspace edit.
 	 * @param token The token after which to delete empty lines.
 	 */
-	protected deleteEmptyLinesAfterToken(document: vscode.TextDocument, edit: vscode.WorkspaceEdit, token: IToken) {
+	private _deleteEmptyLinesAfterToken(document: vscode.TextDocument, edit: vscode.WorkspaceEdit, token: IToken) {
 		let position = new vscode.Position(token.endLine ?? 0, 0);
 
 		while (position.line < document.lineCount) {
@@ -62,7 +109,7 @@ export class PrefixDefinitionService {
 	 * @param prefixes The prefixes to be implemented.
 	 * @param tokenType The token type of the prefix token.
 	 */
-	protected async implementPrefixesAppended(document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
+	private async _implementPrefixesAppended(document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
 		const edit = new vscode.WorkspaceEdit();
 
 		// Get the prefix token type name from the language specific context.
@@ -88,7 +135,7 @@ export class PrefixDefinitionService {
 
 		// 2. Delete leading new lines if there are any prefixes.
 		if (lastPrefix) {
-			this.deleteEmptyLinesAfterToken(document, edit, lastPrefix);
+			this._deleteEmptyLinesAfterToken(document, edit, lastPrefix);
 		}
 
 		// 3. Insert a new line at the end of the document if were any edits, this includes the deleted new lines.
@@ -96,7 +143,9 @@ export class PrefixDefinitionService {
 			edit.insert(context.uri, insertPosition, '\n');
 		}
 
-		await vscode.workspace.applyEdit(edit);
+		if (edit.size > 0) {
+			await vscode.workspace.applyEdit(edit);
+		}
 	}
 
 	/**
@@ -106,7 +155,7 @@ export class PrefixDefinitionService {
 	 * @param prefixes The prefixes to be implemented.
 	 * @param tokenType The token type of the prefix token.
 	 */
-	protected async implementPrefixesSorted(document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
+	private async _implementPrefixesSorted(document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
 		// Get the prefix token type name from the language specific context.
 		const tokenType = context.getPrefixTokenType();
 
@@ -120,10 +169,10 @@ export class PrefixDefinitionService {
 		for (let token of context.tokens) {
 			if (token.tokenType?.tokenName === tokenType) {
 				// If we see a prefix token, delete the line and all preceding empty lines.
-				let startLine = (token.startLine ?? 1) - 1;
+				const line = (token.startLine ?? 1) - 1;
 
 				// Delete lines from the current line up to the start line of the prefix token
-				while (currentLine <= startLine) {
+				while (currentLine <= line) {
 					const start = new vscode.Position(currentLine, 0);
 					const end = new vscode.Position(currentLine + 1, 0);
 
@@ -140,7 +189,7 @@ export class PrefixDefinitionService {
 		const lastPrefix = getLastTokenOfType(context.tokens, tokenType);
 
 		if (lastPrefix) {
-			this.deleteEmptyLinesAfterToken(document, edit, lastPrefix);
+			this._deleteEmptyLinesAfterToken(document, edit, lastPrefix);
 		}
 
 		// 3. Implement the prefixes in a sorted order.
@@ -158,6 +207,8 @@ export class PrefixDefinitionService {
 
 		edit.insert(context.uri, new vscode.Position(0, 0), '\n');
 
-		await vscode.workspace.applyEdit(edit);
+		if (edit.size > 0) {
+			await vscode.workspace.applyEdit(edit);
+		}
 	}
 }

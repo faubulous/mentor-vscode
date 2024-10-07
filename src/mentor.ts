@@ -143,7 +143,7 @@ class MentorExtension {
 
 					// Do not implmenet prefixes that are already defined.
 					if (!context.namespaces[prefix]) {
-						this.prefixDeclarationService.implementPrefixes(e.document, [prefix]);
+						this.prefixDeclarationService.implementPrefixDefinitions(e.document, [prefix]);
 					}
 				}
 			}
