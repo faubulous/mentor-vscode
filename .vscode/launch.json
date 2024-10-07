@@ -5,9 +5,9 @@
     {
       "name": "Launch Extension",
       "type": "extensionHost",
-      "debugWebWorkerHost": true,
       "request": "launch",
       "runtimeExecutable": "${execPath}",
+      "debugWebWorkerHost": true,
       "args": [
         "--extensionDevelopmentPath=${workspaceRoot}",
         "--extensionDevelopmentKind=web",

@@ -113,12 +113,27 @@ export class PrefixDefinitionService {
 		// 1. Delete the existing prefix definitions.
 		let edit = new vscode.WorkspaceEdit();
 
-		for (let token of context.tokens.filter(token => token.tokenType?.tokenName === tokenType)) {
-			const startLine = (token.startLine ?? 1) - 1;
-			const start = new vscode.Position(startLine, 0);
-			const end = new vscode.Position(startLine + 1, 0);
+		// Holds the line number of the last prefix token.
+		let currentLine = 0;
 
-			edit.delete(context.uri, new vscode.Range(start, end));
+		// Iterate over all tokens in the document...
+		for (let token of context.tokens) {
+			if (token.tokenType?.tokenName === tokenType) {
+				// If we see a prefix token, delete the line and all preceding empty lines.
+				let startLine = (token.startLine ?? 1) - 1;
+
+				// Delete lines from the current line up to the start line of the prefix token
+				while (currentLine <= startLine) {
+					const start = new vscode.Position(currentLine, 0);
+					const end = new vscode.Position(currentLine + 1, 0);
+
+					edit.delete(context.uri, new vscode.Range(start, end));
+					currentLine += 1;
+				}
+			} else if (token.startLine && token.startLine !== currentLine) {
+				// If the token is on a new line and not a prefix token, we're done.
+				break;
+			}
 		}
 
 		// 2. Delete leading new lines and insert a new line at the beginning of the document.
