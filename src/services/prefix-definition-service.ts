@@ -250,7 +250,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 			}
 
 			const iri = getIriFromNodeId(token.image);
-			const label = iri.substring(iri.length);
+			const label = iri.substring(namespaceIri.length);
 
 			const location = this.getLocationFromToken(document.uri, token);
 
