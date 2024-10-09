@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { mentor } from "../mentor";
 import { FeatureProvider } from "./feature-provider";
-import { getUriLabel, getNamespaceUriFromPrefixedName, getTripleComponentType } from "../utilities";
+import { getIriLocalPart, getNamespaceIriFromPrefixedName, getTripleComponentType } from "../utilities";
 import { DocumentContext } from "../languages";
 
 export class CompletionItemProvider extends FeatureProvider implements vscode.CompletionItemProvider<vscode.CompletionItem> {
@@ -28,7 +28,7 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 			}
 		} else if (tokenType == "PNAME_LN" || tokenType == "PNAME_NS") {
 			const component = getTripleComponentType(context.tokens, token);
-			const namespace = getNamespaceUriFromPrefixedName(context.namespaces, token.image);
+			const namespace = getNamespaceIriFromPrefixedName(context.namespaces, token.image);
 			const label = token.image.split(":")[1];
 
 			if (namespace) {
@@ -59,14 +59,14 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 
 		if (component == "subject" || component == "object") {
 			for (let c of mentor.vocabulary.getClasses(graphs).filter(c => c.toLowerCase().startsWith(uri))) {
-				const item = new vscode.CompletionItem(getUriLabel(c), vscode.CompletionItemKind.Class);
+				const item = new vscode.CompletionItem(getIriLocalPart(c), vscode.CompletionItemKind.Class);
 				item.detail = context.getResourceDescription(c);
 
 				result.push(item);
 			}
 
 			for (let x of mentor.vocabulary.getIndividuals(graphs).sort().filter(x => x.toLowerCase().startsWith(uri))) {
-				const item = new vscode.CompletionItem(getUriLabel(x), vscode.CompletionItemKind.Field);
+				const item = new vscode.CompletionItem(getIriLocalPart(x), vscode.CompletionItemKind.Field);
 				item.detail = context.getResourceDescription(x);
 
 				result.push(item);
@@ -74,7 +74,7 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 		}
 
 		for (let p of mentor.vocabulary.getProperties(graphs).sort().filter(p => p.toLowerCase().startsWith(uri))) {
-			const item = new vscode.CompletionItem(getUriLabel(p), vscode.CompletionItemKind.Value);
+			const item = new vscode.CompletionItem(getIriLocalPart(p), vscode.CompletionItemKind.Value);
 			item.detail = context.getResourceDescription(p);
 
 			result.push(item);

@@ -4,10 +4,16 @@
  */
 import { IToken } from "millan";
 
+/**
+ * Maps namespace prefixes to IRIs.
+ */
 export interface NamespaceMap {
 	[key: string]: string;
 }
 
+/**
+ * A tuple of a namespace prefix and an associated IRI.
+ */
 export interface NamespaceDefinition {
 	prefix: string;
 	uri: string;
@@ -66,6 +72,16 @@ export function getTokenPosition(token: IToken): TokenPosition {
 	};
 }
 
+/*
+ * Get the token at a given offset.
+ * @param tokens A list of tokens.
+ * @param offset An offset.
+ * @returns The token at the given offset.
+ */
+export function getTokenAtOffset(tokens: IToken[], offset: number): IToken[] {
+	return tokens.filter(t => t.startOffset <= offset && offset <= t.startOffset + t.image.length);
+}
+
 /**
  * Indicates whether the token is a variable.
  * @param token A token.
@@ -108,19 +124,19 @@ export function getPrefixFromToken(token: IToken): string {
 }
 
 /**
- * Get the URI from IRI or prefixed name tokens.
+ * Get the IRI from either an IRI or prefixed name tokens.
  * @param token A token.
  * @returns A URI or undefined.
  */
-export function getUriFromToken(namespaces: NamespaceMap, token: IToken): string | undefined {
+export function getIriFromToken(namespaces: NamespaceMap, token: IToken): string | undefined {
 	const tokenName = token.tokenType?.tokenName;
 
 	switch (tokenName) {
 		case 'IRIREF':
-			return getUriFromIriReference(token.image);
+			return getIriFromIriReference(token.image);
 		case 'PNAME_LN':
 		case 'PNAME_NS':
-			return getUriFromPrefixedName(namespaces, token.image);
+			return getIriFromPrefixedName(namespaces, token.image);
 	}
 }
 
@@ -129,7 +145,7 @@ export function getUriFromToken(namespaces: NamespaceMap, token: IToken): string
  * @param value A URI reference.
  * @returns A URI string wihout angle brackets.
  */
-export function getUriFromIriReference(value: string): string {
+export function getIriFromIriReference(value: string): string {
 	const v = value.trim();
 
 	if (v.length >= 2 && v.startsWith('<') && v.endsWith('>')) {
@@ -140,11 +156,11 @@ export function getUriFromIriReference(value: string): string {
 }
 
 /*
- * Get the URI from a prefixed name.
+ * Get the IRI from a prefixed name.
  * @param name A prefixed name.
- * @returns A URI string.
+ * @returns A IRI string.
  */
-export function getUriFromPrefixedName(namespaces: NamespaceMap, name: string): string | undefined {
+export function getIriFromPrefixedName(namespaces: NamespaceMap, name: string): string | undefined {
 	const parts = name.split(':');
 
 	if (parts.length == 2) {
@@ -157,40 +173,12 @@ export function getUriFromPrefixedName(namespaces: NamespaceMap, name: string): 
 	}
 }
 
-/**
- * Get the first token of a given type.
- * @param tokens A list of tokens.
- * @param type The type name of the token.
- * @returns The last token of the given type, if it exists, undefined otherwise.
- */
-export function getFirstTokenOfType(tokens: IToken[], type: string): IToken | undefined {
-	const n = tokens.findIndex(t => t.tokenType?.tokenName === type);
-
-	if (n > -1) {
-		return tokens[n];
-	}
-}
-
-/**
- * Get the last token of a given type.
- * @param tokens A list of tokens.
- * @param type The type name of the token.
- * @returns The last token of the given type, if it exists, undefined otherwise.
- */
-export function getLastTokenOfType(tokens: IToken[], type: string): IToken | undefined {
-	const result = tokens.filter(t => t.tokenType?.tokenName === type);
-
-	if (result.length > 0) {
-		return result[result.length - 1];
-	}
-}
-
 /*
- * Get the URI from a prefixed name.
+ * Get the IRI from a prefixed name.
  * @param name A prefixed name.
- * @returns A URI string.
+ * @returns A IRI string.
  */
-export function getNamespaceUriFromPrefixedName(namespaces: NamespaceMap, name: string): string | undefined {
+export function getNamespaceIriFromPrefixedName(namespaces: NamespaceMap, name: string): string | undefined {
 	const parts = name.split(':');
 
 	if (parts.length == 2) {
@@ -230,7 +218,7 @@ export function getNamespaceDefinition(tokens: IToken[], token: IToken): Namespa
 	}
 
 	const prefix = prefixToken.image.substring(0, prefixToken.image.length - 1);
-	const uri = getUriFromIriReference(uriToken.image);
+	const uri = getIriFromIriReference(uriToken.image);
 
 	return { prefix, uri };
 }

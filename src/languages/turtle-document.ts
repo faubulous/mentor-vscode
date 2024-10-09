@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { RdfSyntax, TrigSyntaxParser } from '@faubulous/mentor-rdf';
 import { TurtleSyntaxParser } from '@faubulous/mentor-rdf';
-import { DocumentContext } from '../document-context';
+import { DocumentContext, TokenTypes } from '../document-context';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -64,8 +64,12 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
-	public override getPrefixTokenType(): string {
-		return 'TTL_PREFIX';
+	public override getTokenTypes(): TokenTypes {
+		return {
+			PREFIX: 'TTL_PREFIX',
+			BASE: 'TTL_BASE',
+			IRIREF: 'IRIREF',
+		}
 	}
 
 	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {

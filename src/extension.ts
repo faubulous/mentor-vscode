@@ -7,7 +7,7 @@ import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
 import { DefinitionNodeDecorationProvider } from './views/definition-node-decoration-provider';
 import { ResourceNode } from './views/nodes/resource-node';
-import { getUriFromNodeId } from './utilities';
+import { getIriFromNodeId } from './utilities';
 import { DefinitionProvider } from './providers';
 import {
 	LanguageClientBase,
@@ -72,9 +72,9 @@ export function deactivate(): Thenable<void> {
 
 function getUriFromArgument(arg: ResourceNode | string): string {
 	if (arg instanceof ResourceNode) {
-		return getUriFromNodeId(arg.id);
+		return getIriFromNodeId(arg.id);
 	} else if (typeof arg === 'string') {
-		return getUriFromNodeId(arg);
+		return getIriFromNodeId(arg);
 	} else {
 		throw new Error('Invalid argument type: ' + typeof arg);
 	}
@@ -177,19 +177,39 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.workspaceIndexer.indexWorkspace(true);
 	}));
 
-	vscode.commands.registerCommand('mentor.action.implementPrefixDefinitions', (documentUri: vscode.Uri, prefixes: string[]) => {
+	vscode.commands.registerCommand('mentor.action.implementPrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
-			mentor.prefixDeclarationService.implementPrefixDefinitions(document, prefixes);
+			const edit = await mentor.prefixDeclarationService.implementPrefixes(document, prefixes);
+
+			if (edit.size > 0) {
+				await vscode.workspace.applyEdit(edit);
+			}
 		}
 	});
 
-	vscode.commands.registerCommand('mentor.action.deletePrefixDefinitions', (documentUri: vscode.Uri, prefixes: string[]) => {
+	vscode.commands.registerCommand('mentor.action.deletePrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
-			mentor.prefixDeclarationService.deletePrefixDefinitions(document, prefixes);
+			const edit = await mentor.prefixDeclarationService.deletePrefixes(document, prefixes);
+
+			if (edit.size > 0) {
+				await vscode.workspace.applyEdit(edit);
+			}
+		}
+	});
+
+	vscode.commands.registerCommand('mentor.action.implementPrefixForIri', async (documentUri: vscode.Uri, namespaceIri: string) => {
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
+
+		if (document) {
+			const edit = await mentor.prefixDeclarationService.implementPrefixForIri(document, namespaceIri);
+
+			if (edit.size > 0) {
+				vscode.workspace.applyEdit(edit);
+			}
 		}
 	});
 }

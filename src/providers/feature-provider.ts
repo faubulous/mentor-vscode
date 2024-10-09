@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { mentor } from "../mentor";
 import { IToken } from "millan";
-import { getNamespaceUri, getTokenPosition } from "../utilities";
+import { getNamespaceIri, getTokenPosition } from "../utilities";
 
 export class FeatureProvider {
 	/**
@@ -28,7 +28,7 @@ export class FeatureProvider {
 		const startLine = token.startLine ? token.startLine - 1 : 0;
 		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
 		const endLine = token.endLine ? token.endLine - 1 : 0;
-		const endCharacter = token.endColumn ?? 0;
+		const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
 
 		const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
 
@@ -106,7 +106,7 @@ export class FeatureProvider {
 				let uri = token.image.trim();
 				uri = uri.substring(1, uri.length - 1)
 
-				const namespace = getNamespaceUri(uri);
+				const namespace = getNamespaceIri(uri);
 				const label = uri.substring(namespace.length);
 
 				const i = token.image.indexOf(label);

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
-import { DocumentContext } from '../document-context';
+import { DocumentContext, TokenTypes } from '../document-context';
 
 /**
  * A document context for SPARQL documents.
@@ -18,8 +18,12 @@ export class SparqlDocument extends DocumentContext {
 		this.setTokens(tokens);
 	}
 
-	public override getPrefixTokenType(): string {
-		return 'PREFIX';
+	public override getTokenTypes(): TokenTypes {
+		return {
+			BASE: 'BASE',
+			PREFIX: 'PREFIX',
+			IRIREF: 'IRIREF',
+		}
 	}
 
 	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {

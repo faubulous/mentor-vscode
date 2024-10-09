@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { IToken } from "millan";
 import { FeatureProvider } from './feature-provider';
-import { getUriFromToken, getPrefixFromToken } from '../utilities';
+import { getIriFromToken, getPrefixFromToken } from '../utilities';
 import { DocumentContext } from '../languages';
 
 /**
@@ -31,7 +31,7 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 		if (this.isCursorOnPrefix(token, position)) {
 			u = context.namespaces[getPrefixFromToken(token)];
 		} else {
-			u = getUriFromToken(context.namespaces, token);
+			u = getIriFromToken(context.namespaces, token);
 		}
 
 		if (!u) {

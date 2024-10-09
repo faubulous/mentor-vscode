@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { FeatureProvider } from './feature-provider';
-import { getUriFromToken } from '../utilities';
+import { getIriFromToken } from '../utilities';
 
 /**
  * Provides hover information for tokens.
@@ -37,7 +37,7 @@ export class HoverProvider extends FeatureProvider implements vscode.HoverProvid
 			}
 			// Display a the description for the concept for URIs, if it exists.
 			default: {
-				const uri = getUriFromToken(context.namespaces, token);
+				const uri = getIriFromToken(context.namespaces, token);
 
 				if (!uri) {
 					return null;

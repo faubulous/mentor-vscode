@@ -23,7 +23,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { ISemanticError, IToken } from 'millan';
 import {
 	getNamespaceDefinition,
-	getUriFromToken,
+	getIriFromToken,
 	NamespaceMap,
 } from '../utilities';
 
@@ -424,7 +424,7 @@ export abstract class LanguageServerBase {
 					}
 
 					let value = tokens[i - 1];
-					let datatype = getUriFromToken(namespaces, tokens[i + 1]);
+					let datatype = getIriFromToken(namespaces, tokens[i + 1]);
 
 					switch (datatype) {
 						case XSD.anyURI: {

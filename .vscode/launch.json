@@ -14,8 +14,8 @@
         "--enable-proposed-api"
       ],
       "sourceMaps": true,
-      "outFiles": ["${workspaceRoot}/out/**/*.js"]
-      // "preLaunchTask": "npm: watch"
+      "outFiles": ["${workspaceRoot}/out/**/*.js"],
+      // "preLaunchTask": "npm: build:watch"
     },
     {
       "name": "Update Font",
@@ -23,14 +23,6 @@
       "request": "launch",
       "skipFiles": ["<node_internals>/**"],
       "type": "node"
-    },
-    {
-      "type": "node",
-      "request": "attach",
-      "name": "Attach to Extension Host",
-      "port": 5870,
-      "restart": true,
-      "outFiles": ["${workspaceRoot}/dist"]
     }
   ]
 }

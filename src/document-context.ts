@@ -5,13 +5,33 @@ import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/men
 import { IToken } from 'millan';
 import { TreeLabelStyle } from './settings';
 import {
-	getUriLabel,
-	getUriFromIriReference,
-	getUriFromPrefixedName,
-	getUriFromToken,
+	getIriLocalPart,
+	getIriFromIriReference,
+	getIriFromPrefixedName,
+	getIriFromToken,
 	getNamespaceDefinition,
-	getNamespaceUri
+	getNamespaceIri
 } from './utilities';
+
+/**
+ * A map of token type names specific for the document language.
+ */
+export interface TokenTypes {
+	/**
+	 * The token type name of the 'base' keyword in the document language.
+	 */
+	BASE: string;
+
+	/**
+	 * The token type name of the 'prefix' keyword in the document language.
+	 */
+	PREFIX: string;
+
+	/**
+	 * The token type name of IRIs in the document language.
+	 */
+	IRIREF: string;
+}
 
 /**
  * A class that provides access to RDF document specific data such as namespaces, graphs and token maps.
@@ -77,35 +97,35 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	* All namespaces defined in the document.
+	* Maps prefixes to namespace IRIs.
 	*/
 	get namespaces(): { [key: string]: string } {
 		return this._namespaces;
 	}
 
 	/**
-	 * Maps resource URIs to indexed tokens.
+	 * Maps resource IRIs to indexed tokens.
 	 */
 	get namespaceDefinitions(): { [key: string]: IToken } {
 		return this._namespaceDefinitions;
 	}
 
 	/**
-	 * Maps resource URIs to indexed tokens.
+	 * Maps resource IRIs to indexed tokens.
 	 */
 	get references(): { [key: string]: IToken[] } {
 		return this._references;
 	}
 
 	/**
-	 * Maps resource URIs to tokens of subjects that have an asserted rdf:type.
+	 * Maps resource IRIs to tokens of subjects that have an asserted rdf:type.
 	 */
 	get typeAssertions(): { [key: string]: IToken[] } {
 		return this._typeAssertions;
 	}
 
 	/**
-	 * Maps resource URIs to tokens of subjects that are class or property definitions.
+	 * Maps resource IRIs to tokens of subjects that are class or property definitions.
 	 */
 	get typeDefinitions(): { [key: string]: IToken[] } {
 		return this._typeDefinitions;
@@ -131,9 +151,9 @@ export abstract class DocumentContext {
 	abstract infer(): Promise<void>;
 
 	/**
-	 * Gets the token type of the prefix keyword in the document language.
+	 * Gets the token type names specific for the document language.
 	 */
-	abstract getPrefixTokenType(): string;
+	abstract getTokenTypes(): TokenTypes;
 
 	/**
 	 * Get a namespace prefix definition in the serialization of the document language.
@@ -142,6 +162,47 @@ export abstract class DocumentContext {
 	 * @param upperCase Indicates whether the prefix keyword should be in uppercase.
 	 */
 	abstract getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string;
+
+	/**
+	 * Get the first token of a given type.
+	 * @param tokens A list of tokens.
+	 * @param type The type name of the token.
+	 * @returns The last token of the given type, if it exists, undefined otherwise.
+	 */
+	getFirstTokenOfType(type: string): IToken | undefined {
+		const n = this.tokens.findIndex(t => t.tokenType?.tokenName === type);
+
+		if (n > -1) {
+			return this.tokens[n];
+		}
+	}
+
+	/**
+	 * Get the last token of a given type.
+	 * @param tokens A list of tokens.
+	 * @param type The type name of the token.
+	 * @returns The last token of the given type, if it exists, undefined otherwise.
+	 */
+	getLastTokenOfType(type: string): IToken | undefined {
+		const result = this.tokens.filter(t => t.tokenType?.tokenName === type);
+
+		if (result.length > 0) {
+			return result[result.length - 1];
+		}
+	}
+
+	/**
+	 * Get the prefix for a namespace IRI.
+	 * @param namespaceIri The namespace IRI.
+	 * @returns The prefix for the namespace IRI or `undefined`.
+	 */
+	getPrefixForNamespaceIri(namespaceIri: string): string | undefined {
+		for (let [prefix, iri] of Object.entries(this.namespaces)) {
+			if (iri === namespaceIri) {
+				return prefix;
+			}
+		}
+	}
 
 	/**
 	 * Maps blank node ids of the parsed documents to the ones in the triple store.
@@ -175,7 +236,7 @@ export abstract class DocumentContext {
 					break;
 				}
 				case 'PNAME_LN': {
-					const uri = getUriFromPrefixedName(this.namespaces, t.image);
+					const uri = getIriFromPrefixedName(this.namespaces, t.image);
 
 					if (!uri) break;
 
@@ -185,7 +246,7 @@ export abstract class DocumentContext {
 					break;
 				}
 				case 'IRIREF': {
-					const uri = getUriFromIriReference(t.image);
+					const uri = getIriFromIriReference(t.image);
 
 					this._handleTypeAssertion(tokens, t, uri, i);
 					this._handleTypeDefinition(tokens, t, uri, i);
@@ -216,7 +277,7 @@ export abstract class DocumentContext {
 
 		if (!subjectToken) return;
 
-		const subjectUri = getUriFromToken(this.namespaces, subjectToken);
+		const subjectUri = getIriFromToken(this.namespaces, subjectToken);
 
 		if (!subjectUri) return;
 
@@ -230,7 +291,7 @@ export abstract class DocumentContext {
 
 		if (!subjectToken) return;
 
-		const subjectUri = getUriFromToken(this.namespaces, subjectToken);
+		const subjectUri = getIriFromToken(this.namespaces, subjectToken);
 
 		if (!subjectUri) return;
 
@@ -238,11 +299,11 @@ export abstract class DocumentContext {
 
 		if (!objectToken) return;
 
-		const objectUri = getUriFromToken(this.namespaces, objectToken);
+		const objectUri = getIriFromToken(this.namespaces, objectToken);
 
 		if (!objectUri) return;
 
-		const namespaceUri = getNamespaceUri(objectUri);
+		const namespaceUri = getNamespaceIri(objectUri);
 
 		// TODO: Make this more explicit to reduce false positives.
 		switch (namespaceUri) {
@@ -321,7 +382,7 @@ export abstract class DocumentContext {
 						if (q.object.termType === 'Literal') {
 							return q.object.value;
 						} else {
-							return getUriLabel(q.object.value);
+							return getIriLocalPart(q.object.value);
 						}
 					}
 				}
@@ -332,7 +393,7 @@ export abstract class DocumentContext {
 						if (q.object.termType === 'Literal') {
 							return q.object.value;
 						} else {
-							return getUriLabel(q.object.value);
+							return getIriLocalPart(q.object.value);
 						}
 					}
 				}
@@ -341,7 +402,7 @@ export abstract class DocumentContext {
 				break;
 			}
 			case TreeLabelStyle.UriLabelsWithPrefix: {
-				const namespace = getNamespaceUri(subjectUri);
+				const namespace = getNamespaceIri(subjectUri);
 				let prefix = "?";
 
 				for (let [p] of Object.entries(this.namespaces).filter(([_, ns]) => ns == namespace)) {
@@ -349,11 +410,11 @@ export abstract class DocumentContext {
 					break;
 				}
 
-				return `${prefix}:${getUriLabel(subjectUri)}`;
+				return `${prefix}:${getIriLocalPart(subjectUri)}`;
 			}
 		}
 
-		return getUriLabel(subjectUri);
+		return getIriLocalPart(subjectUri);
 	}
 
 	/**
@@ -405,7 +466,7 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	 * Get the URI of a resource. Resolves relative file URIs with regards to the directory of the current document.
+	 * Get the URI of a resource. Resolves relative file IRIs with regards to the directory of the current document.
 	 * @param subjectUri URI of the resource.
 	 * @returns A URI for the resource as a string literal.
 	 */
@@ -414,10 +475,10 @@ export abstract class DocumentContext {
 		if (subjectUri.startsWith('file')) {
 			const u = vscode.Uri.parse(subjectUri);
 
-			// Resolve relative file URIs with regards to the directory of the current document.
+			// Resolve relative file IRIs with regards to the directory of the current document.
 			if (u.authority === '..') {
 				// For a file URI the namespace is the directory of the current document.
-				const directory = getNamespaceUri(this.uri.toString());
+				const directory = getNamespaceIri(this.uri.toString());
 				const filePath = subjectUri.split('//')[1];
 				const fileUrl = vscode.Uri.joinPath(vscode.Uri.parse(directory), filePath);
 

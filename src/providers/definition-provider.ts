@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { DocumentContext } from '../document-context';
 import { FeatureProvider } from './feature-provider';
-import { getUriFromToken } from '../utilities';
+import { getIriFromToken } from '../utilities';
 
 /**
  * Provides resource definitions for Turtle documents.
@@ -26,7 +26,7 @@ export class DefinitionProvider extends FeatureProvider {
 		if (this.isCursorOnPrefix(token, position)) {
 			u = context.namespaces[token.image.split(":")[0]];
 		} else {
-			u = getUriFromToken(context.namespaces, token);
+			u = getIriFromToken(context.namespaces, token);
 		}
 
 		if (!u) {

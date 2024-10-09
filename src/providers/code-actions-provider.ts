@@ -1,21 +1,60 @@
 import * as vscode from 'vscode';
 import { FeatureProvider } from './feature-provider';
-import { error } from 'console';
+import { getNamespaceIri, getIriFromNodeId } from '../utilities';
 
 /**
  * A provider for RDF document code actions.
  */
 export class CodeActionsProvider extends FeatureProvider implements vscode.CodeActionProvider {
 	public static readonly providedCodeActionKinds = [
-		vscode.CodeActionKind.QuickFix
+		vscode.CodeActionKind.QuickFix,
+		vscode.CodeActionKind.Refactor,
 	];
 
 	async provideCodeActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): Promise<vscode.CodeAction[]> {
-		return this._provideFixMissingPrefixesActions(document, actionContext);
+		return [
+			...this._provideRefactoringActions(document, range, actionContext),
+			...this._provideFixMissingPrefixesActions(document, actionContext)
+		];
 	}
 
 	/**
-	 * Get a code action for defining a missing prefixes.
+	 * Get code actions that provide refactoring actions for the given document.
+	 * @param document An RDF document context.
+	 * @param range The range of the current edit.
+	 * @param actionContext The action context.
+	 * @returns An array of code actions.
+	 */
+	private _provideRefactoringActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
+		const result: vscode.CodeAction[] = [];
+
+		const context = this.getDocumentContext(document);
+
+		if (context) {
+			const tokenTypes = context.getTokenTypes();
+			const token = context.getTokensAtPosition(range.start)[0];
+
+			if (token?.tokenType?.tokenName === tokenTypes.IRIREF) {
+				const namespaceIri = getNamespaceIri(getIriFromNodeId(token.image));
+
+				result.push({
+					kind: vscode.CodeActionKind.Refactor,
+					title: 'Define prefix for IRI',
+					isPreferred: true,
+					command: {
+						title: 'Define prefix for IRI',
+						command: 'mentor.action.implementPrefixForIri',
+						arguments: [document.uri, namespaceIri]
+					}
+				});
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Get a code action for defining missing prefixes.
 	 * @param document An RDF document context.
 	 * @param prefixes The prefixes to define.
 	 * @returns Code actions for defining missing prefixes.
@@ -25,25 +64,7 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 
 		const documentDiagnostics = vscode.languages.getDiagnostics(document.uri);
 
-		// Find all unused prefixes in the document, and add them as a repair option.
-		const unusedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'UnusedNamespacePrefixHint');
-
-		if (unusedPrefixes.length > 0) {
-			console.log(unusedPrefixes);
-
-			result.push({
-				kind: vscode.CodeActionKind.QuickFix,
-				title: 'Remove all unused prefixes',
-				isPreferred: true,
-				command: {
-					title: 'Remove all unused prefixes',
-					command: 'mentor.action.deletePrefixDefinitions',
-					arguments: [document.uri, unusedPrefixes.map(p => p.split(' ')[1])]
-				}
-			});
-		}
-
-		// Find all undefined prefixes in the document, and add them as a repair option.
+		// 1. Find all unused prefixes in the whole document, and add them as a repair option on top.
 		const undefinedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'NoNamespacePrefixError');
 
 		if (undefinedPrefixes.length > 0) {
@@ -55,8 +76,24 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 				isPreferred: true,
 				command: {
 					title: 'Implement all missing prefixes',
-					command: 'mentor.action.implementPrefixDefinitions',
+					command: 'mentor.action.implementPrefixes',
 					arguments: [document.uri, Array.from(undefinedPrefixes)]
+				}
+			});
+		}
+
+		// Note, the unused prefix diagnostics contain the _whole_ line of the prefix definition, so we need to extract the prefix from it.
+		const unusedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'UnusedNamespacePrefixHint');
+
+		if (unusedPrefixes.length > 0) {
+			result.push({
+				kind: vscode.CodeActionKind.QuickFix,
+				title: 'Remove all unused prefixes',
+				isPreferred: true,
+				command: {
+					title: 'Remove all unused prefixes',
+					command: 'mentor.action.deletePrefixes',
+					arguments: [document.uri, unusedPrefixes]
 				}
 			});
 		}
@@ -69,7 +106,20 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 				isPreferred: false,
 				command: {
 					title: `Implement missing prefix: ${prefix}`,
-					command: 'mentor.action.implementPrefixDefinitions',
+					command: 'mentor.action.implementPrefixes',
+					arguments: [document.uri, [prefix]]
+				}
+			});
+		}
+
+		for (let prefix of this._getPrefixesWithErrorCode(document, actionContext.diagnostics, 'UnusedNamespacePrefixHint')) {
+			result.push({
+				kind: vscode.CodeActionKind.QuickFix,
+				title: `Remove unused prefix: ${prefix}`,
+				isPreferred: false,
+				command: {
+					title: `Remove unused prefix: ${prefix}`,
+					command: 'mentor.action.deletePrefixes',
 					arguments: [document.uri, [prefix]]
 				}
 			});
@@ -90,7 +140,13 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 
 		for (let diagnostic of diagnostics) {
 			if (diagnostic.code === errorCode) {
-				const prefix = document.getText(diagnostic.range).split(':')[0];
+				let prefix = document.getText(diagnostic.range).split(':')[0];
+
+				if (errorCode === 'UnusedNamespacePrefixHint') {
+					// Note: The unused prefix diagnostics contain the _whole_ line of the prefix definition, 
+					// so we need to extract the prefix from it. At this point the line still contains the PREFIX keyword.
+					prefix = prefix.split(' ')[1];
+				}
 
 				if (prefix !== undefined) {
 					result.add(prefix);

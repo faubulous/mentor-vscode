@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { ReferenceProvider } from './reference-provider';
 import { DocumentContext } from '../document-context';
-import { getPreviousToken, getUriFromToken } from '../utilities';
+import { getPreviousToken, getIriFromToken } from '../utilities';
 import { IToken } from 'millan';
 
 /**
@@ -87,7 +87,7 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 
 			// TODO: Refactor getSubjects into DocumentContext and overload for different languages.
 			for (let subject of this.getSubjects(context)) {
-				let uri = getUriFromToken(context.namespaces, subject);
+				let uri = getIriFromToken(context.namespaces, subject);
 
 				if (!uri) continue;
 
