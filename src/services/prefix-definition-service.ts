@@ -86,7 +86,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 	 * @param prefixes The prefixes to be implemented.
 	 */
 	private async _implementPrefixes(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
-		const mode = await mentor.configuration.get('editor.prefixDefinitionMode');
+		const mode = await mentor.configuration.get('prefixes.prefixDefinitionMode');
 
 		if (mode === 'Sorted') {
 			await this._implementPrefixesSorted(edit, document, context, prefixes);

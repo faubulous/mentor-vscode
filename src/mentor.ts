@@ -134,7 +134,7 @@ class MentorExtension {
 			// Automatically declare prefixes when a colon is typed.
 			const change = e.contentChanges[0];
 
-			if (change?.text.endsWith(':') && this.configuration.get('editor.autoDefinePrefixes')) {
+			if (change?.text.endsWith(':') && this.configuration.get('prefixes.autoDefinePrefixes')) {
 				// Determine the token type at the change position.
 				const token = context.getTokensAtPosition(change.range.start)[0];
 
@@ -223,13 +223,13 @@ class MentorExtension {
 
 		switch (defaultStyle) {
 			case 'AnnotatedLabels':
-				this.settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
+				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 				break;
 			case 'UriLabelsWithPrefix':
-				this.settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
+				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabelsWithPrefix);
 				break;
 			default:
-				this.settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
+				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabels);
 				break;
 		}
 
@@ -255,23 +255,23 @@ class MentorExtension {
 		});
 
 		vscode.commands.registerCommand('mentor.action.groupDefinitionsByType', () => {
-			this.settings.set('view.definitionTreeLayout', DefinitionTreeLayout.ByType);
+			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.ByType);
 		});
 
 		vscode.commands.registerCommand('mentor.action.groupDefinitionsBySource', () => {
-			this.settings.set('view.definitionTreeLayout', DefinitionTreeLayout.BySource);
+			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.BySource);
 		});
 
 		vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
-			this.settings.set('view.treeLabelStyle', TreeLabelStyle.AnnotatedLabels);
+			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 		});
 
 		vscode.commands.registerCommand('mentor.action.showUriLabels', () => {
-			this.settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabels);
+			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabels);
 		});
 
 		vscode.commands.registerCommand('mentor.action.showUriLabelsWithPrefix', () => {
-			this.settings.set('view.treeLabelStyle', TreeLabelStyle.UriLabelsWithPrefix);
+			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabelsWithPrefix);
 		});
 
 		vscode.commands.registerCommand('mentor.action.showReferences', () => {

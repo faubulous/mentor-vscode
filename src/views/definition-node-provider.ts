@@ -57,16 +57,16 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			this._onDidChangeVocabulary(context);
 		});
 
-		mentor.settings.onDidChange("view.treeLabelStyle", () => {
+		mentor.settings.onDidChange("view.definitionTree.labelStyle", () => {
 			this.refresh();
 		});
 
 		// Initialize the default tree layout from the user preferences.
-		let layout = mentor.configuration.get<DefinitionTreeLayout>('view.definitionTreeLayout');
+		let layout = mentor.configuration.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
 
 		this._onDidChangeTreeLayout(layout);
 
-		mentor.settings.onDidChange("view.definitionTreeLayout", (e) => {
+		mentor.settings.onDidChange("view.definitionTree.defaultLayout", (e) => {
 			// When the layout was changed through a command, refresh the tree.
 			this._onDidChangeTreeLayout(e.newValue);
 
