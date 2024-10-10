@@ -33,11 +33,21 @@ export class PrefixDefinitionService extends FeatureProvider {
 					const prefix = nextToken.image.split(':')[0];
 
 					if (prefixes.includes(prefix)) {
-						const line = (nextToken.startLine ?? 1) - 1;
-						const start = new vscode.Position(line, 0);
-						const end = new vscode.Position(line + 1, 0);
+						let line = (nextToken.startLine ?? 1) - 1;
+						let start = new vscode.Position(line, 0);
+						let end = new vscode.Position(line + 1, 0);
 
 						edit.delete(document.uri, new vscode.Range(start, end));
+
+						// Delete any empty lines following the prefix definition.
+						while (line + 1 < document.lineCount && document.lineAt(line + 1).isEmptyOrWhitespace) {
+							line++;
+
+							start = new vscode.Position(line, 0);
+							end = new vscode.Position(line + 1, 0);
+
+							edit.delete(document.uri, new vscode.Range(start, end));
+						}
 					}
 				}
 			}
@@ -127,14 +137,17 @@ export class PrefixDefinitionService extends FeatureProvider {
 		let insertPosition = new vscode.Position(lastPrefix ? (lastPrefix.endLine ?? 0) : 0, 0);
 
 		// 1. Append the new prefixes to the end of the prefix definition list.
-		prefixes.sort().filter(p => !context.namespaces[p]).forEach(prefix => {
-			const uri = mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), prefix);
-			const definition = context.getPrefixDefinition(prefix, uri, upperCase);
+		prefixes
+			.sort()
+			.filter(p => !context.namespaces[p])
+			.forEach(prefix => {
+				const uri = mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), prefix);
+				const definition = context.getPrefixDefinition(prefix, uri, upperCase);
 
-			edit.insert(context.uri, insertPosition, definition + '\n');
+				edit.insert(context.uri, insertPosition, definition + '\n');
 
-			insertPosition = insertPosition.translate(1, 0);
-		});
+				insertPosition = insertPosition.translate(1, 0);
+			});
 
 		// 2. Delete leading new lines if there are any prefixes.
 		if (lastPrefix) {
@@ -213,7 +226,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 		const context = mentor.contexts[document.uri.toString()];
 
 		if (!context) new vscode.WorkspaceEdit();
-		
+
 		const tokenTypes = context.getTokenTypes();
 
 		// The provided IRI may be a full IRI or a namespace IRI.
@@ -227,7 +240,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 		for (let i = 0; i < context.tokens.length; i++) {
 			const token = context.tokens[i];
 
-			if (token.tokenType?.tokenName !== 'IRIREF' || !token.image.includes(namespaceIri)) {
+			if (token.tokenType?.tokenName !== tokenTypes.IRIREF || !token.image.includes(namespaceIri)) {
 				continue;
 			}
 
