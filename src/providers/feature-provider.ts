@@ -25,14 +25,17 @@ export class FeatureProvider {
 	 * @param token A token.
 	 */
 	protected getLocationFromToken(uri: vscode.Uri, token: IToken) {
+		// The token positions are 1-based, whereas the editor positions / locations are 0-based.
 		const startLine = token.startLine ? token.startLine - 1 : 0;
 		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
+
 		const endLine = token.endLine ? token.endLine - 1 : 0;
 		const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
 
 		const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
+		const location = new vscode.Location(uri, range);
 
-		return new vscode.Location(uri, range);
+		return location;
 	}
 
 	/**

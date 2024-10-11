@@ -142,9 +142,13 @@ class MentorExtension {
 					const prefix = token.image.substring(0, token.image.length - 1);
 
 					// Do not implmenet prefixes that are already defined.
-					if (!context.namespaces[prefix]) {
-						this.prefixDeclarationService.implementPrefixes(e.document, [prefix]);
-					}
+					if (context.namespaces[prefix]) return;
+
+					this.prefixDeclarationService.implementPrefixes(e.document, [{ prefix: prefix, namespaceIri: undefined }]).then(edit => {
+						if (edit.size > 0) {
+							vscode.workspace.applyEdit(edit);
+						}
+					});
 				}
 			}
 		});

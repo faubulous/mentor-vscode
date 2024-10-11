@@ -92,7 +92,7 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 				if (!uri) continue;
 
 				// The references include the subject itself, so we subtract 1.
-				let n = Math.max(this.provideReferencesForUri(uri).length - 1, 0);
+				let n = Math.max(this.provideReferencesForIri(uri).length - 1, 0);
 				let location = this.getLocationFromToken(document.uri, subject);
 
 				result.push(new vscode.CodeLens(location.range, {

@@ -26,32 +26,38 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 	}
 
 	provideReferencesForToken(context: DocumentContext, position: vscode.Position, token: IToken) {
-		let u;
+		let iri;
 
 		if (this.isCursorOnPrefix(token, position)) {
-			u = context.namespaces[getPrefixFromToken(token)];
+			iri = context.namespaces[getPrefixFromToken(token)];
 		} else {
-			u = getIriFromToken(context.namespaces, token);
+			iri = getIriFromToken(context.namespaces, token);
 		}
 
-		if (!u) {
+		if (!iri) {
 			return null;
 		}
 
-		return this.provideReferencesForUri(u);
+		return this.provideReferencesForIri(iri);
 	}
 
-	provideReferencesForUri(uri: string): vscode.Location[] {
+	provideReferencesForIri(iri: string): vscode.Location[] {
 		let result: vscode.Location[] = [];
 
 		for (const context of Object.values(mentor.contexts)) {
 			// Do not provide references for temporary, non-persisted git diff views or other in-memory documents.
-			if (context.isTemporary || !context.references[uri]) {
+			if (context.isTemporary || !context.references[iri]) {
 				continue;
 			}
 
-			for (const t of context.references[uri]) {
-				result.push(this.getLocationFromToken(context.uri, t));
+			for (const t of context.references[iri]) {
+				const location = this.getLocationFromToken(context.uri, t);
+
+				// Note: For some unknown reason, the references view does not show the correct range for the reference. It's always off by one character.
+				const r = new vscode.Range(location.range.start, location.range.end.translate(0, 1));
+				const l = new vscode.Location(location.uri, r);
+
+				result.push(l);
 			}
 		}
 

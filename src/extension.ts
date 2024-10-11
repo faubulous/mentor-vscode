@@ -104,9 +104,14 @@ function registerCommands(context: vscode.ExtensionContext) {
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {
-					editor.selection = new vscode.Selection(location.range.start, location.range.end);
+					// We need to set the selection before executing the findReferences command.
+					const start = location.range.start;
+					const end = location.range.end;
 
-					vscode.commands.executeCommand('references-view.findReferences', editor.document.uri, editor.selection.active);
+					editor.selection = new vscode.Selection(start, end);
+
+					// Note: The findReferences command operates on the active editor selection.
+					vscode.commands.executeCommand('references-view.findReferences', editor.document.uri);
 				}
 			}
 		});
@@ -181,7 +186,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
-			const edit = await mentor.prefixDeclarationService.implementPrefixes(document, prefixes);
+			const edit = await mentor.prefixDeclarationService.implementPrefixes(document, prefixes.map(p => ({ prefix: p, namespaceIri: undefined })));
 
 			if (edit.size > 0) {
 				await vscode.workspace.applyEdit(edit);

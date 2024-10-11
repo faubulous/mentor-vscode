@@ -1,9 +1,24 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { IToken } from 'millan';
-import { getIriFromNodeId, getIriLocalPart, getNamespaceIri, isUpperCase } from '../utilities';
+import { getIriFromNodeId, getNamespaceIri, isUpperCase } from '../utilities';
 import { DocumentContext } from '../languages';
 import { FeatureProvider } from '../providers';
+
+/**
+ * Specifies a how a namespace prefix should be defined in a document.
+ */
+export interface PrefixDefinition {
+	/**
+	 * The namespace prefix.
+	 */
+	prefix: string;
+
+	/**
+	 * The namespace IRI or `undefined` if the IRI should be looked up.
+	 */
+	namespaceIri: string | undefined;
+}
 
 /**
  * A service for declaring prefixes in RDF documents.
@@ -17,7 +32,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 	public async deletePrefixes(document: vscode.TextDocument, prefixes: string[]): Promise<vscode.WorkspaceEdit> {
 		const context = mentor.contexts[document.uri.toString()];
 
-		if (!context) new vscode.WorkspaceEdit();
+		if (!context) return new vscode.WorkspaceEdit();
 
 		const tokenTypes = context.getTokenTypes();
 
@@ -66,7 +81,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 	 * @param context The RDF document context.
 	 * @param prefixes The prefixes to implement.
 	 */
-	public async implementPrefixes(document: vscode.TextDocument, prefixes: string[]): Promise<vscode.WorkspaceEdit> {
+	public async implementPrefixes(document: vscode.TextDocument, prefixes: PrefixDefinition[]): Promise<vscode.WorkspaceEdit> {
 		const edit = new vscode.WorkspaceEdit();
 
 		const context = mentor.contexts[document.uri.toString()];
@@ -85,7 +100,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 	 * @param context The RDF document context.
 	 * @param prefixes The prefixes to be implemented.
 	 */
-	private async _implementPrefixes(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
+	private async _implementPrefixes(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: PrefixDefinition[]) {
 		const mode = await mentor.configuration.get('prefixes.prefixDefinitionMode');
 
 		if (mode === 'Sorted') {
@@ -124,7 +139,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 	 * @param prefixes The prefixes to be implemented.
 	 * @param tokenType The token type of the prefix token.
 	 */
-	private async _implementPrefixesAppended(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
+	private async _implementPrefixesAppended(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: PrefixDefinition[]) {
 		// Get the prefix token type name from the language specific context.
 		const tokenTypes = context.getTokenTypes();
 
@@ -139,10 +154,10 @@ export class PrefixDefinitionService extends FeatureProvider {
 		// 1. Append the new prefixes to the end of the prefix definition list.
 		prefixes
 			.sort()
-			.filter(p => !context.namespaces[p])
-			.forEach(prefix => {
-				const uri = mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), prefix);
-				const definition = context.getPrefixDefinition(prefix, uri, upperCase);
+			.filter(x => !context.namespaces[x.prefix] && !x.namespaceIri)
+			.forEach(x => {
+				const iri = x.namespaceIri ?? mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
+				const definition = context.getPrefixDefinition(x.prefix, iri, upperCase);
 
 				edit.insert(context.uri, insertPosition, definition + '\n');
 
@@ -167,7 +182,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 	 * @param prefixes The prefixes to be implemented.
 	 * @param tokenType The token type of the prefix token.
 	 */
-	private async _implementPrefixesSorted(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: string[]) {
+	private async _implementPrefixesSorted(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: PrefixDefinition[]) {
 		// Get the prefix token type name from the language specific context.
 		const tokenTypes = context.getTokenTypes();
 
@@ -202,14 +217,18 @@ export class PrefixDefinitionService extends FeatureProvider {
 		}
 
 		// 3. Implement the prefixes in a sorted order.
-		const sortedPrefixes = [...Object.keys(context.namespaces), ...prefixes].sort();
+		const namespaceMap = { ...context.namespaces };
+
+		for (let x of prefixes) {
+			namespaceMap[x.prefix] = x.namespaceIri ?? mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
+		}
 
 		// Determine whether the prefixes should be in uppercase.
 		const upperCase = isUpperCase(lastPrefix ?? context.tokens[0]);
 
-		for (let prefix of sortedPrefixes) {
-			const uri = context.namespaces[prefix] ?? mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), prefix);
-			const definition = context.getPrefixDefinition(prefix, uri, upperCase);
+		for (let prefix of Object.keys(namespaceMap).sort()) {
+			const namespaceIri = namespaceMap[prefix];
+			const definition = context.getPrefixDefinition(prefix, namespaceIri, upperCase);
 
 			edit.insert(context.uri, new vscode.Position(0, 0), definition + '\n');
 		}
@@ -233,7 +252,12 @@ export class PrefixDefinitionService extends FeatureProvider {
 		const namespaceIri = getNamespaceIri(iri);
 
 		// Reuse existing prefixs if already defined.
-		const prefix = context.getPrefixForNamespaceIri(namespaceIri) ?? getIriLocalPart(namespaceIri);
+		let prefix = context.getPrefixForNamespaceIri(namespaceIri);
+
+		if (!prefix) {
+			// Look up the prefix for the namespace IRI in the document, configuration, or default prefixes.
+			prefix = mentor.prefixLookupService.getPrefixForIri(document.uri.toString(), namespaceIri, 'ns');
+		}
 
 		const edit = new vscode.WorkspaceEdit();
 
@@ -262,18 +286,16 @@ export class PrefixDefinitionService extends FeatureProvider {
 				}
 			}
 
-			const iri = getIriFromNodeId(token.image);
-			const label = iri.substring(namespaceIri.length);
-
+			const localName = getIriFromNodeId(token.image).substring(namespaceIri.length);
 			const location = this.getLocationFromToken(document.uri, token);
 
 			// Delete the entire IRI token.
-			edit.replace(location.uri, location.range, `${prefix}:${label}`);
+			edit.replace(location.uri, location.range, `${prefix}:${localName}`);
 		}
 
 		// Only implement the prefix if not already defined.
 		if (!context.namespaces[prefix]) {
-			await this._implementPrefixes(edit, document, context, [prefix]);
+			await this._implementPrefixes(edit, document, context, [{ prefix, namespaceIri }]);
 		}
 
 		return edit;

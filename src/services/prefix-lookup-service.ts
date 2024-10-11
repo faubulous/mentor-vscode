@@ -6,6 +6,52 @@ import { DEFAULT_PREFIXES } from '../services/prefix-downloader-service';
  */
 export class PrefixLookupService {
 	/**
+	 * Get the prefix for a given namespace IRI.
+	 * @param documentUri The URI of the document where the IRI is used.
+	 * @param namespaceIri A namespace IRI to look up.
+	 * @param defaultValue A default value to return if the prefix is not found.
+	 * @returns A prefix for the given IRI if it is declared in the project. A default value otherwise.
+	 */
+	getPrefixForIri(documentUri: string, namespaceIri: string, defaultValue: string) {
+		const context = mentor.contexts[documentUri];
+
+		if (!context) {
+			return defaultValue;
+		}
+
+		// 1. Try to find the prefix in the document.
+		const namespaces = mentor.contexts[documentUri].namespaces;
+
+		for (let prefix in namespaces) {
+			if (namespaces[prefix] === namespaceIri) {
+				return prefix;
+			}
+		}
+
+		// 2. Try to find the prefix in the project configuration.
+		const prefixes = mentor.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+
+		if (Array.isArray(prefixes)) {
+			const prefix = prefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
+
+			if (prefix) {
+				return prefix;
+			}
+		}
+
+		// 3. Try to find the prefix in the default prefixes.
+		const defaultPrefixes = mentor.localStorageService.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+
+		for (let prefix in defaultPrefixes) {
+			if (defaultPrefixes[prefix] === namespaceIri) {
+				return prefix;
+			}
+		}
+
+		return defaultValue;
+	}
+
+	/**
 	 * Get the most frequently used URI for a given prefix.
 	 * @param documentUri The URI of the document where the prefix is used.
 	 * @param prefix A prefix to look up.
