@@ -31,6 +31,11 @@ export interface TokenTypes {
 	 * The token type name of IRIs in the document language.
 	 */
 	IRIREF: string;
+
+	/**
+	 * The token type name of a namespace prefix in the document language.
+	 */
+	PNAME_NS: string;
 }
 
 /**

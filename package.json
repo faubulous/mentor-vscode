@@ -517,12 +517,16 @@
         "icon": "$(rdf-list)"
       },
       {
-        "command": "mentor.action.sparql.fixMissingPrefixes",
-        "title": "Implement Missing SPARQL Prefixes"
+        "command": "mentor.action.deletePrefixes",
+        "title": "Delete prefix definitions"
       },
       {
-        "command": "mentor.action.turtle.fixMissingPrefixes",
-        "title": "Implement Missing Turtle Prefixes"
+        "command": "mentor.action.implementPrefixes",
+        "title": "Implement prefix definitions"
+      },
+      {
+        "command": "mentor.action.sortPrefixes",
+        "title": "Sort prefix definitions"
       }
     ],
     "menus": {

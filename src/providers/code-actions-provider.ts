@@ -31,10 +31,11 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 		const context = this.getDocumentContext(document);
 
 		if (context) {
-			const tokenTypes = context.getTokenTypes();
 			const token = context.getTokensAtPosition(range.start)[0];
+			const tokenName = token?.tokenType?.tokenName;
+			const tokenTypes = context.getTokenTypes();
 
-			if (token?.tokenType?.tokenName === tokenTypes.IRIREF) {
+			if (tokenName === tokenTypes.IRIREF) {
 				const namespaceIri = getNamespaceIri(getIriFromNodeId(token.image));
 
 				result.push({
@@ -44,7 +45,18 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 					command: {
 						title: 'Define prefix for IRI',
 						command: 'mentor.action.implementPrefixForIri',
-						arguments: [document.uri, namespaceIri]
+						arguments: [document.uri, namespaceIri, token]
+					}
+				});
+			} else if (tokenName === tokenTypes.PREFIX || tokenName === tokenTypes.PNAME_NS) {
+				result.push({
+					kind: vscode.CodeActionKind.Refactor,
+					title: 'Sort prefixes',
+					isPreferred: true,
+					command: {
+						title: 'Sort prefixes',
+						command: 'mentor.action.sortPrefixes',
+						arguments: [document.uri, token]
 					}
 				});
 			}
@@ -72,10 +84,10 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 			// the document may change in the meantime and the insert range may no longer be valid.
 			result.push({
 				kind: vscode.CodeActionKind.QuickFix,
-				title: 'Implement all missing prefixes',
+				title: 'Implement missing prefixes',
 				isPreferred: true,
 				command: {
-					title: 'Implement all missing prefixes',
+					title: 'Implement missing prefixes',
 					command: 'mentor.action.implementPrefixes',
 					arguments: [document.uri, Array.from(undefinedPrefixes)]
 				}
@@ -88,10 +100,10 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 		if (unusedPrefixes.length > 0) {
 			result.push({
 				kind: vscode.CodeActionKind.QuickFix,
-				title: 'Remove all unused prefixes',
+				title: 'Remove unused prefixes',
 				isPreferred: true,
 				command: {
-					title: 'Remove all unused prefixes',
+					title: 'Remove unused prefixes',
 					command: 'mentor.action.deletePrefixes',
 					arguments: [document.uri, unusedPrefixes]
 				}
@@ -107,7 +119,7 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 				command: {
 					title: `Implement missing prefix: ${prefix}`,
 					command: 'mentor.action.implementPrefixes',
-					arguments: [document.uri, [prefix]]
+					arguments: [document.uri, [{ prefix }]]
 				}
 			});
 		}

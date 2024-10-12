@@ -69,6 +69,7 @@ export class TurtleDocument extends DocumentContext {
 			PREFIX: 'TTL_PREFIX',
 			BASE: 'TTL_BASE',
 			IRIREF: 'IRIREF',
+			PNAME_NS: 'PNAME_NS',
 		}
 	}
 

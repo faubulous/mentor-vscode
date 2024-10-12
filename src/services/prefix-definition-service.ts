@@ -25,6 +25,30 @@ export interface PrefixDefinition {
  */
 export class PrefixDefinitionService extends FeatureProvider {
 	/**
+	 * Sort the prefixes in a document.
+	 * @param document The RDF document.
+	 */
+	public async sortPrefixes(document: vscode.TextDocument): Promise<vscode.WorkspaceEdit> {
+		const context = mentor.contexts[document.uri.toString()];
+
+		if (!context) return new vscode.WorkspaceEdit();
+
+		const edit = new vscode.WorkspaceEdit();
+
+		const prefixes: PrefixDefinition[] = [];
+
+		Object.keys(context.namespaces).forEach(prefix => {
+			const namespaceIri = context.namespaces[prefix];
+
+			prefixes.push({ prefix, namespaceIri });
+		});
+
+		await this._implementPrefixesSorted(edit, document, context, prefixes);
+
+		return edit;
+	}
+
+	/**
 	 * Delete prefix definitions from a document.
 	 * @param document The RDF document.
 	 * @param prefixes The prefixes to delete.
@@ -38,10 +62,17 @@ export class PrefixDefinitionService extends FeatureProvider {
 
 		const edit = new vscode.WorkspaceEdit();
 
+		const prefixCount = Object.keys(context.namespaces).length;
+
+		// Number of processed prefixes.
+		let n = 0;
+
 		for (let i = 0; i < context.tokens.length; i++) {
 			const currentToken = context.tokens[i];
 
 			if (currentToken.tokenType?.tokenName === tokenTypes.PREFIX) {
+				n = n + 1;
+
 				const nextToken = context.tokens[i + 1];
 
 				if (nextToken) {
@@ -54,8 +85,8 @@ export class PrefixDefinitionService extends FeatureProvider {
 
 						edit.delete(document.uri, new vscode.Range(start, end));
 
-						// Delete any empty lines following the prefix definition.
-						while (line + 1 < document.lineCount && document.lineAt(line + 1).isEmptyOrWhitespace) {
+						// Delete any empty lines following the prefix definition of all prefixes but the last.
+						while (n < prefixCount && line + 1 < document.lineCount && document.lineAt(line + 1).isEmptyOrWhitespace) {
 							line++;
 
 							start = new vscode.Position(line, 0);

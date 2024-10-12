@@ -23,6 +23,7 @@ export class SparqlDocument extends DocumentContext {
 			BASE: 'BASE',
 			PREFIX: 'PREFIX',
 			IRIREF: 'IRIREF',
+			PNAME_NS: 'PNAME_NS',
 		}
 	}
 
