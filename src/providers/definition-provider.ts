@@ -66,14 +66,7 @@ export class DefinitionProvider extends FeatureProvider {
 		}
 
 		if (token) {
-			const startLine = token.startLine ? token.startLine - 1 : 0;
-			const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
-			const endLine = token.endLine ? token.endLine - 1 : 0;
-			const endCharacter = token.endColumn ?? 0;
-
-			const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
-
-			return new vscode.Location(tokenContext.uri, range);
+			return new vscode.Location(tokenContext.uri, this.getRangeFromToken(token));
 		}
 
 		return null;

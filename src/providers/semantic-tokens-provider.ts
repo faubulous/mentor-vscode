@@ -36,10 +36,10 @@ export class SemanticTokensProvider extends FeatureProvider implements vscode.Do
 			try {
 				const startLine = t.startLine ? t.startLine - 1 : 0;
 				const startColumn = t.startColumn ? t.startColumn - 1 : 0;
-				const endLine = t.endLine ? t.endLine - 1 : 0;
 				const endColumn = t.endColumn ? t.endColumn : 0;
 
-				const tokenRange = new vscode.Range(new vscode.Position(startLine, startColumn), new vscode.Position(endLine, endColumn));
+				// TODO: Check the calcuation of the endColumn as there is a bug in the Millan parser that sometimes includes trailing whitespaces in the token.
+				const tokenRange = this.getRangeFromToken(t);
 				const tokenName = t.tokenType?.tokenName;
 
 				if (!tokenName) {
