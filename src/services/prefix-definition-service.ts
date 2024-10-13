@@ -183,8 +183,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 		let insertPosition = new vscode.Position(lastPrefix ? (lastPrefix.endLine ?? 0) : 0, 0);
 
 		// 1. Append the new prefixes to the end of the prefix definition list.
-		prefixes
-			.sort()
+		prefixes.sort()
 			.filter(x => !context.namespaces[x.prefix] && !x.namespaceIri)
 			.forEach(x => {
 				const iri = x.namespaceIri ?? mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
@@ -282,12 +281,22 @@ export class PrefixDefinitionService extends FeatureProvider {
 		// The provided IRI may be a full IRI or a namespace IRI.
 		const namespaceIri = getNamespaceIri(iri);
 
-		// Reuse existing prefixs if already defined.
-		let prefix = context.getPrefixForNamespaceIri(namespaceIri);
+		// Look up the prefix for the namespace IRI in the document, configuration, or default prefixes.
+		let prefix = mentor.prefixLookupService.getPrefixForIri(document.uri.toString(), namespaceIri, 'ns');
 
-		if (!prefix) {
-			// Look up the prefix for the namespace IRI in the document, configuration, or default prefixes.
-			prefix = mentor.prefixLookupService.getPrefixForIri(document.uri.toString(), namespaceIri, 'ns');
+		// Check if the prefix is already defined and if the IRI are the same.
+		const existingNamspaceIri = context.namespaces[prefix];
+
+		if (existingNamspaceIri && existingNamspaceIri !== namespaceIri) {
+			// If there is a conflict, append a number to the prefix.
+			let n = 1;
+			let p = prefix;
+
+			do {
+				p = prefix + n;
+			} while (context.namespaces[p]);
+
+			prefix = p;
 		}
 
 		const edit = new vscode.WorkspaceEdit();
@@ -320,14 +329,12 @@ export class PrefixDefinitionService extends FeatureProvider {
 			const localName = getIriFromNodeId(token.image).substring(namespaceIri.length);
 			const range = this.getRangeFromToken(token);
 
-			console.log(document.getText(range));
-
 			// Delete the entire IRI token.
 			edit.replace(document.uri, range, `${prefix}:${localName}`);
 		}
 
 		// Only implement the prefix if not already defined.
-		if (!context.namespaces[prefix]) {
+		if (!existingNamspaceIri || existingNamspaceIri !== namespaceIri) {
 			await this._implementPrefixes(edit, document, context, [{ prefix, namespaceIri }]);
 		}
 

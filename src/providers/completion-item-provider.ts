@@ -28,23 +28,23 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 			}
 		} else if (tokenType == "PNAME_LN" || tokenType == "PNAME_NS") {
 			const component = getTripleComponentType(context.tokens, token);
-			const namespace = getNamespaceIriFromPrefixedName(context.namespaces, token.image);
-			const label = token.image.split(":")[1];
+			const namespaceIri = getNamespaceIriFromPrefixedName(context.namespaces, token.image);
+			const localName = token.image.split(":")[1];
 
-			if (namespace) {
-				const uri = (namespace + label).toLowerCase();
+			if (namespaceIri) {
+				const iri = (namespaceIri + localName).toLowerCase();
 
 				const graphs = [document.uri.toString()];
-				graphs.push(namespace);
+				graphs.push(namespaceIri);
 
 				// Primarily query the context graph for retrieving completion items.
-				for (let item of this.getCompletionItems(context, component, uri, graphs)) {
+				for (let item of this.getCompletionItems(context, component, iri, graphs)) {
 					result.push(item);
 				}
 
 				// If none are found, query the background graph for retrieving additional items from other ontologies.
 				if (result.length == 0) {
-					for (let item of this.getCompletionItems(context, component, uri, undefined)) {
+					for (let item of this.getCompletionItems(context, component, iri, undefined)) {
 						result.push(item);
 					}
 				}

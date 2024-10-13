@@ -48,6 +48,7 @@ This extension provides the following features:
   - Checking conformance of literal values to XSD specifications
   - Checking if namespace IRIs end with separator (`/`,`#`, `:`, `_`, `-`)
   - Highlight unused namespace prefixes <sup style="color: orange">NEW</sup>
+  - Highlight duplicate namespace prefix definitions <sup style="color: orange">NEW</sup>
 
 ### Refactoring
   - Rename prefixes
@@ -63,7 +64,7 @@ This extension provides the following features:
 
 ## News
 ### Version 0.2.2: Improved prefix management
-This release adds editor functions to automatically define / implement missing prefix definitions in the document. The namespace IRIs for a prefix are looked up in other documents in the workspace first and if not found, are retreived from a local copy of [prefix.cc](https://prefix.cc). The editor also now highights unused prefix definitions and marks them as inactive similar to the behavior of unused imports in other programming languages. There are also some new refactoring methods for prefixes:
+This release adds editor functions to automatically define / implement missing prefix definitions in the document. The namespace IRIs for a prefix are looked up in other documents in the workspace first and if not found, are retreived from a local copy of [prefix.cc](https://prefix.cc). The editor also now highights unused prefix definitions and marks them as inactive similar to the behavior of unused imports in other programming languages. Duplicate prefix defintions are marked as a warning. Also some new refactoring methods for prefixes were added:
 
 - Sort prefix definitions in the document header
 - Remove unused prefix definitions
