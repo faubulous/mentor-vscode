@@ -15,6 +15,23 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "type": "npm",
+            "script": "build",
+            "group": "build",
+            "problemMatcher": [],
+            "label": "npm: build",
+            "detail": "node ./build-font.js && node ./build.js"
+        },
+        {
+            "type": "npm",
+            "script": "build:watch",
+            "group": "build",
+            "problemMatcher": [],
+            "label": "npm: build:watch",
+            "detail": "node ./build-font.js && node ./build.js --watch",
+            "isBackground": true
         }
     ]
 }

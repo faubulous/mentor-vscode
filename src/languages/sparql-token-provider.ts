@@ -1,9 +1,14 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { RenameProvider } from '../providers/rename-provider';
-import { CodeActionsProvider, CompletionItemProvider, DefinitionProvider, HoverProvider, ReferenceProvider } from '../providers';
-import { getLastTokenOfType, isUpperCase } from '../utilities';
-import { PrefixCompletionProvider } from '../providers/prefix-completion-provider';
+import {
+	CodeActionsProvider,
+	CompletionItemProvider,
+	DefinitionProvider,
+	HoverProvider,
+	PrefixCompletionProvider,
+	ReferenceProvider
+} from '../providers';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -248,6 +253,8 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 							break;
 						case "STRING_LITERAL":
 						case "STRING_LITERAL2":
+						case "STRING_LITERAL_LONG1":
+						case "STRING_LITERAL_LONG2":
 						case "STRING_LITERAL_QUOTE":
 						case "STRING_LITERAL_SINGLE_QUOTE":
 						case "STRING_LITERAL_LONG_QUOTE":
@@ -291,15 +298,11 @@ const referenceProvider = new ReferenceProvider();
 const definitionProvider = new DefinitionProvider();
 const hoverProvider = new HoverProvider();
 const completionProvider = new CompletionItemProvider();
-const codeActionsProvider = new CodeActionsProvider({
-	fixMissingPrefixes: 'mentor.action.sparql.fixMissingPrefixes'
-});
+const codeActionsProvider = new CodeActionsProvider();
 const prefixCompletionProvider = new PrefixCompletionProvider((uri) => ` <${uri}>`);
 
 export class SparqlTokenProvider {
 	register(): vscode.Disposable[] {
-		this.registerCommands();
-
 		return [
 			vscode.languages.registerDocumentSemanticTokensProvider({ language: 'sparql' }, tokenProvider, legend),
 			vscode.languages.registerRenameProvider({ language: 'sparql' }, renameProvider),
@@ -310,24 +313,5 @@ export class SparqlTokenProvider {
 			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider),
 			vscode.languages.registerInlineCompletionItemProvider({ language: 'sparql' }, prefixCompletionProvider)
 		];
-	}
-
-	registerCommands() {
-		vscode.commands.registerCommand(codeActionsProvider.commands.fixMissingPrefixes, (documentUri, prefixes) => {
-			const document = mentor.contexts[documentUri];
-
-			let upperCase = false;
-			upperCase = upperCase || isUpperCase(getLastTokenOfType(document.tokens, 'PREFIX'));
-			upperCase = upperCase || isUpperCase(document.tokens[0]);
-
-			codeActionsProvider.fixMissingPrefixes(documentUri, prefixes, 'PREFIX', (prefix, uri) => {
-				if (upperCase) {
-					return `PREFIX ${prefix}: <${uri}>\n`;
-				}
-				else {
-					return `prefix ${prefix}: <${uri}>\n`;
-				}
-			});
-		});
 	}
 }

@@ -19,15 +19,11 @@ const definitionProvider = new DefinitionProvider();
 const hoverProvider = new HoverProvider();
 const completionProvider = new CompletionItemProvider();
 const codelensProvider = new CodeLensProvider();
-const codeActionsProvider = new CodeActionsProvider({
-	fixMissingPrefixes: 'mentor.action.turtle.fixMissingPrefixes'
-});
+const codeActionsProvider = new CodeActionsProvider();
 const prefixCompletionProvider = new PrefixCompletionProvider((uri) => ` <${uri}> .`);
 
 export class TurtleTokenProvider {
 	register(): vscode.Disposable[] {
-		this.registerCommands();
-
 		const result = [];
 		const languages = ['turtle', 'trig', 'ntriples', 'nquads'];
 
@@ -44,14 +40,5 @@ export class TurtleTokenProvider {
 		}
 
 		return result;
-	}
-
-	registerCommands() {
-		vscode.commands.registerCommand(codeActionsProvider.commands.fixMissingPrefixes, (documentUri, prefixes) => {
-			codeActionsProvider.fixMissingPrefixes(documentUri, prefixes, 'TTL_PREFIX', (prefix, uri) => {
-				// All prefixes keywords are always in lowercase in Turtle.
-				return `@prefix ${prefix}: <${uri}> .\n`;
-			});
-		});
 	}
 }

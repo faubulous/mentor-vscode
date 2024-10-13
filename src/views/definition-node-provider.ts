@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { Uri, OWL, RDF, RDFS, SKOS, SH, _SH } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { DefinitionTreeNode } from './definition-tree-node';
@@ -57,16 +57,16 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			this._onDidChangeVocabulary(context);
 		});
 
-		mentor.settings.onDidChange("view.treeLabelStyle", () => {
+		mentor.settings.onDidChange("view.definitionTree.labelStyle", () => {
 			this.refresh();
 		});
 
 		// Initialize the default tree layout from the user preferences.
-		let layout = mentor.configuration.get<DefinitionTreeLayout>('view.definitionTreeLayout');
+		let layout = mentor.configuration.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
 
 		this._onDidChangeTreeLayout(layout);
 
-		mentor.settings.onDidChange("view.definitionTreeLayout", (e) => {
+		mentor.settings.onDidChange("view.definitionTree.defaultLayout", (e) => {
 			// When the layout was changed through a command, refresh the tree.
 			this._onDidChangeTreeLayout(e.newValue);
 

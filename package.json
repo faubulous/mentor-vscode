@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "preview": true,
   "publisher": "faubulous",
   "private": false,
@@ -517,19 +517,23 @@
         "icon": "$(rdf-list)"
       },
       {
-        "command": "mentor.action.sparql.fixMissingPrefixes",
-        "title": "Implement Missing SPARQL Prefixes"
+        "command": "mentor.action.deletePrefixes",
+        "title": "Delete prefix definitions"
       },
       {
-        "command": "mentor.action.turtle.fixMissingPrefixes",
-        "title": "Implement Missing Turtle Prefixes"
+        "command": "mentor.action.implementPrefixes",
+        "title": "Implement prefix definitions"
+      },
+      {
+        "command": "mentor.action.sortPrefixes",
+        "title": "Sort prefix definitions"
       }
     ],
     "menus": {
       "view/title": [
         {
           "command": "mentor.action.analyzeWorkspace",
-          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing && !mentor.workspace.isAnalyzing",
+          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
           "group": "navigation@3"
         },
         {
@@ -635,7 +639,7 @@
         "title": "Mentor",
         "order": 1,
         "properties": {
-          "mentor.treeLabelStyle": {
+          "mentor.definitionTree.labelStyle": {
             "type": "string",
             "title": "Default Tree Label Style",
             "description": "Set the standard style for rendering of tree labels.",
@@ -651,7 +655,7 @@
             ],
             "default": "AnnotatedLabels"
           },
-          "mentor.definitionTreeLayout": {
+          "mentor.definitionTree.defaultLayout": {
             "type": "string",
             "title": "Default Definitions Tree Layout",
             "description": "Set the standard style for rendering the definitions tree hierarchy.",
@@ -774,6 +778,26 @@
             "title": "Enable Code Lenses",
             "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
             "default": true
+          },
+          "mentor.prefixes.autoDefinePrefixes": {
+            "type": "boolean",
+            "title": "Auto Define Namespaces",
+            "description": "If enabled, the extension will automatically declare namespaces in the document header. The namespaces that are defined in workspace documents are used in preference over the ones retrieved from prefix.cc.",
+            "default": true
+          },
+          "mentor.prefixes.prefixDefinitionMode": {
+            "type": "string",
+            "title": "Prefix Definition Mode",
+            "description": "Set the way prefixes are automatically defined in the document header.",
+            "enum": [
+              "Append",
+              "Sorted"
+            ],
+            "enumDescriptions": [
+              "Append new prefixes to the end of the prefix definition list in the document header.",
+              "Maintain an alphabetical order of prefixes in the document header."
+            ],
+            "default": "Sorted"
           }
         },
         "mentor.language.turtle.maxNumberOfProblems": {

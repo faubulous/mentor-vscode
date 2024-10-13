@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { RdfSyntax, TrigSyntaxParser } from '@faubulous/mentor-rdf';
 import { TurtleSyntaxParser } from '@faubulous/mentor-rdf';
-import { DocumentContext } from '../document-context';
+import { DocumentContext, TokenTypes } from '../document-context';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -62,6 +62,20 @@ export class TurtleDocument extends DocumentContext {
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 		}
+	}
+
+	public override getTokenTypes(): TokenTypes {
+		return {
+			PREFIX: 'TTL_PREFIX',
+			BASE: 'TTL_BASE',
+			IRIREF: 'IRIREF',
+			PNAME_NS: 'PNAME_NS',
+		}
+	}
+
+	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
+		// Note: All prefixes keywords are always in lowercase in Turtle.
+		return `@prefix ${prefix}: <${uri}> .`;
 	}
 
 	override mapBlankNodes() {

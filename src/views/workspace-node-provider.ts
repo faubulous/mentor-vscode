@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { Utils } from 'vscode-uri';
 
 // For a complete implementation of the FileSystemProvider API, see:

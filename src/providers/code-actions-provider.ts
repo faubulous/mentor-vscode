@@ -1,86 +1,62 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
-import { PrefixLookupService } from '../services/prefix-lookup-service';
 import { FeatureProvider } from './feature-provider';
-import { getLastTokenOfType, getNextToken } from '../utilities';
-
-/**
- * The commands that are supported by the code actions provider.
- */
-export interface CodeActionProviderCommands {
-	/**
-	 * The command to be used for fixing missing prefixes.
-	 */
-	fixMissingPrefixes: string;
-}
+import { getNamespaceIri, getIriFromNodeId } from '../utilities';
 
 /**
  * A provider for RDF document code actions.
  */
 export class CodeActionsProvider extends FeatureProvider implements vscode.CodeActionProvider {
-	/**
-	 * The service to be used for looking up project specific or commonly used prefixes.
-	 */
-	protected readonly prefixLookupService = new PrefixLookupService();
-
-	/**
-	 * The commands to be used for implementing common code actions.
-	 */
-	public readonly commands: CodeActionProviderCommands;
-
 	public static readonly providedCodeActionKinds = [
-		vscode.CodeActionKind.QuickFix
+		vscode.CodeActionKind.QuickFix,
+		vscode.CodeActionKind.Refactor,
 	];
 
-	constructor(commands: CodeActionProviderCommands) {
-		super();
-
-		this.commands = commands;
-	}
-
 	async provideCodeActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): Promise<vscode.CodeAction[]> {
-		// Wait until the workspace has been indexed to have access to all prefix definitions.
-		await mentor.indexer.waitForIndexed();
-
-		const prefixes = this._getMissingPrefixes(document, actionContext.diagnostics);
-
-		return this.provideFixMissingPrefixesActions(document, prefixes);
+		return [
+			...this._provideRefactoringActions(document, range, actionContext),
+			...this._provideFixMissingPrefixesActions(document, actionContext)
+		];
 	}
 
 	/**
-	 * Get a code action for defining a missing prefixes.
+	 * Get code actions that provide refactoring actions for the given document.
 	 * @param document An RDF document context.
-	 * @param prefixes The prefixes to define.
-	 * @returns Code actions for defining missing prefixes.
+	 * @param range The range of the current edit.
+	 * @param actionContext The action context.
+	 * @returns An array of code actions.
 	 */
-	provideFixMissingPrefixesActions(document: vscode.TextDocument, prefixes: string[]): vscode.CodeAction[] {
-		const result = [];
+	private _provideRefactoringActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
+		const result: vscode.CodeAction[] = [];
 
-		// Fixing missing prefixes is implemented as a command instead of a satic edit because 
-		// the document may change in the meantime and the insert range may no longer be valid.
-		if (prefixes.length > 0) {
-			const missingPrefixes = this._getMissingPrefixes(document, vscode.languages.getDiagnostics(document.uri));
+		const context = this.getDocumentContext(document);
 
-			result.push({
-				kind: vscode.CodeActionKind.QuickFix,
-				title: 'Implement all missing prefixes',
-				isPreferred: true,
-				command: {
-					title: 'Implement all missing prefixes',
-					command: this.commands.fixMissingPrefixes,
-					arguments: [document.uri, missingPrefixes]
-				}
-			});
+		if (context) {
+			const token = context.getTokensAtPosition(range.start)[0];
+			const tokenName = token?.tokenType?.tokenName;
+			const tokenTypes = context.getTokenTypes();
 
-			for (let prefix of prefixes) {
+			if (tokenName === tokenTypes.IRIREF) {
+				const namespaceIri = getNamespaceIri(getIriFromNodeId(token.image));
+
 				result.push({
-					kind: vscode.CodeActionKind.QuickFix,
-					title: `Implement missing prefix: ${prefix}`,
-					isPreferred: false,
+					kind: vscode.CodeActionKind.Refactor,
+					title: 'Define prefix for IRI',
+					isPreferred: true,
 					command: {
-						title: `Implement missing prefix: ${prefix}`,
-						command: this.commands.fixMissingPrefixes,
-						arguments: [document.uri, [prefix]]
+						title: 'Define prefix for IRI',
+						command: 'mentor.action.implementPrefixForIri',
+						arguments: [document.uri, namespaceIri, token]
+					}
+				});
+			} else if (tokenName === tokenTypes.PREFIX || tokenName === tokenTypes.PNAME_NS) {
+				result.push({
+					kind: vscode.CodeActionKind.Refactor,
+					title: 'Sort prefixes',
+					isPreferred: true,
+					command: {
+						title: 'Sort prefixes',
+						command: 'mentor.action.sortPrefixes',
+						arguments: [document.uri, token]
 					}
 				});
 			}
@@ -90,73 +66,106 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 	}
 
 	/**
-	 * Get the missing prefixes from a list of diagnostics.
-	 * @param document A text document.
-	 * @param diagnostics A list of diagnostics to get the missing prefixes from.
-	 * @returns An array of missing prefix definitions.
+	 * Get a code action for defining missing prefixes.
+	 * @param document An RDF document context.
+	 * @param prefixes The prefixes to define.
+	 * @returns Code actions for defining missing prefixes.
 	 */
-	private _getMissingPrefixes(document: vscode.TextDocument, diagnostics: Iterable<vscode.Diagnostic>): string[] {
+	private _provideFixMissingPrefixesActions(document: vscode.TextDocument, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
+		const result: vscode.CodeAction[] = [];
+
+		const documentDiagnostics = vscode.languages.getDiagnostics(document.uri);
+
+		// 1. Find all unused prefixes in the whole document, and add them as a repair option on top.
+		const undefinedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'NoNamespacePrefixError');
+
+		if (undefinedPrefixes.length > 0) {
+			// Fixing missing prefixes is implemented as a command instead of a static edit because 
+			// the document may change in the meantime and the insert range may no longer be valid.
+			result.push({
+				kind: vscode.CodeActionKind.QuickFix,
+				title: 'Implement missing prefixes',
+				isPreferred: true,
+				command: {
+					title: 'Implement missing prefixes',
+					command: 'mentor.action.implementPrefixes',
+					arguments: [document.uri, Array.from(undefinedPrefixes)]
+				}
+			});
+		}
+
+		// Note, the unused prefix diagnostics contain the _whole_ line of the prefix definition, so we need to extract the prefix from it.
+		const unusedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'UnusedNamespacePrefixHint');
+
+		if (unusedPrefixes.length > 0) {
+			result.push({
+				kind: vscode.CodeActionKind.QuickFix,
+				title: 'Remove unused prefixes',
+				isPreferred: true,
+				command: {
+					title: 'Remove unused prefixes',
+					command: 'mentor.action.deletePrefixes',
+					arguments: [document.uri, unusedPrefixes]
+				}
+			});
+		}
+
+		// 2. Find all unused prefixes in the context and add them as the second repair option.
+		for (let prefix of this._getPrefixesWithErrorCode(document, actionContext.diagnostics, 'NoNamespacePrefixError')) {
+			result.push({
+				kind: vscode.CodeActionKind.QuickFix,
+				title: `Implement missing prefix: ${prefix}`,
+				isPreferred: false,
+				command: {
+					title: `Implement missing prefix: ${prefix}`,
+					command: 'mentor.action.implementPrefixes',
+					arguments: [document.uri, [{ prefix }]]
+				}
+			});
+		}
+
+		for (let prefix of this._getPrefixesWithErrorCode(document, actionContext.diagnostics, 'UnusedNamespacePrefixHint')) {
+			result.push({
+				kind: vscode.CodeActionKind.QuickFix,
+				title: `Remove unused prefix: ${prefix}`,
+				isPreferred: false,
+				command: {
+					title: `Remove unused prefix: ${prefix}`,
+					command: 'mentor.action.deletePrefixes',
+					arguments: [document.uri, [prefix]]
+				}
+			});
+		}
+
+		return result;
+	}
+
+	/**
+	 * Get prefixes with a specific error code from a diagnostic collection.
+	 * @param document The document to search.
+	 * @param diagnostics The diagnostics to search.
+	 * @param errorCode The error code to search for.
+	 * @returns The prefixes with the specified error code.
+	 */
+	private _getPrefixesWithErrorCode(document: vscode.TextDocument, diagnostics: Iterable<vscode.Diagnostic>, errorCode: string) {
 		const result = new Set<string>();
 
 		for (let diagnostic of diagnostics) {
-			if (diagnostic.code === 'NoNamespacePrefixError') {
-				const prefix = document.getText(diagnostic.range).split(':')[0];
+			if (diagnostic.code === errorCode) {
+				let prefix = document.getText(diagnostic.range).split(':')[0];
 
-				if (prefix) {
+				if (errorCode === 'UnusedNamespacePrefixHint') {
+					// Note: The unused prefix diagnostics contain the _whole_ line of the prefix definition, 
+					// so we need to extract the prefix from it. At this point the line still contains the PREFIX keyword.
+					prefix = prefix.split(' ')[1];
+				}
+
+				if (prefix !== undefined) {
 					result.add(prefix);
 				}
 			}
 		}
 
 		return Array.from(result);
-	}
-
-	/**
-	 * Implement missing prefixes in a document.
-	 * @param documentUri The URI of the document to fix the prefixes in.
-	 * @param prefixes The prefixes to implement.
-	 * @param tokenType The token type of the prefix token.
-	 * @param defineCallback A callback that provides the prefix declaration.
-	 */
-	fixMissingPrefixes(documentUri: string, prefixes: string[], tokenType: string, defineCallback: (prefix: string, uri: string) => string) {
-		const document = mentor.contexts[documentUri];
-
-		if (document) {
-			const edit = new vscode.WorkspaceEdit();
-
-			// Implement the prefixes in a sorted order.
-			const sortedPrefixes = prefixes.sort();
-
-			// Insert the new prefix declaration after the last prefix declaration in the document.
-			const lastPrefix = getLastTokenOfType(document.tokens, tokenType);
-
-			// The line number where to insert the new prefix declaration.
-			let n = lastPrefix ? (lastPrefix.endLine ?? 0) : 0;
-
-			for (let i = 0; i < sortedPrefixes.length; i++) {
-				const prefix = sortedPrefixes[i];
-				const uri = this.prefixLookupService.getUriForPrefix(prefix);
-
-				edit.insert(document.uri, new vscode.Position(n, 0), defineCallback(prefix, uri));
-			}
-
-			if (lastPrefix) {
-				const nextToken = getNextToken(document.tokens, lastPrefix);
-
-				// Insert a new line between the last prefix declaration and the next token.
-				if (nextToken && nextToken.endLine === n + 1) {
-					edit.insert(document.uri, new vscode.Position(n, 0), '\n');
-				}
-			} else {
-				const firstToken = document.tokens[0];
-
-				// Insert a new line at the beginning of the document.
-				if (firstToken && firstToken.endLine == 1) {
-					edit.insert(document.uri, new vscode.Position(n, 0), '\n');
-				}
-			}
-
-			vscode.workspace.applyEdit(edit);
-		}
 	}
 }

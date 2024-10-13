@@ -10,17 +10,17 @@ This extension provides powerful editing support for RDF ontologies, thesauri an
 
 This extension provides the following features:
 
-- **Online Collaboration <sup style="color: orange">NEW</sup>**
-  - Runnable in the browser on [vscode.dev](https://vscode.dev)
-  - Edit GitHub repositories online
-- **Workspace Tree**
+### Workspace Tree
   - Navigate all ontology and SPARQL files in the project
-  - Easily find problems in all ontologies in the workspace
-- **Workspace Index**
+  - Easily identify problems in all ontologies in the workspace
+
+### Workspace Index
   - Creates an index of all ontologies in the workspace
   - Find all references to a subject in the workspace
   - Provides code lenses that show reference statistics for a subject
-- **Definitions Tree**
+  - Jump to definitions of subjects in other files
+
+### Definitions Tree
   - Showing the definitions in RDFS or OWL ontologies
     - Ontologies
     - Classes
@@ -41,16 +41,39 @@ This extension provides the following features:
   - RDFS and limited OWL reasoning
   - Find all references in the current document
   - Open URIs in browser
-- **Supports N3, Turtle, Trig and SPARQL**
+
+### Supports N3, Turtle, Trig and SPARQL
   - Syntax highlighting
   - Syntax validation
   - Checking conformance of literal values to XSD specifications
-  - Checking if namespace IRIs end with separator (`/`,`#`, `:`)
-- **Refactoring**
+  - Checking if namespace IRIs end with separator (`/`,`#`, `:`, `_`, `-`)
+  - Highlight unused namespace prefixes <sup style="color: orange">NEW</sup>
+  - Highlight duplicate namespace prefix definitions <sup style="color: orange">NEW</sup>
+
+### Refactoring
   - Rename prefixes
   - Rename resource labels in prefixed names and URIs
+  - Refactor IRI references into prefixes names <sup style="color: orange">NEW</sup>
+  - Auto implement undefined prefixes <sup style="color: orange">NEW</sup>
+  - Sort prefix definitions <sup style="color: orange">NEW</sup>
+  - Remove unused prefix definitions <sup style="color: orange">NEW</sup>
+
+### Online Collaboration <sup style="color: orange">NEW</sup>
+- Runnable in the browser on [vscode.dev](https://vscode.dev)
+- Edit GitHub repositories online
 
 ## News
+### Version 0.2.2: Improved prefix management
+This release adds editor functions to automatically define / implement missing prefix definitions in the document. The namespace IRIs for a prefix are looked up in other documents in the workspace first and if not found, are retreived from a local copy of [prefix.cc](https://prefix.cc). The editor also now highights unused prefix definitions and marks them as inactive similar to the behavior of unused imports in other programming languages. Duplicate prefix defintions are marked as a warning. Also some new refactoring methods for prefixes were added:
+
+- Sort prefix definitions in the document header
+- Remove unused prefix definitions
+- Turn IRI references into prefixed names
+
+There are new settings to adjust the prefix implementation behavior. Prefixes can be implemented by maintaing a sorted list of prefixes at the top of the document (default), or by appending the new prixes after the last prefix defintion. The auto-implementation of prefixes can also be turned off entirely.
+
+Finally this release includes a fix, that addresses a bug caused by the Millan parser that sometimes includes trailing whitespaces in tokens where it should not. Now the find reference command has a more reliable highlighting of the prefix name or IRI.
+
 ### Version 0.2.1: Support for SHACL shapes in Definitions Tree and vscode.dev
 This release supports browsing SHACL shapes that are defined in ontologies. You can quickly jump to shape definitions that are associated with classes or properties from the definitions tree. Also supports SHACL datatype definitions for properties.
 

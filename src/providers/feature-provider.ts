@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import * as mentor from "../mentor";
+import { mentor } from "../mentor";
 import { IToken } from "millan";
-import { getNamespaceUri, getTokenPosition } from "../utilities";
+import { countLeadingWhitespace, countTrailingWhitespace, getNamespaceIri, getTokenPosition } from "../utilities";
 
 export class FeatureProvider {
 	/**
@@ -21,18 +21,26 @@ export class FeatureProvider {
 
 	/**
 	 * Get the location of a token in a document.
-	 * @param uri The URI of the document.
+	 * @param documentUri The URI of the document.
 	 * @param token A token.
 	 */
-	protected getLocationFromToken(uri: vscode.Uri, token: IToken) {
+	protected getRangeFromToken(token: IToken) {
+		// The token positions are 1-based, whereas the editor positions / locations are 0-based.
 		const startLine = token.startLine ? token.startLine - 1 : 0;
 		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
+		const startWhitespace = countLeadingWhitespace(token.image);
+
 		const endLine = token.endLine ? token.endLine - 1 : 0;
-		const endCharacter = token.endColumn ?? 0;
+		const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
+		const endWhitespace = countTrailingWhitespace(token.image);
 
-		const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
+		// TODO: File bug report for millan parser.
+		// Note: The millan parser incorrectly parses some tokens with leading and trailing whitespace.
+		// We account for this by adjusting the start and end positions.
+		const start = new vscode.Position(startLine, startCharacter + startWhitespace);
+		const end = new vscode.Position(endLine, endCharacter - endWhitespace).translate(0, 1);
 
-		return new vscode.Location(uri, range);
+		return new vscode.Range(start, end);
 	}
 
 	/**
@@ -106,7 +114,7 @@ export class FeatureProvider {
 				let uri = token.image.trim();
 				uri = uri.substring(1, uri.length - 1)
 
-				const namespace = getNamespaceUri(uri);
+				const namespace = getNamespaceIri(uri);
 				const label = uri.substring(namespace.length);
 
 				const i = token.image.indexOf(label);
@@ -126,28 +134,5 @@ export class FeatureProvider {
 				return null;
 			}
 		}
-	}
-
-	/**
-	 * Gets all tokens at a given position.
-	 * @param tokens A list of tokens.
-	 * @param position A position in the document.
-	 * @returns An non-empty array of tokens on success, an empty array otherwise.
-	 */
-	protected getTokensAtPosition(tokens: IToken[], position: vscode.Position): IToken[] {
-		// The tokens are 0-based, but the position is 1-based.
-		const l = position.line + 1;
-		const n = position.character + 1;
-
-		return tokens.filter(t =>
-			t.startLine &&
-			t.startLine <= l &&
-			t.endLine &&
-			t.endLine >= l &&
-			t.startColumn &&
-			t.startColumn <= n &&
-			t.endColumn &&
-			t.endColumn >= (n - 1)
-		);
 	}
 }

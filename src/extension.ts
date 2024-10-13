@@ -1,23 +1,23 @@
 'use strict';
 import * as vscode from 'vscode';
-import * as mentor from './mentor';
+import { mentor } from './mentor';
 import { Disposable } from 'vscode-languageclient';
 import { TreeView } from './views/tree-view';
 import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
 import { DefinitionNodeDecorationProvider } from './views/definition-node-decoration-provider';
 import { ResourceNode } from './views/nodes/resource-node';
+import { getIriFromNodeId, getTokenPosition } from './utilities';
+import { DefinitionProvider } from './providers';
 import {
 	LanguageClientBase,
+	SparqlLanguageClient,
+	SparqlTokenProvider,
+	TrigLanguageClient,
 	TurtleLanguageClient,
 	TurtleTokenProvider,
-	TrigLanguageClient,
-	SparqlLanguageClient,
-	SparqlTokenProvider
 } from './languages';
-import { DefinitionProvider } from './providers';
-import { getUriFromNodeId } from './utilities';
-import { WorkspaceAnalyzer } from './workspace-analyzer';
+import { IToken } from 'millan';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -73,12 +73,39 @@ export function deactivate(): Thenable<void> {
 
 function getUriFromArgument(arg: ResourceNode | string): string {
 	if (arg instanceof ResourceNode) {
-		return getUriFromNodeId(arg.id);
+		return getIriFromNodeId(arg.id);
 	} else if (typeof arg === 'string') {
-		return getUriFromNodeId(arg);
+		return getIriFromNodeId(arg);
 	} else {
 		throw new Error('Invalid argument type: ' + typeof arg);
 	}
+}
+
+/**
+ * Get the delta of lines caused by a workspace edit.
+ * @param edit A workspace edit.
+ * @returns The delta of lines caused by the edit.
+ */
+function calculateLineOffset(edit: vscode.WorkspaceEdit): number {
+	let lineOffset = 0;
+
+	for (const [uri, edits] of edit.entries()) {
+		for (const e of edits) {
+			const startLine = e.range.start.line;
+			const endLine = e.range.end.line;
+
+			if (e.newText === '') {
+				// Deletion
+				lineOffset -= (endLine - startLine);
+			} else {
+				// Insertion or Replacement
+				const newLines = e.newText.split('\n').length - 1;
+				lineOffset += newLines - (endLine - startLine);
+			}
+		}
+	}
+
+	return lineOffset;
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
@@ -105,9 +132,14 @@ function registerCommands(context: vscode.ExtensionContext) {
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {
-					editor.selection = new vscode.Selection(location.range.start, location.range.end);
+					// We need to set the selection before executing the findReferences command.
+					const start = location.range.start;
+					const end = location.range.end;
 
-					vscode.commands.executeCommand('references-view.findReferences', editor.document.uri, editor.selection.active);
+					editor.selection = new vscode.Selection(start, end);
+
+					// Note: The findReferences command operates on the active editor selection.
+					vscode.commands.executeCommand('references-view.findReferences', editor.document.uri);
 				}
 			}
 		});
@@ -174,6 +206,72 @@ function registerCommands(context: vscode.ExtensionContext) {
 	}));
 
 	commands.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', async () => {
-		await new WorkspaceAnalyzer().analyzeWorkspace();
+		// Force re-indexing of the workspace, including oversized files.
+		mentor.workspaceIndexer.indexWorkspace(true);
 	}));
+
+	vscode.commands.registerCommand('mentor.action.sortPrefixes', async (documentUri: vscode.Uri) => {
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
+
+		if (document) {
+			const edit = await mentor.prefixDeclarationService.sortPrefixes(document);
+
+			if (edit.size > 0) {
+				await vscode.workspace.applyEdit(edit);
+			}
+		}
+	});
+
+	vscode.commands.registerCommand('mentor.action.implementPrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
+
+		if (document) {
+			const edit = await mentor.prefixDeclarationService.implementPrefixes(document, prefixes.map(p => ({ prefix: p, namespaceIri: undefined })));
+
+			if (edit.size > 0) {
+				await vscode.workspace.applyEdit(edit);
+			}
+		}
+	});
+
+	vscode.commands.registerCommand('mentor.action.implementPrefixForIri', async (documentUri: vscode.Uri, namespaceIri: string, token: IToken) => {
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
+
+		if (document) {
+			const editor = vscode.window.activeTextEditor;
+			const edit = await mentor.prefixDeclarationService.implementPrefixForIri(document, namespaceIri);
+
+			if (editor && edit.size > 0) {
+				// Await the edit application, after this the document is changed and the token position is invalid.
+				const success = await vscode.workspace.applyEdit(edit);
+
+				if (success) {
+					// The token position is valid for the unedited document.
+					const position = getTokenPosition(token);
+
+					// Calculate the line offset caused by the edit.
+					const lineOffset = calculateLineOffset(edit);
+					const start = new vscode.Position(position.startLine + lineOffset, position.startColumn);
+
+					// Set the cursor the the start of the original IRI token which is now the prefix.
+					editor.selection = new vscode.Selection(start, start);
+
+					// Trigger renaming the prefix.
+					vscode.commands.executeCommand('editor.action.rename');
+				}
+			}
+		}
+	});
+
+	vscode.commands.registerCommand('mentor.action.deletePrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
+
+		if (document) {
+			const edit = await mentor.prefixDeclarationService.deletePrefixes(document, prefixes);
+
+			if (edit.size > 0) {
+				await vscode.workspace.applyEdit(edit);
+			}
+		}
+	});
 }

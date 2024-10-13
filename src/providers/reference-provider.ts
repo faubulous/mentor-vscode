@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { IToken } from "millan";
 import { FeatureProvider } from './feature-provider';
-import { getUriFromToken, getPrefixFromToken } from '../utilities';
+import { getIriFromToken, getPrefixFromToken } from '../utilities';
 import { DocumentContext } from '../languages';
 
 /**
@@ -16,7 +16,7 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 			return null;
 		}
 
-		const token = this.getTokensAtPosition(context.tokens, position)[0];
+		const token = context.getTokensAtPosition(position)[0];
 
 		if (!token) {
 			return null;
@@ -26,32 +26,34 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 	}
 
 	provideReferencesForToken(context: DocumentContext, position: vscode.Position, token: IToken) {
-		let u;
+		let iri;
 
 		if (this.isCursorOnPrefix(token, position)) {
-			u = context.namespaces[getPrefixFromToken(token)];
+			iri = context.namespaces[getPrefixFromToken(token)];
 		} else {
-			u = getUriFromToken(context.namespaces, token);
+			iri = getIriFromToken(context.namespaces, token);
 		}
 
-		if (!u) {
+		if (!iri) {
 			return null;
 		}
 
-		return this.provideReferencesForUri(u);
+		return this.provideReferencesForIri(iri);
 	}
 
-	provideReferencesForUri(uri: string): vscode.Location[] {
+	provideReferencesForIri(iri: string): vscode.Location[] {
 		let result: vscode.Location[] = [];
 
 		for (const context of Object.values(mentor.contexts)) {
 			// Do not provide references for temporary, non-persisted git diff views or other in-memory documents.
-			if (context.isTemporary || !context.references[uri]) {
+			if (context.isTemporary || !context.references[iri]) {
 				continue;
 			}
 
-			for (const t of context.references[uri]) {
-				result.push(this.getLocationFromToken(context.uri, t));
+			for (const t of context.references[iri]) {
+				const range = this.getRangeFromToken(t);
+
+				result.push(new vscode.Location(context.uri, range));
 			}
 		}
 

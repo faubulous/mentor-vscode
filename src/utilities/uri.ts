@@ -1,17 +1,17 @@
 /**
- * Get the portion of a URI after the first occurance of '#' or the last occurance of '/'.
- * @param uri A URI.
- * @returns The label portion of the URI.
+ * Get the portion of a IRI after the first occurance of '#' or the last occurance of '/' or the local part of a namespace IRI.
+ * @param iri A IRI.
+ * @returns The local part of the IRI.
  */
-export function getUriLabel(uri: string): string {
-	let u = uri;
+export function getIriLocalPart(iri: string): string {
+	let u = iri;
 
 	// If we have namespace URI, return the label of the document or folder.
 	if (u.endsWith('/') || u.endsWith('#')) {
 		u = u.substring(0, u.length - 1);
 	}
 
-	let ns = getNamespaceUri(u);
+	let ns = getNamespaceIri(u);
 
 	if (ns) {
 		return u.replace(ns, "");
@@ -22,20 +22,20 @@ export function getUriLabel(uri: string): string {
 
 /**
  * Get the portion of a URI after the first occurance of '#' or the last occurance of '/'.
- * @param uri A URI.
+ * @param iri A URI.
  * @returns The namespace portion of the URI.
  */
-export function getNamespaceUri(uri: string) {
-	if (!uri) {
-		return uri;
+export function getNamespaceIri(iri: string) {
+	if (!iri) {
+		return iri;
 	}
 
 	// Remove any query strings from the URI.
-	let u = uri;
+	let u = iri;
 	let n = u.indexOf('?');
 
 	if (n > -1) {
-		u = uri.substring(0, n);
+		u = iri.substring(0, n);
 	}
 
 	// Find the first occurance of '#' and return the substring up to that point.
@@ -58,15 +58,15 @@ export function getNamespaceUri(uri: string) {
 
 /**
  * Get a transformed version of the URI that can be used as a JSON identifier which only contains letters, numbers and dots.
- * @param uri A URI.
+ * @param iri A URI.
  * @returns A transformed version which only contains letters, numbers and dots.
  */
-export function toJsonId(uri: string): string | undefined {
-	if (!uri) {
-		return uri;
+export function toJsonId(iri: string): string | undefined {
+	if (!iri) {
+		return iri;
 	}
 
-	let u = uri.split('//')[1];
+	let u = iri.split('//')[1];
 
 	if (u) {
 		u = u.replace(/[^a-zA-Z0-9]/g, '.');
@@ -82,7 +82,7 @@ export function hasUri(id?: string): boolean {
 	return id ? id.indexOf('|') > -1 : false;
 }
 
-export function getNodeIdFromUri(provider: string, uri: string, parentUri?: string): string {
+export function getNodeIdFromIri(provider: string, uri: string, parentUri?: string): string {
 	if (parentUri) {
 		return provider + '|' + parentUri + '|' + uri;
 	} else {
@@ -90,7 +90,7 @@ export function getNodeIdFromUri(provider: string, uri: string, parentUri?: stri
 	}
 }
 
-export function getUriFromNodeId(id: string): string {
+export function getIriFromNodeId(id: string): string {
 	const n = id.lastIndexOf('<');
 
 	if (n === -1) {

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { ReferenceProvider } from './reference-provider';
 import { DocumentContext } from '../document-context';
-import { getPreviousToken, getUriFromToken } from '../utilities';
+import { getPreviousToken, getIriFromToken } from '../utilities';
 import { IToken } from 'millan';
 
 /**
@@ -47,7 +47,7 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 
 		this._enabled = mentor.configuration.get('editor.codeLensEnabled', true);
 
-		mentor.indexer.waitForIndexed().then(() => {
+		mentor.workspaceIndexer.waitForIndexed().then(() => {
 			if (this._enabled) {
 				this._onDidChangeCodeLenses.fire();
 			}
@@ -87,15 +87,15 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 
 			// TODO: Refactor getSubjects into DocumentContext and overload for different languages.
 			for (let subject of this.getSubjects(context)) {
-				let uri = getUriFromToken(context.namespaces, subject);
+				let uri = getIriFromToken(context.namespaces, subject);
 
 				if (!uri) continue;
 
 				// The references include the subject itself, so we subtract 1.
-				let n = Math.max(this.provideReferencesForUri(uri).length - 1, 0);
-				let location = this.getLocationFromToken(document.uri, subject);
+				let n = Math.max(this.provideReferencesForIri(uri).length - 1, 0);
+				let range = this.getRangeFromToken(subject);
 
-				result.push(new vscode.CodeLens(location.range, {
+				result.push(new vscode.CodeLens(range, {
 					command: 'mentor.action.findReferences',
 					title: n + ' references',
 					arguments: [uri]

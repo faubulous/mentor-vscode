@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
+import { mentor } from '../mentor';
 import { FeatureProvider } from './feature-provider';
-import { PrefixLookupService } from '../services/prefix-lookup-service';
 import { getPreviousToken } from '../utilities';
 
 export class PrefixCompletionProvider extends FeatureProvider implements vscode.InlineCompletionItemProvider {
-	protected readonly prefixLookupService = new PrefixLookupService();
-
 	protected readonly prefixTokenTypes = new Set(["PREFIX", "TTL_PREFIX"]);
 
 	constructor(readonly onComplete: (uri: string) => string) {
@@ -19,7 +17,7 @@ export class PrefixCompletionProvider extends FeatureProvider implements vscode.
 			return null;
 		}
 
-		const currentToken = this.getTokensAtPosition(context.tokens, position)[0];
+		const currentToken = context.getTokensAtPosition(position)[0];
 
 		if (!currentToken) {
 			return null;
@@ -45,7 +43,7 @@ export class PrefixCompletionProvider extends FeatureProvider implements vscode.
 		}
 
 		const prefix = currentToken.image.split(":")[0];
-		const uri = this.prefixLookupService.getUriForPrefix(prefix);
+		const uri = mentor.prefixLookupService.getUriForPrefix(document.uri.toString(), prefix);
 
 		if (uri) {
 			return [{

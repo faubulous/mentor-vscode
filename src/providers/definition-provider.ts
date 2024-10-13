@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import * as mentor from '../mentor';
+import { mentor } from '../mentor';
 import { DocumentContext } from '../document-context';
 import { FeatureProvider } from './feature-provider';
-import { getUriFromToken } from '../utilities';
+import { getIriFromToken } from '../utilities';
 
 /**
  * Provides resource definitions for Turtle documents.
@@ -15,7 +15,7 @@ export class DefinitionProvider extends FeatureProvider {
 			return null;
 		}
 
-		const token = this.getTokensAtPosition(context.tokens, position)[0];
+		const token = context.getTokensAtPosition(position)[0];
 
 		if (!token) {
 			return null;
@@ -26,14 +26,14 @@ export class DefinitionProvider extends FeatureProvider {
 		if (this.isCursorOnPrefix(token, position)) {
 			u = context.namespaces[token.image.split(":")[0]];
 		} else {
-			u = getUriFromToken(context.namespaces, token);
+			u = getIriFromToken(context.namespaces, token);
 		}
 
 		if (!u) {
 			return null;
 		}
 
-		// Todo: Search for definitions in this context and then the other documents.
+		// TODO: Search for definitions in this context and then the other documents.
 		return this.provideDefintionForUri(context, u);
 	}
 
@@ -66,14 +66,7 @@ export class DefinitionProvider extends FeatureProvider {
 		}
 
 		if (token) {
-			const startLine = token.startLine ? token.startLine - 1 : 0;
-			const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
-			const endLine = token.endLine ? token.endLine - 1 : 0;
-			const endCharacter = token.endColumn ?? 0;
-
-			const range = new vscode.Range(startLine, startCharacter, endLine, endCharacter);
-
-			return new vscode.Location(tokenContext.uri, range);
+			return new vscode.Location(tokenContext.uri, this.getRangeFromToken(token));
 		}
 
 		return null;

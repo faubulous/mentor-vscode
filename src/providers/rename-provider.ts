@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { FeatureProvider } from './feature-provider';
-import { isVariable, getUriFromToken } from '../utilities';
+import { isVariable, getIriFromToken } from '../utilities';
 
 /**
  * Provides renaming for URIs, resources labels and prefixes.
@@ -13,7 +13,7 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 			return null;
 		}
 
-		const token = this.getTokensAtPosition(context.tokens, position)[0];
+		const token = context.getTokensAtPosition(position)[0];
 
 		if (!token) {
 			throw new Error('No token found at the given position.');
@@ -34,7 +34,7 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 			return edits;
 		}
 
-		const token = this.getTokensAtPosition(context.tokens, position)[0];
+		const token = context.getTokensAtPosition(position)[0];
 
 		if (!token) {
 			return edits;
@@ -77,7 +77,7 @@ export class RenameProvider extends FeatureProvider implements vscode.RenameProv
 				edits.replace(document.uri, r, newName);
 			}
 		} else {
-			const u = getUriFromToken(context.namespaces, token);
+			const u = getIriFromToken(context.namespaces, token);
 
 			if (u && context.references[u]) {
 				for (const r of context.references[u].map(t => this.getLabelEditRange(t))) {
