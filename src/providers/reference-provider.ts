@@ -51,13 +51,9 @@ export class ReferenceProvider extends FeatureProvider implements vscode.Referen
 			}
 
 			for (const t of context.references[iri]) {
-				const location = this.getLocationFromToken(context.uri, t);
+				const range = this.getRangeFromToken(t);
 
-				// Note: For some unknown reason, the references view does not show the correct range for the reference. It's always off by one character.
-				const r = new vscode.Range(location.range.start, location.range.end.translate(0, 1));
-				const l = new vscode.Location(location.uri, r);
-
-				result.push(l);
+				result.push(new vscode.Location(context.uri, range));
 			}
 		}
 

@@ -318,10 +318,12 @@ export class PrefixDefinitionService extends FeatureProvider {
 			}
 
 			const localName = getIriFromNodeId(token.image).substring(namespaceIri.length);
-			const location = this.getLocationFromToken(document.uri, token);
+			const range = this.getRangeFromToken(token);
+
+			console.log(document.getText(range));
 
 			// Delete the entire IRI token.
-			edit.replace(location.uri, location.range, `${prefix}:${localName}`);
+			edit.replace(document.uri, range, `${prefix}:${localName}`);
 		}
 
 		// Only implement the prefix if not already defined.
