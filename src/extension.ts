@@ -274,4 +274,42 @@ function registerCommands(context: vscode.ExtensionContext) {
 			}
 		}
 	});
+
+	vscode.commands.registerCommand('mentor.action.selectActiveLanguage', async () => {
+		const activeDocument = vscode.window.activeTextEditor?.document;
+
+		if (!activeDocument) {
+			return;
+		}
+
+		const context = mentor.contexts[activeDocument.uri.toString()];
+
+		if (!context) {
+			return;
+		}
+
+		const languageStats = mentor.vocabulary.getLanguageStats(context.graphs, undefined);
+
+		// See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DisplayNames
+		const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
+
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.title = 'Select active document language';
+		quickPick.items = Object.keys(languageStats).sort().map((lang) => ({
+			label: lang,
+			description: languageNames.of(lang.toUpperCase())
+		}));
+		quickPick.onDidChangeSelection((selection) => {
+			if (selection.length > 0) {
+				const language = selection[0].label;
+				context.activeLanguage = language;
+
+				// Refresh the tree views..
+				mentor.settings.set('view.activeLanguage', language);
+
+				quickPick.dispose();
+			}
+		});
+		quickPick.show();
+	});
 }

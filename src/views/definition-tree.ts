@@ -61,6 +61,10 @@ export class DefinitionTree implements TreeView {
 			this.treeDataProvider.showIndividualTypes = e.newValue;
 			this.treeDataProvider.refresh();
 		});
+
+		mentor.settings.onDidChange("view.activeLanguage", (e) => {
+			this.treeDataProvider.refresh();
+		});
 	}
 
 	private updateView() {

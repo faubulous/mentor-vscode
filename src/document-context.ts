@@ -67,6 +67,16 @@ export abstract class DocumentContext {
 	private _blankNodes: { [key: string]: IToken } = {};
 
 	/**
+	 * The language to be used for the display of labels and descriptions.
+	 */
+	activeLanguage: string = 'en';
+
+	/**
+	 * The fallback language to be used for the display of labels and descriptions
+	 */
+	fallbackLanguage: string = 'en';
+
+	/**
 	 * The predicates to be used for retrieving labels and descriptions for resources.
 	 */
 	readonly predicates = {
@@ -382,25 +392,17 @@ export abstract class DocumentContext {
 				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
 
 				// First, try to find a description in the current graph.
-				for (let p of predicates) {
-					for (let q of mentor.store.match(this.graphs, subject, p, null, false)) {
-						if (q.object.termType === 'Literal') {
-							return q.object.value;
-						} else {
-							return getIriLocalPart(q.object.value);
-						}
-					}
+				let result = this._getResourceLabelFromPredicates(this.graphs, subject, predicates);
+
+				if (result) {
+					return result;
 				}
 
 				// If none is found, try to find a description in the default graph.
-				for (let p of predicates) {
-					for (let q of mentor.store.match(undefined, subject, p, null, false)) {
-						if (q.object.termType === 'Literal') {
-							return q.object.value;
-						} else {
-							return getIriLocalPart(q.object.value);
-						}
-					}
+				result = this._getResourceLabelFromPredicates(undefined, subject, predicates);
+
+				if (result) {
+					return result;
 				}
 
 				// Fallback to URI labels without prefixes.
@@ -420,6 +422,50 @@ export abstract class DocumentContext {
 		}
 
 		return getIriLocalPart(subjectUri);
+	}
+
+	/**
+	 * Get the label of a resource, either in the active document language or in the fallback language.
+	 * @param graphUris URIs of the graphs to query.
+	 * @param subject A subject node.
+	 * @param predicates A list of predicates to reqtrieve the label from.
+	 * @returns The label of the resource as a string literal.
+	 */
+	private _getResourceLabelFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): string | undefined {
+		let preferredLabel: string | null = null;
+		let fallbackLabel: string | null = null;
+
+		for (let p of predicates) {
+			for (let q of mentor.store.match(graphUris, subject, p, null, false)) {
+				if (q.object.termType === 'Literal') {
+					const literal = q.object as n3.Literal;
+
+					// Check if the literal language matches the active language
+					if (literal.language === this.activeLanguage) {
+						return literal.value;
+					}
+
+					// Store the first literal as a fallback
+					if (!fallbackLabel) {
+						fallbackLabel = literal.value;
+					}
+
+					// Store the literal if it matches the default language
+					if (literal.language === this.fallbackLanguage) {
+						preferredLabel = literal.value;
+					}
+				} else {
+					return getIriLocalPart(q.object.value);
+				}
+			}
+		}
+
+		// Return the preferred label if found, otherwise return the fallback label
+		if (preferredLabel) {
+			return preferredLabel;
+		} else if (fallbackLabel) {
+			return fallbackLabel;
+		}
 	}
 
 	/**
@@ -471,20 +517,20 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	 * Get the URI of a resource. Resolves relative file IRIs with regards to the directory of the current document.
-	 * @param subjectUri URI of the resource.
-	 * @returns A URI for the resource as a string literal.
+	 * Get the IRI of a resource. Resolves relative file IRIs with regards to the directory of the current document.
+	 * @param subjectIri IRI of the resource.
+	 * @returns A IRI for the resource as a string literal.
 	 */
-	public getResourceUri(subjectUri: string): string {
+	public getResourceIri(subjectIri: string): string {
 		// TODO: Add support for virtual file systems provided by vscode such as vscode-vfs.
-		if (subjectUri.startsWith('file')) {
-			const u = vscode.Uri.parse(subjectUri);
+		if (subjectIri.startsWith('file')) {
+			const u = vscode.Uri.parse(subjectIri);
 
 			// Resolve relative file IRIs with regards to the directory of the current document.
 			if (u.authority === '..') {
 				// For a file URI the namespace is the directory of the current document.
 				const directory = getNamespaceIri(this.uri.toString());
-				const filePath = subjectUri.split('//')[1];
+				const filePath = subjectIri.split('//')[1];
 				const fileUrl = vscode.Uri.joinPath(vscode.Uri.parse(directory), filePath);
 
 				// Allow navigating to the relative file.
@@ -492,7 +538,7 @@ export abstract class DocumentContext {
 			}
 		}
 
-		return subjectUri;
+		return subjectIri;
 	}
 
 	/**
@@ -504,7 +550,7 @@ export abstract class DocumentContext {
 		let lines = [
 			`**${this.getResourceLabel(subjectUri)}**`,
 			this.getResourceDescription(subjectUri),
-			this.getResourceUri(subjectUri)
+			this.getResourceIri(subjectUri)
 		];
 
 		return new vscode.MarkdownString(lines.filter(line => line).join('\n\n'), true);

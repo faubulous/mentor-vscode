@@ -355,6 +355,13 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e018"
         }
+      },
+      "select-language": {
+        "description": "Select language icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e019"
+        }
       }
     },
     "colors": [
@@ -527,6 +534,11 @@
       {
         "command": "mentor.action.sortPrefixes",
         "title": "Sort prefix definitions"
+      },
+      {
+        "command": "mentor.action.selectActiveLanguage",
+        "title": "Select active document language",
+        "icon": "$(select-language)"
       }
     ],
     "menus": {
@@ -574,6 +586,11 @@
         {
           "command": "mentor.action.hideReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === true",
+          "group": "navigation"
+        },
+        {
+          "command": "mentor.action.selectActiveLanguage",
+          "when": "view == mentor.view.definitionTree",
           "group": "navigation"
         }
       ],
