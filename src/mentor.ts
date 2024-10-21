@@ -223,7 +223,7 @@ class MentorExtension {
 		this.localStorageService.initialize(context.globalState);
 
 		// Initialize the default label rendering style.
-		let defaultStyle = this.configuration.get('treeLabelStyle');
+		let defaultStyle = this.configuration.get('definitionTree.labelStyle');
 
 		switch (defaultStyle) {
 			case 'AnnotatedLabels':

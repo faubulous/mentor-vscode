@@ -63,6 +63,9 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
+### Version 0.2.3: Fixed labels in definition tree
+Fixed a bug where the definition tree would ignore the settings for resource labels and initially only show the URI local part instead of annotated labels.
+
 ### Version 0.2.2: Improved prefix management
 This release adds editor functions to automatically define / implement missing prefix definitions in the document. The namespace IRIs for a prefix are looked up in other documents in the workspace first and if not found, are retreived from a local copy of [prefix.cc](https://prefix.cc). The editor also now highights unused prefix definitions and marks them as inactive similar to the behavior of unused imports in other programming languages. Duplicate prefix defintions are marked as a warning. Also some new refactoring methods for prefixes were added:
 
