@@ -45,11 +45,10 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			return undefined;
 		}
 
-		// const color = new vscode.ThemeColor("disabledForeground");
-		const color = new vscode.ThemeColor("list.warningForeground");
+		const color = new vscode.ThemeColor("disabledForeground");
+		// const color = new vscode.ThemeColor("list.warningForeground");
 		
-		// TODO: Provide a better tooltip.
-		const result = new vscode.FileDecoration("●", "Test", color);
+		const result = new vscode.FileDecoration("●", undefined, color);
 		result.propagate = true;
 
 		return result;

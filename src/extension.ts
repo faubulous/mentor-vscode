@@ -276,40 +276,62 @@ function registerCommands(context: vscode.ExtensionContext) {
 	});
 
 	vscode.commands.registerCommand('mentor.action.selectActiveLanguage', async () => {
-		const activeDocument = vscode.window.activeTextEditor?.document;
+		const document = vscode.window.activeTextEditor?.document;
 
-		if (!activeDocument) {
+		if (!document) {
 			return;
 		}
 
-		const context = mentor.contexts[activeDocument.uri.toString()];
+		const context = mentor.contexts[document.uri.toString()];
 
 		if (!context) {
 			return;
 		}
 
-		const languageStats = mentor.vocabulary.getLanguageStats(context.graphs, undefined);
-
-		// See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DisplayNames
-		const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
-
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.title = 'Select active document language';
-		quickPick.items = Object.keys(languageStats).sort().map((lang) => ({
-			label: lang,
-			description: languageNames.of(lang.toUpperCase())
-		}));
-		quickPick.onDidChangeSelection((selection) => {
-			if (selection.length > 0) {
-				const language = selection[0].label;
-				context.activeLanguage = language;
 
-				// Refresh the tree views..
-				mentor.settings.set('view.activeLanguage', language);
+		const primaryLanguage = mentor.vocabulary.getPrimaryLanguageTag(context.graphs, undefined);
 
-				quickPick.dispose();
-			}
-		});
+		if (!primaryLanguage) {
+			quickPick.items = [{
+				label: 'No language tagged literals found.'
+			}];
+		} else {
+			// Note: We translate the language code into a readable name in the UI language of the editor.
+			const languageNames = new Intl.DisplayNames([vscode.env.language], { type: 'language' });
+
+			const languageStats = mentor.vocabulary.getLanguageStats(context.graphs, undefined);
+
+			// Calculate the number of language tagged literals in the primary language.
+			const maxCount = primaryLanguage ? languageStats[primaryLanguage] || 0 : 0;
+
+			quickPick.items = Object.keys(languageStats)
+				.map(key => ({ lang: key, count: languageStats[key] }))
+				.sort((a, b) => b.count - a.count)
+				.map((x) => {
+					const coverage = maxCount > 0 ? (x.count / maxCount) * 100 : 0;
+					const coverageDescription = primaryLanguage ? coverage.toFixed(0) + '%' : '';
+
+					return {
+						label: x.lang,
+						description: `${languageNames.of(x.lang.toUpperCase())} - ${coverageDescription}`
+					};
+				});
+
+			quickPick.onDidChangeSelection((selection) => {
+				if (selection.length > 0) {
+					const language = selection[0].label;
+					context.activeLanguage = language;
+
+					// Refresh the tree views..
+					mentor.settings.set('view.activeLanguage', language);
+
+					quickPick.dispose();
+				}
+			});
+		}
+
 		quickPick.show();
 	});
 }
