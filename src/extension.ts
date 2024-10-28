@@ -313,6 +313,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 					const coverage = maxCount > 0 ? (x.count / maxCount) * 100 : 0;
 					const coverageDescription = primaryLanguage ? coverage.toFixed(0) + '%' : '';
 
+					// TODO: Add a tooltip explaining the coverage percentage.
 					return {
 						label: x.lang,
 						description: `${languageNames.of(x.lang.toUpperCase())} - ${coverageDescription}`

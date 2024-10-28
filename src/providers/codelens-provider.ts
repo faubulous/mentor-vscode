@@ -97,7 +97,7 @@ export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLe
 
 				result.push(new vscode.CodeLens(range, {
 					command: 'mentor.action.findReferences',
-					title: n + ' references',
+					title: n + ' usages',
 					arguments: [uri]
 				}));
 			}

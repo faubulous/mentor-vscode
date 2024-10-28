@@ -48,7 +48,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		const color = new vscode.ThemeColor("disabledForeground");
 		// const color = new vscode.ThemeColor("list.warningForeground");
 		
-		const result = new vscode.FileDecoration("●", undefined, color);
+		const result = new vscode.FileDecoration(undefined, undefined, color);
 		result.propagate = true;
 
 		return result;

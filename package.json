@@ -581,17 +581,17 @@
         {
           "command": "mentor.action.showReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === false",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "mentor.action.hideReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === true",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "mentor.action.selectActiveLanguage",
           "when": "view == mentor.view.definitionTree",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
