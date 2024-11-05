@@ -5,7 +5,6 @@ import { Disposable } from 'vscode-languageclient';
 import { TreeView } from './views/tree-view';
 import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
-import { DefinitionNodeDecorationProvider } from './views/definition-node-decoration-provider';
 import { ResourceNode } from './views/nodes/resource-node';
 import { getIriFromNodeId, getTokenPosition } from './utilities';
 import { DefinitionProvider } from './providers';
@@ -286,14 +285,15 @@ function registerCommands(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		const quickPick = vscode.window.createQuickPick();
+		const quickPick = vscode.window.createQuickPick<LanguageQuckPickItem>();
 		quickPick.title = 'Select active document language';
 
 		const languageStats = mentor.vocabulary.getLanguageStats(context.graphs, undefined);
 
 		if (languageStats.length === 0) {
 			quickPick.items = [{
-				label: 'No language tagged literals found.'
+				label: 'No language tagged literals found.',
+				language: undefined
 			}];
 		} else {
 			// Note: We translate the language code into a readable name in the UI language of the editor.
@@ -309,6 +309,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 				// cases there are only a few language tagged literals. In these cases the percentage
 				// would be 0% and thus be confusing.
 				return {
+					language: x.language,
 					label: `${x.language} - ${languageNames.of(x.language.toUpperCase())}`,
 					// TODO: Improve the calculation of the percentage relative to the number of language tagged literals with the same predicate.
 					// description: `${x.totalCount} total ∙ ${coverage.toFixed(2)}%`,
@@ -317,7 +318,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 			quickPick.onDidChangeSelection((selection) => {
 				if (selection.length > 0) {
-					const language = selection[0].label;
+					const language = selection[0].language;
 					context.activeLanguage = language;
 
 					// Refresh the tree views..
@@ -330,4 +331,11 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 		quickPick.show();
 	});
+}
+
+interface LanguageQuckPickItem extends vscode.QuickPickItem {
+	/**
+	 * The language code.
+	 */
+	language: string | undefined;
 }

@@ -57,8 +57,6 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 						continue;
 					}
 
-					console.log(tokenName);
-
 					switch (tokenName) {
 						case 'A':
 						case 'ADD':

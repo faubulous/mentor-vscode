@@ -8,6 +8,8 @@ export class ValidatorNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "Validators";
+
 	override getIcon() {
 		if (this.uri) {
 			// Return the ref class icon if target cannot be found.
@@ -17,18 +19,6 @@ export class ValidatorNode extends ResourceNode {
 
 	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
-	}
-
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "Validators"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
 	}
 
 	override getDescription(): string {

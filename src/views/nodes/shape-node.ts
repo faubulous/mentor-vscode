@@ -11,6 +11,8 @@ export class ShapeNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "Shapes";
+
 	override getIcon() {
 		if (this.uri) {
 			// TODO: Fix #10 in mentor-rdf
@@ -42,18 +44,6 @@ export class ShapeNode extends ResourceNode {
 
 	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
-	}
-
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "Shapes"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
 	}
 
 	override getDescription(): string {

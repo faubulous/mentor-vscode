@@ -33,8 +33,12 @@ export class DefinitionTree implements TreeView {
 		});
 
 		this.updateView();
+		this.updateViewTitle();
 
-		mentor.onDidChangeVocabularyContext(() => this.updateView());
+		mentor.onDidChangeVocabularyContext(() => {
+			this.updateView();
+			this.updateViewTitle();
+		});
 
 		vscode.commands.executeCommand("setContext", "view.showReferences", this.treeDataProvider.showReferences);
 
@@ -63,7 +67,10 @@ export class DefinitionTree implements TreeView {
 			this.treeDataProvider.refresh();
 		});
 
+		// Update the view and the title when the active language changes.
 		mentor.settings.onDidChange("view.activeLanguage", (e) => {
+			this.updateViewTitle();
+
 			this.treeDataProvider.refresh();
 		});
 
@@ -90,11 +97,30 @@ export class DefinitionTree implements TreeView {
 		});
 	}
 
+	/**
+	 * Shows a message in the tree view if no file is selected.
+	 */
 	private updateView() {
 		if (!mentor.activeContext) {
 			this.treeView.message = "No file selected.";
 		} else {
 			this.treeView.message = undefined;
+		}
+	}
+
+	/**
+	 * Update the title of the tree view to include the active language.
+	 */
+	private updateViewTitle() {
+		if (mentor.activeContext) {
+			const title = this.treeView.title?.split(' - ')[0];
+			const language = mentor.activeContext.activeLanguage;
+
+			if(language) {
+				this.treeView.title = `${title} - ${language}`;
+			} else {
+				this.treeView.title = title;
+			}
 		}
 	}
 }

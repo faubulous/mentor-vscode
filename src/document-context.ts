@@ -1,4 +1,5 @@
 import * as n3 from 'n3';
+import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
 import { mentor } from './mentor';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh, LanguageTagInfo } from '@faubulous/mentor-rdf';
@@ -12,6 +13,21 @@ import {
 	getNamespaceDefinition,
 	getNamespaceIri
 } from './utilities';
+
+/**
+ * A literal value with an optional language tag.
+ */
+export interface LanguageTaggedLiteral {
+	/*
+	 * The value of the literal.
+	 */
+	value: string;
+
+	/*
+	 * The language tag of the literal.
+	 */
+	language: string | undefined;
+}
 
 /**
  * A map of token type names specific for the document language.
@@ -383,14 +399,17 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A label for the resource as a string literal.
 	 */
-	public getResourceLabel(subjectUri: string): string {
+	public getResourceLabel(subjectUri: string): LanguageTaggedLiteral {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 
 		// TODO: Add config option to enable/disable SHACL path labels.
 		// If the node has a SHACL path, use it as the label.
 		for (let q of mentor.store.match(this.graphs, subject, sh.path, null, false)) {
-			return this.getPropertyPathLabel(q.object as n3.Quad_Subject);
+			return {
+				value: this.getPropertyPathLabel(q.object as n3.Quad_Subject),
+				language: undefined
+			};
 		}
 
 		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
@@ -425,11 +444,17 @@ export abstract class DocumentContext {
 					break;
 				}
 
-				return `${prefix}:${getIriLocalPart(subjectUri)}`;
+				return {
+					value: `${prefix}:${getIriLocalPart(subjectUri)}`,
+					language: undefined
+				};
 			}
 		}
 
-		return getIriLocalPart(subjectUri);
+		return {
+			value: getIriLocalPart(subjectUri),
+			language: undefined
+		};
 	}
 
 	/**
@@ -439,9 +464,9 @@ export abstract class DocumentContext {
 	 * @param predicates A list of predicates to reqtrieve the label from.
 	 * @returns The label of the resource as a string literal.
 	 */
-	private _getResourceLabelFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): string | undefined {
-		let preferredLabel: string | null = null;
-		let fallbackLabel: string | null = null;
+	private _getResourceLabelFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): LanguageTaggedLiteral | undefined {
+		let preferredLabel: rdfjs.Literal | null = null;
+		let fallbackLabel: rdfjs.Literal | null = null;
 
 		for (let p of predicates) {
 			for (let q of mentor.store.match(graphUris, subject, p, null, false)) {
@@ -450,20 +475,23 @@ export abstract class DocumentContext {
 
 					// Check if the literal language matches the active language
 					if (literal.language === this.activeLanguage) {
-						return literal.value;
+						return literal;
 					}
 
 					// Store the first literal as a fallback
 					if (!fallbackLabel) {
-						fallbackLabel = literal.value;
+						fallbackLabel = literal;
 					}
 
 					// Store the literal if it matches the primary language
 					if (literal.language === this.primaryLanguage) {
-						preferredLabel = literal.value;
+						preferredLabel = literal;
 					}
 				} else {
-					return getIriLocalPart(q.object.value);
+					return {
+						value: getIriLocalPart(q.object.value),
+						language: undefined
+					};
 				}
 			}
 		}
@@ -492,7 +520,7 @@ export abstract class DocumentContext {
 					result.push(c);
 				}
 			} else {
-				result.push(this.getResourceLabel(c.value));
+				result.push(this.getResourceLabel(c.value).value);
 			}
 		}
 
@@ -556,7 +584,7 @@ export abstract class DocumentContext {
 	 */
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		let lines = [
-			`**${this.getResourceLabel(subjectUri)}**`,
+			`**${this.getResourceLabel(subjectUri).value}**`,
 			this.getResourceDescription(subjectUri),
 			this.getResourceIri(subjectUri)
 		];

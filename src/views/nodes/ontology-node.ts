@@ -8,6 +8,8 @@ export class OntologyNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "unknown";
+
 	isReferenced = false;
 
 	override getIcon() {
@@ -20,18 +22,6 @@ export class OntologyNode extends ResourceNode {
 
 	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
-	}
-
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "unknown"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
 	}
 
 	override getDescription(): string {

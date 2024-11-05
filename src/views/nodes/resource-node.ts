@@ -11,6 +11,11 @@ export class ResourceNode implements DefinitionTreeNode {
 	// TODO: Fix #10 in mentor-rdf; Make this a rdfjs.Quad_Subject instead of string.
 	uri: string | undefined;
 
+	/**
+	 * The default label of the tree item if the `uri` property is undefined.
+	 */
+	defaultLabel: string | undefined;
+
 	document: DocumentContext;
 
 	contextType?: string;
@@ -46,23 +51,31 @@ export class ResourceNode implements DefinitionTreeNode {
 	 * @returns The label of the tree item.
 	 */
 	getLabel(): vscode.TreeItemLabel {
+		let label: string;
+
 		if (this.uri) {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
+			label = this.document.getResourceLabel(this.uri).value;
 		} else {
-			return {
-				label: this.id
-			}
+			label = this.defaultLabel ?? this.id;
 		}
+
+		return { label }
 	}
 
 	/**
 	 * Get the description of the tree item.
 	 * @returns A description string or undefined if no description should be shown.
 	 */
-	getDescription(): string | undefined {
-		return undefined;
+	getDescription(): string {
+		if (this.uri) {
+			const label = this.document.getResourceLabel(this.uri);
+
+			if (label.language && label.language !== this.document.activeLanguage) {
+				return "@" + label.language;
+			}
+		}
+
+		return "";
 	}
 
 	/**

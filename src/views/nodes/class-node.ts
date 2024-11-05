@@ -8,6 +8,8 @@ export class ClassNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "Classes";
+
 	override getIcon() {
 		return ClassNode.getIcon(this.document.graphs, this.uri);
 	}
@@ -36,20 +38,8 @@ export class ClassNode extends ResourceNode {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "Classes"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
-	}
-
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			result += " " + mentor.vocabulary.getClasses(this.document.graphs, this.options).length.toString();
