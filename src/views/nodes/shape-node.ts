@@ -47,7 +47,7 @@ export class ShapeNode extends ResourceNode {
 	}
 
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			result += " " + mentor.vocabulary.getShapes(this.document.graphs, undefined, { includeBlankNodes: true }).length.toString();

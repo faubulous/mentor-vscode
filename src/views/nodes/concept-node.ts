@@ -18,11 +18,15 @@ export class ConceptNode extends ResourceNode {
 		return new vscode.ThemeColor("mentor.color.concept");
 	}
 
-	override getDescription(): string | undefined {
+	override getDescription(): string {
+		let result = super.getDescription();
+
 		if (!this.uri) {
 			const members = mentor.vocabulary.getConcepts(this.document.graphs);
 
-			return " " + members.length.toString();
+			result += " " + members.length.toString();
 		}
+
+		return result;
 	}
 }

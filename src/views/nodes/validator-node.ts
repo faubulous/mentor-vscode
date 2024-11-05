@@ -22,7 +22,7 @@ export class ValidatorNode extends ResourceNode {
 	}
 
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			result += " " + mentor.vocabulary.getValidators(this.document.graphs).length.toString();

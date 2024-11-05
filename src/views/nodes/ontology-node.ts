@@ -25,13 +25,13 @@ export class OntologyNode extends ResourceNode {
 	}
 
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (this.uri) {
 			const version = mentor.vocabulary.getOntologyVersionInfo(this.document.graphs, this.uri);
 
 			if (version) {
-				result += version;
+				result += " " + version;
 			}
 		}
 

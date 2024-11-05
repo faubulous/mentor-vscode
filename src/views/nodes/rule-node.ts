@@ -22,7 +22,7 @@ export class RuleNode extends ResourceNode {
 	}
 
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			result += " " + mentor.vocabulary.getRules(this.document.graphs).length.toString();

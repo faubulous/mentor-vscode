@@ -134,7 +134,7 @@ export class PropertyNode extends ResourceNode {
 	}
 
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			const properties = mentor.vocabulary.getProperties(this.document.graphs, this.options);

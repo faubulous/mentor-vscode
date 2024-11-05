@@ -21,7 +21,7 @@ export class IndividualNode extends ResourceNode {
 	}
 
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			result += " " + mentor.vocabulary.getIndividuals(this.document.graphs, undefined, this.options).length.toString();
