@@ -3,6 +3,7 @@ import { mentor } from '../mentor'
 import { TreeView } from './tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';
+import { DefinitionNodeDecorationProvider } from './definition-node-decoration-provider';
 
 /**
  * Provides a combined explorer for classes, properties and individuals.
@@ -64,6 +65,28 @@ export class DefinitionTree implements TreeView {
 
 		mentor.settings.onDidChange("view.activeLanguage", (e) => {
 			this.treeDataProvider.refresh();
+		});
+
+		// An experimental decoration provider that highlights missing language tags.
+		let disposable: vscode.Disposable | undefined;
+		const decorationProvider = new DefinitionNodeDecorationProvider();
+
+		// If the configuration is set to decorate missing language tags, register the decoration provider.
+		if (mentor.configuration.get('definitionTree.decorateMissingLanguageTags')) {
+			disposable = vscode.window.registerFileDecorationProvider(decorationProvider);
+		}
+
+		// If the configuration for decorating missing language tags changes, update the decoration provider.
+		vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('mentor.definitionTree.decorateMissingLanguageTags')) {
+				const enabled = mentor.configuration.get('definitionTree.decorateMissingLanguageTags');
+
+				if (enabled) {
+					disposable = vscode.window.registerFileDecorationProvider(decorationProvider);
+				} else if (disposable) {
+					disposable.dispose();
+				}
+			}
 		});
 	}
 

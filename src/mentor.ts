@@ -208,6 +208,10 @@ class MentorExtension {
 		// Compute the inference graph on the document to simplify querying.
 		await context.infer();
 
+		// Set the language tag statistics for the document, needed for rendering multi-language labels.
+		context.languageStats = this.vocabulary.getLanguageStats(context.graphs, undefined);
+		context.activeLanguage = context.languageStats[0]?.language;
+
 		this.contexts[uri] = context;
 		this.activeContext = context;
 

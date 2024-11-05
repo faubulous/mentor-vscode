@@ -36,7 +36,6 @@
   ],
   "icon": "media/icons/mentor.png",
   "version": "0.2.3",
-  "preview": true,
   "publisher": "faubulous",
   "private": false,
   "license": "GPL",
@@ -537,7 +536,7 @@
       },
       {
         "command": "mentor.action.selectActiveLanguage",
-        "title": "Select active document language",
+        "title": "Select Active Language",
         "icon": "$(select-language)"
       }
     ],
@@ -581,17 +580,17 @@
         {
           "command": "mentor.action.showReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === false",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "mentor.action.hideReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === true",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "mentor.action.selectActiveLanguage",
           "when": "view == mentor.view.definitionTree",
-          "group": "navigation@2"
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
@@ -685,6 +684,15 @@
               "Group classes, properties and invdividuals in the definitions tree under seperate nodes for each ontology or concept scheme."
             ],
             "default": "GroupBySource"
+          },
+          "mentor.definitionTree.decorateMissingLanguageTags": {
+            "type": "boolean",
+            "title": "Decorate Missing Language Tags",
+            "description": "If enabled, all terms that do not have a value which is tagged in the currently selected language will be greyed out.",
+            "default": false,
+            "tags": [
+              "experimental"
+            ]
           },
           "mentor.internalBrowserEnabled": {
             "type": "boolean",

@@ -1,7 +1,7 @@
 import * as n3 from 'n3';
 import * as vscode from 'vscode';
 import { mentor } from './mentor';
-import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh, LanguageTagInfo } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { TreeLabelStyle } from './settings';
 import {
@@ -67,21 +67,29 @@ export abstract class DocumentContext {
 	private _blankNodes: { [key: string]: IToken } = {};
 
 	/**
-	 * The language to be used for the display of labels and descriptions.
+	 * Information about the language tags used in the document.
 	 */
-	activeLanguage: string = 'en';
+	languageStats: LanguageTagInfo[] = [];
 
 	/**
-	 * The fallback language to be used for the display of labels and descriptions
+	 * The most often used language tag in the document.
 	 */
-	fallbackLanguage: string = 'en';
+	get primaryLanguage(): string | undefined {
+		return this.languageStats.length > 0 ? this.languageStats[0].language : undefined;
+	}
+
+	/**
+	 * The language tag of the user-selected display document language. This value can be 
+	 * used to restore the user's selection when switching between documents.
+	 */
+	activeLanguage: string | undefined;
 
 	/**
 	 * The predicates to be used for retrieving labels and descriptions for resources.
 	 */
 	readonly predicates = {
-		label: [],
-		description: []
+		label: [] as string[],
+		description: [] as string[]
 	};
 
 	constructor(documentUri: vscode.Uri) {
@@ -425,7 +433,7 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	 * Get the label of a resource, either in the active document language or in the fallback language.
+	 * Get the label of a resource, either in the active document language or in the primary language.
 	 * @param graphUris URIs of the graphs to query.
 	 * @param subject A subject node.
 	 * @param predicates A list of predicates to reqtrieve the label from.
@@ -450,8 +458,8 @@ export abstract class DocumentContext {
 						fallbackLabel = literal.value;
 					}
 
-					// Store the literal if it matches the default language
-					if (literal.language === this.fallbackLanguage) {
+					// Store the literal if it matches the primary language
+					if (literal.language === this.primaryLanguage) {
 						preferredLabel = literal.value;
 					}
 				} else {

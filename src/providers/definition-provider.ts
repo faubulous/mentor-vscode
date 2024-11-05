@@ -33,7 +33,7 @@ export class DefinitionProvider extends FeatureProvider {
 			return null;
 		}
 
-		// TODO: Search for definitions in this context and then the other documents.
+		// TODO: Search for definitions in this context and then the other documents. Currently it only provides definitions from the primary document.
 		return this.provideDefintionForUri(context, u);
 	}
 
