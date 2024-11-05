@@ -57,6 +57,8 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 						continue;
 					}
 
+					console.log(tokenName);
+
 					switch (tokenName) {
 						case 'A':
 						case 'ADD':
@@ -78,6 +80,7 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 						case 'DESCRIBE':
 						case 'DISTINCT':
 						case 'DROP':
+						case 'EXISTS':
 						case 'EXPLICIT':
 						case 'FILTER':
 						case 'FROM':
@@ -93,6 +96,7 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 						case 'MOVE':
 						case 'NAMED':
 						case 'NOT':
+						case 'NOT_EXISTS':
 						case 'OFFSET':
 						case 'OPTIONAL':
 						case 'ORDER':

@@ -633,19 +633,24 @@
     },
     "configurationDefaults": {
       "[sparql]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       },
       "[turtle]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       },
       "[trig]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       },
       "[ntriples]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       },
       "[nquads]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       }
     },
     "configuration": [
