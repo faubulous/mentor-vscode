@@ -40,6 +40,11 @@ export class DefinitionTree implements TreeView {
 			this.updateViewTitle();
 		});
 
+		vscode.commands.registerCommand('mentor.action.refreshDefinitionsTree', async () => {
+			this.updateView();
+			this.updateViewTitle();
+		});
+
 		vscode.commands.executeCommand("setContext", "view.showReferences", this.treeDataProvider.showReferences);
 
 		mentor.settings.onDidChange("view.showReferences", (e) => {

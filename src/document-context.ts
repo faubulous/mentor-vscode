@@ -2,7 +2,8 @@ import * as n3 from 'n3';
 import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
 import { mentor } from './mentor';
-import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh, LanguageTagInfo } from '@faubulous/mentor-rdf';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
+import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { TreeLabelStyle } from './settings';
 import {
@@ -15,16 +16,16 @@ import {
 } from './utilities';
 
 /**
- * A literal value with an optional language tag.
+ * A literal value with optional language tag.
  */
-export interface LanguageTaggedLiteral {
-	/*
+export interface Label {
+	/**
 	 * The value of the literal.
 	 */
 	value: string;
 
-	/*
-	 * The language tag of the literal.
+	/**
+	 * The language tag of the literal, if any.
 	 */
 	language: string | undefined;
 }
@@ -85,13 +86,43 @@ export abstract class DocumentContext {
 	/**
 	 * Information about the language tags used in the document.
 	 */
-	languageStats: LanguageTagInfo[] = [];
+	predicateStats: PredicateUsageStats = {};
+
+	private _primaryLanguage: string | undefined | null = null;
 
 	/**
 	 * The most often used language tag in the document.
 	 */
 	get primaryLanguage(): string | undefined {
-		return this.languageStats.length > 0 ? this.languageStats[0].language : undefined;
+		if (this._primaryLanguage === null && this.predicateStats) {
+			let languageStats: LanguageTagUsageStats = {};
+
+			for (let [_, value] of Object.entries(this.predicateStats)) {
+				for (let [lang, count] of Object.entries(value.languageTags)) {
+					if (!languageStats[lang]) {
+						languageStats[lang] = count;
+					} else {
+						languageStats[lang] += count;
+					}
+				}
+			}
+
+			let maxFrequency = -1;
+
+			this._primaryLanguage = undefined;
+	
+			for (let [lang, frequency] of Object.entries(languageStats)) {
+				console.log(lang, frequency);
+
+				if (frequency > maxFrequency) {
+					maxFrequency = frequency;
+
+					this._primaryLanguage = lang;
+				}
+			}
+		}
+
+		return this._primaryLanguage ?? undefined;
 	}
 
 	/**
@@ -399,7 +430,7 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A label for the resource as a string literal.
 	 */
-	public getResourceLabel(subjectUri: string): LanguageTaggedLiteral {
+	public getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 
@@ -464,7 +495,7 @@ export abstract class DocumentContext {
 	 * @param predicates A list of predicates to reqtrieve the label from.
 	 * @returns The label of the resource as a string literal.
 	 */
-	private _getResourceLabelFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): LanguageTaggedLiteral | undefined {
+	private _getResourceLabelFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): Label | undefined {
 		let preferredLabel: rdfjs.Literal | null = null;
 		let fallbackLabel: rdfjs.Literal | null = null;
 

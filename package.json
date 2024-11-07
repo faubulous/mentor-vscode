@@ -84,7 +84,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.48",
+    "@faubulous/mentor-rdf": "^0.2.49",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -493,6 +493,11 @@
         "title": "Group by Source of Definition"
       },
       {
+        "command": "mentor.action.refreshDefinitionsTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "mentor.action.showReferences",
         "title": "Show Referenced Resources",
         "icon": "$(rdf-class)"
@@ -580,17 +585,22 @@
         {
           "command": "mentor.action.showReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === false",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
           "command": "mentor.action.hideReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === true",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
           "command": "mentor.action.selectActiveLanguage",
           "when": "view == mentor.view.definitionTree",
-          "group": "navigation@1"
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.action.refreshDefinitionsTree",
+          "when": "view == mentor.view.definitionTree",
+          "group": "navigation@99"
         }
       ],
       "view/item/context": [

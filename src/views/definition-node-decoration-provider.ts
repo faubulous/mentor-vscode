@@ -34,7 +34,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
 		const context = mentor.activeContext;
 
-		if (!context || !context.languageStats || !context.primaryLanguage) {
+		if (!context || !context.primaryLanguage) {
 			// Note: The document may not have a language set if there are no language tags used in the document.
 			return undefined;
 		}
@@ -56,7 +56,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			}
 		}
 
-		const result = new vscode.FileDecoration(context.primaryLanguage, undefined, this._disabledColor);
+		const result = new vscode.FileDecoration(undefined, undefined, this._disabledColor);
 		result.propagate = true;
 		result.tooltip = `This definition is not available in the active language @${activeLanguage}.`;
 

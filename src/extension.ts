@@ -207,7 +207,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.workspaceIndexer.indexWorkspace(true);
 	}));
 
-	vscode.commands.registerCommand('mentor.action.sortPrefixes', async (documentUri: vscode.Uri) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.sortPrefixes', async (documentUri: vscode.Uri) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
@@ -217,9 +217,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				await vscode.workspace.applyEdit(edit);
 			}
 		}
-	});
+	}));
 
-	vscode.commands.registerCommand('mentor.action.implementPrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.implementPrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
@@ -229,9 +229,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				await vscode.workspace.applyEdit(edit);
 			}
 		}
-	});
+	}));
 
-	vscode.commands.registerCommand('mentor.action.implementPrefixForIri', async (documentUri: vscode.Uri, namespaceIri: string, token: IToken) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.implementPrefixForIri', async (documentUri: vscode.Uri, namespaceIri: string, token: IToken) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
@@ -258,9 +258,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				}
 			}
 		}
-	});
+	}));
 
-	vscode.commands.registerCommand('mentor.action.deletePrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
@@ -270,9 +270,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				await vscode.workspace.applyEdit(edit);
 			}
 		}
-	});
+	}));
 
-	vscode.commands.registerCommand('mentor.action.selectActiveLanguage', async () => {
+	commands.push(vscode.commands.registerCommand('mentor.action.selectActiveLanguage', async () => {
 		const document = vscode.window.activeTextEditor?.document;
 
 		if (!document) {
@@ -288,29 +288,29 @@ function registerCommands(context: vscode.ExtensionContext) {
 		const quickPick = vscode.window.createQuickPick<LanguageQuckPickItem>();
 		quickPick.title = 'Select active document language';
 
-		const languageStats = mentor.vocabulary.getLanguageStats(context.graphs, undefined);
-
-		if (languageStats.length === 0) {
+		if (!context.primaryLanguage) {
 			quickPick.items = [{
 				label: 'No language tagged literals found.',
 				language: undefined
 			}];
 		} else {
+			const languageStats = mentor.vocabulary.getLanguageTagUsageStats(context.graphs);
+
 			// Note: We translate the language code into a readable name in the UI language of the editor.
 			const languageNames = new Intl.DisplayNames([vscode.env.language], { type: 'language' });
 
 			// Calculate the number of language tagged literals in the primary language.
-			const maxCount = languageStats[0].totalCount;
+			const maxCount = languageStats[context.primaryLanguage] ?? 0;
 
-			quickPick.items = languageStats.map((x) => {
-				const coverage = (maxCount > 0 ? (x.totalCount / maxCount) * 100 : 0);
+			quickPick.items = Object.entries(languageStats).map(([l, count]) => {
+				const coverage = (maxCount > 0 ? (count / maxCount) * 100 : 0);
 
 				// Note: The percentage is to a precision of two decimal places because in many 
 				// cases there are only a few language tagged literals. In these cases the percentage
 				// would be 0% and thus be confusing.
 				return {
-					language: x.language,
-					label: `${x.language} - ${languageNames.of(x.language.toUpperCase())}`,
+					language: l,
+					label: `${l} - ${languageNames.of(l.toUpperCase())}`,
 					// TODO: Improve the calculation of the percentage relative to the number of language tagged literals with the same predicate.
 					// description: `${x.totalCount} total ∙ ${coverage.toFixed(2)}%`,
 				};
@@ -330,7 +330,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 		}
 
 		quickPick.show();
-	});
+	}));
 }
 
 interface LanguageQuckPickItem extends vscode.QuickPickItem {
