@@ -125,11 +125,35 @@ export abstract class DocumentContext {
 		return this._primaryLanguage ?? undefined;
 	}
 
+	private _activeLanguageTag: string | undefined;
+
 	/**
-	 * The language tag of the user-selected display document language. This value can be 
-	 * used to restore the user's selection when switching between documents.
+	 * The ISO 639-3 language tag of the user-selected display document language. This value
+	 * can be used to restore the user's selection when switching between documents.
 	 */
-	activeLanguage: string | undefined;
+	get activeLanguageTag(): string | undefined {
+		return this._activeLanguageTag;
+	}
+
+	set activeLanguageTag(value: string | undefined) {
+		this._activeLanguageTag = value;
+
+		if(value) {
+			this._activeLanguage = value.split('-')[0];
+		} else {
+			this._activeLanguage = undefined;
+		}
+	}
+
+	private _activeLanguage: string | undefined;
+
+	/**
+	 * The language portion of the active ISO 639-3 language tag without the regional part.
+	 * e.g. 'en' for the language tags 'en' or 'en-gb'.
+	 */
+	get activeLanguage(): string | undefined {
+		return this._activeLanguage;
+	}
 
 	/**
 	 * The predicates to be used for retrieving labels and descriptions for resources.
@@ -450,14 +474,14 @@ export abstract class DocumentContext {
 				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
 
 				// First, try to find a description in the current graph.
-				let result = this._getResourceLabelFromPredicates(this.graphs, subject, predicates);
+				let result = this._getResourceAnnotationFromPredicates(this.graphs, subject, predicates);
 
 				if (result) {
 					return result;
 				}
 
 				// If none is found, try to find a description in the default graph.
-				result = this._getResourceLabelFromPredicates(undefined, subject, predicates);
+				result = this._getResourceAnnotationFromPredicates(undefined, subject, predicates);
 
 				if (result) {
 					return result;
@@ -489,15 +513,16 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	 * Get the label of a resource, either in the active document language or in the primary language.
+	 * Get an annotation to a resource from a list of predicates. Either in the active document language or in the primary language.
 	 * @param graphUris URIs of the graphs to query.
 	 * @param subject A subject node.
 	 * @param predicates A list of predicates to reqtrieve the label from.
 	 * @returns The label of the resource as a string literal.
 	 */
-	private _getResourceLabelFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): Label | undefined {
-		let preferredLabel: rdfjs.Literal | null = null;
-		let fallbackLabel: rdfjs.Literal | null = null;
+	private _getResourceAnnotationFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): Label | undefined {
+		let languageLabel: rdfjs.Literal | undefined = undefined;
+		let primaryLabel: rdfjs.Literal | undefined = undefined;
+		let fallbackLabel: rdfjs.Literal | undefined = undefined;
 
 		for (let p of predicates) {
 			for (let q of mentor.store.match(graphUris, subject, p, null, false)) {
@@ -505,18 +530,23 @@ export abstract class DocumentContext {
 					const literal = q.object as n3.Literal;
 
 					// Check if the literal language matches the active language
-					if (literal.language === this.activeLanguage) {
+					if (literal.language === this.activeLanguageTag) {
 						return literal;
 					}
 
-					// Store the first literal as a fallback
-					if (!fallbackLabel) {
-						fallbackLabel = literal;
+					// Store the literal if it matches the active language without the regional part.
+					if(this.activeLanguage && literal.language.startsWith(this.activeLanguage)) {
+						languageLabel = literal;
 					}
 
 					// Store the literal if it matches the primary language
-					if (literal.language === this.primaryLanguage) {
-						preferredLabel = literal;
+					if (this.primaryLanguage === literal.language) {
+						primaryLabel = literal;
+					}
+
+					// Store the first literal as a fallback value.
+					if (!fallbackLabel) {
+						fallbackLabel = literal;
 					}
 				} else {
 					return {
@@ -527,12 +557,10 @@ export abstract class DocumentContext {
 			}
 		}
 
-		// Return the preferred label if found, otherwise return the fallback label
-		if (preferredLabel) {
-			return preferredLabel;
-		} else if (fallbackLabel) {
-			return fallbackLabel;
-		}
+		if (languageLabel) return languageLabel;
+		if (primaryLabel) return primaryLabel;
+		
+		return fallbackLabel;
 	}
 
 	/**
@@ -563,24 +591,19 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A description for the resource as a string literal.
 	 */
-	public getResourceDescription(subjectUri: string): string | undefined {
+	public getResourceDescription(subjectUri: string): Label | undefined {
 		// TODO: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
 
 		// First, try to find a description in the current graph.
-		for (let p of predicates) {
-			for (let q of mentor.store.match(this.graphs, subject, p, null, false)) {
-				return q.object.value;
-			}
+		let result = this._getResourceAnnotationFromPredicates(this.graphs, subject, predicates);
+
+		if(result) {
+			return result;
 		}
 
-		// If none is found, try to find a description in the default graph.
-		for (let p of predicates) {
-			for (let q of mentor.store.match(undefined, subject, p, null, false)) {
-				return q.object.value;
-			}
-		}
+		return this._getResourceAnnotationFromPredicates(undefined, subject, predicates);
 	}
 
 	/**
@@ -616,7 +639,7 @@ export abstract class DocumentContext {
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		let lines = [
 			`**${this.getResourceLabel(subjectUri).value}**`,
-			this.getResourceDescription(subjectUri),
+			this.getResourceDescription(subjectUri)?.value,
 			this.getResourceIri(subjectUri)
 		];
 

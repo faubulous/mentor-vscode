@@ -67,15 +67,25 @@ export class ResourceNode implements DefinitionTreeNode {
 	 * @returns A description string or undefined if no description should be shown.
 	 */
 	getDescription(): string {
-		if (this.uri) {
-			const label = this.document.getResourceLabel(this.uri);
-
-			if (label.language && label.language !== this.document.activeLanguage) {
-				return "@" + label.language;
-			}
+		if (!this.uri) {
+			return "";
 		}
 
-		return "";
+		const label = this.document.getResourceLabel(this.uri);
+		const activeLanguageTag = this.document.activeLanguageTag;
+		const activeLanguage = this.document.activeLanguage;
+
+		if (!label.language || !activeLanguageTag || !activeLanguage) {
+			return "";
+		}
+
+		// We return the language tag as a description if it differs from the active language,
+		// or if the selected language tag is non-regional but the returned label is.
+		if (!label.language.startsWith(activeLanguage) || label.language.length > activeLanguageTag.length) {
+			return "@" + label.language;
+		} else {
+			return "";
+		}
 	}
 
 	/**

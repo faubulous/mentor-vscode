@@ -79,27 +79,8 @@ export class DefinitionTree implements TreeView {
 			this.treeDataProvider.refresh();
 		});
 
-		// An experimental decoration provider that highlights missing language tags.
-		let disposable: vscode.Disposable | undefined;
-		const decorationProvider = new DefinitionNodeDecorationProvider();
-
-		// If the configuration is set to decorate missing language tags, register the decoration provider.
-		if (mentor.configuration.get('definitionTree.decorateMissingLanguageTags')) {
-			disposable = vscode.window.registerFileDecorationProvider(decorationProvider);
-		}
-
-		// If the configuration for decorating missing language tags changes, update the decoration provider.
-		vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('mentor.definitionTree.decorateMissingLanguageTags')) {
-				const enabled = mentor.configuration.get('definitionTree.decorateMissingLanguageTags');
-
-				if (enabled) {
-					disposable = vscode.window.registerFileDecorationProvider(decorationProvider);
-				} else if (disposable) {
-					disposable.dispose();
-				}
-			}
-		});
+		// Support for decorating missing language tags through a file decoration provider.
+		vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider());
 	}
 
 	/**
@@ -119,9 +100,9 @@ export class DefinitionTree implements TreeView {
 	private updateViewTitle() {
 		if (mentor.activeContext) {
 			const title = this.treeView.title?.split(' - ')[0];
-			const language = mentor.activeContext.activeLanguage;
+			const language = mentor.activeContext.activeLanguageTag;
 
-			if(language) {
+			if (language) {
 				this.treeView.title = `${title} - ${language}`;
 			} else {
 				this.treeView.title = title;

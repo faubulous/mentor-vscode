@@ -3,6 +3,24 @@ import * as n3 from 'n3';
 import { mentor } from '../mentor';
 
 /**
+ * Indicates the where missing language tags should be decorated.
+ */
+export enum MissingLanguageTagDecorationScope {
+	/**
+	 * Disable the decoration of missing language tags.
+	 */
+	Disabled,
+	/**
+	 * Decorate missing language tags in all sources.
+	 */
+	All,
+	/**
+	 * Decorate missing language tags only in the active document.
+	 */
+	Document
+}
+
+/**
  * A decoration provider that adds a badge to definition tree nodes.
  */
 export class DefinitionNodeDecorationProvider implements vscode.FileDecorationProvider {
@@ -15,7 +33,20 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 	readonly onDidChangeFileDecorations? = this._onDidChangeFileDecorations.event;
 
+	private _decorationScope: MissingLanguageTagDecorationScope;
+
 	constructor() {
+		this._decorationScope = this._getDecorationScopeFromConfiguration();
+
+		// If the configuration for decorating missing language tags changes, update the decoration provider.
+		vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('mentor.definitionTree.decorateMissingLanguageTags')) {
+				this._decorationScope = this._getDecorationScopeFromConfiguration();
+
+				this._onDidChangeFileDecorations.fire(undefined);
+			}
+		});
+
 		mentor.onDidChangeVocabularyContext((context) => {
 			if (context) {
 				// When the context changes, the label predicates need to be updated.
@@ -31,10 +62,30 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		});
 	}
 
+	private _getDecorationScopeFromConfiguration(): MissingLanguageTagDecorationScope {
+		const result = mentor.configuration.get('definitionTree.decorateMissingLanguageTags');
+
+		switch (result) {
+			case 'Document': {
+				return MissingLanguageTagDecorationScope.Document;
+			}
+			case 'All': {
+				return MissingLanguageTagDecorationScope.All;
+			}
+			default: {
+				return MissingLanguageTagDecorationScope.Disabled;
+			}
+		}
+	}
+
 	provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
+		if (!this._decorationScope) {
+			return undefined;
+		}
+
 		const context = mentor.activeContext;
 
-		if (!context || !context.primaryLanguage) {
+		if (!context || !context.primaryLanguage || !context.activeLanguage) {
 			// Note: The document may not have a language set if there are no language tags used in the document.
 			return undefined;
 		}
@@ -45,15 +96,26 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			return undefined;
 		}
 
+		let hasLabels = false;
+
+		const graphUris = this._decorationScope === MissingLanguageTagDecorationScope.Document ? context.graphs : undefined;
 		const activeLanguage = context.activeLanguage;
 
-		for (let triple of mentor.vocabulary.store.match(context.graphs, subject, null, null, false)) {
+		for (let triple of mentor.vocabulary.store.match(graphUris, subject, null, null, false)) {
 			if (triple.object.termType !== "Literal" || !this._labelPredicates.has(triple.predicate.value)) {
+				// Only enable the decoration if the subject is a subject in the configured graphs (document or entire background).
+				hasLabels = true;
 				continue;
-			} else if (triple.object.language === activeLanguage) {
-				// The label is in the active language and we do not need to decorate it.
+			}
+
+			// Either there is no language tag (valid for all languages) or the language tag is in the active language.
+			if (!triple.object.language || triple.object.language.startsWith(activeLanguage)) {
 				return undefined;
 			}
+		}
+
+		if (!hasLabels) {
+			return undefined;
 		}
 
 		const result = new vscode.FileDecoration(undefined, undefined, this._disabledColor);

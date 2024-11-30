@@ -585,17 +585,17 @@
         {
           "command": "mentor.action.showReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === false",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "mentor.action.hideReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === true",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "mentor.action.selectActiveLanguage",
           "when": "view == mentor.view.definitionTree",
-          "group": "navigation@2"
+          "group": "navigation@1"
         },
         {
           "command": "mentor.action.refreshDefinitionsTree",
@@ -701,13 +701,20 @@
             "default": "GroupBySource"
           },
           "mentor.definitionTree.decorateMissingLanguageTags": {
-            "type": "boolean",
+            "type": "string",
             "title": "Decorate Missing Language Tags",
-            "description": "If enabled, all terms that do not have a value which is tagged in the currently selected language will be greyed out.",
-            "default": false,
-            "tags": [
-              "experimental"
-            ]
+            "description": "Grey out all terms that do not have a value which is tagged in the currently selected language.",
+            "enum": [
+              "Disabled",
+              "All",
+              "Document"
+            ],
+            "enumDescriptions": [
+              "Disable the decoration of missing language tags.",
+              "Grey out missing language tags for definitions in all sources.",
+              "Grey out missing language tags only for definitions in the active document."
+            ],
+            "default": "Document"
           },
           "mentor.internalBrowserEnabled": {
             "type": "boolean",

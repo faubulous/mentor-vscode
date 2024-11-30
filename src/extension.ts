@@ -294,32 +294,26 @@ function registerCommands(context: vscode.ExtensionContext) {
 				language: undefined
 			}];
 		} else {
+			// TODO: Sort by language tag but add indicator for value count.
 			const languageStats = mentor.vocabulary.getLanguageTagUsageStats(context.graphs);
 
 			// Note: We translate the language code into a readable name in the UI language of the editor.
 			const languageNames = new Intl.DisplayNames([vscode.env.language], { type: 'language' });
 
-			// Calculate the number of language tagged literals in the primary language.
-			const maxCount = languageStats[context.primaryLanguage] ?? 0;
-
 			quickPick.items = Object.entries(languageStats).map(([l, count]) => {
-				const coverage = (maxCount > 0 ? (count / maxCount) * 100 : 0);
+				const values = count === 1 ? 'value' : 'values';
 
-				// Note: The percentage is to a precision of two decimal places because in many 
-				// cases there are only a few language tagged literals. In these cases the percentage
-				// would be 0% and thus be confusing.
 				return {
 					language: l,
 					label: `${l} - ${languageNames.of(l.toUpperCase())}`,
-					// TODO: Improve the calculation of the percentage relative to the number of language tagged literals with the same predicate.
-					// description: `${x.totalCount} total ∙ ${coverage.toFixed(2)}%`,
+					description: `${count} ${values}`,
 				};
-			});
+			}).sort((a, b) => a.language.localeCompare(b.language));
 
 			quickPick.onDidChangeSelection((selection) => {
 				if (selection.length > 0) {
 					const language = selection[0].language;
-					context.activeLanguage = language;
+					context.activeLanguageTag = language;
 
 					// Refresh the tree views..
 					mentor.settings.set('view.activeLanguage', language);

@@ -60,14 +60,14 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 		if (component == "subject" || component == "object") {
 			for (let c of mentor.vocabulary.getClasses(graphs).filter(c => c.toLowerCase().startsWith(uri))) {
 				const item = new vscode.CompletionItem(getIriLocalPart(c), vscode.CompletionItemKind.Class);
-				item.detail = context.getResourceDescription(c);
+				item.detail = context.getResourceDescription(c)?.value;
 
 				result.push(item);
 			}
 
 			for (let x of mentor.vocabulary.getIndividuals(graphs).sort().filter(x => x.toLowerCase().startsWith(uri))) {
 				const item = new vscode.CompletionItem(getIriLocalPart(x), vscode.CompletionItemKind.Field);
-				item.detail = context.getResourceDescription(x);
+				item.detail = context.getResourceDescription(x)?.value;
 
 				result.push(item);
 			}
@@ -75,7 +75,7 @@ export class CompletionItemProvider extends FeatureProvider implements vscode.Co
 
 		for (let p of mentor.vocabulary.getProperties(graphs).sort().filter(p => p.toLowerCase().startsWith(uri))) {
 			const item = new vscode.CompletionItem(getIriLocalPart(p), vscode.CompletionItemKind.Value);
-			item.detail = context.getResourceDescription(p);
+			item.detail = context.getResourceDescription(p)?.value;
 
 			result.push(item);
 		}

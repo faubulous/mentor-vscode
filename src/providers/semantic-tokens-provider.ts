@@ -47,6 +47,8 @@ export class SemanticTokensProvider extends FeatureProvider implements vscode.Do
 
 				switch (tokenName) {
 					case "A":
+					case "BASE":
+					case "PREFIX":
 					case "TTL_BASE":
 					case "TTL_PREFIX":
 						builder.push(tokenRange, SemanticTokenType.keyword);
