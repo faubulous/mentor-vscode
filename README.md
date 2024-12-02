@@ -26,7 +26,7 @@ This extension provides the following features:
     - Classes
     - Properties
     - Individuals
-  - Showing the definitions of SHACL shapes <sup style="color: orange">NEW</sup>
+  - Showing the definitions of SHACL shapes
     - Quickly jump to shapes associated with a class or property
     - Node Shapes
     - Property Shapes with property path labels
@@ -38,31 +38,37 @@ This extension provides the following features:
     - Collections
   - Grouping of definitions by concept scheme, ontology or `rdfs:isDefinedBy`
   - Quickly jump to definitions
-  - RDFS and limited OWL reasoning
+  - RDFS and structural OWL reasoning
   - Find all references in the current document
-  - Open URIs in browser
+  - Open URIs in web browser
+  - Show definitions in multiple languages <sup style="color: orange">NEW</sup>
+    - Select language tag of the displayed labels and definitions
+    - Highlight the terms missing in the selected language (optional)
 
 ### Supports N3, Turtle, Trig and SPARQL
   - Syntax highlighting
   - Syntax validation
   - Checking conformance of literal values to XSD specifications
   - Checking if namespace IRIs end with separator (`/`,`#`, `:`, `_`, `-`)
-  - Highlight unused namespace prefixes <sup style="color: orange">NEW</sup>
-  - Highlight duplicate namespace prefix definitions <sup style="color: orange">NEW</sup>
+  - Highlight unused namespace prefixes
+  - Highlight duplicate namespace prefix definitions
 
 ### Refactoring
   - Rename prefixes
   - Rename resource labels in prefixed names and URIs
-  - Refactor IRI references into prefixes names <sup style="color: orange">NEW</sup>
-  - Auto implement undefined prefixes <sup style="color: orange">NEW</sup>
-  - Sort prefix definitions <sup style="color: orange">NEW</sup>
-  - Remove unused prefix definitions <sup style="color: orange">NEW</sup>
+  - Refactor IRI references into prefixes names
+  - Auto implement undefined prefixes
+  - Sort prefix definitions
+  - Remove unused prefix definitions
 
-### Online Collaboration <sup style="color: orange">NEW</sup>
+### Online Collaboration
 - Runnable in the browser on [vscode.dev](https://vscode.dev)
 - Edit GitHub repositories online
 
 ## News
+### Version 0.2.5: Language Support in Definition Tree
+This release introduces support for selecting the language tags to display in the definition tree. This ensures a consistent view of definitions across the definition tree and editor tooltips, which typically show labels and definitions in the currently selected language. Additionally, items in the definition tree without language-tagged labels can now be highlighted.
+
 ### Version 0.2.3: Fixed labels in definition tree
 Fixed a bug where the definition tree would ignore the settings for resource labels and initially only show the URI local part instead of annotated labels.
 
@@ -124,12 +130,18 @@ Alternatively, if you have the `.vsix` file of the extension, you can install it
 After installation, you may need to reload Visual Studio Code to activate the extension.
 
 ## Contributing
+We appreciate contributions in all forms! By contributing to Mentor, you'll help make it a better tool for the RDF and knowledge graph community. Contributions can take many shapes, including:
 
-Contributions are always welcome! To start off, fork this repository on GitHub and then clone the fork to your local computer.
+- **Bug reports:** If you encounter an issue, please report it to us so we can investigate and fix it. Your feedback helps us understand what works well and what we can improve.
+
+- **Reviews and feedback:** Share your experience with Mentor by leaving a review on the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=faubulous.mentor).
+
+- **Code contributions:** Help us improve the extension by submitting new features, bug fixes, or refactoring existing code.
+
 
 ### Building
 
-Once cloned, add an upstream remote pointing to the primary toolkit repo.
+To get started, fork this repository on GitHub and then clone the fork to your local computer. Once cloned, add an upstream remote pointing to the primary toolkit repo.
 
 ```bash
 git clone https://github.com/faubulous/mentor-vscode.git
