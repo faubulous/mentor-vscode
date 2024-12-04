@@ -8,6 +8,8 @@ export class IndividualNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "Individuals";
+
 	override getIcon() {
 		if (this.uri) {
 			return new vscode.ThemeIcon('rdf-individual', this.getIconColor());
@@ -18,21 +20,8 @@ export class IndividualNode extends ResourceNode {
 		return new vscode.ThemeColor("mentor.color.individual");
 	}
 
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "Individuals"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
-
-	}
-
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			result += " " + mentor.vocabulary.getIndividuals(this.document.graphs, undefined, this.options).length.toString();

@@ -8,6 +8,8 @@ export class CollectionNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "Collections";
+
 	override getIcon() {
 		if (this.uri) {
 			let isOrdered = mentor.vocabulary.isOrderedCollection(this.document.graphs, this.uri);
@@ -22,23 +24,15 @@ export class CollectionNode extends ResourceNode {
 		return new vscode.ThemeColor("mentor.color.concept");
 	}
 
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "Collections"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
-	}
+	override getDescription(): string {
+		let result = super.getDescription();
 
-	override getDescription(): string | undefined {
 		if (!this.uri) {
 			const members = mentor.vocabulary.getCollections(this.document.graphs);
 
-			return members.length.toString();
+			result + " " + members.length.toString();
 		}
+
+		return result;
 	}
 }

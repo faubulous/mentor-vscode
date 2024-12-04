@@ -9,6 +9,8 @@ export class PropertyNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "Properties";
+
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
 	rangeUri?: string | undefined;
@@ -131,21 +133,8 @@ export class PropertyNode extends ResourceNode {
 		return PropertyNode.getIconColor(this.document.graphs, this.uri, this.rangeUri!);
 	}
 
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "Properties"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
-
-	}
-
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			const properties = mentor.vocabulary.getProperties(this.document.graphs, this.options);

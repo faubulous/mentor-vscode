@@ -8,6 +8,8 @@ export class OntologyNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "unknown";
+
 	isReferenced = false;
 
 	override getIcon() {
@@ -22,26 +24,14 @@ export class OntologyNode extends ResourceNode {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "unknown"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
-	}
-
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (this.uri) {
 			const version = mentor.vocabulary.getOntologyVersionInfo(this.document.graphs, this.uri);
 
 			if (version) {
-				result += version;
+				result += " " + version;
 			}
 		}
 

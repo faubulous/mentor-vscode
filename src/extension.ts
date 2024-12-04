@@ -5,7 +5,6 @@ import { Disposable } from 'vscode-languageclient';
 import { TreeView } from './views/tree-view';
 import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
-import { DefinitionNodeDecorationProvider } from './views/definition-node-decoration-provider';
 import { ResourceNode } from './views/nodes/resource-node';
 import { getIriFromNodeId, getTokenPosition } from './utilities';
 import { DefinitionProvider } from './providers';
@@ -45,8 +44,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	for (const client of clients) {
 		client.start(context);
 	}
-
-	providers.push(vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider()));
 
 	mentor.initialize(context);
 }
@@ -210,7 +207,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.workspaceIndexer.indexWorkspace(true);
 	}));
 
-	vscode.commands.registerCommand('mentor.action.sortPrefixes', async (documentUri: vscode.Uri) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.sortPrefixes', async (documentUri: vscode.Uri) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
@@ -220,9 +217,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				await vscode.workspace.applyEdit(edit);
 			}
 		}
-	});
+	}));
 
-	vscode.commands.registerCommand('mentor.action.implementPrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.implementPrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
@@ -232,9 +229,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				await vscode.workspace.applyEdit(edit);
 			}
 		}
-	});
+	}));
 
-	vscode.commands.registerCommand('mentor.action.implementPrefixForIri', async (documentUri: vscode.Uri, namespaceIri: string, token: IToken) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.implementPrefixForIri', async (documentUri: vscode.Uri, namespaceIri: string, token: IToken) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
@@ -261,9 +258,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 				}
 			}
 		}
-	});
+	}));
 
-	vscode.commands.registerCommand('mentor.action.deletePrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', async (documentUri: vscode.Uri, prefixes: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
@@ -273,5 +270,66 @@ function registerCommands(context: vscode.ExtensionContext) {
 				await vscode.workspace.applyEdit(edit);
 			}
 		}
-	});
+	}));
+
+	commands.push(vscode.commands.registerCommand('mentor.action.selectActiveLanguage', async () => {
+		const document = vscode.window.activeTextEditor?.document;
+
+		if (!document) {
+			return;
+		}
+
+		const context = mentor.contexts[document.uri.toString()];
+
+		if (!context) {
+			return;
+		}
+
+		const quickPick = vscode.window.createQuickPick<LanguageQuckPickItem>();
+		quickPick.title = 'Select active document language';
+
+		if (!context.primaryLanguage) {
+			quickPick.items = [{
+				label: 'No language tagged literals found.',
+				language: undefined
+			}];
+		} else {
+			// TODO: Sort by language tag but add indicator for value count.
+			const languageStats = mentor.vocabulary.getLanguageTagUsageStats(context.graphs);
+
+			// Note: We translate the language code into a readable name in the UI language of the editor.
+			const languageNames = new Intl.DisplayNames([vscode.env.language], { type: 'language' });
+
+			quickPick.items = Object.entries(languageStats).map(([l, count]) => {
+				const values = count === 1 ? 'value' : 'values';
+
+				return {
+					language: l,
+					label: `${l} - ${languageNames.of(l.toUpperCase())}`,
+					description: `${count} ${values}`,
+				};
+			}).sort((a, b) => a.language.localeCompare(b.language));
+
+			quickPick.onDidChangeSelection((selection) => {
+				if (selection.length > 0) {
+					const language = selection[0].language;
+					context.activeLanguageTag = language;
+
+					// Refresh the tree views..
+					mentor.settings.set('view.activeLanguage', language);
+
+					quickPick.dispose();
+				}
+			});
+		}
+
+		quickPick.show();
+	}));
+}
+
+interface LanguageQuckPickItem extends vscode.QuickPickItem {
+	/**
+	 * The language code.
+	 */
+	language: string | undefined;
 }

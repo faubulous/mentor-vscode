@@ -8,6 +8,8 @@ export class ConceptNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "Concepts";
+
 	override getIcon() {
 		return this.uri ? new vscode.ThemeIcon('rdf-concept', this.getIconColor()) : undefined;
 	}
@@ -16,23 +18,15 @@ export class ConceptNode extends ResourceNode {
 		return new vscode.ThemeColor("mentor.color.concept");
 	}
 
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "Concepts"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
-	}
+	override getDescription(): string {
+		let result = super.getDescription();
 
-	override getDescription(): string | undefined {
 		if (!this.uri) {
 			const members = mentor.vocabulary.getConcepts(this.document.graphs);
 
-			return " " + members.length.toString();
+			result += " " + members.length.toString();
 		}
+
+		return result;
 	}
 }

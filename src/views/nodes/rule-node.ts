@@ -8,6 +8,8 @@ export class RuleNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	defaultLabel = "Rules";
+
 	override getIcon() {
 		if (this.uri) {
 			// Return the ref class icon if target cannot be found.
@@ -19,20 +21,8 @@ export class RuleNode extends ResourceNode {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 
-	override getLabel(): vscode.TreeItemLabel {
-		if (!this.uri) {
-			return {
-				label: "Rules"
-			}
-		} else {
-			return {
-				label: this.document.getResourceLabel(this.uri)
-			}
-		}
-	}
-
 	override getDescription(): string {
-		let result = "";
+		let result = super.getDescription();
 
 		if (!this.uri) {
 			result += " " + mentor.vocabulary.getRules(this.document.graphs).length.toString();

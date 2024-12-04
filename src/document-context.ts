@@ -1,7 +1,9 @@
 import * as n3 from 'n3';
+import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
 import { mentor } from './mentor';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
+import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { TreeLabelStyle } from './settings';
 import {
@@ -12,6 +14,21 @@ import {
 	getNamespaceDefinition,
 	getNamespaceIri
 } from './utilities';
+
+/**
+ * A literal value with optional language tag.
+ */
+export interface Label {
+	/**
+	 * The value of the literal.
+	 */
+	value: string;
+
+	/**
+	 * The language tag of the literal, if any.
+	 */
+	language: string | undefined;
+}
 
 /**
  * A map of token type names specific for the document language.
@@ -67,11 +84,81 @@ export abstract class DocumentContext {
 	private _blankNodes: { [key: string]: IToken } = {};
 
 	/**
+	 * Information about the language tags used in the document.
+	 */
+	predicateStats: PredicateUsageStats = {};
+
+	private _primaryLanguage: string | undefined | null = null;
+
+	/**
+	 * The most often used language tag in the document.
+	 */
+	get primaryLanguage(): string | undefined {
+		if (this._primaryLanguage === null && this.predicateStats) {
+			let languageStats: LanguageTagUsageStats = {};
+
+			for (let [_, value] of Object.entries(this.predicateStats)) {
+				for (let [lang, count] of Object.entries(value.languageTags)) {
+					if (!languageStats[lang]) {
+						languageStats[lang] = count;
+					} else {
+						languageStats[lang] += count;
+					}
+				}
+			}
+
+			let maxFrequency = -1;
+
+			this._primaryLanguage = undefined;
+	
+			for (let [lang, frequency] of Object.entries(languageStats)) {
+				if (frequency > maxFrequency) {
+					maxFrequency = frequency;
+
+					this._primaryLanguage = lang;
+				}
+			}
+		}
+
+		return this._primaryLanguage ?? undefined;
+	}
+
+	private _activeLanguageTag: string | undefined;
+
+	/**
+	 * The ISO 639-3 language tag of the user-selected display document language. This value
+	 * can be used to restore the user's selection when switching between documents.
+	 */
+	get activeLanguageTag(): string | undefined {
+		return this._activeLanguageTag;
+	}
+
+	set activeLanguageTag(value: string | undefined) {
+		this._activeLanguageTag = value;
+
+		if(value) {
+			this._activeLanguage = value.split('-')[0];
+		} else {
+			this._activeLanguage = undefined;
+		}
+	}
+
+	private _activeLanguage: string | undefined;
+
+	/**
+	 * The language portion of the active ISO 639-3 language tag without the regional part.
+	 * e.g. 'en' for the language tags 'en' or 'en-gb'.
+	 */
+	get activeLanguage(): string | undefined {
+		return this._activeLanguage;
+	}
+
+	/**
 	 * The predicates to be used for retrieving labels and descriptions for resources.
 	 */
 	readonly predicates = {
-		label: [],
-		description: []
+		label: [] as string[],
+		description: [] as string[]
 	};
 
 	constructor(documentUri: vscode.Uri) {
@@ -365,14 +452,17 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A label for the resource as a string literal.
 	 */
-	public getResourceLabel(subjectUri: string): string {
+	public getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 
 		// TODO: Add config option to enable/disable SHACL path labels.
 		// If the node has a SHACL path, use it as the label.
 		for (let q of mentor.store.match(this.graphs, subject, sh.path, null, false)) {
-			return this.getPropertyPathLabel(q.object as n3.Quad_Subject);
+			return {
+				value: this.getPropertyPathLabel(q.object as n3.Quad_Subject),
+				language: undefined
+			};
 		}
 
 		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
@@ -382,25 +472,17 @@ export abstract class DocumentContext {
 				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
 
 				// First, try to find a description in the current graph.
-				for (let p of predicates) {
-					for (let q of mentor.store.match(this.graphs, subject, p, null, false)) {
-						if (q.object.termType === 'Literal') {
-							return q.object.value;
-						} else {
-							return getIriLocalPart(q.object.value);
-						}
-					}
+				let result = this._getResourceAnnotationFromPredicates(this.graphs, subject, predicates);
+
+				if (result) {
+					return result;
 				}
 
 				// If none is found, try to find a description in the default graph.
-				for (let p of predicates) {
-					for (let q of mentor.store.match(undefined, subject, p, null, false)) {
-						if (q.object.termType === 'Literal') {
-							return q.object.value;
-						} else {
-							return getIriLocalPart(q.object.value);
-						}
-					}
+				result = this._getResourceAnnotationFromPredicates(undefined, subject, predicates);
+
+				if (result) {
+					return result;
 				}
 
 				// Fallback to URI labels without prefixes.
@@ -415,11 +497,68 @@ export abstract class DocumentContext {
 					break;
 				}
 
-				return `${prefix}:${getIriLocalPart(subjectUri)}`;
+				return {
+					value: `${prefix}:${getIriLocalPart(subjectUri)}`,
+					language: undefined
+				};
 			}
 		}
 
-		return getIriLocalPart(subjectUri);
+		return {
+			value: getIriLocalPart(subjectUri),
+			language: undefined
+		};
+	}
+
+	/**
+	 * Get an annotation to a resource from a list of predicates. Either in the active document language or in the primary language.
+	 * @param graphUris URIs of the graphs to query.
+	 * @param subject A subject node.
+	 * @param predicates A list of predicates to reqtrieve the label from.
+	 * @returns The label of the resource as a string literal.
+	 */
+	private _getResourceAnnotationFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): Label | undefined {
+		let languageLabel: rdfjs.Literal | undefined = undefined;
+		let primaryLabel: rdfjs.Literal | undefined = undefined;
+		let fallbackLabel: rdfjs.Literal | undefined = undefined;
+
+		for (let p of predicates) {
+			for (let q of mentor.store.match(graphUris, subject, p, null, false)) {
+				if (q.object.termType === 'Literal') {
+					const literal = q.object as n3.Literal;
+
+					// Check if the literal language matches the active language
+					if (literal.language === this.activeLanguageTag) {
+						return literal;
+					}
+
+					// Store the literal if it matches the active language without the regional part.
+					if(this.activeLanguage && literal.language.startsWith(this.activeLanguage)) {
+						languageLabel = literal;
+					}
+
+					// Store the literal if it matches the primary language
+					if (this.primaryLanguage === literal.language) {
+						primaryLabel = literal;
+					}
+
+					// Store the first literal as a fallback value.
+					if (!fallbackLabel) {
+						fallbackLabel = literal;
+					}
+				} else {
+					return {
+						value: getIriLocalPart(q.object.value),
+						language: undefined
+					};
+				}
+			}
+		}
+
+		if (languageLabel) return languageLabel;
+		if (primaryLabel) return primaryLabel;
+		
+		return fallbackLabel;
 	}
 
 	/**
@@ -438,7 +577,7 @@ export abstract class DocumentContext {
 					result.push(c);
 				}
 			} else {
-				result.push(this.getResourceLabel(c.value));
+				result.push(this.getResourceLabel(c.value).value);
 			}
 		}
 
@@ -450,41 +589,36 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A description for the resource as a string literal.
 	 */
-	public getResourceDescription(subjectUri: string): string | undefined {
+	public getResourceDescription(subjectUri: string): Label | undefined {
 		// TODO: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
 
 		// First, try to find a description in the current graph.
-		for (let p of predicates) {
-			for (let q of mentor.store.match(this.graphs, subject, p, null, false)) {
-				return q.object.value;
-			}
+		let result = this._getResourceAnnotationFromPredicates(this.graphs, subject, predicates);
+
+		if(result) {
+			return result;
 		}
 
-		// If none is found, try to find a description in the default graph.
-		for (let p of predicates) {
-			for (let q of mentor.store.match(undefined, subject, p, null, false)) {
-				return q.object.value;
-			}
-		}
+		return this._getResourceAnnotationFromPredicates(undefined, subject, predicates);
 	}
 
 	/**
-	 * Get the URI of a resource. Resolves relative file IRIs with regards to the directory of the current document.
-	 * @param subjectUri URI of the resource.
-	 * @returns A URI for the resource as a string literal.
+	 * Get the IRI of a resource. Resolves relative file IRIs with regards to the directory of the current document.
+	 * @param subjectIri IRI of the resource.
+	 * @returns A IRI for the resource as a string literal.
 	 */
-	public getResourceUri(subjectUri: string): string {
+	public getResourceIri(subjectIri: string): string {
 		// TODO: Add support for virtual file systems provided by vscode such as vscode-vfs.
-		if (subjectUri.startsWith('file')) {
-			const u = vscode.Uri.parse(subjectUri);
+		if (subjectIri.startsWith('file')) {
+			const u = vscode.Uri.parse(subjectIri);
 
 			// Resolve relative file IRIs with regards to the directory of the current document.
 			if (u.authority === '..') {
 				// For a file URI the namespace is the directory of the current document.
 				const directory = getNamespaceIri(this.uri.toString());
-				const filePath = subjectUri.split('//')[1];
+				const filePath = subjectIri.split('//')[1];
 				const fileUrl = vscode.Uri.joinPath(vscode.Uri.parse(directory), filePath);
 
 				// Allow navigating to the relative file.
@@ -492,7 +626,7 @@ export abstract class DocumentContext {
 			}
 		}
 
-		return subjectUri;
+		return subjectIri;
 	}
 
 	/**
@@ -502,9 +636,9 @@ export abstract class DocumentContext {
 	 */
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		let lines = [
-			`**${this.getResourceLabel(subjectUri)}**`,
-			this.getResourceDescription(subjectUri),
-			this.getResourceUri(subjectUri)
+			`**${this.getResourceLabel(subjectUri).value}**`,
+			this.getResourceDescription(subjectUri)?.value,
+			this.getResourceIri(subjectUri)
 		];
 
 		return new vscode.MarkdownString(lines.filter(line => line).join('\n\n'), true);

@@ -38,7 +38,6 @@ export class SemanticTokensProvider extends FeatureProvider implements vscode.Do
 				const startColumn = t.startColumn ? t.startColumn - 1 : 0;
 				const endColumn = t.endColumn ? t.endColumn : 0;
 
-				// TODO: Check the calcuation of the endColumn as there is a bug in the Millan parser that sometimes includes trailing whitespaces in the token.
 				const tokenRange = this.getRangeFromToken(t);
 				const tokenName = t.tokenType?.tokenName;
 
@@ -48,6 +47,8 @@ export class SemanticTokensProvider extends FeatureProvider implements vscode.Do
 
 				switch (tokenName) {
 					case "A":
+					case "BASE":
+					case "PREFIX":
 					case "TTL_BASE":
 					case "TTL_PREFIX":
 						builder.push(tokenRange, SemanticTokenType.keyword);

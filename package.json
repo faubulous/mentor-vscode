@@ -35,8 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.2.4",
-  "preview": true,
+  "version": "0.2.5",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL",
@@ -85,7 +84,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.48",
+    "@faubulous/mentor-rdf": "^0.2.50",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
@@ -355,6 +354,13 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e018"
         }
+      },
+      "select-language": {
+        "description": "Select language icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e019"
+        }
       }
     },
     "colors": [
@@ -487,6 +493,11 @@
         "title": "Group by Source of Definition"
       },
       {
+        "command": "mentor.action.refreshDefinitionsTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "mentor.action.showReferences",
         "title": "Show Referenced Resources",
         "icon": "$(rdf-class)"
@@ -527,6 +538,11 @@
       {
         "command": "mentor.action.sortPrefixes",
         "title": "Sort prefix definitions"
+      },
+      {
+        "command": "mentor.action.selectActiveLanguage",
+        "title": "Select Active Language",
+        "icon": "$(select-language)"
       }
     ],
     "menus": {
@@ -569,12 +585,22 @@
         {
           "command": "mentor.action.showReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === false",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "mentor.action.hideReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === true",
-          "group": "navigation"
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.action.selectActiveLanguage",
+          "when": "view == mentor.view.definitionTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.action.refreshDefinitionsTree",
+          "when": "view == mentor.view.definitionTree",
+          "group": "navigation@99"
         }
       ],
       "view/item/context": [
@@ -617,19 +643,24 @@
     },
     "configurationDefaults": {
       "[sparql]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       },
       "[turtle]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       },
       "[trig]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       },
       "[ntriples]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       },
       "[nquads]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments"
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
       }
     },
     "configuration": [
@@ -668,6 +699,22 @@
               "Group classes, properties and invdividuals in the definitions tree under seperate nodes for each ontology or concept scheme."
             ],
             "default": "GroupBySource"
+          },
+          "mentor.definitionTree.decorateMissingLanguageTags": {
+            "type": "string",
+            "title": "Decorate Missing Language Tags",
+            "description": "Grey out all terms that do not have a value which is tagged in the currently selected language.",
+            "enum": [
+              "Disabled",
+              "All",
+              "Document"
+            ],
+            "enumDescriptions": [
+              "Disable the decoration of missing language tags.",
+              "Grey out missing language tags for definitions in all sources.",
+              "Grey out missing language tags only for definitions in the active document."
+            ],
+            "default": "Document"
           },
           "mentor.internalBrowserEnabled": {
             "type": "boolean",
