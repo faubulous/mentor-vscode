@@ -112,8 +112,6 @@ export abstract class DocumentContext {
 			this._primaryLanguage = undefined;
 	
 			for (let [lang, frequency] of Object.entries(languageStats)) {
-				console.log(lang, frequency);
-
 				if (frequency > maxFrequency) {
 					maxFrequency = frequency;
 
