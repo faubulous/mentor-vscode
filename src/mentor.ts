@@ -138,6 +138,15 @@ class MentorExtension {
 				// Determine the token type at the change position.
 				const token = context.getTokensAtPosition(change.range.start)[0];
 
+				// Do not auto-implement prefixes when manually typing a prefix.
+				const n = context.tokens.findIndex(t => t === token);
+				const t = context.tokens[n - 1]?.image.toLowerCase();
+
+				// Note: we check the token image instead of the type name to also account for Turtle style prefix
+				// definitions in SPARQL queries. These are not supported by SPARQL and detected as language tags.
+				// Although this kind of prefix declaration is not valid in SPARQL, implementing the prefix should be avoided.
+				if(t === 'prefix' || t === '@prefix') return;
+
 				if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
 					const prefix = token.image.substring(0, token.image.length - 1);
 

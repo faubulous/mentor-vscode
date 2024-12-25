@@ -409,6 +409,17 @@ export abstract class LanguageServerBase {
 
 					break;
 				}
+				case 'PNAME_NS': {
+					const prefix = t.image.split(':')[0];
+					const previousType = tokens[i - 1]?.tokenType?.tokenName;
+
+					// Count prefixed names if they are not part of a prefix declaration.
+					if (previousType !== 'PREFIX' && previousType !== 'TTL_PREFIX') {
+						usedPrefixes.add(prefix);
+					}
+
+					break;
+				}
 				case 'PNAME_LN': {
 					const prefix = t.image.split(':')[0];
 
