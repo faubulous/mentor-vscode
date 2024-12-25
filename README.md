@@ -66,6 +66,13 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
+### Version 0.2.6: Minor bugfixes
+Fixed two minor issues:
+
+1. Auto declaration of prefixes is disabled when manually declaring prefixes in the file header. The auto-implement kicked-in as soon as the ':' was typed and began to resort the prefix definitions without moving the cursor. The new default behavior now is to not run the auto-implement command when manually declaring prefixes.
+
+2. PNAME_NS tokens are now considered for reference counting if they are not part of a prefix declaration. In previous versions of Mentor these tokens were not counted as usages of the namespace and thus lead to invalid markings of namespaces as unused when the namespace prefix was used without a local part.
+
 ### Version 0.2.5: Language Support in Definition Tree
 This release introduces support for selecting the language tags to display in the definition tree. This ensures a consistent view of definitions across the definition tree and editor tooltips, which typically show labels and definitions in the currently selected language. Additionally, items in the definition tree without language-tagged labels can now be highlighted.
 
