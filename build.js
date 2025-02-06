@@ -70,18 +70,19 @@ const getLanguageConfig = (type, language) => {
 
       // Note: Uncomment this if you want to use SVG icons directly.
       console.log("Copying media files to out directory..");
+    }
 
-      fs.mkdirSync('./out/media/glyphs', { recursive: true });
+    fs.mkdirSync('./out');
+    fs.mkdirSync('./out/media/glyphs', { recursive: true });
 
-      for (const file of fs.readdirSync('./media/glyphs')) {
-        fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
-      }
+    for (const file of fs.readdirSync('./media/glyphs')) {
+      fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
+    }
 
-      // Copy the language config files to the out directory.
-      for (const file of fs.readdirSync('./src/languages/')) {
-        if (file.endsWith('.json')) {
-          fs.copyFileSync(`./src/languages/${file}`, `./out/${file}`);
-        }
+    // Copy the language config files to the out directory.
+    for (const file of fs.readdirSync('./src/languages/')) {
+      if (file.endsWith('.json')) {
+        fs.copyFileSync(`./src/languages/${file}`, `./out/${file}`);
       }
     }
 
