@@ -8,10 +8,11 @@
     ],
     "rootDir": "./src",
     "outDir": "./out",
-    "sourceMap": true,
+    "sourceMap": true, // Do we need this when using esbuild?
     "strict": true,
-    "emitDeclarationOnly": true,
-    "declaration": true
+    "noEmit": true, // Do not emit output files, just check for errors.
+    "declaration": true,
+    "skipLibCheck": true // Don't fail on errors in imported libraries. 
   },
   "exclude": [
     "node_modules"

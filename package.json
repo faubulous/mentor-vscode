@@ -49,6 +49,7 @@
   "categories": [
     "Programming Languages"
   ],
+  "type": "module",
   "browser": "./out/extension.js",
   "scripts": {
     "clean": "rm -Rf node_modules && rm -Rf out && rm -Rf media/*.woff",
@@ -62,19 +63,18 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@rdfjs/types": "^1.1.2",
+    "@rdfjs/types": "^2.0.1",
     "@types/jest": "^29.5.5",
-    "@types/mkdirp": "^0.5.2",
     "@types/n3": "^1.16.0",
-    "@types/node": "^16.18.34",
-    "@types/rimraf": "^2.0.2",
+    "@types/node": "^22.13.1",
     "@types/vscode": "^1.73.0",
-    "@typescript-eslint/eslint-plugin": "^5.42.0",
-    "@typescript-eslint/parser": "^5.42.0",
-    "esbuild": "^0.17.19",
+    "@typescript-eslint/eslint-plugin": "^8.23.0",
+    "@typescript-eslint/parser": "^8.23.0",
+    "esbuild": "^0.24.2",
     "esbuild-plugin-copy": "^2.0.1",
-    "eslint": "^8.26.0",
+    "eslint": "^9.19.0",
     "estrella": "^1.4.1",
+    "glob": "^11.0.1",
     "jest": "^29.7.0",
     "jest-environment-node": "^29.7.0",
     "ts-jest": "^29.1.1",
@@ -85,7 +85,6 @@
   },
   "dependencies": {
     "@faubulous/mentor-rdf": "^0.2.50",
-    "@vscode/webview-ui-toolkit": "^1.2.2",
     "millan": "^5.3.0",
     "n3": "^1.17.1",
     "vscode-languageclient": "^9.0.1",
