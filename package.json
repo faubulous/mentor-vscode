@@ -49,7 +49,6 @@
   "categories": [
     "Programming Languages"
   ],
-  "type": "module",
   "browser": "./out/extension.js",
   "scripts": {
     "clean": "rm -Rf node_modules && rm -Rf out && rm -Rf media/*.woff",
