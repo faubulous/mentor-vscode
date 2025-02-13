@@ -4,10 +4,9 @@ const fs = require("fs");
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
 
-console.log("Building extension..");
-
 var productionBuild = process.env.NODE_ENV?.trim() === "production";
 
+console.log("Building extension..");
 console.log("Environment:", productionBuild ? "production" : "development");
 
 /** @type BuildOptions */
@@ -49,9 +48,9 @@ const extensionConfig = {
   tsconfig: "./tsconfig.json"
 };
 
-// Note: The platform 'node' is required for the 'vscode-languageserver' functions to work.
 const getLanguageConfig = (type, language) => {
   const file = language ? `${language}-language-${type}` : `language-${type}`;
+  
   return {
     ...baseConfig,
     format: "cjs",
