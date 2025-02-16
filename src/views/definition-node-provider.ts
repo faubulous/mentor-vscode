@@ -312,7 +312,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		if (hasUnknown) {
-			const n = new OntologyNode(this.context, '<>', undefined, options);
+			// Important: Reset the includeReferenced setting for the root nodes.
+			const n = new OntologyNode(this.context, '<>', undefined, {
+				...options,
+				includeReferenced: this.showReferences
+			});
 			n.isReferenced = true;
 
 			result.push(n);
@@ -339,8 +343,9 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const result = [];
 
 		// Note: Do not override the node options includeReferenced setting if it is already set.
-		const includeReferenced = node.options?.includeReferenced === undefined && this.showReferences && node.uri != null;
-		const options = { ...node.options, includeReferenced: includeReferenced };
+		// const includeReferenced = node.options?.includeReferenced === undefined && this.showReferences && node.uri != null;
+		// const options = { ...node.options, includeReferenced: includeReferenced };
+		const options = {... node.options };
 
 		const classes = new ClassNode(this.context, node.id + '/classes', undefined, options);
 		classes.contextValue = "classes";
