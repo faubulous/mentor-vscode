@@ -2,6 +2,9 @@ import * as vscode from "vscode";
 import { DefinitionQueryOptions } from "@faubulous/mentor-rdf";
 import { DocumentContext } from "../languages";
 
+/**
+ * A tree node that represents a resource that is defined in a vocabulary such as a class or concept.
+ */
 export interface DefinitionTreeNode {
 	/**
 	 * The unique identifier of the tree item.
@@ -84,4 +87,16 @@ export interface DefinitionTreeNode {
 	 * @returns A markdown string or undefined if no tooltip should be shown.
 	 */
 	getTooltip(): vscode.MarkdownString | undefined;
+}
+
+/**
+ * Sort nodes by their labels according to the current label display settings.
+ * @param nodes A list of definition tree nodes.
+ * @returns The nodes sorted by their labels.
+ */
+export function sortByLabel(nodes: DefinitionTreeNode[]): DefinitionTreeNode[] {
+	return nodes
+		.map(n => ({ node: n, label: n.getLabel().label }))
+		.sort((a, b) => a.label.localeCompare(b.label))
+		.map(x => x.node);
 }

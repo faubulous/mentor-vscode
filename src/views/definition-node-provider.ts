@@ -2,10 +2,8 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { Uri, OWL, RDF, RDFS, SKOS, SH, _SH } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
-import { DefinitionTreeNode } from './definition-tree-node';
+import { DefinitionTreeNode, sortByLabel } from './definition-tree-node';
 import { ClassNode } from './nodes/class-node';
-import { CollectionNode } from './nodes/collection-node';
-import { ConceptNode } from './nodes/concept-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
 import { IndividualNode } from './nodes/individual-node';
 import { OntologyNode } from './nodes/ontology-node';
@@ -14,6 +12,16 @@ import { DefinitionTreeLayout } from '../settings';
 import { ShapeNode } from './nodes/shape-node';
 import { ValidatorNode } from './nodes/validator-node';
 import { RuleNode } from './nodes/rule-node';
+import { OntologyNodeProvider } from './nodes/ontology-node-provider';
+import { ClassNodeProvider } from './nodes/class-node-provider';
+import { PropertyNodeProvider } from './nodes/property-node-provider';
+import { IndividualNodeProvider } from './nodes/individual-node-provider';
+import { ShapeNodeProvider } from './nodes/shape-node-provider';
+import { ValidatorNodeProvider } from './nodes/validator-node-provider';
+import { RuleNodeProvider } from './nodes/rule-node-provider';
+import { CollectionNodeProvider } from './nodes/collection-node-provider';
+import { ConceptNodeProvider } from './nodes/concept-node-provider';
+import { ConceptSchemeNodeProvider } from './nodes/concept-scheme-node-provider';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
@@ -115,25 +123,25 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		if (!node) {
 			return this.showDefinitionSources ? this.getRootNodesWithSources() : this.getRootNodes();
 		} else if (node.contextType === OWL.Ontology) {
-			return this.getOntologyNodeChildren(node);
+			return new OntologyNodeProvider(this.context).getNodeChildren(node);
 		} else if (node.contextType === RDFS.Class) {
-			return this.getClassNodeChildren(node);
+			return new ClassNodeProvider(this.context).getNodeChildren(node);
 		} else if (node.contextType === RDF.Property) {
-			return this.getPropertyNodeChildren(node);
+			return new PropertyNodeProvider(this.context).getNodeChildren(node);
 		} else if (node.contextType === OWL.NamedIndividual) {
-			return this.getIndividualNodeChildren(node);
+			return new IndividualNodeProvider(this.context).getNodeChildren(node);
 		} else if (node.contextType === SH.Shape) {
-			return this.getShapeNodeChildren(node);
+			return new ShapeNodeProvider(this.context).getNodeChildren(node);
 		} else if (node.contextType === SH.Validator) {
-			return this.getValidatorNodeChildren(node);
+			return new ValidatorNodeProvider(this.context).getNodeChildren(node);
 		} else if (node.contextType === SH.Rule) {
-			return this.getRuleNodeChildren(node);
+			return new RuleNodeProvider(this.context).getNodeChildren(node);
 		} else if (node.contextType === SKOS.ConceptScheme) {
-			return this.getConceptSchemeNodeChildren(node);
+			return new ConceptSchemeNodeProvider(this.context).getNodeChildren(node);
 		} else if (node.contextType === SKOS.Concept) {
-			return this.getConceptNodeChildren(node);
+			return new ConceptNodeProvider(this.context).getNodeChildren(node);
 		} if (node.contextType == SKOS.Collection) {
-			return this.getCollectionNodeChildren(node);
+			return new CollectionNodeProvider(this.context).getNodeChildren(node);
 		} else {
 			return [];
 		}
@@ -152,8 +160,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		const ontologyUris = mentor.vocabulary.getOntologies(this.context.graphs);
 
-		for (let ontology of ontologyUris) {
-			const n = new OntologyNode(this.context, `<${ontology}>`, ontology);
+		for (const ontologyUri of ontologyUris) {
+			const n = new OntologyNode(this.context, `<${ontologyUri}>`, ontologyUri);
 			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
 
 			result.push(n);
@@ -161,8 +169,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		const schemeUris = mentor.vocabulary.getConceptSchemes(this.context.graphs);
 
-		for (let scheme of schemeUris) {
-			result.push(new ConceptSchemeNode(this.context, `<${scheme}>`, scheme));
+		for (const schemeUri of schemeUris) {
+			result.push(new ConceptSchemeNode(this.context, `<${schemeUri}>`, schemeUri));
 		}
 
 		for (let _ of mentor.vocabulary.getClasses(this.context.graphs)) {
@@ -228,8 +236,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const ontologyUris = mentor.vocabulary.getOntologies(this.context.graphs);
 		const ontologyNodes = [];
 
-		for (let ontology of ontologyUris) {
-			const n = new OntologyNode(this.context, `<${ontology}>`, ontology, { definedBy: ontology });
+		for (const ontologyUri of ontologyUris) {
+			const n = new OntologyNode(this.context, `<${ontologyUri}>`, ontologyUri, { definedBy: ontologyUri });
 			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
 			ontologyNodes.push(n);
@@ -238,8 +246,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const schemeUris = mentor.vocabulary.getConceptSchemes(this.context.graphs);
 		const schemeNodes = [];
 
-		for (let scheme of schemeUris) {
-			schemeNodes.push(new ConceptSchemeNode(this.context, `<${scheme}>`, scheme));
+		for (const schemeUri of schemeUris) {
+			schemeNodes.push(new ConceptSchemeNode(this.context, `<${schemeUri}>`, schemeUri));
 		}
 
 		const ontologies = new Set(ontologyUris);
@@ -261,9 +269,9 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		const result = [
-			...this.sortByLabel(ontologyNodes),
-			...this.sortByLabel(schemeNodes),
-			...this.sortByLabel(sourceNodes)
+			...sortByLabel(ontologyNodes),
+			...sortByLabel(schemeNodes),
+			...sortByLabel(sourceNodes)
 		];
 
 		// Note: For the root nodes we only want to show sources that actually contain *defined* classses. 
@@ -330,335 +338,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return result;
 	}
 
-	/**
-	 * Get the children of an ontology node.
-	 * @param node An ontology node.
-	 * @returns An array of children.
-	 */
-	getOntologyNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		}
-
-		const result = [];
-
-		// Note: Do not override the node options includeReferenced setting if it is already set.
-		// const includeReferenced = node.options?.includeReferenced === undefined && this.showReferences && node.uri != null;
-		// const options = { ...node.options, includeReferenced: includeReferenced };
-		const options = {... node.options };
-
-		const classes = new ClassNode(this.context, node.id + '/classes', undefined, options);
-		classes.contextValue = "classes";
-
-		if (this.getClassNodeChildren(classes).length > 0) {
-			result.push(classes);
-		}
-
-		const properties = new PropertyNode(this.context, node.id + '/properties', undefined, options);
-		properties.contextValue = "properties";
-
-		if (this.getPropertyNodeChildren(properties).length > 0) {
-			result.push(properties);
-		}
-
-		const individuals = new IndividualNode(this.context, node.id + '/individuals', undefined, options);
-		individuals.contextValue = "individuals";
-
-		if (this.getIndividualNodeChildren(individuals).length > 0) {
-			result.push(individuals);
-		}
-
-		const shapes = new ShapeNode(this.context, node.id + '/shapes', undefined, { ...options, includeBlankNodes: true });
-		shapes.contextValue = "shapes";
-
-		if (this.getShapeNodeChildren(shapes).length > 0) {
-			result.push(shapes);
-		}
-
-		const rules = new RuleNode(this.context, node.id + '/rules', undefined, { ...options, includeBlankNodes: true });
-		rules.contextValue = "rules";
-
-		if (this.getRuleNodeChildren(rules).length > 0) {
-			result.push(rules);
-		}
-
-		const validators = new ValidatorNode(this.context, node.id + '/validators', undefined, { ...options, includeBlankNodes: true });
-		validators.contextValue = "validators";
-
-		if (this.getValidatorNodeChildren(validators).length > 0) {
-			result.push(validators);
-		}
-
-		return result;
-	}
-
-	/**
-	 * Get the children of a class node.
-	 * @param node A class node.
-	 * @returns An array of children.
-	 */
-	getClassNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		}
-
-		const result = [];
-		const classes = mentor.vocabulary.getSubClasses(this.context.graphs, node.uri, node.options);
-
-		for (let c of classes) {
-			result.push(new ClassNode(this.context, node.id + `/<${c}>`, c, node.options));
-		}
-
-		return this.sortByLabel(result);
-	}
-
-	/**
-	 * Get the children of a property node.
-	 * @param node A property node.
-	 * @returns An array of child nodes.
-	 */
-	getPropertyNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		}
-
-		const result = [];
-
-		if (node.contextValue === "properties" && this.showPropertyTypes) {
-			const types = mentor.vocabulary.getPropertyTypes(this.context.graphs, node.options);
-
-			for (let type of types) {
-				const n = new ClassNode(this.context, node.id + `/<${type}>`, type, node.options);
-				n.contextType = RDF.Property;
-
-				result.push(n);
-			}
-		} else if (node instanceof ClassNode) {
-			// Note: We only want to return the asserted properties here.
-			let properties = mentor.vocabulary.getRootPropertiesOfType(this.context.graphs, node.uri!, node.options);
-
-			for (let p of properties) {
-				result.push(new PropertyNode(this.context, node.id + `/<${p}>`, p, node.options));
-			}
-		} else {
-			const properties = mentor.vocabulary.getSubProperties(this.context.graphs, node.uri, node.options);
-
-			for (let p of properties) {
-				result.push(new PropertyNode(this.context, node.id + `/<${p}>`, p, node.options));
-			}
-		}
-
-		return this.sortByLabel(result);
-	}
-
-	/**
-	 * Get the children of an invidiual node.
-	 * @param node A invidiual node.
-	 * @returns An array of child nodes.
-	 */
-	getIndividualNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		}
-
-		const result = [];
-
-		if (node.contextValue === "individuals" && this.showIndividualTypes) {
-			const types = mentor.vocabulary.getIndividualTypes(this.context.graphs, undefined, node.options);
-
-			for (let t of types) {
-				const n = new ClassNode(this.context, node.id + `/<${t}>`, t, node.options);
-				n.contextType = OWL.NamedIndividual;
-
-				result.push(n);
-			}
-		} else {
-			const individuals = mentor.vocabulary.getIndividuals(this.context.graphs, node.uri, node.options);
-
-			for (let x of individuals) {
-				result.push(new IndividualNode(this.context, node.id + `/<${x}>`, x, node.options));
-			}
-		}
-
-		return this.sortByLabel(result);
-	}
-
-	getNodeChildrenOfType(graphUris: string | string[] | undefined, node: DefinitionTreeNode, typeUri: string, createNode: (subjectUri: string) => DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		}
-
-		const type = node.uri ? node.uri : typeUri;
-
-		// Include the sub classes of the given type *before* the nodes of the given type.
-		const classNodes = [];
-		const classes = mentor.vocabulary.getSubClasses(graphUris, type);
-
-		for (let c of classes) {
-			if (mentor.vocabulary.hasSubjectsOfType(graphUris, c, node.options)) {
-				const n = new ClassNode(this.context, node.id + `/<${c}>`, c, node.options);
-				n.contextType = typeUri;
-
-				classNodes.push(n);
-			}
-		}
-
-		// Include the nodes of the given type *after* the sub classes.
-		const subjectNodes = [];
-
-		const subjectUris = mentor.vocabulary.getSubjectsOfType(graphUris, type, {
-			...node.options,
-			includeSubTypes: false
-		});
-
-		for (let s of subjectUris) {
-			subjectNodes.push(createNode(s));
-		}
-
-		return [...this.sortByLabel(classNodes), ...this.sortByLabel(subjectNodes)];
-	}
-
-	/**
-	 * Get the children of a shape node.
-	 * @param node A shape node.
-	 * @returns An array of child nodes.
-	 */
-	getShapeNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		} else {
-			const context = this.context;
-			const options = { ...node.options };
-			options.notDefinedBy?.add(_SH);
-
-			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Shape, (uri) => new ShapeNode(context, node.id + `/<${uri}>`, uri, node.options));
-		}
-	}
-
-	/**
-	 * Get the children of a validator node.
-	 * @param node A validator node.
-	 * @returns An array of validator nodes.
-	 */
-	getValidatorNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (this.context != null) {
-			const context = this.context;
-			const options = { ...node.options };
-			options.notDefinedBy?.add(_SH);
-
-			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Validator, (uri) => new ValidatorNode(context, node.id + `/<${uri}>`, uri, node.options));
-		} else {
-			return [];
-		}
-	}
-
-	/**
-	 * Get the children of a validator node.
-	 * @param node A validator node.
-	 * @returns An array of validator nodes.
-	 */
-	getRuleNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (this.context != null) {
-			const context = this.context;
-			const options = { ...node.options };
-			options.notDefinedBy?.add(_SH);
-
-			return this.getNodeChildrenOfType([_SH, ...context.graphs], node, SH.Rule, (uri) => new RuleNode(context, node.id + `/<${uri}>`, uri, node.options));
-		} else {
-			return [];
-		}
-	}
-
-	/**
-	 * Get the children of a concept node.
-	 * @param node A concept node.
-	 * @returns An array of children.
-	 */
-	getConceptNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		}
-
-		let subject = node.uri;
-
-		if (!subject && node.options?.definedBy) {
-			subject = node.options.definedBy;
-		}
-
-		const result = [];
-
-		for (let c of mentor.vocabulary.getNarrowerConcepts(this.context.graphs, subject)) {
-			result.push(new ConceptNode(this.context, node.id + `/<${c}>`, c, node.options));
-		}
-
-		return this.sortByLabel(result);
-	}
-
-	/**
-	 * Get the children of a concept scheme node.
-	 * @param node A concept scheme node.
-	 * @returns An array of children.
-	 */
-	getConceptSchemeNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		}
-
-		const result = [];
-		const options = { ...node.options, definedBy: node.uri };
-
-		const concepts = new ConceptNode(this.context, node.id + '/concepts', undefined, options);
-
-		if (this.getConceptNodeChildren(concepts).length > 0) {
-			result.push(concepts);
-		}
-
-		const collections = new CollectionNode(this.context, node.id + '/collections', undefined, options);
-
-		if (this.getCollectionNodeChildren(collections).length > 0) {
-			result.push(collections);
-		}
-
-		return result;
-	}
-
-	/**
-	 * Get the children of a collection node.
-	 * @param node A collection node.
-	 * @returns An array of children.
-	 */
-	getCollectionNodeChildren(node: DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.context) {
-			return [];
-		}
-
-		const result = [];
-
-		if (!node.uri) {
-			const collections = mentor.vocabulary.getCollections(this.context.graphs);
-
-			for (let c of collections) {
-				result.push(new CollectionNode(this.context, node.id + `/<${c}>`, c, node.options));
-			}
-		} else if (mentor.vocabulary.isOrderedCollection(this.context.graphs, node.uri)) {
-			const members = mentor.vocabulary.getCollectionMembers(this.context.graphs, node.uri);
-
-			for (let m of members) {
-				result.push(new ConceptNode(this.context, node.id + `/<${m}>`, m, node.options));
-			}
-
-			return result;
-		} else {
-			const members = mentor.vocabulary.getCollectionMembers(this.context.graphs, node.uri);
-
-			for (let m of members) {
-				result.push(new ConceptNode(this.context, node.id + `/<${m}>`, m, node.options));
-			}
-		}
-
-		return this.sortByLabel(result);
-	}
-
 	getTreeItem(node: DefinitionTreeNode): vscode.TreeItem {
 		const children = this.getChildren(node);
 		const collapsibleState = children?.length ? node.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
@@ -686,20 +365,5 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		} else {
 			return false;
 		}
-	}
-
-	/**
-	 * Sort the URIs by their labels according to the current label display settings.
-	 * @param nodes A list of URIs.
-	 * @returns The URIs sorted by their labels.
-	 */
-	protected sortByLabel(nodes: DefinitionTreeNode[]): DefinitionTreeNode[] {
-		return nodes
-			.map(n => ({
-				node: n,
-				label: n.getLabel().label
-			}))
-			.sort((a, b) => a.label.localeCompare(b.label))
-			.map(x => x.node);
 	}
 }

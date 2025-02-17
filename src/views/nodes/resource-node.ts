@@ -4,12 +4,18 @@ import { DefinitionTreeNode } from "../definition-tree-node";
 import { DocumentContext } from "../../languages";
 
 export class ResourceNode implements DefinitionTreeNode {
-	contextValue: string = 'resource';
-
+	/**
+	 * The unique identifier of the tree item. Note: It must be unique across all tree items 
+	 * and thus using the resource IRI is not suitable. In moste cases we encode the path of 
+	 * the tree item from the root node using this notation: <parent-iri>/<child-iri>.
+	 */
 	id: string;
 
 	// TODO: Fix #10 in mentor-rdf; Make this a rdfjs.Quad_Subject instead of string.
 	uri: string | undefined;
+
+	// TODO: What is the difference between uri and resourceUri?
+	resourceUri?: vscode.Uri | undefined;
 
 	/**
 	 * The default label of the tree item if the `uri` property is undefined.
@@ -20,11 +26,12 @@ export class ResourceNode implements DefinitionTreeNode {
 
 	contextType?: string;
 
+	contextValue: string = 'resource';
+
+	// TODO: Remove.
 	options?: DefinitionQueryOptions;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
-
-	resourceUri?: vscode.Uri | undefined;
 
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;

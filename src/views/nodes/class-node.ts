@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { mentor } from "../../mentor";
 import { RDFS } from "@faubulous/mentor-rdf";
+import { mentor } from "../../mentor";
 import { ResourceNode } from "./resource-node";
 
 export class ClassNode extends ResourceNode {
