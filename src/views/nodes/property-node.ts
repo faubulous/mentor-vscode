@@ -3,7 +3,12 @@ import { mentor } from "../../mentor";
 import { xsd, rdfs, RDF, DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { ResourceNode } from "./resource-node";
 import { DocumentContext } from "../../languages";
+import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
+import { ClassNode } from "./class-node";
 
+/**
+ * Node of a property in the definition tree.
+ */
 export class PropertyNode extends ResourceNode {
 	contextType = RDF.Property;
 
@@ -121,7 +126,7 @@ export class PropertyNode extends ResourceNode {
 
 	static getIconColor(graphUris: string | string[] | undefined, propertyUri?: string, rangeUri?: string) {
 		let color = 'mentor.color.' + PropertyNode.getPropertyType(rangeUri);
-		
+
 		return new vscode.ThemeColor(color);
 	}
 
@@ -143,5 +148,41 @@ export class PropertyNode extends ResourceNode {
 		}
 
 		return result;
+	}
+
+	override getChildren(): DefinitionTreeNode[] {
+		if (!this.document) {
+			return [];
+		}
+
+		const result = [];
+
+		if (this.contextValue === "properties" && this.showPropertyTypes) {
+			const types = mentor.vocabulary.getPropertyTypes(this.document.graphs, this.options);
+
+			for (let type of types) {
+				const n = new ClassNode(this.document, this.id + `/<${type}>`, type, this.options);
+				n.contextType = RDF.Property;
+
+				result.push(n);
+			}
+		} else if (this instanceof ClassNode) { // TODO: This is not possible.
+			throw new Error("This should not be possible.");
+			
+			// Note: We only want to return the asserted properties here.
+			let properties = mentor.vocabulary.getRootPropertiesOfType(this.document.graphs, this.uri!, this.options);
+
+			for (let p of properties) {
+				result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.options));
+			}
+		} else {
+			const properties = mentor.vocabulary.getSubProperties(this.document.graphs, this.uri, this.options);
+
+			for (let p of properties) {
+				result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.options));
+			}
+		}
+
+		return sortByLabel(result);
 	}
 }

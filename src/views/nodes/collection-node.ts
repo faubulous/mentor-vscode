@@ -1,8 +1,13 @@
 import * as vscode from "vscode";
 import { mentor } from "../../mentor";
-import { ResourceNode } from "./resource-node";
 import { SKOS } from "@faubulous/mentor-rdf";
+import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
+import { ResourceNode } from "./resource-node";
+import { ConceptNode } from "./concept-node";
 
+/**
+ * Node of a SKOS collection in the definition tree.
+ */
 export class CollectionNode extends ResourceNode {
 	contextType = SKOS.Collection;
 
@@ -34,5 +39,37 @@ export class CollectionNode extends ResourceNode {
 		}
 
 		return result;
+	}
+
+	override getChildren(): DefinitionTreeNode[] {
+		if (!this.document) {
+			return [];
+		}
+
+		const result = [];
+
+		if (!this.uri) {
+			const collections = mentor.vocabulary.getCollections(this.document.graphs);
+
+			for (const c of collections) {
+				result.push(new CollectionNode(this.document, this.id + `/<${c}>`, c, this.options));
+			}
+		} else if (mentor.vocabulary.isOrderedCollection(this.document.graphs, this.uri)) {
+			const members = mentor.vocabulary.getCollectionMembers(this.document.graphs, this.uri);
+
+			for (const m of members) {
+				result.push(new ConceptNode(this.document, this.id + `/<${m}>`, m, this.options));
+			}
+
+			return result;
+		} else {
+			const members = mentor.vocabulary.getCollectionMembers(this.document.graphs, this.uri);
+
+			for (const m of members) {
+				result.push(new ConceptNode(this.document, this.id + `/<${m}>`, m, this.options));
+			}
+		}
+
+		return sortByLabel(result);
 	}
 }

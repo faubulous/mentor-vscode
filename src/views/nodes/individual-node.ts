@@ -1,8 +1,13 @@
 import * as vscode from "vscode";
-import { mentor } from "../../mentor";
 import { OWL } from "@faubulous/mentor-rdf";
+import { mentor } from "../../mentor";
+import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { ResourceNode } from "./resource-node";
+import { ClassNode } from "./class-node";
 
+/**
+ * Node of a class instance in the definition tree.
+ */
 export class IndividualNode extends ResourceNode {
 	contextType = OWL.NamedIndividual;
 
@@ -28,5 +33,32 @@ export class IndividualNode extends ResourceNode {
 		}
 
 		return result;
+	}
+
+	override getChildren(): DefinitionTreeNode[] {
+		if (!this.document) {
+			return [];
+		}
+
+		const result = [];
+
+		if (this.contextValue === "individuals" && this.showIndividualTypes) {
+			const types = mentor.vocabulary.getIndividualTypes(this.document.graphs, undefined, this.options);
+
+			for (let t of types) {
+				const n = new ClassNode(this.document, this.id + `/<${t}>`, t, this.options);
+				n.contextType = OWL.NamedIndividual;
+
+				result.push(n);
+			}
+		} else {
+			const individuals = mentor.vocabulary.getIndividuals(this.document.graphs, this.uri, this.options);
+
+			for (let x of individuals) {
+				result.push(new IndividualNode(this.document, this.id + `/<${x}>`, x, this.options));
+			}
+		}
+
+		return sortByLabel(result);
 	}
 }

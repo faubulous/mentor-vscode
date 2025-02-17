@@ -87,6 +87,11 @@ export interface DefinitionTreeNode {
 	 * @returns A markdown string or undefined if no tooltip should be shown.
 	 */
 	getTooltip(): vscode.MarkdownString | undefined;
+
+	/**
+	 * Get the children of the tree item.
+	 */
+	getChildren(): DefinitionTreeNode[];
 }
 
 /**

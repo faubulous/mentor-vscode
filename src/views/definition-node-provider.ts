@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { Uri, OWL, RDF, RDFS, SKOS, SH, _SH } from '@faubulous/mentor-rdf';
+import { Uri, _SH } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
 import { DefinitionTreeNode, sortByLabel } from './definition-tree-node';
 import { ClassNode } from './nodes/class-node';
@@ -12,16 +12,6 @@ import { DefinitionTreeLayout } from '../settings';
 import { ShapeNode } from './nodes/shape-node';
 import { ValidatorNode } from './nodes/validator-node';
 import { RuleNode } from './nodes/rule-node';
-import { OntologyNodeProvider } from './nodes/ontology-node-provider';
-import { ClassNodeProvider } from './nodes/class-node-provider';
-import { PropertyNodeProvider } from './nodes/property-node-provider';
-import { IndividualNodeProvider } from './nodes/individual-node-provider';
-import { ShapeNodeProvider } from './nodes/shape-node-provider';
-import { ValidatorNodeProvider } from './nodes/validator-node-provider';
-import { RuleNodeProvider } from './nodes/rule-node-provider';
-import { CollectionNodeProvider } from './nodes/collection-node-provider';
-import { ConceptNodeProvider } from './nodes/concept-node-provider';
-import { ConceptSchemeNodeProvider } from './nodes/concept-scheme-node-provider';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
@@ -30,11 +20,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	/**
 	 * The vocabulary document context.
 	 */
-	public context: DocumentContext | undefined;
-
-	private _onDidChangeTreeData: vscode.EventEmitter<DefinitionTreeNode | undefined> = new vscode.EventEmitter<DefinitionTreeNode | undefined>();
-
-	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
+	public document: DocumentContext | undefined;
 
 	/**
 	 * Indicates whether to show referenced classes or properties in the tree view.
@@ -56,6 +42,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	 */
 	showDefinitionSources = false;
 
+	private _onDidChangeTreeData: vscode.EventEmitter<DefinitionTreeNode | undefined> = new vscode.EventEmitter<DefinitionTreeNode | undefined>();
+
+	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
+	
 	constructor() {
 		if (mentor.activeContext) {
 			this._onDidChangeVocabulary(mentor.activeContext);
@@ -95,7 +85,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	private _onDidChangeVocabulary(e: DocumentContext | undefined): void {
 		if (e) {
-			this.context = e;
+			this.document = e;
 			this.onDidChangeVocabularyContext(e);
 			this._onDidChangeTreeData.fire(void 0);
 		}
@@ -111,7 +101,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	 * Refresh the tree view.
 	 */
 	refresh(): void {
-		this._onDidChangeVocabulary(this.context);
+		this._onDidChangeVocabulary(this.document);
 	}
 
 	getParent(node: DefinitionTreeNode): DefinitionTreeNode | null | undefined {
@@ -122,28 +112,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		// TODO: Refactor into separate node provider classes and associate these with the nodes.
 		if (!node) {
 			return this.showDefinitionSources ? this.getRootNodesWithSources() : this.getRootNodes();
-		} else if (node.contextType === OWL.Ontology) {
-			return new OntologyNodeProvider(this.context).getNodeChildren(node);
-		} else if (node.contextType === RDFS.Class) {
-			return new ClassNodeProvider(this.context).getNodeChildren(node);
-		} else if (node.contextType === RDF.Property) {
-			return new PropertyNodeProvider(this.context).getNodeChildren(node);
-		} else if (node.contextType === OWL.NamedIndividual) {
-			return new IndividualNodeProvider(this.context).getNodeChildren(node);
-		} else if (node.contextType === SH.Shape) {
-			return new ShapeNodeProvider(this.context).getNodeChildren(node);
-		} else if (node.contextType === SH.Validator) {
-			return new ValidatorNodeProvider(this.context).getNodeChildren(node);
-		} else if (node.contextType === SH.Rule) {
-			return new RuleNodeProvider(this.context).getNodeChildren(node);
-		} else if (node.contextType === SKOS.ConceptScheme) {
-			return new ConceptSchemeNodeProvider(this.context).getNodeChildren(node);
-		} else if (node.contextType === SKOS.Concept) {
-			return new ConceptNodeProvider(this.context).getNodeChildren(node);
-		} if (node.contextType == SKOS.Collection) {
-			return new CollectionNodeProvider(this.context).getNodeChildren(node);
 		} else {
-			return [];
+			return node.getChildren();
 		}
 	}
 
@@ -152,69 +122,69 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	 * @returns The root nodes of the document.
 	 */
 	getRootNodes(): DefinitionTreeNode[] {
-		if (!this.context) {
+		if (!this.document) {
 			return [];
 		}
 
 		let result = [];
 
-		const ontologyUris = mentor.vocabulary.getOntologies(this.context.graphs);
+		const ontologyUris = mentor.vocabulary.getOntologies(this.document.graphs);
 
 		for (const ontologyUri of ontologyUris) {
-			const n = new OntologyNode(this.context, `<${ontologyUri}>`, ontologyUri);
+			const n = new OntologyNode(this.document, `<${ontologyUri}>`, ontologyUri);
 			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
 
 			result.push(n);
 		}
 
-		const schemeUris = mentor.vocabulary.getConceptSchemes(this.context.graphs);
+		const schemeUris = mentor.vocabulary.getConceptSchemes(this.document.graphs);
 
 		for (const schemeUri of schemeUris) {
-			result.push(new ConceptSchemeNode(this.context, `<${schemeUri}>`, schemeUri));
+			result.push(new ConceptSchemeNode(this.document, `<${schemeUri}>`, schemeUri));
 		}
 
-		for (let _ of mentor.vocabulary.getClasses(this.context.graphs)) {
-			const n = new ClassNode(this.context, '<>/classes', undefined, { includeReferenced: this.showReferences });
+		for (let _ of mentor.vocabulary.getClasses(this.document.graphs)) {
+			const n = new ClassNode(this.document, '<>/classes', undefined, { includeReferenced: this.showReferences });
 			n.contextValue = "classes";
 
 			result.push(n);
 			break;
 		}
 
-		for (let _ of mentor.vocabulary.getProperties(this.context.graphs)) {
-			const n = new PropertyNode(this.context, '<>/properties', undefined, { includeReferenced: this.showReferences });
+		for (let _ of mentor.vocabulary.getProperties(this.document.graphs)) {
+			const n = new PropertyNode(this.document, '<>/properties', undefined, { includeReferenced: this.showReferences });
 			n.contextValue = "properties";
 
 			result.push(n);
 			break;
 		}
 
-		for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined)) {
-			const n = new IndividualNode(this.context, '<>/individuals', undefined, undefined);
+		for (let _ of mentor.vocabulary.getIndividuals(this.document.graphs, undefined)) {
+			const n = new IndividualNode(this.document, '<>/individuals', undefined, undefined);
 			n.contextValue = "individuals";
 
 			result.push(n);
 			break;
 		}
 
-		for (let _ of mentor.vocabulary.getShapes(this.context.graphs, undefined)) {
-			const n = new ShapeNode(this.context, '<>/shapes', undefined, undefined);
+		for (let _ of mentor.vocabulary.getShapes(this.document.graphs, undefined)) {
+			const n = new ShapeNode(this.document, '<>/shapes', undefined, undefined);
 			n.contextValue = "shapes";
 
 			result.push(n);
 			break;
 		}
 
-		for (let _ of mentor.vocabulary.getRules(this.context.graphs, undefined)) {
-			const n = new RuleNode(this.context, '<>/rules', undefined, undefined);
+		for (let _ of mentor.vocabulary.getRules(this.document.graphs, undefined)) {
+			const n = new RuleNode(this.document, '<>/rules', undefined, undefined);
 			n.contextValue = "rules";
 
 			result.push(n);
 			break;
 		}
 
-		for (let _ of mentor.vocabulary.getValidators(this.context.graphs, undefined)) {
-			const n = new ValidatorNode(this.context, '<>/validators', undefined, undefined);
+		for (let _ of mentor.vocabulary.getValidators(this.document.graphs, undefined)) {
+			const n = new ValidatorNode(this.document, '<>/validators', undefined, undefined);
 			n.contextValue = "validators";
 
 			result.push(n);
@@ -229,29 +199,29 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	 * @returns The root nodes of the document.
 	 */
 	getRootNodesWithSources(): DefinitionTreeNode[] {
-		if (!this.context) {
+		if (!this.document) {
 			return [];
 		}
 
-		const ontologyUris = mentor.vocabulary.getOntologies(this.context.graphs);
+		const ontologyUris = mentor.vocabulary.getOntologies(this.document.graphs);
 		const ontologyNodes = [];
 
 		for (const ontologyUri of ontologyUris) {
-			const n = new OntologyNode(this.context, `<${ontologyUri}>`, ontologyUri, { definedBy: ontologyUri });
+			const n = new OntologyNode(this.document, `<${ontologyUri}>`, ontologyUri, { definedBy: ontologyUri });
 			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
 			ontologyNodes.push(n);
 		}
 
-		const schemeUris = mentor.vocabulary.getConceptSchemes(this.context.graphs);
+		const schemeUris = mentor.vocabulary.getConceptSchemes(this.document.graphs);
 		const schemeNodes = [];
 
 		for (const schemeUri of schemeUris) {
-			schemeNodes.push(new ConceptSchemeNode(this.context, `<${schemeUri}>`, schemeUri));
+			schemeNodes.push(new ConceptSchemeNode(this.document, `<${schemeUri}>`, schemeUri));
 		}
 
 		const ontologies = new Set(ontologyUris);
-		const sourceUris = mentor.vocabulary.getDefinitionSources(this.context.graphs);
+		const sourceUris = mentor.vocabulary.getDefinitionSources(this.document.graphs);
 		const sourceNodes = [];
 
 		for (let source of sourceUris) {
@@ -261,7 +231,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 				continue;
 			}
 
-			const n = new OntologyNode(this.context, `<${source}>`, source, { definedBy: source });
+			const n = new OntologyNode(this.document, `<${source}>`, source, { definedBy: source });
 			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 			n.isReferenced = true;
 
@@ -279,41 +249,41 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		let options = { notDefinedBy: new Set([...ontologyUris, ...sourceUris]), includeReferenced: false };
 		let hasUnknown = false;
 
-		for (let _ of mentor.vocabulary.getClasses(this.context.graphs, options)) {
+		for (let _ of mentor.vocabulary.getClasses(this.document.graphs, options)) {
 			hasUnknown = true;
 			break;
 		}
 
 		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getProperties(this.context.graphs, options)) {
+			for (let _ of mentor.vocabulary.getProperties(this.document.graphs, options)) {
 				hasUnknown = true;
 				break;
 			}
 		}
 
 		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getIndividuals(this.context.graphs, undefined, options)) {
+			for (let _ of mentor.vocabulary.getIndividuals(this.document.graphs, undefined, options)) {
 				hasUnknown = true;
 				break;
 			}
 		}
 
 		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getShapes(this.context.graphs, undefined, options)) {
+			for (let _ of mentor.vocabulary.getShapes(this.document.graphs, undefined, options)) {
 				hasUnknown = true;
 				break;
 			}
 		}
 
 		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getRules(this.context.graphs, options)) {
+			for (let _ of mentor.vocabulary.getRules(this.document.graphs, options)) {
 				hasUnknown = true;
 				break;
 			}
 		}
 
 		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getValidators(this.context.graphs, options)) {
+			for (let _ of mentor.vocabulary.getValidators(this.document.graphs, options)) {
 				hasUnknown = true;
 				break;
 			}
@@ -321,7 +291,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		if (hasUnknown) {
 			// Important: Reset the includeReferenced setting for the root nodes.
-			const n = new OntologyNode(this.context, '<>', undefined, {
+			const n = new OntologyNode(this.document, '<>', undefined, {
 				...options,
 				includeReferenced: this.showReferences
 			});
@@ -360,8 +330,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	protected hasShapes(node: DefinitionTreeNode): boolean {
-		if (this.context && node.uri) {
-			return mentor.vocabulary.hasShapes(this.context.graphs, node.uri, { ...node.options, definedBy: undefined });
+		if (this.document && node.uri) {
+			return mentor.vocabulary.hasShapes(this.document.graphs, node.uri, { ...node.options, definedBy: undefined });
 		} else {
 			return false;
 		}

@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
-import { DefinitionQueryOptions, RDFS } from "@faubulous/mentor-rdf";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { mentor } from '../../mentor';
 import { DocumentContext } from "../../languages";
+import { DefinitionQueryOptions, RDFS } from "@faubulous/mentor-rdf";
+import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 
-export class ResourceNode implements DefinitionTreeNode {
+export abstract class ResourceNode implements DefinitionTreeNode {
 	/**
 	 * The unique identifier of the tree item. Note: It must be unique across all tree items 
 	 * and thus using the resource IRI is not suitable. In moste cases we encode the path of 
@@ -135,5 +136,56 @@ export class ResourceNode implements DefinitionTreeNode {
 		} else {
 			return undefined;
 		}
+	}
+
+	/**
+	 * Get the children of the tree item.
+	 */
+	abstract getChildren(): DefinitionTreeNode[];
+
+	/**
+	 * Get the children of a node of a specific RDF type.
+	 * @param graphUris Graph URIs to search for subjects.
+	 * @param node The parent node to get the children of.
+	 * @param typeUri The type URI of the children to retrieve.
+	 * @param createNode A callback function to create a new node.
+	 * @returns A list of children nodes.
+	 */
+	getChildrenOfType(graphUris: string | string[] | undefined, node: DefinitionTreeNode, typeUri: string, createNode: (subjectUri: string) => DefinitionTreeNode): DefinitionTreeNode[] {
+		if (!this.document) {
+			return [];
+		}
+
+		const type = node.uri ? node.uri : typeUri;
+
+		// Include the sub classes of the given type *before* the nodes of the given type.
+		const classNodes = [];
+		const classes = mentor.vocabulary.getSubClasses(graphUris, type);
+
+		for (let c of classes) {
+			if (mentor.vocabulary.hasSubjectsOfType(graphUris, c, node.options)) {
+				const n = new ClassNode(this.document, node.id + `/<${c}>`, c, node.options);
+				n.contextType = typeUri;
+
+				classNodes.push(n);
+			}
+		}
+
+		// Include the nodes of the given type *after* the sub classes.
+		const subjectNodes = [];
+
+		const subjectUris = mentor.vocabulary.getSubjectsOfType(graphUris, type, {
+			...node.options,
+			includeSubTypes: false
+		});
+
+		for (let s of subjectUris) {
+			subjectNodes.push(createNode(s));
+		}
+
+		return [
+			...sortByLabel(classNodes),
+			...sortByLabel(subjectNodes)
+		];
 	}
 }

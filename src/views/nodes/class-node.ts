@@ -2,7 +2,11 @@ import * as vscode from "vscode";
 import { RDFS } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { ResourceNode } from "./resource-node";
+import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 
+/**
+ * Node of a RDFS or OWL class in the definition tree.
+ */
 export class ClassNode extends ResourceNode {
 	contextType = RDFS.Class;
 
@@ -29,7 +33,7 @@ export class ClassNode extends ResourceNode {
 			return new vscode.ThemeIcon(icon, ClassNode.getIconColor(graphUris, subjectUri));
 		}
 	}
-	
+
 	override getIconColor() {
 		return ClassNode.getIconColor(this.document.graphs, this.uri);
 	}
@@ -45,16 +49,16 @@ export class ClassNode extends ResourceNode {
 			result += " " + mentor.vocabulary.getClasses(this.document.graphs, this.options).length.toString();
 		} else {
 			let indicators = [];
-			
+
 			if (mentor.vocabulary.hasEquivalentClass(this.document.graphs, this.uri)) {
 				indicators.push("≡");
 			}
 
-			// if (mentor.vocabulary.isIntersectionOfClasses(this.context.graphs, this.uri)) {
+			// if (mentor.vocabulary.isIntersectionOfClasses(this.document.graphs, this.uri)) {
 			// 	indicators.push("⋂");
-			// } else if (mentor.vocabulary.isUnionOfClasses(this.context.graphs, this.uri)) {
+			// } else if (mentor.vocabulary.isUnionOfClasses(this.document.graphs, this.uri)) {
 			// 	indicators.push("⋃");
-			// } else if (mentor.vocabulary.hasEquivalentClass(this.context.graphs, this.uri)) {
+			// } else if (mentor.vocabulary.hasEquivalentClass(this.document.graphs, this.uri)) {
 			// 	indicators.push("≡");
 			// }
 
@@ -62,5 +66,20 @@ export class ClassNode extends ResourceNode {
 		}
 
 		return result;
+	}
+
+	override getChildren(): DefinitionTreeNode[] {
+		if (!this.document) {
+			return [];
+		} else {
+			const result = [];
+			const classes = mentor.vocabulary.getSubClasses(this.document.graphs, this.uri, this.options);
+
+			for (let c of classes) {
+				result.push(new ClassNode(this.document, this.id + `/<${c}>`, c, this.options));
+			}
+
+			return sortByLabel(result);
+		}
 	}
 }

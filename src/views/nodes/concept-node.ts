@@ -2,7 +2,11 @@ import * as vscode from "vscode";
 import { mentor } from "../../mentor";
 import { ResourceNode } from "./resource-node";
 import { SKOS } from "@faubulous/mentor-rdf";
+import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 
+/**
+ * Node of a SKOS concept in the definition tree.
+ */
 export class ConceptNode extends ResourceNode {
 	contextType = SKOS.Concept;
 
@@ -28,5 +32,25 @@ export class ConceptNode extends ResourceNode {
 		}
 
 		return result;
+	}
+
+	override getChildren(): DefinitionTreeNode[] {
+		if (!this.document) {
+			return [];
+		}
+
+		let subject = this.uri;
+
+		if (!subject && this.options?.definedBy) {
+			subject = this.options.definedBy;
+		}
+
+		const result = [];
+
+		for (let c of mentor.vocabulary.getNarrowerConcepts(this.document.graphs, subject)) {
+			result.push(new ConceptNode(this.document, this.id + `/<${c}>`, c, this.options));
+		}
+
+		return sortByLabel(result);
 	}
 }
