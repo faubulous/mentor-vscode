@@ -109,7 +109,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
-		// TODO: Refactor into separate node provider classes and associate these with the nodes.
 		if (!node) {
 			return this.showDefinitionSources ? this.getRootNodesWithSources() : this.getRootNodes();
 		} else {
@@ -160,7 +159,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		for (let _ of mentor.vocabulary.getIndividuals(this.document.graphs, undefined)) {
-			const n = new IndividualNode(this.document, '<>/individuals', undefined, undefined);
+			const n = new IndividualNode(this.document, '<>/individuals', undefined);
 			n.contextValue = "individuals";
 
 			result.push(n);
@@ -168,7 +167,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		for (let _ of mentor.vocabulary.getShapes(this.document.graphs, undefined)) {
-			const n = new ShapeNode(this.document, '<>/shapes', undefined, undefined);
+			const n = new ShapeNode(this.document, '<>/shapes', undefined);
 			n.contextValue = "shapes";
 
 			result.push(n);
@@ -176,7 +175,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		for (let _ of mentor.vocabulary.getRules(this.document.graphs, undefined)) {
-			const n = new RuleNode(this.document, '<>/rules', undefined, undefined);
+			const n = new RuleNode(this.document, '<>/rules', undefined);
 			n.contextValue = "rules";
 
 			result.push(n);
@@ -184,7 +183,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		for (let _ of mentor.vocabulary.getValidators(this.document.graphs, undefined)) {
-			const n = new ValidatorNode(this.document, '<>/validators', undefined, undefined);
+			const n = new ValidatorNode(this.document, '<>/validators', undefined);
 			n.contextValue = "validators";
 
 			result.push(n);
