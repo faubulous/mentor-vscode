@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { mentor } from "../../mentor";
 import { ResourceNode } from "./resource-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 
@@ -15,24 +14,11 @@ export class RuleNode extends ResourceNode {
 	defaultLabel = "Rules";
 
 	override getIcon() {
-		if (this.uri) {
-			// Return the ref class icon if target cannot be found.
-			return new vscode.ThemeIcon('rdf-class', this.getIconColor());
-		}
+		return new vscode.ThemeIcon('rdf-class', this.getIconColor());
 	}
 
 	override getIconColor() {
 		return new vscode.ThemeColor("mentor.color.class");
-	}
-
-	override getDescription(): string {
-		let result = super.getDescription();
-
-		if (!this.uri) {
-			result += " " + mentor.vocabulary.getRules(this.document.graphs).length.toString();
-		}
-
-		return result;
 	}
 
 	override getResourceUri(): vscode.Uri | undefined {
@@ -40,10 +26,6 @@ export class RuleNode extends ResourceNode {
 	}
 
 	override getChildren(): DefinitionTreeNode[] {
-		if (!this.document) {
-			return [];
-		}
-
 		const document = this.document;
 
 		const options = { ...this.options };

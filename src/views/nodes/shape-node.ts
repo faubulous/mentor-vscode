@@ -65,10 +65,6 @@ export class ShapeNode extends ResourceNode {
 	}
 
 	override getChildren(): DefinitionTreeNode[] {
-		if (!this.document) {
-			return [];
-		}
-
 		const document = this.document;
 
 		const options = { ...this.options };

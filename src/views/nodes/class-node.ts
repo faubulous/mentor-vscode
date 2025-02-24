@@ -12,8 +12,6 @@ export class ClassNode extends ResourceNode {
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
-	defaultLabel = "Classes";
-
 	override getIcon() {
 		return ClassNode.getIcon(this.document.graphs, this.uri);
 	}
@@ -45,10 +43,8 @@ export class ClassNode extends ResourceNode {
 	override getDescription(): string {
 		let result = super.getDescription();
 
-		if (!this.uri) {
-			result += " " + mentor.vocabulary.getClasses(this.document.graphs, this.options).length.toString();
-		} else {
-			let indicators = [];
+		if (this.uri) {
+			const indicators = [];
 
 			if (mentor.vocabulary.hasEquivalentClass(this.document.graphs, this.uri)) {
 				indicators.push("≡");
@@ -69,17 +65,13 @@ export class ClassNode extends ResourceNode {
 	}
 
 	override getChildren(): DefinitionTreeNode[] {
-		if (!this.document) {
-			return [];
-		} else {
-			const result = [];
-			const classes = mentor.vocabulary.getSubClasses(this.document.graphs, this.uri, this.options);
+		const result = [];
+		const classes = mentor.vocabulary.getSubClasses(this.document.graphs, this.uri, this.options);
 
-			for (let c of classes) {
-				result.push(new ClassNode(this.document, this.id + `/<${c}>`, c, this.options));
-			}
-
-			return sortByLabel(result);
+		for (let c of classes) {
+			result.push(new ClassNode(this.document, this.id + `/<${c}>`, c, this.options));
 		}
+
+		return sortByLabel(result);
 	}
 }

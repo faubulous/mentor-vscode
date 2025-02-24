@@ -3,12 +3,12 @@ import { OWL } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ResourceNode } from "./resource-node";
-import { ClassNode } from "./class-node";
-import { PropertyNode } from "./property-node";
-import { IndividualNode } from "./individual-node";
-import { ShapeNode } from "./shape-node";
-import { RuleNode } from "./rule-node";
-import { ValidatorNode } from "./validator-node";
+import { ClassGroupNode } from "./class-group-node";
+import { PropertyGroupNode } from "./property-group-node";
+import { IndividualGroupNode } from "./individual-group-node";
+import { ShapeGroupNode } from "./shape-group-node";
+import { RuleGroupNode } from "./rule-group-node";
+import { ValidatorGroupNode } from "./validator-group-node";
 
 /**
  * Node of a ontology header in the definition tree.
@@ -49,50 +49,40 @@ export class OntologyNode extends ResourceNode {
 	}
 
 	override getChildren(): DefinitionTreeNode[] {
-		if (!this.document) {
-			return [];
-		}
-
 		const result = [];
 		const options = { ...this.options };
 
-		const classes = new ClassNode(this.document, this.id + '/classes', undefined, options);
-		classes.contextValue = "classes";
+		const classes = new ClassGroupNode(this.document, this.id + '/classes', undefined, options);
 
 		if (classes.getChildren().length > 0) {
 			result.push(classes);
 		}
 
-		const properties = new PropertyNode(this.document, this.id + '/properties', undefined, options);
-		properties.contextValue = "properties";
+		const properties = new PropertyGroupNode(this.document, this.id + '/properties', undefined, options);
 
 		if (properties.getChildren().length > 0) {
 			result.push(properties);
 		}
 
-		const individuals = new IndividualNode(this.document, this.id + '/individuals', undefined, options);
-		individuals.contextValue = "individuals";
+		const individuals = new IndividualGroupNode(this.document, this.id + '/individuals', undefined, options);
 
 		if (individuals.getChildren().length > 0) {
 			result.push(individuals);
 		}
 
-		const shapes = new ShapeNode(this.document, this.id + '/shapes', undefined, { ...options, includeBlankNodes: true });
-		shapes.contextValue = "shapes";
+		const shapes = new ShapeGroupNode(this.document, this.id + '/shapes', undefined, { ...options, includeBlankNodes: true });
 
 		if (shapes.getChildren().length > 0) {
 			result.push(shapes);
 		}
 
-		const rules = new RuleNode(this.document, this.id + '/rules', undefined, { ...options, includeBlankNodes: true });
-		rules.contextValue = "rules";
+		const rules = new RuleGroupNode(this.document, this.id + '/rules', undefined, { ...options, includeBlankNodes: true });
 
 		if (rules.getChildren().length > 0) {
 			result.push(rules);
 		}
 
-		const validators = new ValidatorNode(this.document, this.id + '/validators', undefined, { ...options, includeBlankNodes: true });
-		validators.contextValue = "validators";
+		const validators = new ValidatorGroupNode(this.document, this.id + '/validators', undefined, { ...options, includeBlankNodes: true });
 
 		if (validators.getChildren().length > 0) {
 			result.push(validators);

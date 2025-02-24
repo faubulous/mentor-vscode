@@ -3,6 +3,7 @@ import { mentor } from '../../mentor';
 import { DocumentContext } from "../../languages";
 import { DefinitionQueryOptions, RDFS } from "@faubulous/mentor-rdf";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
+import { ClassNode } from './class-node';
 
 export abstract class ResourceNode implements DefinitionTreeNode {
 	/**
@@ -141,7 +142,9 @@ export abstract class ResourceNode implements DefinitionTreeNode {
 	/**
 	 * Get the children of the tree item.
 	 */
-	abstract getChildren(): DefinitionTreeNode[];
+	getChildren(): DefinitionTreeNode[] {
+		return [];
+	}
 
 	/**
 	 * Get the children of a node of a specific RDF type.
@@ -152,17 +155,13 @@ export abstract class ResourceNode implements DefinitionTreeNode {
 	 * @returns A list of children nodes.
 	 */
 	getChildrenOfType(graphUris: string | string[] | undefined, node: DefinitionTreeNode, typeUri: string, createNode: (subjectUri: string) => DefinitionTreeNode): DefinitionTreeNode[] {
-		if (!this.document) {
-			return [];
-		}
-
 		const type = node.uri ? node.uri : typeUri;
 
 		// Include the sub classes of the given type *before* the nodes of the given type.
 		const classNodes = [];
-		const classes = mentor.vocabulary.getSubClasses(graphUris, type);
+		const classUris = mentor.vocabulary.getSubClasses(graphUris, type);
 
-		for (let c of classes) {
+		for (let c of classUris) {
 			if (mentor.vocabulary.hasSubjectsOfType(graphUris, c, node.options)) {
 				const n = new ClassNode(this.document, node.id + `/<${c}>`, c, node.options);
 				n.contextType = typeUri;
@@ -173,7 +172,6 @@ export abstract class ResourceNode implements DefinitionTreeNode {
 
 		// Include the nodes of the given type *after* the sub classes.
 		const subjectNodes = [];
-
 		const subjectUris = mentor.vocabulary.getSubjectsOfType(graphUris, type, {
 			...node.options,
 			includeSubTypes: false

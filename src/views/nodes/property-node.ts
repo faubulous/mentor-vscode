@@ -4,7 +4,6 @@ import { xsd, rdfs, RDF, DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { ResourceNode } from "./resource-node";
 import { DocumentContext } from "../../languages";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
-import { ClassNode } from "./class-node";
 
 /**
  * Node of a property in the definition tree.
@@ -13,8 +12,6 @@ export class PropertyNode extends ResourceNode {
 	contextType = RDF.Property;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-
-	defaultLabel = "Properties";
 
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
@@ -125,7 +122,7 @@ export class PropertyNode extends ResourceNode {
 	}
 
 	static getIconColor(graphUris: string | string[] | undefined, propertyUri?: string, rangeUri?: string) {
-		let color = 'mentor.color.' + PropertyNode.getPropertyType(rangeUri);
+		const color = 'mentor.color.' + PropertyNode.getPropertyType(rangeUri);
 
 		return new vscode.ThemeColor(color);
 	}
@@ -138,49 +135,12 @@ export class PropertyNode extends ResourceNode {
 		return PropertyNode.getIconColor(this.document.graphs, this.uri, this.rangeUri!);
 	}
 
-	override getDescription(): string {
-		let result = super.getDescription();
-
-		if (!this.uri) {
-			const properties = mentor.vocabulary.getProperties(this.document.graphs, this.options);
-
-			result += " " + properties.length.toString();
-		}
-
-		return result;
-	}
-
 	override getChildren(): DefinitionTreeNode[] {
-		if (!this.document) {
-			return [];
-		}
-
 		const result = [];
+		const properties = mentor.vocabulary.getSubProperties(this.document.graphs, this.uri, this.options);
 
-		if (this.contextValue === "properties" && this.showPropertyTypes) {
-			const types = mentor.vocabulary.getPropertyTypes(this.document.graphs, this.options);
-
-			for (let type of types) {
-				const n = new ClassNode(this.document, this.id + `/<${type}>`, type, this.options);
-				n.contextType = RDF.Property;
-
-				result.push(n);
-			}
-		} else if (this instanceof ClassNode) { // TODO: This is not possible.
-			throw new Error("This should not be possible.");
-			
-			// Note: We only want to return the asserted properties here.
-			let properties = mentor.vocabulary.getRootPropertiesOfType(this.document.graphs, this.uri!, this.options);
-
-			for (let p of properties) {
-				result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.options));
-			}
-		} else {
-			const properties = mentor.vocabulary.getSubProperties(this.document.graphs, this.uri, this.options);
-
-			for (let p of properties) {
-				result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.options));
-			}
+		for (let p of properties) {
+			result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.options));
 		}
 
 		return sortByLabel(result);
