@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import * as n3 from "n3";
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
-import { DefinitionTreeNode } from "../definition-tree-node";
 import { ResourceNode } from "./resource-node";
 import { ClassNode } from "./class-node";
 import { PropertyNode } from "./property-node";
@@ -12,10 +11,6 @@ import { PropertyNode } from "./property-node";
  */
 export class ShapeNode extends ResourceNode {
 	contextType = SH.Shape;
-
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-
-	defaultLabel = "Shapes";
 
 	override getIcon() {
 		if (this.uri) {
@@ -50,26 +45,7 @@ export class ShapeNode extends ResourceNode {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 
-	override getDescription(): string {
-		let result = super.getDescription();
-
-		if (!this.uri) {
-			result += " " + mentor.vocabulary.getShapes(this.document.graphs, undefined, { includeBlankNodes: true }).length.toString();
-		}
-
-		return result;
-	}
-
 	override getResourceUri(): vscode.Uri | undefined {
 		return undefined;
-	}
-
-	override getChildren(): DefinitionTreeNode[] {
-		const document = this.document;
-
-		const options = { ...this.options };
-		options.notDefinedBy?.add(_SH);
-
-		return this.getChildrenOfType([_SH, ...document.graphs], this, SH.Shape, (uri) => new ShapeNode(document, this.id + `/<${uri}>`, uri, this.options));
 	}
 }

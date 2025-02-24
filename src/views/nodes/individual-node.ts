@@ -8,8 +8,6 @@ import { ResourceNode } from "./resource-node";
 export class IndividualNode extends ResourceNode {
 	contextType = OWL.NamedIndividual;
 
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-
 	override getIcon() {
 		return new vscode.ThemeIcon('rdf-individual', this.getIconColor());
 	}

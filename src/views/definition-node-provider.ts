@@ -27,25 +27,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	 */
 	showReferences = true;
 
-	/**
-	 * Indicates whether to show property types in the tree view.
-	 */
-	showPropertyTypes = true;
-
-	/**
-	 * Indicates whether to show individual types in the tree view.
-	 */
-	showIndividualTypes = true;
-
-	/**
-	 * Indicates whether to group the definitions by type or by source (ontology / concept scheme).
-	 */
-	showDefinitionSources = false;
-
 	private _onDidChangeTreeData: vscode.EventEmitter<DefinitionTreeNode | undefined> = new vscode.EventEmitter<DefinitionTreeNode | undefined>();
 
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
-	
+
 	constructor() {
 		if (mentor.activeContext) {
 			this._onDidChangeVocabulary(mentor.activeContext);
@@ -59,28 +44,9 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			this.refresh();
 		});
 
-		// Initialize the default tree layout from the user preferences.
-		let layout = mentor.configuration.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
-
-		this._onDidChangeTreeLayout(layout);
-
 		mentor.settings.onDidChange("view.definitionTree.defaultLayout", (e) => {
-			// When the layout was changed through a command, refresh the tree.
-			this._onDidChangeTreeLayout(e.newValue);
-
 			this.refresh();
 		});
-	}
-
-	private _onDidChangeTreeLayout(layout?: DefinitionTreeLayout): void {
-		switch (layout) {
-			case DefinitionTreeLayout.ByType:
-				this.showDefinitionSources = false;
-				break;
-			default:
-				this.showDefinitionSources = true;
-				break;
-		}
 	}
 
 	private _onDidChangeVocabulary(e: DocumentContext | undefined): void {
@@ -110,7 +76,13 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
 		if (!node) {
-			return this.showDefinitionSources ? this.getRootNodesWithSources() : this.getRootNodes();
+			let layout = mentor.configuration.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
+
+			if (layout === DefinitionTreeLayout.ByType) {
+				return this.getRootNodes();
+			} else {
+				return this.getRootNodesWithSources();
+			}
 		} else {
 			return node.getChildren();
 		}

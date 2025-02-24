@@ -54,21 +54,19 @@ export class DefinitionTree implements TreeView {
 			this.treeDataProvider.refresh();
 		});
 
-		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", this.treeDataProvider.showPropertyTypes);
+		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", true);
 
 		mentor.settings.onDidChange("view.showPropertyTypes", (e) => {
 			vscode.commands.executeCommand("setContext", "view.showPropertyTypes", e.newValue);
 
-			this.treeDataProvider.showPropertyTypes = e.newValue;
 			this.treeDataProvider.refresh();
 		});
 
-		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", this.treeDataProvider.showIndividualTypes);
+		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", true);
 
 		mentor.settings.onDidChange("view.showIndividualTypes", (e) => {
 			vscode.commands.executeCommand("setContext", "view.showIndividualTypes", e.newValue);
 
-			this.treeDataProvider.showIndividualTypes = e.newValue;
 			this.treeDataProvider.refresh();
 		});
 
