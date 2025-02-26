@@ -8,6 +8,10 @@ import { ValidatorClassNode } from "./validator-class-node";
 export class ValidatorGroupNode extends ValidatorClassNode {
 	contextValue = "validators";
 
+	override getIcon() {
+		return undefined;
+	}
+	
 	override getLabel() {
 		return { label: "Validators" };
 	}

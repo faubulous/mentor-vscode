@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { SKOS } from "@faubulous/mentor-rdf";
 import { ConceptNode } from "./concept-node";
 import { CollectionNode } from "./collection-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
@@ -8,8 +7,6 @@ import { DefinitionTreeNode } from "../definition-tree-node";
  * Node of a SKOS concept scheme in the definition tree.
  */
 export class ConceptSchemeNode extends DefinitionTreeNode {
-	contextType = SKOS.ConceptScheme;
-
 	defaultLabel = "Concept Schemes";
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;

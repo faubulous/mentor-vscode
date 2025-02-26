@@ -5,8 +5,6 @@ import { ShapeNode } from "./shape-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 
 export class ShapeClassNode extends ClassNode {
-	contextType = SH.Shape;
-
 	showIndividuals = true;
 
 	override getSubClassIris(): string[] {
@@ -15,7 +13,7 @@ export class ShapeClassNode extends ClassNode {
 		const options = { ...this.options };
 		options.notDefinedBy?.add(_SH);
 
-		const classIris = mentor.vocabulary.getSubClasses(graphUris, this.uri ?? this.contextType);
+		const classIris = mentor.vocabulary.getSubClasses(graphUris, this.uri ?? SH.Shape);
 
 		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(graphUris, c, {
 			...options,

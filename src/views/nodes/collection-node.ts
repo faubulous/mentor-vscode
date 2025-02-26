@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { mentor } from "../../mentor";
-import { SKOS } from "@faubulous/mentor-rdf";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { ConceptNode } from "./concept-node";
 
@@ -8,8 +7,6 @@ import { ConceptNode } from "./concept-node";
  * Node of a SKOS collection in the definition tree.
  */
 export class CollectionNode extends DefinitionTreeNode {
-	contextType = SKOS.Collection;
-
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	defaultLabel = "Collections";

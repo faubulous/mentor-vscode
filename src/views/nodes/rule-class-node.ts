@@ -5,8 +5,6 @@ import { DefinitionTreeNode } from "../definition-tree-node";
 import { RuleNode } from "./rule-node";
 
 export class RuleClassNode extends ClassNode {
-	contextType = SH.Rule;
-
 	showIndividuals = true;
 
 	override getSubClassIris(): string[] {
@@ -15,7 +13,7 @@ export class RuleClassNode extends ClassNode {
 		const options = { ...this.options };
 		options.notDefinedBy?.add(_SH);
 
-		const classIris = mentor.vocabulary.getSubClasses(graphUris, this.uri ?? this.contextType);
+		const classIris = mentor.vocabulary.getSubClasses(graphUris, this.uri ?? SH.Rule);
 
 		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(graphUris, c, {
 			...options,

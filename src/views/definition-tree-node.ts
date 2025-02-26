@@ -37,11 +37,6 @@ export class DefinitionTreeNode {
 	document: DocumentContext;
 
 	/**
-	 * The RDF type of the definition context used for querying the RDF store.
-	 */
-	contextType?: string;
-
-	/**
 	 * A value that can be accessed in package.json for the context menu.
 	 */
 	contextValue: string = 'resource';
@@ -60,7 +55,6 @@ export class DefinitionTreeNode {
 		this.id = id;
 		this.uri = uri;
 		this.document = context;
-		this.contextType = RDFS.Resource;
 		this.options = options;
 	}
 

@@ -5,8 +5,6 @@ import { ClassNode } from "./class-node";
 import { ValidatorNode } from "./validator-node";
 
 export class ValidatorClassNode extends ClassNode {
-	contextType = SH.Validator;
-
 	showIndividuals = true;
 
 	override getSubClassIris(): string[] {
@@ -15,7 +13,7 @@ export class ValidatorClassNode extends ClassNode {
 		const options = { ...this.options };
 		options.notDefinedBy?.add(_SH);
 
-		const classIris = mentor.vocabulary.getSubClasses(graphUris, this.uri ?? this.contextType);
+		const classIris = mentor.vocabulary.getSubClasses(graphUris, this.uri ?? SH.Validator);
 
 		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(graphUris, c, {
 			...options,

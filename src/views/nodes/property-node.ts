@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
+import { xsd, rdfs, DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { mentor } from "../../mentor";
-import { xsd, rdfs, RDF, DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { DocumentContext } from "../../languages";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 
@@ -8,8 +8,6 @@ import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
  * Node of a property in the definition tree.
  */
 export class PropertyNode extends DefinitionTreeNode {
-	contextType = RDF.Property;
-
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';

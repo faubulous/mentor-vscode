@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { RDFS } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { IndividualNode } from "./individual-node";
@@ -8,8 +7,6 @@ import { IndividualNode } from "./individual-node";
  * Node of a RDFS or OWL class in the definition tree.
  */
 export class ClassNode extends DefinitionTreeNode {
-	contextType = RDFS.Class;
-
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	/**

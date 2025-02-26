@@ -10,8 +10,6 @@ import { PropertyNode } from "./property-node";
  * Node of a SHACL shape in the definition tree.
  */
 export class ShapeNode extends DefinitionTreeNode {
-	contextType = SH.Shape;
-
 	override getIcon() {
 		if (this.uri) {
 			// TODO: Fix #10 in mentor-rdf

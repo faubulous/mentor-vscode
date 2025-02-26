@@ -5,6 +5,10 @@ import { ShapeClassNode } from "./shape-class-node";
 export class ShapeGroupNode extends ShapeClassNode {
 	contextValue = "shapes";
 
+	override getIcon() {
+		return undefined;
+	}
+
 	override getLabel() {
 		return { label: "Shapes" };
 	}

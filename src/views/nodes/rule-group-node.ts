@@ -8,6 +8,10 @@ import { RuleClassNode } from "./rule-class-node";
 export class RuleGroupNode extends RuleClassNode {
 	contextValue = "rules";
 
+	override getIcon() {
+		return undefined;
+	}
+	
 	override getLabel() {
 		return { label: "Rules" };
 	}
