@@ -1,6 +1,6 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
-import { ResourceNode } from "./resource-node";
+import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassNode } from "./class-node";
 import { ValidatorNode } from "./validator-node";
 
@@ -9,7 +9,7 @@ export class ValidatorClassNode extends ClassNode {
 
 	showIndividuals = true;
 
-	override getSubClasses(): string[] {
+	override getSubClassIris(): string[] {
 		const graphUris = [_SH, ...this.document.graphs];
 
 		const options = { ...this.options };
@@ -27,7 +27,7 @@ export class ValidatorClassNode extends ClassNode {
 		return new ValidatorClassNode(this.document, this.id + `/<${iri}>`, iri, this.options);
 	}
 
-	override getIndividualNode(iri: string): ResourceNode {
+	override getIndividualNode(iri: string): DefinitionTreeNode {
 		return new ValidatorNode(this.document, this.id + `/<${iri}>`, iri, this.options);
 	}
 }

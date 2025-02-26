@@ -1,14 +1,13 @@
 import * as vscode from "vscode";
 import { mentor } from "../../mentor";
 import { xsd, rdfs, RDF, DefinitionQueryOptions } from '@faubulous/mentor-rdf';
-import { ResourceNode } from "./resource-node";
 import { DocumentContext } from "../../languages";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 
 /**
  * Node of a property in the definition tree.
  */
-export class PropertyNode extends ResourceNode {
+export class PropertyNode extends DefinitionTreeNode {
 	contextType = RDF.Property;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;

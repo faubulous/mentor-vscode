@@ -2,14 +2,14 @@ import * as vscode from "vscode";
 import * as n3 from "n3";
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
-import { ResourceNode } from "./resource-node";
+import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassNode } from "./class-node";
 import { PropertyNode } from "./property-node";
 
 /**
  * Node of a SHACL shape in the definition tree.
  */
-export class ShapeNode extends ResourceNode {
+export class ShapeNode extends DefinitionTreeNode {
 	contextType = SH.Shape;
 
 	override getIcon() {

@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import { OWL } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { DefinitionTreeNode } from "../definition-tree-node";
-import { ResourceNode } from "./resource-node";
 import { ClassGroupNode } from "./class-group-node";
 import { PropertyGroupNode } from "./property-group-node";
 import { IndividualGroupNode } from "./individual-group-node";
@@ -13,7 +12,7 @@ import { ValidatorGroupNode } from "./validator-group-node";
 /**
  * Node of a ontology header in the definition tree.
  */
-export class OntologyNode extends ResourceNode {
+export class OntologyNode extends DefinitionTreeNode {
 	contextType = OWL.Ontology;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;

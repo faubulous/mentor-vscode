@@ -1,14 +1,13 @@
 import * as vscode from "vscode";
 import { RDFS } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
-import { ResourceNode } from "./resource-node";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { IndividualNode } from "./individual-node";
 
 /**
  * Node of a RDFS or OWL class in the definition tree.
  */
-export class ClassNode extends ResourceNode {
+export class ClassNode extends DefinitionTreeNode {
 	contextType = RDFS.Class;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
@@ -72,14 +71,14 @@ export class ClassNode extends ResourceNode {
 
 	override getChildren(): DefinitionTreeNode[] {
 		const classNodes = [];
-		const classIris = this.getSubClasses();
+		const classIris = this.getSubClassIris();
 
 		for (const iri of classIris) {
 			classNodes.push(this.getClassNode(iri));
 		}
 
 		const individualNodes = [];
-		const individualUris = this.showIndividuals ? this.getIndividuals() : [];
+		const individualUris = this.showIndividuals ? this.getIndividualIris() : [];
 
 		for (const iri of individualUris) {
 			individualNodes.push(this.getIndividualNode(iri));
@@ -95,15 +94,15 @@ export class ClassNode extends ResourceNode {
 		return new ClassNode(this.document, this.id + `/<${iri}>`, iri, this.options);
 	}
 
-	getIndividualNode(iri: string): ResourceNode {
+	getIndividualNode(iri: string): DefinitionTreeNode {
 		return new IndividualNode(this.document, this.id + `/<${iri}>`, iri, this.options);
 	}
 	
-	getSubClasses(): string[] {
+	getSubClassIris(): string[] {
 		return mentor.vocabulary.getSubClasses(this.document.graphs, this.uri, this.options);
 	}
 
-	getIndividuals(): string[] {
+	getIndividualIris(): string[] {
 		return mentor.vocabulary.getSubjectsOfType(this.document.graphs, this.uri!, {
 			...this.options,
 			includeSubTypes: false

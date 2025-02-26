@@ -2,14 +2,14 @@ import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { ClassNode } from "./class-node";
 import { ShapeNode } from "./shape-node";
-import { ResourceNode } from "./resource-node";
+import { DefinitionTreeNode } from "../definition-tree-node";
 
 export class ShapeClassNode extends ClassNode {
 	contextType = SH.Shape;
 
 	showIndividuals = true;
 
-	override getSubClasses(): string[] {
+	override getSubClassIris(): string[] {
 		const graphUris = [_SH, ...this.document.graphs];
 
 		const options = { ...this.options };
@@ -27,7 +27,7 @@ export class ShapeClassNode extends ClassNode {
 		return new ShapeClassNode(this.document, this.id + `/<${iri}>`, iri, this.options);
 	}
 
-	override getIndividualNode(iri: string): ResourceNode {
+	override getIndividualNode(iri: string): DefinitionTreeNode {
 		return new ShapeNode(this.document, this.id + `/<${iri}>`, iri, this.options);
 	}
 }

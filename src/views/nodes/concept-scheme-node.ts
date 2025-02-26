@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { ResourceNode } from "./resource-node";
 import { SKOS } from "@faubulous/mentor-rdf";
 import { ConceptNode } from "./concept-node";
 import { CollectionNode } from "./collection-node";
@@ -8,7 +7,7 @@ import { DefinitionTreeNode } from "../definition-tree-node";
 /**
  * Node of a SKOS concept scheme in the definition tree.
  */
-export class ConceptSchemeNode extends ResourceNode {
+export class ConceptSchemeNode extends DefinitionTreeNode {
 	contextType = SKOS.ConceptScheme;
 
 	defaultLabel = "Concept Schemes";

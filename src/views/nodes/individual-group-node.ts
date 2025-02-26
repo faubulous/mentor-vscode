@@ -2,14 +2,13 @@ import * as vscode from "vscode";
 import { OWL } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
-import { ResourceNode } from "./resource-node";
 import { IndividualNode } from "./individual-node";
 import { IndividualClassNode } from "./individual-class-node";
 
 /**
  * Node of a class instance in the definition tree.
  */
-export class IndividualGroupNode extends ResourceNode {
+export class IndividualGroupNode extends DefinitionTreeNode {
 	contextType = OWL.NamedIndividual;
 
 	contextValue = "individuals";

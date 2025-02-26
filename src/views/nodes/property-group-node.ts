@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { mentor } from "../../mentor";
 import { RDF } from '@faubulous/mentor-rdf';
-import { ResourceNode } from "./resource-node";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { PropertyNode } from "./property-node";
 import { PropertyClassNode } from "./property-class-node";
@@ -9,7 +8,7 @@ import { PropertyClassNode } from "./property-class-node";
 /**
  * Node of a property in the definition tree.
  */
-export class PropertyGroupNode extends ResourceNode {
+export class PropertyGroupNode extends DefinitionTreeNode {
 	contextType = RDF.Property;
 
 	contextValue = "properties";

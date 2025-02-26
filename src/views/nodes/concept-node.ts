@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
 import { mentor } from "../../mentor";
-import { ResourceNode } from "./resource-node";
 import { SKOS } from "@faubulous/mentor-rdf";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 
 /**
  * Node of a SKOS concept in the definition tree.
  */
-export class ConceptNode extends ResourceNode {
+export class ConceptNode extends DefinitionTreeNode {
 	contextType = SKOS.Concept;
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
