@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { FeatureProvider } from './feature-provider';
-import { getNamespaceIri, getIriFromNodeId } from '../utilities';
+import { getNamespaceIri, getIriFromIriReference } from '../utilities';
 
 /**
  * A provider for RDF document code actions.
@@ -36,7 +36,7 @@ export class CodeActionsProvider extends FeatureProvider implements vscode.CodeA
 			const tokenTypes = context.getTokenTypes();
 
 			if (tokenName === tokenTypes.IRIREF) {
-				const namespaceIri = getNamespaceIri(getIriFromNodeId(token.image));
+				const namespaceIri = getNamespaceIri(getIriFromIriReference(token.image));
 
 				result.push({
 					kind: vscode.CodeActionKind.Refactor,

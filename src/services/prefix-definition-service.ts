@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { IToken } from 'millan';
-import { getIriFromNodeId, getNamespaceIri, isUpperCase } from '../utilities';
+import { getIriFromIriReference, getNamespaceIri, isUpperCase } from '../utilities';
 import { DocumentContext } from '../languages';
 import { FeatureProvider } from '../providers';
 
@@ -326,7 +326,7 @@ export class PrefixDefinitionService extends FeatureProvider {
 				}
 			}
 
-			const localName = getIriFromNodeId(token.image).substring(namespaceIri.length);
+			const localName = getIriFromIriReference(token.image).substring(namespaceIri.length);
 			const range = this.getRangeFromToken(token);
 
 			// Delete the entire IRI token.

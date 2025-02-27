@@ -68,7 +68,7 @@ export function deactivate(): Thenable<void> {
 	});
 }
 
-function getUriFromArgument(arg: DefinitionTreeNode | string): string {
+function getIriFromArgument(arg: DefinitionTreeNode | string): string {
 	if (arg instanceof DefinitionTreeNode) {
 		return getIriFromNodeId(arg.id);
 	} else if (typeof arg === 'string') {
@@ -113,7 +113,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (arg: DefinitionTreeNode | string) => {
 		const internalBrowser = mentor.configuration.get('internalBrowserEnabled');
-		const uri = getUriFromArgument(arg);
+		const uri = getIriFromArgument(arg);
 
 		if (internalBrowser === true) {
 			vscode.commands.executeCommand('simpleBrowser.show', uri);
@@ -125,7 +125,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (arg: DefinitionTreeNode | string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
-				const uri = getUriFromArgument(arg);
+				const uri = getIriFromArgument(arg);
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {
@@ -144,7 +144,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
-			const uri = getUriFromArgument(arg);
+			const uri = getIriFromArgument(arg);
 
 			if (!uri) {
 				// If no id is provided, we fail gracefully.
@@ -171,7 +171,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 	commands.push(vscode.commands.registerCommand('mentor.action.revealShapeDefinition', (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
-			const uri = getUriFromArgument(arg);
+			const uri = getIriFromArgument(arg);
 
 			if (!uri) {
 				// If no id is provided, we fail gracefully.

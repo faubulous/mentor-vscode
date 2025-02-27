@@ -14,6 +14,14 @@ import { ValidatorGroupNode } from "./validator-group-node";
 export class OntologyNode extends DefinitionTreeNode {
 	isReferenced = false;
 
+	override getLabel(): vscode.TreeItemLabel {
+		if (this.uri) {
+			return super.getLabel();
+		} else {
+			return { label: "unknown" };
+		}
+	}
+
 	override getIcon() {
 		if (this.isReferenced) {
 			return new vscode.ThemeIcon('rdf-ontology-ref', this.getIconColor());

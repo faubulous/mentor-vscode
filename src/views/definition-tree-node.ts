@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DocumentContext } from "../languages";
-import { DefinitionQueryOptions, RDFS } from "@faubulous/mentor-rdf";
+import { DefinitionQueryOptions } from "@faubulous/mentor-rdf";
 
 /**
  * Base class for a node in the definition tree.
@@ -24,12 +24,6 @@ export class DefinitionTreeNode {
 	 * The URI of the resource associated with the tree item.
 	 */
 	resourceUri?: vscode.Uri;
-
-	/**
-	 * The default label of the tree item if the `uri` property is undefined.
-	 * @deprecated
-	 */
-	defaultLabel?: string;
 
 	/**
 	 * The document context of the tree item.
@@ -87,7 +81,7 @@ export class DefinitionTreeNode {
 		if (this.uri) {
 			label = this.document.getResourceLabel(this.uri).value;
 		} else {
-			label = this.defaultLabel ?? this.id;
+			label = this.id;
 		}
 
 		return { label }
