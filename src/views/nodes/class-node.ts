@@ -7,38 +7,39 @@ import { IndividualNode } from "./individual-node";
  * Node of a RDFS or OWL class in the definition tree.
  */
 export class ClassNode extends DefinitionTreeNode {
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-
 	/**
 	 * Indicates whether class instances should be returned by the {@link getChildren} method.
 	 */
 	showIndividuals = false;
 
-	override getIcon() {
-		return ClassNode.getIcon(this.document.graphs, this.uri);
+	getIconNameFromClass(classIri?: string): string {
+		let iconName = classIri ? 'rdf-class' : 'rdf-class-ref';
+
+		if (classIri) {
+			if (!mentor.vocabulary.hasSubject(this.document.graphs, classIri)) {
+				iconName += '-ref';
+			}
+
+			if (mentor.vocabulary.hasIndividuals(this.document.graphs, classIri)) {
+				iconName += "-i";
+			}
+		}
+
+		return iconName;
 	}
 
-	static getIcon(graphUris: string | string[] | undefined, subjectUri: string | undefined): vscode.ThemeIcon | undefined {
-		if (subjectUri) {
-			let icon = 'rdf-class';
+	getIconColorFromClass(classIri?: string) {
+		return new vscode.ThemeColor("mentor.color.class");
+	}
 
-			if (!mentor.vocabulary.hasSubject(graphUris, subjectUri)) {
-				icon += '-ref';
-			}
+	override getIcon(): vscode.ThemeIcon | undefined {
+		const iconName = this.getIconNameFromClass(this.uri);
+		const iconColor = this.getIconColorFromClass(this.uri);
 
-			if (mentor.vocabulary.hasIndividuals(graphUris, subjectUri)) {
-				icon += "-i";
-			}
-
-			return new vscode.ThemeIcon(icon, ClassNode.getIconColor(graphUris, subjectUri));
-		}
+		return new vscode.ThemeIcon(iconName, iconColor);
 	}
 
 	override getIconColor() {
-		return ClassNode.getIconColor(this.document.graphs, this.uri);
-	}
-
-	static getIconColor(graphUris: string | string[] | undefined, subjectUri: string | undefined): vscode.ThemeColor {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 
@@ -94,7 +95,7 @@ export class ClassNode extends DefinitionTreeNode {
 	getIndividualNode(iri: string): DefinitionTreeNode {
 		return new IndividualNode(this.document, this.id + `/<${iri}>`, iri, this.options);
 	}
-	
+
 	getSubClassIris(): string[] {
 		return mentor.vocabulary.getSubClasses(this.document.graphs, this.uri, this.options);
 	}

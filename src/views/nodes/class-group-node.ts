@@ -7,8 +7,10 @@ import { ClassNode } from "./class-node";
  */
 export class ClassGroupNode extends ClassNode {
 	contextValue = "classes";
-	
-	showIndividuals = false;
+
+	override getIcon(): vscode.ThemeIcon | undefined {
+		return undefined;
+	}
 
 	override getLabel(): vscode.TreeItemLabel {
 		return { label: "Classes" };

@@ -7,7 +7,6 @@ import { ConceptNode } from "./concept-node";
  * Node of a SKOS collection in the definition tree.
  */
 export class CollectionNode extends DefinitionTreeNode {
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	defaultLabel = "Collections";
 

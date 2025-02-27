@@ -7,9 +7,8 @@ import { DefinitionTreeNode } from "../definition-tree-node";
  * Node of a SKOS concept scheme in the definition tree.
  */
 export class ConceptSchemeNode extends DefinitionTreeNode {
+	
 	defaultLabel = "Concept Schemes";
-
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	override getIcon() {
 		return new vscode.ThemeIcon('rdf-concept-scheme', this.getIconColor());

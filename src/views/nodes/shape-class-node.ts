@@ -1,7 +1,7 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { ClassNode } from "./class-node";
-import { ShapeNode } from "./shape-node";
+import { NodeShapeNopde, PropertyShapeNode, ParameterNode } from "./shape-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 
 export class ShapeClassNode extends ClassNode {
@@ -26,6 +26,12 @@ export class ShapeClassNode extends ClassNode {
 	}
 
 	override getIndividualNode(iri: string): DefinitionTreeNode {
-		return new ShapeNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		if (mentor.vocabulary.hasType(this.document.graphs, iri, SH.Parameter, { includeInferred: true })) {
+			return new ParameterNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		} else if (mentor.vocabulary.hasType(this.document.graphs, iri, SH.PropertyShape, { includeInferred: true })) {
+			return new PropertyShapeNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		} else {
+			return new NodeShapeNopde(this.document, this.id + `/<${iri}>`, iri, this.options);
+		}
 	}
 }

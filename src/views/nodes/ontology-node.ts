@@ -12,10 +12,6 @@ import { ValidatorGroupNode } from "./validator-group-node";
  * Node of a ontology header in the definition tree.
  */
 export class OntologyNode extends DefinitionTreeNode {
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-
-	defaultLabel = "unknown";
-
 	isReferenced = false;
 
 	override getIcon() {

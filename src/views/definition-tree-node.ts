@@ -49,7 +49,7 @@ export class DefinitionTreeNode {
 	/**
 	 * The default collapsible state of the tree item.
 	 */
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;

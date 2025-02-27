@@ -2,16 +2,16 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { Uri, _SH } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../document-context';
-import { DefinitionTreeNode, sortByLabel } from './definition-tree-node';
-import { ClassNode } from './nodes/class-node';
-import { ConceptSchemeNode } from './nodes/concept-scheme-node';
-import { IndividualNode } from './nodes/individual-node';
-import { OntologyNode } from './nodes/ontology-node';
-import { PropertyNode } from './nodes/property-node';
 import { DefinitionTreeLayout } from '../settings';
-import { ShapeNode } from './nodes/shape-node';
-import { ValidatorNode } from './nodes/validator-node';
-import { RuleNode } from './nodes/rule-node';
+import { DefinitionTreeNode, sortByLabel } from './definition-tree-node';
+import { ClassGroupNode } from './nodes/class-group-node';
+import { ConceptSchemeNode } from './nodes/concept-scheme-node';
+import { IndividualGroupNode } from './nodes/individual-group-node';
+import { OntologyNode } from './nodes/ontology-node';
+import { PropertyGroupNode } from './nodes/property-group-node';
+import { RuleGroupNode } from './nodes/rule-group-node';
+import { ShapeGroupNode } from './nodes/shape-group-node';
+import { ValidatorGroupNode } from './nodes/validator-group-node';
 
 /**
  * A combined tree node provider for RDF classes, properties and individuals.
@@ -76,7 +76,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
 		if (!node) {
-			let layout = mentor.configuration.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
+			let layout = mentor.settings.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
 
 			if (layout === DefinitionTreeLayout.ByType) {
 				return this.getRootNodes();
@@ -115,48 +115,42 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		for (let _ of mentor.vocabulary.getClasses(this.document.graphs)) {
-			const n = new ClassNode(this.document, '<>/classes', undefined, { includeReferenced: this.showReferences });
-			n.contextValue = "classes";
+			const n = new ClassGroupNode(this.document, '<>/classes', undefined, { includeReferenced: this.showReferences });
 
 			result.push(n);
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getProperties(this.document.graphs)) {
-			const n = new PropertyNode(this.document, '<>/properties', undefined, { includeReferenced: this.showReferences });
-			n.contextValue = "properties";
+			const n = new PropertyGroupNode(this.document, '<>/properties', undefined, { includeReferenced: this.showReferences });
 
 			result.push(n);
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getIndividuals(this.document.graphs, undefined)) {
-			const n = new IndividualNode(this.document, '<>/individuals', undefined);
-			n.contextValue = "individuals";
+			const n = new IndividualGroupNode(this.document, '<>/individuals', undefined);
 
 			result.push(n);
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getShapes(this.document.graphs, undefined)) {
-			const n = new ShapeNode(this.document, '<>/shapes', undefined);
-			n.contextValue = "shapes";
+			const n = new ShapeGroupNode(this.document, '<>/shapes', undefined);
 
 			result.push(n);
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getRules(this.document.graphs, undefined)) {
-			const n = new RuleNode(this.document, '<>/rules', undefined);
-			n.contextValue = "rules";
+			const n = new RuleGroupNode(this.document, '<>/rules', undefined);
 
 			result.push(n);
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getValidators(this.document.graphs, undefined)) {
-			const n = new ValidatorNode(this.document, '<>/validators', undefined);
-			n.contextValue = "validators";
+			const n = new ValidatorGroupNode(this.document, '<>/validators', undefined);
 
 			result.push(n);
 			break;
@@ -283,7 +277,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const children = this.getChildren(node);
 		const collapsibleState = children?.length ? node.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
 
-		if (!(node instanceof ShapeNode) && this.hasShapes(node)) {
+		if (this.hasShapes(node)) {
 			node.contextValue += ' shape-target';
 		}
 

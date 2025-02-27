@@ -10,8 +10,6 @@ import { PropertyClassNode } from "./property-class-node";
 export class PropertyGroupNode extends DefinitionTreeNode {
 	contextValue = "properties";
 
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-
 	override getLabel(): vscode.TreeItemLabel {
 		return { label: "Properties" };
 	}
