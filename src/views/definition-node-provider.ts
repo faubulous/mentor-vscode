@@ -33,28 +33,20 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	constructor() {
 		if (mentor.activeContext) {
-			this._onDidChangeVocabulary(mentor.activeContext);
+			this.refresh(mentor.activeContext);
 		}
 
 		mentor.onDidChangeVocabularyContext((context) => {
-			this._onDidChangeVocabulary(context);
+			this.refresh(context);
 		});
 
 		mentor.settings.onDidChange("view.definitionTree.labelStyle", () => {
-			this.refresh();
+			this.refresh(this.document, true);
 		});
 
 		mentor.settings.onDidChange("view.definitionTree.defaultLayout", (e) => {
-			this.refresh();
+			this.refresh(this.document, true);
 		});
-	}
-
-	private _onDidChangeVocabulary(e: DocumentContext | undefined): void {
-		if (e) {
-			this.document = e;
-			this.onDidChangeVocabularyContext(e);
-			this._onDidChangeTreeData.fire(void 0);
-		}
 	}
 
 	/**
@@ -66,8 +58,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	/**
 	 * Refresh the tree view.
 	 */
-	refresh(): void {
-		this._onDidChangeVocabulary(this.document);
+	refresh(document: DocumentContext | undefined, force: boolean = false): void {
+		if (force || document && document !== this.document) {
+			this.document = document;
+			this.onDidChangeVocabularyContext(document!);
+			this._onDidChangeTreeData.fire(void 0);
+		}
 	}
 
 	getParent(node: DefinitionTreeNode): DefinitionTreeNode | null | undefined {

@@ -43,6 +43,8 @@ export class DefinitionTree implements TreeView {
 		vscode.commands.registerCommand('mentor.action.refreshDefinitionsTree', async () => {
 			this.updateView();
 			this.updateViewTitle();
+
+			this.treeDataProvider.refresh(mentor.activeContext, true);
 		});
 
 		vscode.commands.executeCommand("setContext", "view.showReferences", this.treeDataProvider.showReferences);
@@ -51,7 +53,7 @@ export class DefinitionTree implements TreeView {
 			vscode.commands.executeCommand("setContext", "view.showReferences", e.newValue);
 
 			this.treeDataProvider.showReferences = e.newValue;
-			this.treeDataProvider.refresh();
+			this.treeDataProvider.refresh(mentor.activeContext);
 		});
 
 		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", true);
@@ -59,7 +61,7 @@ export class DefinitionTree implements TreeView {
 		mentor.settings.onDidChange("view.showPropertyTypes", (e) => {
 			vscode.commands.executeCommand("setContext", "view.showPropertyTypes", e.newValue);
 
-			this.treeDataProvider.refresh();
+			this.treeDataProvider.refresh(mentor.activeContext);
 		});
 
 		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", true);
@@ -67,14 +69,14 @@ export class DefinitionTree implements TreeView {
 		mentor.settings.onDidChange("view.showIndividualTypes", (e) => {
 			vscode.commands.executeCommand("setContext", "view.showIndividualTypes", e.newValue);
 
-			this.treeDataProvider.refresh();
+			this.treeDataProvider.refresh(mentor.activeContext);
 		});
 
 		// Update the view and the title when the active language changes.
 		mentor.settings.onDidChange("view.activeLanguage", (e) => {
 			this.updateViewTitle();
 
-			this.treeDataProvider.refresh();
+			this.treeDataProvider.refresh(mentor.activeContext);
 		});
 
 		// Support for decorating missing language tags through a file decoration provider.
