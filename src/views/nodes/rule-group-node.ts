@@ -1,4 +1,4 @@
-import { _SH } from "@faubulous/mentor-rdf";
+import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { RuleClassNode } from "./rule-class-node";
 
@@ -6,6 +6,8 @@ import { RuleClassNode } from "./rule-class-node";
  * Node of a SHACL rule in the definition tree.
  */
 export class RuleGroupNode extends RuleClassNode {
+	uri = SH.Rule;
+
 	contextValue = "rules";
 
 	override getIcon() {
@@ -17,7 +19,7 @@ export class RuleGroupNode extends RuleClassNode {
 	}
 
 	override getDescription(): string {
-		const rules = mentor.vocabulary.getRules(this.document.graphs, this.options);
+		const rules = mentor.vocabulary.getRules(this.graphs, this.options);
 
 		return rules.length.toString();
 	}

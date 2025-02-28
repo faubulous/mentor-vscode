@@ -11,7 +11,7 @@ export class CollectionClassNode extends ClassNode {
 
 	override getIcon() {
 		if (this.uri) {
-			const isOrdered = mentor.vocabulary.isOrderedCollection(this.document.graphs, this.uri);
+			const isOrdered = mentor.vocabulary.isOrderedCollection(this.graphs, this.uri);
 
 			return new vscode.ThemeIcon(isOrdered ? 'rdf-collection-ordered' : 'rdf-collection', this.getIconColor());
 		}
@@ -28,8 +28,8 @@ export class CollectionClassNode extends ClassNode {
 
 		const result = [];
 
-		if (mentor.vocabulary.isOrderedCollection(this.document.graphs, this.uri)) {
-			const members = mentor.vocabulary.getCollectionMembers(this.document.graphs, this.uri);
+		if (mentor.vocabulary.isOrderedCollection(this.graphs, this.uri)) {
+			const members = mentor.vocabulary.getCollectionMembers(this.graphs, this.uri);
 
 			for (const m of members) {
 				result.push(new ConceptClassNode(this.document, this.id + `/<${m}>`, m, this.options));
@@ -37,7 +37,7 @@ export class CollectionClassNode extends ClassNode {
 
 			return result;
 		} else {
-			const members = mentor.vocabulary.getCollectionMembers(this.document.graphs, this.uri);
+			const members = mentor.vocabulary.getCollectionMembers(this.graphs, this.uri);
 
 			for (const m of members) {
 				result.push(new ConceptClassNode(this.document, this.id + `/<${m}>`, m, this.options));

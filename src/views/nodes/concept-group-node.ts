@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { mentor } from "../../mentor";
 import { ConceptClassNode } from "./concept-class-node";
-import { DefinitionTreeNode } from "../definition-tree-node";
 
 export class ConceptGroupNode extends ConceptClassNode {
 
@@ -16,7 +15,7 @@ export class ConceptGroupNode extends ConceptClassNode {
 	}
 
 	override getDescription(): string {
-		const concepts = mentor.vocabulary.getConcepts(this.document.graphs);
+		const concepts = mentor.vocabulary.getConcepts(this.graphs);
 
 		return concepts.length.toString();
 	}

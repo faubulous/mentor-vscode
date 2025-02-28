@@ -19,23 +19,25 @@ export class IndividualGroupNode extends IndividualClassNode {
 	}
 
 	override getDescription(): string {
-		const individuals = mentor.vocabulary.getIndividuals(this.document.graphs, undefined, this.options);
+		const individuals = mentor.vocabulary.getIndividuals(this.graphs, undefined, this.options);
 
 		return individuals.length.toString();
 	}
 
 	override getChildren(): DefinitionTreeNode[] {
+		// TODO: Fix bug in mentor-rdf where it returns XSD individuals from the unesco thesaurus.
+		
 		const result = [];
 		const showIndividualTypes = mentor.settings.get<boolean>('view.showIndividualTypes', true);
 
 		if (showIndividualTypes) {
-			const types = mentor.vocabulary.getIndividualTypes(this.document.graphs, undefined, this.options);
+			const types = mentor.vocabulary.getIndividualTypes(this.graphs, undefined, this.options);
 
 			for (let t of types) {
 				result.push(new IndividualClassNode(this.document, this.id + `/<${t}>`, t, this.options));
 			}
 		} else {
-			const individuals = mentor.vocabulary.getIndividuals(this.document.graphs, this.uri, this.options);
+			const individuals = mentor.vocabulary.getIndividuals(this.graphs, this.uri, this.options);
 
 			for (let i of individuals) {
 				result.push(new IndividualNode(this.document, this.id + `/<${i}>`, i, this.options));

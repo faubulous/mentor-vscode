@@ -294,7 +294,6 @@ function registerCommands(context: vscode.ExtensionContext) {
 				language: undefined
 			}];
 		} else {
-			// TODO: Sort by language tag but add indicator for value count.
 			const languageStats = mentor.vocabulary.getLanguageTagUsageStats(context.graphs);
 
 			// Note: We translate the language code into a readable name in the UI language of the editor.

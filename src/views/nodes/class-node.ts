@@ -16,11 +16,11 @@ export class ClassNode extends DefinitionTreeNode {
 		let iconName = classIri ? 'rdf-class' : 'rdf-class-ref';
 
 		if (classIri) {
-			if (!mentor.vocabulary.hasSubject(this.document.graphs, classIri)) {
+			if (!mentor.vocabulary.hasSubject(this.graphs, classIri)) {
 				iconName += '-ref';
 			}
 
-			if (mentor.vocabulary.hasIndividuals(this.document.graphs, classIri)) {
+			if (mentor.vocabulary.hasIndividuals(this.graphs, classIri)) {
 				iconName += "-i";
 			}
 		}
@@ -49,15 +49,15 @@ export class ClassNode extends DefinitionTreeNode {
 		if (this.uri) {
 			const indicators = [];
 
-			if (mentor.vocabulary.hasEquivalentClass(this.document.graphs, this.uri)) {
+			if (mentor.vocabulary.hasEquivalentClass(this.graphs, this.uri)) {
 				indicators.push("≡");
 			}
 
-			// if (mentor.vocabulary.isIntersectionOfClasses(this.document.graphs, this.uri)) {
+			// if (mentor.vocabulary.isIntersectionOfClasses(graphs, this.uri)) {
 			// 	indicators.push("⋂");
-			// } else if (mentor.vocabulary.isUnionOfClasses(this.document.graphs, this.uri)) {
+			// } else if (mentor.vocabulary.isUnionOfClasses(graphs, this.uri)) {
 			// 	indicators.push("⋃");
-			// } else if (mentor.vocabulary.hasEquivalentClass(this.document.graphs, this.uri)) {
+			// } else if (mentor.vocabulary.hasEquivalentClass(graphs, this.uri)) {
 			// 	indicators.push("≡");
 			// }
 
@@ -97,11 +97,11 @@ export class ClassNode extends DefinitionTreeNode {
 	}
 
 	getSubClassIris(): string[] {
-		return mentor.vocabulary.getSubClasses(this.document.graphs, this.uri, this.options);
+		return mentor.vocabulary.getSubClasses(this.graphs, this.uri, this.options);
 	}
 
 	getIndividualIris(): string[] {
-		return mentor.vocabulary.getSubjectsOfType(this.document.graphs, this.uri!, {
+		return mentor.vocabulary.getSubjectsOfType(this.graphs, this.uri!, {
 			...this.options,
 			includeSubTypes: false
 		});

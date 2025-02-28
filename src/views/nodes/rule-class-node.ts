@@ -7,18 +7,21 @@ import { RuleNode } from "./rule-node";
 export class RuleClassNode extends ClassNode {
 	showIndividuals = true;
 
-	override getSubClassIris(): string[] {
-		const graphUris = [_SH, ...this.document.graphs];
+	get graphs() {
+		return [_SH, ...this.document.graphs];
+	}
 
-		const options = { ...this.options };
+	override getSubClassIris(): string[] {
+		const options = {
+			...this.options,
+			includeSubTypes: false
+		};
+
 		options.notDefinedBy?.add(_SH);
 
-		const classIris = mentor.vocabulary.getSubClasses(graphUris, this.uri ?? SH.Rule);
+		const classIris = mentor.vocabulary.getSubClasses(this.graphs, this.uri ?? SH.Rule);
 
-		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(graphUris, c, {
-			...options,
-			includeSubTypes: false
-		}));
+		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.graphs, c, options));
 	}
 
 	override getClassNode(iri: string): ClassNode {

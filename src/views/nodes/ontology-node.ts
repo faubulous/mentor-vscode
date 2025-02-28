@@ -38,7 +38,7 @@ export class OntologyNode extends DefinitionTreeNode {
 		let result = super.getDescription();
 
 		if (this.uri) {
-			const version = mentor.vocabulary.getOntologyVersionInfo(this.document.graphs, this.uri);
+			const version = mentor.vocabulary.getOntologyVersionInfo(this.graphs, this.uri);
 
 			if (version) {
 				result += " " + version;

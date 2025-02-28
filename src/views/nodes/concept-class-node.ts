@@ -22,7 +22,7 @@ export class ConceptClassNode extends ClassNode {
 			subject = this.options.definedBy;
 		}
 
-		return mentor.vocabulary.getNarrowerConcepts(this.document.graphs, subject);
+		return mentor.vocabulary.getNarrowerConcepts(this.graphs, subject);
 	}
 
 	override getClassNode(iri: string): ClassNode {

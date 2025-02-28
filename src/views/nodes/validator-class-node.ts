@@ -7,18 +7,17 @@ import { ValidatorNode } from "./validator-node";
 export class ValidatorClassNode extends ClassNode {
 	showIndividuals = true;
 
+	get graphs() {
+		return [_SH, ...this.document.graphs];
+	}
+	
 	override getSubClassIris(): string[] {
-		const graphUris = [_SH, ...this.document.graphs];
-
 		const options = { ...this.options };
 		options.notDefinedBy?.add(_SH);
 
-		const classIris = mentor.vocabulary.getSubClasses(graphUris, this.uri ?? SH.Validator);
+		const classIris = mentor.vocabulary.getSubClasses(this.graphs, this.uri ?? SH.Validator);
 
-		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(graphUris, c, {
-			...options,
-			includeSubTypes: false
-		}));
+		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.graphs, c, options));
 	}
 
 	override getClassNode(iri: string): ClassNode {

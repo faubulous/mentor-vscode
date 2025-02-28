@@ -45,6 +45,13 @@ export class DefinitionTreeNode {
 	 */
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	/**
+	 * The IRIs of the graphs that are considered when querying the children of the tree item.
+	 */
+	get graphs() {
+		return this.document.graphs;
+	}
+
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;
 		this.uri = uri;

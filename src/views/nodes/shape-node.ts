@@ -12,7 +12,7 @@ export class NodeShapeNopde extends ClassNode {
 
 		if (this.uri) {
 			const u = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
-			const targets = mentor.vocabulary.getShapeTargets(this.document.graphs, u);
+			const targets = mentor.vocabulary.getShapeTargets(this.graphs, u);
 
 			for (let t of targets) {
 				classIri = t;
@@ -25,10 +25,6 @@ export class NodeShapeNopde extends ClassNode {
 
 		return new vscode.ThemeIcon(iconName, iconColor);
 	}
-
-	override getResourceUri() {
-		return undefined;
-	}
 }
 
 export class PropertyShapeNode extends PropertyNode {
@@ -37,7 +33,7 @@ export class PropertyShapeNode extends PropertyNode {
 
 		if (this.uri) {
 			const id = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
-			const targets = mentor.vocabulary.getShapeTargets(this.document.graphs, id);
+			const targets = mentor.vocabulary.getShapeTargets(this.graphs, id);
 
 			for (const target of targets) {
 				rangeIri = this.getRange(target);
@@ -49,10 +45,6 @@ export class PropertyShapeNode extends PropertyNode {
 		const iconColor = this.getIconColorFromRange(rangeIri);
 
 		return new vscode.ThemeIcon(iconName, iconColor);
-	}
-
-	override getResourceUri() {
-		return undefined;
 	}
 
 	override getChildren() {
