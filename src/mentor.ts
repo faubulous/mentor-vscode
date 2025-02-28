@@ -219,7 +219,9 @@ class MentorExtension {
 
 		// Set the language tag statistics for the document, needed for rendering multi-language labels.
 		context.predicateStats = this.vocabulary.getPredicateUsageStats(context.graphs);
-		context.activeLanguageTag = context.primaryLanguage;
+
+		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
+		context.activeLanguageTag = mentor.configuration.get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
 		this.activeContext = context;

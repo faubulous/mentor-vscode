@@ -50,39 +50,47 @@ export class OntologyNode extends DefinitionTreeNode {
 
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		const options = { ...this.options };
 
-		const classes = new ClassGroupNode(this.document, this.id + '/classes', undefined, options);
+		const classes = new ClassGroupNode(this.document, this.id + '/classes', undefined, this.options);
 
 		if (classes.getChildren().length > 0) {
 			result.push(classes);
 		}
 
-		const properties = new PropertyGroupNode(this.document, this.id + '/properties', undefined, options);
+		const properties = new PropertyGroupNode(this.document, this.id + '/properties', undefined, this.options);
 
 		if (properties.getChildren().length > 0) {
 			result.push(properties);
 		}
 
-		const individuals = new IndividualGroupNode(this.document, this.id + '/individuals', undefined, options);
+		const individuals = new IndividualGroupNode(this.document, this.id + '/individuals', undefined, this.options);
 
 		if (individuals.getChildren().length > 0) {
 			result.push(individuals);
 		}
 
-		const shapes = new ShapeGroupNode(this.document, this.id + '/shapes', undefined, { ...options, includeBlankNodes: true });
+		const shapes = new ShapeGroupNode(this.document, this.id + '/shapes', undefined, {
+			...this.options,
+			includeBlankNodes: true
+		});
 
 		if (shapes.getChildren().length > 0) {
 			result.push(shapes);
 		}
 
-		const rules = new RuleGroupNode(this.document, this.id + '/rules', undefined, { ...options, includeBlankNodes: true });
+		const rules = new RuleGroupNode(this.document, this.id + '/rules', undefined, {
+			...this.options,
+			includeBlankNodes: true
+		});
 
 		if (rules.getChildren().length > 0) {
 			result.push(rules);
 		}
 
-		const validators = new ValidatorGroupNode(this.document, this.id + '/validators', undefined, { ...options, includeBlankNodes: true });
+		const validators = new ValidatorGroupNode(this.document, this.id + '/validators', undefined, {
+			...this.options,
+			includeBlankNodes: true
+		});
 
 		if (validators.getChildren().length > 0) {
 			result.push(validators);

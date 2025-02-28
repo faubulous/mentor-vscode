@@ -12,11 +12,7 @@ export class RuleClassNode extends ClassNode {
 	}
 
 	override getSubClassIris(): string[] {
-		const options = {
-			...this.options,
-			includeSubTypes: false
-		};
-
+		const options = { ...this.options };
 		options.notDefinedBy?.add(_SH);
 
 		const classIris = mentor.vocabulary.getSubClasses(this.graphs, this.uri ?? SH.Rule);

@@ -698,6 +698,12 @@
             ],
             "default": "GroupBySource"
           },
+          "mentor.definitionTree.defaultLanguageTag": {
+            "type": "string",
+            "title": "Default Language",
+            "description": "Set the default language tag to be used for rendering of labels and descriptions in the definitions tree.",
+            "default": "en"
+          },
           "mentor.definitionTree.decorateMissingLanguageTags": {
             "type": "string",
             "title": "Decorate Missing Language Tags",
