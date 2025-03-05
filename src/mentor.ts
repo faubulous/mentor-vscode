@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as n3 from 'n3';
 import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
@@ -11,6 +12,7 @@ import {
 	PrefixDefinitionService,
 	PrefixLookupService
 } from './services';
+import { NamedNode } from '@rdfjs/types';
 
 /**
  * The Mentor extension instance.
@@ -336,6 +338,26 @@ class MentorExtension {
 		});
 
 		vscode.commands.executeCommand('mentor.action.initialize');
+
+		vscode.commands.registerCommand('mentor.action.openInferenceGraph', async () => {
+			if (this.activeContext) {
+				const documentGraphIri = this.activeContext.uri.toString();
+				const inferenceGraphIri = mentor.store.reasoner?.getInferenceGraphUri(documentGraphIri);
+
+				if(inferenceGraphIri) {
+					const prefixes: {[prefix: string]: NamedNode} = {};
+
+					// TODO: This is not needed; adapt mentor-rdf API.
+					for(const [prefix, namespace] of Object.entries(this.activeContext.namespaces)) {
+						prefixes[prefix] = new n3.NamedNode(namespace);
+					}
+
+					const data = await mentor.store.serializeGraph(inferenceGraphIri, prefixes);
+					
+					await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
+				}
+			}
+		});
 	}
 
 	/**

@@ -433,6 +433,10 @@
     },
     "commands": [
       {
+        "command": "mentor.action.openInferenceGraph",
+        "title": "Mentor: Open the Document Inference Graph"
+      },
+      {
         "command": "mentor.action.analyzeWorkspace",
         "title": "Find Problems",
         "icon": "$(debug-alt)"
