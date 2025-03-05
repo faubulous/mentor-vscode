@@ -44,7 +44,7 @@ export class DefinitionTree implements TreeView {
 			this.updateView();
 			this.updateViewTitle();
 
-			this.treeDataProvider.refresh(mentor.activeContext, true);
+			this.treeDataProvider.refresh(mentor.activeContext);
 		});
 
 		vscode.commands.executeCommand("setContext", "view.showReferences", this.treeDataProvider.showReferences);
