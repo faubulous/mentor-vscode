@@ -16,16 +16,12 @@ export class ConceptClassNode extends ClassNode {
 	}
 
 	override getSubClassIris(): string[] {
-		let subject = this.uri;
+		const subject = this.getQueryOptions().definedBy ?? this.uri;
 
-		if (!subject && this.options?.definedBy) {
-			subject = this.options.definedBy;
-		}
-
-		return mentor.vocabulary.getNarrowerConcepts(this.graphs, subject);
+		return mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), subject);
 	}
 
 	override getClassNode(iri: string): ClassNode {
-		return new ConceptClassNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		return new ConceptClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
 	}
 }

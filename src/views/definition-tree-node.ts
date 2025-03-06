@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { DocumentContext } from "../languages";
 import { DefinitionQueryOptions } from "@faubulous/mentor-rdf";
+import { mentor } from '../mentor';
 
 /**
  * Base class for a node in the definition tree.
@@ -38,25 +39,18 @@ export class DefinitionTreeNode {
 	/**
 	 * The options for querying the children of the tree item.
 	 */
-	options?: DefinitionQueryOptions;
+	private _queryOptions?: DefinitionQueryOptions;
 
 	/**
 	 * The default collapsible state of the tree item.
 	 */
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
-	/**
-	 * The IRIs of the graphs that are considered when querying the children of the tree item.
-	 */
-	get graphs() {
-		return this.document.graphs;
-	}
-
 	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
 		this.id = id;
 		this.uri = uri;
 		this.document = context;
-		this.options = options;
+		this._queryOptions = options;
 	}
 
 	/**
@@ -76,6 +70,14 @@ export class DefinitionTreeNode {
 	 */
 	getChildren(): DefinitionTreeNode[] {
 		return [];
+	}
+
+	/**
+	 * Get the graph IRIs of the document context, including the document a-box and it's inference graph.
+	 * @returns An array of graph IRIs.
+	 */
+	getDocumentGraphs(): string[] {
+		return this.document.graphs;
 	}
 
 	/**
@@ -159,6 +161,19 @@ export class DefinitionTreeNode {
 			return vscode.Uri.parse(this.uri);
 		} else {
 			return undefined;
+		}
+	}
+
+	/**
+	 * Get the query options for the tree item.
+	 * @param additionalOptions Query options that will override or be added to the associated query options.
+	 * @returns A query options object.
+	 */
+	getQueryOptions(additionalOptions?: any): DefinitionQueryOptions {
+		return {
+			...this._queryOptions,
+			includeReferenced: mentor.settings.get('view.showReferences', true),
+			...additionalOptions,
 		}
 	}
 }

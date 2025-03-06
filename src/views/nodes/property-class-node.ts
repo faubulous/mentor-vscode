@@ -9,10 +9,10 @@ import { PropertyNode } from "./property-node";
 export class PropertyClassNode extends ClassNode {
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		const properties = mentor.vocabulary.getRootPropertiesOfType(this.graphs, this.uri!, this.options);
+		const properties = mentor.vocabulary.getRootPropertiesOfType(this.getDocumentGraphs(), this.uri!, this.getQueryOptions());
 
 		for (const p of properties) {
-			result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.options));
+			result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.getQueryOptions()));
 		}
 
 		return sortByLabel(result);

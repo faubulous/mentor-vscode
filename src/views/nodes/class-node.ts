@@ -12,15 +12,27 @@ export class ClassNode extends DefinitionTreeNode {
 	 */
 	showIndividuals = false;
 
+	/**
+	 * Get the graph IRIs of the document context and possibly extended ontology graphs. This method should be 
+	 * used when querying type or sub-class relationships and may be overloaded to provide additional relevant
+	 * graphs such as the SHACL spec.
+	 * 
+	 * Note: Used in {@link getSubClassIris}.
+	 * @returns An array of graph IRIs.
+	 */
+	getOntologyGraphs(): string[] {
+		return this.document.graphs;
+	}
+
 	getIconNameFromClass(classIri?: string): string {
 		let iconName = classIri ? 'rdf-class' : 'rdf-class-ref';
 
 		if (classIri) {
-			if (!mentor.vocabulary.hasSubject(this.graphs, classIri)) {
+			if (!mentor.vocabulary.hasSubject(this.getDocumentGraphs(), classIri)) {
 				iconName += '-ref';
 			}
 
-			if (mentor.vocabulary.hasIndividuals(this.graphs, classIri)) {
+			if (mentor.vocabulary.hasIndividuals(this.getDocumentGraphs(), classIri)) {
 				iconName += "-i";
 			}
 		}
@@ -49,7 +61,7 @@ export class ClassNode extends DefinitionTreeNode {
 		if (this.uri) {
 			const indicators = [];
 
-			if (mentor.vocabulary.hasEquivalentClass(this.graphs, this.uri)) {
+			if (mentor.vocabulary.hasEquivalentClass(this.getOntologyGraphs(), this.uri)) {
 				indicators.push("≡");
 			}
 
@@ -76,7 +88,7 @@ export class ClassNode extends DefinitionTreeNode {
 		}
 
 		const individualNodes = [];
-		const individualUris = this.showIndividuals ? this.getIndividualIris() : [];
+		const individualUris = this.getIndividualIris();
 
 		for (const iri of individualUris) {
 			individualNodes.push(this.getIndividualNode(iri));
@@ -89,21 +101,27 @@ export class ClassNode extends DefinitionTreeNode {
 	}
 
 	getClassNode(iri: string): ClassNode {
-		return new ClassNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		return new ClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
 	}
 
 	getIndividualNode(iri: string): DefinitionTreeNode {
-		return new IndividualNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		return new IndividualNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
 	}
 
 	getSubClassIris(): string[] {
-		return mentor.vocabulary.getSubClasses(this.graphs, this.uri, this.options);
+		// Note: We are querying the possibly extended ontology context here for class relationships.
+		return mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri, this.getQueryOptions());
 	}
 
 	getIndividualIris(): string[] {
-		return mentor.vocabulary.getSubjectsOfType(this.graphs, this.uri!, {
-			...this.options,
-			includeSubTypes: false
-		});
+		if (this.showIndividuals) {
+			// Note: If we set includeSubTypes to `false`, we need to provide the ontology context so that
+			// type hierarchies can be loaded and individuals can be filtered accordingly.
+			return mentor.vocabulary.getSubjectsOfType(this.getOntologyGraphs(), this.uri!, this.getQueryOptions({
+				includeSubTypes: false
+			}));
+		} else {
+			return [];
+		}
 	}
 }

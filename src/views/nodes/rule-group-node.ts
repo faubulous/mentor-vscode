@@ -19,7 +19,7 @@ export class RuleGroupNode extends RuleClassNode {
 	}
 
 	override getDescription(): string {
-		const rules = mentor.vocabulary.getRules(this.graphs, this.options);
+		const rules = mentor.vocabulary.getRules(this.getDocumentGraphs(), this.getQueryOptions());
 
 		return rules.length.toString();
 	}

@@ -15,7 +15,7 @@ export class ConceptGroupNode extends ConceptClassNode {
 	}
 
 	override getDescription(): string {
-		const concepts = mentor.vocabulary.getConcepts(this.graphs);
+		const concepts = mentor.vocabulary.getConcepts(this.getDocumentGraphs());
 
 		return concepts.length.toString();
 	}

@@ -19,7 +19,7 @@ export class IndividualGroupNode extends IndividualClassNode {
 	}
 
 	override getDescription(): string {
-		const individuals = mentor.vocabulary.getIndividuals(this.graphs, undefined, this.options);
+		const individuals = mentor.vocabulary.getIndividuals(this.getDocumentGraphs(), undefined, this.getQueryOptions());
 
 		return individuals.length.toString();
 	}
@@ -27,21 +27,21 @@ export class IndividualGroupNode extends IndividualClassNode {
 	override getChildren(): DefinitionTreeNode[] {
 		// TODO: Fix bug in mentor-rdf where it returns XSD individuals from the unesco thesaurus.
 		
-		const result = [];
 		const showIndividualTypes = mentor.settings.get<boolean>('view.showIndividualTypes', true);
 
+		const result = [];
+
 		if (showIndividualTypes) {
-			const types = mentor.vocabulary.getIndividualTypes(this.graphs, undefined, this.options);
+			const types = mentor.vocabulary.getIndividualTypes(this.getOntologyGraphs(), undefined, this.getQueryOptions());
 
 			for (let t of types) {
-				result.push(new IndividualClassNode(this.document, this.id + `/<${t}>`, t, this.options));
+				result.push(new IndividualClassNode(this.document, this.id + `/<${t}>`, t, this.getQueryOptions()));
 			}
 		} else {
-			// TODO: Refarctor this.graphs into a method that takes the additional graphs as an argument.
-			const individuals = mentor.vocabulary.getIndividuals(this.document.graphs, this.uri, this.options);
+			const individuals = mentor.vocabulary.getIndividuals(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
 
 			for (let i of individuals) {
-				result.push(new IndividualNode(this.document, this.id + `/<${i}>`, i, this.options));
+				result.push(new IndividualNode(this.document, this.id + `/<${i}>`, i, this.getQueryOptions()));
 			}
 		}
 

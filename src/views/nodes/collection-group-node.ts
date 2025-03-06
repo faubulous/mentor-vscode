@@ -16,17 +16,18 @@ export class CollectionGroupNode extends CollectionClassNode {
 	}
 
 	override getDescription(): string {
-		const collections = mentor.vocabulary.getCollections(this.graphs);
+		const collections = mentor.vocabulary.getCollections(this.getDocumentGraphs());
 
 		return collections.length.toString();
 	}
 
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		const collections = mentor.vocabulary.getCollections(this.graphs);
+		
+		const collections = mentor.vocabulary.getCollections(this.getDocumentGraphs());
 
 		for (const c of collections) {
-			result.push(new CollectionClassNode(this.document, this.id + `/<${c}>`, c, this.options));
+			result.push(new CollectionClassNode(this.document, this.id + `/<${c}>`, c, this.getQueryOptions()));
 		}
 
 		return sortByLabel(result);

@@ -14,10 +14,10 @@ export class PropertyNode extends DefinitionTreeNode {
 		let rangeUri: string | undefined;
 
 		if (propertyUri) {
-			rangeUri = mentor.vocabulary.getRange(this.graphs, propertyUri);
+			rangeUri = mentor.vocabulary.getRange(this.getDocumentGraphs(), propertyUri);
 
 			if (!rangeUri) {
-				rangeUri = mentor.vocabulary.getDatatype(this.graphs, propertyUri);
+				rangeUri = mentor.vocabulary.getDatatype(this.getDocumentGraphs(), propertyUri);
 			}
 		}
 
@@ -95,7 +95,7 @@ export class PropertyNode extends DefinitionTreeNode {
 				return 'symbol-text';
 			}
 			default: {
-				if (this.uri && mentor.vocabulary.hasSubject(this.graphs, this.uri)) {
+				if (this.uri && mentor.vocabulary.hasSubject(this.getDocumentGraphs(), this.uri)) {
 					return 'rdf-object-property';
 				} else {
 					return 'rdf-object-property-ref';
@@ -121,10 +121,10 @@ export class PropertyNode extends DefinitionTreeNode {
 
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		const properties = mentor.vocabulary.getSubProperties(this.graphs, this.uri, this.options);
+		const properties = mentor.vocabulary.getSubProperties(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
 
 		for (let p of properties) {
-			result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.options));
+			result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.getQueryOptions()));
 		}
 
 		return sortByLabel(result);

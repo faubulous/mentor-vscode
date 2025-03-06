@@ -22,11 +22,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	 */
 	public document: DocumentContext | undefined;
 
-	/**
-	 * Indicates whether to show referenced classes or properties in the tree view.
-	 */
-	showReferences = true;
-
 	private _onDidChangeTreeData: vscode.EventEmitter<DefinitionTreeNode | undefined> = new vscode.EventEmitter<DefinitionTreeNode | undefined>();
 
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
@@ -109,14 +104,14 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		for (let _ of mentor.vocabulary.getClasses(this.document.graphs)) {
-			const n = new ClassGroupNode(this.document, '<>/classes', undefined, { includeReferenced: this.showReferences });
+			const n = new ClassGroupNode(this.document, '<>/classes', undefined);
 
 			result.push(n);
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getProperties(this.document.graphs)) {
-			const n = new PropertyGroupNode(this.document, '<>/properties', undefined, { includeReferenced: this.showReferences });
+			const n = new PropertyGroupNode(this.document, '<>/properties', undefined);
 
 			result.push(n);
 			break;
@@ -250,10 +245,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		if (hasUnknown) {
 			// Important: Reset the includeReferenced setting for the root nodes.
-			const n = new OntologyNode(this.document, '<>', undefined, {
-				...options,
-				includeReferenced: this.showReferences
-			});
+			const n = new OntologyNode(this.document, '<>', undefined, { notDefinedBy: options.notDefinedBy });
 			n.isReferenced = true;
 
 			result.push(n);
@@ -290,7 +282,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	protected hasShapes(node: DefinitionTreeNode): boolean {
 		if (this.document && node.uri) {
-			return mentor.vocabulary.hasShapes(this.document.graphs, node.uri, { ...node.options, definedBy: undefined });
+			return mentor.vocabulary.hasShapes(this.document.graphs, node.uri, node.getQueryOptions({ definedBy: undefined }));
 		} else {
 			return false;
 		}

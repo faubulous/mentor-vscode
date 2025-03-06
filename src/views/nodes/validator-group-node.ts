@@ -19,7 +19,7 @@ export class ValidatorGroupNode extends ValidatorClassNode {
 	}
 
 	override getDescription(): string {
-		const validators = mentor.vocabulary.getValidators(this.graphs, this.options);
+		const validators = mentor.vocabulary.getValidators(this.getDocumentGraphs(), this.getQueryOptions());
 
 		return validators.length.toString();
 	}

@@ -18,7 +18,7 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		const options = { ...this.options, definedBy: this.uri };
+		const options = this.getQueryOptions({ definedBy: this.uri });
 
 		const concepts = new ConceptGroupNode(this.document, this.id + '/concepts', undefined, options);
 

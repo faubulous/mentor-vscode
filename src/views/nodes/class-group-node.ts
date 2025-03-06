@@ -17,7 +17,8 @@ export class ClassGroupNode extends ClassNode {
 	}
 
 	override getDescription(): string {
-		const classes = mentor.vocabulary.getClasses(this.graphs, this.options);
+		// Note: We only want to display the number of classes defined in the document.
+		const classes = mentor.vocabulary.getClasses(this.getDocumentGraphs(), this.getQueryOptions());
 
 		return classes.length.toString();
 	}

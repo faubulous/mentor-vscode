@@ -7,24 +7,24 @@ import { ValidatorNode } from "./validator-node";
 export class ValidatorClassNode extends ClassNode {
 	showIndividuals = true;
 
-	get graphs() {
+	override getOntologyGraphs(): string[] {
 		return [_SH, ...this.document.graphs];
 	}
-	
+
 	override getSubClassIris(): string[] {
-		const options = { ...this.options };
+		const options = this.getQueryOptions();
 		options.notDefinedBy?.add(_SH);
 
-		const classIris = mentor.vocabulary.getSubClasses(this.graphs, this.uri ?? SH.Validator);
+		const classIris = mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri ?? SH.Validator);
 
-		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.graphs, c, options));
+		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options));
 	}
 
 	override getClassNode(iri: string): ClassNode {
-		return new ValidatorClassNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		return new ValidatorClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
 	}
 
 	override getIndividualNode(iri: string): DefinitionTreeNode {
-		return new ValidatorNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		return new ValidatorNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
 	}
 }

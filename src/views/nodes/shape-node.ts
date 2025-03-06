@@ -6,13 +6,13 @@ import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassNode } from "./class-node";
 import { PropertyNode } from "./property-node";
 
-export class NodeShapeNopde extends ClassNode {
+export class NodeShapeNode extends ClassNode {
 	override getIcon() {
 		let classIri: string | undefined;
 
 		if (this.uri) {
 			const u = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
-			const targets = mentor.vocabulary.getShapeTargets(this.graphs, u);
+			const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), u);
 
 			for (let t of targets) {
 				classIri = t;
@@ -33,7 +33,7 @@ export class PropertyShapeNode extends PropertyNode {
 
 		if (this.uri) {
 			const id = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
-			const targets = mentor.vocabulary.getShapeTargets(this.graphs, id);
+			const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
 
 			for (const target of targets) {
 				rangeIri = this.getRange(target);

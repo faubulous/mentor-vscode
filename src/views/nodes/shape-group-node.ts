@@ -16,7 +16,7 @@ export class ShapeGroupNode extends ShapeClassNode {
 	}
 
 	override getDescription(): string {
-		const shapes = mentor.vocabulary.getShapes(this.graphs, undefined, this.options);
+		const shapes = mentor.vocabulary.getShapes(this.getDocumentGraphs(), undefined, this.getQueryOptions());
 
 		return shapes.length.toString();
 	}

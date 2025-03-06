@@ -7,24 +7,24 @@ import { RuleNode } from "./rule-node";
 export class RuleClassNode extends ClassNode {
 	showIndividuals = true;
 
-	get graphs() {
+	override getOntologyGraphs(): string[] {
 		return [_SH, ...this.document.graphs];
 	}
 
 	override getSubClassIris(): string[] {
-		const options = { ...this.options };
+		const options = this.getQueryOptions();
 		options.notDefinedBy?.add(_SH);
 
-		const classIris = mentor.vocabulary.getSubClasses(this.graphs, this.uri ?? SH.Rule);
+		const classIris = mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri ?? SH.Rule);
 
-		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.graphs, c, options));
+		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options));
 	}
 
 	override getClassNode(iri: string): ClassNode {
-		return new RuleClassNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		return new RuleClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
 	}
 
 	override getIndividualNode(iri: string): DefinitionTreeNode {
-		return new RuleNode(this.document, this.id + `/<${iri}>`, iri, this.options);
+		return new RuleNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
 	}
 }
