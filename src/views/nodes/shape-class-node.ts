@@ -21,16 +21,19 @@ export class ShapeClassNode extends ClassNode {
 	}
 
 	override getClassNode(iri: string): ClassNode {
-		return new ShapeClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		return this.createChildNode(ShapeClassNode, iri);
 	}
 
 	override getIndividualNode(iri: string): DefinitionTreeNode {
-		if (mentor.vocabulary.hasType(this.getOntologyGraphs(), iri, SH.Parameter, this.getQueryOptions({ includeInferred: true }))) {
-			return new ParameterNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
-		} else if (mentor.vocabulary.hasType(this.getOntologyGraphs(), iri, SH.PropertyShape, this.getQueryOptions({ includeInferred: true }))) {
-			return new PropertyShapeNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		const graphs = this.getOntologyGraphs();
+		const options = this.getQueryOptions({ includeInferred: true });
+
+		if (mentor.vocabulary.hasType(graphs, iri, SH.Parameter, options)) {
+			return this.createChildNode(ParameterNode, iri);
+		} else if (mentor.vocabulary.hasType(graphs, iri, SH.PropertyShape, options)) {
+			return this.createChildNode(PropertyShapeNode, iri);
 		} else {
-			return new NodeShapeNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+			return this.createChildNode(NodeShapeNode, iri);
 		}
 	}
 }

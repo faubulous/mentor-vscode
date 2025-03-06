@@ -18,7 +18,7 @@ export class DefinitionTreeNode {
 	/**
 	 * The URI of the tree item or undefined if the tree item is not associated with a URI.
 	 */
-	uri: string | undefined;
+	uri: string;
 
 	// TODO: What is the difference between uri and resourceUri?
 	/**
@@ -46,11 +46,21 @@ export class DefinitionTreeNode {
 	 */
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
-	constructor(context: DocumentContext, id: string, uri: string | undefined, options?: DefinitionQueryOptions) {
+	constructor(context: DocumentContext, id: string, uri: string, options?: DefinitionQueryOptions) {
 		this.id = id;
 		this.uri = uri;
 		this.document = context;
 		this._queryOptions = options;
+	}
+
+	createChildNode<NodeType extends DefinitionTreeNode>(
+		NodeConstructor: new (document: DocumentContext, id: string, iri: string, options?: any) => NodeType,
+		iri: string,
+		options?: any
+	): NodeType {
+		const id = `${this.id}/<${iri}>`;
+
+		return new NodeConstructor(this.document, id, iri, this.getQueryOptions(options));
 	}
 
 	/**

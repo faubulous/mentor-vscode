@@ -51,43 +51,37 @@ export class OntologyNode extends DefinitionTreeNode {
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
 
-		const classes = new ClassGroupNode(this.document, this.id + '/classes', undefined, this.getQueryOptions());
+		const classes = this.createChildNode(ClassGroupNode, 'mentor:classes');
 
 		if (classes.getChildren().length > 0) {
 			result.push(classes);
 		}
 
-		const properties = new PropertyGroupNode(this.document, this.id + '/properties', undefined, this.getQueryOptions());
+		const properties = this.createChildNode(PropertyGroupNode, 'mentor:properties');
 
 		if (properties.getChildren().length > 0) {
 			result.push(properties);
 		}
 
-		const individuals = new IndividualGroupNode(this.document, this.id + '/individuals', undefined, this.getQueryOptions());
+		const individuals = this.createChildNode(IndividualGroupNode, 'mentor:individuals');
 
 		if (individuals.getChildren().length > 0) {
 			result.push(individuals);
 		}
 
-		const shapes = new ShapeGroupNode(this.document, this.id + '/shapes', undefined, this.getQueryOptions({
-			includeBlankNodes: true
-		}));
+		const shapes = this.createChildNode(ShapeGroupNode, 'mentor:shapes', this.getQueryOptions({ includeBlankNodes: true }));
 
 		if (shapes.getChildren().length > 0) {
 			result.push(shapes);
 		}
 
-		const rules = new RuleGroupNode(this.document, this.id + '/rules', undefined, this.getQueryOptions({
-			includeBlankNodes: true
-		}));
+		const rules = this.createChildNode(RuleGroupNode, 'mentor:rules', this.getQueryOptions({ includeBlankNodes: true }));
 
 		if (rules.getChildren().length > 0) {
 			result.push(rules);
 		}
 
-		const validators = new ValidatorGroupNode(this.document, this.id + '/validators', undefined, this.getQueryOptions({
-			includeBlankNodes: true
-		}));
+		const validators = this.createChildNode(ValidatorGroupNode, 'mentor:validators', this.getQueryOptions({ includeBlankNodes: true }));
 
 		if (validators.getChildren().length > 0) {
 			result.push(validators);

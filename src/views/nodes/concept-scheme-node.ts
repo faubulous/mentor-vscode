@@ -18,15 +18,14 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		const options = this.getQueryOptions({ definedBy: this.uri });
-
-		const concepts = new ConceptGroupNode(this.document, this.id + '/concepts', undefined, options);
+		
+		const concepts = this.createChildNode(ConceptGroupNode, 'mentor:concepts', { definedBy: this.uri });
 
 		if (concepts.getChildren().length > 0) {
 			result.push(concepts);
 		}
 
-		const collections = new CollectionGroupNode(this.document, this.id + '/collections', undefined, options);
+		const collections = this.createChildNode(CollectionGroupNode, 'mentor:collections', { definedBy: this.uri });
 
 		if (collections.getChildren().length > 0) {
 			result.push(collections);

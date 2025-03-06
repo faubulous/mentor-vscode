@@ -22,4 +22,8 @@ export class ClassGroupNode extends ClassNode {
 
 		return classes.length.toString();
 	}
+
+	override getSubClassIris(): string[] {
+		return mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), undefined, this.getQueryOptions());
+	}
 }

@@ -21,10 +21,10 @@ export class ValidatorClassNode extends ClassNode {
 	}
 
 	override getClassNode(iri: string): ClassNode {
-		return new ValidatorClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		return this.createChildNode(ValidatorClassNode, iri);
 	}
 
 	override getIndividualNode(iri: string): DefinitionTreeNode {
-		return new ValidatorNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		return this.createChildNode(ValidatorNode, iri);
 	}
 }

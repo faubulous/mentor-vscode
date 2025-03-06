@@ -23,11 +23,10 @@ export class CollectionGroupNode extends CollectionClassNode {
 
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		
 		const collections = mentor.vocabulary.getCollections(this.getDocumentGraphs());
 
 		for (const c of collections) {
-			result.push(new CollectionClassNode(this.document, this.id + `/<${c}>`, c, this.getQueryOptions()));
+			result.push(this.createChildNode(CollectionClassNode, c));
 		}
 
 		return sortByLabel(result);

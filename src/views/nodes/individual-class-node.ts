@@ -9,11 +9,10 @@ import { ClassNode } from "./class-node";
 export class IndividualClassNode extends ClassNode {
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-
 		const individuals = mentor.vocabulary.getIndividuals(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
 
 		for (let i of individuals) {
-			result.push(new IndividualNode(this.document, this.id + `/<${i}>`, i, this.getQueryOptions()));
+			result.push(this.createChildNode(IndividualNode, i));
 		}
 
 		return result;

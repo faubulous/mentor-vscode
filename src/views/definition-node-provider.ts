@@ -39,7 +39,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			this.refresh(this.document);
 		});
 
-		mentor.settings.onDidChange("view.definitionTree.defaultLayout", (e) => {
+		mentor.settings.onDidChange("view.definitionTree.defaultLayout", () => {
 			this.refresh(this.document);
 		});
 	}
@@ -77,6 +77,17 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 	}
 
+	protected createRootNode<NodeType extends DefinitionTreeNode>(
+		NodeConstructor: new (document: DocumentContext, id: string, iri: string, options?: any) => NodeType,
+		document: DocumentContext,
+		iri: string,
+		options?: any
+	): NodeType {
+		const id = `<${iri}>`;
+
+		return new NodeConstructor(document, id, iri, options);
+	}
+
 	/**
 	 * Get the root nodes of the document, grouped by type.
 	 * @returns The root nodes of the document.
@@ -91,7 +102,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const ontologyUris = mentor.vocabulary.getOntologies(this.document.graphs);
 
 		for (const ontologyUri of ontologyUris) {
-			const n = new OntologyNode(this.document, `<${ontologyUri}>`, ontologyUri);
+			const n = this.createRootNode(OntologyNode, this.document, ontologyUri, { definedBy: ontologyUri });
 			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
 
 			result.push(n);
@@ -100,48 +111,36 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const schemeUris = mentor.vocabulary.getConceptSchemes(this.document.graphs);
 
 		for (const schemeUri of schemeUris) {
-			result.push(new ConceptSchemeNode(this.document, `<${schemeUri}>`, schemeUri));
+			result.push(this.createRootNode(ConceptSchemeNode, this.document, schemeUri));
 		}
 
 		for (let _ of mentor.vocabulary.getClasses(this.document.graphs)) {
-			const n = new ClassGroupNode(this.document, '<>/classes', undefined);
-
-			result.push(n);
+			result.push(this.createRootNode(ClassGroupNode, this.document, 'mentor:classes'));
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getProperties(this.document.graphs)) {
-			const n = new PropertyGroupNode(this.document, '<>/properties', undefined);
-
-			result.push(n);
+			result.push(this.createRootNode(PropertyGroupNode, this.document, 'mentor:properties'));
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getIndividuals(this.document.graphs, undefined)) {
-			const n = new IndividualGroupNode(this.document, '<>/individuals', undefined);
-
-			result.push(n);
+			result.push(this.createRootNode(IndividualGroupNode, this.document, 'mentor:individuals'));
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getShapes(this.document.graphs, undefined)) {
-			const n = new ShapeGroupNode(this.document, '<>/shapes', undefined);
-
-			result.push(n);
+			result.push(this.createRootNode(ShapeGroupNode, this.document, 'mentor:shapes'));
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getRules(this.document.graphs, undefined)) {
-			const n = new RuleGroupNode(this.document, '<>/rules', undefined);
-
-			result.push(n);
+			result.push(this.createRootNode(RuleGroupNode, this.document, 'mentor:rules'));
 			break;
 		}
 
 		for (let _ of mentor.vocabulary.getValidators(this.document.graphs, undefined)) {
-			const n = new ValidatorGroupNode(this.document, '<>/validators', undefined);
-
-			result.push(n);
+			result.push(this.createRootNode(ValidatorGroupNode, this.document, 'mentor:validators'));
 			break;
 		}
 
@@ -161,7 +160,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const ontologyNodes = [];
 
 		for (const ontologyUri of ontologyUris) {
-			const n = new OntologyNode(this.document, `<${ontologyUri}>`, ontologyUri, { definedBy: ontologyUri });
+			const n = this.createRootNode(OntologyNode, this.document, ontologyUri, { definedBy: ontologyUri });
 			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
 			ontologyNodes.push(n);
@@ -171,7 +170,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const schemeNodes = [];
 
 		for (const schemeUri of schemeUris) {
-			schemeNodes.push(new ConceptSchemeNode(this.document, `<${schemeUri}>`, schemeUri));
+			schemeNodes.push(this.createRootNode(ConceptSchemeNode, this.document, schemeUri));
 		}
 
 		const ontologies = new Set(ontologyUris);
@@ -185,7 +184,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 				continue;
 			}
 
-			const n = new OntologyNode(this.document, `<${source}>`, source, { definedBy: source });
+			const n = this.createRootNode(OntologyNode, this.document, source, { definedBy: source });
 			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 			n.isReferenced = true;
 
@@ -245,7 +244,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		if (hasUnknown) {
 			// Important: Reset the includeReferenced setting for the root nodes.
-			const n = new OntologyNode(this.document, '<>', undefined, { notDefinedBy: options.notDefinedBy });
+			const n = this.createRootNode(OntologyNode, this.document, 'mentor:unknown', { notDefinedBy: options.notDefinedBy });
 			n.isReferenced = true;
 
 			result.push(n);

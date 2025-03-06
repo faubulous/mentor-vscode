@@ -101,11 +101,11 @@ export class ClassNode extends DefinitionTreeNode {
 	}
 
 	getClassNode(iri: string): ClassNode {
-		return new ClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		return this.createChildNode(ClassNode, iri);
 	}
 
 	getIndividualNode(iri: string): DefinitionTreeNode {
-		return new IndividualNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		return this.createChildNode(IndividualNode, iri);
 	}
 
 	getSubClassIris(): string[] {
@@ -117,7 +117,7 @@ export class ClassNode extends DefinitionTreeNode {
 		if (this.showIndividuals) {
 			// Note: If we set includeSubTypes to `false`, we need to provide the ontology context so that
 			// type hierarchies can be loaded and individuals can be filtered accordingly.
-			return mentor.vocabulary.getSubjectsOfType(this.getOntologyGraphs(), this.uri!, this.getQueryOptions({
+			return mentor.vocabulary.getSubjectsOfType(this.getOntologyGraphs(), this.uri, this.getQueryOptions({
 				includeSubTypes: false
 			}));
 		} else {

@@ -10,6 +10,10 @@ import { PropertyClassNode } from "./property-class-node";
 export class PropertyGroupNode extends PropertyClassNode {
 	contextValue = "properties";
 
+	override getIcon(): vscode.ThemeIcon | undefined {
+		return undefined;
+	}
+
 	override getLabel(): vscode.TreeItemLabel {
 		return { label: "Properties" };
 	}

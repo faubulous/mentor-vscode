@@ -12,7 +12,7 @@ export class PropertyClassNode extends ClassNode {
 		const properties = mentor.vocabulary.getRootPropertiesOfType(this.getDocumentGraphs(), this.uri!, this.getQueryOptions());
 
 		for (const p of properties) {
-			result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.getQueryOptions()));
+			result.push(this.createChildNode(PropertyNode, p));
 		}
 
 		return sortByLabel(result);

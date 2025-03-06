@@ -22,6 +22,6 @@ export class ConceptClassNode extends ClassNode {
 	}
 
 	override getClassNode(iri: string): ClassNode {
-		return new ConceptClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		return this.createChildNode(ConceptClassNode, iri);
 	}
 }

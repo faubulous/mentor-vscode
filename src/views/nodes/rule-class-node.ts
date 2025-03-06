@@ -21,10 +21,10 @@ export class RuleClassNode extends ClassNode {
 	}
 
 	override getClassNode(iri: string): ClassNode {
-		return new RuleClassNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		return this.createChildNode(RuleClassNode, iri);
 	}
 
 	override getIndividualNode(iri: string): DefinitionTreeNode {
-		return new RuleNode(this.document, this.id + `/<${iri}>`, iri, this.getQueryOptions());
+		return this.createChildNode(RuleNode, iri);
 	}
 }
