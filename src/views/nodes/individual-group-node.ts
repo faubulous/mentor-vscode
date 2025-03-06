@@ -37,7 +37,8 @@ export class IndividualGroupNode extends IndividualClassNode {
 				result.push(new IndividualClassNode(this.document, this.id + `/<${t}>`, t, this.options));
 			}
 		} else {
-			const individuals = mentor.vocabulary.getIndividuals(this.graphs, this.uri, this.options);
+			// TODO: Refarctor this.graphs into a method that takes the additional graphs as an argument.
+			const individuals = mentor.vocabulary.getIndividuals(this.document.graphs, this.uri, this.options);
 
 			for (let i of individuals) {
 				result.push(new IndividualNode(this.document, this.id + `/<${i}>`, i, this.options));
