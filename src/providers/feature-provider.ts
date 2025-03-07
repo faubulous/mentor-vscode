@@ -34,7 +34,6 @@ export class FeatureProvider {
 		const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
 		const endWhitespace = countTrailingWhitespace(token.image);
 
-		// TODO: File bug report for millan parser.
 		// Note: The millan parser incorrectly parses some tokens with leading and trailing whitespace.
 		// We account for this by adjusting the start and end positions.
 		const start = new vscode.Position(startLine, startCharacter + startWhitespace);

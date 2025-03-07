@@ -26,7 +26,7 @@ export class IndividualGroupNode extends IndividualClassNode {
 
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		const showIndividualTypes = mentor.settings.get<boolean>('view.showIndividualTypes', true);
+		const showIndividualTypes = mentor.settings.get('view.showIndividualTypes', true);
 
 		if (showIndividualTypes) {
 			const types = mentor.vocabulary.getIndividualTypes(this.getOntologyGraphs(), undefined, this.getQueryOptions());

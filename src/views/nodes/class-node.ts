@@ -24,6 +24,11 @@ export class ClassNode extends DefinitionTreeNode {
 		return this.document.graphs;
 	}
 
+	/**
+	 * Get the icon name of a class depending on its properties in the document graph.
+	 * @param classIri IRI of a class.
+	 * @returns The icon name of the class.
+	 */
 	getIconNameFromClass(classIri?: string): string {
 		let iconName = classIri ? 'rdf-class' : 'rdf-class-ref';
 
@@ -40,8 +45,13 @@ export class ClassNode extends DefinitionTreeNode {
 		return iconName;
 	}
 
+	/**
+	 * Get the icon color of a class depending on its properties in the document graph.
+	 * @param classIri IRI of a class.
+	 * @returns The icon color of the class.
+	 */
 	getIconColorFromClass(classIri?: string) {
-		return new vscode.ThemeColor("mentor.color.class");
+		return this.getIconColor();
 	}
 
 	override getIcon(): vscode.ThemeIcon | undefined {
@@ -100,23 +110,44 @@ export class ClassNode extends DefinitionTreeNode {
 		];
 	}
 
+	/**
+	 * Get the node of a class instance. Can be overloaded to provide a custom node type.
+	 * @param iri IRI of the node.
+	 * @returns A node instance.
+	 */
 	getClassNode(iri: string): ClassNode {
 		return this.createChildNode(ClassNode, iri);
 	}
 
+	/**
+	 * Get the node of an individual. Can be overloaded to provide a custom node type.
+	 * @param iri IRI of the node.
+	 * @returns A node instance.
+	 */
 	getIndividualNode(iri: string): DefinitionTreeNode {
 		return this.createChildNode(IndividualNode, iri);
 	}
 
+	/**
+	 * Get the IRIs of the sub-classes of the class. This method should be overloaded to provide a custom
+	 * implementation for specific class types.
+	 * @returns An array of sub-class IRIs.
+	 */
 	getSubClassIris(): string[] {
-		// Note: We are querying the possibly extended ontology context here for class relationships.
+		// Note: We are querying the possibly extended ontology graphs here for class relationships.
 		return mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri, this.getQueryOptions());
 	}
 
+	/**
+	 * Get the IRIs of the individuals of the class. This method should be overloaded to provide a custom
+	 * implementation for specific class types.
+	 * @returns An array of individual IRIs.
+	 */
 	getIndividualIris(): string[] {
 		if (this.showIndividuals) {
-			// Note: If we set includeSubTypes to `false`, we need to provide the ontology context so that
-			// type hierarchies can be loaded and individuals can be filtered accordingly.
+			// Note: If we set includeSubTypes to `false`, we *must* provide the ontology graphs so that
+			// type hierarchies can be loaded and individuals can be filtered accordingly. If this is not done,
+			// we will return more individuals than expected.
 			return mentor.vocabulary.getSubjectsOfType(this.getOntologyGraphs(), this.uri, this.getQueryOptions({
 				includeSubTypes: false
 			}));

@@ -20,12 +20,6 @@ export class DefinitionTreeNode {
 	 */
 	uri: string;
 
-	// TODO: What is the difference between uri and resourceUri?
-	/**
-	 * The URI of the resource associated with the tree item.
-	 */
-	resourceUri?: vscode.Uri;
-
 	/**
 	 * The document context of the tree item.
 	 */
@@ -46,6 +40,8 @@ export class DefinitionTreeNode {
 	 */
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
+	// TODO: Cache children.
+	// TODO: Refactor constructor to also take an optional parent node.
 	constructor(context: DocumentContext, id: string, uri: string, options?: DefinitionQueryOptions) {
 		this.id = id;
 		this.uri = uri;
@@ -53,11 +49,19 @@ export class DefinitionTreeNode {
 		this._queryOptions = options;
 	}
 
+	/**
+	 * Create a child node of the definition tree node.
+	 * @param NodeConstructor Constructor of the child node.
+	 * @param iri IRI of the child node.
+	 * @param options Optional query options for querying the children of the created node.
+	 * @returns A new instance of the child node.
+	 */
 	createChildNode<NodeType extends DefinitionTreeNode>(
 		NodeConstructor: new (document: DocumentContext, id: string, iri: string, options?: any) => NodeType,
 		iri: string,
 		options?: any
 	): NodeType {
+		// TODO: Move ID creation to a separate method in uri module.
 		const id = `${this.id}/<${iri}>`;
 
 		return new NodeConstructor(this.document, id, iri, this.getQueryOptions(options));
@@ -165,9 +169,7 @@ export class DefinitionTreeNode {
 	 * @returns The URI of the tree item or undefined if the tree item is not associated with a URI.
 	 */
 	getResourceUri(): vscode.Uri | undefined {
-		if (this.resourceUri) {
-			return this.resourceUri;
-		} else if (this.uri) {
+		if (this.uri) {
 			return vscode.Uri.parse(this.uri);
 		} else {
 			return undefined;

@@ -27,10 +27,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
-		if (mentor.activeContext) {
-			this.refresh(mentor.activeContext);
-		}
-
 		mentor.onDidChangeVocabularyContext((context) => {
 			this.refresh(context);
 		});
@@ -45,17 +41,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	/**
-	 * A callback that is called when the vocabulary document context has changed.
-	 * @param context The new vocabulary document context.
-	 */
-	protected onDidChangeVocabularyContext(context: DocumentContext) { }
-
-	/**
 	 * Refresh the tree view.
 	 */
 	refresh(document: DocumentContext | undefined): void {
 		this.document = document;
-		this.onDidChangeVocabularyContext(document!);
 		this._onDidChangeTreeData.fire(void 0);
 	}
 
@@ -63,7 +52,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		throw new Error('Method not implemented.');
 	}
 
-	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
+	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {	
 		if (!node) {
 			let layout = mentor.settings.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
 
@@ -262,6 +251,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const children = this.getChildren(node);
 		const collapsibleState = children?.length ? node.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
 
+		// TODO: Move Shape target context value into the corresponding node classes.
 		if (this.hasShapes(node)) {
 			node.contextValue += ' shape-target';
 		}

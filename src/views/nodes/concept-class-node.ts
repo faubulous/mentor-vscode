@@ -7,8 +7,8 @@ import { ClassNode } from "./class-node";
  */
 export class ConceptClassNode extends ClassNode {
 
-	override getIcon() {
-		return this.uri ? new vscode.ThemeIcon('rdf-concept', this.getIconColor()) : undefined;
+	override getIcon() : vscode.ThemeIcon | undefined {
+		return new vscode.ThemeIcon('rdf-concept', this.getIconColor());
 	}
 
 	override getIconColor() {

@@ -124,7 +124,7 @@ export class PropertyNode extends DefinitionTreeNode {
 		const properties = mentor.vocabulary.getSubProperties(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
 
 		for (let p of properties) {
-			result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.getQueryOptions()));
+			result.push(this.createChildNode(PropertyNode, p));
 		}
 
 		return sortByLabel(result);

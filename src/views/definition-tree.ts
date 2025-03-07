@@ -25,8 +25,6 @@ export class DefinitionTree implements TreeView {
 	readonly treeView: vscode.TreeView<DefinitionTreeNode>;
 
 	constructor() {
-		vscode.window.registerTreeDataProvider<DefinitionTreeNode>(this.id, this.treeDataProvider);
-
 		this.treeView = vscode.window.createTreeView<DefinitionTreeNode>(this.id, {
 			treeDataProvider: this.treeDataProvider,
 			showCollapseAll: true

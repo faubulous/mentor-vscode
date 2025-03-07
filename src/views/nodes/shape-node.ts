@@ -10,14 +10,12 @@ export class NodeShapeNode extends ClassNode {
 	override getIcon() {
 		let classIri: string | undefined;
 
-		if (this.uri) {
-			const u = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
-			const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), u);
+		const id = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
+		const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
 
-			for (let t of targets) {
-				classIri = t;
-				break;
-			}
+		for (const target of targets) {
+			classIri = target;
+			break;
 		}
 
 		const iconName = this.getIconNameFromClass(classIri);
@@ -30,15 +28,13 @@ export class NodeShapeNode extends ClassNode {
 export class PropertyShapeNode extends PropertyNode {
 	override getIcon() {
 		let rangeIri: string | undefined;
+		
+		const id = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
+		const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
 
-		if (this.uri) {
-			const id = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
-			const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
-
-			for (const target of targets) {
-				rangeIri = this.getRange(target);
-				break;
-			}
+		for (const target of targets) {
+			rangeIri = this.getRange(target);
+			break;
 		}
 
 		const iconName = this.getIconNameFromRange(rangeIri);

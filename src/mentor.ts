@@ -239,20 +239,8 @@ class MentorExtension {
 		// Initialize the extension persistence service.
 		this.localStorageService.initialize(context.globalState);
 
-		// Initialize the default label rendering style.
-		let defaultStyle = this.configuration.get('definitionTree.labelStyle');
-
-		switch (defaultStyle) {
-			case 'AnnotatedLabels':
-				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
-				break;
-			case 'UriLabelsWithPrefix':
-				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabelsWithPrefix);
-				break;
-			default:
-				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabels);
-				break;
-		}
+		// Initialize the view settings.
+		this.settings.initialize(this.configuration);
 
 		// Register commands..
 		vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {

@@ -26,19 +26,19 @@ export class PropertyGroupNode extends PropertyClassNode {
 
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
-		const showPropertyTypes = mentor.settings.get<boolean>('view.showPropertyTypes', true);
+		const showPropertyTypes = mentor.settings.get('view.showPropertyTypes', true);
 
 		if (showPropertyTypes) {
 			const types = mentor.vocabulary.getPropertyTypes(this.getOntologyGraphs(), this.getQueryOptions());
 
 			for (let type of types) {
-				result.push(new PropertyClassNode(this.document, this.id + `/<${type}>`, type, this.getQueryOptions()));
+				result.push(this.createChildNode(PropertyClassNode, type));
 			}
 		} else {
 			const properties = mentor.vocabulary.getSubProperties(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
 
 			for (let p of properties) {
-				result.push(new PropertyNode(this.document, this.id + `/<${p}>`, p, this.getQueryOptions()));
+				result.push(this.createChildNode(PropertyNode, p));
 			}
 		}
 
