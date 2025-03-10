@@ -37,7 +37,7 @@ export class IndividualGroupNode extends IndividualClassNode {
 				result.push(this.createChildNode(IndividualClassNode, t));
 			}
 		} else {
-			const individuals = mentor.vocabulary.getIndividuals(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
+			const individuals = mentor.vocabulary.getIndividuals(this.getDocumentGraphs(), undefined, this.getQueryOptions());
 
 			for (let i of individuals) {
 				result.push(this.createChildNode(IndividualNode, i));

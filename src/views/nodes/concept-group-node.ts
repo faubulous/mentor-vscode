@@ -20,4 +20,10 @@ export class ConceptGroupNode extends ConceptClassNode {
 
 		return concepts.length.toString();
 	}
+
+	override getSubClassIris(): string[] {
+		const subject = this.getQueryOptions().definedBy ?? this.uri;
+
+		return mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), subject);
+	}
 }

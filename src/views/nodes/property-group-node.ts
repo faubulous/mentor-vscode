@@ -37,7 +37,7 @@ export class PropertyGroupNode extends PropertyClassNode {
 				result.push(this.createChildNode(PropertyClassNode, type));
 			}
 		} else {
-			const properties = mentor.vocabulary.getSubProperties(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
+			const properties = mentor.vocabulary.getSubProperties(this.getDocumentGraphs(), undefined, this.getQueryOptions());
 
 			for (let p of properties) {
 				result.push(this.createChildNode(PropertyNode, p));

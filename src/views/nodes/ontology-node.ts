@@ -15,10 +15,10 @@ export class OntologyNode extends DefinitionTreeNode {
 	isReferenced = false;
 
 	override getLabel(): vscode.TreeItemLabel {
-		if (this.uri) {
-			return super.getLabel();
+		if (this.uri === 'mentor:unknown') {
+			return { label: 'Unknown' };
 		} else {
-			return { label: "unknown" };
+			return super.getLabel();
 		}
 	}
 

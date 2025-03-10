@@ -15,9 +15,7 @@ export class ConceptClassNode extends ClassNodeBase {
 	}
 
 	override getSubClassIris(): string[] {
-		const subject = this.getQueryOptions().definedBy ?? this.uri;
-
-		return mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), subject);
+		return mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), this.uri);
 	}
 
 	override getClassNode(iri: string) {
