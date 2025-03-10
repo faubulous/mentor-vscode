@@ -4,15 +4,16 @@ import { DefinitionTreeNode, sortByLabel} from "../definition-tree-node";
 import { CollectionClassNode } from "./collection-class-node";
 
 export class CollectionGroupNode extends CollectionClassNode {
-
-	contextValue = "collections";
+	override getContextValue(): string {
+		return 'collections';
+	}
 
 	override getIcon(): vscode.ThemeIcon | undefined {
 		return undefined;
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
-		return { label: "Collections" };
+		return { label: 'Collections' };
 	}
 
 	override getDescription(): string {

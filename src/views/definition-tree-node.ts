@@ -27,6 +27,7 @@ export class DefinitionTreeNode {
 
 	/**
 	 * A value that can be accessed in package.json for the context menu.
+	 * @deprecated Use `getContextValue` instead.
 	 */
 	contextValue: string = 'resource';
 
@@ -87,6 +88,14 @@ export class DefinitionTreeNode {
 	}
 
 	/**
+	 * Get a value that can be accessed in `package.json` for the context menu.
+	 * @returns A string that represents the context value of the tree item.
+	 */
+	getContextValue(): string {
+		return 'resource';
+	}
+
+	/**
 	 * Get the graph IRIs of the document context, including the document a-box and it's inference graph.
 	 * @returns An array of graph IRIs.
 	 */
@@ -99,13 +108,7 @@ export class DefinitionTreeNode {
 	 * @returns The label of the tree item.
 	 */
 	getLabel(): vscode.TreeItemLabel {
-		let label: string;
-
-		if (this.uri) {
-			label = this.document.getResourceLabel(this.uri).value;
-		} else {
-			label = this.id;
-		}
+		const label = this.document.getResourceLabel(this.uri).value;
 
 		return { label }
 	}
@@ -115,10 +118,6 @@ export class DefinitionTreeNode {
 	 * @returns A description string or `undefined` if no description should be shown.
 	 */
 	getDescription(): string {
-		if (!this.uri) {
-			return "";
-		}
-
 		const label = this.document.getResourceLabel(this.uri);
 		const activeLanguageTag = this.document.activeLanguageTag;
 		const activeLanguage = this.document.activeLanguage;
@@ -152,7 +151,7 @@ export class DefinitionTreeNode {
 	 * Get the icon of the tree item.
 	 * @returns A theme icon, a file system path or undefined if no icon should be shown.
 	 */
-	getIcon(): vscode.ThemeIcon | string | undefined {
+	getIcon(): vscode.ThemeIcon | undefined {
 		return undefined;
 	}
 
@@ -169,11 +168,7 @@ export class DefinitionTreeNode {
 	 * @returns The URI of the tree item or undefined if the tree item is not associated with a URI.
 	 */
 	getResourceUri(): vscode.Uri | undefined {
-		if (this.uri) {
-			return vscode.Uri.parse(this.uri);
-		} else {
-			return undefined;
-		}
+		return vscode.Uri.parse(this.uri);
 	}
 
 	/**

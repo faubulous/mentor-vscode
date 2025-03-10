@@ -1,12 +1,9 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
-import { ClassNode } from "./class-node";
+import { ClassNodeBase } from "./class-node-base";
 import { NodeShapeNode, PropertyShapeNode, ParameterNode } from "./shape-node";
-import { DefinitionTreeNode } from "../definition-tree-node";
 
-export class ShapeClassNode extends ClassNode {
-	showIndividuals = true;
-
+export class ShapeClassNode extends ClassNodeBase {
 	override getOntologyGraphs(): string[] {
 		return [_SH, ...this.document.graphs];
 	}
@@ -20,11 +17,11 @@ export class ShapeClassNode extends ClassNode {
 		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options));
 	}
 
-	override getClassNode(iri: string): ClassNode {
+	override getClassNode(iri: string) {
 		return this.createChildNode(ShapeClassNode, iri);
 	}
 
-	override getIndividualNode(iri: string): DefinitionTreeNode {
+	override getIndividualNode(iri: string) {
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions({ includeInferred: true });
 

@@ -1,12 +1,12 @@
 import { mentor } from "../../mentor";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { IndividualNode } from "./individual-node";
-import { ClassNode } from "./class-node";
+import { ClassNodeBase } from "./class-node-base";
 
 /**
  * Node of a class instance in the definition tree.
  */
-export class IndividualClassNode extends ClassNode {
+export class IndividualClassNode extends ClassNodeBase {
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
 		const individuals = mentor.vocabulary.getIndividuals(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
@@ -16,5 +16,13 @@ export class IndividualClassNode extends ClassNode {
 		}
 
 		return result;
+	}
+
+	override getClassNode(iri: string): DefinitionTreeNode {
+		return this.createChildNode(IndividualClassNode, iri);
+	}
+
+	override getIndividualNode(iri: string): DefinitionTreeNode {
+		return this.createChildNode(IndividualNode, iri);
 	}
 }

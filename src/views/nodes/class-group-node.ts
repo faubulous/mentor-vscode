@@ -6,14 +6,16 @@ import { ClassNode } from "./class-node";
  * Node of a RDFS or OWL class in the definition tree.
  */
 export class ClassGroupNode extends ClassNode {
-	contextValue = "classes";
+	override getContextValue(): string {
+		return 'classes';
+	}
 
 	override getIcon(): vscode.ThemeIcon | undefined {
 		return undefined;
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
-		return { label: "Classes" };
+		return { label: 'Classes' };
 	}
 
 	override getDescription(): string {

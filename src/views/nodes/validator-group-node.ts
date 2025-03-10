@@ -8,7 +8,9 @@ import { ValidatorClassNode } from "./validator-class-node";
 export class ValidatorGroupNode extends ValidatorClassNode {
 	uri = SH.Validator;
 
-	contextValue = "validators";
+	override getContextValue(): string {
+		return "validators";
+	}
 
 	override getIcon() {
 		return undefined;

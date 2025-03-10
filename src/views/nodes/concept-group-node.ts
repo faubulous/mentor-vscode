@@ -3,15 +3,16 @@ import { mentor } from "../../mentor";
 import { ConceptClassNode } from "./concept-class-node";
 
 export class ConceptGroupNode extends ConceptClassNode {
-
-	contextValue = "concepts";
+	override getContextValue(): string {
+		return 'concepts';
+	}
 
 	override getIcon(): vscode.ThemeIcon | undefined {
 		return undefined;
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
-		return { label: "Concepts" };
+		return { label: 'Concepts' };
 	}
 
 	override getDescription(): string {

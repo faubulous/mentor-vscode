@@ -1,158 +1,48 @@
-import * as vscode from "vscode";
 import { mentor } from "../../mentor";
-import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
+import { ClassNodeBase } from "./class-node-base";
 import { IndividualNode } from "./individual-node";
 
 /**
  * Node of a RDFS or OWL class in the definition tree.
  */
-export class ClassNode extends DefinitionTreeNode {
-	/**
-	 * Indicates whether class instances should be returned by the {@link getChildren} method.
-	 */
-	showIndividuals = false;
-
-	/**
-	 * Get the graph IRIs of the document context and possibly extended ontology graphs. This method should be 
-	 * used when querying type or sub-class relationships and may be overloaded to provide additional relevant
-	 * graphs such as the SHACL spec.
-	 * 
-	 * Note: Used in {@link getSubClassIris}.
-	 * @returns An array of graph IRIs.
-	 */
-	getOntologyGraphs(): string[] {
-		return this.document.graphs;
+export class ClassNode extends ClassNodeBase {
+	override showIndividuals(): boolean {
+		return false;
 	}
 
-	/**
-	 * Get the icon name of a class depending on its properties in the document graph.
-	 * @param classIri IRI of a class.
-	 * @returns The icon name of the class.
-	 */
-	getIconNameFromClass(classIri?: string): string {
-		let iconName = classIri ? 'rdf-class' : 'rdf-class-ref';
+	override getContextValue(): string {
+		let result = super.getContextValue();
 
-		if (classIri) {
-			if (!mentor.vocabulary.hasSubject(this.getDocumentGraphs(), classIri)) {
-				iconName += '-ref';
-			}
-
-			if (mentor.vocabulary.hasIndividuals(this.getDocumentGraphs(), classIri)) {
-				iconName += "-i";
-			}
-		}
-
-		return iconName;
-	}
-
-	/**
-	 * Get the icon color of a class depending on its properties in the document graph.
-	 * @param classIri IRI of a class.
-	 * @returns The icon color of the class.
-	 */
-	getIconColorFromClass(classIri?: string) {
-		return this.getIconColor();
-	}
-
-	override getIcon(): vscode.ThemeIcon | undefined {
-		const iconName = this.getIconNameFromClass(this.uri);
-		const iconColor = this.getIconColorFromClass(this.uri);
-
-		return new vscode.ThemeIcon(iconName, iconColor);
-	}
-
-	override getIconColor() {
-		return new vscode.ThemeColor("mentor.color.class");
-	}
-
-	override getDescription(): string {
-		let result = super.getDescription();
-
-		if (this.uri) {
-			const indicators = [];
-
-			if (mentor.vocabulary.hasEquivalentClass(this.getOntologyGraphs(), this.uri)) {
-				indicators.push("≡");
-			}
-
-			// if (mentor.vocabulary.isIntersectionOfClasses(graphs, this.uri)) {
-			// 	indicators.push("⋂");
-			// } else if (mentor.vocabulary.isUnionOfClasses(graphs, this.uri)) {
-			// 	indicators.push("⋃");
-			// } else if (mentor.vocabulary.hasEquivalentClass(graphs, this.uri)) {
-			// 	indicators.push("≡");
-			// }
-
-			result += indicators.join(" ");
+		if (mentor.vocabulary.hasShapes(this.document.graphs, this.uri, this.getQueryOptions({ definedBy: undefined }))) {
+			result += " shape-target";
 		}
 
 		return result;
 	}
 
-	override getChildren(): DefinitionTreeNode[] {
-		const classNodes = [];
-		const classIris = this.getSubClassIris();
+	override getDescription(): string {
+		const indicators = [];
 
-		for (const iri of classIris) {
-			classNodes.push(this.getClassNode(iri));
+		if (mentor.vocabulary.hasEquivalentClass(this.getOntologyGraphs(), this.uri)) {
+			indicators.push("≡");
 		}
 
-		const individualNodes = [];
-		const individualUris = this.getIndividualIris();
+		// if (mentor.vocabulary.isIntersectionOfClasses(graphs, this.uri)) {
+		// 	indicators.push("⋂");
+		// } else if (mentor.vocabulary.isUnionOfClasses(graphs, this.uri)) {
+		// 	indicators.push("⋃");
+		// } else if (mentor.vocabulary.hasEquivalentClass(graphs, this.uri)) {
+		// 	indicators.push("≡");
+		// }
 
-		for (const iri of individualUris) {
-			individualNodes.push(this.getIndividualNode(iri));
-		}
-
-		return [
-			...sortByLabel(classNodes),
-			...sortByLabel(individualNodes)
-		];
+		return indicators.join(" ");
 	}
 
-	/**
-	 * Get the node of a class instance. Can be overloaded to provide a custom node type.
-	 * @param iri IRI of the node.
-	 * @returns A node instance.
-	 */
-	getClassNode(iri: string): ClassNode {
+	getClassNode(iri: string) {
 		return this.createChildNode(ClassNode, iri);
 	}
 
-	/**
-	 * Get the node of an individual. Can be overloaded to provide a custom node type.
-	 * @param iri IRI of the node.
-	 * @returns A node instance.
-	 */
-	getIndividualNode(iri: string): DefinitionTreeNode {
+	getIndividualNode(iri: string) {
 		return this.createChildNode(IndividualNode, iri);
-	}
-
-	/**
-	 * Get the IRIs of the sub-classes of the class. This method should be overloaded to provide a custom
-	 * implementation for specific class types.
-	 * @returns An array of sub-class IRIs.
-	 */
-	getSubClassIris(): string[] {
-		// Note: We are querying the possibly extended ontology graphs here for class relationships.
-		return mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri, this.getQueryOptions());
-	}
-
-	/**
-	 * Get the IRIs of the individuals of the class. This method should be overloaded to provide a custom
-	 * implementation for specific class types.
-	 * @returns An array of individual IRIs.
-	 */
-	getIndividualIris(): string[] {
-		if (this.showIndividuals) {
-			// Note: If we set includeSubTypes to `false`, we *must* provide the ontology graphs so that
-			// type hierarchies can be loaded and individuals can be filtered accordingly. If this is not done,
-			// we will return more individuals than expected.
-			return mentor.vocabulary.getSubjectsOfType(this.getOntologyGraphs(), this.uri, this.getQueryOptions({
-				includeSubTypes: false
-			}));
-		} else {
-			return [];
-		}
 	}
 }

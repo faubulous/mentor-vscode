@@ -1,13 +1,12 @@
 import * as vscode from "vscode";
 import { mentor } from "../../mentor";
-import { ClassNode } from "./class-node";
+import { ClassNodeBase } from "./class-node-base";
 
 /**
  * Node of a SKOS concept in the definition tree.
  */
-export class ConceptClassNode extends ClassNode {
-
-	override getIcon() : vscode.ThemeIcon | undefined {
+export class ConceptClassNode extends ClassNodeBase {
+	override getIcon(): vscode.ThemeIcon | undefined {
 		return new vscode.ThemeIcon('rdf-concept', this.getIconColor());
 	}
 
@@ -21,7 +20,11 @@ export class ConceptClassNode extends ClassNode {
 		return mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), subject);
 	}
 
-	override getClassNode(iri: string): ClassNode {
+	override getClassNode(iri: string) {
+		return this.createChildNode(ConceptClassNode, iri);
+	}
+
+	override getIndividualNode(iri: string) {
 		return this.createChildNode(ConceptClassNode, iri);
 	}
 }

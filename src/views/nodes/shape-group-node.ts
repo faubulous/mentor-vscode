@@ -5,7 +5,9 @@ import { ShapeClassNode } from "./shape-class-node";
 export class ShapeGroupNode extends ShapeClassNode {
 	uri = SH.Shape;
 
-	contextValue = "shapes";
+	override getContextValue() {
+		return "shapes";
+	}
 
 	override getIcon() {
 		return undefined;

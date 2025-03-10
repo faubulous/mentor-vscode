@@ -7,7 +7,9 @@ import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
  * Node of a property in the definition tree.
  */
 export class PropertyNode extends DefinitionTreeNode {
-
+	/**
+	 * Type of the property.
+	 */
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
 	getRange(propertyUri?: string): string {

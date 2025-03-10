@@ -7,7 +7,6 @@ import { CollectionGroupNode } from "./collection-group-node";
  * Node of a SKOS concept scheme in the definition tree.
  */
 export class ConceptSchemeNode extends DefinitionTreeNode {
-
 	override getIcon() {
 		return new vscode.ThemeIcon('rdf-concept-scheme', this.getIconColor());
 	}

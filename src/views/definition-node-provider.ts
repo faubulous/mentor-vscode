@@ -52,7 +52,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		throw new Error('Method not implemented.');
 	}
 
-	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {	
+	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
 		if (!node) {
 			let layout = mentor.settings.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
 
@@ -91,10 +91,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const ontologyUris = mentor.vocabulary.getOntologies(this.document.graphs);
 
 		for (const ontologyUri of ontologyUris) {
-			const n = this.createRootNode(OntologyNode, this.document, ontologyUri, { definedBy: ontologyUri });
-			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
+			const node = this.createRootNode(OntologyNode, this.document, ontologyUri, { definedBy: ontologyUri });
 
-			result.push(n);
+			// Note: Group by defintion source is disabled here, so we do not make the ontology nodes exapndable.
+			node.initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
+
+			result.push(node);
 		}
 
 		const schemeUris = mentor.vocabulary.getConceptSchemes(this.document.graphs);
@@ -103,34 +105,28 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			result.push(this.createRootNode(ConceptSchemeNode, this.document, schemeUri));
 		}
 
-		for (let _ of mentor.vocabulary.getClasses(this.document.graphs)) {
+		if (mentor.vocabulary.getClasses(this.document.graphs).length > 0) {
 			result.push(this.createRootNode(ClassGroupNode, this.document, 'mentor:classes'));
-			break;
 		}
 
-		for (let _ of mentor.vocabulary.getProperties(this.document.graphs)) {
+		if (mentor.vocabulary.getProperties(this.document.graphs).length > 0) {
 			result.push(this.createRootNode(PropertyGroupNode, this.document, 'mentor:properties'));
-			break;
 		}
 
-		for (let _ of mentor.vocabulary.getIndividuals(this.document.graphs, undefined)) {
+		if (mentor.vocabulary.getIndividuals(this.document.graphs, undefined).length > 0) {
 			result.push(this.createRootNode(IndividualGroupNode, this.document, 'mentor:individuals'));
-			break;
 		}
 
-		for (let _ of mentor.vocabulary.getShapes(this.document.graphs, undefined)) {
+		if (mentor.vocabulary.getShapes(this.document.graphs, undefined).length > 0) {
 			result.push(this.createRootNode(ShapeGroupNode, this.document, 'mentor:shapes'));
-			break;
 		}
 
-		for (let _ of mentor.vocabulary.getRules(this.document.graphs, undefined)) {
+		if (mentor.vocabulary.getRules(this.document.graphs, undefined).length > 0) {
 			result.push(this.createRootNode(RuleGroupNode, this.document, 'mentor:rules'));
-			break;
 		}
 
-		for (let _ of mentor.vocabulary.getValidators(this.document.graphs, undefined)) {
+		if (mentor.vocabulary.getValidators(this.document.graphs, undefined).length > 0) {
 			result.push(this.createRootNode(ValidatorGroupNode, this.document, 'mentor:validators'));
-			break;
 		}
 
 		return result;
@@ -149,10 +145,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const ontologyNodes = [];
 
 		for (const ontologyUri of ontologyUris) {
-			const n = this.createRootNode(OntologyNode, this.document, ontologyUri, { definedBy: ontologyUri });
-			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+			const node = this.createRootNode(OntologyNode, this.document, ontologyUri, { definedBy: ontologyUri });
+			node.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
-			ontologyNodes.push(n);
+			ontologyNodes.push(node);
 		}
 
 		const schemeUris = mentor.vocabulary.getConceptSchemes(this.document.graphs);
@@ -173,11 +169,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 				continue;
 			}
 
-			const n = this.createRootNode(OntologyNode, this.document, source, { definedBy: source });
-			n.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
-			n.isReferenced = true;
+			const node = this.createRootNode(OntologyNode, this.document, source, { definedBy: source });
+			node.initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+			node.isReferenced = true;
 
-			sourceNodes.push(n);
+			sourceNodes.push(node);
 		}
 
 		const result = [
@@ -187,56 +183,22 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		];
 
 		// Note: For the root nodes we only want to show sources that actually contain *defined* classses. 
-		// This is why we exclude referenced classes here, independently of the current setting.
+		// This is why we exclude referenced classes here, independent from the current setting.
 		let options = { notDefinedBy: new Set([...ontologyUris, ...sourceUris]), includeReferenced: false };
-		let hasUnknown = false;
-
-		for (let _ of mentor.vocabulary.getClasses(this.document.graphs, options)) {
-			hasUnknown = true;
-			break;
-		}
-
-		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getProperties(this.document.graphs, options)) {
-				hasUnknown = true;
-				break;
-			}
-		}
-
-		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getIndividuals(this.document.graphs, undefined, options)) {
-				hasUnknown = true;
-				break;
-			}
-		}
-
-		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getShapes(this.document.graphs, undefined, options)) {
-				hasUnknown = true;
-				break;
-			}
-		}
-
-		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getRules(this.document.graphs, options)) {
-				hasUnknown = true;
-				break;
-			}
-		}
-
-		if (!hasUnknown) {
-			for (let _ of mentor.vocabulary.getValidators(this.document.graphs, options)) {
-				hasUnknown = true;
-				break;
-			}
-		}
+		let hasUnknown: boolean =
+			mentor.vocabulary.getClasses(this.document.graphs, options).length > 0 ||
+			mentor.vocabulary.getProperties(this.document.graphs, options).length > 0 ||
+			mentor.vocabulary.getIndividuals(this.document.graphs, undefined, options).length > 0 ||
+			mentor.vocabulary.getShapes(this.document.graphs, undefined, options).length > 0 ||
+			mentor.vocabulary.getRules(this.document.graphs, options).length > 0 ||
+			mentor.vocabulary.getValidators(this.document.graphs, options).length > 0;
 
 		if (hasUnknown) {
 			// Important: Reset the includeReferenced setting for the root nodes.
-			const n = this.createRootNode(OntologyNode, this.document, 'mentor:unknown', { notDefinedBy: options.notDefinedBy });
-			n.isReferenced = true;
+			const node = this.createRootNode(OntologyNode, this.document, 'mentor:unknown', { notDefinedBy: options.notDefinedBy });
+			node.isReferenced = true;
 
-			result.push(n);
+			result.push(node);
 		}
 
 		// If there is only one definition source, expand it by default.
@@ -251,15 +213,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const children = this.getChildren(node);
 		const collapsibleState = children?.length ? node.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
 
-		// TODO: Move Shape target context value into the corresponding node classes.
-		if (this.hasShapes(node)) {
-			node.contextValue += ' shape-target';
-		}
-
 		return {
 			id: node.id,
-			contextValue: node.contextValue,
 			collapsibleState: collapsibleState,
+			contextValue: node.getContextValue(),
 			resourceUri: node.getResourceUri(),
 			iconPath: node.getIcon(),
 			label: node.getLabel(),
@@ -267,13 +224,5 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			command: node.getCommand(),
 			tooltip: node.getTooltip()
 		};
-	}
-
-	protected hasShapes(node: DefinitionTreeNode): boolean {
-		if (this.document && node.uri) {
-			return mentor.vocabulary.hasShapes(this.document.graphs, node.uri, node.getQueryOptions({ definedBy: undefined }));
-		} else {
-			return false;
-		}
 	}
 }

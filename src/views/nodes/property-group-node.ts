@@ -8,14 +8,16 @@ import { PropertyClassNode } from "./property-class-node";
  * Node of a property in the definition tree.
  */
 export class PropertyGroupNode extends PropertyClassNode {
-	contextValue = "properties";
+	override getContextValue(): string {
+		return 'properties';
+	}
 
 	override getIcon(): vscode.ThemeIcon | undefined {
 		return undefined;
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
-		return { label: "Properties" };
+		return { label: 'Properties' };
 	}
 
 	override getDescription(): string {

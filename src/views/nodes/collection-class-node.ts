@@ -2,13 +2,12 @@ import * as vscode from "vscode";
 import { mentor } from "../../mentor";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { ConceptClassNode } from "./concept-class-node";
-import { ClassNode } from "./class-node";
+import { ClassNodeBase } from "./class-node-base";
 
 /**
  * Node of a SKOS collection in the definition tree.
  */
-export class CollectionClassNode extends ClassNode {
-
+export class CollectionClassNode extends ClassNodeBase {
 	override getIcon(): vscode.ThemeIcon | undefined {
 		const isOrdered = mentor.vocabulary.isOrderedCollection(this.getDocumentGraphs(), this.uri);
 
@@ -39,5 +38,13 @@ export class CollectionClassNode extends ClassNode {
 
 			return sortByLabel(result);
 		}
+	}
+
+	override getClassNode(iri: string) {
+		return this.createChildNode(ConceptClassNode, iri);
+	}
+
+	override getIndividualNode(iri: string) {
+		return this.createChildNode(ConceptClassNode, iri);
 	}
 }

@@ -8,14 +8,16 @@ import { IndividualClassNode } from "./individual-class-node";
  * Node of a class instance in the definition tree.
  */
 export class IndividualGroupNode extends IndividualClassNode {
-	contextValue = "individuals";
+	override getContextValue(): string {
+		return 'individuals';
+	}
 
 	override getIcon() {
 		return undefined;
 	}
 
 	override getLabel(): vscode.TreeItemLabel {
-		return { label: "Individuals" };
+		return { label: 'Individuals' };
 	}
 
 	override getDescription(): string {

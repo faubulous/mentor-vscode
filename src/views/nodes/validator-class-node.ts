@@ -1,12 +1,9 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
-import { DefinitionTreeNode } from "../definition-tree-node";
-import { ClassNode } from "./class-node";
+import { ClassNodeBase } from "./class-node-base";
 import { ValidatorNode } from "./validator-node";
 
-export class ValidatorClassNode extends ClassNode {
-	showIndividuals = true;
-
+export class ValidatorClassNode extends ClassNodeBase {
 	override getOntologyGraphs(): string[] {
 		return [_SH, ...this.document.graphs];
 	}
@@ -20,11 +17,11 @@ export class ValidatorClassNode extends ClassNode {
 		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options));
 	}
 
-	override getClassNode(iri: string): ClassNode {
+	override getClassNode(iri: string) {
 		return this.createChildNode(ValidatorClassNode, iri);
 	}
 
-	override getIndividualNode(iri: string): DefinitionTreeNode {
+	override getIndividualNode(iri: string) {
 		return this.createChildNode(ValidatorNode, iri);
 	}
 }

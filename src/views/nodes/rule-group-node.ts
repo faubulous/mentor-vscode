@@ -8,7 +8,9 @@ import { RuleClassNode } from "./rule-class-node";
 export class RuleGroupNode extends RuleClassNode {
 	uri = SH.Rule;
 
-	contextValue = "rules";
+	override getContextValue() {
+		return 'rules';
+	}
 
 	override getIcon() {
 		return undefined;
