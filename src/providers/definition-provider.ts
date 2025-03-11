@@ -58,6 +58,8 @@ export class DefinitionProvider extends FeatureProvider {
 		if (!token) {
 			if (primaryContext.typeDefinitions[uri]) {
 				token = primaryContext.typeDefinitions[uri][0];
+			} else if(primaryContext.typeAssertions[uri]) {
+				token = primaryContext.typeAssertions[uri][0];
 			} else if (primaryContext.namespaceDefinitions[uri]) {
 				token = primaryContext.namespaceDefinitions[uri];
 			} else if (primaryContext.references[uri]) {
