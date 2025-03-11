@@ -147,7 +147,7 @@ class MentorExtension {
 				// Note: we check the token image instead of the type name to also account for Turtle style prefix
 				// definitions in SPARQL queries. These are not supported by SPARQL and detected as language tags.
 				// Although this kind of prefix declaration is not valid in SPARQL, implementing the prefix should be avoided.
-				if(t === 'prefix' || t === '@prefix') return;
+				if (t === 'prefix' || t === '@prefix') return;
 
 				if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
 					const prefix = token.image.substring(0, token.image.length - 1);
@@ -332,16 +332,16 @@ class MentorExtension {
 				const documentGraphIri = this.activeContext.uri.toString();
 				const inferenceGraphIri = mentor.store.reasoner?.getInferenceGraphUri(documentGraphIri);
 
-				if(inferenceGraphIri) {
-					const prefixes: {[prefix: string]: NamedNode} = {};
+				if (inferenceGraphIri) {
+					const prefixes: { [prefix: string]: NamedNode } = {};
 
 					// TODO: This is not needed; adapt mentor-rdf API.
-					for(const [prefix, namespace] of Object.entries(this.activeContext.namespaces)) {
+					for (const [prefix, namespace] of Object.entries(this.activeContext.namespaces)) {
 						prefixes[prefix] = new n3.NamedNode(namespace);
 					}
 
 					const data = await mentor.store.serializeGraph(inferenceGraphIri, prefixes);
-					
+
 					await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
 				}
 			}
@@ -381,6 +381,42 @@ class MentorExtension {
 		}
 
 		return Array.from(result);
+	}
+
+	async activatePython() {
+		// TODO: Make this work.
+		if (!vscode.workspace.workspaceFolders?.length) {
+			return;
+		}
+
+		vscode.extensions.all.forEach((extension) => {
+			console.log(extension.id);
+		});
+
+		const extension = vscode.extensions.getExtension('ms-python.python');
+
+		if (!extension) {
+			console.log('Microsoft Python extension is not installed');
+			return;
+		}
+
+		const executionFactory = extension.exports;
+		const intepreter = executionFactory.getPythonInterpreter();
+
+		if (!intepreter) {
+			console.log('No Python interpreter selected');
+			return;
+		}
+
+		const code = 'print("Hello, World!")';
+		const executionOptions = {
+			cwd: vscode.workspace.workspaceFolders[0].uri.fsPath,
+			env: process.env
+		};
+
+		const result = await executionFactory.execute(code, executionOptions);
+
+		console.log(result);
 	}
 }
 
