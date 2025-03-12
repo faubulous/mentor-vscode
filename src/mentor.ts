@@ -94,6 +94,13 @@ class MentorExtension {
 	 */
 	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
 
+	private readonly _onDidFinishInitializing = new vscode.EventEmitter<void>();
+
+	/**
+	 * An event that is fired after the extension has finished initializing and the workspace was indexed.
+	 */
+	readonly onDidFinishInitializing = this._onDidFinishInitializing.event;
+
 	constructor() {
 		vscode.window.onDidChangeActiveTextEditor(() => this._onActiveEditorChanged());
 		vscode.workspace.onDidChangeTextDocument((e) => this._onTextDocumentChanged(e));
@@ -193,6 +200,7 @@ class MentorExtension {
 	 * Load a text document into a document context.
 	 * @param document The text document to load.
 	 * @param forceReload Indicates whether a new context should be created for existing contexts.
+	 * @param setActive Indicates whether the loaded context should be set as the active context.
 	 * @returns 
 	 */
 	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<DocumentContext | undefined> {
@@ -226,7 +234,13 @@ class MentorExtension {
 		context.activeLanguageTag = mentor.configuration.get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
-		this.activeContext = context;
+
+		// Only set the active context if it matches the active text editor document.
+		const activeEditor = vscode.window.activeTextEditor;
+
+		if (activeEditor && uri === activeEditor.document?.uri.toString()) {
+			this.activeContext = context;
+		}
 
 		return context;
 	}
@@ -323,6 +337,8 @@ class MentorExtension {
 			await this.workspaceIndexer.indexWorkspace();
 
 			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
+
+			this._onDidFinishInitializing.fire();
 		});
 
 		vscode.commands.executeCommand('mentor.action.initialize');

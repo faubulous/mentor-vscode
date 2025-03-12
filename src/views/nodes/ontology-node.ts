@@ -48,6 +48,14 @@ export class OntologyNode extends DefinitionTreeNode {
 		return result;
 	}
 
+	override getTooltip(): vscode.MarkdownString | undefined {
+		if (this.uri === 'mentor:unknown') {
+			return new vscode.MarkdownString('Definitions that are not associated with an ontology in this document, either via `rdfs:isDefinedBy` or via a shared namespace IRI.');
+		} else {
+			return super.getTooltip();
+		}
+	}
+
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
 

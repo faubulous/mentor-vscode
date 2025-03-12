@@ -46,4 +46,8 @@ export class IndividualGroupNode extends IndividualClassNode {
 
 		return sortByLabel(result);
 	}
+
+	override getTooltip(): vscode.MarkdownString | undefined {
+		return undefined;
+	}
 }

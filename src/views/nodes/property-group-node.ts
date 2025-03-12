@@ -46,4 +46,8 @@ export class PropertyGroupNode extends PropertyClassNode {
 
 		return sortByLabel(result);
 	}
+
+	override getTooltip(): vscode.MarkdownString | undefined {
+		return undefined;
+	}
 }

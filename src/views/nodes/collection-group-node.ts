@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { mentor } from "../../mentor";
-import { DefinitionTreeNode, sortByLabel} from "../definition-tree-node";
+import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { CollectionClassNode } from "./collection-class-node";
 
 export class CollectionGroupNode extends CollectionClassNode {
@@ -31,5 +31,9 @@ export class CollectionGroupNode extends CollectionClassNode {
 		}
 
 		return sortByLabel(result);
+	}
+
+	override getTooltip(): vscode.MarkdownString | undefined {
+		return undefined;
 	}
 }

@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { RuleClassNode } from "./rule-class-node";
@@ -15,7 +16,7 @@ export class RuleGroupNode extends RuleClassNode {
 	override getIcon() {
 		return undefined;
 	}
-	
+
 	override getLabel() {
 		return { label: "Rules" };
 	}
@@ -24,5 +25,9 @@ export class RuleGroupNode extends RuleClassNode {
 		const rules = mentor.vocabulary.getRules(this.getDocumentGraphs(), this.getQueryOptions());
 
 		return rules.length.toString();
+	}
+
+	override getTooltip(): vscode.MarkdownString | undefined {
+		return undefined;
 	}
 }

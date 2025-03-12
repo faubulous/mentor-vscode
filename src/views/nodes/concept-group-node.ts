@@ -26,4 +26,8 @@ export class ConceptGroupNode extends ConceptClassNode {
 
 		return mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), subject);
 	}
+
+	override getTooltip(): vscode.MarkdownString | undefined {
+		return undefined;
+	}
 }

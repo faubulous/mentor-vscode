@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { ShapeClassNode } from "./shape-class-node";
@@ -22,4 +23,8 @@ export class ShapeGroupNode extends ShapeClassNode {
 
 		return shapes.length.toString();
 	}
+
+		override getTooltip(): vscode.MarkdownString | undefined {
+			return undefined;
+		}
 }

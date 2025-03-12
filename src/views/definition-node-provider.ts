@@ -28,24 +28,34 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	constructor() {
 		mentor.onDidChangeVocabularyContext((context) => {
+			// Update the tree when the active document changed.
 			this.refresh(context);
 		});
 
-		mentor.settings.onDidChange("view.definitionTree.labelStyle", () => {
-			this.refresh(this.document);
+		mentor.workspaceIndexer.onDidFinishIndexing(() => {
+			// Update the tree when the workspace has been indexed, incorporating definitions from external files.
+			this.refresh();
 		});
 
-		mentor.settings.onDidChange("view.definitionTree.defaultLayout", () => {
-			this.refresh(this.document);
-		});
+		mentor.settings.onDidChange("view.definitionTree.labelStyle", () => this.refresh());
+		mentor.settings.onDidChange("view.definitionTree.defaultLayout", () => this.refresh());
+		mentor.settings.onDidChange("view.showReferences", () => this.refresh());
+		mentor.settings.onDidChange("view.showPropertyTypes", () => this.refresh());
+		mentor.settings.onDidChange("view.showIndividualTypes", () => this.refresh());
+		mentor.settings.onDidChange("view.activeLanguage", () => this.refresh());
 	}
 
 	/**
 	 * Refresh the tree view.
 	 */
-	refresh(document: DocumentContext | undefined): void {
-		this.document = document;
-		this._onDidChangeTreeData.fire(void 0);
+	refresh(document?: DocumentContext): void {
+		if (document) {
+			this.document = document;
+		}
+
+		if (this.document) {
+			this._onDidChangeTreeData.fire(undefined);
+		}
 	}
 
 	getParent(node: DefinitionTreeNode): DefinitionTreeNode | null | undefined {

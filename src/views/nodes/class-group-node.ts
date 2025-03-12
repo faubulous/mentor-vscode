@@ -28,4 +28,8 @@ export class ClassGroupNode extends ClassNode {
 	override getSubClassIris(): string[] {
 		return mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), undefined, this.getQueryOptions());
 	}
+
+	override getTooltip(): vscode.MarkdownString | undefined {
+		return undefined;
+	}
 }

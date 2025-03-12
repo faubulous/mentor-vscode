@@ -1,3 +1,4 @@
+import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "../../mentor";
 import { ValidatorClassNode } from "./validator-class-node";
@@ -15,7 +16,7 @@ export class ValidatorGroupNode extends ValidatorClassNode {
 	override getIcon() {
 		return undefined;
 	}
-	
+
 	override getLabel() {
 		return { label: "Validators" };
 	}
@@ -24,5 +25,9 @@ export class ValidatorGroupNode extends ValidatorClassNode {
 		const validators = mentor.vocabulary.getValidators(this.getDocumentGraphs(), this.getQueryOptions());
 
 		return validators.length.toString();
+	}
+
+	override getTooltip(): vscode.MarkdownString | undefined {
+		return undefined;
 	}
 }

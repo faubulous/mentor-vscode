@@ -48,28 +48,12 @@ export class DefinitionTree implements TreeView {
 		const showReferences = mentor.settings.get('view.showReferences', true);
 
 		vscode.commands.executeCommand("setContext", "view.showReferences", showReferences);
-
-		mentor.settings.onDidChange("view.showReferences", (e) => {
-			this.treeDataProvider.refresh(mentor.activeContext);
-		});
-
 		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", true);
-
-		mentor.settings.onDidChange("view.showPropertyTypes", (e) => {
-			this.treeDataProvider.refresh(mentor.activeContext);
-		});
-
 		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", true);
 
-		mentor.settings.onDidChange("view.showIndividualTypes", (e) => {
-			this.treeDataProvider.refresh(mentor.activeContext);
-		});
-
 		// Update the view and the title when the active language changes.
-		mentor.settings.onDidChange("view.activeLanguage", (e) => {
+		mentor.settings.onDidChange("view.activeLanguage", () => {
 			this.updateViewTitle();
-
-			this.treeDataProvider.refresh(mentor.activeContext);
 		});
 
 		// Support for decorating missing language tags through a file decoration provider.

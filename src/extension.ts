@@ -162,8 +162,6 @@ function registerCommands(context: vscode.ExtensionContext) {
 						// Reset the focus to the definition tree.
 						vscode.commands.executeCommand('mentor.view.definitionTree.focus');
 					}
-				} else {
-					vscode.window.showErrorMessage('No definition found for: ' + uri);
 				}
 			}
 		});
@@ -195,8 +193,6 @@ function registerCommands(context: vscode.ExtensionContext) {
 						// Reset the focus to the definition tree.
 						vscode.commands.executeCommand('mentor.view.definitionTree.focus');
 					}
-				} else {
-					vscode.window.showErrorMessage('No definition found for: ' + uri);
 				}
 			}
 		});

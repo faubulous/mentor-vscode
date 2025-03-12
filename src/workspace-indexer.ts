@@ -24,10 +24,13 @@ export class WorkspaceIndexer {
 	 */
 	private _indexed = false;
 
+
+	private readonly _onDidFinishIndexing = new vscode.EventEmitter<boolean>();
+
 	/**
 	 * An event that is fired when all workspace files have been indexed.
 	 */
-	private readonly _onDidFinishIndexing = new vscode.EventEmitter<boolean>();
+	readonly onDidFinishIndexing = this._onDidFinishIndexing.event;
 
 	constructor() {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
@@ -37,7 +40,7 @@ export class WorkspaceIndexer {
 	 * Builds an index of all RDF resources the current workspace.
 	 */
 	async indexWorkspace(force: boolean = false): Promise<void> {
-		vscode.window.withProgress({
+		return vscode.window.withProgress({
 			location: vscode.ProgressLocation.Window,
 			title: "Indexing workspace",
 			cancellable: false
@@ -80,7 +83,10 @@ export class WorkspaceIndexer {
 					}
 
 					// Open the document to trigger the language server to analyze it.
-					await vscode.workspace.openTextDocument(uri);
+					const document = await vscode.workspace.openTextDocument(uri);
+
+					// Try to load the document so that its graph is created and can be used for showing definitions, descriptions etc..
+					await mentor.loadDocument(document);
 
 					this.reportProgress(progress, Math.round(((i + 1) / uris.length) * 100));
 				}
