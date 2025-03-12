@@ -14,6 +14,7 @@ export function debounce<T extends (...args: any[]) => any>(func: T, wait: numbe
 		};
 
 		clearTimeout(timeout);
+		
 		timeout = setTimeout(later, wait);
 	} as any;
 }

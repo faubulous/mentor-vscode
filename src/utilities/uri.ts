@@ -77,19 +77,6 @@ export function toJsonId(iri: string): string | undefined {
 	}
 }
 
-// TODO: Move this into an node id class and make the tree node providers use it.
-export function hasUri(id?: string): boolean {
-	return id ? id.indexOf('|') > -1 : false;
-}
-
-export function getNodeIdFromIri(provider: string, uri: string, parentUri?: string): string {
-	if (parentUri) {
-		return provider + '|' + parentUri + '|' + uri;
-	} else {
-		return provider + '|' + uri;
-	}
-}
-
 export function getIriFromNodeId(id: string): string {
 	const n = id.lastIndexOf('<');
 
@@ -104,8 +91,4 @@ export function getIriFromNodeId(id: string): string {
 	} else {
 		return id;
 	}
-}
-
-export function getProviderFromNodeId(id: string): string {
-	return id.split('|')[0];
 }

@@ -3,25 +3,29 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch Extension",
+      "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "debugWebWorkerHost": true,
       "args": [
-        "--extensionDevelopmentPath=${workspaceRoot}",
+        "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionDevelopmentKind=web",
         "--enable-proposed-api"
       ],
       "sourceMaps": true,
-      "outFiles": ["${workspaceRoot}/out/**/*.js"],
-      // "preLaunchTask": "npm: build:watch"
+      "outFiles": [
+        "${workspaceFolder}/out/**/*.js"
+      ],
+      "preLaunchTask": "npm: build"
     },
     {
       "name": "Update Font",
       "program": "${workspaceFolder}/build/update-font.js",
       "request": "launch",
-      "skipFiles": ["<node_internals>/**"],
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
       "type": "node"
     }
   ]

@@ -85,4 +85,25 @@ export class Settings extends EventEmitter {
 	has(key: string): boolean {
 		return this._data[key] != null;
 	}
+
+	/**
+	 * Initialize the view settings from the workspace configuration without emmiting change events.
+	 * @param configuration The workspace configuration.
+	 */
+	initialize(configuration: vscode.WorkspaceConfiguration) {
+		// Initialize the default label rendering style.
+		let defaultStyle = configuration.get('definitionTree.labelStyle');
+
+		switch (defaultStyle) {
+			case 'AnnotatedLabels':
+				this._data['view.definitionTree.labelStyle'] = TreeLabelStyle.AnnotatedLabels;
+				break;
+			case 'UriLabelsWithPrefix':
+				this._data['view.definitionTree.labelStyle'] = TreeLabelStyle.UriLabelsWithPrefix;
+				break;
+			default:
+				this._data['view.definitionTree.labelStyle'] = TreeLabelStyle.UriLabels;
+				break;
+		}
+	}
 }

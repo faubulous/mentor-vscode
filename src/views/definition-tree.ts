@@ -25,8 +25,6 @@ export class DefinitionTree implements TreeView {
 	readonly treeView: vscode.TreeView<DefinitionTreeNode>;
 
 	constructor() {
-		vscode.window.registerTreeDataProvider<DefinitionTreeNode>(this.id, this.treeDataProvider);
-
 		this.treeView = vscode.window.createTreeView<DefinitionTreeNode>(this.id, {
 			treeDataProvider: this.treeDataProvider,
 			showCollapseAll: true
@@ -43,40 +41,19 @@ export class DefinitionTree implements TreeView {
 		vscode.commands.registerCommand('mentor.action.refreshDefinitionsTree', async () => {
 			this.updateView();
 			this.updateViewTitle();
+
+			this.treeDataProvider.refresh(mentor.activeContext);
 		});
 
-		vscode.commands.executeCommand("setContext", "view.showReferences", this.treeDataProvider.showReferences);
+		const showReferences = mentor.settings.get('view.showReferences', true);
 
-		mentor.settings.onDidChange("view.showReferences", (e) => {
-			vscode.commands.executeCommand("setContext", "view.showReferences", e.newValue);
-
-			this.treeDataProvider.showReferences = e.newValue;
-			this.treeDataProvider.refresh();
-		});
-
-		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", this.treeDataProvider.showPropertyTypes);
-
-		mentor.settings.onDidChange("view.showPropertyTypes", (e) => {
-			vscode.commands.executeCommand("setContext", "view.showPropertyTypes", e.newValue);
-
-			this.treeDataProvider.showPropertyTypes = e.newValue;
-			this.treeDataProvider.refresh();
-		});
-
-		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", this.treeDataProvider.showIndividualTypes);
-
-		mentor.settings.onDidChange("view.showIndividualTypes", (e) => {
-			vscode.commands.executeCommand("setContext", "view.showIndividualTypes", e.newValue);
-
-			this.treeDataProvider.showIndividualTypes = e.newValue;
-			this.treeDataProvider.refresh();
-		});
+		vscode.commands.executeCommand("setContext", "view.showReferences", showReferences);
+		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", true);
+		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", true);
 
 		// Update the view and the title when the active language changes.
-		mentor.settings.onDidChange("view.activeLanguage", (e) => {
+		mentor.settings.onDidChange("view.activeLanguage", () => {
 			this.updateViewTitle();
-
-			this.treeDataProvider.refresh();
 		});
 
 		// Support for decorating missing language tags through a file decoration provider.

@@ -5,7 +5,7 @@ import { Disposable } from 'vscode-languageclient';
 import { TreeView } from './views/tree-view';
 import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
-import { ResourceNode } from './views/nodes/resource-node';
+import { DefinitionTreeNode } from './views/definition-tree-node';
 import { getIriFromNodeId, getTokenPosition } from './utilities';
 import { DefinitionProvider } from './providers';
 import {
@@ -68,8 +68,8 @@ export function deactivate(): Thenable<void> {
 	});
 }
 
-function getUriFromArgument(arg: ResourceNode | string): string {
-	if (arg instanceof ResourceNode) {
+function getIriFromArgument(arg: DefinitionTreeNode | string): string {
+	if (arg instanceof DefinitionTreeNode) {
 		return getIriFromNodeId(arg.id);
 	} else if (typeof arg === 'string') {
 		return getIriFromNodeId(arg);
@@ -111,9 +111,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:faubulous.mentor');
 	}));
 
-	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (arg: ResourceNode | string) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (arg: DefinitionTreeNode | string) => {
 		const internalBrowser = mentor.configuration.get('internalBrowserEnabled');
-		const uri = getUriFromArgument(arg);
+		const uri = getIriFromArgument(arg);
 
 		if (internalBrowser === true) {
 			vscode.commands.executeCommand('simpleBrowser.show', uri);
@@ -122,10 +122,10 @@ function registerCommands(context: vscode.ExtensionContext) {
 		}
 	}));
 
-	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (arg: ResourceNode | string) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (arg: DefinitionTreeNode | string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
-				const uri = getUriFromArgument(arg);
+				const uri = getIriFromArgument(arg);
 				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {
@@ -142,9 +142,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 		});
 	}));
 
-	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (arg: ResourceNode | string, restoreFocus: boolean = false) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
-			const uri = getUriFromArgument(arg);
+			const uri = getIriFromArgument(arg);
 
 			if (!uri) {
 				// If no id is provided, we fail gracefully.
@@ -162,16 +162,14 @@ function registerCommands(context: vscode.ExtensionContext) {
 						// Reset the focus to the definition tree.
 						vscode.commands.executeCommand('mentor.view.definitionTree.focus');
 					}
-				} else {
-					vscode.window.showErrorMessage('No definition found for: ' + uri);
 				}
 			}
 		});
 	}));
 
-	commands.push(vscode.commands.registerCommand('mentor.action.revealShapeDefinition', (arg: ResourceNode | string, restoreFocus: boolean = false) => {
+	commands.push(vscode.commands.registerCommand('mentor.action.revealShapeDefinition', (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
-			const uri = getUriFromArgument(arg);
+			const uri = getIriFromArgument(arg);
 
 			if (!uri) {
 				// If no id is provided, we fail gracefully.
@@ -195,8 +193,6 @@ function registerCommands(context: vscode.ExtensionContext) {
 						// Reset the focus to the definition tree.
 						vscode.commands.executeCommand('mentor.view.definitionTree.focus');
 					}
-				} else {
-					vscode.window.showErrorMessage('No definition found for: ' + uri);
 				}
 			}
 		});
@@ -294,7 +290,6 @@ function registerCommands(context: vscode.ExtensionContext) {
 				language: undefined
 			}];
 		} else {
-			// TODO: Sort by language tag but add indicator for value count.
 			const languageStats = mentor.vocabulary.getLanguageTagUsageStats(context.graphs);
 
 			// Note: We translate the language code into a readable name in the UI language of the editor.

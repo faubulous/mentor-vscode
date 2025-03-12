@@ -4,10 +4,9 @@ const fs = require("fs");
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
 
-console.log("Building extension..");
-
 var productionBuild = process.env.NODE_ENV?.trim() === "production";
 
+console.log("Building extension..");
 console.log("Environment:", productionBuild ? "production" : "development");
 
 /** @type BuildOptions */
@@ -49,9 +48,9 @@ const extensionConfig = {
   tsconfig: "./tsconfig.json"
 };
 
-// Note: The platform 'node' is required for the 'vscode-languageserver' functions to work.
 const getLanguageConfig = (type, language) => {
   const file = language ? `${language}-language-${type}` : `language-${type}`;
+  
   return {
     ...baseConfig,
     format: "cjs",
@@ -70,18 +69,19 @@ const getLanguageConfig = (type, language) => {
 
       // Note: Uncomment this if you want to use SVG icons directly.
       console.log("Copying media files to out directory..");
+    }
 
-      fs.mkdirSync('./out/media/glyphs', { recursive: true });
+    fs.mkdirSync('./out');
+    fs.mkdirSync('./out/media/glyphs', { recursive: true });
 
-      for (const file of fs.readdirSync('./media/glyphs')) {
-        fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
-      }
+    for (const file of fs.readdirSync('./media/glyphs')) {
+      fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
+    }
 
-      // Copy the language config files to the out directory.
-      for (const file of fs.readdirSync('./src/languages/')) {
-        if (file.endsWith('.json')) {
-          fs.copyFileSync(`./src/languages/${file}`, `./out/${file}`);
-        }
+    // Copy the language config files to the out directory.
+    for (const file of fs.readdirSync('./src/languages/')) {
+      if (file.endsWith('.json')) {
+        fs.copyFileSync(`./src/languages/${file}`, `./out/${file}`);
       }
     }
 

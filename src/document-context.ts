@@ -110,7 +110,7 @@ export abstract class DocumentContext {
 			let maxFrequency = -1;
 
 			this._primaryLanguage = undefined;
-	
+
 			for (let [lang, frequency] of Object.entries(languageStats)) {
 				if (frequency > maxFrequency) {
 					maxFrequency = frequency;
@@ -136,7 +136,7 @@ export abstract class DocumentContext {
 	set activeLanguageTag(value: string | undefined) {
 		this._activeLanguageTag = value;
 
-		if(value) {
+		if (value) {
 			this._activeLanguage = value.split('-')[0];
 		} else {
 			this._activeLanguage = undefined;
@@ -210,7 +210,7 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	 * Maps resource IRIs to tokens of subjects that have an asserted rdf:type.
+	 * Maps resource IRIs to tokens of subjects that have an asserted rdf:type, including named individuals.
 	 */
 	get typeAssertions(): { [key: string]: IToken[] } {
 		return this._typeAssertions;
@@ -533,7 +533,7 @@ export abstract class DocumentContext {
 					}
 
 					// Store the literal if it matches the active language without the regional part.
-					if(this.activeLanguage && literal.language.startsWith(this.activeLanguage)) {
+					if (this.activeLanguage && literal.language.startsWith(this.activeLanguage)) {
 						languageLabel = literal;
 					}
 
@@ -557,7 +557,7 @@ export abstract class DocumentContext {
 
 		if (languageLabel) return languageLabel;
 		if (primaryLabel) return primaryLabel;
-		
+
 		return fallbackLabel;
 	}
 
@@ -597,7 +597,7 @@ export abstract class DocumentContext {
 		// First, try to find a description in the current graph.
 		let result = this._getResourceAnnotationFromPredicates(this.graphs, subject, predicates);
 
-		if(result) {
+		if (result) {
 			return result;
 		}
 

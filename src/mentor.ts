@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as n3 from 'n3';
 import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentFactory } from './languages';
@@ -11,6 +12,7 @@ import {
 	PrefixDefinitionService,
 	PrefixLookupService
 } from './services';
+import { NamedNode } from '@rdfjs/types';
 
 /**
  * The Mentor extension instance.
@@ -92,6 +94,13 @@ class MentorExtension {
 	 */
 	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
 
+	private readonly _onDidFinishInitializing = new vscode.EventEmitter<void>();
+
+	/**
+	 * An event that is fired after the extension has finished initializing and the workspace was indexed.
+	 */
+	readonly onDidFinishInitializing = this._onDidFinishInitializing.event;
+
 	constructor() {
 		vscode.window.onDidChangeActiveTextEditor(() => this._onActiveEditorChanged());
 		vscode.workspace.onDidChangeTextDocument((e) => this._onTextDocumentChanged(e));
@@ -145,7 +154,7 @@ class MentorExtension {
 				// Note: we check the token image instead of the type name to also account for Turtle style prefix
 				// definitions in SPARQL queries. These are not supported by SPARQL and detected as language tags.
 				// Although this kind of prefix declaration is not valid in SPARQL, implementing the prefix should be avoided.
-				if(t === 'prefix' || t === '@prefix') return;
+				if (t === 'prefix' || t === '@prefix') return;
 
 				if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
 					const prefix = token.image.substring(0, token.image.length - 1);
@@ -191,6 +200,7 @@ class MentorExtension {
 	 * Load a text document into a document context.
 	 * @param document The text document to load.
 	 * @param forceReload Indicates whether a new context should be created for existing contexts.
+	 * @param setActive Indicates whether the loaded context should be set as the active context.
 	 * @returns 
 	 */
 	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<DocumentContext | undefined> {
@@ -219,10 +229,18 @@ class MentorExtension {
 
 		// Set the language tag statistics for the document, needed for rendering multi-language labels.
 		context.predicateStats = this.vocabulary.getPredicateUsageStats(context.graphs);
-		context.activeLanguageTag = context.primaryLanguage;
+
+		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
+		context.activeLanguageTag = mentor.configuration.get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
-		this.activeContext = context;
+
+		// Only set the active context if it matches the active text editor document.
+		const activeEditor = vscode.window.activeTextEditor;
+
+		if (activeEditor && uri === activeEditor.document?.uri.toString()) {
+			this.activeContext = context;
+		}
 
 		return context;
 	}
@@ -235,20 +253,8 @@ class MentorExtension {
 		// Initialize the extension persistence service.
 		this.localStorageService.initialize(context.globalState);
 
-		// Initialize the default label rendering style.
-		let defaultStyle = this.configuration.get('definitionTree.labelStyle');
-
-		switch (defaultStyle) {
-			case 'AnnotatedLabels':
-				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
-				break;
-			case 'UriLabelsWithPrefix':
-				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabelsWithPrefix);
-				break;
-			default:
-				this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabels);
-				break;
-		}
+		// Initialize the view settings.
+		this.settings.initialize(this.configuration);
 
 		// Register commands..
 		vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {
@@ -331,9 +337,31 @@ class MentorExtension {
 			await this.workspaceIndexer.indexWorkspace();
 
 			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
+
+			this._onDidFinishInitializing.fire();
 		});
 
 		vscode.commands.executeCommand('mentor.action.initialize');
+
+		vscode.commands.registerCommand('mentor.action.openInferenceGraph', async () => {
+			if (this.activeContext) {
+				const documentGraphIri = this.activeContext.uri.toString();
+				const inferenceGraphIri = mentor.store.reasoner?.getInferenceGraphUri(documentGraphIri);
+
+				if (inferenceGraphIri) {
+					const prefixes: { [prefix: string]: NamedNode } = {};
+
+					// TODO: This is not needed; adapt mentor-rdf API.
+					for (const [prefix, namespace] of Object.entries(this.activeContext.namespaces)) {
+						prefixes[prefix] = new n3.NamedNode(namespace);
+					}
+
+					const data = await mentor.store.serializeGraph(inferenceGraphIri, prefixes);
+
+					await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
+				}
+			}
+		});
 	}
 
 	/**
