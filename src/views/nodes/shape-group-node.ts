@@ -24,7 +24,7 @@ export class ShapeGroupNode extends ShapeClassNode {
 		return shapes.length.toString();
 	}
 
-		override getTooltip(): vscode.MarkdownString | undefined {
-			return undefined;
-		}
+	override getTooltip(): vscode.MarkdownString | undefined {
+		return undefined;
+	}
 }
