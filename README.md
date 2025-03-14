@@ -66,6 +66,14 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
+### Version 0.2.7: Bugfixes and Refactoring
+Fixed two bugs and cleaned up the internal structure of the definition tree code for better maintainability and extensibility. Please report any issues that might occur with the defintion tree after this update.
+
+1. Selecting an individual in the tree now jumps to it's definition instead of the first reference. This behavior is now consistent with the way this works for classes, properties and other definitions.
+2. Improved support for cycles in sub-class relation ships.
+
+Next release is planned add suport RDF/XML.
+
 ### Version 0.2.6: Minor bugfixes
 Fixed two minor issues:
 
