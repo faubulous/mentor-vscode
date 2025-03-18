@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { ConceptClassNode } from "./concept-class-node";
 
 export class ConceptGroupNode extends ConceptClassNode {

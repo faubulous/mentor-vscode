@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { xsd, rdfs } from '@faubulous/mentor-rdf';
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 
 /**

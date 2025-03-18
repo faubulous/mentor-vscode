@@ -2,7 +2,7 @@ export * from './code-actions-provider';
 export * from './codelens-provider';
 export * from './completion-item-provider';
 export * from './definition-provider';
-export * from './feature-provider';
+export * from '../turtle-feature-provider';
 export * from './hover-provider';
 export * from './reference-provider';
 export * from './rename-provider';

@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
-import { RenameProvider } from '../providers/rename-provider';
+import { mentor } from '@/mentor';
 import {
 	CodeActionsProvider,
 	CompletionItemProvider,
 	DefinitionProvider,
 	HoverProvider,
 	PrefixCompletionProvider,
+	RenameProvider,
 	ReferenceProvider
-} from '../providers';
+} from '@/languages/turtle/providers';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 

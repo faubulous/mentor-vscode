@@ -8,9 +8,9 @@ import {
 	SemanticTokensLegend,
 	CompletionItemProvider,
 	CodeLensProvider,
-	CodeActionsProvider
-} from '../providers';
-import { PrefixCompletionProvider } from '../providers/prefix-completion-provider';
+	CodeActionsProvider,
+	PrefixCompletionProvider
+} from '@/languages/turtle/providers';
 
 const tokenProvider = new SemanticTokensProvider();
 const renameProvider = new RenameProvider();

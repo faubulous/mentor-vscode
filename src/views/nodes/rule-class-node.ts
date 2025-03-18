@@ -1,5 +1,5 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { ClassNodeBase } from "./class-node-base";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { RuleNode } from "./rule-node";

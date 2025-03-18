@@ -1,11 +1,11 @@
 import * as n3 from 'n3';
 import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
-import { mentor } from './mentor';
+import { IToken } from 'millan';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
-import { IToken } from 'millan';
-import { TreeLabelStyle } from './settings';
+import { mentor } from '@/mentor';
+import { TreeLabelStyle } from '@/settings';
 import {
 	getIriLocalPart,
 	getIriFromIriReference,
@@ -13,7 +13,7 @@ import {
 	getIriFromToken,
 	getNamespaceDefinition,
 	getNamespaceIri
-} from './utilities';
+} from '@/utilities';
 
 /**
  * A literal value with optional language tag.

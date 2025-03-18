@@ -168,6 +168,20 @@
           "light": "./media/icons/sparql-light.svg",
           "dark": "./media/icons/sparql-dark.svg"
         }
+      },
+      {
+        "id": "xml",
+        "aliases": [
+          "RDF/XML",
+          "rdf/xml"
+        ],
+        "extensions": [
+          ".rdf"
+        ],
+        "icon": {
+          "light": "./media/icons/ontology-light.svg",
+          "dark": "./media/icons/ontology-dark.svg"
+        }
       }
     ],
     "semanticTokenScopes": [

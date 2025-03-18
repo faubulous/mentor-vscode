@@ -1,4 +1,4 @@
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { IndividualNode } from "./individual-node";
 import { ClassNodeBase } from "./class-node-base";

@@ -1,7 +1,12 @@
 import * as vscode from "vscode";
-import { mentor } from "../mentor";
 import { IToken } from "millan";
-import { countLeadingWhitespace, countTrailingWhitespace, getNamespaceIri, getTokenPosition } from "../utilities";
+import { mentor } from "@/mentor";
+import {
+	countLeadingWhitespace,
+	countTrailingWhitespace,
+	getNamespaceIri,
+	getTokenPosition
+} from "@/utilities";
 
 export class FeatureProvider {
 	/**

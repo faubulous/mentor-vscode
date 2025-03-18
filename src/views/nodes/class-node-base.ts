@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 
 export abstract class ClassNodeBase extends DefinitionTreeNode {

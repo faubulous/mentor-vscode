@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassGroupNode } from "./class-group-node";
 import { PropertyGroupNode } from "./property-group-node";

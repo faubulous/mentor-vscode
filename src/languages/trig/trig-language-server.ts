@@ -1,10 +1,10 @@
-import { TurtleSyntaxParser } from '@faubulous/mentor-rdf';
-import { LanguageServerBase } from './language-server';
 import { IToken } from 'millan';
+import { TrigSyntaxParser } from '@faubulous/mentor-rdf';
+import { LanguageServerBase } from '@/languages';
 
-class TurtleLanguageServer extends LanguageServerBase {
+class TrigLanguageServer extends LanguageServerBase {
 	constructor() {
-		super('turtle', 'Turtle', new TurtleSyntaxParser(), true);
+		super('trig', 'TriG', new TrigSyntaxParser(), true);
 	}
 
 	override getUnquotedLiteralValue(token: IToken): string {
@@ -21,4 +21,4 @@ class TurtleLanguageServer extends LanguageServerBase {
 	}
 }
 
-new TurtleLanguageServer().start();
+new TrigLanguageServer().start();

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
-import { IToken } from 'millan';
 import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient/browser';
+import { IToken } from 'millan';
+import { mentor } from '@/mentor';
 
 export abstract class LanguageClientBase implements vscode.Disposable {
 	/**

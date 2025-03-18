@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as n3 from "n3";
 import { _SH } from "@faubulous/mentor-rdf";
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassNodeBase } from "./class-node-base";
 import { PropertyNode } from "./property-node";

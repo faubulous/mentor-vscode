@@ -1,5 +1,5 @@
 import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
-import { LanguageServerBase } from './language-server';
+import { LanguageServerBase } from '@/languages';
 import { IToken } from 'millan';
 
 class SparqlLanguageServer extends LanguageServerBase {

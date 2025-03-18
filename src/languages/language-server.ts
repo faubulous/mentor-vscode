@@ -1,4 +1,5 @@
 import { IRecognitionException } from 'chevrotain';
+import { ISemanticError, IToken } from 'millan';
 import {
 	Connection,
 	Diagnostic,
@@ -18,14 +19,13 @@ import {
 	BrowserMessageWriter,
 	DiagnosticTag
 } from 'vscode-languageserver/browser';
-import { SyntaxParser, XSD } from '@faubulous/mentor-rdf';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { ISemanticError, IToken } from 'millan';
+import { SyntaxParser, XSD } from '@faubulous/mentor-rdf';
 import {
 	getNamespaceDefinition,
 	getIriFromToken,
 	NamespaceMap,
-} from '../utilities';
+} from '@/utilities';
 
 /**
  * The result of tokenizing a text document.

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { FeatureProvider } from './feature-provider';
-import { isVariable, getIriFromToken } from '../utilities';
+import { isVariable, getIriFromToken } from '@/utilities';
+import { FeatureProvider } from '@/languages/turtle';
 
 /**
  * Provides renaming for URIs, resources labels and prefixes.

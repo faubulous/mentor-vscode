@@ -1,4 +1,4 @@
-import { LanguageClientBase } from './language-client';
+import { LanguageClientBase } from '@/languages';
 
 export class SparqlLanguageClient extends LanguageClientBase {
 	constructor() {

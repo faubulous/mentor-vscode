@@ -7,7 +7,7 @@ import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
 import { DefinitionTreeNode } from './views/definition-tree-node';
 import { getIriFromNodeId, getTokenPosition } from './utilities';
-import { DefinitionProvider } from './providers';
+import { DefinitionProvider } from './languages/turtle/providers';
 import {
 	LanguageClientBase,
 	SparqlLanguageClient,
@@ -171,28 +171,26 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.activateDocument().then((editor) => {
 			const uri = getIriFromArgument(arg);
 
-			if (!uri) {
+			if (!uri || !editor || !mentor.activeContext) {
 				// If no id is provided, we fail gracefully.
 				return;
 			}
 
-			if (mentor.activeContext && editor && uri) {
-				const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri, { includeBlankNodes: true })[0];
+			const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri, { includeBlankNodes: true })[0];
 
-				if (!shapeUri) {
-					return;
-				}
+			if (!shapeUri) {
+				return;
+			}
 
-				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, shapeUri, true);
+			const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, shapeUri, true);
 
-				if (location instanceof vscode.Location) {
-					editor.selection = new vscode.Selection(location.range.start, location.range.end);
-					editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
+			if (location instanceof vscode.Location) {
+				editor.selection = new vscode.Selection(location.range.start, location.range.end);
+				editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
 
-					if (restoreFocus) {
-						// Reset the focus to the definition tree.
-						vscode.commands.executeCommand('mentor.view.definitionTree.focus');
-					}
+				if (restoreFocus) {
+					// Reset the focus to the definition tree.
+					vscode.commands.executeCommand('mentor.view.definitionTree.focus');
 				}
 			}
 		});

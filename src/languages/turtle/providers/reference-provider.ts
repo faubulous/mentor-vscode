@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { mentor } from '@/mentor';
 import { IToken } from "millan";
-import { FeatureProvider } from './feature-provider';
-import { getIriFromToken, getPrefixFromToken } from '../utilities';
-import { DocumentContext } from '../languages';
+import { DocumentContext } from "@/document-context";
+import { getIriFromToken, getPrefixFromToken } from '@/utilities';
+import { FeatureProvider } from '@/languages/turtle';
 
 /**
  * Provides references to resources.

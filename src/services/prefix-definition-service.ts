@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
 import { IToken } from 'millan';
-import { getIriFromIriReference, getNamespaceIri, isUpperCase } from '../utilities';
-import { DocumentContext } from '../languages';
-import { FeatureProvider } from '../providers';
+import { mentor } from '@/mentor';
+import { DocumentContext } from '@/document-context';
+import { getIriFromIriReference, getNamespaceIri, isUpperCase } from '@/utilities';
+import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * Specifies a how a namespace prefix should be defined in a document.

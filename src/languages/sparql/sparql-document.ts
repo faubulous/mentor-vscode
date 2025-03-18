@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
-import { DocumentContext, TokenTypes } from '../document-context';
+import { DocumentContext, TokenTypes } from '@/document-context';
 
 /**
  * A document context for SPARQL documents.
