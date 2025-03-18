@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { DocumentContext } from '@/document-context';
 import { getIriFromToken } from '@/utilities';
-import { FeatureProvider } from '@/languages/turtle';
+import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * Provides resource definitions for Turtle documents.

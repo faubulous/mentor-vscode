@@ -1,6 +1,5 @@
 export * from './language-client';
-export * from './language-server';
-export * from './rdf-xml/rdf-xml-document';
+export * from './rdfxml/rdfxml-document';
 export * from './sparql/sparql-document';
 export * from './sparql/sparql-language-client';
 export * from './sparql/sparql-token-provider';

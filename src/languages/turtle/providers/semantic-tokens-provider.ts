@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { FeatureProvider } from "@/languages/turtle";
+import { FeatureProvider } from "@/languages/turtle/turtle-feature-provider";
 
 enum SemanticTokenType {
 	keyword = 'keyword',

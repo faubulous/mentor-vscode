@@ -1,6 +1,6 @@
 import { IToken } from 'millan';
 import { TrigSyntaxParser } from '@faubulous/mentor-rdf';
-import { LanguageServerBase } from '@/languages';
+import { LanguageServerBase } from '@/languages/language-server';
 
 class TrigLanguageServer extends LanguageServerBase {
 	constructor() {

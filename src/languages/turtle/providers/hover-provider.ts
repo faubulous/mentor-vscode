@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getIriFromToken } from '@/utilities';
-import { FeatureProvider } from '@/languages/turtle';
+import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * Provides hover information for tokens.

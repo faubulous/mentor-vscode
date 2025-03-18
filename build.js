@@ -1,5 +1,6 @@
 const { build, context } = require("esbuild");
 const fs = require("fs");
+const glob = require("glob");
 
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
@@ -50,12 +51,13 @@ const extensionConfig = {
 
 const getLanguageConfig = (type, language) => {
   const file = language ? `${language}-language-${type}` : `language-${type}`;
-  
+  const entryPoint = language ? `./src/languages/${language}/${file}.ts` : `./src/languages/${file}.ts`;
+
   return {
     ...baseConfig,
     format: "cjs",
     target: "es2020",
-    entryPoints: [`./src/languages/${file}.ts`],
+    entryPoints: [entryPoint],
     outfile: `./out/${file}.js`
   }
 }
@@ -79,10 +81,11 @@ const getLanguageConfig = (type, language) => {
     }
 
     // Copy the language config files to the out directory.
-    for (const file of fs.readdirSync('./src/languages/')) {
-      if (file.endsWith('.json')) {
-        fs.copyFileSync(`./src/languages/${file}`, `./out/${file}`);
-      }
+    for (const file of glob.sync('./src/languages/**/*.json')) {
+      const fileName = file.split('/').pop();
+      const targetPath = `./out/${fileName}`;
+      
+      fs.copyFileSync(file, targetPath);
     }
 
     const args = process.argv.slice(2);

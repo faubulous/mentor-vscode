@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getNamespaceIri, getIriFromIriReference } from '@/utilities';
-import { FeatureProvider } from '@/languages/turtle';
+import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * A provider for RDF document code actions.

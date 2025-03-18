@@ -3,7 +3,7 @@ import { mentor } from '@/mentor';
 import { IToken } from "millan";
 import { DocumentContext } from "@/document-context";
 import { getIriFromToken, getPrefixFromToken } from '@/utilities';
-import { FeatureProvider } from '@/languages/turtle';
+import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * Provides references to resources.
