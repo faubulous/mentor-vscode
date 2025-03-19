@@ -37,13 +37,13 @@ export class HoverProvider extends FeatureProvider implements vscode.HoverProvid
 			}
 			// Display a the description for the concept for URIs, if it exists.
 			default: {
-				const uri = getIriFromToken(context.namespaces, token);
+				const iri = getIriFromToken(context.namespaces, token);
 
-				if (!uri) {
+				if (!iri) {
 					return null;
 				}
 
-				return new vscode.Hover(context.getResourceTooltip(uri));
+				return new vscode.Hover(context.getResourceTooltip(iri));
 			}
 		}
 	}

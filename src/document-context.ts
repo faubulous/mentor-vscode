@@ -527,6 +527,11 @@ export abstract class DocumentContext {
 				if (q.object.termType === 'Literal') {
 					const literal = q.object as n3.Literal;
 
+					// Prefer to return non-empty values.
+					if(literal.value.length == 0) {
+						continue;
+					}
+
 					// Check if the literal language matches the active language
 					if (literal.language === this.activeLanguageTag) {
 						return literal;
@@ -552,6 +557,12 @@ export abstract class DocumentContext {
 						language: undefined
 					};
 				}
+			}
+
+			// If we have found a label given the current predicates, we can stop 
+			// searching as the predicates are ordered in priority.
+			if(languageLabel || primaryLabel || fallbackLabel) {
+				break;
 			}
 		}
 
@@ -635,10 +646,14 @@ export abstract class DocumentContext {
 	 * @returns A markdown string containing the label, description and URI of the resource.
 	 */
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
+		const iri = this.getResourceIri(subjectUri);
+		const label = this.getResourceLabel(subjectUri);
+		const description = this.getResourceDescription(subjectUri);
+
 		let lines = [
-			`**${this.getResourceLabel(subjectUri).value}**`,
-			this.getResourceDescription(subjectUri)?.value,
-			this.getResourceIri(subjectUri)
+			`**${label.value}**`,
+			description?.value,
+			iri
 		];
 
 		return new vscode.MarkdownString(lines.filter(line => line).join('\n\n'), true);

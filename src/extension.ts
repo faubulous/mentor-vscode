@@ -10,9 +10,11 @@ import { getIriFromNodeId, getTokenPosition } from './utilities';
 import { DefinitionProvider } from './languages/turtle/providers';
 import {
 	LanguageClientBase,
+	RdfXmlTokenProvider,
 	SparqlLanguageClient,
 	SparqlTokenProvider,
 	TrigLanguageClient,
+	TrigTokenProvider,
 	TurtleLanguageClient,
 	TurtleTokenProvider,
 } from './languages';
@@ -25,7 +27,9 @@ const clients: LanguageClientBase[] = [
 ];
 
 const providers: Disposable[] = [
+	...new RdfXmlTokenProvider().register(),
 	...new TurtleTokenProvider().register(),
+	...new TrigTokenProvider().register(),
 	...new SparqlTokenProvider().register()
 ];
 
@@ -110,6 +114,36 @@ function registerCommands(context: vscode.ExtensionContext) {
 	commands.push(vscode.commands.registerCommand("mentor.action.openSettings", () => {
 		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:faubulous.mentor');
 	}));
+
+	commands.push(vscode.commands.registerCommand("mentor.action.openInteralGraph", () => {
+		const graphs = mentor.store.getGraphs();
+
+		const quickPick = vscode.window.createQuickPick<vscode.QuickPickItem>();
+		quickPick.title = 'Select active document language';
+		quickPick.items = graphs.map((graphIri) => {
+			return {
+				label: graphIri,
+				description: `N triples`,
+			};
+		}).sort((a, b) => a.label.localeCompare(b.label));
+
+		quickPick.onDidChangeSelection(async (selection) => {
+			if (selection.length > 0) {
+				const graphIri = selection[0].label;
+
+				if (graphIri.startsWith('file://')) {
+					await vscode.workspace.openTextDocument(vscode.Uri.parse(graphIri));
+				} else {
+					const data = await mentor.store.serializeGraph(graphIri);
+
+					await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
+				}
+			}
+		});
+
+		quickPick.show();
+	}));
+
 
 	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (arg: DefinitionTreeNode | string) => {
 		const internalBrowser = mentor.configuration.get('internalBrowserEnabled');

@@ -43,6 +43,9 @@ export class RdfXmlDocument extends DocumentContext {
 			// The loadFromStream function only updates the existing graphs 
 			// when the document was parsed successfully.
 			await mentor.store.loadFromXmlStream(data, u, false);
+
+			// Parse the Namespace declarations from the RDF/XML document.
+			this.parseXmlnsAttributes(data);
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 		}
@@ -59,5 +62,35 @@ export class RdfXmlDocument extends DocumentContext {
 
 	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
 		return `xmlns:${prefix}="${uri}"`;
+	}
+
+	/**
+	 * Indicates whether the given data is RDF/XML document.
+	 * @param data The RDF/XML document as a string.
+	 * @returns `true` if the given data is RDF/XML, `false` otherwise.
+	 */
+	protected isRdfXml(data: string): boolean {
+		const regex = /<rdf:RDF\s+xmlns:([a-zA-Z_][\w.-]*)="([^"]+)"\s*>/i;
+
+		return regex.test(data);
+	}
+
+	/**
+	 * Parses xmlns attributes from the given RDF/XML document string.
+	 * @param data The RDF/XML document as a string.
+	 * @returns A map of prefix-to-namespace URIs.
+	 */
+	protected parseXmlnsAttributes(data: string) {
+		// Regular expression to match xmlns attributes (e.g., xmlns:prefix="namespace")
+		const regex = /xmlns:([a-zA-Z_][\w.-]*)="([^"]+)"/g;
+
+		let match: RegExpExecArray | null;
+
+		while ((match = regex.exec(data)) !== null) {
+			const prefix = match[1];
+			const namespaceIri = match[2];
+
+			this.namespaces[prefix] = namespaceIri;
+		}
 	}
 }

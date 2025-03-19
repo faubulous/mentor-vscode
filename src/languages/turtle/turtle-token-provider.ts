@@ -24,20 +24,25 @@ const prefixCompletionProvider = new PrefixCompletionProvider((uri) => ` <${uri}
 
 export class TurtleTokenProvider {
 	register(): vscode.Disposable[] {
-		const result = [];
-		const languages = ['turtle', 'trig', 'ntriples', 'nquads'];
+		return [
+			...this.registerForLanguage('ntriples'),
+			...this.registerForLanguage('nquads'),
+			...this.registerForLanguage('turtle')
+		];
+	}
 
-		for (const language of languages) {
-			result.push(vscode.languages.registerDocumentSemanticTokensProvider({ language }, tokenProvider, SemanticTokensLegend));
-			result.push(vscode.languages.registerRenameProvider({ language }, renameProvider));
-			result.push(vscode.languages.registerDefinitionProvider({ language }, definitionProvider));
-			result.push(vscode.languages.registerHoverProvider({ language }, hoverProvider));
-			result.push(vscode.languages.registerReferenceProvider({ language }, referenceProvider));
-			result.push(vscode.languages.registerCompletionItemProvider({ language }, completionProvider, ':'));
-			result.push(vscode.languages.registerCodeLensProvider({ language }, codelensProvider));
-			result.push(vscode.languages.registerCodeActionsProvider({ language }, codeActionsProvider));
-			result.push(vscode.languages.registerInlineCompletionItemProvider({ language }, prefixCompletionProvider));
-		}
+	registerForLanguage(language: string): vscode.Disposable[] {
+		const result = [];
+
+		result.push(vscode.languages.registerDocumentSemanticTokensProvider({ language }, tokenProvider, SemanticTokensLegend));
+		result.push(vscode.languages.registerRenameProvider({ language }, renameProvider));
+		result.push(vscode.languages.registerDefinitionProvider({ language }, definitionProvider));
+		result.push(vscode.languages.registerHoverProvider({ language }, hoverProvider));
+		result.push(vscode.languages.registerReferenceProvider({ language }, referenceProvider));
+		result.push(vscode.languages.registerCompletionItemProvider({ language }, completionProvider, ':'));
+		result.push(vscode.languages.registerCodeLensProvider({ language }, codelensProvider));
+		result.push(vscode.languages.registerCodeActionsProvider({ language }, codeActionsProvider));
+		result.push(vscode.languages.registerInlineCompletionItemProvider({ language }, prefixCompletionProvider));
 
 		return result;
 	}

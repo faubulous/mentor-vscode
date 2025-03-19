@@ -343,7 +343,7 @@ class MentorExtension {
 
 		vscode.commands.executeCommand('mentor.action.initialize');
 
-		vscode.commands.registerCommand('mentor.action.openInferenceGraph', async () => {
+		vscode.commands.registerCommand('mentor.action.openDocumentInferenceGraph', async () => {
 			if (this.activeContext) {
 				const documentGraphIri = this.activeContext.uri.toString();
 				const inferenceGraphIri = mentor.store.reasoner?.getInferenceGraphUri(documentGraphIri);
