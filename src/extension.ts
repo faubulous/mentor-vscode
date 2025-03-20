@@ -7,10 +7,10 @@ import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
 import { DefinitionTreeNode } from './views/definition-tree-node';
 import { getIriFromNodeId, getTokenPosition } from './utilities';
-import { DefinitionProvider } from './languages/turtle/providers';
+import { TurtleDefinitionProvider } from './languages/turtle/providers';
 import {
 	LanguageClientBase,
-	RdfXmlTokenProvider,
+	XmlTokenProvider,
 	SparqlLanguageClient,
 	SparqlTokenProvider,
 	TrigLanguageClient,
@@ -27,7 +27,7 @@ const clients: LanguageClientBase[] = [
 ];
 
 const providers: Disposable[] = [
-	...new RdfXmlTokenProvider().register(),
+	...new XmlTokenProvider().register(),
 	...new TurtleTokenProvider().register(),
 	...new TrigTokenProvider().register(),
 	...new SparqlTokenProvider().register()
@@ -160,7 +160,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
 				const uri = getIriFromArgument(arg);
-				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
+				const location = new TurtleDefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
 
 				if (location instanceof vscode.Location) {
 					// We need to set the selection before executing the findReferences command.
@@ -186,7 +186,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 			}
 
 			if (mentor.activeContext && editor && uri) {
-				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri, true);
+				const location = new TurtleDefinitionProvider().provideDefintionForUri(mentor.activeContext, uri, true);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
@@ -216,7 +216,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, shapeUri, true);
+			const location = new TurtleDefinitionProvider().provideDefintionForUri(mentor.activeContext, shapeUri, true);
 
 			if (location instanceof vscode.Location) {
 				editor.selection = new vscode.Selection(location.range.start, location.range.end);

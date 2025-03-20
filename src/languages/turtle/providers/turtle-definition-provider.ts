@@ -7,7 +7,7 @@ import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 /**
  * Provides resource definitions for Turtle documents.
  */
-export class DefinitionProvider extends FeatureProvider {
+export class TurtleDefinitionProvider extends FeatureProvider {
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
 		const context = this.getDocumentContext(document);
 

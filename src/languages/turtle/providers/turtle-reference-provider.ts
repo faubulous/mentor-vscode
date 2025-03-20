@@ -8,7 +8,7 @@ import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 /**
  * Provides references to resources.
  */
-export class ReferenceProvider extends FeatureProvider implements vscode.ReferenceProvider {
+export class TurtleReferenceProvider extends FeatureProvider implements vscode.ReferenceProvider {
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
 		const context = this.getDocumentContext(document);
 

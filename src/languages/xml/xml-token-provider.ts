@@ -1,11 +1,9 @@
 import * as vscode from 'vscode';
-import {
-	HoverProvider
-} from '@/languages/rdfxml/providers';
+import { XmlHoverProvider } from '@/languages/xml/providers';
 
-const hoverProvider = new HoverProvider();
+const hoverProvider = new XmlHoverProvider();
 
-export class RdfXmlTokenProvider {
+export class XmlTokenProvider {
 	register(): vscode.Disposable[] {
 		return this.registerForLanguage('xml');
 	}

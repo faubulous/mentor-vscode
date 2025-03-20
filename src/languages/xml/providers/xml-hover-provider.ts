@@ -5,7 +5,7 @@ import { getIriFromPrefixedName } from '@/utilities';
 /**
  * Provides hover information for tokens.
  */
-export class HoverProvider implements vscode.HoverProvider {
+export class XmlHoverProvider implements vscode.HoverProvider {
 	/**
 	 * Get the document context from a text document.
 	 * @param document A text document.

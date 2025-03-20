@@ -5,7 +5,7 @@ import { DocumentContext } from './document-context';
 import {
 	TurtleDocument,
 	SparqlDocument,
-	RdfXmlDocument
+	XmlDocument
 } from './languages';
 
 /**
@@ -91,7 +91,7 @@ export class DocumentFactory {
 			case 'sparql':
 				return new SparqlDocument(documentUri);
 			case 'xml':
-				return new RdfXmlDocument(documentUri);
+				return new XmlDocument(documentUri);
 			default:
 				throw new Error('Unsupported language:' + language);
 		}

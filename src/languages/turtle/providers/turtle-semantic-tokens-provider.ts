@@ -20,7 +20,7 @@ enum SemanticTokenModifier {
 
 export const SemanticTokensLegend = new vscode.SemanticTokensLegend(Object.values(SemanticTokenType), Object.values(SemanticTokenModifier));
 
-export class SemanticTokensProvider extends FeatureProvider implements vscode.DocumentSemanticTokensProvider {
+export class TurtleSemanticTokensProvider extends FeatureProvider implements vscode.DocumentSemanticTokensProvider {
 	public provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.SemanticTokens {
 		const context = this.getDocumentContext(document);
 

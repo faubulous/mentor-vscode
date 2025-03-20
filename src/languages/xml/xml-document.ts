@@ -6,7 +6,7 @@ import { DocumentContext, TokenTypes } from '@/document-context';
 /**
  * A document context for RDF/XML documents.
  */
-export class RdfXmlDocument extends DocumentContext {
+export class XmlDocument extends DocumentContext {
 	readonly syntax: RdfSyntax;
 
 	private _inferenceExecuted = false;

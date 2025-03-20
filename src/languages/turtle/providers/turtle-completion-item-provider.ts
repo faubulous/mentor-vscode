@@ -4,7 +4,7 @@ import { DocumentContext } from "@/document-context";
 import { getIriLocalPart, getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
 import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
-export class CompletionItemProvider extends FeatureProvider implements vscode.CompletionItemProvider<vscode.CompletionItem> {
+export class TurtleCompletionItemProvider extends FeatureProvider implements vscode.CompletionItemProvider<vscode.CompletionItem> {
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
 		const context = this.getDocumentContext(document);
 

@@ -1,26 +1,26 @@
 import * as vscode from 'vscode';
 import {
-	RenameProvider,
-	DefinitionProvider,
-	ReferenceProvider,
-	HoverProvider,
-	SemanticTokensProvider,
+	TurtleRenameProvider,
+	TurtleDefinitionProvider,
+	TurtleReferenceProvider,
+	TurtleHoverProvider,
+	TurtleSemanticTokensProvider,
 	SemanticTokensLegend,
-	CompletionItemProvider,
-	CodeLensProvider,
-	CodeActionsProvider,
-	PrefixCompletionProvider
+	TurtleCompletionItemProvider,
+	TurtleCodeLensProvider,
+	TurtleCodeActionsProvider,
+	TurtlePrefixCompletionProvider
 } from '@/languages/turtle/providers';
 
-const tokenProvider = new SemanticTokensProvider();
-const renameProvider = new RenameProvider();
-const referenceProvider = new ReferenceProvider();
-const definitionProvider = new DefinitionProvider();
-const hoverProvider = new HoverProvider();
-const completionProvider = new CompletionItemProvider();
-const codelensProvider = new CodeLensProvider();
-const codeActionsProvider = new CodeActionsProvider();
-const prefixCompletionProvider = new PrefixCompletionProvider((uri) => ` <${uri}> .`);
+const tokenProvider = new TurtleSemanticTokensProvider();
+const renameProvider = new TurtleRenameProvider();
+const referenceProvider = new TurtleReferenceProvider();
+const definitionProvider = new TurtleDefinitionProvider();
+const hoverProvider = new TurtleHoverProvider();
+const completionProvider = new TurtleCompletionItemProvider();
+const codelensProvider = new TurtleCodeLensProvider();
+const codeActionsProvider = new TurtleCodeActionsProvider();
+const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`);
 
 export class TurtleTokenProvider {
 	register(): vscode.Disposable[] {

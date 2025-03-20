@@ -5,7 +5,7 @@ import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 /**
  * Provides renaming for URIs, resources labels and prefixes.
  */
-export class RenameProvider extends FeatureProvider implements vscode.RenameProvider {
+export class TurtleRenameProvider extends FeatureProvider implements vscode.RenameProvider {
 	public async prepareRename(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Range | null> {
 		const context = this.getDocumentContext(document);
 
