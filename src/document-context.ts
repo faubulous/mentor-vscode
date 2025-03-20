@@ -505,7 +505,7 @@ export abstract class DocumentContext {
 		}
 
 		return {
-			value: getIriLocalPart(subjectUri),
+			value: decodeURIComponent(getIriLocalPart(subjectUri)),
 			language: undefined
 		};
 	}

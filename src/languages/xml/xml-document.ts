@@ -46,6 +46,13 @@ export class XmlDocument extends DocumentContext {
 
 			// Parse the Namespace declarations from the RDF/XML document.
 			this.parseXmlnsAttributes(data);
+
+			// The xml namespace is implicitly defined in RDF/XML.
+			if (!this.namespaces['xml']) {
+				// Note: The official definition of the xml namespace omits the trailing hash (#).
+				// However, without the trailing hash the links to the definitions do not work in practise.
+				this.namespaces['xml'] = 'http://www.w3.org/XML/1998/namespace#';
+			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 		}

@@ -30,19 +30,22 @@ export class XmlHoverProvider implements vscode.HoverProvider {
 
 		// Find the full attribute (e.g., xml:lang) at the given position
 		const line = document.lineAt(position.line).text;
-		const attribute = this.getFullAttributeAtPosition(line, position.character);
 
-		if (!attribute) {
-			return null;
+		let iri: string | undefined = undefined;
+		let pname = this.getPrefixedNameAttributeAtPosition(line, position.character);
+
+		if (pname) {
+			iri = getIriFromPrefixedName(context.namespaces, pname);
+		} else {
+			iri = this.getQuotedIriAtPosition(line, position.character);
 		}
 
-		const iri = getIriFromPrefixedName(context.namespaces, attribute);
-
-		if(!iri) {
+		if (iri) {
+			return new vscode.Hover(context.getResourceTooltip(iri));
+		}
+		else {
 			return null;
 		}
-
-		return new vscode.Hover(context.getResourceTooltip(iri));
 	}
 
 	/**
@@ -51,11 +54,12 @@ export class XmlHoverProvider implements vscode.HoverProvider {
 	 * @param character The character position.
 	 * @returns The full attribute or null if not found.
 	 */
-	private getFullAttributeAtPosition(line: string, character: number): string | null {
+	private getPrefixedNameAttributeAtPosition(line: string, character: number): string | undefined {
 		// Match namespace-prefixed attributes (e.g., xml:lang)
 		const regex = /[a-zA-Z_][\w.-]*:[a-zA-Z_][\w.-]*/g;
 
 		let match: RegExpExecArray | null;
+
 		while ((match = regex.exec(line)) !== null) {
 			const start = match.index;
 			const end = start + match[0].length;
@@ -65,7 +69,21 @@ export class XmlHoverProvider implements vscode.HoverProvider {
 				return match[0]; // Return the full attribute
 			}
 		}
+	}
 
-		return null; // No match found
+	private getQuotedIriAtPosition(line: string, character: number): string | undefined {
+		// Match full IRIs in quotes (e.g., "http://example.org/")
+		const regex = /(https?:\/\/[^\s"'<>)]+)/g;
+
+		let match: RegExpExecArray | null;
+
+		while ((match = regex.exec(line)) !== null) {
+			const start = match.index;
+			const end = start + match[0].length;
+
+			if (character >= start && character <= end) {
+				return match[1];
+			}
+		}
 	}
 }
