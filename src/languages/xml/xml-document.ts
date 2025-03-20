@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { RdfSyntax } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
+import { DefinitionProvider } from '@/languages/definition-provider';
+import { XmlDefinitionProvider } from './providers/xml-definition-provider';
 
 /**
  * A document context for RDF/XML documents.
@@ -11,6 +13,8 @@ export class XmlDocument extends DocumentContext {
 
 	private _inferenceExecuted = false;
 
+	private _definitionProvider: DefinitionProvider = new XmlDefinitionProvider();
+
 	constructor(uri: vscode.Uri) {
 		super(uri);
 
@@ -19,6 +23,10 @@ export class XmlDocument extends DocumentContext {
 
 	get isLoaded(): boolean {
 		return super.isLoaded && this.graphs.length > 0;
+	}
+
+	public override getDefinitionProvider(): DefinitionProvider {
+		return this._definitionProvider;
 	}
 
 	public override async infer(): Promise<void> {
@@ -47,6 +55,8 @@ export class XmlDocument extends DocumentContext {
 			// Parse the Namespace declarations from the RDF/XML document.
 			this.parseXmlnsAttributes(data);
 
+			this.baseIri = this.getXmlBaseIri(data);
+
 			// The xml namespace is implicitly defined in RDF/XML.
 			if (!this.namespaces['xml']) {
 				// Note: The official definition of the xml namespace omits the trailing hash (#).
@@ -64,6 +74,15 @@ export class XmlDocument extends DocumentContext {
 			BASE: '',
 			IRIREF: '',
 			PNAME_NS: '',
+		}
+	}
+
+	protected getXmlBaseIri(data: string): string | undefined {
+		const regex =/xml:base="([^"]+)"/i;
+		const match = regex.exec(data);
+
+		if (match) {
+			return match[1];
 		}
 	}
 

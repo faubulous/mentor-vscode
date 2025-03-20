@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
+import { DefinitionProvider } from '@/languages/definition-provider';
+import { TurtleDefinitionProvider } from '@/languages/turtle/providers';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -11,6 +13,8 @@ export class TurtleDocument extends DocumentContext {
 
 	private _inferenceExecuted = false;
 
+	private readonly _definitionProvider: DefinitionProvider = new TurtleDefinitionProvider();
+
 	constructor(uri: vscode.Uri, syntax: RdfSyntax) {
 		super(uri);
 
@@ -19,6 +23,10 @@ export class TurtleDocument extends DocumentContext {
 
 	get isLoaded(): boolean {
 		return super.isLoaded && this.graphs.length > 0;
+	}
+
+	public override getDefinitionProvider(): DefinitionProvider {
+		return this._definitionProvider;
 	}
 
 	public override async infer(): Promise<void> {

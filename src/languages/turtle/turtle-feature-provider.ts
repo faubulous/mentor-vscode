@@ -8,7 +8,7 @@ import {
 	getTokenPosition
 } from "@/utilities";
 
-export class FeatureProvider {
+export class TurtleFeatureProvider {
 	/**
 	 * Get the document context from a text document.
 	 * @param document A text document.

@@ -3,7 +3,7 @@ import { IToken } from 'millan';
 import { mentor } from '@/mentor';
 import { DocumentContext } from '@/document-context';
 import { getIriFromIriReference, getNamespaceIri, isUpperCase } from '@/utilities';
-import { FeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * Specifies a how a namespace prefix should be defined in a document.
@@ -23,7 +23,7 @@ export interface PrefixDefinition {
 /**
  * A service for declaring prefixes in RDF documents.
  */
-export class PrefixDefinitionService extends FeatureProvider {
+export class PrefixDefinitionService extends TurtleFeatureProvider {
 	/**
 	 * Sort the prefixes in a document.
 	 * @param document The RDF document.

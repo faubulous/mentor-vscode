@@ -6,6 +6,7 @@ import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/men
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { TreeLabelStyle } from '@/settings';
+import { DefinitionProvider } from '@/languages';
 import {
 	getIriLocalPart,
 	getIriFromIriReference,
@@ -70,6 +71,8 @@ export abstract class DocumentContext {
 	readonly graphs: string[] = [];
 
 	private _tokens: IToken[] = [];
+
+	private _baseIri: string | undefined;
 
 	private _namespaces: { [key: string]: string } = {};
 
@@ -189,6 +192,22 @@ export abstract class DocumentContext {
 	}
 
 	/**
+	 * Get the base IRI of the document for resolving local names into IRIs.
+	 * @returns The base IRI of the document or `undefined`.
+	 */
+	get baseIri(): string | undefined {
+		return this._baseIri;
+	}
+
+	/**
+	 * Set the base IRI of the document for resolving local names into IRIs.
+	 * @param value The base IRI of the document.
+	 */
+	protected set baseIri(value: string | undefined) {
+		this._baseIri = value;
+	}
+
+	/**
 	* Maps prefixes to namespace IRIs.
 	*/
 	get namespaces(): { [key: string]: string } {
@@ -254,6 +273,11 @@ export abstract class DocumentContext {
 	 * @param upperCase Indicates whether the prefix keyword should be in uppercase.
 	 */
 	abstract getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string;
+
+	/**
+	 * Get the definition provider for the document language.
+	 */
+	abstract getDefinitionProvider(): DefinitionProvider;
 
 	/**
 	 * Get the first token of a given type.
@@ -528,7 +552,7 @@ export abstract class DocumentContext {
 					const literal = q.object as n3.Literal;
 
 					// Prefer to return non-empty values.
-					if(literal.value.length == 0) {
+					if (literal.value.length == 0) {
 						continue;
 					}
 
@@ -561,7 +585,7 @@ export abstract class DocumentContext {
 
 			// If we have found a label given the current predicates, we can stop 
 			// searching as the predicates are ordered in priority.
-			if(languageLabel || primaryLabel || fallbackLabel) {
+			if (languageLabel || primaryLabel || fallbackLabel) {
 				break;
 			}
 		}

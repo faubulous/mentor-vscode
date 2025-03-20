@@ -7,7 +7,6 @@ import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
 import { DefinitionTreeNode } from './views/definition-tree-node';
 import { getIriFromNodeId, getTokenPosition } from './utilities';
-import { TurtleDefinitionProvider } from './languages/turtle/providers';
 import {
 	LanguageClientBase,
 	XmlTokenProvider,
@@ -159,8 +158,10 @@ function registerCommands(context: vscode.ExtensionContext) {
 	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (arg: DefinitionTreeNode | string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
-				const uri = getIriFromArgument(arg);
-				const location = new TurtleDefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
+				const iri = getIriFromArgument(arg);
+
+				const definitionProvider = mentor.activeContext.getDefinitionProvider();
+				const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, iri);
 
 				if (location instanceof vscode.Location) {
 					// We need to set the selection before executing the findReferences command.
@@ -186,7 +187,8 @@ function registerCommands(context: vscode.ExtensionContext) {
 			}
 
 			if (mentor.activeContext && editor && uri) {
-				const location = new TurtleDefinitionProvider().provideDefintionForUri(mentor.activeContext, uri, true);
+				const definitionProvider = mentor.activeContext.getDefinitionProvider();
+				const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, uri, true);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
@@ -216,7 +218,8 @@ function registerCommands(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			const location = new TurtleDefinitionProvider().provideDefintionForUri(mentor.activeContext, shapeUri, true);
+			const definitionProvider = mentor.activeContext.getDefinitionProvider();
+			const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, shapeUri, true);
 
 			if (location instanceof vscode.Location) {
 				editor.selection = new vscode.Selection(location.range.start, location.range.end);
