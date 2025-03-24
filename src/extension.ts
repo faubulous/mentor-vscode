@@ -114,15 +114,17 @@ function registerCommands(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:faubulous.mentor');
 	}));
 
-	commands.push(vscode.commands.registerCommand("mentor.action.openInteralGraph", () => {
+	commands.push(vscode.commands.registerCommand("mentor.action.openDocumentGraph", () => {
 		const graphs = mentor.store.getGraphs();
 
 		const quickPick = vscode.window.createQuickPick<vscode.QuickPickItem>();
-		quickPick.title = 'Select active document language';
+		quickPick.title = 'Select the graph to open:';
 		quickPick.items = graphs.map((graphIri) => {
+			const n = [...mentor.store.match(graphIri, null, null, null)].length;
+
 			return {
 				label: graphIri,
-				description: `N triples`,
+				description: `${n} triples`,
 			};
 		}).sort((a, b) => a.label.localeCompare(b.label));
 
@@ -130,13 +132,17 @@ function registerCommands(context: vscode.ExtensionContext) {
 			if (selection.length > 0) {
 				const graphIri = selection[0].label;
 
+				let document: vscode.TextDocument;
+
 				if (graphIri.startsWith('file://')) {
-					await vscode.workspace.openTextDocument(vscode.Uri.parse(graphIri));
+					document = await vscode.workspace.openTextDocument(vscode.Uri.parse(graphIri));
 				} else {
 					const data = await mentor.store.serializeGraph(graphIri);
 
-					await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
+					document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
 				}
+
+				vscode.window.showTextDocument(document);
 			}
 		});
 

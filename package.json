@@ -445,12 +445,12 @@
     },
     "commands": [
       {
-        "command": "mentor.action.openInteralGraph",
-        "title": "Mentor: Open a Graph from the interal Triple Store"
+        "command": "mentor.action.openDocumentGraph",
+        "title": "Mentor: Open a Document Graph"
       },
       {
         "command": "mentor.action.openDocumentInferenceGraph",
-        "title": "Mentor: Open the Document Inference Graph"
+        "title": "Mentor: Open the active Document Inference Graph"
       },
       {
         "command": "mentor.action.analyzeWorkspace",

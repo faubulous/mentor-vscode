@@ -357,8 +357,9 @@ class MentorExtension {
 					}
 
 					const data = await mentor.store.serializeGraph(inferenceGraphIri, prefixes);
+					const document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
 
-					await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
+					await vscode.window.showTextDocument(document);
 				}
 			}
 		});
