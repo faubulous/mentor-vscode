@@ -41,7 +41,7 @@ This extension provides the following features:
   - RDFS and structural OWL reasoning
   - Find all references in the current document
   - Open URIs in web browser
-  - Show definitions in multiple languages <sup style="color: orange">NEW</sup>
+  - Show definitions in multiple languages
     - Select language tag of the displayed labels and definitions
     - Highlight the terms missing in the selected language (optional)
 
@@ -66,6 +66,9 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
+### Version 0.2.8: Initial RDF/XML Support
+This release adds initial support for [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) documents. This includes browsing definitions and tooltips for IRIs in files that have an `.rdf` extension. The next release will add support for reference / usage information, codelenses and conversion into Turtle.
+
 ### Version 0.2.7: Bugfixes and Refactoring
 Fixed two bugs and cleaned up the internal structure of the definition tree code for better maintainability and extensibility. Please report any issues that might occur with the defintion tree after this update.
 
@@ -104,27 +107,6 @@ This release supports browsing SHACL shapes that are defined in ontologies. You 
 Greatly improved workspace indexing speed for reference resolution with added options for skipping files above a configurable size limit.
 
 Mentor can be run as a pure web extension and supports collaboration in online portals such as [vscode.dev](https://vscode.dev).
-
-### Version 0.1.8: Fixed context menus not working in Definitions Tree
-The context menus for resources in the definitions tree are now working again.
-
-### Version 0.1.7: SKOS + Improved Definitions Tree
-This release includes support for SKOS thesauri resources in the definitions tree: Concept Schemes, Concepts and Collections. To harmonize the user experience of ontologies and thesauri, the definitions tree can now group classes, properties and invidiuals by definition source.
-
-This means that ontology headers are now expandable nodes that show all classes, properties and individuals defined in its namespace. It also considers the `rdfs:isDefinedBy` property to create groups or to explicitly associate a definition with one or more ontologies that have a different namespace. This setting can be changed temporarily in the definitions tree context menu or permanently in the extension settings.
-
-The next release will include support for SHACL shapes.
-
-### Version 0.1.6: Bugfixes
-A minor bugfix release. Next release will feature an improved definitions tree view and SKOS support.
-- Fixed syntax support for TriG files
-- Fixed wrong reference counts in code lenses after opening a file in a Git diff view
-
-### Version 0.1.5: Prefix Definition Support
-Added inline completion support for prefix definitions and quick fixes for implementing missing prefix definitions. The prefix URIs are resolved from the indexed files in the workspace as well as from a local database downloaded from prefix.cc. The local database can be updated manually using a built-in command.
-
-### Version 0.1.3: Global Workspace Index
-Added support for indexing all ontology files in the workspace. This enables finding references, retrieving descriptions and going to defintions of subjects accross the entire workspace. A newly added code lens shows the number of references of a subject in the workspace. In addition, the workspace tree gained a new command for opening all the ontologies in the workspace to identify problems and show them in the problems tab.
 
 ## Installation
 
