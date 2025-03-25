@@ -62,7 +62,7 @@ export class TurtleDocument extends DocumentContext {
 
 			// The loadFromStream function only updates the existing graphs 
 			// when the document was parsed successfully.
-			await mentor.store.loadFromStream(data, u, false);
+			await mentor.store.loadFromTurtleStream(data, u, false);
 
 			// Make definitions using blank nodes resolvable.
 			this.mapBlankNodes();
