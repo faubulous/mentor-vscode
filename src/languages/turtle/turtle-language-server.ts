@@ -1,6 +1,6 @@
-import { TurtleSyntaxParser } from '@faubulous/mentor-rdf';
-import { LanguageServerBase } from './language-server';
 import { IToken } from 'millan';
+import { TurtleSyntaxParser } from '@faubulous/mentor-rdf';
+import { LanguageServerBase } from '@/languages/language-server';
 
 class TurtleLanguageServer extends LanguageServerBase {
 	constructor() {

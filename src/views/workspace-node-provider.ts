@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
 import { Utils } from 'vscode-uri';
+import { mentor } from '@/mentor';
 
 // For a complete implementation of the FileSystemProvider API, see:
 // https://github.com/boltex/revealRangeTest/blob/main/src/fileExplorer.ts#L185

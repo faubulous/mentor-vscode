@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { FeatureProvider } from './feature-provider';
-import { getNamespaceIri, getIriFromIriReference } from '../utilities';
+import { getNamespaceIri, getIriFromIriReference } from '@/utilities';
+import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * A provider for RDF document code actions.
  */
-export class CodeActionsProvider extends FeatureProvider implements vscode.CodeActionProvider {
+export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements vscode.CodeActionProvider {
 	public static readonly providedCodeActionKinds = [
 		vscode.CodeActionKind.QuickFix,
 		vscode.CodeActionKind.Refactor,

@@ -7,12 +7,13 @@ import { WorkspaceTree } from './views/workspace-tree';
 import { DefinitionTree } from './views/definition-tree';
 import { DefinitionTreeNode } from './views/definition-tree-node';
 import { getIriFromNodeId, getTokenPosition } from './utilities';
-import { DefinitionProvider } from './providers';
 import {
 	LanguageClientBase,
+	XmlTokenProvider,
 	SparqlLanguageClient,
 	SparqlTokenProvider,
 	TrigLanguageClient,
+	TrigTokenProvider,
 	TurtleLanguageClient,
 	TurtleTokenProvider,
 } from './languages';
@@ -25,7 +26,9 @@ const clients: LanguageClientBase[] = [
 ];
 
 const providers: Disposable[] = [
+	...new XmlTokenProvider().register(),
 	...new TurtleTokenProvider().register(),
+	...new TrigTokenProvider().register(),
 	...new SparqlTokenProvider().register()
 ];
 
@@ -111,6 +114,42 @@ function registerCommands(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:faubulous.mentor');
 	}));
 
+	commands.push(vscode.commands.registerCommand("mentor.action.openDocumentGraph", () => {
+		const graphs = mentor.store.getGraphs();
+
+		const quickPick = vscode.window.createQuickPick<vscode.QuickPickItem>();
+		quickPick.title = 'Select the graph to open:';
+		quickPick.items = graphs.map((graphIri) => {
+			const n = [...mentor.store.match(graphIri, null, null, null)].length;
+
+			return {
+				label: graphIri,
+				description: `${n} triples`,
+			};
+		}).sort((a, b) => a.label.localeCompare(b.label));
+
+		quickPick.onDidChangeSelection(async (selection) => {
+			if (selection.length > 0) {
+				const graphIri = selection[0].label;
+
+				let document: vscode.TextDocument;
+
+				if (graphIri.startsWith('file://')) {
+					document = await vscode.workspace.openTextDocument(vscode.Uri.parse(graphIri));
+				} else {
+					const data = await mentor.store.serializeGraph(graphIri);
+
+					document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
+				}
+
+				vscode.window.showTextDocument(document);
+			}
+		});
+
+		quickPick.show();
+	}));
+
+
 	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', (arg: DefinitionTreeNode | string) => {
 		const internalBrowser = mentor.configuration.get('internalBrowserEnabled');
 		const uri = getIriFromArgument(arg);
@@ -125,8 +164,10 @@ function registerCommands(context: vscode.ExtensionContext) {
 	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', (arg: DefinitionTreeNode | string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
-				const uri = getIriFromArgument(arg);
-				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri);
+				const iri = getIriFromArgument(arg);
+
+				const definitionProvider = mentor.activeContext.getDefinitionProvider();
+				const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, iri);
 
 				if (location instanceof vscode.Location) {
 					// We need to set the selection before executing the findReferences command.
@@ -152,7 +193,8 @@ function registerCommands(context: vscode.ExtensionContext) {
 			}
 
 			if (mentor.activeContext && editor && uri) {
-				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, uri, true);
+				const definitionProvider = mentor.activeContext.getDefinitionProvider();
+				const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, uri, true);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
@@ -171,28 +213,27 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.activateDocument().then((editor) => {
 			const uri = getIriFromArgument(arg);
 
-			if (!uri) {
+			if (!uri || !editor || !mentor.activeContext) {
 				// If no id is provided, we fail gracefully.
 				return;
 			}
 
-			if (mentor.activeContext && editor && uri) {
-				const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri, { includeBlankNodes: true })[0];
+			const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri, { includeBlankNodes: true })[0];
 
-				if (!shapeUri) {
-					return;
-				}
+			if (!shapeUri) {
+				return;
+			}
 
-				const location = new DefinitionProvider().provideDefintionForUri(mentor.activeContext, shapeUri, true);
+			const definitionProvider = mentor.activeContext.getDefinitionProvider();
+			const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, shapeUri, true);
 
-				if (location instanceof vscode.Location) {
-					editor.selection = new vscode.Selection(location.range.start, location.range.end);
-					editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
+			if (location instanceof vscode.Location) {
+				editor.selection = new vscode.Selection(location.range.start, location.range.end);
+				editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
 
-					if (restoreFocus) {
-						// Reset the focus to the definition tree.
-						vscode.commands.executeCommand('mentor.view.definitionTree.focus');
-					}
+				if (restoreFocus) {
+					// Reset the focus to the definition tree.
+					vscode.commands.executeCommand('mentor.view.definitionTree.focus');
 				}
 			}
 		});

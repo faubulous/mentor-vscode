@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { FeatureProvider } from "./feature-provider";
+import { TurtleFeatureProvider } from "@/languages/turtle/turtle-feature-provider";
 
 enum SemanticTokenType {
 	keyword = 'keyword',
@@ -20,7 +20,7 @@ enum SemanticTokenModifier {
 
 export const SemanticTokensLegend = new vscode.SemanticTokensLegend(Object.values(SemanticTokenType), Object.values(SemanticTokenModifier));
 
-export class SemanticTokensProvider extends FeatureProvider implements vscode.DocumentSemanticTokensProvider {
+export class TurtleSemanticTokensProvider extends TurtleFeatureProvider implements vscode.DocumentSemanticTokensProvider {
 	public provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.SemanticTokens {
 		const context = this.getDocumentContext(document);
 

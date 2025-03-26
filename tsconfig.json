@@ -6,6 +6,12 @@
       "es2020",
       "dom"
     ],
+    "baseUrl": "./",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
     "rootDir": "./src",
     "outDir": "./out",
     "sourceMap": true, // Do we need this when using esbuild?

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
-import { DocumentContext } from './document-context';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { DocumentFactory } from './languages';
+import { DocumentContext } from './document-context';
+import { DocumentFactory } from './document-factory';
 import { DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
 import { WorkspaceIndexer, DocumentIndex } from './workspace-indexer';
 import { WorkspaceRepository } from './workspace-repository';
@@ -343,7 +343,7 @@ class MentorExtension {
 
 		vscode.commands.executeCommand('mentor.action.initialize');
 
-		vscode.commands.registerCommand('mentor.action.openInferenceGraph', async () => {
+		vscode.commands.registerCommand('mentor.action.openDocumentInferenceGraph', async () => {
 			if (this.activeContext) {
 				const documentGraphIri = this.activeContext.uri.toString();
 				const inferenceGraphIri = mentor.store.reasoner?.getInferenceGraphUri(documentGraphIri);
@@ -357,8 +357,9 @@ class MentorExtension {
 					}
 
 					const data = await mentor.store.serializeGraph(inferenceGraphIri, prefixes);
+					const document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
 
-					await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
+					await vscode.window.showTextDocument(document);
 				}
 			}
 		});

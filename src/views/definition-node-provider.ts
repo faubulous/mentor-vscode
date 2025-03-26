@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
 import { Uri, _SH } from '@faubulous/mentor-rdf';
-import { DocumentContext } from '../document-context';
-import { DefinitionTreeLayout } from '../settings';
+import { mentor } from '@/mentor';
+import { DocumentContext } from '@/document-context';
+import { DefinitionTreeLayout } from '@/settings';
 import { DefinitionTreeNode, sortByLabel } from './definition-tree-node';
 import { ClassGroupNode } from './nodes/class-group-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';

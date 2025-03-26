@@ -1,4 +1,4 @@
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { ClassNodeBase } from "./class-node-base";
 import { IndividualNode } from "./individual-node";
 

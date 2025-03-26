@@ -1,5 +1,5 @@
-import { mentor } from '../mentor';
-import { DEFAULT_PREFIXES } from '../services/prefix-downloader-service';
+import { mentor } from '@/mentor';
+import { DEFAULT_PREFIXES } from '@/services';
 
 /**
  * A service for looking up prefixes in the project.

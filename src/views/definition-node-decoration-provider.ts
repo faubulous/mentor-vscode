@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
-import { mentor } from '../mentor';
+import { mentor } from '@/mentor';
 
 /**
  * Indicates the where missing language tags should be decorated.

@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { FeatureProvider } from './feature-provider';
-import { isVariable, getIriFromToken } from '../utilities';
+import { isVariable, getIriFromToken } from '@/utilities';
+import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * Provides renaming for URIs, resources labels and prefixes.
  */
-export class RenameProvider extends FeatureProvider implements vscode.RenameProvider {
+export class TurtleRenameProvider extends TurtleFeatureProvider implements vscode.RenameProvider {
 	public async prepareRename(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Range | null> {
 		const context = this.getDocumentContext(document);
 

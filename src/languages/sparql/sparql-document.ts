@@ -1,11 +1,19 @@
 import * as vscode from 'vscode';
 import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
-import { DocumentContext, TokenTypes } from '../document-context';
+import { DocumentContext, TokenTypes } from '@/document-context';
+import { DefinitionProvider } from '@/languages/definition-provider';
+import { TurtleDefinitionProvider } from '@/languages/turtle/providers';
 
 /**
  * A document context for SPARQL documents.
  */
 export class SparqlDocument extends DocumentContext {
+	private readonly _definitionProvider: DefinitionProvider = new TurtleDefinitionProvider();
+
+	public override getDefinitionProvider(): DefinitionProvider {
+		return this._definitionProvider;
+	}
+
 	public override async infer(): Promise<void> {
 		// Inference is not supported for SPARQL documents.
 	}

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { ConceptClassNode } from "./concept-class-node";
 import { ClassNodeBase } from "./class-node-base";

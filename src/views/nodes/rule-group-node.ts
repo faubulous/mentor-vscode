@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { mentor } from "../../mentor";
+import { mentor } from "@/mentor";
 import { RuleClassNode } from "./rule-class-node";
 
 /**

@@ -1,11 +1,12 @@
 import * as n3 from 'n3';
 import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
-import { mentor } from './mentor';
+import { IToken } from 'millan';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
-import { IToken } from 'millan';
-import { TreeLabelStyle } from './settings';
+import { mentor } from '@/mentor';
+import { TreeLabelStyle } from '@/settings';
+import { DefinitionProvider } from '@/languages';
 import {
 	getIriLocalPart,
 	getIriFromIriReference,
@@ -13,7 +14,7 @@ import {
 	getIriFromToken,
 	getNamespaceDefinition,
 	getNamespaceIri
-} from './utilities';
+} from '@/utilities';
 
 /**
  * A literal value with optional language tag.
@@ -70,6 +71,8 @@ export abstract class DocumentContext {
 	readonly graphs: string[] = [];
 
 	private _tokens: IToken[] = [];
+
+	private _baseIri: string | undefined;
 
 	private _namespaces: { [key: string]: string } = {};
 
@@ -189,6 +192,22 @@ export abstract class DocumentContext {
 	}
 
 	/**
+	 * Get the base IRI of the document for resolving local names into IRIs.
+	 * @returns The base IRI of the document or `undefined`.
+	 */
+	get baseIri(): string | undefined {
+		return this._baseIri;
+	}
+
+	/**
+	 * Set the base IRI of the document for resolving local names into IRIs.
+	 * @param value The base IRI of the document.
+	 */
+	protected set baseIri(value: string | undefined) {
+		this._baseIri = value;
+	}
+
+	/**
 	* Maps prefixes to namespace IRIs.
 	*/
 	get namespaces(): { [key: string]: string } {
@@ -254,6 +273,11 @@ export abstract class DocumentContext {
 	 * @param upperCase Indicates whether the prefix keyword should be in uppercase.
 	 */
 	abstract getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string;
+
+	/**
+	 * Get the definition provider for the document language.
+	 */
+	abstract getDefinitionProvider(): DefinitionProvider;
 
 	/**
 	 * Get the first token of a given type.
@@ -505,7 +529,7 @@ export abstract class DocumentContext {
 		}
 
 		return {
-			value: getIriLocalPart(subjectUri),
+			value: decodeURIComponent(getIriLocalPart(subjectUri)),
 			language: undefined
 		};
 	}
@@ -526,6 +550,11 @@ export abstract class DocumentContext {
 			for (let q of mentor.store.match(graphUris, subject, p, null, false)) {
 				if (q.object.termType === 'Literal') {
 					const literal = q.object as n3.Literal;
+
+					// Prefer to return non-empty values.
+					if (literal.value.length == 0) {
+						continue;
+					}
 
 					// Check if the literal language matches the active language
 					if (literal.language === this.activeLanguageTag) {
@@ -552,6 +581,12 @@ export abstract class DocumentContext {
 						language: undefined
 					};
 				}
+			}
+
+			// If we have found a label given the current predicates, we can stop 
+			// searching as the predicates are ordered in priority.
+			if (languageLabel || primaryLabel || fallbackLabel) {
+				break;
 			}
 		}
 
@@ -635,10 +670,14 @@ export abstract class DocumentContext {
 	 * @returns A markdown string containing the label, description and URI of the resource.
 	 */
 	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
+		const iri = this.getResourceIri(subjectUri);
+		const label = this.getResourceLabel(subjectUri);
+		const description = this.getResourceDescription(subjectUri);
+
 		let lines = [
-			`**${this.getResourceLabel(subjectUri).value}**`,
-			this.getResourceDescription(subjectUri)?.value,
-			this.getResourceIri(subjectUri)
+			`**${label.value}**`,
+			description?.value,
+			iri
 		];
 
 		return new vscode.MarkdownString(lines.filter(line => line).join('\n\n'), true);

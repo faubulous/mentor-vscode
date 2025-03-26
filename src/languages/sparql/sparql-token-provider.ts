@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
-import { RenameProvider } from '../providers/rename-provider';
+import { mentor } from '@/mentor';
 import {
-	CodeActionsProvider,
-	CompletionItemProvider,
-	DefinitionProvider,
-	HoverProvider,
-	PrefixCompletionProvider,
-	ReferenceProvider
-} from '../providers';
+	TurtleCodeActionsProvider,
+	TurtleCompletionItemProvider,
+	TurtleDefinitionProvider,
+	TurtleHoverProvider,
+	TurtlePrefixCompletionProvider,
+	TurtleRenameProvider,
+	TurtleReferenceProvider
+} from '@/languages/turtle/providers';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 
@@ -295,13 +295,13 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 	}
 };
 
-const renameProvider = new RenameProvider();
-const referenceProvider = new ReferenceProvider();
-const definitionProvider = new DefinitionProvider();
-const hoverProvider = new HoverProvider();
-const completionProvider = new CompletionItemProvider();
-const codeActionsProvider = new CodeActionsProvider();
-const prefixCompletionProvider = new PrefixCompletionProvider((uri) => ` <${uri}>`);
+const renameProvider = new TurtleRenameProvider();
+const referenceProvider = new TurtleReferenceProvider();
+const definitionProvider = new TurtleDefinitionProvider();
+const hoverProvider = new TurtleHoverProvider();
+const completionProvider = new TurtleCompletionItemProvider();
+const codeActionsProvider = new TurtleCodeActionsProvider();
+const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
 
 export class SparqlTokenProvider {
 	register(): vscode.Disposable[] {

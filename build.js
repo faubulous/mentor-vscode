@@ -1,66 +1,75 @@
 const { build, context } = require("esbuild");
 const fs = require("fs");
+const glob = require("glob");
 
 //@ts-check
 /** @typedef {import('esbuild').BuildOptions} BuildOptions **/
 
-var productionBuild = process.env.NODE_ENV?.trim() === "production";
-
-console.log("Building extension..");
-console.log("Environment:", productionBuild ? "production" : "development");
-
 /** @type BuildOptions */
-const baseConfig = {
-  bundle: true,
-  minify: productionBuild,
-  sourcemap: !productionBuild,
-  external: ["vscode"],
-  define: {
-    // This is not defined in the browser environment, so we need to provide a polyfill.
-    'global': 'globalThis'
-  },
-  plugins: [
-    {
-      name: 'rebuild-notify',
-      setup(build) {
-        build.onStart(() => {
-          console.log("Build started..");
-        });
+const isProductionBuild = (args) => args.includes("--production");
 
-        build.onEnd(result => {
-          console.log(`Build ended.`);
-        })
-      },
-    }],
-};
+const getBaseConfig = (args) => {
+  const productionBuild = isProductionBuild(args);
 
-console.log("Options:", baseConfig);
-
-// Config for extension source code (to be run in a Node-based context)
-/** @type BuildOptions */
-const extensionConfig = {
-  ...baseConfig,
-  format: "cjs",
-  target: "es2020",
-  mainFields: ["module", "main"],
-  entryPoints: ["./src/extension.ts"],
-  outfile: "./out/extension.js",
-  tsconfig: "./tsconfig.json"
-};
-
-const getLanguageConfig = (type, language) => {
-  const file = language ? `${language}-language-${type}` : `language-${type}`;
-  
   return {
-    ...baseConfig,
+    bundle: true,
+    minify: productionBuild,
+    sourcemap: !productionBuild,
+    external: ["vscode"],
+    define: {
+      // This is not defined in the browser environment, so we need to provide a polyfill.
+      'global': 'globalThis'
+    },
+    plugins: [
+      {
+        name: 'rebuild-notify',
+        setup(build) {
+          build.onStart(() => {
+            console.log("Build started..");
+          });
+
+          build.onEnd(result => {
+            console.log(`Build ended.`);
+          })
+        },
+      }],
+  }
+}
+
+const getExtensionConfig = (args) => {
+  return {
+    ...getBaseConfig(args),
     format: "cjs",
     target: "es2020",
-    entryPoints: [`./src/languages/${file}.ts`],
+    mainFields: ["module", "main"],
+    entryPoints: ["./src/extension.ts"],
+    outfile: "./out/extension.js",
+    tsconfig: "./tsconfig.json"
+  }
+}
+
+const getLanguageConfig = (args, type, language) => {
+  const file = language ? `${language}-language-${type}` : `language-${type}`;
+  const entryPoint = language ? `./src/languages/${language}/${file}.ts` : `./src/languages/${file}.ts`;
+
+  return {
+    ...getBaseConfig(args),
+    format: "cjs",
+    target: "es2020",
+    entryPoints: [entryPoint],
     outfile: `./out/${file}.js`
   }
 }
 
 (async () => {
+  const args = process.argv.slice(2);
+  const productionBuild = isProductionBuild(args);
+  const extensionConfig = getExtensionConfig(args);
+
+  console.log("Building extension..");
+  console.log("Environment:", productionBuild ? "production" : "development");
+  console.log("Extension config:", extensionConfig);
+
   try {
     if (fs.existsSync('./out')) {
       console.log("Deleting existing out directory..");
@@ -79,24 +88,23 @@ const getLanguageConfig = (type, language) => {
     }
 
     // Copy the language config files to the out directory.
-    for (const file of fs.readdirSync('./src/languages/')) {
-      if (file.endsWith('.json')) {
-        fs.copyFileSync(`./src/languages/${file}`, `./out/${file}`);
-      }
-    }
+    for (const file of glob.sync('./src/languages/**/*.json')) {
+      const fileName = file.split('/').pop();
+      const targetPath = `./out/${fileName}`;
 
-    const args = process.argv.slice(2);
+      fs.copyFileSync(file, targetPath);
+    }
 
     const configs = [
       extensionConfig,
-      getLanguageConfig('server'),
-      getLanguageConfig('server', 'turtle'),
-      getLanguageConfig('server', 'trig'),
-      getLanguageConfig('server', 'sparql'),
-      getLanguageConfig('client'),
-      getLanguageConfig('client', 'turtle'),
-      getLanguageConfig('client', 'trig'),
-      getLanguageConfig('client', 'sparql'),
+      getLanguageConfig(args, 'server'),
+      getLanguageConfig(args, 'server', 'turtle'),
+      getLanguageConfig(args, 'server', 'trig'),
+      getLanguageConfig(args, 'server', 'sparql'),
+      getLanguageConfig(args, 'client'),
+      getLanguageConfig(args, 'client', 'turtle'),
+      getLanguageConfig(args, 'client', 'trig'),
+      getLanguageConfig(args, 'client', 'sparql'),
     ]
 
     if (args.includes("--watch")) {
@@ -111,8 +119,6 @@ const getLanguageConfig = (type, language) => {
       }
     }
   } catch (err) {
-    console.log("Extension config:", extensionConfig);
-
     process.stderr.write(err.stderr);
     process.exit(1);
   }

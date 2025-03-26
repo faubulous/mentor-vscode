@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
-import { DocumentContext } from '../document-context';
-import { FeatureProvider } from './feature-provider';
-import { getIriFromToken } from '../utilities';
+import { mentor } from '@/mentor';
+import { DocumentContext } from '@/document-context';
+import { getIriFromToken } from '@/utilities';
+import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * Provides resource definitions for Turtle documents.
  */
-export class DefinitionProvider extends FeatureProvider {
+export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
 		const context = this.getDocumentContext(document);
 
@@ -34,10 +34,10 @@ export class DefinitionProvider extends FeatureProvider {
 		}
 
 		// TODO: Search for definitions in this context and then the other documents. Currently it only provides definitions from the primary document.
-		return this.provideDefintionForUri(context, u);
+		return this.provideDefinitionForIri(context, u);
 	}
 
-	provideDefintionForUri(primaryContext: DocumentContext, uri: string, primaryContextOnly: boolean = false): vscode.Definition | null {
+	provideDefinitionForIri(primaryContext: DocumentContext, uri: string, primaryContextOnly: boolean = false): vscode.Definition | null {
 		let token;
 		let tokenContext = primaryContext;
 

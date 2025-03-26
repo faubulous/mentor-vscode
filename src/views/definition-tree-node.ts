@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from "../languages";
-import { DefinitionQueryOptions } from "@faubulous/mentor-rdf";
-import { mentor } from '../mentor';
+import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
+import { mentor } from '@/mentor';
+import { DocumentContext } from '@/document-context';
 
 /**
  * Base class for a node in the definition tree.

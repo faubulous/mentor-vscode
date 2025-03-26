@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
-import { RdfSyntax, TrigSyntaxParser } from '@faubulous/mentor-rdf';
-import { TurtleSyntaxParser } from '@faubulous/mentor-rdf';
-import { DocumentContext, TokenTypes } from '../document-context';
+import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
+import { mentor } from '@/mentor';
+import { DocumentContext, TokenTypes } from '@/document-context';
+import { DefinitionProvider } from '@/languages/definition-provider';
+import { TurtleDefinitionProvider } from '@/languages/turtle/providers';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -12,6 +13,8 @@ export class TurtleDocument extends DocumentContext {
 
 	private _inferenceExecuted = false;
 
+	private readonly _definitionProvider: DefinitionProvider = new TurtleDefinitionProvider();
+
 	constructor(uri: vscode.Uri, syntax: RdfSyntax) {
 		super(uri);
 
@@ -20,6 +23,10 @@ export class TurtleDocument extends DocumentContext {
 
 	get isLoaded(): boolean {
 		return super.isLoaded && this.graphs.length > 0;
+	}
+
+	public override getDefinitionProvider(): DefinitionProvider {
+		return this._definitionProvider;
 	}
 
 	public override async infer(): Promise<void> {
@@ -48,14 +55,14 @@ export class TurtleDocument extends DocumentContext {
 		try {
 			const u = uri.toString();
 
-			// Initilaize the graphs *before* trying to load the document so 
+			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
 			this.graphs.push(u);
 
 			// The loadFromStream function only updates the existing graphs 
 			// when the document was parsed successfully.
-			await mentor.store.loadFromStream(data, u, false);
+			await mentor.store.loadFromTurtleStream(data, u, false);
 
 			// Make definitions using blank nodes resolvable.
 			this.mapBlankNodes();

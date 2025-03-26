@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { FeatureProvider } from './feature-provider';
-import { getIriFromToken } from '../utilities';
+import { getIriFromToken } from '@/utilities';
+import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
  * Provides hover information for tokens.
  */
-export class HoverProvider extends FeatureProvider implements vscode.HoverProvider {
+export class TurtleHoverProvider extends TurtleFeatureProvider implements vscode.HoverProvider {
 	provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
 		const context = this.getDocumentContext(document);
 
@@ -37,13 +37,13 @@ export class HoverProvider extends FeatureProvider implements vscode.HoverProvid
 			}
 			// Display a the description for the concept for URIs, if it exists.
 			default: {
-				const uri = getIriFromToken(context.namespaces, token);
+				const iri = getIriFromToken(context.namespaces, token);
 
-				if (!uri) {
+				if (!iri) {
 					return null;
 				}
 
-				return new vscode.Hover(context.getResourceTooltip(uri));
+				return new vscode.Hover(context.getResourceTooltip(iri));
 			}
 		}
 	}

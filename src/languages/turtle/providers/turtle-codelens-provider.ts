@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
-import { ReferenceProvider } from './reference-provider';
-import { DocumentContext } from '../document-context';
-import { getPreviousToken, getIriFromToken } from '../utilities';
 import { IToken } from 'millan';
+import { mentor } from '@/mentor';
+import { DocumentContext } from '@/document-context';
+import { getPreviousToken, getIriFromToken } from '@/utilities';
+import { TurtleReferenceProvider } from './turtle-reference-provider';
 
 /**
  * Provides hover information for tokens.
  */
-export class CodeLensProvider extends ReferenceProvider implements vscode.CodeLensProvider {
+export class TurtleCodeLensProvider extends TurtleReferenceProvider implements vscode.CodeLensProvider {
 	/**
 	 * Indicates whether the workspace has been initialized.
 	 */
