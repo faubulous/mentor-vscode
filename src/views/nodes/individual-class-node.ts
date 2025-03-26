@@ -1,5 +1,5 @@
 import { mentor } from "@/mentor";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode, sortByLabel } from "../definition-tree-node";
 import { IndividualNode } from "./individual-node";
 import { ClassNodeBase } from "./class-node-base";
 
@@ -15,7 +15,7 @@ export class IndividualClassNode extends ClassNodeBase {
 			result.push(this.createChildNode(IndividualNode, i));
 		}
 
-		return result;
+		return sortByLabel(result);
 	}
 
 	override getClassNode(iri: string): DefinitionTreeNode {
