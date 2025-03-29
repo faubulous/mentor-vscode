@@ -4,13 +4,14 @@ import { IToken } from "millan";
 import { DocumentContext } from "@/document-context";
 import { getIriFromToken, getPrefixFromToken } from '@/utilities';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { TurtleDocument } from '../turtle-document';
 
 /**
  * Provides references to resources.
  */
 export class TurtleReferenceProvider extends TurtleFeatureProvider implements vscode.ReferenceProvider {
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;

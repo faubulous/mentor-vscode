@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { IToken } from 'millan';
 import { mentor } from '@/mentor';
-import { DocumentContext } from '@/document-context';
 import { getPreviousToken, getIriFromToken } from '@/utilities';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleReferenceProvider } from './turtle-reference-provider';
 
 /**
@@ -77,7 +77,7 @@ export class TurtleCodeLensProvider extends TurtleReferenceProvider implements v
 				return [];
 			}
 
-			const context = this.getDocumentContext(document);
+			const context = mentor.getDocumentContext(document, TurtleDocument);
 
 			if (!context) {
 				return [];
@@ -110,7 +110,7 @@ export class TurtleCodeLensProvider extends TurtleReferenceProvider implements v
 		throw new Error('Method not implemented.');
 	}
 
-	private getSubjects(context: DocumentContext): IToken[] {
+	private getSubjects(context: TurtleDocument): IToken[] {
 		const result = [];
 
 		for (let token of context.tokens) {

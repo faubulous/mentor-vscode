@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
+import { mentor } from '@/mentor';
 import { getIriFromToken } from '@/utilities';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { TurtleDocument } from '../turtle-document';
 
 /**
  * Provides hover information for tokens.
  */
 export class TurtleHoverProvider extends TurtleFeatureProvider implements vscode.HoverProvider {
 	provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;

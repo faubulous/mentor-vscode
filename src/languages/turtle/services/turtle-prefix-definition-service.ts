@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { IToken } from 'millan';
 import { mentor } from '@/mentor';
-import { DocumentContext } from '@/document-context';
 import { getIriFromIriReference, getNamespaceIri, isUpperCase } from '@/utilities';
+import { TurtleDocument } from '@/languages';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
@@ -23,13 +23,13 @@ export interface PrefixDefinition {
 /**
  * A service for declaring prefixes in RDF documents.
  */
-export class PrefixDefinitionService extends TurtleFeatureProvider {
+export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	/**
 	 * Sort the prefixes in a document.
 	 * @param document The RDF document.
 	 */
 	public async sortPrefixes(document: vscode.TextDocument): Promise<vscode.WorkspaceEdit> {
-		const context = mentor.contexts[document.uri.toString()];
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) return new vscode.WorkspaceEdit();
 
@@ -54,7 +54,7 @@ export class PrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param prefixes The prefixes to delete.
 	 */
 	public async deletePrefixes(document: vscode.TextDocument, prefixes: string[]): Promise<vscode.WorkspaceEdit> {
-		const context = mentor.contexts[document.uri.toString()];
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) return new vscode.WorkspaceEdit();
 
@@ -115,7 +115,7 @@ export class PrefixDefinitionService extends TurtleFeatureProvider {
 	public async implementPrefixes(document: vscode.TextDocument, prefixes: PrefixDefinition[]): Promise<vscode.WorkspaceEdit> {
 		const edit = new vscode.WorkspaceEdit();
 
-		const context = mentor.contexts[document.uri.toString()];
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (context) {
 			await this._implementPrefixes(edit, document, context, prefixes);
@@ -131,7 +131,7 @@ export class PrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param context The RDF document context.
 	 * @param prefixes The prefixes to be implemented.
 	 */
-	private async _implementPrefixes(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: PrefixDefinition[]) {
+	private async _implementPrefixes(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, prefixes: PrefixDefinition[]) {
 		const mode = await mentor.configuration.get('prefixes.prefixDefinitionMode');
 
 		if (mode === 'Sorted') {
@@ -170,7 +170,7 @@ export class PrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param prefixes The prefixes to be implemented.
 	 * @param tokenType The token type of the prefix token.
 	 */
-	private async _implementPrefixesAppended(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: PrefixDefinition[]) {
+	private async _implementPrefixesAppended(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, prefixes: PrefixDefinition[]) {
 		// Get the prefix token type name from the language specific context.
 		const tokenTypes = context.getTokenTypes();
 
@@ -212,7 +212,7 @@ export class PrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param prefixes The prefixes to be implemented.
 	 * @param tokenType The token type of the prefix token.
 	 */
-	private async _implementPrefixesSorted(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: DocumentContext, prefixes: PrefixDefinition[]) {
+	private async _implementPrefixesSorted(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, prefixes: PrefixDefinition[]) {
 		// Get the prefix token type name from the language specific context.
 		const tokenTypes = context.getTokenTypes();
 
@@ -272,9 +272,9 @@ export class PrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param iri The namespace IRI for which to implement a prefix.
 	 */
 	async implementPrefixForIri(document: vscode.TextDocument, iri: string): Promise<vscode.WorkspaceEdit> {
-		const context = mentor.contexts[document.uri.toString()];
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
-		if (!context) new vscode.WorkspaceEdit();
+		if (!context) return new vscode.WorkspaceEdit();
 
 		const tokenTypes = context.getTokenTypes();
 

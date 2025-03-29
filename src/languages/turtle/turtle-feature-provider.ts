@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { IToken } from "millan";
 import { mentor } from "@/mentor";
+import { TurtleDocument } from "./turtle-document";
 import {
 	countLeadingWhitespace,
 	countTrailingWhitespace,
@@ -9,21 +10,6 @@ import {
 } from "@/utilities";
 
 export class TurtleFeatureProvider {
-	/**
-	 * Get the document context from a text document.
-	 * @param document A text document.
-	 * @returns A document context if the document is loaded, null otherwise.
-	 */
-	protected getDocumentContext(document: vscode.TextDocument) {
-		const uri = document.uri.toString();
-
-		if (!mentor.contexts[uri]) {
-			return null;
-		}
-
-		return mentor.contexts[uri];
-	}
-
 	/**
 	 * Get the location of a token in a document.
 	 * @param documentUri The URI of the document.

@@ -3,13 +3,14 @@ import { mentor } from '@/mentor';
 import { DocumentContext } from '@/document-context';
 import { getIriFromToken } from '@/utilities';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { TurtleDocument } from '../turtle-document';
 
 /**
  * Provides resource definitions for Turtle documents.
  */
 export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
@@ -58,7 +59,7 @@ export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 		if (!token) {
 			if (primaryContext.typeDefinitions[uri]) {
 				token = primaryContext.typeDefinitions[uri][0];
-			} else if(primaryContext.typeAssertions[uri]) {
+			} else if (primaryContext.typeAssertions[uri]) {
 				token = primaryContext.typeAssertions[uri][0];
 			} else if (primaryContext.namespaceDefinitions[uri]) {
 				token = primaryContext.namespaceDefinitions[uri];

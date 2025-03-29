@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import { mentor } from "@/mentor";
+import { TurtleDocument } from "@/languages/turtle/turtle-document";
 import { TurtleFeatureProvider } from "@/languages/turtle/turtle-feature-provider";
 
 enum SemanticTokenType {
@@ -22,9 +24,9 @@ export const SemanticTokensLegend = new vscode.SemanticTokensLegend(Object.value
 
 export class TurtleSemanticTokensProvider extends TurtleFeatureProvider implements vscode.DocumentSemanticTokensProvider {
 	public provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.SemanticTokens {
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
-		if (!context) {
+		if (!context || !(context instanceof TurtleDocument)) {
 			return new vscode.SemanticTokens(new Uint32Array(0));
 		}
 

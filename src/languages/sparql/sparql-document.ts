@@ -1,17 +1,14 @@
 import * as vscode from 'vscode';
-import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
-import { DocumentContext, TokenTypes } from '@/document-context';
-import { DefinitionProvider } from '@/languages/definition-provider';
-import { TurtleDefinitionProvider } from '@/languages/turtle/providers';
+import { RdfSyntax, SparqlSyntaxParser } from '@faubulous/mentor-rdf';
+import { TokenTypes } from '@/document-context';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 
 /**
  * A document context for SPARQL documents.
  */
-export class SparqlDocument extends DocumentContext {
-	private readonly _definitionProvider: DefinitionProvider = new TurtleDefinitionProvider();
-
-	public override getDefinitionProvider(): DefinitionProvider {
-		return this._definitionProvider;
+export class SparqlDocument extends TurtleDocument {
+	constructor(uri: vscode.Uri) {
+		super(uri, RdfSyntax.Sparql);
 	}
 
 	public override async infer(): Promise<void> {

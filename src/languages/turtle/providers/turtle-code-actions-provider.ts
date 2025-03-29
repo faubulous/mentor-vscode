@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
+import { mentor } from '@/mentor';
 import { getNamespaceIri, getIriFromIriReference } from '@/utilities';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { TurtleDocument } from '../turtle-document';
 
 /**
  * A provider for RDF document code actions.
@@ -28,7 +30,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 	private _provideRefactoringActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
 		const result: vscode.CodeAction[] = [];
 
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (context) {
 			const token = context.getTokensAtPosition(range.start)[0];
