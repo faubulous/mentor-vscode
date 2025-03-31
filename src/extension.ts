@@ -285,7 +285,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 					// Calculate the line offset caused by the edit.
 					const lineOffset = calculateLineOffset(edit);
-					const start = new vscode.Position(position.startLine + lineOffset, position.startColumn);
+					const start = new vscode.Position(position.start.line + lineOffset, position.start.character);
 
 					// Set the cursor the the start of the original IRI token which is now the prefix.
 					editor.selection = new vscode.Selection(start, start);

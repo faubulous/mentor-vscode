@@ -1,7 +1,5 @@
 import * as vscode from "vscode";
 import { IToken } from "millan";
-import { mentor } from "@/mentor";
-import { TurtleDocument } from "./turtle-document";
 import {
 	countLeadingWhitespace,
 	countTrailingWhitespace,
@@ -41,13 +39,13 @@ export class TurtleFeatureProvider {
 	 */
 	protected isCursorOnPrefix(token: IToken, position: vscode.Position) {
 		const tokenType = token.tokenType?.tokenName;
-		const p = getTokenPosition(token);
+		const { start } = getTokenPosition(token);
 
 		switch (tokenType) {
 			case "PNAME_NS":
 			case "PNAME_LN": {
 				const i = token.image.indexOf(":");
-				const n = position.character - p.startColumn;
+				const n = position.character - start.character;
 
 				return n <= i;
 			}
@@ -64,7 +62,7 @@ export class TurtleFeatureProvider {
 	 */
 	protected getPrefixEditRange(token: IToken) {
 		const tokenType = token.tokenType?.tokenName;
-		const p = getTokenPosition(token);
+		const { start } = getTokenPosition(token);
 
 		switch (tokenType) {
 			case "PNAME_NS":
@@ -72,8 +70,8 @@ export class TurtleFeatureProvider {
 				const i = token.image.indexOf(":");
 
 				return new vscode.Range(
-					new vscode.Position(p.startLine, p.startColumn),
-					new vscode.Position(p.startLine, p.startColumn + i)
+					new vscode.Position(start.line, start.character),
+					new vscode.Position(start.line, start.character + i)
 				);
 			}
 			default: {
@@ -89,15 +87,15 @@ export class TurtleFeatureProvider {
 	 */
 	protected getLabelEditRange(token: IToken) {
 		const tokenType = token.tokenType?.tokenName;
-		const p = getTokenPosition(token);
+		const { start, end } = getTokenPosition(token);
 
 		switch (tokenType) {
 			case "PNAME_LN": {
 				const i = token.image.indexOf(":");
 
 				return new vscode.Range(
-					new vscode.Position(p.startLine, p.startColumn + i + 1),
-					new vscode.Position(p.endLine, p.endColumn)
+					new vscode.Position(start.line, start.character + i + 1),
+					new vscode.Position(end.line, end.character)
 				);
 			}
 			case "IRIREF": {
@@ -110,14 +108,14 @@ export class TurtleFeatureProvider {
 				const i = token.image.indexOf(label);
 
 				return new vscode.Range(
-					new vscode.Position(p.startLine, p.startColumn + i),
-					new vscode.Position(p.endLine, p.startColumn + i + label.length)
+					new vscode.Position(start.line, start.character + i),
+					new vscode.Position(end.line, start.character + i + label.length)
 				);
 			}
 			case "VAR1": {
 				return new vscode.Range(
-					new vscode.Position(p.startLine, p.startColumn + 1),
-					new vscode.Position(p.endLine, p.endColumn)
+					new vscode.Position(start.line, start.character + 1),
+					new vscode.Position(end.line, end.character)
 				);
 			}
 			default: {
