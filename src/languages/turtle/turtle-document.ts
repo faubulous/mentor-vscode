@@ -1,19 +1,22 @@
 import * as vscode from 'vscode';
 import { IToken } from 'millan';
+import { Position } from 'vscode-languageserver-types';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
 import { DefinitionProvider } from '@/languages/definition-provider';
 import { TurtleDefinitionProvider } from '@/languages/turtle/providers';
+import { TurtlePrefixDefinitionService } from '@/services';
 import {
 	getIriFromToken,
 	getIriFromIriReference,
 	getIriFromPrefixedName,
 	getNamespaceDefinition,
-	getNamespaceIri
+	getNamespaceIri,
+	countLeadingWhitespace,
+	countTrailingWhitespace
 } from '@/utilities';
-import { TurtlePrefixDefinitionService } from '@/services';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -133,6 +136,29 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	/**
+	 * Get the location of a token in a document.
+	 * @param documentUri The URI of the document.
+	 * @param token A token.
+	 */
+	getRangeFromToken(token: IToken): vscode.Range {
+		// The token positions are 1-based, whereas the editor positions / locations are 0-based.
+		const startLine = token.startLine ? token.startLine - 1 : 0;
+		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
+		const startWhitespace = countLeadingWhitespace(token.image);
+
+		const endLine = token.endLine ? token.endLine - 1 : 0;
+		const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
+		const endWhitespace = countTrailingWhitespace(token.image);
+
+		// Note: The millan parser incorrectly parses some tokens with leading and trailing whitespace.
+		// We account for this by adjusting the start and end positions.
+		const start = new vscode.Position(startLine, startCharacter + startWhitespace);
+		const end = new vscode.Position(endLine, endCharacter - endWhitespace).translate(0, 1);
+
+		return new vscode.Range(start, end);
+	}
+
+	/**
 	 * Get the first token of a given type.
 	 * @param tokens A list of tokens.
 	 * @param type The type name of the token.
@@ -166,7 +192,7 @@ export class TurtleDocument extends DocumentContext {
 	 * @param position A position in the document.
 	 * @returns An non-empty array of tokens on success, an empty array otherwise.
 	 */
-	getTokensAtPosition(position: vscode.Position): IToken[] {
+	getTokensAtPosition(position: Position): IToken[] {
 		// The tokens are 0-based, but the position is 1-based.
 		const l = position.line + 1;
 		const n = position.character + 1;
@@ -205,8 +231,10 @@ export class TurtleDocument extends DocumentContext {
 
 					// Only set the namespace if it is preceeded by a prefix keyword.
 					if (ns) {
+						const r = this.getRangeFromToken(t);
+
 						this.namespaces[ns.prefix] = ns.uri;
-						this.namespaceDefinitions[ns.uri] = t;
+						this.namespaceDefinitions[ns.uri] = r;
 					}
 					break;
 				}
@@ -242,7 +270,9 @@ export class TurtleDocument extends DocumentContext {
 			this.references[uri] = [];
 		}
 
-		this.references[uri].push(token);
+		const range = this.getRangeFromToken(token);
+
+		this.references[uri].push(range);
 	}
 
 	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
@@ -256,7 +286,9 @@ export class TurtleDocument extends DocumentContext {
 
 		if (!subjectUri) return;
 
-		this.typeAssertions[subjectUri] = [subjectToken];
+		const range = this.getRangeFromToken(subjectToken);
+
+		this.typeAssertions[subjectUri] = [range];
 	}
 
 	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
@@ -287,17 +319,23 @@ export class TurtleDocument extends DocumentContext {
 			case _OWL:
 			case _SKOS:
 			case _SKOS_XL:
-			case _SH:
-				this.typeDefinitions[subjectUri] = [subjectToken];
+			case _SH: {
+				const range = this.getRangeFromToken(subjectToken);
+
+				this.typeDefinitions[subjectUri] = [range];
+			}
 		}
 	}
 
-	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
+	override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
 		// Note: All prefixes keywords are always in lowercase in Turtle.
 		return `@prefix ${prefix}: <${uri}> .`;
 	}
 
-	override mapBlankNodes() {
+	/**
+	 * Maps blank node ids of the parsed documents to the ones in the triple store.
+	 */
+	mapBlankNodes() {
 		const blankNodes = new Set<string>();
 
 		for (let q of mentor.store.match(this.graphs, null, null, null, false)) {
@@ -325,20 +363,22 @@ export class TurtleDocument extends DocumentContext {
 
 					tokenStack.push(t);
 
-					let s = blankIds[n++];
+					const s = blankIds[n++];
+					const r = this.getRangeFromToken(t);
 
-					this.blankNodes[s] = t;
-					this.typeDefinitions[s] = [t];
+					this.blankNodes[s] = r;
+					this.typeDefinitions[s] = [r];
 
 					continue;
 				}
 				case '(': {
 					tokenStack.push(t);
 
-					let s = blankIds[n];
+					const s = blankIds[n];
+					const r = this.getRangeFromToken(t);
 
-					this.blankNodes[s] = t;
-					this.typeDefinitions[s] = [t];
+					this.blankNodes[s] = r;
+					this.typeDefinitions[s] = [r];
 
 					continue;
 				}
@@ -353,10 +393,11 @@ export class TurtleDocument extends DocumentContext {
 			}
 
 			if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
-				let s = blankIds[n++];
+				const s = blankIds[n++];
+				const r = this.getRangeFromToken(t);
 
-				this.blankNodes[s] = t;
-				this.typeDefinitions[s] = [t];
+				this.blankNodes[s] = r;
+				this.typeDefinitions[s] = [r];
 			}
 		}
 

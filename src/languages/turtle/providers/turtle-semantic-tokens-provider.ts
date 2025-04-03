@@ -40,7 +40,7 @@ export class TurtleSemanticTokensProvider extends TurtleFeatureProvider implemen
 				const startColumn = t.startColumn ? t.startColumn - 1 : 0;
 				const endColumn = t.endColumn ? t.endColumn : 0;
 
-				const tokenRange = this.getRangeFromToken(t);
+				const tokenRange = context.getRangeFromToken(t);
 				const tokenName = t.tokenType?.tokenName;
 
 				if (!tokenName) {

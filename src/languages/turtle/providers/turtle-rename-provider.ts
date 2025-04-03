@@ -81,12 +81,22 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 		} else {
 			const u = getIriFromToken(context.namespaces, token);
 
-			if (u && context.references[u]) {
-				for (const r of context.references[u].map(t => this.getLabelEditRange(t))) {
-					if (!r) continue;
+			if (!u) return edits;
 
-					edits.replace(document.uri, r, newName);
-				}
+			const references = context.references[u];
+
+			if (!references) return edits;
+
+			for(let range of references) {
+				const token = context.getTokensAtPosition(range.start)[0];
+
+				if(!token) continue;
+
+				const editRange = this.getLabelEditRange(token);
+
+				if (!editRange) continue;
+
+				edits.replace(document.uri, editRange, newName);
 			}
 		}
 

@@ -1,13 +1,13 @@
 import * as n3 from 'n3';
 import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
-import { IToken } from 'millan';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { TreeLabelStyle } from '@/settings';
 import { DefinitionProvider } from '@/languages';
 import { getIriLocalPart, getNamespaceIri } from '@/utilities';
+import { Range } from 'vscode-languageserver-types';
 
 /**
  * A literal value with optional language tag.
@@ -76,27 +76,27 @@ export abstract class DocumentContext {
 	/**
 	 * Maps resource IRIs to indexed tokens.
 	 */
-	namespaceDefinitions: { [key: string]: IToken } = {};
+	namespaceDefinitions: { [key: string]: Range } = {};
 
 	/**
 	 * Maps resource IRIs to indexed tokens.
 	 */
-	references: { [key: string]: IToken[] } = {};
+	references: { [key: string]: Range[] } = {};
 
 	/**
 	 * Maps resource IRIs to tokens of subjects that have an asserted rdf:type, including named individuals.
 	 */
-	typeAssertions: { [key: string]: IToken[] } = {};
+	typeAssertions: { [key: string]: Range[] } = {};
 
 	/**
 	 * Maps resource IRIs to tokens of subjects that are class or property definitions.
 	 */
-	typeDefinitions: { [key: string]: IToken[] } = {};
+	typeDefinitions: { [key: string]: Range[] } = {};
 
 	/**
 	 * Maps blank node ids to indexed tokens.
 	 */
-	blankNodes: { [key: string]: IToken } = {};
+	blankNodes: { [key: string]: Range } = {};
 
 	/**
 	 * Information about the language tags used in the document.
@@ -242,19 +242,6 @@ export abstract class DocumentContext {
 			}
 		}
 	}
-
-	/**
-	 * Maps blank node ids of the parsed documents to the ones in the triple store.
-	 * @deprecated This method is deprecated and will be removed in a future release.
-	 */
-	mapBlankNodes() { }
-
-	/**
-	 * Sets the tokens of the document.
-	 * @deprecated This method is deprecated and will be removed in a future release.
-	 * @param tokens The tokens of the document
-	 */
-	abstract setTokens(tokens: IToken[]): void;
 
 	/**
 	 * Updates a namespace prefix definition in the document.

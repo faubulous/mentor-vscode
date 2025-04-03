@@ -93,7 +93,7 @@ export class TurtleCodeLensProvider extends TurtleReferenceProvider implements v
 
 				// The references include the subject itself, so we subtract 1.
 				let n = Math.max(this.provideReferencesForIri(uri).length - 1, 0);
-				let range = this.getRangeFromToken(subject);
+				let range = context.getRangeFromToken(subject);
 
 				result.push(new vscode.CodeLens(range, {
 					command: 'mentor.action.findReferences',

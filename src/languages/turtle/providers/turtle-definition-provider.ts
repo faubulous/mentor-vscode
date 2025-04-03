@@ -39,8 +39,8 @@ export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 	}
 
 	provideDefinitionForIri(primaryContext: DocumentContext, uri: string, primaryContextOnly: boolean = false): vscode.Definition | null {
-		let token;
-		let tokenContext = primaryContext;
+		let range;
+		let context = primaryContext;
 
 		if (!primaryContextOnly) {
 			// Find all contexts that define the URI.
@@ -48,28 +48,28 @@ export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 
 			for (let c of contexts.filter(c => c.typeDefinitions[uri])) {
 				// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
-				token = c.typeDefinitions[uri][0];
-				tokenContext = c;
+				range = c.typeDefinitions[uri][0];
+				context = c;
 
 				break;
 			}
 		}
 
 		// If no class or property definition was found, look for namespace definitions or references in the primary document.
-		if (!token) {
+		if (!range) {
 			if (primaryContext.typeDefinitions[uri]) {
-				token = primaryContext.typeDefinitions[uri][0];
+				range = primaryContext.typeDefinitions[uri][0];
 			} else if (primaryContext.typeAssertions[uri]) {
-				token = primaryContext.typeAssertions[uri][0];
+				range = primaryContext.typeAssertions[uri][0];
 			} else if (primaryContext.namespaceDefinitions[uri]) {
-				token = primaryContext.namespaceDefinitions[uri];
+				range = primaryContext.namespaceDefinitions[uri];
 			} else if (primaryContext.references[uri]) {
-				token = primaryContext.references[uri][0];
+				range = primaryContext.references[uri][0];
 			}
 		}
 
-		if (token) {
-			return new vscode.Location(tokenContext.uri, this.getRangeFromToken(token));
+		if (range) {
+			return new vscode.Location(context.uri, new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character));
 		}
 
 		return null;

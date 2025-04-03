@@ -51,10 +51,10 @@ export class TurtleReferenceProvider extends TurtleFeatureProvider implements vs
 				continue;
 			}
 
-			for (const t of context.references[iri]) {
-				const range = this.getRangeFromToken(t);
+			for (const range of context.references[iri]) {
+				const r = new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
 
-				result.push(new vscode.Location(context.uri, range));
+				result.push(new vscode.Location(context.uri, r));
 			}
 		}
 

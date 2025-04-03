@@ -266,6 +266,7 @@ export abstract class LanguageServerBase {
 			// This sends the tokens to the client so that they can be used to build a reference index.
 			this.connection.sendNotification('mentor/updateContext', {
 				uri: document.uri,
+				languageId: this.languageId,
 				// Important: We need to clone the tokens so that they can be processed by strucutredClone() of the underlying message channel.
 				tokens: tokens.map(t => ({
 					image: t.image,

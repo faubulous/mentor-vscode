@@ -327,7 +327,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 			}
 
 			const localName = getIriFromIriReference(token.image).substring(namespaceIri.length);
-			const range = this.getRangeFromToken(token);
+			const range = context.getRangeFromToken(token);
 
 			// Delete the entire IRI token.
 			edit.replace(document.uri, range, `${prefix}:${localName}`);
