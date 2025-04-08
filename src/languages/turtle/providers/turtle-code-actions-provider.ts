@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { getNamespaceIri, getIriFromIriReference } from '@/utilities';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
-import { TurtleDocument } from '../turtle-document';
 
 /**
  * A provider for RDF document code actions.

@@ -59,14 +59,16 @@ export class XmlDefinitionProvider extends XmlFeatureProvider implements Definit
 			const line = document.lineAt(n).text;
 
 			let i = line.indexOf(aboutIri);
+			let length = aboutIri.length;
 
 			if (i === -1 && aboutLocalName) {
 				i = line.indexOf(aboutLocalName);
+				length = aboutLocalName.length;
 			}
 
 			if (i !== -1) {
-				const start = new vscode.Position(n, i);
-				const end = new vscode.Position(n, i + aboutIri.length);
+				const start = new vscode.Position(n, i + 'rdf:about="'.length);
+				const end = new vscode.Position(n, i + length - '\"'.length);
 
 				return new vscode.Range(start, end);
 			}

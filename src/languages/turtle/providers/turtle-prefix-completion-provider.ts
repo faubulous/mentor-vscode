@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { getPreviousToken } from '@/utilities';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
-import { TurtleDocument } from '../turtle-document';
 
 export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implements vscode.InlineCompletionItemProvider {
 	protected readonly prefixTokenTypes = new Set(["PREFIX", "TTL_PREFIX"]);

@@ -248,7 +248,7 @@ export abstract class DocumentContext {
 	 * @param oldPrefix The prefix to be replaced.
 	 * @param newPrefix The prefix to replace the old prefix.
 	 */
-	public updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
+	updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
 		const uri = this.namespaces[oldPrefix];
 
 		if (!uri) return;
@@ -263,7 +263,7 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A label for the resource as a string literal.
 	 */
-	public getResourceLabel(subjectUri: string): Label {
+	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 
@@ -388,7 +388,7 @@ export abstract class DocumentContext {
 	 * @param node The object of a SHACL path triple.
 	 * @returns A rendered version of the SHACL path as a string.
 	 */
-	public getPropertyPathLabel(node: n3.Quad_Subject): string {
+	getPropertyPathLabel(node: n3.Quad_Subject): string {
 		let result = [];
 
 		for (let c of mentor.vocabulary.getPropertyPathTokens(this.graphs, node)) {
@@ -411,7 +411,7 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A description for the resource as a string literal.
 	 */
-	public getResourceDescription(subjectUri: string): Label | undefined {
+	getResourceDescription(subjectUri: string): Label | undefined {
 		// TODO: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
@@ -431,7 +431,7 @@ export abstract class DocumentContext {
 	 * @param subjectIri IRI of the resource.
 	 * @returns A IRI for the resource as a string literal.
 	 */
-	public getResourceIri(subjectIri: string): string {
+	getResourceIri(subjectIri: string): string {
 		// TODO: Add support for virtual file systems provided by vscode such as vscode-vfs.
 		if (subjectIri.startsWith('file')) {
 			const u = vscode.Uri.parse(subjectIri);
@@ -456,7 +456,7 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A markdown string containing the label, description and URI of the resource.
 	 */
-	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
+	getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		const iri = this.getResourceIri(subjectUri);
 		const label = this.getResourceLabel(subjectUri);
 		const description = this.getResourceDescription(subjectUri);

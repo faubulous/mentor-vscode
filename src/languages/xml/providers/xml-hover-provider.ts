@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { XmlFeatureProvider } from '../xml-feature-provider';
+import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
 
 /**
  * Provides hover information for tokens.

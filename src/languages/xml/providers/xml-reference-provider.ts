@@ -1,39 +1,19 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { IToken } from "millan";
-import { DocumentContext } from "@/document-context";
-import { getIriFromToken, getPrefixFromToken } from '@/utilities';
-import { TurtleDocument } from '@/languages/turtle/turtle-document';
-import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
 
 /**
  * Provides references to resources.
  */
-export class TurtleReferenceProvider extends TurtleFeatureProvider implements vscode.ReferenceProvider {
+export class XmlReferenceProvider extends XmlFeatureProvider implements vscode.ReferenceProvider {
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
-		const context = mentor.getDocumentContext(document, TurtleDocument);
+		const context = this.getDocumentContext(document);
 
 		if (!context) {
 			return null;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
-
-		if (!token) {
-			return null;
-		}
-
-		return this.provideReferencesForToken(context, position, token);
-	}
-
-	provideReferencesForToken(context: DocumentContext, position: vscode.Position, token: IToken) {
-		let iri;
-
-		if (this.isCursorOnPrefix(token, position)) {
-			iri = context.namespaces[getPrefixFromToken(token)];
-		} else {
-			iri = getIriFromToken(context.namespaces, token);
-		}
+		const iri = this.getIriAtPosition(context, position);
 
 		if (!iri) {
 			return null;

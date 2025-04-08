@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { DocumentContext } from '@/document-context';
 import { getIriFromToken } from '@/utilities';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
-import { TurtleDocument } from '../turtle-document';
 
 /**
  * Provides resource definitions for Turtle documents.
@@ -32,10 +32,11 @@ export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 
 		if (!u) {
 			return null;
+		} else {
+			// TODO: Search for definitions in this context and then the other documents. 
+			// Currently it only provides definitions from the primary document.
+			return this.provideDefinitionForIri(context, u);
 		}
-
-		// TODO: Search for definitions in this context and then the other documents. Currently it only provides definitions from the primary document.
-		return this.provideDefinitionForIri(context, u);
 	}
 
 	provideDefinitionForIri(primaryContext: DocumentContext, uri: string, primaryContextOnly: boolean = false): vscode.Definition | null {

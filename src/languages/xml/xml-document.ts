@@ -4,7 +4,6 @@ import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
 import { DefinitionProvider } from '@/languages/definition-provider';
 import { XmlDefinitionProvider } from './providers/xml-definition-provider';
-import { IToken } from 'millan';
 
 /**
  * A document context for RDF/XML documents.
@@ -76,10 +75,6 @@ export class XmlDocument extends DocumentContext {
 			IRIREF: '',
 			PNAME_NS: '',
 		}
-	}
-
-	public override setTokens(tokens: IToken[]): void {
-		// TODO: Remove this method from DocumentContext as this is specific for the parser and document type.
 	}
 
 	protected getXmlBaseIri(data: string): string | undefined {
