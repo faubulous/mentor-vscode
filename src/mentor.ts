@@ -9,8 +9,8 @@ import { WorkspaceRepository } from './workspace-repository';
 import {
 	LocalStorageService,
 	PrefixDownloaderService,
+	PrefixLookupService,
 	TurtlePrefixDefinitionService,
-	PrefixLookupService
 } from './services';
 import { NamedNode } from '@rdfjs/types';
 

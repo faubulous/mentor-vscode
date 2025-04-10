@@ -3,7 +3,7 @@ import { IToken } from 'millan';
 import { mentor } from '@/mentor';
 import { getPreviousToken, getIriFromToken } from '@/utilities';
 import { TurtleDocument } from '@/languages/turtle/turtle-document';
-import { TurtleReferenceProvider } from './turtle-reference-provider';
+import { TurtleReferenceProvider } from '@/languages/turtle/providers/turtle-reference-provider';
 
 /**
  * Provides hover information for tokens.

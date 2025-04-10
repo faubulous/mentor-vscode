@@ -9,7 +9,7 @@ import {
 	TurtleRenameProvider,
 	TurtleReferenceProvider
 } from '@/languages/turtle/providers';
-import { TurtleDocument } from '../turtle';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 
 // https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-provider
 

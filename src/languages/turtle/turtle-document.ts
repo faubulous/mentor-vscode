@@ -106,6 +106,7 @@ export class TurtleDocument extends DocumentContext {
 		// Automatically declare prefixes when a colon is typed.
 		const change = e.contentChanges[0];
 
+		// TODO: This should be handled in the prefix definition service (listen to doc changes and react) instead of the document itself.
 		if (change?.text.endsWith(':') && mentor.configuration.get('prefixes.autoDefinePrefixes')) {
 			// Determine the token type at the change position.
 			const token = this.getTokensAtPosition(change.range.start)[0];
@@ -239,21 +240,21 @@ export class TurtleDocument extends DocumentContext {
 					break;
 				}
 				case 'PNAME_LN': {
-					const uri = getIriFromPrefixedName(this.namespaces, t.image);
+					const iri = getIriFromPrefixedName(this.namespaces, t.image);
 
-					if (!uri) break;
+					if (!iri) break;
 
-					this._handleTypeAssertion(tokens, t, uri, i);
-					this._handleTypeDefinition(tokens, t, uri, i);
-					this._handleUriReference(tokens, t, uri);
+					this._handleTypeAssertion(tokens, t, iri, i);
+					this._handleTypeDefinition(tokens, t, iri, i);
+					this._handleIriReference(tokens, t, iri);
 					break;
 				}
 				case 'IRIREF': {
-					const uri = getIriFromIriReference(t.image);
+					const iri = getIriFromIriReference(t.image);
 
-					this._handleTypeAssertion(tokens, t, uri, i);
-					this._handleTypeDefinition(tokens, t, uri, i);
-					this._handleUriReference(tokens, t, uri);
+					this._handleTypeAssertion(tokens, t, iri, i);
+					this._handleTypeDefinition(tokens, t, iri, i);
+					this._handleIriReference(tokens, t, iri);
 					break;
 				}
 				case 'A': {
@@ -265,7 +266,7 @@ export class TurtleDocument extends DocumentContext {
 		});
 	}
 
-	private _handleUriReference(tokens: IToken[], token: IToken, uri: string) {
+	private _handleIriReference(tokens: IToken[], token: IToken, uri: string) {
 		if (!this.references[uri]) {
 			this.references[uri] = [];
 		}

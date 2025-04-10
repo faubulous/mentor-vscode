@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
-import { RdfSyntax } from '@faubulous/mentor-rdf';
+import { SAXParser } from 'sax-ts';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RdfSyntax } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
 import { DefinitionProvider } from '@/languages/definition-provider';
-import { XmlDefinitionProvider } from './providers/xml-definition-provider';
+import { XmlDefinitionProvider } from '@/languages/xml/providers/xml-definition-provider';
 
 /**
  * A document context for RDF/XML documents.
@@ -51,6 +52,8 @@ export class XmlDocument extends DocumentContext {
 			// The loadFromStream function only updates the existing graphs 
 			// when the document was parsed successfully.
 			await mentor.store.loadFromXmlStream(data, u, false);
+
+			await this.parseXml(data);
 
 			// Parse the Namespace declarations from the RDF/XML document.
 			this.parseXmlnsAttributes(data);
@@ -119,4 +122,140 @@ export class XmlDocument extends DocumentContext {
 			this.namespaces[prefix] = namespaceIri;
 		}
 	}
+
+	protected async parseXml(data: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const parser = new SAXParser(false, {
+				trim: false,
+				normalize: false,
+				lowercase: true,
+				xmlns: true,
+				position: true,
+			}) as SAXParser & { line: number; column: number };
+
+			let currentTag: SAXNode | undefined;
+
+			parser.onopentagstart = (node: SAXNode) => {
+				currentTag = node;
+			};
+
+			parser.onattribute = (attribute: SAXAttribute) => {
+				if(this._handlePrefixDefinition(attribute)) {
+					return;
+				}
+			};
+
+			parser.onerror = (error: any) => reject(error);
+			parser.onend = () => resolve();
+
+			parser.write(data).close();
+		});
+	}
+
+	/**
+	 * Get a range that starts at the given position and extents to the given length.
+	 * @param position The SAX parser position object.
+	 * @param length Length of the text that starts at the given position.
+	 * @returns A `vscode.Range` object that represents the range of the text.
+	 */
+	private _getRange(position: { line: number, column: number }, length: number) {
+		return new vscode.Range(
+			new vscode.Position(position.line + 1, position.column + 1),
+			new vscode.Position(position.line + 1, position.column + 1 + length)
+		);
+	}
+
+	private _handlePrefixDefinition(attribute: SAXAttribute) {
+		if (attribute.prefix === 'xmlns') {
+			this.namespaces[attribute.local] = attribute.value;
+
+			return true;
+		} else if (attribute.name === 'xml:base') {
+			this.baseIri = attribute.value;
+
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	private _handleTypeAssertion(node: SAXNode, position: { line: number, column: number }) {
+		const subject = this._getAttribute(node, _RDF + 'about');
+
+		if (!subject) return;
+
+		const range = new vscode.Range(
+			new vscode.Position(position.line + 1, position.column + 1),
+			new vscode.Position(position.line + 1, position.column + 1 + subject.value.length)
+		);
+
+		// Check for local names that must be resolved against the base IRI.
+		this.typeAssertions[subject.uri + subject.local] = [range];
+	}
+
+	private _handleTypeDefinition(node: SAXNode, position: { line: number, column: number }) {
+		const subject = this._getAttribute(node, _RDF + 'about');
+
+		if (!subject) return;
+
+		switch (node.uri) {
+			case _RDF:
+			case _RDFS:
+			case _OWL:
+			case _SKOS:
+			case _SKOS_XL:
+			case _SH: {
+				const range = new vscode.Range(
+					new vscode.Position(position.line + 1, position.column + 1),
+					new vscode.Position(position.line + 1, position.column + 1 + subject.value.length)
+				);
+
+				// Check for local names that must be resolved against the base IRI.
+				this.typeDefinitions[subject.uri + subject.local] = [range];
+			}
+		}
+	}
+
+	private _handleIriReference(uri: string) { }
+
+	private _getAttribute(node: SAXNode, attributeIri: string): SAXAttribute | undefined {
+		for (const attribute of Object.values(node.attributes)) {
+			if (attribute.uri + attribute.local === attributeIri) {
+				return attribute;
+			}
+		}
+	}
+
+	private _isReservedTag(node: SAXNode) {
+		const iri = node.uri + node.local;
+
+		switch (iri) {
+			case _RDF + 'rdf':
+			case _RDF + 'description':
+			case _RDF + 'resource': {
+				return true;
+			}
+			default: {
+				return false;
+			}
+		}
+	}
+}
+
+interface SAXNode {
+	attributes: any[];
+	isSelfClosing: boolean;
+	local: string;
+	name: string;
+	ns: any[];
+	prefix: string;
+	uri: string;
+}
+
+interface SAXAttribute {
+	local: string;
+	name: string;
+	prefix: string;
+	uri: string;
+	value: string;
 }

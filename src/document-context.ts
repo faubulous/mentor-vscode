@@ -79,17 +79,17 @@ export abstract class DocumentContext {
 	namespaceDefinitions: { [key: string]: Range } = {};
 
 	/**
-	 * Maps resource IRIs to indexed tokens.
+	 * Maps IRIs of resources to the locations where they appear in the document.
 	 */
 	references: { [key: string]: Range[] } = {};
 
 	/**
-	 * Maps resource IRIs to tokens of subjects that have an asserted rdf:type, including named individuals.
+	 * Maps IRIs of subjects that have an asserted rdf:type (including individuals) to the location of the type assertion.
 	 */
 	typeAssertions: { [key: string]: Range[] } = {};
 
 	/**
-	 * Maps resource IRIs to tokens of subjects that are class or property definitions.
+	 * Maps IRIs of subjects that are class or property definitions to the location of the definition.
 	 */
 	typeDefinitions: { [key: string]: Range[] } = {};
 
