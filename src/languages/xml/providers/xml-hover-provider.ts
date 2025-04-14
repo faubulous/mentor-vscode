@@ -4,7 +4,7 @@ import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
 import { XmlDocument } from '../xml-document';
 
 /**
- * Provides hover information for tokens.
+ * Provides hover information for text under the cursor.
  */
 export class XmlHoverProvider extends XmlFeatureProvider implements vscode.HoverProvider {
 	provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
@@ -14,7 +14,7 @@ export class XmlHoverProvider extends XmlFeatureProvider implements vscode.Hover
 			return null;
 		}
 
-		const iri = context.getIriAtPosition(document, position);
+		const iri = this.getIriAtPosition(document, position);
 
 		if (!iri) {
 			return null;

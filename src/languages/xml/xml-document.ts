@@ -6,18 +6,8 @@ import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
 import { DefinitionProvider } from '@/languages/definition-provider';
 import { XmlDefinitionProvider } from '@/languages/xml/providers/xml-definition-provider';
-import { NamespaceMap, getIriFromPrefixedName } from '@/utilities';
 
-// NOTES
-// - Positions are 0-based in the XML parser, but 1-based in VSCode.
-// - Position handling is seperate for attributes and tags:
-// 	- Attribute positions point at the *end* of the parsed attribute.
-// 	- Open tag positions point at the *start* of the tag.
-// - It's not always necessary to retrieve the document when we have the value from the parser:
-//  - getIriFromAttributeName, getIriFromQuotedIri, getIriFromQuotedLocalName, and getIriFromQuotedPrefixedName retrieve the document where we could provide the line instead.
-//  - Refactor into more specific sub-functions.
-// - Remove getTokenTypes and getPrefixDefinition
-//  - Move into Definition Service for the XML language.
+// TODO: Move getTokenTypes and getPrefixDefintion int the Definition Service for the XML language.
 
 /**
  * A document context for RDF/XML documents.
@@ -151,7 +141,7 @@ export class XmlDocument extends DocumentContext {
 					);
 
 					if (currentTag && attribute.local === 'about') {
-						this._registerTypeReference(currentTag, range);
+						this._registerTypedSubject(currentTag, range);
 					}
 
 					switch (attribute.local) {
@@ -186,7 +176,7 @@ export class XmlDocument extends DocumentContext {
 		}
 	}
 
-	private _registerTypeReference(tag: SAXTag, range: vscode.Range) {
+	private _registerTypedSubject(tag: SAXTag, range: vscode.Range) {
 		// Note: rdf:Description does not assert a type.
 		if (tag.uri === _RDF && tag.local === 'description') {
 			return;
@@ -298,124 +288,6 @@ export class XmlDocument extends DocumentContext {
 		}
 
 		return false;
-	}
-
-	/**
-	 * Get the full IRI of an attribute name or of a quoted string at the given position in the XML document.
-	 * @param context A document context.
-	 * @param position A position in the document.
-	 * @returns A full IRI if found, `undefined` otherwise.
-	 */
-	getIriAtPosition(document: vscode.TextDocument, position: { line: number, character: number }): string | undefined {
-		const line = document.lineAt(position.line).text;
-
-		if (!line) {
-			return;
-		}
-
-		let result = this.getIriFromAttributeName(line, position, this.namespaces);
-
-		if (!result) {
-			result = this.getIriFromQuotedIri(line, position);
-		}
-
-		if (!result) {
-			result = this.getIriFromQuotedPrefixedName(line, position, this.namespaces);
-		}
-
-		if (!result && this.baseIri) {
-			result = this.getIriFromQuotedLocalName(line, position, this.baseIri);
-		}
-
-		return result;
-	}
-
-	/**
-	 * Extracts the full attribute (e.g., xml:lang) at the given character position in a line of text.
-	 * @param line The line of text.
-	 * @param character The character position.
-	 * @returns The full attribute or null if not found.
-	 */
-	protected getIriFromAttributeName(line: string, position: { line: number, character: number }, namespaces: NamespaceMap): string | undefined {
-		// Match namespace-prefixed attributes (e.g., xml:lang)
-		const regex = /[a-zA-Z_][\w.-]*:[a-zA-Z_][\w.-]*/g;
-
-		let match: RegExpExecArray | null;
-
-		while ((match = regex.exec(line)) !== null) {
-			const start = match.index;
-			const end = start + match[0].length;
-
-			if (position.character >= start && position.character <= end) {
-				return getIriFromPrefixedName(namespaces, match[0]);
-			}
-		}
-	}
-
-	/**
-	 * Get the full IRI of quoted attribute values at the given position in the XML document.
-	 * @param document The text document.
-	 * @param position The position in the document.
-	 * @returns A full IRI if found, `undefined` otherwise.
-	 */
-	protected getIriFromQuotedIri(line: string, position: { line: number, character: number }): string | undefined {
-		// Match full IRIs in quotes (e.g., "http://example.org/C1_Test")
-		const iriExpression = /["'](https?:\/\/[^\s"'<>)]+)["']/g;
-
-		let match: RegExpExecArray | null;
-
-		while ((match = iriExpression.exec(line)) !== null) {
-			const start = match.index + 1;
-			const end = start + match[1].length;
-
-			if (position.character >= start && position.character <= end) {
-				return match[1];
-			}
-		}
-	}
-
-	/**
-	 * Get the full IRI of quoted local name values at the given position in the XML document.
-	 * @param document The text document.
-	 * @param position The position in the document.
-	 * @returns A full IRI if found, `undefined` otherwise.
-	 */
-	protected getIriFromQuotedLocalName(line: string, position: { line: number, character: number }, baseIri: string): string | undefined {
-		// Match quoted local names (e.g., "C1_Test")
-		const localNameExpression = /["']([^\s"'<>)]+)["']/g;
-
-		let match: RegExpExecArray | null;
-
-		while ((match = localNameExpression.exec(line)) !== null) {
-			const start = match.index + 1;
-			const end = start + match[1].length;
-
-			if (position.character >= start && position.character <= end) {
-				return new URL(match[1], baseIri).toString();
-			}
-		}
-	}
-
-	/**
-	 * Get the full IRI of quoted prefixed names at the given position in the XML document.
-	 * @param document The text document.
-	 * @param position The position in the document.
-	 * @returns A full IRI if found, `undefined` otherwise.
-	 */
-	protected getIriFromQuotedPrefixedName(line: string, position: { line: number, character: number }, namespaces: NamespaceMap): string | undefined {
-		// Match prefixed names in HTML entity coding (e.g., "&rdf;about")
-		const prefixedNameExpression = /&([a-zA-Z_][\w.-]*);/g;
-
-		let match: RegExpExecArray | null;
-
-		while ((match = prefixedNameExpression.exec(line)) !== null) {
-			const start = match.index + 1;
-			const end = start + match[1].length;
-
-			if (position.character >= start && position.character <= end) {
-				return getIriFromPrefixedName(namespaces, match[1]);
-			}
-		}
 	}
 }
 

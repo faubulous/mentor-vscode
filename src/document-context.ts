@@ -83,13 +83,16 @@ export abstract class DocumentContext {
 	 */
 	references: { [key: string]: Range[] } = {};
 
+	// TODO: Remove all type definitions from this map and query the combination of typeAssertion and typeDefinitions instead.
 	/**
-	 * Maps IRIs of subjects that have an asserted rdf:type (including individuals) to the location of the type assertion.
+	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion. This includes
+	 * named individuals, classes and properties.
 	 */
 	typeAssertions: { [key: string]: Range[] } = {};
 
 	/**
-	 * Maps IRIs of subjects that are class or property definitions to the location of the definition.
+	 * Maps IRIs of subjects that are class or property definitions to the location of the definition. This includes
+	 * only class defintions.
 	 */
 	typeDefinitions: { [key: string]: Range[] } = {};
 

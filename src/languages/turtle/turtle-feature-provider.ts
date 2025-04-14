@@ -2,6 +2,9 @@ import * as vscode from "vscode";
 import { IToken } from "millan";
 import { getNamespaceIri, getTokenPosition } from "@/utilities";
 
+/**
+ * Base class of feature providers for Turtle documents.
+ */
 export class TurtleFeatureProvider {
 	/**
 	 * Indicates whether the cursor position is on a namespace prefix

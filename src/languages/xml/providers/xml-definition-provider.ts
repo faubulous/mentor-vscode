@@ -7,7 +7,7 @@ import { getIriLocalPart } from '@/utilities';
 import { XmlDocument } from '../xml-document';
 
 /**
- * Provides resource definitions for Turtle documents.
+ * Provides resource definitions for RDF/XML documents.
  */
 export class XmlDefinitionProvider extends XmlFeatureProvider implements DefinitionProvider {
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
@@ -17,7 +17,7 @@ export class XmlDefinitionProvider extends XmlFeatureProvider implements Definit
 			return null;
 		}
 
-		const iri = context.getIriAtPosition(document, position);
+		const iri = this.getIriAtPosition(document, position);
 
 		if (iri) {
 			return this.provideDefinitionForIri(context, iri);
