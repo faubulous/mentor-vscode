@@ -231,6 +231,15 @@ export abstract class DocumentContext {
 	async onDidChangeDocument(e: vscode.TextDocumentChangeEvent): Promise<void> { };
 
 	/**
+	 * Get the text document with the given URI.
+	 * @param uri The URI of the text document.
+	 * @returns The text document if it is loaded, null otherwise.
+	 */
+	getTextDocument(): vscode.TextDocument | undefined {
+		return vscode.workspace.textDocuments.find(d => d.uri.toString() === this.uri.toString());
+	}
+
+	/**
 	 * Get the prefix for a namespace IRI.
 	 * @param namespaceIri The namespace IRI.
 	 * @returns The prefix for the namespace IRI or `undefined`.

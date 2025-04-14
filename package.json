@@ -563,6 +563,18 @@
         "command": "mentor.action.selectActiveLanguage",
         "title": "Select Active Language",
         "icon": "$(select-language)"
+      },
+      {
+        "command": "mentor.action.highlightTypeDefinitions",
+        "title": "Mentor: Highlight Type Definitions"
+      },
+      {
+        "command": "mentor.action.highlightTypeAssertions",
+        "title": "Mentor: Highlight Type Assertions"
+      },
+      {
+        "command": "mentor.action.highlightReferencedIris",
+        "title": "Mentor: Highlight Referenced IRIs"
       }
     ],
     "menus": {

@@ -107,7 +107,6 @@ class MentorExtension {
 		vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e));
 	}
 
-
 	/**
 	 * Get the document context from a text document.
 	 * @param document A text document.
@@ -346,6 +345,57 @@ class MentorExtension {
 					const document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
 
 					await vscode.window.showTextDocument(document);
+				}
+			}
+		});
+
+		vscode.commands.registerCommand('mentor.action.highlightTypeDefinitions', async () => {
+			if (this.activeContext) {
+				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
+				const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+				if (editor) {
+					const ranges = [...Object.values(this.activeContext.typeDefinitions)]
+						.flatMap(value => Array.isArray(value) ? value : [])
+						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
+
+					editor.setDecorations(vscode.window.createTextEditorDecorationType({
+						backgroundColor: 'rgba(255, 255, 0, 0.3)',
+					}), ranges);
+				}
+			}
+		});
+
+		vscode.commands.registerCommand('mentor.action.highlightTypeAssertions', async () => {
+			if (this.activeContext) {
+				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
+				const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+				if (editor) {
+					const ranges = [...Object.values(this.activeContext.typeAssertions)]
+						.flatMap(value => Array.isArray(value) ? value : [])
+						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
+
+					editor.setDecorations(vscode.window.createTextEditorDecorationType({
+						backgroundColor: 'rgba(255, 255, 0, 0.3)',
+					}), ranges);
+				}
+			}
+		});
+
+		vscode.commands.registerCommand('mentor.action.highlightReferencedIris', async () => {
+			if (this.activeContext) {
+				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
+				const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+				if (editor) {
+					const ranges = [...Object.values(this.activeContext.references)]
+						.flatMap(value => Array.isArray(value) ? value : [])
+						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
+
+					editor.setDecorations(vscode.window.createTextEditorDecorationType({
+						backgroundColor: 'rgba(255, 255, 0, 0.3)',
+					}), ranges);
 				}
 			}
 		});

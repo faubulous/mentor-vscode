@@ -1,21 +1,23 @@
 import * as vscode from 'vscode';
+import { mentor } from '@/mentor';
 import { DocumentContext } from '@/document-context';
 import { DefinitionProvider } from '@/languages/definition-provider';
 import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
 import { getIriLocalPart } from '@/utilities';
+import { XmlDocument } from '../xml-document';
 
 /**
  * Provides resource definitions for Turtle documents.
  */
 export class XmlDefinitionProvider extends XmlFeatureProvider implements DefinitionProvider {
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, XmlDocument)
 
 		if (!context) {
 			return null;
 		}
 
-		let iri = this.getIriAtPosition(context, position);
+		const iri = context.getIriAtPosition(document, position);
 
 		if (iri) {
 			return this.provideDefinitionForIri(context, iri);
@@ -39,7 +41,7 @@ export class XmlDefinitionProvider extends XmlFeatureProvider implements Definit
 	 * @returns The range of the match or null if not found.
 	 */
 	private _findSubject(context: DocumentContext, uri: string): vscode.Range | null {
-		const document = this.getTextDocument(context.uri);
+		const document = context.getTextDocument();
 
 		if (!document) {
 			return null;
