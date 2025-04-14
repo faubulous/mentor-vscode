@@ -29,15 +29,39 @@ export class XmlDocument extends DocumentContext {
 		return this.graphs.length > 0;
 	}
 
-	public override getDefinitionProvider(): DefinitionProvider {
+	getIriFromXmlString(value: string): string | undefined {
+		if (value.startsWith('&')) {
+			const prefix = value.trim().split(';')[0].substring(1);
+			const namespaceIri = this.namespaces[prefix];
+
+			if (namespaceIri) {
+				const localName = value.split(';')[1];
+
+				return namespaceIri + localName;
+			}
+		}
+		else if (value.startsWith('#') || !value.includes(':')) {
+			return this.baseIri + value;
+		} else if (value.length > 0) {
+			const schemeOrPrefix = value.split(':')[0];
+
+			if (this.namespaces[schemeOrPrefix]) {
+				return this.namespaces[schemeOrPrefix] + value.split(':')[1];
+			} else {
+				return value;
+			}
+		}
+	}
+
+	override getDefinitionProvider(): DefinitionProvider {
 		return this._definitionProvider;
 	}
 
-	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
+	override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
 		return `xmlns:${prefix}="${uri}"`;
 	}
 
-	public override getTokenTypes(): TokenTypes {
+	override getTokenTypes(): TokenTypes {
 		return {
 			PREFIX: '',
 			BASE: '',
@@ -46,7 +70,7 @@ export class XmlDocument extends DocumentContext {
 		}
 	}
 
-	public override async infer(): Promise<void> {
+	override async infer(): Promise<void> {
 		const reasoner = mentor.store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
@@ -56,7 +80,7 @@ export class XmlDocument extends DocumentContext {
 		}
 	}
 
-	public override async parse(uri: vscode.Uri, data: string): Promise<void> {
+	override async parse(uri: vscode.Uri, data: string): Promise<void> {
 		try {
 			const u = uri.toString();
 
@@ -162,30 +186,6 @@ export class XmlDocument extends DocumentContext {
 		});
 	}
 
-	getIriFromXmlString(value: string): string | undefined {
-		if (value.startsWith('&')) {
-			const prefix = value.trim().split(';')[0].substring(1);
-			const namespaceIri = this.namespaces[prefix];
-
-			if (namespaceIri) {
-				const localName = value.split(';')[1];
-
-				return namespaceIri + localName;
-			}
-		}
-		else if (value.startsWith('#') || !value.includes(':')) {
-			return this.baseIri + value;
-		} else if (value.length > 0) {
-			const schemeOrPrefix = value.split(':')[0];
-
-			if (this.namespaces[schemeOrPrefix]) {
-				return this.namespaces[schemeOrPrefix] + value.split(':')[1];
-			} else {
-				return value;
-			}
-		}
-	}
-	
 	private _registerPrefixDefinition(attribute: SAXAttribute) {
 		if (attribute.prefix === 'xmlns') {
 			this.namespaces[attribute.local] = attribute.value;
