@@ -26,20 +26,49 @@ export class XmlFeatureProvider {
 			return;
 		}
 
-		return this.getIriFromAttributeName(line, position, context.namespaces) ??
-			this.getIriFromQuotedIri(line, position) ??
-			this.getIriFromQuotedPrefixedName(line, position, context.namespaces) ??
-			this.getIriFromQuotedLocalName(line, position, context.baseIri);
+		let result = this.getIriFromPrefixedName(line, position, context.namespaces);
+
+		if (result) {
+			return result;
+		}
+
+		const value = this.getXmlAttributeValue(line, position);
+
+		if (value) {
+			return context.getIriFromXmlString(value);
+		}
+	}
+
+	/**
+	 * Get the value of a quoted string in the XML document at the given position wihtout quotation marks.
+	 * @param line A line of text in the XML document.
+	 * @param position The position where to look for the attribute value.
+	 * @returns The value of a quoted string if found, `undefined` otherwise.
+	 */
+	protected getXmlAttributeValue(line: string, position: { line: number, character: number }): string | undefined {
+		// Match quoted values (e.g., "http://example.org/C1_Test")
+		const quotedValueExpression = /["']([^"']+)["']/g;
+
+		let match: RegExpExecArray | null;
+
+		while ((match = quotedValueExpression.exec(line)) !== null) {
+			const start = match.index + 1;
+			const end = start + match[1].length;
+
+			if (position.character >= start && position.character <= end) {
+				return match[1];
+			}
+		}
 	}
 
 	/**
 	 * Get the full IRI from an attribute name at the given position in the XML document.
-	 * @param line The line of text.
-	 * @param character The character position.
+	 * @param line A line of text in the XML document.
+	 * @param position The position where to look for the attribute value.
 	 * @param namespaces The namespaces defined in the document.
 	 * @returns A full IRI if found, `undefined` otherwise.
 	 */
-	protected getIriFromAttributeName(line: string, position: { line: number, character: number }, namespaces: NamespaceMap): string | undefined {
+	protected getIriFromPrefixedName(line: string, position: { line: number, character: number }, namespaces: NamespaceMap): string | undefined {
 		// Match namespace-prefixed attributes (e.g., xml:lang)
 		const regex = /[a-zA-Z_][\w.-]*:[a-zA-Z_][\w.-]*/g;
 
@@ -51,77 +80,6 @@ export class XmlFeatureProvider {
 
 			if (position.character >= start && position.character <= end) {
 				return getIriFromPrefixedName(namespaces, match[0]);
-			}
-		}
-	}
-
-	/**
-	 * Get the full IRI of quoted attribute values at the given position in the XML document.
-	 * @param document The text document.
-	 * @param position The position in the document.
-	 * @returns A full IRI if found, `undefined` otherwise.
-	 */
-	protected getIriFromQuotedIri(line: string, position: { line: number, character: number }): string | undefined {
-		// Match full IRIs in quotes (e.g., "http://example.org/C1_Test")
-		const iriExpression = /["'](https?:\/\/[^\s"'<>)]+)["']/g;
-
-		let match: RegExpExecArray | null;
-
-		while ((match = iriExpression.exec(line)) !== null) {
-			const start = match.index + 1;
-			const end = start + match[1].length;
-
-			if (position.character >= start && position.character <= end) {
-				return match[1];
-			}
-		}
-	}
-
-	/**
-	 * Get the full IRI of quoted local name values at the given position in the XML document.
-	 * @param document The text document.
-	 * @param position The position in the document.
-	 * @param baseIri The base IRI of the document.
-	 * @returns A full IRI string if the text at the position could be resolved against the provided `baseIri`, `undefined` otherwise.
-	 */
-	protected getIriFromQuotedLocalName(line: string, position: { line: number, character: number }, baseIri?: string): string | undefined {
-		if (!baseIri) {
-			return undefined;
-		}
-
-		// Match quoted local names (e.g., "C1_Test")
-		const localNameExpression = /["']([^\s"'<>)]+)["']/g;
-
-		let match: RegExpExecArray | null;
-
-		while ((match = localNameExpression.exec(line)) !== null) {
-			const start = match.index + 1;
-			const end = start + match[1].length;
-
-			if (position.character >= start && position.character <= end) {
-				return new URL(match[1], baseIri).toString();
-			}
-		}
-	}
-
-	/**
-	 * Get the full IRI of quoted prefixed names at the given position in the XML document.
-	 * @param document The text document.
-	 * @param position The position in the document.
-	 * @returns A full IRI if found, `undefined` otherwise.
-	 */
-	protected getIriFromQuotedPrefixedName(line: string, position: { line: number, character: number }, namespaces: NamespaceMap): string | undefined {
-		// Match prefixed names in HTML entity coding (e.g., "&rdf;about")
-		const prefixedNameExpression = /&([a-zA-Z_][\w.-]*);/g;
-
-		let match: RegExpExecArray | null;
-
-		while ((match = prefixedNameExpression.exec(line)) !== null) {
-			const start = match.index + 1;
-			const end = start + match[1].length;
-
-			if (position.character >= start && position.character <= end) {
-				return getIriFromPrefixedName(namespaces, match[1]);
 			}
 		}
 	}

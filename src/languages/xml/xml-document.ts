@@ -141,7 +141,7 @@ export class XmlDocument extends DocumentContext {
 					);
 
 					if (currentTag && attribute.local === 'about') {
-						this._registerTypedSubject(currentTag, range);
+						this._registerTypedSubject(currentTag, attribute, range);
 					}
 
 					switch (attribute.local) {
@@ -162,6 +162,30 @@ export class XmlDocument extends DocumentContext {
 		});
 	}
 
+	getIriFromXmlString(value: string): string | undefined {
+		if (value.startsWith('&')) {
+			const prefix = value.trim().split(';')[0].substring(1);
+			const namespaceIri = this.namespaces[prefix];
+
+			if (namespaceIri) {
+				const localName = value.split(';')[1];
+
+				return namespaceIri + localName;
+			}
+		}
+		else if (value.startsWith('#') || !value.includes(':')) {
+			return this.baseIri + value;
+		} else if (value.length > 0) {
+			const schemeOrPrefix = value.split(':')[0];
+
+			if (this.namespaces[schemeOrPrefix]) {
+				return this.namespaces[schemeOrPrefix] + value.split(':')[1];
+			} else {
+				return value;
+			}
+		}
+	}
+	
 	private _registerPrefixDefinition(attribute: SAXAttribute) {
 		if (attribute.prefix === 'xmlns') {
 			this.namespaces[attribute.local] = attribute.value;
@@ -176,14 +200,14 @@ export class XmlDocument extends DocumentContext {
 		}
 	}
 
-	private _registerTypedSubject(tag: SAXTag, range: vscode.Range) {
+	private _registerTypedSubject(tag: SAXTag, attribute: SAXAttribute, range: vscode.Range) {
 		// Note: rdf:Description does not assert a type.
 		if (tag.uri === _RDF && tag.local === 'description') {
 			return;
 		}
 
 		// Get a resolved IRI from the attribute value.
-		const subject = this._getIriFromXmlString(tag.name);
+		const subject = this.getIriFromXmlString(attribute.value);
 
 		if (!subject) {
 			return;
@@ -209,7 +233,7 @@ export class XmlDocument extends DocumentContext {
 			return;
 		}
 
-		const iri = this._getIriFromXmlString(element.name);
+		const iri = this.getIriFromXmlString(element.name);
 
 		if (iri) {
 			this._addRangeToIndex(this.references, iri, range);
@@ -217,34 +241,10 @@ export class XmlDocument extends DocumentContext {
 	}
 
 	private _registerIriReferenceFromAttributeValue(attribute: SAXAttribute, range: vscode.Range) {
-		const iri = this._getIriFromXmlString(attribute.value);
+		const iri = this.getIriFromXmlString(attribute.value);
 
 		if (iri) {
 			this._addRangeToIndex(this.references, iri, range);
-		}
-	}
-
-	private _getIriFromXmlString(value: string): string | undefined {
-		if (value.startsWith('&')) {
-			const prefix = value.trim().split(';')[0].substring(1);
-			const namespaceIri = this.namespaces[prefix];
-
-			if (namespaceIri) {
-				const localName = value.split(';')[1];
-
-				return namespaceIri + localName;
-			}
-		}
-		else if (value.startsWith('#') || !value.includes(':')) {
-			return this.baseIri + value;
-		} else if (value.length > 0) {
-			const schemeOrPrefix = value.split(':')[0];
-
-			if (this.namespaces[schemeOrPrefix]) {
-				return this.namespaces[schemeOrPrefix] + value.split(':')[1];
-			} else {
-				return value;
-			}
 		}
 	}
 
