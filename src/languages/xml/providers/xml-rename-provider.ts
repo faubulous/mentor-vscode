@@ -91,14 +91,11 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 
 		const edits = new vscode.WorkspaceEdit();
 
-		// TODO: Edit the namespace declarations as well (xmlns: and ENTITY).
-		if (context.namespaceDefinitions[prefix]) {
-			const r = context.namespaceDefinitions[prefix];
-			const editRange = this.getPrefixEditRangeFromCursorPosition(document, new vscode.Position(r.end.line, r.end.character));
-
-			if (editRange) {
-				edits.replace(document.uri, editRange, newName);
-			}
+		for (const r of context.namespaceDefinitions[prefix]) {
+			edits.replace(document.uri, new vscode.Range(
+				new vscode.Position(r.start.line, r.start.character),
+				new vscode.Position(r.end.line, r.end.character)
+			), newName);
 		}
 
 		const namespaceIri = context.namespaces[prefix];

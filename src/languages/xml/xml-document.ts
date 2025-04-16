@@ -125,6 +125,10 @@ export class XmlDocument extends DocumentContext {
 			let currentTag: SAXTag | undefined;
 			let currentTagStart: { line: number; column: number } | undefined;
 
+			parser.ondoctype = (doctype: string) => {
+				this._parseDoctypePrefixDefinitions(doctype, parser.line);
+			}
+
 			// This event is fired before the onattribute event.
 			parser.onopentagstart = (tag: SAXTag) => {
 				currentTag = tag;
@@ -161,11 +165,9 @@ export class XmlDocument extends DocumentContext {
 
 			// This event is fired before the `onopentag` event.
 			parser.onattribute = (attribute: SAXAttribute) => {
-				if (this._registerPrefixDefinition(attribute)) {
-					return;
-				}
-
-				if (attribute.uri === _RDF) {
+				if (attribute.name === 'xml:base') {
+					this.baseIri = attribute.value;
+				} else if (attribute.uri === _RDF) {
 					// Note: The case of the attribute value is not modified by the parser.
 					const line = document.lineAt(parser.line).text;
 					const column = line.indexOf(attribute.value);
@@ -201,6 +203,39 @@ export class XmlDocument extends DocumentContext {
 		});
 	}
 
+	private _parseDoctypePrefixDefinitions(doctype: string, endLine: number) {
+		const lines = doctype.split('\n');
+
+		// Note: The parser provides the end position of the doctype declaration, but not the start position.
+		const startLine = endLine - lines.length + 1;
+		
+		for (let n = lines.length - 1; n > 0; n--) {
+			const text = lines[n];
+
+			// Iterate over all the entity defintions in the string and register the ranges.
+			const matches = text.matchAll(/<!ENTITY (\w+) "([^"]+)">/g);
+
+			for (const match of matches) {
+				const prefix = match[1];
+				const namespaceIri = match[2];
+
+				if (!this.namespaceDefinitions[prefix]) {
+					this.namespaceDefinitions[prefix] = [];
+				}
+
+				// This accounts for multiple whitespaces after <!ENTITY
+				// The prefix will always be the first match in the string.
+				const i = text.indexOf(prefix);
+
+				this.namespaces[prefix] = namespaceIri;
+				this.namespaceDefinitions[prefix].push(new vscode.Range(
+					new vscode.Position(startLine + n, i),
+					new vscode.Position(startLine + n, i + prefix.length)
+				));
+			}
+		}
+	}
+
 	private _registerXmlPrefixDefinition(text: string, line: number) {
 		const matches = text.toLowerCase().matchAll(/(xmlns:(\w+))="([^"]+)"/g);
 
@@ -208,25 +243,15 @@ export class XmlDocument extends DocumentContext {
 			const prefix = match[2];
 			const namespaceIri = match[3];
 
+			if (!this.namespaceDefinitions[prefix]) {
+				this.namespaceDefinitions[prefix] = [];
+			}
+
 			this.namespaces[prefix] = namespaceIri;
-			this.namespaceDefinitions[prefix] = new vscode.Range(
+			this.namespaceDefinitions[prefix].push(new vscode.Range(
 				new vscode.Position(line, match.index + 6),
 				new vscode.Position(line, match.index + 6 + prefix.length)
-			);
-		}
-	}
-
-	private _registerPrefixDefinition(attribute: SAXAttribute) {
-		if (attribute.prefix === 'xmlns') {
-			this.namespaces[attribute.local] = attribute.value;
-
-			return true;
-		} else if (attribute.name === 'xml:base') {
-			this.baseIri = attribute.value;
-
-			return true;
-		} else {
-			return false;
+			));
 		}
 	}
 

@@ -76,7 +76,7 @@ export abstract class DocumentContext {
 	/**
 	 * Maps prefixes to the location of their definition in the document.
 	 */
-	namespaceDefinitions: { [key: string]: Range } = {};
+	namespaceDefinitions: { [key: string]: Range[] } = {};
 
 	/**
 	 * Maps IRIs of resources to the locations where they appear in the document.

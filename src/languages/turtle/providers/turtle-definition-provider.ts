@@ -63,7 +63,7 @@ export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 			} else if (primaryContext.typeAssertions[uri]) {
 				range = primaryContext.typeAssertions[uri][0];
 			} else if (primaryContext.namespaceDefinitions[uri]) {
-				range = primaryContext.namespaceDefinitions[uri];
+				range = primaryContext.namespaceDefinitions[uri][0];
 			} else if (primaryContext.references[uri]) {
 				range = primaryContext.references[uri][0];
 			}

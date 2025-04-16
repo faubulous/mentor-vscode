@@ -235,7 +235,7 @@ export class TurtleDocument extends DocumentContext {
 						const r = this.getRangeFromToken(t);
 
 						this.namespaces[ns.prefix] = ns.uri;
-						this.namespaceDefinitions[ns.uri] = r;
+						this.namespaceDefinitions[ns.uri] = [r];
 					}
 					break;
 				}

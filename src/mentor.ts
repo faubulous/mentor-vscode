@@ -406,14 +406,9 @@ class MentorExtension {
 				const editor = await vscode.window.showTextDocument(document, { preview: false });
 
 				if (editor) {
-					const ranges = [];
-
-					for (const range of Object.values(this.activeContext.namespaceDefinitions)) {
-						ranges.push(new vscode.Range(
-							new vscode.Position(range.start.line, range.start.character),
-							new vscode.Position(range.end.line, range.end.character)
-						));
-					}
+					const ranges = [...Object.values(this.activeContext.namespaceDefinitions)]
+						.flatMap(value => Array.isArray(value) ? value : [])
+						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
 
 					editor.setDecorations(vscode.window.createTextEditorDecorationType({
 						backgroundColor: 'rgba(255, 255, 0, 0.3)',
