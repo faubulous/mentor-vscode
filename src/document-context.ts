@@ -69,12 +69,12 @@ export abstract class DocumentContext {
 	baseIri: string | undefined;
 
 	/**
-	* Maps prefixes to namespace IRIs.
-	*/
+	 * Maps prefixes to namespace IRIs.
+	 */
 	namespaces: { [key: string]: string } = {};
 
 	/**
-	 * Maps resource IRIs to indexed tokens.
+	 * Maps prefixes to the location of their definition in the document.
 	 */
 	namespaceDefinitions: { [key: string]: Range } = {};
 

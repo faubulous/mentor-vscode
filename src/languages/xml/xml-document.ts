@@ -123,11 +123,14 @@ export class XmlDocument extends DocumentContext {
 			}) as SAXParser & { line: number; column: number };
 
 			let currentTag: SAXTag | undefined;
+			let currentTagStart: { line: number; column: number } | undefined;
 
+			// This event is fired before the onattribute event.
 			parser.onopentagstart = (tag: SAXTag) => {
 				currentTag = tag;
+				currentTagStart = { line: parser.line, column: parser.column };
 
-				// Note: The tag name is lowercased by the parser so we need to lower case the line too.
+				// The tag name is lowercased by the parser so we need to lower case the line too.
 				const line = document.lineAt(parser.line).text.toLowerCase();
 				const column = line.indexOf(tag.name);
 
@@ -145,6 +148,18 @@ export class XmlDocument extends DocumentContext {
 				}
 			};
 
+			parser.onopentag = (tag: SAXTag) => {
+				if (currentTagStart && tag.ns) {
+					// Get the slice of 'data' between start tag line and the parser.line.
+					for (let n = currentTagStart?.line; n <= parser.line; n++) {
+						const text = document.lineAt(n).text;
+
+						this._registerXmlPrefixDefinition(text, n);
+					}
+				}
+			}
+
+			// This event is fired before the `onopentag` event.
 			parser.onattribute = (attribute: SAXAttribute) => {
 				if (this._registerPrefixDefinition(attribute)) {
 					return;
@@ -184,6 +199,21 @@ export class XmlDocument extends DocumentContext {
 
 			parser.write(data).close();
 		});
+	}
+
+	private _registerXmlPrefixDefinition(text: string, line: number) {
+		const matches = text.toLowerCase().matchAll(/(xmlns:(\w+))="([^"]+)"/g);
+
+		for (const match of matches) {
+			const prefix = match[2];
+			const namespaceIri = match[3];
+
+			this.namespaces[prefix] = namespaceIri;
+			this.namespaceDefinitions[prefix] = new vscode.Range(
+				new vscode.Position(line, match.index + 6),
+				new vscode.Position(line, match.index + 6 + prefix.length)
+			);
+		}
 	}
 
 	private _registerPrefixDefinition(attribute: SAXAttribute) {

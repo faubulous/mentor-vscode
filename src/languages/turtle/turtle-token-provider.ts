@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import {
+	SemanticTokensLegend,
 	TurtleRenameProvider,
 	TurtleDefinitionProvider,
 	TurtleReferenceProvider,
 	TurtleHoverProvider,
 	TurtleSemanticTokensProvider,
-	SemanticTokensLegend,
 	TurtleCompletionItemProvider,
 	TurtleCodeLensProvider,
 	TurtleCodeActionsProvider,

@@ -26,10 +26,10 @@ export class XmlFeatureProvider {
 			return;
 		}
 
-		let result = this.getIriFromPrefixedName(line, position, context.namespaces);
+		let result = this.getXmlPrefixedName(line, position);
 
 		if (result) {
-			return result;
+			return getIriFromPrefixedName(context.namespaces, result);
 		}
 
 		const value = this.getXmlAttributeValue(line, position);
@@ -40,7 +40,29 @@ export class XmlFeatureProvider {
 	}
 
 	/**
-	 * Get the value of a quoted string in the XML document at the given position wihtout quotation marks.
+	 * Get the (prefixed) name of the closest attribute int the XML document at the given position.
+	 * @param line A line of text in the XML document.
+	 * @param position The position where to look for the attribute value or name.
+	 * @returns The value of the attribute name string if found, `undefined` otherwise.
+	 */
+	protected getXmlAttributeName(line: string, position: { line: number, character: number }): string | undefined {
+		// Match an entire XML attribute (e.g., xml:example="Example")
+		const attributeNameExpression = /(([a-zA-Z_][\w.-]*:)?[a-zA-Z_][\w.-]*)=["']([^"']+)["']/g;
+
+		let match: RegExpExecArray | null;
+
+		while ((match = attributeNameExpression.exec(line)) !== null) {
+			const start = match.index + 1;
+			const end = start + match[0].length;
+
+			if (position.character >= start && position.character <= end) {
+				return match[1];
+			}
+		}
+	}
+
+	/**
+	 * Get the value of a quoted string in the XML document at the given position without quotation marks.
 	 * @param line A line of text in the XML document.
 	 * @param position The position where to look for the attribute value.
 	 * @returns The value of a quoted string if found, `undefined` otherwise.
@@ -68,7 +90,7 @@ export class XmlFeatureProvider {
 	 * @param namespaces The namespaces defined in the document.
 	 * @returns A full IRI if found, `undefined` otherwise.
 	 */
-	protected getIriFromPrefixedName(line: string, position: { line: number, character: number }, namespaces: NamespaceMap): string | undefined {
+	protected getXmlPrefixedName(line: string, position: { line: number, character: number }): string | undefined {
 		// Match namespace-prefixed attributes (e.g., xml:lang)
 		const regex = /[a-zA-Z_][\w.-]*:[a-zA-Z_][\w.-]*/g;
 
@@ -79,7 +101,7 @@ export class XmlFeatureProvider {
 			const end = start + match[0].length;
 
 			if (position.character >= start && position.character <= end) {
-				return getIriFromPrefixedName(namespaces, match[0]);
+				return match[0];
 			}
 		}
 	}

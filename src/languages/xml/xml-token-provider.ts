@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
-import { XmlHoverProvider, XmlReferenceProvider } from '@/languages/xml/providers';
+import { XmlHoverProvider, XmlReferenceProvider, XmlRenameProvider } from '@/languages/xml/providers';
 
 const hoverProvider = new XmlHoverProvider();
+const renameProvider = new XmlRenameProvider();
 const referenceProvider = new XmlReferenceProvider();
 
 export class XmlTokenProvider {
@@ -13,6 +14,7 @@ export class XmlTokenProvider {
 		const result = [];
 
 		result.push(vscode.languages.registerHoverProvider({ language }, hoverProvider));
+		result.push(vscode.languages.registerRenameProvider({ language }, renameProvider));
 		result.push(vscode.languages.registerReferenceProvider({ language }, referenceProvider));
 
 		return result;

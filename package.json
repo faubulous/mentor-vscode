@@ -567,6 +567,10 @@
         "icon": "$(select-language)"
       },
       {
+        "command": "mentor.action.highlightNamespaceDefinitions",
+        "title": "Mentor: Highlight Namespace Definitions"
+      },
+      {
         "command": "mentor.action.highlightTypeDefinitions",
         "title": "Mentor: Highlight Type Definitions"
       },

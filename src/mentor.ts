@@ -399,6 +399,28 @@ class MentorExtension {
 				}
 			}
 		});
+
+		vscode.commands.registerCommand('mentor.action.highlightNamespaceDefinitions', async () => {
+			if (this.activeContext) {
+				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
+				const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+				if (editor) {
+					const ranges = [];
+
+					for (const range of Object.values(this.activeContext.namespaceDefinitions)) {
+						ranges.push(new vscode.Range(
+							new vscode.Position(range.start.line, range.start.character),
+							new vscode.Position(range.end.line, range.end.character)
+						));
+					}
+
+					editor.setDecorations(vscode.window.createTextEditorDecorationType({
+						backgroundColor: 'rgba(255, 255, 0, 0.3)',
+					}), ranges);
+				}
+			}
+		});
 	}
 
 	/**
