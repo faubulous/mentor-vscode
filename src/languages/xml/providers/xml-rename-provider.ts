@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { XmlDocument } from '@/languages/xml/xml-document';
 import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
+import { getIriLocalPart } from '@/utilities';
 
 /**
  * Provides renaming for URIs, resources labels and prefixes.
@@ -44,13 +45,13 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 
 		range = this.getLabelEditRangeFromCursorPosition(document, position);
 
-		if (range && range.contains(position)) {
-			this._highlightRange(range);
-
-			return range;
+		if(!range) {
+			return null;
 		}
 
-		return null;
+		this._highlightRange(range);
+
+		return range;
 	}
 
 	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
@@ -150,14 +151,13 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 
 	getLabelEditRangeFromCursorPosition(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
 		const line = document.lineAt(position.line).text;
+		const prefixedName = this.getXmlPrefixedName(line, position);
 
-		let result = this.getXmlPrefixedName(line, position);
+		if (prefixedName) {
+			const startColumn = line.indexOf(prefixedName) + prefixedName.indexOf(":") + 1;
+			const endColumn = line.indexOf(prefixedName) + prefixedName.length;
 
-		if (result) {
-			const startColumn = line.indexOf(result) + result.indexOf(":") + 1;
-			const endColumn = line.indexOf(result) + result.length;
-
-			if (!result.startsWith('xmlns:') && !result.startsWith('xml:')) {
+			if (!prefixedName.startsWith('xmlns:') && !prefixedName.startsWith('xml:')) {
 				return new vscode.Range(
 					new vscode.Position(position.line, startColumn),
 					new vscode.Position(position.line, endColumn)
@@ -165,34 +165,54 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			}
 		}
 
-		result = this.getXmlAttributeValue(line, position);
+		const attributeValue = this.getXmlAttributeValue(line, position);
 
-		if (result) {
-			// HTML entity-style prefixed names (e.g. "&rdf;about")
-			if (result.trim().startsWith('&')) {
-				const startColumn = line.indexOf(result) + result.indexOf(";") + 1;
-				const endColumn = line.indexOf(result) + result.length;
-
-				return new vscode.Range(
-					new vscode.Position(position.line, startColumn),
-					new vscode.Position(position.line, endColumn)
-				);
-			}
-
-			// Relative IRIs that need to resolved using the document base IRI.
-			const name = this.getXmlAttributeName(line, position)?.toLowerCase();
-
-			if (name === 'rdf:about' || name === 'rdf:resource' || name === 'rdf:datatype') {
-				const startColumn = line.indexOf(result);
-				const endColumn = line.indexOf(result) + result.length;
-
-				return new vscode.Range(
-					new vscode.Position(position.line, startColumn),
-					new vscode.Position(position.line, endColumn)
-				);
-			}
+		if (!attributeValue) {
+			return;
 		}
 
-		// TODO: Handle full IRIs in XML attributes.
+		// HTML entity-style prefixed names (e.g. "&rdf;about")
+		if (attributeValue.trim().startsWith('&')) {
+			const startColumn = line.indexOf(attributeValue) + attributeValue.indexOf(";") + 1;
+			const endColumn = line.indexOf(attributeValue) + attributeValue.length;
+
+			return new vscode.Range(
+				new vscode.Position(position.line, startColumn),
+				new vscode.Position(position.line, endColumn)
+			);
+		}
+
+		// Relative IRIs that need to resolved using the document base IRI.
+		const attributeName = this.getXmlAttributeName(line, position)?.toLowerCase();
+
+		if (attributeName !== 'rdf:about' && attributeName !== 'rdf:resource' && attributeName !== 'rdf:datatype') {
+			return;
+		}
+
+		if (attributeValue.includes(':')) {
+			// Full IRIs in XML attributes.
+			const localName = getIriLocalPart(attributeValue);
+
+			if (localName.length === 0) {
+				return;
+			}
+
+			const startColumn = line.lastIndexOf(localName);
+			const endColumn = line.lastIndexOf(localName) + localName.length;
+
+			return new vscode.Range(
+				new vscode.Position(position.line, startColumn),
+				new vscode.Position(position.line, endColumn)
+			);
+		} else {
+			// Local names which need to be resolved using the document base IRI.
+			const startColumn = line.indexOf(attributeValue);
+			const endColumn = line.indexOf(attributeValue) + attributeValue.length;
+
+			return new vscode.Range(
+				new vscode.Position(position.line, startColumn),
+				new vscode.Position(position.line, endColumn)
+			);
+		}
 	}
 }
