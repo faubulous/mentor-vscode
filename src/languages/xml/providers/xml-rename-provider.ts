@@ -2,57 +2,27 @@ import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { XmlDocument } from '@/languages/xml/xml-document';
 import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
-import { getIriLocalPart } from '@/utilities';
+import { getIriLocalPart, getNamespaceIri } from '@/utilities';
+
+/**
+ * Interface for regular expression based text replacements.
+ */
+interface TextReplacement {
+	/**
+	 * The regular expression to match the text to be replaced.
+	 */
+	fromExpression: RegExp;
+
+	/**
+	 * The replacement text.
+	 */
+	toValue: string;
+}
 
 /**
  * Provides renaming for URIs, resources labels and prefixes.
  */
 export class XmlRenameProvider extends XmlFeatureProvider implements vscode.RenameProvider {
-	private readonly _debug = true;
-
-	private _highlightRange(range: vscode.Range) {
-		if (!this._debug) {
-			return;
-		}
-
-		const editor = vscode.window.activeTextEditor;
-
-		if (editor) {
-			editor.setDecorations(vscode.window.createTextEditorDecorationType({
-				backgroundColor: 'rgba(0, 0, 0, 0)',
-			}), []);
-
-			editor.setDecorations(vscode.window.createTextEditorDecorationType({
-				backgroundColor: 'rgba(255, 255, 0, 0.3)',
-			}), [range]);
-		}
-	}
-
-	public async prepareRename(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Range | null> {
-		const context = mentor.getDocumentContext(document, XmlDocument);
-
-		if (!context) {
-			return null;
-		}
-
-		let range = this.getPrefixEditRangeFromCursorPosition(document, position);
-
-		if (range && range.contains(position)) {
-			this._highlightRange(range);
-
-			return range;
-		}
-
-		range = this.getLabelEditRangeFromCursorPosition(document, position);
-
-		if(!range) {
-			return null;
-		}
-
-		this._highlightRange(range);
-
-		return range;
-	}
 
 	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
 		const context = mentor.getDocumentContext(document, XmlDocument);
@@ -61,120 +31,188 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			return undefined;
 		}
 
-		const labelRange = this.getLabelEditRangeFromCursorPosition(document, position);
+		const edits = new vscode.WorkspaceEdit();
 
-		if (labelRange && labelRange.contains(position)) {
+		// Handle rename of local names. Either of prefixed names or in IRIs.
+		const nameRange = this._getLocalNameEditRange(document, position);
+
+		if (nameRange && nameRange.contains(position)) {
 			const iri = this.getIriAtPosition(document, position);
 
-			if (!iri || !context.references[iri]) {
+			if (!iri) {
 				return undefined;
 			}
 
-			const edits = new vscode.WorkspaceEdit();
+			const replacements = this._getLocalNameTextReplacements(context, iri, newName);
 
-			for (let r of context.references[iri]) {
-				const editRange = this.getLabelEditRangeFromCursorPosition(document, new vscode.Position(r.end.line, r.end.character));
+			return this.getWorkspaceEdits(document, replacements);
+		}
 
-				if (!editRange) continue;
+		// Handle rename of prefixes and prefix definitions.
+		const prefixRange = this._getPrefixEditRange(document, position);
 
-				edits.replace(document.uri, editRange, newName);
+		if (prefixRange && prefixRange.contains(position)) {
+			const prefix = document.getText(prefixRange);
+
+			if (!context.namespaces[prefix]) {
+				return undefined;
 			}
 
-			return edits;
+			const replacements = this._getPrefixTextReplacements(context, prefix, newName);
+
+			return this.getWorkspaceEdits(document, replacements);
 		}
 
-		const prefixRange = this.getPrefixEditRangeFromCursorPosition(document, position);
-		const prefix = document.getText(prefixRange);
+		return edits;
+	}
 
-		if (!prefix || !context.namespaces[prefix]) {
-			return undefined;
-		}
-
+	/**
+	 * Get the workspace edits for the given text replacements.
+	 * @param document The document to be edited.
+	 * @param replacements The replacements to apply.
+	 * @returns A workspace edit containing the replacements.
+	 */
+	getWorkspaceEdits(document: vscode.TextDocument, replacements: TextReplacement[]): vscode.WorkspaceEdit {
 		const edits = new vscode.WorkspaceEdit();
 
-		for (const r of context.namespaceDefinitions[prefix]) {
-			edits.replace(document.uri, new vscode.Range(
-				new vscode.Position(r.start.line, r.start.character),
-				new vscode.Position(r.end.line, r.end.character)
-			), newName);
-		}
+		for (const replacement of replacements) {
+			const documentText = document.getText();
 
-		const namespaceIri = context.namespaces[prefix];
+			let match: RegExpExecArray | null;
 
-		for (const iri of Object.keys(context.references).filter(k => k.startsWith(namespaceIri))) {
-			for (let r of context.references[iri]) {
-				const editRange = this.getPrefixEditRangeFromCursorPosition(document, new vscode.Position(r.start.line, r.start.character));
+			while ((match = replacement.fromExpression.exec(documentText)) !== null) {
+				const matchIndex = match.index;
+				const matchLength = match[0].length;
 
-				if (!editRange) continue;
+				const start = document.positionAt(matchIndex);
+				const end = document.positionAt(matchIndex + matchLength);
 
-				edits.replace(document.uri, editRange, newName);
+				const range = new vscode.Range(start, end);
+
+				edits.replace(document.uri, range, replacement.toValue);
 			}
 		}
 
 		return edits;
 	}
 
-	getPrefixEditRangeFromCursorPosition(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
+	/**
+	 * Get the range of a prefix to be edited in the XML document at the given position.
+	 * @param document The XML document.
+	 * @param position The position where to look for the prefix.
+	 * @returns The range of the prefix to be edited, or `undefined` if not found.
+	 */
+	private _getPrefixEditRange(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
 		const line = document.lineAt(position.line).text;
+		const prefixedNameRange = this.getXmlPrefixedNameRangeAtPosition(line, position);
 
-		let result = this.getXmlPrefixedName(line, position);
+		if (prefixedNameRange) {
+			const prefixedName = document.getText(prefixedNameRange);
 
-		if (result) {
-			const startColumn = line.indexOf(result);
-			const endColumn = startColumn + result.indexOf(":");
+			if (prefixedName.startsWith('xmlns:')) {
+				const start = prefixedNameRange.start.translate(0, 6);
+				const end = prefixedNameRange.end;
 
-			if (result.startsWith('xmlns:')) {
-				return new vscode.Range(
-					new vscode.Position(position.line, endColumn + 1),
-					new vscode.Position(position.line, startColumn + result.length)
-				);
+				return new vscode.Range(start, end);
 			} else {
-				return new vscode.Range(
-					new vscode.Position(position.line, startColumn),
-					new vscode.Position(position.line, endColumn)
-				);
+				const start = prefixedNameRange.start;
+				const end = prefixedNameRange.start.translate(0, prefixedName.indexOf(":"));
+
+				return new vscode.Range(start, end);
 			}
 		}
 
-		result = this.getXmlAttributeValue(line, position);
+		const attributeValueRange = this.getXmlAttributeValueRangeAtPosition(line, position);
 
-		if (result && result.trim().startsWith('&')) {
-			const startColumn = line.indexOf(result) + 1;
-			const endColumn = line.indexOf(result) + result.indexOf(";");
+		if (attributeValueRange) {
+			const attributeValue = document.getText(attributeValueRange);
 
-			return new vscode.Range(
-				new vscode.Position(position.line, startColumn),
-				new vscode.Position(position.line, endColumn)
-			);
+			if (attributeValue.startsWith('&')) {
+				const start = attributeValueRange.start.translate(0, 1);
+				const end = attributeValueRange.end.translate(0, attributeValue.indexOf(";"));
+
+				return new vscode.Range(start, end);
+			}
 		}
+
+		const entityRange = this.getXmlEntityRangeAtPosition(line, position);
+
+		return entityRange;
 	}
 
-	getLabelEditRangeFromCursorPosition(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
-		const line = document.lineAt(position.line).text;
-		const prefixedName = this.getXmlPrefixedName(line, position);
+	/**
+	 * Get the text replacements for a prefix in the XML document.
+	 * @param context The XML document context.
+	 * @param prefix The prefix to be replaced.
+	 * @param newPrefix The new prefix to replace with.
+	 * @returns An array of text replacements.
+	 */
+	private _getPrefixTextReplacements(context: XmlDocument, prefix: string, newPrefix: string): TextReplacement[] {
+		const namespaceIri = context.namespaces[prefix];
 
-		if (prefixedName) {
-			const startColumn = line.indexOf(prefixedName) + prefixedName.indexOf(":") + 1;
-			const endColumn = line.indexOf(prefixedName) + prefixedName.length;
+		if (!namespaceIri) {
+			return [];
+		}
+
+		const result: TextReplacement[] = [];
+
+		result.push({
+			fromExpression: new RegExp(`xmlns:${prefix}`, 'g'),
+			toValue: `xmlns:${newPrefix}`
+		});
+
+		result.push({
+			fromExpression: new RegExp(`${prefix}:`, 'g'),
+			toValue: `${newPrefix}:`
+		});
+
+		result.push({
+			fromExpression: new RegExp(`ENTITY ${prefix}`, 'g'),
+			toValue: `ENTITY ${newPrefix}`
+		});
+
+		result.push({
+			fromExpression: new RegExp(`&${prefix};`, 'g'),
+			toValue: `&${newPrefix};`
+		});
+
+		return result;
+	}
+
+	/**
+	 * Get the range of a local name to be edited in the XML document at the given position.
+	 * @param document The XML document.
+	 * @param position The position where to look for the local name.
+	 * @returns The range of the local name to be edited, or `undefined` if not found.
+	 */
+	private _getLocalNameEditRange(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
+		const line = document.lineAt(position.line).text;
+		const prefixedNameRange = this.getXmlPrefixedNameRangeAtPosition(line, position);
+
+		// Match XML prefixed attribute names (e.g. "rdf:about") which cannot occur inside attribute values.
+		if (prefixedNameRange) {
+			const prefixedName = document.getText(prefixedNameRange);
 
 			if (!prefixedName.startsWith('xmlns:') && !prefixedName.startsWith('xml:')) {
-				return new vscode.Range(
-					new vscode.Position(position.line, startColumn),
-					new vscode.Position(position.line, endColumn)
-				);
+				const start = prefixedNameRange.start.translate(0, prefixedName.indexOf(":") + 1);
+				const end = prefixedNameRange.end;
+
+				return new vscode.Range(start, end);
 			}
 		}
 
-		const attributeValue = this.getXmlAttributeValue(line, position);
+		const attributeValueRange = this.getXmlAttributeValueRangeAtPosition(line, position);
 
-		if (!attributeValue) {
-			return;
+		if (!attributeValueRange) {
+			return undefined;
 		}
 
-		// HTML entity-style prefixed names (e.g. "&rdf;about")
+		// Match entity references (e.g. "&ex;") inside attribute values.
+		const attributeValue = document.getText(attributeValueRange);
+
 		if (attributeValue.trim().startsWith('&')) {
-			const startColumn = line.indexOf(attributeValue) + attributeValue.indexOf(";") + 1;
-			const endColumn = line.indexOf(attributeValue) + attributeValue.length;
+			const startColumn = attributeValueRange.start.character + attributeValue.indexOf(";") + 1;
+			const endColumn = attributeValueRange.start.character + attributeValue.length;
 
 			return new vscode.Range(
 				new vscode.Position(position.line, startColumn),
@@ -182,19 +220,21 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			);
 		}
 
-		// Relative IRIs that need to resolved using the document base IRI.
-		const attributeName = this.getXmlAttributeName(line, position)?.toLowerCase();
+		// Match local names (e.g. "Example") inside attribute values that must be resolved using the document base IRI.
+		const attributeNameRange = this.getXmlAttributeNameRangeNearPosition(line, position);
+		const attributeName = document.getText(attributeNameRange);
 
 		if (attributeName !== 'rdf:about' && attributeName !== 'rdf:resource' && attributeName !== 'rdf:datatype') {
-			return;
+			// We only support renaming of rdf:about, rdf:resource and rdf:datatype as these must be IRIs or local names.
+			return undefined;
 		}
 
 		if (attributeValue.includes(':')) {
-			// Full IRIs in XML attributes.
+			// Attribute values only support 
 			const localName = getIriLocalPart(attributeValue);
 
 			if (localName.length === 0) {
-				return;
+				return undefined;
 			}
 
 			const startColumn = line.lastIndexOf(localName);
@@ -206,13 +246,53 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			);
 		} else {
 			// Local names which need to be resolved using the document base IRI.
-			const startColumn = line.indexOf(attributeValue);
-			const endColumn = line.indexOf(attributeValue) + attributeValue.length;
-
-			return new vscode.Range(
-				new vscode.Position(position.line, startColumn),
-				new vscode.Position(position.line, endColumn)
-			);
+			return attributeValueRange;
 		}
+	}
+
+	/**
+	 * Get the text replacements for a local name in the XML document.
+	 * @param context The XML document context.
+	 * @param iri The IRI which includes the local name to be replaced.
+	 * @param newName The new local name to replace with.
+	 * @returns An array of text replacements.
+	 */
+	private _getLocalNameTextReplacements(context: XmlDocument, iri: string, newName: string): TextReplacement[] {
+		const localName = getIriLocalPart(iri);
+		const namespaceIri = getNamespaceIri(iri);
+
+		if (!iri.includes(':') || namespaceIri.length === 0 || localName.length === 0) {
+			return [];
+		}
+
+		const result: TextReplacement[] = [];
+
+		result.push({
+			fromExpression: new RegExp(`${iri}`, 'g'),
+			toValue: `${namespaceIri + newName}`
+		});
+
+		const prefix = context.getPrefixForNamespaceIri(namespaceIri);
+
+		if (prefix) {
+			result.push({
+				fromExpression: new RegExp(`${prefix}:${localName}`, 'g'),
+				toValue: `${prefix}:${newName}`
+			});
+
+			result.push({
+				fromExpression: new RegExp(`&${prefix};${localName}`, 'g'),
+				toValue: `&${prefix};${newName}`
+			});
+		}
+
+		if (context.baseIri && iri.startsWith(context.baseIri)) {
+			result.push({
+				fromExpression: new RegExp(`="${localName}"`, 'g'),
+				toValue: `="${newName}"`
+			});
+		}
+
+		return result;
 	}
 }
