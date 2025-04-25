@@ -208,7 +208,7 @@ export class XmlDocument extends DocumentContext {
 
 		// Note: The parser provides the end position of the doctype declaration, but not the start position.
 		const startLine = endLine - lines.length + 1;
-		
+
 		for (let n = lines.length - 1; n > 0; n--) {
 			const text = lines[n];
 
@@ -256,15 +256,18 @@ export class XmlDocument extends DocumentContext {
 	}
 
 	private _registerTypedSubject(tag: SAXTag, attribute: SAXAttribute, range: vscode.Range) {
-		// Note: rdf:Description does not assert a type.
-		if (tag.uri === _RDF && tag.local === 'description') {
-			return;
-		}
-
 		// Get a resolved IRI from the attribute value.
 		const subject = this.getIriFromXmlString(attribute.value);
 
 		if (!subject) {
+			return;
+		}
+
+		// Register the subject for code lense providers.
+		this._addRangeToIndex(this.subjects, subject, range);
+
+		// Note: rdf:Description does not assert a type.
+		if (tag.uri === _RDF && tag.local === 'description') {
 			return;
 		}
 

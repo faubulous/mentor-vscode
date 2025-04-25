@@ -79,7 +79,12 @@ export abstract class DocumentContext {
 	namespaceDefinitions: { [key: string]: Range[] } = {};
 
 	/**
-	 * Maps IRIs of resources to the locations where they appear in the document.
+	 * Maps IRIs that appear as subjects to the locations where they appear in the document.
+	 */
+	subjects: { [key: string]: Range[] } = {};
+
+	/**
+	 * Maps IRIs of all resources to the locations where they appear in the document.
 	 */
 	references: { [key: string]: Range[] } = {};
 
