@@ -4,8 +4,9 @@ import { SAXParser } from 'sax-ts';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RdfSyntax } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
-import { DefinitionProvider } from '@/languages/definition-provider';
+import { DefinitionProvider } from '@/providers';
 import { XmlDefinitionProvider } from '@/languages/xml/providers/xml-definition-provider';
+import { XmlReferenceProvider } from '@/languages/xml/providers/xml-reference-provider';
 
 // TODO: Move getTokenTypes and getPrefixDefintion int the Definition Service for the XML language.
 
@@ -17,7 +18,9 @@ export class XmlDocument extends DocumentContext {
 
 	private _inferenceExecuted = false;
 
-	private _definitionProvider: DefinitionProvider = new XmlDefinitionProvider();
+	private readonly _definitionProvider = new XmlDefinitionProvider();
+
+	private readonly _referenceProvider = new XmlReferenceProvider();
 
 	constructor(uri: vscode.Uri) {
 		super(uri);
@@ -55,6 +58,10 @@ export class XmlDocument extends DocumentContext {
 
 	override getDefinitionProvider(): DefinitionProvider {
 		return this._definitionProvider;
+	}
+
+	override getReferenceProvider(): XmlReferenceProvider {
+		return this._referenceProvider;
 	}
 
 	override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {

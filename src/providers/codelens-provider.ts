@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { XmlDocument } from '@/languages/xml/xml-document';
-import { XmlReferenceProvider } from '@/languages/xml/providers/xml-reference-provider';
 
 /**
- * Provides usage information for resource definitions in XML documents.
+ * Provides usage information for resource definitions in Turtle documents.
  */
-export class XmlCodeLensProvider extends XmlReferenceProvider implements vscode.CodeLensProvider {
+export class CodeLensProvider implements vscode.CodeLensProvider {
 	/**
 	 * Indicates whether the workspace has been initialized.
 	 */
@@ -27,8 +25,6 @@ export class XmlCodeLensProvider extends XmlReferenceProvider implements vscode.
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		super();
-
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
 				this._enabled = mentor.configuration.get('editor.codeLensEnabled', true);
@@ -75,18 +71,19 @@ export class XmlCodeLensProvider extends XmlReferenceProvider implements vscode.
 				return [];
 			}
 
-			const context = mentor.getDocumentContext(document, XmlDocument);
+			const context = mentor.contexts[document.uri.toString()];
 
 			if (!context) {
 				return [];
 			}
 
+			const referenceProvider = context.getReferenceProvider();
+
 			const result = [];
 
-			// Match all 'rdf:about' values in the XML document.
 			for (const iri of Object.keys(context.subjects)) {
 				for (const range of context.subjects[iri]) {
-					let n = Math.max(this.provideReferencesForIri(iri).length - 1, 0);
+					let n = Math.max(referenceProvider.provideReferencesForIri(iri).length - 1, 0);
 
 					result.push(new vscode.CodeLens(new vscode.Range(
 						new vscode.Position(range.start.line, range.start.character),

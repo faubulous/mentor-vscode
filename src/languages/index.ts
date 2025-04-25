@@ -1,4 +1,3 @@
-export * from './definition-provider';
 export * from './language-client';
 export * from './xml/xml-document';
 export * from './xml/xml-token-provider';

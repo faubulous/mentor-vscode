@@ -1,5 +1,4 @@
 export * from './turtle-code-actions-provider';
-export * from './turtle-codelens-provider';
 export * from './turtle-completion-item-provider';
 export * from './turtle-definition-provider';
 export * from './turtle-hover-provider';

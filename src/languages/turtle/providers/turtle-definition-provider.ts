@@ -45,7 +45,7 @@ export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 
 		if (!primaryContextOnly) {
 			// Find all contexts that define the URI.
-			const contexts = this._getContextsDefiningUri(uri, primaryContext);
+			const contexts = this._getContextsDefiningIri(uri, primaryContext);
 
 			for (let c of contexts.filter(c => c.typeDefinitions[uri])) {
 				// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
@@ -76,7 +76,7 @@ export class TurtleDefinitionProvider extends TurtleFeatureProvider {
 		return null;
 	}
 
-	private _getContextsDefiningUri(uri: string, primaryContext?: DocumentContext): DocumentContext[] {
+	private _getContextsDefiningIri(uri: string, primaryContext?: DocumentContext): DocumentContext[] {
 		const result: DocumentContext[] = [];
 		const contexts = Object.values(mentor.contexts);
 

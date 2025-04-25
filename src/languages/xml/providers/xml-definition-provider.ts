@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { DocumentContext } from '@/document-context';
-import { DefinitionProvider } from '@/languages/definition-provider';
+import { DefinitionProvider } from '@/providers';
 import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
 import { XmlDocument } from '../xml-document';
 

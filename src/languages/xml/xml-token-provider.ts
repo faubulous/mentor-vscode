@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
-import { XmlHoverProvider, XmlReferenceProvider, XmlRenameProvider, XmlCodeLensProvider } from '@/languages/xml/providers';
+import { CodeLensProvider } from '@/providers';
+import { XmlHoverProvider, XmlReferenceProvider, XmlRenameProvider } from '@/languages/xml/providers';
 
-const codelensProvider = new XmlCodeLensProvider();
+const codelensProvider = new CodeLensProvider();
 const hoverProvider = new XmlHoverProvider();
 const renameProvider = new XmlRenameProvider();
 const referenceProvider = new XmlReferenceProvider();

@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
+import { ReferenceProvider } from '@/providers';
 import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
 
 /**
  * Provides references to resources.
  */
-export class XmlReferenceProvider extends XmlFeatureProvider implements vscode.ReferenceProvider {
+export class XmlReferenceProvider extends XmlFeatureProvider implements ReferenceProvider {
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
 		const iri = this.getIriAtPosition(document, position);
 

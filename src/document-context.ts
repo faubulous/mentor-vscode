@@ -5,7 +5,7 @@ import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-r
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { TreeLabelStyle } from '@/settings';
-import { DefinitionProvider } from '@/languages';
+import { DefinitionProvider, ReferenceProvider } from '@/providers';
 import { getIriLocalPart, getNamespaceIri } from '@/utilities';
 import { Range } from 'vscode-languageserver-types';
 
@@ -231,6 +231,11 @@ export abstract class DocumentContext {
 	 * Get the definition provider for the document language.
 	 */
 	abstract getDefinitionProvider(): DefinitionProvider;
+
+	/**
+	 * Get the reference provider for the document language.
+	 */
+	abstract getReferenceProvider(): ReferenceProvider;
 
 	/**
 	 * Event handler for when the document is changed.

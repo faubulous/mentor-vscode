@@ -5,8 +5,8 @@ import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
-import { DefinitionProvider } from '@/languages/definition-provider';
-import { TurtleDefinitionProvider } from '@/languages/turtle/providers';
+import { DefinitionProvider } from '@/providers';
+import { TurtleDefinitionProvider, TurtleReferenceProvider } from '@/languages/turtle/providers';
 import { TurtlePrefixDefinitionService } from '@/services';
 import {
 	getIriFromToken,
@@ -28,7 +28,9 @@ export class TurtleDocument extends DocumentContext {
 
 	private _tokens: IToken[] = [];
 
-	private readonly _definitionProvider: DefinitionProvider = new TurtleDefinitionProvider();
+	private readonly _definitionProvider = new TurtleDefinitionProvider();
+
+	private readonly _referenceProvider = new TurtleReferenceProvider();
 
 	constructor(uri: vscode.Uri, syntax: RdfSyntax) {
 		super(uri);
@@ -49,6 +51,10 @@ export class TurtleDocument extends DocumentContext {
 
 	public override getDefinitionProvider(): DefinitionProvider {
 		return this._definitionProvider;
+	}
+
+	public override getReferenceProvider(): TurtleReferenceProvider {
+		return this._referenceProvider;
 	}
 
 	public override async infer(): Promise<void> {
@@ -217,12 +223,15 @@ export class TurtleDocument extends DocumentContext {
 	setTokens(tokens: IToken[]): void {
 		this.namespaces = {};
 		this.namespaceDefinitions = {};
+		this.subjects = {};
 		this.references = {};
 		this.typeAssertions = {};
 		this.typeDefinitions = {};
 		this.blankNodes = {};
 
 		this._tokens = tokens;
+
+		let previousToken: IToken | undefined;
 
 		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType?.tokenName) {
@@ -244,6 +253,10 @@ export class TurtleDocument extends DocumentContext {
 
 					if (!iri) break;
 
+					if (t.startColumn === 1 && previousToken) {
+						this._registerSubject(t, iri, previousToken);
+					}
+
 					this._handleTypeAssertion(tokens, t, iri, i);
 					this._handleTypeDefinition(tokens, t, iri, i);
 					this._handleIriReference(tokens, t, iri);
@@ -251,6 +264,10 @@ export class TurtleDocument extends DocumentContext {
 				}
 				case 'IRIREF': {
 					const iri = getIriFromIriReference(t.image);
+
+					if (t.startColumn === 1 && previousToken) {
+						this._registerSubject(t, iri, previousToken);
+					}
 
 					this._handleTypeAssertion(tokens, t, iri, i);
 					this._handleTypeDefinition(tokens, t, iri, i);
@@ -263,7 +280,23 @@ export class TurtleDocument extends DocumentContext {
 					break;
 				}
 			}
+
+			previousToken = t;
 		});
+	}
+
+	private _registerSubject(token: IToken, iri: string, previousToken: IToken) {
+		const previousType = previousToken.tokenType?.tokenName;
+
+		if (previousType === 'Period' || previousType === 'Dot') {
+			const range = this.getRangeFromToken(token);
+
+			if (!this.subjects[iri]) {
+				this.subjects[iri] = [];
+			}
+
+			this.subjects[iri].push(range);
+		}
 	}
 
 	private _handleIriReference(tokens: IToken[], token: IToken, uri: string) {
