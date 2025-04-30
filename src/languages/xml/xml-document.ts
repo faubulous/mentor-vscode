@@ -4,9 +4,7 @@ import { SAXParser } from 'sax-ts';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RdfSyntax } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
-import { DefinitionProvider } from '@/providers';
-import { XmlDefinitionProvider } from '@/languages/xml/providers/xml-definition-provider';
-import { XmlReferenceProvider } from '@/languages/xml/providers/xml-reference-provider';
+import { getIriFromPrefixedName } from '@/utilities';
 
 // TODO: Move getTokenTypes and getPrefixDefintion int the Definition Service for the XML language.
 
@@ -18,9 +16,10 @@ export class XmlDocument extends DocumentContext {
 
 	private _inferenceExecuted = false;
 
-	private readonly _definitionProvider = new XmlDefinitionProvider();
-
-	private readonly _referenceProvider = new XmlReferenceProvider();
+	/**
+	 * The ranges where text literals appear in the XML document.
+	 */
+	private _textLiterals: vscode.Range[] = [];
 
 	constructor(uri: vscode.Uri) {
 		super(uri);
@@ -56,16 +55,162 @@ export class XmlDocument extends DocumentContext {
 		}
 	}
 
-	override getDefinitionProvider(): DefinitionProvider {
-		return this._definitionProvider;
-	}
-
-	override getReferenceProvider(): XmlReferenceProvider {
-		return this._referenceProvider;
-	}
-
 	override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
 		return `xmlns:${prefix}="${uri}"`;
+	}
+
+	override getIriAtPosition(position: { line: number, character: number }): string | undefined {
+		const document = this.getTextDocument();
+
+		if (!document) {
+			return;
+		}
+
+		const line = document.lineAt(position.line).text;
+
+		if (!line) {
+			return;
+		}
+
+		const prefixRange = this.getPrefixedNameRangeAtPosition(line, position);
+
+		if (prefixRange) {
+			const name = document.getText(prefixRange);
+
+			return getIriFromPrefixedName(this.namespaces, name);
+		}
+
+		const valueRange = this.getAttributeValueRangeAtPosition(line, position);
+
+		if (valueRange) {
+			const value = document.getText(valueRange);
+
+			return this.getIriFromXmlString(value);
+		}
+	}
+
+	override getLiteralAtPosition(position: vscode.Position): string | undefined {
+		const document = this.getTextDocument();
+
+		if (!document) {
+			return;
+		}
+
+		for (const range of this._textLiterals) {
+			const r = new vscode.Range(
+				new vscode.Position(range.start.line, range.start.character),
+				new vscode.Position(range.end.line, range.end.character),
+			);
+
+			if (r.contains(position)) {
+				return document.getText(r);
+			}
+
+			if (r.start.line > position.line) {
+				return undefined;
+			}
+		}
+	}
+
+	/**
+	 * Get the (prefixed) name of an attribute in the XML document at the given position.
+	 * @param line A line of text in the XML document.
+	 * @param position The position where to look for the attribute value or name; should be within the attribute name or value.
+	 * @returns The range in the document where the attribute name is found, 1-based for use with the vscode.TextDocument class.
+	 */
+	getAttributeNameRangeNearPosition(line: string, position: { line: number, character: number }): vscode.Range | undefined {
+		// Match an entire XML attribute (e.g., xml:example="Example")
+		const attributeNameExpression = /(([a-zA-Z_][\w.-]*:)?[a-zA-Z_][\w.-]*)=["']([^"']+)["']/g;
+
+		let match: RegExpExecArray | null;
+
+		while ((match = attributeNameExpression.exec(line)) !== null) {
+			const start = match.index;
+			const end = start + match[1].length;
+
+			// Check if the position is within the range of the entire attribute.
+			if (position.character >= start && position.character <= match.index + match[0].length) {
+				return new vscode.Range(
+					new vscode.Position(position.line, start),
+					new vscode.Position(position.line, end)
+				);
+			}
+		}
+	}
+
+	/**
+	 * Get the value of a quoted string in the XML document at the given position without quotation marks.
+	 * @param line A line of text in the XML document.
+	 * @param position The position where to look for the attribute value.
+	 * @returns The range in the document where the attribute value is found if the position is within the value, `undefined` otherwise.
+	 */
+	getAttributeValueRangeAtPosition(line: string, position: { line: number, character: number }): vscode.Range | undefined {
+		// Match quoted values (e.g., "http://example.org/C1_Test")
+		const quotedValueExpression = /["']([^"']+)["']/g;
+
+		let match: RegExpExecArray | null;
+
+		while ((match = quotedValueExpression.exec(line)) !== null) {
+			const start = match.index + 1;
+			const end = start + match[1].length;
+
+			if (position.character >= start && position.character <= end) {
+				return new vscode.Range(
+					new vscode.Position(position.line, start),
+					new vscode.Position(position.line, end)
+				);
+			}
+		}
+	}
+
+	/**
+	 * Get the range of a prefixed name (e.g. rdfs:label) in the XML document at the given position.
+	 * @param line A line of text in the XML document.
+	 * @param position The position where to look for the attribute value.
+	 * @param namespaces The namespaces defined in the document.
+	 * @returns The range in the document where the prefixed name is found if the position is within the name, `undefined` otherwise.
+	 */
+	getPrefixedNameRangeAtPosition(line: string, position: { line: number, character: number }): vscode.Range | undefined {
+		// Match namespace-prefixed attributes (e.g., xml:lang)
+		const regex = /[a-zA-Z_][\w.-]*:[a-zA-Z_][\w.-]*/g;
+
+		let match: RegExpExecArray | null;
+
+		while ((match = regex.exec(line)) !== null) {
+			const start = match.index;
+			const end = start + match[0].length;
+
+			if (position.character >= start && position.character <= end) {
+				return new vscode.Range(
+					new vscode.Position(position.line, start),
+					new vscode.Position(position.line, end)
+				);
+			}
+		}
+	}
+
+	/**
+	 * Get the range of an XML entity name at the given position in the XML document.
+	 * @param line A line of text in the XML document.
+	 * @param position The position where to look for the entity name.
+	 * @returns The range in the document where the entity name is found if the position is within the entity name, `undefined` otherwise.
+	 */
+	getEntityRangeAtPosition(line: string, position: { line: number, character: number }): vscode.Range | undefined {
+		const regex = /ENTITY ([a-zA-Z_][\w.-]*)/g;
+
+		let match: RegExpExecArray | null;
+
+		while ((match = regex.exec(line)) !== null) {
+			const start = match.index + 7;
+			const end = start + match[1].length;
+
+			if (position.character >= start && position.character <= end) {
+				return new vscode.Range(
+					new vscode.Position(position.line, start),
+					new vscode.Position(position.line, end)
+				);
+			}
+		}
 	}
 
 	override getTokenTypes(): TokenTypes {
@@ -74,6 +219,19 @@ export class XmlDocument extends DocumentContext {
 			BASE: '',
 			IRIREF: '',
 			PNAME_NS: '',
+		}
+	}
+
+	override async onDidChangeDocument(e: vscode.TextDocumentChangeEvent): Promise<void> {
+		await super.onDidChangeDocument(e);
+
+		const editor = vscode.window.activeTextEditor;
+		const uri = editor?.document.uri;
+
+		if (editor && uri === this.uri) {
+			editor.setDecorations(vscode.window.createTextEditorDecorationType({
+				backgroundColor: 'rgba(255, 255, 0, 0.3)',
+			}), this._textLiterals);
 		}
 	}
 
@@ -120,6 +278,8 @@ export class XmlDocument extends DocumentContext {
 			return;
 		}
 
+		this._textLiterals = [];
+
 		return new Promise((resolve, reject) => {
 			const parser = new SAXParser(false, {
 				trim: false,
@@ -129,8 +289,11 @@ export class XmlDocument extends DocumentContext {
 				position: true,
 			}) as SAXParser & { line: number; column: number };
 
-			let currentTag: SAXTag | undefined;
-			let currentTagStart: { line: number; column: number } | undefined;
+			let openTag: SAXTag | undefined;
+			let openTagStart: { line: number; column: number } | undefined;
+			let openTagEnd: { line: number; column: number } | undefined;
+			let textContent: string | undefined;
+			let textContentEnd: { line: number; column: number } | undefined;
 
 			parser.ondoctype = (doctype: string) => {
 				this._parseDoctypePrefixDefinitions(doctype, parser.line);
@@ -138,8 +301,8 @@ export class XmlDocument extends DocumentContext {
 
 			// This event is fired before the onattribute event.
 			parser.onopentagstart = (tag: SAXTag) => {
-				currentTag = tag;
-				currentTagStart = { line: parser.line, column: parser.column };
+				openTag = tag;
+				openTagStart = { line: parser.line, column: parser.column };
 
 				// The tag name is lowercased by the parser so we need to lower case the line too.
 				const line = document.lineAt(parser.line).text.toLowerCase();
@@ -160,13 +323,40 @@ export class XmlDocument extends DocumentContext {
 			};
 
 			parser.onopentag = (tag: SAXTag) => {
-				if (currentTagStart && tag.ns) {
+				openTagEnd = {
+					line: parser.line,
+					column: parser.column
+				};
+
+				if (openTagStart && tag.ns) {
 					// Get the slice of 'data' between start tag line and the parser.line.
-					for (let n = currentTagStart?.line; n <= parser.line; n++) {
+					for (let n = openTagStart?.line; n <= parser.line; n++) {
 						const text = document.lineAt(n).text;
 
 						this._registerXmlPrefixDefinition(text, n);
 					}
+				}
+			}
+
+			parser.ontext = (text: string) => {
+				if (openTag && text.trim().length > 0) {
+					textContent = text;
+					textContentEnd = {
+						line: parser.line,
+						column: parser.column - openTag?.name.length - 3
+					}
+				} else {
+					textContent = undefined;
+					textEnd: undefined;
+				}
+			}
+
+			parser.onclosetag = (tag: SAXTag) => {
+				if (textContent && textContentEnd && openTagEnd) {
+					this._textLiterals.push(new vscode.Range(
+						new vscode.Position(openTagEnd.line, openTagEnd.column),
+						new vscode.Position(textContentEnd.line, textContentEnd.column)
+					));
 				}
 			}
 
@@ -188,8 +378,8 @@ export class XmlDocument extends DocumentContext {
 						new vscode.Position(parser.line, column + attribute.value.length)
 					);
 
-					if (currentTag && attribute.local === 'about') {
-						this._registerTypedSubject(currentTag, attribute, range);
+					if (openTag && attribute.local === 'about') {
+						this._registerTypedSubject(openTag, attribute, range);
 					}
 
 					switch (attribute.local) {

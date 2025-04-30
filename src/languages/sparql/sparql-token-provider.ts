@@ -1,13 +1,12 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
+import { ReferenceProvider, DefinitionProvider } from '@/providers';
 import {
 	TurtleCodeActionsProvider,
 	TurtleCompletionItemProvider,
-	TurtleDefinitionProvider,
-	TurtleHoverProvider,
+	HoverProvider,
 	TurtlePrefixCompletionProvider,
-	TurtleRenameProvider,
-	TurtleReferenceProvider
+	TurtleRenameProvider
 } from '@/languages/turtle/providers';
 import { TurtleDocument } from '@/languages/turtle/turtle-document';
 
@@ -298,10 +297,10 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 	}
 };
 
+const definitionProvider = new DefinitionProvider();
+const referenceProvider = new ReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
-const referenceProvider = new TurtleReferenceProvider();
-const definitionProvider = new TurtleDefinitionProvider();
-const hoverProvider = new TurtleHoverProvider();
+const hoverProvider = new HoverProvider();
 const completionProvider = new TurtleCompletionItemProvider();
 const codeActionsProvider = new TurtleCodeActionsProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);

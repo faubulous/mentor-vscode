@@ -5,7 +5,6 @@ import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-r
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { TreeLabelStyle } from '@/settings';
-import { DefinitionProvider, ReferenceProvider } from '@/providers';
 import { getIriLocalPart, getNamespaceIri } from '@/utilities';
 import { Range } from 'vscode-languageserver-types';
 
@@ -228,14 +227,18 @@ export abstract class DocumentContext {
 	abstract getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string;
 
 	/**
-	 * Get the definition provider for the document language.
+	 * Get the full IRI of a resource at the given position in the document.
+	 * @param position The position in the document.
+	 * @returns The full IRI of the resource or `undefined` if not found.
 	 */
-	abstract getDefinitionProvider(): DefinitionProvider;
+	abstract getIriAtPosition(position: vscode.Position): string | undefined;
 
 	/**
-	 * Get the reference provider for the document language.
+	 * Get a literal value at the given position in the document.
+	 * @param position The position in the document.
+	 * @returns The literal value at the position or `undefined` if there is no literal value at that position.
 	 */
-	abstract getReferenceProvider(): ReferenceProvider;
+	abstract getLiteralAtPosition(position: vscode.Position): string | undefined;
 
 	/**
 	 * Event handler for when the document is changed.

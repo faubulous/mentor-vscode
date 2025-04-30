@@ -5,8 +5,6 @@ import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
-import { DefinitionProvider } from '@/providers';
-import { TurtleDefinitionProvider, TurtleReferenceProvider } from '@/languages/turtle/providers';
 import { TurtlePrefixDefinitionService } from '@/services';
 import {
 	getIriFromToken,
@@ -15,7 +13,8 @@ import {
 	getNamespaceDefinition,
 	getNamespaceIri,
 	countLeadingWhitespace,
-	countTrailingWhitespace
+	countTrailingWhitespace,
+	getTokenPosition
 } from '@/utilities';
 
 /**
@@ -27,10 +26,6 @@ export class TurtleDocument extends DocumentContext {
 	private _inferenceExecuted = false;
 
 	private _tokens: IToken[] = [];
-
-	private readonly _definitionProvider = new TurtleDefinitionProvider();
-
-	private readonly _referenceProvider = new TurtleReferenceProvider();
 
 	constructor(uri: vscode.Uri, syntax: RdfSyntax) {
 		super(uri);
@@ -49,12 +44,73 @@ export class TurtleDocument extends DocumentContext {
 		return this._tokens;
 	}
 
-	public override getDefinitionProvider(): DefinitionProvider {
-		return this._definitionProvider;
+	public override getIriAtPosition(position: vscode.Position): string | undefined {
+		const token = this.getTokensAtPosition(position)[0];
+
+		if (token) {
+			let iri;
+
+			if (this.isPrefixTokenAtPosition(token, position)) {
+				const prefix = token.image.split(":")[0];
+
+				iri = this.namespaces[prefix];
+			} else {
+				iri = getIriFromToken(this.namespaces, token);
+			}
+
+			return iri;
+		}
 	}
 
-	public override getReferenceProvider(): TurtleReferenceProvider {
-		return this._referenceProvider;
+	public override getLiteralAtPosition(position: vscode.Position): string | undefined {
+		const token = this.getTokensAtPosition(position)[0];
+
+		if (!token || !token.tokenType) {
+			return undefined;
+		}
+
+		switch (token.tokenType.name) {
+			// Display the literal strings without the quotes for improved readability for long strings.
+			case 'STRING_LITERAL1':
+			case 'STRING_LITERAL2':
+			case 'STRING_LITERAL_QUOTE':
+			case "STRING_LITERAL_SINGLE_QUOTE": {
+				return token.image.slice(1, -1);
+			}
+			case 'STRING_LITERAL_LONG1':
+			case 'STRING_LITERAL_LONG2':
+			case 'STRING_LITERAL_LONG_QUOTE':
+			case "STRING_LITERAL_LONG_SINGLE_QUOTE": {
+				return token.image.slice(3, -3);
+			}
+			default: {
+				return undefined;
+			}
+		}
+	}
+
+	/**
+	 * Indicates whether the token at the given position is a namespace prefix.
+	 * @param token A token.
+	 * @param position The position in the document.
+	 * @returns `true` if the cursor is on the prefix of the token, `false` otherwise.
+	 */
+	isPrefixTokenAtPosition(token: IToken, position: vscode.Position) {
+		const tokenType = token.tokenType?.tokenName;
+		const { start } = getTokenPosition(token);
+
+		switch (tokenType) {
+			case "PNAME_NS":
+			case "PNAME_LN": {
+				const i = token.image.indexOf(":");
+				const n = position.character - start.character;
+
+				return n <= i;
+			}
+			default: {
+				return false;
+			}
+		}
 	}
 
 	public override async infer(): Promise<void> {
@@ -204,16 +260,32 @@ export class TurtleDocument extends DocumentContext {
 		const l = position.line + 1;
 		const n = position.character + 1;
 
-		return this.tokens.filter(t =>
-			t.startLine &&
-			t.startLine <= l &&
-			t.endLine &&
-			t.endLine >= l &&
-			t.startColumn &&
-			t.startColumn <= n &&
-			t.endColumn &&
-			t.endColumn >= (n - 1)
-		);
+		for (let token of this.tokens) {
+			if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
+				continue;
+			}
+
+			if (token.startLine > l) {
+				break;
+			}
+
+			// If the token starts and ends on the same line and column, then the position must be inside the token.
+			if (token.startLine == l && token.endLine == l && token.startColumn <= n && token.endColumn >= n) {
+				return [token];
+			}
+
+			// If we have a multi-line token and the position is between start and end, then we have a match.
+			if (token.startLine < l && token.endLine > l) {
+				return [token];
+			}
+
+			// If the token ends on the same line and the position is before the end column, then we have a match.
+			if (token.endLine == l && token.endColumn >= n) {
+				return [token];
+			}
+		}
+
+		return [];
 	}
 
 	/**

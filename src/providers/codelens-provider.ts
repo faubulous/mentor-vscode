@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
+import { ReferenceProvider } from './reference-provider';
 
 /**
  * Provides usage information for resource definitions in Turtle documents.
@@ -19,6 +20,8 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
 	 * Indicates whether the provider is enabled.
 	 */
 	private _enabled: boolean = true;
+
+	private readonly _referenceProvider: ReferenceProvider = new ReferenceProvider();
 
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
@@ -77,13 +80,11 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
 				return [];
 			}
 
-			const referenceProvider = context.getReferenceProvider();
-
 			const result = [];
 
 			for (const iri of Object.keys(context.subjects)) {
 				for (const range of context.subjects[iri]) {
-					let n = Math.max(referenceProvider.provideReferencesForIri(iri).length - 1, 0);
+					let n = Math.max(this._referenceProvider.provideReferencesForIri(iri).length - 1, 0);
 
 					result.push(new vscode.CodeLens(new vscode.Range(
 						new vscode.Position(range.start.line, range.start.character),

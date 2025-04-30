@@ -18,6 +18,7 @@ import {
 	TurtleTokenProvider,
 } from './languages';
 import { IToken } from 'millan';
+import { DefinitionProvider } from './providers';
 
 const clients: LanguageClientBase[] = [
 	new TurtleLanguageClient(),
@@ -165,9 +166,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {
 				const iri = getIriFromArgument(arg);
-
-				const definitionProvider = mentor.activeContext.getDefinitionProvider();
-				const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, iri);
+				const location = new DefinitionProvider().provideDefinitionForIri(mentor.activeContext, iri);
 
 				if (location instanceof vscode.Location) {
 					// We need to set the selection before executing the findReferences command.
@@ -193,8 +192,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 			}
 
 			if (mentor.activeContext && editor && uri) {
-				const definitionProvider = mentor.activeContext.getDefinitionProvider();
-				const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, uri, true);
+				const location = new DefinitionProvider().provideDefinitionForIri(mentor.activeContext, uri, true);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
@@ -224,8 +222,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 				return;
 			}
 
-			const definitionProvider = mentor.activeContext.getDefinitionProvider();
-			const location = definitionProvider.provideDefinitionForIri(mentor.activeContext, shapeUri, true);
+			const location = new DefinitionProvider().provideDefinitionForIri(mentor.activeContext, shapeUri, true);
 
 			if (location instanceof vscode.Location) {
 				editor.selection = new vscode.Selection(location.range.start, location.range.end);

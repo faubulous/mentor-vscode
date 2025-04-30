@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
-import { CodeLensProvider } from '@/providers';
+import {
+	CodeLensProvider,
+	ReferenceProvider,
+	DefinitionProvider
+} from '@/providers';
 import {
 	SemanticTokensLegend,
 	TurtleRenameProvider,
-	TurtleDefinitionProvider,
-	TurtleReferenceProvider,
-	TurtleHoverProvider,
+	HoverProvider,
 	TurtleSemanticTokensProvider,
 	TurtleCompletionItemProvider,
 	TurtleCodeActionsProvider,
@@ -13,11 +15,11 @@ import {
 } from '@/languages/turtle/providers';
 
 const codelensProvider = new CodeLensProvider();
+const definitionProvider = new DefinitionProvider();
+const hoverProvider = new HoverProvider();
+const referenceProvider = new ReferenceProvider();
 const tokenProvider = new TurtleSemanticTokensProvider();
 const renameProvider = new TurtleRenameProvider();
-const referenceProvider = new TurtleReferenceProvider();
-const definitionProvider = new TurtleDefinitionProvider();
-const hoverProvider = new TurtleHoverProvider();
 const completionProvider = new TurtleCompletionItemProvider();
 const codeActionsProvider = new TurtleCodeActionsProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`);

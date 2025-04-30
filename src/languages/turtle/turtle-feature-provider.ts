@@ -7,30 +7,6 @@ import { getNamespaceIri, getTokenPosition } from "@/utilities";
  */
 export class TurtleFeatureProvider {
 	/**
-	 * Indicates whether the cursor position is on a namespace prefix
-	 * @param token A token.
-	 * @param position The position of the cursor.
-	 * @returns true if the cursor is on the prefix of the token, false otherwise.
-	 */
-	protected isCursorOnPrefix(token: IToken, position: vscode.Position) {
-		const tokenType = token.tokenType?.tokenName;
-		const { start } = getTokenPosition(token);
-
-		switch (tokenType) {
-			case "PNAME_NS":
-			case "PNAME_LN": {
-				const i = token.image.indexOf(":");
-				const n = position.character - start.character;
-
-				return n <= i;
-			}
-			default: {
-				return false;
-			}
-		}
-	}
-
-	/**
 	 * Gets the range of a token that contains an editable prefix.
 	 * @param token A token.
 	 * @returns The range of the prefix.

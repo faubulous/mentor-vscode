@@ -21,7 +21,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			throw new Error('No token found at the given position.');
 		}
 
-		if (this.isCursorOnPrefix(token, position)) {
+		if (context.isPrefixTokenAtPosition(token, position)) {
 			return this.getPrefixEditRange(token);
 		} else {
 			return this.getLabelEditRange(token);
@@ -42,7 +42,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			return edits;
 		}
 
-		if (this.isCursorOnPrefix(token, position)) {
+		if (context.isPrefixTokenAtPosition(token, position)) {
 			const i = token.image.indexOf(":");
 			const prefix = token.image.substring(0, i);
 
@@ -87,10 +87,10 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 
 			if (!references) return edits;
 
-			for(let range of references) {
+			for (let range of references) {
 				const token = context.getTokensAtPosition(range.start)[0];
 
-				if(!token) continue;
+				if (!token) continue;
 
 				const editRange = this.getLabelEditRange(token);
 

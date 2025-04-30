@@ -30,14 +30,14 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 		if (!context) {
 			return undefined;
 		}
-
+		
 		const edits = new vscode.WorkspaceEdit();
 
 		// Handle rename of local names. Either of prefixed names or in IRIs.
 		const nameRange = this._getLocalNameEditRange(document, position);
 
 		if (nameRange && nameRange.contains(position)) {
-			const iri = this.getIriAtPosition(document, position);
+			const iri = context.getIriAtPosition(position);
 
 			if (!iri) {
 				return undefined;
@@ -103,8 +103,14 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 	 * @returns The range of the prefix to be edited, or `undefined` if not found.
 	 */
 	private _getPrefixEditRange(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
+		const context = mentor.getDocumentContext(document, XmlDocument);
+
+		if (!context) {
+			return undefined;
+		}
+
 		const line = document.lineAt(position.line).text;
-		const prefixedNameRange = this.getXmlPrefixedNameRangeAtPosition(line, position);
+		const prefixedNameRange = context.getPrefixedNameRangeAtPosition(line, position);
 
 		if (prefixedNameRange) {
 			const prefixedName = document.getText(prefixedNameRange);
@@ -122,7 +128,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			}
 		}
 
-		const attributeValueRange = this.getXmlAttributeValueRangeAtPosition(line, position);
+		const attributeValueRange = context.getAttributeValueRangeAtPosition(line, position);
 
 		if (attributeValueRange) {
 			const attributeValue = document.getText(attributeValueRange);
@@ -135,7 +141,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			}
 		}
 
-		const entityRange = this.getXmlEntityRangeAtPosition(line, position);
+		const entityRange = context.getEntityRangeAtPosition(line, position);
 
 		return entityRange;
 	}
@@ -186,8 +192,14 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 	 * @returns The range of the local name to be edited, or `undefined` if not found.
 	 */
 	private _getLocalNameEditRange(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
+		const context = mentor.getDocumentContext(document, XmlDocument);
+
+		if (!context) {
+			return undefined;
+		}
+
 		const line = document.lineAt(position.line).text;
-		const prefixedNameRange = this.getXmlPrefixedNameRangeAtPosition(line, position);
+		const prefixedNameRange = context.getPrefixedNameRangeAtPosition(line, position);
 
 		// Match XML prefixed attribute names (e.g. "rdf:about") which cannot occur inside attribute values.
 		if (prefixedNameRange) {
@@ -201,7 +213,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			}
 		}
 
-		const attributeValueRange = this.getXmlAttributeValueRangeAtPosition(line, position);
+		const attributeValueRange = context.getAttributeValueRangeAtPosition(line, position);
 
 		if (!attributeValueRange) {
 			return undefined;
@@ -221,7 +233,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 		}
 
 		// Match local names (e.g. "Example") inside attribute values that must be resolved using the document base IRI.
-		const attributeNameRange = this.getXmlAttributeNameRangeNearPosition(line, position);
+		const attributeNameRange = context.getAttributeNameRangeNearPosition(line, position);
 		const attributeName = document.getText(attributeNameRange);
 
 		if (attributeName !== 'rdf:about' && attributeName !== 'rdf:resource' && attributeName !== 'rdf:datatype') {

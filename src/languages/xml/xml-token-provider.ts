@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { CodeLensProvider } from '@/providers';
-import { XmlHoverProvider, XmlReferenceProvider, XmlRenameProvider } from '@/languages/xml/providers';
+import { CodeLensProvider, ReferenceProvider, HoverProvider } from '@/providers';
+import { XmlRenameProvider } from '@/languages/xml/providers';
 
 const codelensProvider = new CodeLensProvider();
-const hoverProvider = new XmlHoverProvider();
+const referenceProvider = new ReferenceProvider();
+const hoverProvider = new HoverProvider();
 const renameProvider = new XmlRenameProvider();
-const referenceProvider = new XmlReferenceProvider();
 
 export class XmlTokenProvider {
 	register(): vscode.Disposable[] {
