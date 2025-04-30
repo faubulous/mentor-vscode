@@ -258,7 +258,7 @@ export class TurtleDocument extends DocumentContext {
 	getTokensAtPosition(position: Position): IToken[] {
 		// The tokens are 0-based, but the position is 1-based.
 		const l = position.line + 1;
-		const n = position.character + 1;
+		const n = position.character;
 
 		for (let token of this.tokens) {
 			if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
@@ -270,7 +270,7 @@ export class TurtleDocument extends DocumentContext {
 			}
 
 			// If the token starts and ends on the same line and column, then the position must be inside the token.
-			if (token.startLine == l && token.endLine == l && token.startColumn <= n && token.endColumn >= n) {
+			if (token.startLine == l && token.endLine == l && token.startColumn <= n && n <= token.endColumn) {
 				return [token];
 			}
 
