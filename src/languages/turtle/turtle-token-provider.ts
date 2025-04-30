@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import {
 	CodeLensProvider,
 	ReferenceProvider,
-	DefinitionProvider
+	DefinitionProvider,
+	HoverProvider
 } from '@/providers';
 import {
 	SemanticTokensLegend,
 	TurtleRenameProvider,
-	HoverProvider,
 	TurtleSemanticTokensProvider,
 	TurtleCompletionItemProvider,
 	TurtleCodeActionsProvider,

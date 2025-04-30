@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { ReferenceProvider, DefinitionProvider } from '@/providers';
+import {
+	ReferenceProvider,
+	DefinitionProvider,
+	HoverProvider
+} from '@/providers';
 import {
 	TurtleCodeActionsProvider,
 	TurtleCompletionItemProvider,
-	HoverProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider
 } from '@/languages/turtle/providers';
