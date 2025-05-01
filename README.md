@@ -45,7 +45,7 @@ This extension provides the following features:
     - Select language tag of the displayed labels and definitions
     - Highlight the terms missing in the selected language (optional)
 
-### Supports N3, Turtle, Trig and SPARQL
+### Supports N3, Turtle, Trig, RDF/XML and SPARQL
   - Syntax highlighting
   - Syntax validation
   - Checking conformance of literal values to XSD specifications
@@ -66,8 +66,11 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
+### Version 0.2.9: Enhanced RDF/XML Support
+This release adds support for reference browsing, code lenses, renaming and hover tooltips for RDF/XML files.
+
 ### Version 0.2.8: Initial RDF/XML Support
-This release adds initial support for [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) documents. This includes browsing definitions and tooltips for IRIs in files that have an `.rdf` extension. The next release will add support for reference / usage information, codelenses and conversion into Turtle.
+This release adds initial support for [RDF/XML](https://www.w3.org/TR/rdf-syntax-grammar/) documents. This includes browsing definitions and tooltips for IRIs in files that have an `.rdf` extension. The next release will add support for reference / usage information, codelenses ~~and conversion into Turtle~~.
 
 ### Version 0.2.7: Bugfixes and Refactoring
 Fixed two bugs and cleaned up the internal structure of the definition tree code for better maintainability and extensibility. Please report any issues that might occur with the defintion tree after this update.
@@ -173,6 +176,7 @@ This will start a new instance of Visual Studio Code with the Mentor extension l
 npm install --global @vscode/vsce
 ```
 
+Create a production build and install it into your local Visual Studio Code environment:
 ```bash
 npm run package:install
 ```
