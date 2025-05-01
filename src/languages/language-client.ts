@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient/browser';
-import { IToken } from 'millan';
-import { mentor } from '@/mentor';
 
 export abstract class LanguageClientBase implements vscode.Disposable {
 	/**
@@ -63,24 +61,6 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 
 		this.client = new LanguageClient(this.channelId, `${this.languageName} Language Client`, clientOptions, worker);
 		this.client.start();
-
-		this.client.onNotification('mentor/updateContext', (params: { uri: string, tokens: IToken[] }) => {
-			let context = mentor.contexts[params.uri];
-
-			if (!context) {
-				const uri = vscode.Uri.parse(params.uri);
-
-				context = mentor.documentFactory.create(uri, this.languageId);
-
-				mentor.contexts[params.uri] = context
-			}
-
-			// Update the document context with the new tokens.
-			context.setTokens(params.tokens);
-
-			// Map the blank nodes in the document to the ones in the triple store.
-			context.mapBlankNodes();
-		});
 	}
 
 	async dispose() {

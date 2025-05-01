@@ -9,8 +9,8 @@ import { WorkspaceRepository } from './workspace-repository';
 import {
 	LocalStorageService,
 	PrefixDownloaderService,
-	PrefixDefinitionService,
-	PrefixLookupService
+	PrefixLookupService,
+	TurtlePrefixDefinitionService,
 } from './services';
 import { NamedNode } from '@rdfjs/types';
 
@@ -75,7 +75,7 @@ class MentorExtension {
 	/**
 	 * A service for declaring prefixes in RDF documents.
 	 */
-	readonly prefixDeclarationService = new PrefixDefinitionService();
+	readonly prefixDeclarationService = new TurtlePrefixDefinitionService();
 
 	/**
 	 * A service for downloading RDF prefix mappings from the web.
@@ -108,12 +108,25 @@ class MentorExtension {
 	}
 
 	/**
-	 * Get the RDF document context for a text document.
+	 * Get the document context from a text document.
 	 * @param document A text document.
-	 * @returns A document context for the given document or `undefined`.
+	 * @param contextType The expected type of the document context.
+	 * @returns A document context of the specified type if the document is loaded and matches the type, null otherwise.
 	 */
-	getDocumentContext(document: vscode.TextDocument): DocumentContext | undefined {
-		return this.contexts[document.uri.toString()];
+	getDocumentContext<T extends DocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null {
+		const uri = document.uri.toString();
+
+		if (!this.contexts[uri]) {
+			return null;
+		}
+
+		const context = this.contexts[uri];
+
+		if (!(context instanceof contextType)) {
+			return null;
+		}
+
+		return context as T;
 	}
 
 	private _onActiveEditorChanged(): void {
@@ -140,35 +153,7 @@ class MentorExtension {
 
 			this._onDidChangeDocumentContext?.fire(context);
 
-			// Automatically declare prefixes when a colon is typed.
-			const change = e.contentChanges[0];
-
-			if (change?.text.endsWith(':') && this.configuration.get('prefixes.autoDefinePrefixes')) {
-				// Determine the token type at the change position.
-				const token = context.getTokensAtPosition(change.range.start)[0];
-
-				// Do not auto-implement prefixes when manually typing a prefix.
-				const n = context.tokens.findIndex(t => t === token);
-				const t = context.tokens[n - 1]?.image.toLowerCase();
-
-				// Note: we check the token image instead of the type name to also account for Turtle style prefix
-				// definitions in SPARQL queries. These are not supported by SPARQL and detected as language tags.
-				// Although this kind of prefix declaration is not valid in SPARQL, implementing the prefix should be avoided.
-				if (t === 'prefix' || t === '@prefix') return;
-
-				if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
-					const prefix = token.image.substring(0, token.image.length - 1);
-
-					// Do not implmenet prefixes that are already defined.
-					if (context.namespaces[prefix]) return;
-
-					this.prefixDeclarationService.implementPrefixes(e.document, [{ prefix: prefix, namespaceIri: undefined }]).then(edit => {
-						if (edit.size > 0) {
-							vscode.workspace.applyEdit(edit);
-						}
-					});
-				}
-			}
+			context.onDidChangeDocument(e);
 		});
 	}
 
@@ -360,6 +345,74 @@ class MentorExtension {
 					const document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
 
 					await vscode.window.showTextDocument(document);
+				}
+			}
+		});
+
+		vscode.commands.registerCommand('mentor.action.highlightTypeDefinitions', async () => {
+			if (this.activeContext) {
+				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
+				const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+				if (editor) {
+					const ranges = [...Object.values(this.activeContext.typeDefinitions)]
+						.flatMap(value => Array.isArray(value) ? value : [])
+						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
+
+					editor.setDecorations(vscode.window.createTextEditorDecorationType({
+						backgroundColor: 'rgba(255, 255, 0, 0.3)',
+					}), ranges);
+				}
+			}
+		});
+
+		vscode.commands.registerCommand('mentor.action.highlightTypeAssertions', async () => {
+			if (this.activeContext) {
+				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
+				const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+				if (editor) {
+					const ranges = [...Object.values(this.activeContext.typeAssertions)]
+						.flatMap(value => Array.isArray(value) ? value : [])
+						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
+
+					editor.setDecorations(vscode.window.createTextEditorDecorationType({
+						backgroundColor: 'rgba(255, 255, 0, 0.3)',
+					}), ranges);
+				}
+			}
+		});
+
+		vscode.commands.registerCommand('mentor.action.highlightReferencedIris', async () => {
+			if (this.activeContext) {
+				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
+				const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+				if (editor) {
+					const ranges = [...Object.values(this.activeContext.references)]
+						.flatMap(value => Array.isArray(value) ? value : [])
+						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
+
+					editor.setDecorations(vscode.window.createTextEditorDecorationType({
+						backgroundColor: 'rgba(255, 255, 0, 0.3)',
+					}), ranges);
+				}
+			}
+		});
+
+		vscode.commands.registerCommand('mentor.action.highlightNamespaceDefinitions', async () => {
+			if (this.activeContext) {
+				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
+				const editor = await vscode.window.showTextDocument(document, { preview: false });
+
+				if (editor) {
+					const ranges = [...Object.values(this.activeContext.namespaceDefinitions)]
+						.flatMap(value => Array.isArray(value) ? value : [])
+						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
+
+					editor.setDecorations(vscode.window.createTextEditorDecorationType({
+						backgroundColor: 'rgba(255, 255, 0, 0.3)',
+					}), ranges);
 				}
 			}
 		});

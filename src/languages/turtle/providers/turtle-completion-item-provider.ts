@@ -2,11 +2,12 @@ import * as vscode from "vscode";
 import { mentor } from "@/mentor";
 import { DocumentContext } from "@/document-context";
 import { getIriLocalPart, getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 export class TurtleCompletionItemProvider extends TurtleFeatureProvider implements vscode.CompletionItemProvider<vscode.CompletionItem> {
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;

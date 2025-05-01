@@ -1,1 +1,1 @@
-export * from './xml-hover-provider';
+export * from './xml-rename-provider';

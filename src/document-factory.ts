@@ -2,11 +2,7 @@ import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { RdfSyntax } from '@faubulous/mentor-rdf';
 import { DocumentContext } from './document-context';
-import {
-	TurtleDocument,
-	SparqlDocument,
-	XmlDocument
-} from './languages';
+import { TurtleDocument, SparqlDocument, XmlDocument } from './languages';
 
 /**
  * A factory for creating RDF document contexts.

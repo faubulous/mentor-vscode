@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
+import { mentor } from '@/mentor';
 import { isVariable, getIriFromToken } from '@/utilities';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
@@ -7,7 +9,7 @@ import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provide
  */
 export class TurtleRenameProvider extends TurtleFeatureProvider implements vscode.RenameProvider {
 	public async prepareRename(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Range | null> {
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
@@ -19,7 +21,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			throw new Error('No token found at the given position.');
 		}
 
-		if (this.isCursorOnPrefix(token, position)) {
+		if (context.isPrefixTokenAtPosition(token, position)) {
 			return this.getPrefixEditRange(token);
 		} else {
 			return this.getLabelEditRange(token);
@@ -28,7 +30,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 
 	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
 		const edits = new vscode.WorkspaceEdit();
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return edits;
@@ -40,7 +42,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			return edits;
 		}
 
-		if (this.isCursorOnPrefix(token, position)) {
+		if (context.isPrefixTokenAtPosition(token, position)) {
 			const i = token.image.indexOf(":");
 			const prefix = token.image.substring(0, i);
 
@@ -79,12 +81,22 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 		} else {
 			const u = getIriFromToken(context.namespaces, token);
 
-			if (u && context.references[u]) {
-				for (const r of context.references[u].map(t => this.getLabelEditRange(t))) {
-					if (!r) continue;
+			if (!u) return edits;
 
-					edits.replace(document.uri, r, newName);
-				}
+			const references = context.references[u];
+
+			if (!references) return edits;
+
+			for (let range of references) {
+				const token = context.getTokensAtPosition(range.start)[0];
+
+				if (!token) continue;
+
+				const editRange = this.getLabelEditRange(token);
+
+				if (!editRange) continue;
+
+				edits.replace(document.uri, editRange, newName);
 			}
 		}
 

@@ -1,14 +1,11 @@
 import * as vscode from 'vscode';
-import { IToken } from 'millan';
 import { mentor } from '@/mentor';
-import { DocumentContext } from '@/document-context';
-import { getPreviousToken, getIriFromToken } from '@/utilities';
-import { TurtleReferenceProvider } from './turtle-reference-provider';
+import { ReferenceProvider } from './reference-provider';
 
 /**
- * Provides hover information for tokens.
+ * Provides usage information for resource definitions in Turtle documents.
  */
-export class TurtleCodeLensProvider extends TurtleReferenceProvider implements vscode.CodeLensProvider {
+export class CodeLensProvider implements vscode.CodeLensProvider {
 	/**
 	 * Indicates whether the workspace has been initialized.
 	 */
@@ -24,13 +21,13 @@ export class TurtleCodeLensProvider extends TurtleReferenceProvider implements v
 	 */
 	private _enabled: boolean = true;
 
+	private readonly _referenceProvider: ReferenceProvider = new ReferenceProvider();
+
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		super();
-
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
 				this._enabled = mentor.configuration.get('editor.codeLensEnabled', true);
@@ -77,7 +74,7 @@ export class TurtleCodeLensProvider extends TurtleReferenceProvider implements v
 				return [];
 			}
 
-			const context = this.getDocumentContext(document);
+			const context = mentor.contexts[document.uri.toString()];
 
 			if (!context) {
 				return [];
@@ -85,21 +82,19 @@ export class TurtleCodeLensProvider extends TurtleReferenceProvider implements v
 
 			const result = [];
 
-			// TODO: Refactor getSubjects into DocumentContext and overload for different languages.
-			for (let subject of this.getSubjects(context)) {
-				let uri = getIriFromToken(context.namespaces, subject);
+			for (const iri of Object.keys(context.subjects)) {
+				for (const range of context.subjects[iri]) {
+					let n = Math.max(this._referenceProvider.provideReferencesForIri(iri).length - 1, 0);
 
-				if (!uri) continue;
-
-				// The references include the subject itself, so we subtract 1.
-				let n = Math.max(this.provideReferencesForIri(uri).length - 1, 0);
-				let range = this.getRangeFromToken(subject);
-
-				result.push(new vscode.CodeLens(range, {
-					command: 'mentor.action.findReferences',
-					title: n + ' usages',
-					arguments: [uri]
-				}));
+					result.push(new vscode.CodeLens(new vscode.Range(
+						new vscode.Position(range.start.line, range.start.character),
+						new vscode.Position(range.end.line, range.end.character)
+					), {
+						command: 'mentor.action.findReferences',
+						title: n + ' usages',
+						arguments: [iri]
+					}));
+				}
 			}
 
 			resolve(result);
@@ -108,30 +103,5 @@ export class TurtleCodeLensProvider extends TurtleReferenceProvider implements v
 
 	resolveCodeLens?(codeLens: vscode.CodeLens, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeLens> {
 		throw new Error('Method not implemented.');
-	}
-
-	private getSubjects(context: DocumentContext): IToken[] {
-		const result = [];
-
-		for (let token of context.tokens) {
-			if (token.tokenType?.tokenName != "PNAME_LN" && token.tokenType?.tokenName != "IRIREF") {
-				continue;
-			}
-
-			const p = getPreviousToken(context.tokens, token);
-
-			if (!p) continue;
-
-			switch (p.tokenType?.tokenName) {
-				case "Period":
-				case "Dot": {
-					if (token.startColumn == 1) {
-						result.push(token);
-					}
-				}
-			}
-		}
-
-		return result;
 	}
 }

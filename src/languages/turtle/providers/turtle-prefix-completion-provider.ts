@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { getPreviousToken } from '@/utilities';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implements vscode.InlineCompletionItemProvider {
@@ -11,7 +12,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 	}
 
 	provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, completion: vscode.InlineCompletionContext): vscode.ProviderResult<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;

@@ -3,6 +3,7 @@
  * language server where vscode is not available.
  */
 import { IToken } from "millan";
+import { Range } from "vscode-languageserver-types";
 
 /**
  * Maps namespace prefixes to IRIs.
@@ -17,19 +18,6 @@ export interface NamespaceMap {
 export interface NamespaceDefinition {
 	prefix: string;
 	uri: string;
-}
-
-export interface LiteralDefinition {
-	token: IToken;
-	language?: string;
-	datatype?: string;
-}
-
-export interface TokenPosition {
-	startLine: number;
-	startColumn: number;
-	endLine: number;
-	endColumn: number;
 }
 
 /**
@@ -63,12 +51,16 @@ export function getPreviousToken(tokens: IToken[], token: IToken): IToken | unde
 * @param token A token.
 * @returns The position of the token.
 */
-export function getTokenPosition(token: IToken): TokenPosition {
+export function getTokenPosition(token: IToken): Range {
 	return {
-		startLine: token.startLine ? token.startLine - 1 : 0,
-		startColumn: token.startColumn ? token.startColumn - 1 : 0,
-		endLine: token.endLine ? token.endLine - 1 : 0,
-		endColumn: token.endColumn ? token.endColumn : 0
+		start: {
+			line: token.startLine ? token.startLine - 1 : 0,
+			character: token.startColumn ? token.startColumn - 1 : 0,
+		},
+		end: {
+			line: token.endLine ? token.endLine - 1 : 0,
+			character: token.endColumn ? token.endColumn : 0
+		}
 	};
 }
 

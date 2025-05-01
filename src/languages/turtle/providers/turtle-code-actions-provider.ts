@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
+import { mentor } from '@/mentor';
 import { getNamespaceIri, getIriFromIriReference } from '@/utilities';
+import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
 /**
@@ -28,7 +30,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 	private _provideRefactoringActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
 		const result: vscode.CodeAction[] = [];
 
-		const context = this.getDocumentContext(document);
+		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (context) {
 			const token = context.getTokensAtPosition(range.start)[0];

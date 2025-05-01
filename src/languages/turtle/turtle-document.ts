@@ -1,9 +1,21 @@
 import * as vscode from 'vscode';
+import { IToken } from 'millan';
+import { Position } from 'vscode-languageserver-types';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
-import { DefinitionProvider } from '@/languages/definition-provider';
-import { TurtleDefinitionProvider } from '@/languages/turtle/providers';
+import { TurtlePrefixDefinitionService } from '@/services';
+import {
+	getIriFromToken,
+	getIriFromIriReference,
+	getIriFromPrefixedName,
+	getNamespaceDefinition,
+	getNamespaceIri,
+	countLeadingWhitespace,
+	countTrailingWhitespace,
+	getTokenPosition
+} from '@/utilities';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -13,7 +25,7 @@ export class TurtleDocument extends DocumentContext {
 
 	private _inferenceExecuted = false;
 
-	private readonly _definitionProvider: DefinitionProvider = new TurtleDefinitionProvider();
+	private _tokens: IToken[] = [];
 
 	constructor(uri: vscode.Uri, syntax: RdfSyntax) {
 		super(uri);
@@ -22,11 +34,83 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	get isLoaded(): boolean {
-		return super.isLoaded && this.graphs.length > 0;
+		return this._tokens.length > 0 && this.graphs.length > 0;
 	}
 
-	public override getDefinitionProvider(): DefinitionProvider {
-		return this._definitionProvider;
+	/**
+	 * All tokens in the document.
+	 */
+	get tokens(): IToken[] {
+		return this._tokens;
+	}
+
+	public override getIriAtPosition(position: vscode.Position): string | undefined {
+		const token = this.getTokensAtPosition(position)[0];
+
+		if (token) {
+			let iri;
+
+			if (this.isPrefixTokenAtPosition(token, position)) {
+				const prefix = token.image.split(":")[0];
+
+				iri = this.namespaces[prefix];
+			} else {
+				iri = getIriFromToken(this.namespaces, token);
+			}
+
+			return iri;
+		}
+	}
+
+	public override getLiteralAtPosition(position: vscode.Position): string | undefined {
+		const token = this.getTokensAtPosition(position)[0];
+
+		if (!token || !token.tokenType) {
+			return undefined;
+		}
+
+		switch (token.tokenType.name) {
+			// Display the literal strings without the quotes for improved readability for long strings.
+			case 'STRING_LITERAL1':
+			case 'STRING_LITERAL2':
+			case 'STRING_LITERAL_QUOTE':
+			case "STRING_LITERAL_SINGLE_QUOTE": {
+				return token.image.slice(1, -1);
+			}
+			case 'STRING_LITERAL_LONG1':
+			case 'STRING_LITERAL_LONG2':
+			case 'STRING_LITERAL_LONG_QUOTE':
+			case "STRING_LITERAL_LONG_SINGLE_QUOTE": {
+				return token.image.slice(3, -3);
+			}
+			default: {
+				return undefined;
+			}
+		}
+	}
+
+	/**
+	 * Indicates whether the token at the given position is a namespace prefix.
+	 * @param token A token.
+	 * @param position The position in the document.
+	 * @returns `true` if the cursor is on the prefix of the token, `false` otherwise.
+	 */
+	isPrefixTokenAtPosition(token: IToken, position: vscode.Position) {
+		const tokenType = token.tokenType?.tokenName;
+		const { start } = getTokenPosition(token);
+
+		switch (tokenType) {
+			case "PNAME_NS":
+			case "PNAME_LN": {
+				const i = token.image.indexOf(":");
+				const n = position.character - start.character;
+
+				return n <= i;
+			}
+			default: {
+				return false;
+			}
+		}
 	}
 
 	public override async infer(): Promise<void> {
@@ -80,12 +164,284 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
-	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
+	override async onDidChangeDocument(e: vscode.TextDocumentChangeEvent): Promise<void> {
+		// Automatically declare prefixes when a colon is typed.
+		const change = e.contentChanges[0];
+
+		// TODO: This should be handled in the prefix definition service (listen to doc changes and react) instead of the document itself.
+		if (change?.text.endsWith(':') && mentor.configuration.get('prefixes.autoDefinePrefixes')) {
+			// Determine the token type at the change position.
+			const token = this.getTokensAtPosition(change.range.start)[0];
+
+			// Do not auto-implement prefixes when manually typing a prefix.
+			const n = this.tokens.findIndex(t => t === token);
+			const t = this.tokens[n - 1]?.image.toLowerCase();
+
+			// Note: we check the token image instead of the type name to also account for Turtle style prefix
+			// definitions in SPARQL queries. These are not supported by SPARQL and detected as language tags.
+			// Although this kind of prefix declaration is not valid in SPARQL, implementing the prefix should be avoided.
+			if (t === 'prefix' || t === '@prefix') return;
+
+			if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
+				const prefix = token.image.substring(0, token.image.length - 1);
+
+				// Do not implmenet prefixes that are already defined.
+				if (this.namespaces[prefix]) return;
+
+				const service = new TurtlePrefixDefinitionService();
+				const edit = await service.implementPrefixes(e.document, [{ prefix: prefix, namespaceIri: undefined }]);
+
+				if (edit.size > 0) {
+					vscode.workspace.applyEdit(edit);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Get the location of a token in a document.
+	 * @param documentUri The URI of the document.
+	 * @param token A token.
+	 */
+	getRangeFromToken(token: IToken): vscode.Range {
+		// The token positions are 1-based, whereas the editor positions / locations are 0-based.
+		const startLine = token.startLine ? token.startLine - 1 : 0;
+		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
+		const startWhitespace = countLeadingWhitespace(token.image);
+
+		const endLine = token.endLine ? token.endLine - 1 : 0;
+		const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
+		const endWhitespace = countTrailingWhitespace(token.image);
+
+		// Note: The millan parser incorrectly parses some tokens with leading and trailing whitespace.
+		// We account for this by adjusting the start and end positions.
+		const start = new vscode.Position(startLine, startCharacter + startWhitespace);
+		const end = new vscode.Position(endLine, endCharacter - endWhitespace).translate(0, 1);
+
+		return new vscode.Range(start, end);
+	}
+
+	/**
+	 * Get the first token of a given type.
+	 * @param tokens A list of tokens.
+	 * @param type The type name of the token.
+	 * @returns The last token of the given type, if it exists, undefined otherwise.
+	 */
+	getFirstTokenOfType(type: string): IToken | undefined {
+		const n = this.tokens.findIndex(t => t.tokenType?.tokenName === type);
+
+		if (n > -1) {
+			return this.tokens[n];
+		}
+	}
+
+	/**
+	 * Get the last token of a given type.
+	 * @param tokens A list of tokens.
+	 * @param type The type name of the token.
+	 * @returns The last token of the given type, if it exists, undefined otherwise.
+	 */
+	getLastTokenOfType(type: string): IToken | undefined {
+		const result = this.tokens.filter(t => t.tokenType?.tokenName === type);
+
+		if (result.length > 0) {
+			return result[result.length - 1];
+		}
+	}
+
+	/**
+	 * Gets all tokens at a given position.
+	 * @param tokens A list of tokens.
+	 * @param position A position in the document.
+	 * @returns An non-empty array of tokens on success, an empty array otherwise.
+	 */
+	getTokensAtPosition(position: Position): IToken[] {
+		// The tokens are 0-based, but the position is 1-based.
+		const l = position.line + 1;
+		const n = position.character;
+
+		for (let token of this.tokens) {
+			if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
+				continue;
+			}
+
+			if (token.startLine > l) {
+				break;
+			}
+
+			// If the token starts and ends on the same line and column, then the position must be inside the token.
+			if (token.startLine == l && token.endLine == l && token.startColumn <= n && n <= token.endColumn) {
+				return [token];
+			}
+
+			// If we have a multi-line token and the position is between start and end, then we have a match.
+			if (token.startLine < l && token.endLine > l) {
+				return [token];
+			}
+
+			// If the token ends on the same line and the position is before the end column, then we have a match.
+			if (token.endLine == l && token.endColumn >= n) {
+				return [token];
+			}
+		}
+
+		return [];
+	}
+
+	/**
+	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
+	 * @param tokens An array of tokens.
+	 */
+	setTokens(tokens: IToken[]): void {
+		this.namespaces = {};
+		this.namespaceDefinitions = {};
+		this.subjects = {};
+		this.references = {};
+		this.typeAssertions = {};
+		this.typeDefinitions = {};
+		this.blankNodes = {};
+
+		this._tokens = tokens;
+
+		let previousToken: IToken | undefined;
+
+		tokens.forEach((t: IToken, i: number) => {
+			switch (t.tokenType?.tokenName) {
+				case 'PREFIX':
+				case 'TTL_PREFIX': {
+					const ns = getNamespaceDefinition(this.tokens, t);
+
+					// Only set the namespace if it is preceeded by a prefix keyword.
+					if (ns) {
+						const r = this.getRangeFromToken(t);
+
+						this.namespaces[ns.prefix] = ns.uri;
+						this.namespaceDefinitions[ns.uri] = [r];
+					}
+					break;
+				}
+				case 'PNAME_LN': {
+					const iri = getIriFromPrefixedName(this.namespaces, t.image);
+
+					if (!iri) break;
+
+					if (t.startColumn === 1 && previousToken) {
+						this._registerSubject(t, iri, previousToken);
+					}
+
+					this._handleTypeAssertion(tokens, t, iri, i);
+					this._handleTypeDefinition(tokens, t, iri, i);
+					this._handleIriReference(tokens, t, iri);
+					break;
+				}
+				case 'IRIREF': {
+					const iri = getIriFromIriReference(t.image);
+
+					if (t.startColumn === 1 && previousToken) {
+						this._registerSubject(t, iri, previousToken);
+					}
+
+					this._handleTypeAssertion(tokens, t, iri, i);
+					this._handleTypeDefinition(tokens, t, iri, i);
+					this._handleIriReference(tokens, t, iri);
+					break;
+				}
+				case 'A': {
+					this._handleTypeAssertion(tokens, t, rdf.type.id, i);
+					this._handleTypeDefinition(tokens, t, rdf.type.id, i);
+					break;
+				}
+			}
+
+			previousToken = t;
+		});
+	}
+
+	private _registerSubject(token: IToken, iri: string, previousToken: IToken) {
+		const previousType = previousToken.tokenType?.tokenName;
+
+		if (previousType === 'Period' || previousType === 'Dot') {
+			const range = this.getRangeFromToken(token);
+
+			if (!this.subjects[iri]) {
+				this.subjects[iri] = [];
+			}
+
+			this.subjects[iri].push(range);
+		}
+	}
+
+	private _handleIriReference(tokens: IToken[], token: IToken, uri: string) {
+		if (!this.references[uri]) {
+			this.references[uri] = [];
+		}
+
+		const range = this.getRangeFromToken(token);
+
+		this.references[uri].push(range);
+	}
+
+	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
+		if (uri != rdf.type.id) return;
+
+		const subjectToken = tokens[index - 1];
+
+		if (!subjectToken) return;
+
+		const subjectUri = getIriFromToken(this.namespaces, subjectToken);
+
+		if (!subjectUri) return;
+
+		const range = this.getRangeFromToken(subjectToken);
+
+		this.typeAssertions[subjectUri] = [range];
+	}
+
+	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
+		if (uri != rdf.type.id) return;
+
+		const subjectToken = tokens[index - 1];
+
+		if (!subjectToken) return;
+
+		const subjectUri = getIriFromToken(this.namespaces, subjectToken);
+
+		if (!subjectUri) return;
+
+		const objectToken = tokens[index + 1];
+
+		if (!objectToken) return;
+
+		const objectUri = getIriFromToken(this.namespaces, objectToken);
+
+		if (!objectUri) return;
+
+		const namespaceUri = getNamespaceIri(objectUri);
+
+		// TODO: Make this more explicit to reduce false positives.
+		switch (namespaceUri) {
+			case _RDF:
+			case _RDFS:
+			case _OWL:
+			case _SKOS:
+			case _SKOS_XL:
+			case _SH: {
+				const range = this.getRangeFromToken(subjectToken);
+
+				this.typeDefinitions[subjectUri] = [range];
+			}
+		}
+	}
+
+	override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
 		// Note: All prefixes keywords are always in lowercase in Turtle.
 		return `@prefix ${prefix}: <${uri}> .`;
 	}
 
-	override mapBlankNodes() {
+	/**
+	 * Maps blank node ids of the parsed documents to the ones in the triple store.
+	 */
+	mapBlankNodes() {
 		const blankNodes = new Set<string>();
 
 		for (let q of mentor.store.match(this.graphs, null, null, null, false)) {
@@ -113,20 +469,22 @@ export class TurtleDocument extends DocumentContext {
 
 					tokenStack.push(t);
 
-					let s = blankIds[n++];
+					const s = blankIds[n++];
+					const r = this.getRangeFromToken(t);
 
-					this.blankNodes[s] = t;
-					this.typeDefinitions[s] = [t];
+					this.blankNodes[s] = r;
+					this.typeDefinitions[s] = [r];
 
 					continue;
 				}
 				case '(': {
 					tokenStack.push(t);
 
-					let s = blankIds[n];
+					const s = blankIds[n];
+					const r = this.getRangeFromToken(t);
 
-					this.blankNodes[s] = t;
-					this.typeDefinitions[s] = [t];
+					this.blankNodes[s] = r;
+					this.typeDefinitions[s] = [r];
 
 					continue;
 				}
@@ -141,10 +499,11 @@ export class TurtleDocument extends DocumentContext {
 			}
 
 			if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
-				let s = blankIds[n++];
+				const s = blankIds[n++];
+				const r = this.getRangeFromToken(t);
 
-				this.blankNodes[s] = t;
-				this.typeDefinitions[s] = [t];
+				this.blankNodes[s] = r;
+				this.typeDefinitions[s] = [r];
 			}
 		}
 

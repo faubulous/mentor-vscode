@@ -1,7 +1,7 @@
-import { LanguageClientBase } from '@/languages';
+import { TurtleLanguageClient } from '@/languages/turtle/turtle-language-client';
 
-export class TrigLanguageClient extends LanguageClientBase {
-	constructor() {
-		super('trig', 'TriG');
+export class TrigLanguageClient extends TurtleLanguageClient {
+	constructor(languageId = 'trig', languageName = 'TriG') {
+		super(languageId, languageName);
 	}
 }

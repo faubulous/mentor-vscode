@@ -1,20 +1,12 @@
 import * as n3 from 'n3';
 import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
-import { IToken } from 'millan';
-import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf, sh } from '@faubulous/mentor-rdf';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { TreeLabelStyle } from '@/settings';
-import { DefinitionProvider } from '@/languages';
-import {
-	getIriLocalPart,
-	getIriFromIriReference,
-	getIriFromPrefixedName,
-	getIriFromToken,
-	getNamespaceDefinition,
-	getNamespaceIri
-} from '@/utilities';
+import { getIriLocalPart, getNamespaceIri } from '@/utilities';
+import { Range } from 'vscode-languageserver-types';
 
 /**
  * A literal value with optional language tag.
@@ -70,21 +62,48 @@ export abstract class DocumentContext {
 	 */
 	readonly graphs: string[] = [];
 
-	private _tokens: IToken[] = [];
+	/**
+	 * Get the base IRI of the document that can be used for resolving local names into IRIs.
+	 */
+	baseIri: string | undefined;
 
-	private _baseIri: string | undefined;
+	/**
+	 * Maps prefixes to namespace IRIs.
+	 */
+	namespaces: { [key: string]: string } = {};
 
-	private _namespaces: { [key: string]: string } = {};
+	/**
+	 * Maps prefixes to the location of their definition in the document.
+	 */
+	namespaceDefinitions: { [key: string]: Range[] } = {};
 
-	private _namespaceDefinitions: { [key: string]: IToken } = {};
+	/**
+	 * Maps IRIs that appear as subjects to the locations where they appear in the document.
+	 */
+	subjects: { [key: string]: Range[] } = {};
 
-	private _references: { [key: string]: IToken[] } = {};
+	/**
+	 * Maps IRIs of all resources to the locations where they appear in the document.
+	 */
+	references: { [key: string]: Range[] } = {};
 
-	private _typeAssertions: { [key: string]: IToken[] } = {};
+	// TODO: Remove all type definitions from this map and query the combination of typeAssertion and typeDefinitions instead.
+	/**
+	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion. This includes
+	 * named individuals, classes and properties.
+	 */
+	typeAssertions: { [key: string]: Range[] } = {};
 
-	private _typeDefinitions: { [key: string]: IToken[] } = {};
+	/**
+	 * Maps IRIs of subjects that are class or property definitions to the location of the definition. This includes
+	 * only class defintions.
+	 */
+	typeDefinitions: { [key: string]: Range[] } = {};
 
-	private _blankNodes: { [key: string]: IToken } = {};
+	/**
+	 * Maps blank node ids to indexed tokens.
+	 */
+	blankNodes: { [key: string]: Range } = {};
 
 	/**
 	 * Information about the language tags used in the document.
@@ -173,80 +192,13 @@ export abstract class DocumentContext {
 	/**
 	 * Indicates whether the document is fully loaded.
 	 */
-	get isLoaded(): boolean {
-		return this._tokens.length > 0;
-	}
+	abstract get isLoaded(): boolean;
 
 	/**
 	 * Indicates whether the document is temporary and not persisted.
 	 */
 	get isTemporary(): boolean {
 		return this.uri.scheme == 'git';
-	}
-
-	/**
-	 * All tokens in the document.
-	 */
-	get tokens(): IToken[] {
-		return this._tokens;
-	}
-
-	/**
-	 * Get the base IRI of the document for resolving local names into IRIs.
-	 * @returns The base IRI of the document or `undefined`.
-	 */
-	get baseIri(): string | undefined {
-		return this._baseIri;
-	}
-
-	/**
-	 * Set the base IRI of the document for resolving local names into IRIs.
-	 * @param value The base IRI of the document.
-	 */
-	protected set baseIri(value: string | undefined) {
-		this._baseIri = value;
-	}
-
-	/**
-	* Maps prefixes to namespace IRIs.
-	*/
-	get namespaces(): { [key: string]: string } {
-		return this._namespaces;
-	}
-
-	/**
-	 * Maps resource IRIs to indexed tokens.
-	 */
-	get namespaceDefinitions(): { [key: string]: IToken } {
-		return this._namespaceDefinitions;
-	}
-
-	/**
-	 * Maps resource IRIs to indexed tokens.
-	 */
-	get references(): { [key: string]: IToken[] } {
-		return this._references;
-	}
-
-	/**
-	 * Maps resource IRIs to tokens of subjects that have an asserted rdf:type, including named individuals.
-	 */
-	get typeAssertions(): { [key: string]: IToken[] } {
-		return this._typeAssertions;
-	}
-
-	/**
-	 * Maps resource IRIs to tokens of subjects that are class or property definitions.
-	 */
-	get typeDefinitions(): { [key: string]: IToken[] } {
-		return this._typeDefinitions;
-	}
-
-	/**
-	 * Maps blank node ids to indexed tokens.
-	 */
-	get blankNodes(): { [key: string]: IToken } {
-		return this._blankNodes;
 	}
 
 	/**
@@ -275,36 +227,32 @@ export abstract class DocumentContext {
 	abstract getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string;
 
 	/**
-	 * Get the definition provider for the document language.
+	 * Get the full IRI of a resource at the given position in the document.
+	 * @param position The position in the document.
+	 * @returns The full IRI of the resource or `undefined` if not found.
 	 */
-	abstract getDefinitionProvider(): DefinitionProvider;
+	abstract getIriAtPosition(position: vscode.Position): string | undefined;
 
 	/**
-	 * Get the first token of a given type.
-	 * @param tokens A list of tokens.
-	 * @param type The type name of the token.
-	 * @returns The last token of the given type, if it exists, undefined otherwise.
+	 * Get a literal value at the given position in the document.
+	 * @param position The position in the document.
+	 * @returns The literal value at the position or `undefined` if there is no literal value at that position.
 	 */
-	getFirstTokenOfType(type: string): IToken | undefined {
-		const n = this.tokens.findIndex(t => t.tokenType?.tokenName === type);
-
-		if (n > -1) {
-			return this.tokens[n];
-		}
-	}
+	abstract getLiteralAtPosition(position: vscode.Position): string | undefined;
 
 	/**
-	 * Get the last token of a given type.
-	 * @param tokens A list of tokens.
-	 * @param type The type name of the token.
-	 * @returns The last token of the given type, if it exists, undefined otherwise.
-	 */
-	getLastTokenOfType(type: string): IToken | undefined {
-		const result = this.tokens.filter(t => t.tokenType?.tokenName === type);
+	 * Event handler for when the document is changed.
+	 * @param e The document change event.
+	 **/
+	async onDidChangeDocument(e: vscode.TextDocumentChangeEvent): Promise<void> { };
 
-		if (result.length > 0) {
-			return result[result.length - 1];
-		}
+	/**
+	 * Get the text document with the given URI.
+	 * @param uri The URI of the text document.
+	 * @returns The text document if it is loaded, null otherwise.
+	 */
+	getTextDocument(): vscode.TextDocument | undefined {
+		return vscode.workspace.textDocuments.find(d => d.uri.toString() === this.uri.toString());
 	}
 
 	/**
@@ -321,124 +269,11 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	 * Maps blank node ids of the parsed documents to the ones in the triple store.
-	 */
-	mapBlankNodes() { }
-
-	/**
-	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
-	 * @param tokens An array of tokens.
-	 */
-	setTokens(tokens: IToken[]): void {
-		this._tokens = tokens;
-		this._namespaces = {};
-		this._namespaceDefinitions = {};
-		this._references = {};
-		this._typeAssertions = {};
-		this._typeDefinitions = {};
-		this._blankNodes = {};
-
-		tokens.forEach((t: IToken, i: number) => {
-			switch (t.tokenType?.tokenName) {
-				case 'PREFIX':
-				case 'TTL_PREFIX': {
-					const ns = getNamespaceDefinition(this.tokens, t);
-
-					// Only set the namespace if it is preceeded by a prefix keyword.
-					if (ns) {
-						this.namespaces[ns.prefix] = ns.uri;
-						this.namespaceDefinitions[ns.uri] = t;
-					}
-					break;
-				}
-				case 'PNAME_LN': {
-					const uri = getIriFromPrefixedName(this.namespaces, t.image);
-
-					if (!uri) break;
-
-					this._handleTypeAssertion(tokens, t, uri, i);
-					this._handleTypeDefinition(tokens, t, uri, i);
-					this._handleUriReference(tokens, t, uri);
-					break;
-				}
-				case 'IRIREF': {
-					const uri = getIriFromIriReference(t.image);
-
-					this._handleTypeAssertion(tokens, t, uri, i);
-					this._handleTypeDefinition(tokens, t, uri, i);
-					this._handleUriReference(tokens, t, uri);
-					break;
-				}
-				case 'A': {
-					this._handleTypeAssertion(tokens, t, rdf.type.id, i);
-					this._handleTypeDefinition(tokens, t, rdf.type.id, i);
-					break;
-				}
-			}
-		});
-	}
-
-	private _handleUriReference(tokens: IToken[], token: IToken, uri: string) {
-		if (!this.references[uri]) {
-			this.references[uri] = [];
-		}
-
-		this.references[uri].push(token);
-	}
-
-	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
-		if (uri != rdf.type.id) return;
-
-		const subjectToken = tokens[index - 1];
-
-		if (!subjectToken) return;
-
-		const subjectUri = getIriFromToken(this.namespaces, subjectToken);
-
-		if (!subjectUri) return;
-
-		this.typeAssertions[subjectUri] = [subjectToken];
-	}
-
-	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
-		if (uri != rdf.type.id) return;
-
-		const subjectToken = tokens[index - 1];
-
-		if (!subjectToken) return;
-
-		const subjectUri = getIriFromToken(this.namespaces, subjectToken);
-
-		if (!subjectUri) return;
-
-		const objectToken = tokens[index + 1];
-
-		if (!objectToken) return;
-
-		const objectUri = getIriFromToken(this.namespaces, objectToken);
-
-		if (!objectUri) return;
-
-		const namespaceUri = getNamespaceIri(objectUri);
-
-		// TODO: Make this more explicit to reduce false positives.
-		switch (namespaceUri) {
-			case _RDF:
-			case _RDFS:
-			case _OWL:
-			case _SKOS:
-			case _SKOS_XL:
-			case _SH:
-				this.typeDefinitions[subjectUri] = [subjectToken];
-		}
-	}
-
-	/**
 	 * Updates a namespace prefix definition in the document.
 	 * @param oldPrefix The prefix to be replaced.
 	 * @param newPrefix The prefix to replace the old prefix.
 	 */
-	public updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
+	updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
 		const uri = this.namespaces[oldPrefix];
 
 		if (!uri) return;
@@ -449,34 +284,11 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	 * Gets all tokens at a given position.
-	 * @param tokens A list of tokens.
-	 * @param position A position in the document.
-	 * @returns An non-empty array of tokens on success, an empty array otherwise.
-	 */
-	getTokensAtPosition(position: vscode.Position): IToken[] {
-		// The tokens are 0-based, but the position is 1-based.
-		const l = position.line + 1;
-		const n = position.character + 1;
-
-		return this.tokens.filter(t =>
-			t.startLine &&
-			t.startLine <= l &&
-			t.endLine &&
-			t.endLine >= l &&
-			t.startColumn &&
-			t.startColumn <= n &&
-			t.endColumn &&
-			t.endColumn >= (n - 1)
-		);
-	}
-
-	/**
 	 * Get the label of a resource according to the current user preferences for the display of labels.
 	 * @param subjectUri URI of the resource.
 	 * @returns A label for the resource as a string literal.
 	 */
-	public getResourceLabel(subjectUri: string): Label {
+	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 
@@ -601,7 +413,7 @@ export abstract class DocumentContext {
 	 * @param node The object of a SHACL path triple.
 	 * @returns A rendered version of the SHACL path as a string.
 	 */
-	public getPropertyPathLabel(node: n3.Quad_Subject): string {
+	getPropertyPathLabel(node: n3.Quad_Subject): string {
 		let result = [];
 
 		for (let c of mentor.vocabulary.getPropertyPathTokens(this.graphs, node)) {
@@ -624,7 +436,7 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A description for the resource as a string literal.
 	 */
-	public getResourceDescription(subjectUri: string): Label | undefined {
+	getResourceDescription(subjectUri: string): Label | undefined {
 		// TODO: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
 		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
@@ -644,7 +456,7 @@ export abstract class DocumentContext {
 	 * @param subjectIri IRI of the resource.
 	 * @returns A IRI for the resource as a string literal.
 	 */
-	public getResourceIri(subjectIri: string): string {
+	getResourceIri(subjectIri: string): string {
 		// TODO: Add support for virtual file systems provided by vscode such as vscode-vfs.
 		if (subjectIri.startsWith('file')) {
 			const u = vscode.Uri.parse(subjectIri);
@@ -669,7 +481,7 @@ export abstract class DocumentContext {
 	 * @param subjectUri URI of the resource.
 	 * @returns A markdown string containing the label, description and URI of the resource.
 	 */
-	public getResourceTooltip(subjectUri: string): vscode.MarkdownString {
+	getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		const iri = this.getResourceIri(subjectUri);
 		const label = this.getResourceLabel(subjectUri);
 		const description = this.getResourceDescription(subjectUri);
