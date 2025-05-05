@@ -222,19 +222,6 @@ export class XmlDocument extends DocumentContext {
 		}
 	}
 
-	override async onDidChangeDocument(e: vscode.TextDocumentChangeEvent): Promise<void> {
-		await super.onDidChangeDocument(e);
-
-		const editor = vscode.window.activeTextEditor;
-		const uri = editor?.document.uri;
-
-		if (editor && uri === this.uri) {
-			editor.setDecorations(vscode.window.createTextEditorDecorationType({
-				backgroundColor: 'rgba(255, 255, 0, 0.3)',
-			}), this._textLiterals);
-		}
-	}
-
 	override async infer(): Promise<void> {
 		const reasoner = mentor.store.reasoner;
 
