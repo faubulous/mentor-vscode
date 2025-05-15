@@ -449,6 +449,11 @@
     },
     "commands": [
       {
+        "command": "mentor.action.createNotebookFromFile",
+        "title": "Mentor: Edit file in Notebook",
+        "icon": "$(play)"
+      },
+      {
         "command": "mentor.action.openDocumentGraph",
         "title": "Mentor: Open a Document Graph"
       },
@@ -584,6 +589,13 @@
       }
     ],
     "menus": {
+      "editor/title": [
+        {
+          "command": "mentor.action.createNotebookFromFile",
+          "when": "editorLangId == 'sparql'",
+          "group": "navigation@3"
+        }
+      ],
       "view/title": [
         {
           "command": "mentor.action.analyzeWorkspace",

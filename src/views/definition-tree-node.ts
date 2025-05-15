@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { DocumentContext } from '@/document-context';
+import { getIriFromNodeId } from '@/utilities';
 
 /**
  * Base class for a node in the definition tree.
@@ -195,4 +196,14 @@ export function sortByLabel(nodes: DefinitionTreeNode[]): DefinitionTreeNode[] {
 		.map(n => ({ node: n, label: n.getLabel().label }))
 		.sort((a, b) => a.label.localeCompare(b.label))
 		.map(x => x.node);
+}
+
+export function getIriFromArgument(arg: DefinitionTreeNode | string): string {
+	if (arg instanceof DefinitionTreeNode) {
+		return getIriFromNodeId(arg.id);
+	} else if (typeof arg === 'string') {
+		return getIriFromNodeId(arg);
+	} else {
+		throw new Error('Invalid argument type: ' + typeof arg);
+	}
 }
