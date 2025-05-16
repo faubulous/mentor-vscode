@@ -9,21 +9,17 @@ export async function createNotebookFromFile() {
 	}
 
 	const document = editor.document;
-
-	// Read the content of the current file
 	const content = document.getText();
 
-	// Create a new notebook with a single cell
-	const notebookData = new vscode.NotebookData([
+	const data = new vscode.NotebookData([
 		new vscode.NotebookCellData(
-			vscode.NotebookCellKind.Code, // Cell type: Code
-			content,                     // Cell content
-			document.languageId          // Use the current file's language ID
+			vscode.NotebookCellKind.Code,
+			content,
+			document.languageId
 		)
 	]);
 
-	// Open the notebook
-	const notebook = await vscode.workspace.openNotebookDocument('jupyter-notebook', notebookData);
+	const notebook = await vscode.workspace.openNotebookDocument('mentor-notebook', data);
 
 	await vscode.window.showNotebookDocument(notebook);
 }

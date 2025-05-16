@@ -92,7 +92,8 @@
     "vscode-uri": "^3.0.8"
   },
   "activationEvents": [
-    "onLanguage:xml"
+    "onLanguage:xml",
+    "onNotebook:mentor-notebook"
   ],
   "contributes": {
     "languages": [
@@ -909,6 +910,17 @@
           "default": 100,
           "description": "Controls the maximum number of problems produced by the server."
         }
+      }
+    ],
+    "notebooks": [
+      {
+        "type": "mentor-notebook",
+        "displayName": "Mentor Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.mnb"
+          }
+        ]
       }
     ]
   }

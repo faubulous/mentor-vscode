@@ -1,38 +1,24 @@
 'use strict';
 import * as vscode from 'vscode';
+import * as languages from './languages';
+import * as commands from './commands';
+import * as views from './views';
 import { mentor } from './mentor';
-import { Disposable } from 'vscode-languageclient';
-import { TreeView } from './views/tree-view';
-import { WorkspaceTree } from './views/workspace-tree';
-import { DefinitionTree } from './views/definition-tree';
-import * as language from './languages';
-import * as action from './commands';
+import { NotebookSerializer } from './notebook-serializer';
+import { NOTEBOOK_TYPE, NotebookKernel } from './notebook-kernel';
 
-const clients: language.LanguageClientBase[] = [
-	new language.TurtleLanguageClient(),
-	new language.TrigLanguageClient(),
-	new language.SparqlLanguageClient()
+const clients: languages.LanguageClientBase[] = [
+	new languages.TurtleLanguageClient(),
+	new languages.TrigLanguageClient(),
+	new languages.SparqlLanguageClient()
 ];
-
-const providers: Disposable[] = [
-	...new language.XmlTokenProvider().register(),
-	...new language.TurtleTokenProvider().register(),
-	...new language.TrigTokenProvider().register(),
-	...new language.SparqlTokenProvider().register()
-];
-
-const commands: Disposable[] = [];
-
-const views: TreeView[] = [];
 
 export async function activate(context: vscode.ExtensionContext) {
+	registerProviders(context);
 	registerCommands(context);
+	registerViews(context);
+	registerNotebookSerializers(context);
 
-	// Register the tree views.
-	views.push(new WorkspaceTree());
-	views.push(new DefinitionTree());
-
-	// Start the language clients..
 	for (const client of clients) {
 		client.start(context);
 	}
@@ -40,38 +26,41 @@ export async function activate(context: vscode.ExtensionContext) {
 	mentor.initialize(context);
 }
 
-export function deactivate(): Thenable<void> {
-	return new Promise(async () => {
-		for (const client of clients) {
-			await client.dispose();
-		}
+export async function deactivate() {
+	for (const client of clients) {
+		await client.dispose();
+	}
+}
 
-		for (const provider of providers) {
-			provider.dispose();
-		}
+function registerNotebookSerializers(context: vscode.ExtensionContext) {
+	context.subscriptions.push(new NotebookKernel());
+	context.subscriptions.push(vscode.workspace.registerNotebookSerializer(NOTEBOOK_TYPE, new NotebookSerializer(), { transientOutputs: true }));
+}
 
-		for (const command of commands) {
-			command.dispose();
-		}
+function registerProviders(context: vscode.ExtensionContext) {
+	context.subscriptions.push(...new languages.XmlTokenProvider().register());
+	context.subscriptions.push(...new languages.TurtleTokenProvider().register());
+	context.subscriptions.push(...new languages.TrigTokenProvider().register());
+	context.subscriptions.push(...new languages.SparqlTokenProvider().register());
+}
 
-		for (const view of views) {
-			view.treeView.dispose();
-		}
-	});
+function registerViews(context: vscode.ExtensionContext) {
+	context.subscriptions.push(new views.WorkspaceTree().treeView);
+	context.subscriptions.push(new views.DefinitionTree().treeView);
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
-	commands.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', action.analyzeWorkspace));
-	commands.push(vscode.commands.registerCommand('mentor.action.createNotebookFromFile', action.createNotebookFromFile));
-	commands.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', action.deletePrefixes));
-	commands.push(vscode.commands.registerCommand('mentor.action.findReferences', action.findReferences));
-	commands.push(vscode.commands.registerCommand('mentor.action.implementPrefixes', action.implementPrefixes));
-	commands.push(vscode.commands.registerCommand('mentor.action.implementPrefixForIri', action.implementPrefixForIri));
-	commands.push(vscode.commands.registerCommand('mentor.action.openInBrowser', action.openInBrowser));
-	commands.push(vscode.commands.registerCommand('mentor.action.revealDefinition', action.revealDefinition));
-	commands.push(vscode.commands.registerCommand('mentor.action.revealShapeDefinition', action.revealShapeDefinition));
-	commands.push(vscode.commands.registerCommand('mentor.action.selectActiveLanguage', action.selectActiveLanguage));
-	commands.push(vscode.commands.registerCommand('mentor.action.sortPrefixes', action.sortPrefixes));
-	commands.push(vscode.commands.registerCommand("mentor.action.openDocumentGraph", action.openDocumentGraph));
-	commands.push(vscode.commands.registerCommand("mentor.action.openSettings", action.openSettings));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', commands.analyzeWorkspace));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebookFromFile', commands.createNotebookFromFile));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', commands.deletePrefixes));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.findReferences', commands.findReferences));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.implementPrefixes', commands.implementPrefixes));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.implementPrefixForIri', commands.implementPrefixForIri));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.openInBrowser', commands.openInBrowser));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.revealDefinition', commands.revealDefinition));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.revealShapeDefinition', commands.revealShapeDefinition));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.selectActiveLanguage', commands.selectActiveLanguage));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.sortPrefixes', commands.sortPrefixes));
+	context.subscriptions.push(vscode.commands.registerCommand("mentor.action.openDocumentGraph", commands.openDocumentGraph));
+	context.subscriptions.push(vscode.commands.registerCommand("mentor.action.openSettings", commands.openSettings));
 }
