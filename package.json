@@ -38,7 +38,7 @@
   "version": "0.2.10",
   "publisher": "faubulous",
   "private": false,
-  "license": "GPL",
+  "license": "GPL-3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/faubulous/mentor-vscode"
@@ -58,30 +58,28 @@
     "compile": "node ./build-font.js && tsc -p tsconfig.json",
     "package": "node ./build-font.js && node ./build.js --production && vsce package --dependencies -o out/mentor.vsix",
     "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
+    "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
     "test": "npx jest",
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@rdfjs/types": "^2.0.1",
-    "@types/jest": "^29.5.5",
     "@types/n3": "^1.24.2",
     "@types/node": "^22.14.0",
     "@types/vscode": "^1.90.0",
     "@typescript-eslint/eslint-plugin": "^8.29.1",
     "@typescript-eslint/parser": "^8.29.1",
+    "@vscode/test-web": "^0.0.69",
     "esbuild": "^0.25.2",
     "esbuild-plugin-copy": "^2.0.1",
     "eslint": "^9.24.0",
     "glob": "^11.0.1",
-    "jest": "^29.7.0",
-    "jest-environment-node": "^29.7.0",
-    "ts-jest": "^29.3.1",
-    "ts-loader": "^9.5.2",
-    "ts-node": "^10.9.1",
     "typescript": "^5.8.3",
     "webfont": "^11.2.26"
   },
   "dependencies": {
+    "@comunica/query-sparql-rdfjs-lite": "^4.2.0",
     "@faubulous/mentor-rdf": "^0.2.52",
     "millan": "^5.4.0",
     "n3": "^1.24.2",
@@ -450,8 +448,13 @@
     },
     "commands": [
       {
+        "command": "mentor.action.createNotebook",
+        "title": "Mentor: Create Notebook",
+        "icon": "$(play)"
+      },
+      {
         "command": "mentor.action.createNotebookFromFile",
-        "title": "Mentor: Edit file in Notebook",
+        "title": "Mentor: Create Notebook from File",
         "icon": "$(play)"
       },
       {

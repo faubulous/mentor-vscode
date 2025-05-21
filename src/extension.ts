@@ -5,7 +5,7 @@ import * as commands from './commands';
 import * as views from './views';
 import { mentor } from './mentor';
 import { NotebookSerializer } from './notebook-serializer';
-import { NOTEBOOK_TYPE, NotebookKernel } from './notebook-kernel';
+import { NOTEBOOK_TYPE, NotebookController } from './notebook-controller';
 
 const clients: languages.LanguageClientBase[] = [
 	new languages.TurtleLanguageClient(),
@@ -33,7 +33,7 @@ export async function deactivate() {
 }
 
 function registerNotebookSerializers(context: vscode.ExtensionContext) {
-	context.subscriptions.push(new NotebookKernel());
+	context.subscriptions.push(new NotebookController());
 	context.subscriptions.push(vscode.workspace.registerNotebookSerializer(NOTEBOOK_TYPE, new NotebookSerializer(), { transientOutputs: true }));
 }
 
@@ -51,6 +51,7 @@ function registerViews(context: vscode.ExtensionContext) {
 
 function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', commands.analyzeWorkspace));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebook', commands.createNotebook));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebookFromFile', commands.createNotebookFromFile));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', commands.deletePrefixes));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.findReferences', commands.findReferences));

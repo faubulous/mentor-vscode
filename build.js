@@ -1,11 +1,8 @@
-const { build, context } = require("esbuild");
 const fs = require("fs");
 const glob = require("glob");
+const esbuild = require("esbuild");
+const polyfill = require('@esbuild-plugins/node-globals-polyfill');
 
-//@ts-check
-/** @typedef {import('esbuild').BuildOptions} BuildOptions **/
-
-/** @type BuildOptions */
 const isProductionBuild = (args) => args.includes("--production");
 
 const getBaseConfig = (args) => {
@@ -15,12 +12,18 @@ const getBaseConfig = (args) => {
     bundle: true,
     minify: productionBuild,
     sourcemap: !productionBuild,
+    format: "cjs",
     external: ["vscode"],
+    platform: 'browser',
     define: {
       // This is not defined in the browser environment, so we need to provide a polyfill.
       'global': 'globalThis'
     },
     plugins: [
+			polyfill.NodeGlobalsPolyfillPlugin({
+				process: true,
+				buffer: true,
+			}),
       {
         name: 'rebuild-notify',
         setup(build) {
@@ -39,12 +42,9 @@ const getBaseConfig = (args) => {
 const getExtensionConfig = (args) => {
   return {
     ...getBaseConfig(args),
-    format: "cjs",
-    target: "es2020",
-    mainFields: ["module", "main"],
+    // mainFields: ["module", "main"],
     entryPoints: ["./src/extension.ts"],
-    outfile: "./out/extension.js",
-    tsconfig: "./tsconfig.json"
+    outfile: "./out/extension.js"
   }
 }
 
@@ -54,8 +54,6 @@ const getLanguageConfig = (args, type, language) => {
 
   return {
     ...getBaseConfig(args),
-    format: "cjs",
-    target: "es2020",
     entryPoints: [entryPoint],
     outfile: `./out/${file}.js`
   }
@@ -111,11 +109,11 @@ const getLanguageConfig = (args, type, language) => {
       // This is the advanced long-running form of "build" that supports additional
       // features such as watch mode and a local development server.
       for (const config of configs) {
-        (await context(config)).watch();
+        (await esbuild.context(config)).watch();
       }
     } else {
       for (const config of configs) {
-        build(config);
+        esbuild.build(config);
       }
     }
   } catch (err) {

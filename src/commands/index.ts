@@ -1,4 +1,5 @@
 export * from './analyze-workspace';
+export * from './create-notebook';
 export * from './create-notebook-from-file';
 export * from './delete-prefixes';
 export * from './find-references';

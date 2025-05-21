@@ -4,7 +4,8 @@
     "target": "es2020",
     "lib": [
       "es2020",
-      "dom"
+      "dom",
+      "dom.iterable",
     ],
     "baseUrl": "./",
     "paths": {
@@ -18,7 +19,9 @@
     "strict": true,
     "noEmit": true, // Do not emit output files, just check for errors.
     "declaration": true,
-    "skipLibCheck": true // Don't fail on errors in imported libraries. 
+    "skipLibCheck": true, // Don't fail on errors in imported libraries. 
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
   },
   "exclude": [
     "node_modules"

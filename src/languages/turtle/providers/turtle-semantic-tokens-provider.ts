@@ -126,6 +126,7 @@ export class TurtleSemanticTokensProvider extends TurtleFeatureProvider implemen
 					case "TRUE":
 					case "FALSE":
 						builder.push(tokenRange, SemanticTokenType.number);
+						break;
 					case "Comment":
 						builder.push(tokenRange, SemanticTokenType.comment);
 						break;
