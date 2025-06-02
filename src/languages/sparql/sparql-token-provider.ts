@@ -71,7 +71,6 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 					case 'ASC':
 					case 'ASK':
 					case 'BIND':
-					case 'BY':
 					case 'CLEAR':
 					case 'CONSTRUCT':
 					case 'COPY':
@@ -103,7 +102,7 @@ const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 					case 'NOT_EXISTS':
 					case 'OFFSET':
 					case 'OPTIONAL':
-					case 'ORDER':
+					case 'ORDER_BY':
 					case 'PREFIX':
 					case 'REDUCED':
 					case 'SELECT':
