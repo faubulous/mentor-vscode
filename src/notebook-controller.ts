@@ -35,8 +35,8 @@ export class NotebookController {
 		}
 	}
 
-	private _getMentorStore(): n3.Store {
-		return mentor.store.getNativeStore() as n3.Store;
+	private _getMentorStore(): any {
+		return mentor.store.getNativeStore();
 	}
 
 	private _getTestStore(): n3.Store {
@@ -47,27 +47,8 @@ export class NotebookController {
 	}
 
 	private async _doExecution(cell: vscode.NotebookCell): Promise<void> {
-		const execution = this._controller.createNotebookCellExecution(cell);
-
-		execution.executionOrder = ++this._executionOrder;
-		execution.start(Date.now());
-
-		try {
-			const store = this._getMentorStore();
-			const query = cell.document.getText();
-			const bindings = await this._queryEngine.queryBindings(query, { sources: [store] });
-			const output = await bindings.toArray();
-
-			execution.replaceOutput([new vscode.NotebookCellOutput([
-				vscode.NotebookCellOutputItem.text(this.generateCSV(output), 'text/csv')
-			])]);
-		} catch (error: any) {
-			execution.replaceOutput([new vscode.NotebookCellOutput([
-				vscode.NotebookCellOutputItem.error(error as Error)
-			])]);
-		}
-
-		execution.end(true, Date.now());
+		// this._queryAllGraphsN3(cell);
+		this._executeSparqlQuery(cell);
 	}
 
 	private generateCSV(bindings: any[]): string {
@@ -93,5 +74,54 @@ export class NotebookController {
 		].join('\n');
 
 		return csv;
+	}
+
+	private _queryAllGraphsN3(cell: vscode.NotebookCell) {
+		const execution = this._controller.createNotebookCellExecution(cell);
+
+		execution.executionOrder = ++this._executionOrder;
+		execution.start(Date.now());
+
+		const store = this._getMentorStore();
+		const result = new Set<string>();
+
+		for (const q of store.getQuads(null, null, null, null)) {
+			result.add(q.graph.value);
+		}
+
+		const graphs = Array.from(result);
+
+		execution.replaceOutput([new vscode.NotebookCellOutput([
+			vscode.NotebookCellOutputItem.text(`${graphs.length}\n` + graphs.join('\n'), 'text/csv')
+		])]);
+
+		execution.end(true, Date.now());
+	}
+
+	private async _executeSparqlQuery(cell: vscode.NotebookCell) {
+		const execution = this._controller.createNotebookCellExecution(cell);
+
+		execution.executionOrder = ++this._executionOrder;
+		execution.start(Date.now());
+
+		try {
+			const store = this._getMentorStore();
+			const query = cell.document.getText();
+			const bindings = await this._queryEngine.queryBindings(query, {
+				sources: [store],
+				unionDefaultGraph: true
+			});
+			const output = await bindings.toArray();
+
+			execution.replaceOutput([new vscode.NotebookCellOutput([
+				vscode.NotebookCellOutputItem.text(this.generateCSV(output), 'text/csv')
+			])]);
+		} catch (error: any) {
+			execution.replaceOutput([new vscode.NotebookCellOutput([
+				vscode.NotebookCellOutputItem.error(error as Error)
+			])]);
+		}
+
+		execution.end(true, Date.now());
 	}
 }

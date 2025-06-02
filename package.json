@@ -84,6 +84,7 @@
     "millan": "^5.4.0",
     "n3": "^1.24.2",
     "sax-ts": "^1.2.13",
+    "setimmediate": "^1.0.5",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.11",

@@ -1,7 +1,6 @@
 const fs = require("fs");
 const glob = require("glob");
 const esbuild = require("esbuild");
-const polyfill = require('@esbuild-plugins/node-globals-polyfill');
 
 const isProductionBuild = (args) => args.includes("--production");
 
@@ -20,10 +19,6 @@ const getBaseConfig = (args) => {
       'global': 'globalThis'
     },
     plugins: [
-			polyfill.NodeGlobalsPolyfillPlugin({
-				process: true,
-				buffer: true,
-			}),
       {
         name: 'rebuild-notify',
         setup(build) {
@@ -42,7 +37,6 @@ const getBaseConfig = (args) => {
 const getExtensionConfig = (args) => {
   return {
     ...getBaseConfig(args),
-    // mainFields: ["module", "main"],
     entryPoints: ["./src/extension.ts"],
     outfile: "./out/extension.js"
   }
@@ -106,8 +100,9 @@ const getLanguageConfig = (args, type, language) => {
     ]
 
     if (args.includes("--watch")) {
-      // This is the advanced long-running form of "build" that supports additional
-      // features such as watch mode and a local development server.
+      // `esbuild.context` is the advanced long-running form sof 
+      // `build` that supports additional features such as watch 
+      // mode and a local development server.
       for (const config of configs) {
         (await esbuild.context(config)).watch();
       }
@@ -116,8 +111,8 @@ const getLanguageConfig = (args, type, language) => {
         esbuild.build(config);
       }
     }
-  } catch (err) {
-    process.stderr.write(err.stderr);
+  } catch (e) {
+    process.stderr.write(e.stderr);
     process.exit(1);
   }
 })();
