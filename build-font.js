@@ -25,6 +25,7 @@ async function generateFont() {
     const result = await svgtofont({
       src: path.resolve(process.cwd(), 'media', 'glyphs'),
       dest: path.resolve(process.cwd(), 'media'),
+      outputDir: '',
       fontName: 'mentor-icons',
       css: false,
       startUnicode: 0xE000,
@@ -36,6 +37,12 @@ async function generateFont() {
     });
   } catch (e) {
     console.error('Font creation failed.', e);
+  }
+
+  const fontsDir = path.resolve(process.cwd(), 'fonts');
+
+  if (fs.existsSync(fontsDir)) {
+    fs.rmSync(fontsDir, { recursive: true, force: true });
   }
 
   console.log();
