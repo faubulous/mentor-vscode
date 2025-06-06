@@ -101,7 +101,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		const graphUris = this._decorationScope === MissingLanguageTagDecorationScope.Document ? context.graphs : undefined;
 		const activeLanguage = context.activeLanguage;
 
-		for (let triple of mentor.vocabulary.store.match(graphUris, subject, null, null, false)) {
+		for (let triple of mentor.vocabulary.store.matchAll(graphUris, subject, null, null, false)) {
 			if (triple.object.termType !== "Literal" || !this._labelPredicates.has(triple.predicate.value)) {
 				// Only enable the decoration if the subject is a subject in the configured graphs (document or entire background).
 				hasLabels = true;

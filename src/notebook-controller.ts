@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as n3 from 'n3';
 import { mentor } from './mentor';
 import { QueryEngine } from '@comunica/query-sparql-rdfjs-lite';
 
@@ -35,19 +34,7 @@ export class NotebookController {
 		}
 	}
 
-	private _getMentorStore(): any {
-		return mentor.store.getNativeStore();
-	}
-
-	private _getTestStore(): n3.Store {
-		const store = new n3.Store();
-		store.addQuad(n3.DataFactory.quad(n3.DataFactory.namedNode('a'), n3.DataFactory.namedNode('b'), n3.DataFactory.namedNode('http://dbpedia.org/resource/Belgium')));
-		store.addQuad(n3.DataFactory.quad(n3.DataFactory.namedNode('a'), n3.DataFactory.namedNode('b'), n3.DataFactory.namedNode('http://dbpedia.org/resource/Ghent')));
-		return store;
-	}
-
 	private async _doExecution(cell: vscode.NotebookCell): Promise<void> {
-		// this._queryAllGraphsN3(cell);
 		this._executeSparqlQuery(cell);
 	}
 
@@ -76,28 +63,6 @@ export class NotebookController {
 		return csv;
 	}
 
-	private _queryAllGraphsN3(cell: vscode.NotebookCell) {
-		const execution = this._controller.createNotebookCellExecution(cell);
-
-		execution.executionOrder = ++this._executionOrder;
-		execution.start(Date.now());
-
-		const store = this._getMentorStore();
-		const result = new Set<string>();
-
-		for (const q of store.getQuads(null, null, null, null)) {
-			result.add(q.graph.value);
-		}
-
-		const graphs = Array.from(result);
-
-		execution.replaceOutput([new vscode.NotebookCellOutput([
-			vscode.NotebookCellOutputItem.text(`${graphs.length}\n` + graphs.join('\n'), 'text/csv')
-		])]);
-
-		execution.end(true, Date.now());
-	}
-
 	private async _executeSparqlQuery(cell: vscode.NotebookCell) {
 		const execution = this._controller.createNotebookCellExecution(cell);
 
@@ -105,10 +70,10 @@ export class NotebookController {
 		execution.start(Date.now());
 
 		try {
-			const store = this._getMentorStore();
+			const source = mentor.store;
 			const query = cell.document.getText();
 			const bindings = await this._queryEngine.queryBindings(query, {
-				sources: [store],
+				sources: [source],
 				unionDefaultGraph: true
 			});
 			const output = await bindings.toArray();

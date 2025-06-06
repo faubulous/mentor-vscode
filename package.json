@@ -65,6 +65,7 @@
   "devDependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@rdfjs/types": "^2.0.1",
+    "@types/jest": "^29.5.14",
     "@types/n3": "^1.24.2",
     "@types/node": "^22.14.0",
     "@types/vscode": "^1.90.0",
@@ -75,8 +76,8 @@
     "esbuild-plugin-copy": "^2.0.1",
     "eslint": "^9.24.0",
     "glob": "^11.0.1",
-    "typescript": "^5.8.3",
-    "webfont": "^11.2.26"
+    "svgtofont": "^6.3.2",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "@comunica/query-sparql-rdfjs-lite": "^4.2.0",

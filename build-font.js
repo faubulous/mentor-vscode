@@ -1,9 +1,8 @@
-const webfont = require('webfont');
-const fs = require('fs');
-const path = require('path');
+import svgtofont from 'svgtofont';
+import * as fs from 'fs';
+import * as path from 'path';
 
-const targetFile = path.join(__dirname, 'media', 'mentor-icons.woff');
-const sourceFolder = path.join(__dirname, 'media', 'glyphs');
+const sourceFolder = path.resolve(process.cwd(), 'media', 'glyphs');
 
 console.log("Building icon font...");
 console.log(`Font source: ${sourceFolder}`);
@@ -23,19 +22,18 @@ console.log(icons);
 
 async function generateFont() {
   try {
-    const result = await webfont.webfont({
-      files: icons,
-      formats: ['woff'],
+    const result = await svgtofont({
+      src: path.resolve(process.cwd(), 'media', 'glyphs'),
+      dest: path.resolve(process.cwd(), 'media'),
+      fontName: 'mentor-icons',
+      css: false,
       startUnicode: 0xE000,
-      fontHeight: 1000,
-      verbose: true,
-      normalize: true,
-      sort: false
+      excludeFormat: ["eot", "woff2", "ttf", "svg", "symbol.svg"],
+      svgicons2svgfont: {
+        fontHeight: 1000,
+        normalize: true
+      }
     });
-
-    fs.writeFileSync(targetFile, result.woff, 'binary');
-
-    console.log(`Font output: ${targetFile}`);
   } catch (e) {
     console.error('Font creation failed.', e);
   }

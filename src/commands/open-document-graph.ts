@@ -7,7 +7,7 @@ export async function openDocumentGraph() {
 	const quickPick = vscode.window.createQuickPick<vscode.QuickPickItem>();
 	quickPick.title = 'Select the graph to open:';
 	quickPick.items = graphs.map((graphIri) => {
-		const n = [...mentor.store.match(graphIri, null, null, null)].length;
+		const n = [...mentor.store.matchAll(graphIri, null, null, null)].length;
 
 		return {
 			label: graphIri,

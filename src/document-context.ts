@@ -294,7 +294,7 @@ export abstract class DocumentContext {
 
 		// TODO: Add config option to enable/disable SHACL path labels.
 		// If the node has a SHACL path, use it as the label.
-		for (let q of mentor.store.match(this.graphs, subject, sh.path, null, false)) {
+		for (let q of mentor.store.matchAll(this.graphs, subject, sh.path, null, false)) {
 			return {
 				value: this.getPropertyPathLabel(q.object as n3.Quad_Subject),
 				language: undefined
@@ -359,7 +359,7 @@ export abstract class DocumentContext {
 		let fallbackLabel: rdfjs.Literal | undefined = undefined;
 
 		for (let p of predicates) {
-			for (let q of mentor.store.match(graphUris, subject, p, null, false)) {
+			for (let q of mentor.store.matchAll(graphUris, subject, p, null, false)) {
 				if (q.object.termType === 'Literal') {
 					const literal = q.object as n3.Literal;
 
