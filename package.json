@@ -82,6 +82,7 @@
   "dependencies": {
     "@comunica/query-sparql-rdfjs-lite": "^4.2.0",
     "@faubulous/mentor-rdf": "^0.2.52",
+    "@vscode-elements/elements": "^1.16.1",
     "millan": "^5.4.0",
     "n3": "^1.24.2",
     "sax-ts": "^1.2.13",
@@ -420,6 +421,22 @@
         }
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mentor",
+          "title": "Mentor",
+          "icon": "media/glyphs/0-mentor.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "mentor-sparql-results",
+          "title": "Query Results",
+          "icon": "media/glyphs/0-mentor.svg"
+        }
+      ]
+    },
     "views": {
       "mentor": [
         {
@@ -430,6 +447,13 @@
           "id": "mentor.view.definitionTree",
           "name": "Definitions"
         }
+      ],
+      "mentor-sparql-results": [
+        {
+          "type": "webview",
+          "id": "mentor.view.sparqlResults",
+          "name": "Query Results"
+        }
       ]
     },
     "viewsWelcome": [
@@ -439,15 +463,6 @@
         "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
       }
     ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "mentor",
-          "title": "Mentor",
-          "icon": "media/glyphs/0-mentor.svg"
-        }
-      ]
-    },
     "commands": [
       {
         "command": "mentor.action.createNotebook",
@@ -592,6 +607,10 @@
       {
         "command": "mentor.action.highlightReferencedIris",
         "title": "Mentor: Highlight Referenced IRIs"
+      },
+      {
+        "command": "mentor.action.viewSparqlResults",
+        "title": "Mentor: View SPARQL Results"
       }
     ],
     "menus": {

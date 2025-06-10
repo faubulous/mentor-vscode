@@ -48,6 +48,7 @@ function registerProviders(context: vscode.ExtensionContext) {
 function registerViews(context: vscode.ExtensionContext) {
 	context.subscriptions.push(new views.WorkspaceTree().treeView);
 	context.subscriptions.push(new views.DefinitionTree().treeView);
+	context.subscriptions.push(views.sparqlResultsViewProvider.register());
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
@@ -65,4 +66,5 @@ function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.sortPrefixes', commands.sortPrefixes));
 	context.subscriptions.push(vscode.commands.registerCommand("mentor.action.openDocumentGraph", commands.openDocumentGraph));
 	context.subscriptions.push(vscode.commands.registerCommand("mentor.action.openSettings", commands.openSettings));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.viewSparqlResults', commands.viewSparqlResults));
 }

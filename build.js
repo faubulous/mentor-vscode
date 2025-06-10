@@ -14,6 +14,10 @@ const getBaseConfig = (args) => {
     format: "cjs",
     external: ["vscode"],
     platform: 'browser',
+    loader: {
+      // Configure HTML files to be imported as text/strings
+      '.html': 'text'
+    },
     define: {
       // This is not defined in the browser environment, so we need to provide a polyfill.
       'global': 'globalThis'

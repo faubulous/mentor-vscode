@@ -1,6 +1,6 @@
 export * from './analyze-workspace';
-export * from './create-notebook';
 export * from './create-notebook-from-file';
+export * from './create-notebook';
 export * from './delete-prefixes';
 export * from './find-references';
 export * from './implement-prefix-for-iri';
@@ -12,3 +12,4 @@ export * from './reveal-definition';
 export * from './reveal-shape-definition';
 export * from './select-active-language';
 export * from './sort-prefixes';
+export * from './view-sparql-results';
