@@ -13,8 +13,6 @@ export class NotebookController {
 
 	private readonly _controller: vscode.NotebookController;
 
-	private readonly _queryEngine = new QueryEngine();
-
 	private _executionOrder = 0;
 
 	constructor() {
@@ -70,16 +68,20 @@ export class NotebookController {
 		execution.start(Date.now());
 
 		try {
-			const source = mentor.store;
 			const query = cell.document.getText();
-			const bindings = await this._queryEngine.queryBindings(query, {
+
+			const source = mentor.store;
+			const queryEngine = new QueryEngine();
+
+			const bindings = await queryEngine.queryBindings(query, {
 				sources: [source],
 				unionDefaultGraph: true
 			});
-			const output = await bindings.toArray();
+
+			const results = await bindings.toArray();
 
 			execution.replaceOutput([new vscode.NotebookCellOutput([
-				vscode.NotebookCellOutputItem.text(this.generateCSV(output), 'text/csv')
+				vscode.NotebookCellOutputItem.text(JSON.stringify(results), 'application/json')
 			])]);
 		} catch (error: any) {
 			execution.replaceOutput([new vscode.NotebookCellOutput([

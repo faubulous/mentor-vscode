@@ -48,13 +48,14 @@ function registerProviders(context: vscode.ExtensionContext) {
 function registerViews(context: vscode.ExtensionContext) {
 	context.subscriptions.push(new views.WorkspaceTree().treeView);
 	context.subscriptions.push(new views.DefinitionTree().treeView);
-	context.subscriptions.push(views.sparqlResultsViewProvider.register());
+	context.subscriptions.push(views.sparqlResultsViewProvider.register(context));
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', commands.analyzeWorkspace));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebook', commands.createNotebook));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebookFromFile', commands.createNotebookFromFile));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebookFromEditor', commands.createNotebookFromEditor));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQueryFromEditor', commands.executeSparqlQueryFromEditor));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', commands.deletePrefixes));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.findReferences', commands.findReferences));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.implementPrefixes', commands.implementPrefixes));

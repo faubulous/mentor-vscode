@@ -1,6 +1,7 @@
 const fs = require("fs");
 const glob = require("glob");
 const esbuild = require("esbuild");
+const path = require("path");
 
 const isProductionBuild = (args) => args.includes("--production");
 
@@ -57,6 +58,46 @@ const getLanguageConfig = (args, type, language) => {
   }
 }
 
+const copyFontGlyphs = () => {
+  const sourceFolder = path.resolve(__dirname, 'media', 'glyphs');
+  const targetFolder = path.resolve(__dirname, 'out', 'media', 'glyphs');
+
+  console.log(`Copying font glyphs to: ${targetFolder}`);
+
+  if (!fs.existsSync(targetFolder)) {
+    fs.mkdirSync(targetFolder, { recursive: true });
+  }
+
+  for (const file of fs.readdirSync(sourceFolder)) {
+    const sourceFile = path.join(sourceFolder, file);
+    const targetFile = path.join(targetFolder, file);
+
+    fs.copyFileSync(sourceFile, targetFile);
+  }
+}
+
+const copyVSCodeElementsBundle = () => {
+  const bundledSource = path.resolve(
+    __dirname,
+    'node_modules',
+    '@vscode-elements',
+    'elements',
+    'dist',
+    'bundled.js'
+  );
+
+  const targetFolder = path.resolve(__dirname, 'media');
+  const targetFile = path.join(targetFolder, 'vscode-elements.js');
+
+  console.log(`Copying VSCode Elements bundle to: ${targetFile}`);
+
+  if (!fs.existsSync(targetFolder)) {
+    fs.mkdirSync(targetFolder, { recursive: true });
+  }
+
+  fs.copyFileSync(bundledSource, targetFile);
+}
+
 (async () => {
   const args = process.argv.slice(2);
   const productionBuild = isProductionBuild(args);
@@ -67,21 +108,21 @@ const getLanguageConfig = (args, type, language) => {
   console.log("Extension config:", extensionConfig);
 
   try {
-    if (fs.existsSync('./out')) {
-      console.log("Deleting existing out directory..");
+    const outFolder = path.resolve(__dirname, 'out');
 
-      fs.rmSync('./out', { recursive: true });
+    if (fs.existsSync(outFolder)) {
+      console.log(`Deleting existing output directory: ${outFolder}`);
 
-      // Note: Uncomment this if you want to use SVG icons directly.
-      console.log("Copying media files to out directory..");
+      fs.rmSync(outFolder, { recursive: true });
     }
 
-    fs.mkdirSync('./out');
-    fs.mkdirSync('./out/media/glyphs', { recursive: true });
+    fs.mkdirSync(outFolder);
 
-    for (const file of fs.readdirSync('./media/glyphs')) {
-      fs.copyFileSync(`./media/glyphs/${file}`, `./out/media/glyphs/${file}`);
-    }
+    // Copy the SVG font icons to the out directory.
+    copyFontGlyphs();
+
+    // Copy the VSCode Elements bundle to the media directory.
+    copyVSCodeElementsBundle();
 
     // Copy the language config files to the out directory.
     for (const file of glob.sync('./src/languages/**/*.json')) {

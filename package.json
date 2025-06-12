@@ -467,11 +467,16 @@
       {
         "command": "mentor.action.createNotebook",
         "title": "Mentor: Create Notebook",
-        "icon": "$(play)"
+        "icon": "$(notebook)"
       },
       {
-        "command": "mentor.action.createNotebookFromFile",
-        "title": "Mentor: Create Notebook from File",
+        "command": "mentor.action.createNotebookFromEditor",
+        "title": "Mentor: Create Notebook from Editor",
+        "icon": "$(notebook)"
+      },
+      {
+        "command": "mentor.action.executeSparqlQueryFromEditor",
+        "title": "Mentor: Execute SPARQL Query from Editor",
         "icon": "$(play)"
       },
       {
@@ -616,7 +621,12 @@
     "menus": {
       "editor/title": [
         {
-          "command": "mentor.action.createNotebookFromFile",
+          "command": "mentor.action.executeSparqlQueryFromEditor",
+          "when": "editorLangId == 'sparql'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.action.createNotebookFromEditor",
           "when": "editorLangId == 'sparql'",
           "group": "navigation@3"
         }

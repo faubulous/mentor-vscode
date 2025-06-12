@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export async function createNotebookFromFile() {
+export async function createNotebookFromEditor() {
 	const editor = vscode.window.activeTextEditor;
 
 	if (!editor) {

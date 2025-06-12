@@ -2,40 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Hello World Button</title>
-    <script
-      src="https://unpkg.com/@vscode-elements/elements@1.16.1/dist/bundled.js"
-      type="module"
-    ></script>
+    <script src="{{vscodeElementsScript}}" type="module"></script>
   </head>
   <body>
-    <vscode-table bordered-rows id="my-table">
-      <vscode-table-header slot="header">
-        <vscode-table-header-cell>First name</vscode-table-header-cell>
-        <vscode-table-header-cell>Last name</vscode-table-header-cell>
-        <vscode-table-header-cell>Email</vscode-table-header-cell>
+    <vscode-table bordered-rows zebra>
+      <vscode-table-header slot="header" id="table-header">
       </vscode-table-header>
-      <vscode-table-body slot="body" id="table-body">
-        <!-- Rows will be injected here -->
-      </vscode-table-body>
+      <vscode-table-body slot="body" id="table-body"> </vscode-table-body>
     </vscode-table>
     <script>
+      const createHeader = (message) => {
+        const header = document.getElementById("table-header");
+        header.innerHTML = "";
+
+        for (const v of Object.keys(message.data[0].entries)) {
+          header.innerHTML += `<vscode-table-header-cell>${v}</vscode-table-header-cell>`;
+        }
+      };
+
+      const createBody = (message) => {
+        const body = document.getElementById("table-body");
+        body.innerHTML = "";
+
+        for (const row of message.data.slice(0, 100)) {
+          const r = document.createElement("vscode-table-row");
+
+          for (const v of Object.values(row.entries)) {
+            r.innerHTML += `<vscode-table-cell>${v.value}</vscode-table-cell>`;
+          }
+
+          body.appendChild(r);
+        }
+      };
+
       window.addEventListener("message", (event) => {
         const message = event.data;
 
         if (message.type === "setTableData") {
-          const tbody = document.getElementById("table-body");
-          tbody.innerHTML = "";
-
-          for (const row of message.data) {
-            const tr = document.createElement("vscode-table-row");
-            tr.innerHTML = `
-					<vscode-table-cell>${row.firstName}</vscode-table-cell>
-					<vscode-table-cell>${row.lastName}</vscode-table-cell>
-					<vscode-table-cell>${row.email}</vscode-table-cell>
-					`;
-            tbody.appendChild(tr);
-          }
+          createHeader(message);
+          createBody(message);
         }
       });
     </script>
