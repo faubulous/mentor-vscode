@@ -21,12 +21,18 @@ const icons = fs.readdirSync(sourceFolder)
 console.log(icons);
 
 async function generateFont() {
+  const fontName = 'mentor-icons';
+  const sourceDir = path.resolve(process.cwd(), 'media', 'glyphs');
+  const targetDir = path.resolve(process.cwd(), 'media');
+  const targetFileName = fontName + '.woff';
+  const targetFilePath = path.resolve(targetDir, targetFileName);
+
   try {
-    const result = await svgtofont({
-      src: path.resolve(process.cwd(), 'media', 'glyphs'),
-      dest: path.resolve(process.cwd(), 'media'),
+    await svgtofont({
+      src: sourceDir,
+      dest: targetDir,
       outputDir: '',
-      fontName: 'mentor-icons',
+      fontName: fontName,
       css: false,
       startUnicode: 0xE000,
       excludeFormat: ["eot", "woff2", "ttf", "svg", "symbol.svg"],
@@ -35,14 +41,25 @@ async function generateFont() {
         normalize: true
       }
     });
+
+    const outputDir = path.resolve(process.cwd(), 'fonts');
+    const outputFilePath = path.join(outputDir, targetFileName);
+
+    console.log(`\nFont created at: ${outputFilePath}`);
+
+    if (fs.existsSync(outputFilePath)) {
+      fs.renameSync(outputFilePath, targetFilePath);
+    }
+
+    console.log(`Font moved to: ${targetFilePath}`);
+
+    if (fs.existsSync(outputDir)) {
+      fs.rmSync(outputDir, { recursive: true, force: true });
+    }
+    console.log(`Font creation successful.`);
+
   } catch (e) {
     console.error('Font creation failed.', e);
-  }
-
-  const fontsDir = path.resolve(process.cwd(), 'fonts');
-
-  if (fs.existsSync(fontsDir)) {
-    fs.rmSync(fontsDir, { recursive: true, force: true });
   }
 
   console.log();

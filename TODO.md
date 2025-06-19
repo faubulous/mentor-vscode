@@ -1,5 +1,8 @@
 # TODO
-
+- [ ] Switch to svgtofont to address security vulnerablities
+  - [x] Remove old package
+  - [x] Adapt build script
+  - [ ] Fix wrong icon offset
 - [X] Add output view for SPARQL bindings
   - https://code.visualstudio.com/api/ux-guidelines/panel
   - VS Code Elements Table?

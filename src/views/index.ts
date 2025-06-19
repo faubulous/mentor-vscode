@@ -1,3 +1,3 @@
 export * from './workspace-tree';
 export * from './definition-tree';
-export * from './sparql-results-view-provider';
+export * from './components/sparql-results-view-provider';

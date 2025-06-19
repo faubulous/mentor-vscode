@@ -1,4 +1,4 @@
-import { sparqlResultsViewProvider } from '@/views/sparql-results-view-provider';
+import { sparqlResultsViewProvider } from '@/views/components';
 
 export async function viewSparqlResults() {
 	const tableData = [

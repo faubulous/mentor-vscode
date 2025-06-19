@@ -1,0 +1,1 @@
+export * from './sparql-results-view-provider';

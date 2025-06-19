@@ -5,17 +5,18 @@
     <script src="{{vscodeElementsScript}}" type="module"></script>
   </head>
   <body>
-    <vscode-table bordered-rows zebra>
+    <vscode-table bordered-rows>
       <vscode-table-header slot="header" id="table-header">
       </vscode-table-header>
-      <vscode-table-body slot="body" id="table-body"> </vscode-table-body>
+      <vscode-table-body slot="body" id="table-body">
+      </vscode-table-body>
     </vscode-table>
     <script>
       const createHeader = (message) => {
         const header = document.getElementById("table-header");
         header.innerHTML = "";
 
-        for (const v of Object.keys(message.data[0].entries)) {
+        for (const v of Object.keys(message.data[0])) {
           header.innerHTML += `<vscode-table-header-cell>${v}</vscode-table-header-cell>`;
         }
       };
@@ -27,8 +28,8 @@
         for (const row of message.data.slice(0, 100)) {
           const r = document.createElement("vscode-table-row");
 
-          for (const v of Object.values(row.entries)) {
-            r.innerHTML += `<vscode-table-cell>${v.value}</vscode-table-cell>`;
+          for (const v of Object.values(row)) {
+            r.innerHTML += `<vscode-table-cell>${v}</vscode-table-cell>`;
           }
 
           body.appendChild(r);
@@ -37,6 +38,8 @@
 
       window.addEventListener("message", (event) => {
         const message = event.data;
+
+        console.log("Received message:", message);
 
         if (message.type === "setTableData") {
           createHeader(message);

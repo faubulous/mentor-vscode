@@ -119,7 +119,7 @@ const copyVSCodeElementsBundle = () => {
     fs.mkdirSync(outFolder);
 
     // Copy the SVG font icons to the out directory.
-    copyFontGlyphs();
+    // copyFontGlyphs();
 
     // Copy the VSCode Elements bundle to the media directory.
     copyVSCodeElementsBundle();

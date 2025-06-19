@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import html from '@/views/sparql-results-view.html';
+import html from '@/views/components/sparql-results.html';
 
 export class SparqlResultsViewProvider implements vscode.WebviewViewProvider {
 	readonly viewType = 'mentor.view.sparqlResults';

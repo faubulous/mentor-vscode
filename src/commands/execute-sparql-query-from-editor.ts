@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { QueryEngine } from '@comunica/query-sparql-rdfjs-lite';
-import { sparqlResultsViewProvider } from '@/views/sparql-results-view-provider';
+import { sparqlResultsViewProvider } from '@/views/components';
 
 export async function executeSparqlQueryFromEditor(): Promise<void> {
 	const editor = vscode.window.activeTextEditor;
