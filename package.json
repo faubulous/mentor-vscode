@@ -618,6 +618,19 @@
         "title": "Mentor: View SPARQL Results"
       }
     ],
+    "keybindings": [
+      {
+        "command": "mentor.action.executeSparqlQueryFromEditor",
+        "key": "f5",
+        "when": "editorLangId == 'sparql'"
+      },
+      {
+        "command": "mentor.action.executeSparqlQueryFromEditor",
+        "key": "ctrl+f5",
+        "mac": "cmd+f5",
+        "when": "editorLangId == 'sparql'"
+      }
+    ],
     "menus": {
       "editor/title": [
         {

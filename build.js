@@ -58,6 +58,9 @@ const getLanguageConfig = (args, type, language) => {
   }
 }
 
+/**
+ * Copies SVG glyph files from the extension media directory to the package media directory.
+ */
 const copyFontGlyphs = () => {
   const sourceFolder = path.resolve(__dirname, 'media', 'glyphs');
   const targetFolder = path.resolve(__dirname, 'out', 'media', 'glyphs');
@@ -76,6 +79,9 @@ const copyFontGlyphs = () => {
   }
 }
 
+/**
+ * Copies the VSCode Elements bundle to the media directory.
+ */
 const copyVSCodeElementsBundle = () => {
   const bundledSource = path.resolve(
     __dirname,
@@ -118,10 +124,9 @@ const copyVSCodeElementsBundle = () => {
 
     fs.mkdirSync(outFolder);
 
-    // Copy the SVG font icons to the out directory.
+
     // copyFontGlyphs();
 
-    // Copy the VSCode Elements bundle to the media directory.
     copyVSCodeElementsBundle();
 
     // Copy the language config files to the out directory.

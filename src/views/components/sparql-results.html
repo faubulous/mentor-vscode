@@ -8,28 +8,27 @@
     <vscode-table bordered-rows>
       <vscode-table-header slot="header" id="table-header">
       </vscode-table-header>
-      <vscode-table-body slot="body" id="table-body">
-      </vscode-table-body>
+      <vscode-table-body slot="body" id="table-body"> </vscode-table-body>
     </vscode-table>
     <script>
-      const createHeader = (message) => {
+      const createHeader = (data) => {
         const header = document.getElementById("table-header");
         header.innerHTML = "";
 
-        for (const v of Object.keys(message.data[0])) {
+        for (const v of Object.keys(data[0].entries)) {
           header.innerHTML += `<vscode-table-header-cell>${v}</vscode-table-header-cell>`;
         }
       };
 
-      const createBody = (message) => {
+      const createBody = (data) => {
         const body = document.getElementById("table-body");
         body.innerHTML = "";
 
-        for (const row of message.data.slice(0, 100)) {
+        for (const row of data) {
           const r = document.createElement("vscode-table-row");
 
-          for (const v of Object.values(row)) {
-            r.innerHTML += `<vscode-table-cell>${v}</vscode-table-cell>`;
+          for (const v of Object.values(row.entries)) {
+            r.innerHTML += `<vscode-table-cell>${v.value}</vscode-table-cell>`;
           }
 
           body.appendChild(r);
@@ -42,8 +41,14 @@
         console.log("Received message:", message);
 
         if (message.type === "setTableData") {
-          createHeader(message);
-          createBody(message);
+          const data = message.data.data || [];
+          
+          console.log(data);
+
+          if (data.length > 0) {
+            createHeader(data);
+            createBody(data);
+          }
         }
       });
     </script>

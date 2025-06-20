@@ -15,13 +15,16 @@ export async function executeSparqlQueryFromEditor(): Promise<void> {
 	const source = mentor.store;
 	const queryEngine = new QueryEngine();
 
-	const bindings = await queryEngine.queryBindings(query, {
+	const result = await queryEngine.queryBindings(query, {
 		sources: [source],
 		unionDefaultGraph: true
 	});
 
-	const results = await bindings.toArray();
+	const data = {
+		type: 'bindings',
+		data: await result.toArray({ limit: 100 })
+	};
 
 	sparqlResultsViewProvider.reveal();
-	sparqlResultsViewProvider.postMessage({ type: 'setTableData', data: results });
+	sparqlResultsViewProvider.postMessage({ type: 'setTableData', data: data });
 }
