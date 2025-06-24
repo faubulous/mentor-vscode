@@ -52,11 +52,11 @@
   "browser": "./out/extension.js",
   "scripts": {
     "clean": "rm -Rf node_modules && rm -Rf out && rm -Rf media/*.woff",
-    "build": "node ./build-font.js && node ./build.js",
-    "build:watch": "node ./build-font.js && node ./build.js --watch",
-    "build:font": "node ./build-font.js",
-    "compile": "node ./build-font.js && tsc -p tsconfig.json",
-    "package": "node ./build-font.js && node ./build.js --production && vsce package --dependencies -o out/mentor.vsix",
+    "build": "node ./build-font.mjs && node ./build.js",
+    "build:watch": "node ./build-font.mjs && node ./build.js --watch",
+    "build:font": "node ./build-font.mjs",
+    "compile": "node ./build-font.mjs && tsc -p tsconfig.json",
+    "package": "node ./build-font.mjs && node ./build.js --production && vsce package --dependencies -o out/mentor.vsix",
     "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
     "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
     "test": "npx jest",
@@ -68,9 +68,13 @@
     "@types/jest": "^30.0.0",
     "@types/n3": "^1.26.0",
     "@types/node": "^24.0.3",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
     "@types/vscode": "^1.101.0",
+    "@types/vscode-notebook-renderer": "^1.72.3",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
+    "@vscode-elements/react-elements": "^1.15.1",
     "@vscode/test-web": "^0.0.70",
     "esbuild": "^0.25.5",
     "esbuild-plugin-copy": "^2.0.1",
@@ -82,9 +86,9 @@
   "dependencies": {
     "@comunica/query-sparql-rdfjs-lite": "^4.3.0",
     "@faubulous/mentor-rdf": "^0.2.52",
-    "@vscode-elements/elements": "^1.16.1",
     "millan": "^5.4.0",
     "n3": "^1.26.0",
+    "react": "^19.1.0",
     "sax-ts": "^1.2.13",
     "setimmediate": "^1.0.5",
     "vscode-languageclient": "^9.0.1",
@@ -967,6 +971,17 @@
           {
             "filenamePattern": "*.mnb"
           }
+        ]
+      }
+    ],
+    "notebookRenderer": [
+      {
+        "id": "mentor.notebook.sparqlResultsRenderer",
+        "displayName": "SPARQL Results Renderer",
+        "entrypoint": "./out/sparql-results-notebook-renderer.js",
+        "notebookType": "mentor-notebook",
+        "mimeTypes": [
+          "application/sparql-results+json"
         ]
       }
     ]

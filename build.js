@@ -58,6 +58,15 @@ const getLanguageConfig = (args, type, language) => {
   }
 }
 
+const getReactViewConfig = (args, file) => {
+  return {
+    ...getBaseConfig(args),
+    format: "esm", // Ensure ES module format for the VS Code notebook renderer
+    entryPoints: [`./src/views/${file}.tsx`],
+    outfile: `./out/${file}.js`
+  }
+}
+
 /**
  * Copies SVG glyph files from the extension media directory to the package media directory.
  */
@@ -92,7 +101,7 @@ const copyVSCodeElementsBundle = () => {
     'bundled.js'
   );
 
-  const targetFolder = path.resolve(__dirname, 'media');
+  const targetFolder = path.resolve(__dirname, 'out');
   const targetFile = path.join(targetFolder, 'vscode-elements.js');
 
   console.log(`Copying VSCode Elements bundle to: ${targetFile}`);
@@ -147,6 +156,8 @@ const copyVSCodeElementsBundle = () => {
       getLanguageConfig(args, 'client', 'turtle'),
       getLanguageConfig(args, 'client', 'trig'),
       getLanguageConfig(args, 'client', 'sparql'),
+      getReactViewConfig(args, 'sparql-results-notebook-renderer'),
+      getReactViewConfig(args, 'sparql-results-webview'),
     ]
 
     if (args.includes("--watch")) {

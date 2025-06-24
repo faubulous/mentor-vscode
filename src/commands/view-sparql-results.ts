@@ -1,12 +1,26 @@
-import { sparqlResultsViewProvider } from '@/views/components';
+import { sparqlResultsViewProvider } from '@/views';
 
 export async function viewSparqlResults() {
-	// Note: This does not work anymore as the SPARQL results need to be a BindingSet object.
-	const tableData = [
-		{ firstName: "Hans", lastName: "Wurscht", email: "hansw@yahoo.com" },
-		{ firstName: "Clark", lastName: "Breitenberg", email: "Nat_Moore@gmail.com" },
-	];
+	const exampleData = {
+		type: 'bindings',
+		data: [
+			{
+				entries: {
+					firstName: { value: "Hans" },
+					lastName: { value: "Wurscht" },
+					email: { value: "hansw@yahoo.com" }
+				}
+			},
+			{
+				entries: {
+					firstName: { value: "Clark" },
+					lastName: { value: "Breitenberg" },
+					email: { value: "Nat_Moore@gmail.com" }
+				}
+			}
+		]
+	};
 	
-	sparqlResultsViewProvider.postMessage({ type: 'setTableData', data: tableData });
+	sparqlResultsViewProvider.postMessage({ type: 'setTableData', data: exampleData });
 	sparqlResultsViewProvider.reveal();
 }

@@ -9,9 +9,7 @@
     ],
     "baseUrl": "./",
     "paths": {
-      "@/*": [
-        "src/*"
-      ]
+      "@/*": [ "src/*" ]
     },
     "rootDir": "./src",
     "outDir": "./out",
@@ -22,11 +20,14 @@
     "skipLibCheck": true, // Don't fail on errors in imported libraries. 
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   },
   "exclude": [
     "node_modules"
   ],
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ]
 }

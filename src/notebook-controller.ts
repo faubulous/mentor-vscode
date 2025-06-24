@@ -73,15 +73,18 @@ export class NotebookController {
 			const source = mentor.store;
 			const queryEngine = new QueryEngine();
 
-			const bindings = await queryEngine.queryBindings(query, {
+			const result = await queryEngine.queryBindings(query, {
 				sources: [source],
 				unionDefaultGraph: true
 			});
 
-			const results = await bindings.toArray();
+			const resultData = {
+				type: 'bindings',
+				data: await result.toArray({ limit: 100 })
+			};
 
 			execution.replaceOutput([new vscode.NotebookCellOutput([
-				vscode.NotebookCellOutputItem.text(JSON.stringify(results), 'application/json')
+				vscode.NotebookCellOutputItem.json(resultData, 'application/sparql-results+json')
 			])]);
 		} catch (error: any) {
 			execution.replaceOutput([new vscode.NotebookCellOutput([

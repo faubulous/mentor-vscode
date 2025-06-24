@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { QueryEngine } from '@comunica/query-sparql-rdfjs-lite';
-import { sparqlResultsViewProvider } from '@/views/components';
+import { sparqlResultsViewProvider } from '@/views';
 
 export async function executeSparqlQueryFromEditor(): Promise<void> {
 	const editor = vscode.window.activeTextEditor;
@@ -20,11 +20,11 @@ export async function executeSparqlQueryFromEditor(): Promise<void> {
 		unionDefaultGraph: true
 	});
 
-	const data = {
+	const resultData = {
 		type: 'bindings',
 		data: await result.toArray({ limit: 100 })
 	};
 
 	sparqlResultsViewProvider.reveal();
-	sparqlResultsViewProvider.postMessage({ type: 'setTableData', data: data });
+	sparqlResultsViewProvider.postMessage({ type: 'setTableData', data: resultData });
 }
