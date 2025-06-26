@@ -432,13 +432,6 @@
           "title": "Mentor",
           "icon": "media/glyphs/0-mentor.svg"
         }
-      ],
-      "panel": [
-        {
-          "id": "mentor-sparql-results",
-          "title": "Query Results",
-          "icon": "media/glyphs/0-mentor.svg"
-        }
       ]
     },
     "views": {
@@ -450,13 +443,6 @@
         {
           "id": "mentor.view.definitionTree",
           "name": "Definitions"
-        }
-      ],
-      "mentor-sparql-results": [
-        {
-          "type": "webview",
-          "id": "mentor.view.sparqlResults",
-          "name": "Query Results"
         }
       ]
     },
@@ -479,7 +465,7 @@
         "icon": "$(notebook)"
       },
       {
-        "command": "mentor.action.executeSparqlQueryFromEditor",
+        "command": "mentor.action.runSparqlQueryFromEditor",
         "title": "Mentor: Execute SPARQL Query from Editor",
         "icon": "$(play)"
       },
@@ -624,12 +610,12 @@
     ],
     "keybindings": [
       {
-        "command": "mentor.action.executeSparqlQueryFromEditor",
+        "command": "mentor.action.runSparqlQueryFromEditor",
         "key": "f5",
         "when": "editorLangId == 'sparql'"
       },
       {
-        "command": "mentor.action.executeSparqlQueryFromEditor",
+        "command": "mentor.action.runSparqlQueryFromEditor",
         "key": "ctrl+f5",
         "mac": "cmd+f5",
         "when": "editorLangId == 'sparql'"
@@ -638,7 +624,7 @@
     "menus": {
       "editor/title": [
         {
-          "command": "mentor.action.executeSparqlQueryFromEditor",
+          "command": "mentor.action.runSparqlQueryFromEditor",
           "when": "editorLangId == 'sparql'",
           "group": "navigation@2"
         },

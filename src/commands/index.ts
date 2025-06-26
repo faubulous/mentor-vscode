@@ -2,7 +2,7 @@ export * from './analyze-workspace';
 export * from './create-notebook-from-editor';
 export * from './create-notebook';
 export * from './delete-prefixes';
-export * from './execute-sparql-query-from-editor';
+export * from './run-sparql-query-from-editor';
 export * from './find-references';
 export * from './implement-prefix-for-iri';
 export * from './implement-prefixes';
