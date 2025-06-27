@@ -13,4 +13,3 @@ export * from './reveal-definition';
 export * from './reveal-shape-definition';
 export * from './select-active-language';
 export * from './sort-prefixes';
-export * from './view-sparql-results';

@@ -2,9 +2,9 @@ import { createRoot } from 'react-dom/client';
 import { SparqlResultsTable } from './sparql-results-table';
 
 declare function acquireVsCodeApi(): {
-	postMessage: (msg: any) => void;
-	setState: (state: any) => void;
-	getState: () => any;
+  postMessage: (msg: any) => void;
+  setState: (state: any) => void;
+  getState: () => any;
 };
 
 const vscode = acquireVsCodeApi();

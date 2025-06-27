@@ -602,10 +602,6 @@
       {
         "command": "mentor.action.highlightReferencedIris",
         "title": "Mentor: Highlight Referenced IRIs"
-      },
-      {
-        "command": "mentor.action.viewSparqlResults",
-        "title": "Mentor: View SPARQL Results"
       }
     ],
     "keybindings": [
@@ -616,8 +612,7 @@
       },
       {
         "command": "mentor.action.runSparqlQueryFromEditor",
-        "key": "ctrl+f5",
-        "mac": "cmd+f5",
+        "key": "meta+enter",
         "when": "editorLangId == 'sparql'"
       }
     ],
