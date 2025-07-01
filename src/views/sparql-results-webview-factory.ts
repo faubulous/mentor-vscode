@@ -7,7 +7,7 @@ export class SparqlResultsViewFactory {
 		const panel = vscode.window.createWebviewPanel(
 			'mentor.sparqlResultsPanel',
 			'SPARQL Results',
-			vscode.ViewColumn.Active,
+			vscode.ViewColumn.Beside,
 			{
 				enableScripts: true,
 				localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'out')]
@@ -17,6 +17,7 @@ export class SparqlResultsViewFactory {
 		const scriptUri = panel.webview.asWebviewUri(
 			vscode.Uri.joinPath(context.extensionUri, 'out', 'sparql-results-webview.js')
 		);
+		
 		const elementsUri = panel.webview.asWebviewUri(
 			vscode.Uri.joinPath(context.extensionUri, 'out', 'vscode-elements.js')
 		);

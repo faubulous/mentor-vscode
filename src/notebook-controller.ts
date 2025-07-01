@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { mentor } from './mentor';
-import { QueryEngine } from '@comunica/query-sparql-rdfjs-lite';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
 
@@ -36,31 +35,6 @@ export class NotebookController {
 		this._executeSparqlQuery(cell);
 	}
 
-	private generateCSV(bindings: any[]): string {
-		const headers: Set<string> = new Set();
-		const rows: string[][] = [];
-
-		// Process each binding entry
-		for (const b of bindings) {
-			const row: string[] = [];
-			const map = b.entries as Map<string, { value: string }>;
-
-			for (const entry of map.entries()) {
-				headers.add(entry[0]);
-				row.push(entry[1].value);
-			}
-
-			rows.push(row);
-		}
-
-		const csv = [
-			Array.from(headers).join(','),
-			...rows.map(row => row.join(','))
-		].join('\n');
-
-		return csv;
-	}
-
 	private async _executeSparqlQuery(cell: vscode.NotebookCell) {
 		const execution = this._controller.createNotebookCellExecution(cell);
 
@@ -68,23 +42,13 @@ export class NotebookController {
 		execution.start(Date.now());
 
 		try {
+			const documentIri = cell.notebook.uri.toString();
 			const query = cell.document.getText();
 
-			const source = mentor.store;
-			const queryEngine = new QueryEngine();
-
-			const result = await queryEngine.queryBindings(query, {
-				sources: [source],
-				unionDefaultGraph: true
-			});
-
-			const resultData = {
-				type: 'bindings',
-				data: await result.toArray({ limit: 100 })
-			};
+			const results = await mentor.sparqlQueryService.executeQuery(query, documentIri);
 
 			execution.replaceOutput([new vscode.NotebookCellOutput([
-				vscode.NotebookCellOutputItem.json(resultData, 'application/sparql-results+json')
+				vscode.NotebookCellOutputItem.json(results, 'application/sparql-results+json')
 			])]);
 		} catch (error: any) {
 			execution.replaceOutput([new vscode.NotebookCellOutput([

@@ -1,30 +1,50 @@
-import { FunctionComponent } from 'react';
-import { BlankNode, Literal, NamedNode } from '@rdfjs/types';
-import { PrefixLookupService } from '@/services';
-import { getNamespaceIri } from '@/utilities';
+import { Component } from 'react';
+import { Term } from '@rdfjs/types';
+import { getNamespaceIri, PrefixMap } from '@/utilities';
+import { SparqlQueryResults } from '@/services';
 
-export interface SparqlResultsData {
-  documentIri: string;
-  prefixService: PrefixLookupService;
-  type: string;
-  data: any[];
+/**
+ * Interface for SPARQL results table component.
+ */
+export interface SparqlResultsTableProps {
+  results: SparqlQueryResults;
 }
 
-export const SparqlResultsTable: FunctionComponent<{ results: SparqlResultsData }> = ({ results }) => {
-  const data = results?.data || [];
-
-  if (!data.length) {
-    return <div>No results.</div>;
+/**
+ * Component to display SPARQL bindings in a table format.
+ */
+export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
+  state: {
+    loading: boolean;
+    data: SparqlQueryResults;
+    namespaceMap: PrefixMap;
   }
 
-  const getCellValue = (binding?: NamedNode | BlankNode | Literal) => {
+  constructor(props: SparqlResultsTableProps) {
+    super(props);
+
+    this.state = {
+      loading: true,
+      data: props.results,
+      namespaceMap: {}
+    }
+  }
+
+  formatCell = (binding: Term | undefined) => {
+    const namespaceMap = this.state.data.namespaceMap;
+
     switch (binding?.termType) {
       case 'NamedNode': {
-        // const namespaceIri = getNamespaceIri(binding.value);
-        // const prefix = results.prefixService.getPrefixForIri(results.documentIri, namespaceIri, 'nsX');
-        // const value = `${prefix}:${binding.value.substring(namesapceIri.length)}`;
+        const namespaceIri = getNamespaceIri(binding.value);
+        const prefix = namespaceMap[namespaceIri];
 
-        return (<a>{binding.value}</a>);
+        if (prefix) {
+          const value = `${prefix}:${binding.value.substring(namespaceIri.length)}`;
+
+          return (<a href={binding.value}>{value}</a>);
+        } else {
+          return (<a href={binding.value}>{binding.value}</a>);
+        }
       }
       case 'BlankNode': {
         return (<pre>{binding.value}</pre>);
@@ -38,26 +58,34 @@ export const SparqlResultsTable: FunctionComponent<{ results: SparqlResultsData 
     }
   }
 
-  const headers = Object.keys(data[0].entries || {});
+  render() {
+    const data = this.state.data;
 
-  return (
-    <vscode-table zebra bordered-rows>
-      <vscode-table-header>
-        {headers.map(header => (
-          <vscode-table-header-cell key={header}>{header}</vscode-table-header-cell>
-        ))}
-      </vscode-table-header>
-      <vscode-table-body>
-        {data.map((row, rowIndex) => (
-          <vscode-table-row key={rowIndex}>
-            {headers.map(header => (
-              <vscode-table-cell key={`${rowIndex}-${header}`}>
-                {getCellValue(row.entries[header])}
-              </vscode-table-cell>
+    if (data.rows.length === 0) {
+      return (
+        <div>No results.</div>
+      );
+    } else {
+      return (
+        <vscode-table zebra bordered-rows>
+          <vscode-table-header>
+            {data.columns.map(v => (
+              <vscode-table-header-cell key={v}>{v}</vscode-table-header-cell>
             ))}
-          </vscode-table-row>
-        ))}
-      </vscode-table-body>
-    </vscode-table>
-  );
-};
+          </vscode-table-header>
+          <vscode-table-body>
+            {data.rows.map((row, rowIndex) => (
+              <vscode-table-row key={rowIndex}>
+                {data.columns.map(header => (
+                  <vscode-table-cell key={`${rowIndex}-${header}`}>
+                    {this.formatCell(row[header])}
+                  </vscode-table-cell>
+                ))}
+              </vscode-table-row>
+            ))}
+          </vscode-table-body>
+        </vscode-table>
+      );
+    }
+  }
+}

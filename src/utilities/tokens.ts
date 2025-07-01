@@ -6,16 +6,23 @@ import { IToken } from "millan";
 import { Range } from "vscode-languageserver-types";
 
 /**
- * Maps namespace prefixes to IRIs.
+ * Maps namespace IRIs to prefixes.
  */
 export interface NamespaceMap {
 	[key: string]: string;
 }
 
 /**
+ * Maps namespace prefixes to IRIs.
+ */
+export interface PrefixMap {
+	[key: string]: string;
+}
+
+/**
  * A tuple of a namespace prefix and an associated IRI.
  */
-export interface NamespaceDefinition {
+export interface PrefixDefinition {
 	prefix: string;
 	uri: string;
 }
@@ -120,7 +127,7 @@ export function getPrefixFromToken(token: IToken): string {
  * @param token A token.
  * @returns A URI or undefined.
  */
-export function getIriFromToken(namespaces: NamespaceMap, token: IToken): string | undefined {
+export function getIriFromToken(prefixes: PrefixMap, token: IToken): string | undefined {
 	const tokenName = token.tokenType?.tokenName;
 
 	switch (tokenName) {
@@ -128,7 +135,7 @@ export function getIriFromToken(namespaces: NamespaceMap, token: IToken): string
 			return getIriFromIriReference(token.image);
 		case 'PNAME_LN':
 		case 'PNAME_NS':
-			return getIriFromPrefixedName(namespaces, token.image);
+			return getIriFromPrefixedName(prefixes, token.image);
 	}
 }
 
@@ -152,15 +159,15 @@ export function getIriFromIriReference(value: string): string {
  * @param name A prefixed name.
  * @returns A IRI string.
  */
-export function getIriFromPrefixedName(namespaces: NamespaceMap, name: string): string | undefined {
+export function getIriFromPrefixedName(prefixes: PrefixMap, name: string): string | undefined {
 	const parts = name.split(':');
 
 	if (parts.length == 2) {
 		const prefix = parts[0];
 		const label = parts[1];
 
-		if (namespaces[prefix]) {
-			return namespaces[prefix] + label;
+		if (prefixes[prefix]) {
+			return prefixes[prefix] + label;
 		}
 	}
 }
@@ -170,13 +177,13 @@ export function getIriFromPrefixedName(namespaces: NamespaceMap, name: string): 
  * @param name A prefixed name.
  * @returns A IRI string.
  */
-export function getNamespaceIriFromPrefixedName(namespaces: NamespaceMap, name: string): string | undefined {
+export function getNamespaceIriFromPrefixedName(prefixes: PrefixMap, name: string): string | undefined {
 	const parts = name.split(':');
 
 	if (parts.length == 2) {
 		const prefix = parts[0];
 
-		return namespaces[prefix];
+		return prefixes[prefix];
 	}
 }
 
@@ -186,7 +193,7 @@ export function getNamespaceIriFromPrefixedName(namespaces: NamespaceMap, name: 
  * @param token A prefix name declaration token.
  * @returns A namespace definition or undefined.
  */
-export function getNamespaceDefinition(tokens: IToken[], token: IToken): NamespaceDefinition | undefined {
+export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixDefinition | undefined {
 	if (token?.tokenType?.tokenName != "PREFIX" && token?.tokenType?.tokenName != "TTL_PREFIX") {
 		return;
 	}

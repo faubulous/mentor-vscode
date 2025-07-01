@@ -1,20 +1,11 @@
 import { createRoot } from 'react-dom/client';
 import { SparqlResultsTable } from './sparql-results-table';
 
-declare function acquireVsCodeApi(): {
-  postMessage: (msg: any) => void;
-  setState: (state: any) => void;
-  getState: () => any;
-};
-
-const vscode = acquireVsCodeApi();
 const root = createRoot(document.getElementById('root')!);
 
-if (!vscode) {
-	root.render(<div>Error: VS Code API not available.</div>);
-} else {
-	root.render(<div>Loading..</div>);
-}
+root.render(<div>Loading..</div>);
+
+const vscode: VsCodeWebviewApi = acquireVsCodeApi();
 
 let data = vscode.getState();
 

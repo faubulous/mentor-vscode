@@ -30,6 +30,7 @@ import {
   VscodeTabs,
   VscodeTextarea,
   VscodeTextfield,
+  VscodeToolbarContainer,
   VscodeTree,
 } from "@vscode-elements/elements";
 import type { VscCollapsibleToggleEvent } from "@vscode-elements/elements/dist/vscode-collapsible/vscode-collapsible";
@@ -99,6 +100,8 @@ declare module "react" {
       };
       "vscode-textarea": WebComponentProps<VscodeTextarea>;
       "vscode-textfield": WebComponentProps<VscodeTextfield>;
+      "vscode-toolbar-container": WebComponentProps<VscodeToolbarContainer>;
+      "vscode-toolbar-button": WebComponentProps<VscodeToolbarButton>;
       "vscode-tree": WebComponentProps<VscodeTree> & {
         "onvsc-tree-select"?: CustomEventHandler<VscTreeSelectEvent>;
         "onvsc-tree-action"?: CustomEventHandler<VscTreeActionEvent>;
@@ -107,4 +110,4 @@ declare module "react" {
   }
 }
 
-export {};
+export { };

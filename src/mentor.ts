@@ -10,6 +10,7 @@ import {
 	LocalStorageService,
 	PrefixDownloaderService,
 	PrefixLookupService,
+	SparqlQueryService,
 	TurtlePrefixDefinitionService,
 } from './services';
 import { NamedNode } from '@rdfjs/types';
@@ -86,6 +87,11 @@ class MentorExtension {
 	 * A service for looking up prefixes in RDF documents.
 	 */
 	readonly prefixLookupService = new PrefixLookupService();
+
+	/**
+	 * A service for executing queries against RDF triples stores and SPARQL endpoints.
+	 */
+	readonly sparqlQueryService = new SparqlQueryService();
 
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
