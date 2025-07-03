@@ -13,18 +13,14 @@ export class PrefixLookupService {
 	 * @returns A prefix for the given IRI if it is declared in the project. A default value otherwise.
 	 */
 	getPrefixForIri(documentUri: string, namespaceIri: string, defaultValue: string) {
-		const context = mentor.contexts[documentUri];
-
-		if (!context) {
-			return defaultValue;
-		}
-
 		// 1. Try to find the prefix in the document.
-		const namespaces = mentor.contexts[documentUri].namespaces;
+		const documentContext = mentor.contexts[documentUri];
 
-		for (let prefix in namespaces) {
-			if (namespaces[prefix] === namespaceIri) {
-				return prefix;
+		if (documentContext) {
+			for (const [prefix, iri] of Object.entries(documentContext.namespaces)) {
+				if (iri === namespaceIri) {
+					return prefix;
+				}
 			}
 		}
 
@@ -39,10 +35,19 @@ export class PrefixLookupService {
 			}
 		}
 
-		// 3. Try to find the prefix in the default prefixes.
+		// 3. Try to find the prefix in any of the other documents in the workspace.
+		for (const context of Object.values(mentor.contexts)) {
+			for (const [prefix, iri] of Object.entries(context.namespaces)) {
+				if (iri === namespaceIri) {
+					return prefix;
+				}
+			}
+		}
+
+		// 4. Try to find the prefix in the default prefixes.
 		const defaultPrefixes = mentor.localStorageService.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
 
-		for (let prefix in defaultPrefixes) {
+		for (const prefix in defaultPrefixes) {
 			if (defaultPrefixes[prefix] === namespaceIri) {
 				return prefix;
 			}
