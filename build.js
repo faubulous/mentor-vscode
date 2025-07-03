@@ -16,8 +16,9 @@ const getBaseConfig = (args) => {
     external: ["vscode"],
     platform: 'browser',
     loader: {
-      // Configure HTML files to be imported as text/strings
-      '.html': 'text'
+      // Configure HTML and CSS files to be imported as strings
+      '.html': 'text',
+      '.css': 'text'
     },
     define: {
       // This is not defined in the browser environment, so we need to provide a polyfill.

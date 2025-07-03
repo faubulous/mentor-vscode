@@ -609,11 +609,6 @@
         "command": "mentor.action.runSparqlQueryFromEditor",
         "key": "f5",
         "when": "editorLangId == 'sparql'"
-      },
-      {
-        "command": "mentor.action.runSparqlQueryFromEditor",
-        "key": "meta+enter",
-        "when": "editorLangId == 'sparql'"
       }
     ],
     "menus": {
@@ -961,6 +956,7 @@
         "displayName": "SPARQL Results Renderer",
         "entrypoint": "./out/sparql-results-notebook-renderer.js",
         "notebookType": "mentor-notebook",
+        "requiresMessaging": "always",
         "mimeTypes": [
           "application/sparql-results+json"
         ]

@@ -1,7 +1,7 @@
-declare type VsCodeWebviewApi = {
+declare type WebviewApi = {
 	postMessage: (msg: any) => void;
 	setState: (state: any) => void;
 	getState: () => any;
 };
 
-declare function acquireVsCodeApi(): VsCodeWebviewApi;
+declare function acquireVsCodeApi(): WebviewApi;

@@ -17,7 +17,7 @@ export class SparqlResultsViewFactory {
 		const scriptUri = panel.webview.asWebviewUri(
 			vscode.Uri.joinPath(context.extensionUri, 'out', 'sparql-results-webview.js')
 		);
-		
+
 		const elementsUri = panel.webview.asWebviewUri(
 			vscode.Uri.joinPath(context.extensionUri, 'out', 'vscode-elements.js')
 		);
@@ -29,9 +29,7 @@ export class SparqlResultsViewFactory {
 					<meta name="viewport" content="width=device-width, initial-scale=1.0">
 					<script src="${elementsUri}" type="module"></script>
 					<script src="${scriptUri}" type="module"></script>
-					<style type="text/css">
-						pre { margin: 0; }
-					</style>
+					<!-- Note: Do not add any styles here, as they will not be applied in notebook renderers. -->
 				</head>
 				<body>
 					<div id="root"></div>

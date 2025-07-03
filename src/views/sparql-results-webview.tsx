@@ -1,28 +1,35 @@
 import { createRoot } from 'react-dom/client';
 import { SparqlResultsTable } from './sparql-results-table';
+import { WebviewMessagingApi } from './webview-messaging';
 
 const root = createRoot(document.getElementById('root')!);
 
 root.render(<div>Loading..</div>);
 
-const vscode: VsCodeWebviewApi = acquireVsCodeApi();
+const vscode: WebviewApi = acquireVsCodeApi();
+const messaging: WebviewMessagingApi = {
+	postMessage: (message) => vscode.postMessage(message),
+	onMessage: (handler) => window.addEventListener('message', (e) => handler(e.data)),
+};
 
 let data = vscode.getState();
 
 if (data) {
-	root.render(<SparqlResultsTable results={data} />);
+	root.render(<SparqlResultsTable results={data} messaging={messaging} />);
 }
 
-window.addEventListener('message', event => {
-	const data = event.data;
-
-	vscode.setState(data);
-
+messaging.onMessage((data) => {
 	if (data.type === 'bindings') {
-		root.render(<SparqlResultsTable results={data} />);
+		vscode.setState(data);
+
+		root.render(<SparqlResultsTable results={data} messaging={messaging} />);
+	} else if (data.type === 'error') {
+		root.render(<div>Error: {data.message}</div>);
+	} else if (data.type === 'loading') {
+		root.render(<div>Loading...</div>);
 	}
 });
 
 window.addEventListener('DOMContentLoaded', () => {
-	vscode.postMessage({ type: 'ready' });
+	messaging.postMessage({ type: 'ready' });
 });

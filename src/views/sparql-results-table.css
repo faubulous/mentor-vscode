@@ -1,0 +1,15 @@
+body {
+	padding: 0; 
+}
+
+pre {
+	margin: 0;
+}
+
+a {
+	text-decoration: none;
+}
+
+.label {
+	color: var(--vscode-editor-keywordForeground, var(--vscode-editor-foreground));
+}
