@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
+import { Uri } from '@faubulous/mentor-rdf';
 import { IToken } from 'millan';
 import { mentor } from '@/mentor';
-import { getIriFromIriReference, getNamespaceIri, isUpperCase } from '@/utilities';
+import { getIriFromIriReference, isUpperCase } from '@/utilities';
 import { TurtleDocument } from '@/languages';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
@@ -279,7 +280,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		const tokenTypes = context.getTokenTypes();
 
 		// The provided IRI may be a full IRI or a namespace IRI.
-		const namespaceIri = getNamespaceIri(iri);
+		const namespaceIri = Uri.getNamespaceIri(iri);
 
 		// Look up the prefix for the namespace IRI in the document, configuration, or default prefixes.
 		let prefix = mentor.prefixLookupService.getPrefixForIri(document.uri.toString(), namespaceIri, 'ns');

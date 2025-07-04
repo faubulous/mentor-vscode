@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
+import { Uri } from "@faubulous/mentor-rdf"
 import { mentor } from '@/mentor';
-import { getNamespaceIri, getIriFromIriReference } from '@/utilities';
+import { getIriFromIriReference } from '@/utilities';
 import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
@@ -38,7 +39,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 			const tokenTypes = context.getTokenTypes();
 
 			if (tokenName === tokenTypes.IRIREF) {
-				const namespaceIri = getNamespaceIri(getIriFromIriReference(token.image));
+				const namespaceIri = Uri.getNamespaceIri(getIriFromIriReference(token.image));
 
 				result.push({
 					kind: vscode.CodeActionKind.Refactor,

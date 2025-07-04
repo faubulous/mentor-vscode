@@ -134,7 +134,6 @@ const copyVSCodeElementsBundle = () => {
 
     fs.mkdirSync(outFolder);
 
-
     // copyFontGlyphs();
 
     copyVSCodeElementsBundle();

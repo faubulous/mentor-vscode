@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { IToken } from 'millan';
 import { Position } from 'vscode-languageserver-types';
+import { Uri } from '@faubulous/mentor-rdf';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
@@ -11,7 +12,6 @@ import {
 	getIriFromIriReference,
 	getIriFromPrefixedName,
 	getNamespaceDefinition,
-	getNamespaceIri,
 	countLeadingWhitespace,
 	countTrailingWhitespace,
 	getTokenPosition
@@ -416,7 +416,7 @@ export class TurtleDocument extends DocumentContext {
 
 		if (!objectUri) return;
 
-		const namespaceUri = getNamespaceIri(objectUri);
+		const namespaceUri = Uri.getNamespaceIri(objectUri);
 
 		// TODO: Make this more explicit to reduce false positives.
 		switch (namespaceUri) {

@@ -3,9 +3,9 @@ import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
+import { Uri } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
 import { TreeLabelStyle } from '@/settings';
-import { getIriLocalPart, getNamespaceIri } from '@/utilities';
 import { Range } from 'vscode-languageserver-types';
 
 /**
@@ -325,7 +325,7 @@ export abstract class DocumentContext {
 				break;
 			}
 			case TreeLabelStyle.UriLabelsWithPrefix: {
-				const namespace = getNamespaceIri(subjectUri);
+				const namespace = Uri.getNamespaceIri(subjectUri);
 				let prefix = "?";
 
 				for (let [p] of Object.entries(this.namespaces).filter(([_, ns]) => ns == namespace)) {
@@ -334,14 +334,14 @@ export abstract class DocumentContext {
 				}
 
 				return {
-					value: `${prefix}:${getIriLocalPart(subjectUri)}`,
+					value: `${prefix}:${Uri.getLocalPart(subjectUri) || subjectUri}`,
 					language: undefined
 				};
 			}
 		}
 
 		return {
-			value: decodeURIComponent(getIriLocalPart(subjectUri)),
+			value: decodeURIComponent(Uri.getLocalPart(subjectUri) || subjectUri),
 			language: undefined
 		};
 	}
@@ -389,7 +389,7 @@ export abstract class DocumentContext {
 					}
 				} else {
 					return {
-						value: getIriLocalPart(q.object.value),
+						value: Uri.getLocalPart(q.object.value) || '',
 						language: undefined
 					};
 				}
@@ -464,7 +464,7 @@ export abstract class DocumentContext {
 			// Resolve relative file IRIs with regards to the directory of the current document.
 			if (u.authority === '..') {
 				// For a file URI the namespace is the directory of the current document.
-				const directory = getNamespaceIri(this.uri.toString());
+				const directory = Uri.getNamespaceIri(this.uri.toString());
 				const filePath = subjectIri.split('//')[1];
 				const fileUrl = vscode.Uri.joinPath(vscode.Uri.parse(directory), filePath);
 

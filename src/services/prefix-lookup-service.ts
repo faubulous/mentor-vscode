@@ -25,10 +25,10 @@ export class PrefixLookupService {
 		}
 
 		// 2. Try to find the prefix in the project configuration.
-		const prefixes = mentor.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+		const projectPrefixes = mentor.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
-		if (Array.isArray(prefixes)) {
-			const prefix = prefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
+		if (Array.isArray(projectPrefixes)) {
+			const prefix = projectPrefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
 
 			if (prefix) {
 				return prefix;

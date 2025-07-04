@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { Term } from '@rdfjs/types';
-import { getNamespaceIri, PrefixMap } from '@/utilities';
+import { Uri } from '@faubulous/mentor-rdf';
+import { PrefixMap } from '@/utilities';
 import { SparqlQueryResults } from '@/services';
 import { WebviewMessagingApi } from '@/views/webview-messaging';
 import stylesheet from './sparql-results-table.css';
@@ -48,7 +49,7 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
 
     switch (binding?.termType) {
       case 'NamedNode': {
-        const namespaceIri = getNamespaceIri(binding.value);
+        const namespaceIri = Uri.getNamespaceIri(binding.value);
         const prefix = namespaceMap[namespaceIri];
 
         if (prefix) {

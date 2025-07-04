@@ -1,6 +1,7 @@
-import { mentor } from "@/mentor";
 import { BindingsStream } from '@comunica/types';
-import { getNamespaceIri, NamespaceMap, PrefixMap } from "@/utilities";
+import { Uri } from '@faubulous/mentor-rdf';
+import { mentor } from "@/mentor";
+import { NamespaceMap, PrefixMap } from "@/utilities";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Term } from "@rdfjs/types";
 
@@ -50,7 +51,7 @@ export class SparqlQueryService {
 				columns.add(key.value);
 
 				if (value.termType === 'NamedNode') {
-					namespaces.add(getNamespaceIri(value.value));
+					namespaces.add(Uri.getNamespaceIri(value.value));
 				}
 
 				row[key.value] = {
