@@ -70,7 +70,7 @@
     "@types/node": "^24.0.3",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "@types/vscode": "^1.101.0",
+    "@types/vscode": "^1.90.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
@@ -239,42 +239,42 @@
         "description": "Class icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e007"
+          "fontCharacter": "\\e002"
         }
       },
       "rdf-class-i": {
         "description": "Instanced class icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e002"
+          "fontCharacter": "\\e003"
         }
       },
       "rdf-class-ref": {
         "description": "Referenced class icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e003"
+          "fontCharacter": "\\e004"
         }
       },
       "rdf-class-ref-i": {
         "description": "Instanced referenced class icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e004"
+          "fontCharacter": "\\e005"
         }
       },
       "rdf-class-ref-off": {
         "description": "Referenced class icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e005"
+          "fontCharacter": "\\e006"
         }
       },
       "rdf-individual": {
         "description": "Individual icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e006"
+          "fontCharacter": "\\e007"
         }
       },
       "rdf-concept": {
@@ -302,84 +302,84 @@
         "description": "Ontology reference icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00e"
+          "fontCharacter": "\\e00b"
         }
       },
       "rdf-list": {
         "description": "List icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00b"
+          "fontCharacter": "\\e00c"
         }
       },
       "rdf-tree": {
         "description": "Tree icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00c"
+          "fontCharacter": "\\e00d"
         }
       },
       "rdf-collection": {
         "description": "Collection icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e00f"
+          "fontCharacter": "\\e00e"
         }
       },
       "rdf-collection-ordered": {
         "description": "Ordered collection icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e010"
+          "fontCharacter": "\\e00f"
         }
       },
       "rdf-object-property": {
         "description": "Object property icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e011"
+          "fontCharacter": "\\e010"
         }
       },
       "rdf-object-property-ref": {
         "description": "Object property reference icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e012"
+          "fontCharacter": "\\e011"
         }
       },
       "rdf-shape-node": {
         "description": "Node shape icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e015"
+          "fontCharacter": "\\e012"
         }
       },
       "rdf-shape-property": {
         "description": "Property shape icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e016"
+          "fontCharacter": "\\e013"
         }
       },
       "go-to-shape": {
         "description": "Go to shape icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e017"
+          "fontCharacter": "\\e014"
         }
       },
       "rdf-tree-classes": {
         "description": "Classes tree icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e018"
+          "fontCharacter": "\\e015"
         }
       },
       "select-language": {
         "description": "Select language icon",
         "default": {
           "fontPath": "./media/mentor-icons.woff",
-          "fontCharacter": "\\e019"
+          "fontCharacter": "\\e016"
         }
       }
     },
@@ -430,14 +430,14 @@
         {
           "id": "mentor",
           "title": "Mentor",
-          "icon": "media/glyphs/0-mentor.svg"
+          "icon": "media/glyphs/ue000-mentor.svg"
         }
       ],
       "panel": [
         {
           "id": "mentor-sparql-results",
           "title": "SPARQL Results",
-          "icon": "media/glyphs/0-mentor.svg"
+          "icon": "media/glyphs/ue000-mentor.svg"
         }
       ]
     },
@@ -446,12 +446,12 @@
         {
           "id": "mentor.view.workspaceTree",
           "name": "Workspace",
-          "icon": "media/glyphs/0-mentor.svg"
+          "icon": "media/glyphs/ue000-mentor.svg"
         },
         {
           "id": "mentor.view.definitionTree",
           "name": "Definitions",
-          "icon": "media/glyphs/0-mentor.svg"
+          "icon": "media/glyphs/ue000-mentor.svg"
         }
       ],
       "mentor-sparql-results": [
@@ -459,7 +459,7 @@
           "type": "webview",
           "id": "mentor.sparqlResultsView",
           "name": "Results",
-          "icon": "media/glyphs/0-mentor.svg"
+          "icon": "media/glyphs/ue000-mentor.svg"
         }
       ]
     },
