@@ -1,36 +1,22 @@
 import { Component } from 'react';
 import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
-import { PrefixMap } from '@/utilities';
 import { SparqlQueryResults } from '@/services';
 import { WebviewMessagingApi } from '@/views/webview-messaging';
 import stylesheet from './sparql-results-table.css';
 
 /**
- * Interface for SPARQL results table component.
- */
-export interface SparqlResultsTableProps {
-  results: SparqlQueryResults;
-  messaging?: WebviewMessagingApi;
-}
-
-/**
  * Component to display SPARQL bindings in a table format.
  */
 export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
-  state: {
-    loading: boolean;
-    data: SparqlQueryResults;
-    namespaceMap: PrefixMap;
-  }
+  state: SparqlResultsTableState;
 
   constructor(props: SparqlResultsTableProps) {
     super(props);
 
     this.state = {
-      loading: true,
-      data: props.results,
-      namespaceMap: {}
+      loading: false,
+      data: props.results
     }
   }
 
@@ -44,13 +30,60 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
     }
   }
 
-  formatCell = (binding: Term | undefined) => {
+  render() {
+    const data = this.state.data;
+
+    if (data.rows.length === 0) {
+      return this._renderEmptyResults();
+    } else {
+      return this._renderTable(data);
+    }
+  }
+
+  private _renderEmptyResults() {
+    return (
+      <div className="sparql-results-empty">
+        <p>No results.</p>
+      </div>
+    );
+  }
+
+  private _renderTable(results: SparqlQueryResults) {
+    return (<div className="sparql-results-container">
+      <vscode-toolbar-container className="sparql-results-toolbar" style={{}}>
+        <span style={{ marginRight: 'auto' }}>
+          Showing {results.rows.length} of {results.totalLength} rows
+        </span>
+        <vscode-toolbar-button>Save as</vscode-toolbar-button>
+      </vscode-toolbar-container>
+      <vscode-table className="sparql-results-table" zebra bordered-rows resizable>
+        <vscode-table-header>
+          {results.columns.map(v => (
+            <vscode-table-header-cell key={v}>{v}</vscode-table-header-cell>
+          ))}
+        </vscode-table-header>
+        <vscode-table-body>
+          {results.rows.slice(0, 1000).map((row, rowIndex) => (
+            <vscode-table-row key={rowIndex}>
+              {results.columns.map(header => (
+                <vscode-table-cell key={`${rowIndex}-${header}`}>
+                  {this._renderCell(row[header])}
+                </vscode-table-cell>
+              ))}
+            </vscode-table-row>
+          ))}
+        </vscode-table-body>
+      </vscode-table>
+    </div>);
+  }
+
+  private _renderCell(binding: Term | undefined) {
     const namespaceMap = this.state.data.namespaceMap;
 
     switch (binding?.termType) {
       case 'NamedNode': {
         const namespaceIri = Uri.getNamespaceIri(binding.value);
-        const prefix = namespaceMap[namespaceIri];
+        const prefix = namespaceMap ? namespaceMap[namespaceIri] : undefined;
 
         if (prefix) {
           const localName = binding.value.substring(namespaceIri.length);
@@ -71,38 +104,34 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
       }
     }
   }
+}
 
-  render() {
-    const data = this.state.data;
+/**
+ * State interface for the SPARQL results table component.
+ */
+interface SparqlResultsTableState {
+  /**
+   * Indicates if the results are currently loading.
+   */
+  loading: boolean;
 
-    if (data.rows.length === 0) {
-      return (
-        <div>No results.</div>
-      );
-    } else {
-      return (
-        <div>
-          <vscode-table zebra bordered-rows>
-            <vscode-table-header>
-              {data.columns.map(v => (
-                <vscode-table-header-cell key={v}>{v}</vscode-table-header-cell>
-              ))}
-            </vscode-table-header>
-            <vscode-table-body>
-              {data.rows.map((row, rowIndex) => (
-                <vscode-table-row key={rowIndex}>
-                  {data.columns.map(header => (
-                    <vscode-table-cell key={`${rowIndex}-${header}`}>
-                      {this.formatCell(row[header])}
-                    </vscode-table-cell>
-                  ))}
-                </vscode-table-row>
-              ))}
-            </vscode-table-body>
-          </vscode-table>
-          Messaging available: {this.props.messaging ? 'true' : 'false'}
-        </div>
-      );
-    }
-  }
+  /**
+   * The SPARQL query results data.
+   */
+  data: SparqlQueryResults;
+}
+
+/**
+ * Interface for SPARQL results table component.
+ */
+export interface SparqlResultsTableProps {
+  /**
+   * The SPARQL query results to display.
+   */
+  results: SparqlQueryResults;
+
+  /**
+   * Optional messaging API for communication with the extension host.
+   */
+  messaging?: WebviewMessagingApi;
 }

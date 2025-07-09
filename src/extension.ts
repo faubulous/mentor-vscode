@@ -49,6 +49,7 @@ function registerViews(context: vscode.ExtensionContext) {
 	// TODO: Dispose the view providers in the trees.
 	context.subscriptions.push(new views.WorkspaceTree().treeView);
 	context.subscriptions.push(new views.DefinitionTree().treeView);
+	context.subscriptions.push(views.sparqlResultsWebviewProvider.register(context));
 }
 
 function registerCommands(context: vscode.ExtensionContext) {

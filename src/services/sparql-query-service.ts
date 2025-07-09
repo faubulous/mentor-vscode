@@ -24,8 +24,10 @@ export class SparqlQueryService {
 			unionDefaultGraph: true
 		});
 
+		const serialized = await this._serializeQueryResults(documentIri, result);
+
 		return {
-			... await this._serializeQueryResults(documentIri, result),
+			...serialized,
 			type: 'bindings',
 			documentIri: documentIri,
 			query: query
@@ -35,16 +37,18 @@ export class SparqlQueryService {
 	/**
 	 * Serializes SPARQL query results into a format suitable for the webview.
 	 * @param documentIri The IRI of the document where the query was run.
-	 * @param bindings The SPARQL query results as a BindingsStream.
+	 * @param bindingStream The SPARQL query results as a BindingsStream.
 	 * @param limit The maximum number of results to serialize.
 	 * @returns An object containing the serialized results.
 	 */
-	private async _serializeQueryResults(documentIri: string, bindings: BindingsStream, limit: number = 100) {
+	private async _serializeQueryResults(documentIri: string, bindingStream: BindingsStream, limit: number = 100) {
 		const namespaces = new Set<string>();
 		const columns = new Set<string>();
 		const rows: Record<string, any>[] = [];
 
-		for (const binding of await bindings.toArray({ limit })) {
+		const bindings = await bindingStream.toArray();
+
+		for (const binding of bindings) {
 			const row: Record<string, any> = {};
 
 			for (const [key, value] of binding) {
@@ -75,7 +79,12 @@ export class SparqlQueryService {
 			}
 		}
 
-		return { columns: Array.from(columns), rows, namespaceMap };
+		return {
+			totalLength: bindings.length,
+			columns: Array.from(columns),
+			rows,
+			namespaceMap
+		};
 	}
 }
 
@@ -112,4 +121,9 @@ export interface SparqlQueryResults {
 	 * A map of namespace IRIs to prefixes defined in the document or the workspace.
 	 */
 	namespaceMap: PrefixMap;
+
+	/**
+	 * The total number of results in the query.
+	 */
+	totalLength: number;
 }

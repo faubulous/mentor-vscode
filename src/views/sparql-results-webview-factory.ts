@@ -1,13 +1,12 @@
-
 import * as vscode from 'vscode';
 
 export class SparqlResultsViewFactory {
 
-	createWebviewPanel(context: vscode.ExtensionContext): vscode.WebviewPanel {
+	createWebviewPanel(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside): vscode.WebviewPanel {
 		const panel = vscode.window.createWebviewPanel(
 			'mentor.sparqlResultsPanel',
 			'SPARQL Results',
-			vscode.ViewColumn.Beside,
+			viewColumn,
 			{
 				enableScripts: true,
 				localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'out')]

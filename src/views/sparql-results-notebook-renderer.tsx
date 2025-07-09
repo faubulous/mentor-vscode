@@ -6,20 +6,17 @@ import { SparqlResultsTable } from './sparql-results-table';
 
 export const activate: ActivationFunction = (context: RendererContext<NotebookRendererMessaging>) => {
 	const messaging = context.postMessage ? {
-		postMessage: (msg: any) => context.postMessage!(msg),
-		onMessage: (handler: (msg: any) => void) => {
+		postMessage: (message: any) => context.postMessage!(message),
+		onMessage: (handler: (message: any) => void) => {
 			return context.onDidReceiveMessage?.(handler);
 		},
 	} : undefined;
 
 	return {
 		renderOutputItem(data: OutputItem, element: HTMLElement) {
-			createRoot(element).render(
-				<SparqlResultsTable
-					results={data?.json()}
-					messaging={messaging}
-				/>
-			);
+			const results = data?.json();
+
+			createRoot(element).render(<SparqlResultsTable results={results} messaging={messaging} />);
 		}
 	};
 };

@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
+import { Uri } from "@faubulous/mentor-rdf";
 import { mentor } from "@/mentor";
 import { DocumentContext } from "@/document-context";
-import { getIriLocalPart, getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
+import { getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
 import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
@@ -60,14 +61,22 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 		if (component == "subject" || component == "object") {
 			for (let c of mentor.vocabulary.getClasses(graphs).filter(c => c.toLowerCase().startsWith(uri))) {
-				const item = new vscode.CompletionItem(getIriLocalPart(c), vscode.CompletionItemKind.Class);
+				const localPart = Uri.getLocalPart(c);
+
+				if (!localPart) continue;
+
+				const item = new vscode.CompletionItem(localPart, vscode.CompletionItemKind.Value);
 				item.detail = context.getResourceDescription(c)?.value;
 
 				result.push(item);
 			}
 
 			for (let x of mentor.vocabulary.getIndividuals(graphs).sort().filter(x => x.toLowerCase().startsWith(uri))) {
-				const item = new vscode.CompletionItem(getIriLocalPart(x), vscode.CompletionItemKind.Field);
+				const localPart = Uri.getLocalPart(x);
+
+				if (!localPart) continue;
+
+				const item = new vscode.CompletionItem(localPart, vscode.CompletionItemKind.Value);
 				item.detail = context.getResourceDescription(x)?.value;
 
 				result.push(item);
@@ -75,7 +84,11 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		}
 
 		for (let p of mentor.vocabulary.getProperties(graphs).sort().filter(p => p.toLowerCase().startsWith(uri))) {
-			const item = new vscode.CompletionItem(getIriLocalPart(p), vscode.CompletionItemKind.Value);
+			const localPart = Uri.getLocalPart(p);
+
+			if (!localPart) continue;
+
+			const item = new vscode.CompletionItem(localPart, vscode.CompletionItemKind.Value);
 			item.detail = context.getResourceDescription(p)?.value;
 
 			result.push(item);

@@ -432,17 +432,34 @@
           "title": "Mentor",
           "icon": "media/glyphs/0-mentor.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "mentor-sparql-results",
+          "title": "SPARQL Results",
+          "icon": "media/glyphs/0-mentor.svg"
+        }
       ]
     },
     "views": {
       "mentor": [
         {
           "id": "mentor.view.workspaceTree",
-          "name": "Workspace"
+          "name": "Workspace",
+          "icon": "media/glyphs/0-mentor.svg"
         },
         {
           "id": "mentor.view.definitionTree",
-          "name": "Definitions"
+          "name": "Definitions",
+          "icon": "media/glyphs/0-mentor.svg"
+        }
+      ],
+      "mentor-sparql-results": [
+        {
+          "type": "webview",
+          "id": "mentor.sparqlResultsView",
+          "name": "Results",
+          "icon": "media/glyphs/0-mentor.svg"
         }
       ]
     },
@@ -453,6 +470,9 @@
         "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
       }
     ],
+    "webview": {
+      "semanticTokenColorCustomizations": true
+    },
     "commands": [
       {
         "command": "mentor.action.createNotebook",
