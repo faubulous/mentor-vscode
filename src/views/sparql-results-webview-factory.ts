@@ -1,40 +1,70 @@
 import * as vscode from 'vscode';
 
-export class SparqlResultsViewFactory {
+export class SparqlResultsWebviewFactory {
 
-	createWebviewPanel(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside): vscode.WebviewPanel {
-		const panel = vscode.window.createWebviewPanel(
-			'mentor.sparqlResultsPanel',
-			'SPARQL Results',
-			viewColumn,
-			{
-				enableScripts: true,
-				localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'out')]
-			}
+	/**
+	 * Creates a webview panel for displaying SPARQL results.
+	 * @param context The extension context.
+	 * @param viewColumn The column in which to display the webview panel.
+	 * @returns The created webview panel.
+	 */
+	createPanel(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside): vscode.WebviewPanel {
+		const id = 'mentor.sparqlResultsPanel';
+		const title = 'SPARQL Results';
+
+		const panel = vscode.window.createWebviewPanel(id, title, viewColumn);
+		panel.webview.options = this._getWebviewOptions(context);
+		panel.webview.html = this._getWebviewHtml(context, panel.webview);
+
+		return panel;
+	}
+
+	/**
+	 * Inititalises a webview with the SPARQL results view HTML and options.
+	 * @param context The extension context.
+	 * @param view The webview view to initialize.
+	 * @returns The initialized webview view.
+	 */
+	createView(context: vscode.ExtensionContext, view: vscode.WebviewView): vscode.WebviewView {
+		view.webview.options = this._getWebviewOptions(context);
+		view.webview.html = this._getWebviewHtml(context, view.webview);
+
+		return view;
+	}
+
+	private _getWebviewOptions(context: vscode.ExtensionContext): vscode.WebviewOptions {
+		return {
+			enableScripts: true,
+			localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'out')]
+		};
+	}
+
+	private _getWebviewHtml(context: vscode.ExtensionContext, webview: vscode.Webview): string {
+		const codeiconUrl = webview.asWebviewUri(
+			vscode.Uri.joinPath(context.extensionUri, 'out', 'codicon.css')
 		);
 
-		const scriptUri = panel.webview.asWebviewUri(
-			vscode.Uri.joinPath(context.extensionUri, 'out', 'sparql-results-webview.js')
-		);
-
-		const elementsUri = panel.webview.asWebviewUri(
+		const elementsUrl = webview.asWebviewUri(
 			vscode.Uri.joinPath(context.extensionUri, 'out', 'vscode-elements.js')
 		);
 
-		panel.webview.html = `<!DOCTYPE html>
+		const scriptUrl = webview.asWebviewUri(
+			vscode.Uri.joinPath(context.extensionUri, 'out', 'sparql-results-webview.js')
+		);
+
+		return `<!DOCTYPE html>
 			<html lang="en">
 				<head>
 					<meta charset="UTF-8">
 					<meta name="viewport" content="width=device-width, initial-scale=1.0">
-					<script src="${elementsUri}" type="module"></script>
-					<script src="${scriptUri}" type="module"></script>
+					<link href="${codeiconUrl}" rel="stylesheet" id="vscode-codicon-stylesheet">
+					<script src="${elementsUrl}" type="module"></script>
+					<script src="${scriptUrl}" type="module"></script>
 					<!-- Note: Do not add any styles here, as they will not be applied in notebook renderers. -->
 				</head>
 				<body>
 					<div id="root"></div>
 				</body>
 			</html>`;
-
-		return panel;
 	}
 }

@@ -89,29 +89,91 @@ const copyFontGlyphs = () => {
   }
 }
 
+const copyFile = (fileName, sourceFolder, targetFolder, targetName = undefined) => {
+  const sourcePath = path.join(sourceFolder, fileName);
+  const targetPath = path.join(targetFolder, targetName ?? fileName);
+
+  if (fs.existsSync(sourcePath)) {
+    if (!fs.existsSync(targetFolder)) {
+      fs.mkdirSync(targetFolder, { recursive: true });
+    }
+
+    const sourceRelative = sourcePath.substring(__dirname.length + 1);
+    const targetRelative = targetPath.substring(__dirname.length + 1);
+
+    console.log(` ${sourceRelative} → ${targetRelative}`);
+
+    fs.copyFileSync(sourcePath, targetPath);
+  } else {
+    throw new Error(`File not found: ${sourcePath}`);
+  }
+}
+
 /**
- * Copies the VSCode Elements bundle to the media directory.
+ * Creates a bundle for the VSCode Codicon CSS file. It reads the codicon CSS file,
+ * replaces the font-face src with a base64 encoded data URL for the codicon.ttf file,
+ * and writes the modified CSS to the output directory.
+ * 
+ * @note This is necessary because the VSCode Notebook renderer webview does not 
+ * support loading local font files directly. When registering the webview, there is no
+ * ExtensionContext to provide the media path, so we need to embed the font data directly
+ * in the CSS.
  */
-const copyVSCodeElementsBundle = () => {
-  const bundledSource = path.resolve(
+const copyVSCodeCodiconCSS = () => {
+  console.log(`Creating VSCode Codicon CSS bundle..`);
+
+  const sourceFolder = path.resolve(
     __dirname,
     'node_modules',
-    '@vscode-elements',
-    'elements',
-    'dist',
-    'bundled.js'
+    '@vscode',
+    'codicons',
+    'dist'
   );
 
-  const targetFolder = path.resolve(__dirname, 'out');
-  const targetFile = path.join(targetFolder, 'vscode-elements.js');
+  // Create a base64 string for the codicon truetype font file
+  const fontBase64 = fs.readFileSync(path.join(sourceFolder, 'codicon.ttf')).toString('base64');
 
-  console.log(`Copying VSCode Elements bundle to: ${targetFile}`);
+  // Patch font-face src to use base64 data URL
+  let css = fs.readFileSync(path.join(sourceFolder, 'codicon.css'), 'utf8');
+
+  css = css.replace(
+    /src:\s*url\([^)]+\)\s*format\(["']truetype["']\);?/,
+    `src: url("data:font/truetype;charset=utf-8;base64,${fontBase64}") format("truetype");`
+  );
+  css = css.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove comments
+  css = css.replace(/\s+/g, ' '); // Collapse whitespace
+  css = css.trim();
+
+  // Write the modified CSS to the output directory..
+  const targetFolder = path.resolve(__dirname, 'out');
+  const targetPath = path.join(targetFolder, 'codicon.css');
 
   if (!fs.existsSync(targetFolder)) {
     fs.mkdirSync(targetFolder, { recursive: true });
   }
 
-  fs.copyFileSync(bundledSource, targetFile);
+  fs.writeFileSync(targetPath, css);
+
+  console.log(` ${targetPath.substring(__dirname.length + 1)}`);
+}
+
+/**
+ * Copies the VSCode Elements bundle to the media directory.
+ */
+const copyVSCodeElementsBundle = () => {
+  const sourceFolder = path.resolve(
+    __dirname,
+    'node_modules',
+    '@vscode-elements',
+    'elements',
+    'dist'
+  );
+
+  const targetFolder = path.resolve(__dirname, 'out');
+
+  console.log(`Copying VSCode Elements bundle to...`);
+
+  copyFile('bundled.js', sourceFolder, targetFolder, 'vscode-elements.js');
 }
 
 (async () => {
@@ -136,6 +198,7 @@ const copyVSCodeElementsBundle = () => {
 
     // copyFontGlyphs();
 
+    copyVSCodeCodiconCSS();
     copyVSCodeElementsBundle();
 
     // Copy the language config files to the out directory.

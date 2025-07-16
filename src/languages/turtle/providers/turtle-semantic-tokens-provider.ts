@@ -5,13 +5,15 @@ import { TurtleFeatureProvider } from "@/languages/turtle/turtle-feature-provide
 
 enum SemanticTokenType {
 	keyword = 'keyword',
-	namespace = 'namespace',
+	iri = 'iri',
+	prefix = 'prefix',
+	localName = 'localName',
 	comment = 'comment',
-	decorator = 'decorator',
-	label = 'label',
-	enumMember = 'enumMember',
-	string = 'string',
-	number = 'number',
+	booleanLiteral = 'booleanLiteral',
+	numericLiteral = 'numericLiteral',
+	quotedLiteral = 'quotedLiteral',
+	datatypeIri = 'datatypeIri',
+	languageTag = 'languageTag',
 }
 
 enum SemanticTokenModifier {
@@ -56,42 +58,42 @@ export class TurtleSemanticTokensProvider extends TurtleFeatureProvider implemen
 						builder.push(tokenRange, SemanticTokenType.keyword);
 						break;
 					case "PNAME_NS":
-						builder.push(tokenRange, SemanticTokenType.namespace, [SemanticTokenModifier.definition]);
+						builder.push(tokenRange, SemanticTokenType.prefix, [SemanticTokenModifier.definition]);
 						break;
 					case "PNAME_LN": {
 						const p = t.image.split(":")[0];
 
 						if (lastToken === "DoubleCaret") {
-							builder.push(tokenRange, SemanticTokenType.decorator);
+							builder.push(tokenRange, SemanticTokenType.datatypeIri);
 						} else {
 							const prefixRange = new vscode.Range(
 								new vscode.Position(startLine, startColumn),
 								new vscode.Position(startLine, startColumn + p.length + 1)
 							);
 
-							builder.push(prefixRange, SemanticTokenType.namespace);
+							builder.push(prefixRange, SemanticTokenType.prefix);
 
 							const labelRange = new vscode.Range(
 								new vscode.Position(startLine, startColumn + p.length + 1),
 								new vscode.Position(startLine, endColumn)
 							)
 
-							builder.push(labelRange, SemanticTokenType.label);
+							builder.push(labelRange, SemanticTokenType.localName);
 						}
 						break;
 					}
 					case "IRIREF":
 						if (lastToken === "DoubleCaret") {
-							builder.push(tokenRange, SemanticTokenType.decorator);
+							builder.push(tokenRange, SemanticTokenType.datatypeIri);
 						} else {
-							builder.push(tokenRange, SemanticTokenType.enumMember, [SemanticTokenModifier.readonly]);
+							builder.push(tokenRange, SemanticTokenType.iri, [SemanticTokenModifier.readonly]);
 						}
 						break;
 					case "STRING_LITERAL1":
 					case "STRING_LITERAL2":
 					case "STRING_LITERAL_QUOTE":
 					case "STRING_LITERAL_SINGLE_QUOTE":
-						builder.push(tokenRange, SemanticTokenType.string);
+						builder.push(tokenRange, SemanticTokenType.quotedLiteral);
 						break;
 					case "STRING_LITERAL_LONG1":
 					case "STRING_LITERAL_LONG2":
@@ -107,7 +109,7 @@ export class TurtleSemanticTokensProvider extends TurtleFeatureProvider implemen
 								new vscode.Position(n, p > -1 ? p + l.length : l.length)
 							);
 
-							builder.push(r, SemanticTokenType.string);
+							builder.push(r, SemanticTokenType.quotedLiteral);
 
 							n++;
 							p = -1;
@@ -116,16 +118,16 @@ export class TurtleSemanticTokensProvider extends TurtleFeatureProvider implemen
 					}
 					case "DoubleCaret":
 					case "LANGTAG":
-						builder.push(tokenRange, SemanticTokenType.decorator);
+						builder.push(tokenRange, SemanticTokenType.languageTag);
 						break;
 					case "INTEGER":
 					case "DECIMAL":
 					case "DOUBLE":
-						builder.push(tokenRange, SemanticTokenType.number);
+						builder.push(tokenRange, SemanticTokenType.numericLiteral);
 						break;
 					case "TRUE":
 					case "FALSE":
-						builder.push(tokenRange, SemanticTokenType.number);
+						builder.push(tokenRange, SemanticTokenType.booleanLiteral);
 						break;
 					case "Comment":
 						builder.push(tokenRange, SemanticTokenType.comment);

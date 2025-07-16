@@ -3,7 +3,8 @@ import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlQueryResults } from '@/services';
 import { WebviewMessagingApi } from '@/views/webview-messaging';
-import stylesheet from './sparql-results-table.css';
+import stylesheet from '@/views/sparql-results-table.css';
+import codicons from '$/codicon.css';
 
 /**
  * Component to display SPARQL bindings in a table format.
@@ -21,10 +22,15 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
   }
 
   componentDidMount() {
-    if (!document.getElementById('sparql-table-styles')) {
+    this._addStylesheet('codicon-styles', codicons);
+    this._addStylesheet('sparql-table-styles', stylesheet);
+  }
+
+  private _addStylesheet(id: string, content: string) {
+    if (!document.getElementById(id)) {
       const style = document.createElement('style');
-      style.id = 'sparql-table-styles';
-      style.textContent = stylesheet;
+      style.id = id;
+      style.textContent = content;
 
       document.head.appendChild(style);
     }
@@ -50,11 +56,44 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
 
   private _renderTable(results: SparqlQueryResults) {
     return (<div className="sparql-results-container">
-      <vscode-toolbar-container className="sparql-results-toolbar" style={{}}>
-        <span style={{ marginRight: 'auto' }}>
-          Showing {results.rows.length} of {results.totalLength} rows
+      <vscode-toolbar-container className="sparql-results-toolbar loading">
+        <span className="status-icon">
+          <span className="codicon codicon-loading codicon-modifier-spin"></span>
         </span>
-        <vscode-toolbar-button>Save as</vscode-toolbar-button>
+        <span>
+          Running query..
+        </span>
+        <span className="spacer"></span>
+        <vscode-toolbar-button title="Cancel">
+          <span className="codicon codicon-stop-circle"></span>
+        </vscode-toolbar-button>
+      </vscode-toolbar-container>
+      <vscode-toolbar-container className="sparql-results-toolbar error">
+        <span className="status-icon">
+          <span className="codicon codicon-error"></span>
+        </span>
+        <span>
+          Error running query:
+        </span>
+        <span className="spacer"></span>
+        <vscode-toolbar-button title="Reload">
+          <span className="codicon codicon-refresh"></span>
+        </vscode-toolbar-button>
+      </vscode-toolbar-container>
+      <vscode-toolbar-container className="sparql-results-toolbar success">
+        <span className="status-icon">
+          <span className="codicon codicon-pass"></span>
+        </span>
+        <span>
+          Returned <b>{results.totalLength}</b> rows in 42 ms
+        </span>
+        <span className="spacer"></span>
+        <vscode-toolbar-button title="Save">
+          <span className="codicon codicon-file"></span>
+        </vscode-toolbar-button>
+        <vscode-toolbar-button title="Reload">
+          <span className="codicon codicon-refresh"></span>
+        </vscode-toolbar-button>
       </vscode-toolbar-container>
       <vscode-table className="sparql-results-table" zebra bordered-rows resizable>
         <vscode-table-header>

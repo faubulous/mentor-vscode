@@ -25,11 +25,34 @@ a {
 	overflow: hidden;
 }
 
-.sparql-results-toolbar {
-	padding: 5px 10px;
-}
-
 .webview .sparql-results-table {
 	flex: 1 1 0%;
 	min-height: 0;
+}
+
+.sparql-results-toolbar {
+	/* Make the toolbar appear slim and unobtrusive */
+	padding: 2px 8px;
+}
+
+.sparql-results-toolbar .spacer {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.sparql-results-toolbar .status-icon {
+	/* Align the icon vertically with the text */
+	display: inline-flex;
+}
+
+.sparql-results-toolbar.loading .status-icon {
+	color: var(--vscode-progressBar-background);
+}
+
+.sparql-results-toolbar.success .status-icon {
+	color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.sparql-results-toolbar.error .status-icon {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
 }

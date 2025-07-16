@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.2.10",
+  "version": "0.3.0",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -52,11 +52,11 @@
   "browser": "./out/extension.js",
   "scripts": {
     "clean": "rm -Rf node_modules && rm -Rf out && rm -Rf media/*.woff",
-    "build": "node ./build-font.mjs && node ./build.js",
-    "build:watch": "node ./build-font.mjs && node ./build.js --watch",
+    "build": "npm run build:font && node ./build.js",
+    "build:watch": "npm run build:font && node ./build.js --watch",
     "build:font": "node ./build-font.mjs",
-    "compile": "node ./build-font.mjs && tsc -p tsconfig.json",
-    "package": "node ./build-font.mjs && node ./build.js --production && vsce package --dependencies -o out/mentor.vsix",
+    "compile": "npm run build:font && tsc -p tsconfig.json",
+    "package": "npm run build:font && node ./build.js --production && vsce package --dependencies -o out/mentor.vsix",
     "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
     "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
     "test": "npx jest",
@@ -86,6 +86,7 @@
   "dependencies": {
     "@comunica/query-sparql-rdfjs-lite": "^4.3.0",
     "@faubulous/mentor-rdf": "^0.2.52",
+    "@vscode/codicons": "^0.0.36",
     "millan": "^5.4.0",
     "n3": "^1.26.0",
     "react": "^19.1.0",
@@ -101,6 +102,81 @@
     "onNotebook:mentor-notebook"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mentor",
+          "title": "Mentor",
+          "icon": "media/glyphs/ue000-mentor.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "mentor-sparql-results",
+          "title": "SPARQL Results",
+          "icon": "media/glyphs/ue000-mentor.svg"
+        }
+      ]
+    },
+    "views": {
+      "mentor": [
+        {
+          "id": "mentor.view.workspaceTree",
+          "name": "Workspace",
+          "icon": "media/glyphs/ue000-mentor.svg"
+        },
+        {
+          "id": "mentor.view.definitionTree",
+          "name": "Definitions",
+          "icon": "media/glyphs/ue000-mentor.svg"
+        }
+      ],
+      "mentor-sparql-results": [
+        {
+          "type": "webview",
+          "id": "mentor.sparqlResultsView",
+          "name": "Results",
+          "icon": "media/glyphs/ue000-mentor.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "mentor.view.workspaceTree",
+        "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.rdf, *.sparql, *.rq",
+        "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "mentor.action.runSparqlQueryFromEditor",
+        "key": "f5",
+        "when": "editorLangId == 'sparql'"
+      }
+    ],
+    "notebooks": [
+      {
+        "type": "mentor-notebook",
+        "displayName": "Mentor Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.mnb"
+          }
+        ]
+      }
+    ],
+    "notebookRenderer": [
+      {
+        "id": "mentor.notebook.sparqlResultsRenderer",
+        "displayName": "SPARQL Results Renderer",
+        "entrypoint": "./out/sparql-results-notebook-renderer.js",
+        "notebookType": "mentor-notebook",
+        "requiresMessaging": "always",
+        "mimeTypes": [
+          "application/sparql-results+json"
+        ]
+      }
+    ],
     "languages": [
       {
         "id": "ntriples",
@@ -194,32 +270,413 @@
         }
       }
     ],
-    "semanticTokenScopes": [
+    "colors": [
       {
-        "language": "turtle",
-        "scopes": {
-          "namespace": [
-            "storage.modifier.turtle"
-          ]
+        "id": "mentor.color.concept",
+        "description": "Color used for tree nodes representing concepts or concept references.",
+        "defaults": {
+          "light": "#901485",
+          "dark": "#569cd6"
         }
       },
       {
-        "language": "trig",
-        "scopes": {
-          "namespace": [
-            "storage.modifier.trig"
-          ]
+        "id": "mentor.color.class",
+        "description": "Color used for tree nodes representing class or class references.",
+        "defaults": {
+          "light": "#007acc",
+          "dark": "#569cd6"
         }
       },
       {
-        "language": "sparql",
-        "scopes": {
-          "namespace": [
-            "storage.modifier.turtle"
-          ]
+        "id": "mentor.color.individual",
+        "description": "Color used for tree nodes representing literals.",
+        "defaults": {
+          "light": "#007acc",
+          "dark": "#569cd6"
+        }
+      },
+      {
+        "id": "mentor.color.objectProperty",
+        "description": "Color used for tree nodes representing object properties.",
+        "defaults": {
+          "light": "#006bd5",
+          "dark": "#569cd6"
+        }
+      },
+      {
+        "id": "mentor.color.dataProperty",
+        "description": "Color used for tree nodes representing data property.",
+        "defaults": {
+          "light": "#a31515",
+          "dark": "#ce9178"
+        }
+      },
+      {
+        "id": "mentor.color.token.keyword",
+        "description": "Color used for keywords in the editor.",
+        "defaults": {
+          "light": "#C586C0",
+          "dark": "#C586C0"
+        }
+      },
+      {
+        "id": "mentor.color.token.comment",
+        "description": "Color used for comments in the editor.",
+        "defaults": {
+          "light": "#6A9955",
+          "dark": "#6A9955"
+        }
+      },
+      {
+        "id": "mentor.color.token.localName",
+        "description": "Color used for local names in the editor.",
+        "defaults": {
+          "light": "#CCCCCC",
+          "dark": "#CCCCCC"
+        }
+      },
+      {
+        "id": "mentor.color.token.iri",
+        "description": "Color used for IRIs in the editor.",
+        "defaults": {
+          "light": "#4FC1FF",
+          "dark": "#4FC1FF"
+        }
+      },
+      {
+        "id": "mentor.color.token.prefix",
+        "description": "Color used for namespace prefixes in the editor.",
+        "defaults": {
+          "light": "#569CD6",
+          "dark": "#569CD6"
+        }
+      },
+      {
+        "id": "mentor.color.token.booleanLiteral",
+        "description": "Color used for boolean literals in the editor.",
+        "defaults": {
+          "light": "#569CD6",
+          "dark": "#569CD6"
+        }
+      },
+      {
+        "id": "mentor.color.token.numericLiteral",
+        "description": "Color used for numeric literals in the editor.",
+        "defaults": {
+          "light": "#B5CEA8",
+          "dark": "#B5CEA8"
+        }
+      },
+      {
+        "id": "mentor.color.token.quotedLiteral",
+        "description": "Color used for quoted literals in the editor.",
+        "defaults": {
+          "light": "#CE9178",
+          "dark": "#CE9178"
+        }
+      },
+      {
+        "id": "mentor.color.token.datatypeIri",
+        "description": "Color used for datatype IRIs in the editor.",
+        "defaults": {
+          "light": "#DCDCAA",
+          "dark": "#DCDCAA"
+        }
+      },
+      {
+        "id": "mentor.color.token.languageTag",
+        "description": "Color used for language tags in the editor.",
+        "defaults": {
+          "light": "#DCDCAA",
+          "dark": "#DCDCAA"
         }
       }
     ],
+    "configurationDefaults": {
+      "[ntriples]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
+      },
+      "[nquads]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
+      },
+      "[turtle]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
+      },
+      "[trig]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
+      },
+      "[sparql]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
+      },
+      "[xml]": {
+        "editor.wordBasedSuggestionsMode": "allDocuments",
+        "editor.semanticHighlighting.enabled": true
+      }
+    },
+    "commands": [
+      {
+        "command": "mentor.action.createNotebook",
+        "title": "Mentor: Create Notebook",
+        "icon": "$(notebook)"
+      },
+      {
+        "command": "mentor.action.createNotebookFromEditor",
+        "title": "Mentor: Create Notebook from Editor",
+        "icon": "$(notebook)"
+      },
+      {
+        "command": "mentor.action.runSparqlQueryFromEditor",
+        "title": "Mentor: Execute SPARQL Query from Editor",
+        "icon": "$(play)"
+      },
+      {
+        "command": "mentor.action.openDocumentGraph",
+        "title": "Mentor: Open a Document Graph"
+      },
+      {
+        "command": "mentor.action.openDocumentInferenceGraph",
+        "title": "Mentor: Open the active Document Inference Graph"
+      },
+      {
+        "command": "mentor.action.analyzeWorkspace",
+        "title": "Find Problems",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "mentor.action.updatePrefixes",
+        "title": "Mentor: Update prefix definitions from prefix.cc",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "mentor.action.openSettings",
+        "title": "Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "mentor.action.findReferences",
+        "title": "Find All References",
+        "group": "navigation"
+      },
+      {
+        "command": "mentor.action.revealDefinition",
+        "title": "Go to Definition",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "mentor.action.revealShapeDefinition",
+        "title": "Go to Shape Definition",
+        "icon": "$(go-to-shape)"
+      },
+      {
+        "command": "mentor.action.openInBrowser",
+        "title": "Open in Browser",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "mentor.action.showAnnotatedLabels",
+        "title": "Show Annotated Labels",
+        "icon": "$(rdf-label-tag)"
+      },
+      {
+        "command": "mentor.action.showUriLabels",
+        "title": "Show URI Labels",
+        "icon": "$(rdf-label-uri)"
+      },
+      {
+        "command": "mentor.action.showUriLabelsWithPrefix",
+        "title": "Show URI Labels with Prefix",
+        "icon": "$(rdf-label-uri)"
+      },
+      {
+        "command": "mentor.action.groupDefinitionsByType",
+        "title": "Group by Type"
+      },
+      {
+        "command": "mentor.action.groupDefinitionsBySource",
+        "title": "Group by Source of Definition"
+      },
+      {
+        "command": "mentor.action.refreshDefinitionsTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mentor.action.showReferences",
+        "title": "Show Referenced Resources",
+        "icon": "$(rdf-class)"
+      },
+      {
+        "command": "mentor.action.hideReferences",
+        "title": "Hide Referenced Resources",
+        "icon": "$(rdf-class-ref)"
+      },
+      {
+        "command": "mentor.action.showPropertyTypes",
+        "title": "Show Property Types",
+        "icon": "$(rdf-tree)"
+      },
+      {
+        "command": "mentor.action.hidePropertyTypes",
+        "title": "Hide Property Types",
+        "icon": "$(rdf-list)"
+      },
+      {
+        "command": "mentor.action.showIndividualTypes",
+        "title": "Show Individual Types",
+        "icon": "$(rdf-tree)"
+      },
+      {
+        "command": "mentor.action.hideIndividualTypes",
+        "title": "Hide Individual Types",
+        "icon": "$(rdf-list)"
+      },
+      {
+        "command": "mentor.action.deletePrefixes",
+        "title": "Delete prefix definitions"
+      },
+      {
+        "command": "mentor.action.implementPrefixes",
+        "title": "Implement prefix definitions"
+      },
+      {
+        "command": "mentor.action.sortPrefixes",
+        "title": "Sort prefix definitions"
+      },
+      {
+        "command": "mentor.action.selectActiveLanguage",
+        "title": "Select Active Language",
+        "icon": "$(select-language)"
+      },
+      {
+        "command": "mentor.action.highlightNamespaceDefinitions",
+        "title": "Mentor: Highlight Namespace Definitions"
+      },
+      {
+        "command": "mentor.action.highlightTypeDefinitions",
+        "title": "Mentor: Highlight Type Definitions"
+      },
+      {
+        "command": "mentor.action.highlightTypeAssertions",
+        "title": "Mentor: Highlight Type Assertions"
+      },
+      {
+        "command": "mentor.action.highlightReferencedIris",
+        "title": "Mentor: Highlight Referenced IRIs"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "mentor.action.runSparqlQueryFromEditor",
+          "when": "editorLangId == 'sparql'",
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.action.createNotebookFromEditor",
+          "when": "editorLangId == 'sparql'",
+          "group": "navigation@3"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "mentor.action.analyzeWorkspace",
+          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
+          "group": "navigation@3"
+        },
+        {
+          "command": "mentor.action.groupDefinitionsByType",
+          "when": "view == mentor.view.definitionTree",
+          "group": "2_workspace "
+        },
+        {
+          "command": "mentor.action.groupDefinitionsBySource",
+          "when": "view == mentor.view.definitionTree",
+          "group": "2_workspace "
+        },
+        {
+          "command": "mentor.action.showAnnotatedLabels",
+          "when": "view == mentor.view.definitionTree",
+          "group": "4_search"
+        },
+        {
+          "command": "mentor.action.showUriLabels",
+          "when": "view == mentor.view.definitionTree",
+          "group": "4_search"
+        },
+        {
+          "command": "mentor.action.showUriLabelsWithPrefix",
+          "when": "view == mentor.view.definitionTree",
+          "group": "4_search"
+        },
+        {
+          "command": "mentor.action.openSettings",
+          "group": "z_commands",
+          "when": "view == mentor.view.workspaceTree || view == mentor.view.definitionTree"
+        },
+        {
+          "command": "mentor.action.showReferences",
+          "when": "view == mentor.view.definitionTree && view.showReferences === false",
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.action.hideReferences",
+          "when": "view == mentor.view.definitionTree && view.showReferences === true",
+          "group": "navigation@2"
+        },
+        {
+          "command": "mentor.action.selectActiveLanguage",
+          "when": "view == mentor.view.definitionTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.action.refreshDefinitionsTree",
+          "when": "view == mentor.view.definitionTree",
+          "group": "navigation@99"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "mentor.action.findReferences",
+          "when": "viewItem =~ /resource/",
+          "group": "4_search"
+        },
+        {
+          "command": "mentor.action.openInBrowser",
+          "when": "viewItem =~ /resource/",
+          "group": "z_commands"
+        },
+        {
+          "command": "mentor.action.revealShapeDefinition",
+          "when": "viewItem != shapes && viewItem =~ / shape-target/",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.action.showPropertyTypes",
+          "when": "view.showPropertyTypes === false && viewItem == properties",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.action.hidePropertyTypes",
+          "when": "view.showPropertyTypes === true && viewItem == properties",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.action.showIndividualTypes",
+          "when": "view.showIndividualTypes === false && viewItem == individuals",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.action.hideIndividualTypes",
+          "when": "view.showIndividualTypes === true && viewItem == individuals",
+          "group": "inline"
+        }
+      ]
+    },
     "icons": {
       "app-mentor": {
         "description": "Mentor icon",
@@ -382,605 +839,6 @@
           "fontCharacter": "\\e016"
         }
       }
-    },
-    "colors": [
-      {
-        "id": "mentor.color.concept",
-        "description": "Color used for tree nodes representing concepts or concept references.",
-        "defaults": {
-          "light": "#901485",
-          "dark": "#569cd6"
-        }
-      },
-      {
-        "id": "mentor.color.class",
-        "description": "Color used for tree nodes representing class or class references.",
-        "defaults": {
-          "light": "#007acc",
-          "dark": "#569cd6"
-        }
-      },
-      {
-        "id": "mentor.color.individual",
-        "description": "Color used for tree nodes representing literals.",
-        "defaults": {
-          "light": "#007acc",
-          "dark": "#569cd6"
-        }
-      },
-      {
-        "id": "mentor.color.objectProperty",
-        "description": "Color used for tree nodes representing object properties.",
-        "defaults": {
-          "light": "#006bd5",
-          "dark": "#569cd6"
-        }
-      },
-      {
-        "id": "mentor.color.dataProperty",
-        "description": "Color used for tree nodes representing data property.",
-        "defaults": {
-          "light": "#a31515",
-          "dark": "#ce9178"
-        }
-      }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "mentor",
-          "title": "Mentor",
-          "icon": "media/glyphs/ue000-mentor.svg"
-        }
-      ],
-      "panel": [
-        {
-          "id": "mentor-sparql-results",
-          "title": "SPARQL Results",
-          "icon": "media/glyphs/ue000-mentor.svg"
-        }
-      ]
-    },
-    "views": {
-      "mentor": [
-        {
-          "id": "mentor.view.workspaceTree",
-          "name": "Workspace",
-          "icon": "media/glyphs/ue000-mentor.svg"
-        },
-        {
-          "id": "mentor.view.definitionTree",
-          "name": "Definitions",
-          "icon": "media/glyphs/ue000-mentor.svg"
-        }
-      ],
-      "mentor-sparql-results": [
-        {
-          "type": "webview",
-          "id": "mentor.sparqlResultsView",
-          "name": "Results",
-          "icon": "media/glyphs/ue000-mentor.svg"
-        }
-      ]
-    },
-    "viewsWelcome": [
-      {
-        "view": "mentor.view.workspaceTree",
-        "contents": "Welcome to the Mentor extension for Visual Studio Code.\n\n This view shows all RDF files in your current workspace for quick access. To get started, create a file with one of the following extensions:\n\n[Open Explorer](command:workbench.view.explorer)\n\n*.ttl, *.trig, *.n3, *.nt, *.nq, *.rdf, *.sparql, *.rq",
-        "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
-      }
-    ],
-    "webview": {
-      "semanticTokenColorCustomizations": true
-    },
-    "commands": [
-      {
-        "command": "mentor.action.createNotebook",
-        "title": "Mentor: Create Notebook",
-        "icon": "$(notebook)"
-      },
-      {
-        "command": "mentor.action.createNotebookFromEditor",
-        "title": "Mentor: Create Notebook from Editor",
-        "icon": "$(notebook)"
-      },
-      {
-        "command": "mentor.action.runSparqlQueryFromEditor",
-        "title": "Mentor: Execute SPARQL Query from Editor",
-        "icon": "$(play)"
-      },
-      {
-        "command": "mentor.action.openDocumentGraph",
-        "title": "Mentor: Open a Document Graph"
-      },
-      {
-        "command": "mentor.action.openDocumentInferenceGraph",
-        "title": "Mentor: Open the active Document Inference Graph"
-      },
-      {
-        "command": "mentor.action.analyzeWorkspace",
-        "title": "Find Problems",
-        "icon": "$(debug-alt)"
-      },
-      {
-        "command": "mentor.action.updatePrefixes",
-        "title": "Mentor: Update prefix definitions from prefix.cc",
-        "icon": "$(cloud-download)"
-      },
-      {
-        "command": "mentor.action.openSettings",
-        "title": "Settings",
-        "icon": "$(gear)"
-      },
-      {
-        "command": "mentor.action.findReferences",
-        "title": "Find All References",
-        "group": "navigation"
-      },
-      {
-        "command": "mentor.action.revealDefinition",
-        "title": "Go to Definition",
-        "icon": "$(go-to-file)"
-      },
-      {
-        "command": "mentor.action.revealShapeDefinition",
-        "title": "Go to Shape Definition",
-        "icon": "$(go-to-shape)"
-      },
-      {
-        "command": "mentor.action.openInBrowser",
-        "title": "Open in Browser",
-        "icon": "$(globe)"
-      },
-      {
-        "command": "mentor.action.showAnnotatedLabels",
-        "title": "Show Annotated Labels",
-        "icon": "$(rdf-label-tag)"
-      },
-      {
-        "command": "mentor.action.showUriLabels",
-        "title": "Show URI Labels",
-        "icon": "$(rdf-label-uri)"
-      },
-      {
-        "command": "mentor.action.showUriLabelsWithPrefix",
-        "title": "Show URI Labels with Prefix",
-        "icon": "$(rdf-label-uri)"
-      },
-      {
-        "command": "mentor.action.groupDefinitionsByType",
-        "title": "Group by Type"
-      },
-      {
-        "command": "mentor.action.groupDefinitionsBySource",
-        "title": "Group by Source of Definition"
-      },
-      {
-        "command": "mentor.action.refreshDefinitionsTree",
-        "title": "Refresh",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "mentor.action.showReferences",
-        "title": "Show Referenced Resources",
-        "icon": "$(rdf-class)"
-      },
-      {
-        "command": "mentor.action.hideReferences",
-        "title": "Hide Referenced Resources",
-        "icon": "$(rdf-class-ref)"
-      },
-      {
-        "command": "mentor.action.showPropertyTypes",
-        "title": "Show Property Types",
-        "icon": "$(rdf-tree)"
-      },
-      {
-        "command": "mentor.action.hidePropertyTypes",
-        "title": "Hide Property Types",
-        "icon": "$(rdf-list)"
-      },
-      {
-        "command": "mentor.action.showIndividualTypes",
-        "title": "Show Individual Types",
-        "icon": "$(rdf-tree)"
-      },
-      {
-        "command": "mentor.action.hideIndividualTypes",
-        "title": "Hide Individual Types",
-        "icon": "$(rdf-list)"
-      },
-      {
-        "command": "mentor.action.deletePrefixes",
-        "title": "Delete prefix definitions"
-      },
-      {
-        "command": "mentor.action.implementPrefixes",
-        "title": "Implement prefix definitions"
-      },
-      {
-        "command": "mentor.action.sortPrefixes",
-        "title": "Sort prefix definitions"
-      },
-      {
-        "command": "mentor.action.selectActiveLanguage",
-        "title": "Select Active Language",
-        "icon": "$(select-language)"
-      },
-      {
-        "command": "mentor.action.highlightNamespaceDefinitions",
-        "title": "Mentor: Highlight Namespace Definitions"
-      },
-      {
-        "command": "mentor.action.highlightTypeDefinitions",
-        "title": "Mentor: Highlight Type Definitions"
-      },
-      {
-        "command": "mentor.action.highlightTypeAssertions",
-        "title": "Mentor: Highlight Type Assertions"
-      },
-      {
-        "command": "mentor.action.highlightReferencedIris",
-        "title": "Mentor: Highlight Referenced IRIs"
-      }
-    ],
-    "keybindings": [
-      {
-        "command": "mentor.action.runSparqlQueryFromEditor",
-        "key": "f5",
-        "when": "editorLangId == 'sparql'"
-      }
-    ],
-    "menus": {
-      "editor/title": [
-        {
-          "command": "mentor.action.runSparqlQueryFromEditor",
-          "when": "editorLangId == 'sparql'",
-          "group": "navigation@2"
-        },
-        {
-          "command": "mentor.action.createNotebookFromEditor",
-          "when": "editorLangId == 'sparql'",
-          "group": "navigation@3"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "mentor.action.analyzeWorkspace",
-          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
-          "group": "navigation@3"
-        },
-        {
-          "command": "mentor.action.groupDefinitionsByType",
-          "when": "view == mentor.view.definitionTree",
-          "group": "2_workspace "
-        },
-        {
-          "command": "mentor.action.groupDefinitionsBySource",
-          "when": "view == mentor.view.definitionTree",
-          "group": "2_workspace "
-        },
-        {
-          "command": "mentor.action.showAnnotatedLabels",
-          "when": "view == mentor.view.definitionTree",
-          "group": "4_search"
-        },
-        {
-          "command": "mentor.action.showUriLabels",
-          "when": "view == mentor.view.definitionTree",
-          "group": "4_search"
-        },
-        {
-          "command": "mentor.action.showUriLabelsWithPrefix",
-          "when": "view == mentor.view.definitionTree",
-          "group": "4_search"
-        },
-        {
-          "command": "mentor.action.openSettings",
-          "group": "z_commands",
-          "when": "view == mentor.view.workspaceTree || view == mentor.view.definitionTree"
-        },
-        {
-          "command": "mentor.action.showReferences",
-          "when": "view == mentor.view.definitionTree && view.showReferences === false",
-          "group": "navigation@2"
-        },
-        {
-          "command": "mentor.action.hideReferences",
-          "when": "view == mentor.view.definitionTree && view.showReferences === true",
-          "group": "navigation@2"
-        },
-        {
-          "command": "mentor.action.selectActiveLanguage",
-          "when": "view == mentor.view.definitionTree",
-          "group": "navigation@1"
-        },
-        {
-          "command": "mentor.action.refreshDefinitionsTree",
-          "when": "view == mentor.view.definitionTree",
-          "group": "navigation@99"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "mentor.action.findReferences",
-          "when": "viewItem =~ /resource/",
-          "group": "4_search"
-        },
-        {
-          "command": "mentor.action.openInBrowser",
-          "when": "viewItem =~ /resource/",
-          "group": "z_commands"
-        },
-        {
-          "command": "mentor.action.revealShapeDefinition",
-          "when": "viewItem != shapes && viewItem =~ / shape-target/",
-          "group": "inline"
-        },
-        {
-          "command": "mentor.action.showPropertyTypes",
-          "when": "view.showPropertyTypes === false && viewItem == properties",
-          "group": "inline"
-        },
-        {
-          "command": "mentor.action.hidePropertyTypes",
-          "when": "view.showPropertyTypes === true && viewItem == properties",
-          "group": "inline"
-        },
-        {
-          "command": "mentor.action.showIndividualTypes",
-          "when": "view.showIndividualTypes === false && viewItem == individuals",
-          "group": "inline"
-        },
-        {
-          "command": "mentor.action.hideIndividualTypes",
-          "when": "view.showIndividualTypes === true && viewItem == individuals",
-          "group": "inline"
-        }
-      ]
-    },
-    "configurationDefaults": {
-      "[sparql]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments",
-        "editor.semanticHighlighting.enabled": true
-      },
-      "[turtle]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments",
-        "editor.semanticHighlighting.enabled": true
-      },
-      "[trig]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments",
-        "editor.semanticHighlighting.enabled": true
-      },
-      "[ntriples]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments",
-        "editor.semanticHighlighting.enabled": true
-      },
-      "[nquads]": {
-        "editor.wordBasedSuggestionsMode": "allDocuments",
-        "editor.semanticHighlighting.enabled": true
-      }
-    },
-    "configuration": [
-      {
-        "type": "object",
-        "id": "mentorSettings",
-        "title": "Mentor",
-        "order": 1,
-        "properties": {
-          "mentor.definitionTree.labelStyle": {
-            "type": "string",
-            "title": "Default Tree Label Style",
-            "description": "Set the standard style for rendering of tree labels.",
-            "enum": [
-              "AnnotatedLabels",
-              "UriLabels",
-              "UriLabelsWithPrefix"
-            ],
-            "enumDescriptions": [
-              "Render labels from the annotated label predicates.",
-              "Render the URI path element or fragment of the URI.",
-              "Render the URI path element or fragment with namespace prefix."
-            ],
-            "default": "AnnotatedLabels"
-          },
-          "mentor.definitionTree.defaultLayout": {
-            "type": "string",
-            "title": "Default Definitions Tree Layout",
-            "description": "Set the standard style for rendering the definitions tree hierarchy.",
-            "enum": [
-              "GroupByType",
-              "GroupBySource"
-            ],
-            "enumDescriptions": [
-              "Group all classes, properties and individuals in the definitions tree under common top level nodes for each type.",
-              "Group classes, properties and invdividuals in the definitions tree under seperate nodes for each ontology or concept scheme."
-            ],
-            "default": "GroupBySource"
-          },
-          "mentor.definitionTree.defaultLanguageTag": {
-            "type": "string",
-            "title": "Default Language",
-            "description": "Set the default language tag to be used for rendering of labels and descriptions in the definitions tree.",
-            "default": "en"
-          },
-          "mentor.definitionTree.decorateMissingLanguageTags": {
-            "type": "string",
-            "title": "Decorate Missing Language Tags",
-            "description": "Grey out all terms that do not have a value which is tagged in the currently selected language.",
-            "enum": [
-              "Disabled",
-              "All",
-              "Document"
-            ],
-            "enumDescriptions": [
-              "Disable the decoration of missing language tags.",
-              "Grey out missing language tags for definitions in all sources.",
-              "Grey out missing language tags only for definitions in the active document."
-            ],
-            "default": "Document"
-          },
-          "mentor.internalBrowserEnabled": {
-            "type": "boolean",
-            "title": "Open URLs in interal browser",
-            "description": "If enabled, URLs will be opened in the internal browser instead of the default browser.",
-            "default": true
-          },
-          "mentor.predicates.label": {
-            "type": "array",
-            "title": "Label Predicates",
-            "description": "Manage the predicates to be used for labels in the tree view for classes, properties and individuals. The first matching predicate will be used.",
-            "default": [
-              "http://purl.org/dc/terms/title",
-              "http://purl.org/dc/elements/1.1/title",
-              "http://www.w3.org/2004/02/skos/core#prefLabel",
-              "http://www.w3.org/2000/01/rdf-schema#label",
-              "https://schema.org/name",
-              "http://schema.org/name",
-              "http://www.w3.org/ns/shacl#path"
-            ]
-          },
-          "mentor.predicates.description": {
-            "type": "array",
-            "title": "Description Predicates",
-            "description": "Manage the predicates to be used for descriptions in the tree view for classes, properties and individuals. The first matching predicate will be used.",
-            "default": [
-              "http://www.w3.org/2004/02/skos/core#definition",
-              "http://www.w3.org/2000/01/rdf-schema#comment",
-              "http://purl.org/dc/terms/description",
-              "http://purl.org/dc/terms/abstract",
-              "https://schema.org/description",
-              "http://schema.org/description",
-              "http://www.w3.org/2004/02/skos/core#scopeNote"
-            ]
-          },
-          "mentor.namespaces": {
-            "type": "array",
-            "title": "Namespaces",
-            "description": "Manage the namespace URIs to be used in vocabularies.",
-            "items": {
-              "type": "object",
-              "properties": {
-                "uri": {
-                  "type": "string",
-                  "description": "The namespace URI."
-                },
-                "defaultPrefix": {
-                  "type": "string",
-                  "description": "The default abbreviation to be used for the namespace URI if no other is defined."
-                }
-              }
-            },
-            "default": [
-              {
-                "uri": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-                "defaultPrefix": "rdf"
-              },
-              {
-                "uri": "http://www.w3.org/2000/01/rdf-schema#",
-                "defaultPrefix": "rdfs"
-              },
-              {
-                "uri": "http://www.w3.org/ns/rdfa#",
-                "defaultPrefix": "rdfa"
-              },
-              {
-                "uri": "http://www.w3.org/2002/07/owl#",
-                "defaultPrefix": "owl"
-              },
-              {
-                "uri": "http://www.w3.org/2004/02/skos/core#",
-                "defaultPrefix": "skos"
-              },
-              {
-                "uri": "http://schema.org/",
-                "defaultPrefix": "schema"
-              },
-              {
-                "uri": "https://schema.org/",
-                "defaultPrefix": "schema"
-              }
-            ]
-          },
-          "mentor.index.useGitIgnore": {
-            "type": "boolean",
-            "title": "Use .gitignore",
-            "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
-            "default": true
-          },
-          "mentor.index.ignoreFolders": {
-            "type": "array",
-            "title": "Excluded Folders",
-            "description": "Manage the folders that should be skipped when indexing the workspace.",
-            "default": [
-              ".vscode",
-              ".git",
-              "node_modules"
-            ]
-          },
-          "mentor.index.maxFileSize": {
-            "type": "number",
-            "title": "Max File Size",
-            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors. Opening a larger file in an editor or running the 'Analyze Workspace' command will index files above this limit.",
-            "default": 1500000
-          },
-          "mentor.editor.codeLensEnabled": {
-            "type": "boolean",
-            "title": "Enable Code Lenses",
-            "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
-            "default": true
-          },
-          "mentor.prefixes.autoDefinePrefixes": {
-            "type": "boolean",
-            "title": "Auto Define Namespaces",
-            "description": "If enabled, the extension will automatically declare namespaces in the document header. The namespaces that are defined in workspace documents are used in preference over the ones retrieved from prefix.cc.",
-            "default": true
-          },
-          "mentor.prefixes.prefixDefinitionMode": {
-            "type": "string",
-            "title": "Prefix Definition Mode",
-            "description": "Set the way prefixes are automatically defined in the document header.",
-            "enum": [
-              "Append",
-              "Sorted"
-            ],
-            "enumDescriptions": [
-              "Append new prefixes to the end of the prefix definition list in the document header.",
-              "Maintain an alphabetical order of prefixes in the document header."
-            ],
-            "default": "Sorted"
-          }
-        },
-        "mentor.language.turtle.maxNumberOfProblems": {
-          "scope": "resource",
-          "type": "number",
-          "default": 100,
-          "description": "Controls the maximum number of problems produced by the server."
-        }
-      }
-    ],
-    "notebooks": [
-      {
-        "type": "mentor-notebook",
-        "displayName": "Mentor Notebook",
-        "selector": [
-          {
-            "filenamePattern": "*.mnb"
-          }
-        ]
-      }
-    ],
-    "notebookRenderer": [
-      {
-        "id": "mentor.notebook.sparqlResultsRenderer",
-        "displayName": "SPARQL Results Renderer",
-        "entrypoint": "./out/sparql-results-notebook-renderer.js",
-        "notebookType": "mentor-notebook",
-        "requiresMessaging": "always",
-        "mimeTypes": [
-          "application/sparql-results+json"
-        ]
-      }
-    ]
+    }
   }
 }

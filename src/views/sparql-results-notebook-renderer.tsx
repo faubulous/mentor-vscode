@@ -16,7 +16,8 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 		renderOutputItem(data: OutputItem, element: HTMLElement) {
 			const results = data?.json();
 
-			createRoot(element).render(<SparqlResultsTable results={results} messaging={messaging} />);
+			const root = createRoot(element);
+			root.render(<SparqlResultsTable results={results} messaging={messaging} />);
 		}
 	};
 };
