@@ -76,8 +76,8 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
             <b>{results.totalLength}</b> results in {this._getDuration(results)}
           </span>
           <span className="spacer"></span>
-          <vscode-toolbar-button title="Save">
-            <span className="codicon codicon-file"></span>
+          <vscode-toolbar-button title="Save" onClick={() => this._saveResults(results)}>
+            <span className="codicon codicon-save-as"></span>
           </vscode-toolbar-button>
           <vscode-toolbar-button title="Reload">
             <span className="codicon codicon-refresh"></span>
@@ -142,6 +142,20 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
       default: {
         return '';
       }
+    }
+  }
+
+  private _saveResults(results: SparqlQueryResults) {
+    if (this.props.messaging) {
+      const message = {
+        type: 'saveSparqlQueryResults',
+        format: 'csv',
+        results: results
+      }
+
+      this.props.messaging.postMessage(message);
+    } else {
+      console.warn('No messaging API available to save results.');
     }
   }
 }

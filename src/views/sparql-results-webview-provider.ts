@@ -25,6 +25,17 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         }
 
         this._view = new SparqlResultsWebviewFactory().createView(this._context, webviewView);
+
+        this._view.webview.onDidReceiveMessage(async (message) => {
+            if (message.type === 'executeSparqlQuery') {
+                const { documentIri, query } = message;
+                await this.executeQuery(documentIri, query);
+            } else if (message.type === 'saveSparqlQueryResults') {
+                const { format, results } = message;
+
+                vscode.commands.executeCommand('mentor.action.saveSparqlQueryResults', results, format);
+            }
+        });
     }
 
     public async executeQuery(documentIri: string, query: string) {
