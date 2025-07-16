@@ -45,9 +45,9 @@ a {
 	display: inline-flex;
 }
 
-.sparql-results-toolbar.loading .status-icon {
+/* .sparql-results-toolbar.loading .status-icon {
 	color: var(--vscode-progressBar-background);
-}
+} */
 
 .sparql-results-toolbar.success .status-icon {
 	color: var(--vscode-notebookStatusSuccessIcon-foreground);

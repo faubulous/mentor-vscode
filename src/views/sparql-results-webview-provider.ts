@@ -32,10 +32,23 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
             throw new Error('Webview view is not initialized.');
         }
 
-        const results = await mentor.sparqlQueryService.executeQuery(query, documentIri);
+        const x = {
+            resultType: 'bindings',
+            documentIri: documentIri,
+            query: query,
+            startTime: new Date(),
+            rows: []
+        };
 
         this._view.show();
-        this._view.webview.postMessage(results);
+        this._view.webview.postMessage(x);
+
+        const results = await mentor.sparqlQueryService.executeQuery(query, documentIri);
+
+        this._view.webview.postMessage({
+            ...results,
+            startTime: x.startTime
+        });
     }
 }
 

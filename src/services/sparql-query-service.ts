@@ -19,6 +19,8 @@ export class SparqlQueryService {
 		const source = mentor.store;
 		const engine = new QueryEngine();
 
+		const startTime = new Date();
+
 		const result = await engine.queryBindings(query, {
 			sources: [source],
 			unionDefaultGraph: true
@@ -26,11 +28,15 @@ export class SparqlQueryService {
 
 		const serialized = await this._serializeQueryResults(documentIri, result);
 
+		const endTime = new Date();
+
 		return {
 			...serialized,
-			type: 'bindings',
+			resultType: 'bindings',
 			documentIri: documentIri,
-			query: query
+			query: query,
+			startTime: startTime,
+			endTime: endTime
 		};
 	}
 
@@ -103,9 +109,29 @@ export interface SparqlQueryResults {
 	query: string;
 
 	/**
+	 * The time when the query was executed.
+	 */
+	startTime: Date;
+
+	/**
+	 * The time when the query finished executing.
+	 */
+	endTime?: Date;
+
+	/**
+	 * The error that occurred during query execution, if any.
+	 */
+	error?: Error;
+
+	/**
 	 * The type of the results, e.g., 'bindings'.
 	 */
-	type: 'bindings' | 'boolean' | 'graph';
+	resultType: 'bindings' | 'boolean' | 'graph';
+
+	/**
+	 * The total number of results in the query.
+	 */
+	totalLength: number;
 
 	/**
 	 * The column headers of the result table.
@@ -121,9 +147,4 @@ export interface SparqlQueryResults {
 	 * A map of namespace IRIs to prefixes defined in the document or the workspace.
 	 */
 	namespaceMap: PrefixMap;
-
-	/**
-	 * The total number of results in the query.
-	 */
-	totalLength: number;
 }
