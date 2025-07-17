@@ -148,9 +148,9 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
   private _saveResults(results: SparqlQueryResults) {
     if (this.props.messaging) {
       const message = {
-        type: 'saveSparqlQueryResults',
-        format: 'csv',
-        results: results
+        type: 'executeCommand',
+        command: 'mentor.action.saveSparqlQueryResults',
+        args: [results, 'csv']
       }
 
       this.props.messaging.postMessage(message);

@@ -2,13 +2,6 @@ import * as vscode from 'vscode';
 import { SparqlQueryResults } from '@/services';
 
 export async function saveSparqlQueryResults(results: SparqlQueryResults): Promise<void> {
-	const editor = vscode.window.activeTextEditor;
-
-	if (!editor) {
-		vscode.window.showErrorMessage('No active editor found.');
-		return;
-	}
-
 	let content = '';
 
 	// Render the variable names as the first row

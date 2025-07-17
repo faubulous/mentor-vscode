@@ -56,3 +56,12 @@ a {
 .sparql-results-toolbar.error .status-icon {
 	color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
+
+vscode-table-header-cell {
+	line-height: auto;
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+vscode-table-cell {
+	border-bottom: none;
+}

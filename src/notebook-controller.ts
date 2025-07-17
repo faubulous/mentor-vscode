@@ -12,6 +12,10 @@ export class NotebookController {
 
 	private readonly _controller: vscode.NotebookController;
 
+	private readonly _messaging: vscode.NotebookRendererMessaging;
+
+	private readonly _subscriptions: vscode.Disposable[] = [];
+
 	private _executionOrder = 0;
 
 	constructor() {
@@ -19,10 +23,25 @@ export class NotebookController {
 		this._controller.executeHandler = this._executeAll.bind(this);
 		this._controller.supportedLanguages = this._supportedLanguages;
 		this._controller.supportsExecutionOrder = true;
+
+		this._subscriptions.push(this._controller);
+
+		this._messaging = vscode.notebooks.createRendererMessaging('mentor.notebook.sparqlResultsRenderer');
+		this._messaging.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
 	}
 
 	dispose(): void {
-		this._controller.dispose();
+		for (const subscription of this._subscriptions) {
+			subscription.dispose();
+		}
+	}
+
+	private _onDidReceiveMessage(e: any) {
+		const message = e.message;
+		
+		if (message.type === 'executeCommand') {
+			vscode.commands.executeCommand(message.command, ...message.args);
+		}
 	}
 
 	private _executeAll(cells: vscode.NotebookCell[], _notebook: vscode.NotebookDocument, _controller: vscode.NotebookController): void {

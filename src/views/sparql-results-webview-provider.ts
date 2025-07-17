@@ -9,6 +9,8 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
 
     private _context?: vscode.ExtensionContext;
 
+    private _subscriptions: vscode.Disposable[] = [];
+
     public register(context: vscode.ExtensionContext) {
         this._context = context;
 
@@ -25,17 +27,13 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         }
 
         this._view = new SparqlResultsWebviewFactory().createView(this._context, webviewView);
+        this._view.webview.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
+    }
 
-        this._view.webview.onDidReceiveMessage(async (message) => {
-            if (message.type === 'executeSparqlQuery') {
-                const { documentIri, query } = message;
-                await this.executeQuery(documentIri, query);
-            } else if (message.type === 'saveSparqlQueryResults') {
-                const { format, results } = message;
-
-                vscode.commands.executeCommand('mentor.action.saveSparqlQueryResults', results, format);
-            }
-        });
+    private async _onDidReceiveMessage(message: any) {
+        if (message.type === 'executeCommand') {
+            vscode.commands.executeCommand(message.command, ...message.args);
+        }
     }
 
     public async executeQuery(documentIri: string, query: string) {
