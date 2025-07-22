@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TreeView } from './tree-view';
+import { TreeView } from '@/views/tree-view';
 import { WorkspaceNodeProvider } from './workspace-node-provider';
 
 export class WorkspaceTree implements TreeView {

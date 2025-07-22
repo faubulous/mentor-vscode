@@ -1,4 +1,3 @@
-export * from './workspace-tree';
-export * from './definition-tree';
-export * from './sparql-results-webview-provider';
-export * from './sparql-results-webview-factory';
+export * from './definition-tree/definition-tree';
+export * from './workspace-tree/workspace-tree';
+export * from './sparql-results/sparql-results-webview-provider';

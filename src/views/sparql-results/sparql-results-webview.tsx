@@ -1,8 +1,14 @@
 import { createRoot } from 'react-dom/client';
 import { useState, useEffect } from 'react';
-import { SparqlResultsTable } from './sparql-results-table';
-import { WebviewMessagingApi } from './webview-messaging';
+import { WebviewMessagingApi } from '@/views/webview-messaging';
 import { SparqlQueryResults } from '@/services';
+import { SparqlResultsTable } from './sparql-results-table';
+import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
+
+interface SparqlResultsWebviewState {
+	data?: SparqlQueryResults;
+	renderKey?: number;
+}
 
 function SparqlResultsWebview() {
 	const [state, setState] = useState<SparqlResultsWebviewState>({ renderKey: 0 });
@@ -35,13 +41,8 @@ function SparqlResultsWebview() {
 	if (state.data) {
 		return <SparqlResultsTable results={state.data} messaging={messaging} />;
 	} else {
-		return <div>No query was executed yet.</div>;
+		return <SparqlResultsWelcomeView />;
 	}
-}
-
-interface SparqlResultsWebviewState {
-	data?: SparqlQueryResults;
-	renderKey?: number;
 }
 
 const root = createRoot(document.getElementById('root')!);

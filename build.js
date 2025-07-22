@@ -59,11 +59,11 @@ const getLanguageConfig = (args, type, language) => {
   }
 }
 
-const getReactViewConfig = (args, file) => {
+const getReactViewConfig = (args, folder, file) => {
   return {
     ...getBaseConfig(args),
     format: "esm", // Ensure ES module format for the VS Code notebook renderer
-    entryPoints: [`./src/views/${file}.tsx`],
+    entryPoints: [`./src/views/${folder}/${file}.tsx`],
     outfile: `./out/${file}.js`
   }
 }
@@ -117,7 +117,8 @@ const copyFile = (fileName, sourceFolder, targetFolder, targetName = undefined) 
  * @note This is necessary because the VSCode Notebook renderer webview does not 
  * support loading local font files directly. When registering the webview, there is no
  * ExtensionContext to provide the media path, so we need to embed the font data directly
- * in the CSS.
+ * in the CSS. This comes at the cost of increased bundle size, which is loaded for every
+ * webview instance in the notebook.
  */
 const copyVSCodeCodiconCSS = () => {
   console.log(`Creating VSCode Codicon CSS bundle..`);
@@ -219,8 +220,8 @@ const copyVSCodeElementsBundle = () => {
       getLanguageConfig(args, 'client', 'turtle'),
       getLanguageConfig(args, 'client', 'trig'),
       getLanguageConfig(args, 'client', 'sparql'),
-      getReactViewConfig(args, 'sparql-results-notebook-renderer'),
-      getReactViewConfig(args, 'sparql-results-webview'),
+      getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
+      getReactViewConfig(args, 'sparql-results', 'sparql-results-webview'),
     ]
 
     if (args.includes("--watch")) {

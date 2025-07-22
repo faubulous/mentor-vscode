@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { DefinitionProvider } from '@/providers';
-import { DefinitionTreeNode, getIriFromArgument } from '@/views/definition-tree-node';
+import { DefinitionTreeNode, getIriFromArgument } from '@/views/definition-tree/definition-tree-node';
 
 export async function findReferences(arg: DefinitionTreeNode | string) {
 	mentor.activateDocument().then((editor) => {

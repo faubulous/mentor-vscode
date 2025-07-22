@@ -7,9 +7,7 @@ import { SparqlResultsTable } from './sparql-results-table';
 export const activate: ActivationFunction = (context: RendererContext<NotebookRendererMessaging>) => {
 	const messaging = context.postMessage ? {
 		postMessage: (message: any) => context.postMessage!(message),
-		onMessage: (handler: (message: any) => void) => {
-			return context.onDidReceiveMessage?.(handler);
-		},
+		onMessage: (handler: (message: any) => void) => context.onDidReceiveMessage?.(handler),
 	} : undefined;
 
 	return {

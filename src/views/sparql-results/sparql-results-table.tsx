@@ -3,7 +3,7 @@ import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlQueryResults } from '@/services';
 import { WebviewMessagingApi } from '@/views/webview-messaging';
-import stylesheet from '@/views/sparql-results-table.css';
+import stylesheet from '@/views/sparql-results/sparql-results-table.css';
 import codicons from '$/codicon.css';
 
 /**

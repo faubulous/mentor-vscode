@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { SparqlResultsWebviewFactory } from './sparql-results-webview-factory';
+import { SparqlResultsWebviewFactory } from '@/views/sparql-results/sparql-results-webview-factory';
 
 export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider {
     public readonly viewType = 'mentor.sparqlResultsView';

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor'
-import { TreeView } from './tree-view';
+import { TreeView } from '@/views/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { DefinitionNodeDecorationProvider } from './definition-node-decoration-provider';

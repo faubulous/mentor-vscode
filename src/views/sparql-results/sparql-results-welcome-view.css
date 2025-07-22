@@ -1,0 +1,34 @@
+.container {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 50px;
+	padding: 10px;
+}
+
+.column h3 {
+	margin-top: 0;
+	font-weight: 400;
+}
+
+.description {
+	color: var(--vscode-descriptionForeground);
+}
+
+vscode-toolbar-container.vertical {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+vscode-toolbar-container.link-buttons vscode-toolbar-button .codicon {
+	padding: 1em .5em;
+	font-size: large;
+}
+
+vscode-toolbar-container.link-buttons vscode-toolbar-button .codicon,
+vscode-toolbar-container.link-buttons vscode-toolbar-button .label {
+	color: var(--vscode-textLink-foreground);
+}
+
+vscode-toolbar-container.link-buttons vscode-toolbar-button:hover {
+	background: transparent;
+}

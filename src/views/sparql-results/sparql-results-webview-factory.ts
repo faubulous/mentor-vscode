@@ -1,5 +1,8 @@
 import * as vscode from 'vscode';
 
+/**
+ * Factory class for creating SPARQL results webview panels and views.
+ */
 export class SparqlResultsWebviewFactory {
 
 	/**

@@ -113,7 +113,7 @@
       "panel": [
         {
           "id": "mentor-sparql-results",
-          "title": "SPARQL Results",
+          "title": "SPARQL",
           "icon": "media/glyphs/ue000-mentor.svg"
         }
       ]
