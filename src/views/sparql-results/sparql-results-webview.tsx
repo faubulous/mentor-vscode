@@ -39,9 +39,9 @@ function SparqlResultsWebview() {
 	}, []);
 
 	if (state.data) {
-		return <SparqlResultsTable results={state.data} messaging={messaging} />;
+		return <SparqlResultsTable messaging={messaging} results={state.data} />;
 	} else {
-		return <SparqlResultsWelcomeView />;
+		return <SparqlResultsWelcomeView messaging={messaging} />;
 	}
 }
 

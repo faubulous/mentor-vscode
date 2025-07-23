@@ -5,16 +5,28 @@ import { SparqlResultsWebviewFactory } from '@/views/sparql-results/sparql-resul
 export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider {
     public readonly viewType = 'mentor.sparqlResultsView';
 
+    private readonly _subscriptions: vscode.Disposable[] = [];
+
     private _view?: vscode.WebviewView;
 
     private _context?: vscode.ExtensionContext;
 
-    private _subscriptions: vscode.Disposable[] = [];
-
     public register(context: vscode.ExtensionContext) {
         this._context = context;
 
-        return vscode.window.registerWebviewViewProvider(this.viewType, this);
+        const subscription = vscode.window.registerWebviewViewProvider(this.viewType, this);
+
+        this._subscriptions.push(subscription);
+
+        return subscription;
+    }
+
+    public dispose() {
+        this._subscriptions.forEach(subscription => subscription.dispose());
+        this._subscriptions.length = 0;
+        
+        this._view = undefined;
+        this._context = undefined;
     }
 
     public resolveWebviewView(

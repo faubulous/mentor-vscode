@@ -1,44 +1,41 @@
-import { Component } from 'react';
 import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlQueryResults } from '@/services';
-import { WebviewMessagingApi } from '@/views/webview-messaging';
-import stylesheet from '@/views/sparql-results/sparql-results-table.css';
+import { WebviewComponent, WebviewComponentProps } from '@/views/webview-component';
 import codicons from '$/codicon.css';
+import stylesheet from './sparql-results-table.css';
+
+/**
+ * Properties for the SPARQL results table component.
+ */
+export interface SparqlResultsTableProps extends WebviewComponentProps {
+  /**
+   * The SPARQL query results to display.
+   */
+  results: SparqlQueryResults;
+}
 
 /**
  * Component to display SPARQL bindings in a table format.
  */
-export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
+export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps> {
 
   componentDidMount() {
-    this._addStylesheet('codicon-styles', codicons);
-    this._addStylesheet('sparql-table-styles', stylesheet);
-  }
-
-  private _addStylesheet(id: string, content: string) {
-    if (!document.getElementById(id)) {
-      const style = document.createElement('style');
-      style.id = id;
-      style.textContent = content;
-
-      document.head.appendChild(style);
-    }
+    this.addStylesheet('codicon-styles', codicons);
+    this.addStylesheet('sparql-table-styles', stylesheet);
   }
 
   render() {
-    const results = this.props.results;
-
-    if (!results.endTime) {
-      return this._renderExecuting(results);
-    } else if (results.error) {
-      return this._renderError(results);
+    if (!this.props.results.endTime) {
+      return this._renderExecuting();
+    } else if (this.props.results.error) {
+      return this._renderError();
     } else {
-      return this._renderBindingsTable(results);
+      return this._renderBindingsTable();
     }
   }
 
-  private _renderExecuting(results: SparqlQueryResults) {
+  private _renderExecuting() {
     return (
       <vscode-toolbar-container className="sparql-results-toolbar loading">
         <span className="status-icon">
@@ -53,13 +50,13 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
     );
   }
 
-  private _renderError(results: SparqlQueryResults) {
+  private _renderError() {
     return (
       <vscode-toolbar-container className="sparql-results-toolbar error">
         <span className="status-icon">
           <span className="codicon codicon-error"></span>
         </span>
-        <span>Error: {results.error?.message}</span>
+        <span>Error: {this.props.results.error?.message}</span>
         <span className="spacer"></span>
         <vscode-toolbar-button title="Reload">
           <span className="codicon codicon-refresh"></span>
@@ -68,15 +65,17 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
     );
   }
 
-  private _renderBindingsTable(results: SparqlQueryResults) {
+  private _renderBindingsTable() {
+    const results = this.props.results;
+
     return (
       <div className="sparql-results-container">
         <vscode-toolbar-container className="sparql-results-toolbar success">
           <span>
-            <b>{results.totalLength}</b> results in {this._getDuration(results)}
+            <b>{results.totalLength}</b> results in {this._getDuration()}
           </span>
           <span className="spacer"></span>
-          <vscode-toolbar-button title="Save" onClick={() => this._saveResults(results)}>
+          <vscode-toolbar-button title="Save" onClick={() => this._saveResults()}>
             <span className="codicon codicon-save-as"></span>
           </vscode-toolbar-button>
           <vscode-toolbar-button title="Reload">
@@ -105,9 +104,9 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
     );
   }
 
-  private _getDuration(results: SparqlQueryResults): string {
-    const start = new Date(results.startTime);
-    const end = results.endTime ? new Date(results.endTime) : undefined;
+  private _getDuration(): string {
+    const start = new Date(this.props.results.startTime);
+    const end = this.props.results.endTime ? new Date(this.props.results.endTime) : undefined;
 
     if (end && end > start) {
       // Return the duration in seconds with splitsecond precision
@@ -145,42 +144,7 @@ export class SparqlResultsTable extends Component<SparqlResultsTableProps> {
     }
   }
 
-  private _saveResults(results: SparqlQueryResults) {
-    if (this.props.messaging) {
-      const message = {
-        type: 'executeCommand',
-        command: 'mentor.action.saveSparqlQueryResults',
-        args: [results, 'csv']
-      }
-
-      this.props.messaging.postMessage(message);
-    } else {
-      console.warn('No messaging API available to save results.');
-    }
+  private _saveResults() {
+    this.executeCommand('mentor.action.saveSparqlQueryResults', this.props.results, 'csv');
   }
-}
-
-/**
- * State interface for the SPARQL results table component.
- */
-interface SparqlResultsTableState {
-  /**
-   * The SPARQL query results data.
-   */
-  results: SparqlQueryResults;
-}
-
-/**
- * Interface for SPARQL results table component.
- */
-export interface SparqlResultsTableProps {
-  /**
-   * The SPARQL query results to display.
-   */
-  results: SparqlQueryResults;
-
-  /**
-   * Optional messaging API for communication with the extension host.
-   */
-  messaging?: WebviewMessagingApi;
 }

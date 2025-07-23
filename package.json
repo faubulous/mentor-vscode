@@ -430,6 +430,11 @@
         "icon": "$(notebook)"
       },
       {
+        "command": "mentor.action.createSparqlQueryFile",
+        "title": "Mentor: Create SPARQL Query File",
+        "icon": "$(new-file)"
+      },
+      {
         "command": "mentor.action.runSparqlQueryFromEditor",
         "title": "Mentor: Execute SPARQL Query from Editor",
         "icon": "$(play)"
@@ -594,12 +599,12 @@
         {
           "command": "mentor.action.runSparqlQueryFromEditor",
           "when": "editorLangId == 'sparql'",
-          "group": "navigation@2"
+          "group": "navigation@0"
         },
         {
           "command": "mentor.action.createNotebookFromEditor",
           "when": "editorLangId == 'sparql'",
-          "group": "navigation@3"
+          "group": "navigation@1"
         }
       ],
       "view/title": [
@@ -859,6 +864,211 @@
           "fontCharacter": "\\e016"
         }
       }
-    }
+    },
+    "configuration": [
+      {
+        "type": "object",
+        "id": "mentorSettings",
+        "title": "Mentor",
+        "order": 1,
+        "properties": {
+          "mentor.definitionTree.labelStyle": {
+            "type": "string",
+            "title": "Default Tree Label Style",
+            "description": "Set the standard style for rendering of tree labels.",
+            "enum": [
+              "AnnotatedLabels",
+              "UriLabels",
+              "UriLabelsWithPrefix"
+            ],
+            "enumDescriptions": [
+              "Render labels from the annotated label predicates.",
+              "Render the URI path element or fragment of the URI.",
+              "Render the URI path element or fragment with namespace prefix."
+            ],
+            "default": "AnnotatedLabels"
+          },
+          "mentor.definitionTree.defaultLayout": {
+            "type": "string",
+            "title": "Default Definitions Tree Layout",
+            "description": "Set the standard style for rendering the definitions tree hierarchy.",
+            "enum": [
+              "GroupByType",
+              "GroupBySource"
+            ],
+            "enumDescriptions": [
+              "Group all classes, properties and individuals in the definitions tree under common top level nodes for each type.",
+              "Group classes, properties and invdividuals in the definitions tree under seperate nodes for each ontology or concept scheme."
+            ],
+            "default": "GroupBySource"
+          },
+          "mentor.definitionTree.defaultLanguageTag": {
+            "type": "string",
+            "title": "Default Language",
+            "description": "Set the default language tag to be used for rendering of labels and descriptions in the definitions tree.",
+            "default": "en"
+          },
+          "mentor.definitionTree.decorateMissingLanguageTags": {
+            "type": "string",
+            "title": "Decorate Missing Language Tags",
+            "description": "Grey out all terms that do not have a value which is tagged in the currently selected language.",
+            "enum": [
+              "Disabled",
+              "All",
+              "Document"
+            ],
+            "enumDescriptions": [
+              "Disable the decoration of missing language tags.",
+              "Grey out missing language tags for definitions in all sources.",
+              "Grey out missing language tags only for definitions in the active document."
+            ],
+            "default": "Document"
+          },
+          "mentor.internalBrowserEnabled": {
+            "type": "boolean",
+            "title": "Open URLs in interal browser",
+            "description": "If enabled, URLs will be opened in the internal browser instead of the default browser.",
+            "default": true
+          },
+          "mentor.predicates.label": {
+            "type": "array",
+            "title": "Label Predicates",
+            "description": "Manage the predicates to be used for labels in the tree view for classes, properties and individuals. The first matching predicate will be used.",
+            "default": [
+              "http://purl.org/dc/terms/title",
+              "http://purl.org/dc/elements/1.1/title",
+              "http://www.w3.org/2004/02/skos/core#prefLabel",
+              "http://www.w3.org/2000/01/rdf-schema#label",
+              "https://schema.org/name",
+              "http://schema.org/name",
+              "http://www.w3.org/ns/shacl#path"
+            ]
+          },
+          "mentor.predicates.description": {
+            "type": "array",
+            "title": "Description Predicates",
+            "description": "Manage the predicates to be used for descriptions in the tree view for classes, properties and individuals. The first matching predicate will be used.",
+            "default": [
+              "http://www.w3.org/2004/02/skos/core#definition",
+              "http://www.w3.org/2000/01/rdf-schema#comment",
+              "http://purl.org/dc/terms/description",
+              "http://purl.org/dc/terms/abstract",
+              "https://schema.org/description",
+              "http://schema.org/description",
+              "http://www.w3.org/2004/02/skos/core#scopeNote"
+            ]
+          },
+          "mentor.namespaces": {
+            "type": "array",
+            "title": "Namespaces",
+            "description": "Manage the namespace URIs to be used in vocabularies.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "uri": {
+                  "type": "string",
+                  "description": "The namespace URI."
+                },
+                "defaultPrefix": {
+                  "type": "string",
+                  "description": "The default abbreviation to be used for the namespace URI if no other is defined."
+                }
+              }
+            },
+            "default": [
+              {
+                "uri": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                "defaultPrefix": "rdf"
+              },
+              {
+                "uri": "http://www.w3.org/2000/01/rdf-schema#",
+                "defaultPrefix": "rdfs"
+              },
+              {
+                "uri": "http://www.w3.org/ns/rdfa#",
+                "defaultPrefix": "rdfa"
+              },
+              {
+                "uri": "http://www.w3.org/2002/07/owl#",
+                "defaultPrefix": "owl"
+              },
+              {
+                "uri": "http://www.w3.org/2004/02/skos/core#",
+                "defaultPrefix": "skos"
+              },
+              {
+                "uri": "http://schema.org/",
+                "defaultPrefix": "schema"
+              },
+              {
+                "uri": "https://schema.org/",
+                "defaultPrefix": "schema"
+              }
+            ]
+          },
+          "mentor.index.useGitIgnore": {
+            "type": "boolean",
+            "title": "Use .gitignore",
+            "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
+            "default": true
+          },
+          "mentor.index.ignoreFolders": {
+            "type": "array",
+            "title": "Excluded Folders",
+            "description": "Manage the folders that should be skipped when indexing the workspace.",
+            "default": [
+              ".vscode",
+              ".git",
+              "node_modules"
+            ]
+          },
+          "mentor.index.maxFileSize": {
+            "type": "number",
+            "title": "Max File Size",
+            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors. Opening a larger file in an editor or running the 'Analyze Workspace' command will index files above this limit.",
+            "default": 1500000
+          },
+          "mentor.editor.codeLensEnabled": {
+            "type": "boolean",
+            "title": "Enable Code Lenses",
+            "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
+            "default": true
+          },
+          "mentor.prefixes.autoDefinePrefixes": {
+            "type": "boolean",
+            "title": "Auto Define Namespaces",
+            "description": "If enabled, the extension will automatically declare namespaces in the document header. The namespaces that are defined in workspace documents are used in preference over the ones retrieved from prefix.cc.",
+            "default": true
+          },
+          "mentor.prefixes.prefixDefinitionMode": {
+            "type": "string",
+            "title": "Prefix Definition Mode",
+            "description": "Set the way prefixes are automatically defined in the document header.",
+            "enum": [
+              "Append",
+              "Sorted"
+            ],
+            "enumDescriptions": [
+              "Append new prefixes to the end of the prefix definition list in the document header.",
+              "Maintain an alphabetical order of prefixes in the document header."
+            ],
+            "default": "Sorted"
+          },
+          "mentor.query.sparql.defaultQueryTemplate": {
+            "type": "string",
+            "title": "Default SPARQL Query Template",
+            "description": "The default SPARQL query template to be used when creating a new SPARQL query file.",
+            "default": "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 1000",
+            "editPresentation": "multilineText"
+          }
+        },
+        "mentor.language.turtle.maxNumberOfProblems": {
+          "scope": "resource",
+          "type": "number",
+          "default": 100,
+          "description": "Controls the maximum number of problems produced by the server."
+        }
+      }
+    ]
   }
 }
