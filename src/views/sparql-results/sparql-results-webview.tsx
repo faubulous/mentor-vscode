@@ -1,12 +1,12 @@
 import { createRoot } from 'react-dom/client';
 import { useState, useEffect } from 'react';
 import { WebviewMessagingApi } from '@/views/webview-messaging';
-import { SparqlQueryResults } from '@/services';
+import { SparqlQueryContext } from '@/services';
 import { SparqlResultsTable } from './sparql-results-table';
 import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
 
 interface SparqlResultsWebviewState {
-	data?: SparqlQueryResults;
+	data?: SparqlQueryContext;
 	renderKey?: number;
 }
 
@@ -29,7 +29,7 @@ function SparqlResultsWebview() {
 	});
 
 	useEffect(() => {
-		const handleMessage = (data: SparqlQueryResults) => {
+		const handleMessage = (data: SparqlQueryContext) => {
 			setState(prevState => ({ data, renderKey: (prevState.renderKey || 0) + 1 }));
 		};
 
@@ -39,7 +39,7 @@ function SparqlResultsWebview() {
 	}, []);
 
 	if (state.data) {
-		return <SparqlResultsTable messaging={messaging} results={state.data} />;
+		return <SparqlResultsTable messaging={messaging} queryContext={state.data} />;
 	} else {
 		return <SparqlResultsWelcomeView messaging={messaging} />;
 	}

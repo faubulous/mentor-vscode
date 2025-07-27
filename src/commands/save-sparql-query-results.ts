@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { SparqlQueryResults } from '@/services';
+import { SparqlQueryContext } from '@/services';
 
-export async function saveSparqlQueryResults(results: SparqlQueryResults): Promise<void> {
+export async function saveSparqlQueryResults(results: SparqlQueryContext): Promise<void> {
 	let content = '';
 
 	// Render the variable names as the first row

@@ -24,7 +24,8 @@ export class DocumentFactory {
 		'.trig': 'trig',
 		'.sparql': 'sparql',
 		'.rq': 'sparql',
-		'.rdf': 'xml'
+		'.rdf': 'xml',
+		'.mnb': 'json'
 	}
 
 	constructor() {

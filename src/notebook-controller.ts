@@ -38,7 +38,7 @@ export class NotebookController {
 
 	private _onDidReceiveMessage(e: any) {
 		const message = e.message;
-		
+
 		if (message.type === 'executeCommand') {
 			vscode.commands.executeCommand(message.command, ...message.args);
 		}
@@ -64,10 +64,12 @@ export class NotebookController {
 			const documentIri = cell.notebook.uri.toString();
 			const query = cell.document.getText();
 
-			const results = await mentor.sparqlQueryService.executeQuery(query, documentIri);
+			const context = mentor.sparqlQueryService.prepareQuery(documentIri, query);
+
+			await mentor.sparqlQueryService.executeQuery(context);
 
 			execution.replaceOutput([new vscode.NotebookCellOutput([
-				vscode.NotebookCellOutputItem.json(results, 'application/sparql-results+json')
+				vscode.NotebookCellOutputItem.json(context, 'application/sparql-results+json')
 			])]);
 		} catch (error: any) {
 			execution.replaceOutput([new vscode.NotebookCellOutput([

@@ -1,43 +1,46 @@
 import { BindingsStream } from '@comunica/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { mentor } from "@/mentor";
-import { NamespaceMap, PrefixMap } from "@/utilities";
+import { NamespaceMap } from "@/utilities";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { Term } from "@rdfjs/types";
+import { SparqlQueryContext } from "@/services";
 
 /**
  * A service for executing SPARQL queries against an RDF endpoint.
  */
-export class SparqlQueryService {
+export class SparqlQueryService {	
+	/**
+	 * Prepares a SPARQL query for execution.
+	 * @param documentIri The IRI of the document where the query is stored.
+	 * @param query The SPARQL query string to execute.
+	 * @returns A new SparqlQueryContext instance.
+	 */
+	prepareQuery(documentIri: string, query: string): SparqlQueryContext {
+		return new SparqlQueryContext(documentIri, query);
+	}
+
 	/**
 	 * Executes a SPARQL query against the RDF store and returns the results.
 	 * @param query The SPARQL query to execute.
 	 * @param documentIri The IRI of the document where the query is run.
 	 * @returns A promise that resolves to the results of the query.
 	 */
-	async executeQuery(query: string, documentIri: string): Promise<SparqlQueryResults> {
+	async executeQuery(context: SparqlQueryContext): Promise<SparqlQueryContext> {
 		const source = mentor.store;
 		const engine = new QueryEngine();
 
-		const startTime = new Date();
-
-		const result = await engine.queryBindings(query, {
+		const result = await engine.queryBindings(context.query, {
 			sources: [source],
 			unionDefaultGraph: true
 		});
 
-		const serialized = await this._serializeQueryResults(documentIri, result);
+		const serialized = await this._serializeQueryResults(context.documentIri, result);
 
-		const endTime = new Date();
+		context.resultType = 'bindings';
+		context.result = serialized;
+		context.endTime = Date.now();
 
-		return {
-			...serialized,
-			resultType: 'bindings',
-			documentIri: documentIri,
-			query: query,
-			startTime: startTime,
-			endTime: endTime
-		};
+		return context;
 	}
 
 	/**
@@ -86,65 +89,9 @@ export class SparqlQueryService {
 		}
 
 		return {
-			totalLength: bindings.length,
 			columns: Array.from(columns),
 			rows,
 			namespaceMap
 		};
 	}
-}
-
-/**
- * The results of a SPARQL query.
- */
-export interface SparqlQueryResults {
-	/**
-	 * The IRI of the document where the query is stored.
-	 */
-	documentIri: string;
-
-	/**
-	 * The SPARQL query that was executed.
-	 */
-	query: string;
-
-	/**
-	 * The time when the query was executed.
-	 */
-	startTime: Date;
-
-	/**
-	 * The time when the query finished executing.
-	 */
-	endTime?: Date;
-
-	/**
-	 * The error that occurred during query execution, if any.
-	 */
-	error?: Error;
-
-	/**
-	 * The type of the results, e.g., 'bindings'.
-	 */
-	resultType: 'bindings' | 'boolean' | 'graph';
-
-	/**
-	 * The total number of results in the query.
-	 */
-	totalLength: number;
-
-	/**
-	 * The column headers of the result table.
-	 */
-	columns: string[];
-
-	/**
-	 * The rows of the result table containing the data.
-	 */
-	rows: Record<string, Term>[];
-
-	/**
-	 * A map of namespace IRIs to prefixes defined in the document or the workspace.
-	 */
-	namespaceMap: PrefixMap;
 }

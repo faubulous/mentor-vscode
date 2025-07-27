@@ -24,7 +24,7 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
     public dispose() {
         this._subscriptions.forEach(subscription => subscription.dispose());
         this._subscriptions.length = 0;
-        
+
         this._view = undefined;
         this._context = undefined;
     }
@@ -53,23 +53,14 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
             throw new Error('Webview view is not initialized.');
         }
 
-        const x = {
-            resultType: 'bindings',
-            documentIri: documentIri,
-            query: query,
-            startTime: new Date(),
-            rows: []
-        };
+        const context = mentor.sparqlQueryService.prepareQuery(documentIri, query);
 
         this._view.show();
-        this._view.webview.postMessage(x);
+        this._view.webview.postMessage(context);
 
-        const results = await mentor.sparqlQueryService.executeQuery(query, documentIri);
+        await mentor.sparqlQueryService.executeQuery(context);
 
-        this._view.webview.postMessage({
-            ...results,
-            startTime: x.startTime
-        });
+        this._view.webview.postMessage(context);
     }
 }
 
