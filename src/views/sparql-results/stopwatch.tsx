@@ -40,7 +40,7 @@ export const Stopwatch = (props: { queryContext: SparqlQueryContext }) => {
 		if (props.queryContext.endTime) {
 			return `${hh}:${mm}:${ss}.${ms}s`;
 		} else {
-			return `${hh}:${mm}:${ss}s`;
+			return `${hh}:${mm}:${ss}.00s`;
 		}
 	}
 

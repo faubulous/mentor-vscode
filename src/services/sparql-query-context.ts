@@ -28,7 +28,7 @@ export class SparqlQueryContext {
 	/**
 	 * The error that occurred during query execution, if any.
 	 */
-	error?: Error;
+	error?: any;
 
 	/**
 	 * The type of the results, e.g., 'bindings'.

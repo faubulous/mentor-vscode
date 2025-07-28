@@ -14,18 +14,26 @@ a {
   	color: var(--vscode-semanticToken-class-foreground, var(--vscode-editor-foreground));
 }
 
-.codicon-debug-stop {
+.sparql-results-toolbar {
+	/* Make the toolbar appear slim and unobtrusive */
+	padding: 0 8px 2px 8px;
+	border-bottom: 1px solid var(--vscode-editorGroup-border);
+}
+
+.sparql-results-toolbar .codicon-debug-stop {
 	color: var(--vscode-debugIcon-stopForeground);
 }
 
-.codicon-debug-restart {
+.sparql-results-toolbar .codicon-debug-restart {
 	color: var(--vscode-debugIcon-restartForeground);
 }
 
-.sparql-results-toolbar {
-	/* Make the toolbar appear slim and unobtrusive */
-	padding: 2px 8px;
-	border-bottom: 1px solid var(--vscode-editorGroup-border);
+.sparql-results-toolbar .codicon-sync {
+	color: var(--vscode-progressBar-background);
+}
+
+.sparql-results-toolbar .codicon-error {
+	color: var(--vscode-errorForeground);
 }
 
 .sparql-results-toolbar .divider-vertical {
@@ -33,7 +41,7 @@ a {
     width: 1px;
     height: 22px;
     border-left: 1px solid var(--vscode-editorGroup-border);
-    margin: 0 8px;
+    margin: 0 4px;
 }
 
 .sparql-results-toolbar .spacer {
@@ -41,26 +49,21 @@ a {
 	margin-right: auto;
 }
 
-.sparql-results-toolbar .status-icon {
-	/* Align the icon vertically with the text */
-	display: inline-flex;
+.sparql-results-content-container {
+	padding: 15px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
-.sparql-results-content-container {
-	text-align: center;
+.sparql-results-content-container .header {
     display: flex;
     flex-direction: row;
     gap: 10px;
-    padding: 20px;
     align-content: center;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 	font-weight: 500;
-}
-
-.sparql-results-content-container .status-icon .codicon {
-	font-size: 2em;
-	color: var(--vscode-progressBar-background);
 }
 
 vscode-table-header-cell {

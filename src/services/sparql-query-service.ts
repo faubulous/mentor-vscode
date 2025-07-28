@@ -4,11 +4,12 @@ import { mentor } from "@/mentor";
 import { NamespaceMap } from "@/utilities";
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { SparqlQueryContext } from "@/services";
+import { stat } from 'fs';
 
 /**
  * A service for executing SPARQL queries against an RDF endpoint.
  */
-export class SparqlQueryService {	
+export class SparqlQueryService {
 	/**
 	 * Prepares a SPARQL query for execution.
 	 * @param documentIri The IRI of the document where the query is stored.
@@ -29,15 +30,25 @@ export class SparqlQueryService {
 		const source = mentor.store;
 		const engine = new QueryEngine();
 
-		const result = await engine.queryBindings(context.query, {
-			sources: [source],
-			unionDefaultGraph: true
-		});
+		try {
+			const result = await engine.queryBindings(context.query, {
+				sources: [source],
+				unionDefaultGraph: true
+			});
 
-		const serialized = await this._serializeQueryResults(context.documentIri, result);
+			const serialized = await this._serializeQueryResults(context.documentIri, result);
 
-		context.resultType = 'bindings';
-		context.result = serialized;
+			context.resultType = 'bindings';
+			context.result = serialized;
+		} catch (error: any) {
+			context.error = {
+				type: error.name || 'QueryError',
+				message: error.message || 'Unknown error occurred while executing the query.',
+				stack: error.stack || '',
+				statusCode: error.statusCode || 500
+			}
+		}
+
 		context.endTime = Date.now();
 
 		return context;

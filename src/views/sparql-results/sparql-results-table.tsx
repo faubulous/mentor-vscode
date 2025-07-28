@@ -5,6 +5,7 @@ import { WebviewComponent, WebviewComponentProps } from '@/views/webview-compone
 import { Stopwatch } from './stopwatch';
 import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-table.css';
+
 /**
  * Properties for the SPARQL results table component.
  */
@@ -38,20 +39,18 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
 
   private _renderExecuting() {
     return (
-      <div>
-        <vscode-toolbar-container className="sparql-results-toolbar loading">
+      <div className="sparql-results-container loading">
+        <vscode-toolbar-container className="sparql-results-toolbar">
+          <Stopwatch queryContext={this.props.queryContext} />
+          <span className="divider divider-vertical"></span>
           <vscode-toolbar-button title="Cancel">
             <span className="codicon codicon-debug-stop"></span>
           </vscode-toolbar-button>
           <span className="divider divider-vertical"></span>
-          <Stopwatch queryContext={this.props.queryContext} />
+          <span className="codicon codicon-sync codicon-modifier-spin"></span>
+          <span>Executing...</span>
         </vscode-toolbar-container>
         <div className="sparql-results-content-container">
-          <span className="status-icon">
-            <span className="codicon codicon-sync codicon-modifier-spin"></span>
-          </span>
-          <span>Executing...</span>
-          <span className="spacer"></span>
         </div>
       </div>
     );
@@ -59,19 +58,19 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
 
   private _renderError() {
     return (
-      <div>
-        <vscode-toolbar-container className="sparql-results-toolbar error">
+      <div className="sparql-results-container error">
+        <vscode-toolbar-container className="sparql-results-toolbar">
+          <Stopwatch queryContext={this.props.queryContext} />
+          <span className="divider divider-vertical"></span>
           <vscode-toolbar-button title="Reload">
             <span className="codicon codicon-debug-restart"></span>
           </vscode-toolbar-button>
           <span className="divider divider-vertical"></span>
-          <Stopwatch queryContext={this.props.queryContext} />
+          <span className="codicon codicon-error"></span>
+          <span>Error:</span>
         </vscode-toolbar-container>
-        <div>
-          <span className="status-icon">
-            <span className="codicon codicon-error"></span>
-          </span>
-          <span>Error: {this.props.queryContext.error?.message}</span>
+        <div className="sparql-results-content-container">
+          <pre>{this.props.queryContext.error?.stack || 'No stack trace available.'}</pre>
         </div>
       </div>
     );
@@ -85,13 +84,13 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
     };
 
     return (
-      <div className="sparql-results-container">
-        <vscode-toolbar-container className="sparql-results-toolbar success">
+      <div className="sparql-results-container success">
+        <vscode-toolbar-container className="sparql-results-toolbar">
+          <Stopwatch queryContext={this.props.queryContext} />
+          <span className="divider divider-vertical"></span>
           <vscode-toolbar-button title="Reload">
             <span className="codicon codicon-debug-restart"></span>
           </vscode-toolbar-button>
-          <span className="divider divider-vertical"></span>
-          <Stopwatch queryContext={this.props.queryContext} />
           <span className="divider divider-vertical"></span>
           <vscode-toolbar-button title="Previous page">
             <span className="codicon codicon-chevron-left"></span>
