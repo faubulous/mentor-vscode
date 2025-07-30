@@ -1,28 +1,30 @@
 import * as vscode from 'vscode';
-import { SparqlQueryContext } from '@/services';
+import { SparqlQueryContext, BindingsResult } from '@/services';
 
-export async function saveSparqlQueryResults(results: SparqlQueryContext): Promise<void> {
-	let content = '';
+export async function saveSparqlQueryResults(context: SparqlQueryContext): Promise<void> {
+    let content = '';
 
-	// Render the variable names as the first row
-	for (const column of results.columns) {
-		content += `${column}, `;
-	}
+    if (context.resultType === 'bindings') {
+        const result = context.result as BindingsResult;
 
-	// Remove the last comma and add a newline
-	content = content.slice(0, -2) + '\n';
+        // Use array join instead of string concatenation
+        const lines: string[] = [];
+        
+        // Add header row
+        lines.push(result.columns.join(', '));
 
-	// Render the results
-	for (const row of results.rows) {
-		for (const column of results.columns) {
-			content += `${row[column].value || ''}, `;
-		}
+        // Process all data rows at once
+        const dataRows = result.rows.map(row => 
+            result.columns.map(column => row[column]?.value || '').join(', ')
+        );
+        
+        lines.push(...dataRows);
 
-		// Remove the last comma and add a newline
-		content = content.slice(0, -2) + '\n';
-	}
+        // Single join operation at the end
+        content = lines.join('\n');
+    }
 
-	const document = await vscode.workspace.openTextDocument({ content, language: 'csv' });
-
-	await vscode.window.showTextDocument(document, { preview: false });
+    const document = await vscode.workspace.openTextDocument({ content, language: 'csv' });
+	
+    await vscode.window.showTextDocument(document, { preview: false });
 }

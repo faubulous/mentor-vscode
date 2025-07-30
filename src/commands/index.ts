@@ -11,6 +11,7 @@ export * from './open-in-browser';
 export * from './open-settings';
 export * from './reveal-definition';
 export * from './reveal-shape-definition';
+export * from './run-sparql-query';
 export * from './run-sparql-query-from-editor';
 export * from './save-sparql-query-results';
 export * from './select-active-language';

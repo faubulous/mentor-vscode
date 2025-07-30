@@ -16,7 +16,7 @@ a {
 
 .sparql-results-toolbar {
 	/* Make the toolbar appear slim and unobtrusive */
-	padding: 0 8px 2px 8px;
+	padding: 2px 8px;
 	border-bottom: 1px solid var(--vscode-editorGroup-border);
 }
 
@@ -28,9 +28,9 @@ a {
 	color: var(--vscode-debugIcon-restartForeground);
 }
 
-.sparql-results-toolbar .codicon-sync {
+/* .sparql-results-toolbar .codicon-sync {
 	color: var(--vscode-progressBar-background);
-}
+} */
 
 .sparql-results-toolbar .codicon-error {
 	color: var(--vscode-errorForeground);
@@ -41,7 +41,6 @@ a {
     width: 1px;
     height: 22px;
     border-left: 1px solid var(--vscode-editorGroup-border);
-    margin: 0 4px;
 }
 
 .sparql-results-toolbar .spacer {
@@ -64,6 +63,39 @@ a {
     align-items: center;
     justify-content: flex-start;
 	font-weight: 500;
+}
+
+.sparql-results-toolbar select {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+	cursor: pointer;
+}
+
+.sparql-results-toolbar .sparql-results-range {
+	display: inline-block;
+	min-width: 22ch;
+	text-align: center;
+}
+
+/* Style the select when focused */
+.sparql-results-toolbar select:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* Style the select options */
+.sparql-results-toolbar select option {
+    background: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground);
+}
+
+/* Optional: Add subtle hover effect */
+.sparql-results-toolbar select:hover {
+    background: var(--vscode-dropdown-background, transparent);
 }
 
 vscode-table-header-cell {

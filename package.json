@@ -435,6 +435,11 @@
         "icon": "$(new-file)"
       },
       {
+        "command": "mentor.action.runSparqlQuery",
+        "title": "Mentor: Execute SPARQL Query",
+        "icon": "$(play)"
+      },
+      {
         "command": "mentor.action.runSparqlQueryFromEditor",
         "title": "Mentor: Execute SPARQL Query from Editor",
         "icon": "$(play)"

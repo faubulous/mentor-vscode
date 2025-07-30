@@ -20,7 +20,13 @@ export interface SparqlResultsTableProps extends WebviewComponentProps {
  * Component to display SPARQL bindings in a table format.
  */
 export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps> {
-  message?: SparqlQueryContext;
+
+  pageSizeOptions = [100, 500, 1000, 2000, 5000];
+
+  state = {
+    pageSize: 500,
+    currentPage: 0
+  };
 
   componentDidMount() {
     this.addStylesheet('codicon-styles', codicons);
@@ -42,7 +48,7 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
       <div className="sparql-results-container loading">
         <vscode-toolbar-container className="sparql-results-toolbar">
           <Stopwatch queryContext={this.props.queryContext} />
-          <span className="divider divider-vertical"></span>
+          <span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
           <vscode-toolbar-button title="Cancel">
             <span className="codicon codicon-debug-stop"></span>
           </vscode-toolbar-button>
@@ -61,8 +67,8 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
       <div className="sparql-results-container error">
         <vscode-toolbar-container className="sparql-results-toolbar">
           <Stopwatch queryContext={this.props.queryContext} />
-          <span className="divider divider-vertical"></span>
-          <vscode-toolbar-button title="Reload">
+          <span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
+          <vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
             <span className="codicon codicon-debug-restart"></span>
           </vscode-toolbar-button>
           <span className="divider divider-vertical"></span>
@@ -78,25 +84,45 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
 
   private _renderBindingsTable() {
     const result = this.props.queryContext.result as BindingsResult;
+    const { pageSize, currentPage } = this.state;
+
+    const startIndex = currentPage * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, result.rows.length);
+    const totalPages = Math.ceil(result.rows.length / pageSize);
+
     const range = {
-      start: 1,
-      end: Math.min(result.rows.length, 1000)
+      start: startIndex + 1,
+      end: endIndex
     };
 
     return (
       <div className="sparql-results-container success">
         <vscode-toolbar-container className="sparql-results-toolbar">
           <Stopwatch queryContext={this.props.queryContext} />
-          <span className="divider divider-vertical"></span>
-          <vscode-toolbar-button title="Reload">
+          <span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
+          <vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
             <span className="codicon codicon-debug-restart"></span>
           </vscode-toolbar-button>
           <span className="divider divider-vertical"></span>
-          <vscode-toolbar-button title="Previous page">
+          <select className="sparql-results-page-size-select" value={pageSize} onChange={this._handlePageSizeChange}>
+            {this.pageSizeOptions.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+          <span className="divider divider-vertical"></span>
+          <span className="sparql-results-range">{range.start}-{range.end} of {result.rows.length} rows</span>
+          <vscode-toolbar-button
+            title="Previous page"
+            onClick={() => this._previousPage()}
+            disabled={currentPage === 0}
+          >
             <span className="codicon codicon-chevron-left"></span>
           </vscode-toolbar-button>
-          {range.start}-{range.end} of {result.rows.length} rows
-          <vscode-toolbar-button title="Next page">
+          <vscode-toolbar-button
+            title="Next page"
+            onClick={() => this._nextPage()}
+            disabled={currentPage >= totalPages - 1}
+          >
             <span className="codicon codicon-chevron-right"></span>
           </vscode-toolbar-button>
           <span className='divider divider-vertical'></span>
@@ -112,10 +138,10 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
             ))}
           </vscode-table-header>
           <vscode-table-body>
-            {result.rows.slice(0, 1000).map((row, rowIndex) => (
-              <vscode-table-row key={rowIndex}>
+            {result.rows.slice(startIndex, endIndex).map((row, rowIndex) => (
+              <vscode-table-row key={startIndex + rowIndex}>
                 {result.columns.map(header => (
-                  <vscode-table-cell key={`${rowIndex}-${header}`}>
+                  <vscode-table-cell key={`${startIndex + rowIndex}-${header}`}>
                     {this._renderCell(row[header], result.namespaceMap)}
                   </vscode-table-cell>
                 ))}
@@ -125,20 +151,6 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
         </vscode-table>
       </div>
     );
-  }
-
-  private _getDuration(): string {
-    const start = new Date(this.props.queryContext.startTime);
-    const end = this.props.queryContext.endTime ? new Date(this.props.queryContext.endTime) : undefined;
-
-    if (end && end > start) {
-      // Return the duration in seconds with splitsecond precision
-      const duration = (end.getTime() - start.getTime()) / 1000;
-
-      return `${duration.toFixed(2)}s`;
-    } else {
-      return '';
-    }
   }
 
   private _renderCell(binding: Term | undefined, namespaceMap?: Record<string, string>) {
@@ -167,7 +179,43 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
     }
   }
 
+  private _handlePageSizeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const pageSize = parseInt(event.target.value, 10);
+
+    this.setState({
+      pageSize: pageSize,
+      currentPage: 0
+    });
+  };
+
+  private _nextPage = () => {
+    const result = this.props.queryContext.result as BindingsResult;
+    const { pageSize, currentPage } = this.state;
+    const totalPages = Math.ceil(result.rows.length / pageSize);
+
+    if (currentPage < totalPages - 1) {
+      this.setState({ currentPage: currentPage + 1 });
+    }
+  };
+
+  private _previousPage = () => {
+    const { currentPage } = this.state;
+
+    if (currentPage > 0) {
+      this.setState({ currentPage: currentPage - 1 });
+    }
+  };
+
+  private _reloadQuery() {
+    const documentIri = this.props.queryContext.documentIri;
+
+    this.executeCommand('mentor.action.runSparqlQuery', documentIri);
+  }
+
   private _saveResults() {
-    this.executeCommand('mentor.action.saveSparqlQueryResults', this.props.queryContext, 'csv');
+    const context = this.props.queryContext;
+    const format = 'csv';
+
+    this.executeCommand('mentor.action.saveSparqlQueryResults', context, format);
   }
 }

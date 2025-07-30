@@ -25,23 +25,33 @@ export const Stopwatch = (props: { queryContext: SparqlQueryContext }) => {
 		}
 	}, [props.queryContext.startTime, props.queryContext.endTime]);
 
-	const formatTime = (milliseconds: number) => {
-		const totalSeconds = Math.floor(milliseconds / 1000);
+	const formatTime = (elapsedMilliseconds: number) => {
+		const date = new Date(elapsedMilliseconds);
 
-		const hh = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
-		const mm = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
-		const ss = (totalSeconds % 60).toString().padStart(2, '0');
-		const ms = Math.round((milliseconds % 1000) / 10).toString().padStart(2, '0');
+		// Use UTC methods to avoid timezone issues
+		const hours = date.getUTCHours();
+		const minutes = date.getUTCMinutes();
+		const seconds = date.getUTCSeconds();
 
-		// TODO: Fix this by using a more reactive approach. This is a temporary solution.
 		// Note: Until the end time is not set, we do not show the milliseconds. This is
 		// to avoid confusion when the stopwatch is still running and the UI has not been updated.
-		// Usually this takes longer that the query execution time.
-		if (props.queryContext.endTime) {
-			return `${hh}:${mm}:${ss}.${ms}s`;
+		// Usually this takes longer than the query execution time.
+		const centiseconds = props.queryContext.endTime ? Math.round(date.getUTCMilliseconds() / 10) : 0;
+
+		const parts = [];
+
+		if (hours > 0) {
+			parts.push(hours.toString().padStart(2, '0'));
+			parts.push(minutes.toString().padStart(2, '0'));
+			parts.push(seconds.toString().padStart(2, '0'));
+		} else if (minutes > 0) {
+			parts.push(minutes.toString().padStart(2, '0'));
+			parts.push(seconds.toString().padStart(2, '0'));
 		} else {
-			return `${hh}:${mm}:${ss}.00s`;
+			parts.push(seconds.toString());
 		}
+
+		return `${parts.join(':')}.${centiseconds.toString().padStart(2, '0')}s`;
 	}
 
 	return (
