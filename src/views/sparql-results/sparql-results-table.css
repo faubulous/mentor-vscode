@@ -75,12 +75,6 @@ a {
 	cursor: pointer;
 }
 
-.sparql-results-toolbar .sparql-results-range {
-	display: inline-block;
-	min-width: 22ch;
-	text-align: center;
-}
-
 /* Style the select when focused */
 .sparql-results-toolbar select:focus {
     outline: 1px solid var(--vscode-focusBorder);

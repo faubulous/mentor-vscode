@@ -110,7 +110,6 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
             ))}
           </select>
           <span className="divider divider-vertical"></span>
-          <span className="sparql-results-range">{range.start}-{range.end} of {result.rows.length} rows</span>
           <vscode-toolbar-button
             title="Previous page"
             onClick={() => this._previousPage()}
@@ -125,6 +124,7 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
           >
             <span className="codicon codicon-chevron-right"></span>
           </vscode-toolbar-button>
+          <span className="sparql-results-range">{range.start}-{range.end} of {result.rows.length} rows</span>
           <span className='divider divider-vertical'></span>
           <vscode-toolbar-button title="Save" onClick={() => this._saveResults()}>
             CSV
@@ -207,9 +207,9 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
   };
 
   private _reloadQuery() {
-    const documentIri = this.props.queryContext.documentIri;
+    const context = this.props.queryContext;
 
-    this.executeCommand('mentor.action.runSparqlQuery', documentIri);
+    this.executeCommand('mentor.action.runSparqlQuery', context.document);
   }
 
   private _saveResults() {

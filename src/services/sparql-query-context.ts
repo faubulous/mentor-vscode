@@ -12,6 +12,11 @@ export class SparqlQueryContext {
 	document: vscode.TextDocument;
 
 	/**
+	 * The NotebookCell associated with the SPARQL query, if any.
+	 */
+	cell: vscode.NotebookCell | undefined;
+
+	/**
 	 * The time when the query was executed in milliseconds since midnight, January 1, 1970 UTC.
 	 */
 	startTime: number;
@@ -33,10 +38,11 @@ export class SparqlQueryContext {
 
 	result?: BindingsResult | boolean | string;
 
-	constructor(document: vscode.TextDocument) {
+	constructor(document: vscode.TextDocument, cell?: vscode.NotebookCell) {
 		this.document = document;
 		this.startTime = Date.now();
 		this.resultType = 'bindings';
+		this.cell = cell;
 	}
 }
 

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { BindingsStream } from '@comunica/types';
+import { Bindings } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { mentor } from "@/mentor";
 import { NamespaceMap } from "@/utilities";
@@ -16,8 +17,8 @@ export class SparqlQueryService {
 	 * @param document The TextDocument where the query is stored.
 	 * @returns A new SparqlQueryContext instance.
 	 */
-	prepareQuery(document: vscode.TextDocument): SparqlQueryContext {
-		return new SparqlQueryContext(document);
+	prepareQuery(document: vscode.TextDocument, cell: vscode.NotebookCell | undefined): SparqlQueryContext {
+		return new SparqlQueryContext(document, cell);
 	}
 
 	/**
@@ -67,7 +68,7 @@ export class SparqlQueryService {
 		const bindings = await bindingStream.toArray();
 
 		const namespaces = new Set<string>();
-		const columns = this._parseSelectVariables(context);
+		const columns = this._parseSelectVariables(context, bindings);
 		const rows: Record<string, any>[] = [];
 
 		for (const binding of bindings) {
@@ -76,7 +77,7 @@ export class SparqlQueryService {
 			for (const column of columns) {
 				const value = binding.get(column);
 
-				if(value === undefined) {
+				if (value === undefined) {
 					continue;
 				}
 
@@ -119,19 +120,27 @@ export class SparqlQueryService {
 	 * @param bindingStream The SPARQL query results as a BindingsStream.
 	 * @returns A set of variable names used in the query.
 	 */
-	private _parseSelectVariables(context: SparqlQueryContext): Array<string> {
+	private _parseSelectVariables(context: SparqlQueryContext, bindings: Bindings[]): Array<string> {
 		const document = mentor.getDocumentContext(context.document, SparqlDocument);
-		const result = new Array<string>();
 
-		if (document) {
-			for (const token of document.tokens) {
-				const type = token.tokenType?.name;
+		if (!document) {
+			return [];
+		}
 
-				if (type === 'VAR1' || type === 'VAR2') {
-					result.push(token.image.substring(1));
-				} else if (type === 'FROM' || type === 'WHERE') {
-					break;
-				}
+		let result = new Array<string>();
+
+		for (const token of document.tokens) {
+			const type = token.tokenType?.name;
+
+			if (type === 'VAR1' || type === 'VAR2') {
+				result.push(token.image.substring(1));
+			} else if (type === 'Star') {
+				const vars = bindings.length > 0 ? Array.from(bindings[0].keys()) : [];
+
+				result = vars.map(v => v.value);
+				break;
+			} else if (type === 'FROM' || type === 'WHERE') {
+				break;
 			}
 		}
 
