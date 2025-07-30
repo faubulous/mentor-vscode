@@ -7,14 +7,20 @@ import { Term } from "@rdfjs/types";
  */
 export class SparqlQueryContext {
 	/**
-	 * The TextDocument where the SPARQL query is defined.
+	 * The TextDocument where the SPARQL query is defined. In case of a Notebook, this 
+	 * is the IRI of the document that is associated with the cell.
 	 */
-	document: vscode.TextDocument;
+	documentIri: string;
 
 	/**
-	 * The NotebookCell associated with the SPARQL query, if any.
+	 * The IRI of the notebook file where the SPARQL query is run, if applicable.
 	 */
-	cell: vscode.NotebookCell | undefined;
+	notebookIri?: string;
+
+	/**
+	 * Id of the notebook cell associated with the SPARQL query, if any.
+	 */
+	cellIndex?: number;
 
 	/**
 	 * The time when the query was executed in milliseconds since midnight, January 1, 1970 UTC.
@@ -38,11 +44,21 @@ export class SparqlQueryContext {
 
 	result?: BindingsResult | boolean | string;
 
-	constructor(document: vscode.TextDocument, cell?: vscode.NotebookCell) {
-		this.document = document;
+	constructor(querySource: vscode.TextDocument | vscode.NotebookCell) {
+		if ('notebook' in querySource && querySource.notebook) {
+			const cell = querySource as vscode.NotebookCell;
+
+			this.documentIri = cell.document.uri.toString();
+			this.notebookIri = cell.notebook.uri.toString();
+			this.cellIndex = cell.index;
+		} else {
+			const document = querySource as vscode.TextDocument;
+
+			this.documentIri = document.uri.toString();
+		}
+
 		this.startTime = Date.now();
 		this.resultType = 'bindings';
-		this.cell = cell;
 	}
 }
 

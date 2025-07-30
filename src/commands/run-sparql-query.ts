@@ -2,12 +2,10 @@ import * as vscode from 'vscode';
 import { sparqlResultsWebviewProvider } from '@/views';
 
 export async function runSparqlQuery(documentIri: string): Promise<void> {
-    const uri = vscode.Uri.parse(documentIri);
-    const document = await vscode.workspace.openTextDocument(uri);
+    const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentIri);
 
     if (!document) {
-        vscode.window.showErrorMessage('Document not found.');
-        return;
+        throw new Error(`Document with IRI ${documentIri} not found.`);
     }
 
     await sparqlResultsWebviewProvider.executeQuery(document);

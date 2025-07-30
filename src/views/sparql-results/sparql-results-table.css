@@ -92,6 +92,10 @@ a {
     background: var(--vscode-dropdown-background, transparent);
 }
 
+.sparql-results-range {
+	padding-right: 6px;
+}
+
 vscode-table-header-cell {
 	line-height: auto;
 	padding-top: 2px;

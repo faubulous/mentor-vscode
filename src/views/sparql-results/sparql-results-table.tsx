@@ -209,7 +209,7 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
   private _reloadQuery() {
     const context = this.props.queryContext;
 
-    this.executeCommand('mentor.action.runSparqlQuery', context.document);
+    this.executeCommand('mentor.action.runSparqlQuery', context.documentIri);
   }
 
   private _saveResults() {

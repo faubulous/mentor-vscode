@@ -14,11 +14,11 @@ import { SparqlDocument } from '@/languages';
 export class SparqlQueryService {
 	/**
 	 * Prepares a SPARQL query for execution.
-	 * @param document The TextDocument where the query is stored.
+	 * @param source The source document or notebook cell where the query is stored.
 	 * @returns A new SparqlQueryContext instance.
 	 */
-	prepareQuery(document: vscode.TextDocument, cell: vscode.NotebookCell | undefined): SparqlQueryContext {
-		return new SparqlQueryContext(document, cell);
+	prepareQuery(source: vscode.TextDocument | vscode.NotebookCell): SparqlQueryContext {
+		return new SparqlQueryContext(source);
 	}
 
 	/**
@@ -32,7 +32,12 @@ export class SparqlQueryService {
 		const engine = new QueryEngine();
 
 		try {
-			const query = context.document.getText();
+			const query = this._getQueryText(context);
+
+			if(!query) {
+				throw new Error('Unable to retrieve query from the document: ' + context.documentIri);
+			}
+
 			const result = await engine.queryBindings(query, {
 				sources: [source],
 				unionDefaultGraph: true
@@ -54,6 +59,26 @@ export class SparqlQueryService {
 		context.endTime = Date.now();
 
 		return context;
+	}
+
+	private _getQueryText(context: SparqlQueryContext): string | undefined {
+		if (context.notebookIri) {
+			const notebook = vscode.workspace.notebookDocuments
+				.find(n => n.uri.toString() === context.notebookIri);
+
+			if (notebook) {
+				const cell = notebook.cellAt(context.cellIndex || 0);
+
+				return cell.document.getText();
+			}
+		} else {
+			const document = vscode.workspace.textDocuments
+				.find(d => d.uri.toString() === context.documentIri);
+
+			if (document) {
+				return document.getText();
+			}
+		}
 	}
 
 	/**
@@ -96,7 +121,7 @@ export class SparqlQueryService {
 			rows.push(row);
 		}
 
-		const documentIri = context.document.uri.toString();
+		const documentIri = context.documentIri;
 		const namespaceMap: NamespaceMap = {};
 
 		for (const iri of namespaces) {
@@ -121,7 +146,7 @@ export class SparqlQueryService {
 	 * @returns A set of variable names used in the query.
 	 */
 	private _parseSelectVariables(context: SparqlQueryContext, bindings: Bindings[]): Array<string> {
-		const document = mentor.getDocumentContext(context.document, SparqlDocument);
+		const document = mentor.contexts[context.documentIri] as SparqlDocument;
 
 		if (!document) {
 			return [];
