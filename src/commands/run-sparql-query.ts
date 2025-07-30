@@ -10,7 +10,5 @@ export async function runSparqlQuery(documentIri: string): Promise<void> {
         return;
     }
 
-    const query = document.getText();
-
-    await sparqlResultsWebviewProvider.executeQuery(documentIri, query);
+    await sparqlResultsWebviewProvider.executeQuery(document);
 }

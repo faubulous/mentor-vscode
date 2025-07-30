@@ -38,13 +38,12 @@ const legend = new vscode.SemanticTokensLegend(Object.values(SemanticTokenType),
 
 const tokenProvider: vscode.DocumentSemanticTokensProvider = {
 	provideDocumentSemanticTokens(document: vscode.TextDocument): vscode.ProviderResult<vscode.SemanticTokens> {
-		const uri = document.uri.toString();
-
 		const context = mentor.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return undefined;
 		}
+
 		const builder = new vscode.SemanticTokensBuilder(legend);
 
 		let lastToken: string | undefined = undefined;

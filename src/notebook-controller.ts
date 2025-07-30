@@ -61,10 +61,7 @@ export class NotebookController {
 		execution.start(Date.now());
 
 		try {
-			const documentIri = cell.notebook.uri.toString();
-			const query = cell.document.getText();
-
-			const context = mentor.sparqlQueryService.prepareQuery(documentIri, query);
+			const context = mentor.sparqlQueryService.prepareQuery(cell.document);
 
 			await mentor.sparqlQueryService.executeQuery(context);
 

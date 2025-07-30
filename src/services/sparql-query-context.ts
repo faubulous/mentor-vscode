@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { PrefixMap } from "@/utilities";
 import { Term } from "@rdfjs/types";
 
@@ -6,14 +7,9 @@ import { Term } from "@rdfjs/types";
  */
 export class SparqlQueryContext {
 	/**
-	 * The IRI of the document where the query is stored.
+	 * The TextDocument where the SPARQL query is defined.
 	 */
-	documentIri: string;
-
-	/**
-	 * The SPARQL query that was executed.
-	 */
-	query: string;
+	document: vscode.TextDocument;
 
 	/**
 	 * The time when the query was executed in milliseconds since midnight, January 1, 1970 UTC.
@@ -37,9 +33,8 @@ export class SparqlQueryContext {
 
 	result?: BindingsResult | boolean | string;
 
-	constructor(documentIri: string, query: string) {
-		this.documentIri = documentIri;
-		this.query = query;
+	constructor(document: vscode.TextDocument) {
+		this.document = document;
 		this.startTime = Date.now();
 		this.resultType = 'bindings';
 	}
