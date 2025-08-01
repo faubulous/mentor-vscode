@@ -28,6 +28,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 		const currentToken = context.tokens[n];
 
+		// TODO: Move this into SparqlAutoCompleteItemProvider as this will never be used in Turtle.
 		if (this.isGraphDefinitionContext(context, n)) {
 			return this.getGraphIriCompletionItems(context, n);
 		}
@@ -85,9 +86,11 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	isGraphDefinitionContext(context: TurtleDocument, tokenIndex: number) {
 		let n = -1;
 
-		if (context.tokens[tokenIndex].image === '<') {
+		if (context.tokens[tokenIndex].image.startsWith('<')) {
+			// If the current token is either '<' or an IRI that was auto-closed with '>' (e.g. <htt>)
 			n = tokenIndex;
 		} else if (context.tokens[tokenIndex - 1]?.image === '<') {
+			// If the token is not yet closed, then the previous token must be '<'
 			n = tokenIndex - 1;
 		} else {
 			return false;
@@ -108,9 +111,21 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	getGraphIriCompletionItems(context: TurtleDocument, tokenIndex: number): vscode.CompletionItem[] {
 		const result = [];
 		const token = context.tokens[tokenIndex];
+
+		// The token might be completely or partially enclosed in angle brackets.
+		let value = token.image;
+
+		if (value.startsWith('<')) {
+			value = value.slice(1);
+		}
+
+		if (value.endsWith('>')) {
+			value = value.slice(0, -1);
+		}
+
 		const graphs = mentor.store.getGraphs();
 
-		for (const graph of graphs.filter(g => g.startsWith(token.image)).slice(0, this.maxCompletionItems)) {
+		for (const graph of graphs.filter(g => g.startsWith(value)).slice(0, this.maxCompletionItems)) {
 			const item = new vscode.CompletionItem(graph, vscode.CompletionItemKind.Module);
 
 			result.push(item);
