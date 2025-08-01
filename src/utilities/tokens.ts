@@ -222,14 +222,14 @@ export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixD
 	return { prefix, uri };
 }
 
-export function getTripleComponentType(tokens: IToken[], token: IToken): "subject" | "predicate" | "object" | undefined {
-	const p = getPreviousToken(tokens, token);
-
-	if (!p) {
+export function getTripleComponentType(tokens: IToken[], tokenIndex: number): "subject" | "predicate" | "object" | undefined {
+	if (tokenIndex < 1) {
 		// If there is no previous token, we are at the beginning of the document.
 		// It must either be followed by a prefix declaration or a subject.
 		return "subject";
 	}
+
+	const p = tokens[tokenIndex - 1];
 
 	switch (p.tokenType?.tokenName) {
 		case "Period":
@@ -248,7 +248,7 @@ export function getTripleComponentType(tokens: IToken[], token: IToken): "subjec
 		case "PNAME_LN":
 		case "IRIREF": {
 			// This could either be a predicate or an object.
-			const q = getPreviousToken(tokens, p);
+			const q = tokens[tokenIndex - 2];
 
 			switch (q?.tokenType?.tokenName) {
 				case "Semicolon":

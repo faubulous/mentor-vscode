@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as views from './views';
+import * as providers from './providers';
 import { mentor } from './mentor';
 import { NotebookSerializer } from './notebook-serializer';
 import { NOTEBOOK_TYPE, NotebookController } from './notebook-controller';
@@ -43,6 +44,8 @@ function registerProviders(context: vscode.ExtensionContext) {
 	context.subscriptions.push(...new languages.TurtleTokenProvider().register());
 	context.subscriptions.push(...new languages.TrigTokenProvider().register());
 	context.subscriptions.push(...new languages.SparqlTokenProvider().register());
+	context.subscriptions.push(...new providers.MentorFileSystemProvider().register());
+	context.subscriptions.push(...new providers.MentorFileLinkProvider().register());
 }
 
 function registerViews(context: vscode.ExtensionContext) {

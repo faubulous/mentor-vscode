@@ -29,40 +29,47 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 	 * @returns An array of code actions.
 	 */
 	private _provideRefactoringActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
-		const result: vscode.CodeAction[] = [];
-
 		const context = mentor.getDocumentContext(document, TurtleDocument);
 
-		if (context) {
-			const token = context.getTokensAtPosition(range.start)[0];
-			const tokenName = token?.tokenType?.tokenName;
-			const tokenTypes = context.getTokenTypes();
+		if (!context) {
+			return [];
+		}
 
-			if (tokenName === tokenTypes.IRIREF) {
-				const namespaceIri = Uri.getNamespaceIri(getIriFromIriReference(token.image));
+		const token = context.getTokenAtPosition(range.start);
 
-				result.push({
-					kind: vscode.CodeActionKind.Refactor,
+		if(!token) {
+			return [];
+		}
+
+		const result: vscode.CodeAction[] = [];
+
+		const tokenName = token.tokenType?.tokenName;
+		const tokenTypes = context.getTokenTypes();
+
+		if (tokenName === tokenTypes.IRIREF) {
+			const namespaceIri = Uri.getNamespaceIri(getIriFromIriReference(token.image));
+
+			result.push({
+				kind: vscode.CodeActionKind.Refactor,
+				title: 'Define prefix for IRI',
+				isPreferred: true,
+				command: {
 					title: 'Define prefix for IRI',
-					isPreferred: true,
-					command: {
-						title: 'Define prefix for IRI',
-						command: 'mentor.action.implementPrefixForIri',
-						arguments: [document.uri, namespaceIri, token]
-					}
-				});
-			} else if (tokenName === tokenTypes.PREFIX || tokenName === tokenTypes.PNAME_NS) {
-				result.push({
-					kind: vscode.CodeActionKind.Refactor,
+					command: 'mentor.action.implementPrefixForIri',
+					arguments: [document.uri, namespaceIri, token]
+				}
+			});
+		} else if (tokenName === tokenTypes.PREFIX || tokenName === tokenTypes.PNAME_NS) {
+			result.push({
+				kind: vscode.CodeActionKind.Refactor,
+				title: 'Sort prefixes',
+				isPreferred: true,
+				command: {
 					title: 'Sort prefixes',
-					isPreferred: true,
-					command: {
-						title: 'Sort prefixes',
-						command: 'mentor.action.sortPrefixes',
-						arguments: [document.uri, token]
-					}
-				});
-			}
+					command: 'mentor.action.sortPrefixes',
+					arguments: [document.uri, token]
+				}
+			});
 		}
 
 		return result;
