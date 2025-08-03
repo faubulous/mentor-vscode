@@ -5,6 +5,7 @@ import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-r
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { Uri } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
+import { WorkspaceVfs } from '@/workspace-vfs';
 import { TreeLabelStyle } from '@/settings';
 import { Range } from 'vscode-languageserver-types';
 
@@ -61,6 +62,14 @@ export abstract class DocumentContext {
 	 * The graphs in the triple store associated with the document.
 	 */
 	readonly graphs: string[] = [];
+
+	/**
+	 * Get the URI of the document graph in the triple store.
+	 * @note This is a workspace-relative URI so that queries which are persisted in a repository are portable.
+	 */
+	get graphIri(): vscode.Uri {
+		return WorkspaceVfs.toRelativeUri(this.uri);
+	}
 
 	/**
 	 * Get the base IRI of the document that can be used for resolving local names into IRIs.
@@ -203,10 +212,9 @@ export abstract class DocumentContext {
 
 	/**
 	 * Loads the document from the given URI and data.
-	 * @param uri The file URI.
 	 * @param data The file content.
 	 */
-	abstract parse(uri: vscode.Uri, data: string): Promise<void>;
+	abstract parse(data: string): Promise<void>;
 
 	/**
 	 * Infers new triples from the document, if not already done.

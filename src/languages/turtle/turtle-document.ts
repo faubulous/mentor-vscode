@@ -8,12 +8,12 @@ import { mentor } from '@/mentor';
 import { DocumentContext, TokenTypes } from '@/document-context';
 import { TurtlePrefixDefinitionService } from '@/services';
 import {
-	getIriFromToken,
-	getIriFromIriReference,
-	getIriFromPrefixedName,
-	getNamespaceDefinition,
 	countLeadingWhitespace,
 	countTrailingWhitespace,
+	getIriFromIriReference,
+	getIriFromPrefixedName,
+	getIriFromToken,
+	getNamespaceDefinition,
 	getTokenPosition
 } from '@/utilities';
 
@@ -119,11 +119,11 @@ export class TurtleDocument extends DocumentContext {
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			mentor.store.executeInference(this.uri.toString());
+			mentor.store.executeInference(this.graphIri.toString());
 		}
 	}
 
-	public override async parse(uri: vscode.Uri, data: string): Promise<void> {
+	public override async parse(data: string): Promise<void> {
 		// Parse the tokens *before* parsing the graph because the graph parsing 
 		// might fail but we need to update the tokens.
 		let tokens;
@@ -137,16 +137,16 @@ export class TurtleDocument extends DocumentContext {
 		this.setTokens(tokens);
 
 		try {
-			const u = uri.toString();
+			const graphUri = this.graphIri.toString();
 
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
-			this.graphs.push(u);
+			this.graphs.push(graphUri);
 
 			// The loadFromStream function only updates the existing graphs 
 			// when the document was parsed successfully.
-			await mentor.store.loadFromTurtleStream(data, u, false);
+			await mentor.store.loadFromTurtleStream(data, graphUri, false);
 
 			// Make definitions using blank nodes resolvable.
 			this.mapBlankNodes();

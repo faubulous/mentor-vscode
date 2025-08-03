@@ -213,7 +213,7 @@ class MentorExtension {
 		context = this.documentFactory.create(document.uri, document.languageId);
 
 		// Parse the tokens of the document and load the graph.
-		await context.parse(document.uri, document.getText());
+		await context.parse(document.getText());
 
 		// Compute the inference graph on the document to simplify querying.
 		await context.infer();

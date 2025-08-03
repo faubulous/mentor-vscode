@@ -228,22 +228,22 @@ export class XmlDocument extends DocumentContext {
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			mentor.store.executeInference(this.uri.toString());
+			mentor.store.executeInference(this.graphIri.toString());
 		}
 	}
 
-	override async parse(uri: vscode.Uri, data: string): Promise<void> {
+	override async parse(data: string): Promise<void> {
 		try {
-			const u = uri.toString();
+			const graphUri = this.graphIri.toString();
 
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
-			this.graphs.push(u);
+			this.graphs.push(graphUri);
 
 			// The loadFromStream function only updates the existing graphs 
 			// when the document was parsed successfully.
-			await mentor.store.loadFromXmlStream(data, u, false);
+			await mentor.store.loadFromXmlStream(data, graphUri, false);
 
 			await this.parseXml(data);
 

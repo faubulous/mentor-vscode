@@ -1,18 +1,17 @@
 import * as vscode from 'vscode';
-import { MentorFileSystemProvider } from './mentor-file-system-provider';
+import { WorkspaceVfs } from '@/workspace-vfs';
 
 /**
  * Provides document links for URIs with the 'mentor:' scheme.
  */
 export class MentorFileLinkProvider implements vscode.DocumentLinkProvider {
 
-  readonly _uriRegex = new RegExp(`${MentorFileSystemProvider.scheme}://[^\\s>]+`, 'g');
-
   provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const links: vscode.DocumentLink[] = [];
     const text = document.getText();
+    const regex = new RegExp(WorkspaceVfs.uriRegex, 'g');
 
-    for (const match of text.matchAll(this._uriRegex)) {
+    for (const match of text.matchAll(regex)) {
       const start = document.positionAt(match.index);
       const end = document.positionAt(match.index + match[0].length);
 
@@ -27,6 +26,10 @@ export class MentorFileLinkProvider implements vscode.DocumentLinkProvider {
     return links;
   }
 
+  /**
+   * Registers the document link provider with VS Code.
+   * @returns An array of disposables for the provider.
+   */
   register(): vscode.Disposable[] {
     // Register the document link provider for all file schemes and content types.
     return [vscode.languages.registerDocumentLinkProvider({ scheme: 'file' }, this)];

@@ -15,7 +15,7 @@ export class SparqlDocument extends TurtleDocument {
 		// Inference is not supported for SPARQL documents.
 	}
 
-	public override async parse(uri: vscode.Uri, data: string): Promise<void> {
+	public override async parse(data: string): Promise<void> {
 		// Parse the tokens *before* parsing the graph because the graph parsing 
 		// might fail but we need to update the tokens.
 		const tokens = new SparqlSyntaxParser().tokenize(data);

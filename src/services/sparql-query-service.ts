@@ -144,6 +144,7 @@ export class SparqlQueryService {
 	 * @param context The SparqlQueryContext containing the query.
 	 * @param bindingStream The SPARQL query results as a BindingsStream.
 	 * @returns A set of variable names used in the query.
+	 * @remarks This is needed because Comunica does not preserve the definition order of the variables in results.
 	 */
 	private _parseSelectVariables(context: SparqlQueryContext, bindings: Bindings[]): Array<string> {
 		const document = mentor.contexts[context.documentIri] as SparqlDocument;
