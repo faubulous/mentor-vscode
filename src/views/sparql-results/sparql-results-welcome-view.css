@@ -19,8 +19,12 @@ vscode-toolbar-container.vertical {
 	align-items: flex-start;
 }
 
+vscode-toolbar-container.link-buttons-xl vscode-toolbar-button {
+	min-height: 2.5em;
+}
+
 vscode-toolbar-container.link-buttons vscode-toolbar-button .codicon {
-	padding: 1em .5em;
+	padding: 2em .5em;
 	font-size: large;
 }
 

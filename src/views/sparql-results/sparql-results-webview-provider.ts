@@ -49,6 +49,9 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
     }
 
     public async executeQuery(document: vscode.TextDocument) {
+        await vscode.commands.executeCommand('workbench.action.togglePanel');
+        await vscode.commands.executeCommand(`${this.viewType}.focus`);
+
         if (!this._view) {
             throw new Error('Webview view is not initialized.');
         }
@@ -61,6 +64,11 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         await mentor.sparqlQueryService.executeQuery(context);
 
         this._view.webview.postMessage(context);
+    }
+
+    protected async ensureViewVisible() {
+        // Show the panel area if it's hidden
+
     }
 }
 

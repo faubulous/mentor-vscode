@@ -19,7 +19,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent {
 				<p className="description">This panel displays the status and results of <a href="https://www.w3.org/TR/sparql11-query/" target="_blank">SPARQL</a> queries
 					that were executed from files in the editor.</p>
 
-				<vscode-toolbar-container className="vertical link-buttons">
+				<vscode-toolbar-container className="vertical link-buttons link-buttons-xl">
 					<vscode-toolbar-button onClick={() => this._createSparqlQueryFile()}>
 						<span className="codicon codicon-new-file"></span>
 						<span className="label">New Query...</span>
