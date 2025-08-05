@@ -128,6 +128,56 @@ export class WorkspaceRepository {
 	}
 
 	/**
+	 * Generator that yields files matching the given language ID's extensions.
+	 * @param languageId The VS Code language identifier (e.g., 'turtle', 'sparql')
+	 * @returns Generator yielding matching files one by one.
+	 */
+	async* getFilesByLanguageId(languageId: string): AsyncGenerator<vscode.Uri, void, unknown> {
+		// Get extensions for the language ID from VS Code configuration
+		const extensions = await this._getExtensionsForLanguageId(languageId);
+
+		if (extensions.length === 0) {
+			return; // No extensions found for this language
+		}
+
+		const extSet = new Set<string>(extensions);
+
+		for (const file of this._files) {
+			const extension = file.path.split('.').pop() || '';
+
+			if (extSet.has(extension)) {
+				yield file;
+			}
+		}
+	}
+
+	/**
+	 * Gets file extensions associated with a VS Code language ID.
+	 * @param languageId The language identifier
+	 * @returns Array of file extensions (without dots)
+	 */
+	private async _getExtensionsForLanguageId(languageId: string): Promise<string[]> {
+		// Get all language configurations
+		const languages = vscode.extensions.all
+			.flatMap(ext => ext.packageJSON?.contributes?.languages || [])
+			.filter(lang => lang.id === languageId);
+
+		const extensions: string[] = [];
+
+		for (const language of languages) {
+			if (language.extensions) {
+				// Remove the leading dot from extensions
+				const langExtensions = language.extensions.map((ext: string) =>
+					ext.startsWith('.') ? ext.substring(1) : ext
+				);
+				extensions.push(...langExtensions);
+			}
+		}
+
+		return [...new Set(extensions)];
+	}
+
+	/**
 	 * Retrieves the contents of a folder in the workspace.
 	 * @param folderUri The URI of the folder to search in.
 	 * @returns A list of matching files and folders sorted by type and name.

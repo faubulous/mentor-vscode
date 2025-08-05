@@ -7,6 +7,7 @@ export * from './find-references';
 export * from './implement-prefix-for-iri';
 export * from './implement-prefixes';
 export * from './open-document-graph';
+export * from './open-file-by-language';
 export * from './open-in-browser';
 export * from './open-settings';
 export * from './reveal-definition';

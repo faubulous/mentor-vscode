@@ -74,4 +74,5 @@ function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.sortPrefixes', commands.sortPrefixes));
 	context.subscriptions.push(vscode.commands.registerCommand("mentor.action.openDocumentGraph", commands.openDocumentGraph));
 	context.subscriptions.push(vscode.commands.registerCommand("mentor.action.openSettings", commands.openSettings));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.openFileByLanguage', commands.openFileByLanguage));
 }

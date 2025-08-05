@@ -56,7 +56,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent {
 	}
 
 	private _openSparqlQueryFile() {
-		this.executeCommand('mentor.action.openSparqlQueryFile');
+		this.executeCommand('mentor.action.openFileByLanguage', 'sparql');
 	}
 
 	private _connectToEndpoint() {

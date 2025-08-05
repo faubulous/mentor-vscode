@@ -49,12 +49,12 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
     }
 
     public async executeQuery(document: vscode.TextDocument) {
-        await vscode.commands.executeCommand('workbench.action.togglePanel');
-        await vscode.commands.executeCommand(`${this.viewType}.focus`);
-
         if (!this._view) {
-            throw new Error('Webview view is not initialized.');
+            await vscode.commands.executeCommand('workbench.action.togglePanel');
+            await vscode.commands.executeCommand(`${this.viewType}.focus`);
         }
+
+        if (!this._view) throw new Error('Webview view is not initialized.');
 
         const context = mentor.sparqlQueryService.prepareQuery(document);
 

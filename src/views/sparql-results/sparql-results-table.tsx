@@ -104,7 +104,10 @@ export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps
             <span className="codicon codicon-debug-restart"></span>
           </vscode-toolbar-button>
           <span className="divider divider-vertical"></span>
-          <select className="sparql-results-page-size-select" value={pageSize} onChange={this._handlePageSizeChange}>
+          <select className="sparql-results-page-size-select"
+            value={pageSize}
+            onChange={this._handlePageSizeChange}
+            disabled={result.rows.length <= pageSize}>
             {this.pageSizeOptions.map(option => (
               <option key={option} value={option}>{option}</option>
             ))}

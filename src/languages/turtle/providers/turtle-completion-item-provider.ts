@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Uri } from "@faubulous/mentor-rdf";
 import { mentor } from "@/mentor";
-import { getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
+import { getLocalPartAndQuery, getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
 import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
@@ -125,8 +125,12 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 		const graphs = mentor.store.getGraphs();
 
-		for (const graph of graphs.filter(g => g.startsWith(value)).slice(0, this.maxCompletionItems)) {
-			const item = new vscode.CompletionItem(graph, vscode.CompletionItemKind.Module);
+		for (const iri of graphs) {
+			const label = getLocalPartAndQuery(iri);
+
+			const item = new vscode.CompletionItem(label, vscode.CompletionItemKind.Reference);
+			item.detail = iri;
+			item.insertText = new vscode.SnippetString(token.image.endsWith('>') ? iri : iri + '>');
 
 			result.push(item);
 		}

@@ -450,21 +450,6 @@
         "icon": "$(save-as)"
       },
       {
-        "command": "mentor.action.openSparqlQueryResults",
-        "title": "Mentor: Open SPARQL Query Results",
-        "icon": "$(search-result)"
-      },
-      {
-        "command": "mentor.action.openWorkspaceTree",
-        "title": "Mentor: Open Workspace Tree",
-        "icon": "$(folder-opened)"
-      },
-      {
-        "command": "mentor.action.openDefinitionTree",
-        "title": "Mentor: Open Definitions Tree",
-        "icon": "$(tree-view)"
-      },
-      {
         "command": "mentor.action.openDocumentGraph",
         "title": "Mentor: Open a Document Graph"
       },
