@@ -10,7 +10,8 @@
 	font-weight: 400;
 }
 
-.description {
+.description,
+.empty {
 	color: var(--vscode-descriptionForeground);
 }
 

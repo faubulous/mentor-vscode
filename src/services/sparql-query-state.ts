@@ -1,11 +1,10 @@
-import * as vscode from 'vscode';
 import { PrefixMap } from "@/utilities";
 import { Term } from "@rdfjs/types";
 
 /**
- * The state of a SPARQL query execution context.
+ * The state of a SPARQL query execution.
  */
-export class SparqlQueryContext {
+export interface SparqlQueryState {
 	/**
 	 * The TextDocument where the SPARQL query is defined. In case of a Notebook, this 
 	 * is the IRI of the document that is associated with the cell.
@@ -51,34 +50,6 @@ export class SparqlQueryContext {
 	 * The SPARQL query text.
 	 */
 	query: string;
-
-	constructor(querySource: vscode.TextDocument | vscode.NotebookCell) {
-		if ('notebook' in querySource && querySource.notebook) {
-			const cell = querySource as vscode.NotebookCell;
-
-			this.documentIri = cell.document.uri.toString();
-			this.notebookIri = cell.notebook.uri.toString();
-			this.cellIndex = cell.index;
-			this.query = cell.document.getText();
-		} else {
-			const document = querySource as vscode.TextDocument;
-
-			this.documentIri = document.uri.toString();
-			this.query = document.getText();
-		}
-
-		this.startTime = Date.now();
-		this.resultType = 'bindings';
-	}
-
-	/**
-	 * Compares this SparqlQueryContext with another context for equality.
-	 * @param other Another SparqlQueryContext to compare with.
-	 * @returns `true` if the contexts are equal, otherwise `false`.
-	 */
-	equals(other: SparqlQueryContext): boolean {
-		return this.documentIri === other.documentIri && this.query === other.query;
-	}
 }
 
 /**

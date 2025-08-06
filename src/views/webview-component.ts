@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { WebviewMessagingApi } from './webview-messaging';
+import { WebviewMessaging } from './webview-messaging';
 
 /**
  * Properties for the WebviewComponent.
@@ -8,13 +8,19 @@ export interface WebviewComponentProps {
 	/**
 	 * Optional messaging API for communication with the extension host.
 	 */
-	messaging?: WebviewMessagingApi;
+	messaging?: {
+		postMessage(message: any): void;
+		onMessage?(handler: (message: any) => void): void;
+	};
 }
 
 /**
  * Base class for webview components that provides common functionality.
  */
-export class WebviewComponent<P extends WebviewComponentProps = WebviewComponentProps> extends Component<P> {
+export class WebviewComponent<
+	P extends WebviewComponentProps = WebviewComponentProps,
+	S = {}
+> extends Component<P, S> {
 	/**
 	 * Adds a stylesheet to the HTML document header.
 	 * @param id The ID of the stylesheet element.
@@ -37,13 +43,7 @@ export class WebviewComponent<P extends WebviewComponentProps = WebviewComponent
 	 */
 	protected executeCommand(command: string, ...args: any[]) {
 		if (this.props.messaging) {
-			const message = {
-				type: 'executeCommand',
-				command: command,
-				args: args
-			}
-
-			this.props.messaging.postMessage(message);
+			this.props.messaging.postMessage({ id: 'ExecuteCommand', command, args });
 		} else {
 			console.warn('No messaging API available to save results.');
 		}

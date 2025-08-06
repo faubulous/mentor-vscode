@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { SparqlResultsWebviewFactory } from '@/views/sparql-results/sparql-results-webview-factory';
-
+import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
+/**
+ * A provider for the SPARQL results webview. It handles the registration of the webview, 
+ * message passing, and execution of SPARQL queries.
+ */
 export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider {
     public readonly viewType = 'mentor.sparqlResultsView';
 
@@ -42,10 +46,26 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         this._view.webview.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
     }
 
-    private async _onDidReceiveMessage(message: any) {
-        if (message.type === 'executeCommand') {
-            vscode.commands.executeCommand(message.command, ...message.args);
+    private async _onDidReceiveMessage(message: SparqlResultsWebviewMessages) {
+        switch (message.id) {
+            case 'ExecuteCommand': {
+                await vscode.commands.executeCommand(message.command, ...(message.args || []));
+                return;
+            }
+            case 'GetSparqlQueryHistoryRequest': {
+                const history = mentor.sparqlQueryService.getRecentQueries();
+                this._postMessage({ id: 'GetSparqlQueryHistoryResponse', history });
+                return;
+            }
         }
+    }
+
+    private _postMessage(message: SparqlResultsWebviewMessages) {
+        if (!this._view) {
+            throw new Error('Webview view is not initialized.');
+        }
+
+        this._view.webview.postMessage(message);
     }
 
     public async executeQuery(document: vscode.TextDocument) {
@@ -54,21 +74,19 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
             await vscode.commands.executeCommand(`${this.viewType}.focus`);
         }
 
-        if (!this._view) throw new Error('Webview view is not initialized.');
+        if (!this._view) {
+            throw new Error('Webview view is not initialized.');
+        }
 
-        const context = mentor.sparqlQueryService.prepareQuery(document);
+        const initialState = mentor.sparqlQueryService.createQuery(document);
 
         this._view.show();
-        this._view.webview.postMessage(context);
 
-        await mentor.sparqlQueryService.executeQuery(context);
+        this._postMessage({ id: 'SetSparqlQueryState', queryState: initialState });
 
-        this._view.webview.postMessage(context);
-    }
+        const updatedState = await mentor.sparqlQueryService.executeQuery(initialState);
 
-    protected async ensureViewVisible() {
-        // Show the panel area if it's hidden
-
+        this._postMessage({ id: 'SetSparqlQueryState', queryState: updatedState });
     }
 }
 

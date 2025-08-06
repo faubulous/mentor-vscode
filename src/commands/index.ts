@@ -6,6 +6,7 @@ export * from './delete-prefixes';
 export * from './find-references';
 export * from './implement-prefix-for-iri';
 export * from './implement-prefixes';
+export * from './open-document';
 export * from './open-document-graph';
 export * from './open-file-by-language';
 export * from './open-in-browser';

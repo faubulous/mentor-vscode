@@ -1,18 +1,46 @@
 import { WebviewComponent } from '@/views/webview-component';
+import { getFileName } from '@/utilities';
+import { WebviewMessaging } from '../webview-messaging';
+import { SparqlQueryState } from '@/services/sparql-query-state';
+import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-welcome-view.css';
+
+interface SparqlResultsWelcomeViewProps {
+	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
+}
+
+interface SparqlResultsWelcomeViewState {
+	history?: SparqlQueryState[];
+}
 
 /**
  * Component to display a welcome message for the SPARQL results view.
  */
-export class SparqlResultsWelcomeView extends WebviewComponent {
+export class SparqlResultsWelcomeView extends WebviewComponent<
+	SparqlResultsWelcomeViewProps,
+	SparqlResultsWelcomeViewState
+> {
 
 	componentDidMount() {
 		this.addStylesheet('codicon-styles', codicons);
 		this.addStylesheet('sparql-welcome-styles', stylesheet);
+
+		this.props.messaging?.onMessage(message => {
+			switch (message.id) {
+				case 'GetSparqlQueryHistoryResponse': {
+					this.setState({ history: message.history });
+					return;
+				}
+			}
+		});
+
+		this.props.messaging?.postMessage({ id: 'GetSparqlQueryHistoryRequest' });
 	}
 
 	render() {
+		const recentQueries = this.state?.history || [];
+
 		return <div className="container sparql-results-welcome">
 			<div className="column column-left">
 				<h3>SPARQL Query</h3>
@@ -24,7 +52,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent {
 						<span className="codicon codicon-new-file"></span>
 						<span className="label">New Query...</span>
 					</vscode-toolbar-button>
-					<vscode-toolbar-button onClick={() => this._openSparqlQueryFile()}>
+					<vscode-toolbar-button onClick={() => this._selectSparqlQueryFile()}>
 						<span className="codicon codicon-folder-opened"></span>
 						<span className="label">Open Query...</span>
 					</vscode-toolbar-button>
@@ -37,25 +65,30 @@ export class SparqlResultsWelcomeView extends WebviewComponent {
 			<div className="column column-right">
 				<h3>Recent</h3>
 				<vscode-toolbar-container className="vertical link-buttons">
-					<vscode-toolbar-button>
-						<span className='label'>path/to/file/a.spaql</span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button>
-						<span className='label'>path/to/file/b.spaql</span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button>
-						<span className='label'>path/to/file/c.spaql</span>
-					</vscode-toolbar-button>
+					{recentQueries.length === 0 && <span className="empty">No recent queries.</span>}
+					{recentQueries.length > 0 && recentQueries.map(query => (
+						<vscode-toolbar-button onClick={() => this._openDocument(query.documentIri)}>
+							<span className='label'>{this._getFileName(query.documentIri)}</span>
+						</vscode-toolbar-button>
+					))}
 				</vscode-toolbar-container>
 			</div>
 		</div>;
+	}
+
+	private _getFileName(documentIri: string) {
+		return documentIri ? getFileName(documentIri) : documentIri;
+	}
+
+	private _openDocument(documentIri: string) {
+		this.executeCommand('mentor.action.openDocument', documentIri);
 	}
 
 	private _createSparqlQueryFile() {
 		this.executeCommand('mentor.action.createSparqlQueryFile');
 	}
 
-	private _openSparqlQueryFile() {
+	private _selectSparqlQueryFile() {
 		this.executeCommand('mentor.action.openFileByLanguage', 'sparql');
 	}
 

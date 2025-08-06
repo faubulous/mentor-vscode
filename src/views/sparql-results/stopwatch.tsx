@@ -1,7 +1,7 @@
-import { SparqlQueryContext } from '@/services';
+import { SparqlQueryState } from '@/services/sparql-query-state';
 import { useState, useEffect, useRef } from 'react';
 
-export const Stopwatch = (props: { queryContext: SparqlQueryContext }) => {
+export const Stopwatch = (props: { queryContext: SparqlQueryState }) => {
 	const [elapsedTime, setElapsedTime] = useState(0);
 	const intervalRef = useRef(null as ReturnType<typeof setInterval> | null);
 

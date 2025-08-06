@@ -1,7 +1,10 @@
 import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
-import { BindingsResult, SparqlQueryContext } from '@/services';
 import { WebviewComponent, WebviewComponentProps } from '@/views/webview-component';
+import { WebviewMessaging } from '@/views/webview-messaging';
+import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
+import { SparqlQueryState } from '@/services/sparql-query-state';
+import { BindingsResult } from '@/services/sparql-query-state';
 import { Stopwatch } from './stopwatch';
 import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-table.css';
@@ -9,17 +12,28 @@ import stylesheet from './sparql-results-table.css';
 /**
  * Properties for the SPARQL results table component.
  */
-export interface SparqlResultsTableProps extends WebviewComponentProps {
+interface SparqlResultsTableProps extends WebviewComponentProps {
+  messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
+
   /**
    * The SPARQL query results to display.
    */
-  queryContext: SparqlQueryContext;
+  queryContext: SparqlQueryState;
+}
+
+interface SparqlResultsTableState {
+  pageSize: number;
+
+  currentPage: number;
 }
 
 /**
  * Component to display SPARQL bindings in a table format.
  */
-export class SparqlResultsTable extends WebviewComponent<SparqlResultsTableProps> {
+export class SparqlResultsTable extends WebviewComponent<
+  SparqlResultsTableProps,
+  SparqlResultsTableState
+> {
 
   pageSizeOptions = [100, 500, 1000, 2000, 5000];
 
