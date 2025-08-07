@@ -15,8 +15,12 @@ export class SparqlResultsWebviewFactory {
 		const id = 'mentor.sparqlResultsPanel';
 		const title = 'SPARQL Results';
 
-		const panel = vscode.window.createWebviewPanel(id, title, viewColumn);
-		panel.webview.options = this._getWebviewOptions(context);
+		const options = {
+			...this._getWebviewOptions(context),
+			retainContextWhenHidden: true
+		};
+
+		const panel = vscode.window.createWebviewPanel(id, title, viewColumn, options);
 		panel.webview.html = this._getWebviewHtml(context, panel.webview);
 
 		return panel;

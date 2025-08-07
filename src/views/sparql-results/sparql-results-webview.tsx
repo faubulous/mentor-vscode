@@ -16,7 +16,6 @@ interface SparqlResultsWebviewProps extends WebviewComponentProps {
 
 interface SparqlResultsWebviewState {
 	renderKey?: number;
-	queryState?: SparqlQueryState;
 	openQueries: SparqlQueryState[];
 	activeTabIndex: number;
 }
@@ -35,6 +34,8 @@ interface SparqlResultsWebviewState {
 class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, SparqlResultsWebviewState> {
 	private messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
 
+	private vscode: any;
+
 	constructor(props: SparqlResultsWebviewProps) {
 		super(props);
 
@@ -44,17 +45,27 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 			activeTabIndex: 0
 		};
 
-		// Initialize messaging
-		const vscode = (window as any).acquireVsCodeApi();
+		// Initialize extension host messaging and set up state persistence.
+		this.vscode = (window as any).acquireVsCodeApi();
 
 		this.messaging = {
-			postMessage: (message) => vscode.postMessage(message),
+			postMessage: (message) => this.vscode.postMessage(message),
 			onMessage: (handler) => {
 				const messageHandler = (event: MessageEvent) => handler(event.data);
 				window.addEventListener('message', messageHandler);
 				return () => window.removeEventListener('message', messageHandler);
 			},
 		};
+
+		// Restore previous state if available
+		const previousState = this.vscode.getState();
+
+		if (previousState) {
+			this.state = {
+				...this.state,
+				...previousState
+			};
+		}
 	}
 
 	componentDidMount() {
@@ -63,8 +74,12 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 
 		const handleMessage = (message: SparqlResultsWebviewMessages) => {
 			switch (message.id) {
+				case 'RestoreState': {
+					this.setState(message.state);
+					break;
+				}
 				case 'SetSparqlQueryState': {
-					this.addOrUpdateQuery(message.queryState);
+					this._addOrUpdateQuery(message.queryState);
 					break;
 				}
 			}
@@ -73,7 +88,15 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 		this.messaging.onMessage(handleMessage);
 	}
 
-	private addOrUpdateQuery = (queryState: SparqlQueryState) => {
+	componentDidUpdate() {
+		this.vscode.setState({
+			renderKey: 0,
+			openQueries: this.state.openQueries,
+			activeTabIndex: this.state.activeTabIndex
+		});
+	}
+
+	private _addOrUpdateQuery = (queryState: SparqlQueryState) => {
 		this.setState(prevState => {
 			const n = prevState.openQueries.findIndex(q => q.documentIri === queryState.documentIri);
 
@@ -98,7 +121,7 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 		});
 	};
 
-	private closeQuery = (documentIri: string) => {
+	private _closeQuery = (documentIri: string) => {
 		this.setState(prevState => {
 			const queries = prevState.openQueries.filter(q => q.documentIri !== documentIri);
 
@@ -137,7 +160,7 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 								<a className="codicon codicon-close" role="button" title="Close"
 									onClick={(e) => {
 										e.stopPropagation();
-										this.closeQuery(queryState.documentIri);
+										this._closeQuery(queryState.documentIri);
 									}}
 								></a>
 							</div>
@@ -155,4 +178,5 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 	}
 }
 
-createRoot(document.getElementById('root')!).render(<SparqlResultsWebview />);
+createRoot(document.getElementById('root')!)
+	.render(<SparqlResultsWebview />);

@@ -7,36 +7,35 @@ import * as views from './views';
 import * as providers from './providers';
 import { mentor } from './mentor';
 import { NotebookSerializer } from './notebook-serializer';
-import { NOTEBOOK_TYPE, NotebookController } from './notebook-controller';
-
-const clients: languages.LanguageClientBase[] = [
-	new languages.TurtleLanguageClient(),
-	new languages.TrigLanguageClient(),
-	new languages.SparqlLanguageClient()
-];
+import { NotebookController } from './notebook-controller';
 
 export async function activate(context: vscode.ExtensionContext) {
 	registerProviders(context);
+	registerLanguageClients(context);
 	registerCommands(context);
 	registerViews(context);
 	registerNotebookSerializers(context);
 
-	for (const client of clients) {
-		client.start(context);
-	}
-
 	mentor.initialize(context);
 }
 
-export async function deactivate() {
+function registerLanguageClients(context: vscode.ExtensionContext) {
+	const clients: languages.LanguageClientBase[] = [
+		new languages.TurtleLanguageClient(),
+		new languages.TrigLanguageClient(),
+		new languages.SparqlLanguageClient()
+	];
+
 	for (const client of clients) {
-		await client.dispose();
+		context.subscriptions.push(client);
+		
+		client.start(context);
 	}
 }
 
 function registerNotebookSerializers(context: vscode.ExtensionContext) {
 	context.subscriptions.push(new NotebookController());
-	context.subscriptions.push(vscode.workspace.registerNotebookSerializer(NOTEBOOK_TYPE, new NotebookSerializer(), { transientOutputs: true }));
+	context.subscriptions.push(new NotebookSerializer().register());
 }
 
 function registerProviders(context: vscode.ExtensionContext) {

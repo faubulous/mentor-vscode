@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { NOTEBOOK_TYPE } from './notebook-controller';
 
 interface NotebookData {
 	cells: NotebookCell[]
@@ -47,5 +48,9 @@ export class NotebookSerializer implements vscode.NotebookSerializer {
 		}
 
 		return new TextEncoder().encode(JSON.stringify(contents));
+	}
+
+	public register(): vscode.Disposable {
+		return vscode.workspace.registerNotebookSerializer(NOTEBOOK_TYPE, this, { transientOutputs: true });
 	}
 }
