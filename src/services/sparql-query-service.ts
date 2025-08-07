@@ -228,7 +228,7 @@ export class SparqlQueryService {
 	 * @param limit The maximum number of recent queries to return.
 	 * @returns A promise that resolves to an array of recent query entries.
 	 */
-	getRecentQueries(limit: number = 10): SparqlQueryState[] {
+	getQueryHistory(limit: number = 10): SparqlQueryState[] {
 		const history = mentor.localStorageService.getValue<SparqlQueryState[]>(HISTORY_STORAGE_KEY, []);
 
 		return history

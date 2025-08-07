@@ -53,7 +53,7 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
                 return;
             }
             case 'GetSparqlQueryHistoryRequest': {
-                const history = mentor.sparqlQueryService.getRecentQueries();
+                const history = mentor.sparqlQueryService.getQueryHistory();
                 this._postMessage({ id: 'GetSparqlQueryHistoryResponse', history });
                 return;
             }

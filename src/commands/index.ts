@@ -1,4 +1,5 @@
 export * from './analyze-workspace';
+export * from './clear-sparql-query-history';
 export * from './create-notebook-from-editor';
 export * from './create-notebook';
 export * from './create-sparql-query-file';

@@ -35,7 +35,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 			}
 		});
 
-		this.props.messaging?.postMessage({ id: 'GetSparqlQueryHistoryRequest' });
+		this._loadHistory();
 	}
 
 	render() {
@@ -44,7 +44,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 		return <div className="container sparql-results-welcome">
 			<div className="column column-left">
 				<h3>SPARQL Query</h3>
-				<p className="description">This panel displays the status and results of <a href="https://www.w3.org/TR/sparql11-query/" target="_blank">SPARQL</a> queries
+				<p className="muted">This panel displays the status and results of <a href="https://www.w3.org/TR/sparql11-query/" target="_blank">SPARQL</a> queries
 					that were executed from files in the editor.</p>
 
 				<vscode-toolbar-container className="vertical link-buttons link-buttons-xl">
@@ -63,9 +63,14 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 				</vscode-toolbar-container>
 			</div>
 			<div className="column column-right">
-				<h3>Recent</h3>
+				<vscode-toolbar-container className="align-top">
+					<h3>Recent</h3>
+					<vscode-toolbar-button onClick={() => this._clearHistory()}>
+						<span className="codicon codicon-clear-all muted"></span>
+					</vscode-toolbar-button>
+				</vscode-toolbar-container>
 				<vscode-toolbar-container className="vertical link-buttons">
-					{recentQueries.length === 0 && <span className="empty">No recent queries.</span>}
+					{recentQueries.length === 0 && <span className="muted">No recent queries.</span>}
 					{recentQueries.length > 0 && recentQueries.map(query => (
 						<vscode-toolbar-button onClick={() => this._openDocument(query.documentIri)}>
 							<span className='label'>{this._getFileName(query.documentIri)}</span>
@@ -74,6 +79,16 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 				</vscode-toolbar-container>
 			</div>
 		</div>;
+	}
+
+	private _loadHistory() {
+		this.props.messaging?.postMessage({ id: 'GetSparqlQueryHistoryRequest' });
+	}
+
+	private _clearHistory() {
+		this.executeCommand('mentor.action.clearSparqlQueryHistory');
+
+		this._loadHistory();
 	}
 
 	private _getFileName(documentIri: string) {

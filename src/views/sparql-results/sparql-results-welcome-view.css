@@ -5,14 +5,23 @@
 	padding: 10px;
 }
 
+.align-top {
+	gap: 10px;
+    align-items: flex-start;
+}
+
 .column h3 {
 	margin-top: 0;
 	font-weight: 400;
 }
 
-.description,
-.empty {
+.muted {
 	color: var(--vscode-descriptionForeground);
+}
+
+.muted a {
+	color: var(--vscode-descriptionForeground);
+	text-decoration: underline;
 }
 
 vscode-toolbar-container.vertical {

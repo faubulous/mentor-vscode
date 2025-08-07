@@ -57,6 +57,7 @@ function registerViews(context: vscode.ExtensionContext) {
 
 function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', commands.analyzeWorkspace));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.clearSparqlQueryHistory', commands.clearSparqlQueryHistory));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebook', commands.createNotebook));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebookFromEditor', commands.createNotebookFromEditor));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createSparqlQueryFile', commands.createSparqlQueryFile));
