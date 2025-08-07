@@ -1,15 +1,24 @@
 import { createRoot } from 'react-dom/client';
-import { useState, useEffect } from 'react';
+import { Fragment } from 'react';
+import { WebviewComponent, WebviewComponentProps } from '@/views/webview-component';
 import { WebviewMessaging } from '@/views/webview-messaging';
 import { SparqlQueryState } from '@/services/sparql-query-state';
 import { SparqlResultsTable } from './sparql-results-table';
 import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
+import { getFileName } from '@/utilities';
+import codicons from '$/codicon.css';
+import stylesheet from './sparql-results-webview.css';
+
+interface SparqlResultsWebviewProps extends WebviewComponentProps {
+	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
+}
 
 interface SparqlResultsWebviewState {
 	renderKey?: number;
-
 	queryState?: SparqlQueryState;
+	openQueries: SparqlQueryState[];
+	activeTabIndex: number;
 }
 
 /**
@@ -23,48 +32,127 @@ interface SparqlResultsWebviewState {
  * 
  * @returns A React component that renders either query results or the welcome view
  */
-function SparqlResultsWebview() {
-	const [state, setState] = useState<SparqlResultsWebviewState>({ renderKey: 0 });
+class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, SparqlResultsWebviewState> {
+	private messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
 
-	const [messaging] = useState<WebviewMessaging<SparqlResultsWebviewMessages>>(() => {
-		const vscode = acquireVsCodeApi();
+	constructor(props: SparqlResultsWebviewProps) {
+		super(props);
 
-		return {
+		this.state = {
+			renderKey: 0,
+			openQueries: [],
+			activeTabIndex: 0
+		};
+
+		// Initialize messaging
+		const vscode = (window as any).acquireVsCodeApi();
+
+		this.messaging = {
 			postMessage: (message) => vscode.postMessage(message),
 			onMessage: (handler) => {
 				const messageHandler = (event: MessageEvent) => handler(event.data);
-
 				window.addEventListener('message', messageHandler);
-
 				return () => window.removeEventListener('message', messageHandler);
 			},
 		};
-	});
+	}
 
-	useEffect(() => {
+	componentDidMount() {
+		this.addStylesheet('codicon-styles', codicons);
+		this.addStylesheet('sparql-webview-styles', stylesheet);
+
 		const handleMessage = (message: SparqlResultsWebviewMessages) => {
 			switch (message.id) {
 				case 'SetSparqlQueryState': {
-					setState(prevState => ({
-						renderKey: (prevState.renderKey || 0) + 1,
-						queryState: message.queryState
-					}));
+					this.addOrUpdateQuery(message.queryState);
 					break;
 				}
 			}
 		};
 
-		const cleanup = messaging.onMessage(handleMessage);
+		this.messaging.onMessage(handleMessage);
+	}
 
-		return cleanup;
-	}, []);
+	private addOrUpdateQuery = (queryState: SparqlQueryState) => {
+		this.setState(prevState => {
+			const n = prevState.openQueries.findIndex(q => q.documentIri === queryState.documentIri);
 
-	if (state.queryState) {
-		return <SparqlResultsTable messaging={messaging} queryContext={state.queryState} />;
-	} else {
-		return <SparqlResultsWelcomeView messaging={messaging} />;
+			let queries;
+			let activeIndex;
+
+			if (n >= 0) {
+				queries = [...prevState.openQueries];
+				queries[n] = queryState;
+				activeIndex = n + 1;
+			} else {
+				queries = [...prevState.openQueries, queryState];
+				activeIndex = queries.length;
+			}
+
+			return {
+				...prevState,
+				renderKey: (prevState.renderKey || 0) + 1,
+				openQueries: queries,
+				activeTabIndex: activeIndex
+			};
+		});
+	};
+
+	private closeQuery = (documentIri: string) => {
+		this.setState(prevState => {
+			const queries = prevState.openQueries.filter(q => q.documentIri !== documentIri);
+
+			return {
+				...prevState,
+				openQueries: queries,
+				activeTabIndex: Math.min(prevState.activeTabIndex, queries.length)
+			};
+		});
+	};
+
+	render() {
+		const { openQueries, activeTabIndex } = this.state;
+
+		return (
+			<vscode-tabs selectedIndex={activeTabIndex} className="vscode-tabs-slim">
+				{/* Welcome tab */}
+				<vscode-tab-header slot="header" id="0">
+					<div className="tab-header-content">
+						<span className="codicon codicon-list-selection"></span>
+					</div>
+				</vscode-tab-header>
+				<vscode-tab-panel>
+					<SparqlResultsWelcomeView messaging={this.messaging} />
+				</vscode-tab-panel>
+
+				{/* Dynamic query result tabs */}
+				{openQueries.map((queryState, index) => (
+					<Fragment key={queryState.documentIri}>
+						<vscode-tab-header slot="header" id={(index + 1).toString()}>
+							<div className="tab-header-content" onClick={() => this.setState({ activeTabIndex: index + 1 })}>
+								<span>{getFileName(queryState.documentIri)}</span>
+								{queryState.error && (
+									<span className="codicon codicon-error tab-error"></span>
+								)}
+								<a className="codicon codicon-close" role="button" title="Close"
+									onClick={(e) => {
+										e.stopPropagation();
+										this.closeQuery(queryState.documentIri);
+									}}
+								></a>
+							</div>
+						</vscode-tab-header>
+						<vscode-tab-panel>
+							<SparqlResultsTable
+								messaging={this.messaging}
+								queryContext={queryState}
+							/>
+						</vscode-tab-panel>
+					</Fragment>
+				))}
+			</vscode-tabs>
+		);
 	}
 }
 
-const root = createRoot(document.getElementById('root')!);
-root.render(<SparqlResultsWebview />);
+createRoot(document.getElementById('root')!).render(<SparqlResultsWebview />);

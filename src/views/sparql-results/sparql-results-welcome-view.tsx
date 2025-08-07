@@ -3,7 +3,6 @@ import { getFileName } from '@/utilities';
 import { WebviewMessaging } from '../webview-messaging';
 import { SparqlQueryState } from '@/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
-import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-welcome-view.css';
 
 interface SparqlResultsWelcomeViewProps {
@@ -23,7 +22,6 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 > {
 
 	componentDidMount() {
-		this.addStylesheet('codicon-styles', codicons);
 		this.addStylesheet('sparql-welcome-styles', stylesheet);
 
 		this.props.messaging?.onMessage(message => {
@@ -41,44 +39,45 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 	render() {
 		const recentQueries = this.state?.history || [];
 
-		return <div className="container sparql-results-welcome">
-			<div className="column column-left">
-				<h3>SPARQL Query</h3>
-				<p className="muted">This panel displays the status and results of <a href="https://www.w3.org/TR/sparql11-query/" target="_blank">SPARQL</a> queries
-					that were executed from files in the editor.</p>
-
-				<vscode-toolbar-container className="vertical link-buttons link-buttons-xl">
-					<vscode-toolbar-button onClick={() => this._createSparqlQueryFile()}>
-						<span className="codicon codicon-new-file"></span>
-						<span className="label">New Query...</span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button onClick={() => this._selectSparqlQueryFile()}>
-						<span className="codicon codicon-folder-opened"></span>
-						<span className="label">Open Query...</span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button onClick={() => this._connectToEndpoint()}>
-						<span className="codicon codicon-debug-disconnect"></span>
-						<span className="label">Connect to Endpoint...</span>
-					</vscode-toolbar-button>
-				</vscode-toolbar-container>
+		return (
+			<div className="container">
+				<div className="muted">This panel displays the status and results of <a href="https://www.w3.org/TR/sparql11-query/" target="_blank">SPARQL</a> queries that were executed from files in the editor.</div>
+				<div className="row">
+					<div className="column">
+						<vscode-toolbar-container className="vertical link-buttons link-buttons-xl">
+							<vscode-toolbar-button onClick={() => this._createSparqlQueryFile()}>
+								<span className="codicon codicon-new-file"></span>
+								<span className="label">New Query...</span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button onClick={() => this._selectSparqlQueryFile()}>
+								<span className="codicon codicon-folder-opened"></span>
+								<span className="label">Open Query...</span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button onClick={() => this._connectToEndpoint()}>
+								<span className="codicon codicon-debug-disconnect"></span>
+								<span className="label">Connect to Endpoint...</span>
+							</vscode-toolbar-button>
+						</vscode-toolbar-container>
+					</div>
+					<div className="column">
+						<vscode-toolbar-container className="header">
+							<h3>Recent Queries</h3>
+							<vscode-toolbar-button onClick={() => this._clearHistory()}>
+								<span className="codicon codicon-clear-all muted"></span>
+							</vscode-toolbar-button>
+						</vscode-toolbar-container>
+						<vscode-toolbar-container className="vertical link-buttons">
+							{recentQueries.length === 0 && <span className="muted">No recent queries.</span>}
+							{recentQueries.length > 0 && recentQueries.map(query => (
+								<vscode-toolbar-button onClick={() => this._openDocument(query.documentIri)}>
+									<span className='label'>{this._getFileName(query.documentIri)}</span>
+								</vscode-toolbar-button>
+							))}
+						</vscode-toolbar-container>
+					</div>
+				</div>
 			</div>
-			<div className="column column-right">
-				<vscode-toolbar-container className="align-top">
-					<h3>Recent</h3>
-					<vscode-toolbar-button onClick={() => this._clearHistory()}>
-						<span className="codicon codicon-clear-all muted"></span>
-					</vscode-toolbar-button>
-				</vscode-toolbar-container>
-				<vscode-toolbar-container className="vertical link-buttons">
-					{recentQueries.length === 0 && <span className="muted">No recent queries.</span>}
-					{recentQueries.length > 0 && recentQueries.map(query => (
-						<vscode-toolbar-button onClick={() => this._openDocument(query.documentIri)}>
-							<span className='label'>{this._getFileName(query.documentIri)}</span>
-						</vscode-toolbar-button>
-					))}
-				</vscode-toolbar-container>
-			</div>
-		</div>;
+		);
 	}
 
 	private _loadHistory() {

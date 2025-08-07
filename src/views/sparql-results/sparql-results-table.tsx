@@ -6,7 +6,6 @@ import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages'
 import { SparqlQueryState } from '@/services/sparql-query-state';
 import { BindingsResult } from '@/services/sparql-query-state';
 import { Stopwatch } from './stopwatch';
-import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-table.css';
 
 /**
@@ -43,7 +42,6 @@ export class SparqlResultsTable extends WebviewComponent<
   };
 
   componentDidMount() {
-    this.addStylesheet('codicon-styles', codicons);
     this.addStylesheet('sparql-table-styles', stylesheet);
   }
 
