@@ -1,21 +1,8 @@
-body {
-	padding: 0;
-}
-
 .container {
-	padding: 15px;
-}
-
-.row {
 	display: flex;
 	flex-direction: row;
 	gap: 50px;
-	margin-top: 20px;
-}
-
-.column h3 {
-	margin-top: 0;
-	font-weight: 400;
+	padding: 15px;
 }
 
 .muted {
@@ -27,8 +14,18 @@ body {
 	text-decoration: underline;
 }
 
-vscode-toolbar-container.vertical {
+vscode-toolbar-container.header {
+	margin-bottom: 1em;
 	gap: 10px;
+}
+
+vscode-toolbar-container.header h3 {
+	margin: 0;
+	font-weight: 400;
+}
+
+vscode-toolbar-container.vertical {
+	gap: 2px;
 	align-items: top;
 }
 

@@ -130,10 +130,10 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 					<Fragment key={queryState.documentIri}>
 						<vscode-tab-header slot="header" id={(index + 1).toString()}>
 							<div className="tab-header-content" onClick={() => this.setState({ activeTabIndex: index + 1 })}>
-								<span>{getFileName(queryState.documentIri)}</span>
 								{queryState.error && (
 									<span className="codicon codicon-error tab-error"></span>
 								)}
+								<span>{getFileName(queryState.documentIri)}</span>
 								<a className="codicon codicon-close" role="button" title="Close"
 									onClick={(e) => {
 										e.stopPropagation();
