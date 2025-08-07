@@ -68,7 +68,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 						</vscode-toolbar-button>
 					</vscode-toolbar-container>
 					<vscode-toolbar-container className="vertical link-buttons">
-						{recentQueries.length === 0 && <span className="muted">No recent queries.</span>}
+						{recentQueries.length === 0 && <span className="muted">No recent queries in this workspace.</span>}
 						{recentQueries.length > 0 && recentQueries.map(query => (
 							<vscode-toolbar-button onClick={() => this._openDocument(query.documentIri)}>
 								<span className='label'>{this._getFileName(query.documentIri)}</span>

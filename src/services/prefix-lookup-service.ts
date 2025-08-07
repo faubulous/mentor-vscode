@@ -45,7 +45,7 @@ export class PrefixLookupService {
 		}
 
 		// 4. Try to find the prefix in the default prefixes.
-		const defaultPrefixes = mentor.localStorageService.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+		const defaultPrefixes = mentor.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
 
 		for (const prefix in defaultPrefixes) {
 			if (defaultPrefixes[prefix] === namespaceIri) {
@@ -108,7 +108,7 @@ export class PrefixLookupService {
 		}
 
 		// 3. Alternatively use the default prefixes if the prefix is not declared in the project.
-		const defaultPrefixes = mentor.localStorageService.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+		const defaultPrefixes = mentor.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
 
 		// Returning an empty string will produce empty URI declarations which  will trigger 
 		// a diagnostic error in the document so users can enter it manually.

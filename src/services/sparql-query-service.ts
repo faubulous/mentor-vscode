@@ -211,7 +211,7 @@ export class SparqlQueryService {
 	 * Tracks query execution in history and persists to storage.
 	 */
 	private async _logQueryExecution(context: SparqlQueryState): Promise<void> {
-		let history = mentor.localStorageService.getValue<SparqlQueryState[]>(HISTORY_STORAGE_KEY, []);
+		let history = mentor.workspaceStorage.getValue<SparqlQueryState[]>(HISTORY_STORAGE_KEY, []);
 
 		history = history.filter(e => e.documentIri !== context.documentIri);
 		history.unshift(context);
@@ -220,7 +220,7 @@ export class SparqlQueryService {
 			history = history.slice(0, HISTORY_MAX_ENTRIES);
 		}
 
-		mentor.localStorageService.setValue(HISTORY_STORAGE_KEY, history);
+		mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, history);
 	}
 
 	/**
@@ -229,7 +229,7 @@ export class SparqlQueryService {
 	 * @returns A promise that resolves to an array of recent query entries.
 	 */
 	getQueryHistory(limit: number = 10): SparqlQueryState[] {
-		const history = mentor.localStorageService.getValue<SparqlQueryState[]>(HISTORY_STORAGE_KEY, []);
+		const history = mentor.workspaceStorage.getValue<SparqlQueryState[]>(HISTORY_STORAGE_KEY, []);
 
 		return history
 			.slice(0, limit)
@@ -240,6 +240,6 @@ export class SparqlQueryService {
 	 * Clears the persisted query history.
 	 */
 	clearQueryHistory(): void {
-		mentor.localStorageService.setValue(HISTORY_STORAGE_KEY, []);
+		mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, []);
 	}
 }

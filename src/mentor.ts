@@ -69,9 +69,14 @@ class MentorExtension {
 	readonly workspaceIndexer = new WorkspaceIndexer();
 
 	/**
-	 * A service for storing and retrieving data from the local storage with extension scope.
+	 * A service for storing data that is only available in the workspace.
 	 */
-	readonly localStorageService = new LocalStorageService();
+	readonly workspaceStorage = new LocalStorageService();
+
+	/**
+	 * A service for storing data that is available in all VS Code instances, independent of the workspace.
+	 */
+	readonly globalStorage = new LocalStorageService();
 
 	/**
 	 * A service for declaring prefixes in RDF documents.
@@ -242,7 +247,8 @@ class MentorExtension {
 	 */
 	async initialize(context: vscode.ExtensionContext) {
 		// Initialize the extension persistence service.
-		this.localStorageService.initialize(context.globalState);
+		this.workspaceStorage.initialize(context.workspaceState);
+		this.globalStorage.initialize(context.globalState);
 
 		// Initialize the view settings.
 		this.settings.initialize(this.configuration);
@@ -259,7 +265,7 @@ class MentorExtension {
 				try {
 					let result = await this.prefixDownloaderService.fetchPrefixes();
 
-					this.localStorageService.setValue('defaultPrefixes', result);
+					this.globalStorage.setValue('defaultPrefixes', result);
 
 					progress.report({ increment: 100 });
 				} catch (error: any) {
