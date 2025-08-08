@@ -1,3 +1,7 @@
+body {
+    padding: 0;
+}
+
 vscode-tabs.vscode-tabs-slim > vscode-tab-header {
     padding-top: 3px;
     padding-bottom: 3px;

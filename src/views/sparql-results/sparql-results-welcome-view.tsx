@@ -79,8 +79,9 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 									onClick={(e) => this._handleExecuteQuery(queryState, e)}>
 								</a>
 								<a className="file-link" onClick={(e) => this._handleOpenDocument(queryState, e)}>
-									{getDisplayName(queryState)}
+									<span>{getDisplayName(queryState)}</span>
 								</a>
+								<span className="folder muted">{this._getWorkspacePath(queryState)}</span>
 								<a className="remove-button codicon codicon-close" role="button" title="Remove"
 									onClick={(e) => this._handleRemoveFromHistory(queryState, e)}>
 								</a>
@@ -90,6 +91,12 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 				</div>
 			</div>
 		);
+	}
+
+	private _getWorkspacePath(queryState: SparqlQueryExecutionState): string | undefined {
+		if (queryState.workspaceIri) {
+			return '~' + queryState.workspaceIri.split(':')[1];
+		}
 	}
 
 	private _loadHistory() {

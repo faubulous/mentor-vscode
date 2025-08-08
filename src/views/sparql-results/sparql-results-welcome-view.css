@@ -85,11 +85,14 @@ vscode-toolbar-container.vertical .history-item {
 	background-color: var(--vscode-list-hoverBackground);
 }
 
+.folder {
+	margin-left: 7px;
+}
+
 .file-link {
 	color: var(--vscode-textLink-foreground) !important;
     text-decoration: none;
     cursor: pointer;
-	margin-right: 4px;
 }
 
 .execute-button {

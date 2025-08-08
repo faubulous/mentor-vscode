@@ -4,6 +4,7 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { BindingsStream } from '@comunica/types';
 import { Bindings } from '@rdfjs/types';
 import { mentor } from "@/mentor";
+import { WorkspaceUri } from "@/workspace-uri";
 import { NamespaceMap } from "@/utilities";
 import { SparqlDocument } from '@/languages';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
@@ -37,9 +38,11 @@ export class SparqlQueryService {
 	createQuery(querySource: vscode.TextDocument | vscode.NotebookCell): SparqlQueryExecutionState {
 		if ('notebook' in querySource && querySource.notebook) {
 			const cell = querySource as vscode.NotebookCell;
+			const documentIri = cell.document.uri;
 
 			return {
-				documentIri: cell.document.uri.toString(),
+				documentIri: documentIri.toString(),
+				workspaceIri: this._getWorkspaceUri(documentIri)?.toString(),
 				notebookIri: cell.notebook.uri.toString(),
 				cellIndex: cell.index,
 				startTime: Date.now(),
@@ -47,12 +50,20 @@ export class SparqlQueryService {
 			};
 		} else {
 			const document = querySource as vscode.TextDocument;
+			const documentIri = document.uri;
 
 			return {
-				documentIri: document.uri.toString(),
+				documentIri: documentIri.toString(),
+				workspaceIri: this._getWorkspaceUri(documentIri)?.toString(),
 				startTime: Date.now(),
 				query: document.getText()
 			};
+		}
+	}
+
+	private _getWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
+		if (documentIri.scheme === 'file') {
+			return WorkspaceUri.toWorkspaceUri(documentIri);
 		}
 	}
 

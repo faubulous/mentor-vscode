@@ -13,6 +13,11 @@ export interface SparqlQueryExecutionState {
 	documentIri: string;
 
 	/**
+	 * The workspace relative URI of the `documentIri`.
+	 */
+	workspaceIri?: string;
+
+	/**
 	 * The IRI of the notebook file where the SPARQL query is run, if applicable.
 	 */
 	notebookIri?: string;
