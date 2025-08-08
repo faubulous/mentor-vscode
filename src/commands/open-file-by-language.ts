@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { WorkspaceVfs } from '@/workspace-vfs';
+import { WorkspaceUri } from '@/workspace-uri';
 import { getFileName, getPath } from '@/utilities';
 
 export async function openFileByLanguage(languageId: string) {
@@ -14,7 +14,7 @@ export async function openFileByLanguage(languageId: string) {
 	quickPick.title = 'Select the file to open:';
 	quickPick.items = files.map(file => ({
 		label: getFileName(file.toString()),
-		description: '~' + getPath(WorkspaceVfs.toRelativeUri(file).fsPath),
+		description: '~' + getPath(WorkspaceUri.toWorkspaceUri(file).fsPath),
 		iri: file
 	})).sort((a, b) => a.label.localeCompare(b.label));
 

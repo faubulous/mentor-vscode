@@ -149,7 +149,7 @@
     ],
     "keybindings": [
       {
-        "command": "mentor.action.runSparqlQueryFromEditor",
+        "command": "mentor.action.executeSparqlQueryFromActiveEditor",
         "key": "f5",
         "when": "editorLangId == 'sparql'"
       }
@@ -435,13 +435,8 @@
         "icon": "$(new-file)"
       },
       {
-        "command": "mentor.action.runSparqlQuery",
+        "command": "mentor.action.executeSparqlQueryFromActiveEditor",
         "title": "Mentor: Execute SPARQL Query",
-        "icon": "$(play)"
-      },
-      {
-        "command": "mentor.action.runSparqlQueryFromEditor",
-        "title": "Mentor: Execute SPARQL Query from Editor",
         "icon": "$(play)"
       },
       {
@@ -587,7 +582,7 @@
     "menus": {
       "editor/title": [
         {
-          "command": "mentor.action.runSparqlQueryFromEditor",
+          "command": "mentor.action.executeSparqlQueryFromActiveEditor",
           "when": "editorLangId == 'sparql'",
           "group": "navigation@0"
         },

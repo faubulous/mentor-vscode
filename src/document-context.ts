@@ -5,7 +5,7 @@ import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-r
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { Uri } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
-import { WorkspaceVfs } from '@/workspace-vfs';
+import { WorkspaceUri } from '@/workspace-uri';
 import { TreeLabelStyle } from '@/settings';
 import { Range } from 'vscode-languageserver-types';
 
@@ -68,7 +68,7 @@ export abstract class DocumentContext {
 	 * @note This is a workspace-relative URI so that queries which are persisted in a repository are portable.
 	 */
 	get graphIri(): vscode.Uri {
-		return WorkspaceVfs.toRelativeUri(this.uri);
+		return WorkspaceUri.toWorkspaceUri(this.uri);
 	}
 
 	/**

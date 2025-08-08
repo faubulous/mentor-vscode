@@ -2,13 +2,13 @@ import { createRoot } from 'react-dom/client';
 import { Fragment } from 'react';
 import { WebviewComponent, WebviewComponentProps } from '@/views/webview-component';
 import { WebviewMessaging } from '@/views/webview-messaging';
-import { SparqlQueryState } from '@/services/sparql-query-state';
+import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
 import { SparqlResultsTable } from './sparql-results-table';
 import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
-import { getFileName } from '@/utilities';
 import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-webview.css';
+import { VsCodeApi } from '../vscode-api';
 
 interface SparqlResultsWebviewProps extends WebviewComponentProps {
 	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
@@ -16,7 +16,7 @@ interface SparqlResultsWebviewProps extends WebviewComponentProps {
 
 interface SparqlResultsWebviewState {
 	renderKey?: number;
-	openQueries: SparqlQueryState[];
+	openQueries: SparqlQueryExecutionState[];
 	activeTabIndex: number;
 }
 
@@ -34,8 +34,6 @@ interface SparqlResultsWebviewState {
 class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, SparqlResultsWebviewState> {
 	private messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
 
-	private vscode: any;
-
 	constructor(props: SparqlResultsWebviewProps) {
 		super(props);
 
@@ -46,19 +44,10 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 		};
 
 		// Initialize extension host messaging and set up state persistence.
-		this.vscode = (window as any).acquireVsCodeApi();
-
-		this.messaging = {
-			postMessage: (message) => this.vscode.postMessage(message),
-			onMessage: (handler) => {
-				const messageHandler = (event: MessageEvent) => handler(event.data);
-				window.addEventListener('message', messageHandler);
-				return () => window.removeEventListener('message', messageHandler);
-			},
-		};
+		this.messaging = VsCodeApi.getMessaging();
 
 		// Restore previous state if available
-		const previousState = this.vscode.getState();
+		const previousState = VsCodeApi.getState();
 
 		if (previousState) {
 			this.state = {
@@ -89,14 +78,14 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 	}
 
 	componentDidUpdate() {
-		this.vscode.setState({
+		VsCodeApi.setState({
 			renderKey: 0,
 			openQueries: this.state.openQueries,
 			activeTabIndex: this.state.activeTabIndex
 		});
 	}
 
-	private _addOrUpdateQuery = (queryState: SparqlQueryState) => {
+	private _addOrUpdateQuery = (queryState: SparqlQueryExecutionState) => {
 		this.setState(prevState => {
 			const n = prevState.openQueries.findIndex(q => q.documentIri === queryState.documentIri);
 
@@ -156,7 +145,7 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 								{queryState.error && (
 									<span className="codicon codicon-error tab-error"></span>
 								)}
-								<span>{getFileName(queryState.documentIri)}</span>
+								<span>{getDisplayName(queryState)}</span>
 								<a className="codicon codicon-close" role="button" title="Close"
 									onClick={(e) => {
 										e.stopPropagation();

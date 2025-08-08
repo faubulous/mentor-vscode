@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { SparqlQueryState, BindingsResult } from '@/services/sparql-query-state';
+import { SparqlQueryExecutionState, BindingsResult } from '@/services/sparql-query-state';
 
-export async function saveSparqlQueryResults(context: SparqlQueryState): Promise<void> {
+export async function saveSparqlQueryResults(context: SparqlQueryExecutionState): Promise<void> {
     let content = '';
 
-    if (context.resultType === 'bindings') {
+    if (context.result?.type === 'bindings') {
         const result = context.result as BindingsResult;
 
         // Use array join instead of string concatenation

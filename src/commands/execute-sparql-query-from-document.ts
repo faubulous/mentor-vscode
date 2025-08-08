@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { sparqlResultsWebviewProvider } from '@/views';
 
-export async function runSparqlQuery(documentIri: string): Promise<void> {
+export async function executeSparqlQueryFromDocument(documentIri: string): Promise<void> {
     const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentIri);
 
     if (!document) {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NotSupportedError } from '@/utilities/error';
-import { WorkspaceVfs } from '@/workspace-vfs';
+import { WorkspaceUri } from '@/workspace-uri';
 
 /**
  * Provides a file system provider for the 'mentor' scheme.
@@ -11,19 +11,19 @@ export class MentorFileSystemProvider implements vscode.FileSystemProvider {
 	readonly onDidChangeFile = this._onDidChangeFile.event;
 
 	stat(uri: vscode.Uri): vscode.FileStat | Thenable<vscode.FileStat> {
-		const fileUri = WorkspaceVfs.toFileUri(uri);
+		const fileUri = WorkspaceUri.toFileUri(uri);
 
 		return vscode.workspace.fs.stat(fileUri);
 	}
 
 	readFile(uri: vscode.Uri): Uint8Array | Thenable<Uint8Array> {
-		const fileUri = WorkspaceVfs.toFileUri(uri);
+		const fileUri = WorkspaceUri.toFileUri(uri);
 
 		return vscode.workspace.fs.readFile(fileUri);
 	}
 
 	writeFile(uri: vscode.Uri, content: Uint8Array): void | Thenable<void> {
-		const fileUri = WorkspaceVfs.toFileUri(uri);
+		const fileUri = WorkspaceUri.toFileUri(uri);
 
 		return vscode.workspace.fs.writeFile(fileUri, content);
 	}
@@ -49,7 +49,7 @@ export class MentorFileSystemProvider implements vscode.FileSystemProvider {
 	}
 
 	register(): vscode.Disposable[] {
-		return [vscode.workspace.registerFileSystemProvider(WorkspaceVfs.uriScheme, this, {
+		return [vscode.workspace.registerFileSystemProvider(WorkspaceUri.uriScheme, this, {
 			isCaseSensitive: true,
 			isReadonly: false
 		})];

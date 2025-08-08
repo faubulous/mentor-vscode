@@ -6,11 +6,11 @@ import * as vscode from 'vscode';
  * to provide shortened document URIs that can be resolved when the repository code
  * is checked-out on different systems.
  */
-export class WorkspaceVfs {
+export class WorkspaceUri {
 	/**
 	 * The URI scheme for the workspace relative Mentor virtual file system URIs.
 	 */
-	static readonly uriScheme = 'mentor-vfs';
+	static readonly uriScheme = 'workspace';
 
 	/**
 	 * A regular expression to match Mentor VFS URIs in text documents.
@@ -23,7 +23,7 @@ export class WorkspaceVfs {
 	 * @param fileUri The absolute file system URI to convert.
 	 * @returns The corresponding Mentor VFS URI.
 	 */
-	static toRelativeUri(fileUri: vscode.Uri): vscode.Uri {
+	static toWorkspaceUri(fileUri: vscode.Uri): vscode.Uri {
 		const workspaceFolders = vscode.workspace.workspaceFolders;
 
 		if (!workspaceFolders || workspaceFolders.length === 0) {

@@ -3,7 +3,7 @@ import { Uri } from '@faubulous/mentor-rdf';
 import { WebviewComponent, WebviewComponentProps } from '@/views/webview-component';
 import { WebviewMessaging } from '@/views/webview-messaging';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
-import { SparqlQueryState } from '@/services/sparql-query-state';
+import { SparqlQueryExecutionState } from '@/services/sparql-query-state';
 import { BindingsResult } from '@/services/sparql-query-state';
 import { Stopwatch } from './stopwatch';
 import stylesheet from './sparql-results-table.css';
@@ -17,7 +17,7 @@ interface SparqlResultsTableProps extends WebviewComponentProps {
   /**
    * The SPARQL query results to display.
    */
-  queryContext: SparqlQueryState;
+  queryContext: SparqlQueryExecutionState;
 }
 
 interface SparqlResultsTableState {
@@ -224,7 +224,7 @@ export class SparqlResultsTable extends WebviewComponent<
   private _reloadQuery() {
     const context = this.props.queryContext;
 
-    this.executeCommand('mentor.action.runSparqlQuery', context.documentIri);
+    this.executeCommand('mentor.action.executeSparqlQueryFromDocument', context.documentIri);
   }
 
   private _saveResults() {

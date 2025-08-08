@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { WorkspaceVfs } from '@/workspace-vfs';
+import { WorkspaceUri } from '@/workspace-uri';
 
 /**
  * Provides document links for URIs with the 'mentor:' scheme.
@@ -9,7 +9,7 @@ export class MentorFileLinkProvider implements vscode.DocumentLinkProvider {
   provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const links: vscode.DocumentLink[] = [];
     const text = document.getText();
-    const regex = new RegExp(WorkspaceVfs.uriRegex, 'g');
+    const regex = new RegExp(WorkspaceUri.uriRegex, 'g');
 
     for (const match of text.matchAll(regex)) {
       const start = document.positionAt(match.index);

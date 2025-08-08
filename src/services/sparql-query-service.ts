@@ -6,7 +6,7 @@ import { Bindings } from '@rdfjs/types';
 import { mentor } from "@/mentor";
 import { NamespaceMap } from "@/utilities";
 import { SparqlDocument } from '@/languages';
-import { SparqlQueryState } from "./sparql-query-state";
+import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
 
 /**
  * The key for storing query history in local storage.
@@ -34,7 +34,7 @@ export class SparqlQueryService {
 	 * @param querySource The source document or notebook cell where the query is stored.
 	 * @returns A new SparqlQueryContext instance.
 	 */
-	createQuery(querySource: vscode.TextDocument | vscode.NotebookCell): SparqlQueryState {
+	createQuery(querySource: vscode.TextDocument | vscode.NotebookCell): SparqlQueryExecutionState {
 		if ('notebook' in querySource && querySource.notebook) {
 			const cell = querySource as vscode.NotebookCell;
 
@@ -42,19 +42,17 @@ export class SparqlQueryService {
 				documentIri: cell.document.uri.toString(),
 				notebookIri: cell.notebook.uri.toString(),
 				cellIndex: cell.index,
-				query: cell.document.getText(),
 				startTime: Date.now(),
-				resultType: 'bindings',
+				query: cell.document.getText()
 			};
 		} else {
 			const document = querySource as vscode.TextDocument;
 
 			return {
 				documentIri: document.uri.toString(),
-				query: document.getText(),
 				startTime: Date.now(),
-				resultType: 'bindings'
-			}
+				query: document.getText()
+			};
 		}
 	}
 
@@ -63,7 +61,7 @@ export class SparqlQueryService {
 	 * @param documentIri The IRI of the document to retrieve the query state for.
 	 * @returns The SparqlQueryState for the specified document, or `undefined` if not found.
 	 */
-	getQueryState(documentIri: string): SparqlQueryState | undefined {
+	getQueryState(documentIri: string): SparqlQueryExecutionState | undefined {
 		return this.getQueryHistory().find(q => q.documentIri === documentIri);
 	}
 
@@ -71,7 +69,7 @@ export class SparqlQueryService {
 	 * Update the SPARQL query state for a specific document IRI.
 	 * @param state The SparqlQueryState to update or add to the history.
 	 */
-	updateQueryState(state: SparqlQueryState): void {
+	updateQueryState(state: SparqlQueryExecutionState): void {
 		const history = this.getQueryHistory();
 		const index = history.findIndex(q => q.documentIri === state.documentIri);
 
@@ -106,7 +104,7 @@ export class SparqlQueryService {
 	 * @param documentIri The IRI of the document where the query is run.
 	 * @returns A promise that resolves to the results of the query.
 	 */
-	async executeQuery(context: SparqlQueryState): Promise<SparqlQueryState> {
+	async executeQuery(context: SparqlQueryExecutionState): Promise<SparqlQueryExecutionState> {
 		const source = mentor.store;
 		const engine = new QueryEngine();
 
@@ -122,10 +120,7 @@ export class SparqlQueryService {
 				unionDefaultGraph: true
 			});
 
-			const serialized = await this._serializeQueryResults(context, result);
-
-			context.resultType = 'bindings';
-			context.result = serialized;
+			context.result = await this._serializeQueryResults(context, result);
 		} catch (error: any) {
 			context.error = {
 				type: error.name || 'QueryError',
@@ -144,7 +139,7 @@ export class SparqlQueryService {
 		return context;
 	}
 
-	private _getQueryText(context: SparqlQueryState): string | undefined {
+	private _getQueryText(context: SparqlQueryExecutionState): string | undefined {
 		if (context.notebookIri) {
 			const notebook = vscode.workspace.notebookDocuments
 				.find(n => n.uri.toString() === context.notebookIri);
@@ -171,7 +166,7 @@ export class SparqlQueryService {
 	 * @param limit The maximum number of results to serialize.
 	 * @returns An object containing the serialized results.
 	 */
-	private async _serializeQueryResults(context: SparqlQueryState, bindingStream: BindingsStream) {
+	private async _serializeQueryResults(context: SparqlQueryExecutionState, bindingStream: BindingsStream): Promise<BindingsResult> {
 		// Note: This evaluates the query results and collects the bindings.
 		const bindings = await bindingStream.toArray();
 
@@ -216,6 +211,7 @@ export class SparqlQueryService {
 		}
 
 		return {
+			type: 'bindings',
 			columns,
 			rows,
 			namespaceMap
@@ -229,7 +225,7 @@ export class SparqlQueryService {
 	 * @returns A set of variable names used in the query.
 	 * @remarks This is needed because Comunica does not preserve the definition order of the variables in results.
 	 */
-	private _parseSelectVariables(context: SparqlQueryState, bindings: Bindings[]): Array<string> {
+	private _parseSelectVariables(context: SparqlQueryExecutionState, bindings: Bindings[]): Array<string> {
 		const document = mentor.contexts[context.documentIri] as SparqlDocument;
 
 		if (!document) {
@@ -259,8 +255,8 @@ export class SparqlQueryService {
 	/**
 	 * Tracks query execution in history and persists to storage.
 	 */
-	private async _logQueryExecution(context: SparqlQueryState): Promise<void> {
-		let history = mentor.workspaceStorage.getValue<SparqlQueryState[]>(HISTORY_STORAGE_KEY, []);
+	private async _logQueryExecution(context: SparqlQueryExecutionState): Promise<void> {
+		let history = mentor.workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
 
 		history = history.filter(e => e.documentIri !== context.documentIri);
 		history.unshift(context);
@@ -279,8 +275,8 @@ export class SparqlQueryService {
 	 * @param limit The maximum number of recent queries to return.
 	 * @returns A promise that resolves to an array of recent query entries.
 	 */
-	getQueryHistory(limit: number = 10): SparqlQueryState[] {
-		const history = mentor.workspaceStorage.getValue<SparqlQueryState[]>(HISTORY_STORAGE_KEY, []);
+	getQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
+		const history = mentor.workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
 
 		return history
 			.slice(0, limit)

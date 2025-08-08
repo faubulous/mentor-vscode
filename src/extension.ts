@@ -60,8 +60,10 @@ function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebook', commands.createNotebook));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebookFromEditor', commands.createNotebookFromEditor));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createSparqlQueryFile', commands.createSparqlQueryFile));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.runSparqlQuery', commands.runSparqlQuery));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.runSparqlQueryFromEditor', commands.runSparqlQueryFromEditor));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeNotebookCell', commands.executeNotebookCell));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQueryFromDocument', commands.executeSparqlQueryFromDocument));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQueryFromUntitledDocument', commands.executeSparqlQueryFromUntitledDocument));
+	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQueryFromActiveEditor', commands.executeSparqlQueryFromActiveEditor));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.restoreUntitledDocument', commands.restoreUntitledDocument));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.saveSparqlQueryResults', commands.saveSparqlQueryResults));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', commands.deletePrefixes));

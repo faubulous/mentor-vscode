@@ -1,7 +1,6 @@
 import { WebviewComponent } from '@/views/webview-component';
-import { getFileName } from '@/utilities';
 import { WebviewMessaging } from '../webview-messaging';
-import { SparqlQueryState } from '@/services/sparql-query-state';
+import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import stylesheet from './sparql-results-welcome-view.css';
 import React = require('react');
@@ -11,7 +10,7 @@ interface SparqlResultsWelcomeViewProps {
 }
 
 interface SparqlResultsWelcomeViewState {
-	history?: SparqlQueryState[];
+	history?: SparqlQueryExecutionState[];
 }
 
 /**
@@ -74,16 +73,16 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 					</vscode-toolbar-container>
 					<vscode-toolbar-container className="vertical link-buttons">
 						{recentQueries.length === 0 && <span className="muted">No recent queries in this workspace.</span>}
-						{recentQueries.length > 0 && recentQueries.map((query, index) => (
-							<div key={`${query.documentIri}-${index}`} className="history-item">
+						{recentQueries.length > 0 && recentQueries.map((queryState, index) => (
+							<div key={`${queryState.documentIri}-${index}`} className="history-item">
 								<a className='execute-button codicon codicon-play' role="button" title="Execute"
-									onClick={(e) => this._handleExecuteQuery(query, e)}>
+									onClick={(e) => this._handleExecuteQuery(queryState, e)}>
 								</a>
-								<a className="file-link" onClick={(e) => this._handleOpenDocument(query, e)}>
-									{this._getFileName(query)}
+								<a className="file-link" onClick={(e) => this._handleOpenDocument(queryState, e)}>
+									{getDisplayName(queryState)}
 								</a>
 								<a className="remove-button codicon codicon-close" role="button" title="Remove"
-									onClick={(e) => this._handleRemoveFromHistory(query, e)}>
+									onClick={(e) => this._handleRemoveFromHistory(queryState, e)}>
 								</a>
 							</div>
 						))}
@@ -97,38 +96,45 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 		this.props.messaging?.postMessage({ id: 'GetSparqlQueryHistoryRequest' });
 	}
 
-	private _getFileName(query: SparqlQueryState) {
-		if (query.notebookIri && query.cellIndex) {
-			return getFileName(query.documentIri).split('#')[0] + ':Cell-' + query.cellIndex;
-		} else {
-			return getFileName(query.documentIri);
-		}
-	}
-
 	private _handleClearHistory() {
 		this.executeCommand('mentor.action.clearQueryHistory');
 
 		this._loadHistory();
 	}
 
-	private _handleExecuteQuery(query: SparqlQueryState, e?: React.MouseEvent) {
-		e?.stopPropagation();
+	private _handleExecuteQuery(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
+		if (query.notebookIri) {
+			this.executeCommand('mentor.action.executeNotebookCell', query.notebookIri, query.cellIndex);
+		} else if (query.documentIri.startsWith('untitled:')) {
+			this.executeCommand('mentor.action.executeSparqlQueryFromUntitledDocument', query.documentIri, query.query);
+		} else {
+			this.executeCommand('mentor.action.executeSparqlQueryFromDocument', query.documentIri);
+			this.executeCommand('mentor.action.openDocument', query.documentIri);
+		}
 	}
 
-	private _handleOpenDocument(query: SparqlQueryState, e?: React.MouseEvent) {
+	private _handleOpenDocument(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
 		e?.stopPropagation();
 
 		if (query.documentIri.startsWith('untitled:')) {
 			this.executeCommand('mentor.action.restoreUntitledDocument', query.documentIri, query.query);
 		} else {
-			console.warn(query.documentIri);
-
 			this.executeCommand('mentor.action.openDocument', query.documentIri);
 		}
 	}
 
-	private _handleRemoveFromHistory(query: SparqlQueryState, e?: React.MouseEvent) {
+	private _handleRemoveFromHistory(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
 		e?.stopPropagation();
+
+		const n = this.state.history?.findIndex(q => q === query);
+
+		if (n !== undefined && n >= 0) {
+			this.setState(prevState => ({
+				history: prevState.history?.filter((_, index) => index !== n)
+			}));
+
+			this.executeCommand('mentor.action.removeFromQueryHistory', n);
+		}
 	}
 
 	private _handleCreateSparqlQueryFile() {
