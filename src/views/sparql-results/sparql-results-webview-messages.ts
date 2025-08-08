@@ -7,4 +7,5 @@ export type SparqlResultsWebviewMessages =
     { readonly id: 'RestoreState', state: any } |
     { readonly id: 'SaveStateRequest' } |
     { readonly id: 'SaveStateResponse', success: boolean } |
-    { readonly id: 'SetSparqlQueryState', queryState: SparqlQueryState };
+    { readonly id: 'SetSparqlQueryState', queryState: SparqlQueryState } |
+    { readonly id: 'SparqlQueryHistoryChanged' };

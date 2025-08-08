@@ -166,10 +166,7 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 							</div>
 						</vscode-tab-header>
 						<vscode-tab-panel>
-							<SparqlResultsTable
-								messaging={this.messaging}
-								queryContext={queryState}
-							/>
+							<SparqlResultsTable messaging={this.messaging} queryContext={queryState} />
 						</vscode-tab-panel>
 					</Fragment>
 				))}
@@ -178,5 +175,5 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 	}
 }
 
-createRoot(document.getElementById('root')!)
-	.render(<SparqlResultsWebview />);
+const root = createRoot(document.getElementById('root')!);
+root.render(<SparqlResultsWebview />);

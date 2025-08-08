@@ -1,5 +1,5 @@
 export * from './analyze-workspace';
-export * from './clear-sparql-query-history';
+export * from './clear-query-history';
 export * from './create-notebook-from-editor';
 export * from './create-notebook';
 export * from './create-sparql-query-file';
@@ -12,6 +12,8 @@ export * from './open-document-graph';
 export * from './open-file-by-language';
 export * from './open-in-browser';
 export * from './open-settings';
+export * from './remove-from-query-history';
+export * from './restore-untitled-document';
 export * from './reveal-definition';
 export * from './reveal-shape-definition';
 export * from './run-sparql-query';

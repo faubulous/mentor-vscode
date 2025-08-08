@@ -22,6 +22,13 @@ const HISTORY_MAX_ENTRIES = 25;
  * A service for executing SPARQL queries against an RDF endpoint.
  */
 export class SparqlQueryService {
+	private _onDidHistoryChange: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+
+	/**
+	 * Event that is triggered when the query history changes.
+	 */
+	onDidHistoryChange: vscode.Event<void> = this._onDidHistoryChange.event;
+
 	/**
 	 * Prepares a SPARQL query for execution.
 	 * @param querySource The source document or notebook cell where the query is stored.
@@ -48,6 +55,48 @@ export class SparqlQueryService {
 				startTime: Date.now(),
 				resultType: 'bindings'
 			}
+		}
+	}
+
+	/**
+	 * Get the SPARQL query state for a specific document IRI.
+	 * @param documentIri The IRI of the document to retrieve the query state for.
+	 * @returns The SparqlQueryState for the specified document, or `undefined` if not found.
+	 */
+	getQueryState(documentIri: string): SparqlQueryState | undefined {
+		return this.getQueryHistory().find(q => q.documentIri === documentIri);
+	}
+
+	/**
+	 * Update the SPARQL query state for a specific document IRI.
+	 * @param state The SparqlQueryState to update or add to the history.
+	 */
+	updateQueryState(state: SparqlQueryState): void {
+		const history = this.getQueryHistory();
+		const index = history.findIndex(q => q.documentIri === state.documentIri);
+
+		if (index >= 0) {
+			history[index] = state;
+
+			mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, history);
+
+			this._onDidHistoryChange.fire();
+		}
+	}
+
+	/**
+	 * Removes the n-th item from the query history.
+	 * @param index The index of the item to remove from the query history.
+	 */
+	removeQueryState(index: number): void {
+		const history = this.getQueryHistory();
+
+		if (index >= 0 && index < history.length) {
+			history.splice(index, 1);
+
+			mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, history);
+
+			this._onDidHistoryChange.fire();
 		}
 	}
 
@@ -221,6 +270,8 @@ export class SparqlQueryService {
 		}
 
 		mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, history);
+
+		this._onDidHistoryChange.fire();
 	}
 
 	/**
@@ -241,5 +292,7 @@ export class SparqlQueryService {
 	 */
 	clearQueryHistory(): void {
 		mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, []);
+
+		this._onDidHistoryChange.fire();
 	}
 }

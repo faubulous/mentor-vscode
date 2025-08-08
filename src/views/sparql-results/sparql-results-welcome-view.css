@@ -51,3 +51,51 @@ vscode-toolbar-container.link-buttons vscode-toolbar-button .label {
 vscode-toolbar-container.link-buttons vscode-toolbar-button:hover {
 	background: transparent;
 }
+
+vscode-toolbar-container.vertical .history-item {
+    width: 100%;
+    margin-bottom: 2px;
+}
+
+.history-item {
+    display: flex;
+    align-items: center;
+	gap: 4px;
+    padding: 0;
+}
+
+.history-item:focus-within {
+    background-color: var(--vscode-list-focusBackground);
+}
+
+.history-item [role="button"] {
+	color: var(--vscode-inactive);
+    visibility: hidden;
+	background-color: transparent;
+	border-radius: 2px;
+	padding: 2px;
+	cursor: pointer;
+}
+
+.history-item:hover [role="button"] {
+    visibility: visible;
+}
+
+.history-item [role="button"]:hover {
+	background-color: var(--vscode-list-hoverBackground);
+}
+
+.file-link {
+	color: var(--vscode-textLink-foreground) !important;
+    text-decoration: none;
+    cursor: pointer;
+	margin-right: 4px;
+}
+
+.execute-button {
+	color: var(--vscode-debugIcon-restartForeground) !important;
+}
+
+.remove-button {
+	margin-left: auto;
+}

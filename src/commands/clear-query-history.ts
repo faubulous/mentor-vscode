@@ -1,5 +1,5 @@
 import { mentor } from '../mentor';
 
-export const clearSparqlQueryHistory = () => {
+export const clearQueryHistory = () => {
 	mentor.sparqlQueryService.clearQueryHistory();
 };

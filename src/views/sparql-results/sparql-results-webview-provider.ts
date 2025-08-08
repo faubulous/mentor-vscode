@@ -18,19 +18,10 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
     public register(context: vscode.ExtensionContext) {
         this._context = context;
 
-        const subscription = vscode.window.registerWebviewViewProvider(this.viewType, this);
+        this._subscriptions.push(vscode.window.registerWebviewViewProvider(this.viewType, this));
+        this._subscriptions.push(mentor.sparqlQueryService.onDidHistoryChange(this._onDidQueryHistoryChange, this));
 
-        this._subscriptions.push(subscription);
-
-        return subscription;
-    }
-
-    public dispose() {
-        this._subscriptions.forEach(subscription => subscription.dispose());
-        this._subscriptions.length = 0;
-
-        this._view = undefined;
-        this._context = undefined;
+        return this._subscriptions;
     }
 
     public resolveWebviewView(
@@ -47,6 +38,12 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
 
         if (context.state) {
             this._view.webview.postMessage({ id: 'RestoreState', state: context.state });
+        }
+    }
+
+    private _onDidQueryHistoryChange() {
+        if (this._view) {
+            this._view.webview.postMessage({ id: 'SparqlQueryHistoryChanged' });
         }
     }
 

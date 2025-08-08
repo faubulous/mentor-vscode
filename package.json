@@ -1048,7 +1048,7 @@
             "type": "string",
             "title": "Default SPARQL Query Template",
             "description": "The default SPARQL query template to be used when creating a new SPARQL query file.",
-            "default": "SELECT ?s ?p ?o WHERE { ?s ?p ?o } LIMIT 1000",
+            "default": "SELECT ?s ?p ?o\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
             "editPresentation": "multilineText"
           }
         },
