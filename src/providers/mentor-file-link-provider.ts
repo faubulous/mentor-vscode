@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { WorkspaceUri } from '@/workspace-uri';
+import { WorkspaceUri } from '@/workspace/workspace-uri';
 
 /**
  * Provides document links for URIs with the 'mentor:' scheme.

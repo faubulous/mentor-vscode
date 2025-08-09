@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
-import { DocumentContext } from '@/document-context';
+import { DocumentContext } from '@/workspace/document-context';
 import { getIriFromNodeId } from '@/utilities';
 
 /**

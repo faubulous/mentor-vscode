@@ -2,13 +2,13 @@ import { createRoot } from 'react-dom/client';
 import { Fragment } from 'react';
 import { WebviewComponent, WebviewComponentProps } from '@/views/webview-component';
 import { WebviewMessaging } from '@/views/webview-messaging';
+import { VsCodeApi } from '@/views/vscode-api';
 import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
 import { SparqlResultsTable } from './sparql-results-table';
 import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-webview.css';
-import { VsCodeApi } from '../vscode-api';
 
 interface SparqlResultsWebviewProps extends WebviewComponentProps {
 	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
@@ -80,7 +80,11 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 	componentDidUpdate() {
 		VsCodeApi.setState({
 			renderKey: 0,
-			openQueries: this.state.openQueries,
+			openQueries: this.state.openQueries.map(q => ({
+				...q,
+				result: undefined, // Avoid storing large result sets in state.
+				error: undefined // Avoid storing error details in state.
+			})),
 			activeTabIndex: this.state.activeTabIndex
 		});
 	}

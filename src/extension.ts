@@ -6,8 +6,8 @@ import * as commands from './commands';
 import * as views from './views';
 import * as providers from './providers';
 import { mentor } from './mentor';
-import { NotebookSerializer } from './notebook-serializer';
-import { NotebookController } from './notebook-controller';
+import { NotebookSerializer } from './workspace/notebook-serializer';
+import { NotebookController } from './workspace/notebook-controller';
 
 export async function activate(context: vscode.ExtensionContext) {
 	registerProviders(context);

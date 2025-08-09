@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NotSupportedError } from '@/utilities/error';
-import { WorkspaceUri } from '@/workspace-uri';
+import { WorkspaceUri } from '@/workspace/workspace-uri';
 
 /**
  * Provides a file system provider for the 'mentor' scheme.

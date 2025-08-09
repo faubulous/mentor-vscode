@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from './mentor';
+import { mentor } from '../mentor';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
 

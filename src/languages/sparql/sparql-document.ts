@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { RdfSyntax, SparqlSyntaxParser } from '@faubulous/mentor-rdf';
-import { TokenTypes } from '@/document-context';
+import { TokenTypes } from '@/workspace/document-context';
 import { TurtleDocument } from '@/languages/turtle/turtle-document';
 
 /**

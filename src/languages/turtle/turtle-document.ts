@@ -5,7 +5,7 @@ import { Uri } from '@faubulous/mentor-rdf';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
-import { DocumentContext, TokenTypes } from '@/document-context';
+import { DocumentContext, TokenTypes } from '@/workspace/document-context';
 import { TurtlePrefixDefinitionService } from '@/services';
 import {
 	countLeadingWhitespace,

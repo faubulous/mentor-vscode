@@ -52,6 +52,10 @@ export class SparqlResultsTable extends WebviewComponent<
       return this._renderError();
     } else if (this.props.queryContext.result) {
       return this._renderBindingsTable();
+    } else {
+      // If there is no result and no error, then we assume the query state was
+      // restored from local storage and we need to re-execute the query.
+      this._reloadQuery();
     }
   }
 

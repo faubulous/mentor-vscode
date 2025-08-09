@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { DocumentContext } from './document-context';
-import { DocumentFactory } from './document-factory';
+import { DocumentContext } from './workspace/document-context';
+import { DocumentFactory } from './workspace/document-factory';
 import { DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
-import { WorkspaceIndexer, DocumentIndex } from './workspace-indexer';
-import { WorkspaceRepository } from './workspace-repository';
+import { WorkspaceIndexer, DocumentIndex } from './workspace/workspace-indexer';
+import { WorkspaceRepository } from './workspace/workspace-repository';
 import {
 	LocalStorageService,
 	PrefixDownloaderService,

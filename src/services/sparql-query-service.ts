@@ -4,7 +4,7 @@ import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { BindingsStream } from '@comunica/types';
 import { Bindings } from '@rdfjs/types';
 import { mentor } from "@/mentor";
-import { WorkspaceUri } from "@/workspace-uri";
+import { WorkspaceUri } from "@/workspace/workspace-uri";
 import { NamespaceMap } from "@/utilities";
 import { SparqlDocument } from '@/languages';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";

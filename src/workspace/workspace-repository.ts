@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from './mentor';
+import { mentor } from '../mentor';
 import { Utils } from 'vscode-uri';
 import { DocumentFactory } from './document-factory';
 

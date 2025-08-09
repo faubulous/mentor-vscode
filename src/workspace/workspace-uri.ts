@@ -3,8 +3,8 @@ import * as vscode from 'vscode';
 /**
  * A helper class which provides methods to convert between absolute file system 
  * URIs and workspace-relative URIs in the Mentor virtual file system. This is used
- * to provide shortened document URIs that can be resolved when the repository code
- * is checked-out on different systems.
+ * to provide shortened document URIs that are also resolvable when stored in a
+ * version control system repository.
  */
 export class WorkspaceUri {
 	/**

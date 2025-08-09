@@ -3,7 +3,7 @@ import { Range } from 'vscode-languageserver-types';
 import { SAXParser } from 'sax-ts';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RdfSyntax } from '@faubulous/mentor-rdf';
 import { mentor } from '@/mentor';
-import { DocumentContext, TokenTypes } from '@/document-context';
+import { DocumentContext, TokenTypes } from '@/workspace/document-context';
 import { getIriFromPrefixedName } from '@/utilities';
 
 // TODO: Move getTokenTypes and getPrefixDefintion int the Definition Service for the XML language.

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { WorkspaceUri } from '@/workspace-uri';
+import { WorkspaceUri } from '@/workspace/workspace-uri';
 import { getFileName, getPath } from '@/utilities';
 
 export async function openFileByLanguage(languageId: string) {
@@ -10,22 +10,33 @@ export async function openFileByLanguage(languageId: string) {
 		files.push(file);
 	}
 
-	const quickPick = vscode.window.createQuickPick<vscode.QuickPickItem & { iri: vscode.Uri }>();
+	const quickPick = vscode.window.createQuickPick<vscode.QuickPickItem & { iri: vscode.Uri | undefined }>();
 	quickPick.title = 'Select the file to open:';
-	quickPick.items = files.map(file => ({
-		label: getFileName(file.toString()),
-		description: '~' + getPath(WorkspaceUri.toWorkspaceUri(file).fsPath),
-		iri: file
-	})).sort((a, b) => a.label.localeCompare(b.label));
 
-	quickPick.onDidChangeSelection(async (selection) => {
-		if (selection.length > 0) {
-			const fileUri = selection[0].iri;
-			const document = await vscode.workspace.openTextDocument(fileUri);
+	if (files.length === 0) {
+		quickPick.items = [{
+			iri: undefined,
+			label: 'No files found for this language: ' + languageId
+		}];
+	} else {
+		quickPick.items = files.map(file => ({
+			label: getFileName(file.toString()),
+			description: '~' + getPath(WorkspaceUri.toWorkspaceUri(file).fsPath),
+			iri: file
+		})).sort((a, b) => a.label.localeCompare(b.label));
 
-			vscode.window.showTextDocument(document);
-		}
-	});
+		quickPick.onDidChangeSelection(async (selection) => {
+			if (selection.length > 0) {
+				const fileUri = selection[0].iri;
+
+				if (fileUri) {
+					const document = await vscode.workspace.openTextDocument(fileUri);
+
+					vscode.window.showTextDocument(document);
+				}
+			}
+		});
+	}
 
 	quickPick.show();
 }
