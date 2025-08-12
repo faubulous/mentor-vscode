@@ -7,7 +7,7 @@ export * from './delete-prefixes';
 export * from './execute-notebook-cell';
 export * from './execute-sparql-query-from-active-editor';
 export * from './execute-sparql-query-from-document';
-export * from './execute-sparql-query-from-untitled-document';
+export * from './execute-sparql-query';
 export * from './find-references';
 export * from './implement-prefix-for-iri';
 export * from './implement-prefixes';

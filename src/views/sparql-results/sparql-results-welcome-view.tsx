@@ -1,13 +1,8 @@
 import { WebviewComponent } from '@/views/webview-component';
-import { WebviewMessaging } from '../webview-messaging';
 import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
+import { WebviewHost } from '../webview-host';
 import stylesheet from './sparql-results-welcome-view.css';
-import React = require('react');
-
-interface SparqlResultsWelcomeViewProps {
-	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
-}
 
 interface SparqlResultsWelcomeViewState {
 	history?: SparqlQueryExecutionState[];
@@ -17,27 +12,31 @@ interface SparqlResultsWelcomeViewState {
  * Component to display a welcome message for the SPARQL results view.
  */
 export class SparqlResultsWelcomeView extends WebviewComponent<
-	SparqlResultsWelcomeViewProps,
-	SparqlResultsWelcomeViewState
+	{},
+	SparqlResultsWelcomeViewState,
+	SparqlResultsWebviewMessages
 > {
+	messaging = WebviewHost.getMessaging<SparqlResultsWebviewMessages>();
 
 	componentDidMount() {
+		super.componentDidMount();
+
 		this.addStylesheet('sparql-welcome-styles', stylesheet);
 
-		this.props.messaging?.onMessage(message => {
-			switch (message.id) {
-				case 'GetSparqlQueryHistoryResponse': {
-					this.setState({ history: message.history });
-					return;
-				}
-				case 'SparqlQueryHistoryChanged': {
-					this._loadHistory();
-					return;
-				}
-			}
-		});
-
 		this._loadHistory();
+	}
+
+	componentDidReceiveMessage(message: SparqlResultsWebviewMessages): void {
+		switch (message.id) {
+			case 'GetSparqlQueryHistoryResponse': {
+				this.setState({ history: message.history });
+				return;
+			}
+			case 'SparqlQueryHistoryChanged': {
+				this._loadHistory();
+				return;
+			}
+		}
 	}
 
 	render() {
@@ -100,7 +99,11 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 	}
 
 	private _loadHistory() {
-		this.props.messaging?.postMessage({ id: 'GetSparqlQueryHistoryRequest' });
+		this.messaging.postMessage({ id: 'GetSparqlQueryHistoryRequest' });
+	}
+
+	protected executeCommand(command: string, ...args: any[]) {
+		this.messaging.postMessage({ id: 'ExecuteCommand', command, args });
 	}
 
 	private _handleClearHistory() {
@@ -110,12 +113,15 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 	}
 
 	private _handleExecuteQuery(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
-		if (query.notebookIri) {
-			this.executeCommand('mentor.action.executeNotebookCell', query.notebookIri, query.cellIndex);
-		} else if (query.documentIri.startsWith('untitled:')) {
-			this.executeCommand('mentor.action.executeSparqlQueryFromUntitledDocument', query.documentIri, query.query);
-		} else {
-			this.executeCommand('mentor.action.executeSparqlQueryFromDocument', query.documentIri);
+		this.executeCommand('mentor.action.executeSparqlQuery', {
+			documentIri: query.documentIri,
+			workspaceIri: query.workspaceIri,
+			notebookIri: query.notebookIri,
+			cellIndex: query.cellIndex,
+			query: query.query
+		});
+
+		if (query.documentIri) {
 			this.executeCommand('mentor.action.openDocument', query.documentIri);
 		}
 	}

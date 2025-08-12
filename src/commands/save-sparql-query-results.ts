@@ -4,6 +4,7 @@ import { SparqlQueryExecutionState, BindingsResult } from '@/services/sparql-que
 export async function saveSparqlQueryResults(context: SparqlQueryExecutionState): Promise<void> {
     let content = '';
 
+    // TODO: Read the query results from the service instead of serializing them.
     if (context.result?.type === 'bindings') {
         const result = context.result as BindingsResult;
 

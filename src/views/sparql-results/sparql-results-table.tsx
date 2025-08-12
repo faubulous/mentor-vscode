@@ -1,18 +1,22 @@
 import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
-import { WebviewComponent, WebviewComponentProps } from '@/views/webview-component';
+import { WebviewComponent } from '@/views/webview-component';
 import { WebviewMessaging } from '@/views/webview-messaging';
-import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
-import { SparqlQueryExecutionState } from '@/services/sparql-query-state';
 import { BindingsResult } from '@/services/sparql-query-state';
+import { SparqlQueryExecutionState } from '@/services/sparql-query-state';
+import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import { Stopwatch } from './stopwatch';
+import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-table.css';
 
 /**
  * Properties for the SPARQL results table component.
  */
-interface SparqlResultsTableProps extends WebviewComponentProps {
-  messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
+interface SparqlResultsTableProps {
+  /**
+   * Messaging used for communication with the extension host.
+   */
+  messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
 
   /**
    * The SPARQL query results to display.
@@ -20,6 +24,9 @@ interface SparqlResultsTableProps extends WebviewComponentProps {
   queryContext: SparqlQueryExecutionState;
 }
 
+/**
+ * State for the SPARQL results table component.
+ */
 interface SparqlResultsTableState {
   pageSize: number;
 
@@ -31,7 +38,8 @@ interface SparqlResultsTableState {
  */
 export class SparqlResultsTable extends WebviewComponent<
   SparqlResultsTableProps,
-  SparqlResultsTableState
+  SparqlResultsTableState,
+  SparqlResultsWebviewMessages
 > {
 
   pageSizeOptions = [100, 500, 1000, 2000, 5000];
@@ -41,21 +49,28 @@ export class SparqlResultsTable extends WebviewComponent<
     currentPage: 0
   };
 
+  constructor(props: SparqlResultsTableProps) {
+    super(props);
+
+    this.messaging = props.messaging;
+  }
+
   componentDidMount() {
+    super.componentDidMount();
+
+    this.addStylesheet('codicon-styles', codicons);
     this.addStylesheet('sparql-table-styles', stylesheet);
   }
 
   render() {
-    if (!this.props.queryContext.endTime) {
-      return this._renderExecuting();
-    } else if (this.props.queryContext.error) {
+    const context = this.props.queryContext;
+
+    if (context.error) {
       return this._renderError();
-    } else if (this.props.queryContext.result) {
+    } else if (context.startTime && !context.endTime) {
+      return this._renderExecuting();
+    } else if (context.result) {
       return this._renderBindingsTable();
-    } else {
-      // If there is no result and no error, then we assume the query state was
-      // restored from local storage and we need to re-execute the query.
-      this._reloadQuery();
     }
   }
 
@@ -228,13 +243,26 @@ export class SparqlResultsTable extends WebviewComponent<
   private _reloadQuery() {
     const context = this.props.queryContext;
 
-    this.executeCommand('mentor.action.executeSparqlQueryFromDocument', context.documentIri);
+    this.messaging?.postMessage({
+      id: 'ExecuteCommand',
+      command: 'mentor.action.executeSparqlQuery',
+      args: [{
+        documentIri: context.documentIri,
+        workspaceIri: context.workspaceIri,
+        notebookIri: context.notebookIri,
+        cellIndex: context.cellIndex,
+        query: context.query
+      }]
+    });
   }
 
   private _saveResults() {
     const context = this.props.queryContext;
-    const format = 'csv';
 
-    this.executeCommand('mentor.action.saveSparqlQueryResults', context, format);
+    this.messaging?.postMessage({
+      id: 'ExecuteCommand',
+      command: 'mentor.action.saveSparqlQueryResults',
+      args: [context, 'csv']
+    });
   }
 }

@@ -1,18 +1,13 @@
 import { createRoot } from 'react-dom/client';
 import { Fragment } from 'react';
-import { WebviewComponent, WebviewComponentProps } from '@/views/webview-component';
-import { WebviewMessaging } from '@/views/webview-messaging';
-import { VsCodeApi } from '@/views/vscode-api';
+import { WebviewHost } from '@/views/webview-host';
+import { WebviewComponent } from '@/views/webview-component';
 import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
 import { SparqlResultsTable } from './sparql-results-table';
 import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-webview.css';
-
-interface SparqlResultsWebviewProps extends WebviewComponentProps {
-	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
-}
 
 interface SparqlResultsWebviewState {
 	renderKey?: number;
@@ -31,10 +26,14 @@ interface SparqlResultsWebviewState {
  * 
  * @returns A React component that renders either query results or the welcome view
  */
-class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, SparqlResultsWebviewState> {
-	private messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
+class SparqlResultsWebview extends WebviewComponent<
+	{},
+	SparqlResultsWebviewState,
+	SparqlResultsWebviewMessages
+> {
+	messaging = WebviewHost.getMessaging<SparqlResultsWebviewMessages>();
 
-	constructor(props: SparqlResultsWebviewProps) {
+	constructor(props: {}) {
 		super(props);
 
 		this.state = {
@@ -43,11 +42,8 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 			activeTabIndex: 0
 		};
 
-		// Initialize extension host messaging and set up state persistence.
-		this.messaging = VsCodeApi.getMessaging();
-
 		// Restore previous state if available
-		const previousState = VsCodeApi.getState();
+		const previousState = WebviewHost.getState();
 
 		if (previousState) {
 			this.state = {
@@ -58,27 +54,35 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 	}
 
 	componentDidMount() {
+		super.componentDidMount();
+
 		this.addStylesheet('codicon-styles', codicons);
 		this.addStylesheet('sparql-webview-styles', stylesheet);
 
-		const handleMessage = (message: SparqlResultsWebviewMessages) => {
-			switch (message.id) {
-				case 'RestoreState': {
-					this.setState(message.state);
-					break;
-				}
-				case 'SetSparqlQueryState': {
-					this._addOrUpdateQuery(message.queryState);
-					break;
-				}
-			}
-		};
+		console.info('componentDidMount', this.state);
 
-		this.messaging.onMessage(handleMessage);
+		if (this.state.activeTabIndex > 0) {
+			const queryState = this.state.openQueries[this.state.activeTabIndex - 1];
+
+			if (queryState) {
+				this.messaging.postMessage({
+					id: 'ExecuteCommand',
+					command: 'mentor.action.executeSparqlQueryFromDocument',
+					args: [queryState.documentIri]
+				});
+			}
+		}
 	}
 
 	componentDidUpdate() {
-		VsCodeApi.setState({
+		// Force the tabs component to update the selected index
+		const tabsElement = document.querySelector('vscode-tabs') as any;
+
+		if (tabsElement && tabsElement.selectedIndex !== this.state.activeTabIndex) {
+			tabsElement.selectedIndex = this.state.activeTabIndex;
+		}
+
+		WebviewHost.setState({
 			renderKey: 0,
 			openQueries: this.state.openQueries.map(q => ({
 				...q,
@@ -89,7 +93,22 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 		});
 	}
 
-	private _addOrUpdateQuery = (queryState: SparqlQueryExecutionState) => {
+	componentDidReceiveMessage(message: SparqlResultsWebviewMessages): void {
+		console.debug('componentDidRevceiveMessage', message);
+
+		switch (message.id) {
+			case 'RestoreState': {
+				this.setState(message.state);
+				break;
+			}
+			case 'SetSparqlQueryState': {
+				this._addOrUpdateQuery(message.queryState);
+				break;
+			}
+		}
+	}
+
+	private _addOrUpdateQuery(queryState: SparqlQueryExecutionState) {
 		this.setState(prevState => {
 			const n = prevState.openQueries.findIndex(q => q.documentIri === queryState.documentIri);
 
@@ -104,6 +123,8 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 				queries = [...prevState.openQueries, queryState];
 				activeIndex = queries.length;
 			}
+
+			console.debug('_addOrUpdateQuery', n, activeIndex);
 
 			return {
 				...prevState,
@@ -126,8 +147,14 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 		});
 	};
 
+	private _setActiveTab = (index: number) => {
+		this.setState({ activeTabIndex: index });
+	};
+
 	render() {
 		const { openQueries, activeTabIndex } = this.state;
+
+		console.debug('render', { openQueries, activeTabIndex });
 
 		return (
 			<vscode-tabs selectedIndex={activeTabIndex} className="vscode-tabs-slim">
@@ -138,16 +165,19 @@ class SparqlResultsWebview extends WebviewComponent<SparqlResultsWebviewProps, S
 					</div>
 				</vscode-tab-header>
 				<vscode-tab-panel>
-					<SparqlResultsWelcomeView messaging={this.messaging} />
+					<SparqlResultsWelcomeView />
 				</vscode-tab-panel>
 
 				{/* Dynamic query result tabs */}
 				{openQueries.map((queryState, index) => (
 					<Fragment key={queryState.documentIri}>
 						<vscode-tab-header slot="header" id={(index + 1).toString()}>
-							<div className="tab-header-content" onClick={() => this.setState({ activeTabIndex: index + 1 })}>
+							<div className="tab-header-content">
 								{queryState.error && (
 									<span className="codicon codicon-error tab-error"></span>
+								)}
+								{queryState.result?.type === 'bindings' && (
+									<span className="codicon codicon-table"></span>
 								)}
 								<span>{getDisplayName(queryState)}</span>
 								<a className="codicon codicon-close" role="button" title="Close"

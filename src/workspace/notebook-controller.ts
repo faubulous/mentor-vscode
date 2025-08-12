@@ -39,7 +39,7 @@ export class NotebookController {
 	private _onDidReceiveMessage(e: any) {
 		const message = e.message;
 
-		if (message.type === 'executeCommand') {
+		if (message.id === 'ExecuteCommand') {
 			vscode.commands.executeCommand(message.command, ...message.args);
 		}
 	}
