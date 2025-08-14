@@ -7,7 +7,7 @@ import { mentor } from "@/mentor";
 import { WorkspaceUri } from "@/workspace/workspace-uri";
 import { NamespaceMap } from "@/utilities";
 import { SparqlDocument } from '@/languages';
-import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
+import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 
 /**
  * The key for storing query history in local storage.
@@ -76,7 +76,8 @@ export class SparqlQueryService {
 				notebookIri: cell.notebook.uri.toString(),
 				cellIndex: cell.index,
 				startTime: Date.now(),
-				query: cell.document.getText()
+				query: cell.document.getText(),
+				queryType: this._getQueryType(documentIri)
 			};
 		} else {
 			const document = querySource as vscode.TextDocument;
@@ -86,7 +87,8 @@ export class SparqlQueryService {
 				documentIri: documentIri.toString(),
 				workspaceIri: this._getWorkspaceUri(documentIri)?.toString(),
 				startTime: Date.now(),
-				query: document.getText()
+				query: document.getText(),
+				queryType: this._getQueryType(documentIri)
 			};
 		}
 	}
@@ -189,6 +191,27 @@ export class SparqlQueryService {
 		this._saveQueryHistory();
 
 		return context;
+	}
+
+	_getQueryType(documentIri: vscode.Uri): SparqlQueryType | undefined {
+		const document = mentor.contexts[documentIri.toString()] as SparqlDocument;
+
+		for (const token of document?.tokens) {
+			switch (token.tokenType?.name) {
+				case 'SELECT':
+					return 'SELECT';
+				case 'CONSTRUCT':
+					return 'CONSTRUCT';
+				case 'ASK':
+					return 'ASK';
+				case 'DESCRIBE':
+					return 'DESCRIBE';
+				case 'FROM':
+					return undefined;
+				case 'WHERE':
+					return undefined;
+			}
+		}
 	}
 
 	private _getQueryText(context: SparqlQueryExecutionState): string | undefined {

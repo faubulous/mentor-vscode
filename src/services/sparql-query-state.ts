@@ -2,6 +2,8 @@ import { PrefixMap } from "@/utilities";
 import { Term } from "@rdfjs/types";
 import { getFileName } from "@/utilities/uri";
 
+export type SparqlQueryType = 'SELECT' | 'CONSTRUCT' | 'ASK' | 'DESCRIBE';
+
 /**
  * The state of a SPARQL query execution.
  */
@@ -31,7 +33,12 @@ export interface SparqlQueryExecutionState {
 	 * The SPARQL query text.
 	 */
 	query?: string;
-	
+
+	/**
+	 * The SPARQL query type.
+	 */
+	queryType?: SparqlQueryType;
+
 	/**
 	 * The time when the query was executed in milliseconds since midnight, January 1, 1970 UTC.
 	 */

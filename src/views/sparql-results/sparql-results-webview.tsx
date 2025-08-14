@@ -165,13 +165,18 @@ class SparqlResultsWebview extends WebviewComponent<
 	};
 
 	private _closeQuery = (documentIri: string) => {
-		this.setState(prevState => {
-			const queries = prevState.activeQueries.filter(q => q.documentIri !== documentIri);
+		const activeQueries = this.state.activeQueries.filter(q => q.documentIri !== documentIri);
+		let activeTabIndex = this.state.activeTabIndex;
 
+		if (activeTabIndex > activeQueries.length) {
+			activeTabIndex = activeQueries.length;
+		}
+
+		this.setState(prevState => {
 			return {
 				...prevState,
-				activeQueries: queries,
-				activeTabIndex: Math.min(prevState.activeTabIndex, queries.length + 1)
+				activeQueries: activeQueries,
+				activeTabIndex: activeTabIndex
 			};
 		});
 	};
@@ -199,12 +204,7 @@ class SparqlResultsWebview extends WebviewComponent<
 					<Fragment key={query.documentIri}>
 						<vscode-tab-header slot="header" id={(index + 1).toString()}>
 							<div className="tab-header-content">
-								{query.error && (
-									<span className="codicon codicon-error tab-error"></span>
-								)}
-								{query.result?.type === 'bindings' && (
-									<span className="codicon codicon-table"></span>
-								)}
+								{this._getQueryTypeIcon(query)}
 								<span>{getDisplayName(query)}</span>
 								<a className="codicon codicon-close" role="button" title="Close"
 									onClick={(e) => {
@@ -221,6 +221,24 @@ class SparqlResultsWebview extends WebviewComponent<
 				))}
 			</vscode-tabs>
 		);
+	}
+
+	private _getQueryTypeIcon(query: SparqlQueryExecutionState) {
+		if (query.error) {
+			return <span className="codicon codicon-error tab-error"></span>;
+		}
+
+		if (query.queryType === 'SELECT') {
+			return <span className="codicon codicon-table"></span>;
+		}
+
+		if (query.queryType === 'ASK') {
+			return <span className="codicon codicon-question"></span>;
+		}
+
+		if (query.queryType === 'CONSTRUCT' || query.queryType === 'DESCRIBE') {
+			return <span className="codicon codicon-file"></span>;
+		}
 	}
 }
 
