@@ -7,8 +7,8 @@ import { WebviewMessaging, WebviewMessage } from './webview-messaging';
 export abstract class WebviewComponent<P = {}, S = {}, M extends WebviewMessage = WebviewMessage> extends Component<P, S> {
 	protected messaging?: WebviewMessaging<M>;
 
-	componentDidMount() {
-		console.debug('componentDidMount', this.messaging);
+	componentDidMount() {	
+		console.info('componentDidMount', this.state);
 		
 		this.messaging?.onMessage(message => this.componentDidReceiveMessage(message));
 	}

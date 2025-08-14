@@ -28,6 +28,11 @@ export interface SparqlQueryExecutionState {
 	cellIndex?: number;
 
 	/**
+	 * The SPARQL query text.
+	 */
+	query?: string;
+	
+	/**
 	 * The time when the query was executed in milliseconds since midnight, January 1, 1970 UTC.
 	 */
 	startTime: number;
@@ -46,11 +51,6 @@ export interface SparqlQueryExecutionState {
 	 * The results of the query execution, if any.
 	 */
 	result?: SparqlQueryResult;
-
-	/**
-	 * The SPARQL query text.
-	 */
-	query?: string;
 }
 
 /**

@@ -17,7 +17,6 @@ export * from './open-file-by-language';
 export * from './open-in-browser';
 export * from './open-settings';
 export * from './remove-from-query-history';
-export * from './restore-untitled-document';
 export * from './reveal-definition';
 export * from './reveal-shape-definition';
 export * from './save-sparql-query-results';

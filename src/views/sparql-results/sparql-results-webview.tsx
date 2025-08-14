@@ -11,7 +11,7 @@ import stylesheet from './sparql-results-webview.css';
 
 interface SparqlResultsWebviewState {
 	renderKey?: number;
-	openQueries: SparqlQueryExecutionState[];
+	activeQueries: SparqlQueryExecutionState[];
 	activeTabIndex: number;
 }
 
@@ -33,23 +33,22 @@ class SparqlResultsWebview extends WebviewComponent<
 > {
 	messaging = WebviewHost.getMessaging<SparqlResultsWebviewMessages>();
 
+	state: SparqlResultsWebviewState = {
+		renderKey: 0,
+		activeQueries: [],
+		activeTabIndex: 0
+	};
+
 	constructor(props: {}) {
 		super(props);
 
-		this.state = {
-			renderKey: 0,
-			openQueries: [],
-			activeTabIndex: 0
-		};
-
-		// Restore previous state if available
+		// Restore previous state if available.
 		const previousState = WebviewHost.getState();
 
-		if (previousState) {
-			this.state = {
-				...this.state,
-				...previousState
-			};
+		console.debug("SparqlResultsWebview", previousState);
+
+		if (previousState && Array.isArray(previousState.activeQueries)) {
+			this.state = previousState;
 		}
 	}
 
@@ -59,105 +58,132 @@ class SparqlResultsWebview extends WebviewComponent<
 		this.addStylesheet('codicon-styles', codicons);
 		this.addStylesheet('sparql-webview-styles', stylesheet);
 
-		console.info('componentDidMount', this.state);
+		// Listen for tab selection changes
+		const tabsElement = document.querySelector('vscode-tabs');
+
+		if (tabsElement) {
+			tabsElement.addEventListener('vsc-tabs-select', this._handleTabChange);
+		}
 
 		if (this.state.activeTabIndex > 0) {
-			const queryState = this.state.openQueries[this.state.activeTabIndex - 1];
+			const query = this.state.activeQueries[this.state.activeTabIndex - 1];
 
-			if (queryState) {
-				this.messaging.postMessage({
-					id: 'ExecuteCommand',
-					command: 'mentor.action.executeSparqlQueryFromDocument',
-					args: [queryState.documentIri]
-				});
-			}
+			this._restoreSparqlQueryResults(query);
+		}
+	}
+
+	componentWillUnmount() {
+		console.info('componentWillUnmount', this.state);
+
+		const tabsElement = document.querySelector('vscode-tabs');
+
+		if (tabsElement) {
+			tabsElement.removeEventListener('vsc-tabs-select', this._handleTabChange);
+		}
+	}
+
+	private _handleTabChange = (event: any) => {
+		const newIndex = event.detail.selectedIndex;
+
+		this.setState({ activeTabIndex: newIndex });
+
+		this._restoreSparqlQueryResults(this.state.activeQueries[newIndex - 1]);
+	};
+
+	private _restoreSparqlQueryResults(query: SparqlQueryExecutionState) {
+		if (query && query.documentIri && !query.error && !query.result) {
+			this.messaging.postMessage({
+				id: 'ExecuteCommand',
+				command: 'mentor.action.executeSparqlQuery',
+				args: [{
+					documentIri: query.documentIri,
+					workspaceIri: query.workspaceIri,
+					notebookIri: query.notebookIri,
+					cellIndex: query.cellIndex,
+					query: query.query,
+				}]
+			});
 		}
 	}
 
 	componentDidUpdate() {
-		// Force the tabs component to update the selected index
-		const tabsElement = document.querySelector('vscode-tabs') as any;
+		console.info('componentDidUpdate', this.state);
 
-		if (tabsElement && tabsElement.selectedIndex !== this.state.activeTabIndex) {
-			tabsElement.selectedIndex = this.state.activeTabIndex;
-		}
-
-		WebviewHost.setState({
+		const savedState: SparqlResultsWebviewState = {
 			renderKey: 0,
-			openQueries: this.state.openQueries.map(q => ({
-				...q,
-				result: undefined, // Avoid storing large result sets in state.
-				error: undefined // Avoid storing error details in state.
-			})),
-			activeTabIndex: this.state.activeTabIndex
-		});
+			activeTabIndex: this.state.activeTabIndex,
+			activeQueries: this.state.activeQueries
+				.map(q => ({
+					...q,
+					// Avoid storing large result sets in state..
+					result: undefined,
+					error: undefined
+				}))
+		};
+
+		WebviewHost.setState(savedState);
 	}
 
 	componentDidReceiveMessage(message: SparqlResultsWebviewMessages): void {
-		console.debug('componentDidRevceiveMessage', message);
+		console.debug('componentDidReceiveMessage', message);
 
 		switch (message.id) {
-			case 'RestoreState': {
-				this.setState(message.state);
-				break;
-			}
-			case 'SetSparqlQueryState': {
+			case 'SparqlQueryExecutionStarted':
+			case 'SparqlQueryExecutionEnded': {
 				this._addOrUpdateQuery(message.queryState);
 				break;
 			}
 		}
 	}
 
-	private _addOrUpdateQuery(queryState: SparqlQueryExecutionState) {
+	private _addOrUpdateQuery(query: SparqlQueryExecutionState) {
 		this.setState(prevState => {
-			const n = prevState.openQueries.findIndex(q => q.documentIri === queryState.documentIri);
+			const n = prevState.activeQueries.findIndex(q => q.documentIri === query.documentIri);
 
-			let queries;
-			let activeIndex;
+			const activeQueries = [...prevState.activeQueries];
+			let activeQueryIndex = n;
 
 			if (n >= 0) {
-				queries = [...prevState.openQueries];
-				queries[n] = queryState;
-				activeIndex = n + 1;
+				activeQueries.splice(n, 1, query);
+				activeQueryIndex = n;
 			} else {
-				queries = [...prevState.openQueries, queryState];
-				activeIndex = queries.length;
+				activeQueries.push(query);
+				activeQueryIndex = activeQueries.length - 1;
 			}
 
-			console.debug('_addOrUpdateQuery', n, activeIndex);
+			const activeTabIndex = activeQueryIndex + 1;
+
+			console.debug('_addOrUpdateQuery', n, activeTabIndex);
 
 			return {
 				...prevState,
 				renderKey: (prevState.renderKey || 0) + 1,
-				openQueries: queries,
-				activeTabIndex: activeIndex
+				activeTabIndex: activeTabIndex,
+				activeQueries: activeQueries,
 			};
 		});
 	};
 
 	private _closeQuery = (documentIri: string) => {
 		this.setState(prevState => {
-			const queries = prevState.openQueries.filter(q => q.documentIri !== documentIri);
+			const queries = prevState.activeQueries.filter(q => q.documentIri !== documentIri);
 
 			return {
 				...prevState,
-				openQueries: queries,
-				activeTabIndex: Math.min(prevState.activeTabIndex, queries.length)
+				activeQueries: queries,
+				activeTabIndex: Math.min(prevState.activeTabIndex, queries.length + 1)
 			};
 		});
 	};
 
-	private _setActiveTab = (index: number) => {
-		this.setState({ activeTabIndex: index });
-	};
-
 	render() {
-		const { openQueries, activeTabIndex } = this.state;
-
-		console.debug('render', { openQueries, activeTabIndex });
+		console.debug('render', this.state);
 
 		return (
-			<vscode-tabs selectedIndex={activeTabIndex} className="vscode-tabs-slim">
+			<vscode-tabs
+				selectedIndex={this.state.activeTabIndex}
+				className="vscode-tabs-slim"
+			>
 				{/* Welcome tab */}
 				<vscode-tab-header slot="header" id="0">
 					<div className="tab-header-content">
@@ -169,27 +195,27 @@ class SparqlResultsWebview extends WebviewComponent<
 				</vscode-tab-panel>
 
 				{/* Dynamic query result tabs */}
-				{openQueries.map((queryState, index) => (
-					<Fragment key={queryState.documentIri}>
+				{this.state.activeQueries.map((query, index) => (
+					<Fragment key={query.documentIri}>
 						<vscode-tab-header slot="header" id={(index + 1).toString()}>
 							<div className="tab-header-content">
-								{queryState.error && (
+								{query.error && (
 									<span className="codicon codicon-error tab-error"></span>
 								)}
-								{queryState.result?.type === 'bindings' && (
+								{query.result?.type === 'bindings' && (
 									<span className="codicon codicon-table"></span>
 								)}
-								<span>{getDisplayName(queryState)}</span>
+								<span>{getDisplayName(query)}</span>
 								<a className="codicon codicon-close" role="button" title="Close"
 									onClick={(e) => {
 										e.stopPropagation();
-										this._closeQuery(queryState.documentIri);
+										this._closeQuery(query.documentIri);
 									}}
 								></a>
 							</div>
 						</vscode-tab-header>
 						<vscode-tab-panel>
-							<SparqlResultsTable messaging={this.messaging} queryContext={queryState} />
+							<SparqlResultsTable messaging={this.messaging} queryContext={query} />
 						</vscode-tab-panel>
 					</Fragment>
 				))}

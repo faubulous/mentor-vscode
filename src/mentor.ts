@@ -119,6 +119,16 @@ class MentorExtension {
 	}
 
 	/**
+	 * Dispose the extension and clean up resources.
+	 */
+	dispose() {
+		this.sparqlQueryService.dispose();
+		
+		this._onDidChangeDocumentContext.dispose();
+		this._onDidFinishInitializing.dispose();
+	}
+
+	/**
 	 * Get the document context from a text document.
 	 * @param document A text document.
 	 * @param contextType The expected type of the document context.
@@ -252,6 +262,9 @@ class MentorExtension {
 
 		// Initialize the view settings.
 		this.settings.initialize(this.configuration);
+
+		// Restore the query execution history.
+		this.sparqlQueryService.initialize();
 
 		// Register commands..
 		vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {

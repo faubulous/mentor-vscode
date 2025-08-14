@@ -17,18 +17,48 @@ const HISTORY_STORAGE_KEY = 'queryHistory.Sparql';
 /**
  * The maximum number of entries to keep in the query history.
  */
-const HISTORY_MAX_ENTRIES = 25;
+const HISTORY_MAX_ENTRIES = 10;
 
 /**
- * A service for executing SPARQL queries against an RDF endpoint.
+ * A service for executing SPARQL queries against an RDF endpoint. The service
+ * keeps a log of the executed queries in temporal order in memory, and upon
+ * disposal, it saves the query history to a workspace-scoped local storage,
+ * excluding unsaved documents. This query history is then restored when the 
+ * service is instantiated.
  */
 export class SparqlQueryService {
-	private _onDidHistoryChange: vscode.EventEmitter<void> = new vscode.EventEmitter<void>();
+	private _initialized = false;
+
+	private readonly _history: SparqlQueryExecutionState[] = [];
+
+	private readonly _onDidHistoryChange = new vscode.EventEmitter<void>();
 
 	/**
 	 * Event that is triggered when the query history changes.
 	 */
 	onDidHistoryChange: vscode.Event<void> = this._onDidHistoryChange.event;
+
+	/**
+	 * Load the query history from the workspace-scoped local storage.
+	 */
+	initialize() {
+		if (this._initialized) return;
+
+		for (const entry of this._loadQueryHistory()) {
+			this._history.push(entry);
+		}
+
+		this._initialized = true;
+	}
+
+	/**
+	 * Dispose the service and clean up resources.
+	 */
+	dispose() {
+		this._onDidHistoryChange.dispose();
+
+		this._initialized = false;
+	}
 
 	/**
 	 * Prepares a SPARQL query for execution.
@@ -67,13 +97,31 @@ export class SparqlQueryService {
 		}
 	}
 
+	private _loadQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
+		const history = mentor.workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
+
+		return history
+			.filter(q => q)
+			.slice(0, limit)
+			.sort((a, b) => b.startTime - a.startTime);
+	}
+
+	private async _saveQueryHistory(): Promise<void> {
+		// Filter the query history to exclude execution states that would not be valid after a restart.
+		const filteredHistory = this._history
+			.filter(q => q && !q.documentIri.startsWith('untitled'))
+			.slice(0, HISTORY_MAX_ENTRIES);
+
+		await mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, filteredHistory);
+	}
+
 	/**
 	 * Get the SPARQL query state for a specific document IRI.
 	 * @param documentIri The IRI of the document to retrieve the query state for.
 	 * @returns The SparqlQueryState for the specified document, or `undefined` if not found.
 	 */
 	getQueryState(documentIri: string): SparqlQueryExecutionState | undefined {
-		return this.getQueryHistory().find(q => q.documentIri === documentIri);
+		return this._history.find(q => q.documentIri === documentIri);
 	}
 
 	/**
@@ -81,15 +129,12 @@ export class SparqlQueryService {
 	 * @param state The SparqlQueryState to update or add to the history.
 	 */
 	updateQueryState(state: SparqlQueryExecutionState): void {
-		const history = this.getQueryHistory();
-		const index = history.findIndex(q => q.documentIri === state.documentIri);
+		const index = this._history.findIndex(q => q.documentIri === state.documentIri);
 
 		if (index >= 0) {
-			history[index] = state;
+			this._history[index] = state;
 
-			mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, history);
-
-			this._onDidHistoryChange.fire();
+			this._saveQueryHistory();
 		}
 	}
 
@@ -97,15 +142,11 @@ export class SparqlQueryService {
 	 * Removes the n-th item from the query history.
 	 * @param index The index of the item to remove from the query history.
 	 */
-	removeQueryState(index: number): void {
-		const history = this.getQueryHistory();
+	removeQueryStateAt(index: number): void {
+		if (index >= 0 && index < this._history.length) {
+			this._history.splice(index, 1);
 
-		if (index >= 0 && index < history.length) {
-			history.splice(index, 1);
-
-			mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, history);
-
-			this._onDidHistoryChange.fire();
+			this._saveQueryHistory();
 		}
 	}
 
@@ -139,21 +180,22 @@ export class SparqlQueryService {
 				stack: error.stack || '',
 				statusCode: error.statusCode || 500
 			}
-
-			this._logQueryExecution(context);
 		}
 
 		context.endTime = Date.now();
 
 		this._logQueryExecution(context);
 
+		this._saveQueryHistory();
+
 		return context;
 	}
 
 	private _getQueryText(context: SparqlQueryExecutionState): string | undefined {
 		if (context.notebookIri) {
-			const notebook = vscode.workspace.notebookDocuments
-				.find(n => n.uri.toString() === context.notebookIri);
+			const notebook = vscode.workspace.notebookDocuments.find(
+				n => n.uri.toString() === context.notebookIri
+			);
 
 			if (notebook) {
 				const cell = notebook.cellAt(context.cellIndex || 0);
@@ -161,8 +203,9 @@ export class SparqlQueryService {
 				return cell.document.getText();
 			}
 		} else {
-			const document = vscode.workspace.textDocuments
-				.find(d => d.uri.toString() === context.documentIri);
+			const document = vscode.workspace.textDocuments.find(
+				d => d.uri.toString() === context.documentIri
+			);
 
 			if (document) {
 				return document.getText();
@@ -267,18 +310,13 @@ export class SparqlQueryService {
 	 * Tracks query execution in history and persists to storage.
 	 */
 	private async _logQueryExecution(context: SparqlQueryExecutionState): Promise<void> {
-		let history = mentor.workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
+		const n = this._history.findIndex(q => q.documentIri === context.documentIri);
 
-		history = history.filter(e => e.documentIri !== context.documentIri);
-		history.unshift(context);
-
-		if (history.length > HISTORY_MAX_ENTRIES) {
-			history = history.slice(0, HISTORY_MAX_ENTRIES);
+		if (n >= 0) {
+			this._history.splice(n, 1);
 		}
 
-		mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, history);
-
-		this._onDidHistoryChange.fire();
+		this._history.unshift(context);
 	}
 
 	/**
@@ -286,20 +324,16 @@ export class SparqlQueryService {
 	 * @param limit The maximum number of recent queries to return.
 	 * @returns A promise that resolves to an array of recent query entries.
 	 */
-	getQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
-		const history = mentor.workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
-
-		return history
-			.slice(0, limit)
-			.sort((a, b) => b.startTime - a.startTime);
+	getQueryHistory(): SparqlQueryExecutionState[] {
+		return this._history;
 	}
 
 	/**
 	 * Clears the persisted query history.
 	 */
 	clearQueryHistory(): void {
-		mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, []);
+		this._history.length = 0;
 
-		this._onDidHistoryChange.fire();
+		this._saveQueryHistory();
 	}
 }

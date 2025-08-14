@@ -19,6 +19,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	mentor.initialize(context);
 }
 
+export async function deactivate(context: vscode.ExtensionContext) {
+	mentor.dispose();
+}
+
 function registerLanguageClients(context: vscode.ExtensionContext) {
 	const clients: languages.LanguageClientBase[] = [
 		new languages.TurtleLanguageClient(),
@@ -64,7 +68,6 @@ function registerCommands(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQueryFromDocument', commands.executeSparqlQueryFromDocument));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQueryFromActiveEditor', commands.executeSparqlQueryFromActiveEditor));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQuery', commands.executeSparqlQuery));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.restoreUntitledDocument', commands.restoreUntitledDocument));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.saveSparqlQueryResults', commands.saveSparqlQueryResults));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', commands.deletePrefixes));
 	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.findReferences', commands.findReferences));

@@ -32,7 +32,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 				this.setState({ history: message.history });
 				return;
 			}
-			case 'SparqlQueryHistoryChanged': {
+			case 'SparqlQueryExecutionEnded': {
 				this._loadHistory();
 				return;
 			}
@@ -102,10 +102,6 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 		this.messaging.postMessage({ id: 'GetSparqlQueryHistoryRequest' });
 	}
 
-	protected executeCommand(command: string, ...args: any[]) {
-		this.messaging.postMessage({ id: 'ExecuteCommand', command, args });
-	}
-
 	private _handleClearHistory() {
 		this.executeCommand('mentor.action.clearQueryHistory');
 
@@ -129,11 +125,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 	private _handleOpenDocument(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
 		e?.stopPropagation();
 
-		if (query.documentIri.startsWith('untitled:')) {
-			this.executeCommand('mentor.action.restoreUntitledDocument', query.documentIri, query.query);
-		} else {
-			this.executeCommand('mentor.action.openDocument', query.documentIri);
-		}
+		this.executeCommand('mentor.action.openDocument', query.documentIri);
 	}
 
 	private _handleRemoveFromHistory(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
@@ -160,5 +152,9 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 
 	private _handleConnectToEndpoint() {
 		this.executeCommand('mentor.action.connectToSparqlEndpoint');
+	}
+
+	protected executeCommand(command: string, ...args: any[]) {
+		this.messaging.postMessage({ id: 'ExecuteCommand', command, args });
 	}
 }

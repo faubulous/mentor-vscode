@@ -35,10 +35,6 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
 
         this._view = new SparqlResultsWebviewFactory().createView(this._context, webviewView);
         this._view.webview.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
-
-        if (context.state) {
-            this._view.webview.postMessage({ id: 'RestoreState', state: context.state });
-        }
     }
 
     private _onDidQueryHistoryChange() {
@@ -49,12 +45,6 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
 
     private async _onDidReceiveMessage(message: SparqlResultsWebviewMessages) {
         switch (message.id) {
-            case 'SaveStateRequest': {
-                if (this._view) {
-                    this._view.webview.postMessage({ id: 'SaveStateResponse', success: true });
-                }
-                return;
-            }
             case 'ExecuteCommand': {
                 await vscode.commands.executeCommand(message.command, ...(message.args || []));
                 return;
@@ -89,11 +79,11 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
 
         this._view.show();
 
-        this._postMessage({ id: 'SetSparqlQueryState', queryState: initialState });
+        this._postMessage({ id: 'SparqlQueryExecutionStarted', queryState: initialState });
 
         const updatedState = await mentor.sparqlQueryService.executeQuery(initialState);
 
-        this._postMessage({ id: 'SetSparqlQueryState', queryState: updatedState });
+        this._postMessage({ id: 'SparqlQueryExecutionEnded', queryState: updatedState });
     }
 }
 
