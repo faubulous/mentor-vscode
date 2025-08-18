@@ -1,3 +1,10 @@
+:root {
+	--mentor-bindingResult-true-foreground: var(--vscode-notebookStatusSuccessIcon-foreground);
+    --mentor-bindingResult-true-background: rgba(from var(--mentor-bindingResult-true-foreground) r g b / 0.1);
+    --mentor-bindingResult-false-foreground: var(--vscode-notebookStatusErrorIcon-foreground);
+    --mentor-bindingResult-false-background: rgba(from var(--mentor-bindingResult-false-foreground) r g b / 0.1);
+}
+
 body {
 	padding: 0;
 }
@@ -14,8 +21,15 @@ a {
   	color: var(--vscode-semanticToken-class-foreground, var(--vscode-editor-foreground));
 }
 
+.sparql-results-container {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
 .sparql-results-toolbar {
 	/* Make the toolbar appear slim and unobtrusive */
+	flex: 0 0 auto;
 	padding: 2px 8px;
 	border-bottom: 1px solid var(--vscode-editorGroup-border);
 }
@@ -65,6 +79,56 @@ a {
 	font-weight: 500;
 }
 
+.sparql-results-content-container.codicon-xl {
+	box-sizing: border-box;
+	flex: 1 1 auto;
+	padding: 1.5em 2em;
+	gap: 1em;
+}
+
+.sparql-results-content-container.codicon-xl .codicon {
+	font-size: 24px;
+	font-weight: 300;
+	display: none;
+}
+
+.sparql-results-content-container.codicon-xl .result {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	align-items: center;
+	gap: 7px;
+	font-size: 1em;
+	font-weight: 300;
+	font-family: var(--vscode-editor-font-family);
+	text-transform: uppercase;
+	color: var(--vscode-badge-foreground);
+}
+
+.sparql-results-content-container.codicon-xl.true {
+	background: var(--mentor-bindingResult-true-background);
+}
+
+.sparql-results-content-container.codicon-xl.true .result {
+	color: var(--mentor-bindingResult-true-foreground);
+}
+
+.sparql-results-content-container.codicon-xl.true .codicon {
+	color: var(--mentor-bindingResult-true-foreground);
+}
+
+.sparql-results-content-container.codicon-xl.false {
+	background: var(--mentor-bindingResult-false-background);
+}
+
+.sparql-results-content-container.codicon-xl.false .result {
+	color: var(--mentor-bindingResult-false-foreground);
+}
+
+.sparql-results-content-container.codicon-xl.false .codicon {
+	color: var(--mentor-bindingResult-false-foreground);
+}
+
 .sparql-results-toolbar select {
     background: transparent;
     border: none;
@@ -96,6 +160,15 @@ a {
 	padding-right: 6px;
 }
 
+vscode-tab-panel .sparql-results-container {
+	height: 100vh;
+}
+
+vscode-table {
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
 vscode-table-header-cell {
 	line-height: auto;
 	padding-top: 2px;
@@ -103,4 +176,10 @@ vscode-table-header-cell {
 }
 vscode-table-cell {
 	border-bottom: none;
+}
+
+.output_container .sparql-results-container {
+	border: 1px solid var(--vscode-editorGroup-border);
+	border-top: none;
+	max-height: 500px; /* Limit the height of the SPARQL results table within notebooks */
 }

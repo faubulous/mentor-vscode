@@ -7,7 +7,7 @@ import { mentor } from "@/mentor";
 import { WorkspaceUri } from "@/workspace/workspace-uri";
 import { NamespaceMap } from "@/utilities";
 import { SparqlDocument } from '@/languages';
-import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
+import { BindingsResult, BooleanResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 
 /**
  * The key for storing query history in local storage.
@@ -169,12 +169,24 @@ export class SparqlQueryService {
 				throw new Error('Unable to retrieve query from the document: ' + context.documentIri);
 			}
 
-			const result = await engine.queryBindings(query, {
-				sources: [source],
-				unionDefaultGraph: true
-			});
+			if (context.queryType === 'ASK') {
+				const result = await engine.queryBoolean(query, {
+					sources: [source],
+					unionDefaultGraph: true
+				});
 
-			context.result = await this._serializeQueryResults(context, result);
+				context.result = {
+					type: 'boolean',
+					value: result
+				} as BooleanResult;
+			} else {
+				const result = await engine.queryBindings(query, {
+					sources: [source],
+					unionDefaultGraph: true
+				});
+
+				context.result = await this._serializeQueryResults(context, result);
+			}
 		} catch (error: any) {
 			context.error = {
 				type: error.name || 'QueryError',

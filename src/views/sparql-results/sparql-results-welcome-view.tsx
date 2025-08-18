@@ -66,7 +66,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 				<div className="column">
 					<vscode-toolbar-container className="header">
 						<h3>Recent Queries</h3>
-						<vscode-toolbar-button onClick={() => this._handleClearHistory()}>
+						<vscode-toolbar-button onClick={() => this._handleClearHistory()} disabled={recentQueries.length === 0}>
 							<span className="muted">Clear</span>
 						</vscode-toolbar-button>
 					</vscode-toolbar-container>

@@ -185,10 +185,7 @@ class SparqlResultsWebview extends WebviewComponent<
 		console.debug('render', this.state);
 
 		return (
-			<vscode-tabs
-				selectedIndex={this.state.activeTabIndex}
-				className="vscode-tabs-slim"
-			>
+			<vscode-tabs selectedIndex={this.state.activeTabIndex} className="vscode-tabs-slim">
 				{/* Welcome tab */}
 				<vscode-tab-header slot="header" id="0">
 					<div className="tab-header-content">

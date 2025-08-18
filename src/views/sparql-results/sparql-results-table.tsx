@@ -2,7 +2,7 @@ import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { WebviewComponent } from '@/views/webview-component';
 import { WebviewMessaging } from '@/views/webview-messaging';
-import { BindingsResult } from '@/services/sparql-query-state';
+import { BindingsResult, BooleanResult } from '@/services/sparql-query-state';
 import { SparqlQueryExecutionState } from '@/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import { Stopwatch } from './stopwatch';
@@ -70,7 +70,13 @@ export class SparqlResultsTable extends WebviewComponent<
     } else if (context.startTime && !context.endTime) {
       return this._renderExecuting();
     } else if (context.result) {
-      return this._renderBindingsTable();
+      const result = context.result;
+
+      if (result.type === 'boolean') {
+        return this._renderBooleanResult();
+      } else {
+        return this._renderBindingsResult();
+      }
     }
   }
 
@@ -113,7 +119,34 @@ export class SparqlResultsTable extends WebviewComponent<
     );
   }
 
-  private _renderBindingsTable() {
+  private _renderBooleanResult() {
+    const result = this.props.queryContext.result as BooleanResult;
+
+    return (
+      <div className="sparql-results-container success">
+        <vscode-toolbar-container className="sparql-results-toolbar">
+          <Stopwatch queryContext={this.props.queryContext} />
+          <span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
+          <vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
+            <span className="codicon codicon-debug-restart"></span>
+          </vscode-toolbar-button>
+        </vscode-toolbar-container>
+        {result.value ?
+          (<div className="sparql-results-content-container codicon-xl true">
+            <div className='result'>
+              <span className="codicon codicon-pass"></span> True
+            </div>
+          </div>) :
+          (<div className="sparql-results-content-container codicon-xl false">
+            <div className='result'>
+              <span className="codicon codicon-error"></span> False</div>
+          </div>)
+        }
+      </div>
+    );
+  }
+
+  private _renderBindingsResult() {
     const result = this.props.queryContext.result as BindingsResult;
     const { pageSize, currentPage } = this.state;
 

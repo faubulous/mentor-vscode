@@ -1,5 +1,6 @@
 body {
     padding: 0;
+    overflow: hidden;
 }
 
 vscode-tabs.vscode-tabs-slim > vscode-tab-header {
@@ -15,6 +16,10 @@ vscode-tab-header .tab-header-content {
 
 vscode-tab-header {
     color: var(--vscode-tab-activeForeground);
+}
+
+vscode-tab-header[aria-selected="true"] {
+    border-bottom-color: var(--vscode-focusBorder);
 }
 
 vscode-tab-header:hover {
