@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
-import { Uri } from '@faubulous/mentor-rdf';
+import { SparqlSyntaxParser, Uri } from '@faubulous/mentor-rdf';
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
-import { BindingsStream } from '@comunica/types';
-import { Bindings } from '@rdfjs/types';
+import { Bindings, Quad } from '@rdfjs/types';
+import { Writer } from 'n3';
 import { mentor } from "@/mentor";
 import { WorkspaceUri } from "@/workspace/workspace-uri";
 import { NamespaceMap } from "@/utilities";
 import { SparqlDocument } from '@/languages';
-import { BindingsResult, BooleanResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
+import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
+import { AsyncIterator } from 'asynciterator';
 
 /**
  * The key for storing query history in local storage.
@@ -66,35 +67,34 @@ export class SparqlQueryService {
 	 * @returns A new SparqlQueryContext instance.
 	 */
 	createQuery(querySource: vscode.TextDocument | vscode.NotebookCell): SparqlQueryExecutionState {
+		let document: vscode.TextDocument;
+		let cellIndex: number | undefined;
+
 		if ('notebook' in querySource && querySource.notebook) {
 			const cell = querySource as vscode.NotebookCell;
-			const documentIri = cell.document.uri;
 
-			return {
-				documentIri: documentIri.toString(),
-				workspaceIri: this._getWorkspaceUri(documentIri)?.toString(),
-				notebookIri: cell.notebook.uri.toString(),
-				cellIndex: cell.index,
-				startTime: Date.now(),
-				query: cell.document.getText(),
-				queryType: this._getQueryType(documentIri)
-			};
+			document = cell.document;
+			cellIndex = cell.index;
 		} else {
-			const document = querySource as vscode.TextDocument;
-			const documentIri = document.uri;
-
-			return {
-				documentIri: documentIri.toString(),
-				workspaceIri: this._getWorkspaceUri(documentIri)?.toString(),
-				startTime: Date.now(),
-				query: document.getText(),
-				queryType: this._getQueryType(documentIri)
-			};
+			document = querySource as vscode.TextDocument;
 		}
+
+		const query = document.getText();
+		const queryType = this._getQueryType(query);
+		const workspaceIri = this._getWorkspaceUri(document.uri);
+
+		return {
+			documentIri: document.uri.toString(),
+			workspaceIri: workspaceIri?.toString(),
+			cellIndex,
+			query,
+			queryType,
+			startTime: Date.now()
+		};
 	}
 
 	private _getWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
-		if (documentIri.scheme === 'file') {
+		if (documentIri.scheme === 'file' || documentIri.scheme === 'vscode-notebook-cell') {
 			return WorkspaceUri.toWorkspaceUri(documentIri);
 		}
 	}
@@ -159,9 +159,6 @@ export class SparqlQueryService {
 	 * @returns A promise that resolves to the results of the query.
 	 */
 	async executeQuery(context: SparqlQueryExecutionState): Promise<SparqlQueryExecutionState> {
-		const source = mentor.store;
-		const engine = new QueryEngine();
-
 		try {
 			const query = this._getQueryText(context);
 
@@ -169,23 +166,26 @@ export class SparqlQueryService {
 				throw new Error('Unable to retrieve query from the document: ' + context.documentIri);
 			}
 
-			if (context.queryType === 'ASK') {
-				const result = await engine.queryBoolean(query, {
-					sources: [source],
-					unionDefaultGraph: true
-				});
+			const result = await new QueryEngine().query(query, {
+				sources: [mentor.store],
+				unionDefaultGraph: true
+			});
 
+			if (result.resultType === 'bindings') {
+				const bindings = await result.execute();
+				context.result = await this._serializeBindings(context, bindings);
+			} else if (result.resultType === 'boolean') {
+				const value = await result.execute();
+				context.result = { type: 'boolean', value: value };
+			} else if (result.resultType === 'quads') {
+				const quads = await result.execute();
 				context.result = {
-					type: 'boolean',
-					value: result
-				} as BooleanResult;
+					type: 'quads',
+					mimeType: 'text/turtle',
+					document: await this._serializeQuads(context, quads)
+				};
 			} else {
-				const result = await engine.queryBindings(query, {
-					sources: [source],
-					unionDefaultGraph: true
-				});
-
-				context.result = await this._serializeQueryResults(context, result);
+				context.result = undefined;
 			}
 		} catch (error: any) {
 			context.error = {
@@ -205,19 +205,20 @@ export class SparqlQueryService {
 		return context;
 	}
 
-	_getQueryType(documentIri: vscode.Uri): SparqlQueryType | undefined {
-		const document = mentor.contexts[documentIri.toString()] as SparqlDocument;
+	_getQueryType(query: string): SparqlQueryType | undefined {
+		const parser = new SparqlSyntaxParser();
+		const result = parser.parse(query);
 
-		for (const token of document?.tokens) {
+		for (const token of result?.tokens) {
 			switch (token.tokenType?.name) {
-				case 'SELECT':
-					return 'SELECT';
-				case 'CONSTRUCT':
-					return 'CONSTRUCT';
 				case 'ASK':
-					return 'ASK';
+					return 'boolean';
+				case 'SELECT':
+					return 'bindings';
+				case 'CONSTRUCT':
+					return 'quads';
 				case 'DESCRIBE':
-					return 'DESCRIBE';
+					return 'quads';
 				case 'FROM':
 					return undefined;
 				case 'WHERE':
@@ -255,7 +256,7 @@ export class SparqlQueryService {
 	 * @param limit The maximum number of results to serialize.
 	 * @returns An object containing the serialized results.
 	 */
-	private async _serializeQueryResults(context: SparqlQueryExecutionState, bindingStream: BindingsStream): Promise<BindingsResult> {
+	private async _serializeBindings(context: SparqlQueryExecutionState, bindingStream: AsyncIterator<Bindings>): Promise<BindingsResult> {
 		// Note: This evaluates the query results and collects the bindings.
 		const bindings = await bindingStream.toArray();
 
@@ -305,6 +306,67 @@ export class SparqlQueryService {
 			rows,
 			namespaceMap
 		};
+	}
+
+	private async _serializeQuads(context: SparqlQueryExecutionState, quadStream: AsyncIterator<Quad>): Promise<string> {
+		try {
+			const quads = await quadStream.toArray();
+
+			if (quads.length === 0) {
+				return '';
+			}
+
+			// Get namespace prefixes for better formatting
+			const documentIri = context.documentIri;
+			const prefixMap: Record<string, string> = {};
+
+			// Collect unique namespace IRIs from the quads
+			const namespaces = new Set<string>();
+
+			for (const quad of quads) {
+				if (quad.subject.termType === 'NamedNode') {
+					namespaces.add(Uri.getNamespaceIri(quad.subject.value));
+				}
+				if (quad.predicate.termType === 'NamedNode') {
+					namespaces.add(Uri.getNamespaceIri(quad.predicate.value));
+				}
+				if (quad.object.termType === 'NamedNode') {
+					namespaces.add(Uri.getNamespaceIri(quad.object.value));
+				}
+			}
+
+			// Build prefix map
+			for (const iri of namespaces) {
+				const prefix = mentor.prefixLookupService.getPrefixForIri(documentIri, iri, '');
+
+				if (prefix !== '') {
+					prefixMap[prefix] = iri;
+				}
+			}
+
+			// Create N3 writer with prefixes
+			const writer = new Writer({
+				format: 'text/turtle',
+				prefixes: prefixMap
+			});
+
+			// Add all quads to the writer
+			writer.addQuads(quads);
+
+			// Return the serialized Turtle string
+			return new Promise<string>((resolve, reject) => {
+				writer.end((error, result) => {
+					if (error) {
+						reject(error);
+					} else {
+						resolve(result);
+					}
+				});
+			});
+		} catch (error) {
+			console.error('Error serializing quads to Turtle:', error);
+			return '';
+		}
 	}
 
 	/**

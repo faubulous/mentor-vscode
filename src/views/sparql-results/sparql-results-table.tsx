@@ -74,9 +74,13 @@ export class SparqlResultsTable extends WebviewComponent<
 
       if (result.type === 'boolean') {
         return this._renderBooleanResult();
-      } else {
+      } else if (result.type === 'bindings') {
         return this._renderBindingsResult();
+      } else {
+        return (<div>Unknown or unsupported result type: {result.type}</div>);
       }
+    } else {
+      return (<div>Query did not return a result.</div>);
     }
   }
 
@@ -134,7 +138,7 @@ export class SparqlResultsTable extends WebviewComponent<
         {result.value ?
           (<div className="sparql-results-content-container codicon-xl true">
             <div className='result'>
-              <span className="codicon codicon-pass"></span> True
+              <span className="codicon codicon-pass-filled"></span> True
             </div>
           </div>) :
           (<div className="sparql-results-content-container codicon-xl false">

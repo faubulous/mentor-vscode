@@ -16,7 +16,27 @@ export async function saveSparqlQueryResults(context: SparqlQueryExecutionState)
 
         // Process all data rows at once
         const dataRows = result.rows.map(row =>
-            result.columns.map(column => row[column]?.value || '').join(', ')
+            result.columns.map(column => {
+                const term = row[column];
+
+                if (!term) {
+                    return '';
+                }
+
+                if (term.termType === 'Literal') {
+                    const value = term.value || '';
+
+                    // Escape single quotes in the value and wrap in quotes.
+                    // Note: This is to have valid CSV and not break lines in the output.
+                    const escapedValue = value
+                        .replace(/'/g, "''")
+                        .replace(/\n/g, '');
+
+                    return `"${escapedValue}"`;
+                } else {
+                    return term.value;
+                }
+            }).join(', ')
         );
 
         lines.push(...dataRows);

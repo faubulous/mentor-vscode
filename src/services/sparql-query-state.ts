@@ -2,7 +2,7 @@ import { PrefixMap } from "@/utilities";
 import { Term } from "@rdfjs/types";
 import { getFileName } from "@/utilities/uri";
 
-export type SparqlQueryType = 'SELECT' | 'CONSTRUCT' | 'ASK' | 'DESCRIBE';
+export type SparqlQueryType = 'bindings' | 'boolean' | 'quads' | 'void';
 
 /**
  * The state of a SPARQL query execution.
@@ -57,7 +57,7 @@ export interface SparqlQueryExecutionState {
 	/**
 	 * The results of the query execution, if any.
 	 */
-	result?: SparqlQueryResult;
+	result?: BindingsResult | BooleanResult | QuadsResult;
 }
 
 /**
@@ -71,17 +71,10 @@ export function getDisplayName(queryState: SparqlQueryExecutionState): string {
 	}
 }
 
-export interface SparqlQueryResult {
-	/**
-	 * The type of the result, which can be 'bindings', 'boolean', or 'graph'.
-	 */
-	type: 'bindings' | 'boolean' | 'graph';
-}
-
 /**
  * Represents the results of a SPARQL query that returns bindings.
  */
-export interface BindingsResult extends SparqlQueryResult {
+export interface BindingsResult {
 	/**
 	 * The type of the result, which is always 'bindings' for SELECT queries.
 	 */
@@ -103,7 +96,7 @@ export interface BindingsResult extends SparqlQueryResult {
 	namespaceMap: PrefixMap;
 }
 
-export interface BooleanResult extends SparqlQueryResult {
+export interface BooleanResult {
 	/**
 	 * The type of the result, which is always 'boolean' for ASK queries.
 	 */
@@ -115,11 +108,11 @@ export interface BooleanResult extends SparqlQueryResult {
 	value: boolean;
 }
 
-export interface GraphResult extends SparqlQueryResult {
+export interface QuadsResult {
 	/**
-	 * The type of the result, which is always 'graph' for CONSTRUCT queries.
+	 * The type of the result, which is always 'quads' for CONSTRUCT or DESCRIBE queries.
 	 */
-	type: 'graph';
+	type: 'quads';
 
 	/**
 	 * The returned RDF document in the given serialization format.

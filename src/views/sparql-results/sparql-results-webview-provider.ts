@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { SparqlResultsWebviewFactory } from '@/views/sparql-results/sparql-results-webview-factory';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
+import { QuadsResult } from '@/services/sparql-query-state';
+
 /**
  * A provider for the SPARQL results webview. It handles the registration of the webview, 
  * message passing, and execution of SPARQL queries.
@@ -82,6 +84,16 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         this._postMessage({ id: 'SparqlQueryExecutionStarted', queryState: initialState });
 
         const updatedState = await mentor.sparqlQueryService.executeQuery(initialState);
+
+        if (updatedState.result?.type === 'quads') {
+            const result = updatedState.result as QuadsResult;
+            const document = await vscode.workspace.openTextDocument({
+                content: result.document,
+                language: 'turtle'
+            });
+
+            await vscode.window.showTextDocument(document);
+        }
 
         this._postMessage({ id: 'SparqlQueryExecutionEnded', queryState: updatedState });
     }

@@ -130,7 +130,10 @@ class SparqlResultsWebview extends WebviewComponent<
 		switch (message.id) {
 			case 'SparqlQueryExecutionStarted':
 			case 'SparqlQueryExecutionEnded': {
-				this._addOrUpdateQuery(message.queryState);
+				if (message.queryState.queryType === 'bindings' ||
+					message.queryState.queryType === 'boolean') {
+					this._addOrUpdateQuery(message.queryState);
+				}
 				break;
 			}
 		}
@@ -225,15 +228,15 @@ class SparqlResultsWebview extends WebviewComponent<
 			return <span className="codicon codicon-error tab-error"></span>;
 		}
 
-		if (query.queryType === 'SELECT') {
+		if (query.queryType === 'bindings') {
 			return <span className="codicon codicon-table"></span>;
 		}
 
-		if (query.queryType === 'ASK') {
+		if (query.queryType === 'boolean') {
 			return <span className="codicon codicon-question"></span>;
 		}
 
-		if (query.queryType === 'CONSTRUCT' || query.queryType === 'DESCRIBE') {
+		if (query.queryType === 'quads') {
 			return <span className="codicon codicon-file"></span>;
 		}
 	}

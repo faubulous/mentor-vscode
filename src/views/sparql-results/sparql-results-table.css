@@ -82,14 +82,13 @@ a {
 .sparql-results-content-container.codicon-xl {
 	box-sizing: border-box;
 	flex: 1 1 auto;
-	padding: 1.5em 2em;
+	padding: 1em 2em;
 	gap: 1em;
 }
 
 .sparql-results-content-container.codicon-xl .codicon {
-	font-size: 24px;
+	font-size: 1.5em;
 	font-weight: 300;
-	display: none;
 }
 
 .sparql-results-content-container.codicon-xl .result {

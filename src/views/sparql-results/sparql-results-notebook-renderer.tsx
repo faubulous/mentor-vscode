@@ -8,7 +8,7 @@ import { SparqlResultsWebviewMessages } from "./sparql-results-webview-messages"
 
 export const activate: ActivationFunction = (context: RendererContext<NotebookRendererMessaging>) => {
 	if (!context.postMessage || !context.onDidReceiveMessage) {
-		throw new Error("This renderer requires a messaging context");
+		throw new Error("This renderer requires a messaging context.");
 	}
 
 	const messaging: WebviewMessaging<SparqlResultsWebviewMessages> = {
@@ -24,9 +24,7 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 		renderOutputItem(data: OutputItem, element: HTMLElement) {
 			const results = data?.json();
 			const root = createRoot(element);
-			root.render(
-				<SparqlResultsTable messaging={messaging} queryContext={results} />
-			);
+			root.render(<SparqlResultsTable messaging={messaging} queryContext={results} />);
 		}
 	};
 };
