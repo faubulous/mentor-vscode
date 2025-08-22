@@ -3,10 +3,6 @@ body {
     overflow: hidden;
 }
 
-.mentor-panel {
-    /* background-color: red; */
-}
-
 vscode-tabs.vscode-tabs-slim > vscode-tab-header {
     padding-top: 3px;
     padding-bottom: 3px;

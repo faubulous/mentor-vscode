@@ -5,22 +5,15 @@
     --mentor-bindingResult-false-background: rgba(from var(--mentor-bindingResult-false-foreground) r g b / 0.1);
 }
 
-.mentor-notebook-cell {
-	min-height: 50px;
-	max-height: 500px;
-	padding: 0;
-	border: 1px solid var(--vscode-editorGroup-border);
-}
-
-pre {
+.sparql-results-container pre {
 	margin: 0;
 }
 
-a {
+.sparql-results-container a {
 	text-decoration: none;
 }
 
-.label {
+.sparql-results-container .label {
   	color: var(--vscode-semanticToken-class-foreground, var(--vscode-editor-foreground));
 }
 
@@ -28,41 +21,6 @@ a {
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-}
-
-.sparql-results-toolbar {
-	/* Make the toolbar appear slim and unobtrusive */
-	flex: 0 0 auto;
-	padding: 2px 8px;
-	border-bottom: 1px solid var(--vscode-editorGroup-border);
-}
-
-.sparql-results-toolbar .codicon-debug-stop {
-	color: var(--vscode-debugIcon-stopForeground);
-}
-
-.sparql-results-toolbar .codicon-debug-restart {
-	color: var(--vscode-debugIcon-restartForeground);
-}
-
-/* .sparql-results-toolbar .codicon-sync {
-	color: var(--vscode-progressBar-background);
-} */
-
-.sparql-results-toolbar .codicon-error {
-	color: var(--vscode-errorForeground);
-}
-
-.sparql-results-toolbar .divider-vertical {
-	display: inline-block;
-    width: 1px;
-    height: 22px;
-    border-left: 1px solid var(--vscode-editorGroup-border);
-}
-
-.sparql-results-toolbar .spacer {
-	margin-left: auto;
-	margin-right: auto;
 }
 
 .sparql-results-content-container {
@@ -131,51 +89,34 @@ a {
 	color: var(--mentor-bindingResult-false-foreground);
 }
 
-.sparql-results-toolbar select {
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--vscode-foreground);
-    font-family: var(--vscode-font-family);
-    font-size: var(--vscode-font-size);
-	cursor: pointer;
-}
-
-/* Style the select when focused */
-.sparql-results-toolbar select:focus {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
-}
-
-/* Style the select options */
-.sparql-results-toolbar select option {
-    background: var(--vscode-dropdown-background);
-    color: var(--vscode-dropdown-foreground);
-}
-
-/* Optional: Add subtle hover effect */
-.sparql-results-toolbar select:hover {
-    background: var(--vscode-dropdown-background, transparent);
-}
-
-.sparql-results-range {
-	padding-right: 6px;
-}
-
-vscode-tab-panel .sparql-results-container {
+.mentor-panel .sparql-results-container {
 	height: 100vh;
 }
 
-vscode-table {
+.mentor-notebook-output {
+	border: 1px solid var(--vscode-editorGroup-border) !important;
+	padding: 0 !important;
+}
+
+.mentor-panel vscode-table {
 	flex: 1 1 auto;
 	min-height: 0;
 }
 
-vscode-table-header-cell {
+.mentor-notebook-output vscode-table {
+	flex: 1 1 auto;
+	min-height: 50px;
+	max-height: 500px;
+}
+
+.mentor-notebook-output vscode-table-header-cell,
+.mentor-panel vscode-table-header-cell {
 	line-height: auto;
 	padding-top: 2px;
 	padding-bottom: 2px;
 }
-vscode-table-cell {
+
+.mentor-notebook-output vscode-table-cell,
+.mentor-panel vscode-table-cell {
 	border-bottom: none;
 }

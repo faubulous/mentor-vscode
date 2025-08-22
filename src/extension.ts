@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as views from './views';
+import * as webviews from './webviews';
 import * as providers from './providers';
 import { mentor } from './mentor';
 import { NotebookSerializer } from './workspace/notebook-serializer';
@@ -55,7 +56,7 @@ function registerViews(context: vscode.ExtensionContext) {
 	// TODO: Dispose the view providers in the trees.
 	context.subscriptions.push(new views.WorkspaceTree().treeView);
 	context.subscriptions.push(new views.DefinitionTree().treeView);
-	context.subscriptions.push(...views.sparqlResultsWebviewProvider.register(context));
+	context.subscriptions.push(...webviews.sparqlResultsWebviewProvider.register(context));
 }
 
 function registerCommands(context: vscode.ExtensionContext) {

@@ -25,7 +25,7 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 			const results = data?.json();
 			const root = createRoot(element);
 			root.render(
-				<div className="mentor-notebook-cell">
+				<div className="mentor-notebook-output">
 					<SparqlResultsView messaging={messaging} queryContext={results} />
 				</div>
 			);

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlQueryExecutionState } from '@/services/sparql-query-state';
-import { sparqlResultsWebviewProvider } from '@/views';
+import { sparqlResultsWebviewProvider } from '@/webviews';
 import { executeNotebookCell } from './execute-notebook-cell';
 
 export async function executeSparqlQuery(query: SparqlQueryExecutionState): Promise<void> {

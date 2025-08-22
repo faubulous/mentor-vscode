@@ -221,7 +221,7 @@ const copyVSCodeElementsBundle = () => {
       getLanguageConfig(args, 'client', 'trig'),
       getLanguageConfig(args, 'client', 'sparql'),
       getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
-      getReactViewConfig(args, 'sparql-results', 'sparql-results-webview'),
+      getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
     ]
 
     if (args.includes("--watch")) {

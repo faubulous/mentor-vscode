@@ -56,7 +56,7 @@ export class SparqlResultsWebviewFactory {
 		);
 
 		const scriptUrl = webview.asWebviewUri(
-			vscode.Uri.joinPath(context.extensionUri, 'out', 'sparql-results-webview.js')
+			vscode.Uri.joinPath(context.extensionUri, 'out', 'sparql-results-panel.js')
 		);
 
 		return `<!DOCTYPE html>

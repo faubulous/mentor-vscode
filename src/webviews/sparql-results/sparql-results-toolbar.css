@@ -1,0 +1,61 @@
+.sparql-results-toolbar {
+	/* Make the toolbar appear slim and unobtrusive */
+	flex: 0 0 auto;
+	padding: 2px 8px;
+	border-bottom: 1px solid var(--vscode-editorGroup-border);
+}
+
+.sparql-results-toolbar .codicon-debug-stop {
+	color: var(--vscode-debugIcon-stopForeground);
+}
+
+.sparql-results-toolbar .codicon-debug-restart {
+	color: var(--vscode-debugIcon-restartForeground);
+}
+
+.sparql-results-toolbar .codicon-error {
+	color: var(--vscode-errorForeground);
+}
+
+.sparql-results-toolbar .divider-vertical {
+	display: inline-block;
+    width: 1px;
+    height: 22px;
+    border-left: 1px solid var(--vscode-editorGroup-border);
+}
+
+.sparql-results-toolbar .spacer {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.sparql-results-toolbar select {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+	cursor: pointer;
+}
+
+/* Style the select when focused */
+.sparql-results-toolbar select:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* Style the select options */
+.sparql-results-toolbar select option {
+    background: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground);
+}
+
+/* Optional: Add subtle hover effect */
+.sparql-results-toolbar select:hover {
+    background: var(--vscode-dropdown-background, transparent);
+}
+
+.sparql-results-range {
+	padding-right: 6px;
+}

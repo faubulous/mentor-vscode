@@ -42,7 +42,7 @@ export class SparqlResultsView extends WebviewComponent<
     super.componentDidMount();
 
     this.addStylesheet('codicon-styles', codicons);
-    this.addStylesheet('sparql-table-styles', stylesheet);
+    this.addStylesheet('mentor-sparql-table-styles', stylesheet);
   }
 
   render() {

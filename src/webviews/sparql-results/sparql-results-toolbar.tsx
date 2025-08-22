@@ -5,6 +5,7 @@ import { Stopwatch } from './stopwatch';
 import { SparqlResultsContextType } from './sparql-results-context';
 import { withSparqlResults } from './sparql-results-hoc';
 import codicons from '$/codicon.css';
+import toolbarStyle from "./sparql-results-toolbar.css";
 
 /**
  * Properties for the SPARQL results toolbar component.
@@ -22,6 +23,7 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsTool
 		super.componentDidMount();
 
 		this.addStylesheet('codicon-styles', codicons);
+		this.addStylesheet('mentor-sparql-toolbar-styles', toolbarStyle);
 	}
 
 	render() {

@@ -7,9 +7,9 @@ import { SparqlResultsView } from './sparql-results-view';
 import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import codicons from '$/codicon.css';
-import stylesheet from './sparql-results-webview.css';
+import stylesheet from './sparql-results-panel.css';
 
-interface SparqlResultsWebviewState {
+interface SparqlResultsPanelState {
 	renderKey?: number;
 	activeQueries: SparqlQueryExecutionState[];
 	activeTabIndex: number;
@@ -26,14 +26,14 @@ interface SparqlResultsWebviewState {
  * 
  * @returns A React component that renders either query results or the welcome view
  */
-class SparqlResultsWebview extends WebviewComponent<
+class SparqlResultsPanel extends WebviewComponent<
 	{},
-	SparqlResultsWebviewState,
+	SparqlResultsPanelState,
 	SparqlResultsWebviewMessages
 > {
 	messaging = WebviewHost.getMessaging<SparqlResultsWebviewMessages>();
 
-	state: SparqlResultsWebviewState = {
+	state: SparqlResultsPanelState = {
 		renderKey: 0,
 		activeQueries: [],
 		activeTabIndex: 0
@@ -107,7 +107,7 @@ class SparqlResultsWebview extends WebviewComponent<
 	componentDidUpdate() {
 		console.info('componentDidUpdate', this.state);
 
-		const savedState: SparqlResultsWebviewState = {
+		const savedState: SparqlResultsPanelState = {
 			renderKey: 0,
 			activeTabIndex: this.state.activeTabIndex,
 			activeQueries: this.state.activeQueries
@@ -240,4 +240,4 @@ class SparqlResultsWebview extends WebviewComponent<
 }
 
 const root = createRoot(document.getElementById('root')!);
-root.render(<SparqlResultsWebview />);
+root.render(<SparqlResultsPanel />);
