@@ -94,7 +94,7 @@ export class SparqlQueryService {
 	}
 
 	private _getWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
-		if (documentIri.scheme === 'file' || documentIri.scheme === 'vscode-notebook-cell') {
+		if (documentIri.scheme === 'file') {
 			return WorkspaceUri.toWorkspaceUri(documentIri);
 		}
 	}

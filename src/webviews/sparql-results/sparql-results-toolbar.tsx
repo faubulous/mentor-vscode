@@ -1,0 +1,139 @@
+import { Fragment } from 'react/jsx-runtime';
+import { WebviewComponent } from '@/webviews/webview-component';
+import { BindingsResult } from '@/services/sparql-query-state';
+import { Stopwatch } from './stopwatch';
+import { SparqlResultsContextType } from './sparql-results-context';
+import { withSparqlResults } from './sparql-results-hoc';
+import codicons from '$/codicon.css';
+
+/**
+ * Properties for the SPARQL results toolbar component.
+ */
+interface SparqlResultsToolbarProps {
+	sparqlResults: SparqlResultsContextType;
+}
+
+/**
+ * Component to display SPARQL bindings in a table format.
+ */
+export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsToolbarProps> {
+
+	componentDidMount() {
+		super.componentDidMount();
+
+		this.addStylesheet('codicon-styles', codicons);
+	}
+
+	render() {
+		const { queryContext, paging } = this.props.sparqlResults;
+		const bindings = queryContext.result?.type === 'bindings' ? queryContext.result as BindingsResult : null;
+
+		return (
+			<vscode-toolbar-container className="sparql-results-toolbar">
+				<Stopwatch/>
+				<span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
+				<vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
+					<span className="codicon codicon-debug-restart"></span>
+				</vscode-toolbar-button>
+
+				{queryContext.error && (
+					<Fragment>
+						<span className="codicon codicon-error"></span>
+						<span>Error:</span>
+					</Fragment>
+				)}
+
+				{!queryContext.error && !queryContext.endTime && (
+					<Fragment>
+						<span className="codicon codicon-sync codicon-modifier-spin"></span>
+						<span>Executing...</span>
+					</Fragment>
+				)}
+
+				{!queryContext.error && bindings && paging && (
+					<Fragment>
+						<span className="divider divider-vertical"></span>
+						<select className="sparql-results-page-size-select"
+							value={paging.pageSize}
+							onChange={this._handlePageSizeChange}
+							disabled={bindings.rows.length <= paging.pageSize}>
+							{paging.pageSizeOptions.map(option => (
+								<option key={option} value={option}>{option}</option>
+							))}
+						</select>
+						<span className="divider divider-vertical"></span>
+						<vscode-toolbar-button
+							title="Previous page"
+							onClick={() => this._handlePreviousPage()}
+							disabled={paging.currentPage === 0}
+						>
+							<span className="codicon codicon-chevron-left"></span>
+						</vscode-toolbar-button>
+						<vscode-toolbar-button
+							title="Next page"
+							onClick={() => this._handleNextPage()}
+							disabled={paging.currentPage >= paging.totalPages - 1}
+						>
+							<span className="codicon codicon-chevron-right"></span>
+						</vscode-toolbar-button>
+						<span className="sparql-results-range">
+							{paging.startIndex + 1}-{paging.endIndex} of {bindings.rows.length} rows
+						</span>
+					</Fragment>
+				)}
+
+				<span className="spacer"></span>
+
+				{!queryContext.error && queryContext.result && (
+					<Fragment>
+						<vscode-toolbar-button title="Save" onClick={() => this._saveResults()}>
+							CSV
+						</vscode-toolbar-button>
+					</Fragment>
+				)}
+			</vscode-toolbar-container>
+		);
+	}
+
+	private _handlePreviousPage = () => {
+		this.props.sparqlResults.previousPage();
+	};
+
+	private _handleNextPage = () => {
+		this.props.sparqlResults.nextPage();
+	};
+
+	private _handlePageSizeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+		const pageSize = parseInt(event.target.value);
+
+		this.props.sparqlResults.updatePageSize(pageSize);
+	};
+
+	private _reloadQuery() {
+		const { queryContext, messaging } = this.props.sparqlResults;
+
+		messaging?.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.action.executeSparqlQuery',
+			args: [{
+				documentIri: queryContext.documentIri,
+				workspaceIri: queryContext.workspaceIri,
+				notebookIri: queryContext.notebookIri,
+				cellIndex: queryContext.cellIndex,
+				query: queryContext.query
+			}]
+		});
+	}
+
+	private _saveResults() {
+		const { queryContext, messaging } = this.props.sparqlResults;
+
+		messaging.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.action.saveSparqlQueryResults',
+			args: [queryContext, 'csv']
+		});
+	}
+}
+
+export const SparqlResultsToolbar = withSparqlResults(SparqlResultsToolbarBase);

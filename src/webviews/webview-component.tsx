@@ -31,6 +31,8 @@ export abstract class WebviewComponent<P = {}, S = {}, M extends WebviewMessage 
 			style.textContent = content;
 
 			document.head.appendChild(style);
+
+			console.debug('Stylesheet added:', id);
 		}
 	}
 }

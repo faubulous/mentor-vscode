@@ -2,8 +2,8 @@ import "@vscode-elements/elements";
 import type { NotebookRendererMessaging } from 'vscode';
 import type { ActivationFunction, OutputItem, RendererContext } from 'vscode-notebook-renderer';
 import { createRoot } from 'react-dom/client';
-import { WebviewMessaging } from "@/views/webview-messaging";
-import { SparqlResultsTable } from './sparql-results-table';
+import { WebviewMessaging } from "@/webviews/webview-messaging";
+import { SparqlResultsView } from './sparql-results-view';
 import { SparqlResultsWebviewMessages } from "./sparql-results-webview-messages";
 
 export const activate: ActivationFunction = (context: RendererContext<NotebookRendererMessaging>) => {
@@ -24,7 +24,11 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 		renderOutputItem(data: OutputItem, element: HTMLElement) {
 			const results = data?.json();
 			const root = createRoot(element);
-			root.render(<SparqlResultsTable messaging={messaging} queryContext={results} />);
+			root.render(
+				<div className="mentor-notebook-cell">
+					<SparqlResultsView messaging={messaging} queryContext={results} />
+				</div>
+			);
 		}
 	};
 };

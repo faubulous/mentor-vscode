@@ -1,4 +1,4 @@
-import { WebviewComponent } from '@/views/webview-component';
+import { WebviewComponent } from '@/webviews/webview-component';
 import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import { WebviewHost } from '../webview-host';

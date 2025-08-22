@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { SparqlResultsWebviewFactory } from '@/views/sparql-results/sparql-results-webview-factory';
+import { SparqlResultsWebviewFactory } from '@/webviews/sparql-results/sparql-results-webview-factory';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import { QuadsResult } from '@/services/sparql-query-state';
 

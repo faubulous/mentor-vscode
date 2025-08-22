@@ -1,9 +1,9 @@
 import { createRoot } from 'react-dom/client';
 import { Fragment } from 'react';
-import { WebviewHost } from '@/views/webview-host';
-import { WebviewComponent } from '@/views/webview-component';
+import { WebviewHost } from '@/webviews/webview-host';
+import { WebviewComponent } from '@/webviews/webview-component';
 import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
-import { SparqlResultsTable } from './sparql-results-table';
+import { SparqlResultsView } from './sparql-results-view';
 import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import codicons from '$/codicon.css';
@@ -44,8 +44,6 @@ class SparqlResultsWebview extends WebviewComponent<
 
 		// Restore previous state if available.
 		const previousState = WebviewHost.getState();
-
-		console.debug("SparqlResultsWebview", previousState);
 
 		if (previousState && Array.isArray(previousState.activeQueries)) {
 			this.state = previousState;
@@ -188,38 +186,37 @@ class SparqlResultsWebview extends WebviewComponent<
 		console.debug('render', this.state);
 
 		return (
-			<vscode-tabs selectedIndex={this.state.activeTabIndex} className="vscode-tabs-slim">
-				{/* Welcome tab */}
-				<vscode-tab-header slot="header" id="0">
-					<div className="tab-header-content">
-						<span className="codicon codicon-list-selection"></span>
-					</div>
-				</vscode-tab-header>
-				<vscode-tab-panel>
-					<SparqlResultsWelcomeView />
-				</vscode-tab-panel>
-
-				{/* Dynamic query result tabs */}
-				{this.state.activeQueries.map((query, index) => (
-					<Fragment key={query.documentIri}>
-						<vscode-tab-header slot="header" id={(index + 1).toString()}>
-							<div className="tab-header-content">
-								{this._getQueryTypeIcon(query)}
-								<span>{getDisplayName(query)}</span>
-								<a className="codicon codicon-close" role="button" title="Close"
-									onClick={(e) => {
-										e.stopPropagation();
-										this._closeQuery(query.documentIri);
-									}}
-								></a>
-							</div>
-						</vscode-tab-header>
-						<vscode-tab-panel>
-							<SparqlResultsTable messaging={this.messaging} queryContext={query} />
-						</vscode-tab-panel>
-					</Fragment>
-				))}
-			</vscode-tabs>
+			<div className="mentor-panel">
+				<vscode-tabs selectedIndex={this.state.activeTabIndex} className="vscode-tabs-slim">
+					<vscode-tab-header slot="header" id="0">
+						<div className="tab-header-content">
+							<span className="codicon codicon-list-selection"></span>
+						</div>
+					</vscode-tab-header>
+					<vscode-tab-panel>
+						<SparqlResultsWelcomeView />
+					</vscode-tab-panel>
+					{this.state.activeQueries.map((query, index) => (
+						<Fragment key={query.documentIri}>
+							<vscode-tab-header slot="header" id={(index + 1).toString()}>
+								<div className="tab-header-content">
+									{this._getQueryTypeIcon(query)}
+									<span>{getDisplayName(query)}</span>
+									<a className="codicon codicon-close" role="button" title="Close"
+										onClick={(e) => {
+											e.stopPropagation();
+											this._closeQuery(query.documentIri);
+										}}
+									></a>
+								</div>
+							</vscode-tab-header>
+							<vscode-tab-panel>
+								<SparqlResultsView messaging={this.messaging} queryContext={query} />
+							</vscode-tab-panel>
+						</Fragment>
+					))}
+				</vscode-tabs>
+			</div>
 		);
 	}
 

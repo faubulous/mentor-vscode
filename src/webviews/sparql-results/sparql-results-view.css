@@ -5,8 +5,11 @@
     --mentor-bindingResult-false-background: rgba(from var(--mentor-bindingResult-false-foreground) r g b / 0.1);
 }
 
-body {
+.mentor-notebook-cell {
+	min-height: 50px;
+	max-height: 500px;
 	padding: 0;
+	border: 1px solid var(--vscode-editorGroup-border);
 }
 
 pre {
@@ -81,9 +84,9 @@ a {
 
 .sparql-results-content-container.codicon-xl {
 	box-sizing: border-box;
-	flex: 1 1 auto;
 	padding: 1em 2em;
 	gap: 1em;
+	margin: 5px;
 }
 
 .sparql-results-content-container.codicon-xl .codicon {
@@ -175,10 +178,4 @@ vscode-table-header-cell {
 }
 vscode-table-cell {
 	border-bottom: none;
-}
-
-.output_container .sparql-results-container {
-	border: 1px solid var(--vscode-editorGroup-border);
-	border-top: none;
-	max-height: 500px; /* Limit the height of the SPARQL results table within notebooks */
 }

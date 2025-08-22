@@ -1,13 +1,24 @@
-import { SparqlQueryExecutionState } from '@/services/sparql-query-state';
+import { SparqlResultsContextType } from './sparql-results-context';
+import { withSparqlResults } from './sparql-results-hoc';
 import { useState, useEffect, useRef } from 'react';
 
-export const Stopwatch = (props: { queryContext: SparqlQueryExecutionState }) => {
+interface StopwatchProps {
+	sparqlResults: SparqlResultsContextType;
+}
+
+function StopwatchBase({ sparqlResults }: StopwatchProps) {
+	const { queryContext } = sparqlResults;
+
+	if (!queryContext.startTime) {
+		return null;
+	}
+
 	const [elapsedTime, setElapsedTime] = useState(0);
 	const intervalRef = useRef(null as ReturnType<typeof setInterval> | null);
 
 	const updateElapsedTime = () => {
-		const startTime = props.queryContext.startTime;
-		const endTime = props.queryContext.endTime ? props.queryContext.endTime : Date.now();
+		const startTime = queryContext.startTime;
+		const endTime = queryContext.endTime ? queryContext.endTime : Date.now();
 
 		setElapsedTime(Math.max(0, endTime - startTime));
 	};
@@ -15,7 +26,7 @@ export const Stopwatch = (props: { queryContext: SparqlQueryExecutionState }) =>
 	useEffect(() => {
 		updateElapsedTime();
 
-		if (!props.queryContext.endTime) {
+		if (!queryContext.endTime) {
 			// If no end date, start interval to update every 10ms
 			intervalRef.current = setInterval(updateElapsedTime, 10);
 		} else if (intervalRef.current) {
@@ -23,7 +34,7 @@ export const Stopwatch = (props: { queryContext: SparqlQueryExecutionState }) =>
 
 			intervalRef.current = null;
 		}
-	}, [props.queryContext.startTime, props.queryContext.endTime]);
+	}, [queryContext.startTime, queryContext.endTime]);
 
 	const formatTime = (elapsedMilliseconds: number) => {
 		const date = new Date(elapsedMilliseconds);
@@ -36,7 +47,7 @@ export const Stopwatch = (props: { queryContext: SparqlQueryExecutionState }) =>
 		// Note: Until the end time is not set, we do not show the milliseconds. This is
 		// to avoid confusion when the stopwatch is still running and the UI has not been updated.
 		// Usually this takes longer than the query execution time.
-		const centiseconds = props.queryContext.endTime ? Math.round(date.getUTCMilliseconds() / 10) : 0;
+		const centiseconds = queryContext.endTime ? Math.round(date.getUTCMilliseconds() / 10) : 0;
 
 		const parts = [];
 
@@ -58,3 +69,5 @@ export const Stopwatch = (props: { queryContext: SparqlQueryExecutionState }) =>
 		<span>{formatTime(elapsedTime)}</span>
 	);
 };
+
+export const Stopwatch = withSparqlResults(StopwatchBase);
