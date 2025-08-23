@@ -67,28 +67,34 @@ export class NotebookController {
 			await mentor.sparqlQueryService.executeQuery(context);
 
 			if (context.queryType === 'bindings' || context.queryType === 'boolean') {
-				execution.replaceOutput([new vscode.NotebookCellOutput([
+				await execution.replaceOutput([new vscode.NotebookCellOutput([
 					vscode.NotebookCellOutputItem.json(context, 'application/sparql-results+json')
 				])]);
+
+				execution.end(true, Date.now());
 			} else if (context.queryType === 'quads') {
 				const result = context.result as QuadsResult;
 
-				execution.replaceOutput([new vscode.NotebookCellOutput([
+				await execution.replaceOutput([new vscode.NotebookCellOutput([
 					vscode.NotebookCellOutputItem.text(result?.document, 'text/x-turtle')
 				])]);
+
+				execution.end(true, Date.now());
 			} else {
 				const message = `Unknown or unsupported result type: ${context.queryType}`;
 
-				execution.replaceOutput([new vscode.NotebookCellOutput([
+				await execution.replaceOutput([new vscode.NotebookCellOutput([
 					vscode.NotebookCellOutputItem.text(message, 'text/plain')
 				])]);
+
+				execution.end(false, Date.now());
 			}
 		} catch (error: any) {
-			execution.replaceOutput([new vscode.NotebookCellOutput([
+			await execution.replaceOutput([new vscode.NotebookCellOutput([
 				vscode.NotebookCellOutputItem.error(error as Error)
 			])]);
-		}
 
-		execution.end(true, Date.now());
+			execution.end(false, Date.now());
+		}
 	}
 }
