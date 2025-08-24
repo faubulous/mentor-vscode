@@ -67,7 +67,7 @@ export class NotebookController {
 			await mentor.sparqlQueryService.executeQuery(context);
 
 			if (context.queryType === 'bindings' || context.queryType === 'boolean') {
-				await execution.replaceOutput([new vscode.NotebookCellOutput([
+				execution.replaceOutput([new vscode.NotebookCellOutput([
 					vscode.NotebookCellOutputItem.json(context, 'application/sparql-results+json')
 				])]);
 
@@ -75,7 +75,7 @@ export class NotebookController {
 			} else if (context.queryType === 'quads') {
 				const result = context.result as QuadsResult;
 
-				await execution.replaceOutput([new vscode.NotebookCellOutput([
+				execution.replaceOutput([new vscode.NotebookCellOutput([
 					vscode.NotebookCellOutputItem.text(result?.document, 'text/x-turtle')
 				])]);
 
@@ -83,7 +83,7 @@ export class NotebookController {
 			} else {
 				const message = `Unknown or unsupported result type: ${context.queryType}`;
 
-				await execution.replaceOutput([new vscode.NotebookCellOutput([
+				execution.replaceOutput([new vscode.NotebookCellOutput([
 					vscode.NotebookCellOutputItem.text(message, 'text/plain')
 				])]);
 

@@ -26,7 +26,10 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 			const root = createRoot(element);
 			root.render(
 				<div className="mentor-notebook-output">
-					<SparqlResultsView messaging={messaging} queryContext={results} />
+					<SparqlResultsView
+						messaging={messaging}
+						queryContext={results}
+						defaultPageSize={50} />
 				</div>
 			);
 		}

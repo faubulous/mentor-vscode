@@ -22,6 +22,11 @@ interface SparqlResultsViewProps {
    * The SPARQL query results to display.
    */
   queryContext: SparqlQueryExecutionState;
+
+  /**
+   * The default maximum number of items to display in the bindings table.
+   */
+  defaultPageSize: number;
 }
 
 /**
@@ -49,7 +54,10 @@ export class SparqlResultsView extends WebviewComponent<
     const context = this.props.queryContext;
 
     return (
-      <SparqlResultsProvider queryContext={context} messaging={this.props.messaging}>
+      <SparqlResultsProvider
+        queryContext={context}
+        messaging={this.props.messaging}
+        defaultPageSize={this.props.defaultPageSize}>
         {this._renderContent()}
       </SparqlResultsProvider>
     );

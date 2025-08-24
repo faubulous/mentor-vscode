@@ -103,12 +103,6 @@
 	min-height: 0;
 }
 
-.mentor-notebook-output vscode-table {
-	flex: 1 1 auto;
-	min-height: 50px;
-	max-height: 500px;
-}
-
 .mentor-notebook-output vscode-table-header-cell,
 .mentor-panel vscode-table-header-cell {
 	line-height: auto;

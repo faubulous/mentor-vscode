@@ -27,11 +27,13 @@ export interface SparqlResultsProviderProps {
 	queryContext: SparqlQueryExecutionState;
 
 	messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
+
+	defaultPageSize: number;
 }
 
 const SparqlResultsContext = createContext<SparqlResultsContextType | null>(null);
 
-export function SparqlResultsProvider({ children, queryContext, messaging }: SparqlResultsProviderProps) {
+export function SparqlResultsProvider({ children, queryContext, messaging, defaultPageSize }: SparqlResultsProviderProps) {
 	const result = queryContext.result?.type === 'bindings'
 		? queryContext.result as BindingsResult
 		: undefined;
@@ -42,7 +44,7 @@ export function SparqlResultsProvider({ children, queryContext, messaging }: Spa
 		updatePageSize,
 		nextPage,
 		previousPage
-	} = useSparqlResultsPaging(result);
+	} = useSparqlResultsPaging(result, defaultPageSize);
 
 	const contextValue: SparqlResultsContextType = {
 		queryContext,

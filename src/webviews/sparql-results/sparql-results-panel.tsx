@@ -211,7 +211,10 @@ class SparqlResultsPanel extends WebviewComponent<
 								</div>
 							</vscode-tab-header>
 							<vscode-tab-panel>
-								<SparqlResultsView messaging={this.messaging} queryContext={query} />
+								<SparqlResultsView
+									messaging={this.messaging}
+									queryContext={query}
+									defaultPageSize={100}/>
 							</vscode-tab-panel>
 						</Fragment>
 					))}

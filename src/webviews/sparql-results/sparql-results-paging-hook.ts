@@ -2,13 +2,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { SparqlResultsPagingState } from './sparql-results-paging-state';
 import { BindingsResult } from '@/services/sparql-query-state';
 
-export function useSparqlResultsPaging(result?: BindingsResult) {
+export function useSparqlResultsPaging(result?: BindingsResult, defaultPageSize?: number) {
 	const [paging, setPaging] = useState<SparqlResultsPagingState | undefined>();
 
 	// Initialize paging when result changes
 	useEffect(() => {
 		if (result) {
-			setPaging(new SparqlResultsPagingState(result, 0));
+			setPaging(new SparqlResultsPagingState(result, 0, defaultPageSize));
 		} else {
 			setPaging(undefined);
 		}
