@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { SparqlSyntaxParser, Uri } from '@faubulous/mentor-rdf';
 import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Bindings, Quad } from '@rdfjs/types';
-import { Writer } from 'n3';
+import { Store, Writer } from 'n3';
 import { mentor } from "@/mentor";
 import { WorkspaceUri } from "@/workspace/workspace-uri";
 import { NamespaceMap } from "@/utilities";
@@ -316,6 +316,14 @@ export class SparqlQueryService {
 				return '';
 			}
 
+			// TODO: Request quads from communica instead of manually filtering the triples.
+			const store = new Store();
+
+			// Add all quads to the writer
+			for (const q of quads) {
+				store.addQuad(q.subject, q.predicate, q.object);
+			}
+
 			// Get namespace prefixes for better formatting
 			const documentIri = context.documentIri;
 			const prefixMap: Record<string, string> = {};
@@ -350,8 +358,7 @@ export class SparqlQueryService {
 				prefixes: prefixMap
 			});
 
-			// Add all quads to the writer
-			writer.addQuads(quads);
+			writer.addQuads(store.toArray());
 
 			// Return the serialized Turtle string
 			return new Promise<string>((resolve, reject) => {
