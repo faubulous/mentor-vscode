@@ -39,7 +39,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 		const recentQueries = this.state?.history || [];
 
 		return (
-			<div className="container">
+			<div className="sparql-welcome-view-container">
 				<div className="column">
 					<vscode-toolbar-container className="header">
 						<h3>Start</h3>
@@ -94,18 +94,22 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 		}
 	}
 
+	private _executeCommand(command: string, ...args: any[]) {
+		this.messaging.postMessage({ id: 'ExecuteCommand', command, args });
+	}
+
 	private _loadHistory() {
 		this.messaging.postMessage({ id: 'GetSparqlQueryHistory' });
 	}
 
 	private _handleClearHistory() {
-		this.executeCommand('mentor.action.clearQueryHistory');
+		this._executeCommand('mentor.action.clearQueryHistory');
 
 		this._loadHistory();
 	}
 
 	private _handleExecuteQuery(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
-		this.executeCommand('mentor.action.executeSparqlQuery', {
+		this._executeCommand('mentor.action.executeSparqlQuery', {
 			documentIri: query.documentIri,
 			workspaceIri: query.workspaceIri,
 			notebookIri: query.notebookIri,
@@ -114,43 +118,27 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 		});
 
 		if (query.documentIri) {
-			this.executeCommand('mentor.action.openDocument', query.documentIri);
+			this._executeCommand('mentor.action.openDocument', query.documentIri);
 		}
 	}
 
 	private _handleOpenDocument(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
-		e?.stopPropagation();
-
-		this.executeCommand('mentor.action.openDocument', query.documentIri);
+		this._executeCommand('mentor.action.openDocument', query.documentIri);
 	}
 
 	private _handleRemoveFromHistory(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
-		e?.stopPropagation();
-
-		const n = this.state.history?.findIndex(q => q === query);
-
-		if (n !== undefined && n >= 0) {
-			this.setState(prevState => ({
-				history: prevState.history?.filter((_, index) => index !== n)
-			}));
-
-			this.executeCommand('mentor.action.removeFromQueryHistory', n);
-		}
+		this._executeCommand('mentor.action.removeFromQueryHistory', query.documentIri);
 	}
 
 	private _handleCreateSparqlQueryFile() {
-		this.executeCommand('mentor.action.createSparqlQueryFile');
+		this._executeCommand('mentor.action.createSparqlQueryFile');
 	}
 
 	private _handleSelectSparqlQueryFile() {
-		this.executeCommand('mentor.action.openFileByLanguage', 'sparql');
+		this._executeCommand('mentor.action.openFileByLanguage', 'sparql');
 	}
 
 	private _handleConnectToEndpoint() {
-		this.executeCommand('mentor.action.connectToSparqlEndpoint');
-	}
-
-	protected executeCommand(command: string, ...args: any[]) {
-		this.messaging.postMessage({ id: 'ExecuteCommand', command, args });
+		this._executeCommand('mentor.action.connectToSparqlEndpoint');
 	}
 }

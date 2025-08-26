@@ -85,9 +85,7 @@ export class SparqlQueryService {
 		if (document.uri.scheme === 'untitled') {
 			const i = this._history.findIndex(q => q.documentIri === document.uri.toString());
 
-			if (this.removeQueryStateAt(i)) {
-				this._onDidHistoryChange.fire();
-			}
+			this.removeQueryStateAt(i);
 		}
 	}
 
@@ -127,8 +125,10 @@ export class SparqlQueryService {
 	}
 
 	private _getWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
-		if (documentIri.scheme === 'file') {
-			return WorkspaceUri.toWorkspaceUri(documentIri);
+		switch (documentIri.scheme) {
+			case 'file':
+			case 'vscode-notebook':
+				return WorkspaceUri.toWorkspaceUri(documentIri);
 		}
 	}
 
@@ -160,26 +160,24 @@ export class SparqlQueryService {
 	}
 
 	/**
-	 * Update the SPARQL query state for a specific document IRI.
-	 * @param state The SparqlQueryState to update or add to the history.
+	 * Removes a SPARQL query state from the history and triggers the history change event.
+	 * @param state The SparqlQueryState to remove.
 	 */
-	updateQueryState(state: SparqlQueryExecutionState): void {
-		const index = this._history.findIndex(q => q.documentIri === state.documentIri);
+	removeQueryState(state: SparqlQueryExecutionState) {
+		const n = this._history.findIndex(q => q === state);
 
-		if (index >= 0) {
-			this._history[index] = state;
-
-			this._persistQueryHistory();
-		}
+		this.removeQueryStateAt(n);
 	}
 
 	/**
-	 * Removes the n-th item from the query history.
+	 * Removes the n-th item from the query history and triggers the history change event.
 	 * @param index The index of the item to remove from the query history.
 	 */
 	removeQueryStateAt(index: number): boolean {
 		if (index >= 0 && index < this._history.length) {
 			this._history.splice(index, 1);
+
+			this._onDidHistoryChange.fire();
 
 			this._persistQueryHistory();
 
