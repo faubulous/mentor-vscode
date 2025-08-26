@@ -21,7 +21,7 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         this._context = context;
 
         this._subscriptions.push(vscode.window.registerWebviewViewProvider(this.viewType, this));
-        this._subscriptions.push(mentor.sparqlQueryService.onDidHistoryChange(this._onDidQueryHistoryChange, this));
+        this._subscriptions.push(mentor.sparqlQueryService.onDidHistoryChange(this._postQueryHistory, this));
 
         return this._subscriptions;
     }
@@ -39,32 +39,28 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         this._view.webview.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
     }
 
-    private _onDidQueryHistoryChange() {
-        if (this._view) {
-            this._view.webview.postMessage({ id: 'SparqlQueryHistoryChanged' });
+    private _postQueryHistory() {
+        if (!this._view) {
+            return;
         }
+
+        this._view.webview.postMessage({
+            id: 'PostSparqlQueryHistory',
+            history: mentor.sparqlQueryService.getQueryHistory()
+        });
     }
 
     private async _onDidReceiveMessage(message: SparqlResultsWebviewMessages) {
         switch (message.id) {
+            case 'GetSparqlQueryHistory': {
+                this._postQueryHistory();
+                return;
+            }
             case 'ExecuteCommand': {
                 await vscode.commands.executeCommand(message.command, ...(message.args || []));
                 return;
             }
-            case 'GetSparqlQueryHistoryRequest': {
-                const history = mentor.sparqlQueryService.getQueryHistory();
-                this._postMessage({ id: 'GetSparqlQueryHistoryResponse', history });
-                return;
-            }
         }
-    }
-
-    private _postMessage(message: SparqlResultsWebviewMessages) {
-        if (!this._view) {
-            throw new Error('Webview view is not initialized.');
-        }
-
-        this._view.webview.postMessage(message);
     }
 
     public async executeQuery(document: vscode.TextDocument) {
@@ -81,8 +77,6 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
 
         this._view.show();
 
-        this._postMessage({ id: 'SparqlQueryExecutionStarted', queryState: initialState });
-
         const updatedState = await mentor.sparqlQueryService.executeQuery(initialState);
 
         if (updatedState.result?.type === 'quads') {
@@ -94,8 +88,6 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
 
             await vscode.window.showTextDocument(document);
         }
-
-        this._postMessage({ id: 'SparqlQueryExecutionEnded', queryState: updatedState });
     }
 }
 

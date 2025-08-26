@@ -127,19 +127,23 @@ class SparqlResultsPanel extends WebviewComponent<
 
 	componentDidReceiveMessage(message: SparqlResultsWebviewMessages): void {
 		switch (message.id) {
-			case 'SparqlQueryExecutionStarted':
-			case 'SparqlQueryExecutionEnded': {
-				if (message.queryState.queryType === 'bindings' ||
-					message.queryState.queryType === 'boolean') {
-					this._addOrUpdateQuery(message.queryState);
-				}
+			case 'PostSparqlQueryHistory': {
+				console.info(message.id, message.history);
+
+				this._onDidChangeQueryHistory(message.history);
 				break;
 			}
 		}
 	}
 
-	private _addOrUpdateQuery(query: SparqlQueryExecutionState) {
+	private _onDidChangeQueryHistory(history: SparqlQueryExecutionState[]) {
 		this.setState(prevState => {
+			const query = history[0];
+
+			if (!query || !this._shouldHandleQueryResults(query)) {
+				return prevState;
+			}
+
 			const n = prevState.activeQueries.findIndex(q => q.documentIri === query.documentIri);
 
 			const activeQueries = [...prevState.activeQueries];
@@ -165,6 +169,23 @@ class SparqlResultsPanel extends WebviewComponent<
 			};
 		});
 	};
+
+	/**
+	 * Indicates if a SPARQL query result should be handled by the panel.
+	 * @param queryState A SPARQL query execution state.
+	 * @returns `true` if the query result is supported, `false` otherwise.
+	 */
+	private _shouldHandleQueryResults(queryState: SparqlQueryExecutionState) {
+		if(queryState.queryType === 'quads' || queryState.queryType === 'void') {
+			return false;
+		}
+
+		if(queryState.notebookIri) {
+			return false;
+		}
+
+		return true;
+	}
 
 	private _closeQuery = (documentIri: string) => {
 		const activeQueries = this.state.activeQueries.filter(q => q.documentIri !== documentIri);

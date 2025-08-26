@@ -28,12 +28,8 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 
 	componentDidReceiveMessage(message: SparqlResultsWebviewMessages): void {
 		switch (message.id) {
-			case 'GetSparqlQueryHistoryResponse': {
+			case 'PostSparqlQueryHistory': {
 				this.setState({ history: message.history });
-				return;
-			}
-			case 'SparqlQueryExecutionEnded': {
-				this._loadHistory();
 				return;
 			}
 		}
@@ -99,7 +95,7 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 	}
 
 	private _loadHistory() {
-		this.messaging.postMessage({ id: 'GetSparqlQueryHistoryRequest' });
+		this.messaging.postMessage({ id: 'GetSparqlQueryHistory' });
 	}
 
 	private _handleClearHistory() {

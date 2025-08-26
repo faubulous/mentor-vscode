@@ -39,6 +39,20 @@ export class SparqlQueryService {
 	 */
 	onDidHistoryChange: vscode.Event<void> = this._onDidHistoryChange.event;
 
+	private readonly _onDidQueryExecutionStart = new vscode.EventEmitter<SparqlQueryExecutionState>();
+
+	/**
+	 * Event that is triggered before a SPARQL query is about to be executed.
+	 */
+	onDidQueryExecutionStart: vscode.Event<SparqlQueryExecutionState> = this._onDidQueryExecutionStart.event;
+
+	private readonly _onDidQueryExecutionEnd = new vscode.EventEmitter<SparqlQueryExecutionState>();
+
+	/**
+	 * Event that is triggered when a SPARQL query execution has ended with any result.
+	 */
+	onDidQueryExecutionEnd: vscode.Event<SparqlQueryExecutionState> = this._onDidQueryExecutionEnd.event;
+
 	/**
 	 * Load the query history from the workspace-scoped local storage.
 	 */
@@ -48,6 +62,8 @@ export class SparqlQueryService {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);
 		}
+
+		vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e));
 
 		this._initialized = true;
 	}
@@ -62,6 +78,20 @@ export class SparqlQueryService {
 	}
 
 	/**
+	 * Handles the closing of a text document and removes unsaved queries from the history.
+	 * @param document A text document.
+	 */
+	private _onTextDocumentClosed(document: vscode.TextDocument) {
+		if (document.uri.scheme === 'untitled') {
+			const i = this._history.findIndex(q => q.documentIri === document.uri.toString());
+
+			if (this.removeQueryStateAt(i)) {
+				this._onDidHistoryChange.fire();
+			}
+		}
+	}
+
+	/**
 	 * Prepares a SPARQL query for execution.
 	 * @param querySource The source document or notebook cell where the query is stored.
 	 * @returns A new SparqlQueryContext instance.
@@ -69,11 +99,13 @@ export class SparqlQueryService {
 	createQuery(querySource: vscode.TextDocument | vscode.NotebookCell): SparqlQueryExecutionState {
 		let document: vscode.TextDocument;
 		let cellIndex: number | undefined;
+		let notebookIri: vscode.Uri | undefined;
 
 		if ('notebook' in querySource && querySource.notebook) {
 			const cell = querySource as vscode.NotebookCell;
 
 			document = cell.document;
+			notebookIri = cell.notebook.uri;
 			cellIndex = cell.index;
 		} else {
 			document = querySource as vscode.TextDocument;
@@ -86,6 +118,7 @@ export class SparqlQueryService {
 		return {
 			documentIri: document.uri.toString(),
 			workspaceIri: workspaceIri?.toString(),
+			notebookIri: notebookIri?.toString(),
 			cellIndex,
 			query,
 			queryType,
@@ -108,7 +141,7 @@ export class SparqlQueryService {
 			.sort((a, b) => b.startTime - a.startTime);
 	}
 
-	private async _saveQueryHistory(): Promise<void> {
+	private async _persistQueryHistory(): Promise<void> {
 		// Filter the query history to exclude execution states that would not be valid after a restart.
 		const filteredHistory = this._history
 			.filter(q => q && !q.documentIri.startsWith('untitled'))
@@ -136,7 +169,7 @@ export class SparqlQueryService {
 		if (index >= 0) {
 			this._history[index] = state;
 
-			this._saveQueryHistory();
+			this._persistQueryHistory();
 		}
 	}
 
@@ -144,12 +177,16 @@ export class SparqlQueryService {
 	 * Removes the n-th item from the query history.
 	 * @param index The index of the item to remove from the query history.
 	 */
-	removeQueryStateAt(index: number): void {
+	removeQueryStateAt(index: number): boolean {
 		if (index >= 0 && index < this._history.length) {
 			this._history.splice(index, 1);
 
-			this._saveQueryHistory();
+			this._persistQueryHistory();
+
+			return true;
 		}
+
+		return false;
 	}
 
 	/**
@@ -165,6 +202,8 @@ export class SparqlQueryService {
 			if (!query) {
 				throw new Error('Unable to retrieve query from the document: ' + context.documentIri);
 			}
+
+			this._logQueryExecutionStart(context);
 
 			const result = await new QueryEngine().query(query, {
 				sources: [mentor.store],
@@ -198,9 +237,9 @@ export class SparqlQueryService {
 
 		context.endTime = Date.now();
 
-		this._logQueryExecution(context);
+		this._logQueryExecutionEnd(context);
 
-		this._saveQueryHistory();
+		this._persistQueryHistory();
 
 		return context;
 	}
@@ -411,9 +450,29 @@ export class SparqlQueryService {
 	}
 
 	/**
+	 * Update the SPARQL history and fire the appropriate events when a query is executed.
+	 * @param context The context of the SPARQL query execution.
+	 */
+	private async _logQueryExecutionStart(context: SparqlQueryExecutionState) {
+		await this._logQueryExecution(context);
+
+		this._onDidQueryExecutionStart.fire(context);
+	}
+
+	/**
+	 * Update the SPARQL history and fire the appropriate events when a query finished executing.
+	 * @param context The context of the SPARQL query execution.
+	 */
+	private async _logQueryExecutionEnd(context: SparqlQueryExecutionState) {
+		await this._logQueryExecution(context);
+
+		this._onDidQueryExecutionEnd.fire(context);
+	}
+
+	/**
 	 * Tracks query execution in history and persists to storage.
 	 */
-	private async _logQueryExecution(context: SparqlQueryExecutionState): Promise<void> {
+	private async _logQueryExecution(context: SparqlQueryExecutionState) {
 		const n = this._history.findIndex(q => q.documentIri === context.documentIri);
 
 		if (n >= 0) {
@@ -421,6 +480,8 @@ export class SparqlQueryService {
 		}
 
 		this._history.unshift(context);
+
+		this._onDidHistoryChange.fire();
 	}
 
 	/**
@@ -438,6 +499,6 @@ export class SparqlQueryService {
 	clearQueryHistory(): void {
 		this._history.length = 0;
 
-		this._saveQueryHistory();
+		this._persistQueryHistory();
 	}
 }

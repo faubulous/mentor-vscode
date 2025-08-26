@@ -64,10 +64,12 @@ export interface SparqlQueryExecutionState {
  * Get the formatted file name of the associated document or notebook cell.
  */
 export function getDisplayName(queryState: SparqlQueryExecutionState): string {
-	if (queryState.notebookIri && queryState.cellIndex) {
-		return getFileName(queryState.documentIri).split('#')[0] + ':Cell-' + queryState.cellIndex;
+	const fileName = getFileName(queryState.documentIri);
+
+	if (queryState.notebookIri && queryState.cellIndex !== undefined) {
+		return `${fileName.split('#')[0]}:Cell-${queryState.cellIndex}`;
 	} else {
-		return getFileName(queryState.documentIri);
+		return fileName;
 	}
 }
 
