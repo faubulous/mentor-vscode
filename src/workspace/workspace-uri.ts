@@ -20,17 +20,17 @@ export class WorkspaceUri {
 	/**
 	 * Converts an absolute file system URI (file://..) to a workspace-relative Mentor VFS URI that
 	 * can be resolved by the Mentor document link provider and the Mentor virtual file system provider.
-	 * @param fileUri The absolute file system URI to convert.
+	 * @param uri The absolute file system URI to convert.
 	 * @returns The corresponding Mentor VFS URI.
 	 */
-	static toWorkspaceUri(fileUri: vscode.Uri): vscode.Uri {
+	static toWorkspaceUri(documentIri: vscode.Uri): vscode.Uri {
 		const workspaceFolders = vscode.workspace.workspaceFolders;
 
 		if (!workspaceFolders || workspaceFolders.length === 0) {
 			throw new Error('No workspace folders are open.');
 		}
 
-		const absolutePath = fileUri.fsPath;
+		const absolutePath = documentIri.path;
 
 		for (const workspaceFolder of workspaceFolders) {
 			const workspacePath = workspaceFolder.uri.fsPath;
@@ -42,7 +42,7 @@ export class WorkspaceUri {
 			}
 		}
 
-		throw new Error('URI is not within a workspace folder: ' + fileUri.toString());
+		throw new Error('URI is not within a workspace folder: ' + documentIri.toString());
 	}
 
 	/**
@@ -70,5 +70,19 @@ export class WorkspaceUri {
 
 		// If multiple workspace folders, default to the first one
 		return vscode.Uri.joinPath(workspaceFolders[0].uri, ...segments);
+	}
+
+	static toNotebookCellUri(workspaceUri: vscode.Uri): vscode.Uri {
+		if (workspaceUri.scheme !== this.uriScheme) {
+			throw new Error('Cannot convert non-workspace URI to notebook cell URI: ' + workspaceUri.toString());
+		}
+
+		if (!workspaceUri.fragment) {
+			throw new Error('Workspace URI does not have a fragment for the notebook cell: ' + workspaceUri.toString());
+		}
+
+		const fileUri = this.toFileUri(workspaceUri);
+
+		return vscode.Uri.parse(`vscode-notebook-cell://${fileUri.authority}${fileUri.path}#${workspaceUri.fragment}`);
 	}
 }

@@ -111,7 +111,7 @@ export class SparqlQueryService {
 
 		const query = document.getText();
 		const queryType = this._getQueryType(query);
-		const workspaceIri = this._getWorkspaceUri(document.uri);
+		const workspaceIri = WorkspaceUri.toWorkspaceUri(document.uri);
 
 		return {
 			documentIri: document.uri.toString(),
@@ -122,14 +122,6 @@ export class SparqlQueryService {
 			queryType,
 			startTime: Date.now()
 		};
-	}
-
-	private _getWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
-		switch (documentIri.scheme) {
-			case 'file':
-			case 'vscode-notebook':
-				return WorkspaceUri.toWorkspaceUri(documentIri);
-		}
 	}
 
 	private _loadQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {

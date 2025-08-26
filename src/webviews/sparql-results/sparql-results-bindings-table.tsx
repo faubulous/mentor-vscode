@@ -4,12 +4,17 @@ import { withSparqlResults } from './sparql-results-hoc';
 import { WebviewComponent } from '@/webviews/webview-component';
 import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
+import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 
 interface SparqlResultsBindingsTableProps {
 	sparqlResults: SparqlResultsContextType;
 }
 
-class SparqlResultsBindingsTableBase extends WebviewComponent<SparqlResultsBindingsTableProps> {
+class SparqlResultsBindingsTableBase extends WebviewComponent<
+	SparqlResultsBindingsTableProps,
+	{},
+	SparqlResultsWebviewMessages
+> {
 	render() {
 		const { queryContext, paging } = this.props.sparqlResults;
 
@@ -55,9 +60,9 @@ class SparqlResultsBindingsTableBase extends WebviewComponent<SparqlResultsBindi
 
 				if (prefix) {
 					const localName = binding.value.substring(namespaceIri.length);
-					return (<pre><a href={binding.value}>{prefix}:<span className='label'>{localName}</span></a></pre>);
+					return (<pre><a href="#" onClick={() => this._handleNamedNodeClick(binding)}>{prefix}:<span className='label'>{localName}</span></a></pre>);
 				} else {
-					return (<pre><a href={binding.value}>{binding.value}</a></pre>);
+					return (<pre><a href="#" onClick={() => this._handleNamedNodeClick(binding)}>{binding.value}</a></pre>);
 				}
 			}
 			case 'BlankNode': {
@@ -70,6 +75,19 @@ class SparqlResultsBindingsTableBase extends WebviewComponent<SparqlResultsBindi
 				return '';
 			}
 		}
+	}
+
+	private _handleNamedNodeClick(node: Term) {
+		const { messaging } = this.props.sparqlResults;
+		const value = node.value;
+
+		console.debug('_handleNamedNodeClick', value, messaging);
+
+		messaging?.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.action.openInBrowser',
+			args: [value]
+		})
 	}
 }
 
