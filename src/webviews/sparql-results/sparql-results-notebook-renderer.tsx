@@ -6,6 +6,8 @@ import { WebviewMessaging } from "@/webviews/webview-messaging";
 import { SparqlResultsView } from './sparql-results-view';
 import { SparqlResultsWebviewMessages } from "./sparql-results-webview-messages";
 
+let root: ReturnType<typeof createRoot> | undefined;
+
 export const activate: ActivationFunction = (context: RendererContext<NotebookRendererMessaging>) => {
 	if (!context.postMessage || !context.onDidReceiveMessage) {
 		throw new Error("This renderer requires a messaging context.");
@@ -23,7 +25,11 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 	return {
 		renderOutputItem(data: OutputItem, element: HTMLElement) {
 			const results = data?.json();
-			const root = createRoot(element);
+			
+			if(!root) {
+				root = createRoot(element);
+			}
+
 			root.render(
 				<div className="mentor-notebook-output">
 					<SparqlResultsView
