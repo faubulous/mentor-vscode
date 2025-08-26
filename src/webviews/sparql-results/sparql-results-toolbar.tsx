@@ -32,7 +32,7 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsTool
 
 		return (
 			<vscode-toolbar-container className="sparql-results-toolbar">
-				<Stopwatch/>
+				<Stopwatch />
 				<span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
 				<vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
 					<span className="codicon codicon-debug-restart"></span>
@@ -84,15 +84,16 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsTool
 					</Fragment>
 				)}
 
-				<span className="spacer"></span>
-
 				{!queryContext.error && queryContext.result && (
 					<Fragment>
+						<span className="divider divider-vertical"></span>
 						<vscode-toolbar-button title="Save" onClick={() => this._saveResults()}>
 							CSV
 						</vscode-toolbar-button>
 					</Fragment>
 				)}
+
+				<span className="spacer"></span>
 			</vscode-toolbar-container>
 		);
 	}

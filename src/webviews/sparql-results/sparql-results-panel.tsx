@@ -46,7 +46,14 @@ class SparqlResultsPanel extends WebviewComponent<
 		const previousState = WebviewHost.getState();
 
 		if (previousState && Array.isArray(previousState.activeQueries)) {
-			this.state = previousState;
+			// Do not restore untitled queries that are not saved.
+			const activeQueries = previousState.activeQueries as SparqlQueryExecutionState[];
+
+			this.state = {
+				...previousState,
+				activeTabIndex: 0,
+				activeQueries: activeQueries.filter(q => !q.documentIri.startsWith('untitled:'))
+			};
 		}
 	}
 
@@ -71,8 +78,6 @@ class SparqlResultsPanel extends WebviewComponent<
 	}
 
 	componentWillUnmount() {
-		console.info('componentWillUnmount', this.state);
-
 		const tabsElement = document.querySelector('vscode-tabs');
 
 		if (tabsElement) {
@@ -105,8 +110,6 @@ class SparqlResultsPanel extends WebviewComponent<
 	}
 
 	componentDidUpdate() {
-		console.info('componentDidUpdate', this.state);
-
 		const savedState: SparqlResultsPanelState = {
 			renderKey: 0,
 			activeTabIndex: this.state.activeTabIndex,
@@ -123,8 +126,6 @@ class SparqlResultsPanel extends WebviewComponent<
 	}
 
 	componentDidReceiveMessage(message: SparqlResultsWebviewMessages): void {
-		console.debug('componentDidReceiveMessage', message);
-
 		switch (message.id) {
 			case 'SparqlQueryExecutionStarted':
 			case 'SparqlQueryExecutionEnded': {
@@ -183,8 +184,6 @@ class SparqlResultsPanel extends WebviewComponent<
 	};
 
 	render() {
-		console.debug('render', this.state);
-
 		return (
 			<div className="mentor-panel">
 				<vscode-tabs selectedIndex={this.state.activeTabIndex} className="vscode-tabs-slim">
@@ -214,7 +213,7 @@ class SparqlResultsPanel extends WebviewComponent<
 								<SparqlResultsView
 									messaging={this.messaging}
 									queryContext={query}
-									defaultPageSize={100}/>
+									defaultPageSize={100} />
 							</vscode-tab-panel>
 						</Fragment>
 					))}

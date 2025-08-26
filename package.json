@@ -150,8 +150,8 @@
     "keybindings": [
       {
         "command": "mentor.action.executeSparqlQueryFromActiveEditor",
-        "key": "f5",
-        "when": "editorLangId == 'sparql'"
+        "key": "meta+enter",
+        "when": "editorLangId == 'sparql' && !notebookCellType"
       }
     ],
     "notebooks": [
