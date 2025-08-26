@@ -19,10 +19,16 @@ export async function openFileByLanguage(languageId: string) {
 			label: 'No files found for this language: ' + languageId
 		}];
 	} else {
-		quickPick.items = files.map(file => ({
-			label: getFileName(file.toString()),
-			description: '~' + getPath(WorkspaceUri.toWorkspaceUri(file).fsPath),
-			iri: file
+		const items = files.map(file => ({
+			fileUri: file.toString(),
+			workspaceUri: WorkspaceUri.toWorkspaceUri(file)
+		}));
+
+		quickPick.items = items.map(item => ({
+			...item,
+			label: getFileName(item.fileUri),
+			description: item.workspaceUri ? '~' + getPath(item.workspaceUri.fsPath) : undefined,
+			iri: item.workspaceUri
 		})).sort((a, b) => a.label.localeCompare(b.label));
 
 		quickPick.onDidChangeSelection(async (selection) => {

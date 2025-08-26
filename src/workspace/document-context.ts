@@ -68,7 +68,7 @@ export abstract class DocumentContext {
 	 * @note This is a workspace-relative URI so that queries which are persisted in a repository are portable.
 	 */
 	get graphIri(): vscode.Uri {
-		return WorkspaceUri.toWorkspaceUri(this.uri);
+		return WorkspaceUri.toWorkspaceUri(this.uri) || this.uri;
 	}
 
 	/**

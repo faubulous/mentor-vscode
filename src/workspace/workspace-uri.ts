@@ -23,11 +23,11 @@ export class WorkspaceUri {
 	 * @param uri The absolute file system URI to convert.
 	 * @returns The corresponding Mentor VFS URI.
 	 */
-	static toWorkspaceUri(documentIri: vscode.Uri): vscode.Uri {
+	static toWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
 		const workspaceFolders = vscode.workspace.workspaceFolders;
 
 		if (!workspaceFolders || workspaceFolders.length === 0) {
-			throw new Error('No workspace folders are open.');
+			return undefined;
 		}
 
 		const absolutePath = documentIri.path;
@@ -41,8 +41,6 @@ export class WorkspaceUri {
 				return vscode.Uri.parse(`${this.uriScheme}://${relativePath}`);
 			}
 		}
-
-		throw new Error('URI is not within a workspace folder: ' + documentIri.toString());
 	}
 
 	/**

@@ -91,9 +91,9 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 	private _getWorkspacePath(queryState: SparqlQueryExecutionState): string | undefined {
 		if (queryState.workspaceIri) {
 			const workspacePath = queryState.workspaceIri.split(':')[1];
-			const folderPath = workspacePath.split('/').slice(0, -1);
+			const folderPath = workspacePath.split('/').slice(0, -1).join('/');
 
-			return folderPath.length > 0 ? `~${folderPath.join('/')}` : '~';
+			return folderPath.length > 0 ? `~${folderPath}` : '~';
 		}
 	}
 
