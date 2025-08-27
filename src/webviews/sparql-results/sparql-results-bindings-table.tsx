@@ -55,14 +55,27 @@ class SparqlResultsBindingsTableBase extends WebviewComponent<
 	private _renderCell(binding: Term | undefined, namespaceMap?: Record<string, string>) {
 		switch (binding?.termType) {
 			case 'NamedNode': {
-				const namespaceIri = Uri.getNamespaceIri(binding.value);
-				const prefix = namespaceMap ? namespaceMap[namespaceIri] : undefined;
+				if (binding.value.startsWith('inference:')) {
+					const uri = binding.value.substring('inference:'.length);
+					const namespaceIri = Uri.getNamespaceIri(uri);
+					const prefix = namespaceMap ? namespaceMap[namespaceIri] : undefined;
 
-				if (prefix) {
-					const localName = binding.value.substring(namespaceIri.length);
-					return (<pre><a href="#" onClick={() => this._handleNamedNodeClick(binding)}>{prefix}:<span className='label'>{localName}</span></a></pre>);
+					if (prefix) {
+						return (<pre><a href="#" onClick={() => this._handleNamedNodeClick(binding)}>inference:{prefix}:</a></pre>);
+					} else {
+						return (<pre><a href="#" onClick={() => this._handleNamedNodeClick(binding)}>{binding.value}</a></pre>);
+					}
 				} else {
-					return (<pre><a href="#" onClick={() => this._handleNamedNodeClick(binding)}>{binding.value}</a></pre>);
+					const namespaceIri = Uri.getNamespaceIri(binding.value);
+					const prefix = namespaceMap ? namespaceMap[namespaceIri] : undefined;
+
+					if (prefix) {
+						const localName = binding.value.replace(namespaceIri, '');
+
+						return (<pre><a href="#" onClick={() => this._handleNamedNodeClick(binding)}>{prefix}:<span className='label'>{localName}</span></a></pre>);
+					} else {
+						return (<pre><a href="#" onClick={() => this._handleNamedNodeClick(binding)}>{binding.value}</a></pre>);
+					}
 				}
 			}
 			case 'BlankNode': {

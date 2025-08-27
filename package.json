@@ -910,10 +910,11 @@
             "default": "Document"
           },
           "mentor.internalBrowserEnabled": {
+            "deprecationMessage": "The simple browser is deprecated and will be removed in a future version.",
             "type": "boolean",
             "title": "Open URLs in interal browser",
-            "description": "If enabled, URLs will be opened in the internal browser instead of the default browser.",
-            "default": true
+            "description": "If enabled, URLs will be opened in the VSCode internal browser instead of the system browser.",
+            "default": false
           },
           "mentor.predicates.label": {
             "type": "array",
