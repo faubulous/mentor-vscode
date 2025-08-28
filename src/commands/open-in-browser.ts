@@ -3,7 +3,7 @@ import { mentor } from '../mentor';
 import { DefinitionTreeNode, getIriFromArgument } from '@/views/definition-tree/definition-tree-node';
 
 export async function openInBrowser(arg: DefinitionTreeNode | string) {
-	const uri = vscode.Uri.parse(getIriFromArgument(arg), true);
+	let uri = vscode.Uri.parse(getIriFromArgument(arg), true);
 	const simpleBrowser = mentor.configuration.get('internalBrowserEnabled');
 
 	if (simpleBrowser === true && (uri.scheme === 'http' || uri.scheme === 'https')) {

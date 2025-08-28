@@ -85,7 +85,7 @@
   },
   "dependencies": {
     "@comunica/query-sparql-rdfjs-lite": "^4.3.0",
-    "@faubulous/mentor-rdf": "^0.2.53",
+    "@faubulous/mentor-rdf": "^0.2.55",
     "@vscode/codicons": "^0.0.36",
     "millan": "^5.4.0",
     "n3": "^1.26.0",

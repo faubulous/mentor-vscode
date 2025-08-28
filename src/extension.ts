@@ -12,6 +12,7 @@ import { NotebookController } from './workspace/notebook-controller';
 
 export async function activate(context: vscode.ExtensionContext) {
 	registerProviders(context);
+	registerUriHandlers(context);
 	registerLanguageClients(context);
 	registerCommands(context);
 	registerViews(context);
@@ -48,8 +49,13 @@ function registerProviders(context: vscode.ExtensionContext) {
 	context.subscriptions.push(...new languages.TurtleTokenProvider().register());
 	context.subscriptions.push(...new languages.TrigTokenProvider().register());
 	context.subscriptions.push(...new languages.SparqlTokenProvider().register());
-	context.subscriptions.push(...new providers.MentorFileSystemProvider().register());
-	context.subscriptions.push(...new providers.MentorFileLinkProvider().register());
+	context.subscriptions.push(...new providers.WorkspaceUriLinkProvider().register());
+	context.subscriptions.push(...new providers.WorkspaceFileSystemProvider().register());
+	context.subscriptions.push(...new providers.InferenceUriLinkProvider().register());
+}
+
+function registerUriHandlers(context: vscode.ExtensionContext) {
+	context.subscriptions.push(...new providers.InferenceUriHandler(context).register());
 }
 
 function registerViews(context: vscode.ExtensionContext) {

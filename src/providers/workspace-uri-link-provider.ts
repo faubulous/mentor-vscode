@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { WorkspaceUri } from '@/workspace/workspace-uri';
 
 /**
- * Provides document links for URIs with the 'mentor:' scheme.
+ * Provides document links for URIs with the 'workspace:' scheme.
  */
-export class MentorFileLinkProvider implements vscode.DocumentLinkProvider {
+export class WorkspaceUriLinkProvider implements vscode.DocumentLinkProvider {
 
   provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const links: vscode.DocumentLink[] = [];

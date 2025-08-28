@@ -3,9 +3,9 @@ import { NotSupportedError } from '@/utilities/error';
 import { WorkspaceUri } from '@/workspace/workspace-uri';
 
 /**
- * Provides a file system provider for the 'mentor' scheme.
+ * Provides a file system provider for the 'workspace' scheme.
  */
-export class MentorFileSystemProvider implements vscode.FileSystemProvider {
+export class WorkspaceFileSystemProvider implements vscode.FileSystemProvider {
 	private _onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
 	readonly onDidChangeFile = this._onDidChangeFile.event;

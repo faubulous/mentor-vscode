@@ -5,6 +5,9 @@ import * as vscode from 'vscode';
  * URIs and workspace-relative URIs in the Mentor virtual file system. This is used
  * to provide shortened document URIs that are also resolvable when stored in a
  * version control system repository.
+ * 
+ * @note We need vscode.workspaces here to resolve the URIs. So this helper cannot be used
+ * in webview or LSP processes.
  */
 export class WorkspaceUri {
 	/**
@@ -14,6 +17,7 @@ export class WorkspaceUri {
 
 	/**
 	 * A regular expression to match Mentor VFS URIs in text documents.
+	 * @note This is intentionally a string so that any modifiers for the evaluation can be easily applied as needed.
 	 */
 	static readonly uriRegex = `${this.uriScheme}://[^\\s>]+`;
 
