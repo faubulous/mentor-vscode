@@ -66,6 +66,9 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
+### Version 0.2.11: Service Release
+Fixes a stack overflow bug when browsing ontologies with recursive class definitions. Meanwhile work on support for SPARQL queries and notebooks for 0.3.0 is progressing.
+
 ### Version 0.2.9: Enhanced RDF/XML Support
 This release adds support for reference browsing, code lenses, renaming and hover tooltips for RDF/XML files.
 

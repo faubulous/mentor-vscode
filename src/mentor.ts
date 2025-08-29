@@ -48,9 +48,14 @@ class MentorExtension {
 	readonly settings = new Settings();
 
 	/**
+	 * The active reasoner used for the Mentor triple store.
+	 */
+	readonly reasoner = new OwlReasoner();
+
+	/**
 	 * The Mentor RDF extension triple store.
 	 */
-	readonly store = new Store(new OwlReasoner());
+	readonly store = new Store(this.reasoner);
 
 	/**
 	 * A repository for retrieving ontology resources.
@@ -331,7 +336,7 @@ class MentorExtension {
 		vscode.commands.registerCommand('mentor.action.openDocumentInferenceGraph', async () => {
 			if (this.activeContext) {
 				const documentGraphIri = this.activeContext.uri.toString();
-				const inferenceGraphIri = mentor.store.reasoner?.getInferenceGraphUri(documentGraphIri);
+				const inferenceGraphIri = this.reasoner.targetUriGenerator.getGraphUri(documentGraphIri);
 
 				if (inferenceGraphIri) {
 					const prefixes: { [prefix: string]: NamedNode } = {};

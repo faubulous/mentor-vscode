@@ -82,7 +82,7 @@
     "webfont": "^11.2.26"
   },
   "dependencies": {
-    "@faubulous/mentor-rdf": "^0.2.52",
+    "@faubulous/mentor-rdf": "^0.2.56",
     "millan": "^5.4.0",
     "n3": "^1.24.2",
     "sax-ts": "^1.2.13",

@@ -444,7 +444,7 @@ export class TurtleDocument extends DocumentContext {
 	mapBlankNodes() {
 		const blankNodes = new Set<string>();
 
-		for (let q of mentor.store.match(this.graphs, null, null, null, false)) {
+		for (let q of mentor.store.matchAll(this.graphs, null, null, null, false)) {
 			if (q.subject.termType === 'BlankNode') {
 				blankNodes.add(q.subject.value);
 			}
