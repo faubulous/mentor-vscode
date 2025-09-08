@@ -59,21 +59,25 @@
     "package": "npm run build:font && node ./build.js --production && vsce package --dependencies -o out/mentor.vsix",
     "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
     "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
-    "test": "npx jest",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@rdfjs/types": "^2.0.1",
-    "@types/jest": "^30.0.0",
     "@types/n3": "^1.26.0",
-    "@types/node": "^24.0.3",
+    "@types/node": "^24.3.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/vscode": "^1.90.0",
     "@types/vscode-notebook-renderer": "^1.72.3",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/ui": "^3.2.4",
     "@vscode-elements/react-elements": "^1.15.1",
     "@vscode/test-web": "^0.0.70",
     "esbuild": "^0.25.5",
@@ -81,7 +85,8 @@
     "eslint": "^9.29.0",
     "glob": "^11.0.3",
     "svgtofont": "^6.3.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@comunica/query-sparql-rdfjs-lite": "^4.3.0",
