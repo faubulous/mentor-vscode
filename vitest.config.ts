@@ -31,11 +31,6 @@ export default defineConfig({
         'jest.config.ts'
       ]
     },
-    
-    // Mock VS Code modules
-    alias: {
-      'vscode': path.resolve(__dirname, 'src/__mocks__/vscode.ts')
-    }
   },
   
   resolve: {

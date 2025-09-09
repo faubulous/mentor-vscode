@@ -97,7 +97,7 @@ class SparqlResultsPanel extends WebviewComponent<
 		if (query && query.documentIri && !query.error && !query.result) {
 			this.messaging.postMessage({
 				id: 'ExecuteCommand',
-				command: 'mentor.action.executeSparqlQuery',
+				command: 'mentor.command.executeSparqlQuery',
 				args: [{
 					documentIri: query.documentIri,
 					workspaceIri: query.workspaceIri,

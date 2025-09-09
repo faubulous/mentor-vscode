@@ -86,7 +86,8 @@
     "glob": "^11.0.3",
     "svgtofont": "^6.3.2",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "vscode-uri": "^3.1.0"
   },
   "dependencies": {
     "@comunica/query-sparql-rdfjs-lite": "^4.3.0",
@@ -99,8 +100,7 @@
     "setimmediate": "^1.0.5",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.11",
-    "vscode-uri": "^3.0.8"
+    "vscode-languageserver-textdocument": "^1.0.11"
   },
   "activationEvents": [
     "onLanguage:xml",
@@ -154,7 +154,7 @@
     ],
     "keybindings": [
       {
-        "command": "mentor.action.executeSparqlQueryFromActiveEditor",
+        "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "key": "meta+enter",
         "when": "editorLangId == 'sparql' && !notebookCellType"
       }
@@ -425,268 +425,260 @@
     },
     "commands": [
       {
-        "command": "mentor.action.createNotebook",
+        "command": "mentor.command.createNotebook",
         "title": "Mentor: Create Notebook",
         "icon": "$(notebook)"
       },
       {
-        "command": "mentor.action.createNotebookFromEditor",
+        "command": "mentor.command.createNotebookFromEditor",
         "title": "Mentor: Create Notebook from Editor",
         "icon": "$(notebook)"
       },
       {
-        "command": "mentor.action.createSparqlQueryFile",
+        "command": "mentor.command.createSparqlQueryFile",
         "title": "Mentor: Create SPARQL Query File",
         "icon": "$(new-file)"
       },
       {
-        "command": "mentor.action.executeSparqlQueryFromActiveEditor",
+        "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "title": "Mentor: Execute SPARQL Query",
         "icon": "$(play)"
       },
       {
-        "command": "mentor.action.saveSparqlQueryResults",
+        "command": "mentor.command.saveSparqlQueryResults",
         "title": "Mentor: Save SPARQL Query Results",
         "icon": "$(save-as)"
       },
       {
-        "command": "mentor.action.openDocumentGraph",
-        "title": "Mentor: Open a Document Graph"
-      },
-      {
-        "command": "mentor.action.openDocumentInferenceGraph",
-        "title": "Mentor: Open the active Document Inference Graph"
-      },
-      {
-        "command": "mentor.action.analyzeWorkspace",
+        "command": "mentor.command.analyzeWorkspace",
         "title": "Find Problems",
         "icon": "$(debug-alt)"
       },
       {
-        "command": "mentor.action.updatePrefixes",
+        "command": "mentor.command.updatePrefixes",
         "title": "Mentor: Update prefix definitions from prefix.cc",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "mentor.action.openSettings",
+        "command": "mentor.command.openSettings",
         "title": "Settings",
         "icon": "$(gear)"
       },
       {
-        "command": "mentor.action.findReferences",
+        "command": "mentor.command.findReferences",
         "title": "Find All References",
         "group": "navigation"
       },
       {
-        "command": "mentor.action.revealDefinition",
+        "command": "mentor.command.revealDefinition",
         "title": "Go to Definition",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "mentor.action.revealShapeDefinition",
+        "command": "mentor.command.revealShapeDefinition",
         "title": "Go to Shape Definition",
         "icon": "$(go-to-shape)"
       },
       {
-        "command": "mentor.action.openInBrowser",
+        "command": "mentor.command.openInBrowser",
         "title": "Open in Browser",
         "icon": "$(globe)"
       },
       {
-        "command": "mentor.action.showAnnotatedLabels",
+        "command": "mentor.command.showAnnotatedLabels",
         "title": "Show Annotated Labels",
         "icon": "$(rdf-label-tag)"
       },
       {
-        "command": "mentor.action.showUriLabels",
+        "command": "mentor.command.showUriLabels",
         "title": "Show URI Labels",
         "icon": "$(rdf-label-uri)"
       },
       {
-        "command": "mentor.action.showUriLabelsWithPrefix",
+        "command": "mentor.command.showUriLabelsWithPrefix",
         "title": "Show URI Labels with Prefix",
         "icon": "$(rdf-label-uri)"
       },
       {
-        "command": "mentor.action.groupDefinitionsByType",
+        "command": "mentor.command.groupDefinitionsByType",
         "title": "Group by Type"
       },
       {
-        "command": "mentor.action.groupDefinitionsBySource",
+        "command": "mentor.command.groupDefinitionsBySource",
         "title": "Group by Source of Definition"
       },
       {
-        "command": "mentor.action.refreshDefinitionsTree",
+        "command": "mentor.command.refreshDefinitionsTree",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "mentor.action.showReferences",
+        "command": "mentor.command.showReferences",
         "title": "Show Referenced Resources",
         "icon": "$(rdf-class)"
       },
       {
-        "command": "mentor.action.hideReferences",
+        "command": "mentor.command.hideReferences",
         "title": "Hide Referenced Resources",
         "icon": "$(rdf-class-ref)"
       },
       {
-        "command": "mentor.action.showPropertyTypes",
+        "command": "mentor.command.showPropertyTypes",
         "title": "Show Property Types",
         "icon": "$(rdf-tree)"
       },
       {
-        "command": "mentor.action.hidePropertyTypes",
+        "command": "mentor.command.hidePropertyTypes",
         "title": "Hide Property Types",
         "icon": "$(rdf-list)"
       },
       {
-        "command": "mentor.action.showIndividualTypes",
+        "command": "mentor.command.showIndividualTypes",
         "title": "Show Individual Types",
         "icon": "$(rdf-tree)"
       },
       {
-        "command": "mentor.action.hideIndividualTypes",
+        "command": "mentor.command.hideIndividualTypes",
         "title": "Hide Individual Types",
         "icon": "$(rdf-list)"
       },
       {
-        "command": "mentor.action.deletePrefixes",
+        "command": "mentor.command.deletePrefixes",
         "title": "Delete prefix definitions"
       },
       {
-        "command": "mentor.action.implementPrefixes",
+        "command": "mentor.command.implementPrefixes",
         "title": "Implement prefix definitions"
       },
       {
-        "command": "mentor.action.sortPrefixes",
+        "command": "mentor.command.sortPrefixes",
         "title": "Sort prefix definitions"
       },
       {
-        "command": "mentor.action.selectActiveLanguage",
+        "command": "mentor.command.selectActiveLanguage",
         "title": "Select Active Language",
         "icon": "$(select-language)"
       },
       {
-        "command": "mentor.action.highlightNamespaceDefinitions",
+        "command": "mentor.command.highlightNamespaceDefinitions",
         "title": "Mentor: Highlight Namespace Definitions"
       },
       {
-        "command": "mentor.action.highlightTypeDefinitions",
+        "command": "mentor.command.highlightTypeDefinitions",
         "title": "Mentor: Highlight Type Definitions"
       },
       {
-        "command": "mentor.action.highlightTypeAssertions",
+        "command": "mentor.command.highlightTypeAssertions",
         "title": "Mentor: Highlight Type Assertions"
       },
       {
-        "command": "mentor.action.highlightReferencedIris",
+        "command": "mentor.command.highlightReferencedIris",
         "title": "Mentor: Highlight Referenced IRIs"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "mentor.action.executeSparqlQueryFromActiveEditor",
+          "command": "mentor.command.executeSparqlQueryFromActiveEditor",
           "when": "editorLangId == 'sparql'",
           "group": "navigation@0"
         },
         {
-          "command": "mentor.action.createNotebookFromEditor",
+          "command": "mentor.command.createNotebookFromEditor",
           "when": "editorLangId == 'sparql'",
           "group": "navigation@1"
         }
       ],
       "view/title": [
         {
-          "command": "mentor.action.analyzeWorkspace",
+          "command": "mentor.command.analyzeWorkspace",
           "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
           "group": "navigation@3"
         },
         {
-          "command": "mentor.action.groupDefinitionsByType",
+          "command": "mentor.command.groupDefinitionsByType",
           "when": "view == mentor.view.definitionTree",
           "group": "2_workspace "
         },
         {
-          "command": "mentor.action.groupDefinitionsBySource",
+          "command": "mentor.command.groupDefinitionsBySource",
           "when": "view == mentor.view.definitionTree",
           "group": "2_workspace "
         },
         {
-          "command": "mentor.action.showAnnotatedLabels",
+          "command": "mentor.command.showAnnotatedLabels",
           "when": "view == mentor.view.definitionTree",
           "group": "4_search"
         },
         {
-          "command": "mentor.action.showUriLabels",
+          "command": "mentor.command.showUriLabels",
           "when": "view == mentor.view.definitionTree",
           "group": "4_search"
         },
         {
-          "command": "mentor.action.showUriLabelsWithPrefix",
+          "command": "mentor.command.showUriLabelsWithPrefix",
           "when": "view == mentor.view.definitionTree",
           "group": "4_search"
         },
         {
-          "command": "mentor.action.openSettings",
+          "command": "mentor.command.openSettings",
           "group": "z_commands",
           "when": "view == mentor.view.workspaceTree || view == mentor.view.definitionTree"
         },
         {
-          "command": "mentor.action.showReferences",
+          "command": "mentor.command.showReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === false",
           "group": "navigation@2"
         },
         {
-          "command": "mentor.action.hideReferences",
+          "command": "mentor.command.hideReferences",
           "when": "view == mentor.view.definitionTree && view.showReferences === true",
           "group": "navigation@2"
         },
         {
-          "command": "mentor.action.selectActiveLanguage",
+          "command": "mentor.command.selectActiveLanguage",
           "when": "view == mentor.view.definitionTree",
           "group": "navigation@1"
         },
         {
-          "command": "mentor.action.refreshDefinitionsTree",
+          "command": "mentor.command.refreshDefinitionsTree",
           "when": "view == mentor.view.definitionTree",
           "group": "navigation@99"
         }
       ],
       "view/item/context": [
         {
-          "command": "mentor.action.findReferences",
+          "command": "mentor.command.findReferences",
           "when": "viewItem =~ /resource/",
           "group": "4_search"
         },
         {
-          "command": "mentor.action.openInBrowser",
+          "command": "mentor.command.openInBrowser",
           "when": "viewItem =~ /resource/",
           "group": "z_commands"
         },
         {
-          "command": "mentor.action.revealShapeDefinition",
+          "command": "mentor.command.revealShapeDefinition",
           "when": "viewItem != shapes && viewItem =~ / shape-target/",
           "group": "inline"
         },
         {
-          "command": "mentor.action.showPropertyTypes",
+          "command": "mentor.command.showPropertyTypes",
           "when": "view.showPropertyTypes === false && viewItem == properties",
           "group": "inline"
         },
         {
-          "command": "mentor.action.hidePropertyTypes",
+          "command": "mentor.command.hidePropertyTypes",
           "when": "view.showPropertyTypes === true && viewItem == properties",
           "group": "inline"
         },
         {
-          "command": "mentor.action.showIndividualTypes",
+          "command": "mentor.command.showIndividualTypes",
           "when": "view.showIndividualTypes === false && viewItem == individuals",
           "group": "inline"
         },
         {
-          "command": "mentor.action.hideIndividualTypes",
+          "command": "mentor.command.hideIndividualTypes",
           "when": "view.showIndividualTypes === true && viewItem == individuals",
           "group": "inline"
         }

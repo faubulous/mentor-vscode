@@ -55,7 +55,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: true,
 				command: {
 					title: 'Define prefix for IRI',
-					command: 'mentor.action.implementPrefixForIri',
+					command: 'mentor.command.implementPrefixForIri',
 					arguments: [document.uri, namespaceIri, token]
 				}
 			});
@@ -66,7 +66,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: true,
 				command: {
 					title: 'Sort prefixes',
-					command: 'mentor.action.sortPrefixes',
+					command: 'mentor.command.sortPrefixes',
 					arguments: [document.uri, token]
 				}
 			});
@@ -98,7 +98,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: true,
 				command: {
 					title: 'Implement missing prefixes',
-					command: 'mentor.action.implementPrefixes',
+					command: 'mentor.command.implementPrefixes',
 					arguments: [document.uri, Array.from(undefinedPrefixes)]
 				}
 			});
@@ -114,7 +114,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: true,
 				command: {
 					title: 'Remove unused prefixes',
-					command: 'mentor.action.deletePrefixes',
+					command: 'mentor.command.deletePrefixes',
 					arguments: [document.uri, unusedPrefixes]
 				}
 			});
@@ -128,7 +128,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: false,
 				command: {
 					title: `Implement missing prefix: ${prefix}`,
-					command: 'mentor.action.implementPrefixes',
+					command: 'mentor.command.implementPrefixes',
 					arguments: [document.uri, [{ prefix }]]
 				}
 			});
@@ -141,7 +141,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: false,
 				command: {
 					title: `Remove unused prefix: ${prefix}`,
-					command: 'mentor.action.deletePrefixes',
+					command: 'mentor.command.deletePrefixes',
 					arguments: [document.uri, [prefix]]
 				}
 			});

@@ -9,8 +9,12 @@
     ],
     "baseUrl": "./",
     "paths": {
-      "@/*": [ "src/*" ],
-      "$/*": [ "out/*" ]
+      "@/*": [
+        "src/*"
+      ],
+      "$/*": [
+        "out/*"
+      ]
     },
     "rootDir": "./src",
     "outDir": "./out",
@@ -25,10 +29,15 @@
     "jsxImportSource": "react"
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.tsx"
   ],
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    "src/**/*.d.ts"
   ]
 }

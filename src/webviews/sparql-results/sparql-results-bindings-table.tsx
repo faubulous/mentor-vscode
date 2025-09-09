@@ -86,7 +86,7 @@ class SparqlResultsBindingsTableBase extends WebviewComponent<
 
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
-			command: 'mentor.action.openInBrowser',
+			command: 'mentor.command.openInBrowser',
 			args: [value]
 		})
 	}

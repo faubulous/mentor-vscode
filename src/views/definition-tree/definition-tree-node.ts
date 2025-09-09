@@ -75,7 +75,7 @@ export class DefinitionTreeNode {
 	 */
 	getCommand(): vscode.Command | undefined {
 		return {
-			command: 'mentor.action.revealDefinition',
+			command: 'mentor.command.revealDefinition',
 			title: '',
 			arguments: [this.id, true]
 		};

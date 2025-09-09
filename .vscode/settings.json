@@ -15,8 +15,6 @@
     "vitest.commandLine": "npm run test",
     "vitest.include": ["src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     "vitest.exclude": ["node_modules/**", "out/**", "coverage/**"],
-    "vitest.workspaceConfig": "vitest.config.ts",
-    
     // Disable Jest extension to avoid conflicts
     "jest.enable": false,
     "jest.disabledWorkspaceFolders": ["mentor-vscode"],

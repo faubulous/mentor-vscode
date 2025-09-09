@@ -117,7 +117,7 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsTool
 
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
-			command: 'mentor.action.executeSparqlQuery',
+			command: 'mentor.command.executeSparqlQuery',
 			args: [{
 				documentIri: queryContext.documentIri,
 				workspaceIri: queryContext.workspaceIri,
@@ -133,7 +133,7 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsTool
 
 		messaging.postMessage({
 			id: 'ExecuteCommand',
-			command: 'mentor.action.saveSparqlQueryResults',
+			command: 'mentor.command.saveSparqlQueryResults',
 			args: [queryContext, 'csv']
 		});
 	}

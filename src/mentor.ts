@@ -281,7 +281,7 @@ class MentorExtension {
 		this.sparqlQueryService.initialize();
 
 		// Register commands..
-		vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {
+		vscode.commands.registerCommand('mentor.command.updatePrefixes', () => {
 			vscode.window.withProgress({
 				location: vscode.ProgressLocation.Window,
 				title: `Downloading prefixes from ${this.prefixDownloaderService.endpointUrl}...`,
@@ -301,51 +301,51 @@ class MentorExtension {
 			});
 		});
 
-		vscode.commands.registerCommand('mentor.action.groupDefinitionsByType', () => {
+		vscode.commands.registerCommand('mentor.command.groupDefinitionsByType', () => {
 			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.ByType);
 		});
 
-		vscode.commands.registerCommand('mentor.action.groupDefinitionsBySource', () => {
+		vscode.commands.registerCommand('mentor.command.groupDefinitionsBySource', () => {
 			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.BySource);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
+		vscode.commands.registerCommand('mentor.command.showAnnotatedLabels', () => {
 			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showUriLabels', () => {
+		vscode.commands.registerCommand('mentor.command.showUriLabels', () => {
 			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabels);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showUriLabelsWithPrefix', () => {
+		vscode.commands.registerCommand('mentor.command.showUriLabelsWithPrefix', () => {
 			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabelsWithPrefix);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showReferences', () => {
+		vscode.commands.registerCommand('mentor.command.showReferences', () => {
 			this.settings.set('view.showReferences', true);
 		});
 
-		vscode.commands.registerCommand('mentor.action.hideReferences', () => {
+		vscode.commands.registerCommand('mentor.command.hideReferences', () => {
 			this.settings.set('view.showReferences', false);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showPropertyTypes', () => {
+		vscode.commands.registerCommand('mentor.command.showPropertyTypes', () => {
 			this.settings.set('view.showPropertyTypes', true);
 		});
 
-		vscode.commands.registerCommand('mentor.action.hidePropertyTypes', () => {
+		vscode.commands.registerCommand('mentor.command.hidePropertyTypes', () => {
 			this.settings.set('view.showPropertyTypes', false);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showIndividualTypes', () => {
+		vscode.commands.registerCommand('mentor.command.showIndividualTypes', () => {
 			this.settings.set('view.showIndividualTypes', true);
 		});
 
-		vscode.commands.registerCommand('mentor.action.hideIndividualTypes', () => {
+		vscode.commands.registerCommand('mentor.command.hideIndividualTypes', () => {
 			this.settings.set('view.showIndividualTypes', false);
 		});
 
-		vscode.commands.registerCommand('mentor.action.initialize', async () => {
+		vscode.commands.registerCommand('mentor.command.initialize', async () => {
 			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
 
 			// If there is a document opened in the editor, load it.
@@ -365,9 +365,9 @@ class MentorExtension {
 			this._onDidFinishInitializing.fire();
 		});
 
-		vscode.commands.executeCommand('mentor.action.initialize');
+		vscode.commands.executeCommand('mentor.command.initialize');
 
-		vscode.commands.registerCommand('mentor.action.openDocumentInferenceGraph', async () => {
+		vscode.commands.registerCommand('mentor.command.openDocumentInferenceGraph', async () => {
 			if (this.activeContext) {
 				const documentGraphIri = this.activeContext.uri.toString();
 				const inferenceGraphIri = mentor.reasoner.targetUriGenerator.getGraphUri(documentGraphIri);
@@ -388,7 +388,7 @@ class MentorExtension {
 			}
 		});
 
-		vscode.commands.registerCommand('mentor.action.highlightTypeDefinitions', async () => {
+		vscode.commands.registerCommand('mentor.command.highlightTypeDefinitions', async () => {
 			if (this.activeContext) {
 				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
 				const editor = await vscode.window.showTextDocument(document, { preview: false });
@@ -405,7 +405,7 @@ class MentorExtension {
 			}
 		});
 
-		vscode.commands.registerCommand('mentor.action.highlightTypeAssertions', async () => {
+		vscode.commands.registerCommand('mentor.command.highlightTypeAssertions', async () => {
 			if (this.activeContext) {
 				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
 				const editor = await vscode.window.showTextDocument(document, { preview: false });
@@ -422,7 +422,7 @@ class MentorExtension {
 			}
 		});
 
-		vscode.commands.registerCommand('mentor.action.highlightReferencedIris', async () => {
+		vscode.commands.registerCommand('mentor.command.highlightReferencedIris', async () => {
 			if (this.activeContext) {
 				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
 				const editor = await vscode.window.showTextDocument(document, { preview: false });
@@ -439,7 +439,7 @@ class MentorExtension {
 			}
 		});
 
-		vscode.commands.registerCommand('mentor.action.highlightNamespaceDefinitions', async () => {
+		vscode.commands.registerCommand('mentor.command.highlightNamespaceDefinitions', async () => {
 			if (this.activeContext) {
 				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
 				const editor = await vscode.window.showTextDocument(document, { preview: false });

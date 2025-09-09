@@ -38,7 +38,7 @@ export class DefinitionTree implements TreeView {
 			this.updateViewTitle();
 		});
 
-		vscode.commands.registerCommand('mentor.action.refreshDefinitionsTree', async () => {
+		vscode.commands.registerCommand('mentor.command.refreshDefinitionsTree', async () => {
 			this.updateView();
 			this.updateViewTitle();
 

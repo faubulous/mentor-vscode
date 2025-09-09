@@ -90,7 +90,7 @@ export class CodeLensProvider implements vscode.CodeLensProvider {
 						new vscode.Position(range.start.line, range.start.character),
 						new vscode.Position(range.end.line, range.end.character)
 					), {
-						command: 'mentor.action.findReferences',
+						command: 'mentor.command.findReferences',
 						title: n + ' usages',
 						arguments: [iri]
 					}));

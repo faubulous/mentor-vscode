@@ -33,61 +33,71 @@ function registerLanguageClients(context: vscode.ExtensionContext) {
 	];
 
 	for (const client of clients) {
-		context.subscriptions.push(client);
+		subscribe(context, client);
 
 		client.start(context);
 	}
 }
 
 function registerNotebookSerializers(context: vscode.ExtensionContext) {
-	context.subscriptions.push(new NotebookController());
-	context.subscriptions.push(new NotebookSerializer().register());
+	subscribe(context, new NotebookController());
+	subscribe(context, new NotebookSerializer().register());
 }
 
 function registerProviders(context: vscode.ExtensionContext) {
-	context.subscriptions.push(...new languages.XmlTokenProvider().register());
-	context.subscriptions.push(...new languages.TurtleTokenProvider().register());
-	context.subscriptions.push(...new languages.TrigTokenProvider().register());
-	context.subscriptions.push(...new languages.SparqlTokenProvider().register());
-	context.subscriptions.push(...new providers.WorkspaceUriLinkProvider().register());
-	context.subscriptions.push(...new providers.WorkspaceFileSystemProvider().register());
-	context.subscriptions.push(...new providers.InferenceUriLinkProvider().register());
+	subscribe(context, new languages.XmlTokenProvider().register());
+	subscribe(context, new languages.TurtleTokenProvider().register());
+	subscribe(context, new languages.TrigTokenProvider().register());
+	subscribe(context, new languages.SparqlTokenProvider().register());
+	subscribe(context, new providers.WorkspaceUriLinkProvider().register());
+	subscribe(context, new providers.WorkspaceFileSystemProvider().register());
+	subscribe(context, new providers.InferenceUriLinkProvider().register());
 }
 
 function registerUriHandlers(context: vscode.ExtensionContext) {
-	context.subscriptions.push(...new providers.InferenceUriHandler(context).register());
+	subscribe(context, new providers.InferenceUriHandler(context).register());
 }
 
 function registerViews(context: vscode.ExtensionContext) {
 	// TODO: Dispose the view providers in the trees.
-	context.subscriptions.push(new views.WorkspaceTree().treeView);
-	context.subscriptions.push(new views.DefinitionTree().treeView);
-	context.subscriptions.push(...webviews.sparqlResultsWebviewProvider.register(context));
+	subscribe(context, new views.WorkspaceTree().treeView);
+	subscribe(context, new views.DefinitionTree().treeView);
+	subscribe(context, webviews.sparqlResultsWebviewProvider.register(context));
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.analyzeWorkspace', commands.analyzeWorkspace));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.clearQueryHistory', commands.clearQueryHistory));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebook', commands.createNotebook));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createNotebookFromEditor', commands.createNotebookFromEditor));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.createSparqlQueryFile', commands.createSparqlQueryFile));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeNotebookCell', commands.executeNotebookCell));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQueryFromDocument', commands.executeSparqlQueryFromDocument));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQueryFromActiveEditor', commands.executeSparqlQueryFromActiveEditor));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.executeSparqlQuery', commands.executeSparqlQuery));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.saveSparqlQueryResults', commands.saveSparqlQueryResults));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.deletePrefixes', commands.deletePrefixes));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.findReferences', commands.findReferences));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.implementPrefixes', commands.implementPrefixes));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.implementPrefixForIri', commands.implementPrefixForIri));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.openInBrowser', commands.openInBrowser));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.removeFromQueryHistory', commands.removeFromQueryHistory));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.revealDefinition', commands.revealDefinition));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.revealShapeDefinition', commands.revealShapeDefinition));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.selectActiveLanguage', commands.selectActiveLanguage));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.sortPrefixes', commands.sortPrefixes));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.openDocument', commands.openDocument));
-	context.subscriptions.push(vscode.commands.registerCommand("mentor.action.openDocumentGraph", commands.openDocumentGraph));
-	context.subscriptions.push(vscode.commands.registerCommand("mentor.action.openSettings", commands.openSettings));
-	context.subscriptions.push(vscode.commands.registerCommand('mentor.action.openFileByLanguage', commands.openFileByLanguage));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.analyzeWorkspace', commands.analyzeWorkspace));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.clearQueryHistory', commands.clearQueryHistory));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.createNotebook', commands.createNotebook));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.createNotebookFromEditor', commands.createNotebookFromEditor));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.createSparqlQueryFile', commands.createSparqlQueryFile));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.deletePrefixes', commands.deletePrefixes));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.executeNotebookCell', commands.executeNotebookCell));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQuery', commands.executeSparqlQuery));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQueryFromActiveEditor', commands.executeSparqlQueryFromActiveEditor));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQueryFromDocument', commands.executeSparqlQueryFromDocument));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.findReferences', commands.findReferences));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.implementPrefixes', commands.implementPrefixes));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.implementPrefixForIri', commands.implementPrefixForIri));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.openDocument', commands.openDocument));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.openFileByLanguage', commands.openFileByLanguage));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.openInBrowser', commands.openInBrowser));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.removeFromQueryHistory', commands.removeFromQueryHistory));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.revealDefinition', commands.revealDefinition));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.revealShapeDefinition', commands.revealShapeDefinition));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.saveSparqlQueryResults', commands.saveSparqlQueryResults));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.selectActiveLanguage', commands.selectActiveLanguage));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.sortPrefixes', commands.sortPrefixes));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.openGraph', commands.openGraph));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.openSettings', commands.openSettings));
+}
+
+function subscribe(context: vscode.ExtensionContext, disposable: vscode.Disposable | vscode.Disposable[]) {
+	if (Array.isArray(disposable)) {
+		for (const d of disposable) {
+			context.subscriptions.push(d);
+		}
+	} else {
+		context.subscriptions.push(disposable);
+	}
 }

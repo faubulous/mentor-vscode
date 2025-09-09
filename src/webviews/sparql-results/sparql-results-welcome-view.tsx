@@ -106,13 +106,13 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 	}
 
 	private _handleClearHistory() {
-		this._executeCommand('mentor.action.clearQueryHistory');
+		this._executeCommand('mentor.command.clearQueryHistory');
 
 		this._loadHistory();
 	}
 
 	private _handleExecuteQuery(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
-		this._executeCommand('mentor.action.executeSparqlQuery', {
+		this._executeCommand('mentor.command.executeSparqlQuery', {
 			documentIri: query.documentIri,
 			workspaceIri: query.workspaceIri,
 			notebookIri: query.notebookIri,
@@ -121,27 +121,27 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 		});
 
 		if (query.documentIri) {
-			this._executeCommand('mentor.action.openDocument', query.documentIri);
+			this._executeCommand('mentor.command.openDocument', query.documentIri);
 		}
 	}
 
 	private _handleOpenDocument(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
-		this._executeCommand('mentor.action.openDocument', query.documentIri);
+		this._executeCommand('mentor.command.openDocument', query.documentIri);
 	}
 
 	private _handleRemoveFromHistory(query: SparqlQueryExecutionState, e?: React.MouseEvent) {
-		this._executeCommand('mentor.action.removeFromQueryHistory', query.documentIri);
+		this._executeCommand('mentor.command.removeFromQueryHistory', query.documentIri);
 	}
 
 	private _handleCreateSparqlQueryFile() {
-		this._executeCommand('mentor.action.createSparqlQueryFile');
+		this._executeCommand('mentor.command.createSparqlQueryFile');
 	}
 
 	private _handleSelectSparqlQueryFile() {
-		this._executeCommand('mentor.action.openFileByLanguage', 'sparql');
+		this._executeCommand('mentor.command.openFileByLanguage', 'sparql');
 	}
 
 	private _handleConnectToEndpoint() {
-		this._executeCommand('mentor.action.connectToSparqlEndpoint');
+		this._executeCommand('mentor.command.connectToSparqlEndpoint');
 	}
 }
