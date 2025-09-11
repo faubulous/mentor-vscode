@@ -98,6 +98,11 @@
 	padding: 0 !important;
 }
 
+.mentor-notebook-output vscode-table {
+	/* Prevent the table from capturing mouse scroll events and blocking notebook scroll. */
+	pointer-events: none;
+}
+
 .mentor-panel vscode-table {
 	flex: 1 1 auto;
 	min-height: 0;
