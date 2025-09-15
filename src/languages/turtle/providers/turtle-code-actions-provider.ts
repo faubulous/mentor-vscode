@@ -129,7 +129,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				command: {
 					title: `Implement missing prefix: ${prefix}`,
 					command: 'mentor.command.implementPrefixes',
-					arguments: [document.uri, [{ prefix }]]
+					arguments: [document.uri, [prefix]]
 				}
 			});
 		}
