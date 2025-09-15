@@ -87,13 +87,10 @@
             "match": "<[^>]*>"
         },
         "prefixed_name": {
-            "match": "([a-zA-Z0-9_]*)?(:)([a-zA-Z0-9_\\.-]*)?",
+            "match": "(([a-zA-Z0-9_]*)?(:))([a-zA-Z0-9_\\.-]*)?",
             "captures": {
                 "1": {
                     "name": "storage.type.prefix.turtle"
-                },
-                "2": {
-                    "name": "punctuation.separator.prefixed-name.turtle"
                 }
             }
         },
