@@ -182,6 +182,28 @@
         ]
       }
     ],
+    "grammars": [
+      {
+        "language": "turtle",
+        "scopeName": "source.turtle",
+        "path": "./out/turtle.tmLanguage.json"
+      },
+      {
+        "language": "ntriples",
+        "scopeName": "source.turtle",
+        "path": "./out/turtle.tmLanguage.json"
+      },
+      {
+        "language": "nquads",
+        "scopeName": "source.turtle",
+        "path": "./out/turtle.tmLanguage.json"
+      },
+      {
+        "language": "sparql",
+        "scopeName": "source.sparql",
+        "path": "./out/sparql.tmLanguage.json"
+      }
+    ],
     "languages": [
       {
         "id": "ntriples",

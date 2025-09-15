@@ -1,0 +1,182 @@
+{
+    "scopeName": "source.sparql",
+    "uuid": "b9f2f8c7-52a2-4352-9f6b-aca5c7f5323a",
+    "patterns": [
+        {
+            "include": "#comment"
+        },
+        {
+            "include": "#directive"
+        },
+        {
+            "include": "#query"
+        }
+    ],
+    "repository": {
+        "comment": {
+            "name": "comment.line.number-sign.sparql",
+            "match": "#.*$"
+        },
+        "directive": {
+            "begin": "(?i)^\\s*(@prefix|@base|BASE|PREFIX)",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.directive.sparql"
+                }
+            },
+            "end": "(?=[\\s#])",
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "name": "storage.type.prefix.sparql",
+                    "match": "([a-zA-Z0-9_]*)?:"
+                }
+            ]
+        },
+        "query": {
+            "patterns": [
+                {
+                    "include": "#keywords"
+                },
+                {
+                    "include": "#variable"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "include": "#prefixed_name"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#blank_node"
+                },
+                {
+                    "name": "keyword.operator.logical.sparql",
+                    "match": "(&&|\\|\\|)|(=|!=|>|<|<=|>=)|[\\*\\+\\-\\./]"
+                },
+                {
+                    "name": "punctuation.terminator.statement.sparql",
+                    "match": "\\."
+                },
+                {
+                    "name": "punctuation.separator.predicate-object-list.sparql",
+                    "match": ";"
+                },
+                {
+                    "name": "punctuation.separator.object-list.sparql",
+                    "match": ","
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.sparql",
+                    "match": "(?i)\\b(SELECT|CONSTRUCT|ASK|DESCRIBE|WHERE|FROM|NAMED|GRAPH|OPTIONAL|FILTER|UNION|MINUS|SERVICE|BIND|VALUES|ORDER|BY|LIMIT|OFFSET|GROUP|HAVING|DISTINCT|REDUCED|AS|a|EXISTS|NOT|ADD|ALL|ASC|CLEAR|COPY|CREATE|DEFAULT|DELETE|DELETE_DATA|DATA|DESC|DROP|EXPLICIT|IN|INSERT|INSERT_DATA|LOAD|MOVE|NOT_EXISTS|TO|USING|WITH)\\b"
+                },
+                {
+                    "name": "support.function.sparql",
+                    "match": "(?i)\\b(STR|LANG|DATATYPE|BOUND|IRI|URI|BNODE|RAND|ABS|CEIL|FLOOR|ROUND|CONCAT|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|CONTAINS|STRSTARTS|STRENDS|STRBEFORE|STRAFTER|YEAR|MONTH|DAY|HOURS|MINUTES|SECONDS|TIMEZONE|TZ|NOW|UUID|STRUUID|MD5|SHA1|SHA256|SHA384|SHA512|COALESCE|IF|STRLANG|STRDT|SAMETERM|ISIRI|ISBLANK|ISLITERAL|ISNUMERIC|REGEX|COUNT|SUM|MIN|MAX|AVG|SAMPLE|GROUP_CONCAT|LANGMATCHES|ISURI|REPLACE|SUBSTR)\\b"
+                }
+            ]
+        },
+        "variable": {
+            "name": "variable.parameter.sparql",
+            "match": "[?$][a-zA-Z0-9_]+"
+        },
+        "iri": {
+            "name": "variable.other.constant.sparql",
+            "match": "<[^>]*>"
+        },
+        "prefixed_name": {
+            "match": "([a-zA-Z0-9_]*)?(:)([a-zA-Z0-9_\\.-]*)?",
+            "captures": {
+                "1": {
+                    "name": "storage.type.prefix.sparql"
+                },
+                "2": {
+                    "name": "punctuation.separator.prefixed-name.sparql"
+                }
+            }
+        },
+        "literal": {
+            "patterns": [
+                {
+                    "name": "string.quoted.triple.sparql",
+                    "begin": "(\"\"\")|(''')",
+                    "end": "(\\1)",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.sparql",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.double.sparql",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.sparql",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.sparql",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.sparql",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "constant.numeric.sparql",
+                    "match": "[+-]?[0-9]+(\\.[0-9]+)?([eE][+-]?[0-9]+)?"
+                },
+                {
+                    "name": "constant.numeric.sparql",
+                    "match": "(?i)\\b(true|false)\\b"
+                },
+                {
+                    "name": "entity.name.function.sparql",
+                    "match": "@[a-zA-Z-]+"
+                },
+                {
+                    "begin": "(\\^\\^)",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "entity.name.function.sparql"
+                        }
+                    },
+                    "end": "(?=[\\s.,;\\]\\)})}])",
+                    "name": "entity.name.function.sparql"
+                }
+            ]
+        },
+        "blank_node": {
+            "patterns": [
+                {
+                    "name": "variable.other.blank-node.labeled.sparql",
+                    "match": "_:[a-zA-Z0-9_]+"
+                },
+                {
+                    "name": "variable.other.blank-node.anonymous.sparql",
+                    "match": "(\\[\\s*\\])|(\\{\\s*\\})"
+                }
+            ]
+        }
+    }
+}

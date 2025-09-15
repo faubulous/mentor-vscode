@@ -290,13 +290,13 @@ export class SparqlQueryService {
 		const bindings = await bindingStream.toArray();
 
 		const namespaces = new Set<string>();
-		const columns = this._parseSelectVariables(context, bindings);
+		const parsedColumns = this._parseSelectVariables(context, bindings);
 		const rows: Record<string, any>[] = [];
 
 		for (const binding of bindings) {
 			const row: Record<string, any> = {};
 
-			for (const column of columns) {
+			for (const column of parsedColumns) {
 				const value = binding.get(column);
 
 				if (value === undefined) {
@@ -307,11 +307,14 @@ export class SparqlQueryService {
 					namespaces.add(Uri.getNamespaceIri(value.value));
 				}
 
+				const datatype = value.termType === 'Literal' ? value.datatype.value : undefined;
+				const language = value.termType === 'Literal' ? value.language : undefined;
+
 				row[column] = {
 					termType: value.termType,
 					value: value.value,
-					// datatype: value.datatype ? value.datatype.value : undefined,
-					// language: value.language || undefined
+					datatype: datatype,
+					language: language
 				};
 			}
 
@@ -331,7 +334,7 @@ export class SparqlQueryService {
 
 		return {
 			type: 'bindings',
-			columns,
+			columns: parsedColumns,
 			rows,
 			namespaceMap
 		};

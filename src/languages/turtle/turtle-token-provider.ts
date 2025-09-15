@@ -6,9 +6,7 @@ import {
 	HoverProvider
 } from '@/providers';
 import {
-	SemanticTokensLegend,
 	TurtleRenameProvider,
-	TurtleSemanticTokensProvider,
 	TurtleCompletionItemProvider,
 	TurtleCodeActionsProvider,
 	TurtlePrefixCompletionProvider
@@ -18,7 +16,6 @@ const codelensProvider = new CodeLensProvider();
 const definitionProvider = new DefinitionProvider();
 const hoverProvider = new HoverProvider();
 const referenceProvider = new ReferenceProvider();
-const tokenProvider = new TurtleSemanticTokensProvider();
 const renameProvider = new TurtleRenameProvider();
 const completionProvider = new TurtleCompletionItemProvider();
 const codeActionsProvider = new TurtleCodeActionsProvider();
@@ -36,7 +33,6 @@ export class TurtleTokenProvider {
 	registerForLanguage(language: string): vscode.Disposable[] {
 		const result = [];
 
-		result.push(vscode.languages.registerDocumentSemanticTokensProvider({ language }, tokenProvider, SemanticTokensLegend));
 		result.push(vscode.languages.registerRenameProvider({ language }, renameProvider));
 		result.push(vscode.languages.registerDefinitionProvider({ language }, definitionProvider));
 		result.push(vscode.languages.registerHoverProvider({ language }, hoverProvider));
