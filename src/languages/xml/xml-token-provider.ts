@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { CodeLensProvider, ReferenceProvider, HoverProvider } from '@/providers';
+import { ReferenceProvider, HoverProvider } from '@/providers';
+import { TurtleCodeLensProvider } from '@/languages/turtle/providers';
 import { XmlRenameProvider } from '@/languages/xml/providers';
 
-const codelensProvider = new CodeLensProvider();
-const referenceProvider = new ReferenceProvider();
+const codelensProvider = new TurtleCodeLensProvider();
 const hoverProvider = new HoverProvider();
+const referenceProvider = new ReferenceProvider();
 const renameProvider = new XmlRenameProvider();
 
 export class XmlTokenProvider {
@@ -13,13 +14,12 @@ export class XmlTokenProvider {
 	}
 
 	registerForLanguage(language: string): vscode.Disposable[] {
-		const result = [];
-
-		result.push(vscode.languages.registerCodeLensProvider({ language }, codelensProvider));
-		result.push(vscode.languages.registerHoverProvider({ language }, hoverProvider));
-		result.push(vscode.languages.registerRenameProvider({ language }, renameProvider));
-		result.push(vscode.languages.registerReferenceProvider({ language }, referenceProvider));
-
-		return result;
+		return [
+			vscode.languages.registerCodeLensProvider({ language }, codelensProvider),
+			vscode.languages.registerCodeLensProvider({ language }, codelensProvider),
+			vscode.languages.registerHoverProvider({ language }, hoverProvider),
+			vscode.languages.registerReferenceProvider({ language }, referenceProvider),
+			vscode.languages.registerRenameProvider({ language }, renameProvider)
+		];
 	}
 }

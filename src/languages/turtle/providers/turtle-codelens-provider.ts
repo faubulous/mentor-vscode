@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { ReferenceProvider } from './reference-provider';
+import { ReferenceProvider } from '@/providers';
 
 /**
  * Provides usage information for resource definitions in Turtle documents.
  */
-export class CodeLensProvider implements vscode.CodeLensProvider {
+export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 	/**
 	 * Indicates whether the workspace has been initialized.
 	 */

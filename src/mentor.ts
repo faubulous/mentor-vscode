@@ -10,6 +10,7 @@ import {
 	LocalStorageService,
 	PrefixDownloaderService,
 	PrefixLookupService,
+	SparqlConnectionService,
 	SparqlQueryService,
 	TurtlePrefixDefinitionService,
 } from './services';
@@ -108,9 +109,14 @@ class MentorExtension {
 	readonly prefixLookupService = new PrefixLookupService();
 
 	/**
+	 * A service for managing connections to SPARQL endpoints.
+	 */
+	readonly sparqlConnectionService = new SparqlConnectionService();
+
+	/**
 	 * A service for executing queries against RDF triples stores and SPARQL endpoints.
 	 */
-	readonly sparqlQueryService = new SparqlQueryService();
+	readonly sparqlQueryService = new SparqlQueryService(this.sparqlConnectionService);
 
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
@@ -278,6 +284,7 @@ class MentorExtension {
 		this.settings.initialize(this.configuration);
 
 		// Restore the query execution history.
+		this.sparqlConnectionService.initialize(context);
 		this.sparqlQueryService.initialize();
 
 		// Register commands..
