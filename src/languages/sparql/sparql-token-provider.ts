@@ -6,15 +6,17 @@ import {
 } from '@/providers';
 import {
 	TurtleCodeActionsProvider,
-	TurtleCompletionItemProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider
 } from '@/languages/turtle/providers';
-import { SparqlCodeLensProvider } from '@/languages/sparql/providers';
+import {
+	SparqlCodeLensProvider,
+	SparqlCompletionItemProvider
+} from '@/languages/sparql/providers';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
 const codeLensProvider = new SparqlCodeLensProvider();
-const completionProvider = new TurtleCompletionItemProvider();
+const completionProvider = new SparqlCompletionItemProvider();
 const definitionProvider = new DefinitionProvider();
 const hoverProvider = new HoverProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);

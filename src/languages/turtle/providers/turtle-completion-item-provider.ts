@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Uri } from "@faubulous/mentor-rdf";
 import { mentor } from "@/mentor";
-import { getLocalPartAndQuery, getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
+import { getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
 import { TurtleDocument } from '@/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
 
@@ -24,21 +24,20 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			return null;
 		}
 
+		return this.getCompletionItems(document, context, n);
+	}
+
+	getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
 		const result = [];
 
-		const currentToken = context.tokens[n];
-
-		// TODO: Move this into SparqlAutoCompleteItemProvider as this will never be used in Turtle.
-		if (this.isGraphDefinitionContext(context, n)) {
-			return this.getGraphIriCompletionItems(context, n);
+		if (this.isPrefixDefinitionContext(context, tokenIndex)) {
+			return this.getPrefixCompletionItems(context, tokenIndex);
 		}
 
-		if (this.isPrefixDefinitionContext(context, n)) {
-			return this.getPrefixCompletionItems(context, n);
-		}
+		const currentToken = context.tokens[tokenIndex];
 
-		if (this.isLocalPartDefinitionContext(context, n)) {
-			const component = getTripleComponentType(context.tokens, n);
+		if (this.isLocalPartDefinitionContext(context, tokenIndex)) {
+			const component = getTripleComponentType(context.tokens, tokenIndex);
 			const namespaceIri = getNamespaceIriFromPrefixedName(context.namespaces, currentToken.image);
 			const localPart = currentToken.image.split(":")[1];
 
@@ -78,61 +77,6 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 		for (let prefix of prefixes.filter(p => p.startsWith(token.image)).slice(0, this.maxCompletionItems)) {
 			result.push(new vscode.CompletionItem(prefix, vscode.CompletionItemKind.Module));
-		}
-
-		return result;
-	}
-
-	isGraphDefinitionContext(context: TurtleDocument, tokenIndex: number) {
-		let n = -1;
-
-		if (context.tokens[tokenIndex].image.startsWith('<')) {
-			// If the current token is either '<' or an IRI that was auto-closed with '>' (e.g. <htt>)
-			n = tokenIndex;
-		} else if (context.tokens[tokenIndex - 1]?.image === '<') {
-			// If the token is not yet closed, then the previous token must be '<'
-			n = tokenIndex - 1;
-		} else {
-			return false;
-		}
-
-		const previousToken = context.tokens[n - 1];
-
-		switch (previousToken?.tokenType?.tokenName) {
-			case "GRAPH":
-			case "FROM":
-			case "NAMED":
-				return true;
-			default:
-				return false;
-		}
-	}
-
-	getGraphIriCompletionItems(context: TurtleDocument, tokenIndex: number): vscode.CompletionItem[] {
-		const result = [];
-		const token = context.tokens[tokenIndex];
-
-		// The token might be completely or partially enclosed in angle brackets.
-		let value = token.image;
-
-		if (value.startsWith('<')) {
-			value = value.slice(1);
-		}
-
-		if (value.endsWith('>')) {
-			value = value.slice(0, -1);
-		}
-
-		const graphs = mentor.store.getGraphs();
-
-		for (const iri of graphs) {
-			const label = getLocalPartAndQuery(iri);
-
-			const item = new vscode.CompletionItem(label, vscode.CompletionItemKind.Reference);
-			item.detail = iri;
-			item.insertText = new vscode.SnippetString(token.image.endsWith('>') ? iri : iri + '>');
-
-			result.push(item);
 		}
 
 		return result;

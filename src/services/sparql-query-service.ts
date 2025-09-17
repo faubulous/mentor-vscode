@@ -9,6 +9,7 @@ import { NamespaceMap } from "@/utilities";
 import { SparqlDocument } from '@/languages';
 import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { AsyncIterator } from 'asynciterator';
+import { SparqlConnectionService } from './sparql-connection-service';
 
 /**
  * The key for storing query history in local storage.
@@ -52,6 +53,9 @@ export class SparqlQueryService {
 	 * Event that is triggered when a SPARQL query execution has ended with any result.
 	 */
 	onDidQueryExecutionEnd: vscode.Event<SparqlQueryExecutionState> = this._onDidQueryExecutionEnd.event;
+
+	constructor(private _connectionService: SparqlConnectionService) {
+	}
 
 	/**
 	 * Load the query history from the workspace-scoped local storage.
@@ -195,8 +199,11 @@ export class SparqlQueryService {
 
 			this._logQueryExecutionStart(context);
 
+			const documentIri = vscode.Uri.parse(context.documentIri);
+            const source = await this._connectionService.getQuerySourceForDocument(documentIri);
+
 			const result = await new QueryEngine().query(query, {
-				sources: [mentor.store],
+				sources: [source],
 				unionDefaultGraph: true
 			});
 
