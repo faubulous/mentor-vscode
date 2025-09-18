@@ -16,7 +16,7 @@ const SECRET_STORAGE_KEY_PREFIX = 'mentor.sparql.connection:';
 export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 	id: 'mentor-workspace-store',
 	label: 'Mentor Workspace',
-	endpoint: 'mentor://workspace',
+	endpointUrl: 'mentor://workspace',
 	scope: 'workspace',
 };
 
@@ -143,7 +143,7 @@ export class SparqlConnectionService {
 		} else {
 			const source: SparqlEndpointSource = {
 				type: 'sparql',
-				value: connection.endpoint,
+				value: connection.endpointUrl,
 			};
 
 			const credentials = await this._getCredentials(connection.id);
@@ -224,13 +224,13 @@ export class SparqlConnectionService {
 	/**
 	 * Adds a new SPARQL connection and stores it in the specified settings scope.
 	 * @param label A user-friendly name for the connection.
-	 * @param endpoint The URL of the SPARQL endpoint.
+	 * @param endpointUrl The URL of the SPARQL endpoint.
 	 * @param scope Where to save the connection ('project' or 'user').
 	 * @param credentials Optional credentials for the connection.
 	 */
 	public async addConnection(
 		label: string,
-		endpoint: string,
+		endpointUrl: string,
 		scope: SparqlConnectionScope,
 		credentials?: SparqlConnectionCredentials
 	): Promise<void> {
@@ -238,7 +238,7 @@ export class SparqlConnectionService {
 			throw this._notInitializedError();
 		}
 
-		const newConnection = this._connectionFactory.create(label, endpoint, scope);
+		const newConnection = this._connectionFactory.create(label, endpointUrl, scope);
 
 		const config = vscode.workspace.getConfiguration(MENTOR_CONFIG_KEY);
 		const target = scope === 'project' ? vscode.ConfigurationTarget.WorkspaceFolder : vscode.ConfigurationTarget.Global;

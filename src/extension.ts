@@ -62,10 +62,13 @@ function registerViews(context: vscode.ExtensionContext) {
 	// TODO: Dispose the view providers in the trees.
 	subscribe(context, new views.WorkspaceTree().treeView);
 	subscribe(context, new views.DefinitionTree().treeView);
+	subscribe(context, new views.EndpointTree().treeView);
 	subscribe(context, webviews.sparqlResultsWebviewProvider.register(context));
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
+	subscribe(context, vscode.commands.registerCommand('mentor.command.addSparqlEndpoint', commands.addSparqlEndpoint));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.removeSparqlEndpoint', commands.removeSparqlEndpoint));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.analyzeWorkspace', commands.analyzeWorkspace));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.clearQueryHistory', commands.clearQueryHistory));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.createNotebook', commands.createNotebook));

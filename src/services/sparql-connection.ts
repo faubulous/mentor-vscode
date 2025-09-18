@@ -13,7 +13,7 @@ export type SparqlConnectionScope = 'project' | 'user';
 export interface SparqlConnection {
     id: string;
     label: string;
-    endpoint: string;
+    endpointUrl: string;
     scope: SparqlConnectionScope | 'workspace';
 }
 

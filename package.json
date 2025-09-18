@@ -134,6 +134,11 @@
           "id": "mentor.view.definitionTree",
           "name": "Definitions",
           "icon": "media/glyphs/ue000-mentor.svg"
+        },
+        {
+          "id": "mentor.view.endpointTree",
+          "name": "Endpoints",
+          "icon": "media/glyphs/ue000-mentor.svg"
         }
       ],
       "mentor-sparql-results": [
@@ -447,6 +452,16 @@
     },
     "commands": [
       {
+        "command": "mentor.command.addSparqlEndpoint",
+        "title": "Mentor: Add SPARQL Endpoint",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "mentor.command.removeSparqlEndpoint",
+        "title": "Mentor: Remove SPARQL Endpoint",
+        "icon": "$(remove)"
+      },
+      {
         "command": "mentor.command.createNotebook",
         "title": "Mentor: Create Notebook",
         "icon": "$(notebook)"
@@ -685,6 +700,11 @@
           "group": "inline"
         },
         {
+          "command": "mentor.command.removeSparqlEndpoint",
+          "when": "viewItem =~ /endpoint/",
+          "group": "inline"
+        },
+        {
           "command": "mentor.command.showPropertyTypes",
           "when": "view.showPropertyTypes === false && viewItem == properties",
           "group": "inline"
@@ -876,6 +896,11 @@
         "title": "Mentor",
         "order": 1,
         "properties": {
+          "mentor.sparql.connections": {
+            "type": "array",
+            "description": "List of SPARQL endpoint connections.",
+            "default": []
+          },
           "mentor.definitionTree.labelStyle": {
             "type": "string",
             "title": "Default Tree Label Style",

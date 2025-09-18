@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 
 /**
- * Provides a CodeLens to display and change the current SPARQL query source.
+ * Provides a CodeLens to display and change the current SPARQL endpoint.
  */
 export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
@@ -33,7 +33,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		const codeLens = new vscode.CodeLens(range, {
 			title: `$(database)\u00A0${connection.label}`,
 			command: 'mentor.selectSparqlQuerySource',
-			tooltip: 'Click to change the SPARQL query source for this file',
+			tooltip: 'Click to change the SPARQL endpoint for this file',
 			arguments: [document.uri],
 		});
 

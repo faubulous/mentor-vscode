@@ -144,6 +144,6 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 	}
 
 	private _handleConnectToEndpoint() {
-		this._executeCommand('mentor.command.connectToSparqlEndpoint');
+		this._executeCommand('mentor.command.addSparqlEndpoint');
 	}
 }
