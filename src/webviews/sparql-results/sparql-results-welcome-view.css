@@ -2,6 +2,14 @@
 	--button-hoverBackground: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
 }
 
+.mentor-panel vscode-tab-panel vscode-scrollable {
+	position: absolute;
+	top: 40px;
+	right: 0;
+	bottom: 0;
+	left: 0;
+}
+
 .sparql-welcome-view-container {
 	display: flex;
 	flex-direction: row;
@@ -18,43 +26,42 @@
 	text-decoration: underline;
 }
 
-.sparql-welcome-view-container vscode-toolbar-container.header {
+.sparql-welcome-view-container .column .header {
+	display: flex;
+	flex-direction: row;
 	margin-bottom: 1em;
 	gap: 10px;
 }
 
-.sparql-welcome-view-container vscode-toolbar-container.header h3 {
+.sparql-welcome-view-container .column .header h3 {
 	margin: 0;
 	font-weight: 400;
 }
 
-.sparql-welcome-view-container vscode-toolbar-container.vertical {
-	gap: 2px;
-	align-items: top;
-}
-
-.sparql-welcome-view-container vscode-toolbar-container.vertical {
+.sparql-welcome-view-container .column .body {
+	display: flex;
 	flex-direction: column;
 	align-items: flex-start;
+	gap: 2px;
 }
 
-.sparql-welcome-view-container vscode-toolbar-container.link-buttons-xl vscode-toolbar-button {
-	min-height: 2.2em;
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button {
+	justify-content: center;
+	min-width: 8em;
 }
 
-.sparql-welcome-view-container vscode-toolbar-container.link-buttons vscode-toolbar-button .codicon {
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .codicon,
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .label {
+	color: var(--vscode-textLink-foreground);
+}
+
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .codicon {
 	padding: 2em .5em;
 	font-size: large;
 }
 
-.sparql-welcome-view-container vscode-toolbar-container.link-buttons vscode-toolbar-button .codicon,
-.sparql-welcome-view-container vscode-toolbar-container.link-buttons vscode-toolbar-button .label {
-	color: var(--vscode-textLink-foreground);
-}
-
-.sparql-welcome-view-container vscode-toolbar-container.vertical .history-item {
-    width: 100%;
-    margin-bottom: 2px;
+.sparql-welcome-view-container .column .body.button-list-xl vscode-toolbar-button {
+	min-height: 2.2em;
 }
 
 .sparql-welcome-view-container .history-item {
@@ -63,6 +70,8 @@
 	gap: 4px;
     padding: 2px;
 	border-radius: 3px;
+	width: 100%;
+    margin-bottom: 2px;
 }
 
 .sparql-welcome-view-container .history-item:hover,

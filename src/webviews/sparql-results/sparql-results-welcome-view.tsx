@@ -39,52 +39,54 @@ export class SparqlResultsWelcomeView extends WebviewComponent<
 		const recentQueries = this.state?.history || [];
 
 		return (
-			<div className="sparql-welcome-view-container">
-				<div className="column">
-					<vscode-toolbar-container className="header">
-						<h3>Start</h3>
-					</vscode-toolbar-container>
-					<vscode-toolbar-container className="vertical link-buttons link-buttons-xl">
-						<vscode-toolbar-button onClick={() => this._handleCreateSparqlQueryFile()}>
-							<span className="codicon codicon-new-file"></span>
-							<span className="label">New Query...</span>
-						</vscode-toolbar-button>
-						<vscode-toolbar-button onClick={() => this._handleSelectSparqlQueryFile()}>
-							<span className="codicon codicon-folder-opened"></span>
-							<span className="label">Open Query...</span>
-						</vscode-toolbar-button>
-						<vscode-toolbar-button onClick={() => this._handleConnectToEndpoint()}>
-							<span className="codicon codicon-debug-disconnect"></span>
-							<span className="label">Connect to Endpoint...</span>
-						</vscode-toolbar-button>
-					</vscode-toolbar-container>
+			<vscode-scrollable>
+				<div className="sparql-welcome-view-container">
+					<div className="column">
+						<div className="header">
+							<h3>Start</h3>
+						</div>
+						<div className="body button-list button-list-xl">
+							<vscode-toolbar-button onClick={() => this._handleCreateSparqlQueryFile()}>
+								<span className="codicon codicon-new-file"></span>
+								<span className="label">New Query...</span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button onClick={() => this._handleSelectSparqlQueryFile()}>
+								<span className="codicon codicon-folder-opened"></span>
+								<span className="label">Open Query...</span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button onClick={() => this._handleConnectToEndpoint()}>
+								<span className="codicon codicon-debug-disconnect"></span>
+								<span className="label">Connect to Endpoint...</span>
+							</vscode-toolbar-button>
+						</div>
+					</div>
+					<div className="column">
+						<div className="header">
+							<h3>Recent Queries</h3>
+							<vscode-toolbar-button onClick={() => this._handleClearHistory()} disabled={recentQueries.length === 0}>
+								<span className="muted">Clear</span>
+							</vscode-toolbar-button>
+						</div>
+						<div className="body button-list">
+							{recentQueries.length === 0 && <span className="muted">No recent queries in this workspace.</span>}
+							{recentQueries.length > 0 && recentQueries.map((queryState, index) => (
+								<div key={`${queryState.documentIri}-${index}`} className="history-item">
+									<a className='execute-button codicon codicon-play' role="button" title="Execute"
+										onClick={(e) => this._handleExecuteQuery(queryState, e)}>
+									</a>
+									<a className="file-link" onClick={(e) => this._handleOpenDocument(queryState, e)}>
+										<span>{getDisplayName(queryState)}</span>
+									</a>
+									<span className="folder muted">{this._getWorkspacePath(queryState)}</span>
+									<a className="remove-button codicon codicon-close" role="button" title="Remove"
+										onClick={(e) => this._handleRemoveFromHistory(queryState, e)}>
+									</a>
+								</div>
+							))}
+						</div>
+					</div>
 				</div>
-				<div className="column">
-					<vscode-toolbar-container className="header">
-						<h3>Recent Queries</h3>
-						<vscode-toolbar-button onClick={() => this._handleClearHistory()} disabled={recentQueries.length === 0}>
-							<span className="muted">Clear</span>
-						</vscode-toolbar-button>
-					</vscode-toolbar-container>
-					<vscode-toolbar-container className="vertical link-buttons">
-						{recentQueries.length === 0 && <span className="muted">No recent queries in this workspace.</span>}
-						{recentQueries.length > 0 && recentQueries.map((queryState, index) => (
-							<div key={`${queryState.documentIri}-${index}`} className="history-item">
-								<a className='execute-button codicon codicon-play' role="button" title="Execute"
-									onClick={(e) => this._handleExecuteQuery(queryState, e)}>
-								</a>
-								<a className="file-link" onClick={(e) => this._handleOpenDocument(queryState, e)}>
-									<span>{getDisplayName(queryState)}</span>
-								</a>
-								<span className="folder muted">{this._getWorkspacePath(queryState)}</span>
-								<a className="remove-button codicon codicon-close" role="button" title="Remove"
-									onClick={(e) => this._handleRemoveFromHistory(queryState, e)}>
-								</a>
-							</div>
-						))}
-					</vscode-toolbar-container>
-				</div>
-			</div>
+			</vscode-scrollable>
 		);
 	}
 

@@ -3,11 +3,6 @@ body {
     overflow: hidden;
 }
 
-vscode-tabs.vscode-tabs-slim > vscode-tab-header {
-    padding-top: 3px;
-    padding-bottom: 3px;
-}
-
 vscode-tab-header .tab-header-content {
     display: flex;
     align-items: center;
