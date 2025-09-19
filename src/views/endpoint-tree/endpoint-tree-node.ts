@@ -26,7 +26,7 @@ export class EndpointTreeNode {
 
 	constructor(connection: SparqlConnection) {
 		this.id = connection.id;
-		this.label = connection.label;
+		this.label = connection.endpointUrl;
 	}
 
 	/**

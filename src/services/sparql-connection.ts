@@ -22,11 +22,6 @@ export interface SparqlConnection {
     endpointUrl: string;
 
     /**
-     * A human-readable label for the connection used to display in the UI.
-     */
-    label: string;
-
-    /**
      * The scope where the connection is stored.
      */
     scope: SparqlConnectionScope;

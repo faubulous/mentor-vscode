@@ -16,8 +16,7 @@ export const setSparqlEndpoint = async (document: vscode.TextDocument) => {
 	}
 
 	const items = connections.map(connection => ({
-		label: connection.label,
-		description: connection.endpointUrl,
+		label: connection.endpointUrl,
 		connection: connection
 	}));
 

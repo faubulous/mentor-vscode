@@ -13,7 +13,6 @@ const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
  */
 export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 	id: 'mentor-workspace-store',
-	label: 'Mentor Workspace',
 	endpointUrl: 'workspace://',
 	scope: 'global',
 };

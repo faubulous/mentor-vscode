@@ -30,7 +30,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
 
 		const codeLens = new vscode.CodeLens(range, {
-			title: `$(database)\u00A0${connection.label}`,
+			title: `$(database)\u00A0${connection.endpointUrl}`,
 			tooltip: 'Click to change the SPARQL endpoint for this file',
 			command: 'mentor.command.setSparqlEndpoint',
 			arguments: [document],
