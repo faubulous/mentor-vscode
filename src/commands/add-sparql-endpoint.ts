@@ -10,7 +10,7 @@ export const addSparqlEndpoint = async () => {
 
 	if (!endpointUrl) return;
 
-	await mentor.sparqlConnectionService.addConnection(endpointUrl, endpointUrl, 'user');
+	await mentor.sparqlConnectionService.addConnection('global', endpointUrl);
 
 	vscode.window.showInformationMessage('SPARQL endpoint added.');
 };

@@ -13,7 +13,7 @@ export const removeSparqlEndpoint = async (connection: SparqlConnection) => {
 		return;
 	}
 
-	await mentor.sparqlConnectionService.removeConnection(connection.id);
+	await mentor.sparqlConnectionService.removeConnection('global', connection.id);
 
 	vscode.window.showInformationMessage('SPARQL endpoint removed.');
 };

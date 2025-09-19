@@ -128,8 +128,6 @@ class SparqlResultsPanel extends WebviewComponent<
 	componentDidReceiveMessage(message: SparqlResultsWebviewMessages): void {
 		switch (message.id) {
 			case 'PostSparqlQueryHistory': {
-				console.info(message.id, message.history);
-
 				this._onDidChangeQueryHistory(message.history);
 				break;
 			}
@@ -158,8 +156,6 @@ class SparqlResultsPanel extends WebviewComponent<
 			}
 
 			const activeTabIndex = activeQueryIndex + 1;
-
-			console.debug('_addOrUpdateQuery', n, activeTabIndex);
 
 			return {
 				...prevState,

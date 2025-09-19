@@ -10,9 +10,8 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		// Refresh CodeLenses when the list of connections changes.
-		mentor.sparqlConnectionService.onDidChangeConnections(() => {
-			this._onDidChangeCodeLenses.fire();
+		mentor.sparqlConnectionService.onDidChangeConnectionForDocument(() => {
+			this.refresh();
 		});
 	}
 
@@ -32,9 +31,9 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 
 		const codeLens = new vscode.CodeLens(range, {
 			title: `$(database)\u00A0${connection.label}`,
-			command: 'mentor.selectSparqlQuerySource',
 			tooltip: 'Click to change the SPARQL endpoint for this file',
-			arguments: [document.uri],
+			command: 'mentor.command.setSparqlEndpoint',
+			arguments: [document],
 		});
 
 		return [codeLens];

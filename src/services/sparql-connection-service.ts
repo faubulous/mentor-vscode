@@ -26,6 +26,10 @@ export class SparqlConnectionService {
 
 	public readonly onDidChangeConnections = this._onDidChangeConnections.event;
 
+	private _onDidChangeConnectionForDocument = new vscode.EventEmitter<vscode.Uri>();
+
+	public readonly onDidChangeConnectionForDocument = this._onDidChangeConnectionForDocument.event;
+
 	/**
 	 * Helper method to read connections from a specific configuration scope.
 	 */
@@ -79,12 +83,14 @@ export class SparqlConnectionService {
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @param connectionId The ID of the connection to set.
 	 */
-	public async setConnectionForDocument(documentUri: vscode.Uri, connectionId: string): Promise<void> {
+	public async setQuerySourceForDocument(documentUri: vscode.Uri, connectionId: string): Promise<void> {
 		if (documentUri.scheme === 'vscode-notebook-cell') {
 			await this.setConnectionForCell(documentUri, connectionId);
 		} else {
 			mentor.workspaceStorage.setValue(`sparql.connection:${documentUri.toString()}`, connectionId);
 		}
+
+		this._onDidChangeConnectionForDocument.fire(documentUri);
 	}
 
 	/**
@@ -119,6 +125,8 @@ export class SparqlConnectionService {
 				value: connection.endpointUrl,
 			};
 
+			console.debug(documentUri.toString(), connection);
+
 			const headers = await mentor.credentialStorageService.getAuthHeaders(connection.endpointUrl);
 
 			if (headers) {
@@ -137,13 +145,17 @@ export class SparqlConnectionService {
 	public async setConnectionForCell(cellUri: vscode.Uri, connectionId: string): Promise<void> {
 		const notebook = this._getNotebookFromCellUri(cellUri);
 
-		if (!notebook) { return; }
+		if (!notebook) {
+			throw new Error('Notebook document not found for the given cell URI: ' + cellUri.toString());
+		}
 
 		const cell = notebook.getCells().find(cell => cell.document.uri === cellUri);
 
-		if (!cell) { return; }
+		if (!cell) {
+			throw new Error('Cell not found in the notebook for the given cell URI: ' + cellUri.toString());
+		}
 
-		const metadata = { ...cell.metadata, connectionId };
+		const metadata = { ...cell.metadata, connectionId: connectionId };
 		const notebookEdit = vscode.NotebookEdit.updateCellMetadata(cell.index, metadata);
 
 		const workspaceEdit = new vscode.WorkspaceEdit();
@@ -170,6 +182,8 @@ export class SparqlConnectionService {
 					const cell = cells[i];
 					const connectionId = cell.metadata?.connectionId;
 
+					console.debug(cell.metadata);
+
 					if (typeof connectionId === 'string') {
 						return connectionId;
 					}
@@ -182,7 +196,7 @@ export class SparqlConnectionService {
 	 * Finds the containing NotebookDocument for a given cell URI.
 	 */
 	private _getNotebookFromCellUri(cellUri: vscode.Uri): vscode.NotebookDocument | undefined {
-		const notebookUri = cellUri.with({ fragment: '' }).toString();
+		const notebookUri = cellUri.with({ scheme: 'file', fragment: '' }).toString();
 
 		return vscode.workspace.notebookDocuments.find(doc => doc.uri.toString() === notebookUri);
 	}

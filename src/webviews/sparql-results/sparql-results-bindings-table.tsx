@@ -82,8 +82,6 @@ class SparqlResultsBindingsTableBase extends WebviewComponent<
 		const { messaging } = this.props.sparqlResults;
 		const value = node.value;
 
-		console.debug('_handleNamedNodeClick', value, messaging);
-
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.openInBrowser',

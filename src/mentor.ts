@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as n3 from 'n3';
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from './workspace/document-context';
 import { DocumentFactory } from './workspace/document-factory';
@@ -296,26 +295,6 @@ class MentorExtension {
 		this.sparqlQueryService.initialize();
 
 		// Register commands..
-		vscode.commands.registerCommand('mentor.command.updatePrefixes', () => {
-			vscode.window.withProgress({
-				location: vscode.ProgressLocation.Window,
-				title: `Downloading prefixes from ${this.prefixDownloaderService.endpointUrl}...`,
-				cancellable: false
-			}, async (progress) => {
-				progress.report({ increment: 0 });
-
-				try {
-					let result = await this.prefixDownloaderService.fetchPrefixes();
-
-					this.globalStorage.setValue('defaultPrefixes', result);
-
-					progress.report({ increment: 100 });
-				} catch (error: any) {
-					vscode.window.showErrorMessage(`Failed to download prefixes: ${error.message}`);
-				}
-			});
-		});
-
 		vscode.commands.registerCommand('mentor.command.groupDefinitionsByType', () => {
 			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.ByType);
 		});
@@ -381,27 +360,6 @@ class MentorExtension {
 		});
 
 		vscode.commands.executeCommand('mentor.command.initialize');
-
-		vscode.commands.registerCommand('mentor.command.openDocumentInferenceGraph', async () => {
-			if (this.activeContext) {
-				const documentGraphIri = this.activeContext.uri.toString();
-				const inferenceGraphIri = mentor.reasoner.targetUriGenerator.getGraphUri(documentGraphIri);
-
-				if (inferenceGraphIri) {
-					const prefixes: { [prefix: string]: NamedNode } = {};
-
-					// TODO: This is not needed; adapt mentor-rdf API.
-					for (const [prefix, namespace] of Object.entries(this.activeContext.namespaces)) {
-						prefixes[prefix] = new n3.NamedNode(namespace);
-					}
-
-					const data = await mentor.store.serializeGraph(inferenceGraphIri, prefixes);
-					const document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
-
-					await vscode.window.showTextDocument(document);
-				}
-			}
-		});
 
 		vscode.commands.registerCommand('mentor.command.highlightTypeDefinitions', async () => {
 			if (this.activeContext) {
