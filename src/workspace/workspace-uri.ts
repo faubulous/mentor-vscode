@@ -28,6 +28,10 @@ export class WorkspaceUri {
 	 * @returns The corresponding Mentor VFS URI.
 	 */
 	static toWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
+		if(documentIri.scheme === this.uriScheme) {
+			return documentIri;
+		}
+
 		const workspaceFolders = vscode.workspace.workspaceFolders;
 
 		if (!workspaceFolders || workspaceFolders.length === 0) {

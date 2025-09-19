@@ -7,6 +7,7 @@ import { DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
 import { WorkspaceIndexer, DocumentIndex } from './workspace/workspace-indexer';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import {
+	CredentialStorageService,
 	LocalStorageService,
 	PrefixDownloaderService,
 	PrefixLookupService,
@@ -117,6 +118,11 @@ class MentorExtension {
 	 * A service for executing queries against RDF triples stores and SPARQL endpoints.
 	 */
 	readonly sparqlQueryService = new SparqlQueryService(this.sparqlConnectionService);
+
+	/**
+	 * A service for managing credentials using the SecretStorage of Visual Studio Code.
+	 */
+	readonly credentialStorageService = new CredentialStorageService();
 
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
@@ -283,8 +289,10 @@ class MentorExtension {
 		// Initialize the view settings.
 		this.settings.initialize(this.configuration);
 
+		// Initialize the credential storage service used for storing SPARQL endpoint credentials.
+		this.credentialStorageService.initialize(context.secrets);
+
 		// Restore the query execution history.
-		this.sparqlConnectionService.initialize(context);
 		this.sparqlQueryService.initialize();
 
 		// Register commands..
