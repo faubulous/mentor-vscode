@@ -10,6 +10,7 @@ interface NotebookCell {
 	value: string;
 	kind: vscode.NotebookCellKind;
 	editable?: boolean;
+	metadata?: Record<string, any>;
 }
 
 export class NotebookSerializer implements vscode.NotebookSerializer {
@@ -27,11 +28,17 @@ export class NotebookSerializer implements vscode.NotebookSerializer {
 			raw = { cells: [] };
 		}
 
-		const cells = raw.cells.map(item => new vscode.NotebookCellData(
-			item.kind,
-			item.value,
-			item.language
-		));
+		const cells = raw.cells.map(item => {
+			const cell = new vscode.NotebookCellData(
+				item.kind,
+				item.value,
+				item.language,
+			);
+
+			cell.metadata = item.metadata;
+
+			return cell;
+		});
 
 		return new vscode.NotebookData(cells);
 	}
@@ -43,6 +50,7 @@ export class NotebookSerializer implements vscode.NotebookSerializer {
 			contents.cells.push({
 				kind: cell.kind,
 				language: cell.languageId,
+				metadata: cell.metadata,
 				value: cell.value
 			});
 		}
