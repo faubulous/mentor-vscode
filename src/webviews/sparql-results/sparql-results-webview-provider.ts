@@ -1,56 +1,35 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { WebviewComponentFactory } from '@/webviews/webview-component-factory';
+import { WebviewController } from '@/webviews/webview-controller';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import { QuadsResult } from '@/services/sparql-query-state';
 
 /**
- * A provider for the SPARQL results webview. It handles the registration of the webview, 
+ * A controller for the SPARQL results webview. It handles the registration of the webview, 
  * message passing, and execution of SPARQL queries.
  */
-export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider {
-    public readonly viewType = 'mentor.view.sparqlResultsView';
-
-    private readonly _subscriptions: vscode.Disposable[] = [];
-
-    private _view?: vscode.WebviewView;
-
-    private _context?: vscode.ExtensionContext;
-
-    register(context: vscode.ExtensionContext) {
-        this._context = context;
-
-        this._subscriptions.push(vscode.window.registerWebviewViewProvider(this.viewType, this));
-        this._subscriptions.push(mentor.sparqlQueryService.onDidHistoryChange(this._postQueryHistory, this));
-
-        return this._subscriptions;
+export class SparqlResultsWebviewController extends WebviewController<SparqlResultsWebviewMessages> {
+    constructor() {
+        super({
+            viewType: 'mentor.view.sparqlResultsView',
+            componentPath: 'sparql-results-panel.js',
+        });
     }
 
-    resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken,
-    ) {
-        if (!this._context) {
-            throw new Error('Extension context is not initalized. Please register the provider first.');
-        }
-
-        this._view = new WebviewComponentFactory(this._context, 'sparql-results-panel.js').createView(webviewView);
-        this._view.webview.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
+    register(context: vscode.ExtensionContext) {
+        const d = super.register(context);
+        d.push(mentor.sparqlQueryService.onDidHistoryChange(this._postQueryHistory, this));
+        return d;
     }
 
     private _postQueryHistory() {
-        if (!this._view) {
-            return;
-        }
-
-        this._view.webview.postMessage({
+        this.postMessage({
             id: 'PostSparqlQueryHistory',
             history: mentor.sparqlQueryService.getQueryHistory()
         });
     }
 
-    private async _onDidReceiveMessage(message: SparqlResultsWebviewMessages) {
+    protected async onDidReceiveMessage(message: SparqlResultsWebviewMessages) {
         switch (message.id) {
             case 'GetSparqlQueryHistory': {
                 this._postQueryHistory();
@@ -91,4 +70,4 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
     }
 }
 
-export const sparqlResultsWebviewProvider = new SparqlResultsWebviewProvider();
+export const sparqlResultsWebviewProvider = new SparqlResultsWebviewController();

@@ -25,5 +25,6 @@ export * from './reveal-shape-definition';
 export * from './save-sparql-query-results';
 export * from './select-active-language';
 export * from './set-sparql-endpoint';
+export * from './show-webview';
 export * from './sort-prefixes';
 export * from './update-prefixes';

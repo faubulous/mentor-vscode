@@ -4,8 +4,8 @@ import * as vscode from 'vscode';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as views from './views';
-import * as webviews from './webviews';
 import * as providers from './providers';
+import * as webviews from './webviews';
 import { mentor } from './mentor';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
@@ -73,8 +73,8 @@ function registerViews(context: vscode.ExtensionContext) {
 	subscribe(context, new views.WorkspaceTree().treeView);
 	subscribe(context, new views.DefinitionTree().treeView);
 	subscribe(context, new views.EndpointTree().treeView);
-	subscribe(context, webviews.sparqlResultsWebviewProvider.register(context));
-	subscribe(context, webviews.sparqlEndpointPanel.register(context));
+	// Register all webview controllers via registry
+	subscribe(context, webviews.webviewRegistry.registerAll(context));
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
@@ -107,4 +107,5 @@ function registerCommands(context: vscode.ExtensionContext) {
 	subscribe(context, vscode.commands.registerCommand('mentor.command.setSparqlEndpoint', commands.setSparqlEndpoint));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.sortPrefixes', commands.sortPrefixes));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.updatePrefixes', commands.updatePrefixes));
+	subscribe(context, vscode.commands.registerCommand('mentor.webview.show', commands.showWebview));
 }

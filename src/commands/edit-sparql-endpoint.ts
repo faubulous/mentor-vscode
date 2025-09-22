@@ -1,6 +1,6 @@
 import { SparqlConnection } from '@/services/sparql-connection';
-import { sparqlEndpointPanel } from '@/webviews/sparql-endpoint/sparql-endpoint-panel';
+import { sparqlEndpointController } from '@/webviews/sparql-endpoint/sparql-endpoint-controller';
 
 export const editSparqlEndpoint = async (endpoint: SparqlConnection) => {
-	sparqlEndpointPanel.show(endpoint);
+	sparqlEndpointController.open(endpoint);
 };
