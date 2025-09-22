@@ -144,7 +144,7 @@
       "mentor-sparql-results": [
         {
           "type": "webview",
-          "id": "mentor.sparqlResultsView",
+          "id": "mentor.view.sparqlResultsView",
           "name": "Results",
           "icon": "media/glyphs/ue000-mentor.svg"
         }

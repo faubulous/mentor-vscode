@@ -30,7 +30,7 @@ interface SparqlResultsViewProps {
 }
 
 /**
- * Component to display SPARQL bindings in a table format.
+ * Component to display the results of a SPARQL query, either as a boolean or bindings table.
  */
 export class SparqlResultsView extends WebviewComponent<
   SparqlResultsViewProps,

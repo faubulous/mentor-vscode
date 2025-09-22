@@ -25,6 +25,16 @@ export async function deactivate(context: vscode.ExtensionContext) {
 	mentor.dispose();
 }
 
+function subscribe(context: vscode.ExtensionContext, disposable: vscode.Disposable | vscode.Disposable[]) {
+	if (Array.isArray(disposable)) {
+		for (const d of disposable) {
+			context.subscriptions.push(d);
+		}
+	} else {
+		context.subscriptions.push(disposable);
+	}
+}
+
 function registerLanguageClients(context: vscode.ExtensionContext) {
 	const clients: languages.LanguageClientBase[] = [
 		new languages.TurtleLanguageClient(),
@@ -64,6 +74,7 @@ function registerViews(context: vscode.ExtensionContext) {
 	subscribe(context, new views.DefinitionTree().treeView);
 	subscribe(context, new views.EndpointTree().treeView);
 	subscribe(context, webviews.sparqlResultsWebviewProvider.register(context));
+	subscribe(context, webviews.sparqlEndpointPanel.register(context));
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
@@ -74,6 +85,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 	subscribe(context, vscode.commands.registerCommand('mentor.command.createNotebookFromEditor', commands.createNotebookFromEditor));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.createSparqlQueryFile', commands.createSparqlQueryFile));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.deletePrefixes', commands.deletePrefixes));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.editSparqlEndpoint', commands.editSparqlEndpoint));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.executeNotebookCell', commands.executeNotebookCell));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQuery', commands.executeSparqlQuery));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQueryFromActiveEditor', commands.executeSparqlQueryFromActiveEditor));
@@ -95,14 +107,4 @@ function registerCommands(context: vscode.ExtensionContext) {
 	subscribe(context, vscode.commands.registerCommand('mentor.command.setSparqlEndpoint', commands.setSparqlEndpoint));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.sortPrefixes', commands.sortPrefixes));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.updatePrefixes', commands.updatePrefixes));
-}
-
-function subscribe(context: vscode.ExtensionContext, disposable: vscode.Disposable | vscode.Disposable[]) {
-	if (Array.isArray(disposable)) {
-		for (const d of disposable) {
-			context.subscriptions.push(d);
-		}
-	} else {
-		context.subscriptions.push(disposable);
-	}
 }

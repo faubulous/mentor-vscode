@@ -96,7 +96,7 @@ export class EndpointTreeNode {
 	 * @returns A theme icon, a file system path or undefined if no icon should be shown.
 	 */
 	getIcon(): vscode.ThemeIcon | undefined {
-		return new vscode.ThemeIcon('database', this.getIconColor());
+		return undefined;
 	}
 
 	/**

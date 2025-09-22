@@ -5,6 +5,7 @@ export * from './create-notebook-from-editor';
 export * from './create-notebook';
 export * from './create-sparql-query-file';
 export * from './delete-prefixes';
+export * from './edit-sparql-endpoint';
 export * from './execute-notebook-cell';
 export * from './execute-sparql-query-from-active-editor';
 export * from './execute-sparql-query-from-document';

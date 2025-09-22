@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { SparqlResultsWebviewFactory } from '@/webviews/sparql-results/sparql-results-webview-factory';
+import { WebviewComponentFactory } from '@/webviews/webview-component-factory';
 import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import { QuadsResult } from '@/services/sparql-query-state';
 
@@ -9,7 +9,7 @@ import { QuadsResult } from '@/services/sparql-query-state';
  * message passing, and execution of SPARQL queries.
  */
 export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider {
-    public readonly viewType = 'mentor.sparqlResultsView';
+    public readonly viewType = 'mentor.view.sparqlResultsView';
 
     private readonly _subscriptions: vscode.Disposable[] = [];
 
@@ -17,7 +17,7 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
 
     private _context?: vscode.ExtensionContext;
 
-    public register(context: vscode.ExtensionContext) {
+    register(context: vscode.ExtensionContext) {
         this._context = context;
 
         this._subscriptions.push(vscode.window.registerWebviewViewProvider(this.viewType, this));
@@ -26,7 +26,7 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         return this._subscriptions;
     }
 
-    public resolveWebviewView(
+    resolveWebviewView(
         webviewView: vscode.WebviewView,
         context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
@@ -35,7 +35,7 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
             throw new Error('Extension context is not initalized. Please register the provider first.');
         }
 
-        this._view = new SparqlResultsWebviewFactory().createView(this._context, webviewView);
+        this._view = new WebviewComponentFactory(this._context, 'sparql-results-panel.js').createView(webviewView);
         this._view.webview.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
     }
 
@@ -63,7 +63,7 @@ export class SparqlResultsWebviewProvider implements vscode.WebviewViewProvider 
         }
     }
 
-    public async executeQuery(document: vscode.TextDocument) {
+    async executeQuery(document: vscode.TextDocument) {
         if (!this._view) {
             await vscode.commands.executeCommand('workbench.action.togglePanel');
             await vscode.commands.executeCommand(`${this.viewType}.focus`);

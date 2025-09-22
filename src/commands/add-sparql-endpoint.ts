@@ -1,16 +1,18 @@
 import * as vscode from 'vscode';
+import { v4 as uuidv4 } from 'uuid';
 import { mentor } from '../mentor';
+import { SparqlConnection } from '@/services/sparql-connection';
 
 export const addSparqlEndpoint = async () => {
-	const endpointUrl = await vscode.window.showInputBox({
-		prompt: 'Enter the SPARQL endpoint URL',
-		ignoreFocusOut: true,
-		placeHolder: 'https://example.org/sparql'
-	});
+	const endpoint: SparqlConnection = {
+		id: uuidv4(),
+		endpointUrl: 'https://example.org/sparql',
+		scope: 'global',
+	}
 
-	if (!endpointUrl) return;
+	await vscode.commands.executeCommand('mentor.command.editSparqlEndpoint', endpoint);
 
-	await mentor.sparqlConnectionService.addConnection('global', endpointUrl);
+	// await mentor.sparqlConnectionService.addConnection('global', endpointUrl);
 
-	vscode.window.showInformationMessage('SPARQL endpoint added.');
+	// vscode.window.showInformationMessage('SPARQL endpoint added.');
 };
