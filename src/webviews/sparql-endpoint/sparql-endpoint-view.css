@@ -1,0 +1,50 @@
+.sparql-endpoint-view-container {
+	max-width: 500px;
+}
+
+.sparql-endpoint-view-container h2 {
+	font-weight: 400;
+}
+
+.sparql-endpoint-view-container section {
+	margin-bottom: 1.5em;
+}
+
+.sparql-endpoint-view-container .status {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.sparql-endpoint-view-container .status .codicon.codicon-pass {
+	color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.sparql-endpoint-view-container .status .codicon.codicon-error {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.sparql-endpoint-view-container .header {
+	display: flex;
+	flex-direction: row;
+	gap: 1em;
+	align-items: baseline;
+}
+
+.sparql-endpoint-view-container .row {
+	display: flex;
+	flex-direction: row;
+	gap: 1em;
+	align-items: center;
+}
+
+.sparql-endpoint-view-container .column {
+	display: flex;
+	flex-direction: column;
+	gap: 1em;
+}
+
+.sparql-endpoint-view-container vscode-tab-panel {
+	padding: 1em 0;
+}

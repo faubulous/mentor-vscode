@@ -452,19 +452,19 @@
     },
     "commands": [
       {
-        "command": "mentor.webview.show",
-        "title": "Mentor: Show Webview",
-        "icon": "$(layout-panel)"
-      },
-      {
         "command": "mentor.command.addSparqlEndpoint",
-        "title": "Mentor: Add SPARQL Endpoint",
-        "icon": "$(debug-disconnect)"
+        "title": "New Endpoint...",
+        "icon": "$(add)"
       },
       {
         "command": "mentor.command.removeSparqlEndpoint",
-        "title": "Mentor: Remove SPARQL Endpoint",
+        "title": "Delete",
         "icon": "$(remove)"
+      },
+      {
+        "command": "mentor.webview.show",
+        "title": "Mentor: Show Webview",
+        "icon": "$(layout-panel)"
       },
       {
         "command": "mentor.command.createNotebook",
@@ -686,6 +686,11 @@
           "command": "mentor.command.refreshDefinitionsTree",
           "when": "view == mentor.view.definitionTree",
           "group": "navigation@99"
+        },
+        {
+          "command": "mentor.command.addSparqlEndpoint",
+          "when": "view == mentor.view.endpointTree",
+          "group": "navigation@99"
         }
       ],
       "view/item/context": [
@@ -702,11 +707,6 @@
         {
           "command": "mentor.command.revealShapeDefinition",
           "when": "viewItem != shapes && viewItem =~ / shape-target/",
-          "group": "inline"
-        },
-        {
-          "command": "mentor.command.removeSparqlEndpoint",
-          "when": "viewItem =~ /endpoint/",
           "group": "inline"
         },
         {
@@ -728,6 +728,11 @@
           "command": "mentor.command.hideIndividualTypes",
           "when": "view.showIndividualTypes === true && viewItem == individuals",
           "group": "inline"
+        },
+        {
+          "command": "mentor.command.removeSparqlEndpoint",
+          "when": "view == mentor.view.endpointTree",
+          "group": "z_commands"
         }
       ]
     },

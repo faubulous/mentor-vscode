@@ -24,9 +24,15 @@ export class EndpointTreeNode {
 	 */
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
 
+	/**
+	 * The SPARQL connection represented by this tree item.
+	 */
+	endpoint: SparqlConnection | undefined;
+
 	constructor(connection: SparqlConnection) {
 		this.id = connection.id;
 		this.label = connection.endpointUrl;
+		this.endpoint = connection;
 	}
 
 	/**
@@ -49,7 +55,11 @@ export class EndpointTreeNode {
 	 * @returns A command that is executed when the tree item is clicked.
 	 */
 	getCommand(): vscode.Command | undefined {
-		return undefined;
+		return {
+			title: '',
+			command: 'mentor.command.editSparqlEndpoint',
+			arguments: [this.endpoint]
+		};
 	}
 
 	/**

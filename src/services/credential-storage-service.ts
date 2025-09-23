@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 /**
  * Represents a credential, either Basic (username/password) or Bearer token.
  */
-type Credential =
+export type Credential =
     | { type: 'basic'; username: string; password: string }
     | { type: 'bearer'; token: string };
 
@@ -66,28 +66,5 @@ export class CredentialStorageService {
 	 */
     async updateCredential(uri: string, credential: Credential): Promise<void> {
         await this.saveCredential(uri, credential);
-    }
-
-    /**
-     * Returns HTTP Authorization headers for the given URI.
-     */
-    async getAuthHeaders(uri: string): Promise<{ [key: string]: string } | undefined> {
-        const encoded = btoa(`admin:M4XWGDKh3ggo3Ed`);
-        return { Authorization: `Basic ${encoded}` };
-
-        // const credential = await this.getCredential(uri);
-
-        // if (!credential) return undefined;
-
-        // if (credential.type === 'basic') {
-        //     const encoded = Buffer.from(`${credential.username}:${credential.password}`).toString('base64');
-        //     return { Authorization: `Basic ${encoded}` };
-        // }
-
-        // if (credential.type === 'bearer') {
-        //     return { Authorization: `Bearer ${credential.token}` };
-        // }
-
-        // return undefined;
     }
 }

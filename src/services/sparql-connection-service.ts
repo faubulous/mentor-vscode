@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
+import { QueryEngine } from '@comunica/query-sparql';
 import { v4 as uuidv4 } from 'uuid';
 import { ComunicaSource, SparqlEndpointSource } from './sparql-query-source';
 import { SparqlConnection, SparqlConnectionScope } from './sparql-connection';
+import { Credential } from './credential-storage-service';
 
 const MENTOR_CONFIG_KEY = 'mentor';
 
@@ -126,10 +128,10 @@ export class SparqlConnectionService {
 
 			console.debug(documentUri.toString(), connection);
 
-			const headers = await mentor.credentialStorageService.getAuthHeaders(connection.endpointUrl);
+			const credential = await mentor.credentialStorageService.getCredential(connection.endpointUrl);
 
-			if (headers) {
-				source.headers = headers;
+			if (credential) {
+				source.headers = this.getAuthHeaders(credential);
 			}
 
 			return source;
@@ -221,7 +223,7 @@ export class SparqlConnectionService {
 	 * @param scope Where to save the connection ('project' or 'user').
 	 * @param credentials Optional credentials for the connection.
 	 */
-	public async addConnection(scope: SparqlConnectionScope, endpointUrl: string, label?: string): Promise<void> {
+	public async createConnection(scope: SparqlConnectionScope, endpointUrl: string, label?: string): Promise<void> {
 		const connections = this._getConnectionsFromScope(scope);
 
 		if (connections.find(c => c.endpointUrl === endpointUrl)) {
@@ -237,10 +239,35 @@ export class SparqlConnectionService {
 	}
 
 	/**
+	 * Updates an existing SPARQL connection.
+	 * @param connection The connection to update.
+	 */
+	public async updateConnection(connection: SparqlConnection): Promise<void> {
+		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
+			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be modified.');
+			return;
+		}
+
+		const connections = this._getConnectionsFromScope(connection.scope);
+
+		if (connections.findIndex(c => c.id === connection.id) === -1) {
+			vscode.window.showErrorMessage('The connection to update was not found.');
+			return;
+		}
+
+		await this._setConnectionsForScope(connection.scope, [
+			...connections.filter(c => c.id !== connection.id),
+			connection
+		]);
+
+		this._onDidChangeConnections.fire();
+	}
+
+	/**
 	 * Deletes a SPARQL connection from the settings.
 	 * @param connectionId The ID of the connection to delete.
 	 */
-	public async removeConnection(scope: SparqlConnectionScope, connectionId: string): Promise<void> {
+	public async deleteConnection(scope: SparqlConnectionScope, connectionId: string): Promise<void> {
 		if (connectionId === MENTOR_WORKSPACE_STORE.id) {
 			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be removed.');
 			return;
@@ -251,5 +278,76 @@ export class SparqlConnectionService {
 		await this._setConnectionsForScope(scope, connections.filter(c => c.id !== connectionId));
 
 		this._onDidChangeConnections.fire();
+	}
+
+	/**
+	 * Tests if a connection with a SPARQL endpoint can be established.
+	 * @param connection The SPARQL endpoint connection to test.
+	 * @param credential If provided, uses these credentials instead of fetching stored ones.
+	 * @returns `true` if the connection is successful, `false` otherwise.
+	 */
+	async testConnection(connection: SparqlConnection, credential?: Credential | null): Promise<boolean> {
+		try {
+			const source: SparqlEndpointSource = {
+				type: 'sparql',
+				value: connection.endpointUrl,
+			};
+
+			if (credential === undefined) {
+				credential = await mentor.credentialStorageService.getCredential(connection.endpointUrl);
+			}
+
+			if (credential) {
+				source.headers = this.getAuthHeaders(credential);
+			}
+
+			const query = await new QueryEngine().query('ASK { ?s ?p ?o }', { sources: [source] });
+
+			await query.execute();
+
+			return true;
+		} catch (error: any) {
+			console.error(error);
+
+			let errorMessage = `Connection test failed: ${error.message}`;
+
+			// Check for HTTP status code in various ways Comunica might expose it
+			if (error.status || error.statusCode || error.code) {
+				const statusCode = error.status || error.statusCode || error.code;
+				errorMessage = `Connection test failed (HTTP ${statusCode}): ${error.message}`;
+			}
+
+			// Check if it's a fetch-related error with response
+			if (error.response && error.response.status) {
+				errorMessage = `Connection test failed (HTTP ${error.response.status}): ${error.message}`;
+			}
+
+			// Check for nested errors that might contain status codes
+			if (error.cause && (error.cause.status || error.cause.statusCode)) {
+				const statusCode = error.cause.status || error.cause.statusCode;
+				errorMessage = `Connection test failed (HTTP ${statusCode}): ${error.message}`;
+			}
+
+			vscode.window.showErrorMessage(errorMessage);
+
+			return false;
+		}
+	}
+
+	/**
+	 * Returns HTTP Authorization headers for the given URI.
+	 */
+	getAuthHeaders(credential: Credential): { [key: string]: string } | undefined {
+		if (credential.type === 'basic') {
+			const encoded = btoa(`${credential.username}:${credential.password}`);
+
+			return { Authorization: `Basic ${encoded}` };
+		}
+
+		if (credential.type === 'bearer') {
+			return { Authorization: `Bearer ${credential.token}` };
+		}
+
+		return undefined;
 	}
 }
