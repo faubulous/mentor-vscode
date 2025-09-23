@@ -1,9 +1,9 @@
 import { BindingsResult } from "@/services/sparql-query-state";
 
 /**
- * State for the SPARQL results pagination.
+ * State for the SPARQL bindings pagination.
  */
-export class SparqlResultsPagingState {
+export class BindingsTablePagingState {
 	/**
 	 * Available page size options, depending on the result set size.
 	 */

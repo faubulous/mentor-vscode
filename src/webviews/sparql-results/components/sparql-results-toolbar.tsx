@@ -2,22 +2,15 @@ import { Fragment } from 'react/jsx-runtime';
 import { WebviewComponent } from '@/webviews/webview-component';
 import { BindingsResult } from '@/services/sparql-query-state';
 import { Stopwatch } from './stopwatch';
-import { SparqlResultsContextType } from './sparql-results-context';
-import { withSparqlResults } from './sparql-results-hoc';
+import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
+import { withSparqlResults } from '../helpers/sparql-results-hoc';
 import codicons from '$/codicon.css';
 import toolbarStyle from "./sparql-results-toolbar.css";
 
 /**
- * Properties for the SPARQL results toolbar component.
- */
-interface SparqlResultsToolbarProps {
-	sparqlResults: SparqlResultsContextType;
-}
-
-/**
  * Component to display SPARQL bindings in a table format.
  */
-export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsToolbarProps> {
+export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsContextProps> {
 
 	componentDidMount() {
 		super.componentDidMount();

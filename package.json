@@ -452,6 +452,11 @@
     },
     "commands": [
       {
+        "command": "mentor.webview.show",
+        "title": "Mentor: Show Webview",
+        "icon": "$(layout-panel)"
+      },
+      {
         "command": "mentor.command.addSparqlEndpoint",
         "title": "Mentor: Add SPARQL Endpoint",
         "icon": "$(debug-disconnect)"

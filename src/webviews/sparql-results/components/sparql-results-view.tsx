@@ -2,10 +2,10 @@ import { WebviewComponent } from '@/webviews/webview-component';
 import { WebviewMessaging } from '@/webviews/webview-messaging';
 import { BindingsResult, BooleanResult } from '@/services/sparql-query-state';
 import { SparqlQueryExecutionState } from '@/services/sparql-query-state';
-import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
+import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
+import { SparqlResultsProvider } from '../helpers/sparql-results-provider';
 import { SparqlResultsToolbar } from './sparql-results-toolbar';
-import { SparqlResultsProvider } from './sparql-results-context';
-import { SparqlResultsBindingsTable } from './sparql-results-bindings-table';
+import { SparqlResultsBindingsTable } from './bindings-table';
 import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-view.css';
 

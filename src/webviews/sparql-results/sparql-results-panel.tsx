@@ -3,15 +3,31 @@ import { Fragment } from 'react';
 import { WebviewHost } from '@/webviews/webview-host';
 import { WebviewComponent } from '@/webviews/webview-component';
 import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
-import { SparqlResultsView } from './sparql-results-view';
-import { SparqlResultsWelcomeView } from './sparql-results-welcome-view';
-import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
+import { SparqlResultsView } from './components/sparql-results-view';
+import { SparqlWelcomeView } from './components/sparql-welcome-view';
+import { SparqlResultsWebviewMessages } from './sparql-results-messages';
 import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-panel.css';
 
+/**
+ * State for the SPARQL results panel component.
+ */
 interface SparqlResultsPanelState {
+	/**
+	 * A key that forces a full re-render of the component when changed.
+	 * This is useful to reset internal state of child components that do not
+	 * properly respond to prop changes.
+	 */
 	renderKey?: number;
+
+	/**
+	 * The list of active SPARQL queries with results to display in tabs.
+	 */
 	activeQueries: SparqlQueryExecutionState[];
+
+	/**
+	 * The index of the currently active tab. `0` indicates the welcome view.
+	 */
 	activeTabIndex: number;
 }
 
@@ -210,7 +226,7 @@ class SparqlResultsPanel extends WebviewComponent<
 						</div>
 					</vscode-tab-header>
 					<vscode-tab-panel>
-						<SparqlResultsWelcomeView />
+						<SparqlWelcomeView />
 					</vscode-tab-panel>
 					{this.state.activeQueries.map((query, index) => (
 						<Fragment key={query.documentIri}>

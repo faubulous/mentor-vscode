@@ -8,11 +8,11 @@ function collectTargets(): Target[] {
 
   for (const c of controllers as any[]) {
     if (c.panelId && c.panelTitle) {
-      items.push({ kind: 'panel', id: c.panelId, label: `${c.panelTitle} (panel)` });
+      items.push({ kind: 'panel', id: c.panelId, label: `panel: ${c.panelId}` });
     }
 
     if (c.viewType) {
-      items.push({ kind: 'view', id: c.viewType, label: `${c.viewType} (view)` });
+      items.push({ kind: 'view', id: c.viewType, label: `view: ${c.viewType}` });
     }
   }
 

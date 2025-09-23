@@ -1,14 +1,20 @@
 import { useState, useCallback, useEffect } from 'react';
-import { SparqlResultsPagingState } from './sparql-results-paging-state';
 import { BindingsResult } from '@/services/sparql-query-state';
+import { BindingsTablePagingState } from './bindings-table-paging-state';
 
-export function useSparqlResultsPaging(result?: BindingsResult, defaultPageSize?: number) {
-	const [paging, setPaging] = useState<SparqlResultsPagingState | undefined>();
+/**
+ * Custom hook for managing pagination state in a SPARQL bindings table.
+ * @param result The result dataset.
+ * @param defaultPageSize The default page size.
+ * @returns An object containing pagination state and control functions.
+ */
+export function useBindingsTablePaging(result?: BindingsResult, defaultPageSize?: number) {
+	const [paging, setPaging] = useState<BindingsTablePagingState | undefined>();
 
 	// Initialize paging when result changes
 	useEffect(() => {
 		if (result) {
-			setPaging(new SparqlResultsPagingState(result, 0, defaultPageSize));
+			setPaging(new BindingsTablePagingState(result, 0, defaultPageSize));
 		} else {
 			setPaging(undefined);
 		}
@@ -16,13 +22,13 @@ export function useSparqlResultsPaging(result?: BindingsResult, defaultPageSize?
 
 	const updatePage = useCallback((page: number) => {
 		if (paging && result) {
-			setPaging(new SparqlResultsPagingState(result, page, paging.pageSize));
+			setPaging(new BindingsTablePagingState(result, page, paging.pageSize));
 		}
 	}, [paging, result]);
 
 	const updatePageSize = useCallback((pageSize: number) => {
 		if (paging && result) {
-			setPaging(new SparqlResultsPagingState(result, 0, pageSize));
+			setPaging(new BindingsTablePagingState(result, 0, pageSize));
 		}
 	}, [paging, result]);
 

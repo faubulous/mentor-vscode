@@ -7,31 +7,32 @@ import { WebviewComponentFactory } from './webview-component-factory';
  */
 export abstract class WebviewController<M = any> implements vscode.WebviewViewProvider {
 	/**
-	 * Optional contributed view id for sidebar / panel views.
-	 */
-	public readonly viewType?: string;
-
-	/**
-	 * Optional panel identifier for editor / terminal panels.
+	 * Optional contributed view id for components that are shown in the sidebar or the panel area.
 	 * @remarks If set, the controller supports opening a panel via the `show` method.
 	 */
-	public readonly panelId?: string;
+	readonly viewType?: string;
+
+	/**
+	 * Optional panel identifier for components that are shown in the editor area.
+	 * @remarks If set, the controller supports opening a panel via the `show` method.
+	 */
+	readonly panelId?: string;
 
 	/**
 	 * Optional panel title (for editor/terminal panels).
 	 */
-	public readonly panelTitle?: string;
+	readonly panelTitle?: string;
 
 	/**
 	 * Relative JS bundle path inside out/ used by this controller (e.g. "sparql-endpoint-view.js").
 	 */
 	protected readonly componentPath: string;
 
-	protected _context?: vscode.ExtensionContext;
+	protected context?: vscode.ExtensionContext;
 
-	protected _view?: vscode.WebviewView;
+	protected view?: vscode.WebviewView;
 
-	protected _panel?: vscode.WebviewPanel;
+	protected panel?: vscode.WebviewPanel;
 
 	private _subscriptions: vscode.Disposable[] = [];
 
@@ -53,7 +54,7 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	 * @return An array of disposables to be disposed on extension deactivation.
 	 */
 	register(context: vscode.ExtensionContext): vscode.Disposable[] {
-		this._context = context;
+		this.context = context;
 
 		if (this.viewType) {
 			this._subscriptions.push(vscode.window.registerWebviewViewProvider(this.viewType, this));
@@ -68,35 +69,35 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	 * @throws If the controller is not registered or does not support panels.
 	 */
 	show(viewColumn: vscode.ViewColumn = vscode.ViewColumn.Active) {
-		if (!this._context) {
+		if (!this.context) {
 			throw new Error('Extension context is not initialized. Please register the controller first.');
 		}
 
 		if (!this.panelId || !this.panelTitle) {
-			throw new Error('This controller does not support panels (panelId/panelTitle not set).');
+			throw new Error('This controller does not support panels (panelId or panelTitle are not set).');
 		}
 
-		if (!this._panel) {
-			this._panel = new WebviewComponentFactory(this._context, this.componentPath).createPanel(
+		if (!this.panel) {
+			this.panel = new WebviewComponentFactory(this.context, this.componentPath).createPanel(
 				this.panelId,
 				this.panelTitle,
 				viewColumn
 			);
 
-			this._panel.webview.onDidReceiveMessage((message: M) => this.onDidReceiveMessage(message));
-			this._panel.onDidDispose(() => (this._panel = undefined));
+			this.panel.webview.onDidReceiveMessage((message: M) => this.onDidReceiveMessage(message));
+			this.panel.onDidDispose(() => (this.panel = undefined));
 		} else {
-			this._panel.reveal(viewColumn);
+			this.panel.reveal(viewColumn);
 		}
 	}
 
 	resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
-		if (!this._context) {
+		if (!this.context) {
 			throw new Error('Extension context is not initialized. Please register the controller first.');
 		}
 
-		this._view = new WebviewComponentFactory(this._context, this.componentPath).createView(webviewView);
-		this._view.webview.onDidReceiveMessage((message: M) => this.onDidReceiveMessage(message), this, this._subscriptions);
+		this.view = new WebviewComponentFactory(this.context, this.componentPath).createView(webviewView);
+		this.view.webview.onDidReceiveMessage((message: M) => this.onDidReceiveMessage(message), this, this._subscriptions);
 	}
 
 	/**
@@ -104,10 +105,10 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	 * @param message The message to post.
 	 */
 	protected postMessage(message: M) {
-		if (this._view) {
-			this._view.webview.postMessage(message);
-		} else if (this._panel) {
-			this._panel.webview.postMessage(message);
+		if (this.view) {
+			this.view.webview.postMessage(message);
+		} else if (this.panel) {
+			this.panel.webview.postMessage(message);
 		}
 	}
 

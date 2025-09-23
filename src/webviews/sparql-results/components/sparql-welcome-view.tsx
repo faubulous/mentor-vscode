@@ -1,19 +1,25 @@
 import { WebviewComponent } from '@/webviews/webview-component';
+import { WebviewHost } from '@/webviews/webview-host';
 import { SparqlQueryExecutionState, getDisplayName } from '@/services/sparql-query-state';
-import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
-import { WebviewHost } from '../webview-host';
-import stylesheet from './sparql-results-welcome-view.css';
+import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
+import stylesheet from './sparql-welcome-view.css';
 
-interface SparqlResultsWelcomeViewState {
+/**
+ * State for the SparqlWelcomeView component.
+ */
+interface SparqlWelcomeViewState {
+	/**
+	 * The history of executed SPARQL queries, sorted by most recent first.
+	 */
 	history?: SparqlQueryExecutionState[];
 }
 
 /**
  * Component to display a welcome message for the SPARQL results view.
  */
-export class SparqlResultsWelcomeView extends WebviewComponent<
+export class SparqlWelcomeView extends WebviewComponent<
 	{},
-	SparqlResultsWelcomeViewState,
+	SparqlWelcomeViewState,
 	SparqlResultsWebviewMessages
 > {
 	messaging = WebviewHost.getMessaging<SparqlResultsWebviewMessages>();

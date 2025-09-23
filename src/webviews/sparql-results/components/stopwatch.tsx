@@ -1,11 +1,14 @@
-import { SparqlResultsContextType } from './sparql-results-context';
-import { withSparqlResults } from './sparql-results-hoc';
+import { SparqlResultsContextType, withSparqlResults } from '../helpers';
 import { useState, useEffect, useRef } from 'react';
 
 interface StopwatchProps {
 	sparqlResults: SparqlResultsContextType;
 }
 
+/**
+ * Stopwatch component to display the elapsed time of a SPARQL query execution.
+ * @param param0 Props containing the SPARQL results context.
+ */
 function StopwatchBase({ sparqlResults }: StopwatchProps) {
 	const { queryContext } = sparqlResults;
 
@@ -29,12 +32,17 @@ function StopwatchBase({ sparqlResults }: StopwatchProps) {
 		if (!queryContext.endTime) {
 			// If no end date, start interval to update every 10ms
 			intervalRef.current = setInterval(updateElapsedTime, 10);
-		} else if (intervalRef.current) {
-			clearInterval(intervalRef.current);
+		} else {
+            updateElapsedTime();
+        }
 
-			intervalRef.current = null;
-		}
-	}, [queryContext.startTime, queryContext.endTime]);
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        };
+    }, [queryContext.startTime, queryContext.endTime]);
 
 	const formatTime = (elapsedMilliseconds: number) => {
 		const date = new Date(elapsedMilliseconds);
@@ -70,4 +78,7 @@ function StopwatchBase({ sparqlResults }: StopwatchProps) {
 	);
 };
 
+/**
+ * Stopwatch component wrapped with SPARQL results context.
+ */
 export const Stopwatch = withSparqlResults(StopwatchBase);

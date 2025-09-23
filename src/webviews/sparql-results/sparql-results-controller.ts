@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { WebviewController } from '@/webviews/webview-controller';
-import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
 import { QuadsResult } from '@/services/sparql-query-state';
+import { WebviewController } from '@/webviews/webview-controller';
+import { SparqlResultsWebviewMessages } from './sparql-results-messages';
 
 /**
  * A controller for the SPARQL results webview. It handles the registration of the webview, 
@@ -17,9 +17,11 @@ export class SparqlResultsWebviewController extends WebviewController<SparqlResu
     }
 
     register(context: vscode.ExtensionContext) {
-        const d = super.register(context);
-        d.push(mentor.sparqlQueryService.onDidHistoryChange(this._postQueryHistory, this));
-        return d;
+        const subscriptions = super.register(context);
+
+        subscriptions.push(mentor.sparqlQueryService.onDidHistoryChange(this._postQueryHistory, this));
+
+        return subscriptions;
     }
 
     private _postQueryHistory() {
@@ -43,18 +45,18 @@ export class SparqlResultsWebviewController extends WebviewController<SparqlResu
     }
 
     async executeQuery(document: vscode.TextDocument) {
-        if (!this._view) {
+        if (!this.view) {
             await vscode.commands.executeCommand('workbench.action.togglePanel');
             await vscode.commands.executeCommand(`${this.viewType}.focus`);
         }
 
-        if (!this._view) {
+        if (!this.view) {
             throw new Error('Webview view is not initialized.');
         }
 
         const initialState = mentor.sparqlQueryService.createQuery(document);
 
-        this._view.show();
+        this.view.show();
 
         const updatedState = await mentor.sparqlQueryService.executeQuery(initialState);
 

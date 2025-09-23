@@ -1,17 +1,16 @@
-import { BindingsResult } from '@/services/sparql-query-state';
-import { SparqlResultsContextType } from './sparql-results-context';
-import { withSparqlResults } from './sparql-results-hoc';
-import { WebviewComponent } from '@/webviews/webview-component';
 import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
-import { SparqlResultsWebviewMessages } from './sparql-results-webview-messages';
+import { BindingsResult } from '@/services/sparql-query-state';
+import { WebviewComponent } from '@/webviews/webview-component';
+import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
+import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
+import { withSparqlResults } from '../helpers/sparql-results-hoc';
 
-interface SparqlResultsBindingsTableProps {
-	sparqlResults: SparqlResultsContextType;
-}
-
-class SparqlResultsBindingsTableBase extends WebviewComponent<
-	SparqlResultsBindingsTableProps,
+/**
+ * Component to display SPARQL bindings results in a table with pagination.
+ */
+class BindingsTableBase extends WebviewComponent<
+	SparqlResultsContextProps,
 	{},
 	SparqlResultsWebviewMessages
 > {
@@ -90,4 +89,7 @@ class SparqlResultsBindingsTableBase extends WebviewComponent<
 	}
 }
 
-export const SparqlResultsBindingsTable = withSparqlResults(SparqlResultsBindingsTableBase);
+/**
+ * BindingsTable component wrapped with a SPARQL results context.
+ */
+export const SparqlResultsBindingsTable = withSparqlResults(BindingsTableBase);

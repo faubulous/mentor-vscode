@@ -3,8 +3,8 @@ import type { NotebookRendererMessaging } from 'vscode';
 import type { ActivationFunction, OutputItem, RendererContext } from 'vscode-notebook-renderer';
 import { createRoot } from 'react-dom/client';
 import { WebviewMessaging } from "@/webviews/webview-messaging";
-import { SparqlResultsView } from './sparql-results-view';
-import { SparqlResultsWebviewMessages } from "./sparql-results-webview-messages";
+import { SparqlResultsView } from './components/sparql-results-view';
+import { SparqlResultsWebviewMessages } from "./sparql-results-messages";
 
 // Associates created React roots with HTML elements.
 const elementRoots = new WeakMap<HTMLElement, ReturnType<typeof createRoot>>();
