@@ -96,6 +96,7 @@
 .mentor-notebook-output {
 	border: 1px solid var(--vscode-editorGroup-border) !important;
 	padding: 0 !important;
+	margin-top: -1px !important;
 }
 
 .mentor-notebook-output vscode-table {

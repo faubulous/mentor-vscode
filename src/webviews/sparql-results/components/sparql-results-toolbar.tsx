@@ -1,6 +1,7 @@
 import { Fragment } from 'react/jsx-runtime';
 import { WebviewComponent } from '@/webviews/webview-component';
 import { BindingsResult } from '@/services/sparql-query-state';
+import { BindingsTablePagingState } from './bindings-table-paging-state';
 import { Stopwatch } from './stopwatch';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
@@ -72,7 +73,7 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 							<span className="codicon codicon-chevron-right"></span>
 						</vscode-toolbar-button>
 						<span className="sparql-results-range">
-							{paging.startIndex + 1}-{paging.endIndex} of {bindings.rows.length} rows
+							{this._getResultsRangeText(bindings, paging)}
 						</span>
 					</Fragment>
 				)}
@@ -89,6 +90,14 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 				<span className="spacer"></span>
 			</vscode-toolbar-container>
 		);
+	}
+
+	private _getResultsRangeText(bindings: BindingsResult, paging: BindingsTablePagingState): string {
+		const totalRows = bindings.rows.length;
+		const startIndex = Math.min(paging.startIndex + 1, paging.endIndex);
+		const endIndex = Math.min(paging.endIndex, bindings.rows.length);
+
+		return `${startIndex} - ${endIndex} of ${totalRows} rows`;
 	}
 
 	private _handlePreviousPage = () => {

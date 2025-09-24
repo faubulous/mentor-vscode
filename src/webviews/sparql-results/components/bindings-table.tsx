@@ -26,18 +26,20 @@ class BindingsTableBase extends WebviewComponent<
 			: null;
 
 		if (!result) {
-			return <div>No bindings result available</div>;
+			return <div>Unsupported result type: {queryContext.result?.type}</div>;
 		}
 
 		return (
-			<vscode-table className="sparql-results-table" zebra bordered-rows resizable>
-				<vscode-table-header>
-					{result.columns.map(v => (
-						<vscode-table-header-cell key={v}>{v}</vscode-table-header-cell>
-					))}
-				</vscode-table-header>
+			<vscode-table className="sparql-results-table" zebra bordered-rows>
+				{result.rows.length > 0 &&
+					<vscode-table-header>
+						{result.columns.map(v => (
+							<vscode-table-header-cell key={v}>{v}</vscode-table-header-cell>
+						))}
+					</vscode-table-header>
+				}
 				<vscode-table-body>
-					{result.rows.slice(paging.startIndex, paging.endIndex).map((row, rowIndex) => (
+					{result.rows.length > 0 && result.rows.slice(paging.startIndex, paging.endIndex).map((row, rowIndex) => (
 						<vscode-table-row key={paging.startIndex + rowIndex}>
 							{result.columns.map(header => (
 								<vscode-table-cell key={`${paging.startIndex + rowIndex}-${header}`}>
@@ -46,6 +48,13 @@ class BindingsTableBase extends WebviewComponent<
 							))}
 						</vscode-table-row>
 					))}
+					{result.rows.length === 0 && (
+						<vscode-table-row>
+							<vscode-table-cell>
+								No results
+							</vscode-table-cell>
+						</vscode-table-row>
+					)}
 				</vscode-table-body>
 			</vscode-table>
 		);

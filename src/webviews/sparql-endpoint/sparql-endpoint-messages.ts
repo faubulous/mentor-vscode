@@ -8,4 +8,4 @@ export type SparqlEndpointMessages =
     { id: 'GetSparqlEndpointCredential', endpointUrl: string } |
     { id: 'GetSparqlEndpointCredentialResult', credential: Credential | undefined } |
     { id: 'TestSparqlEndpoint', endpoint: SparqlConnection, credential?: Credential | null } |
-    { id: 'TestSparqlEndpointResult', isReachable: boolean };
+    { id: 'TestSparqlEndpointResult', error: { code: number, message: string} | null };

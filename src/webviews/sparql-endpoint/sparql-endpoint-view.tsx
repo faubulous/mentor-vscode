@@ -9,12 +9,17 @@ import stylesheet from './sparql-endpoint-view.css';
 
 interface SparqlEndpointViewState {
 	endpoint: SparqlConnection;
+
 	// 0: none, 1: basic, 2: bearer
 	selectedAuthTabIndex: number;
+
 	basicCredential: { type: 'basic'; username: string; password: string };
+
 	bearerCredential: { type: 'bearer'; token: string };
+
 	isChecking?: boolean;
-	isReachable?: boolean | null;
+
+	connectionError?: { code: number; message: string } | null | undefined;
 }
 
 /**
@@ -38,7 +43,7 @@ export class SparqlEndpointView extends WebviewComponent<
 			basicCredential: { type: 'basic', username: '', password: '' },
 			bearerCredential: { type: 'bearer', token: '' },
 			isChecking: false,
-			isReachable: null
+			connectionError: undefined
 		});
 
 		// Listen for tab selection changes on the auth tabs
@@ -66,7 +71,7 @@ export class SparqlEndpointView extends WebviewComponent<
 					basicCredential: { type: 'basic', username: '', password: '' },
 					bearerCredential: { type: 'bearer', token: '' },
 					isChecking: false,
-					isReachable: null
+					connectionError: undefined
 				});
 
 				this.messaging.postMessage({
@@ -106,7 +111,7 @@ export class SparqlEndpointView extends WebviewComponent<
 			case 'TestSparqlEndpointResult': {
 				this.setState({
 					isChecking: false,
-					isReachable: message.isReachable
+					connectionError: message.error
 				});
 				return;
 			}
@@ -135,7 +140,7 @@ export class SparqlEndpointView extends WebviewComponent<
 	render() {
 		const endpoint: SparqlConnection = this.state?.endpoint || { id: '', endpointUrl: '', scope: 'global' };
 		const isChecking = this.state?.isChecking || false;
-		const isReachable = this.state?.isReachable;
+		const connectionError = this.state?.connectionError;
 
 		return (
 			<div className="sparql-endpoint-view-container">
@@ -149,7 +154,7 @@ export class SparqlEndpointView extends WebviewComponent<
 				<form onSubmit={e => this._handleSaveEndpoint(e)}>
 					<vscode-label>Endpoint URL</vscode-label>
 
-					<section className="row" style={{ gap: '0.5em' }}>
+					<section className="row" style={{ gap: '0.5em', minHeight: '40px', marginBottom: 0 }}>
 						<vscode-textfield
 							required
 							autoFocus
@@ -165,23 +170,20 @@ export class SparqlEndpointView extends WebviewComponent<
 						/>
 						<vscode-button
 							type="button"
-							disabled={!this._isValid() || this._isReadOnly()}
+							disabled={!this._isValid() || this._isReadOnly() || isChecking}
 							onClick={(e) => this._handleTestEndpoint(e)}>
-							Test
+							{isChecking ? <vscode-progress-ring></vscode-progress-ring> : 'Test'}
 						</vscode-button>
 					</section>
 
-					<section className="status">
-						{isChecking && <React.Fragment>
-							<vscode-progress-ring></vscode-progress-ring> Checking...
-						</React.Fragment>}
-						{isReachable === true && <React.Fragment>
+					<div className="status">
+						{connectionError === null && <React.Fragment>
 							<span className="codicon codicon-pass"></span> Success
 						</React.Fragment>}
-						{isReachable === false && <React.Fragment>
-							<span className="codicon codicon-error"></span> Unreachable
+						{connectionError && <React.Fragment>
+							<span className="codicon codicon-error"></span> {connectionError ? `Error ${connectionError.code}: ${connectionError.message}` : 'Unreachable'}
 						</React.Fragment>}
-					</section>
+					</div>
 
 					<section>
 						<vscode-label style={{ marginTop: '1em' }}>Authentication</vscode-label>
@@ -202,7 +204,7 @@ export class SparqlEndpointView extends WebviewComponent<
 								Bearer
 							</vscode-tab-header>
 							<vscode-tab-panel>
-								{this._renderOAuthFields()}
+								{this._renderBearerAuthFields()}
 							</vscode-tab-panel>
 						</vscode-tabs>
 					</section>
@@ -251,7 +253,7 @@ export class SparqlEndpointView extends WebviewComponent<
 		);
 	}
 
-	private _renderOAuthFields() {
+	private _renderBearerAuthFields() {
 		const credential = this.state?.bearerCredential;
 
 		return (
@@ -294,7 +296,7 @@ export class SparqlEndpointView extends WebviewComponent<
 	private _handleTestEndpoint(e: any) {
 		e.preventDefault();
 
-		this.setState({ isChecking: true, isReachable: null });
+		this.setState({ isChecking: true, connectionError: undefined });
 
 		const credential = this._getSelectedCredentialOrNull();
 

@@ -25,10 +25,10 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 
     return {
         renderOutputItem(data: OutputItem, element: HTMLElement) {
-            const results = data?.json();
+            const json = data?.json();
 
             let root = elementRoots.get(element);
-            
+
             if (!root) {
                 root = createRoot(element);
                 elementRoots.set(element, root);
@@ -38,7 +38,7 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
                 <div className="mentor-notebook-output">
                     <SparqlResultsView
                         messaging={messaging}
-                        queryContext={results}
+                        queryContext={json}
                         defaultPageSize={50} />
                 </div>
             );

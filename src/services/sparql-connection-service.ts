@@ -126,8 +126,6 @@ export class SparqlConnectionService {
 				value: connection.endpointUrl,
 			};
 
-			console.debug(documentUri.toString(), connection);
-
 			const credential = await mentor.credentialStorageService.getCredential(connection.endpointUrl);
 
 			if (credential) {
@@ -182,8 +180,6 @@ export class SparqlConnectionService {
 				for (let i = cellIndex; i >= 0; i--) {
 					const cell = cells[i];
 					const connectionId = cell.metadata?.connectionId;
-
-					console.debug(cell.metadata);
 
 					if (typeof connectionId === 'string') {
 						return connectionId;
@@ -281,56 +277,54 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Tests if a connection with a SPARQL endpoint can be established.
-	 * @param connection The SPARQL endpoint connection to test.
-	 * @param credential If provided, uses these credentials instead of fetching stored ones.
-	 * @returns `true` if the connection is successful, `false` otherwise.
-	 */
-	async testConnection(connection: SparqlConnection, credential?: Credential | null): Promise<boolean> {
+ * Tests if a connection with a SPARQL endpoint can be established using a direct HTTP POST.
+ * @param connection The SPARQL endpoint connection to test.
+ * @param credential If provided, uses these credentials instead of fetching stored ones.
+ * @returns `null` if the connection is successful, or an error object { code, message } otherwise.
+ */
+	async testConnection(
+		connection: SparqlConnection,
+		credential?: Credential | null
+	): Promise<null | { code: number; message: string }> {
 		try {
-			const source: SparqlEndpointSource = {
-				type: 'sparql',
-				value: connection.endpointUrl,
+			const headers: Record<string, string> = {
+				'Content-Type': 'application/sparql-query',
+				'Accept': 'application/sparql-results+json,application/json'
 			};
 
 			if (credential === undefined) {
 				credential = await mentor.credentialStorageService.getCredential(connection.endpointUrl);
 			}
 
-			if (credential) {
-				source.headers = this.getAuthHeaders(credential);
+			const authHeaders = this.getAuthHeaders(credential as Credential);
+
+			if (authHeaders) {
+				Object.assign(headers, authHeaders);
 			}
 
-			const query = await new QueryEngine().query('ASK { ?s ?p ?o }', { sources: [source] });
+			const response = await fetch(connection.endpointUrl, {
+				method: 'POST',
+				headers,
+				body: 'ASK WHERE { ?s ?p ?o }'
+			});
 
-			await query.execute();
+			if (response.ok) {
+				return null;
+			} else {
+				const text = await response.text();
 
-			return true;
+				return {
+					code: response.status,
+					message: text || response.statusText
+				};
+			}
 		} catch (error: any) {
 			console.error(error);
 
-			let errorMessage = `Connection test failed: ${error.message}`;
-
-			// Check for HTTP status code in various ways Comunica might expose it
-			if (error.status || error.statusCode || error.code) {
-				const statusCode = error.status || error.statusCode || error.code;
-				errorMessage = `Connection test failed (HTTP ${statusCode}): ${error.message}`;
-			}
-
-			// Check if it's a fetch-related error with response
-			if (error.response && error.response.status) {
-				errorMessage = `Connection test failed (HTTP ${error.response.status}): ${error.message}`;
-			}
-
-			// Check for nested errors that might contain status codes
-			if (error.cause && (error.cause.status || error.cause.statusCode)) {
-				const statusCode = error.cause.status || error.cause.statusCode;
-				errorMessage = `Connection test failed (HTTP ${statusCode}): ${error.message}`;
-			}
-
-			vscode.window.showErrorMessage(errorMessage);
-
-			return false;
+			return {
+				code: error.status || error.code || 0,
+				message: error.message || String(error)
+			};
 		}
 	}
 
@@ -338,6 +332,10 @@ export class SparqlConnectionService {
 	 * Returns HTTP Authorization headers for the given URI.
 	 */
 	getAuthHeaders(credential: Credential): { [key: string]: string } | undefined {
+		if(!credential) {
+			return undefined;
+		}
+
 		if (credential.type === 'basic') {
 			const encoded = btoa(`${credential.username}:${credential.password}`);
 

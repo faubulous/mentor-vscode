@@ -6,10 +6,10 @@ import { Store, Writer } from 'n3';
 import { mentor } from "@/mentor";
 import { WorkspaceUri } from "@/workspace/workspace-uri";
 import { NamespaceMap } from "@/utilities";
-import { SparqlDocument } from '@/languages';
 import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { AsyncIterator } from 'asynciterator';
 import { SparqlConnectionService } from './sparql-connection-service';
+import { SparqlVariableParser } from './sparql-variable-parser';
 
 /**
  * The key for storing query history in local storage.
@@ -297,7 +297,7 @@ export class SparqlQueryService {
 		const bindings = await bindingStream.toArray();
 
 		const namespaces = new Set<string>();
-		const parsedColumns = this._parseSelectVariables(context, bindings);
+		const parsedColumns = SparqlVariableParser.parseSelectVariables(context.query!, bindings);
 		const rows: Record<string, any>[] = [];
 
 		for (const binding of bindings) {
@@ -339,12 +339,16 @@ export class SparqlQueryService {
 			}
 		}
 
-		return {
+		const result: BindingsResult = {
 			type: 'bindings',
 			columns: parsedColumns,
 			rows,
 			namespaceMap
 		};
+
+		console.debug('serializeBindings:', result);
+
+		return result;
 	}
 
 	private async _serializeQuads(context: SparqlQueryExecutionState, quadStream: AsyncIterator<Quad>): Promise<string> {
@@ -413,40 +417,6 @@ export class SparqlQueryService {
 			console.error('Error serializing quads to Turtle:', error);
 			return '';
 		}
-	}
-
-	/**
-	 * Parses the query variables form the SELECT query in the order they were defined.
-	 * @param context The SparqlQueryContext containing the query.
-	 * @param bindingStream The SPARQL query results as a BindingsStream.
-	 * @returns A set of variable names used in the query.
-	 * @remarks This is needed because Comunica does not preserve the definition order of the variables in results.
-	 */
-	private _parseSelectVariables(context: SparqlQueryExecutionState, bindings: Bindings[]): Array<string> {
-		const document = mentor.contexts[context.documentIri] as SparqlDocument;
-
-		if (!document) {
-			return [];
-		}
-
-		let result = new Array<string>();
-
-		for (const token of document.tokens) {
-			const type = token.tokenType?.name;
-
-			if (type === 'VAR1' || type === 'VAR2') {
-				result.push(token.image.substring(1));
-			} else if (type === 'Star') {
-				const vars = bindings.length > 0 ? Array.from(bindings[0].keys()) : [];
-
-				result = vars.map(v => v.value);
-				break;
-			} else if (type === 'FROM' || type === 'WHERE') {
-				break;
-			}
-		}
-
-		return result;
 	}
 
 	/**
