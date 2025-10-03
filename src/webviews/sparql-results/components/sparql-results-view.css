@@ -102,6 +102,7 @@
 .mentor-notebook-output vscode-table {
 	/* Prevent the table from capturing mouse scroll events and blocking notebook scroll. */
 	pointer-events: none;
+	margin-bottom: 1px;
 }
 
 .mentor-panel vscode-table {

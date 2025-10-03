@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
-import { SparqlConnection } from '@/services/sparql-connection';
+import { SparqlEndpoint } from '@/services/sparql-endpoint';
 
 /**
  * Base class for a node in the SPARQL connection tree.
@@ -27,9 +27,9 @@ export class EndpointTreeNode {
 	/**
 	 * The SPARQL connection represented by this tree item.
 	 */
-	endpoint: SparqlConnection | undefined;
+	endpoint: SparqlEndpoint | undefined;
 
-	constructor(connection: SparqlConnection) {
+	constructor(connection: SparqlEndpoint) {
 		this.id = connection.id;
 		this.label = connection.endpointUrl;
 		this.endpoint = connection;
@@ -90,7 +90,11 @@ export class EndpointTreeNode {
 	 * @returns A description string or `undefined` if no description should be shown.
 	 */
 	getDescription(): string {
-		return '';
+		if(this.endpoint?.isModified) {
+			return 'Unsaved';
+		} else {
+			return '';
+		}
 	}
 
 	/**

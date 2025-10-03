@@ -29,7 +29,9 @@ export class EndpointTree implements TreeView {
 			showCollapseAll: true
 		});
 
-		vscode.commands.registerCommand('mentor.command.refreshEndpointTree', async () => {
+		vscode.commands.registerCommand('mentor.command.refreshEndpointsTree', async () => {
+			console.log('mentor.command.refreshEndpointsTree');
+
 			this.treeDataProvider.refresh();
 		});
 	}

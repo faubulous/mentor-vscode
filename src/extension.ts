@@ -78,7 +78,7 @@ function registerViews(context: vscode.ExtensionContext) {
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
-	subscribe(context, vscode.commands.registerCommand('mentor.command.addSparqlEndpoint', commands.addSparqlEndpoint));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.createSparqlEndpoint', commands.createSparqlEndpoint));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.analyzeWorkspace', commands.analyzeWorkspace));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.clearQueryHistory', commands.clearQueryHistory));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.createNotebook', commands.createNotebook));
@@ -104,7 +104,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 	subscribe(context, vscode.commands.registerCommand('mentor.command.revealShapeDefinition', commands.revealShapeDefinition));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.saveSparqlQueryResults', commands.saveSparqlQueryResults));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.selectActiveLanguage', commands.selectActiveLanguage));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.setSparqlEndpoint', commands.setSparqlEndpoint));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.selectSparqlEndpoint', commands.selectSparqlEndpoint));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.sortPrefixes', commands.sortPrefixes));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.updatePrefixes', commands.updatePrefixes));
 	subscribe(context, vscode.commands.registerCommand('mentor.webview.show', commands.showWebview));

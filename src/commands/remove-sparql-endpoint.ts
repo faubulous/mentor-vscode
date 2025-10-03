@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { SparqlConnection } from '@/services/sparql-connection';
+import { SparqlEndpoint } from '@/services/sparql-endpoint';
 
-export const removeSparqlEndpoint = async (connection: SparqlConnection) => {
+export const removeSparqlEndpoint = async (connection: SparqlEndpoint) => {
 	const confirm = await vscode.window.showWarningMessage(
 		'Are you sure you want to remove this SPARQL endpoint?',
 		{ modal: true },
@@ -13,5 +13,5 @@ export const removeSparqlEndpoint = async (connection: SparqlConnection) => {
 		return;
 	}
 
-	await mentor.sparqlConnectionService.deleteConnection('global', connection.id);
+	await mentor.sparqlEndpointService.deleteEndpoint('global', connection.id);
 };

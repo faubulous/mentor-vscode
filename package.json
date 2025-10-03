@@ -452,7 +452,12 @@
     },
     "commands": [
       {
-        "command": "mentor.command.addSparqlEndpoint",
+        "command": "mentor.command.refreshEndpointsTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "mentor.command.createSparqlEndpoint",
         "title": "New Endpoint...",
         "icon": "$(add)"
       },
@@ -688,7 +693,12 @@
           "group": "navigation@99"
         },
         {
-          "command": "mentor.command.addSparqlEndpoint",
+          "command": "mentor.command.refreshEndpointsTree",
+          "when": "view == mentor.view.endpointTree",
+          "group": "navigation@99"
+        },
+        {
+          "command": "mentor.command.createSparqlEndpoint",
           "when": "view == mentor.view.endpointTree",
           "group": "navigation@99"
         }

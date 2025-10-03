@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { WebviewController } from '../webview-controller';
 import { SparqlEndpointMessages } from './sparql-endpoint-messages';
-import { SparqlConnection } from '@/services/sparql-connection';
+import { SparqlEndpoint } from '@/services/sparql-endpoint';
 
 export class SparqlEndpointController extends WebviewController<SparqlEndpointMessages> {
     constructor() {
@@ -16,7 +16,7 @@ export class SparqlEndpointController extends WebviewController<SparqlEndpointMe
     /**
      * Opens the SPARQL endpoint editor in the editor area and optionally preloads the endpoint.
      */
-    open(endpoint?: SparqlConnection) {
+    edit(endpoint?: SparqlEndpoint) {
         super.show(vscode.ViewColumn.Active);
 
         if (endpoint) {
@@ -31,24 +31,28 @@ export class SparqlEndpointController extends WebviewController<SparqlEndpointMe
                 return;
             }
             case 'SaveSparqlEndpoint': {
-                await mentor.sparqlConnectionService.updateConnection(message.endpoint);
+                await mentor.sparqlEndpointService.updateEndpoint(message.endpoint);
+                await mentor.sparqlEndpointService.saveConfiguration();
 
                 if (message.credential) {
-                    await mentor.credentialStorageService.saveCredential(message.endpoint.endpointUrl, message.credential);
-                } else {
                     await mentor.credentialStorageService.deleteCredential(message.endpoint.endpointUrl);
+                    await mentor.credentialStorageService.saveCredential(message.endpoint.endpointUrl, message.credential);
                 }
-
-                vscode.window.showInformationMessage(`SPARQL endpoint saved.`);
+                return;
+            }
+            case 'UpdateSparqlEndpoint': {
+                await mentor.sparqlEndpointService.updateEndpoint(message.endpoint);
                 return;
             }
             case 'GetSparqlEndpointCredential': {
                 const credential = await mentor.credentialStorageService.getCredential(message.endpointUrl);
+
                 this.postMessage({ id: 'GetSparqlEndpointCredentialResult', credential });
                 return;
             }
             case 'TestSparqlEndpoint': {
-                const result = await mentor.sparqlConnectionService.testConnection(message.endpoint, message.credential);
+                const result = await mentor.sparqlEndpointService.testConnection(message.endpoint, message.credential);
+
                 this.postMessage({ id: 'TestSparqlEndpointResult', error: result });
                 return;
             }

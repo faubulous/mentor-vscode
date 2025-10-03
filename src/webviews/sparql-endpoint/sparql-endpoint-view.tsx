@@ -3,23 +3,30 @@ import { createRoot } from 'react-dom/client';
 import { WebviewHost } from '@/webviews/webview-host';
 import { WebviewComponent } from '@/webviews/webview-component';
 import { SparqlEndpointMessages } from './sparql-endpoint-messages';
-import { SparqlConnection } from '@/services/sparql-connection';
+import { SparqlEndpoint } from '@/services/sparql-endpoint';
 import { Credential } from '@/services/credential-storage-service';
 import stylesheet from './sparql-endpoint-view.css';
 
-interface SparqlEndpointViewState {
-	endpoint: SparqlConnection;
+enum AuthTabIndex {
+	None = 0,
+	Basic = 1,
+	Bearer = 2
+}
 
-	// 0: none, 1: basic, 2: bearer
-	selectedAuthTabIndex: number;
+interface SparqlEndpointViewState {
+	isChecking?: boolean;
+
+	connectionError?: { code: number; message: string } | null | undefined;
+
+	hasUnsavedChanges: boolean;
+
+	endpoint: SparqlEndpoint;
+
+	selectedAuthTabIndex: AuthTabIndex;
 
 	basicCredential: { type: 'basic'; username: string; password: string };
 
 	bearerCredential: { type: 'bearer'; token: string };
-
-	isChecking?: boolean;
-
-	connectionError?: { code: number; message: string } | null | undefined;
 }
 
 /**
@@ -38,7 +45,7 @@ export class SparqlEndpointView extends WebviewComponent<
 		this.addStylesheet('sparql-endpoint-styles', stylesheet);
 
 		this.setState({
-			endpoint: { id: '', endpointUrl: '', scope: 'global' },
+			endpoint: { id: 'new', endpointUrl: '', configTarget: 1 },
 			selectedAuthTabIndex: 0,
 			basicCredential: { type: 'basic', username: '', password: '' },
 			bearerCredential: { type: 'bearer', token: '' },
@@ -65,6 +72,8 @@ export class SparqlEndpointView extends WebviewComponent<
 	override componentDidReceiveMessage(message: SparqlEndpointMessages) {
 		switch (message.id) {
 			case 'EditSparqlEndpoint': {
+				console.log('EditSparqlEndpoint', message.endpoint);
+
 				this.setState({
 					endpoint: message.endpoint,
 					selectedAuthTabIndex: 0,
@@ -125,7 +134,7 @@ export class SparqlEndpointView extends WebviewComponent<
 			case 2:
 				return this.state.bearerCredential;
 			default:
-				return null; // None
+				return null;
 		}
 	}
 
@@ -138,7 +147,12 @@ export class SparqlEndpointView extends WebviewComponent<
 	}
 
 	render() {
-		const endpoint: SparqlConnection = this.state?.endpoint || { id: '', endpointUrl: '', scope: 'global' };
+		const endpoint: SparqlEndpoint = this.state?.endpoint;
+
+		if (!endpoint) {
+			return <div>Loading...</div>;
+		}
+
 		const isChecking = this.state?.isChecking || false;
 		const connectionError = this.state?.connectionError;
 
@@ -151,7 +165,7 @@ export class SparqlEndpointView extends WebviewComponent<
 						Delete
 					</a>
 				</div>
-				<form onSubmit={e => this._handleSaveEndpoint(e)}>
+				<form onSubmit={e => this._handleSaveEndpoint(e)} onChange={e => this._handleFormChange(e)}>
 					<vscode-label>Endpoint URL</vscode-label>
 
 					<section className="row" style={{ gap: '0.5em', minHeight: '40px', marginBottom: 0 }}>
@@ -161,12 +175,11 @@ export class SparqlEndpointView extends WebviewComponent<
 							value={endpoint.endpointUrl}
 							placeholder="https://example.org/sparql"
 							disabled={this._isReadOnly()}
-							onInput={e => this.setState({
-								endpoint: {
-									...endpoint,
-									endpointUrl: (e.target as HTMLInputElement).value
-								}
-							})}
+							onInput={e => {
+								endpoint.endpointUrl = (e.target as HTMLInputElement).value;
+
+								this._handleFormChange(e)
+							}}
 						/>
 						<vscode-button
 							type="button"
@@ -275,8 +288,19 @@ export class SparqlEndpointView extends WebviewComponent<
 		);
 	}
 
+	private _handleFormChange(e: any) {
+		this.state.endpoint.isModified = true;
+
+		this.setState({ ...this.state, hasUnsavedChanges: true });
+
+		this.messaging.postMessage({
+			id: 'UpdateSparqlEndpoint',
+			endpoint: this.state.endpoint
+		});
+	}
+
 	private _handleAuthTabChange = (event: any) => {
-		const i = event.detail?.selectedIndex ?? 0;
+		const i = event.detail?.selectedIndex ?? AuthTabIndex.None;
 
 		this.setState({ selectedAuthTabIndex: i });
 	};
@@ -284,13 +308,13 @@ export class SparqlEndpointView extends WebviewComponent<
 	private _handleSaveEndpoint(e: any) {
 		e.preventDefault();
 
-		const credential = this._getSelectedCredentialOrNull();
-
 		this.messaging.postMessage({
 			id: 'SaveSparqlEndpoint',
 			endpoint: this.state.endpoint,
-			credential: credential ?? undefined
+			credential: this._getSelectedCredentialOrNull()
 		});
+
+		this.setState({ hasUnsavedChanges: false });
 	}
 
 	private _handleTestEndpoint(e: any) {
@@ -298,12 +322,10 @@ export class SparqlEndpointView extends WebviewComponent<
 
 		this.setState({ isChecking: true, connectionError: undefined });
 
-		const credential = this._getSelectedCredentialOrNull();
-
 		this.messaging.postMessage({
 			id: 'TestSparqlEndpoint',
 			endpoint: this.state.endpoint,
-			credential: credential
+			credential: this._getSelectedCredentialOrNull()
 		});
 	}
 

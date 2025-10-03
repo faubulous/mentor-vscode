@@ -8,8 +8,9 @@ import { WorkspaceUri } from "@/workspace/workspace-uri";
 import { NamespaceMap } from "@/utilities";
 import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { AsyncIterator } from 'asynciterator';
-import { SparqlConnectionService } from './sparql-connection-service';
+import { SparqlEndpointService } from './sparql-endpoint-service';
 import { SparqlVariableParser } from './sparql-variable-parser';
+import { Credential } from './credential-storage-service';
 
 /**
  * The key for storing query history in local storage.
@@ -54,7 +55,7 @@ export class SparqlQueryService {
 	 */
 	onDidQueryExecutionEnd: vscode.Event<SparqlQueryExecutionState> = this._onDidQueryExecutionEnd.event;
 
-	constructor(private _connectionService: SparqlConnectionService) {
+	constructor(private _connectionService: SparqlEndpointService) {
 	}
 
 	/**
@@ -200,12 +201,23 @@ export class SparqlQueryService {
 			this._logQueryExecutionStart(context);
 
 			const documentIri = vscode.Uri.parse(context.documentIri);
-            const source = await this._connectionService.getQuerySourceForDocument(documentIri);
 
-			const result = await new QueryEngine().query(query, {
+			const source = await this._connectionService.getQuerySourceForDocument(documentIri);
+			const options: any = {
 				sources: [source],
 				unionDefaultGraph: true
-			});
+			};
+
+			if (source.type === 'sparql') {
+				// Note: Setting a custom fetch handler because some SPARQL endpoints do not 
+				// work properly with the default Comuica fetch implementation.
+				const endpointUrl = source.value;
+				const credential = await mentor.credentialStorageService.getCredential(endpointUrl);
+
+				options.fetch = this._getFetchHandler(credential);
+			}
+
+			const result = await new QueryEngine().query(query, options);
 
 			if (result.resultType === 'bindings') {
 				const bindings = await result.execute();
@@ -239,6 +251,27 @@ export class SparqlQueryService {
 		this._persistQueryHistory();
 
 		return context;
+	}
+
+	_getFetchHandler(credential?: Credential) {
+		if (credential?.type === 'basic') {
+			const username = credential.username;
+			const password = credential.password;
+			const encoded = btoa(`${username}:${password}`);
+
+			return (input: RequestInfo | URL, init?: RequestInit) => {
+				const headers = new Headers(init?.headers || {});
+				headers.set("Authorization", `Basic ${encoded}`);
+
+				return fetch(input, { ...init, headers });
+			};
+		}
+
+		if (credential?.type === 'bearer') {
+			throw new Error('Not implemented.');
+		}
+
+		return undefined;
 	}
 
 	_getQueryType(query: string): SparqlQueryType | undefined {

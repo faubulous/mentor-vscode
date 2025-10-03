@@ -1,4 +1,4 @@
-export * from './add-sparql-endpoint';
+export * from './create-sparql-endpoint';
 export * from './analyze-workspace';
 export * from './clear-query-history';
 export * from './create-notebook-from-editor';
@@ -24,7 +24,7 @@ export * from './reveal-definition';
 export * from './reveal-shape-definition';
 export * from './save-sparql-query-results';
 export * from './select-active-language';
-export * from './set-sparql-endpoint';
+export * from './select-sparql-endpoint';
 export * from './show-webview';
 export * from './sort-prefixes';
 export * from './update-prefixes';
