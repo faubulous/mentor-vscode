@@ -68,7 +68,7 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	 * @param viewColumn The view column to show the panel in.
 	 * @throws If the controller is not registered or does not support panels.
 	 */
-	show(viewColumn: vscode.ViewColumn = vscode.ViewColumn.Active) {
+	async show(viewColumn: vscode.ViewColumn = vscode.ViewColumn.Active) {
 		if (!this.context) {
 			throw new Error('Extension context is not initialized. Please register the controller first.');
 		}

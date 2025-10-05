@@ -14,6 +14,7 @@ export const MENTOR_WORKSPACE_STORE: SparqlEndpoint = {
 	id: 'workspace',
 	endpointUrl: 'workspace://',
 	configTarget: vscode.ConfigurationTarget.Global,
+	isRemovable: false
 };
 
 /**

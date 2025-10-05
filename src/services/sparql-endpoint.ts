@@ -28,4 +28,9 @@ export interface SparqlEndpoint {
      * Indicates if this connection has unsaved changes.
      */
     isModified?: boolean;
+
+    /**
+     * Indicates if this connection can be removed by the user.
+     */
+    isRemovable?: boolean;
 }

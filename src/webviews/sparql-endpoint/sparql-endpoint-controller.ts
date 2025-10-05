@@ -16,7 +16,7 @@ export class SparqlEndpointController extends WebviewController<SparqlEndpointMe
     /**
      * Opens the SPARQL endpoint editor in the editor area and optionally preloads the endpoint.
      */
-    edit(endpoint?: SparqlEndpoint) {
+    async edit(endpoint?: SparqlEndpoint) {
         super.show(vscode.ViewColumn.Active);
 
         if (endpoint) {

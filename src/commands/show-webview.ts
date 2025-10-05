@@ -23,30 +23,30 @@ export async function showWebview(arg?: { id?: string } | string) {
   const targets = collectTargets();
   const id = typeof arg === 'string' ? arg : arg?.id;
 
-  let picked: Target | undefined = id
+  let selectedView: Target | undefined = id
     ? targets.find(t => t.id === id)
     : await vscode.window.showQuickPick(
       targets.map(t => ({ label: t.label, description: t.id, t })),
       { title: 'Select webview to show' }
     ).then(r => r?.t);
 
-  if (!picked) {
+  if (!selectedView) {
     return;
   }
 
   // Find controller instance
   const controller = (controllers as any[]).find(c =>
-    (picked!.kind === 'panel' ? c.panelId === picked!.id : c.viewType === picked!.id)
+    (selectedView!.kind === 'panel' ? c.panelId === selectedView!.id : c.viewType === selectedView!.id)
   );
 
   if (!controller) {
-    vscode.window.showErrorMessage(`Webview not found for id: ${picked.id}`);
+    vscode.window.showErrorMessage(`Webview not found for id: ${selectedView.id}`);
     return;
   }
 
-  if (picked.kind === 'panel') {
+  if (selectedView.kind === 'panel') {
     controller.show(vscode.ViewColumn.Active);
   } else {
-    await vscode.commands.executeCommand(`${picked.id}.focus`);
+    await vscode.commands.executeCommand(`${selectedView.id}.focus`);
   }
 }

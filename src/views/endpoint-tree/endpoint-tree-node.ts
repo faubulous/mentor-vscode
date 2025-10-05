@@ -58,7 +58,7 @@ export class EndpointTreeNode {
 		return {
 			title: '',
 			command: 'mentor.command.editSparqlEndpoint',
-			arguments: [this.endpoint]
+			arguments: [this.endpoint, true]
 		};
 	}
 

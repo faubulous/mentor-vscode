@@ -171,7 +171,6 @@ export class SparqlEndpointView extends WebviewComponent<
 					<section className="row" style={{ gap: '0.5em', minHeight: '40px', marginBottom: 0 }}>
 						<vscode-textfield
 							required
-							autoFocus
 							value={endpoint.endpointUrl}
 							placeholder="https://example.org/sparql"
 							disabled={this._isReadOnly()}
