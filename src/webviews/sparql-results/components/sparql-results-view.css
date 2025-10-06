@@ -100,9 +100,8 @@
 }
 
 .mentor-notebook-output vscode-table {
-	/* Prevent the table from capturing mouse scroll events and blocking notebook scroll. */
-	pointer-events: none;
-	margin-bottom: 1px;
+	/* Add a margin to the bottom to avoid cutting off the table border in notebooks. */
+	margin-bottom: 5px;
 }
 
 .mentor-panel vscode-table {

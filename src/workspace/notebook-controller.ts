@@ -62,7 +62,7 @@ export class NotebookController {
 		execution.start(Date.now());
 
 		try {
-			let queryState = mentor.sparqlQueryService.createQuery(cell);
+			let queryState = mentor.sparqlQueryService.createQueryFromDocument(cell);
 
 			queryState = await mentor.sparqlQueryService.executeQuery(queryState);
 
