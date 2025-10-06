@@ -1,0 +1,24 @@
+.bindings-table vscode-table-header-cell .cell,
+.bindings-table vscode-table-row .cell {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.bindings-table vscode-table-header-cell .cell .cell-value,
+.bindings-table vscode-table-row .cell .cell-value {
+	flex-grow: 1;
+}
+
+.bindings-table vscode-table-header-cell .cell .cell-actions,
+.bindings-table vscode-table-row .cell .cell-actions {
+	display: flex;
+	flex-direction: row;
+	gap: 4px;
+	opacity: 0;
+}
+
+.bindings-table vscode-table-header-cell:hover .cell .cell-actions,
+.bindings-table vscode-table-row .cell:hover .cell-actions {
+	opacity: 1;
+}

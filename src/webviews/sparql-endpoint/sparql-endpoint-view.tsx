@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { createRoot } from 'react-dom/client';
+import { VscodeContextMenu, VscodeIcon, VscodeTabs } from '@vscode-elements/elements';
 import { WebviewHost } from '@/webviews/webview-host';
 import { WebviewComponent } from '@/webviews/webview-component';
 import { SparqlEndpointMessages } from './sparql-endpoint-messages';
@@ -39,6 +40,12 @@ export class SparqlEndpointView extends WebviewComponent<
 > {
 	messaging = WebviewHost.getMessaging<SparqlEndpointMessages>();
 
+	tabsRef = React.createRef<VscodeTabs>();
+
+	contextMenu: VscodeContextMenu | null = null;
+
+	contextMenuToggle: VscodeIcon | null = null;
+
 	componentDidMount() {
 		super.componentDidMount();
 
@@ -54,7 +61,7 @@ export class SparqlEndpointView extends WebviewComponent<
 		});
 
 		// Listen for tab selection changes on the auth tabs
-		const tabsElement = document.querySelector('vscode-tabs');
+		const tabsElement = this.tabsRef.current;
 
 		if (tabsElement) {
 			tabsElement.addEventListener('vsc-tabs-select', this._handleAuthTabChange);
@@ -62,7 +69,7 @@ export class SparqlEndpointView extends WebviewComponent<
 	}
 
 	componentWillUnmount(): void {
-		const tabsElement = document.querySelector('vscode-tabs');
+		const tabsElement = this.tabsRef.current;
 
 		if (tabsElement) {
 			tabsElement.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
@@ -127,25 +134,6 @@ export class SparqlEndpointView extends WebviewComponent<
 		}
 	}
 
-	private _getSelectedCredentialOrNull(): Credential | null {
-		switch (this.state.selectedAuthTabIndex) {
-			case 1:
-				return this.state.basicCredential;
-			case 2:
-				return this.state.bearerCredential;
-			default:
-				return null;
-		}
-	}
-
-	private _isValid() {
-		return this.state?.endpoint.endpointUrl.trim().length > 0;
-	}
-
-	private _isReadOnly() {
-		return this.state?.endpoint.endpointUrl === 'workspace://';
-	}
-
 	render() {
 		const endpoint: SparqlEndpoint = this.state?.endpoint;
 
@@ -153,58 +141,107 @@ export class SparqlEndpointView extends WebviewComponent<
 			return <div>Loading...</div>;
 		}
 
-		const isChecking = this.state?.isChecking || false;
 		const connectionError = this.state?.connectionError;
+
+		console.log(String(endpoint.configTarget));
 
 		return (
 			<div className="sparql-endpoint-view-container">
-				<div className="header">
-					<h2>SPARQL Endpoint</h2>
-					<a href="#"
-						onClick={e => this._handleDeleteEndpoint(e)}>
-						Delete
-					</a>
-				</div>
-				<form onSubmit={e => this._handleSaveEndpoint(e)} onChange={e => this._handleFormChange(e)}>
-					<vscode-label>Endpoint URL</vscode-label>
-
-					<section className="row" style={{ gap: '0.5em', minHeight: '40px', marginBottom: 0 }}>
-						<vscode-textfield
-							required
-							value={endpoint.endpointUrl}
-							placeholder="https://example.org/sparql"
-							disabled={this._isReadOnly()}
-							onInput={e => {
-								endpoint.endpointUrl = (e.target as HTMLInputElement).value;
-
-								this._handleFormChange(e)
-							}}
-						/>
-						<vscode-button
-							type="button"
-							disabled={!this._isValid() || this._isReadOnly() || isChecking}
-							onClick={(e) => this._handleTestEndpoint(e)}>
-							{isChecking ? <vscode-progress-ring></vscode-progress-ring> : 'Test'}
-						</vscode-button>
-					</section>
-
-					<div className="status">
-						{connectionError === null && <React.Fragment>
-							<span className="codicon codicon-pass"></span> Success
-						</React.Fragment>}
-						{connectionError && <React.Fragment>
-							<span className="codicon codicon-error"></span> {connectionError ? `Error ${connectionError.code}: ${connectionError.message}` : 'Unreachable'}
-						</React.Fragment>}
+				{this._isConnectionTesting() && <vscode-progress-bar />}
+				<form onSubmit={(e) => this._handleSaveEndpoint(e)} onChange={(e) => this._handleFormChange(e)}>
+					<div className="form-header">
+						<div className="form-title">
+							<h2>SPARQL Endpoint</h2>
+						</div>
+						<div className="form-buttons">
+							<div className="menu-wrapper">
+								<vscode-icon
+									action-icon
+									name="kebab-vertical"
+									title="More Actions"
+									ref={this._setContextMenuToggleRef.bind(this)}
+								></vscode-icon>
+								<vscode-context-menu ref={this._setContextMenuRef.bind(this)}>
+								</vscode-context-menu>
+							</div>
+							<vscode-button
+								type="submit"
+								disabled={!this._isFormValid() || this._isFormReadOnly()}>
+								Save
+							</vscode-button>
+						</div>
 					</div>
+					<vscode-divider></vscode-divider>
+					<vscode-form-group variant="vertical">
+						<vscode-label>Endpoint URL</vscode-label>
+						<div className={this._getEndpointSectionClassName()}>
+							<vscode-textfield
+								required
+								value={endpoint.endpointUrl}
+								placeholder="https://example.org/sparql"
+								disabled={this._isFormReadOnly()}
+								onInput={e => {
+									endpoint.endpointUrl = (e.target as HTMLInputElement).value;
 
-					<section>
-						<vscode-label style={{ marginTop: '1em' }}>Authentication</vscode-label>
+									this._handleFormChange(e)
+								}}
+							>
+								{this._isFormReadOnly() && <vscode-icon
+									slot="content-after"
+									name="lock"
+									className="icon-readonly"
+								></vscode-icon>}
+								{this._isConnectionTesting() && <vscode-icon
+									slot="content-after"
+									name="ellipsis"
+									className="icon-testing"
+								></vscode-icon>}
+								{this._hasConnectionError() && <vscode-icon
+									slot="content-after"
+									name="error"
+									className="icon-error"
+								></vscode-icon>}
+								{this._isConnectionSuccessful() && <vscode-icon
+									slot="content-after"
+									name="pass"
+									className="icon-success"
+								></vscode-icon>}
+							</vscode-textfield>
+							<vscode-button
+								type="button"
+								icon="debug-disconnect"
+								title="Test Connection"
+								disabled={!this._isFormValid() || this._isFormReadOnly() || this._isConnectionTesting()}
+								onClick={(e) => this._handleTestEndpoint(e)}>
+							</vscode-button>
+						</div>
+						{connectionError && <div className='section-endpoint-status status-error'>
+							{connectionError.code === 0 && <p>Unreachable</p>}
+							{connectionError.code !== 0 && <h4>Error {connectionError.code}</h4>}
+							{connectionError.code !== 0 && <p>connectionError.message</p>}
+						</div>}
+					</vscode-form-group>
+
+					<vscode-form-group variant="vertical">
+						<vscode-label>Configuration Scope</vscode-label>
+						<vscode-single-select
+							value={String(endpoint.configTarget)}
+							disabled={this._isFormReadOnly()}
+							onChange={(e) => this._handleFormChange(e)}>
+							<vscode-option value="1">User</vscode-option>
+							<vscode-option value="2">Workspace</vscode-option>
+							<vscode-option value="3">Workspace Folder</vscode-option>
+						</vscode-single-select>
+					</vscode-form-group>
+
+					<vscode-form-group variant="vertical">
+						<vscode-label>Authentication</vscode-label>
 						<vscode-tabs selectedIndex={this.state?.selectedAuthTabIndex ?? 0}>
 							<vscode-tab-header id="none" slot="header">
 								None
 							</vscode-tab-header>
 							<vscode-tab-panel>
-								No authentication
+								<span className="text-muted">No authentication</span>
 							</vscode-tab-panel>
 							<vscode-tab-header id="basic" slot="header">
 								Basic
@@ -219,14 +256,95 @@ export class SparqlEndpointView extends WebviewComponent<
 								{this._renderBearerAuthFields()}
 							</vscode-tab-panel>
 						</vscode-tabs>
-					</section>
-
-					<vscode-button type="submit" disabled={!this._isValid() || this._isReadOnly()}>
-						Save
-					</vscode-button>
+					</vscode-form-group>
 				</form>
 			</div>
 		);
+	}
+
+	private _setContextMenuRef(contextMenu: VscodeContextMenu | null) {
+		if (this.contextMenu) {
+			this.contextMenu.removeEventListener('vsc-context-menu-select', this._onDidContextMenuSelectItem);
+		}
+
+		this.contextMenu = contextMenu;
+
+		if (contextMenu) {
+			contextMenu.data = [
+				{ label: 'Delete', value: 'delete' }
+			];
+
+			contextMenu.addEventListener('vsc-context-menu-select', this._onDidContextMenuSelectItem);
+		}
+	}
+
+	private _onDidContextMenuSelectItem = (event: any) => {
+		if (event.detail?.value === 'delete') {
+			this._handleDeleteEndpoint(event);
+		}
+	}
+
+	private _setContextMenuToggleRef(contextMenuToggle: VscodeIcon | null) {
+		this.contextMenuToggle = contextMenuToggle;
+
+		if (contextMenuToggle) {
+			contextMenuToggle.addEventListener('click', () => {
+				if (this.contextMenu) {
+					this.contextMenu!.show = !this.contextMenu!.show;
+				}
+			});
+		}
+	}
+
+	private _isFormValid() {
+		return this.state?.endpoint.endpointUrl.trim().length > 0;
+	}
+
+	private _isFormReadOnly() {
+		return this.state?.endpoint.isProtected === true;
+	}
+
+	private _isConnectionTesting() {
+		return this.state?.isChecking === true;
+	}
+
+	private _isConnectionSuccessful() {
+		return this.state?.connectionError === null;
+	}
+
+	private _hasConnectionError() {
+		return this.state?.connectionError !== null && this.state?.connectionError !== undefined;
+	}
+
+	private _getSelectedCredentialOrNull(): Credential | null {
+		switch (this.state.selectedAuthTabIndex) {
+			case 1:
+				return this.state.basicCredential;
+			case 2:
+				return this.state.bearerCredential;
+			default:
+				return null;
+		}
+	}
+
+	private _getEndpointSectionClassName() {
+		const result = ['section-endpoint-url', 'row'];
+
+		if (this._isFormReadOnly()) {
+			result.push('readonly');
+		}
+
+		if (this._isConnectionTesting()) {
+			result.push('status-testing');
+		}
+
+		if (this.state?.connectionError) {
+			result.push('status-error');
+		} else if (this.state?.connectionError === null) {
+			result.push('status-success');
+		}
+
+		return result.join(' ');
 	}
 
 	private _renderBasicAuthFields() {
@@ -238,7 +356,7 @@ export class SparqlEndpointView extends WebviewComponent<
 					value={credential?.username ?? ''}
 					placeholder="Username"
 					label="Username"
-					disabled={this._isReadOnly()}
+					disabled={this._isFormReadOnly()}
 					onInput={e => {
 						const updatedCredential = {
 							...credential!,
@@ -252,7 +370,7 @@ export class SparqlEndpointView extends WebviewComponent<
 					placeholder="Password"
 					label="Password"
 					type="password"
-					disabled={this._isReadOnly()}
+					disabled={this._isFormReadOnly()}
 					onInput={e => {
 						const updatedCredential = {
 							...credential!,
@@ -274,7 +392,7 @@ export class SparqlEndpointView extends WebviewComponent<
 					value={credential?.token ?? ''}
 					placeholder="Token"
 					label="Token"
-					disabled={this._isReadOnly()}
+					disabled={this._isFormReadOnly()}
 					onInput={e => {
 						const updatedCredential = {
 							...credential!,
@@ -306,6 +424,8 @@ export class SparqlEndpointView extends WebviewComponent<
 
 	private _handleSaveEndpoint(e: any) {
 		e.preventDefault();
+
+		console.log('Save endpoint', this.state.endpoint, this._getSelectedCredentialOrNull());
 
 		this.messaging.postMessage({
 			id: 'SaveSparqlEndpoint',

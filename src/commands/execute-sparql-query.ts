@@ -13,6 +13,6 @@ export async function executeSparqlQuery(query: SparqlQueryExecutionState): Prom
             throw new Error(`Document with IRI ${query.documentIri} not found.`);
         }
 
-        await sparqlResultsWebviewProvider.executeQuery(document);
+        await sparqlResultsWebviewProvider.executeQueryFromTextDocument(document);
     }
 }

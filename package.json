@@ -164,9 +164,9 @@
         "when": "editorLangId == 'sparql' && !notebookCellType"
       },
       {
-        "command": "mentor.command.deleteSparqlEndpoint",
+        "command": "mentor.command.removeSparqlEndpoint",
         "key": "delete",
-        "when": "view == mentor.view.endpointTree && viewItem.isRemovable !== false"
+        "when": "view == mentor.view.endpointTree && viewItem.isProtected !== true"
       }
     ],
     "notebooks": [

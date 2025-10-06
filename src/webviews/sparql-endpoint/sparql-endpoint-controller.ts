@@ -38,6 +38,8 @@ export class SparqlEndpointController extends WebviewController<SparqlEndpointMe
                     await mentor.credentialStorageService.deleteCredential(message.endpoint.endpointUrl);
                     await mentor.credentialStorageService.saveCredential(message.endpoint.endpointUrl, message.credential);
                 }
+
+                vscode.window.showInformationMessage(`SPARQL endpoint saved.`);
                 return;
             }
             case 'UpdateSparqlEndpoint': {

@@ -13,5 +13,5 @@ export const removeSparqlEndpoint = async (connection: SparqlEndpoint) => {
 		return;
 	}
 
-	await mentor.sparqlEndpointService.deleteEndpoint('global', connection.id);
+	await mentor.sparqlEndpointService.deleteEndpoint(connection.configTarget, connection.id);
 };

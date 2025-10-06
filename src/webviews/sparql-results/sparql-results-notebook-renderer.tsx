@@ -16,10 +16,18 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
 
     const messaging: WebviewMessaging<SparqlResultsWebviewMessages> = {
         postMessage: (message: SparqlResultsWebviewMessages) => {
-            context.postMessage?.(message);
+            if (context.postMessage) {
+                context.postMessage(message);
+            } else {
+                console.warn('No postMessage function available in context.');
+            }
         },
         onMessage: (handler: (message: SparqlResultsWebviewMessages) => void) => {
-            context.onDidReceiveMessage?.(handler);
+            if(context.onDidReceiveMessage) {
+                context.onDidReceiveMessage(handler);
+            } else {
+                console.warn('No onDidReceiveMessage function available in context.');
+            }
         },
     };
 

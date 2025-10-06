@@ -14,6 +14,7 @@ import {
   VscodeLabel,
   VscodeMultiSelect,
   VscodeOption,
+  VscodeProgressBar,
   VscodeProgressRing,
   VscodeRadio,
   VscodeRadioGroup,
@@ -79,6 +80,7 @@ declare module "react" {
       "vscode-label": WebComponentProps<VscodeLabel>;
       "vscode-multi-select": WebComponentProps<VscodeMultiSelect>;
       "vscode-option": WebComponentProps<VscodeOption>;
+      "vscode-progress-bar": WebComponentProps<VscodeProgressBar>;
       "vscode-progress-ring": WebComponentProps<VscodeProgressRing>;
       "vscode-radio": WebComponentProps<VscodeRadio>;
       "vscode-radio-group": WebComponentProps<VscodeRadioGroup>;

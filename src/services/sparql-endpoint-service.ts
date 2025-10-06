@@ -14,7 +14,7 @@ export const MENTOR_WORKSPACE_STORE: SparqlEndpoint = {
 	id: 'workspace',
 	endpointUrl: 'workspace://',
 	configTarget: vscode.ConfigurationTarget.Global,
-	isRemovable: false
+	isProtected: true
 };
 
 /**
@@ -34,7 +34,7 @@ export class SparqlEndpointService {
 
 	private _defaultEndpointUrl = 'https://';
 
-	private _defaultConfigTarget: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global;
+	private _defaultConfigTarget: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace;
 
 	/**
 	 * Loads connections from the various configuration storage locactions into memory.
@@ -69,11 +69,15 @@ export class SparqlEndpointService {
 				connections.push(...inspect.globalValue);
 			}
 
+			if (configTarget === vscode.ConfigurationTarget.Workspace && inspect.workspaceValue) {
+				connections.push(...inspect.workspaceValue);
+			}
+
 			if (configTarget === vscode.ConfigurationTarget.WorkspaceFolder && inspect.workspaceFolderValue) {
 				connections.push(...inspect.workspaceFolderValue);
 			}
 
-			return connections.map(c => ({ ...c, scope: configTarget }));
+			return connections.map(c => ({ ...c, configTarget: configTarget }));
 		} else {
 			return [];
 		}
@@ -84,10 +88,12 @@ export class SparqlEndpointService {
 	 */
 	public async saveConfiguration(): Promise<void> {
 		const globalConnections = this._connections.filter(c => c.configTarget === vscode.ConfigurationTarget.Global && c.id !== MENTOR_WORKSPACE_STORE.id);
-		const workspaceConnections = this._connections.filter(c => c.configTarget === vscode.ConfigurationTarget.WorkspaceFolder && c.id !== MENTOR_WORKSPACE_STORE.id);
+		const workspaceConnections = this._connections.filter(c => c.configTarget === vscode.ConfigurationTarget.Workspace && c.id !== MENTOR_WORKSPACE_STORE.id);
+		// const workspaceFolderConnections = this._connections.filter(c => c.configTarget === vscode.ConfigurationTarget.WorkspaceFolder && c.id !== MENTOR_WORKSPACE_STORE.id);
 
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
-		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.WorkspaceFolder);
+		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
+		// await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceFolderConnections, vscode.ConfigurationTarget.WorkspaceFolder);
 
 		this._onDidChangeConnections.fire();
 	}

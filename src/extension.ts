@@ -85,6 +85,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 	subscribe(context, vscode.commands.registerCommand('mentor.command.createNotebookFromEditor', commands.createNotebookFromEditor));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.createSparqlQueryFile', commands.createSparqlQueryFile));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.deletePrefixes', commands.deletePrefixes));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.executeDescribeQuery', commands.executeDescribeQuery));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.editSparqlEndpoint', commands.editSparqlEndpoint));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.executeNotebookCell', commands.executeNotebookCell));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQuery', commands.executeSparqlQuery));

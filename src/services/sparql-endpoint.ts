@@ -30,7 +30,7 @@ export interface SparqlEndpoint {
     isModified?: boolean;
 
     /**
-     * Indicates if this connection can be removed by the user.
+     * Indicates if this connection can be removed or modified by the user.
      */
-    isRemovable?: boolean;
+    isProtected?: boolean;
 }

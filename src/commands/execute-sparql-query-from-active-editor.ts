@@ -9,5 +9,5 @@ export async function executeSparqlQueryFromActiveEditor(): Promise<void> {
         return;
     }
 
-    await sparqlResultsWebviewProvider.executeQuery(editor.document);
+    await sparqlResultsWebviewProvider.executeQueryFromTextDocument(editor.document);
 }

@@ -95,38 +95,61 @@ export class SparqlQueryService {
 	}
 
 	/**
-	 * Prepares a SPARQL query for execution.
+	 * Creates a new SPARQL query state from a query string.
 	 * @param querySource The source document or notebook cell where the query is stored.
-	 * @returns A new SparqlQueryContext instance.
+	 * @param query The SPARQL query string.
+	 * @returns A new SparqlQueryExecutionState instance.
 	 */
-	createQuery(querySource: vscode.TextDocument | vscode.NotebookCell): SparqlQueryExecutionState {
-		let document: vscode.TextDocument;
-		let cellIndex: number | undefined;
-		let notebookIri: vscode.Uri | undefined;
-
-		if ('notebook' in querySource && querySource.notebook) {
-			const cell = querySource as vscode.NotebookCell;
-
-			document = cell.document;
-			notebookIri = cell.notebook.uri;
-			cellIndex = cell.index;
-		} else {
-			document = querySource as vscode.TextDocument;
-		}
-
-		const query = document.getText();
+	createQuery(querySource: vscode.TextDocument | vscode.NotebookCell, query: string): SparqlQueryExecutionState {
+		const source = this._getDocumentFromQuerySource(querySource);
+		const workspaceIri = WorkspaceUri.toWorkspaceUri(source.document.uri);
 		const queryType = this._getQueryType(query);
-		const workspaceIri = WorkspaceUri.toWorkspaceUri(document.uri);
 
 		return {
-			documentIri: document.uri.toString(),
+			documentIri: source.document.uri.toString(),
 			workspaceIri: workspaceIri?.toString(),
-			notebookIri: notebookIri?.toString(),
-			cellIndex,
+			notebookIri: source.notebookIri?.toString(),
+			cellIndex: source.cellIndex,
 			query,
 			queryType,
 			startTime: Date.now()
 		};
+	}
+
+	/**
+	 * Creates a new SPARQL query state from a document or notebook cell.
+	 * @param querySource The source document or notebook cell where the query is stored.
+	 * @returns A new SparqlQueryContext instance.
+	 */
+	createQueryFromDocument(querySource: vscode.TextDocument | vscode.NotebookCell): SparqlQueryExecutionState {
+		const source = this._getDocumentFromQuerySource(querySource);
+		const workspaceIri = WorkspaceUri.toWorkspaceUri(source.document.uri);
+		const query = source.document.getText();
+		const queryType = this._getQueryType(query);
+
+		return {
+			documentIri: source.document.uri.toString(),
+			workspaceIri: workspaceIri?.toString(),
+			notebookIri: source.notebookIri?.toString(),
+			cellIndex: source.cellIndex,
+			query,
+			queryType,
+			startTime: Date.now()
+		};
+	}
+
+	private _getDocumentFromQuerySource(querySource: vscode.TextDocument | vscode.NotebookCell) {
+		if ('notebook' in querySource && querySource.notebook) {
+			const cell = querySource as vscode.NotebookCell;
+
+			return {
+				document: cell.document,
+				notebookIri: cell.notebook.uri,
+				cellIndex: cell.index
+			};
+		} else {
+			return { document: querySource as vscode.TextDocument };
+		}
 	}
 
 	private _loadQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
@@ -297,7 +320,9 @@ export class SparqlQueryService {
 	}
 
 	private _getQueryText(context: SparqlQueryExecutionState): string | undefined {
-		if (context.notebookIri) {
+		if (context.query) {
+			return context.query;
+		} else if (context.notebookIri) {
 			const notebook = vscode.workspace.notebookDocuments.find(
 				n => n.uri.toString() === context.notebookIri
 			);
