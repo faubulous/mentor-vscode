@@ -30,8 +30,6 @@ export class EndpointTree implements TreeView {
 		});
 
 		vscode.commands.registerCommand('mentor.command.refreshEndpointsTree', async () => {
-			console.log('mentor.command.refreshEndpointsTree');
-
 			this.treeDataProvider.refresh();
 		});
 	}

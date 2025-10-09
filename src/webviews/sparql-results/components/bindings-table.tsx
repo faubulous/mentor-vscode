@@ -37,7 +37,7 @@ class BindingsTableBase extends WebviewComponent<
 		}
 
 		return (
-			<vscode-table className="bindings-table" zebra bordered-rows>
+			<vscode-table className="bindings-table" zebra bordered-rows resizable>
 				{result.rows.length > 0 &&
 					<vscode-table-header>
 						{result.columns.map(v => (
@@ -136,7 +136,7 @@ class BindingsTableBase extends WebviewComponent<
 	}
 
 	private _renderLiteral(binding: Term) {
-		return (<pre>{binding.value}</pre>);
+		return (<pre className="mtk12">{binding.value}</pre>);
 	}
 
 	private _handleCopyColumnClick(column: string, result: BindingsResult) {

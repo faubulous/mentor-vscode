@@ -78,7 +78,7 @@ export class WorkspaceIndexer {
 					const size = (await vscode.workspace.fs.stat(uri)).size;
 
 					if (size > maxSize && !force) {
-						console.log(`Mentor: Skipping large file ${uri.toString()} (${size} bytes)`);
+						console.debug(`Mentor: Skipping large file ${uri.toString()} (${size} bytes)`);
 						continue;
 					}
 
@@ -93,7 +93,7 @@ export class WorkspaceIndexer {
 
 				const endTime = performance.now();
 
-				console.log(`Mentor: Indexing took ${endTime - startTime} ms`);
+				console.debug(`Mentor: Indexing took ${endTime - startTime} ms`);
 			}
 
 			this._indexed = true;

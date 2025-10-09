@@ -46,19 +46,19 @@ export class SparqlResultsWebviewController extends WebviewController<SparqlResu
         }
     }
 
-    private async _prepareQueryExecution() {
-        if (!this.view) {
+    private async _prepareQueryExecution(queryContext: vscode.TextDocument | vscode.NotebookCell) {
+        if ('uri' in queryContext && queryContext.uri.scheme === 'vscode-notebook-cell') {
+            return;
+        } else if (!this.view) {
             await vscode.commands.executeCommand('workbench.action.togglePanel');
             await vscode.commands.executeCommand(`${this.viewType}.focus`);
         }
     }
 
     private async _executeQuery(queryState: SparqlQueryExecutionState) {
-        if (!this.view) {
-            throw new Error('Webview view is not initialized.');
+        if (this.view) {
+            this.view.show();
         }
-
-        this.view.show();
 
         const updatedState = await mentor.sparqlQueryService.executeQuery(queryState);
 
@@ -68,8 +68,6 @@ export class SparqlResultsWebviewController extends WebviewController<SparqlResu
                 content: result.document,
                 language: 'turtle'
             });
-
-            console.log(result);
 
             await vscode.window.showTextDocument(document);
         }
@@ -81,7 +79,7 @@ export class SparqlResultsWebviewController extends WebviewController<SparqlResu
      * @param query The SPARQL query string.
      */
     async executeQuery(queryContext: vscode.TextDocument | vscode.NotebookCell, query: string) {
-        await this._prepareQueryExecution();
+        await this._prepareQueryExecution(queryContext);
 
         const queryState = mentor.sparqlQueryService.createQuery(queryContext, query);
 
@@ -90,13 +88,13 @@ export class SparqlResultsWebviewController extends WebviewController<SparqlResu
 
     /**
      * Executes a SPARQL query from the contents of a text document or notebook cell.
-     * @param document The text document or notebook cell containing the SPARQL query.
+     * @param queryContext The text document or notebook cell containing the SPARQL query.
      * @returns A promise that resolves when the query execution is complete.
      */
-    async executeQueryFromTextDocument(document: vscode.TextDocument | vscode.NotebookCell) {
-        await this._prepareQueryExecution();
+    async executeQueryFromTextDocument(queryContext: vscode.TextDocument | vscode.NotebookCell) {
+        await this._prepareQueryExecution(queryContext);
 
-        const queryState = mentor.sparqlQueryService.createQueryFromDocument(document);
+        const queryState = mentor.sparqlQueryService.createQueryFromDocument(queryContext);
 
         await this._executeQuery(queryState);
     }

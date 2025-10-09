@@ -79,8 +79,6 @@ export class SparqlEndpointView extends WebviewComponent<
 	override componentDidReceiveMessage(message: SparqlEndpointMessages) {
 		switch (message.id) {
 			case 'EditSparqlEndpoint': {
-				console.log('EditSparqlEndpoint', message.endpoint);
-
 				this.setState({
 					endpoint: message.endpoint,
 					selectedAuthTabIndex: 0,
@@ -142,8 +140,6 @@ export class SparqlEndpointView extends WebviewComponent<
 		}
 
 		const connectionError = this.state?.connectionError;
-
-		console.log(String(endpoint.configTarget));
 
 		return (
 			<div className="sparql-endpoint-view-container">
@@ -216,7 +212,7 @@ export class SparqlEndpointView extends WebviewComponent<
 							</vscode-button>
 						</div>
 						{connectionError && <div className='section-endpoint-status status-error'>
-							{connectionError.code === 0 && <p>Unreachable</p>}
+							{connectionError.code === 0 && <p>Host unreachable. This might indicate a failing CORS preflight request or a network connection problem.</p>}
 							{connectionError.code !== 0 && <h4>Error {connectionError.code}</h4>}
 							{connectionError.code !== 0 && <p>connectionError.message</p>}
 						</div>}
@@ -424,8 +420,6 @@ export class SparqlEndpointView extends WebviewComponent<
 
 	private _handleSaveEndpoint(e: any) {
 		e.preventDefault();
-
-		console.log('Save endpoint', this.state.endpoint, this._getSelectedCredentialOrNull());
 
 		this.messaging.postMessage({
 			id: 'SaveSparqlEndpoint',
