@@ -13,7 +13,7 @@ const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 export const MENTOR_WORKSPACE_STORE: SparqlEndpoint = {
 	id: 'workspace',
 	endpointUrl: 'workspace://',
-	configTarget: vscode.ConfigurationTarget.Global,
+	configTarget: vscode.ConfigurationTarget.Workspace,
 	isProtected: true
 };
 
@@ -49,7 +49,7 @@ export class SparqlEndpointService {
 	public loadConfiguration(): void {
 		this._connections = [MENTOR_WORKSPACE_STORE];
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));
-		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.WorkspaceFolder));
+		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Workspace));
 
 		this._onDidChangeConnections.fire();
 	}
@@ -73,29 +73,53 @@ export class SparqlEndpointService {
 				connections.push(...inspect.workspaceValue);
 			}
 
-			if (configTarget === vscode.ConfigurationTarget.WorkspaceFolder && inspect.workspaceFolderValue) {
-				connections.push(...inspect.workspaceFolderValue);
-			}
-
 			return connections.map(c => ({ ...c, configTarget: configTarget }));
 		} else {
 			return [];
 		}
 	}
 
+	private _getEndpointDataForConfigTarget(configTarget: vscode.ConfigurationTarget) {
+		return this._connections
+			.filter(c => c.configTarget === configTarget && c.id !== MENTOR_WORKSPACE_STORE.id)
+			.map(c => ({
+				id: c.id,
+				endpointUrl: c.endpointUrl
+			}));
+	}
+
 	/**
 	 * Persists the in-memory connections to configuration.
 	 */
 	public async saveConfiguration(): Promise<void> {
-		const globalConnections = this._connections.filter(c => c.configTarget === vscode.ConfigurationTarget.Global && c.id !== MENTOR_WORKSPACE_STORE.id);
-		const workspaceConnections = this._connections.filter(c => c.configTarget === vscode.ConfigurationTarget.Workspace && c.id !== MENTOR_WORKSPACE_STORE.id);
-		// const workspaceFolderConnections = this._connections.filter(c => c.configTarget === vscode.ConfigurationTarget.WorkspaceFolder && c.id !== MENTOR_WORKSPACE_STORE.id);
+		const globalConnections = this._getEndpointDataForConfigTarget(vscode.ConfigurationTarget.Global);
+		const workspaceConnections = this._getEndpointDataForConfigTarget(vscode.ConfigurationTarget.Workspace);
+
+		console.log("globalConnections:", globalConnections);
+		console.log("workspaceConnections:", workspaceConnections);
 
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
-		// await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceFolderConnections, vscode.ConfigurationTarget.WorkspaceFolder);
+
+		for(const connection of this._connections) {
+			connection.isNew = false;
+			connection.isModified = false;
+		}
 
 		this._onDidChangeConnections.fire();
+	}
+
+	/**
+	 * Get the configuration targets supported for storing SPARQL connections.
+	 * @remarks The Workspace Folder target is not supported because it would require
+	 *          to select a specific workspace folder when creating a new connection.
+	 * @returns An array of supported configuration targets.
+	 */
+	public getSupportedConfigTargets(): vscode.ConfigurationTarget[] {
+		return [
+			vscode.ConfigurationTarget.Global,
+			vscode.ConfigurationTarget.Workspace
+		];
 	}
 
 	/**
@@ -106,6 +130,20 @@ export class SparqlEndpointService {
 		return this._connections;
 	}
 
+	/**
+	 * Retrieves all SPARQL connections for a specific configuration target.
+	 * @param configTarget The configuration target to filter connections by.
+	 * @returns An array of SPARQL connections for the specified configuration target.
+	 */
+	public getConnectionsForConfigTarget(configTarget: vscode.ConfigurationTarget): SparqlEndpoint[] {
+		return this._connections.filter(c => c.configTarget === configTarget);
+	}
+
+	/**
+	 * Retrieves a SPARQL connection by its ID.
+	 * @param id The ID of the connection to retrieve.
+	 * @returns The SPARQL connection or `undefined` if not found.
+	 */
 	public getConnection(id: string): SparqlEndpoint | undefined {
 		return this._connections.find(c => c.id === id);
 	}

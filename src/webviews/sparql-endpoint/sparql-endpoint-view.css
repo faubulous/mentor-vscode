@@ -111,3 +111,11 @@
 .sparql-endpoint-view-container .section-endpoint-status.status-error p {
 	margin: 0;
 }
+
+.sparql-endpoint-view-container vscode-form-group vscode-label {
+	margin-bottom: 0.5em;
+}
+
+.sparql-endpoint-view-container vscode-tab-header {
+	padding: 0 0.75em;
+}

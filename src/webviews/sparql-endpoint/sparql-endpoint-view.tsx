@@ -1,10 +1,9 @@
-import * as React from 'react';
 import { createRoot } from 'react-dom/client';
-import { VscodeContextMenu, VscodeIcon, VscodeTabs } from '@vscode-elements/elements';
+import { VscodeSingleSelect, VscodeTabs } from '@vscode-elements/elements';
 import { WebviewHost } from '@/webviews/webview-host';
 import { WebviewComponent } from '@/webviews/webview-component';
 import { SparqlEndpointMessages } from './sparql-endpoint-messages';
-import { SparqlEndpoint } from '@/services/sparql-endpoint';
+import { SparqlEndpoint, getConfigurationTargetLabel } from '@/services/sparql-endpoint';
 import { Credential } from '@/services/credential-storage-service';
 import stylesheet from './sparql-endpoint-view.css';
 
@@ -40,11 +39,33 @@ export class SparqlEndpointView extends WebviewComponent<
 > {
 	messaging = WebviewHost.getMessaging<SparqlEndpointMessages>();
 
-	tabsRef = React.createRef<VscodeTabs>();
+	private authTabs: VscodeTabs | null = null;
 
-	contextMenu: VscodeContextMenu | null = null;
+	private setAuthTabsRef = (element: VscodeTabs | null) => {
+		if (this.authTabs) {
+			this.authTabs.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
+		}
 
-	contextMenuToggle: VscodeIcon | null = null;
+		this.authTabs = element;
+
+		if (element) {
+			element.addEventListener('vsc-tabs-select', this._handleAuthTabChange);
+		}
+	};
+
+	private configTargetSelect: VscodeSingleSelect | null = null;
+
+	private setConfigTargetRef = (element: VscodeSingleSelect | null) => {
+		if (this.configTargetSelect) {
+			this.configTargetSelect.removeEventListener('change', this._handleConfigTargetChange);
+		}
+
+		this.configTargetSelect = element;
+
+		if (element) {
+			element.addEventListener('change', this._handleConfigTargetChange);
+		}
+	};
 
 	componentDidMount() {
 		super.componentDidMount();
@@ -59,20 +80,15 @@ export class SparqlEndpointView extends WebviewComponent<
 			isChecking: false,
 			connectionError: undefined
 		});
-
-		// Listen for tab selection changes on the auth tabs
-		const tabsElement = this.tabsRef.current;
-
-		if (tabsElement) {
-			tabsElement.addEventListener('vsc-tabs-select', this._handleAuthTabChange);
-		}
 	}
 
 	componentWillUnmount(): void {
-		const tabsElement = this.tabsRef.current;
+		if (this.authTabs) {
+			this.authTabs.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
+		}
 
-		if (tabsElement) {
-			tabsElement.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
+		if (this.configTargetSelect) {
+			this.configTargetSelect.removeEventListener('change', this._handleConfigTargetChange);
 		}
 	}
 
@@ -144,22 +160,21 @@ export class SparqlEndpointView extends WebviewComponent<
 		return (
 			<div className="sparql-endpoint-view-container">
 				{this._isConnectionTesting() && <vscode-progress-bar />}
-				<form onSubmit={(e) => this._handleSaveEndpoint(e)} onChange={(e) => this._handleFormChange(e)}>
+				<form onSubmit={(e) => this._handleSaveEndpoint(e)}>
 					<div className="form-header">
 						<div className="form-title">
 							<h2>SPARQL Endpoint</h2>
 						</div>
 						<div className="form-buttons">
-							<div className="menu-wrapper">
+							<vscode-toolbar-button
+								disabled={this._isFormReadOnly()}
+								onClick={(e) => this._handleDeleteEndpoint(e)}>
 								<vscode-icon
 									action-icon
-									name="kebab-vertical"
-									title="More Actions"
-									ref={this._setContextMenuToggleRef.bind(this)}
+									name="trash"
+									title="Delete"
 								></vscode-icon>
-								<vscode-context-menu ref={this._setContextMenuRef.bind(this)}>
-								</vscode-context-menu>
-							</div>
+							</vscode-toolbar-button>
 							<vscode-button
 								type="submit"
 								disabled={!this._isFormValid() || this._isFormReadOnly()}>
@@ -176,11 +191,7 @@ export class SparqlEndpointView extends WebviewComponent<
 								value={endpoint.endpointUrl}
 								placeholder="https://example.org/sparql"
 								disabled={this._isFormReadOnly()}
-								onInput={e => {
-									endpoint.endpointUrl = (e.target as HTMLInputElement).value;
-
-									this._handleFormChange(e)
-								}}
+								onInput={e => this._handleEndpointUrlChange(e)}
 							>
 								{this._isFormReadOnly() && <vscode-icon
 									slot="content-after"
@@ -212,27 +223,26 @@ export class SparqlEndpointView extends WebviewComponent<
 							</vscode-button>
 						</div>
 						{connectionError && <div className='section-endpoint-status status-error'>
-							{connectionError.code === 0 && <p>Host unreachable. This might indicate a failing CORS preflight request or a network connection problem.</p>}
+							{connectionError.code === 0 && this._renderConnectionTestErrorMessage()}
 							{connectionError.code !== 0 && <h4>Error {connectionError.code}</h4>}
 							{connectionError.code !== 0 && <p>connectionError.message</p>}
 						</div>}
 					</vscode-form-group>
-
 					<vscode-form-group variant="vertical">
 						<vscode-label>Configuration Scope</vscode-label>
 						<vscode-single-select
+							ref={this.setConfigTargetRef}
 							value={String(endpoint.configTarget)}
-							disabled={this._isFormReadOnly()}
-							onChange={(e) => this._handleFormChange(e)}>
+							disabled={this._isFormReadOnly()}>
 							<vscode-option value="1">User</vscode-option>
 							<vscode-option value="2">Workspace</vscode-option>
-							<vscode-option value="3">Workspace Folder</vscode-option>
 						</vscode-single-select>
 					</vscode-form-group>
-
 					<vscode-form-group variant="vertical">
 						<vscode-label>Authentication</vscode-label>
-						<vscode-tabs selectedIndex={this.state?.selectedAuthTabIndex ?? 0}>
+						<vscode-tabs
+							ref={this.setAuthTabsRef}
+							selectedIndex={this.state?.selectedAuthTabIndex ?? 0}>
 							<vscode-tab-header id="none" slot="header">
 								None
 							</vscode-tab-header>
@@ -256,40 +266,6 @@ export class SparqlEndpointView extends WebviewComponent<
 				</form>
 			</div>
 		);
-	}
-
-	private _setContextMenuRef(contextMenu: VscodeContextMenu | null) {
-		if (this.contextMenu) {
-			this.contextMenu.removeEventListener('vsc-context-menu-select', this._onDidContextMenuSelectItem);
-		}
-
-		this.contextMenu = contextMenu;
-
-		if (contextMenu) {
-			contextMenu.data = [
-				{ label: 'Delete', value: 'delete' }
-			];
-
-			contextMenu.addEventListener('vsc-context-menu-select', this._onDidContextMenuSelectItem);
-		}
-	}
-
-	private _onDidContextMenuSelectItem = (event: any) => {
-		if (event.detail?.value === 'delete') {
-			this._handleDeleteEndpoint(event);
-		}
-	}
-
-	private _setContextMenuToggleRef(contextMenuToggle: VscodeIcon | null) {
-		this.contextMenuToggle = contextMenuToggle;
-
-		if (contextMenuToggle) {
-			contextMenuToggle.addEventListener('click', () => {
-				if (this.contextMenu) {
-					this.contextMenu!.show = !this.contextMenu!.show;
-				}
-			});
-		}
 	}
 
 	private _isFormValid() {
@@ -379,6 +355,20 @@ export class SparqlEndpointView extends WebviewComponent<
 		);
 	}
 
+	private _renderConnectionTestErrorMessage() {
+		return (
+			<div>
+				<p>The host is unreachable. This might be for the following reasons:</p>
+				<ul>
+					<li>Incorrect endpoint URL</li>
+					<li>Endpoint is offline</li>
+					<li>Failing CORS preflight request</li>
+					<li>Firewall blocking the request</li>
+				</ul>
+			</div>
+		)
+	}
+
 	private _renderBearerAuthFields() {
 		const credential = this.state?.bearerCredential;
 
@@ -401,8 +391,9 @@ export class SparqlEndpointView extends WebviewComponent<
 		);
 	}
 
-	private _handleFormChange(e: any) {
+	private _handleEndpointUrlChange(e: any) {
 		this.state.endpoint.isModified = true;
+		this.state.endpoint.endpointUrl = (e.target as HTMLInputElement).value;
 
 		this.setState({ ...this.state, hasUnsavedChanges: true });
 
@@ -412,10 +403,28 @@ export class SparqlEndpointView extends WebviewComponent<
 		});
 	}
 
-	private _handleAuthTabChange = (event: any) => {
-		const i = event.detail?.selectedIndex ?? AuthTabIndex.None;
+	private _handleConfigTargetChange = (e: any) => {
+		if (this.configTargetSelect) {
+			const endpoint = this.state.endpoint;
+			endpoint.configTarget = parseInt(this.configTargetSelect.value, 10);
 
-		this.setState({ selectedAuthTabIndex: i });
+			this.setState({ endpoint, hasUnsavedChanges: true });
+
+			this.messaging.postMessage({
+				id: 'UpdateSparqlEndpoint',
+				endpoint: this.state.endpoint
+			});
+		}
+	}
+
+	private _handleAuthTabChange = (event: any) => {
+		if (this.authTabs) {
+			const i = this.authTabs.selectedIndex ?? AuthTabIndex.None;
+
+			console.log('_handleAuthTabChange', i);
+
+			this.setState({ selectedAuthTabIndex: i });
+		}
 	};
 
 	private _handleSaveEndpoint(e: any) {

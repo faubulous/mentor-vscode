@@ -15,6 +15,8 @@ class BindingsTableBase extends WebviewComponent<
 	{},
 	SparqlResultsWebviewMessages
 > {
+	private _renderKey: number = 0;
+
 	componentDidMount() {
 		super.componentDidMount();
 
@@ -22,6 +24,8 @@ class BindingsTableBase extends WebviewComponent<
 	}
 
 	render() {
+		this._renderKey++;
+
 		const { queryContext, paging } = this.props.sparqlResults;
 
 		if (!paging) {
@@ -37,7 +41,7 @@ class BindingsTableBase extends WebviewComponent<
 		}
 
 		return (
-			<vscode-table className="bindings-table" zebra bordered-rows resizable>
+			<vscode-table className="bindings-table" zebra bordered-rows resizable key={this._renderKey}>
 				{result.rows.length > 0 &&
 					<vscode-table-header>
 						{result.columns.map(v => (
@@ -75,7 +79,7 @@ class BindingsTableBase extends WebviewComponent<
 				<div className="cell-value">{column}</div>
 				<div className="cell-actions">
 					<vscode-toolbar-button
-						title="Copy Values to Clipboard"
+						title="Copy Column Values"
 						onClick={() => this._handleCopyColumnClick(column, this.props.sparqlResults.queryContext.result as BindingsResult)}>
 						<span className="codicon codicon-copy"></span>
 					</vscode-toolbar-button>
@@ -136,13 +140,30 @@ class BindingsTableBase extends WebviewComponent<
 	}
 
 	private _renderLiteral(binding: Term) {
-		return (<pre className="mtk12">{binding.value}</pre>);
+		return (
+			<div className="cell">
+				<pre className="cell-value">
+					{binding.value}
+				</pre>
+				<div className="cell-actions">
+					<vscode-toolbar-button
+						title="Copy Cell Value"
+						onClick={() => this._handleCopyCellClick(binding)}>
+						<span className="codicon codicon-copy"></span>
+					</vscode-toolbar-button>
+				</div>
+			</div>
+		);
 	}
 
 	private _handleCopyColumnClick(column: string, result: BindingsResult) {
 		const values = result.rows.map(row => row[column]?.value ?? '').join('\n');
-
+		
 		navigator.clipboard.writeText(values);
+	}
+
+	private _handleCopyCellClick(binding: Term) {
+		navigator.clipboard.writeText(binding.value);
 	}
 
 	private _handleDescribeNamedNode(node: Term) {
