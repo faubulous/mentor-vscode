@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { v4 as uuidv4 } from 'uuid';
-import { Credential } from './credential-storage-service';
+import { AuthCredential } from './credential';
 import { ComunicaSource, SparqlEndpointSource } from './sparql-query-source';
 import { SparqlEndpoint } from './sparql-endpoint';
 
@@ -248,9 +248,10 @@ export class SparqlEndpointService {
 			const source: SparqlEndpointSource = {
 				type: 'sparql',
 				value: connection.endpointUrl,
+				connection: connection,
 			};
 
-			const credential = await mentor.credentialStorageService.getCredential(connection.endpointUrl);
+			const credential = await mentor.credentialStorageService.getCredential(connection.id);
 
 			source.headers = this.getAuthHeaders(credential);
 
@@ -359,7 +360,7 @@ export class SparqlEndpointService {
 	 * @param credential If provided, uses these credentials instead of fetching stored ones.
 	 * @returns `null` if the connection is successful, or an error object { code, message } otherwise.
 	 */
-	async testConnection(connection: SparqlEndpoint, credential?: Credential | null): Promise<null | { code: number; message: string }> {
+	async testConnection(connection: SparqlEndpoint, credential?: AuthCredential | null): Promise<null | { code: number; message: string }> {
 		try {
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/sparql-query',
@@ -367,10 +368,10 @@ export class SparqlEndpointService {
 			};
 
 			if (credential === undefined) {
-				credential = await mentor.credentialStorageService.getCredential(connection.endpointUrl);
+				credential = await mentor.credentialStorageService.getCredential(connection.id);
 			}
 
-			const authHeaders = this.getAuthHeaders(credential as Credential);
+			const authHeaders = this.getAuthHeaders(credential as AuthCredential);
 
 			if (authHeaders) {
 				Object.assign(headers, authHeaders);
@@ -403,7 +404,7 @@ export class SparqlEndpointService {
 	/**
 	 * Returns HTTP Authorization headers for the given URI.
 	 */
-	getAuthHeaders(credential?: Credential): Record<string, string> {
+	getAuthHeaders(credential?: AuthCredential): Record<string, string> {
 		const headers: Record<string, string> = {};
 
 		if (credential?.type === 'basic') {

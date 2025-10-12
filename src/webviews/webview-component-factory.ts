@@ -24,6 +24,10 @@ export class WebviewComponentFactory {
 
 		const panel = vscode.window.createWebviewPanel(id, title, viewColumn, options);
 		panel.webview.html = this._getWebviewHtml(panel.webview);
+		panel.iconPath = {
+			light: this._getIconPath('database-light.svg'),
+			dark: this._getIconPath('database-dark.svg')
+		}
 
 		return panel;
 	}
@@ -40,7 +44,10 @@ export class WebviewComponentFactory {
 
 		return view;
 	}
-
+	private _getIconPath(iconName: string): vscode.Uri {
+		return vscode.Uri.joinPath(this._context.extensionUri, 'media', 'icons', iconName);
+	}
+	
 	private _getWebviewOptions(): vscode.WebviewOptions {
 		return {
 			enableScripts: true,

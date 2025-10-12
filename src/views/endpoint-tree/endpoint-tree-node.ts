@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
-import { SparqlEndpoint } from '@/services/sparql-endpoint';
+import { getConfigurationTargetLabel, SparqlEndpoint } from '@/services/sparql-endpoint';
 
 /**
  * Base class for a node in the SPARQL connection tree.
@@ -22,17 +21,22 @@ export class EndpointTreeNode {
 	/**
 	 * The default collapsible state of the tree item.
 	 */
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
 	/**
 	 * The SPARQL connection represented by this tree item.
 	 */
 	endpoint: SparqlEndpoint | undefined;
 
-	constructor(connection: SparqlEndpoint) {
-		this.id = connection.id;
-		this.label = connection.endpointUrl;
-		this.endpoint = connection;
+	constructor(context: SparqlEndpoint | vscode.ConfigurationTarget) {
+		if (typeof context === 'number') {
+			this.id = context.toString();
+			this.label = getConfigurationTargetLabel(context);
+		} else {
+			this.id = context.id;
+			this.label = context.endpointUrl;
+			this.endpoint = context;
+		}
 	}
 
 	/**
@@ -55,11 +59,13 @@ export class EndpointTreeNode {
 	 * @returns A command that is executed when the tree item is clicked.
 	 */
 	getCommand(): vscode.Command | undefined {
-		return {
-			title: '',
-			command: 'mentor.command.editSparqlEndpoint',
-			arguments: [this.endpoint, true]
-		};
+		if (this.endpoint) {
+			return {
+				title: '',
+				command: 'mentor.command.editSparqlEndpoint',
+				arguments: [this.endpoint, true]
+			};
+		}
 	}
 
 	/**
@@ -90,7 +96,7 @@ export class EndpointTreeNode {
 	 * @returns A description string or `undefined` if no description should be shown.
 	 */
 	getDescription(): string {
-		if(this.endpoint?.isModified) {
+		if (this.endpoint?.isModified) {
 			return 'Unsaved';
 		} else {
 			return '';
@@ -110,7 +116,11 @@ export class EndpointTreeNode {
 	 * @returns A theme icon, a file system path or undefined if no icon should be shown.
 	 */
 	getIcon(): vscode.ThemeIcon | undefined {
-		return undefined;
+		if (this.endpoint) {
+			return new vscode.ThemeIcon('database', this.getIconColor());
+		} else {
+			return undefined;
+		}
 	}
 
 	/**

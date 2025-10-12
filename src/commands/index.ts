@@ -20,7 +20,7 @@ export * from './open-graph';
 export * from './open-in-browser';
 export * from './open-settings';
 export * from './remove-from-query-history';
-export * from './remove-sparql-endpoint';
+export * from './delete-sparql-endpoint';
 export * from './reveal-definition';
 export * from './reveal-shape-definition';
 export * from './save-sparql-query-results';

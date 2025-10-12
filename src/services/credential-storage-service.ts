@@ -1,11 +1,5 @@
 import * as vscode from 'vscode';
-
-/**
- * Represents a credential, either Basic (username/password) or Bearer token.
- */
-export type Credential =
-    | { type: 'basic'; username: string; password: string }
-    | { type: 'bearer'; token: string };
+import { AuthCredential } from './credential';
 
 /**
  * Service for managing credentials using the SecretStorage of Visual Studio Code.
@@ -30,7 +24,7 @@ export class CredentialStorageService {
 	 * @param uri The URI for which to store the credential.
 	 * @param credential The credential to store.
 	 */
-    async saveCredential(uri: string, credential: Credential): Promise<void> {
+    async saveCredential(uri: string, credential: AuthCredential): Promise<void> {
         if (!this._secretStorage) throw this._notInitializedError();
 
         await this._secretStorage.store(this._getKey(uri), JSON.stringify(credential));
@@ -41,12 +35,12 @@ export class CredentialStorageService {
 	 * @param uri The URI for which to retrieve the credential.
 	 * @returns The stored credential, or undefined if none is found.
 	 */
-    async getCredential(uri: string): Promise<Credential | undefined> {
+    async getCredential(uri: string): Promise<AuthCredential | undefined> {
         if (!this._secretStorage) throw this._notInitializedError();
 
         const value = await this._secretStorage.get(this._getKey(uri));
 
-        return value ? JSON.parse(value) as Credential : undefined;
+        return value ? JSON.parse(value) as AuthCredential : undefined;
     }
 
 	/**
@@ -64,7 +58,7 @@ export class CredentialStorageService {
 	 * @param uri The URI for which to update the credential.
 	 * @param credential The new credential to store.
 	 */
-    async updateCredential(uri: string, credential: Credential): Promise<void> {
+    async updateCredential(uri: string, credential: AuthCredential): Promise<void> {
         await this.saveCredential(uri, credential);
     }
 }

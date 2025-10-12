@@ -35,8 +35,8 @@ export class SparqlEndpointController extends WebviewController<SparqlEndpointMe
                 await mentor.sparqlEndpointService.saveConfiguration();
 
                 if (message.credential) {
-                    await mentor.credentialStorageService.deleteCredential(message.endpoint.endpointUrl);
-                    await mentor.credentialStorageService.saveCredential(message.endpoint.endpointUrl, message.credential);
+                    await mentor.credentialStorageService.deleteCredential(message.endpoint.id);
+                    await mentor.credentialStorageService.saveCredential(message.endpoint.id, message.credential);
                 }
 
                 vscode.window.showInformationMessage(`SPARQL endpoint saved.`);
@@ -47,9 +47,13 @@ export class SparqlEndpointController extends WebviewController<SparqlEndpointMe
                 return;
             }
             case 'GetSparqlEndpointCredential': {
-                const credential = await mentor.credentialStorageService.getCredential(message.endpointUrl);
+                const credential = await mentor.credentialStorageService.getCredential(message.connection.id);
 
-                this.postMessage({ id: 'GetSparqlEndpointCredentialResult', credential });
+                this.postMessage({
+                    id: 'GetSparqlEndpointCredentialResult',
+                    connection: message.connection,
+                    credential
+                });
                 return;
             }
             case 'TestSparqlEndpoint': {

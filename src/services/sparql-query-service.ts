@@ -10,7 +10,7 @@ import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sp
 import { AsyncIterator } from 'asynciterator';
 import { SparqlEndpointService } from './sparql-endpoint-service';
 import { SparqlVariableParser } from './sparql-variable-parser';
-import { Credential } from './credential-storage-service';
+import { AuthCredential } from './credential';
 
 /**
  * The key for storing query history in local storage.
@@ -234,8 +234,8 @@ export class SparqlQueryService {
 			if (source.type === 'sparql') {
 				// Note: Setting a custom fetch handler because some SPARQL endpoints do not 
 				// work properly with the default Comuica fetch implementation.
-				const endpointUrl = source.value;
-				const credential = await mentor.credentialStorageService.getCredential(endpointUrl);
+				const connection = source.connection;
+				const credential = await mentor.credentialStorageService.getCredential(connection.id);
 
 				options.fetch = this._getFetchHandler(credential);
 			}
@@ -276,11 +276,13 @@ export class SparqlQueryService {
 		return context;
 	}
 
-	_getFetchHandler(credential?: Credential) {
+	_getFetchHandler(credential?: AuthCredential) {
 		if (credential?.type === 'basic') {
 			const username = credential.username;
 			const password = credential.password;
 			const encoded = btoa(`${username}:${password}`);
+
+			console.log('_getFetchHandler:', username, password, encoded);
 
 			return (input: RequestInfo | URL, init?: RequestInit) => {
 				const headers = new Headers(init?.headers || {});

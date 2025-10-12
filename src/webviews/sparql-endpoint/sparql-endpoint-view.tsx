@@ -3,8 +3,8 @@ import { VscodeSingleSelect, VscodeTabs } from '@vscode-elements/elements';
 import { WebviewHost } from '@/webviews/webview-host';
 import { WebviewComponent } from '@/webviews/webview-component';
 import { SparqlEndpointMessages } from './sparql-endpoint-messages';
-import { SparqlEndpoint, getConfigurationTargetLabel } from '@/services/sparql-endpoint';
-import { Credential } from '@/services/credential-storage-service';
+import { SparqlEndpoint } from '@/services/sparql-endpoint';
+import { AuthCredential, BasicAuthCredential, BearerAuthCredential } from '@/services/credential';
 import stylesheet from './sparql-endpoint-view.css';
 
 enum AuthTabIndex {
@@ -24,9 +24,11 @@ interface SparqlEndpointViewState {
 
 	selectedAuthTabIndex: AuthTabIndex;
 
-	basicCredential: { type: 'basic'; username: string; password: string };
+	basicCredential: BasicAuthCredential;
 
-	bearerCredential: { type: 'bearer'; token: string };
+	bearerCredential: BearerAuthCredential;
+
+	passwordVisible?: boolean;
 }
 
 /**
@@ -76,7 +78,7 @@ export class SparqlEndpointView extends WebviewComponent<
 			endpoint: { id: 'new', endpointUrl: '', configTarget: 1 },
 			selectedAuthTabIndex: 0,
 			basicCredential: { type: 'basic', username: '', password: '' },
-			bearerCredential: { type: 'bearer', token: '' },
+			bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
 			isChecking: false,
 			connectionError: undefined
 		});
@@ -99,14 +101,14 @@ export class SparqlEndpointView extends WebviewComponent<
 					endpoint: message.endpoint,
 					selectedAuthTabIndex: 0,
 					basicCredential: { type: 'basic', username: '', password: '' },
-					bearerCredential: { type: 'bearer', token: '' },
+					bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
 					isChecking: false,
 					connectionError: undefined
 				});
 
 				this.messaging.postMessage({
 					id: 'GetSparqlEndpointCredential',
-					endpointUrl: message.endpoint.endpointUrl
+					connection: message.endpoint
 				});
 				return;
 			}
@@ -132,6 +134,7 @@ export class SparqlEndpointView extends WebviewComponent<
 						selectedAuthTabIndex: 2,
 						bearerCredential: {
 							type: 'bearer',
+							prefix: credential.prefix ?? 'Bearer',
 							token: credential.token ?? ''
 						}
 					});
@@ -225,7 +228,7 @@ export class SparqlEndpointView extends WebviewComponent<
 						{connectionError && <div className='section-endpoint-status status-error'>
 							{connectionError.code === 0 && this._renderConnectionTestErrorMessage()}
 							{connectionError.code !== 0 && <h4>Error {connectionError.code}</h4>}
-							{connectionError.code !== 0 && <p>connectionError.message</p>}
+							{connectionError.code !== 0 && <p>{connectionError.message}</p>}
 						</div>}
 					</vscode-form-group>
 					<vscode-form-group variant="vertical">
@@ -288,7 +291,7 @@ export class SparqlEndpointView extends WebviewComponent<
 		return this.state?.connectionError !== null && this.state?.connectionError !== undefined;
 	}
 
-	private _getSelectedCredentialOrNull(): Credential | null {
+	private _getSelectedCredentialOrNull(): AuthCredential | null {
 		switch (this.state.selectedAuthTabIndex) {
 			case 1:
 				return this.state.basicCredential;
@@ -323,10 +326,11 @@ export class SparqlEndpointView extends WebviewComponent<
 		const credential = this.state?.basicCredential;
 
 		return (
-			<div className="column">
+			<vscode-form-group variant='vertical'>
+				<vscode-label>Username</vscode-label>
 				<vscode-textfield
 					value={credential?.username ?? ''}
-					placeholder="Username"
+					placeholder="myuser"
 					label="Username"
 					disabled={this._isFormReadOnly()}
 					onInput={e => {
@@ -337,11 +341,11 @@ export class SparqlEndpointView extends WebviewComponent<
 						this.setState({ basicCredential: updatedCredential });
 					}}
 				/>
+				<vscode-label>Password</vscode-label>
 				<vscode-textfield
 					value={credential?.password ?? ''}
-					placeholder="Password"
 					label="Password"
-					type="password"
+					type={this.state.passwordVisible ? 'text' : 'password'}
 					disabled={this._isFormReadOnly()}
 					onInput={e => {
 						const updatedCredential = {
@@ -350,8 +354,16 @@ export class SparqlEndpointView extends WebviewComponent<
 						};
 						this.setState({ basicCredential: updatedCredential });
 					}}
-				/>
-			</div>
+				>
+					<vscode-icon
+						slot="content-after"
+						name={this.state.passwordVisible ? 'eye-closed' : 'eye'}
+						title="clear-all"
+						action-icon
+						onClick={() => this.setState({ passwordVisible: !this.state.passwordVisible })}
+					></vscode-icon>
+				</vscode-textfield>
+			</vscode-form-group>
 		);
 	}
 
@@ -373,21 +385,38 @@ export class SparqlEndpointView extends WebviewComponent<
 		const credential = this.state?.bearerCredential;
 
 		return (
-			<div className="column">
+			<vscode-form-group variant='vertical'>
+				<vscode-label>Token Prefix</vscode-label>
 				<vscode-textfield
+					value={credential?.prefix ?? ''}
+					placeholder="Bearer"
+					label="Token Prefix"
+					disabled={this._isFormReadOnly()}
+					onInput={e => {
+						const value = (e.target as HTMLInputElement).value;
+
+						this.setState({ bearerCredential: {
+							...credential,
+							prefix: value
+						} });
+					}}
+				/>
+				<vscode-label>Token</vscode-label>
+				<vscode-textarea
 					value={credential?.token ?? ''}
 					placeholder="Token"
 					label="Token"
 					disabled={this._isFormReadOnly()}
 					onInput={e => {
-						const updatedCredential = {
-							...credential!,
-							token: (e.target as HTMLInputElement).value
-						};
-						this.setState({ bearerCredential: updatedCredential });
+						const value = (e.target as HTMLInputElement).value;
+
+						this.setState({ bearerCredential: {
+							...credential,
+							token: value
+						} });
 					}}
 				/>
-			</div>
+			</vscode-form-group>
 		);
 	}
 
@@ -454,7 +483,7 @@ export class SparqlEndpointView extends WebviewComponent<
 	private _handleDeleteEndpoint(e: any) {
 		e.preventDefault();
 
-		this._executeCommand('mentor.command.removeSparqlEndpoint', this.state.endpoint);
+		this._executeCommand('mentor.command.deleteSparqlEndpoint', this.state.endpoint);
 	}
 
 	private _executeCommand(command: string, ...args: any[]) {

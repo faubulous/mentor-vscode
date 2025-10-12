@@ -30,10 +30,30 @@ export class EndpointNodeProvider implements vscode.TreeDataProvider<EndpointTre
 		throw new Error('Method not implemented.');
 	}
 
-	async getChildren(node: EndpointTreeNode): Promise<EndpointTreeNode[] | null | undefined> {
-		const connections = await mentor.sparqlEndpointService.getConnections();
+	async getChildren(node?: EndpointTreeNode): Promise<EndpointTreeNode[] | null | undefined> {
+		if (node) {
+			let target: vscode.ConfigurationTarget;
 
-		return connections.map(connection => new EndpointTreeNode(connection));
+			switch (node.id) {
+				case vscode.ConfigurationTarget.Global.toString():
+					target = vscode.ConfigurationTarget.Global;
+					break;
+				case vscode.ConfigurationTarget.Workspace.toString():
+					target = vscode.ConfigurationTarget.Workspace;
+					break;
+				default:
+					return null;
+			}
+
+			const connections = await mentor.sparqlEndpointService
+				.getConnectionsForConfigTarget(target);
+
+			return connections.map(connection => new EndpointTreeNode(connection));
+		} else {
+			return mentor.sparqlEndpointService
+				.getSupportedConfigTargets()
+				.map(target => new EndpointTreeNode(target));
+		}
 	}
 
 	async getTreeItem(node: EndpointTreeNode): Promise<vscode.TreeItem> {

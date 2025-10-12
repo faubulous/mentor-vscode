@@ -164,7 +164,7 @@
         "when": "editorLangId == 'sparql' && !notebookCellType"
       },
       {
-        "command": "mentor.command.removeSparqlEndpoint",
+        "command": "mentor.command.deleteSparqlEndpoint",
         "key": "delete",
         "when": "view == mentor.view.endpointTree && viewItem.isProtected !== true"
       }
@@ -467,7 +467,7 @@
         "icon": "$(add)"
       },
       {
-        "command": "mentor.command.removeSparqlEndpoint",
+        "command": "mentor.command.deleteSparqlEndpoint",
         "title": "Delete",
         "icon": "$(remove)"
       },
@@ -745,7 +745,7 @@
           "group": "inline"
         },
         {
-          "command": "mentor.command.removeSparqlEndpoint",
+          "command": "mentor.command.deleteSparqlEndpoint",
           "when": "view == mentor.view.endpointTree",
           "group": "z_commands"
         }
@@ -911,6 +911,13 @@
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e016"
+        }
+      },
+      "rdf-graph": {
+        "description": "Graph icon",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e017"
         }
       }
     },

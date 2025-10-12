@@ -34,3 +34,21 @@ export interface SparqlEndpoint {
      */
     isProtected?: boolean;
 }
+
+/**
+ * Get the display label for a configuration target.
+ * @param configTarget The configuration target.
+ * @returns The label for the configuration target.
+ */
+export function getConfigurationTargetLabel(configTarget: vscode.ConfigurationTarget): string {
+    switch (configTarget) {
+        case vscode.ConfigurationTarget.Global:
+            return 'User';
+        case vscode.ConfigurationTarget.Workspace:
+            return 'Workspace';
+        case vscode.ConfigurationTarget.WorkspaceFolder:
+            return 'Workspace Folder';
+        default:
+            return 'Unknown';
+    }
+}

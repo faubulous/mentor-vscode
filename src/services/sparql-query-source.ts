@@ -1,4 +1,5 @@
 import * as rdfjs from '@rdfjs/types';
+import { SparqlEndpoint } from './sparql-endpoint';
 
 /**
  * A Comunica-compatible source configuration for a SPARQL endpoint.
@@ -6,6 +7,7 @@ import * as rdfjs from '@rdfjs/types';
 export interface SparqlEndpointSource {
 	type: 'sparql';
 	value: string;
+	connection: SparqlEndpoint;
 	headers?: Record<string, string>;
 }
 

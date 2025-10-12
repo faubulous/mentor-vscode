@@ -100,7 +100,7 @@ function registerCommands(context: vscode.ExtensionContext) {
 	subscribe(context, vscode.commands.registerCommand('mentor.command.openInBrowser', commands.openInBrowser));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.openSettings', commands.openSettings));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.removeFromQueryHistory', commands.removeFromQueryHistory));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.removeSparqlEndpoint', commands.removeSparqlEndpoint));
+	subscribe(context, vscode.commands.registerCommand('mentor.command.deleteSparqlEndpoint', commands.deleteSparqlEndpoint));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.revealDefinition', commands.revealDefinition));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.revealShapeDefinition', commands.revealShapeDefinition));
 	subscribe(context, vscode.commands.registerCommand('mentor.command.saveSparqlQueryResults', commands.saveSparqlQueryResults));
