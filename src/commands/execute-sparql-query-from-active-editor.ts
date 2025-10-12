@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { sparqlResultsWebviewProvider } from '@/webviews';
+import { sparqlResultsWebviewProvider } from '@src/views/webviews';
 
 export async function executeSparqlQueryFromActiveEditor(): Promise<void> {
     const editor = vscode.window.activeTextEditor;

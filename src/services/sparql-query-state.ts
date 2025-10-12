@@ -1,6 +1,6 @@
-import { PrefixMap } from "@/utilities";
+import { PrefixMap } from "@src/utilities";
 import { Term } from "@rdfjs/types";
-import { getFileName } from "@/utilities/uri";
+import { getFileName } from "@src/utilities/uri";
 
 export type SparqlQueryType = 'bindings' | 'boolean' | 'quads' | 'void';
 

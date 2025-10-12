@@ -1,4 +1,4 @@
-import { mentor } from '@/mentor';
+import { mentor } from '@src/mentor';
 
 export async function removeFromQueryHistory(documentIri: string) {
 	const queryState = mentor.sparqlQueryService.getQueryState(documentIri);

@@ -4,9 +4,9 @@ import { Position } from 'vscode-languageserver-types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
-import { mentor } from '@/mentor';
-import { DocumentContext, TokenTypes } from '@/workspace/document-context';
-import { TurtlePrefixDefinitionService } from '@/services';
+import { mentor } from '@src/mentor';
+import { DocumentContext, TokenTypes } from '@src/workspace/document-context';
+import { TurtlePrefixDefinitionService } from '@src/services';
 import {
 	countLeadingWhitespace,
 	countTrailingWhitespace,
@@ -15,7 +15,7 @@ import {
 	getIriFromToken,
 	getNamespaceDefinition,
 	getTokenPosition
-} from '@/utilities';
+} from '@src/utilities';
 
 /**
  * A document context for Turtle and TriG documents.

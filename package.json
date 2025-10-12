@@ -136,8 +136,8 @@
           "icon": "media/glyphs/ue000-mentor.svg"
         },
         {
-          "id": "mentor.view.endpointTree",
-          "name": "Endpoints",
+          "id": "mentor.view.connectionTree",
+          "name": "Connections",
           "icon": "media/glyphs/ue000-mentor.svg"
         }
       ],
@@ -166,7 +166,7 @@
       {
         "command": "mentor.command.deleteSparqlConnection",
         "key": "delete",
-        "when": "view == mentor.view.endpointTree && viewItem.isProtected !== true"
+        "when": "view == mentor.view.connectionTree && viewItem =~ /connection/ && viewItem.isProtected !== true"
       }
     ],
     "notebooks": [
@@ -457,7 +457,7 @@
     },
     "commands": [
       {
-        "command": "mentor.command.refreshEndpointsTree",
+        "command": "mentor.command.refreshConnectionsTree",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
@@ -698,13 +698,13 @@
           "group": "navigation@99"
         },
         {
-          "command": "mentor.command.refreshEndpointsTree",
-          "when": "view == mentor.view.endpointTree",
+          "command": "mentor.command.refreshConnectionsTree",
+          "when": "view == mentor.view.connectionTree",
           "group": "navigation@99"
         },
         {
           "command": "mentor.command.createSparqlConnection",
-          "when": "view == mentor.view.endpointTree",
+          "when": "view == mentor.view.connectionTree",
           "group": "navigation@99"
         }
       ],
@@ -746,7 +746,7 @@
         },
         {
           "command": "mentor.command.deleteSparqlConnection",
-          "when": "view == mentor.view.endpointTree",
+          "when": "view == mentor.view.connectionTree && viewItem =~ /connection/ && viewItem.isProtected !== true",
           "group": "z_commands"
         }
       ]

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { RdfSyntax, SparqlSyntaxParser } from '@faubulous/mentor-rdf';
-import { TokenTypes } from '@/workspace/document-context';
-import { TurtleDocument } from '@/languages/turtle/turtle-document';
+import { TokenTypes } from '@src/workspace/document-context';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 
 /**
  * A document context for SPARQL documents.

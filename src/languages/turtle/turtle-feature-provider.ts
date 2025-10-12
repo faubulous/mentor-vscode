@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Uri } from '@faubulous/mentor-rdf';
 import { IToken } from "millan";
-import { getTokenPosition } from "@/utilities";
+import { getTokenPosition } from "@src/utilities";
 
 /**
  * Base class of feature providers for Turtle documents.

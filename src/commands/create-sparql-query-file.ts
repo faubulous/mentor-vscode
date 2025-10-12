@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
+import { mentor } from '@src/mentor';
 
 export async function createSparqlQueryFile() {
 	const content = mentor.configuration.get<string>('query.sparql.defaultQueryTemplate', '');

@@ -1,6 +1,6 @@
-import { mentor } from '@/mentor';
-import { NamespaceMap } from '@/utilities';
-import { DEFAULT_PREFIXES } from '@/services';
+import { mentor } from '@src/mentor';
+import { NamespaceMap } from '@src/utilities';
+import { DEFAULT_PREFIXES } from '@src/services';
 
 /**
  * A service for looking up prefixes in the project.

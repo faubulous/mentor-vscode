@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
+import { mentor } from '@src/mentor';
 
 /**
  * Provides a CodeLens to display and change the current SPARQL endpoint.

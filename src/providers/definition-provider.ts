@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
-import { DocumentContext } from '@/workspace/document-context';
+import { mentor } from '@src/mentor';
+import { DocumentContext } from '@src/workspace/document-context';
 
 /**
  * A provider that retrieves the locations of resource definitions in a document.

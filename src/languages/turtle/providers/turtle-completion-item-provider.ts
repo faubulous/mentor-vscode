@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
 import { Uri } from "@faubulous/mentor-rdf";
-import { mentor } from "@/mentor";
-import { getNamespaceIriFromPrefixedName, getTripleComponentType } from "@/utilities";
-import { TurtleDocument } from '@/languages/turtle/turtle-document';
-import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { mentor } from "@src/mentor";
+import { getNamespaceIriFromPrefixedName, getTripleComponentType } from "@src/utilities";
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
 export class TurtleCompletionItemProvider extends TurtleFeatureProvider implements vscode.CompletionItemProvider<vscode.CompletionItem> {
 	/**

@@ -25,7 +25,7 @@ import {
 	getNamespaceDefinition,
 	getIriFromToken,
 	PrefixMap,
-} from '@/utilities';
+} from '@src/utilities';
 
 /**
  * The result of tokenizing a text document.

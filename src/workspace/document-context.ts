@@ -4,9 +4,9 @@ import * as vscode from 'vscode';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { Uri } from '@faubulous/mentor-rdf';
-import { mentor } from '@/mentor';
-import { WorkspaceUri } from '@/workspace/workspace-uri';
-import { TreeLabelStyle } from '@/settings';
+import { mentor } from '@src/mentor';
+import { WorkspaceUri } from '@src/workspace/workspace-uri';
+import { TreeLabelStyle } from '@src/settings';
 import { Range } from 'vscode-languageserver-types';
 
 /**

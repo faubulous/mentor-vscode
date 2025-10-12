@@ -3,16 +3,16 @@ import {
 	ReferenceProvider,
 	DefinitionProvider,
 	HoverProvider
-} from '@/providers';
+} from '@src/providers';
 import {
 	TurtleCodeActionsProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider
-} from '@/languages/turtle/providers';
+} from '@src/languages/turtle/providers';
 import {
 	SparqlCodeLensProvider,
 	SparqlCompletionItemProvider
-} from '@/languages/sparql/providers';
+} from '@src/languages/sparql/providers';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
 const codeLensProvider = new SparqlCodeLensProvider();

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { controllers } from '../webviews/registry';
+import { controllers } from '@src/views/webviews/registry';
 
 type Target = { kind: 'panel' | 'view'; id: string; label: string };
 

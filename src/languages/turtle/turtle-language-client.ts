@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { IToken } from 'millan';
-import { mentor } from '@/mentor';
-import { LanguageClientBase, TurtleDocument } from '@/languages';
+import { mentor } from '@src/mentor';
+import { LanguageClientBase, TurtleDocument } from '@src/languages';
 
 export class TurtleLanguageClient extends LanguageClientBase {
 	constructor(languageId = 'turtle', languageName = 'Turtle') {

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { ReferenceProvider, HoverProvider } from '@/providers';
-import { TurtleCodeLensProvider } from '@/languages/turtle/providers';
-import { XmlRenameProvider } from '@/languages/xml/providers';
+import { ReferenceProvider, HoverProvider } from '@src/providers';
+import { TurtleCodeLensProvider } from '@src/languages/turtle/providers';
+import { XmlRenameProvider } from '@src/languages/xml/providers';
 
 const codelensProvider = new TurtleCodeLensProvider();
 const hoverProvider = new HoverProvider();

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 import { IToken } from 'millan';
-import { getTokenPosition } from '@/utilities';
+import { getTokenPosition } from '@src/utilities';
 
 /**
  * Get the delta of lines caused by a workspace edit.

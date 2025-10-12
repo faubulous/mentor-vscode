@@ -1,4 +1,4 @@
-import { InferenceUri } from '@/workspace/inference-uri';
+import { InferenceUri } from '@src/workspace/inference-uri';
 import * as vscode from 'vscode';
 
 /**

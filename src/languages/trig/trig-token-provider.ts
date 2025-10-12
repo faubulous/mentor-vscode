@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TurtleTokenProvider } from "@/languages/turtle/turtle-token-provider";
+import { TurtleTokenProvider } from "@src/languages/turtle/turtle-token-provider";
 
 export class TrigTokenProvider extends TurtleTokenProvider {
 	register(): vscode.Disposable[] {

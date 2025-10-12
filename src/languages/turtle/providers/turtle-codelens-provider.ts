@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
-import { ReferenceProvider } from '@/providers';
+import { mentor } from '@src/mentor';
+import { ReferenceProvider } from '@src/providers';
 
 /**
  * Provides usage information for resource definitions in Turtle documents.

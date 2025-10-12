@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { mentor } from "@/mentor";
-import { TurtleCompletionItemProvider } from "@/languages/turtle/providers";
-import { TurtleDocument } from "@/languages/turtle";
+import { mentor } from "@src/mentor";
+import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
+import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 

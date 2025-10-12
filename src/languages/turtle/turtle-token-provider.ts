@@ -3,14 +3,14 @@ import {
 	ReferenceProvider,
 	DefinitionProvider,
 	HoverProvider
-} from '@/providers';
+} from '@src/providers';
 import {
 	TurtleCodeActionsProvider,
 	TurtleCodeLensProvider,
 	TurtleCompletionItemProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider
-} from '@/languages/turtle/providers';
+} from '@src/languages/turtle/providers';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
 const codelensProvider = new TurtleCodeLensProvider();

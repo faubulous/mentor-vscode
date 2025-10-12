@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { NotSupportedError } from '@/utilities/error';
-import { WorkspaceUri } from '@/workspace/workspace-uri';
+import { NotSupportedError } from '@src/utilities/error';
+import { WorkspaceUri } from '@src/workspace/workspace-uri';
 
 /**
  * Provides a file system provider for the 'workspace' scheme.

@@ -1,7 +1,7 @@
 import * as n3 from 'n3';
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
 import { NamedNode } from '@rdfjs/types';
+import { mentor } from '@src/mentor';
 
 const { namedNode } = n3.DataFactory;
 

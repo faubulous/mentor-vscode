@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
+import { mentor } from '@src/mentor';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthCredential } from './credential';
 import { ComunicaSource, SparqlConnectionSource } from './sparql-query-source';

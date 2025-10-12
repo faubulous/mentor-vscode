@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { DefinitionTreeNode, getIriFromArgument } from '@/views/definition-tree/definition-tree-node';
-import { InferenceUri } from '@/workspace/inference-uri';
+import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
+import { InferenceUri } from '@src/workspace/inference-uri';
 
 export async function openInBrowser(arg: DefinitionTreeNode | string) {
 	let uri = vscode.Uri.parse(getIriFromArgument(arg), true);

@@ -3,9 +3,9 @@ require('setimmediate');
 import * as vscode from 'vscode';
 import * as languages from './languages';
 import * as commands from './commands';
-import * as views from './views';
+import * as trees from './views/trees';
+import * as webviews from './views/webviews';
 import * as providers from './providers';
-import * as webviews from './webviews';
 import { mentor } from './mentor';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
@@ -70,9 +70,9 @@ function registerUriHandlers(context: vscode.ExtensionContext) {
 
 function registerViews(context: vscode.ExtensionContext) {
 	// TODO: Dispose the view providers in the trees.
-	subscribe(context, new views.WorkspaceTree().treeView);
-	subscribe(context, new views.DefinitionTree().treeView);
-	subscribe(context, new views.EndpointTree().treeView);
+	subscribe(context, new trees.WorkspaceTree().treeView);
+	subscribe(context, new trees.DefinitionTree().treeView);
+	subscribe(context, new trees.ConnectionTree().treeView);
 	// Register all webview controllers via registry
 	subscribe(context, webviews.webviewRegistry.registerAll(context));
 }

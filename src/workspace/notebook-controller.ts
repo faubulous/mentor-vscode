@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { QuadsResult } from '@/services/sparql-query-state';
+import { QuadsResult } from '@src/services/sparql-query-state';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
 

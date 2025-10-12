@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as n3 from 'n3';
-import { mentor } from '@/mentor';
-import { InferenceUri } from '@/workspace/inference-uri';
+import { mentor } from '@src/mentor';
+import { InferenceUri } from '@src/workspace/inference-uri';
 
 const { namedNode } = n3.DataFactory;
 

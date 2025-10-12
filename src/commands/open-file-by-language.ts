@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { WorkspaceUri } from '@/workspace/workspace-uri';
-import { getFileName, getPath } from '@/utilities';
+import { WorkspaceUri } from '@src/workspace/workspace-uri';
+import { getFileName, getPath } from '@src/utilities';
 
 export async function openFileByLanguage(languageId: string) {
 	const files: vscode.Uri[] = [];

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SparqlQueryExecutionState, BindingsResult } from '@/services/sparql-query-state';
+import { SparqlQueryExecutionState, BindingsResult } from '@src/services/sparql-query-state';
 
 export async function saveSparqlQueryResults(context: SparqlQueryExecutionState): Promise<void> {
     let content = '';

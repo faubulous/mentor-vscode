@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { SparqlConnection } from '@/services/sparql-connection';
+import { SparqlConnection } from '@src/services/sparql-connection';
 
 export const deleteSparqlConnection = async (connection: SparqlConnection) => {
 	const confirm = await vscode.window.showWarningMessage(

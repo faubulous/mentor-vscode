@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { Uri } from '@faubulous/mentor-rdf';
-import { mentor } from '@/mentor';
-import { XmlDocument } from '@/languages/xml/xml-document';
-import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
+import { mentor } from '@src/mentor';
+import { XmlDocument } from '@src/languages/xml/xml-document';
+import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';
 
 /**
  * Interface for regular expression based text replacements.
