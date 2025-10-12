@@ -8,7 +8,7 @@ import { WorkspaceUri } from "@/workspace/workspace-uri";
 import { NamespaceMap } from "@/utilities";
 import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { AsyncIterator } from 'asynciterator';
-import { SparqlEndpointService } from './sparql-endpoint-service';
+import { SparqlConnectionService } from './sparql-connection-service';
 import { SparqlVariableParser } from './sparql-variable-parser';
 import { AuthCredential } from './credential';
 
@@ -55,7 +55,7 @@ export class SparqlQueryService {
 	 */
 	onDidQueryExecutionEnd: vscode.Event<SparqlQueryExecutionState> = this._onDidQueryExecutionEnd.event;
 
-	constructor(private _connectionService: SparqlEndpointService) {
+	constructor(private _connectionService: SparqlConnectionService) {
 	}
 
 	/**
@@ -282,8 +282,6 @@ export class SparqlQueryService {
 			const password = credential.password;
 			const encoded = btoa(`${username}:${password}`);
 
-			console.log('_getFetchHandler:', username, password, encoded);
-
 			return (input: RequestInfo | URL, init?: RequestInit) => {
 				const headers = new Headers(init?.headers || {});
 				headers.set("Authorization", `Basic ${encoded}`);
@@ -405,8 +403,6 @@ export class SparqlQueryService {
 			rows,
 			namespaceMap
 		};
-
-		console.debug('serializeBindings:', result);
 
 		return result;
 	}

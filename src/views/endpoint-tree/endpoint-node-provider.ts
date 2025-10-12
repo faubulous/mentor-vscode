@@ -16,7 +16,7 @@ export class EndpointNodeProvider implements vscode.TreeDataProvider<EndpointTre
 	readonly onDidChangeTreeData: vscode.Event<EndpointTreeNode | undefined> = this._onDidChangeTreeData.event;
 
 	constructor() {
-		mentor.sparqlEndpointService.onDidChangeConnections(() => this.refresh());
+		mentor.sparqlConnectionService.onDidChangeConnections(() => this.refresh());
 	}
 
 	/**
@@ -45,12 +45,12 @@ export class EndpointNodeProvider implements vscode.TreeDataProvider<EndpointTre
 					return null;
 			}
 
-			const connections = await mentor.sparqlEndpointService
+			const connections = await mentor.sparqlConnectionService
 				.getConnectionsForConfigTarget(target);
 
 			return connections.map(connection => new EndpointTreeNode(connection));
 		} else {
-			return mentor.sparqlEndpointService
+			return mentor.sparqlConnectionService
 				.getSupportedConfigTargets()
 				.map(target => new EndpointTreeNode(target));
 		}

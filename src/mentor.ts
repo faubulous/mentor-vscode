@@ -10,7 +10,7 @@ import {
 	LocalStorageService,
 	PrefixDownloaderService,
 	PrefixLookupService,
-	SparqlEndpointService,
+	SparqlConnectionService,
 	SparqlQueryService,
 	TurtlePrefixDefinitionService,
 } from './services';
@@ -111,12 +111,12 @@ class MentorExtension {
 	/**
 	 * A service for managing connections to SPARQL endpoints.
 	 */
-	readonly sparqlEndpointService = new SparqlEndpointService();
+	readonly sparqlConnectionService = new SparqlConnectionService();
 
 	/**
 	 * A service for executing queries against RDF triples stores and SPARQL endpoints.
 	 */
-	readonly sparqlQueryService = new SparqlQueryService(this.sparqlEndpointService);
+	readonly sparqlQueryService = new SparqlQueryService(this.sparqlConnectionService);
 
 	/**
 	 * A service for managing credentials using the SecretStorage of Visual Studio Code.
@@ -292,7 +292,7 @@ class MentorExtension {
 		this.credentialStorageService.initialize(context.secrets);
 
 		// Load the endpoint configuration into memory.
-		this.sparqlEndpointService.initialize();
+		this.sparqlConnectionService.initialize();
 
 		// Restore the query execution history.
 		this.sparqlQueryService.initialize();

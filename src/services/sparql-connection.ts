@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 /**
  * Connection information for a SPARQL endpoint.
  */
-export interface SparqlEndpoint {
+export interface SparqlConnection {
     /**
      * The identifier of the connection, usually a UUID.
      */

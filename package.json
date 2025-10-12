@@ -164,7 +164,7 @@
         "when": "editorLangId == 'sparql' && !notebookCellType"
       },
       {
-        "command": "mentor.command.deleteSparqlEndpoint",
+        "command": "mentor.command.deleteSparqlConnection",
         "key": "delete",
         "when": "view == mentor.view.endpointTree && viewItem.isProtected !== true"
       }
@@ -462,12 +462,12 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "mentor.command.createSparqlEndpoint",
+        "command": "mentor.command.createSparqlConnection",
         "title": "New Endpoint...",
         "icon": "$(add)"
       },
       {
-        "command": "mentor.command.deleteSparqlEndpoint",
+        "command": "mentor.command.deleteSparqlConnection",
         "title": "Delete",
         "icon": "$(remove)"
       },
@@ -703,7 +703,7 @@
           "group": "navigation@99"
         },
         {
-          "command": "mentor.command.createSparqlEndpoint",
+          "command": "mentor.command.createSparqlConnection",
           "when": "view == mentor.view.endpointTree",
           "group": "navigation@99"
         }
@@ -745,7 +745,7 @@
           "group": "inline"
         },
         {
-          "command": "mentor.command.deleteSparqlEndpoint",
+          "command": "mentor.command.deleteSparqlConnection",
           "when": "view == mentor.view.endpointTree",
           "group": "z_commands"
         }

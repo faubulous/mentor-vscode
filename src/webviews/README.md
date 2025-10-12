@@ -19,7 +19,7 @@ This folder contains reusable infrastructure and components for building Mentor 
 
 ## Conventions
 
-- Each webview has a bundle built into `out/` (e.g. `sparql-endpoint-view.js`). The controller references it via `componentPath` and the factory generates the final HTML.
+- Each webview has a bundle built into `out/` (e.g. `sparql-connection-view.js`). The controller references it via `componentPath` and the factory generates the final HTML.
 - Use a per-webview `*Messages` union type to keep messages discoverable and typed.
 
 ## Create a new webview (checklist)

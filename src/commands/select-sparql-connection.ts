@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 
-export const selectSparqlEndpoint = async (document: vscode.TextDocument) => {
+export const selectSparqlConnection = async (document: vscode.TextDocument) => {
 	if(!document) {
 		vscode.window.showWarningMessage('No document valid was provided.');
 		return;
 	}
 
 	// Show a quick pick to select from existing SPARQL connections
-	const connections = await mentor.sparqlEndpointService.getConnections();
+	const connections = await mentor.sparqlConnectionService.getConnections();
 
 	if (connections.length === 0) {
 		vscode.window.showWarningMessage('No SPARQL endpoints configured. Please add one first.');
@@ -28,5 +28,5 @@ export const selectSparqlEndpoint = async (document: vscode.TextDocument) => {
 		return;
 	}
 
-	await mentor.sparqlEndpointService.setQuerySourceForDocument(document.uri, selected.connection.id);
+	await mentor.sparqlConnectionService.setQuerySourceForDocument(document.uri, selected.connection.id);
 };

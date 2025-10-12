@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { sparqlResultsWebviewProvider } from './sparql-results/sparql-results-controller';
-import { sparqlEndpointController } from './sparql-endpoint/sparql-endpoint-controller';
+import { sparqlConnectionController } from './sparql-connection/sparql-connection-controller';
 
 /**
  * Centralised register of all webview controllers. Extend this array with 
@@ -8,7 +8,7 @@ import { sparqlEndpointController } from './sparql-endpoint/sparql-endpoint-cont
  */
 const controllers = [
   sparqlResultsWebviewProvider,
-  sparqlEndpointController,
+  sparqlConnectionController,
 ];
 
 /**

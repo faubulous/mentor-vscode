@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getConfigurationTargetLabel, SparqlEndpoint } from '@/services/sparql-endpoint';
+import { getConfigurationTargetLabel, SparqlConnection } from '@/services/sparql-connection';
 
 /**
  * Base class for a node in the SPARQL connection tree.
@@ -26,9 +26,9 @@ export class EndpointTreeNode {
 	/**
 	 * The SPARQL connection represented by this tree item.
 	 */
-	endpoint: SparqlEndpoint | undefined;
+	endpoint: SparqlConnection | undefined;
 
-	constructor(context: SparqlEndpoint | vscode.ConfigurationTarget) {
+	constructor(context: SparqlConnection | vscode.ConfigurationTarget) {
 		if (typeof context === 'number') {
 			this.id = context.toString();
 			this.label = getConfigurationTargetLabel(context);
@@ -62,7 +62,7 @@ export class EndpointTreeNode {
 		if (this.endpoint) {
 			return {
 				title: '',
-				command: 'mentor.command.editSparqlEndpoint',
+				command: 'mentor.command.editSparqlConnection',
 				arguments: [this.endpoint, true]
 			};
 		}

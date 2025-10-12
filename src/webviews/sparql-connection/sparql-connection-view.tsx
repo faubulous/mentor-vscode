@@ -2,10 +2,10 @@ import { createRoot } from 'react-dom/client';
 import { VscodeSingleSelect, VscodeTabs } from '@vscode-elements/elements';
 import { WebviewHost } from '@/webviews/webview-host';
 import { WebviewComponent } from '@/webviews/webview-component';
-import { SparqlEndpointMessages } from './sparql-endpoint-messages';
-import { SparqlEndpoint } from '@/services/sparql-endpoint';
+import { SparqlConnectionMessages } from './sparql-connection-messages';
+import { SparqlConnection } from '@/services/sparql-connection';
 import { AuthCredential, BasicAuthCredential, BearerAuthCredential } from '@/services/credential';
-import stylesheet from './sparql-endpoint-view.css';
+import stylesheet from './sparql-connection-view.css';
 
 enum AuthTabIndex {
 	None = 0,
@@ -13,14 +13,14 @@ enum AuthTabIndex {
 	Bearer = 2
 }
 
-interface SparqlEndpointViewState {
+interface SparqlConnectionViewState {
 	isChecking?: boolean;
 
 	connectionError?: { code: number; message: string } | null | undefined;
 
 	hasUnsavedChanges: boolean;
 
-	endpoint: SparqlEndpoint;
+	endpoint: SparqlConnection;
 
 	selectedAuthTabIndex: AuthTabIndex;
 
@@ -34,12 +34,12 @@ interface SparqlEndpointViewState {
 /**
  * Component to edit SPARQL endpoint settings, e.g. endpoint URL and authentication.
  */
-export class SparqlEndpointView extends WebviewComponent<
+export class SparqlConnectionView extends WebviewComponent<
 	{},
-	SparqlEndpointViewState,
-	SparqlEndpointMessages
+	SparqlConnectionViewState,
+	SparqlConnectionMessages
 > {
-	messaging = WebviewHost.getMessaging<SparqlEndpointMessages>();
+	messaging = WebviewHost.getMessaging<SparqlConnectionMessages>();
 
 	private authTabs: VscodeTabs | null = null;
 
@@ -72,7 +72,7 @@ export class SparqlEndpointView extends WebviewComponent<
 	componentDidMount() {
 		super.componentDidMount();
 
-		this.addStylesheet('sparql-endpoint-styles', stylesheet);
+		this.addStylesheet('sparql-connection-styles', stylesheet);
 
 		this.setState({
 			endpoint: { id: 'new', endpointUrl: '', configTarget: 1 },
@@ -94,11 +94,11 @@ export class SparqlEndpointView extends WebviewComponent<
 		}
 	}
 
-	override componentDidReceiveMessage(message: SparqlEndpointMessages) {
+	override componentDidReceiveMessage(message: SparqlConnectionMessages) {
 		switch (message.id) {
-			case 'EditSparqlEndpoint': {
+			case 'EditSparqlConnection': {
 				this.setState({
-					endpoint: message.endpoint,
+					endpoint: message.connection,
 					selectedAuthTabIndex: 0,
 					basicCredential: { type: 'basic', username: '', password: '' },
 					bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
@@ -107,12 +107,12 @@ export class SparqlEndpointView extends WebviewComponent<
 				});
 
 				this.messaging.postMessage({
-					id: 'GetSparqlEndpointCredential',
-					connection: message.endpoint
+					id: 'GetSparqlConnectionCredential',
+					connectionId: message.connection.id
 				});
 				return;
 			}
-			case 'GetSparqlEndpointCredentialResult': {
+			case 'GetSparqlConnectionCredentialResult': {
 				const credential = message.credential;
 
 				if (!credential) {
@@ -141,7 +141,7 @@ export class SparqlEndpointView extends WebviewComponent<
 				}
 				return;
 			}
-			case 'TestSparqlEndpointResult': {
+			case 'TestSparqlConnectionResult': {
 				this.setState({
 					isChecking: false,
 					connectionError: message.error
@@ -152,7 +152,7 @@ export class SparqlEndpointView extends WebviewComponent<
 	}
 
 	render() {
-		const endpoint: SparqlEndpoint = this.state?.endpoint;
+		const endpoint: SparqlConnection = this.state?.endpoint;
 
 		if (!endpoint) {
 			return <div>Loading...</div>;
@@ -161,7 +161,7 @@ export class SparqlEndpointView extends WebviewComponent<
 		const connectionError = this.state?.connectionError;
 
 		return (
-			<div className="sparql-endpoint-view-container">
+			<div className="sparql-connection-view-container">
 				{this._isConnectionTesting() && <vscode-progress-bar />}
 				<form onSubmit={(e) => this._handleSaveEndpoint(e)}>
 					<div className="form-header">
@@ -427,8 +427,8 @@ export class SparqlEndpointView extends WebviewComponent<
 		this.setState({ ...this.state, hasUnsavedChanges: true });
 
 		this.messaging.postMessage({
-			id: 'UpdateSparqlEndpoint',
-			endpoint: this.state.endpoint
+			id: 'UpdateSparqlConnection',
+			connection: this.state.endpoint
 		});
 	}
 
@@ -440,8 +440,8 @@ export class SparqlEndpointView extends WebviewComponent<
 			this.setState({ endpoint, hasUnsavedChanges: true });
 
 			this.messaging.postMessage({
-				id: 'UpdateSparqlEndpoint',
-				endpoint: this.state.endpoint
+				id: 'UpdateSparqlConnection',
+				connection: this.state.endpoint
 			});
 		}
 	}
@@ -460,8 +460,8 @@ export class SparqlEndpointView extends WebviewComponent<
 		e.preventDefault();
 
 		this.messaging.postMessage({
-			id: 'SaveSparqlEndpoint',
-			endpoint: this.state.endpoint,
+			id: 'SaveSparqlConnection',
+			connection: this.state.endpoint,
 			credential: this._getSelectedCredentialOrNull()
 		});
 
@@ -474,8 +474,8 @@ export class SparqlEndpointView extends WebviewComponent<
 		this.setState({ isChecking: true, connectionError: undefined });
 
 		this.messaging.postMessage({
-			id: 'TestSparqlEndpoint',
-			endpoint: this.state.endpoint,
+			id: 'TestSparqlConnection',
+			connection: this.state.endpoint,
 			credential: this._getSelectedCredentialOrNull()
 		});
 	}
@@ -483,7 +483,7 @@ export class SparqlEndpointView extends WebviewComponent<
 	private _handleDeleteEndpoint(e: any) {
 		e.preventDefault();
 
-		this._executeCommand('mentor.command.deleteSparqlEndpoint', this.state.endpoint);
+		this._executeCommand('mentor.command.deleteSparqlConnection', this.state.endpoint);
 	}
 
 	private _executeCommand(command: string, ...args: any[]) {
@@ -492,4 +492,4 @@ export class SparqlEndpointView extends WebviewComponent<
 }
 
 const root = createRoot(document.getElementById('root')!);
-root.render(<SparqlEndpointView />);
+root.render(<SparqlConnectionView />);

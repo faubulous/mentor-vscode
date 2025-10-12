@@ -2,15 +2,15 @@ import * as vscode from 'vscode';
 import { mentor } from '@/mentor';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthCredential } from './credential';
-import { ComunicaSource, SparqlEndpointSource } from './sparql-query-source';
-import { SparqlEndpoint } from './sparql-endpoint';
+import { ComunicaSource, SparqlConnectionSource } from './sparql-query-source';
+import { SparqlConnection } from './sparql-connection';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 
 /**
  * The non-removable workspace triple store.
  */
-export const MENTOR_WORKSPACE_STORE: SparqlEndpoint = {
+export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 	id: 'workspace',
 	endpointUrl: 'workspace://',
 	configTarget: vscode.ConfigurationTarget.Workspace,
@@ -20,9 +20,9 @@ export const MENTOR_WORKSPACE_STORE: SparqlEndpoint = {
 /**
  * Service for managing connections to SPARQL endpoints.
  */
-export class SparqlEndpointService {
+export class SparqlConnectionService {
 
-	private _connections: SparqlEndpoint[] = [];
+	private _connections: SparqlConnection[] = [];
 
 	private _onDidChangeConnections = new vscode.EventEmitter<void>();
 
@@ -59,8 +59,8 @@ export class SparqlEndpointService {
 	 * @param configTarget The configuration target to read from.
 	 * @returns An array of SPARQL connections.
 	 */
-	private _loadConnectionsFromConfiguration(configTarget: vscode.ConfigurationTarget): SparqlEndpoint[] {
-		const inspect = mentor.configuration.inspect<SparqlEndpoint[]>(CONNECTIONS_CONFIG_KEY);
+	private _loadConnectionsFromConfiguration(configTarget: vscode.ConfigurationTarget): SparqlConnection[] {
+		const inspect = mentor.configuration.inspect<SparqlConnection[]>(CONNECTIONS_CONFIG_KEY);
 
 		if (inspect) {
 			const connections = [];
@@ -95,9 +95,6 @@ export class SparqlEndpointService {
 		const globalConnections = this._getEndpointDataForConfigTarget(vscode.ConfigurationTarget.Global);
 		const workspaceConnections = this._getEndpointDataForConfigTarget(vscode.ConfigurationTarget.Workspace);
 
-		console.log("globalConnections:", globalConnections);
-		console.log("workspaceConnections:", workspaceConnections);
-
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
 
@@ -126,7 +123,7 @@ export class SparqlEndpointService {
 	 * Retrieves all available SPARQL endpoints, including the internal store.
 	 * @returns A promise that resolves to an array of all connections.
 	 */
-	public getConnections(): SparqlEndpoint[] {
+	public getConnections(): SparqlConnection[] {
 		return this._connections;
 	}
 
@@ -135,17 +132,17 @@ export class SparqlEndpointService {
 	 * @param configTarget The configuration target to filter connections by.
 	 * @returns An array of SPARQL connections for the specified configuration target.
 	 */
-	public getConnectionsForConfigTarget(configTarget: vscode.ConfigurationTarget): SparqlEndpoint[] {
+	public getConnectionsForConfigTarget(configTarget: vscode.ConfigurationTarget): SparqlConnection[] {
 		return this._connections.filter(c => c.configTarget === configTarget);
 	}
 
 	/**
 	 * Retrieves a SPARQL connection by its ID.
-	 * @param id The ID of the connection to retrieve.
+	 * @param connectionId The ID of the connection to retrieve.
 	 * @returns The SPARQL connection or `undefined` if not found.
 	 */
-	public getConnection(id: string): SparqlEndpoint | undefined {
-		return this._connections.find(c => c.id === id);
+	public getConnection(connectionId: string): SparqlConnection | undefined {
+		return this._connections.find(c => c.id === connectionId);
 	}
 
 	/**
@@ -153,7 +150,7 @@ export class SparqlEndpointService {
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @returns The SPARQL connection or the Mentor Workspace triple store if no connection is found.
 	 */
-	public getConnectionForDocument(documentUri: vscode.Uri): SparqlEndpoint {
+	public getConnectionForDocument(documentUri: vscode.Uri): SparqlConnection {
 		let connectionId;
 
 		if (documentUri.scheme === 'vscode-notebook-cell') {
@@ -193,14 +190,24 @@ export class SparqlEndpointService {
 		}
 	}
 
+	/**
+	 * Get the storage key in the workspace or global storage for a specific document.
+	 * @param documentUri The URI of the document.
+	 * @returns The storage key.
+	 */
+	private _getConnectionStorageKeyForDocument(documentUri: vscode.Uri): string {
+		return `sparql.connection:${documentUri.toString()}`;
+	}
+
+	/**
+	 * Get a connection ID for a text document.
+	 * @param documentUri The URI of the document.
+	 * @returns The connection ID, or `undefined` if none is set.
+	 */
 	private _getConnectionIdForDocument(documentUri: vscode.Uri): string | undefined {
 		const key = this._getConnectionStorageKeyForDocument(documentUri);
 
 		return mentor.workspaceStorage.getValue(key, undefined);
-	}
-
-	private _getConnectionStorageKeyForDocument(documentUri: vscode.Uri): string {
-		return `sparql.connection:${documentUri.toString()}`;
 	}
 
 	/**
@@ -225,7 +232,7 @@ export class SparqlEndpointService {
 	 * @param endpointUrl The URL of the SPARQL endpoint.
 	 * @returns The SPARQL connection or `undefined` if not found.
 	 */
-	public getConnectionForEndpoint(endpointUrl: string): SparqlEndpoint | undefined {
+	public getConnectionForEndpoint(endpointUrl: string): SparqlConnection | undefined {
 		return this._connections.find(c => c.endpointUrl === endpointUrl);
 	}
 
@@ -245,15 +252,11 @@ export class SparqlEndpointService {
 				value: mentor.store,
 			};
 		} else {
-			const source: SparqlEndpointSource = {
+			const source: SparqlConnectionSource = {
 				type: 'sparql',
 				value: connection.endpointUrl,
 				connection: connection,
 			};
-
-			const credential = await mentor.credentialStorageService.getCredential(connection.id);
-
-			source.headers = this.getAuthHeaders(credential);
 
 			return source;
 		}
@@ -302,8 +305,8 @@ export class SparqlEndpointService {
 	 * @param scope Where to save the connection ('project' or 'user').
 	 * @param credentials Optional credentials for the connection.
 	 */
-	public async createEndpoint(): Promise<SparqlEndpoint> {
-		const connection: SparqlEndpoint = {
+	public async createConnection(): Promise<SparqlConnection> {
+		const connection: SparqlConnection = {
 			id: uuidv4(),
 			isNew: true,
 			isModified: false,
@@ -312,7 +315,6 @@ export class SparqlEndpointService {
 		};
 
 		this._connections.push(connection);
-
 		this._onDidChangeConnections.fire();
 
 		return connection;
@@ -322,7 +324,7 @@ export class SparqlEndpointService {
 	 * Updates an existing SPARQL connection.
 	 * @param connection The connection to update.
 	 */
-	public async updateEndpoint(connection: SparqlEndpoint): Promise<void> {
+	public async updateEndpoint(connection: SparqlConnection): Promise<void> {
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
 			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be modified.');
 			return;
@@ -343,7 +345,7 @@ export class SparqlEndpointService {
 	 * Deletes a SPARQL connection from the settings.
 	 * @param connectionId The ID of the connection to delete.
 	 */
-	public async deleteEndpoint(configTarget: vscode.ConfigurationTarget, connectionId: string): Promise<void> {
+	public async deleteConnection(connectionId: string): Promise<void> {
 		if (connectionId === MENTOR_WORKSPACE_STORE.id) {
 			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be removed.');
 			return;
@@ -360,7 +362,7 @@ export class SparqlEndpointService {
 	 * @param credential If provided, uses these credentials instead of fetching stored ones.
 	 * @returns `null` if the connection is successful, or an error object { code, message } otherwise.
 	 */
-	async testConnection(connection: SparqlEndpoint, credential?: AuthCredential | null): Promise<null | { code: number; message: string }> {
+	async testConnection(connection: SparqlConnection, credential?: AuthCredential | null): Promise<null | { code: number; message: string }> {
 		try {
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/sparql-query',

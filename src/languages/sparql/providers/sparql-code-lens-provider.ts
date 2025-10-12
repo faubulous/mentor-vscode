@@ -10,7 +10,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		mentor.sparqlEndpointService.onDidChangeConnectionForDocument(() => {
+		mentor.sparqlConnectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();
 		});
 	}
@@ -21,7 +21,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	 * @returns A promise that resolves to an array of CodeLenses.
 	 */
 	public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-		const connection = await mentor.sparqlEndpointService.getConnectionForDocument(document.uri);
+		const connection = await mentor.sparqlConnectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {
 			return [];
@@ -32,7 +32,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		const codeLens = new vscode.CodeLens(range, {
 			title: `${connection.endpointUrl}`,
 			tooltip: 'Click to change the SPARQL endpoint for this file',
-			command: 'mentor.command.selectSparqlEndpoint',
+			command: 'mentor.command.selectSparqlConnection',
 			arguments: [document],
 		});
 
