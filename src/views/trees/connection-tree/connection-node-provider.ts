@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '@src/mentor';
 import { DocumentContext } from '@src/workspace/document-context';
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { ConnectionNode } from './nodes/connection-node';
 import { ConnectionScopeNode } from './nodes/connection-scope-node';
 import { TreeNode } from '../tree-node';
@@ -52,27 +53,27 @@ export class ConnectionNodeProvider implements vscode.TreeDataProvider<TreeNode>
 
 	async getChildren(node?: TreeNode): Promise<TreeNode[] | null | undefined> {
 		if (node) {
-			let target: vscode.ConfigurationTarget;
+			let scope: ConfigurationScope;
 
 			switch (node.id) {
-				case vscode.ConfigurationTarget.Global.toString():
-					target = vscode.ConfigurationTarget.Global;
+				case ConfigurationScope.User.toString():
+					scope = ConfigurationScope.User;
 					break;
-				case vscode.ConfigurationTarget.Workspace.toString():
-					target = vscode.ConfigurationTarget.Workspace;
+				case ConfigurationScope.Workspace.toString():
+					scope = ConfigurationScope.Workspace;
 					break;
 				default:
 					return null;
 			}
 
 			const connections = await mentor.sparqlConnectionService
-				.getConnectionsForConfigTarget(target);
+				.getConnectionsForConfigurationScope(scope);
 
 			return connections.map(connection => new ConnectionNode(connection));
 		} else {
 			return mentor.sparqlConnectionService
-				.getSupportedConfigTargets()
-				.map(target => new ConnectionScopeNode(target));
+				.getSupportedConfigurationScopes()
+				.map(scope => new ConnectionScopeNode(scope));
 		}
 	}
 }

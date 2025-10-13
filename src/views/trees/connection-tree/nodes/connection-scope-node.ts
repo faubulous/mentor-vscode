@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
-import { getConfigurationTargetLabel } from '@src/services/sparql-connection';
 import { TreeNodeBase } from '@src/views/trees/tree-node';
+import {
+	ConfigurationScope,
+	getConfigurationScopeLabel,
+	getConfigurationScopeDescription
+} from '@src/utilities/config-scope';
 
 /**
  * Represents a configuration scope (config target) or SPARQL connection in the connection tree.
@@ -12,34 +16,31 @@ export class ConnectionScopeNode extends TreeNodeBase {
 	 */
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
-	constructor(context: vscode.ConfigurationTarget) {
+	/**
+	 * The configuration scope represented by this node.
+	 */
+	scope: ConfigurationScope;
+
+	constructor(scope: ConfigurationScope) {
 		super();
 
-		this.id = context.toString();
-		this.label = getConfigurationTargetLabel(context);
+		this.id = scope.toString();
+		this.scope = scope;
 	}
 
-	/**
-	 * Get a value that can be accessed in `package.json` for the context menu.
-	 * @returns A string that represents the context value of the tree item.
-	 */
 	getContextValue(): string {
 		return 'connectionScope';
 	}
 
-	/**
-	 * Get the label of the tree item.
-	 * @returns The label of the tree item.
-	 */
 	getLabel(): vscode.TreeItemLabel {
-		return { label: this.label };
+		return { label: getConfigurationScopeLabel(this.scope) };
 	}
 
-	/**
-	 * Get the description of the tree item.
-	 * @returns A description string or `undefined` if no description should be shown.
-	 */
-	getDescription(): string {
-		return '';
+	getTooltip(): vscode.MarkdownString | undefined {
+		const description = getConfigurationScopeDescription(this.scope);
+
+		if (description) {
+			return new vscode.MarkdownString(description);
+		}
 	}
 }

@@ -16,7 +16,6 @@ export class ConnectionNode extends TreeNodeBase {
 		super();
 
 		this.id = connection.id;
-		this.label = connection.endpointUrl;
 		this.connection = connection;
 	}
 
@@ -45,7 +44,7 @@ export class ConnectionNode extends TreeNodeBase {
 	 * @returns The label of the tree item.
 	 */
 	getLabel(): vscode.TreeItemLabel {
-		return { label: this.label };
+		return { label: this.connection.endpointUrl };
 	}
 
 	/**

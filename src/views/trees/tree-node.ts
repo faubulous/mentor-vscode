@@ -79,8 +79,6 @@ export abstract class TreeNodeBase implements TreeNode {
 
 	uri: string = '';
 
-	label: string = '';
-
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
 
 	getCommand(): vscode.Command | undefined {

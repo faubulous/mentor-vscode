@@ -7,6 +7,7 @@ import { SparqlConnection } from '@src/services/sparql-connection';
 import { AuthCredential, BasicAuthCredential, BearerAuthCredential } from '@src/services/credential';
 import { HttpStatusCodes } from '@src/utilities/http-status-codes';
 import stylesheet from './sparql-connection-view.css';
+import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 
 enum AuthTabIndex {
 	None = 0,
@@ -94,7 +95,7 @@ export class SparqlConnectionView extends WebviewComponent<
 		this.addStylesheet('sparql-connection-styles', stylesheet);
 
 		this.setState({
-			endpoint: { id: 'new', endpointUrl: 'https://', configTarget: 1 },
+			endpoint: { id: 'new', endpointUrl: 'https://', configScope: 1 },
 			selectedAuthTabIndex: 0,
 			basicCredential: { type: 'basic', username: '', password: '' },
 			bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
@@ -209,9 +210,9 @@ export class SparqlConnectionView extends WebviewComponent<
 								</vscode-button>
 							</div>}
 						</div>
-						<vscode-tabs ref={this.setConfigScopeRef} selected-index={endpoint.configTarget - 1}>
-							<vscode-tab-header title="The settings will be available in all Visual Studio Code instances.">User</vscode-tab-header>
-							<vscode-tab-header title="The settings will are local to the workspace. All connection parameters except secrets can be shared with version control.">Workspace</vscode-tab-header>
+						<vscode-tabs ref={this.setConfigScopeRef} selected-index={endpoint.configScope - 1}>
+							<vscode-tab-header title={getConfigurationScopeDescription(ConfigurationScope.User)}>User</vscode-tab-header>
+							<vscode-tab-header title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}>Workspace</vscode-tab-header>
 						</vscode-tabs>
 					</section>
 					<section>
@@ -461,7 +462,7 @@ export class SparqlConnectionView extends WebviewComponent<
 	private _handleConfigScopeChange = (e: any) => {
 		if (this._configScopeTabs) {
 			const endpoint = this.state.endpoint;
-			endpoint.configTarget = this._configScopeTabs.selectedIndex + 1;
+			endpoint.configScope = this._configScopeTabs.selectedIndex + 1;
 
 			this.setState({ endpoint, hasUnsavedChanges: true });
 

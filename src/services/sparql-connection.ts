@@ -1,3 +1,4 @@
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import * as vscode from 'vscode';
 
 /**
@@ -17,7 +18,7 @@ export interface SparqlConnection {
     /**
      * The location where the connection is stored, either the workspace folder or the global settings.
      */
-    configTarget: vscode.ConfigurationTarget;
+    configScope: ConfigurationScope;
 
     /**
      * Indicates if this connection is newly created and not yet saved.
@@ -33,22 +34,4 @@ export interface SparqlConnection {
      * Indicates if this connection can be removed or modified by the user.
      */
     isProtected?: boolean;
-}
-
-/**
- * Get the display label for a configuration target.
- * @param configTarget The configuration target.
- * @returns The label for the configuration target.
- */
-export function getConfigurationTargetLabel(configTarget: vscode.ConfigurationTarget): string {
-    switch (configTarget) {
-        case vscode.ConfigurationTarget.Global:
-            return 'User';
-        case vscode.ConfigurationTarget.Workspace:
-            return 'Workspace';
-        case vscode.ConfigurationTarget.WorkspaceFolder:
-            return 'Workspace Folder';
-        default:
-            return 'Unknown';
-    }
 }

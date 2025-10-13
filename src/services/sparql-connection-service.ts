@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '@src/mentor';
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { v4 as uuidv4 } from 'uuid';
 import { AuthCredential } from './credential';
 import { ComunicaSource, SparqlConnectionSource } from './sparql-query-source';
@@ -13,7 +14,7 @@ const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 	id: 'workspace',
 	endpointUrl: 'workspace://',
-	configTarget: vscode.ConfigurationTarget.Workspace,
+	configScope: ConfigurationScope.Workspace,
 	isProtected: true
 };
 
@@ -34,7 +35,7 @@ export class SparqlConnectionService {
 
 	private _defaultEndpointUrl = 'https://';
 
-	private _defaultConfigTarget: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global;
+	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
 
 	/**
 	 * Loads connections from the various configuration storage locactions into memory.
@@ -52,6 +53,22 @@ export class SparqlConnectionService {
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Workspace));
 
 		this._onDidChangeConnections.fire();
+	}
+
+	/**
+	 * Gets the configuration scope from a Visual Studio configuration target.
+	 * @param configTarget A Visual Studio configuration target.
+	 * @returns The corresponding configuration scope.
+	 */
+	private _getConfigurationScopeFromTarget(configTarget: vscode.ConfigurationTarget): ConfigurationScope {
+		switch (configTarget) {
+			case vscode.ConfigurationTarget.Global:
+				return ConfigurationScope.User;
+			case vscode.ConfigurationTarget.Workspace:
+				return ConfigurationScope.Workspace;
+			default:
+				return ConfigurationScope.User;
+		}
 	}
 
 	/**
@@ -73,15 +90,18 @@ export class SparqlConnectionService {
 				connections.push(...inspect.workspaceValue);
 			}
 
-			return connections.map(c => ({ ...c, configTarget: configTarget }));
+			return connections.map(c => ({
+				...c,
+				configScope: this._getConfigurationScopeFromTarget(configTarget),
+			}));
 		} else {
 			return [];
 		}
 	}
 
-	private _getEndpointDataForConfigTarget(configTarget: vscode.ConfigurationTarget) {
+	private _getEndpointDataForConfigScope(configScope: ConfigurationScope) {
 		return this._connections
-			.filter(c => c.configTarget === configTarget && c.id !== MENTOR_WORKSPACE_STORE.id)
+			.filter(c => c.configScope === configScope && c.id !== MENTOR_WORKSPACE_STORE.id)
 			.map(c => ({
 				id: c.id,
 				endpointUrl: c.endpointUrl
@@ -92,8 +112,8 @@ export class SparqlConnectionService {
 	 * Persists the in-memory connections to configuration.
 	 */
 	public async saveConfiguration(): Promise<void> {
-		const globalConnections = this._getEndpointDataForConfigTarget(vscode.ConfigurationTarget.Global);
-		const workspaceConnections = this._getEndpointDataForConfigTarget(vscode.ConfigurationTarget.Workspace);
+		const globalConnections = this._getEndpointDataForConfigScope(ConfigurationScope.User);
+		const workspaceConnections = this._getEndpointDataForConfigScope(ConfigurationScope.Workspace);
 
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
@@ -110,12 +130,12 @@ export class SparqlConnectionService {
 	 * Get the configuration targets supported for storing SPARQL connections.
 	 * @remarks The Workspace Folder target is not supported because it would require
 	 *          to select a specific workspace folder when creating a new connection.
-	 * @returns An array of supported configuration targets.
+	 * @returns An array of supported configuration scopes.
 	 */
-	public getSupportedConfigTargets(): vscode.ConfigurationTarget[] {
+	public getSupportedConfigurationScopes(): ConfigurationScope[] {
 		return [
-			vscode.ConfigurationTarget.Global,
-			vscode.ConfigurationTarget.Workspace
+			ConfigurationScope.User,
+			ConfigurationScope.Workspace
 		];
 	}
 
@@ -128,12 +148,12 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Retrieves all SPARQL connections for a specific configuration target.
-	 * @param configTarget The configuration target to filter connections by.
-	 * @returns An array of SPARQL connections for the specified configuration target.
+	 * Retrieves all SPARQL connections for a specific configuration scope.
+	 * @param configScope The configuration scope to filter connections by.
+	 * @returns An array of SPARQL connections for the specified configuration scope.
 	 */
-	public getConnectionsForConfigTarget(configTarget: vscode.ConfigurationTarget): SparqlConnection[] {
-		return this._connections.filter(c => c.configTarget === configTarget);
+	public getConnectionsForConfigurationScope(configScope: ConfigurationScope): SparqlConnection[] {
+		return this._connections.filter(c => c.configScope === configScope);
 	}
 
 	/**
@@ -311,7 +331,7 @@ export class SparqlConnectionService {
 			isNew: true,
 			isModified: false,
 			endpointUrl: this._defaultEndpointUrl,
-			configTarget: this._defaultConfigTarget,
+			configScope: this._defaultConfigScope,
 		};
 
 		this._connections.push(connection);
