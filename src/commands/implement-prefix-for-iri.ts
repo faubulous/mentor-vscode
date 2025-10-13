@@ -30,31 +30,34 @@ function calculateLineOffset(edit: vscode.WorkspaceEdit): number {
 	return lineOffset;
 }
 
-export async function implementPrefixForIri(documentUri: vscode.Uri, namespaceIri: string, token: IToken) {
-	const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
+export const implementPrefixForIri = {
+	commandId: 'mentor.command.implementPrefixForIri',
+	handler: async (documentUri: vscode.Uri, namespaceIri: string, token: IToken) => {
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
-	if (document) {
-		const editor = vscode.window.activeTextEditor;
-		const edit = await mentor.prefixDeclarationService.implementPrefixForIri(document, namespaceIri);
+		if (document) {
+			const editor = vscode.window.activeTextEditor;
+			const edit = await mentor.prefixDeclarationService.implementPrefixForIri(document, namespaceIri);
 
-		if (editor && edit.size > 0) {
-			// Await the edit application, after this the document is changed and the token position is invalid.
-			const success = await vscode.workspace.applyEdit(edit);
+			if (editor && edit.size > 0) {
+				// Await the edit application, after this the document is changed and the token position is invalid.
+				const success = await vscode.workspace.applyEdit(edit);
 
-			if (success) {
-				// The token position is valid for the unedited document.
-				const position = getTokenPosition(token);
+				if (success) {
+					// The token position is valid for the unedited document.
+					const position = getTokenPosition(token);
 
-				// Calculate the line offset caused by the edit.
-				const lineOffset = calculateLineOffset(edit);
-				const start = new vscode.Position(position.start.line + lineOffset, position.start.character);
+					// Calculate the line offset caused by the edit.
+					const lineOffset = calculateLineOffset(edit);
+					const start = new vscode.Position(position.start.line + lineOffset, position.start.character);
 
-				// Set the cursor the the start of the original IRI token which is now the prefix.
-				editor.selection = new vscode.Selection(start, start);
+					// Set the cursor the the start of the original IRI token which is now the prefix.
+					editor.selection = new vscode.Selection(start, start);
 
-				// Trigger renaming the prefix.
-				vscode.commands.executeCommand('editor.action.rename');
+					// Trigger renaming the prefix.
+					vscode.commands.executeCommand('editor.action.rename');
+				}
 			}
 		}
 	}
-}
+};

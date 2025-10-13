@@ -1,14 +1,17 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 
-export async function sortPrefixes(documentUri: vscode.Uri) {
-	const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
+export const sortPrefixes = {
+	commandId: 'mentor.command.sortPrefixes',
+	handler: async (documentUri: vscode.Uri) => {
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
-	if (document) {
-		const edit = await mentor.prefixDeclarationService.sortPrefixes(document);
+		if (document) {
+			const edit = await mentor.prefixDeclarationService.sortPrefixes(document);
 
-		if (edit.size > 0) {
-			await vscode.workspace.applyEdit(edit);
+			if (edit.size > 0) {
+				await vscode.workspace.applyEdit(edit);
+			}
 		}
 	}
-}
+};

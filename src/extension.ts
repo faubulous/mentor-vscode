@@ -73,40 +73,9 @@ function registerViews(context: vscode.ExtensionContext) {
 	subscribe(context, new trees.WorkspaceTree().treeView);
 	subscribe(context, new trees.DefinitionTree().treeView);
 	subscribe(context, new trees.ConnectionTree().treeView);
-	// Register all webview controllers via registry
 	subscribe(context, webviews.webviewRegistry.registerAll(context));
 }
 
 function registerCommands(context: vscode.ExtensionContext) {
-	subscribe(context, vscode.commands.registerCommand('mentor.command.analyzeWorkspace', commands.analyzeWorkspace));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.clearQueryHistory', commands.clearQueryHistory));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.createNotebook', commands.createNotebook));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.createNotebookFromEditor', commands.createNotebookFromEditor));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.createSparqlConnection', commands.createSparqlConnection));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.createSparqlQueryFile', commands.createSparqlQueryFile));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.deletePrefixes', commands.deletePrefixes));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.deleteSparqlConnection', commands.deleteSparqlConnection));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.editSparqlConnection', commands.editSparqlConnection));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.executeDescribeQuery', commands.executeDescribeQuery));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.executeNotebookCell', commands.executeNotebookCell));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQuery', commands.executeSparqlQuery));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQueryFromActiveEditor', commands.executeSparqlQueryFromActiveEditor));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.executeSparqlQueryFromDocument', commands.executeSparqlQueryFromDocument));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.findReferences', commands.findReferences));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.implementPrefixes', commands.implementPrefixes));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.implementPrefixForIri', commands.implementPrefixForIri));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.openDocument', commands.openDocument));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.openFileByLanguage', commands.openFileByLanguage));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.openGraph', commands.openGraph));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.openInBrowser', commands.openInBrowser));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.openSettings', commands.openSettings));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.removeFromQueryHistory', commands.removeFromQueryHistory));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.revealDefinition', commands.revealDefinition));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.revealShapeDefinition', commands.revealShapeDefinition));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.saveSparqlQueryResults', commands.saveSparqlQueryResults));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.selectActiveLanguage', commands.selectActiveLanguage));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.selectSparqlConnection', commands.selectSparqlConnection));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.sortPrefixes', commands.sortPrefixes));
-	subscribe(context, vscode.commands.registerCommand('mentor.command.updatePrefixes', commands.updatePrefixes));
-	subscribe(context, vscode.commands.registerCommand('mentor.webview.show', commands.showWebview));
+	subscribe(context, commands.commandRegistry.registerAll());
 }

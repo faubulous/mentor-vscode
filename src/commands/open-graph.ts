@@ -5,15 +5,18 @@ import { mentor } from '@src/mentor';
 
 const { namedNode } = n3.DataFactory;
 
-export async function openGraph(graphIri: vscode.Uri) {
-	const prefixes: { [prefix: string]: NamedNode } = {};
+export const openGraph = {
+	commandId: 'mentor.command.openGraph',
+	handler: async (graphIri: vscode.Uri) => {
+		const prefixes: { [prefix: string]: NamedNode } = {};
 
-	for (const [prefix, iri] of Object.entries(mentor.prefixLookupService.getInferencePrefixes())) {
-		prefixes[prefix] = namedNode(iri);
+		for (const [prefix, iri] of Object.entries(mentor.prefixLookupService.getInferencePrefixes())) {
+			prefixes[prefix] = namedNode(iri);
+		}
+
+		const data = await mentor.store.serializeGraph(graphIri.toString(true), prefixes);
+		const document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
+
+		vscode.window.showTextDocument(document);
 	}
-
-	const data = await mentor.store.serializeGraph(graphIri.toString(true), prefixes);
-	const document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
-
-	vscode.window.showTextDocument(document);
-}	
+};	
