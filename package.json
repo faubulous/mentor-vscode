@@ -459,6 +459,11 @@
     },
     "commands": [
       {
+        "command": "mentor.command.refreshWorkspaceTree",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "mentor.command.refreshConnectionsTree",
         "title": "Refresh",
         "icon": "$(refresh)"
@@ -647,7 +652,12 @@
         {
           "command": "mentor.command.analyzeWorkspace",
           "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
-          "group": "navigation@3"
+          "group": "navigation@1"
+        },
+        {
+          "command": "mentor.command.createNotebook",
+          "when": "view == mentor.view.workspaceTree",
+          "group": "navigation@2"
         },
         {
           "command": "mentor.command.groupDefinitionsByType",
@@ -693,6 +703,11 @@
           "command": "mentor.command.selectActiveLanguage",
           "when": "view == mentor.view.definitionTree",
           "group": "navigation@1"
+        },
+        {
+          "command": "mentor.command.refreshWorkspaceTree",
+          "when": "view == mentor.view.workspaceTree",
+          "group": "navigation@99"
         },
         {
           "command": "mentor.command.refreshDefinitionsTree",

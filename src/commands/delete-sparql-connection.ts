@@ -16,6 +16,10 @@ export const deleteSparqlConnection = {
 		}
 
 		await mentor.sparqlConnectionService.deleteConnection(connection.id);
+		await mentor.sparqlConnectionService.saveConfiguration();
+
 		await mentor.credentialStorageService.deleteCredential(connection.id);
+
+		vscode.window.showInformationMessage('SPARQL connection deleted.');
 	}
 };

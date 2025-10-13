@@ -25,5 +25,9 @@ export class WorkspaceTree implements TreeView {
 		});
 
 		this.treeView.title = vscode.workspace.name ?? "Workspace";
+
+		vscode.commands.registerCommand('mentor.command.refreshWorkspaceTree', async () => {
+			this.treeDataProvider.refresh();
+		});
 	}
 }

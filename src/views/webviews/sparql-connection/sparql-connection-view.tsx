@@ -71,14 +71,14 @@ export class SparqlConnectionView extends WebviewComponent<
 		}
 	};
 
-	protected setAuthTypeSelectRef = (element: VscodeSingleSelect | null) => {
-		if (element) {
-			element.addEventListener('change', (e: any) => {
-				const value = parseInt(e.target.value, 10);
+	private _authTypeSelect: VscodeSingleSelect | null = null;
 
-				this.setState({ selectedAuthTabIndex: value });
-			});
+	protected setAuthTypeSelectRef = (element: VscodeSingleSelect | null) => {
+		if (this._authTypeSelect) {
+			this._authTypeSelect.removeEventListener('change', this._handleAuthTabChange);
 		}
+		
+		this._authTypeSelect = element;
 
 		if (element) {
 			element.addEventListener('change', (e: any) => {
@@ -225,22 +225,22 @@ export class SparqlConnectionView extends WebviewComponent<
 								disabled={this._isFormReadOnly()}
 								onInput={e => this._handleEndpointUrlChange(e)}
 							>
-								<vscode-icon
+								{!this._wasConnectionTested() && <vscode-icon
 									slot="content-before"
 									name="database"
-								></vscode-icon>
+								></vscode-icon>}
 								{this._isConnectionTesting() && <vscode-icon
-									slot="content-after"
+									slot="content-before"
 									name="ellipsis"
 									className="icon-testing"
 								></vscode-icon>}
 								{this._hasConnectionError() && <vscode-icon
-									slot="content-after"
+									slot="content-before"
 									name="error"
 									className="icon-error"
 								></vscode-icon>}
 								{this._isConnectionSuccessful() && <vscode-icon
-									slot="content-after"
+									slot="content-before"
 									name="pass"
 									className="icon-success"
 								></vscode-icon>}
@@ -291,6 +291,12 @@ export class SparqlConnectionView extends WebviewComponent<
 
 	private _isFormReadOnly() {
 		return this.state?.endpoint.isProtected === true;
+	}
+
+	private _wasConnectionTested() {
+		return this._isConnectionTesting() ||
+			this._isConnectionSuccessful() ||
+			this._hasConnectionError();
 	}
 
 	private _isConnectionTesting() {
@@ -382,15 +388,16 @@ export class SparqlConnectionView extends WebviewComponent<
 	}
 
 	private _renderConnectionTestErrorMessage(connectionError: any) {
+		console.log(connectionError);
 		if (connectionError.code === 0) {
-			(
+			return (
 				<div>
-					<p>The host is unreachable. This might be for the following reasons:</p>
+					<p>The host could not be reached. Possible causes include:</p>
 					<ul>
 						<li>Incorrect endpoint URL</li>
-						<li>Endpoint is offline</li>
+						<li>The endpoint is unavailable</li>
 						<li>Failing CORS preflight request</li>
-						<li>Firewall blocking the request</li>
+						<li>Firewall or network policy is blocking the request</li>
 					</ul>
 				</div>
 			)
