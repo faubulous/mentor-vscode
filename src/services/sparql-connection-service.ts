@@ -34,7 +34,7 @@ export class SparqlConnectionService {
 
 	private _defaultEndpointUrl = 'https://';
 
-	private _defaultConfigTarget: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace;
+	private _defaultConfigTarget: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global;
 
 	/**
 	 * Loads connections from the various configuration storage locactions into memory.

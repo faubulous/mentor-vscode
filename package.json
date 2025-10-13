@@ -172,7 +172,9 @@
     "notebooks": [
       {
         "type": "mentor-notebook",
-        "displayName": "Mentor Notebook",
+        "displayName": "Mentor",
+        "hasExecutionOrder": false,
+        "cellToolbarVisibility": "visible",
         "selector": [
           {
             "filenamePattern": "*.mnb"

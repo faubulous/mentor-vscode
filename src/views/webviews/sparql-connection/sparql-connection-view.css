@@ -1,8 +1,8 @@
 :root {
 	--mentor-sparqlConnectionsuccess-foreground: var(--vscode-notebookStatusSuccessIcon-foreground);
-    --mentor-sparqlConnectionsuccess-background: rgba(from var(--mentor-sparqlConnectionsuccess-foreground) r g b / 0.1);
-    --mentor-sparqlConnectionerror-foreground: var(--vscode-notebookStatusErrorIcon-foreground);
-    --mentor-sparqlConnectionerror-background: rgba(from var(--mentor-sparqlConnectionerror-foreground) r g b / 0.1);
+	--mentor-sparqlConnectionsuccess-background: rgba(from var(--mentor-sparqlConnectionsuccess-foreground) r g b / 0.1);
+	--mentor-sparqlConnectionerror-foreground: var(--vscode-notebookStatusErrorIcon-foreground);
+	--mentor-sparqlConnectionerror-background: rgba(from var(--mentor-sparqlConnectionerror-foreground) r g b / 0.1);
 }
 
 .text-muted {
@@ -12,17 +12,24 @@
 
 .sparql-connection-view-container {
 	max-width: 560px;
-}
-
-.sparql-connection-view-container h2 {
-	font-weight: 400;
+	display: flex;
+	flex-direction: column;
+	gap: 3em;
 }
 
 .sparql-connection-view-container .form-header,
-.sparql-connection-view-container .row  {
+.sparql-connection-view-container .row {
 	display: flex;
 	flex-direction: row;
 	gap: 1em;
+}
+
+.sparql-connection-view-container .form-read-only {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+	font-weight: 600;
 }
 
 .sparql-connection-view-container .column {
@@ -34,6 +41,7 @@
 .sparql-connection-view-container form {
 	display: flex;
 	flex-direction: column;
+	gap: 1.3em;
 }
 
 .sparql-connection-view-container .form-header {
@@ -60,6 +68,11 @@
 
 .sparql-connection-view-container vscode-form-group {
 	margin: 12px 0;
+}
+
+.sparql-connection-view-container vscode-form-helper {
+	margin-top: 0;
+	margin-bottom: 1.5em;
 }
 
 .sparql-connection-view-container vscode-context-menu {
@@ -112,10 +125,33 @@
 	margin: 0;
 }
 
-.sparql-connection-view-container vscode-form-group vscode-label {
-	margin-bottom: 0.5em;
-}
-
 .sparql-connection-view-container vscode-tab-header {
 	padding: 0 0.75em;
+}
+
+.sparql-connection-view-container .section-authentication-container {
+	display: flex;
+	flex-direction: row;
+	gap: 1.5em;
+}
+
+.sparql-connection-view-container .section-authentication-container div:first-child {
+	max-width: 200px;
+}
+
+.sparql-connection-view-container .section-authentication-container div.vertical-separator {
+	border-left: 1px solid var(--vscode-editorWidget-border);
+	padding-left: 1.5em;
+}
+
+.sparql-connection-view-container .section-authentication-container div>vscode-form-group {
+	margin: 0;
+}
+
+.sparql-connection-view-container .section-authentication-container div vscode-label {
+	margin-top: 1.5em;
+}
+
+.sparql-connection-view-container .section-authentication-container div vscode-label:first-child {
+	margin-top: -5px;
 }

@@ -5,6 +5,8 @@ import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
 
 export class SparqlConnectionController extends WebviewController<SparqlConnectionMessages> {
+    private selectedConnection?: SparqlConnection;
+
     constructor() {
         super({
             componentPath: 'sparql-connection-view.js',
@@ -16,11 +18,16 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
     /**
      * Opens the SPARQL endpoint editor in the editor area and optionally preloads the endpoint.
      */
-    async edit(endpoint?: SparqlConnection) {
+    async edit(connection?: SparqlConnection) {
         super.show(vscode.ViewColumn.Active);
 
-        if (endpoint) {
-            this.postMessage({ id: 'EditSparqlConnection', connection: endpoint });
+        this.selectedConnection = connection;
+
+        if (connection) {
+            this.postMessage({
+                id: 'GetSparqlConnectionResult',
+                connection: connection
+            });
         }
     }
 
@@ -28,6 +35,37 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
         switch (message.id) {
             case 'ExecuteCommand': {
                 await vscode.commands.executeCommand(message.command, ...(message.args || []));
+
+                if(message.command === 'mentor.command.deleteSparqlConnection') {
+                    this.panel?.dispose();
+                }
+                return;
+            }
+            case 'GetSparqlConnection': {
+                if (this.selectedConnection) {
+                    this.postMessage({
+                        id: 'GetSparqlConnectionResult',
+                        connection: this.selectedConnection
+                    });
+                } else {
+                    // Note: This always returns at least one connection (the Mentor Store).
+                    const connection = mentor.sparqlConnectionService.getConnections()[0];
+
+                    this.postMessage({
+                        id: 'GetSparqlConnectionResult',
+                        connection: connection
+                    });
+                }
+                return;
+            }
+            case 'GetSparqlConnectionCredential': {
+                const credential = await mentor.credentialStorageService.getCredential(message.connectionId);
+
+                this.postMessage({
+                    id: 'GetSparqlConnectionCredentialResult',
+                    connectionId: message.connectionId,
+                    credential
+                });
                 return;
             }
             case 'SaveSparqlConnection': {
@@ -39,21 +77,11 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                     await mentor.credentialStorageService.saveCredential(message.connection.id, message.credential);
                 }
 
-                vscode.window.showInformationMessage(`SPARQL endpoint saved.`);
+                vscode.window.showInformationMessage(`SPARQL connection saved.`);
                 return;
             }
             case 'UpdateSparqlConnection': {
                 await mentor.sparqlConnectionService.updateEndpoint(message.connection);
-                return;
-            }
-            case 'GetSparqlConnectionCredential': {
-                const credential = await mentor.credentialStorageService.getCredential(message.connectionId);
-
-                this.postMessage({
-                    id: 'GetSparqlConnectionCredentialResult',
-                    connectionId: message.connectionId,
-                    credential
-                });
                 return;
             }
             case 'TestSparqlConnection': {

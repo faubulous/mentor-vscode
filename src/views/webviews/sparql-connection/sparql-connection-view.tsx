@@ -5,6 +5,7 @@ import { WebviewComponent } from '@src/views/webviews/webview-component';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { AuthCredential, BasicAuthCredential, BearerAuthCredential } from '@src/services/credential';
+import { HttpStatusCodes } from '@src/utilities/http-status-codes';
 import stylesheet from './sparql-connection-view.css';
 
 enum AuthTabIndex {
@@ -41,33 +42,51 @@ export class SparqlConnectionView extends WebviewComponent<
 > {
 	messaging = WebviewHost.getMessaging<SparqlConnectionMessages>();
 
-	private authTabs: VscodeTabs | null = null;
+	private _authTabs: VscodeTabs | null = null;
 
-	private setAuthTabsRef = (element: VscodeTabs | null) => {
-		if (this.authTabs) {
-			this.authTabs.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
+	protected setAuthTabsRef = (element: VscodeTabs | null) => {
+		if (this._authTabs) {
+			this._authTabs.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
 		}
 
-		this.authTabs = element;
+		this._authTabs = element;
 
 		if (element) {
 			element.addEventListener('vsc-tabs-select', this._handleAuthTabChange);
 		}
 	};
 
-	private configTargetSelect: VscodeSingleSelect | null = null;
+	private _configScopeTabs: VscodeTabs | null = null;
 
-	private setConfigTargetRef = (element: VscodeSingleSelect | null) => {
-		if (this.configTargetSelect) {
-			this.configTargetSelect.removeEventListener('change', this._handleConfigTargetChange);
+	protected setConfigScopeRef = (element: VscodeTabs | null) => {
+		if (this._configScopeTabs) {
+			this._configScopeTabs.removeEventListener('vsc-tabs-select', this._handleConfigScopeChange);
 		}
 
-		this.configTargetSelect = element;
+		this._configScopeTabs = element;
 
 		if (element) {
-			element.addEventListener('change', this._handleConfigTargetChange);
+			element.addEventListener('vsc-tabs-select', this._handleConfigScopeChange);
 		}
 	};
+
+	protected setAuthTypeSelectRef = (element: VscodeSingleSelect | null) => {
+		if (element) {
+			element.addEventListener('change', (e: any) => {
+				const value = parseInt(e.target.value, 10);
+
+				this.setState({ selectedAuthTabIndex: value });
+			});
+		}
+
+		if (element) {
+			element.addEventListener('change', (e: any) => {
+				const value = parseInt(e.target.value, 10);
+
+				this.setState({ selectedAuthTabIndex: value });
+			});
+		}
+	}
 
 	componentDidMount() {
 		super.componentDidMount();
@@ -75,35 +94,38 @@ export class SparqlConnectionView extends WebviewComponent<
 		this.addStylesheet('sparql-connection-styles', stylesheet);
 
 		this.setState({
-			endpoint: { id: 'new', endpointUrl: '', configTarget: 1 },
+			endpoint: { id: 'new', endpointUrl: 'https://', configTarget: 1 },
 			selectedAuthTabIndex: 0,
 			basicCredential: { type: 'basic', username: '', password: '' },
 			bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
 			isChecking: false,
 			connectionError: undefined
 		});
+
+		this.messaging.postMessage({ id: 'GetSparqlConnection' });
 	}
 
 	componentWillUnmount(): void {
-		if (this.authTabs) {
-			this.authTabs.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
+		if (this._authTabs) {
+			this._authTabs.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
 		}
 
-		if (this.configTargetSelect) {
-			this.configTargetSelect.removeEventListener('change', this._handleConfigTargetChange);
+		if (this._configScopeTabs) {
+			this._configScopeTabs.removeEventListener('change', this._handleConfigScopeChange);
 		}
 	}
 
 	override componentDidReceiveMessage(message: SparqlConnectionMessages) {
 		switch (message.id) {
-			case 'EditSparqlConnection': {
+			case 'GetSparqlConnectionResult': {
 				this.setState({
 					endpoint: message.connection,
 					selectedAuthTabIndex: 0,
 					basicCredential: { type: 'basic', username: '', password: '' },
 					bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
 					isChecking: false,
-					connectionError: undefined
+					connectionError: undefined,
+					hasUnsavedChanges: false
 				});
 
 				this.messaging.postMessage({
@@ -164,43 +186,48 @@ export class SparqlConnectionView extends WebviewComponent<
 			<div className="sparql-connection-view-container">
 				{this._isConnectionTesting() && <vscode-progress-bar />}
 				<form onSubmit={(e) => this._handleSaveEndpoint(e)}>
-					<div className="form-header">
-						<div className="form-title">
-							<h2>SPARQL Endpoint</h2>
+					<section>
+						<div className="form-header">
+							<div className="form-title">
+								<h2>SPARQL Connection</h2>
+							</div>
+							{this._isFormReadOnly() && <div className="form-read-only">
+								<vscode-icon name="lock" /><span>This connection cannot be edited.</span>
+							</div>}
+							{!this._isFormReadOnly() && <div className="form-buttons">
+								<vscode-toolbar-button
+									onClick={(e) => this._handleDeleteEndpoint(e)}>
+									<vscode-icon
+										name="trash"
+										title="Delete"
+									></vscode-icon>
+								</vscode-toolbar-button>
+								<vscode-button
+									type="submit"
+									disabled={!this._isFormValid() || !this.state.hasUnsavedChanges}>
+									Save
+								</vscode-button>
+							</div>}
 						</div>
-						<div className="form-buttons">
-							<vscode-toolbar-button
-								disabled={this._isFormReadOnly()}
-								onClick={(e) => this._handleDeleteEndpoint(e)}>
-								<vscode-icon
-									action-icon
-									name="trash"
-									title="Delete"
-								></vscode-icon>
-							</vscode-toolbar-button>
-							<vscode-button
-								type="submit"
-								disabled={!this._isFormValid() || this._isFormReadOnly()}>
-								Save
-							</vscode-button>
-						</div>
-					</div>
-					<vscode-divider></vscode-divider>
-					<vscode-form-group variant="vertical">
-						<vscode-label>Endpoint URL</vscode-label>
+						<vscode-tabs ref={this.setConfigScopeRef} selected-index={endpoint.configTarget - 1}>
+							<vscode-tab-header title="The settings will be available in all Visual Studio Code instances.">User</vscode-tab-header>
+							<vscode-tab-header title="The settings will are local to the workspace. All connection parameters except secrets can be shared with version control.">Workspace</vscode-tab-header>
+						</vscode-tabs>
+					</section>
+					<section>
 						<div className={this._getEndpointSectionClassName()}>
 							<vscode-textfield
 								required
 								value={endpoint.endpointUrl}
+								title='Endpoint URL'
 								placeholder="https://example.org/sparql"
 								disabled={this._isFormReadOnly()}
 								onInput={e => this._handleEndpointUrlChange(e)}
 							>
-								{this._isFormReadOnly() && <vscode-icon
-									slot="content-after"
-									name="lock"
-									className="icon-readonly"
-								></vscode-icon>}
+								<vscode-icon
+									slot="content-before"
+									name="database"
+								></vscode-icon>
 								{this._isConnectionTesting() && <vscode-icon
 									slot="content-after"
 									name="ellipsis"
@@ -226,46 +253,32 @@ export class SparqlConnectionView extends WebviewComponent<
 							</vscode-button>
 						</div>
 						{connectionError && <div className='section-endpoint-status status-error'>
-							{connectionError.code === 0 && this._renderConnectionTestErrorMessage()}
-							{connectionError.code !== 0 && <h4>Error {connectionError.code}</h4>}
-							{connectionError.code !== 0 && <p>{connectionError.message}</p>}
+							{this._renderConnectionTestErrorMessage(connectionError)}
 						</div>}
-					</vscode-form-group>
-					<vscode-form-group variant="vertical">
-						<vscode-label>Configuration Scope</vscode-label>
-						<vscode-single-select
-							ref={this.setConfigTargetRef}
-							value={String(endpoint.configTarget)}
-							disabled={this._isFormReadOnly()}>
-							<vscode-option value="1">User</vscode-option>
-							<vscode-option value="2">Workspace</vscode-option>
-						</vscode-single-select>
-					</vscode-form-group>
-					<vscode-form-group variant="vertical">
+					</section>
+					<section>
 						<vscode-label>Authentication</vscode-label>
-						<vscode-tabs
-							ref={this.setAuthTabsRef}
-							selectedIndex={this.state?.selectedAuthTabIndex ?? 0}>
-							<vscode-tab-header id="none" slot="header">
-								None
-							</vscode-tab-header>
-							<vscode-tab-panel>
-								<span className="text-muted">No authentication</span>
-							</vscode-tab-panel>
-							<vscode-tab-header id="basic" slot="header">
-								Basic
-							</vscode-tab-header>
-							<vscode-tab-panel>
-								{this._renderBasicAuthFields()}
-							</vscode-tab-panel>
-							<vscode-tab-header id="bearer" slot="header">
-								Bearer
-							</vscode-tab-header>
-							<vscode-tab-panel>
-								{this._renderBearerAuthFields()}
-							</vscode-tab-panel>
-						</vscode-tabs>
-					</vscode-form-group>
+						<vscode-form-helper>
+							Select the authentication method to use when connecting to the SPARQL endpoint:
+						</vscode-form-helper>
+						<div className="section-authentication-container">
+							<div className="column-1">
+								<vscode-label>Type</vscode-label>
+								<vscode-single-select
+									ref={this.setAuthTypeSelectRef}
+									value={this.state.selectedAuthTabIndex.toString()}
+									disabled={this._isFormReadOnly()}>
+									<vscode-option value="0">None</vscode-option>
+									<vscode-option value="1">Basic</vscode-option>
+									<vscode-option value="2">Bearer</vscode-option>
+								</vscode-single-select>
+							</div>
+							{this.state.selectedAuthTabIndex !== 0 && <div className="vertical-separator">
+								{this.state.selectedAuthTabIndex === 1 && this._renderBasicAuthFields()}
+								{this.state.selectedAuthTabIndex === 2 && this._renderBearerAuthFields()}
+							</div>}
+						</div>
+					</section>
 				</form>
 			</div>
 		);
@@ -367,18 +380,27 @@ export class SparqlConnectionView extends WebviewComponent<
 		);
 	}
 
-	private _renderConnectionTestErrorMessage() {
-		return (
-			<div>
-				<p>The host is unreachable. This might be for the following reasons:</p>
-				<ul>
-					<li>Incorrect endpoint URL</li>
-					<li>Endpoint is offline</li>
-					<li>Failing CORS preflight request</li>
-					<li>Firewall blocking the request</li>
-				</ul>
-			</div>
-		)
+	private _renderConnectionTestErrorMessage(connectionError: any) {
+		if (connectionError.code === 0) {
+			(
+				<div>
+					<p>The host is unreachable. This might be for the following reasons:</p>
+					<ul>
+						<li>Incorrect endpoint URL</li>
+						<li>Endpoint is offline</li>
+						<li>Failing CORS preflight request</li>
+						<li>Firewall blocking the request</li>
+					</ul>
+				</div>
+			)
+		} else if (connectionError.code !== 0) {
+			return (
+				<div>
+					<h4>Error {connectionError.code} - {HttpStatusCodes[connectionError.code].message}</h4>
+					<p>{connectionError.message}</p>
+				</div>
+			)
+		}
 	}
 
 	private _renderBearerAuthFields() {
@@ -395,10 +417,12 @@ export class SparqlConnectionView extends WebviewComponent<
 					onInput={e => {
 						const value = (e.target as HTMLInputElement).value;
 
-						this.setState({ bearerCredential: {
-							...credential,
-							prefix: value
-						} });
+						this.setState({
+							bearerCredential: {
+								...credential,
+								prefix: value
+							}
+						});
 					}}
 				/>
 				<vscode-label>Token</vscode-label>
@@ -410,10 +434,12 @@ export class SparqlConnectionView extends WebviewComponent<
 					onInput={e => {
 						const value = (e.target as HTMLInputElement).value;
 
-						this.setState({ bearerCredential: {
-							...credential,
-							token: value
-						} });
+						this.setState({
+							bearerCredential: {
+								...credential,
+								token: value
+							}
+						});
 					}}
 				/>
 			</vscode-form-group>
@@ -432,10 +458,10 @@ export class SparqlConnectionView extends WebviewComponent<
 		});
 	}
 
-	private _handleConfigTargetChange = (e: any) => {
-		if (this.configTargetSelect) {
+	private _handleConfigScopeChange = (e: any) => {
+		if (this._configScopeTabs) {
 			const endpoint = this.state.endpoint;
-			endpoint.configTarget = parseInt(this.configTargetSelect.value, 10);
+			endpoint.configTarget = this._configScopeTabs.selectedIndex + 1;
 
 			this.setState({ endpoint, hasUnsavedChanges: true });
 
@@ -447,8 +473,8 @@ export class SparqlConnectionView extends WebviewComponent<
 	}
 
 	private _handleAuthTabChange = (event: any) => {
-		if (this.authTabs) {
-			const i = this.authTabs.selectedIndex ?? AuthTabIndex.None;
+		if (this._authTabs) {
+			const i = this._authTabs.selectedIndex ?? AuthTabIndex.None;
 
 			console.log('_handleAuthTabChange', i);
 

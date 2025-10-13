@@ -41,11 +41,14 @@ class BindingsTableBase extends WebviewComponent<
 		}
 
 		return (
-			<vscode-table className="bindings-table" zebra bordered-rows resizable key={this._renderKey}>
+			<vscode-table className="bindings-table" zebra bordered-rows resizable
+				columns={["50px"]} key={this._renderKey}>
 				{result.rows.length > 0 &&
 					<vscode-table-header>
+						<vscode-table-header-cell key="row-number">
+						</vscode-table-header-cell>
 						{result.columns.map(v => (
-							<vscode-table-header-cell key={v}>
+							<vscode-table-header-cell key={'var-' + v}>
 								{this._renderHeaderCell(v)}
 							</vscode-table-header-cell>
 						))}
@@ -54,6 +57,9 @@ class BindingsTableBase extends WebviewComponent<
 				<vscode-table-body>
 					{result.rows.length > 0 && result.rows.slice(paging.startIndex, paging.endIndex).map((row, rowIndex) => (
 						<vscode-table-row key={paging.startIndex + rowIndex}>
+							<vscode-table-cell key={`row-number-${paging.startIndex + rowIndex}`}>
+								{paging.startIndex + rowIndex + 1}
+							</vscode-table-cell>
 							{result.columns.map(header => (
 								<vscode-table-cell key={`${paging.startIndex + rowIndex}-${header}`}>
 									{this._renderCell(row[header], result.namespaceMap)}
@@ -158,7 +164,7 @@ class BindingsTableBase extends WebviewComponent<
 
 	private _handleCopyColumnClick(column: string, result: BindingsResult) {
 		const values = result.rows.map(row => row[column]?.value ?? '').join('\n');
-		
+
 		navigator.clipboard.writeText(values);
 	}
 

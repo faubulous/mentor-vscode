@@ -32,3 +32,8 @@
 	border: 1px solid var(--vscode-editorWidget-border);
 	border-radius: 5px;
 }
+
+.bindings-table vscode-table-row .cell:hover .cell-actions,
+.bindings-table vscode-table-row:hover {
+	background-color: var(--vscode-list-hoverBackground);
+}

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 
 export const selectSparqlConnection = async (document: vscode.TextDocument) => {
-	if(!document) {
+	if (!document) {
 		vscode.window.showWarningMessage('No document valid was provided.');
 		return;
 	}
@@ -15,10 +15,15 @@ export const selectSparqlConnection = async (document: vscode.TextDocument) => {
 		return;
 	}
 
-	const items = connections.map(connection => ({
-		label: connection.endpointUrl,
+	const items: any[] = connections.map(connection => ({
+		label: `$(database) ${connection.endpointUrl}`,
 		connection: connection
 	}));
+
+	items.push({
+		label: '$(add) Create new SPARQL connection...',
+		command: 'mentor.command.createSparqlConnection'
+	});
 
 	const selected = await vscode.window.showQuickPick(items, {
 		placeHolder: 'Select a SPARQL endpoint',
@@ -28,5 +33,9 @@ export const selectSparqlConnection = async (document: vscode.TextDocument) => {
 		return;
 	}
 
-	await mentor.sparqlConnectionService.setQuerySourceForDocument(document.uri, selected.connection.id);
+	if (selected.command) {
+		await vscode.commands.executeCommand(selected.command);
+	} else {
+		await mentor.sparqlConnectionService.setQuerySourceForDocument(document.uri, selected.connection.id);
+	}
 };
