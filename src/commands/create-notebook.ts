@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 export const createNotebook = {
-	commandId: 'mentor.command.createNotebook',
+	id: 'mentor.command.createNotebook',
 	handler: async () => {
 		const data = new vscode.NotebookData([
 			new vscode.NotebookCellData(

@@ -36,47 +36,47 @@ class BindingsTableBase extends WebviewComponent<
 			? queryContext.result as BindingsResult
 			: null;
 
-		if (!result) {
-			return <div>Unsupported result type: {queryContext.result?.type}</div>;
-		}
-
-		return (
-			<vscode-table className="bindings-table" zebra bordered-rows resizable
-				columns={["50px"]} key={this._renderKey}>
-				{result.rows.length > 0 &&
-					<vscode-table-header>
-						<vscode-table-header-cell key="row-number">
-						</vscode-table-header-cell>
-						{result.columns.map(v => (
-							<vscode-table-header-cell key={'var-' + v}>
-								{this._renderHeaderCell(v)}
+		if (result) {
+			return (
+				<vscode-table className="bindings-table" zebra bordered-rows resizable
+					columns={["50px"]} key={this._renderKey}>
+					{result.rows.length > 0 &&
+						<vscode-table-header>
+							<vscode-table-header-cell key="row-number">
 							</vscode-table-header-cell>
-						))}
-					</vscode-table-header>
-				}
-				<vscode-table-body>
-					{result.rows.length > 0 && result.rows.slice(paging.startIndex, paging.endIndex).map((row, rowIndex) => (
-						<vscode-table-row key={paging.startIndex + rowIndex}>
-							<vscode-table-cell key={`row-number-${paging.startIndex + rowIndex}`}>
-								{paging.startIndex + rowIndex + 1}
-							</vscode-table-cell>
-							{result.columns.map(header => (
-								<vscode-table-cell key={`${paging.startIndex + rowIndex}-${header}`}>
-									{this._renderCell(row[header], result.namespaceMap)}
-								</vscode-table-cell>
+							{result.columns.map(v => (
+								<vscode-table-header-cell key={'var-' + v}>
+									{this._renderHeaderCell(v)}
+								</vscode-table-header-cell>
 							))}
-						</vscode-table-row>
-					))}
-					{result.rows.length === 0 && (
-						<vscode-table-row>
-							<vscode-table-cell>
-								No results
-							</vscode-table-cell>
-						</vscode-table-row>
-					)}
-				</vscode-table-body>
-			</vscode-table>
-		);
+						</vscode-table-header>
+					}
+					<vscode-table-body>
+						{result.rows.length > 0 && result.rows.slice(paging.startIndex, paging.endIndex).map((row, rowIndex) => (
+							<vscode-table-row key={paging.startIndex + rowIndex}>
+								<vscode-table-cell key={`row-number-${paging.startIndex + rowIndex}`}>
+									{paging.startIndex + rowIndex + 1}
+								</vscode-table-cell>
+								{result.columns.map(header => (
+									<vscode-table-cell key={`${paging.startIndex + rowIndex}-${header}`}>
+										{this._renderCell(row[header], result.namespaceMap)}
+									</vscode-table-cell>
+								))}
+							</vscode-table-row>
+						))}
+						{result.rows.length === 0 && (
+							<vscode-table-row>
+								<vscode-table-cell>
+									No results
+								</vscode-table-cell>
+							</vscode-table-row>
+						)}
+					</vscode-table-body>
+				</vscode-table>
+			);
+		} else if(!queryContext.error) {
+			return <div>The query returned no results.</div>;
+		}
 	}
 
 	private _renderHeaderCell(column: string) {

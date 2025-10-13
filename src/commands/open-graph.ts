@@ -6,7 +6,7 @@ import { mentor } from '@src/mentor';
 const { namedNode } = n3.DataFactory;
 
 export const openGraph = {
-	commandId: 'mentor.command.openGraph',
+	id: 'mentor.command.openGraph',
 	handler: async (graphIri: vscode.Uri) => {
 		const prefixes: { [prefix: string]: NamedNode } = {};
 

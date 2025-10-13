@@ -69,7 +69,7 @@ const commands = [
 export const commandRegistry = {
 	registerAll: (): vscode.Disposable[] => {
 		return commands.map(command => {
-			return vscode.commands.registerCommand(command.commandId, command.handler);
+			return vscode.commands.registerCommand(command.id, command.handler);
 		});
 	}
 }

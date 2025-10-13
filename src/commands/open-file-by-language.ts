@@ -4,7 +4,7 @@ import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { getFileName, getPath } from '@src/utilities';
 
 export const openFileByLanguage = {
-	commandId: 'mentor.command.openFileByLanguage',
+	id: 'mentor.command.openFileByLanguage',
 	handler: async (languageId: string) => {
 		const files: vscode.Uri[] = [];
 

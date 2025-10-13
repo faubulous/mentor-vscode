@@ -3,7 +3,7 @@ import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definit
 import { InferenceUri } from '@src/workspace/inference-uri';
 
 export const openInBrowser = {
-	commandId: 'mentor.command.openInBrowser',
+	id: 'mentor.command.openInBrowser',
 	handler: async (arg: DefinitionTreeNode | string) => {
 		let uri = vscode.Uri.parse(getIriFromArgument(arg), true);
 

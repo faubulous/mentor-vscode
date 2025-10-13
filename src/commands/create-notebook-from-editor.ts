@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 export const createNotebookFromEditor = {
-	commandId: 'mentor.command.createNotebookFromEditor',
+	id: 'mentor.command.createNotebookFromEditor',
 	handler: async () => {
 		const editor = vscode.window.activeTextEditor;
 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 export const openDocument = {
-    commandId: 'mentor.command.openDocument',
+    id: 'mentor.command.openDocument',
     handler: async (documentIri: string) => {
         if (!documentIri) {
             vscode.window.showErrorMessage('No document IRI provided.');

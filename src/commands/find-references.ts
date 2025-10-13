@@ -4,7 +4,7 @@ import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 export const findReferences = {
-	commandId: 'mentor.command.findReferences',
+	id: 'mentor.command.findReferences',
 	handler: async (arg: DefinitionTreeNode | string) => {
 		mentor.activateDocument().then((editor) => {
 			if (mentor.activeContext && editor) {

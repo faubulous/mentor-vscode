@@ -9,7 +9,7 @@ interface LanguageQuckPickItem extends vscode.QuickPickItem {
 }
 
 export const selectActiveLanguage = {
-	commandId: 'mentor.command.selectActiveLanguage',
+	id: 'mentor.command.selectActiveLanguage',
 	handler: async () => {
 		const document = vscode.window.activeTextEditor?.document;
 

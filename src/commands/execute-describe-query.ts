@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { sparqlResultsWebviewProvider } from '@src/views/webviews';
 
 export const executeDescribeQuery = {
-	commandId: 'mentor.command.executeDescribeQuery',
+	id: 'mentor.command.executeDescribeQuery',
 	handler: async (documentUri: vscode.Uri, resourceIri: string) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 

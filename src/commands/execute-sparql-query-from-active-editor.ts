@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { sparqlResultsWebviewProvider } from '@src/views/webviews';
 
 export const executeSparqlQueryFromActiveEditor = {
-    commandId: 'mentor.command.executeSparqlQueryFromActiveEditor',
+    id: 'mentor.command.executeSparqlQueryFromActiveEditor',
     handler: async (): Promise<void> => {
         const editor = vscode.window.activeTextEditor;
 

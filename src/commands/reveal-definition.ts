@@ -4,7 +4,7 @@ import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 export const revealDefinition = {
-	commandId: 'mentor.command.revealDefinition',
+	id: 'mentor.command.revealDefinition',
 	handler: async (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
 			const uri = getIriFromArgument(arg);

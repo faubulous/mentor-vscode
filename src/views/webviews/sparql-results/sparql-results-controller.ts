@@ -32,8 +32,6 @@ export class SparqlResultsWebviewController extends WebviewController<SparqlResu
     }
 
     protected async onDidReceiveMessage(message: SparqlResultsWebviewMessages) {
-        console.debug('onDidReceiveMessage', message);
-
         switch (message.id) {
             case 'GetSparqlQueryHistory': {
                 this._postQueryHistory();

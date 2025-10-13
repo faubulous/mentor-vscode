@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 
 export const sortPrefixes = {
-	commandId: 'mentor.command.sortPrefixes',
+	id: 'mentor.command.sortPrefixes',
 	handler: async (documentUri: vscode.Uri) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 

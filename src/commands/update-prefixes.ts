@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 
 export const updatePrefixes = {
-	commandId: 'mentor.command.updatePrefixes',
+	id: 'mentor.command.updatePrefixes',
 	handler: async () => {
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Window,

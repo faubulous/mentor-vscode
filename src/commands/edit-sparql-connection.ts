@@ -3,7 +3,7 @@ import { SparqlConnection } from '@src/services/sparql-connection';
 import { sparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 
 export const editSparqlConnection = {
-	commandId: 'mentor.command.editSparqlConnection',
+	id: 'mentor.command.editSparqlConnection',
 	handler: async (endpoint: SparqlConnection, restoreFocus: boolean) => {
 		sparqlConnectionController.edit(endpoint);
 		

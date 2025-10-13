@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 
 export const deletePrefixes = {
-	commandId: 'mentor.command.deletePrefixes',
+	id: 'mentor.command.deletePrefixes',
 	handler: async (documentUri: vscode.Uri, prefixes: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 		

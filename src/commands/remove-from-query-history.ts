@@ -1,7 +1,7 @@
 import { mentor } from '@src/mentor';
 
 export const removeFromQueryHistory = {
-	commandId: 'mentor.command.removeFromQueryHistory',
+	id: 'mentor.command.removeFromQueryHistory',
 	handler: async (documentIri: string) => {
 		const queryState = mentor.sparqlQueryService.getQueryState(documentIri);
 

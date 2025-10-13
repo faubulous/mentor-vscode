@@ -15,7 +15,7 @@ import { AuthCredential } from './credential';
 /**
  * The key for storing query history in local storage.
  */
-const HISTORY_STORAGE_KEY = 'queryHistory.Sparql';
+const HISTORY_STORAGE_KEY = 'mentor.sparql.queryHistory';
 
 /**
  * The maximum number of entries to keep in the query history.

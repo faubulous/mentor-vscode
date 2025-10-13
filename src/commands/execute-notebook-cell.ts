@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 export const executeNotebookCell = {
-	commandId: 'mentor.command.executeNotebookCell',
+	id: 'mentor.command.executeNotebookCell',
 	handler: async (notebookUri: string, cellIndex: number): Promise<void> => {
 		try {
 			const uri = vscode.Uri.parse(notebookUri);

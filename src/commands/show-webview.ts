@@ -1,26 +1,8 @@
 import * as vscode from 'vscode';
 import { controllers } from '@src/views/webviews/registry';
 
-type Target = { kind: 'panel' | 'view'; id: string; label: string };
-
-function collectTargets(): Target[] {
-  const items: Target[] = [];
-
-  for (const c of controllers as any[]) {
-    if (c.panelId && c.panelTitle) {
-      items.push({ kind: 'panel', id: c.panelId, label: `panel: ${c.panelId}` });
-    }
-
-    if (c.viewType) {
-      items.push({ kind: 'view', id: c.viewType, label: `view: ${c.viewType}` });
-    }
-  }
-
-  return items;
-}
-
 export const showWebview = {
-  commandId: 'mentor.webview.show',
+  id: 'mentor.webview.show',
   handler: async (arg?: { id?: string } | string) => {
     const targets = collectTargets();
     const id = typeof arg === 'string' ? arg : arg?.id;
@@ -53,3 +35,21 @@ export const showWebview = {
     }
   }
 };
+
+type Target = { kind: 'panel' | 'view'; id: string; label: string };
+
+function collectTargets(): Target[] {
+  const items: Target[] = [];
+
+  for (const c of controllers as any[]) {
+    if (c.panelId && c.panelTitle) {
+      items.push({ kind: 'panel', id: c.panelId, label: `panel: ${c.panelId}` });
+    }
+
+    if (c.viewType) {
+      items.push({ kind: 'view', id: c.viewType, label: `view: ${c.viewType}` });
+    }
+  }
+
+  return items;
+}

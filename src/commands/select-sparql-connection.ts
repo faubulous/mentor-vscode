@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { mentor } from '../mentor';
 
 export const selectSparqlConnection = {
-	commandId: 'mentor.command.selectSparqlConnection',
+	id: 'mentor.command.selectSparqlConnection',
 	handler: async (document: vscode.TextDocument) => {
 		if (!document) {
 			vscode.window.showWarningMessage('No document valid was provided.');

@@ -4,7 +4,7 @@ import { sparqlResultsWebviewProvider } from '@src/views/webviews';
 import { executeNotebookCell } from './execute-notebook-cell';
 
 export const executeSparqlQuery = {
-    commandId: 'mentor.command.executeSparqlQuery',
+    id: 'mentor.command.executeSparqlQuery',
     handler: async (query: SparqlQueryExecutionState): Promise<void> => {
         if (query.notebookIri && query.cellIndex !== undefined) {
             // @ts-ignore: handler signature

@@ -2,7 +2,7 @@ import { mentor } from '@src/mentor';
 import { sparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 
 export const createSparqlConnection = {
-	commandId: 'mentor.command.createSparqlConnection',
+	id: 'mentor.command.createSparqlConnection',
 	handler: async () => {
 		const endpoint = await mentor.sparqlConnectionService.createConnection();
 		
