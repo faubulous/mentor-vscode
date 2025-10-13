@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlQueryExecutionState } from '@src/services/sparql-query-state';
-import { sparqlResultsWebviewProvider } from '@src/views/webviews';
+import { sparqlResultsController } from '@src/views/webviews';
 import { executeNotebookCell } from './execute-notebook-cell';
 
 export const executeSparqlQuery = {
@@ -14,7 +14,7 @@ export const executeSparqlQuery = {
             if (!document) {
                 throw new Error(`Document with IRI ${query.documentIri} not found.`);
             }
-            await sparqlResultsWebviewProvider.executeQueryFromTextDocument(document);
+            await sparqlResultsController.executeQueryFromTextDocument(document);
         }
     }
 };

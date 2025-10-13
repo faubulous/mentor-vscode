@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlSyntaxParser, Uri } from '@faubulous/mentor-rdf';
-import { QueryEngine } from "@comunica/query-sparql";
+import { QueryEngine } from "@comunica/query-sparql-rdfjs-lite";
 import { Bindings, Quad } from '@rdfjs/types';
 import { Store, Writer } from 'n3';
 import { mentor } from "@src/mentor";

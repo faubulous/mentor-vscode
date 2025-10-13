@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { sparqlResultsWebviewProvider } from '@src/views/webviews';
+import { sparqlResultsController } from '@src/views/webviews';
 
 export const executeDescribeQuery = {
 	id: 'mentor.command.executeDescribeQuery',
@@ -13,6 +13,6 @@ export const executeDescribeQuery = {
 
 		const query = `CONSTRUCT { <${resourceIri}> ?p ?o } WHERE { <${resourceIri}> ?p ?o }`;
 		
-		await sparqlResultsWebviewProvider.executeQuery(document, query);
+		await sparqlResultsController.executeQuery(document, query);
 	}
 };

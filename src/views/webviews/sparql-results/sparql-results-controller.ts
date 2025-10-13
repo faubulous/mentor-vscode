@@ -8,7 +8,7 @@ import { SparqlResultsWebviewMessages } from './sparql-results-messages';
  * A controller for the SPARQL results webview. It handles the registration of the webview, 
  * message passing, and execution of SPARQL queries.
  */
-export class SparqlResultsWebviewController extends WebviewController<SparqlResultsWebviewMessages> {
+export class SparqlResultsController extends WebviewController<SparqlResultsWebviewMessages> {
     constructor() {
         super({
             viewType: 'mentor.view.sparqlResultsView',
@@ -98,4 +98,4 @@ export class SparqlResultsWebviewController extends WebviewController<SparqlResu
     }
 }
 
-export const sparqlResultsWebviewProvider = new SparqlResultsWebviewController();
+export const sparqlResultsController = new SparqlResultsController();

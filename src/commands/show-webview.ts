@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { controllers } from '@src/views/webviews/registry';
+import { controllers } from '@src/views/webviews/webview-registry';
 
 export const showWebview = {
   id: 'mentor.webview.show',

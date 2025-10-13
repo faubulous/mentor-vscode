@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { sparqlResultsWebviewProvider } from '@src/views/webviews';
+import { sparqlResultsController } from '@src/views/webviews';
 
 export const executeSparqlQueryFromActiveEditor = {
     id: 'mentor.command.executeSparqlQueryFromActiveEditor',
@@ -11,6 +11,6 @@ export const executeSparqlQueryFromActiveEditor = {
             return;
         }
 
-        await sparqlResultsWebviewProvider.executeQueryFromTextDocument(editor.document);
+        await sparqlResultsController.executeQueryFromTextDocument(editor.document);
     }
 };

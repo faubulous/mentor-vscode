@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { sparqlResultsWebviewProvider } from '@src/views/webviews';
+import { sparqlResultsController } from '@src/views/webviews';
 
 export const executeSparqlQueryFromDocument = {
     id: 'mentor.command.executeSparqlQueryFromDocument',
@@ -10,6 +10,6 @@ export const executeSparqlQueryFromDocument = {
             throw new Error(`Document with IRI ${documentIri} not found.`);
         }
 
-        await sparqlResultsWebviewProvider.executeQueryFromTextDocument(document);
+        await sparqlResultsController.executeQueryFromTextDocument(document);
     }
 };
