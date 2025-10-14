@@ -45,7 +45,15 @@ This extension provides the following features:
     - Select language tag of the displayed labels and definitions
     - Highlight the terms missing in the selected language (optional)
 
-### Supports N3, Turtle, Trig, RDF/XML and SPARQL
+### SPARQL Query
+  - Execute SPARQL queries against external endpoints / databases
+   - Currently support auth methods: Basic, Bearer (OAuth planned)
+  - Execute SPARQL queries against all files in your workspace
+   - With the `workspace:/` URI scheme you can address files relative to your workspace / repository
+   - Auto-complete support
+  - Create Notebooks with SPARQL queries
+
+### N3, Turtle, Trig, RDF/XML and SPARQL Syntax
   - Syntax highlighting
   - Syntax validation
   - Checking conformance of literal values to XSD specifications
@@ -66,6 +74,9 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
+### Version 0.3.0: Pre-Release
+This version adds support for executing SPARQL queries against SPARQL endpoints and the internal Mentor workspace. This is a pre-release version to test the extensive changes before an actual release.
+
 ### Version 0.2.11: Service Release
 Fixes a stack overflow bug when browsing ontologies with recursive class definitions. Meanwhile work on support for SPARQL queries and notebooks for 0.3.0 is progressing.
 
