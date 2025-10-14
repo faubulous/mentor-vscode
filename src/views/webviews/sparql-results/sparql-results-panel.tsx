@@ -6,7 +6,6 @@ import { SparqlQueryExecutionState, getDisplayName } from '@src/services/sparql-
 import { SparqlResultsView } from './components/sparql-results-view';
 import { SparqlWelcomeView } from './components/sparql-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
-import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-panel.css';
 
 /**
@@ -76,7 +75,6 @@ class SparqlResultsPanel extends WebviewComponent<
 	componentDidMount() {
 		super.componentDidMount();
 
-		this.addStylesheet('codicon-styles', codicons);
 		this.addStylesheet('sparql-webview-styles', stylesheet);
 
 		// Listen for tab selection changes
@@ -188,11 +186,11 @@ class SparqlResultsPanel extends WebviewComponent<
 	 * @returns `true` if the query result is supported, `false` otherwise.
 	 */
 	private _shouldHandleQueryResults(queryState: SparqlQueryExecutionState) {
-		if(queryState.queryType === 'quads' || queryState.queryType === 'void') {
+		if (queryState.queryType === 'quads' || queryState.queryType === 'void') {
 			return false;
 		}
 
-		if(queryState.notebookIri) {
+		if (queryState.notebookIri) {
 			return false;
 		}
 
@@ -222,7 +220,7 @@ class SparqlResultsPanel extends WebviewComponent<
 				<vscode-tabs selectedIndex={this.state.activeTabIndex} className="vscode-tabs-slim">
 					<vscode-tab-header slot="header" id="0">
 						<div className="tab-header-content">
-							<span className="codicon codicon-list-selection"></span>
+							<vscode-icon name="list-selection"></vscode-icon>
 						</div>
 					</vscode-tab-header>
 					<vscode-tab-panel>
@@ -234,12 +232,16 @@ class SparqlResultsPanel extends WebviewComponent<
 								<div className="tab-header-content">
 									{this._getQueryTypeIcon(query)}
 									<span>{getDisplayName(query)}</span>
-									<a className="codicon codicon-close" role="button" title="Close"
+									<vscode-icon
+										actionIcon
+										name="close"
+										title="Close"
+										aria-hidden="true"
 										onClick={(e) => {
 											e.stopPropagation();
 											this._closeQuery(query.documentIri);
-										}}
-									></a>
+										}}>
+									</vscode-icon>
 								</div>
 							</vscode-tab-header>
 							<vscode-tab-panel>
@@ -257,19 +259,35 @@ class SparqlResultsPanel extends WebviewComponent<
 
 	private _getQueryTypeIcon(query: SparqlQueryExecutionState) {
 		if (query.error) {
-			return <span className="codicon codicon-error tab-error"></span>;
+			return <vscode-icon
+				name="error"
+				className="tab-error"
+				aria-label="Error">
+			</vscode-icon>;
 		}
 
 		if (query.queryType === 'bindings') {
-			return <span className="codicon codicon-table"></span>;
+			return <vscode-icon
+				name="table"
+				className="tab-icon"
+				aria-label="Bindings Result">
+			</vscode-icon>;
 		}
 
 		if (query.queryType === 'boolean') {
-			return <span className="codicon codicon-question"></span>;
+			return <vscode-icon
+				name="question"
+				className="tab-icon"
+				aria-label="Boolean Result">
+			</vscode-icon>;
 		}
 
 		if (query.queryType === 'quads') {
-			return <span className="codicon codicon-file"></span>;
+			return <vscode-icon
+				name="file"
+				className="tab-icon"
+				aria-label="Quads Results">
+			</vscode-icon>;
 		}
 	}
 }

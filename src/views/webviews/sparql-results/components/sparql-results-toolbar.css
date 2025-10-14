@@ -5,15 +5,15 @@
 	border-bottom: 1px solid var(--vscode-editorGroup-border);
 }
 
-.sparql-results-toolbar .codicon-debug-stop {
+.sparql-results-toolbar vscode-icon.debug-stop {
 	color: var(--vscode-debugIcon-stopForeground);
 }
 
-.sparql-results-toolbar .codicon-debug-restart {
+.sparql-results-toolbar vscode-icon.debug-restart {
 	color: var(--vscode-debugIcon-restartForeground);
 }
 
-.sparql-results-toolbar .codicon-error {
+.sparql-results-toolbar vscode-icon.error {
 	color: var(--vscode-errorForeground);
 }
 

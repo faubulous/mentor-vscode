@@ -6,7 +6,6 @@ import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import { SparqlResultsProvider } from '../helpers/sparql-results-provider';
 import { SparqlResultsToolbar } from './sparql-results-toolbar';
 import { SparqlResultsBindingsTable } from './bindings-table';
-import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-view.css';
 
 /**
@@ -46,7 +45,6 @@ export class SparqlResultsView extends WebviewComponent<
   componentDidMount() {
     super.componentDidMount();
 
-    this.addStylesheet('codicon-styles', codicons);
     this.addStylesheet('sparql-results-view-styles', stylesheet);
   }
 
@@ -107,14 +105,16 @@ export class SparqlResultsView extends WebviewComponent<
       <div className="sparql-results-container success">
         <SparqlResultsToolbar />
         {result.value ?
-          (<div className="sparql-results-content-container codicon-xl true">
+          (<div className="sparql-results-content-container vscode-icon-large true">
             <div className='result'>
-              <span className="codicon codicon-pass-filled"></span> True
+              <vscode-icon name="pass-filled"></vscode-icon>
+              <span> True</span>
             </div>
           </div>) :
-          (<div className="sparql-results-content-container codicon-xl false">
+          (<div className="sparql-results-content-container vscode-icon-large false">
             <div className='result'>
-              <span className="codicon codicon-error"></span> False
+              <vscode-icon name="error"></vscode-icon>
+              <span> False</span>
             </div>
           </div>)
         }

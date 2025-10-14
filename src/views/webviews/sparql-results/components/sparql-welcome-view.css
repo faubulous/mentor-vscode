@@ -50,12 +50,12 @@
 	min-width: 8em;
 }
 
-.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .codicon,
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button vscode-icon,
 .sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .label {
 	color: var(--vscode-textLink-foreground);
 }
 
-.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .codicon {
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button vscode-icon {
 	padding: 2em .5em;
 	font-size: large;
 }
@@ -76,11 +76,11 @@
 
 .sparql-welcome-view-container .history-item:hover,
 .sparql-welcome-view-container .history-item:focus-within,
-.sparql-welcome-view-container .history-item [role="button"]:hover {
+.sparql-welcome-view-container .history-item vscode-icon:hover {
     background-color: var(--button-hoverBackground);
 }
 
-.sparql-welcome-view-container .history-item [role="button"] {
+.sparql-welcome-view-container .history-item vscode-icon {
 	color: var(--vscode-inactive);
     visibility: hidden;
 	background-color: transparent;
@@ -89,7 +89,7 @@
 	cursor: pointer;
 }
 
-.sparql-welcome-view-container .history-item:hover [role="button"] {
+.sparql-welcome-view-container .history-item:hover vscode-icon {
     visibility: visible;
 }
 
@@ -103,10 +103,10 @@
     cursor: pointer;
 }
 
-.sparql-welcome-view-container .execute-button {
+.sparql-welcome-view-container vscode-icon.play {
 	color: var(--vscode-debugIcon-restartForeground) !important;
 }
 
-.sparql-welcome-view-container .remove-button {
+.sparql-welcome-view-container vscode-icon.remove {
 	margin-left: auto;
 }

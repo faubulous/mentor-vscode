@@ -87,7 +87,7 @@ class BindingsTableBase extends WebviewComponent<
 					<vscode-toolbar-button
 						title="Copy Column Values"
 						onClick={() => this._handleCopyColumnClick(column, this.props.sparqlResults.queryContext.result as BindingsResult)}>
-						<span className="codicon codicon-copy"></span>
+						<vscode-icon name="copy"></vscode-icon>
 					</vscode-toolbar-button>
 				</div>
 			</div>
@@ -134,7 +134,7 @@ class BindingsTableBase extends WebviewComponent<
 					<vscode-toolbar-button
 						title="Describe Resource"
 						onClick={() => this._handleDescribeNamedNode(binding)}>
-						<span className="codicon codicon-info"></span>
+						<vscode-icon name="info"></vscode-icon>
 					</vscode-toolbar-button>
 				</div>
 			</div>
@@ -155,7 +155,7 @@ class BindingsTableBase extends WebviewComponent<
 					<vscode-toolbar-button
 						title="Copy Cell Value"
 						onClick={() => this._handleCopyCellClick(binding)}>
-						<span className="codicon codicon-copy"></span>
+						<vscode-icon name="copy"></vscode-icon>
 					</vscode-toolbar-button>
 				</div>
 			</div>

@@ -2,6 +2,7 @@ import { WebviewComponent } from '@src/views/webviews/webview-component';
 import { WebviewHost } from '@src/views/webviews/webview-host';
 import { SparqlQueryExecutionState, getDisplayName } from '@src/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
+import codicons from '$/codicon.css';
 import stylesheet from './sparql-welcome-view.css';
 
 /**
@@ -27,6 +28,7 @@ export class SparqlWelcomeView extends WebviewComponent<
 	componentDidMount() {
 		super.componentDidMount();
 
+		this.addStylesheet('codicon-styles', codicons);
 		this.addStylesheet('sparql-welcome-styles', stylesheet);
 
 		this._loadHistory();
@@ -53,15 +55,15 @@ export class SparqlWelcomeView extends WebviewComponent<
 						</div>
 						<div className="body button-list button-list-xl">
 							<vscode-toolbar-button onClick={() => this._handleCreateSparqlQueryFile()}>
-								<span className="codicon codicon-new-file"></span>
+								<vscode-icon name="new-file" className="new-file"></vscode-icon>
 								<span className="label">New Query...</span>
 							</vscode-toolbar-button>
 							<vscode-toolbar-button onClick={() => this._handleSelectSparqlQueryFile()}>
-								<span className="codicon codicon-folder-opened"></span>
+								<vscode-icon name="folder-opened" className="folder-opened"></vscode-icon>
 								<span className="label">Open Query...</span>
 							</vscode-toolbar-button>
 							<vscode-toolbar-button onClick={() => this._handleConnectToEndpoint()}>
-								<span className="codicon codicon-debug-disconnect"></span>
+								<vscode-icon name="debug-disconnect" className="debug-disconnect"></vscode-icon>
 								<span className="label">Connect to Endpoint...</span>
 							</vscode-toolbar-button>
 						</div>
@@ -77,16 +79,23 @@ export class SparqlWelcomeView extends WebviewComponent<
 							{recentQueries.length === 0 && <span className="muted">No recent queries in this workspace.</span>}
 							{recentQueries.length > 0 && recentQueries.map((queryState, index) => (
 								<div key={`${queryState.documentIri}-${index}`} className="history-item">
-									<a className='execute-button codicon codicon-play' role="button" title="Execute"
-										onClick={(e) => this._handleExecuteQuery(queryState, e)}>
-									</a>
+									<vscode-icon
+										actionIcon
+										name="play"
+										title="Execute"
+										className="play"
+										onClick={(e) => this._handleExecuteQuery(queryState, e)}
+									/>
 									<a className="file-link" onClick={(e) => this._handleOpenDocument(queryState, e)}>
 										<span>{getDisplayName(queryState)}</span>
 									</a>
 									<span className="folder muted">{this._getWorkspacePath(queryState)}</span>
-									<a className="remove-button codicon codicon-close" role="button" title="Remove"
-										onClick={(e) => this._handleRemoveFromHistory(queryState, e)}>
-									</a>
+									<vscode-icon
+										name="close"
+										title="Remove"
+										className="remove"
+										onClick={(e) => this._handleRemoveFromHistory(queryState, e)}
+									/>
 								</div>
 							))}
 						</div>
@@ -101,7 +110,7 @@ export class SparqlWelcomeView extends WebviewComponent<
 			const workspacePath = queryState.workspaceIri.split(':')[1];
 			const folderPath = workspacePath.split('/').slice(0, -1).join('/');
 
-			return folderPath.length > 0 ? `~${folderPath}` : '~';
+			return folderPath.length > 0 ? `~${folderPath}` : '~/';
 		}
 	}
 

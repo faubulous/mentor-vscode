@@ -5,7 +5,6 @@ import { BindingsTablePagingState } from './bindings-table-paging-state';
 import { Stopwatch } from './stopwatch';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
-import codicons from '$/codicon.css';
 import toolbarStyle from "./sparql-results-toolbar.css";
 
 /**
@@ -16,7 +15,6 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 	componentDidMount() {
 		super.componentDidMount();
 
-		this.addStylesheet('codicon-styles', codicons);
 		this.addStylesheet('mentor-sparql-toolbar-styles', toolbarStyle);
 	}
 
@@ -29,19 +27,21 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 				<Stopwatch />
 				<span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
 				<vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
-					<span className="codicon codicon-debug-restart"></span>
+					<vscode-icon name="debug-restart" className="debug-restart"></vscode-icon>
 				</vscode-toolbar-button>
 
 				{queryContext.error && (
 					<Fragment>
-						<span className="codicon codicon-error"></span>
+						<span className="divider divider-vertical"></span>
+						<vscode-icon name="error" className='error'></vscode-icon>
 						<span>Error:</span>
 					</Fragment>
 				)}
 
 				{!queryContext.error && !queryContext.endTime && (
 					<Fragment>
-						<span className="codicon codicon-sync codicon-modifier-spin"></span>
+						<span className="divider divider-vertical"></span>
+						<vscode-icon name="sync" spin></vscode-icon>
 						<span>Executing...</span>
 					</Fragment>
 				)}
@@ -63,14 +63,14 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 							onClick={() => this._handlePreviousPage()}
 							disabled={paging.currentPage === 0}
 						>
-							<span className="codicon codicon-chevron-left"></span>
+							<vscode-icon name="chevron-left"></vscode-icon>
 						</vscode-toolbar-button>
 						<vscode-toolbar-button
 							title="Next page"
 							onClick={() => this._handleNextPage()}
 							disabled={paging.currentPage >= paging.totalPages - 1}
 						>
-							<span className="codicon codicon-chevron-right"></span>
+							<vscode-icon name="chevron-right"></vscode-icon>
 						</vscode-toolbar-button>
 						<span className="sparql-results-range">
 							{this._getResultsRangeText(bindings, paging)}

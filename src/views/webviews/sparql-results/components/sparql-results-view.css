@@ -40,19 +40,19 @@
 	font-weight: 500;
 }
 
-.sparql-results-content-container.codicon-xl {
+.sparql-results-content-container.vscode-icon-large {
 	box-sizing: border-box;
 	padding: 1em 2em;
 	gap: 1em;
 	margin: 5px;
 }
 
-.sparql-results-content-container.codicon-xl .codicon {
+.sparql-results-content-container.vscode-icon-large vscode-icon {
 	font-size: 1.5em;
 	font-weight: 300;
 }
 
-.sparql-results-content-container.codicon-xl .result {
+.sparql-results-content-container.vscode-icon-large .result {
 	display: flex;
 	flex-direction: row;
 	justify-content: flex-start;
@@ -65,27 +65,27 @@
 	color: var(--vscode-badge-foreground);
 }
 
-.sparql-results-content-container.codicon-xl.true {
+.sparql-results-content-container.vscode-icon-large.true {
 	background: var(--mentor-bindingResult-true-background);
 }
 
-.sparql-results-content-container.codicon-xl.true .result {
+.sparql-results-content-container.vscode-icon-large.true .result {
 	color: var(--mentor-bindingResult-true-foreground);
 }
 
-.sparql-results-content-container.codicon-xl.true .codicon {
+.sparql-results-content-container.vscode-icon-large.true vscode-icon {
 	color: var(--mentor-bindingResult-true-foreground);
 }
 
-.sparql-results-content-container.codicon-xl.false {
+.sparql-results-content-container.vscode-icon-large.false {
 	background: var(--mentor-bindingResult-false-background);
 }
 
-.sparql-results-content-container.codicon-xl.false .result {
+.sparql-results-content-container.vscode-icon-large.false .result {
 	color: var(--mentor-bindingResult-false-foreground);
 }
 
-.sparql-results-content-container.codicon-xl.false .codicon {
+.sparql-results-content-container.vscode-icon-large.false vscode-icon {
 	color: var(--mentor-bindingResult-false-foreground);
 }
 
