@@ -61,11 +61,7 @@ class MentorExtension {
 	/**
 	 * The active reasoner used for the Mentor triple store.
 	 */
-<<<<<<< HEAD
 	readonly reasoner = new OwlReasoner(new MentorGraphUriGenerator());
-=======
-	readonly reasoner = new OwlReasoner();
->>>>>>> origin/main
 
 	/**
 	 * The Mentor RDF extension triple store.
