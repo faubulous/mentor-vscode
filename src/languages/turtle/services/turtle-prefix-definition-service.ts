@@ -328,6 +328,13 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 			}
 
 			const localName = getIriFromIriReference(token.image).substring(namespaceIri.length);
+
+			if(localName.includes('/')) {
+				// Skip if the local name contains a slash, indicating it's not a valid prefixed name.
+				// See: https://github.com/faubulous/mentor-vscode/issues/55
+				continue;
+			}
+
 			const range = context.getRangeFromToken(token);
 
 			// Delete the entire IRI token.
