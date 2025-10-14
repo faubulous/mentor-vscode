@@ -2,4 +2,4 @@
 **/out
 **/coverage
 log.txt
-.vscode-test-web
+.vscode-test-web/**
