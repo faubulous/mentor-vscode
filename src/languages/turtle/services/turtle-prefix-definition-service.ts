@@ -329,8 +329,8 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 
 			const localName = getIriFromIriReference(token.image).substring(namespaceIri.length);
 
-			if(localName.includes('/')) {
-				// Skip if the local name contains a slash, indicating it's not a valid prefixed name.
+			if (!this._isValidLocalName(localName)) {
+				// Skip if the local name contains a URI characters, indicating it's not a valid prefixed name.
 				// See: https://github.com/faubulous/mentor-vscode/issues/55
 				continue;
 			}
@@ -347,5 +347,9 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		}
 
 		return edit;
+	}
+
+	private _isValidLocalName(localName: string): boolean {
+		return /^[A-Za-z0-9_\-\.]+$/.test(localName);
 	}
 }
