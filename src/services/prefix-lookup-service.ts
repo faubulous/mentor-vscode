@@ -1,10 +1,33 @@
-import { mentor } from '@/mentor';
-import { DEFAULT_PREFIXES } from '@/services';
+import { mentor } from '@src/mentor';
+import { NamespaceMap } from '@src/utilities';
+import { DEFAULT_PREFIXES } from '@src/services';
 
 /**
  * A service for looking up prefixes in the project.
  */
 export class PrefixLookupService {
+	/**
+	 * Get the a namespace map for the standard W3C prefix definitions used in inference graphs.
+	 * @returns A map of standard prefixes.
+	 */
+	getInferencePrefixes(): NamespaceMap {
+		return {
+			'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+			'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+			'owl': 'http://www.w3.org/2002/07/owl#',
+			'skos': 'http://www.w3.org/2004/02/skos/core#',
+			'shacl': 'http://www.w3.org/ns/shacl#'
+		}
+	}
+
+	/**
+	 * Get the default prefixes from the Mentor extension configuration.
+	 * @returns A map of default prefixes.
+	 */
+	getDefaultPrefixes(): NamespaceMap {
+		return mentor.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+	}
+
 	/**
 	 * Get the prefix for a given namespace IRI.
 	 * @param documentUri The URI of the document where the IRI is used.
@@ -13,36 +36,41 @@ export class PrefixLookupService {
 	 * @returns A prefix for the given IRI if it is declared in the project. A default value otherwise.
 	 */
 	getPrefixForIri(documentUri: string, namespaceIri: string, defaultValue: string) {
-		const context = mentor.contexts[documentUri];
-
-		if (!context) {
-			return defaultValue;
-		}
-
 		// 1. Try to find the prefix in the document.
-		const namespaces = mentor.contexts[documentUri].namespaces;
+		const documentContext = mentor.contexts[documentUri];
 
-		for (let prefix in namespaces) {
-			if (namespaces[prefix] === namespaceIri) {
-				return prefix;
+		if (documentContext) {
+			for (const [prefix, iri] of Object.entries(documentContext.namespaces)) {
+				if (iri === namespaceIri) {
+					return prefix;
+				}
 			}
 		}
 
 		// 2. Try to find the prefix in the project configuration.
-		const prefixes = mentor.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+		const projectPrefixes = mentor.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
-		if (Array.isArray(prefixes)) {
-			const prefix = prefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
+		if (Array.isArray(projectPrefixes)) {
+			const prefix = projectPrefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
 
 			if (prefix) {
 				return prefix;
 			}
 		}
 
-		// 3. Try to find the prefix in the default prefixes.
-		const defaultPrefixes = mentor.localStorageService.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+		// 3. Try to find the prefix in any of the other documents in the workspace.
+		for (const context of Object.values(mentor.contexts)) {
+			for (const [prefix, iri] of Object.entries(context.namespaces)) {
+				if (iri === namespaceIri) {
+					return prefix;
+				}
+			}
+		}
 
-		for (let prefix in defaultPrefixes) {
+		// 4. Try to find the prefix in the default prefixes.
+		const defaultPrefixes = this.getDefaultPrefixes();
+
+		for (const prefix in defaultPrefixes) {
 			if (defaultPrefixes[prefix] === namespaceIri) {
 				return prefix;
 			}
@@ -103,7 +131,7 @@ export class PrefixLookupService {
 		}
 
 		// 3. Alternatively use the default prefixes if the prefix is not declared in the project.
-		const defaultPrefixes = mentor.localStorageService.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+		const defaultPrefixes = this.getDefaultPrefixes();
 
 		// Returning an empty string will produce empty URI declarations which  will trigger 
 		// a diagnostic error in the document so users can enter it manually.

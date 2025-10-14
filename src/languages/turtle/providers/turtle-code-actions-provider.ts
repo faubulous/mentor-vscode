@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
-import { getNamespaceIri, getIriFromIriReference } from '@/utilities';
-import { TurtleDocument } from '@/languages/turtle/turtle-document';
-import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { Uri } from "@faubulous/mentor-rdf"
+import { mentor } from '@src/mentor';
+import { getIriFromIriReference } from '@src/utilities';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
 /**
  * A provider for RDF document code actions.
@@ -28,40 +29,47 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 	 * @returns An array of code actions.
 	 */
 	private _provideRefactoringActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
-		const result: vscode.CodeAction[] = [];
-
 		const context = mentor.getDocumentContext(document, TurtleDocument);
 
-		if (context) {
-			const token = context.getTokensAtPosition(range.start)[0];
-			const tokenName = token?.tokenType?.tokenName;
-			const tokenTypes = context.getTokenTypes();
+		if (!context) {
+			return [];
+		}
 
-			if (tokenName === tokenTypes.IRIREF) {
-				const namespaceIri = getNamespaceIri(getIriFromIriReference(token.image));
+		const token = context.getTokenAtPosition(range.start);
 
-				result.push({
-					kind: vscode.CodeActionKind.Refactor,
+		if(!token) {
+			return [];
+		}
+
+		const result: vscode.CodeAction[] = [];
+
+		const tokenName = token.tokenType?.tokenName;
+		const tokenTypes = context.getTokenTypes();
+
+		if (tokenName === tokenTypes.IRIREF) {
+			const namespaceIri = Uri.getNamespaceIri(getIriFromIriReference(token.image));
+
+			result.push({
+				kind: vscode.CodeActionKind.Refactor,
+				title: 'Define prefix for IRI',
+				isPreferred: true,
+				command: {
 					title: 'Define prefix for IRI',
-					isPreferred: true,
-					command: {
-						title: 'Define prefix for IRI',
-						command: 'mentor.action.implementPrefixForIri',
-						arguments: [document.uri, namespaceIri, token]
-					}
-				});
-			} else if (tokenName === tokenTypes.PREFIX || tokenName === tokenTypes.PNAME_NS) {
-				result.push({
-					kind: vscode.CodeActionKind.Refactor,
+					command: 'mentor.command.implementPrefixForIri',
+					arguments: [document.uri, namespaceIri, token]
+				}
+			});
+		} else if (tokenName === tokenTypes.PREFIX || tokenName === tokenTypes.PNAME_NS) {
+			result.push({
+				kind: vscode.CodeActionKind.Refactor,
+				title: 'Sort prefixes',
+				isPreferred: true,
+				command: {
 					title: 'Sort prefixes',
-					isPreferred: true,
-					command: {
-						title: 'Sort prefixes',
-						command: 'mentor.action.sortPrefixes',
-						arguments: [document.uri, token]
-					}
-				});
-			}
+					command: 'mentor.command.sortPrefixes',
+					arguments: [document.uri, token]
+				}
+			});
 		}
 
 		return result;
@@ -90,7 +98,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: true,
 				command: {
 					title: 'Implement missing prefixes',
-					command: 'mentor.action.implementPrefixes',
+					command: 'mentor.command.implementPrefixes',
 					arguments: [document.uri, Array.from(undefinedPrefixes)]
 				}
 			});
@@ -106,7 +114,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: true,
 				command: {
 					title: 'Remove unused prefixes',
-					command: 'mentor.action.deletePrefixes',
+					command: 'mentor.command.deletePrefixes',
 					arguments: [document.uri, unusedPrefixes]
 				}
 			});
@@ -120,8 +128,8 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: false,
 				command: {
 					title: `Implement missing prefix: ${prefix}`,
-					command: 'mentor.action.implementPrefixes',
-					arguments: [document.uri, [{ prefix }]]
+					command: 'mentor.command.implementPrefixes',
+					arguments: [document.uri, [prefix]]
 				}
 			});
 		}
@@ -133,7 +141,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				isPreferred: false,
 				command: {
 					title: `Remove unused prefix: ${prefix}`,
-					command: 'mentor.action.deletePrefixes',
+					command: 'mentor.command.deletePrefixes',
 					arguments: [document.uri, [prefix]]
 				}
 			});

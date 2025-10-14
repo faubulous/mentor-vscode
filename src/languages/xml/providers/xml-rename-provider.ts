@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
-import { XmlDocument } from '@/languages/xml/xml-document';
-import { XmlFeatureProvider } from '@/languages/xml/xml-feature-provider';
-import { getIriLocalPart, getNamespaceIri } from '@/utilities';
+import { Uri } from '@faubulous/mentor-rdf';
+import { mentor } from '@src/mentor';
+import { XmlDocument } from '@src/languages/xml/xml-document';
+import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';
 
 /**
  * Interface for regular expression based text replacements.
@@ -30,7 +30,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 		if (!context) {
 			return undefined;
 		}
-		
+
 		const edits = new vscode.WorkspaceEdit();
 
 		// Handle rename of local names. Either of prefixed names or in IRIs.
@@ -243,9 +243,9 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 
 		if (attributeValue.includes(':')) {
 			// Attribute values only support 
-			const localName = getIriLocalPart(attributeValue);
+			const localName = Uri.getLocalPart(attributeValue);
 
-			if (localName.length === 0) {
+			if (!localName || localName.length === 0) {
 				return undefined;
 			}
 
@@ -270,10 +270,10 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 	 * @returns An array of text replacements.
 	 */
 	private _getLocalNameTextReplacements(context: XmlDocument, iri: string, newName: string): TextReplacement[] {
-		const localName = getIriLocalPart(iri);
-		const namespaceIri = getNamespaceIri(iri);
+		const localName = Uri.getLocalPart(iri);
+		const namespaceIri = Uri.getNamespaceIri(iri);
 
-		if (!iri.includes(':') || namespaceIri.length === 0 || localName.length === 0) {
+		if (!iri.includes(':') || namespaceIri.length === 0 || !localName || localName.length === 0) {
 			return [];
 		}
 

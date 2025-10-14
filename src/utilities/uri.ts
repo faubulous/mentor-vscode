@@ -1,62 +1,4 @@
 /**
- * Get the portion of a IRI after the first occurance of '#' or the last occurance of '/' or the local part of a namespace IRI.
- * @param iri A IRI.
- * @returns The local part of the IRI.
- */
-export function getIriLocalPart(iri: string): string {
-	let u = iri;
-
-	// If we have namespace URI, return the label of the document or folder.
-	if (u.endsWith('/') || u.endsWith('#')) {
-		u = u.substring(0, u.length - 1);
-	}
-
-	let ns = getNamespaceIri(u);
-
-	if (ns) {
-		return u.replace(ns, "");
-	} else {
-		return u;
-	}
-}
-
-/**
- * Get the portion of a URI after the first occurance of '#' or the last occurance of '/'.
- * @param iri A URI.
- * @returns The namespace portion of the URI.
- */
-export function getNamespaceIri(iri: string) {
-	if (!iri) {
-		return iri;
-	}
-
-	// Remove any query strings from the URI.
-	let u = iri;
-	let n = u.indexOf('?');
-
-	if (n > -1) {
-		u = iri.substring(0, n);
-	}
-
-	// Find the first occurance of '#' and return the substring up to that point.
-	n = u.indexOf('#');
-
-	if (n > -1) {
-		return u.substring(0, n + 1);
-	}
-
-	// Find the last occurance of '/' and return the substring up to that point.
-	n = u.lastIndexOf('/');
-
-	// Only return the substring if it is not the 'http://' or 'https://' protocol.
-	if (n > 8) {
-		return u.substring(0, n + 1);
-	} else {
-		return u + "/";
-	}
-}
-
-/**
  * Get a transformed version of the URI that can be used as a JSON identifier which only contains letters, numbers and dots.
  * @param iri A URI.
  * @returns A transformed version which only contains letters, numbers and dots.
@@ -77,6 +19,12 @@ export function toJsonId(iri: string): string | undefined {
 	}
 }
 
+/**
+ * Get the IRI from a node ID in the form of `<http://example.com/resource>`.
+ * If the node ID does not contain angle brackets, it is returned as is.
+ * @param id A node ID.
+ * @returns The IRI corresponding to the node ID.
+ */
 export function getIriFromNodeId(id: string): string {
 	const n = id.lastIndexOf('<');
 
@@ -90,5 +38,43 @@ export function getIriFromNodeId(id: string): string {
 		return id.substring(n + 1, m);
 	} else {
 		return id;
+	}
+}
+
+/**
+ * Get the local part and query from an IRI string.
+ * @param iri An IRI string.
+ * @returns The local part and query of the IRI, or the IRI itself if it does not contain a local part or query.
+ */
+export function getLocalPartAndQuery(iri: string): string {
+	if (iri.includes('#')) {
+		return iri.split('#').pop() || iri;
+	} else {
+		return iri.split('/').pop() || iri;
+	}
+}
+/**
+ * Get the file name from a URI string.
+ * @param uri A URI string.
+ * @returns The file name, or the URI itself if it does not contain a file name.
+ */
+export function getFileName(uri: string): string {
+	const parts = uri.split('/');
+
+	return parts.length > 0 ? parts[parts.length - 1] : uri;
+}
+
+/**
+ * Get the folder path from a URI string.
+ * @param uri A URI string.
+ * @returns The folder path, or the URI itself if it does not contain a path.
+ */
+export function getPath(uri: string): string {
+	const parts = uri.split('/');
+
+	if (parts.length > 1) {
+		return parts.slice(0, -1).join('/');
+	} else {
+		return uri;
 	}
 }

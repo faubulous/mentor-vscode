@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
-import { isVariable, getIriFromToken } from '@/utilities';
-import { TurtleDocument } from '@/languages/turtle/turtle-document';
-import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { mentor } from '@src/mentor';
+import { isVariable, getIriFromToken } from '@src/utilities';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
 /**
  * Provides renaming for URIs, resources labels and prefixes.
@@ -15,7 +15,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			return null;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
+		const token = context.getTokenAtPosition(position);
 
 		if (!token) {
 			throw new Error('No token found at the given position.');
@@ -36,7 +36,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			return edits;
 		}
 
-		const token = context.getTokensAtPosition(position)[0];
+		const token = context.getTokenAtPosition(position);
 
 		if (!token) {
 			return edits;
@@ -88,7 +88,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			if (!references) return edits;
 
 			for (let range of references) {
-				const token = context.getTokensAtPosition(range.start)[0];
+				const token = context.getTokenAtPosition(range.start);
 
 				if (!token) continue;
 

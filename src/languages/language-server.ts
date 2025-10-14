@@ -1,31 +1,31 @@
 import { IRecognitionException } from 'chevrotain';
 import { ISemanticError, IToken } from 'millan';
 import {
-	Connection,
-	Diagnostic,
-	DidChangeConfigurationNotification,
-	InitializeParams,
-	InitializeResult,
-	TextDocuments,
-	TextDocumentSyncKind,
-	TextDocumentChangeEvent,
-	createConnection,
-	DiagnosticSeverity,
-	Range,
-	DidChangeWatchedFilesParams,
-	DidChangeConfigurationParams,
-	PublishDiagnosticsParams,
 	BrowserMessageReader,
 	BrowserMessageWriter,
-	DiagnosticTag
+	Connection,
+	createConnection,
+	Diagnostic,
+	DiagnosticSeverity,
+	DiagnosticTag,
+	DidChangeConfigurationNotification,
+	DidChangeConfigurationParams,
+	DidChangeWatchedFilesParams,
+	InitializeParams,
+	InitializeResult,
+	PublishDiagnosticsParams,
+	Range,
+	TextDocumentChangeEvent,
+	TextDocuments,
+	TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { SyntaxParser, XSD } from '@faubulous/mentor-rdf';
 import {
 	getNamespaceDefinition,
 	getIriFromToken,
-	NamespaceMap,
-} from '@/utilities';
+	PrefixMap,
+} from '@src/utilities';
 
 /**
  * The result of tokenizing a text document.
@@ -73,6 +73,8 @@ export abstract class LanguageServerBase {
 
 	readonly documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
+	readonly documentSettings: Map<string, Thenable<ParserSettings>> = new Map();
+
 	hasConfigurationCapability = false;
 
 	hasWorkspaceFolderCapability = false;
@@ -90,8 +92,6 @@ export abstract class LanguageServerBase {
 	 * The parser used to tokenize and validate the document.
 	 */
 	parser: SyntaxParser;
-
-	readonly documentSettings: Map<string, Thenable<ParserSettings>> = new Map();
 
 	constructor(langaugeId: string, languageName: string, parser: SyntaxParser, isDocumentTokenProvider = false) {
 		this.languageName = languageName;
@@ -352,7 +352,7 @@ export abstract class LanguageServerBase {
 
 	protected getLintDiagnostics(document: TextDocument, content: string, tokens: IToken[]): Diagnostic[] {
 		let result: Diagnostic[] = [];
-		let namespaces: NamespaceMap = {};
+		let prefixes: PrefixMap = {};
 		let usedPrefixes: Set<string> = new Set();
 
 		for (let i = 0; i < tokens.length; i++) {
@@ -369,7 +369,7 @@ export abstract class LanguageServerBase {
 					const ns = getNamespaceDefinition(tokens, t);
 
 					if (ns) {
-						if (namespaces[ns.prefix]) {
+						if (prefixes[ns.prefix]) {
 							const n = t.startLine ? t.startLine - 1 : 0;
 
 							result.push({
@@ -382,7 +382,7 @@ export abstract class LanguageServerBase {
 							})
 						}
 
-						namespaces[ns.prefix] = ns.uri;
+						prefixes[ns.prefix] = ns.uri;
 
 						const u = tokens[i + 2];
 
@@ -436,7 +436,7 @@ export abstract class LanguageServerBase {
 					}
 
 					let value = tokens[i - 1];
-					let datatype = getIriFromToken(namespaces, tokens[i + 1]);
+					let datatype = getIriFromToken(prefixes, tokens[i + 1]);
 
 					switch (datatype) {
 						case XSD.anyURI: {
@@ -826,7 +826,7 @@ export abstract class LanguageServerBase {
 			}
 		}
 
-		for (let prefix of Object.keys(namespaces)) {
+		for (let prefix of Object.keys(prefixes)) {
 			if (!usedPrefixes.has(prefix)) {
 				const prefixToken = tokens.find(t => t.image === `${prefix}:`);
 

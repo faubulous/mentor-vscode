@@ -1,0 +1,48 @@
+body {
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+vscode-tab-header .tab-header-content {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+vscode-tab-header {
+    color: var(--vscode-tab-activeForeground);
+}
+
+vscode-tab-header[aria-selected="true"] {
+    border-bottom-color: var(--vscode-focusBorder);
+}
+
+vscode-tab-header:hover {
+	background-color: var(--vscode-tab-hoverBackground);
+}
+
+vscode-tab-header:not([aria-selected="true"]) {
+    color: var(--vscode-tab-inactiveForeground);
+    opacity: 0.7;
+}
+
+vscode-tab-header a[role="button"] {
+	color: var(--vscode-tab-inactiveForeground);
+    opacity: 0;
+    visibility: hidden;
+}
+
+vscode-tab-header:hover a[role="button"],
+vscode-tab-header[aria-selected="true"] a[role="button"] {
+    opacity: 1;
+    visibility: visible;
+}
+
+vscode-tab-header[aria-selected="true"] a[role="button"] {
+	color: var(--vscode-tab-activeForeground);
+}
+
+vscode-tab-header a[role="button"]:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    border-radius: 2px;
+}

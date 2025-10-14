@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
+import { Uri } from '@faubulous/mentor-rdf';
 import { IToken } from "millan";
-import { getNamespaceIri, getTokenPosition } from "@/utilities";
+import { getTokenPosition } from "@src/utilities";
 
 /**
  * Base class of feature providers for Turtle documents.
@@ -53,7 +54,7 @@ export class TurtleFeatureProvider {
 				let uri = token.image.trim();
 				uri = uri.substring(1, uri.length - 1)
 
-				const namespace = getNamespaceIri(uri);
+				const namespace = Uri.getNamespaceIri(uri);
 				const label = uri.substring(namespace.length);
 
 				const i = token.image.indexOf(label);

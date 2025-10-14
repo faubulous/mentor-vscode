@@ -4,12 +4,16 @@
     "target": "es2020",
     "lib": [
       "es2020",
-      "dom"
+      "dom",
+      "dom.iterable",
     ],
     "baseUrl": "./",
     "paths": {
-      "@/*": [
+      "@src/*": [
         "src/*"
+      ],
+      "$/*": [
+        "out/*"
       ]
     },
     "rootDir": "./src",
@@ -18,12 +22,22 @@
     "strict": true,
     "noEmit": true, // Do not emit output files, just check for errors.
     "declaration": true,
-    "skipLibCheck": true // Don't fail on errors in imported libraries. 
+    "skipLibCheck": true, // Don't fail on errors in imported libraries. 
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.tsx"
   ],
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts"
   ]
 }

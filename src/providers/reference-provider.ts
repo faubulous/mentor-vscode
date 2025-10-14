@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
+import { mentor } from '@src/mentor';
 
 /**
  * A provider that retrieves the locations of resource references in a document.

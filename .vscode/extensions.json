@@ -4,6 +4,12 @@
 
 	// List of extensions which should be recommended for users of this workspace.
 	"recommendations": [
-		"dbaeumer.vscode-eslint"
+		"dbaeumer.vscode-eslint",
+		"vitest.explorer"
+	],
+	
+	// Extensions that should not be recommended
+	"unwantedRecommendations": [
+		"orta.vscode-jest"
 	]
 }

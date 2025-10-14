@@ -1,21 +1,21 @@
 import * as vscode from 'vscode';
 import { IToken } from 'millan';
 import { Position } from 'vscode-languageserver-types';
+import { Uri } from '@faubulous/mentor-rdf';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
-import { mentor } from '@/mentor';
-import { DocumentContext, TokenTypes } from '@/document-context';
-import { TurtlePrefixDefinitionService } from '@/services';
+import { mentor } from '@src/mentor';
+import { DocumentContext, TokenTypes } from '@src/workspace/document-context';
+import { TurtlePrefixDefinitionService } from '@src/services';
 import {
-	getIriFromToken,
-	getIriFromIriReference,
-	getIriFromPrefixedName,
-	getNamespaceDefinition,
-	getNamespaceIri,
 	countLeadingWhitespace,
 	countTrailingWhitespace,
+	getIriFromIriReference,
+	getIriFromPrefixedName,
+	getIriFromToken,
+	getNamespaceDefinition,
 	getTokenPosition
-} from '@/utilities';
+} from '@src/utilities';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -45,7 +45,7 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	public override getIriAtPosition(position: vscode.Position): string | undefined {
-		const token = this.getTokensAtPosition(position)[0];
+		const token = this.getTokenAtPosition(position);
 
 		if (token) {
 			let iri;
@@ -63,7 +63,7 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	public override getLiteralAtPosition(position: vscode.Position): string | undefined {
-		const token = this.getTokensAtPosition(position)[0];
+		const token = this.getTokenAtPosition(position);
 
 		if (!token || !token.tokenType) {
 			return undefined;
@@ -119,11 +119,11 @@ export class TurtleDocument extends DocumentContext {
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			mentor.store.executeInference(this.uri.toString());
+			mentor.store.executeInference(this.graphIri.toString());
 		}
 	}
 
-	public override async parse(uri: vscode.Uri, data: string): Promise<void> {
+	public override async parse(data: string): Promise<void> {
 		// Parse the tokens *before* parsing the graph because the graph parsing 
 		// might fail but we need to update the tokens.
 		let tokens;
@@ -137,16 +137,16 @@ export class TurtleDocument extends DocumentContext {
 		this.setTokens(tokens);
 
 		try {
-			const u = uri.toString();
+			const graphUri = this.graphIri.toString();
 
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
-			this.graphs.push(u);
+			this.graphs.push(graphUri);
 
 			// The loadFromStream function only updates the existing graphs 
 			// when the document was parsed successfully.
-			await mentor.store.loadFromTurtleStream(data, u, false);
+			await mentor.store.loadFromTurtleStream(data, graphUri, false);
 
 			// Make definitions using blank nodes resolvable.
 			this.mapBlankNodes();
@@ -170,20 +170,27 @@ export class TurtleDocument extends DocumentContext {
 
 		// TODO: This should be handled in the prefix definition service (listen to doc changes and react) instead of the document itself.
 		if (change?.text.endsWith(':') && mentor.configuration.get('prefixes.autoDefinePrefixes')) {
-			// Determine the token type at the change position.
-			const token = this.getTokensAtPosition(change.range.start)[0];
-
 			// Do not auto-implement prefixes when manually typing a prefix.
-			const n = this.tokens.findIndex(t => t === token);
-			const t = this.tokens[n - 1]?.image.toLowerCase();
+			const n = this.getTokenIndexAtPosition(change.range.start);
 
-			// Note: we check the token image instead of the type name to also account for Turtle style prefix
-			// definitions in SPARQL queries. These are not supported by SPARQL and detected as language tags.
-			// Although this kind of prefix declaration is not valid in SPARQL, implementing the prefix should be avoided.
-			if (t === 'prefix' || t === '@prefix') return;
+			if (n < 1) return;
 
-			if (token && token.image && token.tokenType?.tokenName === 'PNAME_NS') {
-				const prefix = token.image.substring(0, token.image.length - 1);
+			// Determine the token type at the change position.
+			const previousToken = this.tokens[n - 1]?.image.toLowerCase();
+
+			// Note: We check the token image instead of the type name to also account 
+			// for Turtle style prefix definitions in SPARQL queries. These are not supported 
+			// by SPARQL and detected as language tags. Although this kind of prefix declaration 
+			// is not valid in SPARQL, implementing the prefix should be avoided.
+			if (previousToken === 'prefix' || previousToken === '@prefix') return;
+
+			// Also do not implement prefixes for URI schemes..
+			if (previousToken === '<') return;
+
+			const currentToken = this.tokens[n];
+
+			if (currentToken && currentToken.image && currentToken.tokenType?.tokenName === 'PNAME_NS') {
+				const prefix = currentToken.image.substring(0, currentToken.image.length - 1);
 
 				// Do not implmenet prefixes that are already defined.
 				if (this.namespaces[prefix]) return;
@@ -250,17 +257,18 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	/**
-	 * Gets all tokens at a given position.
-	 * @param tokens A list of tokens.
+	 * Gets the index of the token at a given position.
 	 * @param position A position in the document.
-	 * @returns An non-empty array of tokens on success, an empty array otherwise.
+	 * @returns The index of the token at the given position, or -1 if no token is found.
 	 */
-	getTokensAtPosition(position: Position): IToken[] {
-		// The tokens are 0-based, but the position is 1-based.
+	getTokenIndexAtPosition(position: Position): number {
+		// The tokens are 1-based, but the position is 0-based.
 		const l = position.line + 1;
 		const n = position.character;
 
-		for (let token of this.tokens) {
+		for (let i = 0; i < this.tokens.length; i++) {
+			const token = this.tokens[i];
+
 			if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
 				continue;
 			}
@@ -271,21 +279,66 @@ export class TurtleDocument extends DocumentContext {
 
 			// If the token starts and ends on the same line and column, then the position must be inside the token.
 			if (token.startLine == l && token.endLine == l && token.startColumn <= n && n <= token.endColumn) {
-				return [token];
+				return i;
 			}
 
 			// If we have a multi-line token and the position is between start and end, then we have a match.
 			if (token.startLine < l && token.endLine > l) {
-				return [token];
+				return i;
 			}
 
 			// If the token ends on the same line and the position is before the end column, then we have a match.
 			if (token.endLine == l && token.endColumn >= n) {
-				return [token];
+				return i;
 			}
 		}
 
-		return [];
+		return -1;
+	}
+
+	/**
+	 * Gets the first token at a given position.
+	 * @param position A position in the document.
+	 * @returns The token at the given position, if it exists, undefined otherwise.
+	 */
+	getTokenAtPosition(position: Position): IToken | undefined {
+		const index = this.getTokenIndexAtPosition(position);
+
+		return index >= 0 ? this.tokens[index] : undefined;
+	}
+
+	/**
+	 * Gets the token that precedes the given position.
+	 * @param position A position in the document.
+	 * @returns The token before the given position, if it exists, undefined otherwise.
+	 */
+	getTokenBeforePosition(position: Position): IToken | undefined {
+		const index = this.getTokenIndexAtPosition(position);
+
+		if (index > 0) {
+			// Found token at position, return previous one
+			return this.tokens[index - 1];
+		} else if (index === 0) {
+			// At first token, no previous token
+			return undefined;
+		} else {
+			// No token at position (index === -1), find last token before this position
+			const l = position.line + 1;
+			const n = position.character;
+
+			for (let i = this.tokens.length - 1; i >= 0; i--) {
+				const token = this.tokens[i];
+
+				if (!token.endLine || !token.endColumn) continue;
+
+				// If token ends before the cursor position, it's the one we want
+				if (token.endLine < l || (token.endLine === l && token.endColumn <= n)) {
+					return token;
+				}
+			}
+		}
+
+		return undefined;
 	}
 
 	/**
@@ -416,7 +469,7 @@ export class TurtleDocument extends DocumentContext {
 
 		if (!objectUri) return;
 
-		const namespaceUri = getNamespaceIri(objectUri);
+		const namespaceUri = Uri.getNamespaceIri(objectUri);
 
 		// TODO: Make this more explicit to reduce false positives.
 		switch (namespaceUri) {

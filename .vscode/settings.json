@@ -9,7 +9,19 @@
     "typescript.tsdk": "./node_modules/typescript/lib", // we want to use the TS server from our node_modules folder to control its version
     "typescript.tsc.autoDetect": "off",
     "editor.insertSpaces": false,
-    "jest.runMode": {
-        "type": "on-demand"
-    }
+    
+    // Vitest configuration
+    "vitest.enable": true,
+    "vitest.commandLine": "npm run test",
+    "vitest.include": ["src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+    "vitest.exclude": ["node_modules/**", "out/**", "coverage/**"],
+    // Disable Jest extension to avoid conflicts
+    "jest.enable": false,
+    "jest.disabledWorkspaceFolders": ["mentor-vscode"],
+    
+    // Test Explorer settings
+    "testExplorer.useNativeTesting": true,
+    
+    // TypeScript settings for better test support
+    "typescript.preferences.includePackageJsonAutoImports": "on"
 }

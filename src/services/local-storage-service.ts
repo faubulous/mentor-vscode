@@ -28,16 +28,16 @@ export class LocalStorageService {
 		}
 	}
 
-	/**
-	 * Set a value in the local storage.
-	 * @param key Key to store the value in the storage.
-	 * @param value Value to store in the storage.
-	 */
-	setValue<T>(key: string, value: T) {
-		if (this._storage) {
-			this._storage.update(key, value);
-		} else {
-			throw new Error("Storage not initialized.");
-		}
-	}
+    /**
+     * Set a value in the local storage.
+     * @param key Key to store the value in the storage.
+     * @param value Value to store in the storage.
+     */
+    async setValue<T>(key: string, value: T): Promise<void> {
+        if (this._storage) {
+            await this._storage.update(key, value);
+        } else {
+            throw new Error("Storage not initialized.");
+        }
+    }
 }

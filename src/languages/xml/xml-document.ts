@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { Range } from 'vscode-languageserver-types';
 import { SAXParser } from 'sax-ts';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RdfSyntax } from '@faubulous/mentor-rdf';
-import { mentor } from '@/mentor';
-import { DocumentContext, TokenTypes } from '@/document-context';
-import { getIriFromPrefixedName } from '@/utilities';
+import { mentor } from '@src/mentor';
+import { DocumentContext, TokenTypes } from '@src/workspace/document-context';
+import { getIriFromPrefixedName } from '@src/utilities';
 
 // TODO: Move getTokenTypes and getPrefixDefintion int the Definition Service for the XML language.
 
@@ -228,22 +228,22 @@ export class XmlDocument extends DocumentContext {
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			mentor.store.executeInference(this.uri.toString());
+			mentor.store.executeInference(this.graphIri.toString());
 		}
 	}
 
-	override async parse(uri: vscode.Uri, data: string): Promise<void> {
+	override async parse(data: string): Promise<void> {
 		try {
-			const u = uri.toString();
+			const graphUri = this.graphIri.toString();
 
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
-			this.graphs.push(u);
+			this.graphs.push(graphUri);
 
 			// The loadFromStream function only updates the existing graphs 
 			// when the document was parsed successfully.
-			await mentor.store.loadFromXmlStream(data, u, false);
+			await mentor.store.loadFromXmlStream(data, graphUri, false);
 
 			await this.parseXml(data);
 

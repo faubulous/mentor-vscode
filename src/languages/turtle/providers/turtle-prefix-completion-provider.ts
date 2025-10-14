@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
-import { mentor } from '@/mentor';
-import { getPreviousToken } from '@/utilities';
-import { TurtleDocument } from '@/languages/turtle/turtle-document';
-import { TurtleFeatureProvider } from '@/languages/turtle/turtle-feature-provider';
+import { mentor } from '@src/mentor';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
 export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implements vscode.InlineCompletionItemProvider {
 	protected readonly prefixTokenTypes = new Set(["PREFIX", "TTL_PREFIX"]);
@@ -18,19 +17,21 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 			return null;
 		}
 
-		const currentToken = context.getTokensAtPosition(position)[0];
+		const n = context.getTokenIndexAtPosition(position);
 
-		if (!currentToken) {
+		// We also need the previous token to determine if this is a prefix definition.
+		if (n < 1) {
 			return null;
 		}
 
+		const currentToken = context.tokens[n];
 		const currentType = currentToken.tokenType?.tokenName;
 
 		if (!currentType || currentType != "PNAME_NS") {
 			return;
 		}
 
-		const previousToken = getPreviousToken(context.tokens, currentToken);
+		const previousToken = context.tokens[n - 1];
 
 		if (!previousToken) {
 			return null;

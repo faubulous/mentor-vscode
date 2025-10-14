@@ -1,18 +1,29 @@
 import * as vscode from 'vscode';
-import * as n3 from 'n3';
-import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { DocumentContext } from './document-context';
-import { DocumentFactory } from './document-factory';
+import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { DocumentContext } from './workspace/document-context';
+import { DocumentFactory } from './workspace/document-factory';
 import { DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
-import { WorkspaceIndexer, DocumentIndex } from './workspace-indexer';
-import { WorkspaceRepository } from './workspace-repository';
+import { WorkspaceIndexer, DocumentIndex } from './workspace/workspace-indexer';
+import { WorkspaceRepository } from './workspace/workspace-repository';
 import {
+	CredentialStorageService,
 	LocalStorageService,
 	PrefixDownloaderService,
 	PrefixLookupService,
+	SparqlConnectionService,
+	SparqlQueryService,
 	TurtlePrefixDefinitionService,
 } from './services';
-import { NamedNode } from '@rdfjs/types';
+import { NamedNode, Quad_Graph } from '@rdfjs/types';
+import { InferenceUri } from './workspace/inference-uri';
+
+class MentorGraphUriGenerator implements GraphUriGenerator {
+	getGraphUri(uri: string | Quad_Graph): string {
+		const value = typeof uri === 'string' ? uri : uri.value;
+
+		return InferenceUri.toInferenceUri(value);
+	}
+}
 
 /**
  * The Mentor extension instance.
@@ -50,7 +61,7 @@ class MentorExtension {
 	/**
 	 * The active reasoner used for the Mentor triple store.
 	 */
-	readonly reasoner = new OwlReasoner();
+	readonly reasoner = new OwlReasoner(new MentorGraphUriGenerator());
 
 	/**
 	 * The Mentor RDF extension triple store.
@@ -73,9 +84,14 @@ class MentorExtension {
 	readonly workspaceIndexer = new WorkspaceIndexer();
 
 	/**
-	 * A service for storing and retrieving data from the local storage with extension scope.
+	 * A service for storing data that is only available in the workspace.
 	 */
-	readonly localStorageService = new LocalStorageService();
+	readonly workspaceStorage = new LocalStorageService();
+
+	/**
+	 * A service for storing data that is available in all VS Code instances, independent of the workspace.
+	 */
+	readonly globalStorage = new LocalStorageService();
 
 	/**
 	 * A service for declaring prefixes in RDF documents.
@@ -91,6 +107,21 @@ class MentorExtension {
 	 * A service for looking up prefixes in RDF documents.
 	 */
 	readonly prefixLookupService = new PrefixLookupService();
+
+	/**
+	 * A service for managing connections to SPARQL endpoints.
+	 */
+	readonly sparqlConnectionService = new SparqlConnectionService();
+
+	/**
+	 * A service for executing queries against RDF triples stores and SPARQL endpoints.
+	 */
+	readonly sparqlQueryService = new SparqlQueryService(this.sparqlConnectionService);
+
+	/**
+	 * A service for managing credentials using the SecretStorage of Visual Studio Code.
+	 */
+	readonly credentialStorageService = new CredentialStorageService();
 
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
@@ -110,6 +141,16 @@ class MentorExtension {
 		vscode.window.onDidChangeActiveTextEditor(() => this._onActiveEditorChanged());
 		vscode.workspace.onDidChangeTextDocument((e) => this._onTextDocumentChanged(e));
 		vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e));
+	}
+
+	/**
+	 * Dispose the extension and clean up resources.
+	 */
+	dispose() {
+		this.sparqlQueryService.dispose();
+
+		this._onDidChangeDocumentContext.dispose();
+		this._onDidFinishInitializing.dispose();
 	}
 
 	/**
@@ -212,7 +253,7 @@ class MentorExtension {
 		context = this.documentFactory.create(document.uri, document.languageId);
 
 		// Parse the tokens of the document and load the graph.
-		await context.parse(document.uri, document.getText());
+		await context.parse(document.getText());
 
 		// Compute the inference graph on the document to simplify querying.
 		await context.infer();
@@ -241,77 +282,67 @@ class MentorExtension {
 	 */
 	async initialize(context: vscode.ExtensionContext) {
 		// Initialize the extension persistence service.
-		this.localStorageService.initialize(context.globalState);
+		this.workspaceStorage.initialize(context.workspaceState);
+		this.globalStorage.initialize(context.globalState);
 
 		// Initialize the view settings.
 		this.settings.initialize(this.configuration);
 
+		// Initialize the credential storage service used for storing SPARQL endpoint credentials.
+		this.credentialStorageService.initialize(context.secrets);
+
+		// Load the endpoint configuration into memory.
+		this.sparqlConnectionService.initialize();
+
+		// Restore the query execution history.
+		this.sparqlQueryService.initialize();
+
 		// Register commands..
-		vscode.commands.registerCommand('mentor.action.updatePrefixes', () => {
-			vscode.window.withProgress({
-				location: vscode.ProgressLocation.Window,
-				title: `Downloading prefixes from ${this.prefixDownloaderService.endpointUrl}...`,
-				cancellable: false
-			}, async (progress) => {
-				progress.report({ increment: 0 });
-
-				try {
-					let result = await this.prefixDownloaderService.fetchPrefixes();
-
-					this.localStorageService.setValue('defaultPrefixes', result);
-
-					progress.report({ increment: 100 });
-				} catch (error: any) {
-					vscode.window.showErrorMessage(`Failed to download prefixes: ${error.message}`);
-				}
-			});
-		});
-
-		vscode.commands.registerCommand('mentor.action.groupDefinitionsByType', () => {
+		vscode.commands.registerCommand('mentor.command.groupDefinitionsByType', () => {
 			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.ByType);
 		});
 
-		vscode.commands.registerCommand('mentor.action.groupDefinitionsBySource', () => {
+		vscode.commands.registerCommand('mentor.command.groupDefinitionsBySource', () => {
 			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.BySource);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showAnnotatedLabels', () => {
+		vscode.commands.registerCommand('mentor.command.showAnnotatedLabels', () => {
 			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showUriLabels', () => {
+		vscode.commands.registerCommand('mentor.command.showUriLabels', () => {
 			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabels);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showUriLabelsWithPrefix', () => {
+		vscode.commands.registerCommand('mentor.command.showUriLabelsWithPrefix', () => {
 			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabelsWithPrefix);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showReferences', () => {
+		vscode.commands.registerCommand('mentor.command.showReferences', () => {
 			this.settings.set('view.showReferences', true);
 		});
 
-		vscode.commands.registerCommand('mentor.action.hideReferences', () => {
+		vscode.commands.registerCommand('mentor.command.hideReferences', () => {
 			this.settings.set('view.showReferences', false);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showPropertyTypes', () => {
+		vscode.commands.registerCommand('mentor.command.showPropertyTypes', () => {
 			this.settings.set('view.showPropertyTypes', true);
 		});
 
-		vscode.commands.registerCommand('mentor.action.hidePropertyTypes', () => {
+		vscode.commands.registerCommand('mentor.command.hidePropertyTypes', () => {
 			this.settings.set('view.showPropertyTypes', false);
 		});
 
-		vscode.commands.registerCommand('mentor.action.showIndividualTypes', () => {
+		vscode.commands.registerCommand('mentor.command.showIndividualTypes', () => {
 			this.settings.set('view.showIndividualTypes', true);
 		});
 
-		vscode.commands.registerCommand('mentor.action.hideIndividualTypes', () => {
+		vscode.commands.registerCommand('mentor.command.hideIndividualTypes', () => {
 			this.settings.set('view.showIndividualTypes', false);
 		});
 
-		vscode.commands.registerCommand('mentor.action.initialize', async () => {
+		vscode.commands.registerCommand('mentor.command.initialize', async () => {
 			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
 
 			// If there is a document opened in the editor, load it.
@@ -331,30 +362,9 @@ class MentorExtension {
 			this._onDidFinishInitializing.fire();
 		});
 
-		vscode.commands.executeCommand('mentor.action.initialize');
+		vscode.commands.executeCommand('mentor.command.initialize');
 
-		vscode.commands.registerCommand('mentor.action.openDocumentInferenceGraph', async () => {
-			if (this.activeContext) {
-				const documentGraphIri = this.activeContext.uri.toString();
-				const inferenceGraphIri = this.reasoner.targetUriGenerator.getGraphUri(documentGraphIri);
-
-				if (inferenceGraphIri) {
-					const prefixes: { [prefix: string]: NamedNode } = {};
-
-					// TODO: This is not needed; adapt mentor-rdf API.
-					for (const [prefix, namespace] of Object.entries(this.activeContext.namespaces)) {
-						prefixes[prefix] = new n3.NamedNode(namespace);
-					}
-
-					const data = await mentor.store.serializeGraph(inferenceGraphIri, prefixes);
-					const document = await vscode.workspace.openTextDocument({ content: data, language: 'turtle' });
-
-					await vscode.window.showTextDocument(document);
-				}
-			}
-		});
-
-		vscode.commands.registerCommand('mentor.action.highlightTypeDefinitions', async () => {
+		vscode.commands.registerCommand('mentor.command.highlightTypeDefinitions', async () => {
 			if (this.activeContext) {
 				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
 				const editor = await vscode.window.showTextDocument(document, { preview: false });
@@ -371,7 +381,7 @@ class MentorExtension {
 			}
 		});
 
-		vscode.commands.registerCommand('mentor.action.highlightTypeAssertions', async () => {
+		vscode.commands.registerCommand('mentor.command.highlightTypeAssertions', async () => {
 			if (this.activeContext) {
 				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
 				const editor = await vscode.window.showTextDocument(document, { preview: false });
@@ -388,7 +398,7 @@ class MentorExtension {
 			}
 		});
 
-		vscode.commands.registerCommand('mentor.action.highlightReferencedIris', async () => {
+		vscode.commands.registerCommand('mentor.command.highlightReferencedIris', async () => {
 			if (this.activeContext) {
 				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
 				const editor = await vscode.window.showTextDocument(document, { preview: false });
@@ -405,7 +415,7 @@ class MentorExtension {
 			}
 		});
 
-		vscode.commands.registerCommand('mentor.action.highlightNamespaceDefinitions', async () => {
+		vscode.commands.registerCommand('mentor.command.highlightNamespaceDefinitions', async () => {
 			if (this.activeContext) {
 				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
 				const editor = await vscode.window.showTextDocument(document, { preview: false });
