@@ -1,8 +1,8 @@
 :root {
 	--mentor-bindingResult-true-foreground: var(--vscode-notebookStatusSuccessIcon-foreground);
-    --mentor-bindingResult-true-background: rgba(from var(--mentor-bindingResult-true-foreground) r g b / 0.1);
-    --mentor-bindingResult-false-foreground: var(--vscode-notebookStatusErrorIcon-foreground);
-    --mentor-bindingResult-false-background: rgba(from var(--mentor-bindingResult-false-foreground) r g b / 0.1);
+	--mentor-bindingResult-true-background: rgba(from var(--mentor-bindingResult-true-foreground) r g b / 0.1);
+	--mentor-bindingResult-false-foreground: var(--vscode-notebookStatusErrorIcon-foreground);
+	--mentor-bindingResult-false-background: rgba(from var(--mentor-bindingResult-false-foreground) r g b / 0.1);
 }
 
 .sparql-results-container pre {
@@ -14,7 +14,7 @@
 }
 
 .sparql-results-container .label {
-  	color: var(--vscode-semanticToken-class-foreground, var(--vscode-editor-foreground));
+	color: var(--vscode-semanticToken-class-foreground, var(--vscode-editor-foreground));
 }
 
 .sparql-results-container {
@@ -31,12 +31,12 @@
 }
 
 .sparql-results-content-container .header {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    align-content: center;
-    align-items: center;
-    justify-content: flex-start;
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	align-content: center;
+	align-items: center;
+	justify-content: flex-start;
 	font-weight: 500;
 }
 
@@ -87,6 +87,18 @@
 
 .sparql-results-content-container.codicon-xl.false .codicon {
 	color: var(--mentor-bindingResult-false-foreground);
+}
+
+.sparql-results-cancelled-message {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	align-items: center;
+	gap: 10px;
+}
+
+.text-muted {
+	color: var(--vscode-breadcrumb-foreground);
 }
 
 .mentor-panel .sparql-results-container {

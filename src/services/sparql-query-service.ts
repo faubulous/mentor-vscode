@@ -6,6 +6,7 @@ import { Store, Writer } from 'n3';
 import { mentor } from "@src/mentor";
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { NamespaceMap } from "@src/utilities";
+import { CancellationError, withCancellation, toArrayWithCancellation } from '@src/utilities/cancellation';
 import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { AsyncIterator } from 'asynciterator';
 import { SparqlConnectionService } from './sparql-connection-service';
@@ -213,7 +214,7 @@ export class SparqlQueryService {
 	 * @param documentIri The IRI of the document where the query is run.
 	 * @returns A promise that resolves to the results of the query.
 	 */
-	async executeQuery(context: SparqlQueryExecutionState): Promise<SparqlQueryExecutionState> {
+	async executeQuery(context: SparqlQueryExecutionState, token?: vscode.CancellationToken): Promise<SparqlQueryExecutionState> {
 		try {
 			const query = this._getQueryText(context);
 
@@ -240,20 +241,29 @@ export class SparqlQueryService {
 				options.fetch = this._getFetchHandler(credential);
 			}
 
-			const result = await new QueryEngine().query(query, options);
+			// Note: This does not actually execute the query yet; it just prepares the execution.
+			const preparedQuery = await new QueryEngine().query(query, options);
 
-			if (result.resultType === 'bindings') {
-				const bindings = await result.execute();
-				context.result = await this._serializeBindings(context, bindings);
-			} else if (result.resultType === 'boolean') {
-				const value = await result.execute();
+			if (preparedQuery.resultType === 'bindings') {
+				// The query execution for bindings is lazy, so the cancellation is not effective here.
+				const bindings = await preparedQuery.execute();
+
+				// The cancellation token is passed here to allow cancelling when the bindings are being serialized.
+				context.result = await this._serializeBindings(context, bindings, token);
+			} else if (preparedQuery.resultType === 'boolean') {
+				// Since the boolean result is a single value, the cancellation is effective here.
+				const value = await withCancellation(preparedQuery.execute(), token);
+
 				context.result = { type: 'boolean', value: value };
-			} else if (result.resultType === 'quads') {
-				const quads = await result.execute();
+			} else if (preparedQuery.resultType === 'quads') {
+				// The query execution for quads is lazy, so the cancellation is not effective here.
+				const quads = await preparedQuery.execute();
+
+				// The cancellation token is passed here to allow cancelling when the quads are being serialized.
 				context.result = {
 					type: 'quads',
 					mimeType: 'text/turtle',
-					document: await this._serializeQuads(context, quads)
+					document: await this._serializeQuads(context, quads, token)
 				};
 			} else {
 				context.result = undefined;
@@ -263,14 +273,14 @@ export class SparqlQueryService {
 				type: error.name || 'QueryError',
 				message: error.message || 'Unknown error occurred while executing the query.',
 				stack: error.stack || '',
-				statusCode: error.statusCode || 500
+				statusCode: error.statusCode || 500,
+				cancelled: error instanceof CancellationError
 			}
 		}
 
 		context.endTime = Date.now();
 
 		this._logQueryExecutionEnd(context);
-
 		this._persistQueryHistory();
 
 		return context;
@@ -350,9 +360,15 @@ export class SparqlQueryService {
 	 * @param limit The maximum number of results to serialize.
 	 * @returns An object containing the serialized results.
 	 */
-	private async _serializeBindings(context: SparqlQueryExecutionState, bindingStream: AsyncIterator<Bindings>): Promise<BindingsResult> {
+	private async _serializeBindings(
+		context: SparqlQueryExecutionState,
+		bindingStream: AsyncIterator<Bindings>,
+		token?: vscode.CancellationToken
+	): Promise<BindingsResult> {
+		console.log("_serializeBindings:", context.documentIri);
+
 		// Note: This evaluates the query results and collects the bindings.
-		const bindings = await bindingStream.toArray();
+		const bindings = await toArrayWithCancellation(bindingStream, token);
 
 		const namespaces = new Set<string>();
 		const parsedColumns = SparqlVariableParser.parseSelectVariables(context.query!, bindings);
@@ -407,9 +423,13 @@ export class SparqlQueryService {
 		return result;
 	}
 
-	private async _serializeQuads(context: SparqlQueryExecutionState, quadStream: AsyncIterator<Quad>): Promise<string> {
+	private async _serializeQuads(
+		context: SparqlQueryExecutionState,
+		quadStream: AsyncIterator<Quad>,
+		token?: vscode.CancellationToken
+	): Promise<string> {
 		try {
-			const quads = await quadStream.toArray();
+			const quads = await toArrayWithCancellation(quadStream, token);
 
 			if (quads.length === 0) {
 				return '';

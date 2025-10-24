@@ -64,7 +64,9 @@ export class NotebookController {
 		try {
 			let queryState = mentor.sparqlQueryService.createQueryFromDocument(cell);
 
-			queryState = await mentor.sparqlQueryService.executeQuery(queryState);
+			const cancellationToken = execution.token;
+
+			queryState = await mentor.sparqlQueryService.executeQuery(queryState, cancellationToken);
 
 			if (queryState.queryType === 'bindings' || queryState.queryType === 'boolean') {
 				await execution.replaceOutput([new vscode.NotebookCellOutput([

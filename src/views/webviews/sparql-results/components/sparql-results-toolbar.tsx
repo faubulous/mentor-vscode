@@ -31,8 +31,9 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 				<vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
 					<span className="codicon codicon-debug-restart"></span>
 				</vscode-toolbar-button>
+				<span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
 
-				{queryContext.error && (
+				{queryContext.error && !queryContext.error.cancelled && (
 					<Fragment>
 						<span className="codicon codicon-error"></span>
 						<span>Error:</span>

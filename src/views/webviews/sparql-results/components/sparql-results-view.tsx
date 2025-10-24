@@ -85,21 +85,31 @@ export class SparqlResultsView extends WebviewComponent<
     return (
       <div className="sparql-results-container loading">
         <SparqlResultsToolbar />
-        <div className="sparql-results-content-container">
+        <div className="sparql-results-content-container text-muted">
+          <span className="codicon codicon-arrow-swap"></span>
+          Query is executing...
         </div>
       </div>
     );
   }
 
   private _renderError() {
-    return (
-      <div className="sparql-results-container error">
-        <SparqlResultsToolbar />
-        <div className="sparql-results-content-container">
-          <pre>{this.props.queryContext.error?.stack || 'No stack trace available.'}</pre>
-        </div>
+    return (<div className="sparql-results-container error">
+      <SparqlResultsToolbar />
+      <div className="sparql-results-content-container">
+        {!this.props.queryContext.error?.cancelled &&
+          <pre>
+            {this.props.queryContext.error?.stack || 'No stack trace available.'}
+          </pre>
+        }
+        {this.props.queryContext.error?.cancelled &&
+          <div className="sparql-results-cancelled-message text-muted">
+            <span className="codicon codicon-circle-slash"></span>
+            Query execution was cancelled.
+          </div>
+        }
       </div>
-    );
+    </div>);
   }
 
   private _renderBooleanResult(result: BooleanResult) {
