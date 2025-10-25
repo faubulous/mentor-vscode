@@ -5,7 +5,6 @@ import { BindingsTablePagingState } from './bindings-table-paging-state';
 import { Stopwatch } from './stopwatch';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
-import codicons from '$/codicon.css';
 import toolbarStyle from "./sparql-results-toolbar.css";
 
 /**
@@ -16,7 +15,6 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 	componentDidMount() {
 		super.componentDidMount();
 
-		this.addStylesheet('codicon-styles', codicons);
 		this.addStylesheet('mentor-sparql-toolbar-styles', toolbarStyle);
 	}
 
@@ -76,14 +74,14 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 							onClick={() => this._handlePreviousPage()}
 							disabled={paging.currentPage === 0}
 						>
-							<span className="codicon codicon-chevron-left"></span>
+							<vscode-icon name="chevron-left"></vscode-icon>
 						</vscode-toolbar-button>
 						<vscode-toolbar-button
 							title="Next page"
 							onClick={() => this._handleNextPage()}
 							disabled={paging.currentPage >= paging.totalPages - 1}
 						>
-							<span className="codicon codicon-chevron-right"></span>
+							<vscode-icon name="chevron-right"></vscode-icon>
 						</vscode-toolbar-button>
 						<span className="sparql-results-range">
 							{this._getResultsRangeText(bindings, paging)}
