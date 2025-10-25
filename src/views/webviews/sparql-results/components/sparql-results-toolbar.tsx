@@ -28,13 +28,18 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 			<vscode-toolbar-container className="sparql-results-toolbar">
 				<Stopwatch />
 				<span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
-				<vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
-					<span className="codicon codicon-debug-restart"></span>
-				</vscode-toolbar-button>
-				<span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
+
+				{queryContext.error && (
+					<Fragment>
+						<vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
+							<span className="codicon codicon-debug-restart"></span>
+						</vscode-toolbar-button>
+					</Fragment>
+				)}
 
 				{queryContext.error && !queryContext.error.cancelled && (
 					<Fragment>
+						<span className="divider divider-vertical"></span>
 						<span className="codicon codicon-error"></span>
 						<span>Error:</span>
 					</Fragment>
@@ -42,6 +47,10 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 
 				{!queryContext.error && !queryContext.endTime && (
 					<Fragment>
+						<vscode-toolbar-button title="Cancel" onClick={() => this._cancelQuery()}>
+							<span className="codicon codicon-debug-stop"></span>
+						</vscode-toolbar-button>
+						<span className="divider divider-vertical"></span>
 						<span className="codicon codicon-sync codicon-modifier-spin"></span>
 						<span>Executing...</span>
 					</Fragment>
@@ -49,6 +58,9 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 
 				{!queryContext.error && bindings && paging && (
 					<Fragment>
+						<vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
+							<span className="codicon codicon-debug-restart"></span>
+						</vscode-toolbar-button>
 						<span className="divider divider-vertical"></span>
 						<select className="sparql-results-page-size-select"
 							value={paging.pageSize}
@@ -114,6 +126,16 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 
 		this.props.sparqlResults.updatePageSize(pageSize);
 	};
+
+	private _cancelQuery() {
+		const { queryContext, messaging } = this.props.sparqlResults;
+
+		messaging.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.command.cancelSparqlQueryExecution',
+			args: [queryContext.id]
+		});
+	}
 
 	private _reloadQuery() {
 		const { queryContext, messaging } = this.props.sparqlResults;

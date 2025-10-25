@@ -85,9 +85,7 @@ export class SparqlResultsView extends WebviewComponent<
     return (
       <div className="sparql-results-container loading">
         <SparqlResultsToolbar />
-        <div className="sparql-results-content-container text-muted">
-          <span className="codicon codicon-arrow-swap"></span>
-          Query is executing...
+        <div className="sparql-results-content-container">
         </div>
       </div>
     );

@@ -61,12 +61,19 @@ export class NotebookController {
 		execution.executionOrder = ++this._executionOrder;
 		execution.start(Date.now());
 
+		// We need a cancellation token source so we can request cancellation
+		// from anywhere in Mentor. The execution.token is only cancelled when
+		// the user explicitly cancels the cell execution in the notebook.
+		const tokenSource = new vscode.CancellationTokenSource();
+
+		execution.token.onCancellationRequested(() => {
+			tokenSource.cancel();
+		});
+
 		try {
 			let queryState = mentor.sparqlQueryService.createQueryFromDocument(cell);
 
-			const cancellationToken = execution.token;
-
-			queryState = await mentor.sparqlQueryService.executeQuery(queryState, cancellationToken);
+			queryState = await mentor.sparqlQueryService.executeQuery(queryState, tokenSource);
 
 			if (queryState.queryType === 'bindings' || queryState.queryType === 'boolean') {
 				await execution.replaceOutput([new vscode.NotebookCellOutput([

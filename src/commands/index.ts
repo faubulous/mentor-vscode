@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { analyzeWorkspace } from './analyze-workspace';
+import { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
 import { clearQueryHistory } from './clear-query-history';
 import { createNotebook } from './create-notebook';
 import { createNotebookFromEditor } from './create-notebook-from-editor';
@@ -34,6 +35,7 @@ import { updatePrefixes } from './update-prefixes';
 
 const commands = [
 	analyzeWorkspace,
+	cancelSparqlQueryExecution,
 	clearQueryHistory,
 	createNotebook,
 	createNotebookFromEditor,

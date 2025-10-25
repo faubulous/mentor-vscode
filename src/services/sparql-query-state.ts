@@ -9,6 +9,11 @@ export type SparqlQueryType = 'bindings' | 'boolean' | 'quads' | 'void';
  */
 export interface SparqlQueryExecutionState {
 	/**
+	 * A unique identifier for the query execution.
+	 */
+	id: string;
+	
+	/**
 	 * The TextDocument where the SPARQL query is defined. In case of a Notebook, this 
 	 * is the IRI of the document that is associated with the cell.
 	 */

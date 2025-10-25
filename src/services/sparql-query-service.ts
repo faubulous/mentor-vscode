@@ -1,16 +1,12 @@
 import * as vscode from 'vscode';
-import { SparqlSyntaxParser, Uri } from '@faubulous/mentor-rdf';
+import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
 import { QueryEngine } from "@comunica/query-sparql";
-import { Bindings, Quad } from '@rdfjs/types';
-import { Store, Writer } from 'n3';
 import { mentor } from "@src/mentor";
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
-import { NamespaceMap } from "@src/utilities";
-import { CancellationError, withCancellation, toArrayWithCancellation } from '@src/utilities/cancellation';
-import { BindingsResult, SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
-import { AsyncIterator } from 'asynciterator';
+import { CancellationError, withCancellation } from '@src/utilities/cancellation';
+import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
+import { SparqlQueryResultSerializer } from './sparql-query-result-serializer';
 import { SparqlConnectionService } from './sparql-connection-service';
-import { SparqlVariableParser } from './sparql-variable-parser';
 import { AuthCredential } from './credential';
 
 /**
@@ -35,7 +31,11 @@ export class SparqlQueryService {
 
 	private readonly _history: SparqlQueryExecutionState[] = [];
 
+	private readonly _cancellationTokens = new Map<string, vscode.CancellationTokenSource>();
+
 	private readonly _onDidHistoryChange = new vscode.EventEmitter<void>();
+
+	private readonly _querySerializer = new SparqlQueryResultSerializer();
 
 	/**
 	 * Event that is triggered when the query history changes.
@@ -107,6 +107,7 @@ export class SparqlQueryService {
 		const queryType = this._getQueryType(query);
 
 		return {
+			id: crypto.randomUUID(),
 			documentIri: source.document.uri.toString(),
 			workspaceIri: workspaceIri?.toString(),
 			notebookIri: source.notebookIri?.toString(),
@@ -129,6 +130,7 @@ export class SparqlQueryService {
 		const queryType = this._getQueryType(query);
 
 		return {
+			id: crypto.randomUUID(),
 			documentIri: source.document.uri.toString(),
 			workspaceIri: workspaceIri?.toString(),
 			notebookIri: source.notebookIri?.toString(),
@@ -176,7 +178,7 @@ export class SparqlQueryService {
 	 * @param documentIri The IRI of the document to retrieve the query state for.
 	 * @returns The SparqlQueryState for the specified document, or `undefined` if not found.
 	 */
-	getQueryState(documentIri: string): SparqlQueryExecutionState | undefined {
+	getQueryStateForDocument(documentIri: string): SparqlQueryExecutionState | undefined {
 		return this._history.find(q => q.documentIri === documentIri);
 	}
 
@@ -191,11 +193,30 @@ export class SparqlQueryService {
 	}
 
 	/**
+	 * Cancels a running SPARQL query execution.
+	 * @param queryStateID Id of the query execution state.
+	 * @returns `true` if the query was successfully cancelled, `false` otherwise.
+	 */
+	cancelQuery(queryStateID: string): boolean {
+		if (this._cancellationTokens.has(queryStateID)) {
+			this._cancellationTokens.get(queryStateID)?.cancel();
+			this._cancellationTokens.delete(queryStateID);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
 	 * Removes the n-th item from the query history and triggers the history change event.
 	 * @param index The index of the item to remove from the query history.
 	 */
 	removeQueryStateAt(index: number): boolean {
 		if (index >= 0 && index < this._history.length) {
+			const queryState = this._history[index];
+
+			this.cancelQuery(queryState.id);
+
 			this._history.splice(index, 1);
 
 			this._onDidHistoryChange.fire();
@@ -203,24 +224,27 @@ export class SparqlQueryService {
 			this._persistQueryHistory();
 
 			return true;
+		} else {
+			return false;
 		}
-
-		return false;
 	}
 
 	/**
 	 * Executes a SPARQL query against the RDF store and returns the results.
 	 * @param query The SPARQL query to execute.
 	 * @param documentIri The IRI of the document where the query is run.
+	 * @param tokenSource A cancellation token source to cancel the query execution.
 	 * @returns A promise that resolves to the results of the query.
 	 */
-	async executeQuery(context: SparqlQueryExecutionState, token?: vscode.CancellationToken): Promise<SparqlQueryExecutionState> {
+	async executeQuery(context: SparqlQueryExecutionState, tokenSource: vscode.CancellationTokenSource = new vscode.CancellationTokenSource()): Promise<SparqlQueryExecutionState> {
 		try {
 			const query = this._getQueryText(context);
 
 			if (!query) {
 				throw new Error('Unable to retrieve query from the document: ' + context.documentIri);
 			}
+
+			this._cancellationTokens.set(context.id, tokenSource);
 
 			this._logQueryExecutionStart(context);
 
@@ -249,10 +273,10 @@ export class SparqlQueryService {
 				const bindings = await preparedQuery.execute();
 
 				// The cancellation token is passed here to allow cancelling when the bindings are being serialized.
-				context.result = await this._serializeBindings(context, bindings, token);
+				context.result = await this._querySerializer.serializeBindings(context, bindings, tokenSource.token);
 			} else if (preparedQuery.resultType === 'boolean') {
 				// Since the boolean result is a single value, the cancellation is effective here.
-				const value = await withCancellation(preparedQuery.execute(), token);
+				const value = await withCancellation(preparedQuery.execute(), tokenSource.token);
 
 				context.result = { type: 'boolean', value: value };
 			} else if (preparedQuery.resultType === 'quads') {
@@ -263,7 +287,7 @@ export class SparqlQueryService {
 				context.result = {
 					type: 'quads',
 					mimeType: 'text/turtle',
-					document: await this._serializeQuads(context, quads, token)
+					document: await this._querySerializer.serializeQuads(context, quads, tokenSource.token)
 				};
 			} else {
 				context.result = undefined;
@@ -350,148 +374,6 @@ export class SparqlQueryService {
 			if (document) {
 				return document.getText();
 			}
-		}
-	}
-
-	/**
-	 * Serializes SPARQL query results into a format suitable for the webview.
-	 * @param documentIri The IRI of the document where the query was run.
-	 * @param bindingStream The SPARQL query results as a BindingsStream.
-	 * @param limit The maximum number of results to serialize.
-	 * @returns An object containing the serialized results.
-	 */
-	private async _serializeBindings(
-		context: SparqlQueryExecutionState,
-		bindingStream: AsyncIterator<Bindings>,
-		token?: vscode.CancellationToken
-	): Promise<BindingsResult> {
-		console.log("_serializeBindings:", context.documentIri);
-
-		// Note: This evaluates the query results and collects the bindings.
-		const bindings = await toArrayWithCancellation(bindingStream, token);
-
-		const namespaces = new Set<string>();
-		const parsedColumns = SparqlVariableParser.parseSelectVariables(context.query!, bindings);
-		const rows: Record<string, any>[] = [];
-
-		for (const binding of bindings) {
-			const row: Record<string, any> = {};
-
-			for (const column of parsedColumns) {
-				const value = binding.get(column);
-
-				if (value === undefined) {
-					continue;
-				}
-
-				if (value.termType === 'NamedNode') {
-					namespaces.add(Uri.getNamespaceIri(value.value));
-				}
-
-				const datatype = value.termType === 'Literal' ? value.datatype.value : undefined;
-				const language = value.termType === 'Literal' ? value.language : undefined;
-
-				row[column] = {
-					termType: value.termType,
-					value: value.value,
-					datatype: datatype,
-					language: language
-				};
-			}
-
-			rows.push(row);
-		}
-
-		const documentIri = context.documentIri;
-		const namespaceMap: NamespaceMap = {};
-
-		for (const iri of namespaces) {
-			const prefix = mentor.prefixLookupService.getPrefixForIri(documentIri, iri, '');
-
-			if (prefix !== '') {
-				namespaceMap[iri] = prefix;
-			}
-		}
-
-		const result: BindingsResult = {
-			type: 'bindings',
-			columns: parsedColumns,
-			rows,
-			namespaceMap
-		};
-
-		return result;
-	}
-
-	private async _serializeQuads(
-		context: SparqlQueryExecutionState,
-		quadStream: AsyncIterator<Quad>,
-		token?: vscode.CancellationToken
-	): Promise<string> {
-		try {
-			const quads = await toArrayWithCancellation(quadStream, token);
-
-			if (quads.length === 0) {
-				return '';
-			}
-
-			// TODO: Request quads from communica instead of manually filtering the triples.
-			const store = new Store();
-
-			// Add all quads to the writer
-			for (const q of quads) {
-				store.addQuad(q.subject, q.predicate, q.object);
-			}
-
-			// Get namespace prefixes for better formatting
-			const documentIri = context.documentIri;
-			const prefixMap: Record<string, string> = {};
-
-			// Collect unique namespace IRIs from the quads
-			const namespaces = new Set<string>();
-
-			for (const quad of quads) {
-				if (quad.subject.termType === 'NamedNode') {
-					namespaces.add(Uri.getNamespaceIri(quad.subject.value));
-				}
-				if (quad.predicate.termType === 'NamedNode') {
-					namespaces.add(Uri.getNamespaceIri(quad.predicate.value));
-				}
-				if (quad.object.termType === 'NamedNode') {
-					namespaces.add(Uri.getNamespaceIri(quad.object.value));
-				}
-			}
-
-			// Build prefix map
-			for (const iri of namespaces) {
-				const prefix = mentor.prefixLookupService.getPrefixForIri(documentIri, iri, '');
-
-				if (prefix !== '') {
-					prefixMap[prefix] = iri;
-				}
-			}
-
-			// Create N3 writer with prefixes
-			const writer = new Writer({
-				format: 'text/turtle',
-				prefixes: prefixMap
-			});
-
-			writer.addQuads(store.toArray());
-
-			// Return the serialized Turtle string
-			return new Promise<string>((resolve, reject) => {
-				writer.end((error, result) => {
-					if (error) {
-						reject(error);
-					} else {
-						resolve(result);
-					}
-				});
-			});
-		} catch (error) {
-			console.error('Error serializing quads to Turtle:', error);
-			return '';
 		}
 	}
 

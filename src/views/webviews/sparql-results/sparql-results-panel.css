@@ -13,8 +13,8 @@ vscode-tab-header {
     color: var(--vscode-tab-activeForeground);
 }
 
-vscode-tab-header[aria-selected="true"] {
-    border-bottom-color: var(--vscode-focusBorder);
+vscode-tab-header[aria-selected="true"] .wrapper {
+    border-bottom-color: var(--vscode-panelTitle-activeBorder) !important;
 }
 
 vscode-tab-header:hover {
