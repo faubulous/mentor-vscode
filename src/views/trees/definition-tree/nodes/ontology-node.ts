@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
 import { mentor } from "@src/mentor";
 import { DefinitionTreeNode } from "../definition-tree-node";
-import { ClassGroupNode } from "./class-group-node";
-import { PropertyGroupNode } from "./property-group-node";
-import { IndividualGroupNode } from "./individual-group-node";
-import { ShapeGroupNode } from "./shape-group-node";
-import { RuleGroupNode } from "./rule-group-node";
-import { ValidatorGroupNode } from "./validator-group-node";
+import { ClassesNode } from "./classes-node";
+import { PropertiesNode } from "./properties-node";
+import { IndividualsNode } from "./individuals-node";
+import { ShapesNode } from "./shapes-node";
+import { RulesNode } from "./rules-node";
+import { ValidatorsNode } from "./validators-node";
 
 /**
  * Node of a ontology header in the definition tree.
@@ -59,37 +59,37 @@ export class OntologyNode extends DefinitionTreeNode {
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
 
-		const classes = this.createChildNode(ClassGroupNode, 'mentor:classes');
+		const classes = this.createChildNode(ClassesNode, 'mentor:classes');
 
 		if (classes.getChildren().length > 0) {
 			result.push(classes);
 		}
 
-		const properties = this.createChildNode(PropertyGroupNode, 'mentor:properties');
+		const properties = this.createChildNode(PropertiesNode, 'mentor:properties');
 
 		if (properties.getChildren().length > 0) {
 			result.push(properties);
 		}
 
-		const individuals = this.createChildNode(IndividualGroupNode, 'mentor:individuals');
+		const individuals = this.createChildNode(IndividualsNode, 'mentor:individuals');
 
 		if (individuals.getChildren().length > 0) {
 			result.push(individuals);
 		}
 
-		const shapes = this.createChildNode(ShapeGroupNode, 'mentor:shapes', this.getQueryOptions({ includeBlankNodes: true }));
+		const shapes = this.createChildNode(ShapesNode, 'mentor:shapes', this.getQueryOptions({ includeBlankNodes: true }));
 
 		if (shapes.getChildren().length > 0) {
 			result.push(shapes);
 		}
 
-		const rules = this.createChildNode(RuleGroupNode, 'mentor:rules', this.getQueryOptions({ includeBlankNodes: true }));
+		const rules = this.createChildNode(RulesNode, 'mentor:rules', this.getQueryOptions({ includeBlankNodes: true }));
 
 		if (rules.getChildren().length > 0) {
 			result.push(rules);
 		}
 
-		const validators = this.createChildNode(ValidatorGroupNode, 'mentor:validators', this.getQueryOptions({ includeBlankNodes: true }));
+		const validators = this.createChildNode(ValidatorsNode, 'mentor:validators', this.getQueryOptions({ includeBlankNodes: true }));
 
 		if (validators.getChildren().length > 0) {
 			result.push(validators);

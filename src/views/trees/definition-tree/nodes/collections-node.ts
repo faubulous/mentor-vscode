@@ -3,7 +3,7 @@ import { mentor } from "@src/mentor";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { CollectionClassNode } from "./collection-class-node";
 
-export class CollectionGroupNode extends CollectionClassNode {
+export class CollectionsNode extends CollectionClassNode {
 	override getContextValue(): string {
 		return 'collections';
 	}

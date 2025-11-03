@@ -6,7 +6,7 @@ import { ValidatorClassNode } from "./validator-class-node";
 /**
  * Node of a SHACL rule in the definition tree.
  */
-export class ValidatorGroupNode extends ValidatorClassNode {
+export class ValidatorsNode extends ValidatorClassNode {
 	uri = SH.Validator;
 
 	override getContextValue(): string {

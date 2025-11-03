@@ -3,7 +3,7 @@ import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "@src/mentor";
 import { ShapeClassNode } from "./shape-class-node";
 
-export class ShapeGroupNode extends ShapeClassNode {
+export class ShapesNode extends ShapeClassNode {
 	uri = SH.Shape;
 
 	override getContextValue() {
