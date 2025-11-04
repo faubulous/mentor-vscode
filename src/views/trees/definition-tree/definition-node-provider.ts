@@ -157,8 +157,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const ontologyNodes = [];
 
 		for (const ontologyUri of ontologyUris) {
-			console.log(ontologyUri);
-
 			const node = this.createRootNode(OntologyNode, this.document, ontologyUri, { definedBy: ontologyUri });
 			node.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
@@ -177,8 +175,6 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		const sourceNodes = [];
 
 		for (let source of sourceUris) {
-			console.log(source);
-
 			// Handle the case where rdfs:isDefinedBy refers to the ontology namespace
 			// but the ontology header is annotated with an absolute URI.
 			if (ontologies.has(source) || ontologies.has(Uri.getNormalizedUri(source))) {
