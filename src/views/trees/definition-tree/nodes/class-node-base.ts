@@ -69,8 +69,6 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 	}
 
 	override hasChildren(): boolean {
-		console.log("ClassNodeBase.hasChildren:", this.uri);
-
 		for (const _ of this.getSubClassIris()) {
 			return true;
 		}
@@ -103,8 +101,6 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 
 			result.push(...sortByLabel(individualNodes));
 		}
-
-		console.log("getChildren:", this.uri, result);
 
 		return result;
 	}

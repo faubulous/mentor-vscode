@@ -18,24 +18,28 @@ export class CollectionClassNode extends ClassNodeBase {
 		return new vscode.ThemeColor("mentor.color.concept");
 	}
 
+	override hasChildren(): boolean {
+		const graphs = this.getDocumentGraphs();
+
+		for (const _ of mentor.vocabulary.getCollectionMembers(graphs, this.uri)) {
+			return true;
+		}
+
+		return false;
+	}
+
 	override getChildren(): TreeNode[] {
 		const result = [];
+		const graphs = this.getDocumentGraphs();
 
-		if (mentor.vocabulary.isOrderedCollection(this.getDocumentGraphs(), this.uri)) {
-			const members = mentor.vocabulary.getCollectionMembers(this.getDocumentGraphs(), this.uri);
+		for (const m of mentor.vocabulary.getCollectionMembers(graphs, this.uri)) {
+			result.push(this.createChildNode(ConceptClassNode, m));
+		}
 
-			for (const m of members) {
-				result.push(this.createChildNode(ConceptClassNode, m));
-			}
-
+		if (mentor.vocabulary.isOrderedCollection(graphs, this.uri)) {
+			// Preserve order for ordered collections.
 			return result;
 		} else {
-			const members = mentor.vocabulary.getCollectionMembers(this.getDocumentGraphs(), this.uri);
-
-			for (const m of members) {
-				result.push(this.createChildNode(ConceptClassNode, m));
-			}
-
 			return sortByLabel(result);
 		}
 	}

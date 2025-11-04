@@ -17,14 +17,16 @@ export class CollectionsNode extends CollectionClassNode {
 	}
 
 	override getDescription(): string {
-		const collections = mentor.vocabulary.getCollections(this.getDocumentGraphs());
+		const graphs = this.getDocumentGraphs();
+		const collections = [...mentor.vocabulary.getCollections(graphs)];
 
 		return collections.length.toString();
 	}
 
 	override getChildren(): TreeNode[] {
 		const result = [];
-		const collections = mentor.vocabulary.getCollections(this.getDocumentGraphs());
+		const graphs = this.getDocumentGraphs();
+		const collections = [...mentor.vocabulary.getCollections(graphs)];
 
 		for (const c of collections) {
 			result.push(this.createChildNode(CollectionClassNode, c));

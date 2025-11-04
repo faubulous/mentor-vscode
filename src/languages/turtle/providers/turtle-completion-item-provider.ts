@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { Uri } from "@faubulous/mentor-rdf";
 import { mentor } from "@src/mentor";
+import { take } from "@src/utilities";
 import { getNamespaceIriFromPrefixedName, getTripleComponentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -94,7 +95,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		const limit = this.maxCompletionItems;
 
 		if (componentType == "subject" || componentType == "object") {
-			for (let c of mentor.vocabulary.getClasses(graphs).filter(c => c.toLowerCase().startsWith(uri)).slice(0, limit)) {
+			for (let c of take(mentor.vocabulary.getClasses(graphs), limit).filter(c => c.toLowerCase().startsWith(uri))) {
 				const localPart = Uri.getLocalPart(c);
 
 				if (!localPart) continue;
@@ -117,7 +118,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			}
 		}
 
-		for (let p of mentor.vocabulary.getProperties(graphs).sort().filter(p => p.toLowerCase().startsWith(uri)).slice(0, limit)) {
+		for (let p of take(mentor.vocabulary.getProperties(graphs), limit).sort().filter(p => p.toLowerCase().startsWith(uri))) {
 			const localPart = Uri.getLocalPart(p);
 
 			if (!localPart) continue;

@@ -97,8 +97,6 @@ export abstract class TreeNodeBase implements TreeNode {
 	}
 
 	getCollapsibleState(): vscode.TreeItemCollapsibleState {
-		console.log('getCollapsibleState:', this.uri);
-
 		const collapsibleState = this.hasChildren() ?
 			this.initialCollapsibleState :
 			vscode.TreeItemCollapsibleState.None;
@@ -109,8 +107,6 @@ export abstract class TreeNodeBase implements TreeNode {
 	abstract getContextValue(): string;
 
 	hasChildren(): boolean {
-		console.log("TreeNodeBase.hasChildren:", this.uri);
-
 		return this.getChildren().length > 0;
 	}
 

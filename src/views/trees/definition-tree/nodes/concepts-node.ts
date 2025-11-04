@@ -16,15 +16,17 @@ export class ConceptsNode extends ConceptClassNode {
 	}
 
 	override getDescription(): string {
-		const concepts = mentor.vocabulary.getConcepts(this.getDocumentGraphs());
+		const graphs = this.getDocumentGraphs();
+		const concepts = [...mentor.vocabulary.getConcepts(graphs)];
 
 		return concepts.length.toString();
 	}
 
 	override *getSubClassIris(): IterableIterator<string> {
+		const graphs = this.getDocumentGraphs();
 		const subject = this.getQueryOptions().definedBy ?? this.uri;
 
-		yield* mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), subject);
+		yield* mentor.vocabulary.getNarrowerConcepts(graphs, subject);
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {
