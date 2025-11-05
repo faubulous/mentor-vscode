@@ -106,7 +106,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 				result.push(item);
 			}
 
-			for (let x of mentor.vocabulary.getIndividuals(graphs).sort().filter(x => x.toLowerCase().startsWith(uri)).slice(0, limit)) {
+			for (let x of take(mentor.vocabulary.getIndividuals(graphs), limit).sort().filter(x => x.toLowerCase().startsWith(uri))) {
 				const localPart = Uri.getLocalPart(x);
 
 				if (!localPart) continue;

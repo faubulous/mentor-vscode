@@ -19,9 +19,11 @@ export class ShapesNode extends ShapeClassNode {
 	}
 
 	override getDescription(): string {
-		const shapes = mentor.vocabulary.getShapes(this.getDocumentGraphs(), undefined, this.getQueryOptions());
+		const graphs = this.getDocumentGraphs();
+		const options = this.getQueryOptions();
+		const shapes = mentor.vocabulary.getShapes(graphs, undefined, options);
 
-		return shapes.length.toString();
+		return [...shapes].length.toString();
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {

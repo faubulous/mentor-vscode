@@ -14,7 +14,7 @@ export const revealShapeDefinition = {
 				return;
 			}
 
-			const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri, { includeBlankNodes: true })[0];
+			const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri, { includeBlankNodes: true }).next().value;
 
 			if (!shapeUri) {
 				return;

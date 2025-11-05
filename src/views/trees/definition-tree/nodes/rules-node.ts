@@ -22,9 +22,11 @@ export class RulesNode extends RuleClassNode {
 	}
 
 	override getDescription(): string {
-		const rules = mentor.vocabulary.getRules(this.getDocumentGraphs(), this.getQueryOptions());
+		const graphs = this.getDocumentGraphs();
+		const options = this.getQueryOptions();
+		const rules = mentor.vocabulary.getRules(graphs, options);
 
-		return rules.length.toString();
+		return [...rules].length.toString();
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {

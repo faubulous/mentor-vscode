@@ -22,9 +22,11 @@ export class ValidatorsNode extends ValidatorClassNode {
 	}
 
 	override getDescription(): string {
-		const validators = mentor.vocabulary.getValidators(this.getDocumentGraphs(), this.getQueryOptions());
+		const graphs = this.getDocumentGraphs();
+		const options = this.getQueryOptions();
+		const validators = mentor.vocabulary.getValidators(graphs, options);
 
-		return validators.length.toString();
+		return [...validators].length.toString();
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {

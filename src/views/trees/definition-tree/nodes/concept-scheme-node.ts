@@ -15,18 +15,34 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 
-	override getChildren(): DefinitionTreeNode[] {
-		const result = [];
-		
+	override hasChildren(): boolean {
 		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: this.uri });
 
-		if (concepts.getChildren().length > 0) {
+		if (concepts.hasChildren()) {
+			return true;
+		}
+
+		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: this.uri });
+
+		if (collections.hasChildren()) {
+			return true;
+		}
+
+		return false;
+	}
+
+	override getChildren(): DefinitionTreeNode[] {
+		const result = [];
+
+		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: this.uri });
+
+		if (concepts.hasChildren()) {
 			result.push(concepts);
 		}
 
 		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: this.uri });
 
-		if (collections.getChildren().length > 0) {
+		if (collections.hasChildren()) {
 			result.push(collections);
 		}
 

@@ -125,19 +125,19 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			result.push(this.createRootNode(PropertiesNode, this.document, 'mentor:properties'));
 		}
 
-		if (mentor.vocabulary.getIndividuals(this.document.graphs, undefined).length > 0) {
+		if (any(mentor.vocabulary.getIndividuals(this.document.graphs, undefined))) {
 			result.push(this.createRootNode(IndividualsNode, this.document, 'mentor:individuals'));
 		}
 
-		if (mentor.vocabulary.getShapes(this.document.graphs, undefined).length > 0) {
+		if (any(mentor.vocabulary.getShapes(this.document.graphs, undefined))	) {
 			result.push(this.createRootNode(ShapesNode, this.document, 'mentor:shapes'));
 		}
 
-		if (mentor.vocabulary.getRules(this.document.graphs, undefined).length > 0) {
+		if (any(mentor.vocabulary.getRules(this.document.graphs, undefined))) {
 			result.push(this.createRootNode(RulesNode, this.document, 'mentor:rules'));
 		}
 
-		if (mentor.vocabulary.getValidators(this.document.graphs, undefined).length > 0) {
+		if (any(mentor.vocabulary.getValidators(this.document.graphs, undefined))) {
 			result.push(this.createRootNode(ValidatorsNode, this.document, 'mentor:validators'));
 		}
 
@@ -200,10 +200,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		let hasUnknown: boolean =
 			any(mentor.vocabulary.getClasses(this.document.graphs, options)) ||
 			any(mentor.vocabulary.getProperties(this.document.graphs, options)) ||
-			mentor.vocabulary.getIndividuals(this.document.graphs, undefined, options).length > 0 ||
-			mentor.vocabulary.getShapes(this.document.graphs, undefined, options).length > 0 ||
-			mentor.vocabulary.getRules(this.document.graphs, options).length > 0 ||
-			mentor.vocabulary.getValidators(this.document.graphs, options).length > 0;
+			any(mentor.vocabulary.getIndividuals(this.document.graphs, undefined, options)) ||
+			any(mentor.vocabulary.getShapes(this.document.graphs, undefined, options)) ||
+			any(mentor.vocabulary.getRules(this.document.graphs, options)) ||
+			any(mentor.vocabulary.getValidators(this.document.graphs, options));
 
 		if (hasUnknown) {
 			// Important: Reset the includeReferenced setting for the root nodes.

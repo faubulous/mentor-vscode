@@ -61,37 +61,37 @@ export class OntologyNode extends DefinitionTreeNode {
 
 		const classes = this.createChildNode(ClassesNode, 'mentor:classes');
 
-		if (classes.getChildren().length > 0) {
+		if (classes.hasChildren()) {
 			result.push(classes);
 		}
 
 		const properties = this.createChildNode(PropertiesNode, 'mentor:properties');
 
-		if (properties.getChildren().length > 0) {
+		if (properties.hasChildren()) {
 			result.push(properties);
 		}
 
 		const individuals = this.createChildNode(IndividualsNode, 'mentor:individuals');
 
-		if (individuals.getChildren().length > 0) {
+		if (individuals.hasChildren()) {
 			result.push(individuals);
 		}
 
 		const shapes = this.createChildNode(ShapesNode, 'mentor:shapes', this.getQueryOptions({ includeBlankNodes: true }));
 
-		if (shapes.getChildren().length > 0) {
+		if (shapes.hasChildren()) {
 			result.push(shapes);
 		}
 
 		const rules = this.createChildNode(RulesNode, 'mentor:rules', this.getQueryOptions({ includeBlankNodes: true }));
 
-		if (rules.getChildren().length > 0) {
+		if (rules.hasChildren()) {
 			result.push(rules);
 		}
 
 		const validators = this.createChildNode(ValidatorsNode, 'mentor:validators', this.getQueryOptions({ includeBlankNodes: true }));
 
-		if (validators.getChildren().length > 0) {
+		if (validators.hasChildren()) {
 			result.push(validators);
 		}
 

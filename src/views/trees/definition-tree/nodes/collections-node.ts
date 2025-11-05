@@ -23,6 +23,16 @@ export class CollectionsNode extends CollectionClassNode {
 		return collections.length.toString();
 	}
 
+	override hasChildren(): boolean {
+		const graphs = this.getDocumentGraphs();
+
+		for(const _ of mentor.vocabulary.getCollections(graphs)) {
+			return true;
+		}
+
+		return false;
+	}
+
 	override getChildren(): TreeNode[] {
 		const result = [];
 		const graphs = this.getDocumentGraphs();
