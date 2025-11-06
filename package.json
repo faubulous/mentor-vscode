@@ -91,7 +91,7 @@
   },
   "dependencies": {
     "@comunica/query-sparql": "^4.3.0",
-    "@faubulous/mentor-rdf": "^0.2.55",
+    "@faubulous/mentor-rdf": "^0.3.0",
     "@vscode/codicons": "^0.0.40",
     "millan": "^5.4.0",
     "n3": "^1.26.0",
