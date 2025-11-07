@@ -13,7 +13,7 @@ const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
  */
 export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 	id: 'workspace',
-	endpointUrl: 'workspace://',
+	endpointUrl: 'workspace:',
 	configScope: ConfigurationScope.Workspace,
 	isProtected: true
 };
@@ -313,9 +313,11 @@ export class SparqlConnectionService {
 	 * Finds the containing NotebookDocument for a given cell URI.
 	 */
 	private _getNotebookFromCellUri(cellUri: vscode.Uri): vscode.NotebookDocument | undefined {
-		const notebookUri = cellUri.with({ scheme: 'file', fragment: '' }).toString();
-
-		return vscode.workspace.notebookDocuments.find(doc => doc.uri.toString() === notebookUri);
+		for(const notebook of vscode.workspace.notebookDocuments) {
+			if(notebook.uri.path === cellUri.path) {
+				return notebook;
+			}
+		}
 	}
 
 	/**

@@ -1,5 +1,4 @@
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import * as vscode from 'vscode';
 
 /**
  * Connection information for a SPARQL endpoint.
@@ -11,7 +10,7 @@ export interface SparqlConnection {
     id: string;
 
     /**
-     * The SPARQL endpoint URL (e.g., 'https://dbpedia.org/sparql' or 'workspace://')
+     * The SPARQL endpoint URL (e.g., 'https://dbpedia.org/sparql' or 'workspace:')
      */
     endpointUrl: string;
 

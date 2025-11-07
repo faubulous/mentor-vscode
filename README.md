@@ -49,7 +49,7 @@ This extension provides the following features:
   - Execute SPARQL queries against external endpoints / databases
    - Currently support auth methods: Basic, Bearer (OAuth planned)
   - Execute SPARQL queries against all files in your workspace
-   - With the `workspace:/` URI scheme you can address files relative to your workspace / repository
+   - With the `workspace:` URI scheme you can address files relative to your workspace / repository
    - Auto-complete support
   - Create Notebooks with SPARQL queries
 
