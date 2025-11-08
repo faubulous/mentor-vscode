@@ -6,7 +6,7 @@ import { ValidatorClassNode } from "./validator-class-node";
 /**
  * Node of a SHACL rule in the definition tree.
  */
-export class ValidatorGroupNode extends ValidatorClassNode {
+export class ValidatorsNode extends ValidatorClassNode {
 	uri = SH.Validator;
 
 	override getContextValue(): string {
@@ -22,9 +22,11 @@ export class ValidatorGroupNode extends ValidatorClassNode {
 	}
 
 	override getDescription(): string {
-		const validators = mentor.vocabulary.getValidators(this.getDocumentGraphs(), this.getQueryOptions());
+		const graphs = this.getDocumentGraphs();
+		const options = this.getQueryOptions();
+		const validators = mentor.vocabulary.getValidators(graphs, options);
 
-		return validators.length.toString();
+		return [...validators].length.toString();
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {

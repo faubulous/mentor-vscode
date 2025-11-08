@@ -8,7 +8,7 @@ import { IndividualClassNode } from "./individual-class-node";
 /**
  * Node of a class instance in the definition tree.
  */
-export class IndividualGroupNode extends IndividualClassNode {
+export class IndividualsNode extends IndividualClassNode {
 	override getContextValue(): string {
 		return 'individuals';
 	}
@@ -22,9 +22,19 @@ export class IndividualGroupNode extends IndividualClassNode {
 	}
 
 	override getDescription(): string {
-		const individuals = mentor.vocabulary.getIndividuals(this.getDocumentGraphs(), undefined, this.getQueryOptions());
+		const graphs = this.getDocumentGraphs();
+		const options = this.getQueryOptions();
+		const individuals = mentor.vocabulary.getIndividuals(graphs, undefined, options);
 
-		return individuals.length.toString();
+		return [...individuals].length.toString();
+	}
+
+	override hasChildren(): boolean {
+		for (const _ of this.getChildren()) {
+			return true;
+		}
+
+		return false;
 	}
 
 	override getChildren(): TreeNode[] {

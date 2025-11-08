@@ -388,7 +388,6 @@ export class SparqlConnectionView extends WebviewComponent<
 	}
 
 	private _renderConnectionTestErrorMessage(connectionError: any) {
-		console.log(connectionError);
 		if (connectionError.code === 0) {
 			return (
 				<div>
@@ -483,8 +482,6 @@ export class SparqlConnectionView extends WebviewComponent<
 	private _handleAuthTabChange = (event: any) => {
 		if (this._authTabs) {
 			const i = this._authTabs.selectedIndex ?? AuthTabIndex.None;
-
-			console.log('_handleAuthTabChange', i);
 
 			this.setState({ selectedAuthTabIndex: i });
 		}

@@ -1,8 +1,12 @@
 import * as vscode from "vscode";
 import { mentor } from "@src/mentor";
-import { DefinitionTreeNode } from "../definition-tree-node";
 import { sortByLabel } from "@src/views/trees/tree-node";
+import { DefinitionTreeNode } from "../definition-tree-node";
 
+/**
+ * Base class for all nodes that represent classes in the definition tree, such as classes and properties.
+ * It is also used as a base for parent nodes of individual lists such as named individuals, shapes, collections, etc.
+ */
 export abstract class ClassNodeBase extends DefinitionTreeNode {
 	/**
 	 * Indicates whether class instances should be returned by the {@link getChildren} method.
@@ -64,25 +68,41 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 		return new vscode.ThemeColor("mentor.color.class");
 	}
 
-	override getChildren() {
-		const classNodes = [];
-		const classIris = this.getSubClassIris();
+	override hasChildren(): boolean {
+		for (const _ of this.getSubClassIris()) {
+			return true;
+		}
 
-		for (const iri of classIris) {
+		if (this.showIndividuals()) {
+			for (const _ of this.getIndividualIris()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	override getChildren() {
+		const result = [];
+		const classNodes = [];
+
+		for (const iri of this.getSubClassIris()) {
 			classNodes.push(this.getClassNode(iri));
 		}
 
-		const individualNodes = [];
-		const individualUris = this.getIndividualIris();
+		result.push(...sortByLabel(classNodes));
 
-		for (const iri of individualUris) {
-			individualNodes.push(this.getIndividualNode(iri));
+		if (this.showIndividuals()) {
+			const individualNodes = [];
+
+			for (const iri of this.getIndividualIris()) {
+				individualNodes.push(this.getIndividualNode(iri));
+			}
+
+			result.push(...sortByLabel(individualNodes));
 		}
 
-		return [
-			...sortByLabel(classNodes),
-			...sortByLabel(individualNodes)
-		];
+		return result;
 	}
 
 	/**
@@ -104,9 +124,12 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 	 * implementation for specific class types.
 	 * @returns An array of sub-class IRIs.
 	 */
-	getSubClassIris(): string[] {
+	*getSubClassIris(): IterableIterator<string> {
+		const graphs = this.getOntologyGraphs();
+		const options = this.getQueryOptions();
+
 		// Note: We are querying the possibly extended ontology graphs here for class relationships.
-		return mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri, this.getQueryOptions());
+		yield* mentor.vocabulary.getSubClasses(graphs, this.uri, options);
 	}
 
 	/**
@@ -114,16 +137,13 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 	 * implementation for specific class types.
 	 * @returns An array of individual IRIs.
 	 */
-	getIndividualIris(): string[] {
-		if (this.showIndividuals()) {
-			// Note: If we set includeSubTypes to `false`, we *must* provide the ontology graphs so that
-			// type hierarchies can be loaded and individuals can be filtered accordingly. If this is not done,
-			// we will return more individuals than expected.
-			return mentor.vocabulary.getSubjectsOfType(this.getOntologyGraphs(), this.uri, this.getQueryOptions({
-				includeSubTypes: false
-			}));
-		} else {
-			return [];
-		}
+	*getIndividualIris(): IterableIterator<string> {
+		const graphs = this.getDocumentGraphs();
+		const options = this.getQueryOptions({ includeSubTypes: false });
+
+		// Note: If we set includeSubTypes to `false`, we *must* provide the ontology graphs so that
+		// type hierarchies can be loaded and individuals can be filtered accordingly. If this is not done,
+		// we will return more individuals than expected.
+		yield* mentor.vocabulary.getSubjectsOfType(graphs, this.uri, options);
 	}
 }

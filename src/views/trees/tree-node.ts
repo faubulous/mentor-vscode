@@ -23,10 +23,22 @@ export interface TreeNode {
 	initialCollapsibleState: vscode.TreeItemCollapsibleState;
 
 	/**
+	 * Get the collapsible state of the tree item.
+	 * @returns The collapsible state of the tree item.
+	 */
+	getCollapsibleState(): vscode.TreeItemCollapsibleState;
+
+	/**
 	 * Get the command that is executed when the tree item is clicked.
 	 * @returns A command that is executed when the tree item is clicked.
 	 */
 	getCommand(): vscode.Command | undefined;
+
+	/**
+	 * Indicates whether the tree item has children.
+	 * @returns `true` if the tree item has children, `false` otherwise.
+	 */
+	hasChildren(): boolean;
 
 	/**
 	 * Get the children of the tree item.
@@ -43,19 +55,19 @@ export interface TreeNode {
 	 * Get the label of the tree item.
 	 * @returns The label of the tree item.
 	 */
-	getLabel(): vscode.TreeItemLabel ;
+	getLabel(): vscode.TreeItemLabel;
 
 	/**
 	 * Get the description of the tree item.
 	 * @returns A description string or `undefined` if no description should be shown.
 	 */
-	getDescription(): string ;
+	getDescription(): string;
 
 	/**
 	 * Get the tooltip of the tree item.
 	 * @returns A markdown string or `undefined` if no tooltip should be shown.
 	 */
-	getTooltip(): vscode.MarkdownString | undefined ;
+	getTooltip(): vscode.MarkdownString | undefined;
 
 	/**
 	 * Get the icon of the tree item.
@@ -74,18 +86,29 @@ export interface TreeNode {
  * Abstract base class for a node in tree views.
  */
 export abstract class TreeNodeBase implements TreeNode {
-
 	id: string = '';
 
 	uri: string = '';
 
-	initialCollapsibleState = vscode.TreeItemCollapsibleState.None;
+	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	getCommand(): vscode.Command | undefined {
 		return undefined;
 	}
 
+	getCollapsibleState(): vscode.TreeItemCollapsibleState {
+		const collapsibleState = this.hasChildren() ?
+			this.initialCollapsibleState :
+			vscode.TreeItemCollapsibleState.None;
+
+		return collapsibleState;
+	}
+
 	abstract getContextValue(): string;
+
+	hasChildren(): boolean {
+		return this.getChildren().length > 0;
+	}
 
 	getChildren(): TreeNode[] {
 		return [];
@@ -95,7 +118,7 @@ export abstract class TreeNodeBase implements TreeNode {
 		return '';
 	}
 
-	abstract getLabel(): vscode.TreeItemLabel ;
+	abstract getLabel(): vscode.TreeItemLabel;
 
 	getTooltip(): vscode.MarkdownString | undefined {
 		return undefined;

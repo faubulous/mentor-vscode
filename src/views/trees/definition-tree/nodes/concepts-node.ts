@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { mentor } from "@src/mentor";
 import { ConceptClassNode } from "./concept-class-node";
 
-export class ConceptGroupNode extends ConceptClassNode {
+export class ConceptsNode extends ConceptClassNode {
 	override getContextValue(): string {
 		return 'concepts';
 	}
@@ -16,15 +16,17 @@ export class ConceptGroupNode extends ConceptClassNode {
 	}
 
 	override getDescription(): string {
-		const concepts = mentor.vocabulary.getConcepts(this.getDocumentGraphs());
+		const graphs = this.getDocumentGraphs();
+		const concepts = [...mentor.vocabulary.getConcepts(graphs)];
 
 		return concepts.length.toString();
 	}
 
-	override getSubClassIris(): string[] {
+	override *getSubClassIris(): IterableIterator<string> {
+		const graphs = this.getDocumentGraphs();
 		const subject = this.getQueryOptions().definedBy ?? this.uri;
 
-		return mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), subject);
+		yield* mentor.vocabulary.getNarrowerConcepts(graphs, subject);
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {

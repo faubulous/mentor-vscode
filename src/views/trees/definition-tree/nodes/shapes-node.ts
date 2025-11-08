@@ -3,7 +3,7 @@ import { _SH, SH } from "@faubulous/mentor-rdf";
 import { mentor } from "@src/mentor";
 import { ShapeClassNode } from "./shape-class-node";
 
-export class ShapeGroupNode extends ShapeClassNode {
+export class ShapesNode extends ShapeClassNode {
 	uri = SH.Shape;
 
 	override getContextValue() {
@@ -19,9 +19,11 @@ export class ShapeGroupNode extends ShapeClassNode {
 	}
 
 	override getDescription(): string {
-		const shapes = mentor.vocabulary.getShapes(this.getDocumentGraphs(), undefined, this.getQueryOptions());
+		const graphs = this.getDocumentGraphs();
+		const options = this.getQueryOptions();
+		const shapes = mentor.vocabulary.getShapes(graphs, undefined, options);
 
-		return shapes.length.toString();
+		return [...shapes].length.toString();
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {

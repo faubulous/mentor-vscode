@@ -3,9 +3,9 @@ import { mentor } from "@src/mentor";
 import { ClassNode } from "./class-node";
 
 /**
- * Node of a RDFS or OWL class in the definition tree.
+ * The group node representing all classes defined in the document.
  */
-export class ClassGroupNode extends ClassNode {
+export class ClassesNode extends ClassNode {
 	override getContextValue(): string {
 		return 'classes';
 	}
@@ -19,14 +19,20 @@ export class ClassGroupNode extends ClassNode {
 	}
 
 	override getDescription(): string {
+		const graphs = this.getOntologyGraphs();
+		const options = this.getQueryOptions();
+
 		// Note: We only want to display the number of classes defined in the document, hence {@link getDocumentGraphs}.
-		const classes = mentor.vocabulary.getClasses(this.getDocumentGraphs(), this.getQueryOptions());
+		const classes = [...mentor.vocabulary.getClasses(graphs, options)];
 
 		return classes.length.toString();
 	}
 
-	override getSubClassIris(): string[] {
-		return mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), undefined, this.getQueryOptions());
+	override getSubClassIris(): IterableIterator<string> {
+		const graphs = this.getOntologyGraphs();
+		const options = this.getQueryOptions();
+
+		return mentor.vocabulary.getSubClasses(graphs, undefined, options);
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {

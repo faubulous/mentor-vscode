@@ -25,8 +25,6 @@ export class SparqlQueryResultSerializer {
 		bindingStream: AsyncIterator<Bindings>,
 		token: vscode.CancellationToken
 	): Promise<BindingsResult> {
-		console.log("_serializeBindings:", context.documentIri);
-
 		// Note: This evaluates the query results and collects the bindings.
 		const bindings = await toArrayWithCancellation(bindingStream, token);
 

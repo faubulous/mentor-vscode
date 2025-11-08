@@ -9,13 +9,17 @@ export class RuleClassNode extends ClassNodeBase {
 		return [_SH, ...this.document.graphs];
 	}
 
-	override getSubClassIris(): string[] {
+	override *getSubClassIris(): IterableIterator<string> {
 		const options = this.getQueryOptions();
 		options.notDefinedBy?.add(_SH);
 
 		const classIris = mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri ?? SH.Rule);
 
-		return classIris.filter(c => mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options));
+		for (const c of classIris) {
+			if (mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options)) {
+				yield c;
+			}
+		}
 	}
 
 	override getClassNode(iri: string) {

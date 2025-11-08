@@ -14,8 +14,8 @@ export class ConceptClassNode extends ClassNodeBase {
 		return new vscode.ThemeColor("mentor.color.concept");
 	}
 
-	override getSubClassIris(): string[] {
-		return mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), this.uri);
+	override *getSubClassIris(): IterableIterator<string> {
+		yield* mentor.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), this.uri);
 	}
 
 	override getClassNode(iri: string) {

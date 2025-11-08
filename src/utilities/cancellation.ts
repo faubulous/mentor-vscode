@@ -37,8 +37,6 @@ export async function withCancellation<T>(
 				reject(new CancellationError());
 			} else {
 				const subscription = token.onCancellationRequested(() => {
-					console.log("withCancellation: Cancellation requested");
-
 					subscription.dispose();
 
 					reject(new CancellationError());
@@ -107,12 +105,8 @@ async function _toArrayWithCancellation<T>(
 
 	let subscription: vscode.Disposable | undefined;
 
-	console.log("_toArrayWithCancellation");
-
 	const cancel = new Promise<never>((_, reject) => {
 		subscription = token.onCancellationRequested(() => {
-			console.log("_toArrayWithCancellation.onCancellationRequested");
-
 			_tryClose(iterable);
 
 			reject(new CancellationError());
