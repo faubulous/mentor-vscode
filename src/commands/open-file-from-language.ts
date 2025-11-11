@@ -3,8 +3,8 @@ import { mentor } from '../mentor';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { getFileName, getPath } from '@src/utilities';
 
-export const openFileByLanguage = {
-	id: 'mentor.command.openFileByLanguage',
+export const openFileFromLanguage = {
+	id: 'mentor.command.openFileFromLanguage',
 	handler: async (languageId: string) => {
 		const files: vscode.Uri[] = [];
 

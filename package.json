@@ -193,6 +193,11 @@
     ],
     "grammars": [
       {
+        "language": "trig",
+        "scopeName": "source.trig",
+        "path": "./out/trig.tmLanguage.json"
+      },
+      {
         "language": "turtle",
         "scopeName": "source.turtle",
         "path": "./out/turtle.tmLanguage.json"
@@ -481,6 +486,11 @@
         "icon": "$(layout-panel)"
       },
       {
+        "command": "mentor.command.createDocument",
+        "title": "Mentor: Create Document",
+        "icon": "$(new-file)"
+      },
+      {
         "command": "mentor.command.createNotebook",
         "title": "Mentor: Create Notebook",
         "icon": "$(notebook)"
@@ -489,11 +499,6 @@
         "command": "mentor.command.createNotebookFromEditor",
         "title": "Mentor: Create Notebook from Editor",
         "icon": "$(notebook)"
-      },
-      {
-        "command": "mentor.command.createSparqlQueryFile",
-        "title": "Mentor: Create SPARQL Query File",
-        "icon": "$(new-file)"
       },
       {
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
@@ -652,7 +657,7 @@
           "group": "navigation@1"
         },
         {
-          "command": "mentor.command.createNotebook",
+          "command": "mentor.command.createDocument",
           "when": "view == mentor.view.workspaceTree",
           "group": "navigation@2"
         },
@@ -1130,11 +1135,46 @@
             ],
             "default": "Sorted"
           },
-          "mentor.query.sparql.defaultQueryTemplate": {
+          "mentor.language.sparql.defaultDocumentTemplate": {
             "type": "string",
-            "title": "Default SPARQL Query Template",
-            "description": "The default SPARQL query template to be used when creating a new SPARQL query file.",
+            "title": "Default SPARQL Document Template",
+            "description": "The default SPARQL document template to be used when creating a new SPARQL document.",
             "default": "SELECT ?s ?p ?o\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
+            "editPresentation": "multilineText"
+          },
+          "mentor.language.turtle.defaultDocumentTemplate": {
+            "type": "string",
+            "title": "Default Turtle Document Template",
+            "description": "The default Turtle document template to be used when creating a new Turtle document.",
+            "default": "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix ex: <http://example.org/> .\n\n",
+            "editPresentation": "multilineText"
+          },
+          "mentor.language.trig.defaultDocumentTemplate": {
+            "type": "string",
+            "title": "Default TriG Document Template",
+            "description": "The default TriG document template to be used when creating a new TriG document.",
+            "default": "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix ex: <http://example.org/> .\n\n",
+            "editPresentation": "multilineText"
+          },
+          "mentor.language.n3.defaultDocumentTemplate": {
+            "type": "string",
+            "title": "Default N3 Document Template",
+            "description": "The default N3 document template to be used when creating a new N3 document.",
+            "default": "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix ex: <http://example.org/> .\n\n",
+            "editPresentation": "multilineText"
+          },
+          "mentor.language.ntriples.defaultDocumentTemplate": {
+            "type": "string",
+            "title": "Default N-Triples Document Template",
+            "description": "The default N-Triples document template to be used when creating a new N-Triples document.",
+            "default": "",
+            "editPresentation": "multilineText"
+          },
+          "mentor.language.nquads.defaultDocumentTemplate": {
+            "type": "string",
+            "title": "Default N-Quads Document Template",
+            "description": "The default N-Quads document template to be used when creating a new N-Quads document.",
+            "default": "",
             "editPresentation": "multilineText"
           }
         },

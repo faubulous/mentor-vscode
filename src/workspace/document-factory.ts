@@ -1,8 +1,34 @@
 import * as vscode from 'vscode';
+import { MENTOR_EXTENSION_ID } from '../mentor';
 import { Utils } from 'vscode-uri';
 import { RdfSyntax } from '@faubulous/mentor-rdf';
 import { DocumentContext } from './document-context';
 import { TurtleDocument, SparqlDocument, XmlDocument } from '../languages';
+
+/**
+ * Information about a supported programming language.
+ */
+interface LanguageInfo {
+	/**
+	 * The language identifier, (e.g. 'turtle' or 'sparql').
+	 */
+	id: string;
+
+	/**
+	 * The human-readable name of the language.
+	 */
+	name: string;
+
+	/**
+	 * The icon associated with the language, if any.
+	 */
+	icon?: any;
+
+	/**
+	 * The file extensions associated with the language (e.g. '.ttl', '.sparql').
+	 */
+	extensions: string[];
+}
 
 /**
  * A factory for creating RDF document contexts.
@@ -91,6 +117,68 @@ export class DocumentFactory {
 				return new XmlDocument(documentUri);
 			default:
 				throw new Error('Unsupported language:' + language);
+		}
+	}
+
+	/**
+	 * Retrieves language information including readable names and icons from package.json.
+	 * @param factory The DocumentFactory instance.
+	 * @returns An array of language information objects.
+	 */
+	async getSupportedLanguagesInfo(): Promise<LanguageInfo[]> {
+		const packageJson = await this._getPackageJson();
+		const languageMap = new Map<string, LanguageInfo>();
+
+		for (const language of this.supportedLanguages) {
+			languageMap.set(language, {
+				id: language,
+				name: language, // fallback name
+				extensions: []
+			});
+		}
+
+		for (const [extension, languageId] of Object.entries(this.supportedExtensions)) {
+			const info = languageMap.get(languageId);
+
+			if (info) {
+				info.extensions.push(extension);
+			}
+		}
+		
+		if (packageJson?.contributes?.languages) {
+			for (const lang of packageJson.contributes.languages) {
+				const info = languageMap.get(lang.id);
+
+				if (info) {
+					info.name = lang.aliases?.[0] || lang.id;
+					info.icon = lang.icon;
+				}
+			}
+		}
+
+		return Array.from(languageMap.values());
+	}
+
+	/**
+	 * Helper function to read package.json from the extension.
+	 * @returns The parsed package.json content.
+	 */
+	private async _getPackageJson(): Promise<any> {
+		try {
+			const extensionPath = vscode.extensions.getExtension(MENTOR_EXTENSION_ID)?.extensionPath;
+
+			if (!extensionPath) {
+				throw new Error('Extension path not found');
+			}
+
+			const packageJsonUri = vscode.Uri.joinPath(vscode.Uri.file(extensionPath), 'package.json');
+			const buffer = await vscode.workspace.fs.readFile(packageJsonUri);
+            const content = new TextDecoder().decode(buffer);
+
+			return JSON.parse(content);
+		} catch (error) {
+			console.warn('Could not read package.json:', error);
+			return null;
 		}
 	}
 }
