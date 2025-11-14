@@ -4,15 +4,16 @@ import { WebviewHost } from '@src/views/webviews/webview-host';
 import { WebviewComponent } from '@src/views/webviews/webview-component';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
-import { AuthCredential, BasicAuthCredential, BearerAuthCredential } from '@src/services/credential';
+import { AuthCredential, BasicAuthCredential, BearerAuthCredential, MicrosoftAuthCredential } from '@src/services/credential';
 import { HttpStatusCodes } from '@src/utilities/http-status-codes';
-import stylesheet from './sparql-connection-view.css';
 import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
+import stylesheet from './sparql-connection-view.css';
 
-enum AuthTabIndex {
+enum AuthTypeIndex {
 	None = 0,
 	Basic = 1,
-	Bearer = 2
+	Bearer = 2,
+	Microsoft = 3
 }
 
 interface SparqlConnectionViewState {
@@ -24,11 +25,13 @@ interface SparqlConnectionViewState {
 
 	endpoint: SparqlConnection;
 
-	selectedAuthTabIndex: AuthTabIndex;
+	selectedAuthTypeIndex: AuthTypeIndex;
 
 	basicCredential: BasicAuthCredential;
 
 	bearerCredential: BearerAuthCredential;
+
+	microsoftCredential: MicrosoftAuthCredential;
 
 	passwordVisible?: boolean;
 }
@@ -43,17 +46,17 @@ export class SparqlConnectionView extends WebviewComponent<
 > {
 	messaging = WebviewHost.getMessaging<SparqlConnectionMessages>();
 
-	private _authTabs: VscodeTabs | null = null;
+	private _authTypes: VscodeTabs | null = null;
 
 	protected setAuthTabsRef = (element: VscodeTabs | null) => {
-		if (this._authTabs) {
-			this._authTabs.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
+		if (this._authTypes) {
+			this._authTypes.removeEventListener('vsc-tabs-select', this._handleAuthTypeChange);
 		}
 
-		this._authTabs = element;
+		this._authTypes = element;
 
 		if (element) {
-			element.addEventListener('vsc-tabs-select', this._handleAuthTabChange);
+			element.addEventListener('vsc-tabs-select', this._handleAuthTypeChange);
 		}
 	};
 
@@ -75,16 +78,19 @@ export class SparqlConnectionView extends WebviewComponent<
 
 	protected setAuthTypeSelectRef = (element: VscodeSingleSelect | null) => {
 		if (this._authTypeSelect) {
-			this._authTypeSelect.removeEventListener('change', this._handleAuthTabChange);
+			this._authTypeSelect.removeEventListener('change', this._handleAuthTypeChange);
 		}
-		
+
 		this._authTypeSelect = element;
 
 		if (element) {
 			element.addEventListener('change', (e: any) => {
 				const value = parseInt(e.target.value, 10);
 
-				this.setState({ selectedAuthTabIndex: value });
+				this.setState({
+					selectedAuthTypeIndex: value,
+					hasUnsavedChanges: true
+				});
 			});
 		}
 	}
@@ -96,9 +102,10 @@ export class SparqlConnectionView extends WebviewComponent<
 
 		this.setState({
 			endpoint: { id: 'new', endpointUrl: 'https://', configScope: 1 },
-			selectedAuthTabIndex: 0,
+			selectedAuthTypeIndex: 0,
 			basicCredential: { type: 'basic', username: '', password: '' },
 			bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
+			microsoftCredential: { type: 'microsoft', scopes: ['https://graph.microsoft.com/.default'] },
 			isChecking: false,
 			connectionError: undefined
 		});
@@ -107,8 +114,8 @@ export class SparqlConnectionView extends WebviewComponent<
 	}
 
 	componentWillUnmount(): void {
-		if (this._authTabs) {
-			this._authTabs.removeEventListener('vsc-tabs-select', this._handleAuthTabChange);
+		if (this._authTypes) {
+			this._authTypes.removeEventListener('vsc-tabs-select', this._handleAuthTypeChange);
 		}
 
 		if (this._configScopeTabs) {
@@ -121,9 +128,10 @@ export class SparqlConnectionView extends WebviewComponent<
 			case 'GetSparqlConnectionResult': {
 				this.setState({
 					endpoint: message.connection,
-					selectedAuthTabIndex: 0,
+					selectedAuthTypeIndex: 0,
 					basicCredential: { type: 'basic', username: '', password: '' },
 					bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
+					microsoftCredential: { type: 'microsoft', scopes: [] },
 					isChecking: false,
 					connectionError: undefined,
 					hasUnsavedChanges: false
@@ -139,13 +147,13 @@ export class SparqlConnectionView extends WebviewComponent<
 				const credential = message.credential;
 
 				if (!credential) {
-					this.setState({ selectedAuthTabIndex: 0 });
+					this.setState({ selectedAuthTypeIndex: 0 });
 					return;
 				}
 
 				if (credential.type === 'basic') {
 					this.setState({
-						selectedAuthTabIndex: 1,
+						selectedAuthTypeIndex: 1,
 						basicCredential: {
 							type: 'basic',
 							username: credential.username ?? '',
@@ -154,13 +162,21 @@ export class SparqlConnectionView extends WebviewComponent<
 					});
 				} else if (credential.type === 'bearer') {
 					this.setState({
-						selectedAuthTabIndex: 2,
+						selectedAuthTypeIndex: 2,
 						bearerCredential: {
 							type: 'bearer',
 							prefix: credential.prefix ?? 'Bearer',
 							token: credential.token ?? ''
 						}
 					});
+				} else if (credential.type === 'microsoft') {
+					this.setState({
+						selectedAuthTypeIndex: 3,
+						microsoftCredential: {
+							type: 'microsoft',
+							scopes: credential.scopes ?? []
+						}
+					})
 				}
 				return;
 			}
@@ -267,16 +283,18 @@ export class SparqlConnectionView extends WebviewComponent<
 								<vscode-label>Type</vscode-label>
 								<vscode-single-select
 									ref={this.setAuthTypeSelectRef}
-									value={this.state.selectedAuthTabIndex.toString()}
+									value={this.state.selectedAuthTypeIndex.toString()}
 									disabled={this._isFormReadOnly()}>
 									<vscode-option value="0">None</vscode-option>
 									<vscode-option value="1">Basic</vscode-option>
 									<vscode-option value="2">Bearer</vscode-option>
+									<vscode-option value="3">Microsoft</vscode-option>
 								</vscode-single-select>
 							</div>
-							{this.state.selectedAuthTabIndex !== 0 && <div className="vertical-separator">
-								{this.state.selectedAuthTabIndex === 1 && this._renderBasicAuthFields()}
-								{this.state.selectedAuthTabIndex === 2 && this._renderBearerAuthFields()}
+							{this.state.selectedAuthTypeIndex !== 0 && <div className="vertical-separator">
+								{this.state.selectedAuthTypeIndex === 1 && this._renderBasicAuthFields()}
+								{this.state.selectedAuthTypeIndex === 2 && this._renderBearerAuthFields()}
+								{this.state.selectedAuthTypeIndex === 3 && this._renderMicrosoftAuthFields()}
 							</div>}
 						</div>
 					</section>
@@ -312,11 +330,13 @@ export class SparqlConnectionView extends WebviewComponent<
 	}
 
 	private _getSelectedCredentialOrNull(): AuthCredential | null {
-		switch (this.state.selectedAuthTabIndex) {
+		switch (this.state.selectedAuthTypeIndex) {
 			case 1:
 				return this.state.basicCredential;
 			case 2:
 				return this.state.bearerCredential;
+			case 3:
+				return this.state.microsoftCredential;
 			default:
 				return null;
 		}
@@ -342,51 +362,6 @@ export class SparqlConnectionView extends WebviewComponent<
 		return result.join(' ');
 	}
 
-	private _renderBasicAuthFields() {
-		const credential = this.state?.basicCredential;
-
-		return (
-			<vscode-form-group variant='vertical'>
-				<vscode-label>Username</vscode-label>
-				<vscode-textfield
-					value={credential?.username ?? ''}
-					placeholder="myuser"
-					label="Username"
-					disabled={this._isFormReadOnly()}
-					onInput={e => {
-						const updatedCredential = {
-							...credential!,
-							username: (e.target as HTMLInputElement).value
-						};
-						this.setState({ basicCredential: updatedCredential });
-					}}
-				/>
-				<vscode-label>Password</vscode-label>
-				<vscode-textfield
-					value={credential?.password ?? ''}
-					label="Password"
-					type={this.state.passwordVisible ? 'text' : 'password'}
-					disabled={this._isFormReadOnly()}
-					onInput={e => {
-						const updatedCredential = {
-							...credential!,
-							password: (e.target as HTMLInputElement).value
-						};
-						this.setState({ basicCredential: updatedCredential });
-					}}
-				>
-					<vscode-icon
-						slot="content-after"
-						name={this.state.passwordVisible ? 'eye-closed' : 'eye'}
-						title="clear-all"
-						action-icon
-						onClick={() => this.setState({ passwordVisible: !this.state.passwordVisible })}
-					></vscode-icon>
-				</vscode-textfield>
-			</vscode-form-group>
-		);
-	}
-
 	private _renderConnectionTestErrorMessage(connectionError: any) {
 		if (connectionError.code === 0) {
 			return (
@@ -410,6 +385,95 @@ export class SparqlConnectionView extends WebviewComponent<
 		}
 	}
 
+	private _renderBasicAuthFields() {
+		const credential = this.state?.basicCredential;
+
+		return (
+			<vscode-form-group variant='vertical'>
+				<vscode-label>Username</vscode-label>
+				<vscode-textfield
+					value={credential?.username ?? ''}
+					placeholder="myuser"
+					label="Username"
+					disabled={this._isFormReadOnly()}
+					onInput={e => {
+						const updatedCredential = {
+							...credential!,
+							username: (e.target as HTMLInputElement).value
+						};
+
+						this.setState({
+							basicCredential: updatedCredential,
+							hasUnsavedChanges: true
+						});
+					}}
+				/>
+				<vscode-label>Password</vscode-label>
+				<vscode-textfield
+					value={credential?.password ?? ''}
+					label="Password"
+					type={this.state.passwordVisible ? 'text' : 'password'}
+					disabled={this._isFormReadOnly()}
+					onInput={e => {
+						const updatedCredential = {
+							...credential!,
+							password: (e.target as HTMLInputElement).value
+						};
+
+						this.setState({
+							basicCredential: updatedCredential,
+							hasUnsavedChanges: true
+						});
+					}}
+				>
+					<vscode-icon
+						slot="content-after"
+						name={this.state.passwordVisible ? 'eye-closed' : 'eye'}
+						title="clear-all"
+						action-icon
+						onClick={() => this.setState({ passwordVisible: !this.state.passwordVisible })}
+					></vscode-icon>
+				</vscode-textfield>
+			</vscode-form-group>
+		);
+	}
+
+	private _renderMicrosoftAuthFields() {
+		const credential = this.state?.microsoftCredential;
+
+		return (
+			<vscode-form-group variant='vertical'>
+				<vscode-label>Scopes</vscode-label>
+				<vscode-textarea
+					rows={5}
+					value={credential?.scopes.join('\n') ?? ''}
+					placeholder="scopes"
+					label="Scopes"
+
+					disabled={this._isFormReadOnly()}
+					onInput={e => {
+						const updatedCredential = {
+							...credential!,
+							scopes: (e.target as HTMLInputElement).value.split('\n')
+						};
+
+						this.setState({
+							microsoftCredential: updatedCredential,
+							hasUnsavedChanges: true
+						});
+					}}
+				/>
+				<vscode-button onClick={() => {
+					const scopes = this.state.microsoftCredential?.scopes;
+
+					this._executeCommand('mentor.command.loginMicrosoftAuthProvider', scopes);
+				}}>
+					Login
+				</vscode-button>
+			</vscode-form-group>
+		);
+	}
+
 	private _renderBearerAuthFields() {
 		const credential = this.state?.bearerCredential;
 
@@ -428,7 +492,8 @@ export class SparqlConnectionView extends WebviewComponent<
 							bearerCredential: {
 								...credential,
 								prefix: value
-							}
+							},
+							hasUnsavedChanges: true
 						});
 					}}
 				/>
@@ -445,7 +510,8 @@ export class SparqlConnectionView extends WebviewComponent<
 							bearerCredential: {
 								...credential,
 								token: value
-							}
+							},
+							hasUnsavedChanges: true
 						});
 					}}
 				/>
@@ -479,11 +545,14 @@ export class SparqlConnectionView extends WebviewComponent<
 		}
 	}
 
-	private _handleAuthTabChange = (event: any) => {
-		if (this._authTabs) {
-			const i = this._authTabs.selectedIndex ?? AuthTabIndex.None;
+	private _handleAuthTypeChange = (event: any) => {
+		if (this._authTypes) {
+			const i = this._authTypes.selectedIndex ?? AuthTypeIndex.None;
 
-			this.setState({ selectedAuthTabIndex: i });
+			this.setState({
+				selectedAuthTypeIndex: i,
+				hasUnsavedChanges: true
+			});
 		}
 	};
 

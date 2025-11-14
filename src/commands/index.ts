@@ -19,6 +19,7 @@ import { executeSparqlQueryFromDocument } from './execute-sparql-query-from-docu
 import { findReferences } from './find-references';
 import { implementPrefixes } from './implement-prefixes';
 import { implementPrefixForIri } from './implement-prefix-for-iri';
+import { loginMicrosoftAuthProvider } from './login-microsoft-auth';
 import { openDocument } from './open-document';
 import { openFileFromLanguage } from './open-file-from-language';
 import { openGraph } from './open-graph';
@@ -54,6 +55,7 @@ const commands = [
 	findReferences,
 	implementPrefixes,
 	implementPrefixForIri,
+	loginMicrosoftAuthProvider,
 	openDocument,
 	openFileFromLanguage,
 	openGraph,

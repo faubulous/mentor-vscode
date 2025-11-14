@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { AuthCredential } from './credential';
 import { ComunicaSource, SparqlConnectionSource } from './sparql-query-source';
 import { SparqlConnection } from './sparql-connection';
+import { MicrosoftAuthService } from './microsoft-auth-service';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 
@@ -36,6 +37,8 @@ export class SparqlConnectionService {
 	private _defaultEndpointUrl = 'https://';
 
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
+
+	private _microsoftAuthService = new MicrosoftAuthService();
 
 	/**
 	 * Loads connections from the various configuration storage locactions into memory.
@@ -118,7 +121,7 @@ export class SparqlConnectionService {
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
 		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
 
-		for(const connection of this._connections) {
+		for (const connection of this._connections) {
 			connection.isNew = false;
 			connection.isModified = false;
 		}
@@ -313,8 +316,8 @@ export class SparqlConnectionService {
 	 * Finds the containing NotebookDocument for a given cell URI.
 	 */
 	private _getNotebookFromCellUri(cellUri: vscode.Uri): vscode.NotebookDocument | undefined {
-		for(const notebook of vscode.workspace.notebookDocuments) {
-			if(notebook.uri.path === cellUri.path) {
+		for (const notebook of vscode.workspace.notebookDocuments) {
+			if (notebook.uri.path === cellUri.path) {
 				return notebook;
 			}
 		}
@@ -395,7 +398,7 @@ export class SparqlConnectionService {
 				credential = await mentor.credentialStorageService.getCredential(connection.id);
 			}
 
-			const authHeaders = this.getAuthHeaders(credential as AuthCredential);
+			const authHeaders = await this.getAuthHeaders(credential as AuthCredential);
 
 			if (authHeaders) {
 				Object.assign(headers, authHeaders);
@@ -428,7 +431,7 @@ export class SparqlConnectionService {
 	/**
 	 * Returns HTTP Authorization headers for the given URI.
 	 */
-	getAuthHeaders(credential?: AuthCredential): Record<string, string> {
+	async getAuthHeaders(credential?: AuthCredential): Promise<Record<string, string>> {
 		const headers: Record<string, string> = {};
 
 		if (credential?.type === 'basic') {
@@ -439,6 +442,12 @@ export class SparqlConnectionService {
 
 		if (credential?.type === 'bearer') {
 			headers.Authorization = `Bearer ${credential.token}`;
+		}
+
+		if (credential?.type === 'microsoft') {
+			const token = await this._microsoftAuthService.getAccessToken(credential.scopes);
+
+			headers.Authorization = `Bearer ${token}`;
 		}
 
 		return headers;

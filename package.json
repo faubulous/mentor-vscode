@@ -463,178 +463,220 @@
       {
         "command": "mentor.command.refreshWorkspaceTree",
         "title": "Refresh",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.refreshConnectionsTree",
         "title": "Refresh",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.createSparqlConnection",
         "title": "New Endpoint...",
-        "icon": "$(add)"
+        "icon": "$(add)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.deleteSparqlConnection",
         "title": "Delete",
-        "icon": "$(remove)"
+        "icon": "$(remove)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.webview.show",
-        "title": "Mentor: Show Webview",
-        "icon": "$(layout-panel)"
+        "title": "Show Webview",
+        "icon": "$(layout-panel)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.createDocument",
-        "title": "Mentor: Create Document",
-        "icon": "$(new-file)"
+        "title": "Create Document",
+        "icon": "$(new-file)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.createNotebook",
-        "title": "Mentor: Create Notebook",
-        "icon": "$(notebook)"
+        "title": "Create Notebook",
+        "icon": "$(notebook)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.createNotebookFromEditor",
-        "title": "Mentor: Create Notebook from Editor",
-        "icon": "$(notebook)"
+        "title": "Create Notebook from Editor",
+        "icon": "$(notebook)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
-        "title": "Mentor: Execute SPARQL Query",
-        "icon": "$(play)"
+        "title": "Execute SPARQL Query",
+        "icon": "$(play)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.saveSparqlQueryResults",
-        "title": "Mentor: Save SPARQL Query Results",
-        "icon": "$(save-as)"
+        "title": "Save SPARQL Query Results",
+        "icon": "$(save-as)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.analyzeWorkspace",
         "title": "Find Problems",
-        "icon": "$(debug-alt)"
+        "icon": "$(debug-alt)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.updatePrefixes",
-        "title": "Mentor: Update prefix definitions from prefix.cc",
-        "icon": "$(cloud-download)"
+        "title": "Update prefix definitions from prefix.cc",
+        "icon": "$(cloud-download)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.openSettings",
         "title": "Settings",
-        "icon": "$(gear)"
+        "icon": "$(gear)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.findReferences",
         "title": "Find All References",
-        "group": "navigation"
+        "group": "navigation",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.revealDefinition",
         "title": "Go to Definition",
-        "icon": "$(go-to-file)"
+        "icon": "$(go-to-file)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.revealShapeDefinition",
         "title": "Go to Shape Definition",
-        "icon": "$(go-to-shape)"
+        "icon": "$(go-to-shape)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.openInBrowser",
         "title": "Open in Browser",
-        "icon": "$(globe)"
+        "icon": "$(globe)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.showAnnotatedLabels",
         "title": "Show Annotated Labels",
-        "icon": "$(rdf-label-tag)"
+        "icon": "$(rdf-label-tag)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.showUriLabels",
         "title": "Show URI Labels",
-        "icon": "$(rdf-label-uri)"
+        "icon": "$(rdf-label-uri)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.showUriLabelsWithPrefix",
         "title": "Show URI Labels with Prefix",
-        "icon": "$(rdf-label-uri)"
+        "icon": "$(rdf-label-uri)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.groupDefinitionsByType",
-        "title": "Group by Type"
+        "title": "Group by Type",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.groupDefinitionsBySource",
-        "title": "Group by Source of Definition"
+        "title": "Group by Source of Definition",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.refreshDefinitionsTree",
         "title": "Refresh",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.showReferences",
         "title": "Show Referenced Resources",
-        "icon": "$(rdf-class)"
+        "icon": "$(rdf-class)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.hideReferences",
         "title": "Hide Referenced Resources",
-        "icon": "$(rdf-class-ref)"
+        "icon": "$(rdf-class-ref)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.showPropertyTypes",
         "title": "Show Property Types",
-        "icon": "$(rdf-tree)"
+        "icon": "$(rdf-tree)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.hidePropertyTypes",
         "title": "Hide Property Types",
-        "icon": "$(rdf-list)"
+        "icon": "$(rdf-list)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.showIndividualTypes",
         "title": "Show Individual Types",
-        "icon": "$(rdf-tree)"
+        "icon": "$(rdf-tree)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.hideIndividualTypes",
         "title": "Hide Individual Types",
-        "icon": "$(rdf-list)"
+        "icon": "$(rdf-list)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.deletePrefixes",
-        "title": "Delete prefix definitions"
+        "title": "Delete prefix definitions",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.implementPrefixes",
-        "title": "Implement prefix definitions"
+        "title": "Implement prefix definitions",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.sortPrefixes",
-        "title": "Sort prefix definitions"
+        "title": "Sort prefix definitions",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.selectActiveLanguage",
         "title": "Select Active Language",
-        "icon": "$(select-language)"
+        "icon": "$(select-language)",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.highlightNamespaceDefinitions",
-        "title": "Mentor: Highlight Namespace Definitions"
+        "title": "Highlight Namespace Definitions",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.highlightTypeDefinitions",
-        "title": "Mentor: Highlight Type Definitions"
+        "title": "Highlight Type Definitions",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.highlightTypeAssertions",
-        "title": "Mentor: Highlight Type Assertions"
+        "title": "Highlight Type Assertions",
+        "category": "Mentor"
       },
       {
         "command": "mentor.command.highlightReferencedIris",
-        "title": "Mentor: Highlight Referenced IRIs"
+        "title": "Highlight Referenced IRIs",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.loginMicrosoftAuthProvider",
+        "title": "Login with Microsoft Entra",
+        "category": "Mentor"
       }
     ],
     "menus": {
