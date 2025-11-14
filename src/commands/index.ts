@@ -3,10 +3,11 @@ import * as vscode from 'vscode';
 import { analyzeWorkspace } from './analyze-workspace';
 import { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
 import { clearQueryHistory } from './clear-query-history';
+import { createDocument } from './create-document';
+import { createDocumentFromLanguage } from './create-document-from-language';
 import { createNotebook } from './create-notebook';
 import { createNotebookFromEditor } from './create-notebook-from-editor';
 import { createSparqlConnection } from './create-sparql-connection';
-import { createSparqlQueryFile } from './create-sparql-query-file';
 import { deletePrefixes } from './delete-prefixes';
 import { deleteSparqlConnection } from './delete-sparql-connection';
 import { editSparqlConnection } from './edit-sparql-connection';
@@ -18,8 +19,9 @@ import { executeSparqlQueryFromDocument } from './execute-sparql-query-from-docu
 import { findReferences } from './find-references';
 import { implementPrefixes } from './implement-prefixes';
 import { implementPrefixForIri } from './implement-prefix-for-iri';
+import { loginMicrosoftAuthProvider } from './login-microsoft-auth';
 import { openDocument } from './open-document';
-import { openFileByLanguage } from './open-file-by-language';
+import { openFileFromLanguage } from './open-file-from-language';
 import { openGraph } from './open-graph';
 import { openInBrowser } from './open-in-browser';
 import { openSettings } from './open-settings';
@@ -37,10 +39,11 @@ const commands = [
 	analyzeWorkspace,
 	cancelSparqlQueryExecution,
 	clearQueryHistory,
+	createDocument,
+	createDocumentFromLanguage,
 	createNotebook,
 	createNotebookFromEditor,
 	createSparqlConnection,
-	createSparqlQueryFile,
 	deletePrefixes,
 	deleteSparqlConnection,
 	editSparqlConnection,
@@ -52,8 +55,9 @@ const commands = [
 	findReferences,
 	implementPrefixes,
 	implementPrefixForIri,
+	loginMicrosoftAuthProvider,
 	openDocument,
-	openFileByLanguage,
+	openFileFromLanguage,
 	openGraph,
 	openInBrowser,
 	openSettings,

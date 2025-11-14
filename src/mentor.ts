@@ -14,8 +14,13 @@ import {
 	SparqlQueryService,
 	TurtlePrefixDefinitionService,
 } from './services';
-import { NamedNode, Quad_Graph } from '@rdfjs/types';
+import { Quad_Graph } from '@rdfjs/types';
 import { InferenceUri } from './workspace/inference-uri';
+
+/**
+ * The Mentor extension identifier.
+ */
+export const MENTOR_EXTENSION_ID = 'faubulous.mentor';
 
 class MentorGraphUriGenerator implements GraphUriGenerator {
 	getGraphUri(uri: string | Quad_Graph): string {

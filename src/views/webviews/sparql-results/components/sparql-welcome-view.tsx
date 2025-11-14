@@ -142,11 +142,11 @@ export class SparqlWelcomeView extends WebviewComponent<
 	}
 
 	private _handleCreateSparqlQueryFile() {
-		this._executeCommand('mentor.command.createSparqlQueryFile');
+		this._executeCommand('mentor.command.createDocumentFromLanguage', 'sparql');
 	}
 
 	private _handleSelectSparqlQueryFile() {
-		this._executeCommand('mentor.command.openFileByLanguage', 'sparql');
+		this._executeCommand('mentor.command.openFileFromLanguage', 'sparql');
 	}
 
 	private _handleConnectToEndpoint() {

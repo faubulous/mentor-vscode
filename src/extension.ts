@@ -1,5 +1,4 @@
 'use strict';
-require('setimmediate');
 import * as vscode from 'vscode';
 import * as languages from './languages';
 import * as commands from './commands';
