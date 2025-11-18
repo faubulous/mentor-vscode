@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
+import { v4 as uuidv4 } from 'uuid';
 import { mentor } from '@src/mentor';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { v4 as uuidv4 } from 'uuid';
 import { AuthCredential } from './credential';
-import { ComunicaSource, SparqlConnectionSource } from './sparql-query-source';
 import { SparqlConnection } from './sparql-connection';
-import { MicrosoftAuthService } from './microsoft-auth-service';
+import { SparqlConnectionSource, ComunicaSource } from './sparql-query-source';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 
@@ -38,19 +37,17 @@ export class SparqlConnectionService {
 
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
 
-	private _microsoftAuthService = new MicrosoftAuthService();
-
 	/**
 	 * Loads connections from the various configuration storage locactions into memory.
 	 */
-	public initialize() {
+	initialize() {
 		this.loadConfiguration();
 	}
 
 	/**
 	 * Loads connections from the various configuration storage locactions into memory.
 	 */
-	public loadConfiguration(): void {
+	loadConfiguration(): void {
 		this._connections = [MENTOR_WORKSPACE_STORE];
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Workspace));
@@ -64,13 +61,10 @@ export class SparqlConnectionService {
 	 * @returns The corresponding configuration scope.
 	 */
 	private _getConfigurationScopeFromTarget(configTarget: vscode.ConfigurationTarget): ConfigurationScope {
-		switch (configTarget) {
-			case vscode.ConfigurationTarget.Global:
-				return ConfigurationScope.User;
-			case vscode.ConfigurationTarget.Workspace:
-				return ConfigurationScope.Workspace;
-			default:
-				return ConfigurationScope.User;
+		if (configTarget === vscode.ConfigurationTarget.Workspace) {
+			return ConfigurationScope.Workspace;
+		} else {
+			return ConfigurationScope.User;
 		}
 	}
 
@@ -114,7 +108,7 @@ export class SparqlConnectionService {
 	/**
 	 * Persists the in-memory connections to configuration.
 	 */
-	public async saveConfiguration(): Promise<void> {
+	async saveConfiguration(): Promise<void> {
 		const globalConnections = this._getEndpointDataForConfigScope(ConfigurationScope.User);
 		const workspaceConnections = this._getEndpointDataForConfigScope(ConfigurationScope.Workspace);
 
@@ -135,7 +129,7 @@ export class SparqlConnectionService {
 	 *          to select a specific workspace folder when creating a new connection.
 	 * @returns An array of supported configuration scopes.
 	 */
-	public getSupportedConfigurationScopes(): ConfigurationScope[] {
+	getSupportedConfigurationScopes(): ConfigurationScope[] {
 		return [
 			ConfigurationScope.User,
 			ConfigurationScope.Workspace
@@ -146,7 +140,7 @@ export class SparqlConnectionService {
 	 * Retrieves all available SPARQL endpoints, including the internal store.
 	 * @returns A promise that resolves to an array of all connections.
 	 */
-	public getConnections(): SparqlConnection[] {
+	getConnections(): SparqlConnection[] {
 		return this._connections;
 	}
 
@@ -155,7 +149,7 @@ export class SparqlConnectionService {
 	 * @param configScope The configuration scope to filter connections by.
 	 * @returns An array of SPARQL connections for the specified configuration scope.
 	 */
-	public getConnectionsForConfigurationScope(configScope: ConfigurationScope): SparqlConnection[] {
+	getConnectionsForConfigurationScope(configScope: ConfigurationScope): SparqlConnection[] {
 		return this._connections.filter(c => c.configScope === configScope);
 	}
 
@@ -164,7 +158,7 @@ export class SparqlConnectionService {
 	 * @param connectionId The ID of the connection to retrieve.
 	 * @returns The SPARQL connection or `undefined` if not found.
 	 */
-	public getConnection(connectionId: string): SparqlConnection | undefined {
+	getConnection(connectionId: string): SparqlConnection | undefined {
 		return this._connections.find(c => c.id === connectionId);
 	}
 
@@ -173,7 +167,7 @@ export class SparqlConnectionService {
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @returns The SPARQL connection or the Mentor Workspace triple store if no connection is found.
 	 */
-	public getConnectionForDocument(documentUri: vscode.Uri): SparqlConnection {
+	getConnectionForDocument(documentUri: vscode.Uri): SparqlConnection {
 		let connectionId;
 
 		if (documentUri.scheme === 'vscode-notebook-cell') {
@@ -238,7 +232,7 @@ export class SparqlConnectionService {
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @param connectionId The ID of the connection to set.
 	 */
-	public async setQuerySourceForDocument(documentUri: vscode.Uri, connectionId: string): Promise<void> {
+	async setQuerySourceForDocument(documentUri: vscode.Uri, connectionId: string): Promise<void> {
 		if (documentUri.scheme === 'vscode-notebook-cell') {
 			await this.setConnectionForCell(documentUri, connectionId);
 		} else {
@@ -255,7 +249,7 @@ export class SparqlConnectionService {
 	 * @param endpointUrl The URL of the SPARQL endpoint.
 	 * @returns The SPARQL connection or `undefined` if not found.
 	 */
-	public getConnectionForEndpoint(endpointUrl: string): SparqlConnection | undefined {
+	getConnectionForEndpoint(endpointUrl: string): SparqlConnection | undefined {
 		return this._connections.find(c => c.endpointUrl === endpointUrl);
 	}
 
@@ -266,7 +260,7 @@ export class SparqlConnectionService {
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @returns A promise that resolves to a ComunicaSource configuration.
 	 */
-	public async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource> {
+	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource> {
 		const connection = this.getConnectionForDocument(documentUri);
 
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
@@ -290,7 +284,7 @@ export class SparqlConnectionService {
 	 * @param cellUri The URI of the notebook cell.
 	 * @param connectionId The ID of the connection to set.
 	 */
-	public async setConnectionForCell(cellUri: vscode.Uri, connectionId: string): Promise<void> {
+	async setConnectionForCell(cellUri: vscode.Uri, connectionId: string): Promise<void> {
 		const notebook = this._getNotebookFromCellUri(cellUri);
 
 		if (!notebook) {
@@ -330,7 +324,7 @@ export class SparqlConnectionService {
 	 * @param scope Where to save the connection ('project' or 'user').
 	 * @param credentials Optional credentials for the connection.
 	 */
-	public async createConnection(): Promise<SparqlConnection> {
+	async createConnection(): Promise<SparqlConnection> {
 		const connection: SparqlConnection = {
 			id: uuidv4(),
 			isNew: true,
@@ -349,7 +343,7 @@ export class SparqlConnectionService {
 	 * Updates an existing SPARQL connection.
 	 * @param connection The connection to update.
 	 */
-	public async updateEndpoint(connection: SparqlConnection): Promise<void> {
+	async updateEndpoint(connection: SparqlConnection): Promise<void> {
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
 			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be modified.');
 			return;
@@ -370,7 +364,7 @@ export class SparqlConnectionService {
 	 * Deletes a SPARQL connection from the settings.
 	 * @param connectionId The ID of the connection to delete.
 	 */
-	public async deleteConnection(connectionId: string): Promise<void> {
+	async deleteConnection(connectionId: string): Promise<void> {
 		if (connectionId === MENTOR_WORKSPACE_STORE.id) {
 			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be removed.');
 			return;
@@ -445,10 +439,10 @@ export class SparqlConnectionService {
 		}
 
 		if (credential?.type === 'microsoft') {
-			const token = await this._microsoftAuthService.getAccessToken(credential.scopes);
-
-			headers.Authorization = `Bearer ${token}`;
+			headers.Authorization = `Bearer ${credential.accessToken}`;
 		}
+
+		console.log('Auth headers:', credential, headers);
 
 		return headers;
 	}

@@ -8,12 +8,16 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "debugWebWorkerHost": true,
+      "debugWebviews": false,
+      "trace": true,
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "--extensionDevelopmentKind=web",
-        "--enable-proposed-api"
+        "--extensionDevelopmentKind=web"
       ],
       "sourceMaps": true,
+      "skipFiles": [
+        "**/node_modules/**",
+      ],
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"
       ],

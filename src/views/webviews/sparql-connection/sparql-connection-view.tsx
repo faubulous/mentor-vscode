@@ -5,6 +5,7 @@ import { WebviewComponent } from '@src/views/webviews/webview-component';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { AuthCredential, BasicAuthCredential, BearerAuthCredential, MicrosoftAuthCredential } from '@src/services/credential';
+import { CredentialFactory } from '@src/services/credential-factory';
 import { HttpStatusCodes } from '@src/utilities/http-status-codes';
 import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 import stylesheet from './sparql-connection-view.css';
@@ -45,20 +46,6 @@ export class SparqlConnectionView extends WebviewComponent<
 	SparqlConnectionMessages
 > {
 	messaging = WebviewHost.getMessaging<SparqlConnectionMessages>();
-
-	private _authTypes: VscodeTabs | null = null;
-
-	protected setAuthTabsRef = (element: VscodeTabs | null) => {
-		if (this._authTypes) {
-			this._authTypes.removeEventListener('vsc-tabs-select', this._handleAuthTypeChange);
-		}
-
-		this._authTypes = element;
-
-		if (element) {
-			element.addEventListener('vsc-tabs-select', this._handleAuthTypeChange);
-		}
-	};
 
 	private _configScopeTabs: VscodeTabs | null = null;
 
@@ -103,9 +90,9 @@ export class SparqlConnectionView extends WebviewComponent<
 		this.setState({
 			endpoint: { id: 'new', endpointUrl: 'https://', configScope: 1 },
 			selectedAuthTypeIndex: 0,
-			basicCredential: { type: 'basic', username: '', password: '' },
-			bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
-			microsoftCredential: { type: 'microsoft', scopes: ['https://graph.microsoft.com/.default'] },
+			basicCredential: CredentialFactory.createBasicAuthCredential(),
+			bearerCredential: CredentialFactory.createBearerAuthCredential(),
+			microsoftCredential: CredentialFactory.createMicrosoftAuthCredential(),
 			isChecking: false,
 			connectionError: undefined
 		});
@@ -114,13 +101,8 @@ export class SparqlConnectionView extends WebviewComponent<
 	}
 
 	componentWillUnmount(): void {
-		if (this._authTypes) {
-			this._authTypes.removeEventListener('vsc-tabs-select', this._handleAuthTypeChange);
-		}
-
-		if (this._configScopeTabs) {
-			this._configScopeTabs.removeEventListener('change', this._handleConfigScopeChange);
-		}
+		this.setConfigScopeRef(null);
+		this.setAuthTypeSelectRef(null);
 	}
 
 	override componentDidReceiveMessage(message: SparqlConnectionMessages) {
@@ -129,9 +111,9 @@ export class SparqlConnectionView extends WebviewComponent<
 				this.setState({
 					endpoint: message.connection,
 					selectedAuthTypeIndex: 0,
-					basicCredential: { type: 'basic', username: '', password: '' },
-					bearerCredential: { type: 'bearer', prefix: 'Bearer', token: '' },
-					microsoftCredential: { type: 'microsoft', scopes: [] },
+					basicCredential: CredentialFactory.createBasicAuthCredential(),
+					bearerCredential: CredentialFactory.createBearerAuthCredential(),
+					microsoftCredential: CredentialFactory.createMicrosoftAuthCredential(),
 					isChecking: false,
 					connectionError: undefined,
 					hasUnsavedChanges: false
@@ -148,35 +130,31 @@ export class SparqlConnectionView extends WebviewComponent<
 
 				if (!credential) {
 					this.setState({ selectedAuthTypeIndex: 0 });
-					return;
-				}
-
-				if (credential.type === 'basic') {
+				} else if (credential.type === 'basic') {
 					this.setState({
 						selectedAuthTypeIndex: 1,
-						basicCredential: {
-							type: 'basic',
-							username: credential.username ?? '',
-							password: credential.password ?? ''
-						}
+						basicCredential: message.credential as BasicAuthCredential
 					});
 				} else if (credential.type === 'bearer') {
 					this.setState({
 						selectedAuthTypeIndex: 2,
-						bearerCredential: {
-							type: 'bearer',
-							prefix: credential.prefix ?? 'Bearer',
-							token: credential.token ?? ''
-						}
+						bearerCredential: message.credential as BearerAuthCredential
 					});
 				} else if (credential.type === 'microsoft') {
 					this.setState({
 						selectedAuthTypeIndex: 3,
-						microsoftCredential: {
-							type: 'microsoft',
-							scopes: credential.scopes ?? []
-						}
+						microsoftCredential: message.credential as MicrosoftAuthCredential
 					})
+				}
+				return;
+			}
+			case 'FetchMicrosoftAuthCredentialResult': {				
+				if (message.credential) {
+					this.setState({
+						selectedAuthTypeIndex: 3,
+						microsoftCredential: message.credential,
+						hasUnsavedChanges: true
+					});
 				}
 				return;
 			}
@@ -288,7 +266,7 @@ export class SparqlConnectionView extends WebviewComponent<
 									<vscode-option value="0">None</vscode-option>
 									<vscode-option value="1">Basic</vscode-option>
 									<vscode-option value="2">Bearer</vscode-option>
-									<vscode-option value="3">Microsoft</vscode-option>
+									<vscode-option value="3">Microsoft Entra</vscode-option>
 								</vscode-single-select>
 							</div>
 							{this.state.selectedAuthTypeIndex !== 0 && <div className="vertical-separator">
@@ -466,9 +444,13 @@ export class SparqlConnectionView extends WebviewComponent<
 				<vscode-button onClick={() => {
 					const scopes = this.state.microsoftCredential?.scopes;
 
-					this._executeCommand('mentor.command.loginMicrosoftAuthProvider', scopes);
+					this.messaging.postMessage({
+						id: 'FetchMicrosoftAuthCredential',
+						connectionId: this.state.endpoint.id,
+						scopes: scopes
+					});
 				}}>
-					Login
+					Get Token
 				</vscode-button>
 			</vscode-form-group>
 		);
@@ -546,8 +528,8 @@ export class SparqlConnectionView extends WebviewComponent<
 	}
 
 	private _handleAuthTypeChange = (event: any) => {
-		if (this._authTypes) {
-			const i = this._authTypes.selectedIndex ?? AuthTypeIndex.None;
+		if (this._authTypeSelect) {
+			const i = this._authTypeSelect.selectedIndex ?? AuthTypeIndex.None;
 
 			this.setState({
 				selectedAuthTypeIndex: i,

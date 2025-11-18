@@ -23,5 +23,6 @@
     "testExplorer.useNativeTesting": true,
     
     // TypeScript settings for better test support
-    "typescript.preferences.includePackageJsonAutoImports": "on"
+    "typescript.preferences.includePackageJsonAutoImports": "on",
+    "mentor.sparql.connections": []
 }

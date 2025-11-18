@@ -5,8 +5,8 @@
    viewBox="0 0 16 16"
    version="1.1"
    id="svg1"
-   sodipodi:docname="10-ontology.svg"
-   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   sodipodi:docname="ue004-rdf-concept.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -23,13 +23,13 @@
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="25.15625"
-     inkscape:cx="3.2397516"
-     inkscape:cy="4.1341615"
+     inkscape:zoom="35.57631"
+     inkscape:cx="7.7860801"
+     inkscape:cy="10.17531"
      inkscape:window-width="1920"
-     inkscape:window-height="1010"
-     inkscape:window-x="-6"
-     inkscape:window-y="-6"
+     inkscape:window-height="1051"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg1"
      showgrid="true">
@@ -58,9 +58,9 @@
   <defs
      id="defs1" />
   <path
-     id="path5"
-     style="fill:#000000;stroke-linejoin:bevel;stroke-dashoffset:0.3;paint-order:markers stroke fill"
-     d="M 8 0 A 8 8 0 0 0 0 8 A 8 8 0 0 0 8 16 A 8 8 0 0 0 16 8 A 8 8 0 0 0 8 0 z M 5.4414062 5.0136719 C 6.2724038 5.0136719 6.9414062 5.6826747 6.9414062 6.5136719 C 6.9414062 7.34467 6.2724038 8.0136719 5.4414062 8.0136719 C 4.6104089 8.0136719 3.9414062 7.34467 3.9414062 6.5136719 C 3.9414062 5.6826747 4.6104089 5.0136719 5.4414062 5.0136719 z M 10.558594 5.0136719 C 11.389591 5.0136719 12.058594 5.6826747 12.058594 6.5136719 C 12.058594 7.34467 11.389591 8.0136719 10.558594 8.0136719 C 9.7275956 8.0136719 9.0585938 7.34467 9.0585938 6.5136719 C 9.0585937 5.6826747 9.7275956 5.0136719 10.558594 5.0136719 z M 8 9.4980469 C 8.8309984 9.4980469 9.5 10.167049 9.5 10.998047 C 9.5 11.829046 8.8309984 12.498047 8 12.498047 C 7.1690012 12.498047 6.5 11.829046 6.5 10.998047 C 6.5 10.167049 7.1690012 9.4980469 8 9.4980469 z " />
+     id="rect1"
+     style="baseline-shift:baseline;display:inline;overflow:visible;vector-effect:none;stroke-linecap:round;stroke-linejoin:round;enable-background:accumulate;stop-color:#000000;stop-opacity:1;opacity:1"
+     d="M 5.5859375 4.9863281 A 0.60006002 0.60006002 0 0 0 4.9863281 5.5859375 L 4.9863281 10.414062 A 0.60006002 0.60006002 0 0 0 5.5859375 11.013672 L 10.414062 11.013672 A 0.60006002 0.60006002 0 0 0 11.013672 10.414062 L 11.013672 5.5859375 A 0.60006002 0.60006002 0 0 0 10.414062 4.9863281 L 5.5859375 4.9863281 z " />
   <metadata
      id="metadata1">
     <rdf:RDF>

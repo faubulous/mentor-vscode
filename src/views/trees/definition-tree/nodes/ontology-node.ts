@@ -23,11 +23,8 @@ export class OntologyNode extends DefinitionTreeNode {
 	}
 
 	override getIcon() {
-		if (this.isReferenced) {
-			return new vscode.ThemeIcon('rdf-ontology-ref', this.getIconColor());
-		} else {
-			return new vscode.ThemeIcon('rdf-ontology', this.getIconColor());
-		}
+		// return undefined;
+		return new vscode.ThemeIcon('rdf-ontology', this.getIconColor());
 	}
 
 	override getIconColor() {

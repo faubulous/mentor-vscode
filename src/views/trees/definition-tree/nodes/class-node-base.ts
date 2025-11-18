@@ -33,12 +33,12 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 	 * @returns The icon name of the class.
 	 */
 	getIconNameFromClass(classIri?: string): string {
-		let iconName = classIri ? 'rdf-class' : 'rdf-class-ref';
+		let iconName = 'rdf-class';
 
 		if (classIri) {
-			if (!mentor.vocabulary.hasSubject(this.getDocumentGraphs(), classIri)) {
-				iconName += '-ref';
-			}
+			// if (!mentor.vocabulary.hasSubject(this.getDocumentGraphs(), classIri)) {
+			// 	iconName += '-ref';
+			// }
 
 			if (mentor.vocabulary.hasIndividuals(this.getDocumentGraphs(), classIri)) {
 				iconName += "-i";

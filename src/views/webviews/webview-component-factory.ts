@@ -48,7 +48,7 @@ export class WebviewComponentFactory {
 		return vscode.Uri.joinPath(this._context.extensionUri, 'media', 'icons', iconName);
 	}
 	
-	private _getWebviewOptions(): vscode.WebviewOptions {
+	private _getWebviewOptions(): vscode.WebviewPanelOptions & vscode.WebviewOptions {
 		return {
 			enableScripts: true,
 			localResourceRoots: [vscode.Uri.joinPath(this._context.extensionUri, 'out')]

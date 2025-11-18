@@ -3,6 +3,8 @@ import { mentor } from '@src/mentor';
 import { WebviewController } from '../webview-controller';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
+import { MicrosoftAuthCredential } from '@src/services/credential';
+import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
 
 export class SparqlConnectionController extends WebviewController<SparqlConnectionMessages> {
     private selectedConnection?: SparqlConnection;
@@ -36,7 +38,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
             case 'ExecuteCommand': {
                 await vscode.commands.executeCommand(message.command, ...(message.args || []));
 
-                if(message.command === 'mentor.command.deleteSparqlConnection') {
+                if (message.command === 'mentor.command.deleteSparqlConnection') {
                     this.panel?.dispose();
                 }
                 return;
@@ -88,6 +90,25 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 const result = await mentor.sparqlConnectionService.testConnection(message.connection, message.credential);
 
                 this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
+                return;
+            }
+            case 'FetchMicrosoftAuthCredential': {
+                const command = loginMicrosoftAuthProvider.id;
+                const credential = await vscode.commands.executeCommand<MicrosoftAuthCredential | null>(command, message.scopes);
+
+                if (credential) {
+                    this.postMessage({
+                        id: 'FetchMicrosoftAuthCredentialResult',
+                        connectionId: message.connectionId,
+                        credential: credential
+                    });
+                } else {
+                    this.postMessage({
+                        id: 'FetchMicrosoftAuthCredentialResult',
+                        connectionId: message.connectionId,
+                        credential: null
+                    });
+                }
                 return;
             }
         }
