@@ -144,7 +144,7 @@ export class DocumentFactory {
 				info.extensions.push(extension);
 			}
 		}
-		
+
 		if (packageJson?.contributes?.languages) {
 			for (const lang of packageJson.contributes.languages) {
 				const info = languageMap.get(lang.id);
@@ -157,6 +157,15 @@ export class DocumentFactory {
 		}
 
 		return Array.from(languageMap.values());
+	}
+
+	/**
+	 * Get language metadata such as the name and extensions from package.json
+	 * @param languageId The language identifier.
+	 * @returns A `LanguageInfo` object if the language is supported by this factory, `undefined` otherwise.
+	 */
+	async getLanguageInfo(languageId: string): Promise<LanguageInfo | undefined> {
+		return (await this.getSupportedLanguagesInfo()).find(l => l.id === languageId);
 	}
 
 	/**
@@ -173,7 +182,7 @@ export class DocumentFactory {
 
 			const packageJsonUri = vscode.Uri.joinPath(vscode.Uri.file(extensionPath), 'package.json');
 			const buffer = await vscode.workspace.fs.readFile(packageJsonUri);
-            const content = new TextDecoder().decode(buffer);
+			const content = new TextDecoder().decode(buffer);
 
 			return JSON.parse(content);
 		} catch (error) {

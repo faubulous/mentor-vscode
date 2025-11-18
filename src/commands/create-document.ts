@@ -12,8 +12,10 @@ export const createDocument = {
 		});
 
 		for (const lang of await mentor.documentFactory.getSupportedLanguagesInfo()) {
+			const documentType = lang.id === 'sparql' ? 'Query' : 'Document';
+
 			items.push({
-				label: `$(file) ${lang.name} File`,
+				label: `$(file) ${lang.name} ${documentType}`,
 				command: 'mentor.command.createDocumentFromLanguage',
 				args: lang.id
 			});
