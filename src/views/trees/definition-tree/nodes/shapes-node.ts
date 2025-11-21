@@ -4,8 +4,6 @@ import { mentor } from "@src/mentor";
 import { ShapeClassNode } from "./shape-class-node";
 
 export class ShapesNode extends ShapeClassNode {
-	uri = SH.Shape;
-
 	override getContextValue() {
 		return "shapes";
 	}

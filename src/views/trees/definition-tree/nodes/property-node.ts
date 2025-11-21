@@ -98,11 +98,7 @@ export class PropertyNode extends DefinitionTreeNode {
 				return 'symbol-text';
 			}
 			default: {
-				if (this.uri && mentor.vocabulary.hasSubject(this.getDocumentGraphs(), this.uri)) {
-					return 'rdf-object-property';
-				} else {
-					return 'rdf-object-property-ref';
-				}
+				return 'rdf-object-property';
 			}
 		}
 	}

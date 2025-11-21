@@ -6,7 +6,6 @@ import { TreeNodeBase } from '@src/views/trees/tree-node';
  * Represents a SPARQL connection in the connection tree.
  */
 export class ConnectionNode extends TreeNodeBase {
-
 	/**
 	 * The SPARQL connection represented by this tree item.
 	 */
@@ -52,11 +51,7 @@ export class ConnectionNode extends TreeNodeBase {
 	 * @returns A description string or `undefined` if no description should be shown.
 	 */
 	getDescription(): string {
-		if (this.connection?.isModified) {
-			return 'Unsaved';
-		} else {
-			return '';
-		}
+		return this.connection?.isModified ? 'Unsaved' : '';
 	}
 
 	/**

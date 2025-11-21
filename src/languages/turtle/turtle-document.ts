@@ -373,10 +373,23 @@ export class TurtleDocument extends DocumentContext {
 					}
 					break;
 				}
+				case 'PNAME_NS':
 				case 'PNAME_LN': {
-					const iri = getIriFromPrefixedName(this.namespaces, t.image);
+					// Skip processing prefixes and iris in prefix definitions..
+					switch(previousToken?.tokenType?.tokenName) {
+						case 'PREFIX':
+						case 'TTL_PREFIX':
+						case 'PNAME_NS':
+							break;
+					}
+
+					let iri = getIriFromPrefixedName(this.namespaces, t.image);
 
 					if (!iri) break;
+
+					// Remove any trailing slahes or hashes so that the IRIs are comparable
+					// with the vscode.Uri.toString() output.
+					iri = Uri.getNormalizedUri(iri);
 
 					if (t.startColumn === 1 && previousToken) {
 						this._registerSubject(t, iri, previousToken);

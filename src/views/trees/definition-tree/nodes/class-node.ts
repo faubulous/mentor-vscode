@@ -21,21 +21,13 @@ export class ClassNode extends ClassNodeBase {
 	}
 
 	override getDescription(): string {
-		const indicators = [];
+		let description = super.getDescription();
 
 		if (mentor.vocabulary.hasEquivalentClass(this.getOntologyGraphs(), this.uri)) {
-			indicators.push("≡");
+			description += "≡";
 		}
 
-		// if (mentor.vocabulary.isIntersectionOfClasses(graphs, this.uri)) {
-		// 	indicators.push("⋂");
-		// } else if (mentor.vocabulary.isUnionOfClasses(graphs, this.uri)) {
-		// 	indicators.push("⋃");
-		// } else if (mentor.vocabulary.hasEquivalentClass(graphs, this.uri)) {
-		// 	indicators.push("≡");
-		// }
-
-		return indicators.join(" ");
+		return description;
 	}
 
 	getClassNode(iri: string) {

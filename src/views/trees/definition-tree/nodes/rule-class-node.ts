@@ -13,7 +13,8 @@ export class RuleClassNode extends ClassNodeBase {
 		const options = this.getQueryOptions();
 		options.notDefinedBy?.add(_SH);
 
-		const classIris = mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri ?? SH.Rule);
+		const uri = this.uri.startsWith('mentor') ? SH.Rule : this.uri;
+		const classIris = mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), uri);
 
 		for (const c of classIris) {
 			if (mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options)) {

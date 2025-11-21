@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { mentor } from "@src/mentor";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
-import { DefinitionTreeNode } from "../definition-tree-node";
 import { IndividualNode } from "./individual-node";
 import { IndividualClassNode } from "./individual-class-node";
 

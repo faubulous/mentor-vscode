@@ -12,7 +12,10 @@ export class ValidatorClassNode extends ClassNodeBase {
 		const options = this.getQueryOptions();
 		options.notDefinedBy?.add(_SH);
 
-		for (const c of mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), this.uri ?? SH.Validator)) {
+		const uri = this.uri.startsWith('mentor') ? SH.Validator : this.uri;
+		const classIris = mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), uri);
+
+		for (const c of classIris) {
 			if (mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options)) {
 				yield c;
 			}

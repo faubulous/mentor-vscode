@@ -7,8 +7,6 @@ import { RuleClassNode } from "./rule-class-node";
  * Node of a SHACL rule in the definition tree.
  */
 export class RulesNode extends RuleClassNode {
-	uri = SH.Rule;
-
 	override getContextValue() {
 		return 'rules';
 	}
