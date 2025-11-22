@@ -9,7 +9,7 @@ export class NotebookController {
 
 	private readonly _label = 'Mentor Notebook';
 
-	private readonly _supportedLanguages = ['sparql'];
+	private readonly _supportedLanguages = ['sparql','turtle', 'trig', 'ntriples', 'nquads', 'xml'];
 
 	private readonly _controller: vscode.NotebookController;
 
