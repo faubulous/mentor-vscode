@@ -125,12 +125,14 @@ export class DocumentFactory {
 		}
 	}
 
-	private _getTypeName(languageId: string): string {
+	private _getTypeName(languageId: string, alias?: string): string {
+		const name = alias ? alias : languageId;
+
 		switch (languageId) {
 			case 'sparql':
-				return languageId + ' Query';
+				return name + ' Query';
 			default:
-				return languageId + ' File';
+				return name + ' File';
 		}
 	}
 
@@ -183,6 +185,7 @@ export class DocumentFactory {
 
 				if (info) {
 					info.name = lang.aliases?.[0] || lang.id;
+					info.typeName = this._getTypeName(lang.id, info.name) || lang.id;
 					info.icon = this._getIconName(lang.id);
 				}
 			}
