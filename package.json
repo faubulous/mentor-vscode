@@ -292,7 +292,7 @@
         ],
         "configuration": "./out/sparql-language-config.json",
         "icon": {
-          "light": "./media/icons/sparql-file.svg",
+          "light": "./media/icons/sparql-file-light.svg",
           "dark": "./media/icons/sparql-file.svg"
         }
       },
@@ -319,7 +319,7 @@
           ".mnb"
         ],
         "icon": {
-          "light": "./media/icons/notebook.svg",
+          "light": "./media/icons/notebook-light.svg",
           "dark": "./media/icons/notebook.svg"
         }
       }
