@@ -8,7 +8,7 @@
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "debugWebWorkerHost": true,
-      "debugWebviews": false,
+      "debugWebviews": true,
       "trace": true,
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",

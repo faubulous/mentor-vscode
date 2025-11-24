@@ -9,7 +9,7 @@ export class NotebookController {
 
 	private readonly _label = 'Mentor Notebook';
 
-	private readonly _supportedLanguages = ['sparql','turtle', 'trig', 'ntriples', 'nquads', 'xml'];
+	private readonly _supportedLanguages = ['sparql', 'turtle', 'trig', 'ntriples', 'nquads', 'xml'];
 
 	private readonly _controller: vscode.NotebookController;
 
@@ -79,25 +79,15 @@ export class NotebookController {
 				await execution.replaceOutput([new vscode.NotebookCellOutput([
 					vscode.NotebookCellOutputItem.json(queryState, 'application/sparql-results+json')
 				])]);
-
-				execution.end(true, Date.now());
 			} else if (queryState.queryType === 'quads') {
 				const result = queryState.result as QuadsResult;
 
 				await execution.replaceOutput([new vscode.NotebookCellOutput([
 					vscode.NotebookCellOutputItem.text(result?.document, 'text/x-turtle')
 				])]);
-
-				execution.end(true, Date.now());
-			} else {
-				const message = `Unknown or unsupported result type: ${queryState.queryType}`;
-
-				await execution.replaceOutput([new vscode.NotebookCellOutput([
-					vscode.NotebookCellOutputItem.text(message, 'text/plain')
-				])]);
-
-				execution.end(false, Date.now());
 			}
+
+			execution.end(true, Date.now());
 		} catch (error: any) {
 			await execution.replaceOutput([new vscode.NotebookCellOutput([
 				vscode.NotebookCellOutputItem.error(error as Error)

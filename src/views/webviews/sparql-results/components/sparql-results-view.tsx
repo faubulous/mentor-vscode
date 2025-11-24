@@ -74,7 +74,7 @@ export class SparqlResultsView extends WebviewComponent<
       return this._renderBooleanResult(context.result);
     } else if (context.result?.type === 'bindings') {
       return this._renderBindingsResult(context.result);
-    } else if (context.result) {
+    } else if (context.result?.type) {
       return this._renderUnknownResultType(context);
     } else {
       return this._renderNoResult();
@@ -155,7 +155,7 @@ export class SparqlResultsView extends WebviewComponent<
       <div className="sparql-results-container">
         <SparqlResultsToolbar />
         <div className="sparql-results-content-container">
-          No result available.
+          The query did not return any results.
         </div>
       </div>
     );

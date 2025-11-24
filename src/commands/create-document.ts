@@ -7,15 +7,13 @@ export const createDocument = {
 		const items: any[] = [];
 
 		items.push({
-			label: '$(notebook) Mentor Notebook',
+			label: '$(mentor-notebook) Mentor Notebook',
 			command: 'mentor.command.createNotebook'
 		});
 
 		for (const lang of await mentor.documentFactory.getSupportedLanguagesInfo()) {
-			const documentType = lang.id === 'sparql' ? 'Query' : 'Document';
-
 			items.push({
-				label: `$(file) ${lang.name} ${documentType}`,
+				label: `$(${lang.icon})  ${lang.typeName}`,
 				command: 'mentor.command.createDocumentFromLanguage',
 				args: lang.id
 			});

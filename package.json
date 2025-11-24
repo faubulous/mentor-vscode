@@ -935,6 +935,27 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e00f"
         }
+      },
+      "rdf-file": {
+        "description": "RDF File",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e010"
+        }
+      },
+      "sparql-file": {
+        "description": "SPARQL File",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e011"
+        }
+      },
+      "mentor-notebook": {
+        "description": "Mentor Notebook",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e012"
+        }
       }
     },
     "configuration": [

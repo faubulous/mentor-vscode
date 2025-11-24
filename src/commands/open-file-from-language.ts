@@ -20,6 +20,7 @@ export const openFileFromLanguage = {
 
 		const language = await mentor.documentFactory.getLanguageInfo(languageId);
 		const languageName = language ? language.name : languageId;
+		const languageIcon = language ? language.icon : 'file';
 
 		const quickPick = vscode.window.createQuickPick<FileQuickPickItem>();
 		quickPick.title = 'Select the file to open:';
@@ -39,7 +40,8 @@ export const openFileFromLanguage = {
 				}))
 				.map(item => ({
 					...item,
-					label: getFileName(item.fileUri),
+					icon: languageIcon,
+					label: `$(${languageIcon})  ${getFileName(item.fileUri)}`,
 					description: item.workspaceUri ? '~' + getPath(item.workspaceUri.fsPath) : undefined,
 					iri: item.workspaceUri
 				}))
@@ -55,7 +57,7 @@ export const openFileFromLanguage = {
 
 			items.push({
 				iri: undefined,
-				label: `$(new-file) New ${languageName} File`,
+				label: `$(${language.icon})  New ${language.typeName}`,
 				command: 'mentor.command.createDocumentFromLanguage',
 				args: language.id
 			});

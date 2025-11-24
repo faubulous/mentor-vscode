@@ -20,9 +20,14 @@ interface LanguageInfo {
 	name: string;
 
 	/**
+	 * Get the displayed name of the file type (e.g. 'Turtle Document', 'SPARQL Query').
+	 */
+	typeName: string;
+
+	/**
 	 * The icon associated with the language, if any.
 	 */
-	icon?: any;
+	icon: string;
 
 	/**
 	 * The file extensions associated with the language (e.g. '.ttl', '.sparql').
@@ -120,6 +125,31 @@ export class DocumentFactory {
 		}
 	}
 
+	private _getTypeName(languageId: string): string {
+		switch (languageId) {
+			case 'sparql':
+				return languageId + ' Query';
+			default:
+				return languageId + ' File';
+		}
+	}
+
+	private _getIconName(languageId: string): string {
+		switch (languageId) {
+			case 'sparql':
+				return 'sparql-file';
+			case 'ntriples':
+			case 'nquads':
+			case 'turtle':
+			case 'trig':
+			case 'xml':
+			case 'json':
+				return 'rdf-file';
+			default:
+				return 'file';
+		}
+	}
+
 	/**
 	 * Retrieves language information including readable names and icons from package.json.
 	 * @param factory The DocumentFactory instance.
@@ -133,6 +163,8 @@ export class DocumentFactory {
 			languageMap.set(language, {
 				id: language,
 				name: language, // fallback name
+				typeName: this._getTypeName(language),
+				icon: this._getIconName(language),
 				extensions: []
 			});
 		}
@@ -151,7 +183,7 @@ export class DocumentFactory {
 
 				if (info) {
 					info.name = lang.aliases?.[0] || lang.id;
-					info.icon = lang.icon;
+					info.icon = this._getIconName(lang.id);
 				}
 			}
 		}
