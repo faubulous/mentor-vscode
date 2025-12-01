@@ -74,14 +74,14 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 							onClick={() => this._handlePreviousPage()}
 							disabled={paging.currentPage === 0}
 						>
-							<vscode-icon name="chevron-left"></vscode-icon>
+							<span className="codicon codicon-chevron-left"></span>
 						</vscode-toolbar-button>
 						<vscode-toolbar-button
 							title="Next page"
 							onClick={() => this._handleNextPage()}
 							disabled={paging.currentPage >= paging.totalPages - 1}
 						>
-							<vscode-icon name="chevron-right"></vscode-icon>
+							<span className="codicon codicon-chevron-right"></span>
 						</vscode-toolbar-button>
 						<span className="sparql-results-range">
 							{this._getResultsRangeText(bindings, paging)}
