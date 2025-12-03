@@ -231,8 +231,8 @@
         ],
         "configuration": "./out/turtle-language-config.json",
         "icon": {
-          "light": "./media/icons/rdf-file.svg",
-          "dark": "./media/icons/rdf-file.svg"
+          "light": "./media/icons/light/rdf-file.svg",
+          "dark": "./media/icons/dark/rdf-file.svg"
         }
       },
       {
@@ -246,8 +246,8 @@
         ],
         "configuration": "./out/turtle-language-config.json",
         "icon": {
-          "light": "./media/icons/rdf-file.svg",
-          "dark": "./media/icons/rdf-file.svg"
+          "light": "./media/icons/light/rdf-file.svg",
+          "dark": "./media/icons/dark/rdf-file.svg"
         }
       },
       {
@@ -261,8 +261,8 @@
         ],
         "configuration": "./out/turtle-language-config.json",
         "icon": {
-          "light": "./media/icons/rdf-file.svg",
-          "dark": "./media/icons/rdf-file.svg"
+          "light": "./media/icons/light/rdf-file.svg",
+          "dark": "./media/icons/dark/rdf-file.svg"
         }
       },
       {
@@ -276,8 +276,8 @@
         ],
         "configuration": "./out/trig-language-config.json",
         "icon": {
-          "light": "./media/icons/rdf-file.svg",
-          "dark": "./media/icons/rdf-file.svg"
+          "light": "./media/icons/light/rdf-file.svg",
+          "dark": "./media/icons/dark/rdf-file.svg"
         }
       },
       {
@@ -292,8 +292,8 @@
         ],
         "configuration": "./out/sparql-language-config.json",
         "icon": {
-          "light": "./media/icons/sparql-file-light.svg",
-          "dark": "./media/icons/sparql-file.svg"
+          "light": "./media/icons/light/sparql-file.svg",
+          "dark": "./media/icons/dark/sparql-file.svg"
         }
       },
       {
@@ -306,8 +306,8 @@
           ".rdf"
         ],
         "icon": {
-          "light": "./media/icons/rdf-file.svg",
-          "dark": "./media/icons/rdf-file.svg"
+          "light": "./media/icons/light/rdf-file.svg",
+          "dark": "./media/icons/dark/rdf-file.svg"
         }
       },
       {
@@ -319,8 +319,8 @@
           ".mnb"
         ],
         "icon": {
-          "light": "./media/icons/notebook-light.svg",
-          "dark": "./media/icons/notebook.svg"
+          "light": "./media/icons/light/notebook.svg",
+          "dark": "./media/icons/dark/notebook.svg"
         }
       }
     ],
