@@ -74,7 +74,7 @@ class BindingsTableBase extends WebviewComponent<
 					</vscode-table-body>
 				</vscode-table>
 			);
-		} else if(!queryContext.error) {
+		} else if (!queryContext.error) {
 			return <div>The query returned no results.</div>;
 		}
 	}
@@ -126,15 +126,15 @@ class BindingsTableBase extends WebviewComponent<
 		return (
 			<div className="cell">
 				<pre className="cell-value">
-					<a href="#" onClick={() => this._handleNamedNodeClick(binding)}>
+					<a href="#" onClick={() => this._handleDescribeNamedNode(binding)}>
 						{value}
 					</a>
 				</pre>
 				<div className="cell-actions">
 					<vscode-toolbar-button
 						title="Describe Resource"
-						onClick={() => this._handleDescribeNamedNode(binding)}>
-						<span className="codicon codicon-info"></span>
+						onClick={() => this._handleNamedNodeClick(binding)}>
+						<span className="codicon codicon-link-external"></span>
 					</vscode-toolbar-button>
 				</div>
 			</div>
