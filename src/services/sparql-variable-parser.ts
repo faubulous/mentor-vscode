@@ -15,7 +15,7 @@ export class SparqlVariableParser {
 			return [];
 		}
 
-		const selectMatch = query.match(/select\s+(distinct|reduced)?\s*([\s\S]+?)\s+where\b/i);
+		const selectMatch = query.match(/select\s+(distinct|reduced)?\s*([\s\S]+?)\s+\b/i);
 
 		if (!selectMatch) {
 			return [];
