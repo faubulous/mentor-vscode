@@ -39,7 +39,8 @@ class BindingsTableBase extends WebviewComponent<
 		if (result) {
 			return (
 				<vscode-table className="bindings-table" zebra bordered-rows resizable
-					columns={["50px"]} key={this._renderKey}>
+					columns={["50px"]} key={this._renderKey}
+					onClick={(e) => this._handleRightClick(e)}>
 					{result.rows.length > 0 &&
 						<vscode-table-header>
 							<vscode-table-header-cell key="row-number">
@@ -77,6 +78,11 @@ class BindingsTableBase extends WebviewComponent<
 		} else if (!queryContext.error) {
 			return <div>The query returned no results.</div>;
 		}
+	}
+
+	private _handleRightClick(event: any) {
+		// Do not show default context menu on right click.
+		event.preventDefault();
 	}
 
 	private _renderHeaderCell(column: string) {
@@ -132,9 +138,14 @@ class BindingsTableBase extends WebviewComponent<
 				</pre>
 				<div className="cell-actions">
 					<vscode-toolbar-button
-						title="Describe Resource"
+						title="Open in Browser"
 						onClick={() => this._handleNamedNodeClick(binding)}>
 						<span className="codicon codicon-link-external"></span>
+					</vscode-toolbar-button>
+					<vscode-toolbar-button
+						title="Copy Cell Value"
+						onClick={() => this._handleCopyCellClick(binding)}>
+						<span className="codicon codicon-copy"></span>
 					</vscode-toolbar-button>
 				</div>
 			</div>
