@@ -6,13 +6,18 @@ import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
 import { toArrayWithCancellation } from '@src/utilities/cancellation';
-import { SparqlVariableParser } from './sparql-variable-parser';
 import { NamespaceMap } from '@src/utilities';
+import { SparqlVariableParser } from './sparql-variable-parser';
 
 /**
  * Handler for serializing SPARQL query results.
  */
 export class SparqlQueryResultSerializer {
+	/**
+	 * Instance of SparqlVariableParser for parsing variable names from SELECT queries.
+	 */
+	private readonly _variableParser = new SparqlVariableParser();
+
 	/**
 	 * Serializes SPARQL query results into a format suitable for the webview.
 	 * @param documentIri The IRI of the document where the query was run.
@@ -27,21 +32,22 @@ export class SparqlQueryResultSerializer {
 	): Promise<BindingsResult> {
 		// Note: This evaluates the query results and collects the bindings.
 		const bindings = await toArrayWithCancellation(bindingStream, token);
+		const parsedColumns: string[] = [];
+
+		if (context.query) {
+			// Parse the variables from select queries in the order they were defined.
+			const variables = this._variableParser.parseSelectVariables(context.query);
+
+			parsedColumns.push(...variables);
+		}
 
 		const namespaces = new Set<string>();
-		const parsedColumns = SparqlVariableParser.parseSelectVariables(context.query!, bindings);
 		const rows: Record<string, any>[] = [];
 
 		for (const binding of bindings) {
 			const row: Record<string, any> = {};
 
-			for (const column of parsedColumns) {
-				const value = binding.get(column);
-
-				if (value === undefined) {
-					continue;
-				}
-
+			for (const [key, value] of binding) {
 				if (value.termType === 'NamedNode') {
 					namespaces.add(Uri.getNamespaceIri(value.value));
 				}
@@ -49,7 +55,11 @@ export class SparqlQueryResultSerializer {
 				const datatype = value.termType === 'Literal' ? value.datatype.value : undefined;
 				const language = value.termType === 'Literal' ? value.language : undefined;
 
-				row[column] = {
+				if (!parsedColumns.includes(key.value)) {
+					parsedColumns.push(key.value);
+				}
+
+				row[key.value] = {
 					termType: value.termType,
 					value: value.value,
 					datatype: datatype,
