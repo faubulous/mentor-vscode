@@ -75,7 +75,7 @@ This extension provides the following features:
 
 ## News
 ### Version 0.3.6: Service Release
-This version addresses a bug that caused missing result values or unbound variables in SPARQL query results.
+This version addresses a bug that caused missing result values or unbound variables in SPARQL query results, missing navigation icons in the bindings table.
 
 ### Version 0.3.2: Service Release
 This version fixes a bug where cyclic rdfs:subClassOf definitions caused an infinite recursion error. It also implements an improved Mentor RDF API that handles the retrieval of resources more efficiently and faster then previous versions.
