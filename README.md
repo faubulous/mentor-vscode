@@ -74,7 +74,10 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
-### Version 0.3.2: Bugfixes
+### Version 0.3.6: Service Release
+This version addresses a bug that caused missing result values or unbound variables in SPARQL query results.
+
+### Version 0.3.2: Service Release
 This version fixes a bug where cyclic rdfs:subClassOf definitions caused an infinite recursion error. It also implements an improved Mentor RDF API that handles the retrieval of resources more efficiently and faster then previous versions.
 
 ### Version 0.3.0: Pre-Release
