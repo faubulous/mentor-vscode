@@ -1,7 +1,7 @@
 import * as n3 from 'n3';
 import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
-import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, sh } from '@faubulous/mentor-rdf';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { Uri } from '@faubulous/mentor-rdf';
 import { mentor } from '@src/mentor';
@@ -299,16 +299,6 @@ export abstract class DocumentContext {
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
-
-		// TODO: Add config option to enable/disable SHACL path labels.
-		// If the node has a SHACL path, use it as the label.
-		for (let q of mentor.store.matchAll(this.graphs, subject, sh.path, null, false)) {
-			return {
-				value: this.getPropertyPathLabel(q.object as n3.Quad_Subject),
-				language: undefined
-			};
-		}
-
 		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
@@ -395,6 +385,11 @@ export abstract class DocumentContext {
 					if (!fallbackLabel) {
 						fallbackLabel = literal;
 					}
+				} else if (p.id === SH.path) {
+					return {
+						value: this.getPropertyPathLabel(q.object as n3.Quad_Subject),
+						language: undefined
+					};
 				} else {
 					return {
 						value: Uri.getLocalPart(q.object.value) || '',

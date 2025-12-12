@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -1041,6 +1041,7 @@
               "http://www.w3.org/2000/01/rdf-schema#label",
               "https://schema.org/name",
               "http://schema.org/name",
+              "http://www.w3.org/ns/shacl#name",
               "http://www.w3.org/ns/shacl#path"
             ]
           },
