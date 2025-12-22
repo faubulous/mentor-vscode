@@ -54,11 +54,16 @@ export class SparqlResultsToolbarBase extends WebviewComponent<SparqlResultsCont
 					</Fragment>
 				)}
 
-				{!queryContext.error && bindings && paging && (
+				{!queryContext.error && queryContext.endTime && (
 					<Fragment>
 						<vscode-toolbar-button title="Reload" onClick={() => this._reloadQuery()}>
 							<span className="codicon codicon-debug-restart"></span>
 						</vscode-toolbar-button>
+					</Fragment>
+				)}
+
+				{!queryContext.error && bindings && paging && (
+					<Fragment>
 						<span className="divider divider-vertical"></span>
 						<select className="sparql-results-page-size-select"
 							value={paging.pageSize}

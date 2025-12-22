@@ -488,7 +488,7 @@
       },
       {
         "command": "mentor.command.createSparqlConnection",
-        "title": "New Endpoint...",
+        "title": "Add Connection...",
         "icon": "$(add)",
         "category": "Mentor"
       },
