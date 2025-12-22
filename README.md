@@ -74,6 +74,14 @@ This extension provides the following features:
 - Edit GitHub repositories online
 
 ## News
+### Version 0.3.7: Service Release
+Improves the way sh:path is handled when displaying nodes in the definition tree. In previous versions the
+tree always preferred displaying sh:path as a node name if present. Now it respects the order of the the
+predicates defined in `mentor.predicates.labels` setting. Also, `sh:name` was added to the default list with
+a higher priority than `sh:path`, allowing you to define custom labels more easily.
+
+Fixes refresh button not visible in toolbar for boolean SPARQL results.
+
 ### Version 0.3.6: Service Release
 This version addresses a bug that caused missing result values or unbound variables in SPARQL query results, missing navigation icons in the bindings table.
 
