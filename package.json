@@ -1,7 +1,7 @@
 {
   "name": "mentor",
   "displayName": "Mentor",
-  "description": "Code editing support for RDF, RDFS, OWL, SKOS, SHACL and SPARQL.",
+  "description": "IDE for RDF knowledge graph projects including SPARQL notebooks.",
   "keywords": [
     "anzo",
     "blazegraph",
@@ -700,7 +700,7 @@
         },
         {
           "command": "mentor.command.createNotebookFromEditor",
-          "when": "editorLangId == 'sparql'",
+          "when": "editorLangId == 'sparql' || editorLangId == 'ntriples' || editorLangId == 'nquads' || editorLangId == 'turtle' || editorLangId == 'trig'",
           "group": "navigation@1"
         }
       ],
