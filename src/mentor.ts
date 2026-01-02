@@ -15,6 +15,7 @@ import {
 	TurtlePrefixDefinitionService,
 } from './services';
 import { Quad_Graph } from '@rdfjs/types';
+import { WorkspaceUri } from './workspace/workspace-uri';
 import { InferenceUri } from './workspace/inference-uri';
 
 /**
@@ -156,6 +157,21 @@ class MentorExtension {
 
 		this._onDidChangeDocumentContext.dispose();
 		this._onDidFinishInitializing.dispose();
+	}
+
+	/**
+	 * Get the document context from a file or workspace URI.
+	 * @param uri A document or workspace URI.
+	 * @returns A document context if the document is loaded, `undefined` otherwise.
+	 */
+	getDocumentContextFromUri(uri: string): DocumentContext | undefined {
+		if (uri.startsWith(WorkspaceUri.uriScheme)) {
+			const u = WorkspaceUri.toFileUri(vscode.Uri.parse(uri)).toString();
+
+			return this.contexts[u];
+		} else {
+			return this.contexts[uri];
+		}
 	}
 
 	/**

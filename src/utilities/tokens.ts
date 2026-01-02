@@ -222,7 +222,9 @@ export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixD
 	return { prefix, uri };
 }
 
-export function getTripleComponentType(tokens: IToken[], tokenIndex: number): "subject" | "predicate" | "object" | undefined {
+export type TripleComonentType = "subject" | "predicate" | "object" | undefined;
+
+export function getTripleComponentType(tokens: IToken[], tokenIndex: number): TripleComonentType {
 	if (tokenIndex < 1) {
 		// If there is no previous token, we are at the beginning of the document.
 		// It must either be followed by a prefix declaration or a subject.

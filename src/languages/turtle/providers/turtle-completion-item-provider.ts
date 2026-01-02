@@ -1,10 +1,33 @@
 import * as vscode from "vscode";
 import { Uri } from "@faubulous/mentor-rdf";
 import { mentor } from "@src/mentor";
-import { take } from "@src/utilities";
-import { getNamespaceIriFromPrefixedName, getTripleComponentType } from "@src/utilities";
+import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
+import { WorkspaceUri } from "@src/workspace/workspace-uri";
+
+class IriCompletionItem extends vscode.CompletionItem {
+	/**
+	 * The IRI of the subject.
+	 */
+	iri: string;
+
+	/**
+	 * Creates a new completion item.
+	 *
+	 * Completion items must have at least a {@link CompletionItem.label label} which then
+	 * will be used as insert text as well as for sorting and filtering.
+	 *
+	 * @param iri The IRI of the completion item.
+	 * @param label The label of the completion.
+	 * @param kind The {@link CompletionItemKind kind} of the completion.
+	 */
+	constructor(iri: string, label: string | vscode.CompletionItemLabel, kind?: vscode.CompletionItemKind) {
+		super(label, kind);
+
+		this.iri = iri;
+	}
+}
 
 export class TurtleCompletionItemProvider extends TurtleFeatureProvider implements vscode.CompletionItemProvider<vscode.CompletionItem> {
 	/**
@@ -38,24 +61,25 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		const currentToken = context.tokens[tokenIndex];
 
 		if (this.isLocalPartDefinitionContext(context, tokenIndex)) {
-			const component = getTripleComponentType(context.tokens, tokenIndex);
+			const documentIri = WorkspaceUri.toWorkspaceUri(document.uri);
+			const componentType = getTripleComponentType(context.tokens, tokenIndex);
 			const namespaceIri = getNamespaceIriFromPrefixedName(context.namespaces, currentToken.image);
 			const localPart = currentToken.image.split(":")[1];
 
-			if (namespaceIri) {
+			if (documentIri && namespaceIri) {
 				const iri = (namespaceIri + localPart).toLowerCase();
 
-				const graphs = [document.uri.toString()];
+				const graphs = [documentIri.toString()];
 				graphs.push(namespaceIri);
 
 				// Primarily query the context graph for retrieving completion items.
-				for (let item of this.getLocalPartCompletionItems(context, component, iri, graphs)) {
+				for (let item of this.getLocalPartCompletionItems(context, componentType, iri, graphs)) {
 					result.push(item);
 				}
 
 				// If none are found, query the background graph for retrieving additional items from other ontologies.
 				if (result.length == 0) {
-					for (let item of this.getLocalPartCompletionItems(context, component, iri, undefined)) {
+					for (let item of this.getLocalPartCompletionItems(context, componentType, iri, undefined)) {
 						result.push(item);
 					}
 				}
@@ -90,46 +114,59 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		return currentType === 'PNAME_LN' || currentType === 'PNAME_NS';
 	}
 
-	getLocalPartCompletionItems(context: TurtleDocument, componentType: "subject" | "predicate" | "object" | undefined, uri: string, graphs: string[] | undefined): vscode.CompletionItem[] {
-		const result = [];
-		const limit = this.maxCompletionItems;
+	getLocalPartCompletionItems(context: TurtleDocument, componentType: TripleComonentType, uri: string, graphs: string[] | undefined): vscode.CompletionItem[] {
+		let result: IriCompletionItem[] = [];
 
-		if (componentType == "subject" || componentType == "object") {
-			for (let c of take(mentor.vocabulary.getClasses(graphs), limit).filter(c => c.toLowerCase().startsWith(uri))) {
-				const localPart = Uri.getLocalPart(c);
+		if (componentType === 'predicate') {
+			for (let property of mentor.vocabulary.getProperties(graphs)) {
+				this._addCompletionItem(result, uri, property);
+			}
+		} else {
+			const contexts = [];
 
-				if (!localPart) continue;
+			if (graphs) {
+				for (const g of graphs) {
+					const c = mentor.getDocumentContextFromUri(g);
 
-				const item = new vscode.CompletionItem(localPart, vscode.CompletionItemKind.Value);
-				item.detail = context.getResourceDescription(c)?.value;
-
-				result.push(item);
+					if (c) {
+						contexts.push(c);
+					}
+				}
+			} else {
+				contexts.push(...Object.values(mentor.contexts));
 			}
 
-			for (let x of take(mentor.vocabulary.getIndividuals(graphs), limit).sort().filter(x => x.toLowerCase().startsWith(uri))) {
-				const localPart = Uri.getLocalPart(x);
-
-				if (!localPart) continue;
-
-				const item = new vscode.CompletionItem(localPart, vscode.CompletionItemKind.Value);
-				item.detail = context.getResourceDescription(x)?.value;
-
-				result.push(item);
+			for (const c of contexts) {
+				for (let subject of Object.keys(c.subjects)) {
+					this._addCompletionItem(result, uri, subject);
+				}
 			}
 		}
 
-		for (let p of take(mentor.vocabulary.getProperties(graphs), limit).sort().filter(p => p.toLowerCase().startsWith(uri))) {
-			const localPart = Uri.getLocalPart(p);
+		result = result.sort().slice(0, this.maxCompletionItems);
 
-			if (!localPart) continue;
-
-			const item = new vscode.CompletionItem(localPart, vscode.CompletionItemKind.Value);
-			item.detail = context.getResourceDescription(p)?.value;
-
-			result.push(item);
+		for (let item of result) {
+			item.detail = context.getResourceDescription(item.iri)?.value;
 		}
 
-		return result.sort().slice(0, limit);
+		return result.sort().slice(0, this.maxCompletionItems);
+	}
+
+	private _addCompletionItem(result: IriCompletionItem[], namespaceIri: string, subjectIri: string) {
+		if (!subjectIri.toLowerCase().startsWith(namespaceIri)) {
+			return;
+		}
+
+		const localPart = Uri.getLocalPart(subjectIri);
+
+		if (!localPart) {
+			return;
+		}
+
+		const item = new IriCompletionItem(subjectIri, localPart, vscode.CompletionItemKind.Value);
+		item.iri = subjectIri;
+
+		result.push(item);
 	}
 
 	resolveCompletionItem?(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
