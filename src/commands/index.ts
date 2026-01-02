@@ -23,6 +23,7 @@ import { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
 import { openDocument } from './open-document';
 import { openFileFromLanguage } from './open-file-from-language';
 import { openGraph } from './open-graph';
+import { openMentorHomepage } from './open-mentor-homepage';
 import { openInBrowser } from './open-in-browser';
 import { openSettings } from './open-settings';
 import { removeFromQueryHistory } from './remove-from-query-history';
@@ -59,6 +60,7 @@ const commands = [
 	openDocument,
 	openFileFromLanguage,
 	openGraph,
+	openMentorHomepage,
 	openInBrowser,
 	openSettings,
 	removeFromQueryHistory,

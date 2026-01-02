@@ -39,6 +39,7 @@
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
+  "homepage": "https://mentor-vscode.dev",
   "repository": {
     "type": "git",
     "url": "https://github.com/faubulous/mentor-vscode"
@@ -151,7 +152,7 @@
     "viewsWelcome": [
       {
         "view": "mentor.view.workspaceTree",
-        "contents": "Welcome to the Mentor extension for Visual Studio Code! This view shows all RDF files in your current workspace for quick access.\n\n There are currently no RDF documents in your workspace.\n\n[Create Document](command:mentor.command.createDocument)",
+        "contents": "Welcome to the Mentor extension for Visual Studio Code! This view shows all RDF files in your current workspace for quick access.\n\n There are currently no RDF documents in your workspace.\n\n[Create Document](command:mentor.command.createDocument)\n\nFind more information and help at [mentor-vscode.dev](command:mentor.command.openMentorHomepage)",
         "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
       }
     ],
@@ -571,6 +572,12 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.openMentorHomepage",
+        "title": "Help",
+        "icon": "$(help)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.openInBrowser",
         "title": "Open in Browser",
         "icon": "$(globe)",
@@ -743,6 +750,11 @@
         {
           "command": "mentor.command.openSettings",
           "group": "z_commands",
+          "when": "view == mentor.view.workspaceTree || view == mentor.view.definitionTree"
+        },
+        {
+          "command": "mentor.command.openMentorHomepage",
+          "group": "z_commands@1",
           "when": "view == mentor.view.workspaceTree || view == mentor.view.definitionTree"
         },
         {

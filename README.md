@@ -32,6 +32,8 @@ The developer friendly IDE for RDF knowledge graphs.
 ### Version 0.3.8: Service Release
 - Fixes broken auto-complete support.
 - Fixes missing refresh icon in SPARQL boolean query results.
+- `:` prefixes in files are now implemented as `workspace:` URIs instead of `file:` to improve portability.
+- Added link to mentor-vscode.dev for help
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 
