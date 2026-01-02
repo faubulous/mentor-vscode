@@ -1,7 +1,7 @@
 # Mentor
 [![License: GPL-V3](https://img.shields.io/badge/license-GPL3-brightgreen)](./LICENSE) [![Website](https://img.shields.io/badge/website-mentor--vscode.dev-blue)](https://mentor-vscode.dev)
 
-This extension provides powerful editing support for RDF knowledge graph projects in Visual Studio Code.
+The developer friendly IDE for RDF knowledge graphs.
 
 <img src="https://raw.githubusercontent.com/faubulous/mentor-vscode.dev/main/public/screenshots/window.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
 
@@ -9,26 +9,29 @@ This extension provides powerful editing support for RDF knowledge graph project
 ## Features:
 
 - **Workspace Management**
-  - Fast indexing, file explorer, cross-file references, code lenses and quick navigation to definitions.
+  - Fast indexing, cross-file references, code lenses and quick navigation to definitions.
 - **Content Navigation**
-  - Browsable trees for RDFS/OWL/SHACL/SKOS with structural reasoning and multilingual labels.
+  - Browsable definition trees for RDFS / OWL / SHACL / SKOS
+  - Structural reasoning and multilingual labels.
 - **Syntax Highlighting & Validation**
-  - Highlighting and validation for N3 / Turtle / TriG / RDF-XML / SPARQL.
+  - N3 / Turtle / TriG / RDF-XML and SPARQL.
+- **Editing**
+  - Repository wide auto-complete
+  - Built in prefix.cc support for namespace lookups
 - **Refactoring**
-  - Rename symbols, implement/sort/remove prefixes and refactor IRIs to prefixed names.
-- **SPARQL & Notebooks**
-  - Run queries against endpoints or workspace files, auth support, autocomplete and interactive notebooks.
+  - Refactor prefixed names and IRIs
+  - Auto-implement / sort / remove prefixes
+- **Notebooks && SPARQL**
+  - Built-in triple store for all files in the workspace.
+  - Run queries against remote endpoints or workspace files.
+  - Interactive notebooks with support for Markdown, RDF data and SPARQL queries.
 - **Collaboration**
   - Runs in the browser (e.g. [`vscode.dev`](https://vscode.dev)), supports editing GitHub repositories and live collaboration.
 
 ## News
-### Version 0.3.7: Service Release
-Improves the way sh:path is handled when displaying nodes in the definition tree. In previous versions the
-tree always preferred displaying sh:path as a node name if present. Now it respects the order of the the
-predicates defined in `mentor.predicates.labels` setting. Also, `sh:name` was added to the default list with
-a higher priority than `sh:path`, allowing you to define custom labels more easily.
-
-Fixes refresh button not visible in toolbar for boolean SPARQL results.
+### Version 0.3.8: Service Release
+- Fixes broken auto-complete support.
+- Fixes missing refresh icon in SPARQL boolean query results.
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 
@@ -40,15 +43,6 @@ You can install the Mentor extension directly from the [Visual Studio Code marke
 2. Click on the Extensions view icon on the Sidebar (or press `Ctrl+Shift+X`).
 3. In the Extensions view, enter `Mentor` in the search form and press `Enter`.
 4. Locate the Mentor extension in the search results and click on the install button.
-
-Alternatively, if you have the `.vsix` file of the extension, you can install it manually:
-
-1. Open Visual Studio Code.
-2. Click on the Extensions view icon on the Sidebar.
-3. Click on the `...` at the top of the Extensions view, select `Install from VSIX...`.
-4. Locate the `.vsix` file and click `Open`.
-
-After installation, you may need to reload Visual Studio Code to activate the extension.
 
 ## Contributing
 We appreciate contributions in all forms! By contributing to Mentor, you'll help make it a better tool for the RDF and knowledge graph community. Contributions can take many shapes, including:

@@ -1,6 +1,8 @@
+import * as vscode from 'vscode';
 import { mentor } from '@src/mentor';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services';
+import { WorkspaceUri } from '@src/workspace/workspace-uri';
 
 /**
  * A service for looking up prefixes in the project.
@@ -88,7 +90,18 @@ export class PrefixLookupService {
 	getUriForPrefix(documentUri: string, prefix: string): string {
 		// The empty prefix is specific for the document and should not be resolved.
 		if (prefix === '') {
-			return documentUri.endsWith('#') ? documentUri : documentUri + '#';
+			let uri = documentUri;
+
+			if (documentUri.startsWith('file')) {
+				// Make file: URIs workspace relative
+				const workspaceUri = WorkspaceUri.toWorkspaceUri(vscode.Uri.parse(documentUri));
+
+				if (workspaceUri) {
+					uri = workspaceUri.toString();
+				}
+			}
+
+			return uri.endsWith('#') ? uri : uri + '#';
 		}
 
 		let result: string | undefined = undefined;

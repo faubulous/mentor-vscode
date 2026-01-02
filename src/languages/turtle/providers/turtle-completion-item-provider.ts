@@ -6,6 +6,9 @@ import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 
+/**
+ * Represents a completion item that has an associated IRI (Internationalized Resource Identifier).
+ */
 class IriCompletionItem extends vscode.CompletionItem {
 	/**
 	 * The IRI of the subject.
@@ -29,11 +32,22 @@ class IriCompletionItem extends vscode.CompletionItem {
 	}
 }
 
+/**
+ * Provides completion items for Turtle documents based on the cursor position in the document. The
+ * completion items return subject/object definitions when the cursor is on a subject or object, in
+ * a triple. If the cursor is on a predicate, the completion items return predicate definitions. The
+ * definitions are resolved in the following order: local definitions (file), then global definitions 
+ * (e.g. RDF, RDFS..).
+ */
 export class TurtleCompletionItemProvider extends TurtleFeatureProvider implements vscode.CompletionItemProvider<vscode.CompletionItem> {
 	/**
 	 * Maximum number of completion items to return.
 	 */
 	readonly maxCompletionItems = 10;
+
+	resolveCompletionItem?(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
+		return item;
+	}
 
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
 		const context = mentor.getDocumentContext(document, TurtleDocument);
@@ -51,16 +65,16 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		return this.getCompletionItems(document, context, n);
 	}
 
-	getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
+	protected getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
 		const result = [];
 
-		if (this.isPrefixDefinitionContext(context, tokenIndex)) {
-			return this.getPrefixCompletionItems(context, tokenIndex);
+		if (this._isPrefixDefinitionContext(context, tokenIndex)) {
+			return this._getPrefixCompletionItems(context, tokenIndex);
 		}
 
 		const currentToken = context.tokens[tokenIndex];
 
-		if (this.isLocalPartDefinitionContext(context, tokenIndex)) {
+		if (this._isLocalPartDefinitionContext(context, tokenIndex)) {
 			const documentIri = WorkspaceUri.toWorkspaceUri(document.uri);
 			const componentType = getTripleComponentType(context.tokens, tokenIndex);
 			const namespaceIri = getNamespaceIriFromPrefixedName(context.namespaces, currentToken.image);
@@ -73,13 +87,13 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 				graphs.push(namespaceIri);
 
 				// Primarily query the context graph for retrieving completion items.
-				for (let item of this.getLocalPartCompletionItems(context, componentType, iri, graphs)) {
+				for (let item of this._getLocalPartCompletionItems(context, componentType, iri, graphs)) {
 					result.push(item);
 				}
 
 				// If none are found, query the background graph for retrieving additional items from other ontologies.
 				if (result.length == 0) {
-					for (let item of this.getLocalPartCompletionItems(context, componentType, iri, undefined)) {
+					for (let item of this._getLocalPartCompletionItems(context, componentType, iri, undefined)) {
 						result.push(item);
 					}
 				}
@@ -89,13 +103,13 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		return result;
 	}
 
-	isPrefixDefinitionContext(context: TurtleDocument, tokenIndex: number): boolean {
+	private _isPrefixDefinitionContext(context: TurtleDocument, tokenIndex: number): boolean {
 		const currentToken = context.tokens[tokenIndex];
 
 		return currentToken?.tokenType?.tokenName === "PN_CHARS_BASE";
 	}
 
-	getPrefixCompletionItems(context: TurtleDocument, tokenIndex: number): vscode.CompletionItem[] {
+	private _getPrefixCompletionItems(context: TurtleDocument, tokenIndex: number): vscode.CompletionItem[] {
 		const result = [];
 		const token = context.tokens[tokenIndex];
 		const prefixes = Object.keys(context.namespaces);
@@ -107,21 +121,23 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		return result;
 	}
 
-	isLocalPartDefinitionContext(context: TurtleDocument, tokenIndex: number): boolean {
+	private _isLocalPartDefinitionContext(context: TurtleDocument, tokenIndex: number): boolean {
 		const currentToken = context.tokens[tokenIndex];
 		const currentType = currentToken?.tokenType?.tokenName;
 
 		return currentType === 'PNAME_LN' || currentType === 'PNAME_NS';
 	}
 
-	getLocalPartCompletionItems(context: TurtleDocument, componentType: TripleComonentType, uri: string, graphs: string[] | undefined): vscode.CompletionItem[] {
-		let result: IriCompletionItem[] = [];
+	private _getLocalPartCompletionItems(context: TurtleDocument, componentType: TripleComonentType, uri: string, graphs: string[] | undefined): vscode.CompletionItem[] {
+		let items: Record<string, IriCompletionItem> = {};
 
 		if (componentType === 'predicate') {
+			// In this case we only want to return properties.
 			for (let property of mentor.vocabulary.getProperties(graphs)) {
-				this._addCompletionItem(result, uri, property);
+				this._addLocalPartCompletionItem(items, uri, property);
 			}
 		} else {
+			// Here we want to return all subjects, including properties as those can be subject or objects too.
 			const contexts = [];
 
 			if (graphs) {
@@ -138,22 +154,22 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 			for (const c of contexts) {
 				for (let subject of Object.keys(c.subjects)) {
-					this._addCompletionItem(result, uri, subject);
+					this._addLocalPartCompletionItem(items, uri, subject);
 				}
 			}
 		}
 
-		result = result.sort().slice(0, this.maxCompletionItems);
+		const result = Object.values(items).sort().slice(0, this.maxCompletionItems);
 
 		for (let item of result) {
 			item.detail = context.getResourceDescription(item.iri)?.value;
 		}
 
-		return result.sort().slice(0, this.maxCompletionItems);
+		return result;
 	}
 
-	private _addCompletionItem(result: IriCompletionItem[], namespaceIri: string, subjectIri: string) {
-		if (!subjectIri.toLowerCase().startsWith(namespaceIri)) {
+	private _addLocalPartCompletionItem(result: Record<string, IriCompletionItem>, namespaceIri: string, subjectIri: string) {
+		if (result[subjectIri] || !subjectIri.toLowerCase().startsWith(namespaceIri)) {
 			return;
 		}
 
@@ -166,10 +182,6 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		const item = new IriCompletionItem(subjectIri, localPart, vscode.CompletionItemKind.Value);
 		item.iri = subjectIri;
 
-		result.push(item);
-	}
-
-	resolveCompletionItem?(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
-		return item;
+		result[subjectIri] = item;
 	}
 }
