@@ -5,7 +5,6 @@ The developer friendly IDE for RDF knowledge graphs.
 
 <img src="https://raw.githubusercontent.com/faubulous/mentor-vscode.dev/main/public/screenshots/window.png" alt="The Mentor extension showing the workspace explorer and the ontology definitions tree view.">
 
-
 ## Features:
 
 - **Workspace Management**
@@ -29,6 +28,7 @@ The developer friendly IDE for RDF knowledge graphs.
   - Runs in the browser (e.g. [`vscode.dev`](https://vscode.dev)), supports editing GitHub repositories and live collaboration.
 
 ## News
+
 ### Version 0.3.8: Service Release
 - Fixes broken auto-complete support.
 - Fixes missing refresh icon in SPARQL boolean query results.

@@ -91,9 +91,10 @@ export class PrefixLookupService {
 		// The empty prefix is specific for the document and should not be resolved.
 		if (prefix === '') {
 			let uri = documentUri;
+			const scheme = documentUri.split(':')[0];
 
-			if (documentUri.startsWith('file') || documentUri.startsWith('vscode-notebook-cell')) {
-				// Make file: URIs workspace relative
+			if (WorkspaceUri.supportedSchemes.has(scheme)) {
+				// Make supported URI schemes workspace relative.
 				const workspaceUri = WorkspaceUri.toWorkspaceUri(vscode.Uri.parse(documentUri));
 
 				if (workspaceUri) {
@@ -105,7 +106,7 @@ export class PrefixLookupService {
 				const param = mentor.configuration.get<string>('prefixes.queryParameterName');
 
 				return uri + '?' + param + '=';
-			} else if (uri.endsWith('#')) {
+			} else if (!uri.endsWith('#')) {
 				return uri + '#';
 			} else {
 				return uri;

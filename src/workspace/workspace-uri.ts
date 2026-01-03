@@ -22,6 +22,15 @@ export class WorkspaceUri {
 	static readonly uriRegex = `${this.uriScheme}://[^\\s>]+`;
 
 	/**
+	 * A set of URI schemes that can be translated to workspace-relative URIs.
+	 */
+	static readonly supportedSchemes = new Set<string>([
+		"file",
+		"vscode-notebook-cell",
+		"vscode-vfs"
+	]);
+
+	/**
 	 * Converts an absolute file system URI (file://..) to a workspace-relative Mentor VFS URI that
 	 * can be resolved by the Mentor document link provider and the Mentor virtual file system provider.
 	 * @param uri The absolute file system URI to convert.
