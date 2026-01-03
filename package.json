@@ -1147,6 +1147,12 @@
             "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
             "default": true
           },
+          "mentor.prefixes.queryParameterName": {
+            "type": "string",
+            "title": "Query Parameter Name",
+            "description": "Name of the query parameter that is appended to URIs that already contain a fragment identifier (e.g. vscode-notebook-cell) when generating workspace: URIs.",
+            "default": "id"
+          },
           "mentor.prefixes.autoDefinePrefixes": {
             "type": "boolean",
             "title": "Auto Define Namespaces",

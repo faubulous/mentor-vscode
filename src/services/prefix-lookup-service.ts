@@ -102,7 +102,9 @@ export class PrefixLookupService {
 			}
 
 			if (uri.includes('#')) {
-				return uri + '?id=';
+				const param = mentor.configuration.get<string>('prefixes.queryParameterName');
+
+				return uri + '?' + param + '=';
 			} else if (uri.endsWith('#')) {
 				return uri + '#';
 			} else {
