@@ -5,32 +5,42 @@ import { WorkspaceUri } from './workspace-uri';
 
 describe('WorkspaceUri', () => {
 	it('converts file: -> workspace: for a path inside the workspace', () => {
-		const file = vscode.Uri.parse('file:///w/dir/file.ttl');
-		const ws = WorkspaceUri.toWorkspaceUri(file)!;
+		const fileUri = vscode.Uri.parse('file:///w/dir/file.ttl');
+		const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
 
-		expect(ws).toBeTruthy();
-		expect(ws.scheme).toBe('workspace');
+		expect(workspaceUri).toBeTruthy();
+		expect(workspaceUri.scheme).toBe('workspace');
 
 		// Expect relative path preserved (ignore how toString formats slashes)
-		expect(ws.path).toBe('/dir/file.ttl');
+		expect(workspaceUri.path).toBe('/dir/file.ttl');
+	});
+
+	it('converts vscode-notebook-cell: -> workspace: and preserves fragments', () => {
+		// Simulate a notebook cell URI inside the workspace root
+		const cellUri = vscode.Uri.parse('vscode-notebook-cell:/w/notebook.mnb#cell7');
+		const workspaceUri = WorkspaceUri.toWorkspaceUri(cellUri)!;
+
+		expect(workspaceUri.scheme).toBe('workspace');
+		expect(workspaceUri.fragment).toBe('cell7');
+		expect(workspaceUri.path).toBe('/notebook.mnb');
 	});
 
 	it('round-trips workspace: -> file:', () => {
-		const ws = vscode.Uri.parse('workspace:/dir/file.ttl');
-		const file = WorkspaceUri.toFileUri(ws);
+		const workspaceUri = vscode.Uri.parse('workspace:/dir/file.ttl');
+		const fileUri = WorkspaceUri.toFileUri(workspaceUri);
 
-		expect(file.scheme).toBe('file');
-		expect(file.toString()).toBe('file:///w/dir/file.ttl');
+		expect(fileUri.scheme).toBe('file');
+		expect(fileUri.toString()).toBe('file:///w/dir/file.ttl');
 	});
 
 	it('preserves hash fragments when converting file: -> workspace: (e.g., notebooks)', () => {
-		const file = vscode.Uri.parse('file:///w/notebook.mnb#cell1');
-		const ws = WorkspaceUri.toWorkspaceUri(file)!;
+		const fileUri = vscode.Uri.parse('file:///w/notebook.mnb#cell1');
+		const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
 
 		// Must preserve fragment
-		expect(ws.scheme).toBe('workspace');
-		expect(ws.fragment).toBe('cell1');
-		expect(ws.path).toBe('/notebook.mnb');
+		expect(workspaceUri.scheme).toBe('workspace');
+		expect(workspaceUri.fragment).toBe('cell1');
+		expect(workspaceUri.path).toBe('/notebook.mnb');
 	});
 
 	it('preserves hash fragments when converting workspace: -> file:', () => {

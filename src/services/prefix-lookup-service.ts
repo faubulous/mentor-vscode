@@ -92,7 +92,7 @@ export class PrefixLookupService {
 		if (prefix === '') {
 			let uri = documentUri;
 
-			if (documentUri.startsWith('file')) {
+			if (documentUri.startsWith('file') || documentUri.startsWith('vscode-notebook-cell')) {
 				// Make file: URIs workspace relative
 				const workspaceUri = WorkspaceUri.toWorkspaceUri(vscode.Uri.parse(documentUri));
 
@@ -101,7 +101,13 @@ export class PrefixLookupService {
 				}
 			}
 
-			return uri.endsWith('#') ? uri : uri + '#';
+			if (uri.includes('#')) {
+				return uri + '?id=';
+			} else if (uri.endsWith('#')) {
+				return uri + '#';
+			} else {
+				return uri;
+			}
 		}
 
 		let result: string | undefined = undefined;
