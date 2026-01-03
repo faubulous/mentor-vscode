@@ -28,7 +28,7 @@ export class WorkspaceUri {
 	 * @returns The corresponding Mentor VFS URI.
 	 */
 	static toWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
-		if(documentIri.scheme === this.uriScheme) {
+		if (documentIri.scheme === this.uriScheme) {
 			return documentIri;
 		}
 
@@ -41,12 +41,13 @@ export class WorkspaceUri {
 		const absolutePath = documentIri.path;
 
 		for (const workspaceFolder of workspaceFolders) {
-			const workspacePath = workspaceFolder.uri.fsPath;
+			const workspacePath = workspaceFolder.uri.path;
 
 			if (absolutePath.startsWith(workspacePath)) {
 				const relativePath = absolutePath.substring(workspacePath.length);
+				const fragment = documentIri.fragment ? `#${documentIri.fragment}` : '';
 
-				return vscode.Uri.parse(`${this.uriScheme}://${relativePath}`);
+				return vscode.Uri.parse(`${this.uriScheme}://${relativePath}${fragment}`);
 			}
 		}
 	}
@@ -57,25 +58,22 @@ export class WorkspaceUri {
 	 * @returns The absolute file URI.
 	 */
 	static toFileUri(workspaceUri: vscode.Uri): vscode.Uri {
+		if (workspaceUri.scheme !== this.uriScheme) {
+			throw new Error('Cannot convert non-workspace URI to file URI: ' + workspaceUri.toString());
+		}
+
 		const workspaceFolders = vscode.workspace.workspaceFolders;
 
 		if (!workspaceFolders || workspaceFolders.length === 0) {
 			throw new Error('No workspace folders are open.');
 		}
 
-		const segments = [
-			workspaceUri.authority, // Note: the authority can be used to identify the workspace, if needed.
-			workspaceUri.path.startsWith('/') ? workspaceUri.path.substring(1) : workspaceUri.path
-		];
+		const root = workspaceFolders[0].uri;
+		const path = workspaceUri.path.startsWith('/') ? workspaceUri.path.substring(1) : workspaceUri.path;
+		const fileUri = vscode.Uri.joinPath(root, path);
 
-		for (const workspaceFolder of workspaceFolders) {
-			const targetUri = vscode.Uri.joinPath(workspaceFolder.uri, ...segments);
-
-			return targetUri;
-		}
-
-		// If multiple workspace folders, default to the first one
-		return vscode.Uri.joinPath(workspaceFolders[0].uri, ...segments);
+		// Preserve the fragment (e.g., notebook cell index)
+		return fileUri.with({ fragment: workspaceUri.fragment });
 	}
 
 	static toNotebookCellUri(workspaceUri: vscode.Uri): vscode.Uri {

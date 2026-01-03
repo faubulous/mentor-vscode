@@ -3,21 +3,12 @@ import path from 'path';
 
 export default defineConfig({
   test: {
-    // Enable TypeScript support
     typecheck: {
       tsconfig: './tsconfig.spec.json'
     },
-    
-    // Test file patterns
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    
-    // Environment setup
     environment: 'node',
-    
-    // Global test setup
     globals: true,
-    
-    // Coverage configuration
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -34,7 +25,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@src': path.resolve(__dirname, 'src')
+      '@src': path.resolve(__dirname, 'src'),
+      // Map vscode module to local stub for tests so the test explorer can resolve it
+      'vscode': path.resolve(__dirname, 'src/mocks/vscode.ts')
     }
   }
 });
