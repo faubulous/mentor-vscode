@@ -83,7 +83,7 @@ export class NotebookController {
 				const result = queryState.result as QuadsResult;
 
 				await execution.replaceOutput([new vscode.NotebookCellOutput([
-					vscode.NotebookCellOutputItem.text(result?.document, 'text/x-turtle')
+					vscode.NotebookCellOutputItem.text(result?.document, 'text/turtle')
 				])]);
 			}
 

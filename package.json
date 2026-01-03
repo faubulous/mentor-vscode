@@ -231,6 +231,9 @@
           ".nt",
           ".n3"
         ],
+        "mimetypes": [
+          "application/n-triples"
+        ],
         "configuration": "./out/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/light/rdf-file.svg",
@@ -245,6 +248,9 @@
         ],
         "extensions": [
           ".nq"
+        ],
+        "mimetypes": [
+          "application/n-quads"
         ],
         "configuration": "./out/turtle-language-config.json",
         "icon": {
@@ -261,6 +267,9 @@
         "extensions": [
           ".ttl"
         ],
+        "mimetypes": [
+          "text/turtle"
+        ],
         "configuration": "./out/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/light/rdf-file.svg",
@@ -275,6 +284,9 @@
         ],
         "extensions": [
           ".trig"
+        ],
+        "mimetypes": [
+          "application/trig"
         ],
         "configuration": "./out/trig-language-config.json",
         "icon": {
@@ -292,6 +304,9 @@
           ".sparql",
           ".rq"
         ],
+        "mimetypes": [
+          "application/sparql-query"
+        ],
         "configuration": "./out/sparql-language-config.json",
         "icon": {
           "light": "./media/icons/light/sparql-file.svg",
@@ -306,6 +321,9 @@
         ],
         "extensions": [
           ".rdf"
+        ],
+        "mimetypes": [
+          "application/rdf+xml"
         ],
         "icon": {
           "light": "./media/icons/light/rdf-file.svg",
