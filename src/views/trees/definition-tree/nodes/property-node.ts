@@ -13,6 +13,16 @@ export class PropertyNode extends DefinitionTreeNode {
 	 */
 	propertyType: 'objectProperty' | 'dataProperty' | 'annotationProperty' = 'objectProperty';
 
+	getContextValue(): string {
+		let result = super.getContextValue();
+
+		if (mentor.vocabulary.hasShapes(this.document.graphs, this.uri, this.getQueryOptions({ definedBy: undefined }))) {
+			result += " shape-target";
+		}
+
+		return result;
+	}
+
 	getRange(propertyUri?: string): string {
 		let rangeUri: string | undefined;
 
