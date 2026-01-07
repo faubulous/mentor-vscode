@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { xsd, rdfs } from '@faubulous/mentor-rdf';
+import { xsd, rdf, rdfs } from '@faubulous/mentor-rdf';
 import { mentor } from "@src/mentor";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
@@ -29,6 +29,7 @@ export class PropertyNode extends DefinitionTreeNode {
 
 	getPropertyType(rangeUri?: string) {
 		switch (rangeUri) {
+			case rdf.langString.id:
 			case rdfs.Literal.id:
 			case xsd.base64Binary.id:
 			case xsd.boolean.id:
@@ -94,6 +95,7 @@ export class PropertyNode extends DefinitionTreeNode {
 				return 'symbol-number';
 			}
 			case xsd.string.id:
+			case rdf.langString.id:
 			case rdfs.Literal.id: {
 				return 'symbol-text';
 			}
