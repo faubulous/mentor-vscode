@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { analyzeWorkspace } from './analyze-workspace';
 import { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
 import { clearQueryHistory } from './clear-query-history';
+import { convertFileFormat } from './convert-file-format';
 import { createDocument } from './create-document';
 import { createDocumentFromLanguage } from './create-document-from-language';
 import { createNotebook } from './create-notebook';
@@ -40,6 +41,7 @@ const commands = [
 	analyzeWorkspace,
 	cancelSparqlQueryExecution,
 	clearQueryHistory,
+	convertFileFormat,
 	createDocument,
 	createDocumentFromLanguage,
 	createNotebook,

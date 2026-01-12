@@ -8,7 +8,7 @@ import { TurtleDocument, SparqlDocument, XmlDocument } from '../languages';
 /**
  * Information about a supported programming language.
  */
-interface LanguageInfo {
+export interface LanguageInfo {
 	/**
 	 * The language identifier, (e.g. 'turtle' or 'sparql').
 	 */
@@ -33,6 +33,11 @@ interface LanguageInfo {
 	 * The file extensions associated with the language (e.g. '.ttl', '.sparql').
 	 */
 	extensions: string[];
+
+	/**
+	 * The MIME types associated with the language (e.g. 'text/turtle', 'application/sparql-query').
+	 */
+	mimetypes: string[];
 }
 
 /**
@@ -64,11 +69,25 @@ export class DocumentFactory {
 	}
 
 	/**
+	 * Checks if a document can be converted to another format.
+	 * @param languageId The language ID of the document.
+	 * @returns `true` if the document can be converted, otherwise `false`.
+	 */
+	isConvertibleLanguage(languageId: string): boolean {
+		return languageId === 'ntriples' ||
+			languageId === 'nquads' ||
+			languageId === 'turtle' ||
+			languageId === 'trig' ||
+			languageId === 'n3' ||
+			languageId === 'xml';
+	}
+
+	/**
 	 * Checks if a file is supported by the factory.
 	 * @param uri The URI of the file.
 	 * @returns `true` if the file is supported, otherwise `false`.
 	 */
-	public isSupportedFile(uri: vscode.Uri): boolean {
+	isSupportedFile(uri: vscode.Uri): boolean {
 		return this.getDocumentLanguageId(uri) !== undefined;
 	}
 
@@ -77,7 +96,7 @@ export class DocumentFactory {
 	 * @param ext The lower-case file extension including the dot (e.g. '.ttl').
 	 * @returns `true` if the file is supported, otherwise `false`.
 	 */
-	public isSupportedExtension(ext: string): boolean {
+	isSupportedExtension(ext: string): boolean {
 		return this.supportedExtensions[ext] !== undefined;
 	}
 
@@ -86,7 +105,7 @@ export class DocumentFactory {
 	 * @param uri The URI of the file.
 	 * @returns A language ID if the file is supported, otherwise `undefined`.
 	 */
-	public getDocumentLanguageId(uri: vscode.Uri): string {
+	getDocumentLanguageId(uri: vscode.Uri): string {
 		const extension = Utils.extname(uri).toLowerCase();
 
 		return this.supportedExtensions[extension];
@@ -97,7 +116,7 @@ export class DocumentFactory {
 	 * @param document A text document.
 	 * @returns A document context.
 	 */
-	public create(documentUri: vscode.Uri, languageId?: string): DocumentContext {
+	create(documentUri: vscode.Uri, languageId?: string): DocumentContext {
 		// If the language ID is provided, use it to create the document context
 		// as this is more reliable than the file extension. For unsaved documents,
 		// the file extension is not available.
@@ -167,7 +186,8 @@ export class DocumentFactory {
 				name: language, // fallback name
 				typeName: this._getTypeName(language),
 				icon: this._getIconName(language),
-				extensions: []
+				extensions: [],
+				mimetypes: []
 			});
 		}
 
@@ -187,6 +207,10 @@ export class DocumentFactory {
 					info.name = lang.aliases?.[0] || lang.id;
 					info.typeName = this._getTypeName(lang.id, info.name) || lang.id;
 					info.icon = this._getIconName(lang.id);
+
+					for (const mimetype of lang.mimetypes || []) {
+						info.mimetypes.push(mimetype);
+					}
 				}
 			}
 		}
@@ -201,6 +225,15 @@ export class DocumentFactory {
 	 */
 	async getLanguageInfo(languageId: string): Promise<LanguageInfo | undefined> {
 		return (await this.getSupportedLanguagesInfo()).find(l => l.id === languageId);
+	}
+
+	/**
+	 * Retrieves language information from a MIME type.
+	 * @param mimetype The MIME type to look up.
+	 * @returns The corresponding `LanguageInfo` object, or `undefined` if not found.
+	 */
+	async getLanguageInfoFromMimeType(mimetype: string): Promise<LanguageInfo | undefined> {
+		return (await this.getSupportedLanguagesInfo()).find(l => l.mimetypes.includes(mimetype));
 	}
 
 	/**

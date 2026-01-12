@@ -714,6 +714,12 @@
         "command": "mentor.command.loginMicrosoftAuthProvider",
         "title": "Login with Microsoft Entra",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.convertFileFormat",
+        "title": "Convert File Format..",
+        "icon": "$(file-zip)",
+        "category": "Mentor"
       }
     ],
     "menus": {
@@ -851,6 +857,13 @@
           "command": "mentor.command.deleteSparqlConnection",
           "when": "view == mentor.view.connectionTree && viewItem =~ /connection/ && viewItem.isProtected !== true",
           "group": "z_commands"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "mentor.command.convertFileFormat",
+          "group": "1_modification@99",
+          "when": "editorTextFocus && !notebookCellType && mentor.command.convertFileFormat.executable"
         }
       ]
     },

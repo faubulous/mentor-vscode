@@ -206,6 +206,10 @@ class MentorExtension {
 					this.activeContext = context;
 					this._onDidChangeDocumentContext?.fire(context);
 				}
+
+				const convertible = this.documentFactory.isConvertibleLanguage(activeEditor.document.languageId);
+
+				vscode.commands.executeCommand("setContext", "mentor.command.convertFileFormat.executable", convertible);
 			});
 		}
 	}
