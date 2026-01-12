@@ -49,7 +49,7 @@ async function selectTargetLanguage(sourceLanguageId: string) {
 		language: LanguageInfo;
 	};
 
-	// TODO: Move isConvertibleLanguage into mentor-rdf.Store and add support for RDF/XML serialization
+	// TODO: Move isSerializableGraph into mentor-rdf.Store and add support for RDF/XML serialization
 	const items: LanguagePickItem[] = languages
 		.filter(lang => lang.id !== sourceLanguageId && lang.id !== 'xml')
 		.filter(lang => mentor.documentFactory.isConvertibleLanguage(lang.id))

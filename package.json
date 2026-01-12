@@ -70,7 +70,7 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@rdfjs/types": "^2.0.1",
     "@types/n3": "^1.26.0",
-    "@types/node": "^24.3.1",
+    "@types/node": "^25.0.6",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/vscode": "^1.90.0",
@@ -89,11 +89,11 @@
     "vscode-uri": "^3.1.0"
   },
   "dependencies": {
-    "@comunica/query-sparql": "^4.3.0",
+    "@comunica/query-sparql": "^5.0.3",
     "@faubulous/mentor-rdf": "^0.3.1",
-    "@vscode/codicons": "^0.0.43",
+    "@vscode/codicons": "^0.0.44",
     "millan": "^5.4.0",
-    "n3": "^1.26.0",
+    "n3": "^2.0.1",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "sax-ts": "^1.2.13",
