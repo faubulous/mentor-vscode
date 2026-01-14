@@ -54,7 +54,7 @@ export class DocumentFactory {
 	 */
 	readonly supportedExtensions: { [key: string]: string } = {
 		'.ttl': 'turtle',
-		'.n3': 'ntriples',
+		'.n3': 'n3',
 		'.nt': 'ntriples',
 		'.nq': 'nquads',
 		'.trig': 'trig',
@@ -76,9 +76,8 @@ export class DocumentFactory {
 	isConvertibleLanguage(languageId: string): boolean {
 		return languageId === 'ntriples' ||
 			languageId === 'nquads' ||
-			languageId === 'turtle' ||
 			languageId === 'trig' ||
-			languageId === 'n3' ||
+			languageId === 'turtle' ||
 			languageId === 'xml';
 	}
 
@@ -133,6 +132,8 @@ export class DocumentFactory {
 				return new TurtleDocument(documentUri, RdfSyntax.NTriples);
 			case 'nquads':
 				return new TurtleDocument(documentUri, RdfSyntax.NQuads);
+			case 'n3':
+				return new TurtleDocument(documentUri, RdfSyntax.N3);
 			case 'trig':
 				return new TurtleDocument(documentUri, RdfSyntax.TriG);
 			case 'sparql':
@@ -161,6 +162,7 @@ export class DocumentFactory {
 				return 'sparql-file';
 			case 'ntriples':
 			case 'nquads':
+			case 'n3':
 			case 'turtle':
 			case 'trig':
 			case 'xml':

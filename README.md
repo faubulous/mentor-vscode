@@ -29,11 +29,11 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.3.8: Service Release
-- Fixes broken auto-complete support.
-- Fixes missing refresh icon in SPARQL boolean query results.
-- `:` prefixes in files are now implemented as `workspace:` URIs instead of `file:` to improve portability.
-- Added link to mentor-vscode.dev for help
+### Version 0.3.9: Service Release
+- Added support for converting RDF file formats (RDF/XML, Turtle, TriG, N-Triples, N-Quads)
+  - See [Mentor documentation](https://mentor-vscode.dev/feature/format-conversion)
+- Fixes wrong icon for properties with datatype / range rdf:langString
+- Fixes 'Go to Shape Definition' command not visible for properties in Definition Tree
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 

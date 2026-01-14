@@ -13,6 +13,14 @@ export const convertFileFormat = {
 			return;
 		}
 
+		const diagnostics = vscode.languages.getDiagnostics(document.uri);
+		const hasErrors = diagnostics.some((d) => d.severity === vscode.DiagnosticSeverity.Error);
+
+		if (hasErrors) {
+			await vscode.window.showErrorMessage('This document has syntax errors and cannot be converted.');
+			return;
+		}
+
 		const documentIri = document.uri.toString();
 		const context = mentor.contexts[documentIri];
 
@@ -28,14 +36,26 @@ export const convertFileFormat = {
 			return;
 		}
 
-		const graph = context.graphIri.toString();
+		let targetLanguage: string | undefined;
+
+		switch(selectedLanguage.id) {
+			case 'nquads':
+				targetLanguage = selectedLanguage.mimetypes[0];
+				break;
+			default:
+				// Do not set any language and let the serializer (N3) handle it.
+		}
+
+		const sourceGraphIri = context.graphIri.toString();
+		const targetGraphIri = await selectTargetGraphIri(sourceGraphIri, selectedLanguage.id);
+
 		const prefixes: { [key: string]: NamedNode } = {};
 
 		for (const [prefix, uri] of Object.entries(context.namespaces)) {
 			prefixes[prefix] = DataFactory.namedNode(uri);
 		}
 
-		const data = await mentor.vocabulary.store.serializeGraph(graph, prefixes, selectedLanguage.mimetypes[0]);
+		const data = await mentor.vocabulary.store.serializeGraph(sourceGraphIri, prefixes, targetLanguage, targetGraphIri);
 		const result = await vscode.workspace.openTextDocument({ content: data, language: selectedLanguage.id });
 
 		vscode.window.showTextDocument(result);
@@ -65,4 +85,23 @@ async function selectTargetLanguage(sourceLanguageId: string) {
 	});
 
 	return selected?.language;
+}
+
+/**
+ * Select the target graph IRI for the conversion if supported by the target language.
+ * @param graphUri The source graph URI.
+ * @param targetLanguageId The target language ID.
+ * @returns The selected target graph IRI.
+ */
+async function selectTargetGraphIri(graphUri: string, targetLanguageId: string): Promise<string | undefined> {
+	if (targetLanguageId === 'nquads' || targetLanguageId === 'trig') {
+		const result = await vscode.window.showInputBox({
+			prompt: 'Enter the target graph URI',
+			value: graphUri
+		});
+
+		return result;
+	} else {
+		return undefined;
+	}
 }
