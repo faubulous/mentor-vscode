@@ -31,22 +31,42 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 		return uri ? Utils.dirname(resourceUri).toString() : undefined;
 	}
 
-	async getChildren(uri: string): Promise<string[]> {
+	/**
+	 * Get the children of a folder.
+	 * @param uri The URI of the folder to get children for or `undefined` for the root.
+	 * @returns An array of child URIs, sorted by folders first and then by name.
+	 */
+	async getChildren(uri?: string): Promise<string[]> {
 		if (!vscode.workspace.name || !vscode.workspace.workspaceFolders?.length) {
 			return [];
 		}
 
-		let resourceUri;
-
-		if (uri == null) {
+		if (!uri) {
 			await mentor.workspace.waitForInitialized();
-
-			resourceUri = vscode.workspace.workspaceFolders[0].uri;
-		} else {
-			resourceUri = vscode.Uri.parse(uri);
 		}
 
-		const result = await mentor.workspace.getFolderContents(resourceUri);
+		const result = [];
+
+		if (uri) {
+			// If the URI is provided, get the contents of the specified folder.
+			const folder = vscode.Uri.parse(uri);
+
+			result.push(...(await mentor.workspace.getFolderContents(folder)));
+		} else if (!vscode.workspace.workspaceFile) {
+			// If this is not a workspace, then return the contents of the first folder.
+			const folder = vscode.workspace.workspaceFolders[0].uri;
+
+			result.push(...(await mentor.workspace.getFolderContents(folder)));
+		} else {
+			// Iterate the workspace folders and push only the ones that have contents.
+			for (const folder of vscode.workspace.workspaceFolders) {
+				const contents = await mentor.workspace.getFolderContents(folder.uri);
+
+				if (contents.length > 0) {
+					result.push(folder.uri);
+				}
+			}
+		}
 
 		return result.map((resource) => resource.toString());
 	}

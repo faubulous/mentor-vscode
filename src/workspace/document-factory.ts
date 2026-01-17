@@ -76,7 +76,6 @@ export class DocumentFactory {
 	isConvertibleLanguage(languageId: string): boolean {
 		return languageId === 'ntriples' ||
 			languageId === 'nquads' ||
-			languageId === 'trig' ||
 			languageId === 'turtle' ||
 			languageId === 'xml';
 	}

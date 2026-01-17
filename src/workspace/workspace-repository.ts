@@ -88,8 +88,8 @@ export class WorkspaceRepository {
 		// Clear the root items.
 		this._files = [];
 
-		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-			const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
+		for (const folder of vscode.workspace.workspaceFolders ?? []) {
+			const workspaceUri = folder.uri;
 
 			this._excludePatterns = await mentor.getExcludePatterns(workspaceUri);
 
@@ -100,7 +100,7 @@ export class WorkspaceRepository {
 			const includedFiles = new vscode.RelativePattern(workspaceUri, '{' + this._includePatterns.join(",") + '}');
 
 			// This will only return files. We need to extract the subfolders separately.
-			this._files = await vscode.workspace.findFiles(includedFiles, excludedFolders);
+			this._files.push(...await vscode.workspace.findFiles(includedFiles, excludedFolders));
 		}
 
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', this._files.length === 0);

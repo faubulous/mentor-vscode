@@ -36,29 +36,18 @@ export const convertFileFormat = {
 			return;
 		}
 
-		let targetLanguage: string | undefined;
-
-		switch(selectedLanguage.id) {
-			case 'nquads':
-				targetLanguage = selectedLanguage.mimetypes[0];
-				break;
-			default:
-				// Do not set any language and let the serializer (N3) handle it.
-		}
-
 		const sourceGraphIri = context.graphIri.toString();
 		const targetGraphIri = await selectTargetGraphIri(sourceGraphIri, selectedLanguage.id);
+		const targetLanguage = selectedLanguage.mimetypes[0];
 
-		const prefixes: { [key: string]: NamedNode } = {};
+		try {
+			const data = await mentor.vocabulary.store.serializeGraph(sourceGraphIri, targetLanguage, targetGraphIri, context.namespaces);
+			const result = await vscode.workspace.openTextDocument({ content: data, language: selectedLanguage.id });
 
-		for (const [prefix, uri] of Object.entries(context.namespaces)) {
-			prefixes[prefix] = DataFactory.namedNode(uri);
+			vscode.window.showTextDocument(result);
+		} catch (error) {
+			vscode.window.showErrorMessage(`Error converting file format: ${error}`);
 		}
-
-		const data = await mentor.vocabulary.store.serializeGraph(sourceGraphIri, prefixes, targetLanguage, targetGraphIri);
-		const result = await vscode.workspace.openTextDocument({ content: data, language: selectedLanguage.id });
-
-		vscode.window.showTextDocument(result);
 	}
 };
 
@@ -71,7 +60,7 @@ async function selectTargetLanguage(sourceLanguageId: string) {
 
 	// TODO: Move isSerializableGraph into mentor-rdf.Store and add support for RDF/XML serialization
 	const items: LanguagePickItem[] = languages
-		.filter(lang => lang.id !== sourceLanguageId && lang.id !== 'xml')
+		.filter(lang => lang.id !== sourceLanguageId)
 		.filter(lang => mentor.documentFactory.isConvertibleLanguage(lang.id))
 		.map((lang) => ({
 			label: lang.name,
