@@ -16,7 +16,7 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 
 	constructor() {
 		// Montior for changes in the workspace folders.
-		mentor.workspace.onDidChangeWorkspaceFolder((e) => {
+		mentor.workspace.onDidChangeWorkspaceContents((e) => {
 			this._onDidChangeTreeData.fire(e.uri.toString());
 		});
 	}

@@ -45,7 +45,7 @@ export class WorkspaceRepository {
 	/**
 	 * An event that is fired when the workspace contents have changed.
 	 */
-	readonly onDidChangeWorkspaceFolder = this._onDidChangeWorkspaceContents.event;
+	readonly onDidChangeWorkspaceContents = this._onDidChangeWorkspaceContents.event;
 
 	constructor(documentFactory: DocumentFactory) {
 		this._includePatterns = Object.keys(documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
