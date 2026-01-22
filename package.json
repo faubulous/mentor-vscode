@@ -223,6 +223,11 @@
         "language": "sparql",
         "scopeName": "source.sparql",
         "path": "./out/sparql.tmLanguage.json"
+      },
+      {
+        "language": "datalog",
+        "scopeName": "source.datalog",
+        "path": "./out/datalog.tmLanguage.json"
       }
     ],
     "languages": [
@@ -333,6 +338,25 @@
         "icon": {
           "light": "./media/icons/light/sparql-file.svg",
           "dark": "./media/icons/dark/sparql-file.svg"
+        }
+      },
+      {
+        "id": "datalog",
+        "aliases": [
+          "Datalog",
+          "datalog"
+        ],
+        "extensions": [
+          ".dl",
+          ".datalog"
+        ],
+        "mimetypes": [
+          "text/x-datalog"
+        ],
+        "configuration": "./out/datalog-language-config.json",
+        "icon": {
+          "light": "./media/icons/light/rdf-file.svg",
+          "dark": "./media/icons/dark/rdf-file.svg"
         }
       },
       {
