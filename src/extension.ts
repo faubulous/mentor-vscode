@@ -54,6 +54,7 @@ function registerNotebookSerializers(context: vscode.ExtensionContext) {
 }
 
 function registerProviders(context: vscode.ExtensionContext) {
+	subscribe(context, new languages.DatalogTokenProvider().register());
 	subscribe(context, new languages.XmlTokenProvider().register());
 	subscribe(context, new languages.TurtleTokenProvider().register());
 	subscribe(context, new languages.TrigTokenProvider().register());

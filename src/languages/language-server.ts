@@ -1,4 +1,3 @@
-import { IRecognitionException } from 'chevrotain';
 import { ISemanticError, IToken } from 'millan';
 import {
 	BrowserMessageReader,
@@ -32,8 +31,8 @@ import {
  */
 export interface TokenizationResults {
 	comments: IToken[];
-	errors: IRecognitionException[];
-	semanticErrors: IRecognitionException[];
+	errors: ISemanticError[];
+	semanticErrors: ISemanticError[];
 	tokens: IToken[];
 }
 

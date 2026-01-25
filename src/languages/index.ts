@@ -1,4 +1,5 @@
 export * from './language-client';
+export * from './datalog/datalog-token-provider';
 export * from './xml/xml-document';
 export * from './xml/xml-token-provider';
 export * from './sparql/sparql-document';

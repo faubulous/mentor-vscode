@@ -1,9 +1,6 @@
 import * as vscode from 'vscode';
-import * as n3 from 'n3';
 import { mentor } from '@src/mentor';
 import { InferenceUri } from '@src/workspace/inference-uri';
-
-const { namedNode } = n3.DataFactory;
 
 export class InferenceUriHandler implements vscode.UriHandler {
 	readonly extensionId: string;
@@ -31,13 +28,8 @@ export class InferenceUriHandler implements vscode.UriHandler {
 				const inferenceUri = InferenceUri.toInferenceUri(targetUri);
 
 				if (mentor.store.hasGraph(inferenceUri)) {
-					const standardPrefixes: { [prefix: string]: n3.NamedNode } = {};
-
-					for (const [prefix, iri] of Object.entries(mentor.prefixLookupService.getInferencePrefixes())) {
-						standardPrefixes[prefix] = namedNode(iri);
-					}
-
-					const content = await mentor.store.serializeGraph(inferenceUri, standardPrefixes);
+					const namespaces = mentor.prefixLookupService.getInferencePrefixes();
+					const content = await mentor.store.serializeGraph(inferenceUri, 'text/turtle', undefined, namespaces);
 					const document = await vscode.workspace.openTextDocument({ content, language: 'turtle' });
 
 					await vscode.window.showTextDocument(document);
