@@ -1,45 +1,37 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { WebviewMessaging, WebviewMessage, ExecuteCommandMessage } from './webview-messaging';
+import { WebviewMessaging, WebviewMessage } from './webview-messaging';
 import { WebviewHost } from './webview-host';
 
 /**
- * React hook for webview messaging. Provides `postMessage` and automatically
- * subscribes to incoming messages, calling the provided handler.
+ * React hook for webview messaging. Provides the full messaging interface including
+ * `postMessage`, `onMessage`, and `executeCommand`.
  * 
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { postMessage } = useWebviewMessaging<MyMessages>(message => {
+ *   const messaging = useWebviewMessaging<MyMessages>(message => {
  *     if (message.id === 'DataLoaded') {
  *       setData(message.data);
  *     }
  *   });
  * 
  *   const handleClick = () => {
- *     postMessage({ id: 'LoadData' });
+ *     messaging?.postMessage({ id: 'LoadData' });
  *   };
  * }
  * ```
  * 
  * @param onMessage Callback invoked when a message is received from the extension host.
  * @param messaging Optional custom messaging instance. If not provided, uses WebviewHost (must be in webview context).
- * @returns An object with `postMessage` function.
- * @throws Error if no messaging is provided and WebviewHost is not available.
+ * @returns The WebviewMessaging interface, or undefined if not in a webview context and no messaging was provided.
  */
 export function useWebviewMessaging<M extends WebviewMessage>(
 	onMessage?: (message: M) => void,
 	messaging?: WebviewMessaging<M>
-): { postMessage: (message: M) => void; executeCommand: (command: string, ...args: any[]) => void } {
+): WebviewMessaging<M> | undefined {
 	const messagingRef = useRef<WebviewMessaging<M> | undefined>(
 		messaging ?? (WebviewHost.isAvailable() ? WebviewHost.getMessaging<M>() : undefined)
 	);
-
-	if (!messagingRef.current) {
-		throw new Error(
-			'useWebviewMessaging: No messaging available. ' +
-			'Either pass a messaging instance or ensure this hook is used in a VS Code webview context.'
-		);
-	}
 
 	useEffect(() => {
 		if (onMessage && messagingRef.current) {
@@ -51,16 +43,7 @@ export function useWebviewMessaging<M extends WebviewMessage>(
 		}
 	}, [onMessage]);
 
-	const postMessage = useCallback((message: M) => {
-		messagingRef.current?.postMessage(message);
-	}, []);
-
-	const executeCommand = useCallback((command: string, ...args: any[]) => {
-		const message: ExecuteCommandMessage = { id: 'ExecuteCommand', command, args };
-		messagingRef.current?.postMessage(message as unknown as M);
-	}, []);
-
-	return { postMessage, executeCommand };
+	return messagingRef.current;
 }
 
 /**

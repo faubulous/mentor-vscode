@@ -22,8 +22,9 @@ export interface SparqlResultsProviderProps {
 
 	/**
 	 * Messaging interface for sending and receiving messages to/from the VS Code extension host.
+	 * May be undefined in notebook renderer contexts where messaging is handled differently.
 	 */
-	messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
+	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
 
 	/**
 	 * The default number of results to display per page.
