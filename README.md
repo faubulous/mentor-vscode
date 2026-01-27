@@ -31,7 +31,7 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ### Version 0.3.9: Service Release
 - Added support for converting RDF file formats (RDF/XML, Turtle, TriG, N-Triples, N-Quads)
-  - See [Mentor documentation](https://mentor-vscode.dev/feature/format-conversion)
+- Added syntax highlighting and rename support for Datalog files
 - Fixes wrong icon for properties with datatype / range rdf:langString
 - Fixes 'Go to Shape Definition' command not visible for properties in Definition Tree
 
