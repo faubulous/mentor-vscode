@@ -1,7 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { VscodeSingleSelect, VscodeTabs } from '@vscode-elements/elements';
-import { WebviewHost } from '@src/views/webviews/webview-host';
-import { WebviewComponent } from '@src/views/webviews/webview-component';
+import { WebviewComponent, createVscodeElementRef } from '@src/views/webviews/webview-component';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { AuthCredential, BasicAuthCredential, BearerAuthCredential, MicrosoftAuthCredential } from '@src/services/credential';
@@ -45,42 +44,22 @@ export class SparqlConnectionView extends WebviewComponent<
 	SparqlConnectionViewState,
 	SparqlConnectionMessages
 > {
-	messaging = WebviewHost.getMessaging<SparqlConnectionMessages>();
+	// Use createVscodeElementRef for automatic event listener management
+	private _configScopeTabs = createVscodeElementRef<VscodeTabs, { selectedIndex: number }>({
+		eventName: 'vsc-tabs-select',
+		onEvent: (_element, _event) => this._handleConfigScopeChange()
+	});
 
-	private _configScopeTabs: VscodeTabs | null = null;
-
-	protected setConfigScopeRef = (element: VscodeTabs | null) => {
-		if (this._configScopeTabs) {
-			this._configScopeTabs.removeEventListener('vsc-tabs-select', this._handleConfigScopeChange);
-		}
-
-		this._configScopeTabs = element;
-
-		if (element) {
-			element.addEventListener('vsc-tabs-select', this._handleConfigScopeChange);
-		}
-	};
-
-	private _authTypeSelect: VscodeSingleSelect | null = null;
-
-	protected setAuthTypeSelectRef = (element: VscodeSingleSelect | null) => {
-		if (this._authTypeSelect) {
-			this._authTypeSelect.removeEventListener('change', this._handleAuthTypeChange);
-		}
-
-		this._authTypeSelect = element;
-
-		if (element) {
-			element.addEventListener('change', (e: any) => {
-				const value = parseInt(e.target.value, 10);
-
-				this.setState({
-					selectedAuthTypeIndex: value,
-					hasUnsavedChanges: true
-				});
+	private _authTypeSelect = createVscodeElementRef<VscodeSingleSelect>({
+		eventName: 'change',
+		onEvent: (element, _event) => {
+			const value = parseInt(element.value, 10);
+			this.setState({
+				selectedAuthTypeIndex: value,
+				hasUnsavedChanges: true
 			});
 		}
-	}
+	});
 
 	componentDidMount() {
 		super.componentDidMount();
@@ -101,8 +80,9 @@ export class SparqlConnectionView extends WebviewComponent<
 	}
 
 	componentWillUnmount(): void {
-		this.setConfigScopeRef(null);
-		this.setAuthTypeSelectRef(null);
+		// Cleanup is now handled automatically by createVscodeElementRef
+		this._configScopeTabs.callback(null);
+		this._authTypeSelect.callback(null);
 	}
 
 	override componentDidReceiveMessage(message: SparqlConnectionMessages) {
@@ -204,7 +184,7 @@ export class SparqlConnectionView extends WebviewComponent<
 								</vscode-button>
 							</div>}
 						</div>
-						<vscode-tabs ref={this.setConfigScopeRef} selected-index={endpoint.configScope - 1}>
+						<vscode-tabs ref={this._configScopeTabs.callback} selected-index={endpoint.configScope - 1}>
 							<vscode-tab-header title={getConfigurationScopeDescription(ConfigurationScope.User)}>User</vscode-tab-header>
 							<vscode-tab-header title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}>Workspace</vscode-tab-header>
 						</vscode-tabs>
@@ -260,7 +240,7 @@ export class SparqlConnectionView extends WebviewComponent<
 							<div className="column-1">
 								<vscode-label>Type</vscode-label>
 								<vscode-single-select
-									ref={this.setAuthTypeSelectRef}
+									ref={this._authTypeSelect.callback}
 									value={this.state.selectedAuthTypeIndex.toString()}
 									disabled={this._isFormReadOnly()}>
 									<vscode-option value="0">None</vscode-option>
@@ -513,10 +493,11 @@ export class SparqlConnectionView extends WebviewComponent<
 		});
 	}
 
-	private _handleConfigScopeChange = (e: any) => {
-		if (this._configScopeTabs) {
+	private _handleConfigScopeChange = () => {
+		const element = this._configScopeTabs.current;
+		if (element) {
 			const endpoint = this.state.endpoint;
-			endpoint.configScope = this._configScopeTabs.selectedIndex + 1;
+			endpoint.configScope = element.selectedIndex + 1;
 
 			this.setState({ endpoint, hasUnsavedChanges: true });
 
@@ -527,16 +508,7 @@ export class SparqlConnectionView extends WebviewComponent<
 		}
 	}
 
-	private _handleAuthTypeChange = (event: any) => {
-		if (this._authTypeSelect) {
-			const i = this._authTypeSelect.selectedIndex ?? AuthTypeIndex.None;
-
-			this.setState({
-				selectedAuthTypeIndex: i,
-				hasUnsavedChanges: true
-			});
-		}
-	};
+	// Note: _handleAuthTypeChange is no longer needed as the logic is now in createVscodeElementRef callback
 
 	private _handleSaveEndpoint(e: any) {
 		e.preventDefault();
@@ -565,11 +537,7 @@ export class SparqlConnectionView extends WebviewComponent<
 	private _handleDeleteEndpoint(e: any) {
 		e.preventDefault();
 
-		this._executeCommand('mentor.command.deleteSparqlConnection', this.state.endpoint);
-	}
-
-	private _executeCommand(command: string, ...args: any[]) {
-		this.messaging.postMessage({ id: 'ExecuteCommand', command, args });
+		this.executeCommand('mentor.command.deleteSparqlConnection', this.state.endpoint);
 	}
 }
 

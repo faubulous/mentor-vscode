@@ -33,15 +33,15 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
         }
     }
 
-    protected async onDidReceiveMessage(message: SparqlConnectionMessages) {
+    protected async onDidReceiveMessage(message: SparqlConnectionMessages): Promise<boolean> {
         switch (message.id) {
             case 'ExecuteCommand': {
-                await vscode.commands.executeCommand(message.command, ...(message.args || []));
+                await super.onDidReceiveMessage(message);
 
                 if (message.command === 'mentor.command.deleteSparqlConnection') {
                     this.panel?.dispose();
                 }
-                return;
+                return true;
             }
             case 'GetSparqlConnection': {
                 if (this.selectedConnection) {
@@ -58,7 +58,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                         connection: connection
                     });
                 }
-                return;
+                return true;
             }
             case 'GetSparqlConnectionCredential': {
                 const credential = await mentor.credentialStorageService.getCredential(message.connectionId);
@@ -68,7 +68,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                     connectionId: message.connectionId,
                     credential
                 });
-                return;
+                return true;
             }
             case 'SaveSparqlConnection': {
                 await mentor.sparqlConnectionService.updateEndpoint(message.connection);
@@ -80,17 +80,17 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 }
 
                 vscode.window.showInformationMessage(`SPARQL connection saved.`);
-                return;
+                return true;
             }
             case 'UpdateSparqlConnection': {
                 await mentor.sparqlConnectionService.updateEndpoint(message.connection);
-                return;
+                return true;
             }
             case 'TestSparqlConnection': {
                 const result = await mentor.sparqlConnectionService.testConnection(message.connection, message.credential);
 
                 this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
-                return;
+                return true;
             }
             case 'FetchMicrosoftAuthCredential': {
                 const command = loginMicrosoftAuthProvider.id;
@@ -109,8 +109,10 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                         credential: null
                     });
                 }
-                return;
+                return true;
             }
+            default:
+                return super.onDidReceiveMessage(message);
         }
     }
 }

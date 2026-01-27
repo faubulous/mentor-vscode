@@ -31,16 +31,14 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         });
     }
 
-    protected async onDidReceiveMessage(message: SparqlResultsWebviewMessages) {
+    protected async onDidReceiveMessage(message: SparqlResultsWebviewMessages): Promise<boolean> {
         switch (message.id) {
             case 'GetSparqlQueryHistory': {
                 this._postQueryHistory();
-                return;
+                return true;
             }
-            case 'ExecuteCommand': {
-                await vscode.commands.executeCommand(message.command, ...(message.args || []));
-                return;
-            }
+            default:
+                return super.onDidReceiveMessage(message);
         }
     }
 

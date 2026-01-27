@@ -11,11 +11,13 @@ This folder contains reusable infrastructure and components for building Mentor 
 
 ## Key pieces
 
-- `webview-controller.ts`: Base class that unifies creation of a sidebar/panel View (WebviewView) and an editor Panel (WebviewPanel), plus message wiring. Subclass this for each feature.
+- `webview-controller.ts`: Base class that unifies creation of a sidebar/panel View (WebviewView) and an editor Panel (WebviewPanel), plus message wiring. Includes built-in handling for common messages like `ExecuteCommand`. Subclass this for each feature.
 - `webview-component-factory.ts`: Central HTML/options provider. Ensures consistent includes (codicon.css, vscode-elements.js, your bundle).
-- `webview-messaging.ts` and `webview-host.ts`: Thin messaging and state helpers used by the TSX client.
-- `webview-component.tsx`: React base class for client components with simple message and style helpers.
-- `registry.ts`: Central registry to register all controllers from one place.
+- `webview-messaging.ts`: Message types and interfaces including the shared `ExecuteCommandMessage` type.
+- `webview-host.ts`: Singleton manager for VS Code API in webviews (state persistence, messaging).
+- `webview-component.tsx`: React base class for client components with automatic messaging initialization, stylesheet injection, command execution helpers, and `createVscodeElementRef` for managing VS Code web component event listeners.
+- `webview-hooks.ts`: React hooks for functional components: `useWebviewMessaging`, `useWebviewState`, `useVscodeElementRef`, and `useStylesheet`.
+- `webview-registry.ts`: Central registry to register all controllers from one place.
 
 ## Conventions
 
@@ -45,10 +47,71 @@ This folder contains reusable infrastructure and components for building Mentor 
 
 5) Open it
 - For a View: focus it via `${viewType}.focus` or your command.
-- For a Panel: call your controller’s `show()` (or a helper method you define) to open in the active editor area.
+- For a Panel: call your controller's `show()` (or a helper method you define) to open in the active editor area.
 
 ## Tips
 
 - Prefer posting structured messages with clear `id` strings; keep them in a single `*Messages` type per webview.
 - For shared styles, consider injecting them via `WebviewComponent.addStylesheet()` to avoid HTML template changes.
 - If you support both a View and a Panel for the same feature, use a single controller class with both `viewType` and `panelId/panelTitle` set.
+- Use `this.executeCommand(...)` in components instead of manually constructing `ExecuteCommand` messages.
+- For functional components, use the hooks from `webview-hooks.ts` instead of the class-based `WebviewComponent`.
+
+## Using VS Code Web Components (vscode-elements)
+
+When using `@vscode-elements/elements` components that emit custom events (like `vsc-tabs-select` or `change`), use the `createVscodeElementRef` helper to automatically manage event listener cleanup:
+
+```tsx
+import { createVscodeElementRef } from '@src/views/webviews/webview-component';
+import { VscodeTabs } from '@vscode-elements/elements';
+
+class MyView extends WebviewComponent<...> {
+  private _tabsRef = createVscodeElementRef<VscodeTabs, { selectedIndex: number }>({
+    eventName: 'vsc-tabs-select',
+    onEvent: (element, event) => {
+      this.setState({ selectedIndex: event.detail.selectedIndex });
+    }
+  });
+
+  componentWillUnmount() {
+    this._tabsRef.callback(null); // Cleanup
+  }
+
+  render() {
+    return <vscode-tabs ref={this._tabsRef.callback}>...</vscode-tabs>;
+  }
+}
+```
+
+For functional components, use the `useVscodeElementRef` hook instead.
+
+## React Hooks for Functional Components
+
+For modern functional components, use the hooks from `webview-hooks.ts`:
+
+```tsx
+import { useWebviewMessaging, useWebviewState, useVscodeElementRef, useStylesheet } from '@src/views/webviews/webview-hooks';
+
+function MyView() {
+  // Auto-managed messaging with command execution
+  const { postMessage, executeCommand } = useWebviewMessaging<MyMessages>(message => {
+    if (message.id === 'DataLoaded') {
+      setData(message.data);
+    }
+  });
+
+  // Persisted state across webview lifecycle
+  const [state, setState] = useWebviewState({ count: 0 });
+
+  // Auto-managed event listeners for vscode-elements
+  const tabsRef = useVscodeElementRef<VscodeTabs>('vsc-tabs-select', (el, ev) => {
+    console.log('Tab changed:', ev.detail.selectedIndex);
+  });
+
+  // Auto-injected stylesheets
+  useStylesheet('my-styles', myStylesheet);
+
+  return <vscode-tabs ref={tabsRef}>...</vscode-tabs>;
+}
+```
+

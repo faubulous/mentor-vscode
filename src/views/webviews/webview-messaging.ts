@@ -25,3 +25,13 @@ export interface WebviewMessage {
 	 */
 	id: string;
 }
+
+/**
+ * Common message type for executing VS Code commands from webviews.
+ * Include this in your webview's message union type to enable command execution.
+ */
+export interface ExecuteCommandMessage extends WebviewMessage {
+	id: 'ExecuteCommand';
+	command: string;
+	args?: any[];
+}

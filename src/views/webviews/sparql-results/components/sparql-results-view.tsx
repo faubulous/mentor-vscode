@@ -1,4 +1,4 @@
-import { WebviewComponent } from '@src/views/webviews/webview-component';
+import { WebviewComponent, WebviewComponentProps } from '@src/views/webviews/webview-component';
 import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
 import { BindingsResult, BooleanResult } from '@src/services/sparql-query-state';
 import { SparqlQueryExecutionState } from '@src/services/sparql-query-state';
@@ -12,12 +12,7 @@ import stylesheet from './sparql-results-view.css';
 /**
  * Properties for the SPARQL results table component.
  */
-interface SparqlResultsViewProps {
-  /**
-   * Messaging used for communication with the extension host.
-   */
-  messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
-
+interface SparqlResultsViewProps extends WebviewComponentProps {
   /**
    * The SPARQL query results to display.
    */
@@ -37,12 +32,6 @@ export class SparqlResultsView extends WebviewComponent<
   {},
   SparqlResultsWebviewMessages
 > {
-  constructor(props: SparqlResultsViewProps) {
-    super(props);
-
-    this.messaging = props.messaging;
-  }
-
   componentDidMount() {
     super.componentDidMount();
 
@@ -56,7 +45,7 @@ export class SparqlResultsView extends WebviewComponent<
     return (
       <SparqlResultsProvider
         queryContext={context}
-        messaging={this.props.messaging}
+        messaging={this.messaging}
         defaultPageSize={this.props.defaultPageSize}>
         {this._renderContent()}
       </SparqlResultsProvider>

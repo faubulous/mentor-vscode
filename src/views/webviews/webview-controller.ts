@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { WebviewComponentFactory } from './webview-component-factory';
+import { ExecuteCommandMessage } from './webview-messaging';
 
 /**
  * Base controller for webviews providing unified lifecycle for both Views (WebviewView)
@@ -113,9 +114,20 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	}
 
 	/**
-	 * Handle messages received from the webview
+	 * Handle messages received from the webview. Override this in subclasses to handle
+	 * custom messages. Call `super.onDidReceiveMessage(message)` for unhandled messages
+	 * to enable default handling of common message types like `ExecuteCommand`.
 	 * @param message The message received from the webview.
-	 * @note Implement this in subclasses to handle messages from the webview.
+	 * @returns `true` if the message was handled, `false` otherwise.
 	 */
-	protected abstract onDidReceiveMessage(message: M): void | Promise<void>;
+	protected async onDidReceiveMessage(message: M): Promise<boolean> {
+		const msg = message as unknown as ExecuteCommandMessage;
+
+		if (msg.id === 'ExecuteCommand') {
+			await vscode.commands.executeCommand(msg.command, ...(msg.args || []));
+			return true;
+		}
+
+		return false;
+	}
 }

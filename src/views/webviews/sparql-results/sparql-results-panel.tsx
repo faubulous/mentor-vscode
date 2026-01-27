@@ -47,8 +47,6 @@ class SparqlResultsPanel extends WebviewComponent<
 	SparqlResultsPanelState,
 	SparqlResultsWebviewMessages
 > {
-	messaging = WebviewHost.getMessaging<SparqlResultsWebviewMessages>();
-
 	state: SparqlResultsPanelState = {
 		renderKey: 0,
 		activeQueries: [],
