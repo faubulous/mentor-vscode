@@ -355,8 +355,8 @@
         ],
         "configuration": "./out/datalog-language-config.json",
         "icon": {
-          "light": "./media/icons/light/rdf-file.svg",
-          "dark": "./media/icons/dark/rdf-file.svg"
+          "light": "./media/icons/light/datalog-file.svg",
+          "dark": "./media/icons/dark/datalog-file.svg"
         }
       },
       {
@@ -1045,6 +1045,13 @@
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e012"
+        }
+      },
+      "datalog-file": {
+        "description": "Datalog File",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e013"
         }
       }
     },
