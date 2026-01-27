@@ -21,6 +21,7 @@ import { findReferences } from './find-references';
 import { implementPrefixes } from './implement-prefixes';
 import { implementPrefixForIri } from './implement-prefix-for-iri';
 import { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
+import { openConnectionsList } from './open-connections-list';
 import { openDocument } from './open-document';
 import { openFileFromLanguage } from './open-file-from-language';
 import { openGraph } from './open-graph';
@@ -59,6 +60,7 @@ const commands = [
 	implementPrefixes,
 	implementPrefixForIri,
 	loginMicrosoftAuthProvider,
+	openConnectionsList,
 	openDocument,
 	openFileFromLanguage,
 	openGraph,

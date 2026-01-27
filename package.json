@@ -133,11 +133,6 @@
           "id": "mentor.view.definitionTree",
           "name": "Definitions",
           "icon": "media/glyphs/ue000-mentor.svg"
-        },
-        {
-          "id": "mentor.view.connectionTree",
-          "name": "Connections",
-          "icon": "media/glyphs/ue000-mentor.svg"
         }
       ],
       "mentor-sparql-results": [
@@ -165,7 +160,7 @@
       {
         "command": "mentor.command.deleteSparqlConnection",
         "key": "delete",
-        "when": "view == mentor.view.connectionTree && viewItem =~ /connection/ && viewItem.isProtected !== true"
+        "when": "view == mentor.view.sparqlConnectionsListPanel"
       }
     ],
     "notebooks": [
@@ -546,15 +541,15 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.refreshConnectionsTree",
-        "title": "Refresh",
-        "icon": "$(refresh)",
-        "category": "Mentor"
-      },
-      {
         "command": "mentor.command.createSparqlConnection",
         "title": "Add Connection...",
         "icon": "$(add)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.openConnectionsList",
+        "title": "Manage Connections",
+        "icon": "$(database)",
         "category": "Mentor"
       },
       {
@@ -793,6 +788,11 @@
           "group": "navigation@2"
         },
         {
+          "command": "mentor.command.openConnectionsList",
+          "when": "view == mentor.view.workspaceTree",
+          "group": "navigation@3"
+        },
+        {
           "command": "mentor.command.groupDefinitionsByType",
           "when": "view == mentor.view.definitionTree",
           "group": "2_workspace "
@@ -851,16 +851,6 @@
           "command": "mentor.command.refreshDefinitionsTree",
           "when": "view == mentor.view.definitionTree",
           "group": "navigation@99"
-        },
-        {
-          "command": "mentor.command.refreshConnectionsTree",
-          "when": "view == mentor.view.connectionTree",
-          "group": "navigation@99"
-        },
-        {
-          "command": "mentor.command.createSparqlConnection",
-          "when": "view == mentor.view.connectionTree",
-          "group": "navigation@99"
         }
       ],
       "view/item/context": [
@@ -898,11 +888,6 @@
           "command": "mentor.command.hideIndividualTypes",
           "when": "view.showIndividualTypes === true && viewItem == individuals",
           "group": "inline"
-        },
-        {
-          "command": "mentor.command.deleteSparqlConnection",
-          "when": "view == mentor.view.connectionTree && viewItem =~ /connection/ && viewItem.isProtected !== true",
-          "group": "z_commands"
         }
       ],
       "editor/context": [

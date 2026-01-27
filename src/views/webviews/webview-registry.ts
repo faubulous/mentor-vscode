@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { sparqlResultsController } from './sparql-results/sparql-results-controller';
 import { sparqlConnectionController } from './sparql-connection/sparql-connection-controller';
+import { sparqlConnectionsListController } from './sparql-connections-list/sparql-connections-list-controller';
 
 /**
  * Centralized register of all webview controllers. Extend this array with 
@@ -9,6 +10,7 @@ import { sparqlConnectionController } from './sparql-connection/sparql-connectio
 export const controllers = [
   sparqlResultsController,
   sparqlConnectionController,
+  sparqlConnectionsListController,
 ];
 
 export const webviewRegistry = {

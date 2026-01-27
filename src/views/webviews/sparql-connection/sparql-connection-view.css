@@ -14,7 +14,8 @@
 	max-width: 560px;
 	display: flex;
 	flex-direction: column;
-	gap: 3em;
+	padding: 16px;
+	gap: 16px;
 }
 
 .sparql-connection-view-container .form-header,
@@ -22,6 +23,19 @@
 	display: flex;
 	flex-direction: row;
 	gap: 1em;
+}
+
+.sparql-connection-view-container .form-header {
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--vscode-panel-border);
+	align-items: center;
+	justify-content: space-between;
+}
+
+.sparql-connection-view-container .form-header h2 {
+	margin: 0;
+	font-size: 1.4em;
+	font-weight: 500;
 }
 
 .sparql-connection-view-container .form-read-only {
@@ -42,11 +56,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 1.3em;
-}
-
-.sparql-connection-view-container .form-header {
-	align-items: center;
-	justify-content: space-between;
 }
 
 .sparql-connection-view-container .form-buttons {
