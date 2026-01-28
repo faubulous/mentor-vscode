@@ -13,7 +13,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
         super({
             componentPath: 'sparql-connection-view.js',
             panelId: 'sparqlConnectionPanel',
-            panelTitle: 'SPARQL Connection',
+            panelTitle: 'Edit Connection',
         });
     }
 

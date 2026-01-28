@@ -417,7 +417,7 @@ function SparqlConnectionView() {
 				<section>
 					<div className="form-header">
 						<div className="form-title">
-							<h2>SPARQL Connection</h2>
+							<h2>Edit Connection</h2>
 						</div>
 						{isFormReadOnly() && <div className="form-read-only">
 							<vscode-icon name="lock" /><span>This connection cannot be edited.</span>
@@ -485,7 +485,7 @@ function SparqlConnectionView() {
 					</div>}
 				</section>
 				<section>
-					<vscode-label>Authentication</vscode-label>
+					<span className='section-label'>Authentication</span>
 					<vscode-form-helper>
 						Select the authentication method to use when connecting to the SPARQL endpoint:
 					</vscode-form-helper>

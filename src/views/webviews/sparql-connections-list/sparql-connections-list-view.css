@@ -13,6 +13,7 @@
     align-items: center;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--vscode-panel-border);
+    min-height: 40px;
 }
 
 .connections-list-header h2 {
@@ -66,10 +67,10 @@
 .connection-item {
     display: flex;
     align-items: center;
-    min-height: 40px;
-    padding: 8px 12px;
+    min-height: 28px;
+    padding: 0 8px;
     box-sizing: border-box;
-    background: var(--vscode-list-hoverBackground);
+    background: var(--vscode-settings-textInputBackground);
     border-radius: 4px;
     cursor: pointer;
     transition: background-color 0.1s ease;
@@ -80,7 +81,7 @@
 }
 
 .connection-item-icon {
-    margin-right: 12px;
+    margin-right: 8px;
     color: var(--vscode-symbolIcon-fieldForeground);
 }
 

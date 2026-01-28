@@ -123,12 +123,11 @@ function SparqlConnectionsListView() {
 	};
 
 	const hasConnections = state.connections.length > 0;
-	const hasEditableConnections = state.connections.some(c => !c.isProtected);
 
 	return (
 		<div className="connections-list-container">
 			<div className="connections-list-header">
-				<h2>SPARQL Connections</h2>
+				<h2>Manage Connections</h2>
 				<vscode-button className="add-button" title="Add new connection" onClick={handleCreateConnection}>
 					<vscode-icon name="add" />
 				</vscode-button>
