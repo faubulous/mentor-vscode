@@ -61,7 +61,12 @@
 .sparql-connection-view-container .form-buttons {
 	display: flex;
 	gap: 1em;
-	align-items: center;
+	align-items: stretch;
+	min-height: 28px;
+}
+
+.sparql-connection-view-container vscode-single-select {
+	width: 200px;
 }
 
 .sparql-connection-view-container vscode-progress-bar {
@@ -81,7 +86,7 @@
 
 .sparql-connection-view-container vscode-form-helper {
 	margin-top: 0;
-	margin-bottom: 1.5em;
+	margin-bottom: 1em;
 }
 
 .sparql-connection-view-container vscode-context-menu {

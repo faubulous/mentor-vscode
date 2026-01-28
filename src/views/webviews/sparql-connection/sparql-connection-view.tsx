@@ -129,10 +129,10 @@ function SparqlConnectionView() {
 	}, []);
 
 	// Refs for vscode-elements with event handlers
-	const configScopeTabsRef = useVscodeElementRef<VscodeTabs, { selectedIndex: number }>(
-		'vsc-tabs-select',
+	const configScopeSelectRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
 		(element, _event) => {
-			const newConfigScope = element.selectedIndex + 1;
+			const newConfigScope = parseInt(element.value, 10);
 			setState(prev => {
 				const endpoint = { ...prev.endpoint, configScope: newConfigScope };
 				messaging?.postMessage({
@@ -437,12 +437,9 @@ function SparqlConnectionView() {
 							</vscode-button>
 						</div>}
 					</div>
-					<vscode-tabs ref={configScopeTabsRef} selected-index={endpoint.configScope - 1}>
-						<vscode-tab-header title={getConfigurationScopeDescription(ConfigurationScope.User)}>User</vscode-tab-header>
-						<vscode-tab-header title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}>Workspace</vscode-tab-header>
-					</vscode-tabs>
 				</section>
 				<section>
+					<vscode-label>Endpoint URL</vscode-label>
 					<div className={getEndpointSectionClassName()}>
 						<vscode-textfield
 							required
@@ -508,6 +505,20 @@ function SparqlConnectionView() {
 							{state.selectedAuthTypeIndex === AuthTypeIndex.Microsoft && renderMicrosoftAuthFields()}
 						</div>}
 					</div>
+				</section>
+				<section>
+					<span className='section-label'>Scope</span>
+					<vscode-form-helper>
+						Select where the connection settings should be stored:
+					</vscode-form-helper>
+					<vscode-single-select
+						ref={configScopeSelectRef}
+						value={endpoint.configScope.toString()}
+						disabled={isFormReadOnly()}
+						className="connection-scope-select">
+						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.User)} value="1">User</vscode-option>
+						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}value="2">Workspace</vscode-option>
+					</vscode-single-select>
 				</section>
 			</form>
 		</div>
