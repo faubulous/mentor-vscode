@@ -82,6 +82,10 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                 }
                 return true;
             }
+            case 'ListGraphs': {
+                await vscode.commands.executeCommand('mentor.command.listGraphs', message.connection);
+                return true;
+            }
             default:
                 return super.onDidReceiveMessage(message);
         }

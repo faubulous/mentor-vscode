@@ -8,4 +8,5 @@ export type SparqlConnectionsListMessages =
     { id: 'ConnectionsChanged', connections: SparqlConnection[] } |
     { id: 'EditConnection', connection: SparqlConnection } |
     { id: 'DeleteConnection', connection: SparqlConnection } |
-    { id: 'CreateConnection' };
+    { id: 'CreateConnection' } |
+    { id: 'ListGraphs', connection: SparqlConnection };

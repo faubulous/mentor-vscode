@@ -30,7 +30,6 @@
 	border-bottom: 1px solid var(--vscode-panel-border);
 	align-items: center;
 	justify-content: space-between;
-    min-height: 40px;
 }
 
 .sparql-connection-view-container .form-header h2 {
@@ -44,6 +43,7 @@
 	flex-direction: row;
 	align-items: center;
 	gap: 0.5em;
+	font-weight: 600;
 }
 
 .sparql-connection-view-container .column {
@@ -61,12 +61,7 @@
 .sparql-connection-view-container .form-buttons {
 	display: flex;
 	gap: 1em;
-	align-items: stretch;
-	min-height: 28px;
-}
-
-.sparql-connection-view-container vscode-single-select {
-	width: 200px;
+	align-items: center;
 }
 
 .sparql-connection-view-container vscode-progress-bar {
@@ -86,25 +81,12 @@
 
 .sparql-connection-view-container vscode-form-helper {
 	margin-top: 0;
-	margin-bottom: 1em;
+	margin-bottom: 1.5em;
 }
 
 .sparql-connection-view-container vscode-context-menu {
 	position: absolute;
 	z-index: 10;
-}
-
-.sparql-connection-view-container vscode-label {
-	display: block;
-	margin: .5em 0;
-}
-
-.sparql-connection-view-container .section-label {
-	text-transform: uppercase;
-	font-weight: 600;
-	display: block;
-	line-height: 2em;
-	margin-top: 1em;
 }
 
 .sparql-connection-view-container .section-endpoint-url {
@@ -118,7 +100,10 @@
 
 .sparql-connection-view-container .section-endpoint-url vscode-icon {
 	margin: 0 .2em 0 0.5em;
-	color: var(--vscode-symbolIcon-fieldForeground);
+}
+
+.sparql-connection-view-container .section-endpoint-url vscode-icon.icon-testing {
+	color: var(--vscode-textLink-activeForeground);
 }
 
 .sparql-connection-view-container .section-endpoint-url vscode-icon.icon-success {
@@ -172,9 +157,10 @@
 	margin: 0;
 }
 
-.sparql-connection-view-container vscode-form-helper {
-	color: var(--vscode-descriptionForeground);
-	font-size: 1em;
-	line-height: 1.4;
-	padding: .4em 0 .6em 0;
+.sparql-connection-view-container .section-authentication-container div vscode-label {
+	margin-top: 1.5em;
+}
+
+.sparql-connection-view-container .section-authentication-container div vscode-label:first-child {
+	margin-top: -5px;
 }

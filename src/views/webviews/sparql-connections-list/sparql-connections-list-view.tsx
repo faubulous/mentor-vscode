@@ -68,6 +68,11 @@ function SparqlConnectionsListView() {
 		messaging?.postMessage({ id: 'DeleteConnection', connection });
 	};
 
+	const handleListGraphs = (connection: SparqlConnection, e: React.MouseEvent) => {
+		e.stopPropagation();
+		messaging?.postMessage({ id: 'ListGraphs', connection });
+	};
+
 	const renderConnection = (connection: SparqlConnection) => {
 		const isProtected = connection.isProtected === true;
 		const isWorkspaceStore = connection.id === 'workspace';
@@ -85,17 +90,24 @@ function SparqlConnectionsListView() {
 						{isWorkspaceStore ? 'workspace:' : connection.endpointUrl}
 					</span>
 				</div>
-				{isProtected ? (
-					<vscode-icon name="lock" className="connection-item-lock" title="Built-in connection" />
-				) : (
-					<div className="connection-item-actions">
+				<div className="connection-item-actions">
+					<vscode-toolbar-button
+						title="List graphs"
+						onClick={(e: React.MouseEvent) => handleListGraphs(connection, e)}
+					>
+						<vscode-icon name="list-tree" />
+					</vscode-toolbar-button>
+					{!isProtected && (
 						<vscode-toolbar-button
 							title="Delete connection"
 							onClick={(e: React.MouseEvent) => handleDeleteConnection(connection, e)}
 						>
 							<vscode-icon name="trash" />
 						</vscode-toolbar-button>
-					</div>
+					)}
+				</div>
+				{isProtected && (
+					<vscode-icon name="lock" className="connection-item-lock" title="Built-in connection" />
 				)}
 			</div>
 		);

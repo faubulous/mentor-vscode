@@ -559,6 +559,12 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.listGraphs",
+        "title": "List Graphs",
+        "icon": "$(list-tree)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.webview.show",
         "title": "Show Webview",
         "icon": "$(layout-panel)",
@@ -1051,6 +1057,13 @@
             "type": "array",
             "description": "List of SPARQL endpoint connections.",
             "default": []
+          },
+          "mentor.sparql.listGraphsQuery": {
+            "type": "string",
+            "title": "List Graphs Query",
+            "description": "SPARQL query used to retrieve all named graphs and the default graph from a SPARQL endpoint.",
+            "default": "SELECT DISTINCT ?graph (COUNT(*) AS ?triples)\nWHERE {\n  {\n    GRAPH ?graph { ?s ?p ?o }\n  }\n  UNION\n  {\n    ?s ?p ?o\n    FILTER NOT EXISTS { GRAPH ?g { ?s ?p ?o } }\n    BIND(\"default\" AS ?graph)\n  }\n}\nGROUP BY ?graph\nORDER BY DESC(?triples)",
+            "editPresentation": "multilineText"
           },
           "mentor.definitionTree.labelStyle": {
             "type": "string",
