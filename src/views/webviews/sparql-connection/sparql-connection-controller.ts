@@ -88,7 +88,6 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
             }
             case 'TestSparqlConnection': {
                 const result = await mentor.sparqlConnectionService.testConnection(message.connection, message.credential);
-
                 this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
                 return true;
             }

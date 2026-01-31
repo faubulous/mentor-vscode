@@ -7,7 +7,6 @@ import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { AuthCredential, BasicAuthCredential, BearerAuthCredential, MicrosoftAuthCredential } from '@src/services/credential';
 import { CredentialFactory } from '@src/services/credential-factory';
-import { HttpStatusCodes } from '@src/utilities/http-status-codes';
 import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 import stylesheet from './sparql-connection-view.css';
 
@@ -244,30 +243,6 @@ function SparqlConnectionView() {
 		});
 	};
 
-	// Render helpers
-	const renderConnectionTestErrorMessage = (connectionError: { code: number; message: string }) => {
-		if (connectionError.code === 0) {
-			return (
-				<div>
-					<p>The host could not be reached. Possible causes include:</p>
-					<ul>
-						<li>Incorrect endpoint URL</li>
-						<li>The endpoint is unavailable</li>
-						<li>Failing CORS preflight request</li>
-						<li>Firewall or network policy is blocking the request</li>
-					</ul>
-				</div>
-			);
-		} else {
-			return (
-				<div>
-					<h4>Error {connectionError.code} - {HttpStatusCodes[connectionError.code].message}</h4>
-					<p>{connectionError.message}</p>
-				</div>
-			);
-		}
-	};
-
 	const renderBasicAuthFields = () => {
 		const credential = state.basicCredential;
 
@@ -408,8 +383,6 @@ function SparqlConnectionView() {
 		return <div>Loading...</div>;
 	}
 
-	const connectionError = state.connectionError;
-
 	return (
 		<div className="sparql-connection-view-container">
 			{isConnectionTesting() && <vscode-progress-bar />}
@@ -477,9 +450,6 @@ function SparqlConnectionView() {
 							onClick={handleTestEndpoint}>
 						</vscode-button>
 					</div>
-					{connectionError && <div className='section-endpoint-status status-error'>
-						{renderConnectionTestErrorMessage(connectionError)}
-					</div>}
 				</section>
 				<section>
 					<span className='section-label'>Authentication</span>

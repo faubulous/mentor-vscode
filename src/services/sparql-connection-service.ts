@@ -412,18 +412,36 @@ export class SparqlConnectionService {
 			if (response.ok) {
 				return null;
 			} else {
-				const text = await response.text();
-
-				return {
+				const error = {
 					code: response.status,
-					message: text || response.statusText
+					message: await response.text() || response.statusText
 				};
+
+				let errorMessage = '';
+
+				if (error.code === 0) {
+					errorMessage = 'Connection failed: The host could not be reached.\n Possible causes: Incorrect endpoint URL, the endpoint is unavailable, failing CORS preflight request or a firewall/network policy blocking the request.';
+				} else {
+					errorMessage = `Connection failed: Error ${error.code} - ${error.message}`;
+				}
+
+				vscode.window.showErrorMessage(errorMessage);
+
+				return error;
 			}
 		} catch (error: any) {
-			return {
+			const errorObj = {
 				code: error.status || error.code || 0,
 				message: error.message || String(error)
 			};
+			let errorMessage = '';
+			if (errorObj.code === 0) {
+				errorMessage = 'Connection failed: The host could not be reached. Possible causes include: Incorrect endpoint URL, the endpoint is unavailable, failing CORS preflight request, or a firewall/network policy blocking the request.';
+			} else {
+				errorMessage = `Connection failed: Error ${errorObj.code} - ${errorObj.message}`;
+			}
+			vscode.window.showErrorMessage(errorMessage);
+			return errorObj;
 		}
 	}
 
