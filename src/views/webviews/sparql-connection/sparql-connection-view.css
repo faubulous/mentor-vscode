@@ -87,11 +87,21 @@
 .sparql-connection-view-container vscode-form-helper {
 	margin-top: 0;
 	margin-bottom: 1.5em;
+    color: var(--vscode-descriptionForeground);
 }
 
 .sparql-connection-view-container vscode-context-menu {
 	position: absolute;
 	z-index: 10;
+}
+
+.sparql-connection-view-container .section-label {
+	color: var(--vscode-foreground);
+    font-size: 1em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+	line-height: 2em;
 }
 
 .sparql-connection-view-container .section-endpoint-url {

@@ -269,8 +269,7 @@ function SparqlConnectionsListView() {
 							disabled={isTestingAll}
 							secondary
 						>
-							<vscode-icon name="debug-disconnect" slot="start" />
-							Test All
+							<vscode-icon name="debug-disconnect" />
 						</vscode-toolbar-button>
 					)}
 					<vscode-button className="add-button" title="Add new connection" onClick={handleCreateConnection}>

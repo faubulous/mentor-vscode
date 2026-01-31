@@ -51,6 +51,7 @@
     flex-direction: column;
     gap: 4px;
     margin-bottom: 12px;
+	padding: 5px 0;
 }
 
 .connections-scope-title {
@@ -65,7 +66,7 @@
     color: var(--vscode-descriptionForeground);
     font-size: 1em;
     line-height: 1.4;
-	padding: .4em 0 .6em 0;
+	padding: 0 0 .6em 0;
 }
 
 .connections-list {
