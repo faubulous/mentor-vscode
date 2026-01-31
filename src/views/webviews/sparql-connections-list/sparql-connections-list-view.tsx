@@ -123,8 +123,8 @@ function SparqlConnectionsListView() {
 
 	const handleTestAllConnections = () => {
 		// Get all testable connections (not workspace store)
-		const testableConnections = state.connections.filter(c => c.id !== 'workspace');
-		
+		const testableConnections = state.connections;
+
 		// Mark all as testing and clear previous results
 		setState(prev => {
 			const newTestingConnections = new Set(prev.testingConnections);
@@ -157,34 +157,40 @@ function SparqlConnectionsListView() {
 		const testResult = state.testResults.get(connection.id);
 
 		const getConnectionIcon = () => {
-			if (isWorkspaceStore) {
-				return <vscode-icon name="database" className="connection-item-icon" />;
-			}
 			if (isTesting) {
 				return <vscode-icon name="ellipsis" className="connection-item-icon icon-testing" />;
-			}
-			if (testResult?.success) {
+			} else if (testResult?.success) {
 				return <vscode-icon name="pass" className="connection-item-icon icon-success" />;
-			}
-			if (testResult && !testResult.success) {
+			} else if (testResult && !testResult.success) {
 				return <vscode-icon name="error" className="connection-item-icon icon-error" title={testResult.error} />;
+			} else {
+				return <vscode-icon name="database" className="connection-item-icon" />;
 			}
-			return <vscode-icon name="database" className="connection-item-icon" />;
 		};
 
 		const getTestTitle = () => {
-			if (isTesting) return 'Testing connection...';
-			if (testResult) {
-				return testResult.success ? 'Connection successful' : `Connection failed: ${testResult.error}`;
+			if (isTesting) {
+				return 'Testing connection...';
+			} else if (testResult?.success) {
+				return 'Connection successful';
+			} else if (testResult) {
+				return `Connection failed: ${testResult.error}`;
+			} else {
+				return 'Test connection';
 			}
-			return 'Test connection';
 		};
 
 		const getConnectionItemClass = () => {
 			let className = 'connection-item';
-			if (isTesting) className += ' testing';
-			else if (testResult?.success) className += ' test-success';
-			else if (testResult && !testResult.success) className += ' test-error';
+
+			if (isTesting) {
+				className += ' testing';
+			} else if (testResult?.success) {
+				className += ' test-success';
+			} else if (testResult && !testResult.success) {
+				className += ' test-error';
+			}
+
 			return className;
 		};
 
@@ -198,7 +204,7 @@ function SparqlConnectionsListView() {
 				{getConnectionIcon()}
 				<div className="connection-item-content">
 					<span className="connection-item-url">
-						{isWorkspaceStore ? 'workspace:' : connection.endpointUrl}
+						{connection.endpointUrl}
 					</span>
 				</div>
 				<div className="connection-item-actions">
@@ -208,15 +214,13 @@ function SparqlConnectionsListView() {
 					>
 						<vscode-icon name="list-unordered" />
 					</vscode-toolbar-button>
-					{!isWorkspaceStore && (
-						<vscode-toolbar-button
-							title={getTestTitle()}
-							onClick={(e: React.MouseEvent) => handleTestConnection(connection, e)}
-							disabled={isTesting}
-						>
-							<vscode-icon name="debug-disconnect" />
-						</vscode-toolbar-button>
-					)}
+					<vscode-toolbar-button
+						title={getTestTitle()}
+						onClick={(e: React.MouseEvent) => handleTestConnection(connection, e)}
+						disabled={isTesting}
+					>
+						<vscode-icon name="debug-disconnect" />
+					</vscode-toolbar-button>
 					{!isProtected && (
 						<vscode-toolbar-button
 							title="Delete connection"
@@ -262,9 +266,9 @@ function SparqlConnectionsListView() {
 				<h2>Manage Connections</h2>
 				<div className="connections-list-header-actions">
 					{testableConnectionsCount > 0 && (
-						<vscode-toolbar-button 
-							className="test-all-button" 
-							title="Test all connections" 
+						<vscode-toolbar-button
+							className="test-all-button"
+							title="Test all connections"
 							onClick={handleTestAllConnections}
 							disabled={isTestingAll}
 							secondary

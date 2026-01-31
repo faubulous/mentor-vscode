@@ -84,7 +84,7 @@ export function getTokenAtOffset(tokens: IToken[], offset: number): IToken[] {
 /**
  * Indicates whether the token is a variable.
  * @param token A token.
- * @returns true if the token is a variable, false otherwise.
+ * @returns `true` if the token is a variable, `false` otherwise.
  */
 export function isVariable(token: IToken) {
 	const tokenType = token.tokenType?.tokenName;

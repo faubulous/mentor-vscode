@@ -85,10 +85,6 @@ export function SparqlWelcomeView() {
 		executeCommand('mentor.command.openFileFromLanguage', 'sparql');
 	};
 
-	const handleConnectToEndpoint = () => {
-		executeCommand('mentor.command.createSparqlConnection');
-	};
-
 	return (
 		<vscode-scrollable>
 			<div className="sparql-welcome-view-container">
@@ -104,10 +100,6 @@ export function SparqlWelcomeView() {
 						<vscode-toolbar-button onClick={handleSelectSparqlQueryFile}>
 							<span className="codicon codicon-folder-opened"></span>
 							<span className="label">Open Query...</span>
-						</vscode-toolbar-button>
-						<vscode-toolbar-button onClick={handleConnectToEndpoint}>
-							<span className="codicon codicon-debug-disconnect"></span>
-							<span className="label">Connect to Endpoint...</span>
 						</vscode-toolbar-button>
 						<vscode-toolbar-button onClick={handleManageConnections}>
 							<span className="codicon codicon-database"></span>

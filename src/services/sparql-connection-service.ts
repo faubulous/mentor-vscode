@@ -415,34 +415,34 @@ export class SparqlConnectionService {
 				const error = {
 					code: response.status,
 					message: await response.text() || response.statusText
-				};
-
-				let errorMessage = '';
-
-				if (error.code === 0) {
-					errorMessage = 'Connection failed: The host could not be reached.\n Possible causes: Incorrect endpoint URL, the endpoint is unavailable, failing CORS preflight request or a firewall/network policy blocking the request.';
-				} else {
-					errorMessage = `Connection failed: Error ${error.code} - ${error.message}`;
 				}
 
-				vscode.window.showErrorMessage(errorMessage);
+				this._showErrorMessage(connection.endpointUrl, error);
 
 				return error;
 			}
-		} catch (error: any) {
-			const errorObj = {
-				code: error.status || error.code || 0,
-				message: error.message || String(error)
+		} catch (e: any) {
+			const error = {
+				code: e.status || e.code || 0,
+				message: e.message || String(e)
 			};
-			let errorMessage = '';
-			if (errorObj.code === 0) {
-				errorMessage = 'Connection failed: The host could not be reached. Possible causes include: Incorrect endpoint URL, the endpoint is unavailable, failing CORS preflight request, or a firewall/network policy blocking the request.';
-			} else {
-				errorMessage = `Connection failed: Error ${errorObj.code} - ${errorObj.message}`;
-			}
-			vscode.window.showErrorMessage(errorMessage);
-			return errorObj;
+
+			this._showErrorMessage(connection.endpointUrl, error);
+
+			return error;
 		}
+	}
+
+	private _showErrorMessage(endpointUrl: string, error: { code: number; message: string }): void {
+		let errorMessage = '';
+
+		if (error.code === 0) {
+			errorMessage = `Connection failed: ${endpointUrl}\n Possible causes: Incorrect endpoint URL, the endpoint is unavailable, failing CORS preflight request or a firewall/network policy blocking the request.`;
+		} else {
+			errorMessage = `Connection failed: Error ${error.code} - ${error.message}`;
+		}
+
+		vscode.window.showErrorMessage(errorMessage);
 	}
 
 	/**
