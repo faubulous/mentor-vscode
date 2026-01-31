@@ -382,6 +382,11 @@ export class SparqlConnectionService {
 	 * @returns `null` if the connection is successful, or an error object { code, message } otherwise.
 	 */
 	async testConnection(connection: SparqlConnection, credential?: AuthCredential | null): Promise<null | { code: number; message: string }> {
+		// Workspace store is always available - no need to test
+		if (connection.id === 'workspace') {
+			return null;
+		}
+
 		try {
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/sparql-query',

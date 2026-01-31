@@ -21,6 +21,17 @@
     font-weight: 500;
 }
 
+.connections-list-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.connections-list-header .test-all-button {
+    height: 28px;
+    padding: 0 8px;
+}
+
 .connections-list-header .add-button {
     min-width: auto;
     width: 28px;
@@ -71,12 +82,25 @@
     box-sizing: border-box;
     background: var(--vscode-settings-textInputBackground);
     border-radius: 4px;
+    border-left: 3px solid transparent;
     cursor: pointer;
-    transition: background-color 0.1s ease;
+    transition: background-color 0.1s ease, border-color 0.2s ease;
 }
 
 .connection-item:hover {
     background: var(--vscode-list-activeSelectionBackground);
+}
+
+.connection-item.testing {
+    border-left-color: var(--vscode-textLink-activeForeground);
+}
+
+.connection-item.test-success {
+    border-left-color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.connection-item.test-error {
+    border-left-color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
 .connection-item-icon {
@@ -105,6 +129,19 @@
     margin-left: 8px;
 }
 
+.connection-item-icon.icon-testing {
+    color: var(--vscode-textLink-activeForeground);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.connection-item-icon.icon-success {
+    color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.connection-item-icon.icon-error {
+    color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
 .connection-item-actions {
     display: flex;
     gap: 4px;
@@ -114,6 +151,11 @@
 
 .connection-item:hover .connection-item-actions {
     opacity: 1;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
 }
 
 .empty-state {

@@ -83,7 +83,38 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                 return true;
             }
             case 'ListGraphs': {
+                // First test the connection
+                const testResult = await mentor.sparqlConnectionService.testConnection(message.connection);
+                
+                if (testResult !== null) {
+                    // Connection failed - send error result
+                    this.postMessage({
+                        id: 'TestConnectionResult',
+                        connectionId: message.connection.id,
+                        success: false,
+                        error: testResult.message
+                    });
+                    return true;
+                }
+                
+                // Connection succeeded - update state and execute query
+                this.postMessage({
+                    id: 'TestConnectionResult',
+                    connectionId: message.connection.id,
+                    success: true
+                });
+                
                 await vscode.commands.executeCommand('mentor.command.listGraphs', message.connection);
+                return true;
+            }
+            case 'TestConnection': {
+                const result = await mentor.sparqlConnectionService.testConnection(message.connection);
+                this.postMessage({
+                    id: 'TestConnectionResult',
+                    connectionId: message.connection.id,
+                    success: result === null,
+                    error: result?.message
+                });
                 return true;
             }
             default:

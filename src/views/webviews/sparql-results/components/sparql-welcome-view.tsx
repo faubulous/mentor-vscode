@@ -65,6 +65,10 @@ export function SparqlWelcomeView() {
 		}
 	};
 
+	const handleManageConnections = () => {
+		executeCommand('mentor.command.openConnectionsList');
+	};
+
 	const handleOpenDocument = (query: SparqlQueryExecutionState) => {
 		executeCommand('mentor.command.openDocument', query.documentIri);
 	};
@@ -104,6 +108,10 @@ export function SparqlWelcomeView() {
 						<vscode-toolbar-button onClick={handleConnectToEndpoint}>
 							<span className="codicon codicon-debug-disconnect"></span>
 							<span className="label">Connect to Endpoint...</span>
+						</vscode-toolbar-button>
+						<vscode-toolbar-button onClick={handleManageConnections}>
+							<span className="codicon codicon-database"></span>
+							<span className="label">Manage Connections...</span>
 						</vscode-toolbar-button>
 					</div>
 				</div>

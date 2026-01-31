@@ -9,4 +9,6 @@ export type SparqlConnectionsListMessages =
     { id: 'EditConnection', connection: SparqlConnection } |
     { id: 'DeleteConnection', connection: SparqlConnection } |
     { id: 'CreateConnection' } |
-    { id: 'ListGraphs', connection: SparqlConnection };
+    { id: 'ListGraphs', connection: SparqlConnection } |
+    { id: 'TestConnection', connection: SparqlConnection } |
+    { id: 'TestConnectionResult', connectionId: string, success: boolean, error?: string };
