@@ -93,8 +93,10 @@ function SparqlConnectionsListView() {
 		setState(prev => {
 			const newTestingConnections = new Set(prev.testingConnections);
 			newTestingConnections.add(connection.id);
+
 			const newTestResults = new Map(prev.testResults);
 			newTestResults.delete(connection.id);
+			
 			return {
 				...prev,
 				testingConnections: newTestingConnections,

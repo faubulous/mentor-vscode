@@ -9,6 +9,7 @@ import { createDocumentFromLanguage } from './create-document-from-language';
 import { createNotebook } from './create-notebook';
 import { createNotebookFromEditor } from './create-notebook-from-editor';
 import { createSparqlConnection } from './create-sparql-connection';
+import { deleteGraph } from './delete-graph';
 import { deletePrefixes } from './delete-prefixes';
 import { deleteSparqlConnection } from './delete-sparql-connection';
 import { editSparqlConnection } from './edit-sparql-connection';
@@ -49,6 +50,7 @@ const commands = [
 	createNotebook,
 	createNotebookFromEditor,
 	createSparqlConnection,
+	deleteGraph,
 	deletePrefixes,
 	deleteSparqlConnection,
 	editSparqlConnection,

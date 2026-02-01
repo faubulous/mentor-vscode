@@ -24,9 +24,19 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		return <div>Loading...</div>;
 	}
 
-	const result = queryContext.result?.type === 'bindings'
-		? queryContext.result as BindingsResult
-		: null;
+	const result = queryContext.result?.type === 'bindings' ?
+		queryContext.result as BindingsResult : null;
+
+	// Determine which binding variables are named graphs
+	const graphHeaders = new Set<string>();
+
+	if (result) {
+		const graphExpression = /GRAPH\s+\?([a-zA-Z_][a-zA-Z0-9_]*)/ig;
+
+		for (const column of graphExpression.exec(queryContext.query || '') || []) {
+			graphHeaders.add(column);
+		}
+	}
 
 	const handleRightClick = (event: React.MouseEvent) => {
 		// Do not show default context menu on right click.
@@ -42,11 +52,30 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		navigator.clipboard.writeText(binding.value);
 	};
 
+	const handleOpenGraph = (node: Term) => {
+		const value = node.value;
+		messaging?.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.command.openGraph',
+			args: [value]
+		});
+	};
+
+	const handleDeleteGraph = (node: Term) => {
+		const value = node.value;
+
+		messaging?.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.command.deleteGraph',
+			args: [queryContext.documentIri, value]
+		});
+	};
+
 	const handleDescribeNamedNode = (node: Term) => {
 		const value = node.value;
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
-			command: 'mentor.command.executeDescribeQuery',
+			command: 'mentor.command.executeSerializeQuery',
 			args: [queryContext.documentIri, value]
 		});
 	};
@@ -73,7 +102,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		</div>
 	);
 
-	const renderNamedNode = (binding: Term, namespaceMap?: Record<string, string>) => {
+	const getNamedNodeLabel = (binding: Term, namespaceMap?: Record<string, string>) => {
 		let value = (<span className="label">{binding.value}</span>);
 
 		const namespaceIri = Uri.getNamespaceIri(binding.value);
@@ -84,11 +113,43 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 			value = (<span>{prefix}:<span className="label">{localName}</span></span>);
 		}
 
+		return value;
+	};
+
+	const renderGraphNode = (binding: Term, namespaceMap?: Record<string, string>) => {
+		const label = getNamedNodeLabel(binding, namespaceMap);
+
+		return (
+			<div className="cell">
+				<pre className="cell-value">
+					<a href="#" onClick={() => handleOpenGraph(binding)}>
+						{label}
+					</a>
+				</pre>
+				<div className="cell-actions">
+					<vscode-toolbar-button
+						title="Delete Graph"
+						onClick={() => handleDeleteGraph(binding)}>
+						<span className="codicon codicon-trash"></span>
+					</vscode-toolbar-button>
+					<vscode-toolbar-button
+						title="Copy Cell Value"
+						onClick={() => handleCopyCellClick(binding)}>
+						<span className="codicon codicon-copy"></span>
+					</vscode-toolbar-button>
+				</div>
+			</div>
+		);
+	};
+
+	const renderNamedNode = (binding: Term, namespaceMap?: Record<string, string>) => {
+		const label = getNamedNodeLabel(binding, namespaceMap);
+
 		return (
 			<div className="cell">
 				<pre className="cell-value">
 					<a href="#" onClick={() => handleDescribeNamedNode(binding)}>
-						{value}
+						{label}
 					</a>
 				</pre>
 				<div className="cell-actions">
@@ -126,10 +187,14 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		</div>
 	);
 
-	const renderCell = (binding: Term | undefined, namespaceMap?: Record<string, string>) => {
+	const renderCell = (binding: Term | undefined, header: string, namespaceMap?: Record<string, string>) => {
 		switch (binding?.termType) {
 			case 'NamedNode':
-				return renderNamedNode(binding, namespaceMap);
+				if (graphHeaders.has(header)) {
+					return renderGraphNode(binding, namespaceMap);
+				} else {
+					return renderNamedNode(binding, namespaceMap);
+				}
 			case 'BlankNode':
 				return renderBlankNode(binding);
 			case 'Literal':
@@ -163,7 +228,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 							</vscode-table-cell>
 							{result.columns.map(header => (
 								<vscode-table-cell key={`${paging.startIndex + rowIndex}-${header}`}>
-									{renderCell(row[header], result.namespaceMap)}
+									{renderCell(row[header], header, result.namespaceMap)}
 								</vscode-table-cell>
 							))}
 						</vscode-table-row>

@@ -1065,6 +1065,13 @@
             "default": "SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph { ?s ?p ?o }\n}\nORDER BY ?graph",
             "editPresentation": "multilineText"
           },
+          "mentor.sparql.dropGraphQuery": {
+            "type": "string",
+            "title": "Drop Graph Query",
+            "description": "SPARQL query used to drop a named graph from a SPARQL endpoint.",
+            "default": "DROP GRAPH <@graphIri>",
+            "editPresentation": "multilineText"
+          },
           "mentor.definitionTree.labelStyle": {
             "type": "string",
             "title": "Default Tree Label Style",

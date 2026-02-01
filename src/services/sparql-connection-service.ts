@@ -164,16 +164,18 @@ export class SparqlConnectionService {
 
 	/**
 	 * Get the configured SPARQL connection for a specific document (TextDocument or NotebookCell).
-	 * @param documentUri The URI of the document or notebook cell.
+	 * @param documentIri The URI of the document or notebook cell.
 	 * @returns The SPARQL connection or the Mentor Workspace triple store if no connection is found.
 	 */
-	getConnectionForDocument(documentUri: vscode.Uri): SparqlConnection {
+	getConnectionForDocument(documentIri: vscode.Uri | string): SparqlConnection {
+		const uri = typeof (documentIri) === 'string' ? vscode.Uri.parse(documentIri) : documentIri;
+
 		let connectionId;
 
-		if (documentUri.scheme === 'vscode-notebook-cell') {
-			connectionId = this._getConnectionIdForCell(documentUri);
+		if (uri.scheme === 'vscode-notebook-cell') {
+			connectionId = this._getConnectionIdForCell(uri);
 		} else {
-			connectionId = this._getConnectionIdForDocument(documentUri);
+			connectionId = this._getConnectionIdForDocument(uri);
 		}
 
 		const connection = this.getConnection(connectionId ?? '');
