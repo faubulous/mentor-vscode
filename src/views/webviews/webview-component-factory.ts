@@ -19,14 +19,17 @@ export class WebviewComponentFactory {
 	 * @param viewColumn The column in which to display the webview panel.
 	 * @returns The created webview panel.
 	 */
-	createPanel(id: string, title: string, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside): vscode.WebviewPanel {
+	createPanel(id: string, title: string, icon?: string, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside): vscode.WebviewPanel {
 		const options = this._getWebviewOptions();
 
 		const panel = vscode.window.createWebviewPanel(id, title, viewColumn, options);
 		panel.webview.html = this._getWebviewHtml(panel.webview);
-		panel.iconPath = {
-			light: this._getIconPath('database-light.svg'),
-			dark: this._getIconPath('database-dark.svg')
+
+		if (icon) {
+			panel.iconPath = {
+				light: this._getIconPath('light', icon),
+				dark: this._getIconPath('dark', icon)
+			}
 		}
 
 		return panel;
@@ -44,10 +47,10 @@ export class WebviewComponentFactory {
 
 		return view;
 	}
-	private _getIconPath(iconName: string): vscode.Uri {
-		return vscode.Uri.joinPath(this._context.extensionUri, 'media', 'icons', iconName);
+	private _getIconPath(theme: string, iconName: string): vscode.Uri {
+		return vscode.Uri.joinPath(this._context.extensionUri, 'media', 'icons', theme, iconName + '.svg');
 	}
-	
+
 	private _getWebviewOptions(): vscode.WebviewPanelOptions & vscode.WebviewOptions {
 		return {
 			enableScripts: true,

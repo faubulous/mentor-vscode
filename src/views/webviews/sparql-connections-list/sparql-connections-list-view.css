@@ -106,7 +106,6 @@
 
 .connection-item-icon {
     margin-right: 8px;
-    color: var(--vscode-symbolIcon-fieldForeground);
 }
 
 .connection-item-content {

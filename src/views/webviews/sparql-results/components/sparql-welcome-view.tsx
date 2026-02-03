@@ -66,7 +66,7 @@ export function SparqlWelcomeView() {
 	};
 
 	const handleManageConnections = () => {
-		executeCommand('mentor.command.openConnectionsList');
+		executeCommand('mentor.command.manageSparqlConnections');
 	};
 
 	const handleOpenDocument = (query: SparqlQueryExecutionState) => {

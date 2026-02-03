@@ -156,11 +156,6 @@
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "key": "meta+enter",
         "when": "editorLangId == 'sparql' && !notebookCellType"
-      },
-      {
-        "command": "mentor.command.deleteSparqlConnection",
-        "key": "delete",
-        "when": "view == mentor.view.sparqlConnectionsListPanel"
       }
     ],
     "notebooks": [
@@ -547,9 +542,9 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.openConnectionsList",
+        "command": "mentor.command.manageSparqlConnections",
         "title": "Manage Connections",
-        "icon": "$(database)",
+        "icon": "$(database-connection)",
         "category": "Mentor"
       },
       {
@@ -794,7 +789,7 @@
           "group": "navigation@2"
         },
         {
-          "command": "mentor.command.openConnectionsList",
+          "command": "mentor.command.manageSparqlConnections",
           "when": "view == mentor.view.workspaceTree",
           "group": "navigation@3"
         },
@@ -1043,6 +1038,13 @@
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e013"
+        }
+      },
+      "database-connection": {
+        "description": "Databases",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e014"
         }
       }
     },

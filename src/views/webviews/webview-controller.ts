@@ -25,6 +25,11 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	readonly panelTitle?: string;
 
 	/**
+	 * Optional panel icon (for editor/terminal panels).
+	 */
+	readonly panelIcon?: string;
+
+	/**
 	 * Relative JS bundle path inside out/ used by this controller (e.g. "sparql-endpoint-view.js").
 	 */
 	protected readonly componentPath: string;
@@ -42,11 +47,13 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 		viewType?: string;
 		panelId?: string;
 		panelTitle?: string;
+		panelIcon?: string;
 	}) {
 		this.componentPath = init.componentPath;
 		this.viewType = init.viewType;
 		this.panelId = init.panelId;
 		this.panelTitle = init.panelTitle;
+		this.panelIcon = init.panelIcon;
 	}
 
 	/**
@@ -82,6 +89,7 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 			this.panel = new WebviewComponentFactory(this.context, this.componentPath).createPanel(
 				this.panelId,
 				this.panelTitle,
+				this.panelIcon,
 				viewColumn
 			);
 

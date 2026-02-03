@@ -23,7 +23,7 @@ import { implementPrefixes } from './implement-prefixes';
 import { implementPrefixForIri } from './implement-prefix-for-iri';
 import { listGraphs } from './list-graphs';
 import { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
-import { openConnectionsList } from './open-connections-list';
+import { manageSparqlConnections } from './manage-sparql-connections';
 import { openDocument } from './open-document';
 import { openFileFromLanguage } from './open-file-from-language';
 import { openGraph } from './open-graph';
@@ -64,7 +64,7 @@ const commands = [
 	implementPrefixForIri,
 	listGraphs,
 	loginMicrosoftAuthProvider,
-	openConnectionsList,
+	manageSparqlConnections,
 	openDocument,
 	openFileFromLanguage,
 	openGraph,

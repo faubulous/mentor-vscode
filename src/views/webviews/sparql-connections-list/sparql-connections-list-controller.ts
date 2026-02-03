@@ -12,6 +12,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
             componentPath: 'sparql-connections-list-view.js',
             panelId: 'sparqlConnectionsListPanel',
             panelTitle: 'Manage Connections',
+            panelIcon: 'database-connection'
         });
     }
 

@@ -19,26 +19,44 @@ export const selectSparqlConnection = {
 
 		const items: any[] = connections.map(connection => ({
 			label: `$(database) ${connection.endpointUrl}`,
-			connection: connection
+			connection: connection,
+			buttons: [{
+				iconPath: new vscode.ThemeIcon('edit'),
+				tooltip: 'Edit Connection',
+				command: 'mentor.command.editSparqlConnection',
+				args: [connection]
+			}]
 		}));
 
 		items.push({
-			label: '$(add) Create new SPARQL connection...',
-			command: 'mentor.command.createSparqlConnection'
+			label: '$(database-connection) Manage Connections...',
+			command: 'mentor.command.manageSparqlConnections'
 		});
 
-		const selected = await vscode.window.showQuickPick(items, {
-			placeHolder: 'Select a SPARQL endpoint',
+		const quickPick = vscode.window.createQuickPick();
+		quickPick.items = items;
+		quickPick.placeholder = 'Select a SPARQL endpoint';
+
+		quickPick.onDidTriggerItemButton(async (e) => {
+			const button = e.button as any;
+
+			vscode.commands.executeCommand(button.command, ...button.args);
+
+			quickPick.hide();
 		});
 
-		if (!selected) {
-			return;
-		}
+		quickPick.onDidChangeSelection(async (e) => {
+			const selected = e[0] as any;
 
-		if (selected.command) {
-			await vscode.commands.executeCommand(selected.command);
-		} else {
-			await mentor.sparqlConnectionService.setQuerySourceForDocument(document.uri, selected.connection.id);
-		}
+			if (selected?.command) {
+				await vscode.commands.executeCommand(selected.command);
+			} else if (selected?.connection) {
+				await mentor.sparqlConnectionService.setQuerySourceForDocument(document.uri, selected.connection.id);
+			}
+
+			quickPick.hide();
+		});
+
+		quickPick.show();
 	}
 };
