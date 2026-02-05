@@ -169,4 +169,80 @@ export class SparqlQueryResultSerializer {
 			return '';
 		}
 	}
+
+	/**
+	 * Serializes an array of quads into Turtle format without requiring a context.
+	 * @param quads The array of quads to serialize.
+	 * @param namespaces Optional namespace map for prefix resolution.
+	 * @returns A string containing the serialized Turtle document.
+	 */
+	async serializeQuadsToString(quads: Quad[], namespaces?: Record<string, string>): Promise<string> {
+		try {
+			if (quads.length === 0) {
+				return '';
+			}
+
+			const store = new Store();
+
+			for (const q of quads) {
+				store.addQuad(q.subject, q.predicate, q.object);
+			}
+
+			const prefixMap: Record<string, string> = {};
+
+			if (namespaces) {
+				Object.assign(prefixMap, namespaces);
+			} else {
+				// Collect unique namespace IRIs from the quads
+				const namespaceIris = new Set<string>();
+
+				for (const quad of quads) {
+					if (quad.subject.termType === 'NamedNode') {
+						namespaceIris.add(Uri.getNamespaceIri(quad.subject.value));
+					}
+					if (quad.predicate.termType === 'NamedNode') {
+						namespaceIris.add(Uri.getNamespaceIri(quad.predicate.value));
+					}
+					if (quad.object.termType === 'NamedNode') {
+						namespaceIris.add(Uri.getNamespaceIri(quad.object.value));
+					}
+				}
+
+				// Build prefix map using inference prefixes and default prefixes
+				const inferencePrefixes = mentor.prefixLookupService.getInferencePrefixes();
+				const defaultPrefixes = mentor.prefixLookupService.getDefaultPrefixes();
+				const allPrefixes = { ...inferencePrefixes, ...defaultPrefixes };
+
+				for (const iri of namespaceIris) {
+					// allPrefixes is { prefix: iri }, so we need to find the prefix for this iri
+					for (const [prefix, prefixIri] of Object.entries(allPrefixes)) {
+						if (prefixIri === iri) {
+							prefixMap[prefix] = iri;
+							break;
+						}
+					}
+				}
+			}
+
+			const writer = new Writer({
+				format: 'text/turtle',
+				prefixes: prefixMap
+			});
+
+			writer.addQuads(store.toArray());
+
+			return new Promise<string>((resolve, reject) => {
+				writer.end((error, result) => {
+					if (error) {
+						reject(error);
+					} else {
+						resolve(result);
+					}
+				});
+			});
+		} catch (error) {
+			console.error('Error serializing quads to Turtle:', error);
+			return '';
+		}
+	}
 }

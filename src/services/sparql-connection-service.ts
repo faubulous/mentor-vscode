@@ -264,7 +264,16 @@ export class SparqlConnectionService {
 	 */
 	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource> {
 		const connection = this.getConnectionForDocument(documentUri);
+		
+		return this.getQuerySourceForConnection(connection);
+	}
 
+	/**
+	 * Gets a Comunica query source for a specific connection.
+	 * @param connection The SPARQL connection.
+	 * @returns A promise that resolves to a ComunicaSource configuration.
+	 */
+	async getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaSource> {
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
 			return {
 				type: 'rdfjs',

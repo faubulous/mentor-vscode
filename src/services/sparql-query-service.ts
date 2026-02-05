@@ -1,12 +1,15 @@
 import * as vscode from 'vscode';
 import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
 import { QueryEngine } from "@comunica/query-sparql";
+import { AsyncIterator } from 'asynciterator';
+import { Bindings, Quad } from "@rdfjs/types";
 import { mentor } from "@src/mentor";
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { SparqlQueryResultSerializer } from './sparql-query-result-serializer';
 import { SparqlConnectionService } from './sparql-connection-service';
+import { SparqlConnection } from './sparql-connection';
 import { AuthCredential } from './credential';
 
 /**
@@ -249,45 +252,19 @@ export class SparqlQueryService {
 			this._logQueryExecutionStart(context);
 
 			const documentIri = vscode.Uri.parse(context.documentIri);
-
 			const source = await this._connectionService.getQuerySourceForDocument(documentIri);
-			const options: any = {
-				sources: [source],
-				unionDefaultGraph: true
-			};
 
-			if (source.type === 'sparql') {
-				// Note: Setting a custom fetch handler because some SPARQL endpoints do not 
-				// work properly with the default Comuica fetch implementation.
-				const connection = source.connection;
-				const credential = await mentor.credentialStorageService.getCredential(connection.id);
+			const result = await this._executeQueryOnSource(query, source, tokenSource.token);
 
-				options.fetch = this._getFetchHandler(credential);
-			}
-
-			// Note: This does not actually execute the query yet; it just prepares the execution.
-			const preparedQuery = await new QueryEngine().query(query, options);
-
-			if (preparedQuery.resultType === 'bindings') {
-				// The query execution for bindings is lazy, so the cancellation is not effective here.
-				const bindings = await preparedQuery.execute();
-
-				// The cancellation token is passed here to allow cancelling when the bindings are being serialized.
-				context.result = await this._querySerializer.serializeBindings(context, bindings, tokenSource.token);
-			} else if (preparedQuery.resultType === 'boolean') {
-				// Since the boolean result is a single value, the cancellation is effective here.
-				const value = await withCancellation(preparedQuery.execute(), tokenSource.token);
-
-				context.result = { type: 'boolean', value: value };
-			} else if (preparedQuery.resultType === 'quads') {
-				// The query execution for quads is lazy, so the cancellation is not effective here.
-				const quads = await preparedQuery.execute();
-
-				// The cancellation token is passed here to allow cancelling when the quads are being serialized.
+			if (result.type === 'bindings') {
+				context.result = await this._querySerializer.serializeBindings(context, result.bindings, tokenSource.token);
+			} else if (result.type === 'boolean') {
+				context.result = { type: 'boolean', value: result.value };
+			} else if (result.type === 'quads') {
 				context.result = {
 					type: 'quads',
 					mimeType: 'text/turtle',
-					document: await this._querySerializer.serializeQuads(context, quads, tokenSource.token)
+					document: await this._querySerializer.serializeQuads(context, result.quads, tokenSource.token)
 				};
 			} else {
 				context.result = undefined;
@@ -308,6 +285,95 @@ export class SparqlQueryService {
 		this._persistQueryHistory();
 
 		return context;
+	}
+
+	/**
+	 * Executes a SPARQL query directly against a connection without requiring a document.
+	 * This method does not log the query in history and is intended for internal/programmatic use.
+	 * @param query The SPARQL query string to execute.
+	 * @param connection The SPARQL connection to execute against.
+	 * @returns The query result based on the query type.
+	 */
+	async executeQueryOnConnection(query: string, connection: SparqlConnection): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null> {
+		try {
+			const source = await this._connectionService.getQuerySourceForConnection(connection);
+			const result = await this._executeQueryOnSource(query, source);
+
+			if (result.type === 'boolean') {
+				return { type: 'boolean', value: result.value };
+			} else if (result.type === 'quads') {
+				const quads: Quad[] = [];
+
+				for await (const quad of result.quads) {
+					quads.push(quad);
+				}
+
+				const data = await this._querySerializer.serializeQuadsToString(quads);
+
+				return { type: 'quads', data };
+			} else if (result.type === 'bindings') {
+				const bindings: Bindings[] = [];
+
+				for await (const binding of result.bindings) {
+					bindings.push(binding);
+				}
+
+				return { type: 'bindings', bindings: bindings };
+			}
+
+			return null;
+		} catch (error: any) {
+			throw new Error(`Query execution failed: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Executes a SPARQL query against a Comunica source and returns the raw result.
+	 * @param query The SPARQL query string to execute.
+	 * @param source The Comunica source to execute against.
+	 * @param token Optional cancellation token.
+	 * @returns The raw query result with type information.
+	 */
+	private async _executeQueryOnSource(
+		query: string,
+		source: any,
+		token?: vscode.CancellationToken
+	): Promise<
+		| { type: 'boolean'; value: boolean }
+		| { type: 'quads'; quads: AsyncIterator<Quad> }
+		| { type: 'bindings'; bindings: AsyncIterator<Bindings> }
+		| { type: 'none' }
+	> {
+		const options: any = {
+			sources: [source],
+			unionDefaultGraph: true
+		};
+
+		if (source.type === 'sparql') {
+			const connection = source.connection;
+			const credential = await mentor.credentialStorageService.getCredential(connection.id);
+			options.fetch = this._getFetchHandler(credential);
+		}
+
+		const preparedQuery = await new QueryEngine().query(query, options);
+
+		if (preparedQuery.resultType === 'boolean') {
+			const value = token
+				? await withCancellation(preparedQuery.execute(), token)
+				: await preparedQuery.execute();
+
+			return { type: 'boolean', value };
+		} else if (preparedQuery.resultType === 'quads') {
+			const quads = await preparedQuery.execute();
+
+			return { type: 'quads', quads };
+		} else if (preparedQuery.resultType === 'bindings') {
+			const bindings = await preparedQuery.execute();
+
+			return { type: 'bindings', bindings };
+		}
+
+		return { type: 'none' };
 	}
 
 	_getFetchHandler(credential?: AuthCredential) {

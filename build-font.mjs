@@ -56,6 +56,7 @@ async function generateFont() {
     if (fs.existsSync(outputDir)) {
       fs.rmSync(outputDir, { recursive: true, force: true });
     }
+    
     console.log(`Font creation successful.`);
 
   } catch (e) {
