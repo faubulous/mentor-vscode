@@ -7,7 +7,6 @@ import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import { SparqlResultsProvider } from '../helpers/sparql-results-provider';
 import { SparqlResultsToolbar } from './sparql-results-toolbar';
 import { SparqlResultsBindingsTable } from './bindings-table';
-import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-view.css';
 
 /**
@@ -39,7 +38,6 @@ export function SparqlResultsView({ queryContext, defaultPageSize, messaging: pr
   const messaging = propMessaging ?? hookMessaging;
 
   // Add stylesheets
-  useStylesheet('codicon-styles', codicons);
   useStylesheet('sparql-results-view-styles', stylesheet);
 
   const renderExecuting = () => (

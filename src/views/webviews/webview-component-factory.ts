@@ -47,6 +47,7 @@ export class WebviewComponentFactory {
 
 		return view;
 	}
+	
 	private _getIconPath(theme: string, iconName: string): vscode.Uri {
 		return vscode.Uri.joinPath(this._context.extensionUri, 'media', 'icons', theme, iconName + '.svg');
 	}
@@ -63,7 +64,7 @@ export class WebviewComponentFactory {
 
 	private _getWebviewHtml(webview: vscode.Webview): string {
 		const codeiconUrl = webview.asWebviewUri(
-			vscode.Uri.joinPath(this._context.extensionUri, 'out', 'codicon.css')
+			vscode.Uri.joinPath(this._context.extensionUri, 'media', 'codicon.css')
 		);
 
 		const mentorIconsUrl = webview.asWebviewUri(

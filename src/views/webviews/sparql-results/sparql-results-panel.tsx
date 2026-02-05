@@ -6,7 +6,6 @@ import { SparqlQueryExecutionState, getDisplayName } from '@src/services/sparql-
 import { SparqlResultsView } from './components/sparql-results-view';
 import { SparqlWelcomeView } from './components/sparql-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
-import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-panel.css';
 
 /**
@@ -65,7 +64,6 @@ function SparqlResultsPanel() {
 	const messaging = useWebviewMessaging<SparqlResultsWebviewMessages>(handleMessage);
 
 	// Add stylesheets
-	useStylesheet('codicon-styles', codicons);
 	useStylesheet('sparql-webview-styles', stylesheet);
 
 	// Tab reference with change handler
