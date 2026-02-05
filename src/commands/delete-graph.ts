@@ -5,6 +5,17 @@ import { sparqlResultsController } from '@src/views/webviews/sparql-results/spar
 export const deleteGraph = {
 	id: 'mentor.command.deleteGraph',
 	handler: async (documentIri: string, graphIri: vscode.Uri | string) => {
+		// Ask for confirmation before deleting
+		const answer = await vscode.window.showWarningMessage(
+			`Are you sure you want to delete the graph "${graphIri.toString(true)}"? This action cannot be undone.`,
+			{ modal: true },
+			'Delete'
+		);
+
+		if (answer !== 'Delete') {
+			return;
+		}
+
 		const connection = mentor.sparqlConnectionService.getConnectionForDocument(documentIri);
 
 		if (!connection) {
@@ -13,7 +24,7 @@ export const deleteGraph = {
 		}
 
 		if (connection.id === 'workspace') {
-			mentor.store.deleteGraphs([graphIri.toString()]);
+			mentor.store.deleteGraphs([graphIri.toString(true)]);
 		} else {
 			const query = mentor.configuration.get<string>('sparql.dropGraphQuery');
 
