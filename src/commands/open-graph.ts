@@ -16,9 +16,10 @@ export const openGraph = {
 				SELECT (COUNT(?s) as ?count)
 				WHERE {
 					SELECT ?s
-					FROM <${graphIri.toString(true)}>
 					WHERE {
-						?s ?p ?o .
+						GRAPH <${graphIri.toString(true)}> {
+							?s ?p ?o .
+						}
 					}
 					LIMIT ${LARGE_GRAPH_THRESHOLD}
 				}

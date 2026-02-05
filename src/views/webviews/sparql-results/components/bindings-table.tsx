@@ -122,20 +122,25 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		return (
 			<div className="cell">
 				<pre className="cell-value">
-					<a href="#" onClick={() => handleOpenGraph(binding)}>
+					<a href="#" onClick={() => handleDescribeNamedNode(binding)}>
 						{label}
 					</a>
 				</pre>
 				<div className="cell-actions">
 					<vscode-toolbar-button
-						title="Delete Graph"
-						onClick={() => handleDeleteGraph(binding)}>
-						<span className="codicon codicon-trash"></span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button
 						title="Copy Cell Value"
 						onClick={() => handleCopyCellClick(binding)}>
 						<span className="codicon codicon-copy"></span>
+					</vscode-toolbar-button>
+					<vscode-toolbar-button
+						title="Download Graph"
+						onClick={() => handleOpenGraph(binding)}>
+						<span className="codicon codicon-download"></span>
+					</vscode-toolbar-button>
+					<vscode-toolbar-button
+						title="Delete Graph"
+						onClick={() => handleDeleteGraph(binding)}>
+						<span className="codicon codicon-trash"></span>
 					</vscode-toolbar-button>
 				</div>
 			</div>
