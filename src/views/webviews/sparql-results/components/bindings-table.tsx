@@ -73,15 +73,17 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 
 	const handleDescribeNamedNode = (node: Term) => {
 		const value = node.value;
+
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
-			command: 'mentor.command.executeSerializeQuery',
+			command: 'mentor.command.executeDescribeQuery',
 			args: [queryContext.documentIri, value]
 		});
 	};
 
 	const handleNamedNodeClick = (node: Term) => {
 		const value = node.value;
+		
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.openInBrowser',
