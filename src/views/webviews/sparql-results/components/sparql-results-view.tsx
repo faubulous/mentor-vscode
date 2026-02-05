@@ -1,23 +1,18 @@
-import { WebviewComponent } from '@src/views/webviews/webview-component';
+import { useStylesheet } from '@src/views/webviews/webview-hooks';
+import { useWebviewMessaging } from '@src/views/webviews/webview-hooks';
 import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
-import { BindingsResult, BooleanResult } from '@src/services/sparql-query-state';
+import { BooleanResult } from '@src/services/sparql-query-state';
 import { SparqlQueryExecutionState } from '@src/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import { SparqlResultsProvider } from '../helpers/sparql-results-provider';
 import { SparqlResultsToolbar } from './sparql-results-toolbar';
 import { SparqlResultsBindingsTable } from './bindings-table';
-import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-view.css';
 
 /**
  * Properties for the SPARQL results table component.
  */
 interface SparqlResultsViewProps {
-  /**
-   * Messaging used for communication with the extension host.
-   */
-  messaging: WebviewMessaging<SparqlResultsWebviewMessages>;
-
   /**
    * The SPARQL query results to display.
    */
@@ -27,137 +22,116 @@ interface SparqlResultsViewProps {
    * The default maximum number of items to display in the bindings table.
    */
   defaultPageSize: number;
+
+  /**
+   * Optional messaging instance (passed when used as child component).
+   */
+  messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
 }
 
 /**
  * Component to display the results of a SPARQL query, either as a boolean or bindings table.
  */
-export class SparqlResultsView extends WebviewComponent<
-  SparqlResultsViewProps,
-  {},
-  SparqlResultsWebviewMessages
-> {
-  constructor(props: SparqlResultsViewProps) {
-    super(props);
+export function SparqlResultsView({ queryContext, defaultPageSize, messaging: propMessaging }: SparqlResultsViewProps) {
+  // Use provided messaging or create our own
+  const hookMessaging = useWebviewMessaging<SparqlResultsWebviewMessages>();
+  const messaging = propMessaging ?? hookMessaging;
 
-    this.messaging = props.messaging;
-  }
+  // Add stylesheets
+  useStylesheet('sparql-results-view-styles', stylesheet);
 
-  componentDidMount() {
-    super.componentDidMount();
-
-    this.addStylesheet('codicon-styles', codicons);
-    this.addStylesheet('sparql-results-view-styles', stylesheet);
-  }
-
-  render() {
-    const context = this.props.queryContext;
-
-    return (
-      <SparqlResultsProvider
-        queryContext={context}
-        messaging={this.props.messaging}
-        defaultPageSize={this.props.defaultPageSize}>
-        {this._renderContent()}
-      </SparqlResultsProvider>
-    );
-  }
-
-  private _renderContent() {
-    const context = this.props.queryContext;
-
-    if (context.error) {
-      return this._renderError();
-    } else if (context.startTime && !context.endTime) {
-      return this._renderExecuting();
-    } else if (context.result?.type === 'boolean') {
-      return this._renderBooleanResult(context.result);
-    } else if (context.result?.type === 'bindings') {
-      return this._renderBindingsResult(context.result);
-    } else if (context.result?.type) {
-      return this._renderUnknownResultType(context);
-    } else {
-      return this._renderNoResult();
-    }
-  }
-
-  private _renderExecuting() {
-    return (
-      <div className="sparql-results-container loading">
-        <SparqlResultsToolbar />
-        <div className="sparql-results-content-container">
-        </div>
-      </div>
-    );
-  }
-
-  private _renderError() {
-    return (<div className="sparql-results-container error">
+  const renderExecuting = () => (
+    <div className="sparql-results-container loading">
       <SparqlResultsToolbar />
       <div className="sparql-results-content-container">
-        {!this.props.queryContext.error?.cancelled &&
+      </div>
+    </div>
+  );
+
+  const renderError = () => (
+    <div className="sparql-results-container error">
+      <SparqlResultsToolbar />
+      <div className="sparql-results-content-container">
+        {!queryContext.error?.cancelled &&
           <pre>
-            {this.props.queryContext.error?.stack || 'No stack trace available.'}
+            {queryContext.error?.stack || 'No stack trace available.'}
           </pre>
         }
-        {this.props.queryContext.error?.cancelled &&
+        {queryContext.error?.cancelled &&
           <div className="sparql-results-cancelled-message text-muted">
             <span className="codicon codicon-circle-slash"></span>
             Query execution was cancelled.
           </div>
         }
       </div>
-    </div>);
-  }
+    </div>
+  );
 
-  private _renderBooleanResult(result: BooleanResult) {
-    return (
-      <div className="sparql-results-container success">
-        <SparqlResultsToolbar />
-        {result.value ?
-          (<div className="sparql-results-content-container codicon-xl true">
-            <div className='result'>
-              <span className="codicon codicon-pass-filled"></span> True
-            </div>
-          </div>) :
-          (<div className="sparql-results-content-container codicon-xl false">
-            <div className='result'>
-              <span className="codicon codicon-error"></span> False
-            </div>
-          </div>)
-        }
-      </div>
-    );
-  }
+  const renderBooleanResult = (result: BooleanResult) => (
+    <div className="sparql-results-container success">
+      <SparqlResultsToolbar />
+      {result.value ?
+        (<div className="sparql-results-content-container codicon-xl true">
+          <div className='result'>
+            <span className="codicon codicon-pass-filled"></span> True
+          </div>
+        </div>) :
+        (<div className="sparql-results-content-container codicon-xl false">
+          <div className='result'>
+            <span className="codicon codicon-error"></span> False
+          </div>
+        </div>)
+      }
+    </div>
+  );
 
-  private _renderBindingsResult(result: BindingsResult) {
-    return (
-      <div className="sparql-results-container success">
-        <SparqlResultsToolbar />
-        <SparqlResultsBindingsTable />
-      </div>
-    );
-  }
+  const renderBindingsResult = () => (
+    <div className="sparql-results-container success">
+      <SparqlResultsToolbar />
+      <SparqlResultsBindingsTable />
+    </div>
+  );
 
-  private _renderUnknownResultType(context: SparqlQueryExecutionState) {
-    return (
-      <div className="sparql-results-container">
-        <SparqlResultsToolbar />
-        <div className="sparql-results-content-container">
-          Unknown or unsupported result type: {context.result?.type}
-        </div>
+  const renderUnknownResultType = () => (
+    <div className="sparql-results-container">
+      <SparqlResultsToolbar />
+      <div className="sparql-results-content-container">
+        Unknown or unsupported result type: {queryContext.result?.type}
       </div>
-    );
-  }
+    </div>
+  );
 
-  private _renderNoResult() {
-    return (
-      <div className="sparql-results-container">
-        <SparqlResultsToolbar />
-        <div className="sparql-results-content-container">
-          The query did not return any results.
-        </div>
+  const renderNoResult = () => (
+    <div className="sparql-results-container">
+      <SparqlResultsToolbar />
+      <div className="sparql-results-content-container">
+        The query did not return any results.
       </div>
-    );
-  }
+    </div>
+  );
+
+  const renderContent = () => {
+    if (queryContext.error) {
+      return renderError();
+    } else if (queryContext.startTime && !queryContext.endTime) {
+      return renderExecuting();
+    } else if (queryContext.result?.type === 'boolean') {
+      return renderBooleanResult(queryContext.result);
+    } else if (queryContext.result?.type === 'bindings') {
+      return renderBindingsResult();
+    } else if (queryContext.result?.type) {
+      return renderUnknownResultType();
+    } else {
+      return renderNoResult();
+    }
+  };
+
+  return (
+    <SparqlResultsProvider
+      queryContext={queryContext}
+      messaging={messaging}
+      defaultPageSize={defaultPageSize}>
+      {renderContent()}
+    </SparqlResultsProvider>
+  );
 }

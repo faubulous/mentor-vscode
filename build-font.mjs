@@ -20,12 +20,41 @@ const icons = fs.readdirSync(sourceFolder)
 
 console.log(icons);
 
+/**
+ * Post-process the generated CSS to create friendlier class names.
+ * Converts `.mentor-icons-ue020-databases` to `.mentor-icon.databases`
+ * Usage: <span className="mentor-icon databases"></span>
+ */
+function postProcessCss(cssPath) {
+  if (!fs.existsSync(cssPath)) {
+    console.warn(`CSS file not found: ${cssPath}`);
+    return;
+  }
+
+  let css = fs.readFileSync(cssPath, 'utf-8');
+
+  // Replace the selector pattern to use simpler class names
+  // From: .mentor-icons-ue000-mentor -> .mentor-icon.mentor
+  css = css.replace(/\.mentor-icons-ue[0-9a-f]+-/g, '.mentor-icon.');
+
+  // Update the class prefix selector to target the base .mentor-icon class
+  css = css.replace(
+    /\[class\^="mentor-icons-"\], \[class\*=" mentor-icons-"\]/g,
+    '.mentor-icon'
+  );
+
+  fs.writeFileSync(cssPath, css, 'utf-8');
+  console.log(`CSS post-processed: ${cssPath}`);
+}
+
 async function generateFont() {
   const fontName = 'mentor-icons';
   const sourceDir = path.resolve(process.cwd(), 'media', 'glyphs');
   const targetDir = path.resolve(process.cwd(), 'media');
-  const targetFileName = fontName + '.woff';
-  const targetFilePath = path.resolve(targetDir, targetFileName);
+  const targetFontName = fontName + '.woff';
+  const targetFontPath = path.resolve(targetDir, targetFontName);
+  const targetStyleName = fontName + '.css';
+  const targetStylePath = path.resolve(targetDir, targetStyleName);
 
   try {
     await svgtofont({
@@ -33,7 +62,7 @@ async function generateFont() {
       dest: targetDir,
       outputDir: '',
       fontName: fontName,
-      css: false,
+      css: true,
       startUnicode: 0xE000,
       excludeFormat: ["eot", "woff2", "ttf", "svg", "symbol.svg"],
       svgicons2svgfont: {
@@ -43,19 +72,32 @@ async function generateFont() {
     });
 
     const outputDir = path.resolve(process.cwd(), 'fonts');
-    const outputFilePath = path.join(outputDir, targetFileName);
+    const outputFilePath = path.join(outputDir, targetFontName);
+    const outputStylePath = path.join(outputDir, targetStyleName);
+
+    console.log(`\nCSS created at: ${outputStylePath}`);
+
+    if (fs.existsSync(outputStylePath)) {
+      fs.renameSync(outputStylePath, targetStylePath);
+
+      console.log(`CSS moved to: ${targetStylePath}`);
+
+      // Post-process the CSS to generate friendlier class names
+      postProcessCss(targetStylePath);
+    }
 
     console.log(`\nFont created at: ${outputFilePath}`);
 
     if (fs.existsSync(outputFilePath)) {
-      fs.renameSync(outputFilePath, targetFilePath);
+      fs.renameSync(outputFilePath, targetFontPath);
     }
 
-    console.log(`Font moved to: ${targetFilePath}`);
+    console.log(`Font moved to: ${targetFontPath}`);
 
     if (fs.existsSync(outputDir)) {
       fs.rmSync(outputDir, { recursive: true, force: true });
     }
+
     console.log(`Font creation successful.`);
 
   } catch (e) {

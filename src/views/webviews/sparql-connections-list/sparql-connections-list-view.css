@@ -1,0 +1,179 @@
+.connections-list-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: 560px;
+    padding: 16px;
+    gap: 16px;
+}
+
+.connections-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.connections-list-header h2 {
+    margin: 0;
+    font-size: 1.4em;
+    font-weight: 500;
+}
+
+.connections-list-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.connections-list-header .test-all-button {
+    height: 28px;
+    padding: 0 8px;
+}
+
+.connections-list-header .add-button {
+    min-width: auto;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.connections-scope-section {
+    margin-bottom: 16px;
+}
+
+.connections-scope-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+	padding: 5px 0;
+}
+
+.connections-scope-title {
+    color: var(--vscode-foreground);
+    font-size: 1em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.connections-scope-description {
+    color: var(--vscode-descriptionForeground);
+    font-size: 1em;
+    line-height: 1.4;
+	padding: 0 0 .6em 0;
+}
+
+.connections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.connection-item {
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 8px;
+    box-sizing: border-box;
+    background: var(--vscode-settings-textInputBackground);
+    border-radius: 4px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.1s ease, border-color 0.2s ease;
+}
+
+.connection-item:hover {
+    background: var(--vscode-list-activeSelectionBackground);
+}
+
+.connection-item.testing {
+    border-left-color: var(--vscode-textLink-activeForeground);
+}
+
+.connection-item.test-success {
+    border-left-color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.connection-item.test-error {
+    border-left-color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.connection-item-icon {
+    margin-right: 8px;
+}
+
+.connection-item-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.connection-item-url {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.connection-item-lock {
+    font-size: 14px;
+    color: var(--vscode-descriptionForeground);
+    margin-left: 8px;
+}
+
+.connection-item-icon.icon-testing {
+    color: var(--vscode-textLink-activeForeground);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.connection-item-icon.icon-success {
+    color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.connection-item-icon.icon-error {
+    color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.connection-item-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+.connection-item:hover .connection-item-actions {
+    opacity: 1;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+}
+
+.empty-state vscode-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    margin: 0 0 16px 0;
+}

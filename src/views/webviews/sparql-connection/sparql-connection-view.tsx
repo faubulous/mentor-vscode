@@ -1,12 +1,12 @@
+import * as React from 'react';
 import { createRoot } from 'react-dom/client';
+import { useState, useCallback } from 'react';
 import { VscodeSingleSelect, VscodeTabs } from '@vscode-elements/elements';
-import { WebviewHost } from '@src/views/webviews/webview-host';
-import { WebviewComponent } from '@src/views/webviews/webview-component';
+import { useWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { AuthCredential, BasicAuthCredential, BearerAuthCredential, MicrosoftAuthCredential } from '@src/services/credential';
 import { CredentialFactory } from '@src/services/credential-factory';
-import { HttpStatusCodes } from '@src/utilities/http-status-codes';
 import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 import stylesheet from './sparql-connection-view.css';
 
@@ -18,108 +18,52 @@ enum AuthTypeIndex {
 }
 
 interface SparqlConnectionViewState {
-	isChecking?: boolean;
-
-	connectionError?: { code: number; message: string } | null | undefined;
-
+	isChecking: boolean;
+	connectionError?: { code: number; message: string } | null;
 	hasUnsavedChanges: boolean;
-
 	endpoint: SparqlConnection;
-
 	selectedAuthTypeIndex: AuthTypeIndex;
-
 	basicCredential: BasicAuthCredential;
-
 	bearerCredential: BearerAuthCredential;
-
 	microsoftCredential: MicrosoftAuthCredential;
-
-	passwordVisible?: boolean;
+	passwordVisible: boolean;
 }
+
+const initialState: SparqlConnectionViewState = {
+	isChecking: false,
+	connectionError: undefined,
+	hasUnsavedChanges: false,
+	endpoint: { id: 'new', endpointUrl: 'https://', configScope: 1 },
+	selectedAuthTypeIndex: AuthTypeIndex.None,
+	basicCredential: CredentialFactory.createBasicAuthCredential(),
+	bearerCredential: CredentialFactory.createBearerAuthCredential(),
+	microsoftCredential: CredentialFactory.createMicrosoftAuthCredential(),
+	passwordVisible: false
+};
 
 /**
  * Component to edit SPARQL endpoint settings, e.g. endpoint URL and authentication.
  */
-export class SparqlConnectionView extends WebviewComponent<
-	{},
-	SparqlConnectionViewState,
-	SparqlConnectionMessages
-> {
-	messaging = WebviewHost.getMessaging<SparqlConnectionMessages>();
+function SparqlConnectionView() {
+	const [state, setState] = useState<SparqlConnectionViewState>(initialState);
 
-	private _configScopeTabs: VscodeTabs | null = null;
-
-	protected setConfigScopeRef = (element: VscodeTabs | null) => {
-		if (this._configScopeTabs) {
-			this._configScopeTabs.removeEventListener('vsc-tabs-select', this._handleConfigScopeChange);
-		}
-
-		this._configScopeTabs = element;
-
-		if (element) {
-			element.addEventListener('vsc-tabs-select', this._handleConfigScopeChange);
-		}
-	};
-
-	private _authTypeSelect: VscodeSingleSelect | null = null;
-
-	protected setAuthTypeSelectRef = (element: VscodeSingleSelect | null) => {
-		if (this._authTypeSelect) {
-			this._authTypeSelect.removeEventListener('change', this._handleAuthTypeChange);
-		}
-
-		this._authTypeSelect = element;
-
-		if (element) {
-			element.addEventListener('change', (e: any) => {
-				const value = parseInt(e.target.value, 10);
-
-				this.setState({
-					selectedAuthTypeIndex: value,
-					hasUnsavedChanges: true
-				});
-			});
-		}
-	}
-
-	componentDidMount() {
-		super.componentDidMount();
-
-		this.addStylesheet('sparql-connection-styles', stylesheet);
-
-		this.setState({
-			endpoint: { id: 'new', endpointUrl: 'https://', configScope: 1 },
-			selectedAuthTypeIndex: 0,
-			basicCredential: CredentialFactory.createBasicAuthCredential(),
-			bearerCredential: CredentialFactory.createBearerAuthCredential(),
-			microsoftCredential: CredentialFactory.createMicrosoftAuthCredential(),
-			isChecking: false,
-			connectionError: undefined
-		});
-
-		this.messaging.postMessage({ id: 'GetSparqlConnection' });
-	}
-
-	componentWillUnmount(): void {
-		this.setConfigScopeRef(null);
-		this.setAuthTypeSelectRef(null);
-	}
-
-	override componentDidReceiveMessage(message: SparqlConnectionMessages) {
+	// Message handler
+	const handleMessage = useCallback((message: SparqlConnectionMessages) => {
 		switch (message.id) {
 			case 'GetSparqlConnectionResult': {
-				this.setState({
+				setState(prev => ({
+					...prev,
 					endpoint: message.connection,
-					selectedAuthTypeIndex: 0,
+					selectedAuthTypeIndex: AuthTypeIndex.None,
 					basicCredential: CredentialFactory.createBasicAuthCredential(),
 					bearerCredential: CredentialFactory.createBearerAuthCredential(),
 					microsoftCredential: CredentialFactory.createMicrosoftAuthCredential(),
 					isChecking: false,
 					connectionError: undefined,
 					hasUnsavedChanges: false
-				});
+				}));
 
-				this.messaging.postMessage({
+				messaging?.postMessage({
 					id: 'GetSparqlConnectionCredential',
 					connectionId: message.connection.id
 				});
@@ -129,242 +73,178 @@ export class SparqlConnectionView extends WebviewComponent<
 				const credential = message.credential;
 
 				if (!credential) {
-					this.setState({ selectedAuthTypeIndex: 0 });
+					setState(prev => ({ ...prev, selectedAuthTypeIndex: AuthTypeIndex.None }));
 				} else if (credential.type === 'basic') {
-					this.setState({
-						selectedAuthTypeIndex: 1,
+					setState(prev => ({
+						...prev,
+						selectedAuthTypeIndex: AuthTypeIndex.Basic,
 						basicCredential: message.credential as BasicAuthCredential
-					});
+					}));
 				} else if (credential.type === 'bearer') {
-					this.setState({
-						selectedAuthTypeIndex: 2,
+					setState(prev => ({
+						...prev,
+						selectedAuthTypeIndex: AuthTypeIndex.Bearer,
 						bearerCredential: message.credential as BearerAuthCredential
-					});
+					}));
 				} else if (credential.type === 'microsoft') {
-					this.setState({
-						selectedAuthTypeIndex: 3,
+					setState(prev => ({
+						...prev,
+						selectedAuthTypeIndex: AuthTypeIndex.Microsoft,
 						microsoftCredential: message.credential as MicrosoftAuthCredential
-					})
+					}));
 				}
 				return;
 			}
-			case 'FetchMicrosoftAuthCredentialResult': {				
+			case 'FetchMicrosoftAuthCredentialResult': {
 				if (message.credential) {
-					this.setState({
-						selectedAuthTypeIndex: 3,
-						microsoftCredential: message.credential,
+					setState(prev => ({
+						...prev,
+						selectedAuthTypeIndex: AuthTypeIndex.Microsoft,
+						microsoftCredential: message.credential!,
 						hasUnsavedChanges: true
-					});
+					}));
 				}
 				return;
 			}
 			case 'TestSparqlConnectionResult': {
-				this.setState({
+				setState(prev => ({
+					...prev,
 					isChecking: false,
 					connectionError: message.error
-				});
+				}));
 				return;
 			}
 		}
-	}
+	}, []);
 
-	render() {
-		const endpoint: SparqlConnection = this.state?.endpoint;
+	const messaging = useWebviewMessaging<SparqlConnectionMessages>(handleMessage);
 
-		if (!endpoint) {
-			return <div>Loading...</div>;
+	// Add stylesheet
+	useStylesheet('sparql-connection-styles', stylesheet);
+
+	// Request initial connection on mount
+	React.useEffect(() => {
+		messaging?.postMessage({ id: 'GetSparqlConnection' });
+	}, []);
+
+	// Refs for vscode-elements with event handlers
+	const configScopeSelectRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element, _event) => {
+			const newConfigScope = parseInt(element.value, 10);
+			setState(prev => {
+				const endpoint = { ...prev.endpoint, configScope: newConfigScope };
+				messaging?.postMessage({
+					id: 'UpdateSparqlConnection',
+					connection: endpoint
+				});
+				return { ...prev, endpoint, hasUnsavedChanges: true };
+			});
 		}
+	);
 
-		const connectionError = this.state?.connectionError;
+	const authTypeSelectRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element, _event) => {
+			const value = parseInt(element.value, 10);
+			setState(prev => ({
+				...prev,
+				selectedAuthTypeIndex: value,
+				hasUnsavedChanges: true
+			}));
+		}
+	);
 
-		return (
-			<div className="sparql-connection-view-container">
-				{this._isConnectionTesting() && <vscode-progress-bar />}
-				<form onSubmit={(e) => this._handleSaveEndpoint(e)}>
-					<section>
-						<div className="form-header">
-							<div className="form-title">
-								<h2>SPARQL Connection</h2>
-							</div>
-							{this._isFormReadOnly() && <div className="form-read-only">
-								<vscode-icon name="lock" /><span>This connection cannot be edited.</span>
-							</div>}
-							{!this._isFormReadOnly() && <div className="form-buttons">
-								<vscode-toolbar-button
-									onClick={(e) => this._handleDeleteEndpoint(e)}>
-									<vscode-icon
-										name="trash"
-										title="Delete"
-									></vscode-icon>
-								</vscode-toolbar-button>
-								<vscode-button
-									type="submit"
-									disabled={!this._isFormValid() || !this.state.hasUnsavedChanges}>
-									Save
-								</vscode-button>
-							</div>}
-						</div>
-						<vscode-tabs ref={this.setConfigScopeRef} selected-index={endpoint.configScope - 1}>
-							<vscode-tab-header title={getConfigurationScopeDescription(ConfigurationScope.User)}>User</vscode-tab-header>
-							<vscode-tab-header title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}>Workspace</vscode-tab-header>
-						</vscode-tabs>
-					</section>
-					<section>
-						<div className={this._getEndpointSectionClassName()}>
-							<vscode-textfield
-								required
-								value={endpoint.endpointUrl}
-								title='Endpoint URL'
-								placeholder="https://example.org/sparql"
-								disabled={this._isFormReadOnly()}
-								onInput={e => this._handleEndpointUrlChange(e)}
-							>
-								{!this._wasConnectionTested() && <vscode-icon
-									slot="content-before"
-									name="database"
-								></vscode-icon>}
-								{this._isConnectionTesting() && <vscode-icon
-									slot="content-before"
-									name="ellipsis"
-									className="icon-testing"
-								></vscode-icon>}
-								{this._hasConnectionError() && <vscode-icon
-									slot="content-before"
-									name="error"
-									className="icon-error"
-								></vscode-icon>}
-								{this._isConnectionSuccessful() && <vscode-icon
-									slot="content-before"
-									name="pass"
-									className="icon-success"
-								></vscode-icon>}
-							</vscode-textfield>
-							<vscode-button
-								type="button"
-								icon="debug-disconnect"
-								title="Test Connection"
-								disabled={!this._isFormValid() || this._isFormReadOnly() || this._isConnectionTesting()}
-								onClick={(e) => this._handleTestEndpoint(e)}>
-							</vscode-button>
-						</div>
-						{connectionError && <div className='section-endpoint-status status-error'>
-							{this._renderConnectionTestErrorMessage(connectionError)}
-						</div>}
-					</section>
-					<section>
-						<vscode-label>Authentication</vscode-label>
-						<vscode-form-helper>
-							Select the authentication method to use when connecting to the SPARQL endpoint:
-						</vscode-form-helper>
-						<div className="section-authentication-container">
-							<div className="column-1">
-								<vscode-label>Type</vscode-label>
-								<vscode-single-select
-									ref={this.setAuthTypeSelectRef}
-									value={this.state.selectedAuthTypeIndex.toString()}
-									disabled={this._isFormReadOnly()}>
-									<vscode-option value="0">None</vscode-option>
-									<vscode-option value="1">Basic</vscode-option>
-									<vscode-option value="2">Bearer</vscode-option>
-									<vscode-option value="3">Microsoft Entra</vscode-option>
-								</vscode-single-select>
-							</div>
-							{this.state.selectedAuthTypeIndex !== 0 && <div className="vertical-separator">
-								{this.state.selectedAuthTypeIndex === 1 && this._renderBasicAuthFields()}
-								{this.state.selectedAuthTypeIndex === 2 && this._renderBearerAuthFields()}
-								{this.state.selectedAuthTypeIndex === 3 && this._renderMicrosoftAuthFields()}
-							</div>}
-						</div>
-					</section>
-				</form>
-			</div>
-		);
-	}
+	// Helper functions
+	const isFormValid = () => state.endpoint.endpointUrl.trim().length > 0;
+	const isFormReadOnly = () => state.endpoint.isProtected === true;
+	const wasConnectionTested = () => isConnectionTesting() || isConnectionSuccessful() || hasConnectionError();
+	const isConnectionTesting = () => state.isChecking === true;
+	const isConnectionSuccessful = () => state.connectionError === null;
+	const hasConnectionError = () => state.connectionError !== null && state.connectionError !== undefined;
 
-	private _isFormValid() {
-		return this.state?.endpoint.endpointUrl.trim().length > 0;
-	}
-
-	private _isFormReadOnly() {
-		return this.state?.endpoint.isProtected === true;
-	}
-
-	private _wasConnectionTested() {
-		return this._isConnectionTesting() ||
-			this._isConnectionSuccessful() ||
-			this._hasConnectionError();
-	}
-
-	private _isConnectionTesting() {
-		return this.state?.isChecking === true;
-	}
-
-	private _isConnectionSuccessful() {
-		return this.state?.connectionError === null;
-	}
-
-	private _hasConnectionError() {
-		return this.state?.connectionError !== null && this.state?.connectionError !== undefined;
-	}
-
-	private _getSelectedCredentialOrNull(): AuthCredential | null {
-		switch (this.state.selectedAuthTypeIndex) {
-			case 1:
-				return this.state.basicCredential;
-			case 2:
-				return this.state.bearerCredential;
-			case 3:
-				return this.state.microsoftCredential;
+	const getSelectedCredentialOrNull = (): AuthCredential | null => {
+		switch (state.selectedAuthTypeIndex) {
+			case AuthTypeIndex.Basic:
+				return state.basicCredential;
+			case AuthTypeIndex.Bearer:
+				return state.bearerCredential;
+			case AuthTypeIndex.Microsoft:
+				return state.microsoftCredential;
 			default:
 				return null;
 		}
-	}
+	};
 
-	private _getEndpointSectionClassName() {
+	const getEndpointSectionClassName = () => {
 		const result = ['section-endpoint-url', 'row'];
 
-		if (this._isFormReadOnly()) {
+		if (isFormReadOnly()) {
 			result.push('readonly');
 		}
 
-		if (this._isConnectionTesting()) {
+		if (isConnectionTesting()) {
 			result.push('status-testing');
 		}
 
-		if (this.state?.connectionError) {
+		if (state.connectionError) {
 			result.push('status-error');
-		} else if (this.state?.connectionError === null) {
+		} else if (state.connectionError === null) {
 			result.push('status-success');
 		}
 
 		return result.join(' ');
-	}
+	};
 
-	private _renderConnectionTestErrorMessage(connectionError: any) {
-		if (connectionError.code === 0) {
-			return (
-				<div>
-					<p>The host could not be reached. Possible causes include:</p>
-					<ul>
-						<li>Incorrect endpoint URL</li>
-						<li>The endpoint is unavailable</li>
-						<li>Failing CORS preflight request</li>
-						<li>Firewall or network policy is blocking the request</li>
-					</ul>
-				</div>
-			)
-		} else if (connectionError.code !== 0) {
-			return (
-				<div>
-					<h4>Error {connectionError.code} - {HttpStatusCodes[connectionError.code].message}</h4>
-					<p>{connectionError.message}</p>
-				</div>
-			)
-		}
-	}
+	// Event handlers
+	const handleEndpointUrlChange = (e: React.FormEvent<HTMLElement>) => {
+		const value = (e.target as HTMLInputElement).value;
+		setState(prev => {
+			const endpoint = { ...prev.endpoint, isModified: true, endpointUrl: value };
+			messaging?.postMessage({
+				id: 'UpdateSparqlConnection',
+				connection: endpoint
+			});
+			return { ...prev, endpoint, hasUnsavedChanges: true };
+		});
+	};
 
-	private _renderBasicAuthFields() {
-		const credential = this.state?.basicCredential;
+	const handleSaveEndpoint = (e: React.FormEvent) => {
+		e.preventDefault();
+
+		messaging?.postMessage({
+			id: 'SaveSparqlConnection',
+			connection: state.endpoint,
+			credential: getSelectedCredentialOrNull()
+		});
+
+		setState(prev => ({ ...prev, hasUnsavedChanges: false }));
+	};
+
+	const handleTestEndpoint = (e: React.MouseEvent) => {
+		e.preventDefault();
+
+		setState(prev => ({ ...prev, isChecking: true, connectionError: undefined }));
+
+		messaging?.postMessage({
+			id: 'TestSparqlConnection',
+			connection: state.endpoint,
+			credential: getSelectedCredentialOrNull()
+		});
+	};
+
+	const handleDeleteEndpoint = (e: React.MouseEvent) => {
+		e.preventDefault();
+
+		messaging?.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.command.deleteSparqlConnection',
+			args: [state.endpoint]
+		});
+	};
+
+	const renderBasicAuthFields = () => {
+		const credential = state.basicCredential;
 
 		return (
 			<vscode-form-group variant='vertical'>
@@ -373,51 +253,51 @@ export class SparqlConnectionView extends WebviewComponent<
 					value={credential?.username ?? ''}
 					placeholder="myuser"
 					label="Username"
-					disabled={this._isFormReadOnly()}
-					onInput={e => {
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
 						const updatedCredential = {
 							...credential!,
 							username: (e.target as HTMLInputElement).value
 						};
-
-						this.setState({
+						setState(prev => ({
+							...prev,
 							basicCredential: updatedCredential,
 							hasUnsavedChanges: true
-						});
+						}));
 					}}
 				/>
 				<vscode-label>Password</vscode-label>
 				<vscode-textfield
 					value={credential?.password ?? ''}
 					label="Password"
-					type={this.state.passwordVisible ? 'text' : 'password'}
-					disabled={this._isFormReadOnly()}
-					onInput={e => {
+					type={state.passwordVisible ? 'text' : 'password'}
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
 						const updatedCredential = {
 							...credential!,
 							password: (e.target as HTMLInputElement).value
 						};
-
-						this.setState({
+						setState(prev => ({
+							...prev,
 							basicCredential: updatedCredential,
 							hasUnsavedChanges: true
-						});
+						}));
 					}}
 				>
 					<vscode-icon
 						slot="content-after"
-						name={this.state.passwordVisible ? 'eye-closed' : 'eye'}
+						name={state.passwordVisible ? 'eye-closed' : 'eye'}
 						title="clear-all"
 						action-icon
-						onClick={() => this.setState({ passwordVisible: !this.state.passwordVisible })}
+						onClick={() => setState(prev => ({ ...prev, passwordVisible: !prev.passwordVisible }))}
 					></vscode-icon>
 				</vscode-textfield>
 			</vscode-form-group>
 		);
-	}
+	};
 
-	private _renderMicrosoftAuthFields() {
-		const credential = this.state?.microsoftCredential;
+	const renderMicrosoftAuthFields = () => {
+		const credential = state.microsoftCredential;
 
 		return (
 			<vscode-form-group variant='vertical'>
@@ -427,26 +307,24 @@ export class SparqlConnectionView extends WebviewComponent<
 					value={credential?.scopes.join('\n') ?? ''}
 					placeholder="scopes"
 					label="Scopes"
-
-					disabled={this._isFormReadOnly()}
-					onInput={e => {
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
 						const updatedCredential = {
 							...credential!,
 							scopes: (e.target as HTMLInputElement).value.split('\n')
 						};
-
-						this.setState({
+						setState(prev => ({
+							...prev,
 							microsoftCredential: updatedCredential,
 							hasUnsavedChanges: true
-						});
+						}));
 					}}
 				/>
 				<vscode-button onClick={() => {
-					const scopes = this.state.microsoftCredential?.scopes;
-
-					this.messaging.postMessage({
+					const scopes = state.microsoftCredential?.scopes;
+					messaging?.postMessage({
 						id: 'FetchMicrosoftAuthCredential',
-						connectionId: this.state.endpoint.id,
+						connectionId: state.endpoint.id,
 						scopes: scopes
 					});
 				}}>
@@ -454,10 +332,10 @@ export class SparqlConnectionView extends WebviewComponent<
 				</vscode-button>
 			</vscode-form-group>
 		);
-	}
+	};
 
-	private _renderBearerAuthFields() {
-		const credential = this.state?.bearerCredential;
+	const renderBearerAuthFields = () => {
+		const credential = state.bearerCredential;
 
 		return (
 			<vscode-form-group variant='vertical'>
@@ -466,17 +344,16 @@ export class SparqlConnectionView extends WebviewComponent<
 					value={credential?.prefix ?? ''}
 					placeholder="Bearer"
 					label="Token Prefix"
-					disabled={this._isFormReadOnly()}
-					onInput={e => {
-						const value = (e.target as HTMLInputElement).value;
-
-						this.setState({
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
+						setState(prev => ({
+							...prev,
 							bearerCredential: {
 								...credential,
-								prefix: value
+								prefix: (e.target as HTMLInputElement).value
 							},
 							hasUnsavedChanges: true
-						});
+						}));
 					}}
 				/>
 				<vscode-label>Token</vscode-label>
@@ -484,94 +361,141 @@ export class SparqlConnectionView extends WebviewComponent<
 					value={credential?.token ?? ''}
 					placeholder="Token"
 					label="Token"
-					disabled={this._isFormReadOnly()}
-					onInput={e => {
-						const value = (e.target as HTMLInputElement).value;
-
-						this.setState({
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
+						setState(prev => ({
+							...prev,
 							bearerCredential: {
 								...credential,
-								token: value
+								token: (e.target as HTMLInputElement).value
 							},
 							hasUnsavedChanges: true
-						});
+						}));
 					}}
 				/>
 			</vscode-form-group>
 		);
-	}
-
-	private _handleEndpointUrlChange(e: any) {
-		this.state.endpoint.isModified = true;
-		this.state.endpoint.endpointUrl = (e.target as HTMLInputElement).value;
-
-		this.setState({ ...this.state, hasUnsavedChanges: true });
-
-		this.messaging.postMessage({
-			id: 'UpdateSparqlConnection',
-			connection: this.state.endpoint
-		});
-	}
-
-	private _handleConfigScopeChange = (e: any) => {
-		if (this._configScopeTabs) {
-			const endpoint = this.state.endpoint;
-			endpoint.configScope = this._configScopeTabs.selectedIndex + 1;
-
-			this.setState({ endpoint, hasUnsavedChanges: true });
-
-			this.messaging.postMessage({
-				id: 'UpdateSparqlConnection',
-				connection: this.state.endpoint
-			});
-		}
-	}
-
-	private _handleAuthTypeChange = (event: any) => {
-		if (this._authTypeSelect) {
-			const i = this._authTypeSelect.selectedIndex ?? AuthTypeIndex.None;
-
-			this.setState({
-				selectedAuthTypeIndex: i,
-				hasUnsavedChanges: true
-			});
-		}
 	};
 
-	private _handleSaveEndpoint(e: any) {
-		e.preventDefault();
+	const endpoint = state.endpoint;
 
-		this.messaging.postMessage({
-			id: 'SaveSparqlConnection',
-			connection: this.state.endpoint,
-			credential: this._getSelectedCredentialOrNull()
-		});
-
-		this.setState({ hasUnsavedChanges: false });
+	if (!endpoint) {
+		return <div>Loading...</div>;
 	}
 
-	private _handleTestEndpoint(e: any) {
-		e.preventDefault();
-
-		this.setState({ isChecking: true, connectionError: undefined });
-
-		this.messaging.postMessage({
-			id: 'TestSparqlConnection',
-			connection: this.state.endpoint,
-			credential: this._getSelectedCredentialOrNull()
-		});
-	}
-
-	private _handleDeleteEndpoint(e: any) {
-		e.preventDefault();
-
-		this._executeCommand('mentor.command.deleteSparqlConnection', this.state.endpoint);
-	}
-
-	private _executeCommand(command: string, ...args: any[]) {
-		this.messaging.postMessage({ id: 'ExecuteCommand', command, args });
-	}
+	return (
+		<div className="sparql-connection-view-container">
+			{isConnectionTesting() && <vscode-progress-bar />}
+			<form onSubmit={handleSaveEndpoint}>
+				<section>
+					<div className="form-header">
+						<div className="form-title">
+							<h2>Edit Connection</h2>
+						</div>
+						{isFormReadOnly() && <div className="form-read-only">
+							<vscode-icon name="lock" /><span>This connection cannot be edited.</span>
+						</div>}
+						{!isFormReadOnly() && <div className="form-buttons">
+							<vscode-toolbar-button
+								onClick={handleDeleteEndpoint}>
+								<vscode-icon
+									name="trash"
+									title="Delete"
+								></vscode-icon>
+							</vscode-toolbar-button>
+							<vscode-button
+								type="submit"
+								disabled={!isFormValid() || !state.hasUnsavedChanges}>
+								Save
+							</vscode-button>
+						</div>}
+					</div>
+				</section>
+				<section>
+					<vscode-label>Endpoint URL</vscode-label>
+					<div className={getEndpointSectionClassName()}>
+						<vscode-textfield
+							required
+							value={endpoint.endpointUrl}
+							title='Endpoint URL'
+							placeholder="https://example.org/sparql"
+							disabled={isFormReadOnly()}
+							onInput={handleEndpointUrlChange}
+						>
+							{!wasConnectionTested() && <vscode-icon
+								slot="content-before"
+								name="database"
+							></vscode-icon>}
+							{isConnectionTesting() && <vscode-icon
+								slot="content-before"
+								name="ellipsis"
+								className="icon-testing"
+							></vscode-icon>}
+							{hasConnectionError() && <vscode-icon
+								slot="content-before"
+								name="error"
+								className="icon-error"
+							></vscode-icon>}
+							{isConnectionSuccessful() && <vscode-icon
+								slot="content-before"
+								name="pass"
+								className="icon-success"
+							></vscode-icon>}
+						</vscode-textfield>
+						<vscode-button
+							type="button"
+							icon="debug-disconnect"
+							title="Test Connection"
+							disabled={!isFormValid() || isFormReadOnly() || isConnectionTesting()}
+							onClick={handleTestEndpoint}>
+						</vscode-button>
+					</div>
+				</section>
+				<section>
+					<span className='section-label'>Authentication</span>
+					<vscode-form-helper>
+						Select the authentication method to use when connecting to the SPARQL endpoint:
+					</vscode-form-helper>
+					<div className="section-authentication-container">
+						<div className="column-1">
+							<vscode-label>Type</vscode-label>
+							<vscode-single-select
+								ref={authTypeSelectRef}
+								value={state.selectedAuthTypeIndex.toString()}
+								disabled={isFormReadOnly()}>
+								<vscode-option value="0">None</vscode-option>
+								<vscode-option value="1">Basic</vscode-option>
+								<vscode-option value="2">Bearer</vscode-option>
+								<vscode-option value="3">Microsoft Entra</vscode-option>
+							</vscode-single-select>
+						</div>
+						{state.selectedAuthTypeIndex !== AuthTypeIndex.None && <div className="vertical-separator">
+							{state.selectedAuthTypeIndex === AuthTypeIndex.Basic && renderBasicAuthFields()}
+							{state.selectedAuthTypeIndex === AuthTypeIndex.Bearer && renderBearerAuthFields()}
+							{state.selectedAuthTypeIndex === AuthTypeIndex.Microsoft && renderMicrosoftAuthFields()}
+						</div>}
+					</div>
+				</section>
+				<section>
+					<span className='section-label'>Scope</span>
+					<vscode-form-helper>
+						Select where the connection settings should be stored:
+					</vscode-form-helper>
+					<vscode-single-select
+						ref={configScopeSelectRef}
+						value={endpoint.configScope.toString()}
+						disabled={isFormReadOnly()}
+						className="connection-scope-select">
+						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.User)} value="1">User</vscode-option>
+						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}value="2">Workspace</vscode-option>
+					</vscode-single-select>
+				</section>
+			</form>
+		</div>
+	);
 }
+
+export { SparqlConnectionView };
 
 const root = createRoot(document.getElementById('root')!);
 root.render(<SparqlConnectionView />);

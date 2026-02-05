@@ -72,7 +72,6 @@ function registerViews(context: vscode.ExtensionContext) {
 	// TODO: Dispose the view providers in the trees.
 	subscribe(context, new trees.WorkspaceTree().treeView);
 	subscribe(context, new trees.DefinitionTree().treeView);
-	subscribe(context, new trees.ConnectionTree().treeView);
 	subscribe(context, webviews.webviewRegistry.registerAll(context));
 }
 

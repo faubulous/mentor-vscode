@@ -19,14 +19,17 @@ export class WebviewComponentFactory {
 	 * @param viewColumn The column in which to display the webview panel.
 	 * @returns The created webview panel.
 	 */
-	createPanel(id: string, title: string, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside): vscode.WebviewPanel {
+	createPanel(id: string, title: string, icon?: string, viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside): vscode.WebviewPanel {
 		const options = this._getWebviewOptions();
 
 		const panel = vscode.window.createWebviewPanel(id, title, viewColumn, options);
 		panel.webview.html = this._getWebviewHtml(panel.webview);
-		panel.iconPath = {
-			light: this._getIconPath('database-light.svg'),
-			dark: this._getIconPath('database-dark.svg')
+
+		if (icon) {
+			panel.iconPath = {
+				light: this._getIconPath('light', icon),
+				dark: this._getIconPath('dark', icon)
+			}
 		}
 
 		return panel;
@@ -44,20 +47,28 @@ export class WebviewComponentFactory {
 
 		return view;
 	}
-	private _getIconPath(iconName: string): vscode.Uri {
-		return vscode.Uri.joinPath(this._context.extensionUri, 'media', 'icons', iconName);
-	}
 	
+	private _getIconPath(theme: string, iconName: string): vscode.Uri {
+		return vscode.Uri.joinPath(this._context.extensionUri, 'media', 'icons', theme, iconName + '.svg');
+	}
+
 	private _getWebviewOptions(): vscode.WebviewPanelOptions & vscode.WebviewOptions {
 		return {
 			enableScripts: true,
-			localResourceRoots: [vscode.Uri.joinPath(this._context.extensionUri, 'out')]
+			localResourceRoots: [
+				vscode.Uri.joinPath(this._context.extensionUri, 'out'),
+				vscode.Uri.joinPath(this._context.extensionUri, 'media')
+			]
 		};
 	}
 
 	private _getWebviewHtml(webview: vscode.Webview): string {
 		const codeiconUrl = webview.asWebviewUri(
-			vscode.Uri.joinPath(this._context.extensionUri, 'out', 'codicon.css')
+			vscode.Uri.joinPath(this._context.extensionUri, 'media', 'codicon.css')
+		);
+
+		const mentorIconsUrl = webview.asWebviewUri(
+			vscode.Uri.joinPath(this._context.extensionUri, 'media', 'mentor-icons.css')
 		);
 
 		const elementsUrl = webview.asWebviewUri(
@@ -74,6 +85,7 @@ export class WebviewComponentFactory {
 					<meta charset="UTF-8">
 					<meta name="viewport" content="width=device-width, initial-scale=1.0">
 					<link href="${codeiconUrl}" rel="stylesheet" id="vscode-codicon-stylesheet">
+					<link href="${mentorIconsUrl}" rel="stylesheet" id="mentor-icons-stylesheet">
 					<script src="${elementsUrl}" type="module"></script>
 					<script src="${componentUrl}" type="module"></script>
 					<!-- Note: Do not add any styles here, as they will not be applied in notebook renderers. -->

@@ -164,16 +164,18 @@ export class SparqlConnectionService {
 
 	/**
 	 * Get the configured SPARQL connection for a specific document (TextDocument or NotebookCell).
-	 * @param documentUri The URI of the document or notebook cell.
+	 * @param documentIri The URI of the document or notebook cell.
 	 * @returns The SPARQL connection or the Mentor Workspace triple store if no connection is found.
 	 */
-	getConnectionForDocument(documentUri: vscode.Uri): SparqlConnection {
+	getConnectionForDocument(documentIri: vscode.Uri | string): SparqlConnection {
+		const uri = typeof (documentIri) === 'string' ? vscode.Uri.parse(documentIri) : documentIri;
+
 		let connectionId;
 
-		if (documentUri.scheme === 'vscode-notebook-cell') {
-			connectionId = this._getConnectionIdForCell(documentUri);
+		if (uri.scheme === 'vscode-notebook-cell') {
+			connectionId = this._getConnectionIdForCell(uri);
 		} else {
-			connectionId = this._getConnectionIdForDocument(documentUri);
+			connectionId = this._getConnectionIdForDocument(uri);
 		}
 
 		const connection = this.getConnection(connectionId ?? '');
@@ -262,7 +264,16 @@ export class SparqlConnectionService {
 	 */
 	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource> {
 		const connection = this.getConnectionForDocument(documentUri);
+		
+		return this.getQuerySourceForConnection(connection);
+	}
 
+	/**
+	 * Gets a Comunica query source for a specific connection.
+	 * @param connection The SPARQL connection.
+	 * @returns A promise that resolves to a ComunicaSource configuration.
+	 */
+	async getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaSource> {
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
 			return {
 				type: 'rdfjs',
@@ -382,6 +393,11 @@ export class SparqlConnectionService {
 	 * @returns `null` if the connection is successful, or an error object { code, message } otherwise.
 	 */
 	async testConnection(connection: SparqlConnection, credential?: AuthCredential | null): Promise<null | { code: number; message: string }> {
+		// Workspace store is always available - no need to test
+		if (connection.id === 'workspace') {
+			return null;
+		}
+
 		try {
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/sparql-query',
@@ -407,19 +423,37 @@ export class SparqlConnectionService {
 			if (response.ok) {
 				return null;
 			} else {
-				const text = await response.text();
-
-				return {
+				const error = {
 					code: response.status,
-					message: text || response.statusText
-				};
+					message: await response.text() || response.statusText
+				}
+
+				this._showErrorMessage(connection.endpointUrl, error);
+
+				return error;
 			}
-		} catch (error: any) {
-			return {
-				code: error.status || error.code || 0,
-				message: error.message || String(error)
+		} catch (e: any) {
+			const error = {
+				code: e.status || e.code || 0,
+				message: e.message || String(e)
 			};
+
+			this._showErrorMessage(connection.endpointUrl, error);
+
+			return error;
 		}
+	}
+
+	private _showErrorMessage(endpointUrl: string, error: { code: number; message: string }): void {
+		let errorMessage = '';
+
+		if (error.code === 0) {
+			errorMessage = `Connection failed: ${endpointUrl}\n Possible causes: Incorrect endpoint URL, the endpoint is unavailable, failing CORS preflight request or a firewall/network policy blocking the request.`;
+		} else {
+			errorMessage = `Connection failed: Error ${error.code} - ${error.message}`;
+		}
+
+		vscode.window.showErrorMessage(errorMessage);
 	}
 
 	/**

@@ -1,8 +1,9 @@
 import { SparqlConnection } from "@src/services/sparql-connection";
 import { AuthCredential, MicrosoftAuthCredential } from '@src/services/credential';
+import { ExecuteCommandMessage } from '../webview-messaging';
 
 export type SparqlConnectionMessages =
-    { id: 'ExecuteCommand', command: string, args?: any[] } |
+    ExecuteCommandMessage |
     { id: 'SaveSparqlConnection', connection: SparqlConnection, credential: AuthCredential | null } |
     { id: 'UpdateSparqlConnection', connection: SparqlConnection } |
     { id: 'DeleteSparqlConnection', connectionId: string } |

@@ -1,12 +1,11 @@
 import { createRoot } from 'react-dom/client';
-import { Fragment } from 'react';
+import { Fragment, useState, useEffect, useCallback } from 'react';
 import { WebviewHost } from '@src/views/webviews/webview-host';
-import { WebviewComponent } from '@src/views/webviews/webview-component';
+import { useWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SparqlQueryExecutionState, getDisplayName } from '@src/services/sparql-query-state';
 import { SparqlResultsView } from './components/sparql-results-view';
 import { SparqlWelcomeView } from './components/sparql-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
-import codicons from '$/codicon.css';
 import stylesheet from './sparql-results-panel.css';
 
 /**
@@ -15,10 +14,8 @@ import stylesheet from './sparql-results-panel.css';
 interface SparqlResultsPanelState {
 	/**
 	 * A key that forces a full re-render of the component when changed.
-	 * This is useful to reset internal state of child components that do not
-	 * properly respond to prop changes.
 	 */
-	renderKey?: number;
+	renderKey: number;
 
 	/**
 	 * The list of active SPARQL queries with results to display in tabs.
@@ -32,86 +29,80 @@ interface SparqlResultsPanelState {
 }
 
 /**
- * Main webview component for displaying SPARQL query results and history. This component 
- * renders either a table of SPARQL query results when queries are executed from files, or 
- * a welcome view showing the history of previous queries when no active results are present.
- * 
- * It handles bidirectional messaging between the webview and VS Code extension host to 
- * execute commands and retrieve SPARQL query history, automatically switching between the 
- * results table and welcome view based on the incoming message type and data.
- * 
- * @returns A React component that renders either query results or the welcome view
+ * Main webview component for displaying SPARQL query results and history.
  */
-class SparqlResultsPanel extends WebviewComponent<
-	{},
-	SparqlResultsPanelState,
-	SparqlResultsWebviewMessages
-> {
-	messaging = WebviewHost.getMessaging<SparqlResultsWebviewMessages>();
-
-	state: SparqlResultsPanelState = {
-		renderKey: 0,
-		activeQueries: [],
-		activeTabIndex: 0
-	};
-
-	constructor(props: {}) {
-		super(props);
-
-		// Restore previous state if available.
+function SparqlResultsPanel() {
+	// Initialize state from WebviewHost if available
+	const getInitialState = (): SparqlResultsPanelState => {
 		const previousState = WebviewHost.getState();
 
 		if (previousState && Array.isArray(previousState.activeQueries)) {
-			// Do not restore untitled queries that are not saved.
 			const activeQueries = previousState.activeQueries as SparqlQueryExecutionState[];
-
-			this.state = {
+			return {
 				...previousState,
 				activeTabIndex: 0,
 				activeQueries: activeQueries.filter(q => !q.documentIri.startsWith('untitled:'))
 			};
 		}
-	}
 
-	componentDidMount() {
-		super.componentDidMount();
-
-		this.addStylesheet('codicon-styles', codicons);
-		this.addStylesheet('sparql-webview-styles', stylesheet);
-
-		// Listen for tab selection changes
-		const tabsElement = document.querySelector('vscode-tabs');
-
-		if (tabsElement) {
-			tabsElement.addEventListener('vsc-tabs-select', this._handleTabChange);
-		}
-
-		if (this.state.activeTabIndex > 0) {
-			const query = this.state.activeQueries[this.state.activeTabIndex - 1];
-
-			this._restoreSparqlQueryResults(query);
-		}
-	}
-
-	componentWillUnmount() {
-		const tabsElement = document.querySelector('vscode-tabs');
-
-		if (tabsElement) {
-			tabsElement.removeEventListener('vsc-tabs-select', this._handleTabChange);
-		}
-	}
-
-	private _handleTabChange = (event: any) => {
-		const newIndex = event.detail.selectedIndex;
-
-		this.setState({ activeTabIndex: newIndex });
-
-		this._restoreSparqlQueryResults(this.state.activeQueries[newIndex - 1]);
+		return {
+			renderKey: 0,
+			activeQueries: [],
+			activeTabIndex: 0
+		};
 	};
 
-	private _restoreSparqlQueryResults(query: SparqlQueryExecutionState) {
+	const [state, setState] = useState<SparqlResultsPanelState>(getInitialState);
+
+	// Set up messaging with message handler
+	const handleMessage = useCallback((message: SparqlResultsWebviewMessages) => {
+		if (message.id === 'PostSparqlQueryHistory') {
+			onDidChangeQueryHistory(message.history);
+		}
+	}, []);
+
+	const messaging = useWebviewMessaging<SparqlResultsWebviewMessages>(handleMessage);
+
+	// Add stylesheets
+	useStylesheet('sparql-webview-styles', stylesheet);
+
+	// Tab reference with change handler
+	const tabsRef = useVscodeElementRef<HTMLElement & { selectedIndex: number }, { selectedIndex: number }>(
+		'vsc-tabs-select',
+		(_element, event) => {
+			const newIndex = event.detail.selectedIndex;
+			setState(prev => ({ ...prev, activeTabIndex: newIndex }));
+			restoreSparqlQueryResults(state.activeQueries[newIndex - 1]);
+		}
+	);
+
+	// Restore query on mount if needed
+	useEffect(() => {
+		if (state.activeTabIndex > 0) {
+			const query = state.activeQueries[state.activeTabIndex - 1];
+			restoreSparqlQueryResults(query);
+		}
+	}, []); // Only run on mount
+
+	// Save state to WebviewHost when it changes
+	useEffect(() => {
+		const savedState: SparqlResultsPanelState = {
+			renderKey: 0,
+			activeTabIndex: state.activeTabIndex,
+			activeQueries: state.activeQueries.map(q => ({
+				...q,
+				// Avoid storing large result sets in state..
+				result: undefined,
+				error: undefined
+			}))
+		};
+
+		WebviewHost.setState(savedState);
+	}, [state.activeTabIndex, state.activeQueries]);
+
+	const restoreSparqlQueryResults = (query: SparqlQueryExecutionState) => {
 		if (query && query.documentIri && !query.error && !query.result) {
-			this.messaging.postMessage({
+			messaging?.postMessage({
 				id: 'ExecuteCommand',
 				command: 'mentor.command.executeSparqlQuery',
 				args: [{
@@ -123,38 +114,13 @@ class SparqlResultsPanel extends WebviewComponent<
 				}]
 			});
 		}
-	}
+	};
 
-	componentDidUpdate() {
-		const savedState: SparqlResultsPanelState = {
-			renderKey: 0,
-			activeTabIndex: this.state.activeTabIndex,
-			activeQueries: this.state.activeQueries
-				.map(q => ({
-					...q,
-					// Avoid storing large result sets in state..
-					result: undefined,
-					error: undefined
-				}))
-		};
-
-		WebviewHost.setState(savedState);
-	}
-
-	componentDidReceiveMessage(message: SparqlResultsWebviewMessages): void {
-		switch (message.id) {
-			case 'PostSparqlQueryHistory': {
-				this._onDidChangeQueryHistory(message.history);
-				break;
-			}
-		}
-	}
-
-	private _onDidChangeQueryHistory(history: SparqlQueryExecutionState[]) {
-		this.setState(prevState => {
+	const onDidChangeQueryHistory = (history: SparqlQueryExecutionState[]) => {
+		setState(prevState => {
 			const query = history[0];
 
-			if (!query || !this._shouldHandleQueryResults(query)) {
+			if (!query || !shouldHandleQueryResults(query)) {
 				return prevState;
 			}
 
@@ -182,32 +148,27 @@ class SparqlResultsPanel extends WebviewComponent<
 		});
 	};
 
-	/**
-	 * Indicates if a SPARQL query result should be handled by the panel.
-	 * @param queryState A SPARQL query execution state.
-	 * @returns `true` if the query result is supported, `false` otherwise.
-	 */
-	private _shouldHandleQueryResults(queryState: SparqlQueryExecutionState) {
-		if(queryState.queryType === 'quads' || queryState.queryType === 'void') {
+	const shouldHandleQueryResults = (queryState: SparqlQueryExecutionState) => {
+		if (queryState.queryType === 'quads' || queryState.queryType === 'void') {
 			return false;
 		}
 
-		if(queryState.notebookIri) {
+		if (queryState.notebookIri) {
 			return false;
 		}
 
 		return true;
-	}
+	};
 
-	private _closeQuery = (documentIri: string) => {
-		const activeQueries = this.state.activeQueries.filter(q => q.documentIri !== documentIri);
-		let activeTabIndex = this.state.activeTabIndex;
+	const closeQuery = (documentIri: string) => {
+		setState(prevState => {
+			const activeQueries = prevState.activeQueries.filter(q => q.documentIri !== documentIri);
+			let activeTabIndex = prevState.activeTabIndex;
 
-		if (activeTabIndex > activeQueries.length) {
-			activeTabIndex = activeQueries.length;
-		}
+			if (activeTabIndex > activeQueries.length) {
+				activeTabIndex = activeQueries.length;
+			}
 
-		this.setState(prevState => {
 			return {
 				...prevState,
 				activeQueries: activeQueries,
@@ -216,46 +177,7 @@ class SparqlResultsPanel extends WebviewComponent<
 		});
 	};
 
-	render() {
-		return (
-			<div className="mentor-panel">
-				<vscode-tabs selectedIndex={this.state.activeTabIndex} className="vscode-tabs-slim">
-					<vscode-tab-header slot="header" id="0">
-						<div className="tab-header-content">
-							<span className="codicon codicon-list-selection"></span>
-						</div>
-					</vscode-tab-header>
-					<vscode-tab-panel>
-						<SparqlWelcomeView />
-					</vscode-tab-panel>
-					{this.state.activeQueries.map((query, index) => (
-						<Fragment key={query.documentIri}>
-							<vscode-tab-header slot="header" id={(index + 1).toString()}>
-								<div className="tab-header-content">
-									{this._getQueryTypeIcon(query)}
-									<span>{getDisplayName(query)}</span>
-									<a className="codicon codicon-close" role="button" title="Close"
-										onClick={(e) => {
-											e.stopPropagation();
-											this._closeQuery(query.documentIri);
-										}}
-									></a>
-								</div>
-							</vscode-tab-header>
-							<vscode-tab-panel>
-								<SparqlResultsView
-									messaging={this.messaging}
-									queryContext={query}
-									defaultPageSize={100} />
-							</vscode-tab-panel>
-						</Fragment>
-					))}
-				</vscode-tabs>
-			</div>
-		);
-	}
-
-	private _getQueryTypeIcon(query: SparqlQueryExecutionState) {
+	const getQueryTypeIcon = (query: SparqlQueryExecutionState) => {
 		if (query.error) {
 			return <span className="codicon codicon-error tab-error"></span>;
 		}
@@ -271,7 +193,44 @@ class SparqlResultsPanel extends WebviewComponent<
 		if (query.queryType === 'quads') {
 			return <span className="codicon codicon-file"></span>;
 		}
-	}
+	};
+
+	return (
+		<div className="mentor-panel">
+			<vscode-tabs ref={tabsRef} selectedIndex={state.activeTabIndex} className="vscode-tabs-slim">
+				<vscode-tab-header slot="header" id="0">
+					<div className="tab-header-content">
+						<span className="codicon codicon-list-selection"></span>
+					</div>
+				</vscode-tab-header>
+				<vscode-tab-panel>
+					<SparqlWelcomeView />
+				</vscode-tab-panel>
+				{state.activeQueries.map((query, index) => (
+					<Fragment key={query.documentIri}>
+						<vscode-tab-header slot="header" id={(index + 1).toString()}>
+							<div className="tab-header-content">
+								{getQueryTypeIcon(query)}
+								<span>{getDisplayName(query)}</span>
+								<a className="codicon codicon-close" role="button" title="Close"
+									onClick={(e) => {
+										e.stopPropagation();
+										closeQuery(query.documentIri);
+									}}
+								></a>
+							</div>
+						</vscode-tab-header>
+						<vscode-tab-panel>
+							<SparqlResultsView
+								messaging={messaging}
+								queryContext={query}
+								defaultPageSize={100} />
+						</vscode-tab-panel>
+					</Fragment>
+				))}
+			</vscode-tabs>
+		</div>
+	);
 }
 
 const root = createRoot(document.getElementById('root')!);

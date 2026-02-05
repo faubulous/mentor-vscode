@@ -9,6 +9,7 @@ import { createDocumentFromLanguage } from './create-document-from-language';
 import { createNotebook } from './create-notebook';
 import { createNotebookFromEditor } from './create-notebook-from-editor';
 import { createSparqlConnection } from './create-sparql-connection';
+import { deleteGraph } from './delete-graph';
 import { deletePrefixes } from './delete-prefixes';
 import { deleteSparqlConnection } from './delete-sparql-connection';
 import { editSparqlConnection } from './edit-sparql-connection';
@@ -20,7 +21,9 @@ import { executeSparqlQueryFromDocument } from './execute-sparql-query-from-docu
 import { findReferences } from './find-references';
 import { implementPrefixes } from './implement-prefixes';
 import { implementPrefixForIri } from './implement-prefix-for-iri';
+import { listGraphs } from './list-graphs';
 import { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
+import { manageSparqlConnections } from './manage-sparql-connections';
 import { openDocument } from './open-document';
 import { openFileFromLanguage } from './open-file-from-language';
 import { openGraph } from './open-graph';
@@ -47,6 +50,7 @@ const commands = [
 	createNotebook,
 	createNotebookFromEditor,
 	createSparqlConnection,
+	deleteGraph,
 	deletePrefixes,
 	deleteSparqlConnection,
 	editSparqlConnection,
@@ -58,7 +62,9 @@ const commands = [
 	findReferences,
 	implementPrefixes,
 	implementPrefixForIri,
+	listGraphs,
 	loginMicrosoftAuthProvider,
+	manageSparqlConnections,
 	openDocument,
 	openFileFromLanguage,
 	openGraph,

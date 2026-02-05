@@ -1,7 +1,8 @@
 import { SparqlQueryExecutionState } from "@src/services/sparql-query-state";
+import { ExecuteCommandMessage } from '../webview-messaging';
 
 export type SparqlResultsWebviewMessages =
-    { readonly id: 'ExecuteCommand', command: string, args?: any[] } |
+    ExecuteCommandMessage |
     { readonly id: 'GetSparqlQueryHistory' } |
     { readonly id: 'PostSparqlQueryHistory', history: SparqlQueryExecutionState[] } |
     { readonly id: 'SparqlQueryExecutionStarted', queryState: SparqlQueryExecutionState } |

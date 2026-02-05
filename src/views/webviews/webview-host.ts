@@ -3,16 +3,34 @@ import { WebviewMessage } from "./webview-messaging";
 /**
  * A singleton manager for the VS Code API that provides methods 
  * to interact with the VS Code extension host.
+ * 
+ * @remarks This class is only available in webview contexts where `acquireVsCodeApi` is present.
+ * In notebook renderers, messaging is provided through the renderer context instead.
  */
 export class WebviewHost {
 	private static _instance?: any;
 
 	/**
+	 * Check if the VS Code webview API is available.
+	 * @returns `true` if running in a VS Code webview context, `false` otherwise (e.g., in notebook renderers).
+	 */
+	public static isAvailable(): boolean {
+		return typeof (window as any).acquireVsCodeApi === 'function';
+	}
+
+	/**
 	 * Get the singleton instance of the VS Code API manager.
 	 * @returns The singleton instance of the VS Code API manager.
+	 * @throws Error if `acquireVsCodeApi` is not available (e.g., in notebook renderers).
 	 */
 	public static getInstance() {
 		if (!this._instance) {
+			if (!this.isAvailable()) {
+				throw new Error(
+					'acquireVsCodeApi is not available. ' +
+					'This typically happens in notebook renderers where messaging should be passed via props instead.'
+				);
+			}
 			this._instance = (window as any).acquireVsCodeApi();
 		}
 
@@ -22,6 +40,7 @@ export class WebviewHost {
 	/**
 	 * Get the messaging API for the VS Code extension host.
 	 * @returns An object with `postMessage` and `onMessage` methods for communication.
+	 * @throws Error if `acquireVsCodeApi` is not available.
 	 */
 	public static getMessaging<T extends WebviewMessage>() {
 		const vscode = this.getInstance();

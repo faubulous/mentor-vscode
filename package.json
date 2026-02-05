@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -90,8 +90,9 @@
   },
   "dependencies": {
     "@comunica/query-sparql": "^5.0.3",
-    "@faubulous/mentor-rdf": "^0.4.2",
+    "@faubulous/mentor-rdf": "^0.4.4",
     "@vscode/codicons": "^0.0.44",
+    "chevrotain": "^4.7.0",
     "millan": "^5.4.0",
     "n3": "^2.0.1",
     "react": "^19.2.1",
@@ -133,11 +134,6 @@
           "id": "mentor.view.definitionTree",
           "name": "Definitions",
           "icon": "media/glyphs/ue000-mentor.svg"
-        },
-        {
-          "id": "mentor.view.connectionTree",
-          "name": "Connections",
-          "icon": "media/glyphs/ue000-mentor.svg"
         }
       ],
       "mentor-sparql-results": [
@@ -161,11 +157,6 @@
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "key": "meta+enter",
         "when": "editorLangId == 'sparql' && !notebookCellType"
-      },
-      {
-        "command": "mentor.command.deleteSparqlConnection",
-        "key": "delete",
-        "when": "view == mentor.view.connectionTree && viewItem =~ /connection/ && viewItem.isProtected !== true"
       }
     ],
     "notebooks": [
@@ -546,21 +537,27 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.refreshConnectionsTree",
-        "title": "Refresh",
-        "icon": "$(refresh)",
-        "category": "Mentor"
-      },
-      {
         "command": "mentor.command.createSparqlConnection",
         "title": "Add Connection...",
         "icon": "$(add)",
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.manageSparqlConnections",
+        "title": "Manage Connections",
+        "icon": "$(database-connection)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.deleteSparqlConnection",
         "title": "Delete",
         "icon": "$(remove)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.listGraphs",
+        "title": "List Graphs",
+        "icon": "$(list-tree)",
         "category": "Mentor"
       },
       {
@@ -793,6 +790,11 @@
           "group": "navigation@2"
         },
         {
+          "command": "mentor.command.manageSparqlConnections",
+          "when": "view == mentor.view.workspaceTree",
+          "group": "navigation@3"
+        },
+        {
           "command": "mentor.command.groupDefinitionsByType",
           "when": "view == mentor.view.definitionTree",
           "group": "2_workspace "
@@ -851,16 +853,6 @@
           "command": "mentor.command.refreshDefinitionsTree",
           "when": "view == mentor.view.definitionTree",
           "group": "navigation@99"
-        },
-        {
-          "command": "mentor.command.refreshConnectionsTree",
-          "when": "view == mentor.view.connectionTree",
-          "group": "navigation@99"
-        },
-        {
-          "command": "mentor.command.createSparqlConnection",
-          "when": "view == mentor.view.connectionTree",
-          "group": "navigation@99"
         }
       ],
       "view/item/context": [
@@ -898,11 +890,6 @@
           "command": "mentor.command.hideIndividualTypes",
           "when": "view.showIndividualTypes === true && viewItem == individuals",
           "group": "inline"
-        },
-        {
-          "command": "mentor.command.deleteSparqlConnection",
-          "when": "view == mentor.view.connectionTree && viewItem =~ /connection/ && viewItem.isProtected !== true",
-          "group": "z_commands"
         }
       ],
       "editor/context": [
@@ -1053,6 +1040,13 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e013"
         }
+      },
+      "database-connection": {
+        "description": "Databases",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e014"
+        }
       }
     },
     "configuration": [
@@ -1066,6 +1060,20 @@
             "type": "array",
             "description": "List of SPARQL endpoint connections.",
             "default": []
+          },
+          "mentor.sparql.listGraphsQuery": {
+            "type": "string",
+            "title": "List Graphs Query",
+            "description": "SPARQL query used to retrieve all named graphs and the default graph from a SPARQL endpoint.",
+            "default": "SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph { ?s ?p ?o }\n}\nORDER BY ?graph",
+            "editPresentation": "multilineText"
+          },
+          "mentor.sparql.dropGraphQuery": {
+            "type": "string",
+            "title": "Drop Graph Query",
+            "description": "SPARQL query used to drop a named graph from a SPARQL endpoint.",
+            "default": "DROP GRAPH <@graphIri>",
+            "editPresentation": "multilineText"
           },
           "mentor.definitionTree.labelStyle": {
             "type": "string",

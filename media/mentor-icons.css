@@ -1,0 +1,36 @@
+@font-face {
+  font-family: "mentor-icons";
+  src: url('mentor-icons.woff?t=1770317614379') format('woff');
+}
+
+.mentor-icon {
+  font-family: 'mentor-icons' !important;
+  font-style:normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+.mentor-icon.mentor::before { content: "\e000"; }
+.mentor-icon.rdf-class::before { content: "\e001"; }
+.mentor-icon.rdf-class-i::before { content: "\e002"; }
+.mentor-icon.rdf-individual::before { content: "\e003"; }
+.mentor-icon.rdf-concept::before { content: "\e004"; }
+.mentor-icon.rdf-concept-scheme::before { content: "\e005"; }
+.mentor-icon.rdf-ontology::before { content: "\e006"; }
+.mentor-icon.rdf-list::before { content: "\e007"; }
+.mentor-icon.rdf-tree::before { content: "\e008"; }
+.mentor-icon.rdf-collection::before { content: "\e009"; }
+.mentor-icon.collection-o::before { content: "\e00a"; }
+.mentor-icon.rdf-object-property::before { content: "\e00b"; }
+.mentor-icon.rdf-shape::before { content: "\e00c"; }
+.mentor-icon.rdf-shape-property::before { content: "\e00d"; }
+.mentor-icon.go-to-shape::before { content: "\e00e"; }
+.mentor-icon.language::before { content: "\e00f"; }
+.mentor-icon.rdf-file::before { content: "\e010"; }
+.mentor-icon.sparql-file::before { content: "\e011"; }
+.mentor-icon.notebook::before { content: "\e012"; }
+.mentor-icon.datalog-file::before { content: "\e013"; }
+.mentor-icon.database-connection::before { content: "\e014"; }
+
+

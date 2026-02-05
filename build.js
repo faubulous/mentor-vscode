@@ -110,18 +110,12 @@ const copyFile = (fileName, sourceFolder, targetFolder, targetName = undefined) 
 }
 
 /**
- * Creates a bundle for the VSCode Codicon CSS file. It reads the codicon CSS file,
- * replaces the font-face src with a base64 encoded data URL for the codicon.ttf file,
- * and writes the modified CSS to the output directory.
- * 
- * @note This is necessary because the VSCode Notebook renderer webview does not 
- * support loading local font files directly. When registering the webview, there is no
- * ExtensionContext to provide the media path, so we need to embed the font data directly
- * in the CSS. This comes at the cost of increased bundle size, which is loaded for every
- * webview instance in the notebook.
+ * Copies the VSCode Codicon CSS and font files to the media directory.
+ * The CSS is modified to reference the font file using a relative URL,
+ * similar to how mentor-icons.css works.
  */
 const copyVSCodeCodiconCSS = () => {
-  console.log(`Creating VSCode Codicon CSS bundle..`);
+  console.log(`Copying VSCode Codicon CSS and font files..`);
 
   const sourceFolder = path.resolve(
     __dirname,
@@ -131,31 +125,39 @@ const copyVSCodeCodiconCSS = () => {
     'dist'
   );
 
-  // Create a base64 string for the codicon truetype font file
-  const fontBase64 = fs.readFileSync(path.join(sourceFolder, 'codicon.ttf')).toString('base64');
+  const mediaFolder = path.resolve(__dirname, 'media');
 
-  // Patch font-face src to use base64 data URL
+  // Ensure media folder exists
+  if (!fs.existsSync(mediaFolder)) {
+    fs.mkdirSync(mediaFolder, { recursive: true });
+  }
+
+  // Copy the codicon.ttf font file to the media directory
+  const fontSource = path.join(sourceFolder, 'codicon.ttf');
+  const fontTarget = path.join(mediaFolder, 'codicon.ttf');
+
+  fs.copyFileSync(fontSource, fontTarget);
+
+  console.log(` codicon.ttf → media/codicon.ttf`);
+
+  // Read and modify the CSS to reference the font file via URL
   let css = fs.readFileSync(path.join(sourceFolder, 'codicon.css'), 'utf8');
 
+  // Update the font-face src to use a relative URL (will be resolved by webview)
   css = css.replace(
     /src:\s*url\([^)]+\)\s*format\(["']truetype["']\);?/,
-    `src: url("data:font/truetype;charset=utf-8;base64,${fontBase64}") format("truetype");`
+    `src: url('codicon.ttf') format('truetype');`
   );
   css = css.replace(/\/\*[\s\S]*?\*\//g, ''); // Remove comments
   css = css.replace(/\s+/g, ' '); // Collapse whitespace
   css = css.trim();
 
-  // Write the modified CSS to the output directory..
-  const targetFolder = path.resolve(__dirname, 'out');
-  const targetPath = path.join(targetFolder, 'codicon.css');
+  // Write the modified CSS to the media directory (alongside the font)
+  const cssTarget = path.join(mediaFolder, 'codicon.css');
 
-  if (!fs.existsSync(targetFolder)) {
-    fs.mkdirSync(targetFolder, { recursive: true });
-  }
-
-  fs.writeFileSync(targetPath, css);
-
-  console.log(` ${targetPath.substring(__dirname.length + 1)}`);
+  fs.writeFileSync(cssTarget, css);
+  
+  console.log(` codicon.css → media/codicon.css`);
 }
 
 /**
@@ -223,6 +225,7 @@ const copyVSCodeElementsBundle = () => {
       getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
       getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
       getReactViewConfig(args, 'sparql-connection', 'sparql-connection-view'),
+      getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list-view'),
     ]
 
     if (args.includes("--watch")) {
