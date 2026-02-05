@@ -102,7 +102,7 @@ export function SparqlWelcomeView() {
 							<span className="label">Open Query...</span>
 						</vscode-toolbar-button>
 						<vscode-toolbar-button onClick={handleManageConnections}>
-							<span className="codicon codicon-database"></span>
+							<span className="mentor-icon database-connection"></span>
 							<span className="label">Manage Connections...</span>
 						</vscode-toolbar-button>
 					</div>

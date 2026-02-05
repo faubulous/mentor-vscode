@@ -50,11 +50,13 @@
 	min-width: 8em;
 }
 
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .mentor-icon,
 .sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .codicon,
 .sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .label {
 	color: var(--vscode-textLink-foreground);
 }
 
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .mentor-icon,
 .sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .codicon {
 	padding: 2em .5em;
 	font-size: large;
