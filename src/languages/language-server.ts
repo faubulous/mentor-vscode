@@ -1,4 +1,5 @@
-import { ISemanticError, IToken } from 'millan';
+import { IRecognitionException } from 'chevrotain';
+import { IToken } from 'millan';
 import {
 	BrowserMessageReader,
 	BrowserMessageWriter,
@@ -31,8 +32,8 @@ import {
  */
 export interface TokenizationResults {
 	comments: IToken[];
-	errors: ISemanticError[];
-	semanticErrors: ISemanticError[];
+	errors: IRecognitionException[];
+	semanticErrors: IRecognitionException[];
 	tokens: IToken[];
 }
 
@@ -301,7 +302,7 @@ export abstract class LanguageServerBase {
 			);
 	}
 
-	protected getParseDiagnostics(document: TextDocument, errors: ISemanticError[]) {
+	protected getParseDiagnostics(document: TextDocument, errors: IRecognitionException[]) {
 		const content = document.getText();
 
 		return errors.map(
