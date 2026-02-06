@@ -29,11 +29,12 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.3.9: Service Release
-- Added support for converting RDF file formats (RDF/XML, Turtle, TriG, N-Triples, N-Quads)
-- Added syntax highlighting and rename support for Datalog files
-- Fixes wrong icon for properties with datatype / range rdf:langString
-- Fixes 'Go to Shape Definition' command not visible for properties in Definition Tree
+### Version 0.3.10: Improved SPARQL connection management
+- Moved SPARQL connection management into dedicated view
+    - Removed old connection management tree view
+- Added basic graph management:
+    - Can list SPARQL endpoint graphs in connection view
+    - Can drop graphs to binding result view
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 
