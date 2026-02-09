@@ -90,6 +90,17 @@ export class DocumentFactory {
 	}
 
 	/**
+	 * Checks if a notebook file is supported by Mentor.
+	 * @param uri The URI of the notebook file.
+	 * @returns `true` if the notebook file is supported, otherwise `false`.
+	 */
+	isSupportedNotebookFile(uri: vscode.Uri): boolean {
+		const extension = Utils.extname(uri).toLowerCase();
+		
+		return extension === '.mnb';
+	}
+
+	/**
 	 * Checks if a file is supported by the factory.
 	 * @param ext The lower-case file extension including the dot (e.g. '.ttl').
 	 * @returns `true` if the file is supported, otherwise `false`.

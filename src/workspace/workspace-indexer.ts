@@ -75,18 +75,19 @@ export class WorkspaceIndexer {
 						continue;
 					}
 
-					const size = (await vscode.workspace.fs.stat(uri)).size;
+					const stat = await vscode.workspace.fs.stat(uri);
+					const size = stat.size;
 
 					if (size > maxSize && !force) {
 						console.debug(`Mentor: Skipping large file ${uri.toString()} (${size} bytes)`);
 						continue;
 					}
 
-					// Open the document to trigger the language server to analyze it.
-					const document = await vscode.workspace.openTextDocument(uri);
-
-					// Try to load the document so that its graph is created and can be used for showing definitions, descriptions etc..
-					await mentor.loadDocument(document);
+					if (this._documentFactory.isSupportedNotebookFile(uri)) {
+						this._indexNotebook(uri, force);
+					} else {
+						this._indexTextDocument(uri, force);
+					}
 
 					this.reportProgress(progress, Math.round(((i + 1) / uris.length) * 100));
 				}
@@ -104,6 +105,47 @@ export class WorkspaceIndexer {
 
 			this._onDidFinishIndexing.fire(true);
 		});
+	}
+
+	/**
+	 * Index a regular text document.
+	 * @param uri The URI of the document to index.
+	 * @param force Whether to force re-indexing of the document.
+	 */
+	private async _indexTextDocument(uri: vscode.Uri, force: boolean): Promise<void> {
+		// Open the document to trigger the language server to analyze it.
+		const document = await vscode.workspace.openTextDocument(uri);
+
+		// Try to load the document so that its graph is created and can be used for showing definitions, descriptions etc..
+		await mentor.loadDocument(document);
+	}
+
+	/**
+	 * Index RDF cells within a notebook document.
+	 * @param notebookUri The URI of the notebook file.
+	 * @param force Whether to force re-indexing of already indexed cells.
+	 */
+	private async _indexNotebook(notebookUri: vscode.Uri, force: boolean): Promise<void> {
+		try {
+			const notebook = await vscode.workspace.openNotebookDocument(notebookUri);
+
+			for (const cell of notebook.getCells()) {
+				if (!this._documentFactory.supportedLanguages.has(cell.document.languageId)) {
+					continue;
+				}
+
+				const cellUri = cell.document.uri.toString();
+
+				if (mentor.contexts[cellUri] && !force) {
+					continue;
+				}
+
+				// Load the cell document to create its context
+				await mentor.loadDocument(cell.document);
+			}
+		} catch (error) {
+			console.error(`Mentor: Failed to index notebook ${notebookUri.toString()}:`, error);
+		}
 	}
 
 	/**

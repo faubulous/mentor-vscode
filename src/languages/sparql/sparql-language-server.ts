@@ -47,7 +47,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 		const result = super.getLintDiagnostics(document, content, tokens);
 
 		// Add SPARQL-specific unused variable diagnostics
-		result.push(...this.getUnusedVariableDiagnostics(document, tokens));
+		result.push(...this._getUnusedVariableDiagnostics(document, tokens));
 
 		return result;
 	}
@@ -56,7 +56,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 	 * Get diagnostics for unused variables in SPARQL queries.
 	 * A variable is considered unused if it appears only once and the query doesn't use SELECT *.
 	 */
-	private getUnusedVariableDiagnostics(document: TextDocument, tokens: IToken[]): Diagnostic[] {
+	private _getUnusedVariableDiagnostics(document: TextDocument, tokens: IToken[]): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 		const scopeStack: QueryScope[] = [];
 
@@ -118,7 +118,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 					// Check if any scopes should be closed
 					while (scopeStack.length > 0 && scopeStack[scopeStack.length - 1].depth > currentDepth) {
 						const closedScope = scopeStack.pop()!;
-						diagnostics.push(...this.checkScopeForUnusedVariables(document, closedScope));
+						diagnostics.push(...this._checkScopeForUnusedVariables(document, closedScope));
 					}
 					break;
 				}
@@ -154,7 +154,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 		while (scopeStack.length > 0) {
 			const closedScope = scopeStack.pop()!;
 
-			diagnostics.push(...this.checkScopeForUnusedVariables(document, closedScope));
+			diagnostics.push(...this._checkScopeForUnusedVariables(document, closedScope));
 		}
 
 		return diagnostics;
@@ -163,7 +163,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 	/**
 	 * Check a query scope for unused variables and return diagnostics.
 	 */
-	private checkScopeForUnusedVariables(document: TextDocument, scope: QueryScope): Diagnostic[] {
+	private _checkScopeForUnusedVariables(document: TextDocument, scope: QueryScope): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 
 		// Don't report unused variables if this is a SELECT * query
