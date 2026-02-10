@@ -39,7 +39,7 @@
                 },
                 {
                     "name": "storage.type.prefix.turtle",
-                    "match": "([a-zA-Z0-9_]*)?:"
+                    "match": "([a-zA-Z](?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?)?:"
                 }
             ]
         },
@@ -87,7 +87,7 @@
             "match": "<[^>]*>"
         },
         "prefixed_name": {
-            "match": "(([a-zA-Z0-9_]*)?(:))([a-zA-Z0-9_\\.-]*)?",
+            "match": "(([a-zA-Z](?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?)?(:))",
             "captures": {
                 "1": {
                     "name": "storage.type.prefix.turtle"
