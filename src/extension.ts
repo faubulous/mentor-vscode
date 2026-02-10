@@ -59,6 +59,7 @@ function registerProviders(context: vscode.ExtensionContext) {
 	subscribe(context, new languages.TurtleTokenProvider().register());
 	subscribe(context, new languages.TrigTokenProvider().register());
 	subscribe(context, new languages.SparqlTokenProvider().register());
+	subscribe(context, new providers.DocumentLintingProvider().register());
 	subscribe(context, new providers.WorkspaceUriLinkProvider().register());
 	subscribe(context, new providers.WorkspaceFileSystemProvider().register());
 	subscribe(context, new providers.InferenceUriLinkProvider().register());

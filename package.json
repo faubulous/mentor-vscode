@@ -1265,6 +1265,34 @@
             ],
             "default": "Sorted"
           },
+          "mentor.linting.enabled": {
+            "type": "boolean",
+            "title": "Enable Linting",
+            "description": "If enabled, the extension will provide linting for RDF documents.",
+            "default": false,
+            "experimental": true
+          },
+          "mentor.linting.unresolvedReferenceSeverity": {
+            "type": "string",
+            "title": "Severity: Unresolved References",
+            "description": "The severity level for unresolved references in RDF documents.",
+            "enum": [
+              "Error",
+              "Warning",
+              "Information",
+              "Hint",
+              "Disabled"
+            ],
+            "enumDescriptions": [
+              "Unresolved references will be treated as errors.",
+              "Unresolved references will be treated as warnings.",
+              "Unresolved references will be treated as information messages.",
+              "Unresolved references will be treated as hints.",
+              "Unresolved references will not be reported."
+            ],
+            "default": "Warning",
+            "experimental": true
+          },
           "mentor.language.sparql.defaultDocumentTemplate": {
             "type": "string",
             "title": "Default SPARQL Document Template",

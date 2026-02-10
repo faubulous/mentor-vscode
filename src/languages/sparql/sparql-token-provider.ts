@@ -11,8 +11,7 @@ import {
 } from '@src/languages/turtle/providers';
 import {
 	SparqlCodeLensProvider,
-	SparqlCompletionItemProvider,
-	SparqlLintingProvider
+	SparqlCompletionItemProvider
 } from '@src/languages/sparql/providers';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
@@ -20,7 +19,6 @@ const codeLensProvider = new SparqlCodeLensProvider();
 const completionProvider = new SparqlCompletionItemProvider();
 const definitionProvider = new DefinitionProvider();
 const hoverProvider = new HoverProvider();
-const lintingProvider = new SparqlLintingProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
 const referenceProvider = new ReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
@@ -36,7 +34,6 @@ export class SparqlTokenProvider {
 			vscode.languages.registerInlineCompletionItemProvider({ language: 'sparql' }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language: 'sparql' }, referenceProvider),
 			vscode.languages.registerRenameProvider({ language: 'sparql' }, renameProvider),
-			...lintingProvider.register(),
 		];
 	}
 }

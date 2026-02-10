@@ -72,10 +72,11 @@ class SparqlLanguageServer extends LanguageServerBase {
 				continue;
 			}
 
+			// Only check the variable usage in SELECT/CONSTRUCT/DESCRIBE queries.
+			// In ASK queries, all variables are considered used.
 			switch (tokenType) {
 				case 'SELECT':
 				case 'CONSTRUCT':
-				case 'ASK':
 				case 'DESCRIBE': {
 					// Start tracking a new query scope
 					const newScope: QueryScope = {

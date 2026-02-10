@@ -1,4 +1,5 @@
 export * from './definition-provider';
+export * from './document-linting-provider';
 export * from './hover-provider';
 export * from './inference-uri-handler';
 export * from './inference-uri-link-provider';
