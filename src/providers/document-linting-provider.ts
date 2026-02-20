@@ -24,8 +24,22 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 */
 	private readonly _disposables: vscode.Disposable[] = [];
 
+	/**
+	 * Cached linting enabled state (kill switch).
+	 */
+	private _lintingEnabled: boolean = false;
+
 	constructor() {
 		this._diagnosticCollection = vscode.languages.createDiagnosticCollection('mentor-linting');
+
+		this._loadLintingEnabledState();
+	}
+
+	/**
+	 * Refresh the cached linting enabled state.
+	 */
+	private _loadLintingEnabledState(): void {
+		this._lintingEnabled = !!mentor.configuration.get<boolean>('linting.enabled', false);
 	}
 
 	/**
@@ -80,6 +94,20 @@ export class DocumentLintingProvider implements vscode.Disposable {
 
 				this._validateAllOpenDocuments();
 			}
+
+			if (e.affectsConfiguration('mentor.linting.enabled')) {
+				this._loadLintingEnabledState();
+
+				// Kill switch: if linting is disabled, clear all diagnostics and stop.
+				if (!this._lintingEnabled) {
+					this._diagnosticCollection.clear();
+					return;
+				}
+
+				// If it was enabled, validate everything again.
+				this._validateAllOpenDocuments();
+				this._validateAllOpenNotebooks();
+			}
 		}));
 	}
 
@@ -87,6 +115,10 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Handle document change events.
 	 */
 	private _onDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
+		if (!this._lintingEnabled) {
+			return;
+		}
+
 		if (this._isSupportedLanguage(e.document.languageId)) {
 			this._validateDocument(e.document);
 		}
@@ -96,6 +128,10 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Handle document open events.
 	 */
 	private _onDocumentOpened(document: vscode.TextDocument): void {
+		if (!this._lintingEnabled) {
+			return;
+		}
+
 		if (this._isSupportedLanguage(document.languageId)) {
 			this._validateDocument(document);
 		}
@@ -114,6 +150,10 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Handle notebook open events.
 	 */
 	private _onNotebookOpened(notebook: vscode.NotebookDocument): void {
+		if (!this._lintingEnabled) {
+			return;
+		}
+
 		this._validateNotebook(notebook);
 	}
 
@@ -133,6 +173,10 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Handle notebook change events.
 	 */
 	private _onNotebookChanged(e: vscode.NotebookDocumentChangeEvent): void {
+		if (!this._lintingEnabled) {
+			return;
+		}
+
 		// Validate cells that had content changes
 		for (const cellChange of e.cellChanges) {
 			if (cellChange.document && this._isSupportedLanguage(cellChange.cell.document.languageId)) {
@@ -161,6 +205,10 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Validate all currently open RDF documents.
 	 */
 	private _validateAllOpenDocuments(): void {
+		if (!this._lintingEnabled) {
+			return;
+		}
+
 		for (const document of vscode.workspace.textDocuments) {
 			if (this._isSupportedLanguage(document.languageId)) {
 				this._validateDocument(document);
@@ -172,6 +220,10 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Validate all currently open notebooks.
 	 */
 	private _validateAllOpenNotebooks(): void {
+		if (!this._lintingEnabled) {
+			return;
+		}
+
 		for (const notebook of vscode.workspace.notebookDocuments) {
 			this._validateNotebook(notebook);
 		}
@@ -181,6 +233,10 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Validate all supported cells in a notebook.
 	 */
 	private _validateNotebook(notebook: vscode.NotebookDocument): void {
+		if (!this._lintingEnabled) {
+			return;
+		}
+
 		for (const cell of notebook.getCells()) {
 			if (this._isSupportedLanguage(cell.document.languageId)) {
 				this._validateDocument(cell.document);
@@ -193,6 +249,11 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * @param document The document to validate.
 	 */
 	private async _validateDocument(document: vscode.TextDocument): Promise<void> {
+		if (!this._lintingEnabled) {
+			this._diagnosticCollection.delete(document.uri);
+			return;
+		}
+
 		const context = mentor.getDocumentContextFromUri(document.uri.toString());
 
 		if (!context) {
