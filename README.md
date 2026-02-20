@@ -29,6 +29,11 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
+### Version 0.3.11: Minor improvements and bug fixes
+- Added support for highlighting unused variables in SPARQL queries
+- Added support for indexing notebook cells upon indexing the workspace
+- Fixed invalid syntax highlighting of prefixes that contain '-' characters
+
 ### Version 0.3.10: Improved SPARQL connection management
 - Moved SPARQL connection management into dedicated view
     - Removed old connection management tree view
