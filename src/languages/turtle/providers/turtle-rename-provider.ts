@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '@src/mentor';
-import { TOKENS } from '@faubulous/mentor-rdf-parsers';
-import { isVariable, getIriFromToken } from '@src/utilities';
+import { TOKENS, isVariableToken } from '@faubulous/mentor-rdf-parsers';
+import { getIriFromToken } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
@@ -71,7 +71,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			if (edits.size > 0) {
 				context.updateNamespacePrefix(prefix, newName);
 			}
-		} else if (isVariable(token)) {
+		} else if (isVariableToken(token)) {
 			for (const t of context.tokens.filter(t => t.image === token.image)) {
 				const r = this.getLabelEditRange(t);
 

@@ -11,6 +11,7 @@
       "debugWebviews": true,
       "trace": true,
       "args": [
+        "--inspect",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionDevelopmentKind=web"
       ],

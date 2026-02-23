@@ -69,15 +69,11 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	protected getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
 		const result = [];
 
-		if (this._isPrefixDefinitionContext(context, tokenIndex)) {
-			return this._getPrefixCompletionItems(context, tokenIndex);
-		}
-
-		const currentToken = context.tokens[tokenIndex];
-
 		if (this._isLocalPartDefinitionContext(context, tokenIndex)) {
 			const documentIri = WorkspaceUri.toWorkspaceUri(document.uri);
 			const componentType = getTripleComponentType(context.tokens, tokenIndex);
+
+			const currentToken = context.tokens[tokenIndex];
 			const namespaceIri = getNamespaceIriFromPrefixedName(context.namespaces, currentToken.image);
 			const localPart = currentToken.image.split(":")[1];
 
@@ -99,24 +95,6 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 					}
 				}
 			}
-		}
-
-		return result;
-	}
-
-	private _isPrefixDefinitionContext(context: TurtleDocument, tokenIndex: number): boolean {
-		const currentToken = context.tokens[tokenIndex];
-
-		return currentToken?.tokenType?.name === "PN_CHARS_BASE";
-	}
-
-	private _getPrefixCompletionItems(context: TurtleDocument, tokenIndex: number): vscode.CompletionItem[] {
-		const result = [];
-		const token = context.tokens[tokenIndex];
-		const prefixes = Object.keys(context.namespaces);
-
-		for (let prefix of prefixes.filter(p => p.startsWith(token.image)).slice(0, this.maxCompletionItems)) {
-			result.push(new vscode.CompletionItem(prefix, vscode.CompletionItemKind.Module));
 		}
 
 		return result;

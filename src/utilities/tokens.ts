@@ -29,32 +29,6 @@ export interface PrefixDefinition {
 }
 
 /**
- * Get the next token.
- * @param token A token.
- * @returns The next token or undefined.
- */
-export function getNextToken(tokens: IToken[], token: IToken): IToken | undefined {
-	const index = tokens.indexOf(token);
-
-	if (index > -1 && index < tokens.length - 1) {
-		return tokens[index + 1];
-	}
-}
-
-/**
- * Get the previous token.
- * @param token A token.
- * @returns The previous token or undefined.
- */
-export function getPreviousToken(tokens: IToken[], token: IToken): IToken | undefined {
-	const index = tokens.indexOf(token);
-
-	if (index > 0) {
-		return tokens[index - 1];
-	}
-}
-
-/**
 * Gets the position of a token in a document.
 * @param token A token.
 * @returns The position of the token.
@@ -72,66 +46,17 @@ export function getTokenPosition(token: IToken): Range {
 	};
 }
 
-/*
- * Get the token at a given offset.
- * @param tokens A list of tokens.
- * @param offset An offset.
- * @returns The token at the given offset.
- */
-export function getTokenAtOffset(tokens: IToken[], offset: number): IToken[] {
-	return tokens.filter(t => t.startOffset <= offset && offset <= t.startOffset + t.image.length);
-}
-
-/**
- * Indicates whether the token is a variable.
- * @param token A token.
- * @returns `true` if the token is a variable, `false` otherwise.
- */
-export function isVariable(token: IToken) {
-	return token.tokenType === TOKENS.VAR1;
-}
-
-/**
- * Indicates whether a token is upper case.
- * @param token A token.
- * @returns `true` if the token is upper case. `false` otherwise.
- */
-export function isUpperCase(token?: IToken): boolean {
-	if (token) {
-		const image = token.image;
-
-		if (image) {
-			return image === image.toUpperCase();
-		}
-	}
-
-	return false;
-}
-
-/**
- * Get the prefix name from a prefixed name token.
- */
-export function getPrefixFromToken(token: IToken): string {
-	if (token.tokenType === TOKENS.PNAME_LN) {
-		return token.image.split(':')[0];
-	} else if (token.tokenType === TOKENS.PNAME_NS) {
-		return token.image.substring(0, token.image.length - 1);
-	} else {
-		throw new Error("Cannot get prefix from token type: " + token.tokenType?.name);
-	}
-}
-
 /**
  * Get the IRI from either an IRI or prefixed name tokens.
  * @param token A token.
  * @returns A URI or undefined.
  */
 export function getIriFromToken(prefixes: PrefixMap, token: IToken): string | undefined {
-	switch (token.tokenType) {
-		case TOKENS.IRIREF:
+	switch (token.tokenType.name) {
+		case TOKENS.IRIREF.name:
 			return getIriFromIriReference(token.image);
-		case TOKENS.PNAME_LN:
-		case TOKENS.PNAME_NS:
+		case TOKENS.PNAME_LN.name:
+		case TOKENS.PNAME_NS.name:
 			return getIriFromPrefixedName(prefixes, token.image);
 	}
 }
@@ -191,7 +116,7 @@ export function getNamespaceIriFromPrefixedName(prefixes: PrefixMap, name: strin
  * @returns A namespace definition or undefined.
  */
 export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixDefinition | undefined {
-	if (token?.tokenType != TOKENS.PREFIX && token?.tokenType != TOKENS.TTL_PREFIX) {
+	if (token?.tokenType.name !== TOKENS.PREFIX.name && token?.tokenType.name !== TOKENS.TTL_PREFIX.name) {
 		return;
 	}
 
@@ -203,13 +128,13 @@ export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixD
 
 	const prefixToken = tokens[n + 1];
 
-	if (prefixToken?.tokenType != TOKENS.PNAME_NS) {
+	if (prefixToken?.tokenType.name !== TOKENS.PNAME_NS.name) {
 		return;
 	}
 
 	const uriToken = tokens[n + 2];
 
-	if (uriToken?.tokenType != TOKENS.IRIREF) {
+	if (uriToken?.tokenType.name !== TOKENS.IRIREF.name) {
 		return;
 	}
 
@@ -230,32 +155,32 @@ export function getTripleComponentType(tokens: IToken[], tokenIndex: number): Tr
 
 	const p = tokens[tokenIndex - 1];
 
-	switch (p.tokenType) {
-		case TOKENS.PERIOD: {
+	switch (p.tokenType.name) {
+		case TOKENS.PERIOD.name: {
 			// A dot is always followed by a subject.
 			return "subject";
 		}
-		case TOKENS.SEMICOLON: {
+		case TOKENS.SEMICOLON.name: {
 			// A semicolon is always followed by a predicate.
 			return "predicate";
 		}
-		case TOKENS.A: {
+		case TOKENS.A.name: {
 			// A type assertion is always followed by an object.
 			return "object";
 		}
-		case TOKENS.PNAME_LN:
-		case TOKENS.IRIREF: {
+		case TOKENS.PNAME_LN.name:
+		case TOKENS.IRIREF.name: {
 			// This could either be a predicate or an object.
 			const q = tokens[tokenIndex - 2];
 
-			switch (q?.tokenType) {
-				case TOKENS.SEMICOLON:
-				case TOKENS.LBRACKET:
-				case TOKENS.PNAME_LN:
-				case TOKENS.IRIREF: {
+			switch (q?.tokenType.name) {
+				case TOKENS.SEMICOLON.name:
+				case TOKENS.LBRACKET.name:
+				case TOKENS.PNAME_LN.name:
+				case TOKENS.IRIREF.name: {
 					return "object";
 				}
-				case TOKENS.PERIOD: {
+				case TOKENS.PERIOD.name: {
 					return "predicate";
 				}
 			}

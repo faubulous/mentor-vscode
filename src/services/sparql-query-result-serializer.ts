@@ -2,22 +2,17 @@ import * as vscode from 'vscode';
 import { mentor } from '@src/mentor';
 import { Store, Writer } from 'n3';
 import { Uri } from '@faubulous/mentor-rdf';
+import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
 import { toArrayWithCancellation } from '@src/utilities/cancellation';
 import { NamespaceMap } from '@src/utilities';
-import { SparqlVariableParser } from './sparql-variable-parser';
 
 /**
  * Handler for serializing SPARQL query results.
  */
 export class SparqlQueryResultSerializer {
-	/**
-	 * Instance of SparqlVariableParser for parsing variable names from SELECT queries.
-	 */
-	private readonly _variableParser = new SparqlVariableParser();
-
 	/**
 	 * Serializes SPARQL query results into a format suitable for the webview.
 	 * @param documentIri The IRI of the document where the query was run.
@@ -35,8 +30,11 @@ export class SparqlQueryResultSerializer {
 		const parsedColumns: string[] = [];
 
 		if (context.query) {
+			const lexResult = new SparqlLexer().tokenize(context.query);
+			const cst = new SparqlParser().parse(lexResult.tokens);
+
 			// Parse the variables from select queries in the order they were defined.
-			const variables = this._variableParser.parseSelectVariables(context.query);
+			const variables = new SparqlVariableParser().getSelectedVariables(cst);
 
 			parsedColumns.push(...variables);
 		}

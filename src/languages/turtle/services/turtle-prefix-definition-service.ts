@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { IToken, TokenType } from 'chevrotain';
 import { Uri } from '@faubulous/mentor-rdf';
-import { TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { TOKENS, isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
-import { getIriFromIriReference, isUpperCase, getFirstTokenOfType, getLastTokenOfType } from '@src/utilities';
+import { getIriFromIriReference } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
@@ -257,7 +257,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 
 		// Determine the token type for prefix definitions in the document and if they should be uppercase.
 		const tokenType = this._getPrefixTokenType(document, context);
-		const upperCase = isUpperCase(lastPrefix ?? context.tokens[0]);
+		const upperCase = isUpperCaseToken(lastPrefix ?? context.tokens[0]);
 
 		let insertPosition = new vscode.Position(lastPrefix ? (lastPrefix.endLine ?? 0) : 0, 0);
 
@@ -331,7 +331,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 
 		// Determine the token type for prefix definitions in the document and if they should be uppercase.
 		const tokenType = this._getPrefixTokenType(document, context);
-		const upperCase = isUpperCase(lastPrefix ?? context.tokens[0]);
+		const upperCase = isUpperCaseToken(lastPrefix ?? context.tokens[0]);
 
 		for (const prefix of Object.keys(namespaceMap).sort()) {
 			const namespaceIri = namespaceMap[prefix];
