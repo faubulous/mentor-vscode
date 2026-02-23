@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { Range } from 'vscode-languageserver-types';
 import { SAXParser } from 'sax-ts';
-import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RdfSyntax } from '@faubulous/mentor-rdf';
+import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL } from '@faubulous/mentor-rdf';
+import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
-import { DocumentContext, TokenTypes } from '@src/workspace/document-context';
+import { DocumentContext } from '@src/workspace/document-context';
 import { getIriFromPrefixedName } from '@src/utilities';
 
 // TODO: Move getTokenTypes and getPrefixDefintion int the Definition Service for the XML language.
@@ -53,10 +54,6 @@ export class XmlDocument extends DocumentContext {
 				return value;
 			}
 		}
-	}
-
-	override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
-		return `xmlns:${prefix}="${uri}"`;
 	}
 
 	override getIriAtPosition(position: { line: number, character: number }): string | undefined {
@@ -210,15 +207,6 @@ export class XmlDocument extends DocumentContext {
 					new vscode.Position(position.line, end)
 				);
 			}
-		}
-	}
-
-	override getTokenTypes(): TokenTypes {
-		return {
-			PREFIX: '',
-			BASE: '',
-			IRIREF: '',
-			PNAME_NS: '',
 		}
 	}
 

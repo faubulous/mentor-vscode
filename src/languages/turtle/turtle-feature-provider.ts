@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { Uri } from '@faubulous/mentor-rdf';
-import { IToken } from "millan";
+import { TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { IToken } from "chevrotain";
 import { getTokenPosition } from "@src/utilities";
 
 /**
@@ -13,12 +14,11 @@ export class TurtleFeatureProvider {
 	 * @returns The range of the prefix.
 	 */
 	protected getPrefixEditRange(token: IToken) {
-		const tokenType = token.tokenType?.tokenName;
 		const { start } = getTokenPosition(token);
 
-		switch (tokenType) {
-			case "PNAME_NS":
-			case "PNAME_LN": {
+		switch (token.tokenType.name) {
+			case TOKENS.PNAME_NS.name:
+			case TOKENS.PNAME_LN.name: {
 				const i = token.image.indexOf(":");
 
 				return new vscode.Range(
@@ -38,11 +38,10 @@ export class TurtleFeatureProvider {
 	 * @returns The range of the label.
 	 */
 	protected getLabelEditRange(token: IToken) {
-		const tokenType = token.tokenType?.tokenName;
 		const { start, end } = getTokenPosition(token);
 
-		switch (tokenType) {
-			case "PNAME_LN": {
+		switch (token.tokenType.name) {
+			case TOKENS.PNAME_LN.name: {
 				const i = token.image.indexOf(":");
 
 				return new vscode.Range(
@@ -50,7 +49,7 @@ export class TurtleFeatureProvider {
 					new vscode.Position(end.line, end.character)
 				);
 			}
-			case "IRIREF": {
+			case TOKENS.IRIREF.name: {
 				let uri = token.image.trim();
 				uri = uri.substring(1, uri.length - 1)
 
@@ -64,7 +63,7 @@ export class TurtleFeatureProvider {
 					new vscode.Position(end.line, start.character + i + label.length)
 				);
 			}
-			case "VAR1": {
+			case TOKENS.VAR1.name: {
 				return new vscode.Range(
 					new vscode.Position(start.line, start.character + 1),
 					new vscode.Position(end.line, end.character)

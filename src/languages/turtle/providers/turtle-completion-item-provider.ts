@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { Uri } from "@faubulous/mentor-rdf";
+import { TOKENS } from "@faubulous/mentor-rdf-parsers";
 import { mentor } from "@src/mentor";
 import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -106,7 +107,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	private _isPrefixDefinitionContext(context: TurtleDocument, tokenIndex: number): boolean {
 		const currentToken = context.tokens[tokenIndex];
 
-		return currentToken?.tokenType?.tokenName === "PN_CHARS_BASE";
+		return currentToken?.tokenType?.name === "PN_CHARS_BASE";
 	}
 
 	private _getPrefixCompletionItems(context: TurtleDocument, tokenIndex: number): vscode.CompletionItem[] {
@@ -123,9 +124,9 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 	private _isLocalPartDefinitionContext(context: TurtleDocument, tokenIndex: number): boolean {
 		const currentToken = context.tokens[tokenIndex];
-		const currentType = currentToken?.tokenType?.tokenName;
+		const currentType = currentToken?.tokenType.name;
 
-		return currentType === 'PNAME_LN' || currentType === 'PNAME_NS';
+		return currentType === TOKENS.PNAME_LN.name || currentType === TOKENS.PNAME_NS.name;
 	}
 
 	private _getLocalPartCompletionItems(context: TurtleDocument, componentType: TripleComonentType, uri: string, graphs: string[] | undefined): vscode.CompletionItem[] {

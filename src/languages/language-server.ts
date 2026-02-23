@@ -1,5 +1,6 @@
-import { IRecognitionException } from 'chevrotain';
-import { IToken } from 'millan';
+import { XSD } from '@faubulous/mentor-rdf';
+import { IParser, ILexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { IToken, IRecognitionException } from 'chevrotain';
 import {
 	BrowserMessageReader,
 	BrowserMessageWriter,
@@ -20,7 +21,6 @@ import {
 	TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { SyntaxParser, XSD } from '@faubulous/mentor-rdf';
 import {
 	getNamespaceDefinition,
 	getIriFromToken,
@@ -31,9 +31,7 @@ import {
  * The result of tokenizing a text document.
  */
 export interface TokenizationResults {
-	comments: IToken[];
 	errors: IRecognitionException[];
-	semanticErrors: IRecognitionException[];
 	tokens: IToken[];
 }
 
@@ -89,13 +87,19 @@ export abstract class LanguageServerBase {
 	isDocumentTokenProvider = false;
 
 	/**
+	 * The lexer used to tokenize the document. This is used to provide lexing diagnostics, but not for validating the document for errors, since that requires fully parsing it.
+	 */
+	lexer: ILexer;
+
+	/**
 	 * The parser used to tokenize and validate the document.
 	 */
-	parser: SyntaxParser;
+	parser: IParser;
 
-	constructor(langaugeId: string, languageName: string, parser: SyntaxParser, isDocumentTokenProvider = false) {
+	constructor(langaugeId: string, languageName: string, lexer: ILexer, parser: IParser, isDocumentTokenProvider = false) {
 		this.languageName = languageName;
 		this.languageId = langaugeId;
+		this.lexer = lexer;
 		this.parser = parser;
 		this.isDocumentTokenProvider = isDocumentTokenProvider;
 
@@ -207,14 +211,23 @@ export abstract class LanguageServerBase {
 		this.validateTextDocument(change.document);
 	}
 
+	/**
+	 * Parses the content of a document and returns any recognition exceptions that 
+	 * were thrown during parsing, which include both lexing and parsing errors. Note 
+	 * that this requires fully parsing the document, including building the CST, 
+	 * which can be a potentially expensive operation for large documents. Therefore, 
+	 * we only do this in the language server and send the result to the client to not block the UI.
+	 * @param content 
+	 * @returns 
+	 */
 	protected async parse(content: string): Promise<TokenizationResults> {
-		const result = this.parser.parse(content);
+		const lexResult = this.lexer.tokenize(content);
+
+		this.parser.parse(lexResult.tokens, false);
 
 		return {
-			tokens: [...result.tokens, ...result.comments],
-			errors: result.errors,
-			semanticErrors: result.semanticErrors,
-			comments: result.comments
+			tokens: lexResult.tokens,
+			errors: this.parser.errors,
 		};
 	}
 
@@ -244,7 +257,7 @@ export abstract class LanguageServerBase {
 
 				diagnostics = [
 					...this.getLexDiagnostics(document, result.tokens),
-					...this.getParseDiagnostics(document, result.errors.concat(result.semanticErrors)),
+					...this.getParseDiagnostics(document, result.errors),
 					...this.getLintDiagnostics(document, content, result.tokens)
 				];
 			}
@@ -278,8 +291,8 @@ export abstract class LanguageServerBase {
 					endColumn: t.endColumn,
 					tokenTypeIdx: t.tokenTypeIdx,
 					tokenType: {
-						name: t.tokenType?.tokenName ?? '',
-						tokenName: t.tokenType?.tokenName,
+						name: t.tokenType?.name ?? '',
+						tokenName: t.tokenType?.name,
 						GROUP: t.tokenType?.GROUP,
 					}
 				}))
@@ -289,7 +302,7 @@ export abstract class LanguageServerBase {
 
 	protected getLexDiagnostics(document: TextDocument, tokens: IToken[]) {
 		return tokens
-			.filter((t) => t?.tokenType?.tokenName === 'Unknown')
+			.filter((t) => t?.tokenType?.name === 'Unknown')
 			.map(
 				(unknownToken): Diagnostic => ({
 					severity: DiagnosticSeverity.Error,
@@ -321,7 +334,7 @@ export abstract class LanguageServerBase {
 					severity: DiagnosticSeverity.Error,
 				};
 
-				if (token.tokenType?.tokenName !== 'EOF') {
+				if (token.tokenType?.name !== 'EOF') {
 					constructedDiagnostic.range = Range.create(
 						document.positionAt(token.startOffset),
 						document.positionAt((token.endOffset ?? token.startOffset) + 1)
@@ -357,7 +370,7 @@ export abstract class LanguageServerBase {
 
 		for (let i = 0; i < tokens.length; i++) {
 			const t = tokens[i];
-			const type = t.tokenType?.tokenName;
+			const type = t.tokenType?.name;
 
 			if (!type || type === 'Unknown') {
 				continue;
@@ -412,7 +425,7 @@ export abstract class LanguageServerBase {
 				}
 				case 'PNAME_NS': {
 					const prefix = t.image.split(':')[0];
-					const previousType = tokens[i - 1]?.tokenType?.tokenName;
+					const previousType = tokens[i - 1]?.tokenType?.name;
 
 					// Count prefixed names if they are not part of a prefix declaration.
 					if (previousType !== 'PREFIX' && previousType !== 'TTL_PREFIX') {
@@ -850,5 +863,16 @@ export abstract class LanguageServerBase {
 		return result;
 	}
 
-	abstract getUnquotedLiteralValue(token: IToken): string;
+	getUnquotedLiteralValue(token: IToken): string {
+		switch (token?.tokenType.name) {
+			case TOKENS.STRING_LITERAL_QUOTE.name:
+			case TOKENS.STRING_LITERAL_SINGLE_QUOTE.name:
+				return token.image.substring(1, token.image.length - 1);
+			case TOKENS.STRING_LITERAL_LONG_QUOTE.name:
+			case TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE.name:
+				return token.image.substring(3, token.image.length - 3);
+		}
+
+		return token.image;
+	}
 }

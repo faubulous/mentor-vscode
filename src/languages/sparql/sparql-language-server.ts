@@ -1,5 +1,5 @@
-import { IToken } from 'millan';
-import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
+import { IToken } from 'chevrotain';
+import { SparqlLexer, SparqlParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { LanguageServerBase } from '@src/languages/language-server';
 import { Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver/browser';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -22,24 +22,16 @@ interface QueryScope {
 	 * Variables and their occurrence tokens within this scope.
 	 */
 	variables: Map<string, IToken[]>;
+
+	/**
+	 * Variables that are projection targets in the SELECT clause (AS ?x).
+	 */
+	projectionVariables: Set<string>;
 }
 
 class SparqlLanguageServer extends LanguageServerBase {
 	constructor() {
-		super('sparql', 'SPARQL', new SparqlSyntaxParser());
-	}
-
-	override getUnquotedLiteralValue(token: IToken): string {
-		switch (token?.tokenType?.tokenName) {
-			case "STRING_LITERAL1":
-			case "STRING_LITERAL2":
-				return token.image.substring(1, token.image.length - 1);
-			case "STRING_LITERAL_LONG1":
-			case "STRING_LITERAL_LONG2":
-				return token.image.substring(3, token.image.length - 3);
-		}
-
-		return token.image;
+		super('sparql', 'SPARQL', new SparqlLexer(), new SparqlParser(), true);
 	}
 
 	override getLintDiagnostics(document: TextDocument, content: string, tokens: IToken[]): Diagnostic[] {
@@ -66,43 +58,41 @@ class SparqlLanguageServer extends LanguageServerBase {
 
 		for (let i = 0; i < tokens.length; i++) {
 			const token = tokens[i];
-			const tokenType = token.tokenType?.tokenName;
 
-			if (!tokenType) {
+			if (!token.tokenType) {
 				continue;
 			}
 
 			// Only check the variable usage in SELECT/CONSTRUCT/DESCRIBE queries.
 			// In ASK queries, all variables are considered used.
-			switch (tokenType) {
-				case 'SELECT':
-				case 'CONSTRUCT':
-				case 'DESCRIBE': {
+			switch (token.tokenType.name) {
+				case TOKENS.SELECT.name:
+				case TOKENS.CONSTRUCT.name:
+				case TOKENS.DESCRIBE.name: {
 					// Start tracking a new query scope
 					const newScope: QueryScope = {
 						isStarSelect: false,
 						depth: currentDepth,
-						variables: new Map()
+						variables: new Map(),
+						projectionVariables: new Set()
 					};
 
 					scopeStack.push(newScope);
 
-					if (tokenType === 'SELECT') {
+					if (token.tokenType.name === TOKENS.SELECT.name) {
 						expectingSelectClause = true;
 						inSelectClause = true;
 					}
 					break;
 				}
-
-				case 'Star': {
+				case TOKENS.STAR.name: {
 					// Check if this is a SELECT * (star in select clause)
 					if (inSelectClause && scopeStack.length > 0) {
 						scopeStack[scopeStack.length - 1].isStarSelect = true;
 					}
 					break;
 				}
-
-				case 'LCurly': {
+				case TOKENS.LCURLY.name: {
 					currentDepth++;
 
 					// End of SELECT clause when we hit the first curly brace
@@ -112,8 +102,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 					}
 					break;
 				}
-
-				case 'RCurly': {
+				case TOKENS.RCURLY.name: {
 					currentDepth--;
 
 					// Check if any scopes should be closed
@@ -123,13 +112,21 @@ class SparqlLanguageServer extends LanguageServerBase {
 					}
 					break;
 				}
-
-				case 'VAR1':
-				case 'VAR2': {
+				case TOKENS.VAR1.name:
+				case TOKENS.VAR2.name: {
 					// Track variable occurrences in the current scope
 					if (scopeStack.length > 0) {
 						const currentScope = scopeStack[scopeStack.length - 1];
 						const varName = token.image;
+
+						// Check if this variable is a projection target (preceded by AS in SELECT clause)
+						if (inSelectClause && i > 0) {
+							const prevToken = tokens[i - 1];
+
+							if (prevToken?.tokenType?.name === TOKENS.AS_KW.name) {
+								currentScope.projectionVariables.add(varName);
+							}
+						}
 
 						if (!currentScope.variables.has(varName)) {
 							currentScope.variables.set(varName, []);
@@ -139,8 +136,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 					}
 					break;
 				}
-
-				case 'WHERE': {
+				case TOKENS.WHERE.name: {
 					// End of SELECT clause
 					if (expectingSelectClause) {
 						expectingSelectClause = false;
@@ -173,10 +169,11 @@ class SparqlLanguageServer extends LanguageServerBase {
 		}
 
 		for (const [varName, occurrences] of scope.variables) {
-			// A variable that appears only once is considered unused
-			if (occurrences.length === 1) {
+			// A variable that appears only once is considered unused,
+			// unless it's a projection target in the SELECT clause (AS ?x)
+			if (occurrences.length === 1 && !scope.projectionVariables.has(varName)) {
 				const token = occurrences[0];
-				
+
 				diagnostics.push({
 					code: 'UnusedVariableHint',
 					severity: DiagnosticSeverity.Hint,

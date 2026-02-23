@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { IToken } from 'millan';
+import { IToken } from 'chevrotain';
 import { Position } from 'vscode-languageserver-types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
-import { RdfSyntax, TrigSyntaxParser, TurtleSyntaxParser } from '@faubulous/mentor-rdf';
+import { RdfSyntax, TurtleLexer, TrigLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
-import { DocumentContext, TokenTypes } from '@src/workspace/document-context';
+import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from '@src/services';
 import {
 	countLeadingWhitespace,
@@ -71,16 +71,12 @@ export class TurtleDocument extends DocumentContext {
 
 		switch (token.tokenType.name) {
 			// Display the literal strings without the quotes for improved readability for long strings.
-			case 'STRING_LITERAL1':
-			case 'STRING_LITERAL2':
-			case 'STRING_LITERAL_QUOTE':
-			case "STRING_LITERAL_SINGLE_QUOTE": {
+			case TOKENS.STRING_LITERAL_SINGLE_QUOTE.name:
+			case TOKENS.STRING_LITERAL_QUOTE.name: {
 				return token.image.slice(1, -1);
 			}
-			case 'STRING_LITERAL_LONG1':
-			case 'STRING_LITERAL_LONG2':
-			case 'STRING_LITERAL_LONG_QUOTE':
-			case "STRING_LITERAL_LONG_SINGLE_QUOTE": {
+			case TOKENS.STRING_LITERAL_LONG_QUOTE.name:
+			case TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE.name: {
 				return token.image.slice(3, -3);
 			}
 			default: {
@@ -96,12 +92,11 @@ export class TurtleDocument extends DocumentContext {
 	 * @returns `true` if the cursor is on the prefix of the token, `false` otherwise.
 	 */
 	isPrefixTokenAtPosition(token: IToken, position: vscode.Position) {
-		const tokenType = token.tokenType?.tokenName;
 		const { start } = getTokenPosition(token);
 
-		switch (tokenType) {
-			case "PNAME_NS":
-			case "PNAME_LN": {
+		switch (token.tokenType.name) {
+			case TOKENS.PNAME_NS.name:
+			case TOKENS.PNAME_LN.name: {
 				const i = token.image.indexOf(":");
 				const n = position.character - start.character;
 
@@ -126,15 +121,15 @@ export class TurtleDocument extends DocumentContext {
 	public override async parse(data: string): Promise<void> {
 		// Parse the tokens *before* parsing the graph because the graph parsing 
 		// might fail but we need to update the tokens.
-		let tokens;
+		let lexResult;
 
 		if (this.syntax === RdfSyntax.TriG) {
-			tokens = new TrigSyntaxParser().tokenize(data);
+			lexResult = new TrigLexer().tokenize(data);
 		} else {
-			tokens = new TurtleSyntaxParser().tokenize(data)
+			lexResult = new TurtleLexer().tokenize(data);
 		}
 
-		this.setTokens(tokens);
+		this.setTokens(lexResult.tokens);
 
 		try {
 			const graphUri = this.graphIri.toString();
@@ -155,20 +150,12 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
-	public override getTokenTypes(): TokenTypes {
-		return {
-			PREFIX: 'TTL_PREFIX',
-			BASE: 'TTL_BASE',
-			IRIREF: 'IRIREF',
-			PNAME_NS: 'PNAME_NS',
-		}
-	}
-
 	override async onDidChangeDocument(e: vscode.TextDocumentChangeEvent): Promise<void> {
 		// Automatically declare prefixes when a colon is typed.
 		const change = e.contentChanges[0];
 
-		// TODO: This should be handled in the prefix definition service (listen to doc changes and react) instead of the document itself.
+		// TODO: This should be handled in the prefix definition service 
+		// (listen to doc changes and react) instead of the document itself.
 		if (change?.text.endsWith(':') && mentor.configuration.get('prefixes.autoDefinePrefixes')) {
 			// Do not auto-implement prefixes when manually typing a prefix.
 			const n = this.getTokenIndexAtPosition(change.range.start);
@@ -189,7 +176,7 @@ export class TurtleDocument extends DocumentContext {
 
 			const currentToken = this.tokens[n];
 
-			if (currentToken && currentToken.image && currentToken.tokenType?.tokenName === 'PNAME_NS') {
+			if (currentToken && currentToken.image && currentToken.tokenType.name === TOKENS.PNAME_NS.name) {
 				const prefix = currentToken.image.substring(0, currentToken.image.length - 1);
 
 				// Do not implmenet prefixes that are already defined.
@@ -226,34 +213,6 @@ export class TurtleDocument extends DocumentContext {
 		const end = new vscode.Position(endLine, endCharacter - endWhitespace).translate(0, 1);
 
 		return new vscode.Range(start, end);
-	}
-
-	/**
-	 * Get the first token of a given type.
-	 * @param tokens A list of tokens.
-	 * @param type The type name of the token.
-	 * @returns The last token of the given type, if it exists, undefined otherwise.
-	 */
-	getFirstTokenOfType(type: string): IToken | undefined {
-		const n = this.tokens.findIndex(t => t.tokenType?.tokenName === type);
-
-		if (n > -1) {
-			return this.tokens[n];
-		}
-	}
-
-	/**
-	 * Get the last token of a given type.
-	 * @param tokens A list of tokens.
-	 * @param type The type name of the token.
-	 * @returns The last token of the given type, if it exists, undefined otherwise.
-	 */
-	getLastTokenOfType(type: string): IToken | undefined {
-		const result = this.tokens.filter(t => t.tokenType?.tokenName === type);
-
-		if (result.length > 0) {
-			return result[result.length - 1];
-		}
 	}
 
 	/**
@@ -359,9 +318,9 @@ export class TurtleDocument extends DocumentContext {
 		let previousToken: IToken | undefined;
 
 		tokens.forEach((t: IToken, i: number) => {
-			switch (t.tokenType?.tokenName) {
-				case 'PREFIX':
-				case 'TTL_PREFIX': {
+			switch (t.tokenType.name) {
+				case TOKENS.PREFIX.name:
+				case TOKENS.TTL_PREFIX.name: {
 					const ns = getNamespaceDefinition(this.tokens, t);
 
 					// Only set the namespace if it is preceeded by a prefix keyword.
@@ -373,13 +332,13 @@ export class TurtleDocument extends DocumentContext {
 					}
 					break;
 				}
-				case 'PNAME_NS':
-				case 'PNAME_LN': {
+				case TOKENS.PNAME_NS.name:
+				case TOKENS.PNAME_LN.name: {
 					// Skip processing prefixes and iris in prefix definitions..
-					switch(previousToken?.tokenType?.tokenName) {
-						case 'PREFIX':
-						case 'TTL_PREFIX':
-						case 'PNAME_NS':
+					switch (previousToken?.tokenType.name) {
+						case TOKENS.PREFIX.name:
+						case TOKENS.TTL_PREFIX.name:
+						case TOKENS.PNAME_NS.name:
 							break;
 					}
 
@@ -400,7 +359,7 @@ export class TurtleDocument extends DocumentContext {
 					this._handleIriReference(tokens, t, iri);
 					break;
 				}
-				case 'IRIREF': {
+				case TOKENS.IRIREF.name: {
 					const iri = getIriFromIriReference(t.image);
 
 					if (t.startColumn === 1 && previousToken) {
@@ -412,7 +371,7 @@ export class TurtleDocument extends DocumentContext {
 					this._handleIriReference(tokens, t, iri);
 					break;
 				}
-				case 'A': {
+				case TOKENS.A.name: {
 					this._handleTypeAssertion(tokens, t, rdf.type.id, i);
 					this._handleTypeDefinition(tokens, t, rdf.type.id, i);
 					break;
@@ -424,9 +383,9 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	private _registerSubject(token: IToken, iri: string, previousToken: IToken) {
-		const previousType = previousToken.tokenType?.tokenName;
+		const previousType = previousToken.tokenType.name;
 
-		if (previousType === 'Period' || previousType === 'Dot') {
+		if (previousType === TOKENS.PERIOD.name || previousType === TOKENS.PERIOD.name) {
 			const range = this.getRangeFromToken(token);
 
 			if (!this.subjects[iri]) {
@@ -499,11 +458,6 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
-	override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
-		// Note: All prefixes keywords are always in lowercase in Turtle.
-		return `@prefix ${prefix}: <${uri}> .`;
-	}
-
 	/**
 	 * Maps blank node ids of the parsed documents to the ones in the triple store.
 	 */
@@ -526,8 +480,8 @@ export class TurtleDocument extends DocumentContext {
 		let n = 0;
 
 		for (let t of this.tokens) {
-			switch (t.image) {
-				case '[': {
+			switch (t.tokenType.name) {
+				case TOKENS.LBRACKET.name: {
 					if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
 						// Account for the blank node list element.
 						n++;
@@ -543,7 +497,7 @@ export class TurtleDocument extends DocumentContext {
 
 					continue;
 				}
-				case '(': {
+				case TOKENS.LPARENT.name: {
 					tokenStack.push(t);
 
 					const s = blankIds[n];
@@ -554,17 +508,17 @@ export class TurtleDocument extends DocumentContext {
 
 					continue;
 				}
-				case ']': {
+				case TOKENS.RBRACKET.name: {
 					tokenStack.pop();
 					continue;;
 				}
-				case ')': {
+				case TOKENS.RPARENT.name: {
 					tokenStack.pop();
 					continue;;
 				}
 			}
 
-			if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
+			if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].tokenType.name === TOKENS.LPARENT.name) {
 				const s = blankIds[n++];
 				const r = this.getRangeFromToken(t);
 

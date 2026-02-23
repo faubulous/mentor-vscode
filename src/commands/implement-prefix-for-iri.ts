@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
-import { IToken } from 'millan';
+import { IToken } from 'chevrotain';
 import { getTokenPosition } from '@src/utilities';
 
 export const implementPrefixForIri = {

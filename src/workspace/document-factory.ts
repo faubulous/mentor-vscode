@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { MENTOR_EXTENSION_ID } from '../mentor';
 import { Utils } from 'vscode-uri';
-import { RdfSyntax } from '@faubulous/mentor-rdf';
+import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContext } from './document-context';
 import { TurtleDocument, SparqlDocument, XmlDocument } from '../languages';
 

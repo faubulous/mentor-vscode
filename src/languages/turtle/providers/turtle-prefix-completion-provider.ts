@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
+import { TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
 export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implements vscode.InlineCompletionItemProvider {
-	protected readonly prefixTokenTypes = new Set(["PREFIX", "TTL_PREFIX"]);
+	protected readonly prefixTokenTypes = new Set([TOKENS.PREFIX.name, TOKENS.TTL_PREFIX.name]);
 
 	constructor(readonly onComplete: (uri: string) => string) {
 		super();
@@ -25,9 +26,9 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		}
 
 		const currentToken = context.tokens[n];
-		const currentType = currentToken.tokenType?.tokenName;
+		const currentType = currentToken.tokenType.name;
 
-		if (!currentType || currentType != "PNAME_NS") {
+		if (!currentType || currentType !== TOKENS.PNAME_NS.name) {
 			return;
 		}
 
@@ -38,7 +39,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		}
 
 		// Only do inline completion for prefix defitions.
-		const previousType = previousToken.tokenType?.tokenName;
+		const previousType = previousToken.tokenType.name;
 
 		if (!previousType || !this.prefixTokenTypes.has(previousType)) {
 			return null;

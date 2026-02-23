@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { mentor } from '@src/mentor';
+import { TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { isVariable, getIriFromToken } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -47,11 +48,11 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			const prefix = token.image.substring(0, i);
 
 			for (const t of context.tokens) {
-				const tokenType = t.tokenType?.tokenName;
+				const tokenType = t.tokenType.name;
 
 				switch (tokenType) {
-					case "PNAME_NS":
-					case "PNAME_LN": {
+					case TOKENS.PNAME_NS.name:
+					case TOKENS.PNAME_LN.name: {
 						const p = t.image.split(":")[0];
 
 						if (p === prefix) {

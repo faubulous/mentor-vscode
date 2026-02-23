@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SparqlSyntaxParser } from '@faubulous/mentor-rdf';
+import { SparqlLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
@@ -398,22 +398,21 @@ export class SparqlQueryService {
 	}
 
 	_getQueryType(query: string): SparqlQueryType | undefined {
-		const parser = new SparqlSyntaxParser();
-		const result = parser.parse(query);
+		const lexingResult = new SparqlLexer().tokenize(query);
 
-		for (const token of result?.tokens) {
-			switch (token.tokenType?.name) {
-				case 'ASK':
+		for (const token of lexingResult.tokens) {
+			switch (token.tokenType.name) {
+				case TOKENS.ASK.name:
 					return 'boolean';
-				case 'SELECT':
+				case TOKENS.SELECT.name:
 					return 'bindings';
-				case 'CONSTRUCT':
+				case TOKENS.CONSTRUCT.name:
 					return 'quads';
-				case 'DESCRIBE':
+				case TOKENS.DESCRIBE.name:
 					return 'quads';
-				case 'FROM':
+				case TOKENS.FROM.name:
 					return undefined;
-				case 'WHERE':
+				case TOKENS.WHERE.name:
 					return undefined;
 			}
 		}

@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { TOKENS } from "@faubulous/mentor-rdf-parsers";
 import { mentor } from "@src/mentor";
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
@@ -28,10 +29,10 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 
 		const previousToken = context.tokens[n - 1];
 
-		switch (previousToken?.tokenType?.tokenName) {
-			case "GRAPH":
-			case "FROM":
-			case "NAMED":
+		switch (previousToken?.tokenType.name) {
+			case TOKENS.GRAPH.name:
+			case TOKENS.FROM.name:
+			case TOKENS.NAMED.name:
 				return true;
 			default:
 				return false;

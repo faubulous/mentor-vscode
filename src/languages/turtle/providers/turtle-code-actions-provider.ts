@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { Uri } from "@faubulous/mentor-rdf"
+import { Uri } from "@faubulous/mentor-rdf";
+import { TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
 import { getIriFromIriReference } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -9,6 +10,9 @@ import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-prov
  * A provider for RDF document code actions.
  */
 export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements vscode.CodeActionProvider {
+	/**
+	 * The kinds of code actions provided by this provider.
+	 */
 	public static readonly providedCodeActionKinds = [
 		vscode.CodeActionKind.QuickFix,
 		vscode.CodeActionKind.Refactor,
@@ -37,39 +41,45 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 
 		const token = context.getTokenAtPosition(range.start);
 
-		if(!token) {
+		if (!token) {
 			return [];
 		}
 
 		const result: vscode.CodeAction[] = [];
 
-		const tokenName = token.tokenType?.tokenName;
-		const tokenTypes = context.getTokenTypes();
+		switch (token.tokenType.name) {
+			case TOKENS.IRIREF.name: {
+				const namespaceIri = Uri.getNamespaceIri(getIriFromIriReference(token.image));
 
-		if (tokenName === tokenTypes.IRIREF) {
-			const namespaceIri = Uri.getNamespaceIri(getIriFromIriReference(token.image));
-
-			result.push({
-				kind: vscode.CodeActionKind.Refactor,
-				title: 'Define prefix for IRI',
-				isPreferred: true,
-				command: {
+				result.push({
+					kind: vscode.CodeActionKind.Refactor,
 					title: 'Define prefix for IRI',
-					command: 'mentor.command.implementPrefixForIri',
-					arguments: [document.uri, namespaceIri, token]
-				}
-			});
-		} else if (tokenName === tokenTypes.PREFIX || tokenName === tokenTypes.PNAME_NS) {
-			result.push({
-				kind: vscode.CodeActionKind.Refactor,
-				title: 'Sort prefixes',
-				isPreferred: true,
-				command: {
+					isPreferred: true,
+					command: {
+						title: 'Define prefix for IRI',
+						command: 'mentor.command.implementPrefixForIri',
+						arguments: [document.uri, namespaceIri, token]
+					}
+				});
+
+				break;
+			}
+			case TOKENS.PNAME_NS.name:
+			case TOKENS.PREFIX.name:
+			case TOKENS.TTL_PREFIX.name: {
+				result.push({
+					kind: vscode.CodeActionKind.Refactor,
 					title: 'Sort prefixes',
-					command: 'mentor.command.sortPrefixes',
-					arguments: [document.uri, token]
-				}
-			});
+					isPreferred: true,
+					command: {
+						title: 'Sort prefixes',
+						command: 'mentor.command.sortPrefixes',
+						arguments: [document.uri, token]
+					}
+				});
+
+				break;
+			}
 		}
 
 		return result;
@@ -87,7 +97,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		const documentDiagnostics = vscode.languages.getDiagnostics(document.uri);
 
 		// 1. Find all unused prefixes in the whole document, and add them as a repair option on top.
-		const undefinedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'NoNamespacePrefixError');
+		const undefinedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'UndefinedNamespacePrefixError');
 
 		if (undefinedPrefixes.length > 0) {
 			// Fixing missing prefixes is implemented as a command instead of a static edit because 
@@ -121,7 +131,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		}
 
 		// 2. Find all unused prefixes in the context and add them as the second repair option.
-		for (let prefix of this._getPrefixesWithErrorCode(document, actionContext.diagnostics, 'NoNamespacePrefixError')) {
+		for (let prefix of this._getPrefixesWithErrorCode(document, actionContext.diagnostics, 'UndefinedNamespacePrefixError')) {
 			result.push({
 				kind: vscode.CodeActionKind.QuickFix,
 				title: `Implement missing prefix: ${prefix}`,

@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { RdfSyntax, SparqlSyntaxParser } from '@faubulous/mentor-rdf';
-import { TokenTypes } from '@src/workspace/document-context';
+import { RdfSyntax, SparqlLexer } from '@faubulous/mentor-rdf-parsers';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 
 /**
@@ -16,28 +15,10 @@ export class SparqlDocument extends TurtleDocument {
 	}
 
 	public override async parse(data: string): Promise<void> {
-		// Parse the tokens *before* parsing the graph because the graph parsing 
-		// might fail but we need to update the tokens.
-		const tokens = new SparqlSyntaxParser().tokenize(data);
+		// Parse the tokens *before* parsing the graph because the graph 
+		// parsing might fail but we need to update the tokens.
+		const lexResult = new SparqlLexer().tokenize(data);
 
-		this.setTokens(tokens);
-	}
-
-	public override getTokenTypes(): TokenTypes {
-		return {
-			BASE: 'BASE',
-			PREFIX: 'PREFIX',
-			IRIREF: 'IRIREF',
-			PNAME_NS: 'PNAME_NS',
-		}
-	}
-
-	public override getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string {
-		if (upperCase) {
-			return `PREFIX ${prefix}: <${uri}>`;
-		}
-		else {
-			return `prefix ${prefix}: <${uri}>`;
-		}
+		this.setTokens(lexResult.tokens);
 	}
 }

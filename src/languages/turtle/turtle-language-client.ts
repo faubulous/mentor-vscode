@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { IToken } from 'millan';
+import { IToken } from 'chevrotain';
 import { mentor } from '@src/mentor';
 import { LanguageClientBase, TurtleDocument } from '@src/languages';
 

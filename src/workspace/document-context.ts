@@ -25,31 +25,6 @@ export interface Label {
 }
 
 /**
- * A map of token type names specific for the document language.
- */
-export interface TokenTypes {
-	/**
-	 * The token type name of the 'base' keyword in the document language.
-	 */
-	BASE: string;
-
-	/**
-	 * The token type name of the 'prefix' keyword in the document language.
-	 */
-	PREFIX: string;
-
-	/**
-	 * The token type name of IRIs in the document language.
-	 */
-	IRIREF: string;
-
-	/**
-	 * The token type name of a namespace prefix in the document language.
-	 */
-	PNAME_NS: string;
-}
-
-/**
  * A class that provides access to RDF document specific data such as namespaces, graphs and token maps.
  */
 export abstract class DocumentContext {
@@ -220,19 +195,6 @@ export abstract class DocumentContext {
 	 * Infers new triples from the document, if not already done.
 	 */
 	abstract infer(): Promise<void>;
-
-	/**
-	 * Gets the token type names specific for the document language.
-	 */
-	abstract getTokenTypes(): TokenTypes;
-
-	/**
-	 * Get a namespace prefix definition in the serialization of the document language.
-	 * @param prefix The prefix to declare.
-	 * @param uri The URI to associate with the prefix.
-	 * @param upperCase Indicates whether the prefix keyword should be in uppercase.
-	 */
-	abstract getPrefixDefinition(prefix: string, uri: string, upperCase: boolean): string;
 
 	/**
 	 * Get the full IRI of a resource at the given position in the document.

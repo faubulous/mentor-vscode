@@ -2,7 +2,8 @@
  * Note: Do not add import from 'vscode' here. This file is used in the 
  * language server where vscode is not available.
  */
-import { IToken } from "millan";
+import { IToken } from "chevrotain";
+import { TOKENS } from "@faubulous/mentor-rdf-parsers";
 import { Range } from "vscode-languageserver-types";
 
 /**
@@ -87,9 +88,7 @@ export function getTokenAtOffset(tokens: IToken[], offset: number): IToken[] {
  * @returns `true` if the token is a variable, `false` otherwise.
  */
 export function isVariable(token: IToken) {
-	const tokenType = token.tokenType?.tokenName;
-
-	return tokenType === "VAR1";
+	return token.tokenType === TOKENS.VAR1;
 }
 
 /**
@@ -113,12 +112,12 @@ export function isUpperCase(token?: IToken): boolean {
  * Get the prefix name from a prefixed name token.
  */
 export function getPrefixFromToken(token: IToken): string {
-	if (token.tokenType?.tokenName === 'PNAME_LN') {
+	if (token.tokenType === TOKENS.PNAME_LN) {
 		return token.image.split(':')[0];
-	} else if (token.tokenType?.tokenName === 'PNAME_NS') {
+	} else if (token.tokenType === TOKENS.PNAME_NS) {
 		return token.image.substring(0, token.image.length - 1);
 	} else {
-		throw new Error("Cannot get prefix from token type: " + token.tokenType?.tokenName);
+		throw new Error("Cannot get prefix from token type: " + token.tokenType?.name);
 	}
 }
 
@@ -128,13 +127,11 @@ export function getPrefixFromToken(token: IToken): string {
  * @returns A URI or undefined.
  */
 export function getIriFromToken(prefixes: PrefixMap, token: IToken): string | undefined {
-	const tokenName = token.tokenType?.tokenName;
-
-	switch (tokenName) {
-		case 'IRIREF':
+	switch (token.tokenType) {
+		case TOKENS.IRIREF:
 			return getIriFromIriReference(token.image);
-		case 'PNAME_LN':
-		case 'PNAME_NS':
+		case TOKENS.PNAME_LN:
+		case TOKENS.PNAME_NS:
 			return getIriFromPrefixedName(prefixes, token.image);
 	}
 }
@@ -194,7 +191,7 @@ export function getNamespaceIriFromPrefixedName(prefixes: PrefixMap, name: strin
  * @returns A namespace definition or undefined.
  */
 export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixDefinition | undefined {
-	if (token?.tokenType?.tokenName != "PREFIX" && token?.tokenType?.tokenName != "TTL_PREFIX") {
+	if (token?.tokenType != TOKENS.PREFIX && token?.tokenType != TOKENS.TTL_PREFIX) {
 		return;
 	}
 
@@ -206,13 +203,13 @@ export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixD
 
 	const prefixToken = tokens[n + 1];
 
-	if (prefixToken?.tokenType?.tokenName != "PNAME_NS") {
+	if (prefixToken?.tokenType != TOKENS.PNAME_NS) {
 		return;
 	}
 
 	const uriToken = tokens[n + 2];
 
-	if (uriToken?.tokenType?.tokenName != "IRIREF") {
+	if (uriToken?.tokenType != TOKENS.IRIREF) {
 		return;
 	}
 
@@ -233,34 +230,32 @@ export function getTripleComponentType(tokens: IToken[], tokenIndex: number): Tr
 
 	const p = tokens[tokenIndex - 1];
 
-	switch (p.tokenType?.tokenName) {
-		case "Period":
-		case "Dot": {
+	switch (p.tokenType) {
+		case TOKENS.PERIOD: {
 			// A dot is always followed by a subject.
 			return "subject";
 		}
-		case "Semicolon": {
+		case TOKENS.SEMICOLON: {
 			// A semicolon is always followed by a predicate.
 			return "predicate";
 		}
-		case "A": {
+		case TOKENS.A: {
 			// A type assertion is always followed by an object.
 			return "object";
 		}
-		case "PNAME_LN":
-		case "IRIREF": {
+		case TOKENS.PNAME_LN:
+		case TOKENS.IRIREF: {
 			// This could either be a predicate or an object.
 			const q = tokens[tokenIndex - 2];
 
-			switch (q?.tokenType?.tokenName) {
-				case "Semicolon":
-				case "LBracket":
-				case "PNAME_LN":
-				case "IRIREF": {
+			switch (q?.tokenType) {
+				case TOKENS.SEMICOLON:
+				case TOKENS.LBRACKET:
+				case TOKENS.PNAME_LN:
+				case TOKENS.IRIREF: {
 					return "object";
 				}
-				case "Period":
-				case "Dot": {
+				case TOKENS.PERIOD: {
 					return "predicate";
 				}
 			}
