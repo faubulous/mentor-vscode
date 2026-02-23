@@ -9,6 +9,9 @@
     ],
     "baseUrl": "./",
     "paths": {
+      "@media/*": [
+        "media/*"
+      ],
       "@src/*": [
         "src/*"
       ],

@@ -158,6 +158,52 @@ const copyVSCodeCodiconCSS = () => {
   fs.writeFileSync(cssTarget, css);
   
   console.log(` codicon.css → media/codicon.css`);
+
+  // Also create a version with inline base64 font for notebook renderers
+  // (notebook renderers run in isolated iframes and can't reference external font files)
+  const fontData = fs.readFileSync(fontSource);
+  const fontBase64 = fontData.toString('base64');
+  const inlineCss = css.replace(
+    /src:\s*url\([^)]+\)\s*format\(["']truetype["']\);?/,
+    `src: url('data:font/truetype;charset=utf-8;base64,${fontBase64}') format('truetype');`
+  );
+
+  const inlineCssTarget = path.join(mediaFolder, 'codicon-inline.css');
+  fs.writeFileSync(inlineCssTarget, inlineCss);
+
+  console.log(` codicon-inline.css → media/codicon-inline.css (with embedded font)`);
+}
+
+/**
+ * Creates an inline version of mentor-icons.css with the font embedded as base64.
+ * This is required for notebook renderers which run in isolated iframes.
+ */
+const createMentorIconsInlineCSS = () => {
+  console.log(`Creating inline mentor-icons CSS with embedded font..`);
+
+  const mediaFolder = path.resolve(__dirname, 'media');
+  const cssSource = path.join(mediaFolder, 'mentor-icons.css');
+  const fontSource = path.join(mediaFolder, 'mentor-icons.woff');
+
+  if (!fs.existsSync(cssSource) || !fs.existsSync(fontSource)) {
+    console.log(` Skipping mentor-icons-inline.css (source files not found)`);
+    return;
+  }
+
+  let css = fs.readFileSync(cssSource, 'utf8');
+  const fontData = fs.readFileSync(fontSource);
+  const fontBase64 = fontData.toString('base64');
+
+  // Replace the font URL with inline base64 data
+  css = css.replace(
+    /src:\s*url\([^)]+\)\s*format\(["']woff["']\);?/,
+    `src: url('data:font/woff;charset=utf-8;base64,${fontBase64}') format('woff');`
+  );
+
+  const inlineCssTarget = path.join(mediaFolder, 'mentor-icons-inline.css');
+  fs.writeFileSync(inlineCssTarget, css);
+
+  console.log(` mentor-icons-inline.css → media/mentor-icons-inline.css (with embedded font)`);
 }
 
 /**
@@ -202,6 +248,7 @@ const copyVSCodeElementsBundle = () => {
     // copyFontGlyphs();
 
     copyVSCodeCodiconCSS();
+    createMentorIconsInlineCSS();
     copyVSCodeElementsBundle();
 
     // Copy the language config files to the out directory.
