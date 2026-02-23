@@ -53,15 +53,35 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 
 		const edit = new vscode.WorkspaceEdit();
 
-		const prefixes: PrefixDefinition[] = [];
+		// Collect prefix lines with their line numbers.
+		const prefixLines: { line: number; text: string }[] = [];
 
-		Object.keys(context.namespaces).forEach(prefix => {
-			const namespaceIri = context.namespaces[prefix];
+		for (const token of context.tokens) {
+			if (this._prefixTokenTypes.has(token.tokenType.name)) {
+				const line = (token.startLine ?? 1) - 1;
+				prefixLines.push({ line, text: document.lineAt(line).text });
+			}
+		}
 
-			prefixes.push({ prefix, namespaceIri });
+		if (prefixLines.length === 0) return edit;
+
+		// Sort lines by extracted prefix name.
+		prefixLines.sort((a, b) => {
+			const prefixA = a.text.match(/(?:@?prefix\s+)(\S*:)/i)?.[1]?.toLowerCase() ?? '';
+			const prefixB = b.text.match(/(?:@?prefix\s+)(\S*:)/i)?.[1]?.toLowerCase() ?? '';
+			return prefixA.localeCompare(prefixB);
 		});
 
-		await this._implementPrefixesSorted(edit, document, context, prefixes);
+		// Replace the prefix block with sorted lines.
+		const firstLine = Math.min(...prefixLines.map(p => p.line));
+		const lastLine = Math.max(...prefixLines.map(p => p.line));
+		const range = new vscode.Range(
+			new vscode.Position(firstLine, 0),
+			new vscode.Position(lastLine, document.lineAt(lastLine).text.length)
+		);
+
+		const sortedText = prefixLines.map(p => p.text).join('\n');
+		edit.replace(document.uri, range, sortedText);
 
 		return edit;
 	}
@@ -193,8 +213,8 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		if (document.languageId === 'xml') {
 			return { name: 'XML_PREFIX' };
 		} else {
-			const hasDefaultPrefix = !!getFirstTokenOfType(context.tokens, this._defaultPrefixTokenType.name);
-			const hasTurtlePrefixes = !!getFirstTokenOfType(context.tokens, TOKENS.TTL_PREFIX.name);
+			const hasDefaultPrefix = getFirstTokenOfType(context.tokens, this._defaultPrefixTokenType.name) !== undefined;
+			const hasTurtlePrefixes = getFirstTokenOfType(context.tokens, TOKENS.TTL_PREFIX.name) !== undefined;
 
 			if (hasTurtlePrefixes && !hasDefaultPrefix) {
 				return TOKENS.TTL_PREFIX;
@@ -305,7 +325,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		// 3. Implement the prefixes in a sorted order.
 		const namespaceMap = { ...context.namespaces };
 
-		for (let x of prefixes) {
+		for (const x of prefixes) {
 			namespaceMap[x.prefix] = x.namespaceIri ?? mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
 		}
 
@@ -313,7 +333,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		const tokenType = this._getPrefixTokenType(document, context);
 		const upperCase = isUpperCase(lastPrefix ?? context.tokens[0]);
 
-		for (let prefix of Object.keys(namespaceMap).sort()) {
+		for (const prefix of Object.keys(namespaceMap).sort()) {
 			const namespaceIri = namespaceMap[prefix];
 			const definition = this._getPrefixDefinition(tokenType, upperCase, prefix, namespaceIri);
 

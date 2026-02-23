@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Uri } from "@faubulous/mentor-rdf";
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
-import { getIriFromIriReference } from '@src/utilities';
+import { getIriFromIriReference, getNamespaceDefinition } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
@@ -78,11 +78,62 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 					}
 				});
 
+				// Add conversion actions for prefix definitions.
+				if (token.tokenType.name === TOKENS.PREFIX.name) {
+					result.push(this._createConvertPrefixAction(document, context, token, 'turtle'));
+				} else if (token.tokenType.name === TOKENS.TTL_PREFIX.name) {
+					result.push(this._createConvertPrefixAction(document, context, token, 'sparql'));
+				}
+
 				break;
 			}
 		}
 
 		return result;
+	}
+
+	/**
+	 * Create a code action for converting all prefix definitions between Turtle and SPARQL styles.
+	 * @param document The text document.
+	 * @param context The Turtle document context.
+	 * @param token The prefix token (PREFIX or TTL_PREFIX).
+	 * @param targetStyle The target style to convert to ('turtle' for @prefix, 'sparql' for PREFIX).
+	 * @returns A code action for converting all prefix definitions.
+	 */
+	private _createConvertPrefixAction(document: vscode.TextDocument, context: TurtleDocument, token: import('chevrotain').IToken, targetStyle: 'turtle' | 'sparql'): vscode.CodeAction {
+		const title = targetStyle === 'turtle' ? 'Convert all to @prefix' : 'Convert all to PREFIX';
+
+		const action: vscode.CodeAction = {
+			kind: vscode.CodeActionKind.Refactor,
+			title,
+			isPreferred: false,
+		};
+
+		const edit = new vscode.WorkspaceEdit();
+
+		// Iterate over all tokens and convert all prefix definitions to the target style.
+		for (const t of context.tokens) {
+			if (t.tokenType.name === TOKENS.PREFIX.name || t.tokenType.name === TOKENS.TTL_PREFIX.name) {
+				const ns = getNamespaceDefinition(context.tokens, t);
+
+				if (ns) {
+					const line = (t.startLine ?? 1) - 1;
+					const lineRange = document.lineAt(line).range;
+
+					const newDefinition = targetStyle === 'turtle'
+						? `@prefix ${ns.prefix}: <${ns.uri}> .`
+						: `PREFIX ${ns.prefix}: <${ns.uri}>`;
+
+					edit.replace(document.uri, lineRange, newDefinition);
+				}
+			}
+		}
+
+		if (edit.size > 0) {
+			action.edit = edit;
+		}
+
+		return action;
 	}
 
 	/**

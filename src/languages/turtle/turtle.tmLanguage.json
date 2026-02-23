@@ -18,7 +18,17 @@
             "match": "#.*$"
         },
         "directive": {
-            "begin": "(?i)^\\s*(@prefix|@base|BASE|PREFIX)",
+            "patterns": [
+                {
+                    "include": "#turtle_directive"
+                },
+                {
+                    "include": "#sparql_directive"
+                }
+            ]
+        },
+        "turtle_directive": {
+            "begin": "(?i)^\\s*(@prefix|@base)",
             "beginCaptures": {
                 "1": {
                     "name": "keyword.control.directive.turtle"
@@ -30,6 +40,27 @@
                     "name": "punctuation.terminator.statement.turtle"
                 }
             },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "name": "storage.type.prefix.turtle",
+                    "match": "([a-zA-Z](?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?)?:"
+                }
+            ]
+        },
+        "sparql_directive": {
+            "begin": "(?i)^\\s*(BASE|PREFIX)",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.directive.turtle"
+                }
+            },
+            "end": "$",
             "patterns": [
                 {
                     "include": "#comment"
