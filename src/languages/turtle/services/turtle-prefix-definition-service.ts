@@ -214,7 +214,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 */
 	private _getPrefixDefinition(tokenType: TokenType, upperCase: boolean, prefix: string, namespaceIri: string): string {
 		if (tokenType.name === TOKENS.PREFIX.name) {
-			return `${upperCase ? 'PREFIX' : 'prefix'} ${prefix}: <${namespaceIri}> .`;
+			return `${upperCase ? 'PREFIX' : 'prefix'} ${prefix}: <${namespaceIri}>`;
 		} else if (tokenType.name === TOKENS.TTL_PREFIX.name) {
 			return `@prefix ${prefix}: <${namespaceIri}> .`;
 		} else if (tokenType.name === 'XML_PREFIX') {
