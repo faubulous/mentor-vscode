@@ -82,7 +82,7 @@ export abstract class LanguageServerBase {
 	globalSettings: ParserSettings = defaultSettings;
 
 	/**
-	 * Indicates whether the language server should provide tokens for the document to the client via 'mentor/updateContext'.
+	 * Indicates whether the language server should provide tokens for the document to the client via 'mentor.message.updateContext'.
 	 */
 	isDocumentTokenProvider = false;
 
@@ -227,7 +227,10 @@ export abstract class LanguageServerBase {
 
 		return {
 			tokens: lexResult.tokens,
-			errors: this.parser.errors,
+			errors: [
+				...this.parser.errors,
+				...this.parser.semanticErrors
+			],
 		};
 	}
 
@@ -277,7 +280,7 @@ export abstract class LanguageServerBase {
 
 		if (this.isDocumentTokenProvider && tokens) {
 			// This sends the tokens to the client so that they can be used to build a reference index.
-			this.connection.sendNotification('mentor/updateContext', {
+			this.connection.sendNotification('mentor.message.updateContext', {
 				uri: document.uri,
 				languageId: this.languageId,
 				// Important: We need to clone the tokens so that they can be processed by strucutredClone() of the underlying message channel.

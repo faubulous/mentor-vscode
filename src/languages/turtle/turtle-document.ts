@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
+import { DataFactory, Quad_Object, Quad_Predicate } from 'n3';
 import { Position } from 'vscode-languageserver-types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
-import { RdfSyntax, TurtleLexer, TrigLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax, TurtleLexer, TurtleReader, TurtleParser, TrigLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from '@src/services';
@@ -16,6 +17,7 @@ import {
 	getNamespaceDefinition,
 	getTokenPosition
 } from '@src/utilities';
+import { Quad_Subject } from '@rdfjs/types';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -119,32 +121,37 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	public override async parse(data: string): Promise<void> {
-		// Parse the tokens *before* parsing the graph because the graph parsing 
-		// might fail but we need to update the tokens.
-		let lexResult;
-
-		if (this.syntax === RdfSyntax.TriG) {
-			lexResult = new TrigLexer().tokenize(data);
-		} else {
-			lexResult = new TurtleLexer().tokenize(data);
-		}
-
-		this.setTokens(lexResult.tokens);
-
 		try {
-			const graphUri = this.graphIri.toString();
+			// Parse the tokens *before* parsing the graph because the graph parsing 
+			// might fail but we need to update the tokens.
+			let lexResult;
+
+			if (this.syntax === RdfSyntax.TriG) {
+				lexResult = new TrigLexer().tokenize(data);
+			} else {
+				lexResult = new TurtleLexer().tokenize(data);
+			}
+
+			this.setTokens(lexResult.tokens);
 
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
+			const graphUri = this.graphIri.toString();
+			const g = DataFactory.namedNode(graphUri);
+
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
 
-			// The loadFromStream function only updates the existing graphs 
-			// when the document was parsed successfully.
-			await mentor.store.loadFromTurtleStream(data, graphUri, false);
+			// Only updates the existing graphs if the document was parsed successfully.
+			const cst = new TurtleParser().parse(lexResult.tokens);
 
-			// Make definitions using blank nodes resolvable.
-			this.mapBlankNodes();
+			for (const quadInfo of new TurtleReader().turtleDocInfo(cst)) {
+				const s = quadInfo.subject.term as Quad_Subject;
+				const p = quadInfo.predicate.term as Quad_Predicate;
+				const o = quadInfo.object.term as Quad_Object;
+
+				mentor.store.add(DataFactory.quad(s, p, o, g));
+			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 		}
@@ -385,6 +392,7 @@ export class TurtleDocument extends DocumentContext {
 	private _registerSubject(token: IToken, iri: string, previousToken: IToken) {
 		const previousType = previousToken.tokenType.name;
 
+		// TODO: Review. This does not look right.
 		if (previousType === TOKENS.PERIOD.name || previousType === TOKENS.PERIOD.name) {
 			const range = this.getRangeFromToken(token);
 
@@ -407,128 +415,54 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
-		if (uri != rdf.type.id) return;
+		if (uri === rdf.type.id) {
+			const subjectToken = tokens[index - 1];
 
-		const subjectToken = tokens[index - 1];
+			if (!subjectToken) return;
 
-		if (!subjectToken) return;
+			const subjectUri = getIriFromToken(this.namespaces, subjectToken);
 
-		const subjectUri = getIriFromToken(this.namespaces, subjectToken);
+			if (!subjectUri) return;
 
-		if (!subjectUri) return;
+			const range = this.getRangeFromToken(subjectToken);
 
-		const range = this.getRangeFromToken(subjectToken);
-
-		this.typeAssertions[subjectUri] = [range];
+			this.typeAssertions[subjectUri] = [range];
+		}
 	}
 
 	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
-		if (uri != rdf.type.id) return;
+		if (uri == rdf.type.id) {
+			const subjectToken = tokens[index - 1];
 
-		const subjectToken = tokens[index - 1];
+			if (!subjectToken) return;
 
-		if (!subjectToken) return;
+			const subjectUri = getIriFromToken(this.namespaces, subjectToken);
 
-		const subjectUri = getIriFromToken(this.namespaces, subjectToken);
+			if (!subjectUri) return;
 
-		if (!subjectUri) return;
+			const objectToken = tokens[index + 1];
 
-		const objectToken = tokens[index + 1];
+			if (!objectToken) return;
 
-		if (!objectToken) return;
+			const objectUri = getIriFromToken(this.namespaces, objectToken);
 
-		const objectUri = getIriFromToken(this.namespaces, objectToken);
+			if (!objectUri) return;
 
-		if (!objectUri) return;
+			const namespaceUri = Uri.getNamespaceIri(objectUri);
 
-		const namespaceUri = Uri.getNamespaceIri(objectUri);
+			// TODO: Make this more explicit to reduce false positives.
+			switch (namespaceUri) {
+				case _RDF:
+				case _RDFS:
+				case _OWL:
+				case _SKOS:
+				case _SKOS_XL:
+				case _SH: {
+					const range = this.getRangeFromToken(subjectToken);
 
-		// TODO: Make this more explicit to reduce false positives.
-		switch (namespaceUri) {
-			case _RDF:
-			case _RDFS:
-			case _OWL:
-			case _SKOS:
-			case _SKOS_XL:
-			case _SH: {
-				const range = this.getRangeFromToken(subjectToken);
-
-				this.typeDefinitions[subjectUri] = [range];
+					this.typeDefinitions[subjectUri] = [range];
+				}
 			}
 		}
-	}
-
-	/**
-	 * Maps blank node ids of the parsed documents to the ones in the triple store.
-	 */
-	mapBlankNodes() {
-		const blankNodes = new Set<string>();
-
-		for (let q of mentor.store.matchAll(this.graphs, null, null, null, false)) {
-			if (q.subject.termType === 'BlankNode') {
-				blankNodes.add(q.subject.value);
-			}
-		}
-
-		const blankIds = Array.from(blankNodes).sort((a, b) => {
-			const numA = parseInt(a.split('-')[1], 10);
-			const numB = parseInt(b.split('-')[1], 10);
-			return numA - numB;
-		});
-
-		let tokenStack = [];
-		let n = 0;
-
-		for (let t of this.tokens) {
-			switch (t.tokenType.name) {
-				case TOKENS.LBRACKET.name: {
-					if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].image === '(') {
-						// Account for the blank node list element.
-						n++;
-					}
-
-					tokenStack.push(t);
-
-					const s = blankIds[n++];
-					const r = this.getRangeFromToken(t);
-
-					this.blankNodes[s] = r;
-					this.typeDefinitions[s] = [r];
-
-					continue;
-				}
-				case TOKENS.LPARENT.name: {
-					tokenStack.push(t);
-
-					const s = blankIds[n];
-					const r = this.getRangeFromToken(t);
-
-					this.blankNodes[s] = r;
-					this.typeDefinitions[s] = [r];
-
-					continue;
-				}
-				case TOKENS.RBRACKET.name: {
-					tokenStack.pop();
-					continue;;
-				}
-				case TOKENS.RPARENT.name: {
-					tokenStack.pop();
-					continue;;
-				}
-			}
-
-			if (tokenStack.length > 0 && tokenStack[tokenStack.length - 1].tokenType.name === TOKENS.LPARENT.name) {
-				const s = blankIds[n++];
-				const r = this.getRangeFromToken(t);
-
-				this.blankNodes[s] = r;
-				this.typeDefinitions[s] = [r];
-			}
-		}
-
-		// if (n != blankIds.length) {
-		// 	console.debug('Not all blank node tokens could be mapped to blank ids from the document graph.');
-		// }
 	}
 }

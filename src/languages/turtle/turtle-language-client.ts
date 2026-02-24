@@ -12,7 +12,7 @@ export class TurtleLanguageClient extends LanguageClientBase {
 		super.start(context);
 
 		if (this.client) {
-			this.client.onNotification('mentor/updateContext', (params: { languageId: string, uri: string, tokens: IToken[] }) => {
+			this.client.onNotification('mentor.message.updateContext', (params: { languageId: string, uri: string, tokens: IToken[] }) => {
 				let context = mentor.contexts[params.uri];
 
 				if (context === undefined) {
@@ -27,9 +27,6 @@ export class TurtleLanguageClient extends LanguageClientBase {
 				if (context instanceof TurtleDocument) {
 					// Update the document context with the new tokens.
 					context.setTokens(params.tokens);
-
-					// Map the blank nodes in the document to the ones in the triple store.
-					context.mapBlankNodes();
 				}
 			});
 		}

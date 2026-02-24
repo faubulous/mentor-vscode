@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { DataFactory, NamedNode } from 'n3';
 import { mentor } from '@src/mentor';
 import { LanguageInfo } from '@src/workspace/document-factory';
 
