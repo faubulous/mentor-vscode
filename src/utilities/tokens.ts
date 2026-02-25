@@ -52,12 +52,12 @@ export function getTokenPosition(token: IToken): Range {
  * @returns A URI or undefined.
  */
 export function getIriFromToken(prefixes: PrefixMap, token: IToken): string | undefined {
-	switch (token.tokenType.name) {
-		case TOKENS.IRIREF.name:
-			return getIriFromIriReference(token.image);
-		case TOKENS.PNAME_LN.name:
-		case TOKENS.PNAME_NS.name:
-			return getIriFromPrefixedName(prefixes, token.image);
+	if(token.tokenType.name === TOKENS.IRIREF.name) {
+		return getIriFromIriReference(token.image);
+	} else if(token.tokenType.name === TOKENS.PNAME_LN.name || token.tokenType.name === TOKENS.PNAME_NS.name) {
+		return getIriFromPrefixedName(prefixes, token.image);
+	} else if(token.payload?.blankNodeId) {
+		return token.payload.blankNodeId;
 	}
 }
 

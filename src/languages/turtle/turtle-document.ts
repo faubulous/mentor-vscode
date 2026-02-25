@@ -310,6 +310,7 @@ export class TurtleDocument extends DocumentContext {
 	/**
 	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
 	 * @param tokens An array of tokens.
+	 * @note The registration is executed on a token level so that document types are supported that do not produce triples.
 	 */
 	setTokens(tokens: IToken[]): void {
 		this.namespaces = {};
@@ -392,8 +393,7 @@ export class TurtleDocument extends DocumentContext {
 	private _registerSubject(token: IToken, iri: string, previousToken: IToken) {
 		const previousType = previousToken.tokenType.name;
 
-		// TODO: Review. This does not look right.
-		if (previousType === TOKENS.PERIOD.name || previousType === TOKENS.PERIOD.name) {
+		if (previousType === TOKENS.PERIOD.name) {
 			const range = this.getRangeFromToken(token);
 
 			if (!this.subjects[iri]) {
