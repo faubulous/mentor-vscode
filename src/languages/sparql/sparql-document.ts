@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { RdfSyntax, SparqlLexer } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 
 /**
@@ -14,11 +14,8 @@ export class SparqlDocument extends TurtleDocument {
 		// Inference is not supported for SPARQL documents.
 	}
 
-	public override async parse(data: string): Promise<void> {
-		// Parse the tokens *before* parsing the graph because the graph 
-		// parsing might fail but we need to update the tokens.
-		const lexResult = new SparqlLexer().tokenize(data);
-
-		this.setTokens(lexResult.tokens);
+	public override async loadTriples(data: string): Promise<void> {
+		// SPARQL documents don't load triples into the store.
+		// Tokens are already set by the language server.
 	}
 }

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { IToken } from 'chevrotain';
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from './workspace/document-context';
 import { DocumentFactory } from './workspace/document-factory';
@@ -129,6 +130,20 @@ class MentorExtension {
 	 */
 	readonly credentialStorageService = new CredentialStorageService();
 
+	/**
+	 * A map of pending token requests keyed by document URI.
+	 * Used to coordinate between loadDocument and language server token delivery.
+	 */
+	private readonly _pendingTokenRequests = new Map<string, {
+		resolve: (tokens: IToken[]) => void;
+		reject: (error: Error) => void;
+	}>();
+
+	/**
+	 * Default timeout in milliseconds for waiting for tokens from the language server.
+	 */
+	private readonly _tokenWaitTimeout = 5000;
+
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 
 	/**
@@ -157,6 +172,76 @@ class MentorExtension {
 
 		this._onDidChangeDocumentContext.dispose();
 		this._onDidFinishInitializing.dispose();
+
+		// Reject any pending token requests
+		for (const [uri, pending] of this._pendingTokenRequests) {
+			pending.reject(new Error('Extension disposed'));
+		}
+
+		this._pendingTokenRequests.clear();
+	}
+
+	/**
+	 * Wait for tokens to be delivered from the language server for a document.
+	 * @param uri The document URI to wait for tokens.
+	 * @param timeout Optional timeout in milliseconds (defaults to _tokenWaitTimeout).
+	 * @returns A promise that resolves with the tokens or rejects on timeout.
+	 */
+	waitForTokens(uri: string, timeout?: number): Promise<IToken[]> {
+		const existingRequest = this._pendingTokenRequests.get(uri);
+
+		if (existingRequest) {
+			// Already waiting for this document
+			return new Promise((resolve, reject) => {
+				const originalResolve = existingRequest.resolve;
+				const originalReject = existingRequest.reject;
+
+				existingRequest.resolve = (tokens) => {
+					originalResolve(tokens);
+					resolve(tokens);
+				};
+
+				existingRequest.reject = (error) => {
+					originalReject(error);
+					reject(error);
+				};
+			});
+		}
+
+		return new Promise((resolve, reject) => {
+			const timeoutMs = timeout ?? this._tokenWaitTimeout;
+			
+			const timeoutId = setTimeout(() => {
+				this._pendingTokenRequests.delete(uri);
+				reject(new Error(`Timeout waiting for tokens from language server for: ${uri}`));
+			}, timeoutMs);
+
+			this._pendingTokenRequests.set(uri, {
+				resolve: (tokens) => {
+					clearTimeout(timeoutId);
+					this._pendingTokenRequests.delete(uri);
+					resolve(tokens);
+				},
+				reject: (error) => {
+					clearTimeout(timeoutId);
+					this._pendingTokenRequests.delete(uri);
+					reject(error);
+				}
+			});
+		});
+	}
+
+	/**
+	 * Resolve pending token requests for a document. Called by language clients when tokens arrive.
+	 * @param uri The document URI.
+	 * @param tokens The tokens from the language server.
+	 */
+	resolveTokens(uri: string, tokens: IToken[]): void {
+		const pending = this._pendingTokenRequests.get(uri);
+
+		if (pending) {
+			pending.resolve(tokens);
+		}
 	}
 
 	/**
@@ -277,8 +362,31 @@ class MentorExtension {
 
 		context = this.documentFactory.create(document.uri, document.languageId);
 
-		// Parse the tokens of the document and load the graph.
-		await context.parse(document.getText());
+		// Register context immediately so language client notification handlers can find it.
+		this.contexts[uri] = context;
+
+		const content = document.getText();
+
+		// Check if the context already has tokens (from language server notification that arrived early).
+		// If not, wait for tokens from the language server.
+		if (!context.hasTokens) {
+			try {
+				// Wait for tokens from the language server.
+				await this.waitForTokens(uri);
+			} catch (e) {
+				// Timeout or error - show error to user.
+				const message = e instanceof Error ? e.message : String(e);
+
+				console.error(`Failed to receive tokens from language server for: ${uri}`, e);
+
+				vscode.window.showErrorMessage(`Mentor: Language server connection failed. Document features may be unavailable. ${message}`);
+				
+				return context;
+			}
+		}
+
+		// Tokens available, load triples into store.
+		await context.loadTriples(content);
 
 		// Compute the inference graph on the document to simplify querying.
 		await context.infer();

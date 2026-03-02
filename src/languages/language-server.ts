@@ -297,6 +297,10 @@ export abstract class LanguageServerBase {
 						name: t.tokenType?.name ?? '',
 						tokenName: t.tokenType?.name,
 						GROUP: t.tokenType?.GROUP,
+					},
+					// TODO: Define the interface / or clone method in mentor-rdf and use this token interface instead of the Chevrotain IToken to avoid having to clone the tokens here. --- IGNORE ---
+					payload: {
+						...t.payload
 					}
 				}))
 			});

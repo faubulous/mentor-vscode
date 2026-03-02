@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
-import { DataFactory, Quad_Object, Quad_Predicate } from 'n3';
 import { Position } from 'vscode-languageserver-types';
-import { Uri } from '@faubulous/mentor-rdf';
-import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
-import { RdfSyntax, TurtleLexer, TurtleReader, TurtleParser, TrigLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
+import { Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
+import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from '@src/services';
@@ -17,7 +16,6 @@ import {
 	getNamespaceDefinition,
 	getTokenPosition
 } from '@src/utilities';
-import { Quad_Subject } from '@rdfjs/types';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -37,6 +35,13 @@ export class TurtleDocument extends DocumentContext {
 
 	get isLoaded(): boolean {
 		return this._tokens.length > 0 && this.graphs.length > 0;
+	}
+
+	/**
+	 * Indicates whether tokens have been set for this document.
+	 */
+	get hasTokens(): boolean {
+		return this._tokens.length > 0;
 	}
 
 	/**
@@ -120,37 +125,33 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
-	public override async parse(data: string): Promise<void> {
+	/**
+	 * Loads triples into the triple store using existing tokens.
+	 * This method assumes tokens have already been set via setTokens().
+	 * @param data The file content (not used, parsing uses existing tokens).
+	 */
+	public override async loadTriples(data: string): Promise<void> {
 		try {
-			// Parse the tokens *before* parsing the graph because the graph parsing 
-			// might fail but we need to update the tokens.
-			let lexResult;
-
-			if (this.syntax === RdfSyntax.TriG) {
-				lexResult = new TrigLexer().tokenize(data);
-			} else {
-				lexResult = new TurtleLexer().tokenize(data);
-			}
-
-			this.setTokens(lexResult.tokens);
-
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			const graphUri = this.graphIri.toString();
-			const g = DataFactory.namedNode(graphUri);
+			const g = mentor.store.dataFactory.namedNode(graphUri);
 
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
 
 			// Only updates the existing graphs if the document was parsed successfully.
-			const cst = new TurtleParser().parse(lexResult.tokens);
+			// Uses existing tokens that were set by the language server.
+			const cst = new TurtleParser().parse(this._tokens);
 
 			for (const quadInfo of new TurtleReader().turtleDocInfo(cst)) {
 				const s = quadInfo.subject.term as Quad_Subject;
 				const p = quadInfo.predicate.term as Quad_Predicate;
 				const o = quadInfo.object.term as Quad_Object;
 
-				mentor.store.add(DataFactory.quad(s, p, o, g));
+				const quad = mentor.store.dataFactory.quad(s, p, o, g);
+
+				mentor.store.add(quad);
 			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
@@ -319,11 +320,18 @@ export class TurtleDocument extends DocumentContext {
 		this.references = {};
 		this.typeAssertions = {};
 		this.typeDefinitions = {};
-		this.blankNodes = {};
 
 		this._tokens = tokens;
 
 		let previousToken: IToken | undefined;
+
+		const u = this.uri.toString();
+
+		console.debug('setTokens:', u);
+
+		if (u === "file:///home/faubulous/Projects/2023/mentor-rdf/src/rdf/tests/cases/valid-blanknodes.ttl") {
+			console.log('test');
+		}
 
 		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType.name) {

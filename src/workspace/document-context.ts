@@ -179,6 +179,12 @@ export abstract class DocumentContext {
 	abstract get isLoaded(): boolean;
 
 	/**
+	 * Indicates whether tokens have been set for this document.
+	 * Used to determine if we need to wait for tokens from the language server.
+	 */
+	abstract get hasTokens(): boolean;
+
+	/**
 	 * Indicates whether the document is temporary and not persisted.
 	 */
 	get isTemporary(): boolean {
@@ -186,10 +192,11 @@ export abstract class DocumentContext {
 	}
 
 	/**
-	 * Loads the document from the given URI and data.
+	 * Loads triples into the triple store using existing tokens.
+	 * This method assumes tokens have already been set via setTokens().
 	 * @param data The file content.
 	 */
-	abstract parse(data: string): Promise<void>;
+	abstract loadTriples(data: string): Promise<void>;
 
 	/**
 	 * Infers new triples from the document, if not already done.

@@ -13,20 +13,24 @@ export class TurtleLanguageClient extends LanguageClientBase {
 
 		if (this.client) {
 			this.client.onNotification('mentor.message.updateContext', (params: { languageId: string, uri: string, tokens: IToken[] }) => {
-				let context = mentor.contexts[params.uri];
+				let documentContext = mentor.contexts[params.uri];
 
-				if (context === undefined) {
+				if (documentContext === undefined) {
 					const uri = vscode.Uri.parse(params.uri);
 
-					context = mentor.documentFactory.create(uri, this.languageId);
+					documentContext = mentor.documentFactory.create(uri, this.languageId);
 
-					mentor.contexts[params.uri] = context
+					mentor.contexts[params.uri] = documentContext;
 				}
 
 				// Note: TriG is also handled by the TurtleDocument class.
-				if (context instanceof TurtleDocument) {
+				if (documentContext instanceof TurtleDocument) {
 					// Update the document context with the new tokens.
-					context.setTokens(params.tokens);
+					documentContext.setTokens(params.tokens);
+
+					// Resolve any pending token requests for this document.
+					// This allows loadDocument to proceed with triple loading.
+					mentor.resolveTokens(params.uri, params.tokens);
 				}
 			});
 		}
