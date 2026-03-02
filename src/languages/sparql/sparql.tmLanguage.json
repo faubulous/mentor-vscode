@@ -17,6 +17,98 @@
             "name": "comment.line.number-sign.sparql",
             "match": "#.*$"
         },
+        "triple_term": {
+            "begin": "<<",
+            "end": ">>",
+            "name": "meta.triple-term.sparql",
+            "beginCaptures": {
+                "0": {
+                    "name": "variable.other.constant.sparql"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "variable.other.constant.sparql"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#variable"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "include": "#prefixed_name"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#blank_node"
+                },
+                {
+                    "name": "keyword.control.sparql",
+                    "match": "\\b(a)\\b"
+                }
+            ]
+        },
+        "annotation": {
+            "begin": "\\{\\|",
+            "end": "\\|\\}",
+            "name": "meta.annotation.sparql",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.annotation.begin.sparql"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.annotation.end.sparql"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#variable"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "include": "#prefixed_name"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#blank_node"
+                },
+                {
+                    "name": "keyword.control.sparql",
+                    "match": "\\b(a)\\b"
+                },
+                {
+                    "name": "punctuation.separator.predicate-object-list.sparql",
+                    "match": ";"
+                },
+                {
+                    "name": "punctuation.separator.object-list.sparql",
+                    "match": ","
+                }
+            ]
+        },
         "directive": {
             "begin": "(?i)^\\s*(@prefix|@base|BASE|PREFIX)",
             "beginCaptures": {
@@ -42,6 +134,12 @@
             "patterns": [
                 {
                     "include": "#keywords"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#annotation"
                 },
                 {
                     "include": "#variable"
@@ -80,11 +178,11 @@
             "patterns": [
                 {
                     "name": "keyword.control.sparql",
-                    "match": "(?i)\\b(SELECT|CONSTRUCT|ASK|DESCRIBE|WHERE|FROM|NAMED|GRAPH|OPTIONAL|FILTER|UNION|MINUS|SERVICE|BIND|VALUES|ORDER|BY|LIMIT|OFFSET|GROUP|HAVING|DISTINCT|REDUCED|AS|a|EXISTS|NOT|ADD|ALL|ASC|CLEAR|COPY|CREATE|DEFAULT|DELETE|DELETE_DATA|DATA|DESC|DROP|EXPLICIT|IN|INSERT|INSERT_DATA|LOAD|MOVE|NOT_EXISTS|TO|USING|WITH)\\b"
+                    "match": "(?i)\\b(SELECT|CONSTRUCT|ASK|DESCRIBE|WHERE|FROM|NAMED|GRAPH|OPTIONAL|FILTER|UNION|MINUS|SERVICE|BIND|VALUES|ORDER|BY|LIMIT|OFFSET|GROUP|HAVING|DISTINCT|REDUCED|AS|a|EXISTS|NOT|ADD|ALL|ASC|CLEAR|COPY|CREATE|DEFAULT|DELETE|DELETE_DATA|DATA|DESC|DROP|EXPLICIT|IN|INSERT|INSERT_DATA|LOAD|MOVE|NOT_EXISTS|TO|USING|WITH|REIFIER|VERSION)\\b"
                 },
                 {
                     "name": "support.function.sparql",
-                    "match": "(?i)\\b(STR|LANG|DATATYPE|BOUND|IRI|URI|BNODE|RAND|ABS|CEIL|FLOOR|ROUND|CONCAT|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|CONTAINS|STRSTARTS|STRENDS|STRBEFORE|STRAFTER|YEAR|MONTH|DAY|HOURS|MINUTES|SECONDS|TIMEZONE|TZ|NOW|UUID|STRUUID|MD5|SHA1|SHA256|SHA384|SHA512|COALESCE|IF|STRLANG|STRDT|SAMETERM|ISIRI|ISBLANK|ISLITERAL|ISNUMERIC|REGEX|COUNT|SUM|MIN|MAX|AVG|SAMPLE|GROUP_CONCAT|LANGMATCHES|ISURI|REPLACE|SUBSTR)\\b"
+                    "match": "(?i)\\b(STR|LANG|DATATYPE|BOUND|IRI|URI|BNODE|RAND|ABS|CEIL|FLOOR|ROUND|CONCAT|STRLEN|UCASE|LCASE|ENCODE_FOR_URI|CONTAINS|STRSTARTS|STRENDS|STRBEFORE|STRAFTER|YEAR|MONTH|DAY|HOURS|MINUTES|SECONDS|TIMEZONE|TZ|NOW|UUID|STRUUID|MD5|SHA1|SHA256|SHA384|SHA512|COALESCE|IF|STRLANG|STRDT|SAMETERM|ISIRI|ISBLANK|ISLITERAL|ISNUMERIC|REGEX|COUNT|SUM|MIN|MAX|AVG|SAMPLE|GROUP_CONCAT|LANGMATCHES|ISURI|REPLACE|SUBSTR|TRIPLE|ISTRIPLE|SUBJECT|PREDICATE|OBJECT)\\b"
                 }
             ]
         },

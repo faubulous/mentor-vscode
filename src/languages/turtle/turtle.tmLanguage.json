@@ -17,6 +17,92 @@
             "name": "comment.line.number-sign.turtle",
             "match": "#.*$"
         },
+        "triple_term": {
+            "begin": "<<",
+            "end": ">>",
+            "name": "meta.triple-term.turtle",
+            "beginCaptures": {
+                "0": {
+                    "name": "variable.other.constant.turtle"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "variable.other.constant.turtle"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "include": "#prefixed_name"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#blank_node"
+                },
+                {
+                    "name": "keyword.control.turtle",
+                    "match": "\\b(a)\\b"
+                }
+            ]
+        },
+        "annotation": {
+            "begin": "\\{\\|",
+            "end": "\\|\\}",
+            "name": "meta.annotation.turtle",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.annotation.begin.turtle"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.annotation.end.turtle"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "include": "#prefixed_name"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#blank_node"
+                },
+                {
+                    "name": "keyword.control.turtle",
+                    "match": "\\b(a)\\b"
+                },
+                {
+                    "name": "punctuation.separator.predicate-object-list.turtle",
+                    "match": ";"
+                },
+                {
+                    "name": "punctuation.separator.object-list.turtle",
+                    "match": ","
+                }
+            ]
+        },
         "directive": {
             "patterns": [
                 {
@@ -78,6 +164,12 @@
             "patterns": [
                 {
                     "include": "#comment"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#annotation"
                 },
                 {
                     "include": "#iri"

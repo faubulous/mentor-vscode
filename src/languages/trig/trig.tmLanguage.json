@@ -20,6 +20,92 @@
             "name": "comment.line.number-sign.trig",
             "match": "#.*$"
         },
+        "triple_term": {
+            "begin": "<<",
+            "end": ">>",
+            "name": "meta.triple-term.trig",
+            "beginCaptures": {
+                "0": {
+                    "name": "variable.other.constant.trig"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "variable.other.constant.trig"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "include": "#prefixed_name"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#blank_node"
+                },
+                {
+                    "name": "keyword.control.trig",
+                    "match": "\\b(a)\\b"
+                }
+            ]
+        },
+        "annotation": {
+            "begin": "\\{\\|",
+            "end": "\\|\\}",
+            "name": "meta.annotation.trig",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.definition.annotation.begin.trig"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.definition.annotation.end.trig"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#comment"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#iri"
+                },
+                {
+                    "include": "#prefixed_name"
+                },
+                {
+                    "include": "#literal"
+                },
+                {
+                    "include": "#blank_node"
+                },
+                {
+                    "name": "keyword.control.trig",
+                    "match": "\\b(a)\\b"
+                },
+                {
+                    "name": "punctuation.separator.predicate-object-list.trig",
+                    "match": ";"
+                },
+                {
+                    "name": "punctuation.separator.object-list.trig",
+                    "match": ","
+                }
+            ]
+        },
         "directive": {
             "begin": "(?i)^\\s*(@prefix|@base|BASE|PREFIX)",
             "beginCaptures": {
@@ -82,6 +168,12 @@
             "patterns": [
                 {
                     "include": "#comment"
+                },
+                {
+                    "include": "#triple_term"
+                },
+                {
+                    "include": "#annotation"
                 },
                 {
                     "include": "#iri"
