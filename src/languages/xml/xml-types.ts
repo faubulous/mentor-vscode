@@ -1,5 +1,6 @@
 import { Range } from 'vscode-languageserver/browser';
 
+
 /**
  * Parsed content data from an RDF/XML document.
  */

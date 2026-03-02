@@ -266,11 +266,8 @@ const copyVSCodeElementsBundle = () => {
       getLanguageConfig(args, 'server', 'trig'),
       getLanguageConfig(args, 'server', 'sparql'),
       getLanguageConfig(args, 'server', 'xml'),
-      getLanguageConfig(args, 'client'),
-      getLanguageConfig(args, 'client', 'turtle'),
-      getLanguageConfig(args, 'client', 'trig'),
-      getLanguageConfig(args, 'client', 'sparql'),
-      getLanguageConfig(args, 'client', 'xml'),
+      // Note: Language clients run in the extension host, not as separate bundles.
+      // They are bundled into extension.js via the languages/index.ts barrel export.
       getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
       getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
       getReactViewConfig(args, 'sparql-connection', 'sparql-connection-view'),

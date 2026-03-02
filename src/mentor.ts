@@ -360,10 +360,14 @@ class MentorExtension {
 			return context;
 		}
 
-		context = this.documentFactory.create(document.uri, document.languageId);
+		// Only create a new context if one doesn't exist or if force reloading.
+		// This preserves tokens from early language server notifications.
+		if (!context || forceReload) {
+			context = this.documentFactory.create(document.uri, document.languageId);
 
-		// Register context immediately so language client notification handlers can find it.
-		this.contexts[uri] = context;
+			// Register context immediately so language client notification handlers can find it.
+			this.contexts[uri] = context;
+		}
 
 		const content = document.getText();
 

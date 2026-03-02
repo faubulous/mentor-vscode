@@ -325,14 +325,6 @@ export class TurtleDocument extends DocumentContext {
 
 		let previousToken: IToken | undefined;
 
-		const u = this.uri.toString();
-
-		console.debug('setTokens:', u);
-
-		if (u === "file:///home/faubulous/Projects/2023/mentor-rdf/src/rdf/tests/cases/valid-blanknodes.ttl") {
-			console.log('test');
-		}
-
 		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType.name) {
 				case TOKENS.PREFIX.name:

@@ -10,6 +10,14 @@ export class SparqlDocument extends TurtleDocument {
 		super(uri, RdfSyntax.Sparql);
 	}
 
+	/**
+	 * SPARQL documents are considered loaded when tokens are available.
+	 * Unlike RDF documents, SPARQL queries don't produce graphs.
+	 */
+	override get isLoaded(): boolean {
+		return this.hasTokens;
+	}
+
 	public override async infer(): Promise<void> {
 		// Inference is not supported for SPARQL documents.
 	}
