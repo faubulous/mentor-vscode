@@ -84,7 +84,7 @@ export class WorkspaceIndexer {
 					}
 
 					if (this._documentFactory.isSupportedNotebookFile(uri)) {
-						this._indexNotebook(uri, force);
+						this._indexNotebookDocument(uri, force);
 					} else {
 						this._indexTextDocument(uri, force);
 					}
@@ -125,12 +125,12 @@ export class WorkspaceIndexer {
 	 * @param notebookUri The URI of the notebook file.
 	 * @param force Whether to force re-indexing of already indexed cells.
 	 */
-	private async _indexNotebook(notebookUri: vscode.Uri, force: boolean): Promise<void> {
+	private async _indexNotebookDocument(notebookUri: vscode.Uri, force: boolean): Promise<void> {
 		try {
 			const notebook = await vscode.workspace.openNotebookDocument(notebookUri);
 
 			for (const cell of notebook.getCells()) {
-				if (!this._documentFactory.supportedLanguages.has(cell.document.languageId)) {
+				if (!this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
 					continue;
 				}
 

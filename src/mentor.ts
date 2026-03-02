@@ -160,6 +160,7 @@ class MentorExtension {
 
 	constructor() {
 		vscode.window.onDidChangeActiveTextEditor(() => this._onActiveEditorChanged());
+		vscode.window.onDidChangeActiveNotebookEditor((e) => this._onActiveNotebookEditorChanged(e));
 		vscode.workspace.onDidChangeTextDocument((e) => this._onTextDocumentChanged(e));
 		vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e));
 	}
@@ -299,6 +300,17 @@ class MentorExtension {
 		}
 	}
 
+	private _onActiveNotebookEditorChanged(editor: vscode.NotebookEditor | undefined): void {
+		if (!editor) return;
+
+		// Load all RDF cells in the notebook to ensure their graphs are created.
+		for (const cell of editor.notebook.getCells()) {
+			if (this.documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
+				this.loadDocument(cell.document);
+			}
+		}
+	}
+
 	private _onTextDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
 		// Reload the document context when the document has changed.
 		this.loadDocument(e.document, true).then((context) => {
@@ -350,6 +362,10 @@ class MentorExtension {
 		}
 
 		const uri = document.uri.toString();
+
+		if(document.uri.scheme === 'vscode-notebook-cell') {
+			console.log(document.uri);
+		}
 
 		let context = this.contexts[uri];
 

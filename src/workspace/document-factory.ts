@@ -41,6 +41,21 @@ export interface LanguageInfo {
 }
 
 /**
+ * Metadata about a supported file extension.
+ */
+export interface FileExtensionInfo {
+	/**
+	 * The language identifier associated with the file extension (e.g. 'turtle' for '.ttl').
+	 */
+	language: string;
+
+	/**
+	 * Indicates whether files with this extension can be loaded as triple sources into the RDF store.
+	 */
+	isTripleSource: boolean;
+}
+
+/**
  * A factory for creating RDF document contexts.
  */
 export class DocumentFactory {
@@ -52,20 +67,40 @@ export class DocumentFactory {
 	/**
 	 * The supported file extensions.
 	 */
-	readonly supportedExtensions: { [key: string]: string } = {
-		'.ttl': 'turtle',
-		'.n3': 'n3',
-		'.nt': 'ntriples',
-		'.nq': 'nquads',
-		'.trig': 'trig',
-		'.sparql': 'sparql',
-		'.rq': 'sparql',
-		'.rdf': 'xml',
-		'.mnb': 'json'
+	readonly supportedExtensions: { [key: string]: FileExtensionInfo } = {
+		'.ttl': { language: 'turtle', isTripleSource: true },
+		'.n3': { language: 'n3', isTripleSource: true },
+		'.nt': { language: 'ntriples', isTripleSource: true },
+		'.nq': { language: 'nquads', isTripleSource: true },
+		'.trig': { language: 'trig', isTripleSource: true },
+		'.sparql': { language: 'sparql', isTripleSource: false },
+		'.rq': { language: 'sparql', isTripleSource: false },
+		'.rdf': { language: 'xml', isTripleSource: true },
+		'.mnb': { language: 'json', isTripleSource: false }
 	}
 
 	constructor() {
-		this.supportedLanguages = new Set(Object.values(this.supportedExtensions));
+		const extensions = Object.keys(this.supportedExtensions);
+		const languages = extensions.map(e => this.supportedExtensions[e].language);
+
+		this.supportedLanguages = new Set(languages);
+	}
+
+	/**
+	 * Indicates whether a language is a triple source language, meaning that documents in this language can be loaded as RDF triples into the store.
+	 * @param languageId The language ID to check (e.g. 'turtle', 'sparql').
+	 * @returns `true` if the language is a triple source language, otherwise `false`.
+	 */
+	isTripleSourceLanguage(languageId: string): boolean {
+		for (const ext in this.supportedExtensions) {
+			const info = this.supportedExtensions[ext];
+
+			if (info.language === languageId) {
+				return info.isTripleSource;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -96,7 +131,7 @@ export class DocumentFactory {
 	 */
 	isSupportedNotebookFile(uri: vscode.Uri): boolean {
 		const extension = Utils.extname(uri).toLowerCase();
-		
+
 		return extension === '.mnb';
 	}
 
@@ -114,10 +149,10 @@ export class DocumentFactory {
 	 * @param uri The URI of the file.
 	 * @returns A language ID if the file is supported, otherwise `undefined`.
 	 */
-	getDocumentLanguageId(uri: vscode.Uri): string {
+	getDocumentLanguageId(uri: vscode.Uri): string | undefined {
 		const extension = Utils.extname(uri).toLowerCase();
 
-		return this.supportedExtensions[extension];
+		return this.supportedExtensions[extension]?.language;
 	}
 
 	/**
@@ -203,8 +238,8 @@ export class DocumentFactory {
 			});
 		}
 
-		for (const [extension, languageId] of Object.entries(this.supportedExtensions)) {
-			const info = languageMap.get(languageId);
+		for (const [extension, extensionInfo] of Object.entries(this.supportedExtensions)) {
+			const info = languageMap.get(extensionInfo.language);
 
 			if (info) {
 				info.extensions.push(extension);
