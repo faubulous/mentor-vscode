@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-import * as n3 from "n3";
-import { _SH } from "@faubulous/mentor-rdf";
+import { _SH, NamedNode, BlankNode } from "@faubulous/mentor-rdf";
 import { mentor } from "@src/mentor";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassNodeBase } from "./class-node-base";
@@ -10,7 +9,7 @@ export class NodeShapeNode extends ClassNodeBase {
 	override getIcon() {
 		let classIri: string | undefined;
 
-		const id = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
+		const id = this.uri.includes(':') ? new NamedNode(this.uri) : new BlankNode(this.uri);
 		const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
 
 		for (const target of targets) {
@@ -41,7 +40,7 @@ export class PropertyShapeNode extends PropertyNode {
 	override getIcon() {
 		let rangeIri: string | undefined;
 
-		const id = this.uri.includes(':') ? new n3.NamedNode(this.uri) : new n3.BlankNode(this.uri);
+		const id = this.uri.includes(':') ? new NamedNode(this.uri) : new BlankNode(this.uri);
 		const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
 
 		for (const target of targets) {

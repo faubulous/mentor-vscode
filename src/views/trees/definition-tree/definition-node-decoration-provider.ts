@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as n3 from 'n3';
+import { NamedNode } from '@faubulous/mentor-rdf';
 import { mentor } from '@src/mentor';
 
 /**
@@ -87,9 +87,9 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			return undefined;
 		}
 
-		const node = new n3.NamedNode(uri.toString());
+		const node = new NamedNode(uri.toString());
 
-		if (!context.subjects[node.id]) {
+		if (!context.subjects[node.value]) {
 			const result = new vscode.FileDecoration(undefined, undefined, this._disabledColor);
 			result.propagate = false;
 			result.tooltip = `This subject is not defined in the active document.`;
@@ -106,7 +106,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			return undefined;
 		}
 
-		if (!context.references[node.id]) {
+		if (!context.references[node.value]) {
 			return undefined;
 		}
 

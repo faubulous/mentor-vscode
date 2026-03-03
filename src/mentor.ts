@@ -394,12 +394,12 @@ class MentorExtension {
 				// Wait for tokens from the language server.
 				await this.waitForTokens(uri);
 			} catch (e) {
-				// Timeout or error - show error to user.
+				// Timeout waiting for tokens - this can happen if the language server is slow
+				// or not responding or if the document simply does not contain any tokens (e.g. empty document). 
+				// In this case, we proceed with loading the document without tokens, and log a warning.
 				const message = e instanceof Error ? e.message : String(e);
-
-				console.error(`Failed to receive tokens from language server for: ${uri}`, e);
-
-				vscode.window.showErrorMessage(`Mentor: Language server connection failed. Document features may be unavailable. ${message}`);
+				
+				console.warn(`Mentor: Timeout waiting for tokens: ${uri}`, message);
 				
 				return context;
 			}

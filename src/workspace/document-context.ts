@@ -1,9 +1,8 @@
-import * as n3 from 'n3';
-import * as rdfjs from "@rdfjs/types";
 import * as vscode from 'vscode';
+import { Quad_Subject } from "@rdfjs/types";
 import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
+import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
-import { Uri } from '@faubulous/mentor-rdf';
 import { mentor } from '@src/mentor';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { TreeLabelStyle } from '@src/settings';
@@ -267,12 +266,12 @@ export abstract class DocumentContext {
 	 */
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
-		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
+		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
 		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
-				const predicates = this.predicates.label.map(p => new n3.NamedNode(p));
+				const predicates = this.predicates.label.map(p => new NamedNode(p));
 
 				// First, try to find a description in the current graph.
 				let result = this._getResourceAnnotationFromPredicates(this.graphs, subject, predicates);
@@ -320,15 +319,15 @@ export abstract class DocumentContext {
 	 * @param predicates A list of predicates to reqtrieve the label from.
 	 * @returns The label of the resource as a string literal.
 	 */
-	private _getResourceAnnotationFromPredicates(graphUris: string[] | string | undefined, subject: n3.NamedNode | n3.BlankNode, predicates: n3.NamedNode[]): Label | undefined {
-		let languageLabel: rdfjs.Literal | undefined = undefined;
-		let primaryLabel: rdfjs.Literal | undefined = undefined;
-		let fallbackLabel: rdfjs.Literal | undefined = undefined;
+	private _getResourceAnnotationFromPredicates(graphUris: string[] | string | undefined, subject: NamedNode | BlankNode, predicates: NamedNode[]): Label | undefined {
+		let languageLabel: Literal | undefined = undefined;
+		let primaryLabel: Literal | undefined = undefined;
+		let fallbackLabel: Literal | undefined = undefined;
 
 		for (let p of predicates) {
 			for (let q of mentor.store.matchAll(graphUris, subject, p, null, false)) {
 				if (q.object.termType === 'Literal') {
-					const literal = q.object as n3.Literal;
+					const literal = q.object as Literal;
 
 					// Prefer to return non-empty values.
 					if (literal.value.length == 0) {
@@ -354,9 +353,9 @@ export abstract class DocumentContext {
 					if (!fallbackLabel) {
 						fallbackLabel = literal;
 					}
-				} else if (p.id === SH.path) {
+				} else if (p.value === SH.path) {
 					return {
-						value: this.getPropertyPathLabel(q.object as n3.Quad_Subject),
+						value: this.getPropertyPathLabel(q.object as Quad_Subject),
 						language: undefined
 					};
 				} else {
@@ -385,7 +384,7 @@ export abstract class DocumentContext {
 	 * @param node The object of a SHACL path triple.
 	 * @returns A rendered version of the SHACL path as a string.
 	 */
-	getPropertyPathLabel(node: n3.Quad_Subject): string {
+	getPropertyPathLabel(node: Quad_Subject): string {
 		let result = [];
 
 		for (let c of mentor.vocabulary.getPropertyPathTokens(this.graphs, node)) {
@@ -410,8 +409,8 @@ export abstract class DocumentContext {
 	 */
 	getResourceDescription(subjectUri: string): Label | undefined {
 		// TODO: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
-		const subject = subjectUri.includes(':') ? new n3.NamedNode(subjectUri) : new n3.BlankNode(subjectUri);
-		const predicates = this.predicates.description.map(p => new n3.NamedNode(p));
+		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
+		const predicates = this.predicates.description.map(p => new NamedNode(p));
 
 		// First, try to find a description in the current graph.
 		let result = this._getResourceAnnotationFromPredicates(this.graphs, subject, predicates);

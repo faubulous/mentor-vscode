@@ -278,7 +278,9 @@ export abstract class LanguageServerBase {
 		// Send the computed diagnostics to the client.
 		this.connection.sendDiagnostics({ uri: document.uri, diagnostics });
 
-		if (this.isDocumentTokenProvider && tokens) {
+		// Always send token notification to unblock the client, even for empty files or parsing errors.
+		// The client needs this to resolve pending token requests and avoid timeout errors.
+		if (this.isDocumentTokenProvider) {
 			// This sends the tokens to the client so that they can be used to build a reference index.
 			this.connection.sendNotification('mentor.message.updateContext', {
 				uri: document.uri,

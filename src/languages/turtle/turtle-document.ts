@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { Position } from 'vscode-languageserver-types';
 import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
-import { Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, rdf } from '@faubulous/mentor-rdf';
+import { Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { mentor } from '@src/mentor';
 import { DocumentContext } from '@src/workspace/document-context';
@@ -380,8 +380,8 @@ export class TurtleDocument extends DocumentContext {
 					break;
 				}
 				case TOKENS.A.name: {
-					this._handleTypeAssertion(tokens, t, rdf.type.id, i);
-					this._handleTypeDefinition(tokens, t, rdf.type.id, i);
+					this._handleTypeAssertion(tokens, t, RDF.type, i);
+					this._handleTypeDefinition(tokens, t, RDF.type, i);
 					break;
 				}
 			}
@@ -415,7 +415,7 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
-		if (uri === rdf.type.id) {
+		if (uri === RDF.type) {
 			const subjectToken = tokens[index - 1];
 
 			if (!subjectToken) return;
@@ -431,7 +431,7 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	private _handleTypeDefinition(tokens: IToken[], token: IToken, uri: string, index: number) {
-		if (uri == rdf.type.id) {
+		if (uri == RDF.type) {
 			const subjectToken = tokens[index - 1];
 
 			if (!subjectToken) return;

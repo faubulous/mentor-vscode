@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { xsd, rdf, rdfs } from '@faubulous/mentor-rdf';
+import { XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
 import { mentor } from "@src/mentor";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
@@ -34,34 +34,34 @@ export class PropertyNode extends DefinitionTreeNode {
 			}
 		}
 
-		return rangeUri ?? rdfs.Resource.id;
+		return rangeUri ?? RDFS.Resource;
 	}
 
 	getPropertyType(rangeUri?: string) {
 		switch (rangeUri) {
-			case rdf.langString.id:
-			case rdfs.Literal.id:
-			case xsd.base64Binary.id:
-			case xsd.boolean.id:
-			case xsd.byte.id:
-			case xsd.date.id:
-			case xsd.dateTime.id:
-			case xsd.decimal.id:
-			case xsd.double.id:
-			case xsd.float.id:
-			case xsd.int.id:
-			case xsd.integer.id:
-			case xsd.long.id:
-			case xsd.negativeInteger.id:
-			case xsd.nonNegativeInteger.id:
-			case xsd.nonPositiveInteger.id:
-			case xsd.positiveInteger.id:
-			case xsd.short.id:
-			case xsd.string.id:
-			case xsd.unsignedInt.id:
-			case xsd.unsignedShort.id:
-			case xsd.unsingedLong.id:
-			case xsd.usignedByte.id: {
+			case RDF.langString:
+			case RDFS.Literal:
+			case XSD.base64Binary:
+			case XSD.boolean:
+			case XSD.byte:
+			case XSD.date:
+			case XSD.dateTime:
+			case XSD.decimal:
+			case XSD.double:
+			case XSD.float:
+			case XSD.int:
+			case XSD.integer:
+			case XSD.long:
+			case XSD.negativeInteger:
+			case XSD.nonNegativeInteger:
+			case XSD.nonPositiveInteger:
+			case XSD.positiveInteger:
+			case XSD.short:
+			case XSD.string:
+			case XSD.unsignedInt:
+			case XSD.unsignedShort:
+			case XSD.unsingedLong:
+			case XSD.usignedByte: {
 				return 'dataProperty';
 			}
 			default: {
@@ -76,37 +76,37 @@ export class PropertyNode extends DefinitionTreeNode {
 
 	getIconNameFromRange(rangeIri?: string) {
 		switch (rangeIri) {
-			case xsd.date.id:
-			case xsd.dateTime.id: {
+			case XSD.date:
+			case XSD.dateTime: {
 				return 'calendar';
 			}
-			case xsd.boolean.id: {
+			case XSD.boolean: {
 				return 'symbol-boolean';
 			}
-			case xsd.base64Binary.id: {
+			case XSD.base64Binary: {
 				return 'file-binary';
 			}
-			case xsd.byte.id:
-			case xsd.decimal.id:
-			case xsd.double.id:
-			case xsd.float.id:
-			case xsd.int.id:
-			case xsd.integer.id:
-			case xsd.short.id:
-			case xsd.nonNegativeInteger.id:
-			case xsd.nonPositiveInteger.id:
-			case xsd.negativeInteger.id:
-			case xsd.positiveInteger.id:
-			case xsd.long.id:
-			case xsd.unsignedInt.id:
-			case xsd.unsignedShort.id:
-			case xsd.unsingedLong.id:
-			case xsd.usignedByte.id: {
+			case XSD.byte:
+			case XSD.decimal:
+			case XSD.double:
+			case XSD.float:
+			case XSD.int:
+			case XSD.integer:
+			case XSD.short:
+			case XSD.nonNegativeInteger:
+			case XSD.nonPositiveInteger:
+			case XSD.negativeInteger:
+			case XSD.positiveInteger:
+			case XSD.long:
+			case XSD.unsignedInt:
+			case XSD.unsignedShort:
+			case XSD.unsingedLong:
+			case XSD.usignedByte: {
 				return 'symbol-number';
 			}
-			case xsd.string.id:
-			case rdf.langString.id:
-			case rdfs.Literal.id: {
+			case XSD.string:
+			case RDF.langString:
+			case RDFS.Literal: {
 				return 'symbol-text';
 			}
 			default: {
