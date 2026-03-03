@@ -144,10 +144,10 @@ export class TurtleDocument extends DocumentContext {
 			// Uses existing tokens that were set by the language server.
 			const cst = new TurtleParser().parse(this._tokens);
 
-			for (const quadInfo of new TurtleReader().turtleDocInfo(cst)) {
-				const s = quadInfo.subject.term as Quad_Subject;
-				const p = quadInfo.predicate.term as Quad_Predicate;
-				const o = quadInfo.object.term as Quad_Object;
+			for (const q of new TurtleReader().visit(cst)) {
+				const s = q.subject as Quad_Subject;
+				const p = q.predicate as Quad_Predicate;
+				const o = q.object as Quad_Object;
 
 				const quad = mentor.store.dataFactory.quad(s, p, o, g);
 
