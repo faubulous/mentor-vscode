@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
 import { IToken, TokenType } from 'chevrotain';
+import { injectable, inject, delay } from 'tsyringe';
 import { Uri } from '@faubulous/mentor-rdf';
 import { TOKENS, isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
-import { mentor } from '@src/mentor';
+import { ConfigurationProvider } from '@src/container';
+import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { PrefixLookupService } from '@src/services';
 import { getIriFromIriReference } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -25,7 +28,16 @@ export interface PrefixDefinition {
 /**
  * A service for declaring prefixes in RDF documents.
  */
+@injectable()
 export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
+	constructor(
+		@inject(delay(() => ConfigurationProvider)) private readonly configuration: ConfigurationProvider,
+		@inject(delay(() => DocumentContextManager)) private readonly contextManager: DocumentContextManager,
+		@inject(delay(() => PrefixLookupService)) private readonly prefixLookupService: PrefixLookupService
+	) {
+		super();
+	}
+
 	/**
 	 * The default token type for prefix definitions. This is used when appending 
 	 * new prefixes to the end of the prefix definition list.
@@ -47,7 +59,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param document The RDF document.
 	 */
 	public async sortPrefixes(document: vscode.TextDocument): Promise<vscode.WorkspaceEdit> {
-		const context = mentor.getDocumentContext(document, TurtleDocument);
+		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
 
 		if (!context) return new vscode.WorkspaceEdit();
 
@@ -92,7 +104,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param prefixes The prefixes to delete.
 	 */
 	public async deletePrefixes(document: vscode.TextDocument, prefixes: string[]): Promise<vscode.WorkspaceEdit> {
-		const context = mentor.getDocumentContext(document, TurtleDocument);
+		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
 
 		if (!context) return new vscode.WorkspaceEdit();
 
@@ -155,7 +167,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	public async implementPrefixes(document: vscode.TextDocument, prefixes: PrefixDefinition[]): Promise<vscode.WorkspaceEdit> {
 		const edit = new vscode.WorkspaceEdit();
 
-		const context = mentor.getDocumentContext(document, TurtleDocument);
+		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
 
 		if (context) {
 			await this._implementPrefixes(edit, document, context, prefixes);
@@ -172,7 +184,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param prefixes The prefixes to be implemented.
 	 */
 	private async _implementPrefixes(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, prefixes: PrefixDefinition[]) {
-		const mode = await mentor.configuration.get('prefixes.prefixDefinitionMode');
+		const mode = await this.configuration.get().get('prefixes.prefixDefinitionMode');
 
 		if (mode === 'Sorted') {
 			await this._implementPrefixesSorted(edit, document, context, prefixes);
@@ -265,7 +277,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		prefixes.sort()
 			.filter(x => !context.namespaces[x.prefix] && !x.namespaceIri)
 			.forEach(x => {
-				const iri = x.namespaceIri ?? mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
+				const iri = x.namespaceIri ?? this.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
 				const definition = this._getPrefixDefinition(tokenType, upperCase, x.prefix, iri);
 
 				edit.insert(context.uri, insertPosition, definition + '\n');
@@ -326,7 +338,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		const namespaceMap = { ...context.namespaces };
 
 		for (const x of prefixes) {
-			namespaceMap[x.prefix] = x.namespaceIri ?? mentor.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
+			namespaceMap[x.prefix] = x.namespaceIri ?? this.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
 		}
 
 		// Determine the token type for prefix definitions in the document and if they should be uppercase.
@@ -349,7 +361,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param iri The namespace IRI for which to implement a prefix.
 	 */
 	async implementPrefixForIri(document: vscode.TextDocument, iri: string): Promise<vscode.WorkspaceEdit> {
-		const context = mentor.getDocumentContext(document, TurtleDocument);
+		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
 
 		if (!context) return new vscode.WorkspaceEdit();
 
@@ -357,7 +369,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		const namespaceIri = Uri.getNamespaceIri(iri);
 
 		// Look up the prefix for the namespace IRI in the document, configuration, or default prefixes.
-		let prefix = mentor.prefixLookupService.getPrefixForIri(document.uri.toString(), namespaceIri, 'ns');
+		let prefix = this.prefixLookupService.getPrefixForIri(document.uri.toString(), namespaceIri, 'ns');
 
 		// Check if the prefix is already defined and if the IRI are the same.
 		const existingNamspaceIri = context.namespaces[prefix];

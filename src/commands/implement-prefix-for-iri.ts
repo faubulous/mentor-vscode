@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container } from '../container';
 import { IToken } from 'chevrotain';
+import { TurtlePrefixDefinitionService } from '../services';
 import { getTokenPosition } from '@src/utilities';
 
 export const implementPrefixForIri = {
@@ -10,7 +11,8 @@ export const implementPrefixForIri = {
 
 		if (document) {
 			const editor = vscode.window.activeTextEditor;
-			const edit = await mentor.prefixDeclarationService.implementPrefixForIri(document, namespaceIri);
+			const service = container.resolve(TurtlePrefixDefinitionService);
+			const edit = await service.implementPrefixForIri(document, namespaceIri);
 
 			if (editor && edit.size > 0) {
 				// Await the edit application, after this the document is changed and the token position is invalid.

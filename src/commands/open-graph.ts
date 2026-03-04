@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container } from '@src/container';
+import { SparqlQueryService } from '@src/services';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { MENTOR_WORKSPACE_STORE } from '@src/services/sparql-connection-service';
 
@@ -9,6 +10,7 @@ export const openGraph = {
 	id: 'mentor.command.openGraph',
 	handler: async (graphIri: vscode.Uri | string, connection?: SparqlConnection) => {
 		const targetConnection = connection ?? MENTOR_WORKSPACE_STORE;
+		const queryService = container.resolve(SparqlQueryService);
 
 		try {
 			// Check if the graph contains more than the threshold number of triples.
@@ -25,7 +27,7 @@ export const openGraph = {
 				}
 			`;
 
-			const countResult = await mentor.sparqlQueryService.executeQueryOnConnection(countQuery, targetConnection);
+			const countResult = await queryService.executeQueryOnConnection(countQuery, targetConnection);
 
 			if (countResult?.type === 'bindings' && countResult.bindings.length > 0) {
 				const countValue = countResult.bindings[0].get('count');
@@ -56,7 +58,7 @@ export const openGraph = {
 				title: 'Exporting graph...',
 				cancellable: false
 			}, async () => {
-				const result = await mentor.sparqlQueryService.executeQueryOnConnection(constructQuery, targetConnection);
+				const result = await queryService.executeQueryOnConnection(constructQuery, targetConnection);
 
 				if (result?.type === 'quads' && result.data) {
 					const document = await vscode.workspace.openTextDocument({

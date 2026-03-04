@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { Quad_Subject } from "@rdfjs/types";
-import { _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
+import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
-import { mentor } from '@src/mentor';
+import { container, ConfigurationProvider } from '@src/container';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
-import { TreeLabelStyle } from '@src/settings';
+import { TreeLabelStyle, Settings } from '@src/settings';
 import { Range } from 'vscode-languageserver-types';
 
 /**
@@ -168,8 +168,9 @@ export abstract class DocumentContext {
 
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
-		this.predicates.label = mentor.configuration.get('predicates.label') ?? [];
-		this.predicates.description = mentor.configuration.get('predicates.description') ?? [];
+		const config = container.resolve(ConfigurationProvider).get();
+		this.predicates.label = config.get('predicates.label') ?? [];
+		this.predicates.description = config.get('predicates.description') ?? [];
 	}
 
 	/**
@@ -267,7 +268,8 @@ export abstract class DocumentContext {
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
-		const treeLabelStyle = mentor.settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
+		const settings = container.resolve(Settings);
+		const treeLabelStyle = settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
@@ -324,8 +326,10 @@ export abstract class DocumentContext {
 		let primaryLabel: Literal | undefined = undefined;
 		let fallbackLabel: Literal | undefined = undefined;
 
+		const store = container.resolve(Store);
+
 		for (let p of predicates) {
-			for (let q of mentor.store.matchAll(graphUris, subject, p, null, false)) {
+			for (let q of store.matchAll(graphUris, subject, p, null, false)) {
 				if (q.object.termType === 'Literal') {
 					const literal = q.object as Literal;
 
@@ -386,8 +390,9 @@ export abstract class DocumentContext {
 	 */
 	getPropertyPathLabel(node: Quad_Subject): string {
 		let result = [];
+		const vocabulary = container.resolve(VocabularyRepository);
 
-		for (let c of mentor.vocabulary.getPropertyPathTokens(this.graphs, node)) {
+		for (let c of vocabulary.getPropertyPathTokens(this.graphs, node)) {
 			if (typeof (c) === 'string') {
 				if (c === '|' || c === '/') {
 					result.push(` ${c} `);

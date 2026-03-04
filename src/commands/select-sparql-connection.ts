@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container } from '../container';
+import { SparqlConnectionService } from '../services';
 
 export const selectSparqlConnection = {
 	id: 'mentor.command.selectSparqlConnection',
@@ -9,8 +10,10 @@ export const selectSparqlConnection = {
 			return;
 		}
 
+		const service = container.resolve(SparqlConnectionService);
+
 		// Show a quick pick to select from existing SPARQL connections
-		const connections = await mentor.sparqlConnectionService.getConnections();
+		const connections = await service.getConnections();
 
 		if (connections.length === 0) {
 			vscode.window.showWarningMessage('No SPARQL endpoints configured. Please add one first.');
@@ -51,7 +54,7 @@ export const selectSparqlConnection = {
 			if (selected?.command) {
 				await vscode.commands.executeCommand(selected.command);
 			} else if (selected?.connection) {
-				await mentor.sparqlConnectionService.setQuerySourceForDocument(document.uri, selected.connection.id);
+				await service.setQuerySourceForDocument(document.uri, selected.connection.id);
 			}
 
 			quickPick.hide();

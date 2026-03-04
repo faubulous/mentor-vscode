@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container } from '../container';
+import { SparqlQueryService } from '../services';
 import { QuadsResult } from '@src/services/sparql-query-state';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
@@ -71,9 +72,10 @@ export class NotebookController {
 		});
 
 		try {
-			let queryState = mentor.sparqlQueryService.createQueryFromDocument(cell);
+			const queryService = container.resolve(SparqlQueryService);
+			let queryState = queryService.createQueryFromDocument(cell);
 
-			queryState = await mentor.sparqlQueryService.executeQuery(queryState, tokenSource);
+			queryState = await queryService.executeQuery(queryState, tokenSource);
 
 			if (queryState.queryType === 'bindings' || queryState.queryType === 'boolean') {
 				await execution.replaceOutput([new vscode.NotebookCellOutput([

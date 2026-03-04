@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
+import { container } from '@src/container';
 import { mentor } from '@src/mentor';
+import { SparqlConnectionService } from '@src/services';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
 
 export const deleteGraph = {
@@ -16,7 +18,8 @@ export const deleteGraph = {
 			return;
 		}
 
-		const connection = mentor.sparqlConnectionService.getConnectionForDocument(documentIri);
+		const connectionService = container.resolve(SparqlConnectionService);
+		const connection = connectionService.getConnectionForDocument(documentIri);
 
 		if (!connection) {
 			vscode.window.showErrorMessage(`Unable to retrieve SPARQL connection for document: ${documentIri}`);
@@ -40,7 +43,7 @@ export const deleteGraph = {
 			});
 
 			// Set the connection for this document
-			await mentor.sparqlConnectionService.setQuerySourceForDocument(document.uri, connection.id);
+			await connectionService.setQuerySourceForDocument(document.uri, connection.id);
 
 			// Show the document and execute the query
 			await vscode.window.showTextDocument(document);

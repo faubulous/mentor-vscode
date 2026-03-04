@@ -1,12 +1,14 @@
-import { mentor } from '@src/mentor';
+import { container } from '@src/container';
+import { SparqlQueryService } from '@src/services';
 
 export const removeFromQueryHistory = {
 	id: 'mentor.command.removeFromQueryHistory',
 	handler: async (documentIri: string) => {
-		const queryState = mentor.sparqlQueryService.getQueryStateForDocument(documentIri);
+		const service = container.resolve(SparqlQueryService);
+		const queryState = service.getQueryStateForDocument(documentIri);
 
 		if (queryState) {
-			mentor.sparqlQueryService.removeQueryState(queryState);
+			service.removeQueryState(queryState);
 		}
 	}
 };

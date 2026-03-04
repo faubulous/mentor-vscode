@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { Position } from 'vscode-languageserver-types';
 import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
-import { Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
+import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
-import { mentor } from '@src/mentor';
+import { container, ConfigurationProvider } from '@src/container';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from '@src/services';
 import {
@@ -116,12 +116,13 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	public override async infer(): Promise<void> {
-		const reasoner = mentor.store.reasoner;
+		const store = container.resolve(Store);
+		const reasoner = store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			mentor.store.executeInference(this.graphIri.toString());
+			store.executeInference(this.graphIri.toString());
 		}
 	}
 
@@ -132,10 +133,11 @@ export class TurtleDocument extends DocumentContext {
 	 */
 	public override async loadTriples(data: string): Promise<void> {
 		try {
+			const store = container.resolve(Store);
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			const graphUri = this.graphIri.toString();
-			const g = mentor.store.dataFactory.namedNode(graphUri);
+			const g = store.dataFactory.namedNode(graphUri);
 
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
@@ -149,9 +151,9 @@ export class TurtleDocument extends DocumentContext {
 				const p = q.predicate as Quad_Predicate;
 				const o = q.object as Quad_Object;
 
-				const quad = mentor.store.dataFactory.quad(s, p, o, g);
+				const quad = store.dataFactory.quad(s, p, o, g);
 
-				mentor.store.add(quad);
+				store.add(quad);
 			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
@@ -164,7 +166,8 @@ export class TurtleDocument extends DocumentContext {
 
 		// TODO: This should be handled in the prefix definition service 
 		// (listen to doc changes and react) instead of the document itself.
-		if (change?.text.endsWith(':') && mentor.configuration.get('prefixes.autoDefinePrefixes')) {
+		const config = container.resolve(ConfigurationProvider).get();
+		if (change?.text.endsWith(':') && config.get('prefixes.autoDefinePrefixes')) {
 			// Do not auto-implement prefixes when manually typing a prefix.
 			const n = this.getTokenIndexAtPosition(change.range.start);
 
@@ -190,7 +193,7 @@ export class TurtleDocument extends DocumentContext {
 				// Do not implmenet prefixes that are already defined.
 				if (this.namespaces[prefix]) return;
 
-				const service = new TurtlePrefixDefinitionService();
+				const service = container.resolve(TurtlePrefixDefinitionService);
 				const edit = await service.implementPrefixes(e.document, [{ prefix: prefix, namespaceIri: undefined }]);
 
 				if (edit.size > 0) {

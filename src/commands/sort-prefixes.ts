@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container } from '../container';
+import { TurtlePrefixDefinitionService } from '../services';
 
 export const sortPrefixes = {
 	id: 'mentor.command.sortPrefixes',
@@ -7,7 +8,8 @@ export const sortPrefixes = {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
-			const edit = await mentor.prefixDeclarationService.sortPrefixes(document);
+			const service = container.resolve(TurtlePrefixDefinitionService);
+			const edit = await service.sortPrefixes(document);
 
 			if (edit.size > 0) {
 				await vscode.workspace.applyEdit(edit);

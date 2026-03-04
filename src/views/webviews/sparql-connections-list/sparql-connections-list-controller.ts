@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container } from '@src/container';
+import { SparqlConnectionService } from '@src/services';
 import { WebviewController } from '../webview-controller';
 import { SparqlConnectionsListMessages } from './sparql-connections-list-messages';
 import { sparqlConnectionController } from '../sparql-connection/sparql-connection-controller';
@@ -21,10 +22,11 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
      */
     register(context: vscode.ExtensionContext): vscode.Disposable[] {
         const disposables = super.register(context);
+        const connectionService = container.resolve(SparqlConnectionService);
 
         // Listen for connection changes and update the webview
         this._disposables.push(
-            mentor.sparqlConnectionService.onDidChangeConnections(() => {
+            connectionService.onDidChangeConnections(() => {
                 this.sendConnectionsUpdate();
             })
         );
@@ -44,7 +46,9 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
      * Sends the current connections list to the webview.
      */
     private sendConnectionsUpdate() {
-        const connections = mentor.sparqlConnectionService.getConnections();
+        const connectionService = container.resolve(SparqlConnectionService);
+        const connections = connectionService.getConnections();
+        
         this.postMessage({
             id: 'ConnectionsChanged',
             connections: connections
@@ -52,9 +56,11 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
     }
 
     protected async onDidReceiveMessage(message: SparqlConnectionsListMessages): Promise<boolean> {
+        const connectionService = container.resolve(SparqlConnectionService);
+
         switch (message.id) {
             case 'GetConnections': {
-                const connections = mentor.sparqlConnectionService.getConnections();
+                const connections = connectionService.getConnections();
                 this.postMessage({
                     id: 'GetConnectionsResult',
                     connections: connections
@@ -62,7 +68,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                 return true;
             }
             case 'CreateConnection': {
-                const connection = await mentor.sparqlConnectionService.createConnection();
+                const connection = await connectionService.createConnection();
                 sparqlConnectionController.edit(connection);
                 return true;
             }
@@ -78,14 +84,14 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                 );
                 
                 if (answer === 'Delete') {
-                    await mentor.sparqlConnectionService.deleteConnection(message.connection.id);
-                    await mentor.sparqlConnectionService.saveConfiguration();
+                    await connectionService.deleteConnection(message.connection.id);
+                    await connectionService.saveConfiguration();
                 }
                 return true;
             }
             case 'ListGraphs': {
                 // First test the connection
-                const testResult = await mentor.sparqlConnectionService.testConnection(message.connection);
+                const testResult = await connectionService.testConnection(message.connection);
                 
                 if (testResult !== null) {
                     // Connection failed - send error result
@@ -109,7 +115,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                 return true;
             }
             case 'TestConnection': {
-                const result = await mentor.sparqlConnectionService.testConnection(message.connection);
+                const result = await connectionService.testConnection(message.connection);
                 this.postMessage({
                     id: 'TestConnectionResult',
                     connectionId: message.connection.id,

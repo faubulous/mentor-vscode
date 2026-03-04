@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
+import { container } from '@src/container';
 import { mentor } from '@src/mentor';
+import { PrefixLookupService } from '@src/services';
 import { InferenceUri } from '@src/workspace/inference-uri';
 
 export class InferenceUriHandler implements vscode.UriHandler {
@@ -28,7 +30,8 @@ export class InferenceUriHandler implements vscode.UriHandler {
 				const inferenceUri = InferenceUri.toInferenceUri(targetUri);
 
 				if (mentor.store.hasGraph(inferenceUri)) {
-					const namespaces = mentor.prefixLookupService.getInferencePrefixes();
+					const prefixLookup = container.resolve(PrefixLookupService);
+					const namespaces = prefixLookup.getInferencePrefixes();
 					const content = await mentor.store.serializeGraph(inferenceUri, 'text/turtle', undefined, namespaces);
 					const document = await vscode.workspace.openTextDocument({ content, language: 'turtle' });
 

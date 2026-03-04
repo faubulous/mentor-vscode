@@ -12,7 +12,8 @@ import { Quad_Graph } from '@rdfjs/types';
 import { InferenceUri } from './workspace/inference-uri';
 import { DocumentFactory } from './workspace/document-factory';
 import { DocumentContextManager } from './workspace/document-context-manager';
-import { LocalStorageService, CredentialStorageService, SparqlConnectionService, SparqlQueryService, PrefixLookupService } from './services';
+import { Settings } from './settings';
+import { LocalStorageService, CredentialStorageService, SparqlConnectionService, SparqlQueryService, PrefixLookupService, PrefixDownloaderService, TurtlePrefixDefinitionService, SparqlQueryResultSerializer } from './services';
 
 /**
  * Injectable wrapper for VS Code ExtensionContext.
@@ -75,39 +76,50 @@ export function configureContainer(): DependencyContainer {
 	// Register MentorGraphUriGenerator as GraphUriGenerator
 	container.registerSingleton<GraphUriGenerator>("GraphUriGenerator", MentorGraphUriGenerator);
 
-	container.register(OwlReasoner, {
-		useFactory: (c) => new OwlReasoner(c.resolve<GraphUriGenerator>("GraphUriGenerator"))
-	});
+	// Create singleton instances for the core RDF services
+	const graphUriGenerator = container.resolve<GraphUriGenerator>("GraphUriGenerator");
+	const reasoner = new OwlReasoner(graphUriGenerator);
+	const store = new Store(reasoner);
+	const vocabulary = new VocabularyRepository(store);
 
-	container.register(Store, {
-		useFactory: (c) => new Store(c.resolve(OwlReasoner))
-	});
-
-	container.register(VocabularyRepository, {
-		useFactory: (c) => new VocabularyRepository(c.resolve(Store))
-	});
+	// Register them as singleton instances
+	container.registerInstance(OwlReasoner, reasoner);
+	container.registerInstance(Store, store);
+	container.registerInstance(VocabularyRepository, vocabulary);
 
 	container.registerSingleton(DocumentFactory);
 
-	container.register(DocumentContextManager, {
-		useFactory: (c) => new DocumentContextManager(
-			c.resolve(Store),
-			c.resolve(VocabularyRepository),
-			c.resolve(DocumentFactory),
-			c.resolve(ConfigurationProvider)
-		)
-	});
+	// Create DocumentContextManager instance manually to avoid circular dependency with ConfigurationProvider
+	const documentContextManager = new DocumentContextManager(
+		store,
+		vocabulary,
+		container.resolve(DocumentFactory),
+		container.resolve(ConfigurationProvider)
+	);
+	container.registerInstance(DocumentContextManager, documentContextManager);
 
 	container.registerSingleton(CredentialStorageService);
 
 	// Register SparqlConnectionService (dependencies resolved at runtime)
 	container.registerSingleton(SparqlConnectionService);
 
+	// Register SparqlQueryResultSerializer
+	container.registerSingleton(SparqlQueryResultSerializer);
+
 	// Register SparqlQueryService
 	container.registerSingleton(SparqlQueryService);
 
 	// Register PrefixLookupService
 	container.registerSingleton(PrefixLookupService);
+
+	// Register PrefixDownloaderService
+	container.registerSingleton(PrefixDownloaderService);
+
+	// Register TurtlePrefixDefinitionService
+	container.registerSingleton(TurtlePrefixDefinitionService);
+
+	// Register Settings
+	container.registerSingleton(Settings);
 
 	return container;
 }

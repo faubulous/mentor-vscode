@@ -41,8 +41,6 @@ export class SparqlQueryService {
 
 	private readonly _onDidHistoryChange = new vscode.EventEmitter<void>();
 
-	private readonly _querySerializer = new SparqlQueryResultSerializer();
-
 	/**
 	 * Event that is triggered when the query history changes.
 	 */
@@ -65,7 +63,8 @@ export class SparqlQueryService {
 	constructor(
 		@inject(SparqlConnectionService) private readonly _connectionService: SparqlConnectionService,
 		@inject(delay(() => WorkspaceStorageService)) private readonly workspaceStorage: WorkspaceStorageService,
-		@inject(CredentialStorageService) private readonly credentialStorage: CredentialStorageService
+		@inject(CredentialStorageService) private readonly credentialStorage: CredentialStorageService,
+		@inject(SparqlQueryResultSerializer) private readonly _querySerializer: SparqlQueryResultSerializer
 	) {}
 
 	/**

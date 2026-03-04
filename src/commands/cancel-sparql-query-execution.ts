@@ -1,8 +1,10 @@
-import { mentor } from '../mentor';
+import { container } from '../container';
+import { SparqlQueryService } from '../services';
 
 export const cancelSparqlQueryExecution = {
 	id: 'mentor.command.cancelSparqlQueryExecution',
 	handler: (queryStateID: string) => {
-		mentor.sparqlQueryService.cancelQuery(queryStateID);
+		const service = container.resolve(SparqlQueryService);
+		service.cancelQuery(queryStateID);
 	}
 };

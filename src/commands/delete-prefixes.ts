@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container } from '../container';
+import { TurtlePrefixDefinitionService } from '../services';
 
 export const deletePrefixes = {
 	id: 'mentor.command.deletePrefixes',
@@ -7,7 +8,8 @@ export const deletePrefixes = {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 		
 		if (document) {
-			const edit = await mentor.prefixDeclarationService.deletePrefixes(document, prefixes);
+			const service = container.resolve(TurtlePrefixDefinitionService);
+			const edit = await service.deletePrefixes(document, prefixes);
 			if (edit.size > 0) {
 				await vscode.workspace.applyEdit(edit);
 			}

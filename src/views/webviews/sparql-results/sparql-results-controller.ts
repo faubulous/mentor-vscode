@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container } from '@src/container';
+import { SparqlQueryService } from '@src/services';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/services/sparql-query-state';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
@@ -18,16 +19,19 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
 
     register(context: vscode.ExtensionContext) {
         const subscriptions = super.register(context);
+        const queryService = container.resolve(SparqlQueryService);
 
-        subscriptions.push(mentor.sparqlQueryService.onDidHistoryChange(this._postQueryHistory, this));
+        subscriptions.push(queryService.onDidHistoryChange(this._postQueryHistory, this));
 
         return subscriptions;
     }
 
     private _postQueryHistory() {
+        const queryService = container.resolve(SparqlQueryService);
+        
         this.postMessage({
             id: 'PostSparqlQueryHistory',
-            history: mentor.sparqlQueryService.getQueryHistory()
+            history: queryService.getQueryHistory()
         });
     }
 
@@ -56,7 +60,8 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
             this.view.show();
         }
 
-        const updatedState = await mentor.sparqlQueryService.executeQuery(queryState);
+        const queryService = container.resolve(SparqlQueryService);
+        const updatedState = await queryService.executeQuery(queryState);
 
         if (updatedState.result?.type === 'quads') {
             const result = updatedState.result as QuadsResult;
@@ -77,7 +82,8 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
     async executeQuery(queryContext: vscode.TextDocument | vscode.NotebookCell, query: string) {
         await this._prepareQueryExecution(queryContext);
 
-        const queryState = mentor.sparqlQueryService.createQuery(queryContext, query);
+        const queryService = container.resolve(SparqlQueryService);
+        const queryState = queryService.createQuery(queryContext, query);
 
         await this._executeQuery(queryState);
     }
@@ -90,7 +96,8 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
     async executeQueryFromTextDocument(queryContext: vscode.TextDocument | vscode.NotebookCell) {
         await this._prepareQueryExecution(queryContext);
 
-        const queryState = mentor.sparqlQueryService.createQueryFromDocument(queryContext);
+        const queryService = container.resolve(SparqlQueryService);
+        const queryState = queryService.createQueryFromDocument(queryContext);
 
         await this._executeQuery(queryState);
     }

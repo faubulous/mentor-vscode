@@ -80,6 +80,42 @@ export class DocumentContextManager {
 	}
 
 	/**
+	 * Get the document context from a URI.
+	 * @param uri A document or workspace URI.
+	 * @returns A document context if the document is loaded, `undefined` otherwise.
+	 */
+	getDocumentContextFromUri(uri: string): DocumentContext | undefined {
+		if (uri.startsWith(WorkspaceUri.uriScheme)) {
+			const u = WorkspaceUri.toFileUri(vscode.Uri.parse(uri)).toString();
+			return this.contexts[u];
+		} else {
+			return this.contexts[uri];
+		}
+	}
+
+	/**
+	 * Get the document context from a text document.
+	 * @param document A text document.
+	 * @param contextType The expected type of the document context.
+	 * @returns A document context of the specified type if the document is loaded and matches the type, null otherwise.
+	 */
+	getDocumentContext<T extends DocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null {
+		const uri = document.uri.toString();
+
+		if (!this.contexts[uri]) {
+			return null;
+		}
+
+		const context = this.contexts[uri];
+
+		if (!(context instanceof contextType)) {
+			return null;
+		}
+
+		return context as T;
+	}
+
+	/**
 	 * Wait for tokens to be delivered from the language server for a document.
 	 * @param uri The document URI to wait for tokens.
 	 * @param timeout Optional timeout in milliseconds (defaults to _tokenWaitTimeout).

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container } from '@src/container';
+import { SparqlConnectionService } from '@src/services';
 
 /**
  * Provides a CodeLens to display and change the current SPARQL endpoint.
@@ -10,7 +11,8 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		mentor.sparqlConnectionService.onDidChangeConnectionForDocument(() => {
+		const connectionService = container.resolve(SparqlConnectionService);
+		connectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();
 		});
 	}
@@ -21,7 +23,8 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	 * @returns A promise that resolves to an array of CodeLenses.
 	 */
 	public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-		const connection = await mentor.sparqlConnectionService.getConnectionForDocument(document.uri);
+		const connectionService = container.resolve(SparqlConnectionService);
+		const connection = await connectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {
 			return [];

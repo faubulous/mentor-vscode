@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container } from '@src/container';
+import { SparqlConnectionService, CredentialStorageService } from '@src/services';
 import { WebviewController } from '../webview-controller';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql-connection';
@@ -51,8 +52,9 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                         connection: this.selectedConnection
                     });
                 } else {
+                    const connectionService = container.resolve(SparqlConnectionService);
                     // Note: This always returns at least one connection (the Mentor Store).
-                    const connection = mentor.sparqlConnectionService.getConnections()[0];
+                    const connection = connectionService.getConnections()[0];
 
                     this.postMessage({
                         id: 'GetSparqlConnectionResult',
@@ -62,7 +64,8 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 return true;
             }
             case 'GetSparqlConnectionCredential': {
-                const credential = await mentor.credentialStorageService.getCredential(message.connectionId);
+                const credentialService = container.resolve(CredentialStorageService);
+                const credential = await credentialService.getCredential(message.connectionId);
 
                 this.postMessage({
                     id: 'GetSparqlConnectionCredentialResult',
@@ -72,23 +75,28 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 return true;
             }
             case 'SaveSparqlConnection': {
-                await mentor.sparqlConnectionService.updateEndpoint(message.connection);
-                await mentor.sparqlConnectionService.saveConfiguration();
+                const connectionService = container.resolve(SparqlConnectionService);
+                const credentialService = container.resolve(CredentialStorageService);
+
+                await connectionService.updateEndpoint(message.connection);
+                await connectionService.saveConfiguration();
 
                 if (message.credential) {
-                    await mentor.credentialStorageService.deleteCredential(message.connection.id);
-                    await mentor.credentialStorageService.saveCredential(message.connection.id, message.credential);
+                    await credentialService.deleteCredential(message.connection.id);
+                    await credentialService.saveCredential(message.connection.id, message.credential);
                 }
 
                 vscode.window.showInformationMessage(`SPARQL connection saved.`);
                 return true;
             }
             case 'UpdateSparqlConnection': {
-                await mentor.sparqlConnectionService.updateEndpoint(message.connection);
+                const connectionService = container.resolve(SparqlConnectionService);
+                await connectionService.updateEndpoint(message.connection);
                 return true;
             }
             case 'TestSparqlConnection': {
-                const result = await mentor.sparqlConnectionService.testConnection(message.connection, message.credential);
+                const connectionService = container.resolve(SparqlConnectionService);
+                const result = await connectionService.testConnection(message.connection, message.credential);
                 this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
                 return true;
             }

@@ -98,12 +98,16 @@ class MentorExtension {
 	/**
 	 * A service for declaring prefixes in RDF documents.
 	 */
-	readonly prefixDeclarationService = new TurtlePrefixDefinitionService();
+	get prefixDeclarationService(): TurtlePrefixDefinitionService {
+		return container.resolve(TurtlePrefixDefinitionService);
+	}
 
 	/**
 	 * A service for downloading RDF prefix mappings from the web.
 	 */
-	readonly prefixDownloaderService = new PrefixDownloaderService();
+	get prefixDownloaderService(): PrefixDownloaderService {
+		return container.resolve(PrefixDownloaderService);
+	}
 
 	/**
 	 * A service for looking up prefixes in RDF documents.

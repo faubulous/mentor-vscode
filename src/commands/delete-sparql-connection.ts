@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container } from '../container';
+import { SparqlConnectionService, CredentialStorageService } from '../services';
 import { SparqlConnection } from '@src/services/sparql-connection';
 
 export const deleteSparqlConnection = {
@@ -15,10 +16,13 @@ export const deleteSparqlConnection = {
 			return;
 		}
 
-		await mentor.sparqlConnectionService.deleteConnection(connection.id);
-		await mentor.sparqlConnectionService.saveConfiguration();
+		const connectionService = container.resolve(SparqlConnectionService);
+		const credentialService = container.resolve(CredentialStorageService);
 
-		await mentor.credentialStorageService.deleteCredential(connection.id);
+		await connectionService.deleteConnection(connection.id);
+		await connectionService.saveConfiguration();
+
+		await credentialService.deleteCredential(connection.id);
 
 		vscode.window.showInformationMessage('SPARQL connection deleted.');
 	}

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container } from '../container';
+import { TurtlePrefixDefinitionService } from '../services';
 
 export const implementPrefixes = {
 	id: 'mentor.command.implementPrefixes',
@@ -7,7 +8,8 @@ export const implementPrefixes = {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
-			const edit = await mentor.prefixDeclarationService.implementPrefixes(document, prefixes.map(p => ({ prefix: p, namespaceIri: undefined })));
+			const service = container.resolve(TurtlePrefixDefinitionService);
+			const edit = await service.implementPrefixes(document, prefixes.map(p => ({ prefix: p, namespaceIri: undefined })));
 
 			if (edit.size > 0) {
 				await vscode.workspace.applyEdit(edit);

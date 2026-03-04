@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { injectable, inject, delay } from 'tsyringe';
 import { Store, Writer } from 'n3';
 import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
+import { PrefixLookupService } from './prefix-lookup-service';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
 import { toArrayWithCancellation } from '@src/utilities/cancellation';
 import { NamespaceMap } from '@src/utilities';
@@ -12,7 +13,12 @@ import { NamespaceMap } from '@src/utilities';
 /**
  * Handler for serializing SPARQL query results.
  */
+@injectable()
 export class SparqlQueryResultSerializer {
+	constructor(
+		@inject(delay(() => PrefixLookupService)) private readonly prefixLookupService: PrefixLookupService
+	) {}
+
 	/**
 	 * Serializes SPARQL query results into a format suitable for the webview.
 	 * @param documentIri The IRI of the document where the query was run.
@@ -72,7 +78,7 @@ export class SparqlQueryResultSerializer {
 		const namespaceMap: NamespaceMap = {};
 
 		for (const iri of namespaces) {
-			const prefix = mentor.prefixLookupService.getPrefixForIri(documentIri, iri, '');
+			const prefix = this.prefixLookupService.getPrefixForIri(documentIri, iri, '');
 
 			if (prefix !== '') {
 				namespaceMap[iri] = prefix;
@@ -137,7 +143,7 @@ export class SparqlQueryResultSerializer {
 
 			// Build prefix map
 			for (const iri of namespaces) {
-				const prefix = mentor.prefixLookupService.getPrefixForIri(documentIri, iri, '');
+				const prefix = this.prefixLookupService.getPrefixForIri(documentIri, iri, '');
 
 				if (prefix !== '') {
 					prefixMap[prefix] = iri;
@@ -207,8 +213,8 @@ export class SparqlQueryResultSerializer {
 				}
 
 				// Build prefix map using inference prefixes and default prefixes
-				const inferencePrefixes = mentor.prefixLookupService.getInferencePrefixes();
-				const defaultPrefixes = mentor.prefixLookupService.getDefaultPrefixes();
+				const inferencePrefixes = this.prefixLookupService.getInferencePrefixes();
+				const defaultPrefixes = this.prefixLookupService.getDefaultPrefixes();
 				const allPrefixes = { ...inferencePrefixes, ...defaultPrefixes };
 
 				for (const iri of namespaceIris) {

@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { container } from '@src/container';
 import { mentor } from '@src/mentor';
+import { PrefixLookupService } from '@src/services';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
@@ -46,7 +48,8 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		}
 
 		const prefix = currentToken.image.split(":")[0];
-		const uri = mentor.prefixLookupService.getUriForPrefix(document.uri.toString(), prefix);
+		const prefixLookup = container.resolve(PrefixLookupService);
+		const uri = prefixLookup.getUriForPrefix(document.uri.toString(), prefix);
 
 		if (uri) {
 			return [{

@@ -314,7 +314,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 			let resolved = cache.get(iri);
 
 			if (resolved === undefined) {
-				resolved = mentor.vocabulary.hasSubject(graphs, iri) || mentor.store.hasGraph(iri);
+				resolved = mentor.vocabulary.hasSubject(graphs, iri) || mentor.vocabulary.store.hasGraph(iri);
 
 				cache.set(iri, resolved);
 			}
@@ -349,7 +349,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	private _getGraphsExcept(excludedGraphs: string[]): string[] {
 		const excluded = new Set<string>(excludedGraphs);;
 
-		return mentor.store.getGraphs().filter(g => !excluded.has(g));
+		return mentor.vocabulary.store.getGraphs().filter(g => !excluded.has(g));
 	}
 
 	private _createDiagnosticForToken(token: IToken, message: string, severity: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Error): vscode.Diagnostic {
