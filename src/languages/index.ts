@@ -8,6 +8,9 @@ export * from './sparql/sparql-language-client';
 export * from './sparql/sparql-token-provider';
 export * from './trig/trig-language-client';
 export * from './trig/trig-token-provider';
+export * from './nquads/nquads-language-client';
+export * from './ntriples/ntriples-language-client';
+export * from './n3/n3-language-client';
 export * from './turtle/turtle-document'
 export * from './turtle/turtle-language-client';
 export * from './turtle/turtle-token-provider';

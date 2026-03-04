@@ -38,6 +38,9 @@ function registerLanguageClients(context: vscode.ExtensionContext) {
 	const clients: languages.LanguageClientBase[] = [
 		new languages.TurtleLanguageClient(),
 		new languages.TrigLanguageClient(),
+		new languages.NQuadsLanguageClient(),
+		new languages.NTriplesLanguageClient(),
+		new languages.N3LanguageClient(),
 		new languages.SparqlLanguageClient(),
 		new languages.XmlLanguageClient()
 	];

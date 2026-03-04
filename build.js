@@ -264,6 +264,9 @@ const copyVSCodeElementsBundle = () => {
       getLanguageConfig(args, 'server'),
       getLanguageConfig(args, 'server', 'turtle'),
       getLanguageConfig(args, 'server', 'trig'),
+      getLanguageConfig(args, 'server', 'nquads'),
+      getLanguageConfig(args, 'server', 'ntriples'),
+      getLanguageConfig(args, 'server', 'n3'),
       getLanguageConfig(args, 'server', 'sparql'),
       getLanguageConfig(args, 'server', 'xml'),
       // Note: Language clients run in the extension host, not as separate bundles.
