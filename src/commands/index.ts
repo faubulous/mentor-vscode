@@ -19,6 +19,11 @@ import { executeSparqlQuery } from './execute-sparql-query';
 import { executeSparqlQueryFromActiveEditor } from './execute-sparql-query-from-active-editor';
 import { executeSparqlQueryFromDocument } from './execute-sparql-query-from-document';
 import { findReferences } from './find-references';
+import { groupDefinitionsBySource } from './group-definitions-by-source';
+import { groupDefinitionsByType } from './group-definitions-by-type';
+import { hideIndividualTypes } from './hide-individual-types';
+import { hidePropertyTypes } from './hide-property-types';
+import { hideReferences } from './hide-references';
 import { implementPrefixes } from './implement-prefixes';
 import { implementPrefixForIri } from './implement-prefix-for-iri';
 import { listGraphs } from './list-graphs';
@@ -36,6 +41,12 @@ import { revealShapeDefinition } from './reveal-shape-definition';
 import { saveSparqlQueryResults } from './save-sparql-query-results';
 import { selectActiveLanguage } from './select-active-language';
 import { selectSparqlConnection } from './select-sparql-connection';
+import { showAnnotatedLabels } from './show-annotated-labels';
+import { showIndividualTypes } from './show-individual-types';
+import { showPropertyTypes } from './show-property-types';
+import { showReferences } from './show-references';
+import { showUriLabels } from './show-uri-labels';
+import { showUriLabelsWithPrefix } from './show-uri-labels-with-prefix';
 import { showWebview } from './show-webview';
 import { sortPrefixes } from './sort-prefixes';
 import { updatePrefixes } from './update-prefixes';
@@ -60,6 +71,11 @@ const commands = [
 	executeSparqlQueryFromActiveEditor,
 	executeSparqlQueryFromDocument,
 	findReferences,
+	groupDefinitionsBySource,
+	groupDefinitionsByType,
+	hideIndividualTypes,
+	hidePropertyTypes,
+	hideReferences,
 	implementPrefixes,
 	implementPrefixForIri,
 	listGraphs,
@@ -77,6 +93,12 @@ const commands = [
 	saveSparqlQueryResults,
 	selectActiveLanguage,
 	selectSparqlConnection,
+	showAnnotatedLabels,
+	showIndividualTypes,
+	showPropertyTypes,
+	showReferences,
+	showUriLabels,
+	showUriLabelsWithPrefix,
 	showWebview,
 	sortPrefixes,
 	updatePrefixes,

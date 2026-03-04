@@ -3,7 +3,7 @@ import { IToken } from 'chevrotain';
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from './workspace/document-context';
 import { DocumentFactory } from './workspace/document-factory';
-import { DefinitionTreeLayout, Settings, TreeLabelStyle } from './settings';
+import { Settings } from './settings';
 import { WorkspaceIndexer, DocumentIndex } from './workspace/workspace-indexer';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import {
@@ -211,7 +211,7 @@ class MentorExtension {
 
 		return new Promise((resolve, reject) => {
 			const timeoutMs = timeout ?? this._tokenWaitTimeout;
-			
+
 			const timeoutId = setTimeout(() => {
 				this._pendingTokenRequests.delete(uri);
 				reject(new Error(`Timeout waiting for tokens from language server for: ${uri}`));
@@ -283,21 +283,24 @@ class MentorExtension {
 	}
 
 	private _onActiveEditorChanged(): void {
-		const activeEditor = vscode.window.activeTextEditor;
-		const uri = activeEditor?.document.uri;
+		const editor = vscode.window.activeTextEditor;
 
-		if (activeEditor && uri && uri != this.activeContext?.uri) {
-			this.loadDocument(activeEditor.document).then((context) => {
-				if (context) {
-					this.activeContext = context;
-					this._onDidChangeDocumentContext?.fire(context);
-				}
+		if (!editor) return;
 
-				const convertible = this.documentFactory.isConvertibleLanguage(activeEditor.document.languageId);
+		const uri = editor.document.uri;
 
-				vscode.commands.executeCommand("setContext", "mentor.command.convertFileFormat.executable", convertible);
-			});
-		}
+		if (!uri || uri === this.activeContext?.uri) return;
+
+		this.loadDocument(editor.document).then((context) => {
+			if (context) {
+				this.activeContext = context;
+				this._onDidChangeDocumentContext?.fire(context);
+			}
+
+			const convertible = this.documentFactory.isConvertibleLanguage(editor.document.languageId);
+
+			vscode.commands.executeCommand("setContext", "mentor.command.convertFileFormat.executable", convertible);
+		});
 	}
 
 	private _onActiveNotebookEditorChanged(editor: vscode.NotebookEditor | undefined): void {
@@ -363,7 +366,7 @@ class MentorExtension {
 
 		const uri = document.uri.toString();
 
-		if(document.uri.scheme === 'vscode-notebook-cell') {
+		if (document.uri.scheme === 'vscode-notebook-cell') {
 			console.log(document.uri);
 		}
 
@@ -398,9 +401,9 @@ class MentorExtension {
 				// or not responding or if the document simply does not contain any tokens (e.g. empty document). 
 				// In this case, we proceed with loading the document without tokens, and log a warning.
 				const message = e instanceof Error ? e.message : String(e);
-				
+
 				console.warn(`Mentor: Timeout waiting for tokens: ${uri}`, message);
-				
+
 				return context;
 			}
 		}
@@ -434,6 +437,8 @@ class MentorExtension {
 	 * @param context The extension context.
 	 */
 	async initialize(context: vscode.ExtensionContext) {
+		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
+
 		// Initialize the extension persistence service.
 		this.workspaceStorage.initialize(context.workspaceState);
 		this.globalStorage.initialize(context.globalState);
@@ -450,140 +455,21 @@ class MentorExtension {
 		// Restore the query execution history.
 		this.sparqlQueryService.initialize();
 
-		// Register commands..
-		vscode.commands.registerCommand('mentor.command.groupDefinitionsByType', () => {
-			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.ByType);
-		});
+		// If there is a document opened in the editor, load it.
+		this._onActiveEditorChanged();
 
-		vscode.commands.registerCommand('mentor.command.groupDefinitionsBySource', () => {
-			this.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.BySource);
-		});
+		// Load the W3C and other common ontologies for providing hovers, completions and definitions.
+		await mentor.store.loadFrameworkOntologies();
 
-		vscode.commands.registerCommand('mentor.command.showAnnotatedLabels', () => {
-			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
-		});
+		// Load the workspace files and folders for the explorer tree view.
+		await mentor.workspace.initialize();
 
-		vscode.commands.registerCommand('mentor.command.showUriLabels', () => {
-			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabels);
-		});
+		// Index the entire workspace for providing hovers, completions and definitions.
+		await mentor.workspaceIndexer.indexWorkspace();
 
-		vscode.commands.registerCommand('mentor.command.showUriLabelsWithPrefix', () => {
-			this.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.UriLabelsWithPrefix);
-		});
+		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
-		vscode.commands.registerCommand('mentor.command.showReferences', () => {
-			this.settings.set('view.showReferences', true);
-		});
-
-		vscode.commands.registerCommand('mentor.command.hideReferences', () => {
-			this.settings.set('view.showReferences', false);
-		});
-
-		vscode.commands.registerCommand('mentor.command.showPropertyTypes', () => {
-			this.settings.set('view.showPropertyTypes', true);
-		});
-
-		vscode.commands.registerCommand('mentor.command.hidePropertyTypes', () => {
-			this.settings.set('view.showPropertyTypes', false);
-		});
-
-		vscode.commands.registerCommand('mentor.command.showIndividualTypes', () => {
-			this.settings.set('view.showIndividualTypes', true);
-		});
-
-		vscode.commands.registerCommand('mentor.command.hideIndividualTypes', () => {
-			this.settings.set('view.showIndividualTypes', false);
-		});
-
-		vscode.commands.registerCommand('mentor.command.initialize', async () => {
-			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
-
-			// If there is a document opened in the editor, load it.
-			this._onActiveEditorChanged();
-
-			// Load the W3C and other common ontologies for providing hovers, completions and definitions.
-			await this.store.loadFrameworkOntologies();
-
-			// Load the workspace files and folders for the explorer tree view.
-			await this.workspace.initialize();
-
-			// Index the entire workspace for providing hovers, completions and definitions.
-			await this.workspaceIndexer.indexWorkspace();
-
-			vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
-
-			this._onDidFinishInitializing.fire();
-		});
-
-		vscode.commands.executeCommand('mentor.command.initialize');
-
-		vscode.commands.registerCommand('mentor.command.highlightTypeDefinitions', async () => {
-			if (this.activeContext) {
-				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
-				const editor = await vscode.window.showTextDocument(document, { preview: false });
-
-				if (editor) {
-					const ranges = [...Object.values(this.activeContext.typeDefinitions)]
-						.flatMap(value => Array.isArray(value) ? value : [])
-						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
-
-					editor.setDecorations(vscode.window.createTextEditorDecorationType({
-						backgroundColor: 'rgba(255, 255, 0, 0.3)',
-					}), ranges);
-				}
-			}
-		});
-
-		vscode.commands.registerCommand('mentor.command.highlightTypeAssertions', async () => {
-			if (this.activeContext) {
-				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
-				const editor = await vscode.window.showTextDocument(document, { preview: false });
-
-				if (editor) {
-					const ranges = [...Object.values(this.activeContext.typeAssertions)]
-						.flatMap(value => Array.isArray(value) ? value : [])
-						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
-
-					editor.setDecorations(vscode.window.createTextEditorDecorationType({
-						backgroundColor: 'rgba(255, 255, 0, 0.3)',
-					}), ranges);
-				}
-			}
-		});
-
-		vscode.commands.registerCommand('mentor.command.highlightReferencedIris', async () => {
-			if (this.activeContext) {
-				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
-				const editor = await vscode.window.showTextDocument(document, { preview: false });
-
-				if (editor) {
-					const ranges = [...Object.values(this.activeContext.references)]
-						.flatMap(value => Array.isArray(value) ? value : [])
-						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
-
-					editor.setDecorations(vscode.window.createTextEditorDecorationType({
-						backgroundColor: 'rgba(255, 255, 0, 0.3)',
-					}), ranges);
-				}
-			}
-		});
-
-		vscode.commands.registerCommand('mentor.command.highlightNamespaceDefinitions', async () => {
-			if (this.activeContext) {
-				const document = await vscode.workspace.openTextDocument(this.activeContext.uri);
-				const editor = await vscode.window.showTextDocument(document, { preview: false });
-
-				if (editor) {
-					const ranges = [...Object.values(this.activeContext.namespaceDefinitions)]
-						.flatMap(value => Array.isArray(value) ? value : [])
-						.map(value => new vscode.Range(value.start.line, value.start.character, value.end.line, value.end.character));
-
-					editor.setDecorations(vscode.window.createTextEditorDecorationType({
-						backgroundColor: 'rgba(255, 255, 0, 0.3)',
-					}), ranges);
-				}
-			}
-		});
+		this._onDidFinishInitializing.fire();
 	}
 
 	/**
