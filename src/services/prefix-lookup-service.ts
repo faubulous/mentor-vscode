@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { injectable, inject, delay } from 'tsyringe';
+import { ConfigurationProvider, GlobalStorageService } from '@src/container';
+import { DocumentContextManager } from '@src/workspace/document-context-manager';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
@@ -7,7 +9,13 @@ import { WorkspaceUri } from '@src/workspace/workspace-uri';
 /**
  * A service for looking up prefixes in the project.
  */
+@injectable()
 export class PrefixLookupService {
+	constructor(
+		@inject(delay(() => GlobalStorageService)) private readonly globalStorage: GlobalStorageService,
+		@inject(delay(() => ConfigurationProvider)) private readonly configuration: ConfigurationProvider,
+		@inject(DocumentContextManager) private readonly contextManager: DocumentContextManager
+	) {}
 	/**
 	 * Get the a namespace map for the standard W3C prefix definitions used in inference graphs.
 	 * @returns A map of standard prefixes.
@@ -27,7 +35,7 @@ export class PrefixLookupService {
 	 * @returns A map of default prefixes.
 	 */
 	getDefaultPrefixes(): NamespaceMap {
-		return mentor.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+		return this.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
 	}
 
 	/**
@@ -39,7 +47,7 @@ export class PrefixLookupService {
 	 */
 	getPrefixForIri(documentUri: string, namespaceIri: string, defaultValue: string) {
 		// 1. Try to find the prefix in the document.
-		const documentContext = mentor.contexts[documentUri];
+		const documentContext = this.contextManager.contexts[documentUri];
 
 		if (documentContext) {
 			for (const [prefix, iri] of Object.entries(documentContext.namespaces)) {
@@ -50,7 +58,7 @@ export class PrefixLookupService {
 		}
 
 		// 2. Try to find the prefix in the project configuration.
-		const projectPrefixes = mentor.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+		const projectPrefixes = this.configuration.get().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
 		if (Array.isArray(projectPrefixes)) {
 			const prefix = projectPrefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
@@ -61,7 +69,7 @@ export class PrefixLookupService {
 		}
 
 		// 3. Try to find the prefix in any of the other documents in the workspace.
-		for (const context of Object.values(mentor.contexts)) {
+		for (const context of Object.values(this.contextManager.contexts)) {
 			for (const [prefix, iri] of Object.entries(context.namespaces)) {
 				if (iri === namespaceIri) {
 					return prefix;
@@ -103,7 +111,7 @@ export class PrefixLookupService {
 			}
 
 			if (uri.includes('#')) {
-				const param = mentor.configuration.get<string>('prefixes.queryParameterName');
+				const param = this.configuration.get().get<string>('prefixes.queryParameterName');
 
 				return uri + '?' + param + '=';
 			} else if (!uri.endsWith('#')) {
@@ -116,7 +124,7 @@ export class PrefixLookupService {
 		let result: string | undefined = undefined;
 
 		// 1. Check if the prefix is declared in the project configuration as a default prefix.
-		const namespaces = mentor.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+		const namespaces = this.configuration.get().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
 		if (Array.isArray(namespaces)) {
 			result = namespaces.find(namespace => namespace.defaultPrefix === prefix)?.uri;
@@ -130,7 +138,7 @@ export class PrefixLookupService {
 		// Count the number of times each URI is used for the given prefix.
 		const uriCounts: { [uri: string]: number } = {};
 
-		for (let document of Object.values(mentor.contexts)) {
+		for (let document of Object.values(this.contextManager.contexts)) {
 			if (document.namespaces[prefix]) {
 				const uri = document.namespaces[prefix];
 

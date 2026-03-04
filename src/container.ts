@@ -12,7 +12,7 @@ import { Quad_Graph } from '@rdfjs/types';
 import { InferenceUri } from './workspace/inference-uri';
 import { DocumentFactory } from './workspace/document-factory';
 import { DocumentContextManager } from './workspace/document-context-manager';
-import { LocalStorageService, CredentialStorageService } from './services';
+import { LocalStorageService, CredentialStorageService, SparqlConnectionService, SparqlQueryService, PrefixLookupService } from './services';
 
 /**
  * Injectable wrapper for VS Code ExtensionContext.
@@ -100,6 +100,15 @@ export function configureContainer(): DependencyContainer {
 
 	container.registerSingleton(CredentialStorageService);
 
+	// Register SparqlConnectionService (dependencies resolved at runtime)
+	container.registerSingleton(SparqlConnectionService);
+
+	// Register SparqlQueryService
+	container.registerSingleton(SparqlQueryService);
+
+	// Register PrefixLookupService
+	container.registerSingleton(PrefixLookupService);
+
 	return container;
 }
 
@@ -122,7 +131,7 @@ export function registerDependencies(context: vscode.ExtensionContext): void {
 	container.registerInstance(GlobalStorageService, globalStorage);
 
 	const credentialStorage = container.resolve(CredentialStorageService);
-	
+
 	credentialStorage.initialize(context.secrets);
 }
 

@@ -108,17 +108,23 @@ class MentorExtension {
 	/**
 	 * A service for looking up prefixes in RDF documents.
 	 */
-	readonly prefixLookupService = new PrefixLookupService();
+	get prefixLookupService(): PrefixLookupService {
+		return container.resolve(PrefixLookupService);
+	}
 
 	/**
 	 * A service for managing connections to SPARQL endpoints.
 	 */
-	readonly sparqlConnectionService = new SparqlConnectionService();
+	get sparqlConnectionService(): SparqlConnectionService {
+		return container.resolve(SparqlConnectionService);
+	}
 
 	/**
 	 * A service for executing queries against RDF triples stores and SPARQL endpoints.
 	 */
-	readonly sparqlQueryService = new SparqlQueryService(this.sparqlConnectionService);
+	get sparqlQueryService(): SparqlQueryService {
+		return container.resolve(SparqlQueryService);
+	}
 
 	/**
 	 * A service for managing credentials using the SecretStorage of Visual Studio Code.

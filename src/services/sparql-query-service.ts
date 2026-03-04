@@ -1,14 +1,16 @@
 import * as vscode from 'vscode';
+import { injectable, inject, delay } from 'tsyringe';
 import { SparqlLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { mentor } from "@src/mentor";
+import { WorkspaceStorageService } from "@src/container";
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { SparqlQueryResultSerializer } from './sparql-query-result-serializer';
 import { SparqlConnectionService } from './sparql-connection-service';
+import { CredentialStorageService } from './credential-storage-service';
 import { SparqlConnection } from './sparql-connection';
 import { AuthCredential } from './credential';
 
@@ -29,6 +31,7 @@ const HISTORY_MAX_ENTRIES = 10;
  * excluding unsaved documents. This query history is then restored when the 
  * service is instantiated.
  */
+@injectable()
 export class SparqlQueryService {
 	private _initialized = false;
 
@@ -59,8 +62,11 @@ export class SparqlQueryService {
 	 */
 	onDidQueryExecutionEnd: vscode.Event<SparqlQueryExecutionState> = this._onDidQueryExecutionEnd.event;
 
-	constructor(private _connectionService: SparqlConnectionService) {
-	}
+	constructor(
+		@inject(SparqlConnectionService) private readonly _connectionService: SparqlConnectionService,
+		@inject(delay(() => WorkspaceStorageService)) private readonly workspaceStorage: WorkspaceStorageService,
+		@inject(CredentialStorageService) private readonly credentialStorage: CredentialStorageService
+	) {}
 
 	/**
 	 * Load the query history from the workspace-scoped local storage.
@@ -159,7 +165,7 @@ export class SparqlQueryService {
 	}
 
 	private _loadQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
-		const history = mentor.workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
+		const history = this.workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
 
 		return history
 			.filter(q => q)
@@ -173,7 +179,7 @@ export class SparqlQueryService {
 			.filter(q => q && !q.documentIri.startsWith('untitled'))
 			.slice(0, HISTORY_MAX_ENTRIES);
 
-		await mentor.workspaceStorage.setValue(HISTORY_STORAGE_KEY, filteredHistory);
+		await this.workspaceStorage.setValue(HISTORY_STORAGE_KEY, filteredHistory);
 	}
 
 	/**
@@ -351,7 +357,7 @@ export class SparqlQueryService {
 
 		if (source.type === 'sparql') {
 			const connection = source.connection;
-			const credential = await mentor.credentialStorageService.getCredential(connection.id);
+			const credential = await this.credentialStorage.getCredential(connection.id);
 			options.fetch = this._getFetchHandler(credential);
 		}
 

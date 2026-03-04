@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
+import { injectable, inject, delay } from 'tsyringe';
 import { v4 as uuidv4 } from 'uuid';
-import { mentor } from '@src/mentor';
+import { Store } from '@faubulous/mentor-rdf';
+import { ConfigurationProvider, WorkspaceStorageService } from '@src/container';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from './credential';
+import { CredentialStorageService } from './credential-storage-service';
 import { SparqlConnection } from './sparql-connection';
 import { SparqlConnectionSource, ComunicaSource } from './sparql-query-source';
 
@@ -21,6 +24,7 @@ export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 /**
  * Service for managing connections to SPARQL endpoints.
  */
+@injectable()
 export class SparqlConnectionService {
 
 	private _connections: SparqlConnection[] = [];
@@ -36,6 +40,20 @@ export class SparqlConnectionService {
 	private _defaultEndpointUrl = 'https://';
 
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
+
+	constructor(
+		@inject(Store) private readonly store: Store,
+		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider,
+		@inject(delay(() => WorkspaceStorageService)) private readonly workspaceStorage: WorkspaceStorageService,
+		@inject(CredentialStorageService) private readonly credentialStorage: CredentialStorageService
+	) {}
+
+	/**
+	 * Get the VS Code configuration section for the extension.
+	 */
+	private get configuration(): vscode.WorkspaceConfiguration {
+		return this.configurationProvider.get();
+	}
 
 	/**
 	 * Loads connections from the various configuration storage locactions into memory.
@@ -74,7 +92,7 @@ export class SparqlConnectionService {
 	 * @returns An array of SPARQL connections.
 	 */
 	private _loadConnectionsFromConfiguration(configTarget: vscode.ConfigurationTarget): SparqlConnection[] {
-		const inspect = mentor.configuration.inspect<SparqlConnection[]>(CONNECTIONS_CONFIG_KEY);
+		const inspect = this.configuration.inspect<SparqlConnection[]>(CONNECTIONS_CONFIG_KEY);
 
 		if (inspect) {
 			const connections = [];
@@ -112,8 +130,8 @@ export class SparqlConnectionService {
 		const globalConnections = this._getEndpointDataForConfigScope(ConfigurationScope.User);
 		const workspaceConnections = this._getEndpointDataForConfigScope(ConfigurationScope.Workspace);
 
-		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
-		await mentor.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
+		await this.configuration.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
+		await this.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
 
 		for (const connection of this._connections) {
 			connection.isNew = false;
@@ -226,7 +244,7 @@ export class SparqlConnectionService {
 	private _getConnectionIdForDocument(documentUri: vscode.Uri): string | undefined {
 		const key = this._getConnectionStorageKeyForDocument(documentUri);
 
-		return mentor.workspaceStorage.getValue(key, undefined);
+		return this.workspaceStorage.getValue(key, undefined);
 	}
 
 	/**
@@ -240,7 +258,7 @@ export class SparqlConnectionService {
 		} else {
 			const key = this._getConnectionStorageKeyForDocument(documentUri);
 
-			mentor.workspaceStorage.setValue(key, connectionId);
+			this.workspaceStorage.setValue(key, connectionId);
 		}
 
 		this._onDidChangeConnectionForDocument.fire(documentUri);
@@ -277,7 +295,7 @@ export class SparqlConnectionService {
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
 			return {
 				type: 'rdfjs',
-				value: mentor.store,
+				value: this.store,
 			};
 		} else {
 			const source: SparqlConnectionSource = {
@@ -405,7 +423,7 @@ export class SparqlConnectionService {
 			};
 
 			if (credential === undefined) {
-				credential = await mentor.credentialStorageService.getCredential(connection.id);
+				credential = await this.credentialStorage.getCredential(connection.id);
 			}
 
 			const authHeaders = await this.getAuthHeaders(credential as AuthCredential);
