@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { inject, injectable, delay } from 'tsyringe';
 import { Utils } from 'vscode-uri';
+import { ConfigurationProvider } from '../container';
 import { DocumentFactory } from './document-factory';
 
 /**
  * A repository for retrieving workspace resources such as files and folders.
  */
+@injectable()
 export class WorkspaceRepository {
 	/**
 	 * The included file extensions as glob patterns.
@@ -47,7 +49,10 @@ export class WorkspaceRepository {
 	 */
 	readonly onDidChangeWorkspaceContents = this._onDidChangeWorkspaceContents.event;
 
-	constructor(documentFactory: DocumentFactory) {
+	constructor(
+		@inject(DocumentFactory) documentFactory: DocumentFactory,
+		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider
+	) {
 		this._includePatterns = Object.keys(documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
 
 		this.watcher.onDidCreate((uri: vscode.Uri) => {
@@ -91,7 +96,7 @@ export class WorkspaceRepository {
 		for (const folder of vscode.workspace.workspaceFolders ?? []) {
 			const workspaceUri = folder.uri;
 
-			this._excludePatterns = await mentor.getExcludePatterns(workspaceUri);
+			this._excludePatterns = await this.configurationProvider.getExcludePatterns(workspaceUri);
 
 			// Get the excluded folders pattern relative to the workspace folder.
 			const excludedFolders = new vscode.RelativePattern(workspaceUri, '{' + this._excludePatterns.join(",") + '}');

@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { inject, injectable, delay } from 'tsyringe';
+import { ConfigurationProvider } from '../container';
 import { DocumentFactory } from './document-factory';
 import { DocumentContext } from './document-context';
+import { DocumentContextManager } from './document-context-manager';
 
 /**
  * Maps document URIs to RDF document contexts.
@@ -13,12 +15,8 @@ export interface DocumentIndex {
 /**
  * Indexes RDF documents in the current workspace.
  */
+@injectable()
 export class WorkspaceIndexer {
-	/**
-	 * The document factory for creating document contexts.
-	 */
-	private readonly _documentFactory = new DocumentFactory();
-
 	/**
 	 * Indicates if all workspace files have been indexed.
 	 */
@@ -32,7 +30,11 @@ export class WorkspaceIndexer {
 	 */
 	readonly onDidFinishIndexing = this._onDidFinishIndexing.event;
 
-	constructor() {
+	constructor(
+		@inject(DocumentFactory) private readonly documentFactory: DocumentFactory,
+		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider,
+		@inject(delay(() => DocumentContextManager)) private readonly contextManager: DocumentContextManager
+	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 	}
 
@@ -51,27 +53,27 @@ export class WorkspaceIndexer {
 
 			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
 			// file size limit and make issues with the configuration more visible.
-			const maxSize = mentor.configuration.get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
+			const maxSize = this.configurationProvider.get().get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
 
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 				const startTime = performance.now();
 
 				const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
 
-				const excludedFolders = '{' + (await mentor.getExcludePatterns(workspaceUri)).join(",") + '}';
+				const excludedFolders = '{' + (await this.configurationProvider.getExcludePatterns(workspaceUri)).join(",") + '}';
 
-				const includedExtensions = Object.keys(this._documentFactory.supportedExtensions).join(',');
+				const includedExtensions = Object.keys(this.documentFactory.supportedExtensions).join(',');
 
 				let uris = await vscode.workspace.findFiles("**/*{" + includedExtensions + "}", excludedFolders);
 
 				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
-				uris = uris.filter(uri => this._documentFactory.isSupportedFile(uri));
+				uris = uris.filter(uri => this.documentFactory.isSupportedFile(uri));
 
 				for (let i = 0; i < uris.length; i++) {
 					const uri = uris[i];
 					const u = uri.toString();
 
-					if (mentor.contexts[u] && !force) {
+					if (this.contextManager.contexts[u] && !force) {
 						continue;
 					}
 
@@ -83,7 +85,7 @@ export class WorkspaceIndexer {
 						continue;
 					}
 
-					if (this._documentFactory.isSupportedNotebookFile(uri)) {
+					if (this.documentFactory.isSupportedNotebookFile(uri)) {
 						this._indexNotebookDocument(uri, force);
 					} else {
 						this._indexTextDocument(uri, force);
@@ -118,7 +120,7 @@ export class WorkspaceIndexer {
 			const document = await vscode.workspace.openTextDocument(uri);
 
 			// Try to load the document so that its graph is created and can be used for showing definitions, descriptions etc..
-			await mentor.loadDocument(document);
+			await this.contextManager.loadDocument(document);
 		} catch (error) {
 			// VS Code may refuse to open files it considers binary (e.g., files containing
 			// ASCII control characters like W3C test files). Skip these gracefully.
@@ -135,19 +137,19 @@ export class WorkspaceIndexer {
 		const notebook = await vscode.workspace.openNotebookDocument(notebookUri);
 
 		for (const cell of notebook.getCells()) {
-			if (!this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
+			if (!this.documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
 				continue;
 			}
 
 			const cellUri = cell.document.uri.toString();
 
-			if (mentor.contexts[cellUri] && !force) {
+			if (this.contextManager.contexts[cellUri] && !force) {
 				continue;
 			}
 
 			try {
 				// Load the cell document to create its context
-				await mentor.loadDocument(cell.document);
+				await this.contextManager.loadDocument(cell.document);
 			} catch (error) {
 				console.error(`Mentor: Failed to index notebook cell ${cellUri}:`, error);
 			}

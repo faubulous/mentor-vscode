@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import { configureContainer } from './container';
+import { configureContainer, WorkspaceStorageService, GlobalStorageService } from './container';
 import { DocumentContext } from './workspace/document-context';
 import { DocumentContextManager } from './workspace/document-context-manager';
 import { DocumentFactory } from './workspace/document-factory';
@@ -11,7 +11,6 @@ import { WorkspaceIndexer, DocumentIndex } from './workspace/workspace-indexer';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import {
 	CredentialStorageService,
-	LocalStorageService,
 	PrefixDownloaderService,
 	PrefixLookupService,
 	SparqlConnectionService,
@@ -107,22 +106,30 @@ class MentorExtension {
 	/**
 	 * A repository for retrieving workspace resources such as files and folders.
 	 */
-	readonly workspace = new WorkspaceRepository(this.documentFactory);
+	get workspace(): WorkspaceRepository {
+		return container.resolve(WorkspaceRepository);
+	}
 
 	/**
 	 * A document indexer for indexing RDF files in the entire workspace.
 	 */
-	readonly workspaceIndexer = new WorkspaceIndexer();
+	get workspaceIndexer(): WorkspaceIndexer {
+		return container.resolve(WorkspaceIndexer);
+	}
 
 	/**
 	 * A service for storing data that is only available in the workspace.
 	 */
-	readonly workspaceStorage = new LocalStorageService();
+	get workspaceStorage(): WorkspaceStorageService {
+		return container.resolve(WorkspaceStorageService);
+	}
 
 	/**
 	 * A service for storing data that is available in all VS Code instances, independent of the workspace.
 	 */
-	readonly globalStorage = new LocalStorageService();
+	get globalStorage(): GlobalStorageService {
+		return container.resolve(GlobalStorageService);
+	}
 
 	/**
 	 * A service for declaring prefixes in RDF documents.
@@ -286,10 +293,6 @@ class MentorExtension {
 	 */
 	async initialize(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
-
-		// Initialize the extension persistence service.
-		this.workspaceStorage.initialize(context.workspaceState);
-		this.globalStorage.initialize(context.globalState);
 
 		// Initialize the view settings.
 		this.settings.initialize(this.configuration);
