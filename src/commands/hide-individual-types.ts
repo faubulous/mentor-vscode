@@ -1,8 +1,9 @@
-import { mentor } from '../mentor';
+import { container } from '@src/container';
+import { Settings } from '@src/settings';
 
 export const hideIndividualTypes = {
 	id: 'mentor.command.hideIndividualTypes',
 	handler: () => {
-		mentor.settings.set('view.showIndividualTypes', false);
+		container.resolve(Settings).set('view.showIndividualTypes', false);
 	}
 };

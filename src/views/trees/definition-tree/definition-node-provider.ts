@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Uri, _SH } from '@faubulous/mentor-rdf';
 import { mentor } from '@src/mentor';
 import { container, VocabularyRepository } from '@src/container';
+import { Settings } from '@src/settings';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
 import { DefinitionTreeLayout } from '@src/settings';
@@ -33,6 +34,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return container.resolve(VocabularyRepository);
 	}
 
+	private get settings() {
+		return container.resolve(Settings);
+	}
+
 	constructor() {
 		mentor.onDidChangeVocabularyContext((context) => {
 			// Update the tree when the active document changed.
@@ -44,12 +49,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			this.refresh();
 		});
 
-		mentor.settings.onDidChange("view.definitionTree.labelStyle", () => this.refresh());
-		mentor.settings.onDidChange("view.definitionTree.defaultLayout", () => this.refresh());
-		mentor.settings.onDidChange("view.showReferences", () => this.refresh());
-		mentor.settings.onDidChange("view.showPropertyTypes", () => this.refresh());
-		mentor.settings.onDidChange("view.showIndividualTypes", () => this.refresh());
-		mentor.settings.onDidChange("view.activeLanguage", () => this.refresh());
+		this.settings.onDidChange("view.definitionTree.labelStyle", () => this.refresh());
+		this.settings.onDidChange("view.definitionTree.defaultLayout", () => this.refresh());
+		this.settings.onDidChange("view.showReferences", () => this.refresh());
+		this.settings.onDidChange("view.showPropertyTypes", () => this.refresh());
+		this.settings.onDidChange("view.showIndividualTypes", () => this.refresh());
+		this.settings.onDidChange("view.activeLanguage", () => this.refresh());
 	}
 
 	/**
@@ -71,7 +76,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
 		if (!node) {
-			let layout = mentor.settings.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
+			let layout = this.settings.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
 
 			if (layout === DefinitionTreeLayout.ByType) {
 				return this.getRootNodes();

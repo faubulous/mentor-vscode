@@ -1,9 +1,9 @@
-import { mentor } from '../mentor';
-import { TreeLabelStyle } from '../settings';
+import { container } from '@src/container';
+import { Settings, TreeLabelStyle } from '@src/settings';
 
 export const showAnnotatedLabels = {
 	id: 'mentor.command.showAnnotatedLabels',
 	handler: () => {
-		mentor.settings.set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
+		container.resolve(Settings).set('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 	}
 };

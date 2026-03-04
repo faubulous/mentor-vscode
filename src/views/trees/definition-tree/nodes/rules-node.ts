@@ -1,16 +1,11 @@
 import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { container, VocabularyRepository } from "@src/container";
 import { RuleClassNode } from "./rule-class-node";
 
 /**
  * Node of a SHACL rule in the definition tree.
  */
 export class RulesNode extends RuleClassNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getContextValue() {
 		return 'rules';
 	}

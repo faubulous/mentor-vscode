@@ -8,7 +8,7 @@ import { DefinitionTreeNode } from "../definition-tree-node";
  * Node of a property in the definition tree.
  */
 export class PropertyNode extends DefinitionTreeNode {
-	private get vocabulary() {
+	protected get vocabulary() {
 		return container.resolve(VocabularyRepository);
 	}
 

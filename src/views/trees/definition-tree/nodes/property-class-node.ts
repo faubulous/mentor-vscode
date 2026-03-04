@@ -1,4 +1,3 @@
-import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { ClassNodeBase } from "./class-node-base";
 import { PropertyNode } from "./property-node";
@@ -7,10 +6,6 @@ import { PropertyNode } from "./property-node";
  * Node of a property in the definition tree.
  */
 export class PropertyClassNode extends ClassNodeBase {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getChildren(): TreeNode[] {
 		const result = [];
 		const properties = this.vocabulary.getRootPropertiesOfType(this.getDocumentGraphs(), this.uri!, this.getQueryOptions());

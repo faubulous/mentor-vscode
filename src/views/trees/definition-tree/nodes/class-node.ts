@@ -1,4 +1,3 @@
-import { container, VocabularyRepository } from "@src/container";
 import { ClassNodeBase } from "./class-node-base";
 import { IndividualNode } from "./individual-node";
 
@@ -6,10 +5,6 @@ import { IndividualNode } from "./individual-node";
  * Node of a RDFS or OWL class in the definition tree.
  */
 export class ClassNode extends ClassNodeBase {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override showIndividuals(): boolean {
 		return false;
 	}

@@ -1,9 +1,9 @@
-import { mentor } from '../mentor';
-import { DefinitionTreeLayout } from '../settings';
+import { container } from '@src/container';
+import { DefinitionTreeLayout, Settings } from '@src/settings';
 
 export const groupDefinitionsBySource = {
 	id: 'mentor.command.groupDefinitionsBySource',
 	handler: () => {
-		mentor.settings.set('view.definitionTree.defaultLayout', DefinitionTreeLayout.BySource);
+		container.resolve(Settings).set('view.definitionTree.defaultLayout', DefinitionTreeLayout.BySource);
 	}
 };

@@ -1,13 +1,8 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { container, VocabularyRepository } from "@src/container";
 import { ClassNodeBase } from "./class-node-base";
 import { NodeShapeNode, PropertyShapeNode, ParameterNode } from "./shape-node";
 
 export class ShapeClassNode extends ClassNodeBase {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getOntologyGraphs(): string[] {
 		return [_SH, ...this.document.graphs];
 	}

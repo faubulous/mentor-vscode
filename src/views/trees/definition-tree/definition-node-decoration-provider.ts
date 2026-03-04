@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
 import { mentor } from '@src/mentor';
 import { container, VocabularyRepository } from '@src/container';
+import { Settings } from '@src/settings';
 
 /**
  * Indicates the where missing language tags should be decorated.
@@ -42,6 +43,10 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		return container.resolve(VocabularyRepository);
 	}
 
+	private get settings() {
+		return container.resolve(Settings);
+	}
+
 	constructor() {
 		this._decorationScope = this._getDecorationScopeFromConfiguration();
 
@@ -63,7 +68,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			}
 		});
 
-		mentor.settings.onDidChange("view.activeLanguage", () => {
+		this.settings.onDidChange("view.activeLanguage", () => {
 			// When the active language changes, the decorations need to be updated.
 			this._onDidChangeFileDecorations.fire(undefined);
 		});

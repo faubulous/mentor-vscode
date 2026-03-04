@@ -1,8 +1,9 @@
-import { mentor } from '../mentor';
+import { container } from '@src/container';
+import { Settings } from '@src/settings';
 
 export const showReferences = {
 	id: 'mentor.command.showReferences',
 	handler: () => {
-		mentor.settings.set('view.showReferences', true);
+		container.resolve(Settings).set('view.showReferences', true);
 	}
 };

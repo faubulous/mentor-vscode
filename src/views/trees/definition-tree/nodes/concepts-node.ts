@@ -1,12 +1,7 @@
 import * as vscode from "vscode";
-import { container, VocabularyRepository } from "@src/container";
 import { ConceptClassNode } from "./concept-class-node";
 
 export class ConceptsNode extends ConceptClassNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getContextValue(): string {
 		return 'concepts';
 	}

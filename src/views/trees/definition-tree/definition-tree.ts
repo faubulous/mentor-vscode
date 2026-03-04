@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '@src/mentor';
+import { container } from '@src/container';
+import { Settings } from '@src/settings';
 import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';
@@ -13,6 +15,10 @@ export class DefinitionTree implements TreeView {
 	 * The ID which is used to register the view and make it visible in VS Code.
 	 */
 	readonly id = "mentor.view.definitionTree";
+
+	private get settings() {
+		return container.resolve(Settings);
+	}
 
 	/**
 	 * The tree node provider.
@@ -45,14 +51,14 @@ export class DefinitionTree implements TreeView {
 			this.treeDataProvider.refresh(mentor.activeContext);
 		});
 
-		const showReferences = mentor.settings.get('view.showReferences', true);
+		const showReferences = this.settings.get('view.showReferences', true);
 
 		vscode.commands.executeCommand("setContext", "view.showReferences", showReferences);
 		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", true);
 		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", true);
 
 		// Update the view and the title when the active language changes.
-		mentor.settings.onDidChange("view.activeLanguage", () => {
+		this.settings.onDidChange("view.activeLanguage", () => {
 			this.updateViewTitle();
 		});
 

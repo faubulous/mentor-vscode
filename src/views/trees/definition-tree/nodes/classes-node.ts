@@ -1,15 +1,10 @@
 import * as vscode from "vscode";
-import { container, VocabularyRepository } from "@src/container";
 import { ClassNode } from "./class-node";
 
 /**
  * The group node representing all classes defined in the document.
  */
 export class ClassesNode extends ClassNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getContextValue(): string {
 		return 'classes';
 	}

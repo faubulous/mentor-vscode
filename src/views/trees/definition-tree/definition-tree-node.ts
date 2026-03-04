@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
-import { mentor } from '@src/mentor';
+import { container } from '@src/container';
+import { Settings } from '@src/settings';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TreeNodeBase } from '@src/views/trees/tree-node';
 import { getIriFromNodeId } from '@src/utilities';
@@ -10,6 +11,10 @@ import { getIriFromNodeId } from '@src/utilities';
  */
 export class DefinitionTreeNode extends TreeNodeBase {
 	
+	protected get settings() {
+		return container.resolve(Settings);
+	}
+
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	/**
@@ -113,7 +118,7 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	getQueryOptions(additionalOptions?: any): DefinitionQueryOptions {
 		return {
 			...this._queryOptions,
-			includeReferenced: mentor.settings.get('view.showReferences', true),
+			includeReferenced: this.settings.get('view.showReferences', true),
 			...additionalOptions,
 		}
 	}

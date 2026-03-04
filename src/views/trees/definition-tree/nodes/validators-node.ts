@@ -1,16 +1,11 @@
 import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { container, VocabularyRepository } from "@src/container";
 import { ValidatorClassNode } from "./validator-class-node";
 
 /**
  * Node of a SHACL rule in the definition tree.
  */
 export class ValidatorsNode extends ValidatorClassNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getContextValue(): string {
 		return "validators";
 	}

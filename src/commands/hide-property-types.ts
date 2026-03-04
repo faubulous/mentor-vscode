@@ -1,8 +1,9 @@
-import { mentor } from '../mentor';
+import { container } from '@src/container';
+import { Settings } from '@src/settings';
 
 export const hidePropertyTypes = {
 	id: 'mentor.command.hidePropertyTypes',
 	handler: () => {
-		mentor.settings.set('view.showPropertyTypes', false);
+		container.resolve(Settings).set('view.showPropertyTypes', false);
 	}
 };

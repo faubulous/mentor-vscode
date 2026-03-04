@@ -1,13 +1,8 @@
 import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { container, VocabularyRepository } from "@src/container";
 import { ShapeClassNode } from "./shape-class-node";
 
 export class ShapesNode extends ShapeClassNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getContextValue() {
 		return "shapes";
 	}

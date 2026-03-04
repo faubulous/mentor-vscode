@@ -1,13 +1,8 @@
 import * as vscode from "vscode";
-import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { CollectionClassNode } from "./collection-class-node";
 
 export class CollectionsNode extends CollectionClassNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getContextValue(): string {
 		return 'collections';
 	}

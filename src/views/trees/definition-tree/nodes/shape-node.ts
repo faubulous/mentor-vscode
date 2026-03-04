@@ -6,10 +6,6 @@ import { ClassNodeBase } from "./class-node-base";
 import { PropertyNode } from "./property-node";
 
 export class NodeShapeNode extends ClassNodeBase {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getIcon() {
 		let classIri: string | undefined;
 
@@ -41,10 +37,6 @@ export class NodeShapeNode extends ClassNodeBase {
 }
 
 export class PropertyShapeNode extends PropertyNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getIcon() {
 		let rangeIri: string | undefined;
 

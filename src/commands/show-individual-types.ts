@@ -1,8 +1,9 @@
-import { mentor } from '../mentor';
+import { container } from '@src/container';
+import { Settings } from '@src/settings';
 
 export const showIndividualTypes = {
 	id: 'mentor.command.showIndividualTypes',
 	handler: () => {
-		mentor.settings.set('view.showIndividualTypes', true);
+		container.resolve(Settings).set('view.showIndividualTypes', true);
 	}
 };

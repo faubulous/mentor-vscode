@@ -8,7 +8,7 @@ import { DefinitionTreeNode } from "../definition-tree-node";
  * It is also used as a base for parent nodes of individual lists such as named individuals, shapes, collections, etc.
  */
 export abstract class ClassNodeBase extends DefinitionTreeNode {
-	private get vocabulary() {
+	protected get vocabulary() {
 		return container.resolve(VocabularyRepository);
 	}
 

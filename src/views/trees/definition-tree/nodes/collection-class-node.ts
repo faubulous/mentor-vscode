@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { ConceptClassNode } from "./concept-class-node";
 import { ClassNodeBase } from "./class-node-base";
@@ -8,10 +7,6 @@ import { ClassNodeBase } from "./class-node-base";
  * Node of a SKOS collection in the definition tree.
  */
 export class CollectionClassNode extends ClassNodeBase {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getIcon(): vscode.ThemeIcon | undefined {
 		const isOrdered = this.vocabulary.isOrderedCollection(this.getDocumentGraphs(), this.uri);
 

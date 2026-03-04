@@ -1,6 +1,4 @@
 import * as vscode from "vscode";
-import { mentor } from "@src/mentor";
-import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { IndividualNode } from "./individual-node";
 import { IndividualClassNode } from "./individual-class-node";
@@ -9,10 +7,6 @@ import { IndividualClassNode } from "./individual-class-node";
  * Node of a class instance in the definition tree.
  */
 export class IndividualsNode extends IndividualClassNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getContextValue(): string {
 		return 'individuals';
 	}
@@ -43,7 +37,7 @@ export class IndividualsNode extends IndividualClassNode {
 
 	override getChildren(): TreeNode[] {
 		const result = [];
-		const showIndividualTypes = mentor.settings.get('view.showIndividualTypes', true);
+		const showIndividualTypes = this.settings.get('view.showIndividualTypes', true);
 
 		if (showIndividualTypes) {
 			const types = this.vocabulary.getIndividualTypes(this.getOntologyGraphs(), undefined, this.getQueryOptions());

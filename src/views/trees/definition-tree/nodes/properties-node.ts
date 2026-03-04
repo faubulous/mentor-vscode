@@ -1,6 +1,4 @@
 import * as vscode from "vscode";
-import { mentor } from "@src/mentor";
-import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { PropertyNode } from "./property-node";
 import { PropertyClassNode } from "./property-class-node";
@@ -9,10 +7,6 @@ import { PropertyClassNode } from "./property-class-node";
  * Node of a property in the definition tree.
  */
 export class PropertiesNode extends PropertyClassNode {
-	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
-	}
-
 	override getContextValue(): string {
 		return 'properties';
 	}
@@ -36,7 +30,7 @@ export class PropertiesNode extends PropertyClassNode {
 	override hasChildren(): boolean {
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions();
-		const showPropertyTypes = mentor.settings.get('view.showPropertyTypes', true);
+		const showPropertyTypes = this.settings.get('view.showPropertyTypes', true);
 
 		if (showPropertyTypes) {
 			const types = this.vocabulary.getPropertyTypes(graphs, options);
@@ -59,7 +53,7 @@ export class PropertiesNode extends PropertyClassNode {
 		const result = [];
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions();
-		const showPropertyTypes = mentor.settings.get('view.showPropertyTypes', true);
+		const showPropertyTypes = this.settings.get('view.showPropertyTypes', true);
 
 		if (showPropertyTypes) {
 			const types = this.vocabulary.getPropertyTypes(graphs, options);
