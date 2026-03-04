@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import { Uri } from "@faubulous/mentor-rdf";
 import { TOKENS } from "@faubulous/mentor-rdf-parsers";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
+import { DocumentContextManager } from "@src/workspace/document-context-manager";
 import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -46,12 +47,20 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	 */
 	readonly maxCompletionItems = 10;
 
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	resolveCompletionItem?(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
 		return item;
 	}
 
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
-		const context = mentor.getDocumentContext(document, TurtleDocument);
+		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
@@ -112,7 +121,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 		if (componentType === 'predicate') {
 			// In this case we only want to return properties.
-			for (let property of mentor.vocabulary.getProperties(graphs)) {
+			for (let property of this.vocabulary.getProperties(graphs)) {
 				this._addLocalPartCompletionItem(items, uri, property);
 			}
 		} else {
@@ -121,14 +130,14 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 			if (graphs) {
 				for (const g of graphs) {
-					const c = mentor.getDocumentContextFromUri(g);
+					const c = this.contextManager.getDocumentContextFromUri(g);
 
 					if (c) {
 						contexts.push(c);
 					}
 				}
 			} else {
-				contexts.push(...Object.values(mentor.contexts));
+				contexts.push(...Object.values(this.contextManager.contexts));
 			}
 
 			for (const c of contexts) {

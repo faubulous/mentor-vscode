@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { mentor } from '../mentor';
+import { container, VocabularyRepository } from '@src/container';
+import { DocumentContextManager } from '@src/workspace/document-context-manager';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
@@ -8,19 +10,21 @@ export const revealShapeDefinition = {
 	handler: async (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
 		mentor.activateDocument().then((editor) => {
 			const uri = getIriFromArgument(arg);
+			const contextManager = container.resolve(DocumentContextManager);
 
-			if (!uri || !editor || !mentor.activeContext) {
+			if (!uri || !editor || !contextManager.activeContext) {
 				// If no id is provided, we fail gracefully.
 				return;
 			}
 
-			const shapeUri = mentor.vocabulary.getShapes(mentor.activeContext.graphs, uri, { includeBlankNodes: true }).next().value;
+			const vocabulary = container.resolve(VocabularyRepository);
+			const shapeUri = vocabulary.getShapes(contextManager.activeContext.graphs, uri, { includeBlankNodes: true }).next().value;
 
 			if (!shapeUri) {
 				return;
 			}
 
-			const location = new DefinitionProvider().provideDefinitionForIri(mentor.activeContext, shapeUri, true);
+			const location = new DefinitionProvider().provideDefinitionForIri(contextManager.activeContext, shapeUri, true);
 
 			if (location instanceof vscode.Location) {
 				editor.selection = new vscode.Selection(location.range.start, location.range.end);

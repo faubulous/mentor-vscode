@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
 import { mentor } from '@src/mentor';
+import { container, VocabularyRepository } from '@src/container';
 
 /**
  * Indicates the where missing language tags should be decorated.
  */
-export enum MissingLanguageTagDecorationScope {
+enum MissingLanguageTagDecorationScope {
 	/**
 	 * Disable the decoration of missing language tags.
 	 */
@@ -36,6 +37,10 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	readonly onDidChangeFileDecorations? = this._onDidChangeFileDecorations.event;
 
 	private _decorationScope: MissingLanguageTagDecorationScope;
+
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
 
 	constructor() {
 		this._decorationScope = this._getDecorationScopeFromConfiguration();
@@ -115,7 +120,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 		let hasLabels = false;
 
-		for (let triple of mentor.vocabulary.store.matchAll(graphUris, node, null, null, false)) {
+		for (let triple of this.vocabulary.store.matchAll(graphUris, node, null, null, false)) {
 			if (triple.object.termType !== "Literal" || !this._labelPredicates.has(triple.predicate.value)) {
 				continue;
 			}

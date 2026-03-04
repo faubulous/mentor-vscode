@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container, VocabularyRepository } from '@src/container';
+import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { Settings } from '@src/settings';
 
 interface LanguageQuckPickItem extends vscode.QuickPickItem {
 	/**
@@ -17,7 +19,8 @@ export const selectActiveLanguage = {
 			return;
 		}
 
-		const context = mentor.contexts[document.uri.toString()];
+		const contextManager = container.resolve(DocumentContextManager);
+		const context = contextManager.contexts[document.uri.toString()];
 
 		if (!context) {
 			return;
@@ -32,7 +35,8 @@ export const selectActiveLanguage = {
 				language: undefined
 			}];
 		} else {
-			const languageStats = mentor.vocabulary.getLanguageTagUsageStats(context.graphs);
+			const vocabulary = container.resolve(VocabularyRepository);
+			const languageStats = vocabulary.getLanguageTagUsageStats(context.graphs);
 
 			// Note: We translate the language code into a readable name in the UI language of the editor.
 			const languageNames = new Intl.DisplayNames([vscode.env.language], { type: 'language' });
@@ -53,7 +57,8 @@ export const selectActiveLanguage = {
 					context.activeLanguageTag = language;
 
 					// Refresh the tree views..
-					mentor.settings.set('view.activeLanguage', language);
+					const settings = container.resolve(Settings);
+					settings.set('view.activeLanguage', language);
 
 					quickPick.dispose();
 				}

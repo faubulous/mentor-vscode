@@ -1,4 +1,4 @@
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { ClassNodeBase } from "./class-node-base";
 import { IndividualNode } from "./individual-node";
 
@@ -6,6 +6,10 @@ import { IndividualNode } from "./individual-node";
  * Node of a RDFS or OWL class in the definition tree.
  */
 export class ClassNode extends ClassNodeBase {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override showIndividuals(): boolean {
 		return false;
 	}
@@ -13,7 +17,7 @@ export class ClassNode extends ClassNodeBase {
 	override getContextValue(): string {
 		let result = super.getContextValue();
 
-		if (mentor.vocabulary.hasShapes(this.document.graphs, this.uri, this.getQueryOptions({ definedBy: undefined }))) {
+		if (this.vocabulary.hasShapes(this.document.graphs, this.uri, this.getQueryOptions({ definedBy: undefined }))) {
 			result += " shape-target";
 		}
 
@@ -23,7 +27,7 @@ export class ClassNode extends ClassNodeBase {
 	override getDescription(): string {
 		let description = super.getDescription();
 
-		if (mentor.vocabulary.hasEquivalentClass(this.getOntologyGraphs(), this.uri)) {
+		if (this.vocabulary.hasEquivalentClass(this.getOntologyGraphs(), this.uri)) {
 			description += "≡";
 		}
 

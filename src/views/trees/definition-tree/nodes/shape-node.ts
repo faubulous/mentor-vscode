@@ -1,16 +1,20 @@
 import * as vscode from "vscode";
 import { _SH, NamedNode, BlankNode } from "@faubulous/mentor-rdf";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassNodeBase } from "./class-node-base";
 import { PropertyNode } from "./property-node";
 
 export class NodeShapeNode extends ClassNodeBase {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getIcon() {
 		let classIri: string | undefined;
 
 		const id = this.uri.includes(':') ? new NamedNode(this.uri) : new BlankNode(this.uri);
-		const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
+		const targets = this.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
 
 		for (const target of targets) {
 			classIri = target;
@@ -37,11 +41,15 @@ export class NodeShapeNode extends ClassNodeBase {
 }
 
 export class PropertyShapeNode extends PropertyNode {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getIcon() {
 		let rangeIri: string | undefined;
 
 		const id = this.uri.includes(':') ? new NamedNode(this.uri) : new BlankNode(this.uri);
-		const targets = mentor.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
+		const targets = this.vocabulary.getShapeTargets(this.getDocumentGraphs(), id);
 
 		for (const target of targets) {
 			rangeIri = this.getRange(target);

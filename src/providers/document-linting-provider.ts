@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
-import { mentor } from '@src/mentor';
+import { container, VocabularyRepository, ConfigurationProvider } from '@src/container';
+import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { DocumentFactory } from '@src/workspace/document-factory';
+import { WorkspaceIndexer } from '@src/workspace/workspace-indexer';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { getIriFromToken, getTokenPosition } from '@src/utilities';
@@ -29,6 +32,26 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 */
 	private _lintingEnabled: boolean = false;
 
+	private get configuration() {
+		return container.resolve(ConfigurationProvider).get();
+	}
+
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
+	private get documentFactory() {
+		return container.resolve(DocumentFactory);
+	}
+
+	private get workspaceIndexer() {
+		return container.resolve(WorkspaceIndexer);
+	}
+
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
 	constructor() {
 		this._diagnosticCollection = vscode.languages.createDiagnosticCollection('mentor-linting');
 
@@ -39,14 +62,14 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Refresh the cached linting enabled state.
 	 */
 	private _loadLintingEnabledState(): void {
-		this._lintingEnabled = !!mentor.configuration.get<boolean>('linting.enabled', false);
+		this._lintingEnabled = !!this.configuration.get<boolean>('linting.enabled', false);
 	}
 
 	/**
 	 * Register the linting provider and return disposables.
 	 */
 	register(): vscode.Disposable[] {
-		mentor.workspaceIndexer.waitForIndexed().then(() => {
+		this.workspaceIndexer.waitForIndexed().then(() => {
 			// Subscribe to change events
 			this._subscribeChangeEvents();
 
@@ -73,7 +96,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Check if the document is a supported RDF language.
 	 */
 	private _isSupportedLanguage(languageId: string): boolean {
-		return mentor.documentFactory.supportedLanguages.has(languageId);
+		return this.documentFactory.supportedLanguages.has(languageId);
 	}
 
 	private _subscribeChangeEvents() {
@@ -254,7 +277,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 			return;
 		}
 
-		const context = mentor.getDocumentContextFromUri(document.uri.toString());
+		const context = this.contextManager.getDocumentContextFromUri(document.uri.toString());
 
 		if (!context) {
 			return;
@@ -314,7 +337,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 			let resolved = cache.get(iri);
 
 			if (resolved === undefined) {
-				resolved = mentor.vocabulary.hasSubject(graphs, iri) || mentor.vocabulary.store.hasGraph(iri);
+				resolved = this.vocabulary.hasSubject(graphs, iri) || this.vocabulary.store.hasGraph(iri);
 
 				cache.set(iri, resolved);
 			}
@@ -330,7 +353,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	}
 
 	private _getSeverityLevel(setting: string, defaultValue: string): vscode.DiagnosticSeverity | null {
-		const value = mentor.configuration.get(setting, defaultValue);
+		const value = this.configuration.get(setting, defaultValue);
 
 		switch (value) {
 			case 'Error':
@@ -349,7 +372,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	private _getGraphsExcept(excludedGraphs: string[]): string[] {
 		const excluded = new Set<string>(excludedGraphs);;
 
-		return mentor.vocabulary.store.getGraphs().filter(g => !excluded.has(g));
+		return this.vocabulary.store.getGraphs().filter(g => !excluded.has(g));
 	}
 
 	private _createDiagnosticForToken(token: IToken, message: string, severity: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Error): vscode.Diagnostic {

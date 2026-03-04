@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 
@@ -8,6 +8,10 @@ import { DefinitionTreeNode } from "../definition-tree-node";
  * It is also used as a base for parent nodes of individual lists such as named individuals, shapes, collections, etc.
  */
 export abstract class ClassNodeBase extends DefinitionTreeNode {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	/**
 	 * Indicates whether class instances should be returned by the {@link getChildren} method.
 	 */
@@ -40,7 +44,7 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 			// 	iconName += '-ref';
 			// }
 
-			if (mentor.vocabulary.hasIndividuals(this.getDocumentGraphs(), classIri)) {
+			if (this.vocabulary.hasIndividuals(this.getDocumentGraphs(), classIri)) {
 				iconName += "-i";
 			}
 		}
@@ -129,7 +133,7 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 		const options = this.getQueryOptions();
 
 		// Note: We are querying the possibly extended ontology graphs here for class relationships.
-		yield* mentor.vocabulary.getSubClasses(graphs, this.uri, options);
+		yield* this.vocabulary.getSubClasses(graphs, this.uri, options);
 	}
 
 	/**
@@ -144,6 +148,6 @@ export abstract class ClassNodeBase extends DefinitionTreeNode {
 		// Note: If we set includeSubTypes to `false`, we *must* provide the ontology graphs so that
 		// type hierarchies can be loaded and individuals can be filtered accordingly. If this is not done,
 		// we will return more individuals than expected.
-		yield* mentor.vocabulary.getSubjectsOfType(graphs, this.uri, options);
+		yield* this.vocabulary.getSubjectsOfType(graphs, this.uri, options);
 	}
 }

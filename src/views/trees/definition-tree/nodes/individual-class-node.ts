@@ -1,4 +1,4 @@
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { IndividualNode } from "./individual-node";
@@ -8,9 +8,13 @@ import { ClassNodeBase } from "./class-node-base";
  * Node of a class instance in the definition tree.
  */
 export class IndividualClassNode extends ClassNodeBase {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getChildren(): TreeNode[] {
 		const result = [];
-		const individuals = mentor.vocabulary.getIndividuals(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
+		const individuals = this.vocabulary.getIndividuals(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
 
 		for (let i of individuals) {
 			result.push(this.createChildNode(IndividualNode, i));

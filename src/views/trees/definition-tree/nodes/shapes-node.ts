@@ -1,9 +1,13 @@
 import * as vscode from "vscode";
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { ShapeClassNode } from "./shape-class-node";
 
 export class ShapesNode extends ShapeClassNode {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getContextValue() {
 		return "shapes";
 	}
@@ -19,7 +23,7 @@ export class ShapesNode extends ShapeClassNode {
 	override getDescription(): string {
 		const graphs = this.getDocumentGraphs();
 		const options = this.getQueryOptions();
-		const shapes = mentor.vocabulary.getShapes(graphs, undefined, options);
+		const shapes = this.vocabulary.getShapes(graphs, undefined, options);
 
 		return [...shapes].length.toString();
 	}

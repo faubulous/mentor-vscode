@@ -194,3 +194,8 @@ export function registerDependencies(context: vscode.ExtensionContext): void {
  * Export the container for direct access when needed.
  */
 export { container };
+
+/**
+ * Re-export core RDF services for convenient access.
+ */
+export { VocabularyRepository, Store, OwlReasoner };

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassesNode } from "./classes-node";
 import { PropertiesNode } from "./properties-node";
@@ -12,6 +12,10 @@ import { ValidatorsNode } from "./validators-node";
  * Node of a ontology header in the definition tree.
  */
 export class OntologyNode extends DefinitionTreeNode {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	isReferenced = false;
 
 	override getLabel(): vscode.TreeItemLabel {
@@ -35,7 +39,7 @@ export class OntologyNode extends DefinitionTreeNode {
 		let result = super.getDescription();
 
 		if (this.uri) {
-			const version = mentor.vocabulary.getOntologyVersionInfo(this.getDocumentGraphs(), this.uri);
+			const version = this.vocabulary.getOntologyVersionInfo(this.getDocumentGraphs(), this.uri);
 
 			if (version) {
 				result += " " + version;

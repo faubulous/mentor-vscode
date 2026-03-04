@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 
@@ -8,6 +8,10 @@ import { DefinitionTreeNode } from "../definition-tree-node";
  * Node of a property in the definition tree.
  */
 export class PropertyNode extends DefinitionTreeNode {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	/**
 	 * Type of the property.
 	 */
@@ -16,7 +20,7 @@ export class PropertyNode extends DefinitionTreeNode {
 	getContextValue(): string {
 		let result = super.getContextValue();
 
-		if (mentor.vocabulary.hasShapes(this.document.graphs, this.uri, this.getQueryOptions({ definedBy: undefined }))) {
+		if (this.vocabulary.hasShapes(this.document.graphs, this.uri, this.getQueryOptions({ definedBy: undefined }))) {
 			result += " shape-target";
 		}
 
@@ -27,10 +31,10 @@ export class PropertyNode extends DefinitionTreeNode {
 		let rangeUri: string | undefined;
 
 		if (propertyUri) {
-			rangeUri = mentor.vocabulary.getRange(this.getDocumentGraphs(), propertyUri);
+			rangeUri = this.vocabulary.getRange(this.getDocumentGraphs(), propertyUri);
 
 			if (!rangeUri) {
-				rangeUri = mentor.vocabulary.getDatatype(this.getDocumentGraphs(), propertyUri);
+				rangeUri = this.vocabulary.getDatatype(this.getDocumentGraphs(), propertyUri);
 			}
 		}
 
@@ -132,7 +136,7 @@ export class PropertyNode extends DefinitionTreeNode {
 
 	override getChildren(): TreeNode[] {
 		const result = [];
-		const properties = mentor.vocabulary.getSubProperties(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
+		const properties = this.vocabulary.getSubProperties(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
 
 		for (let p of properties) {
 			result.push(this.createChildNode(PropertyNode, p));

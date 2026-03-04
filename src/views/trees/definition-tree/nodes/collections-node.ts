@@ -1,9 +1,13 @@
 import * as vscode from "vscode";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { CollectionClassNode } from "./collection-class-node";
 
 export class CollectionsNode extends CollectionClassNode {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getContextValue(): string {
 		return 'collections';
 	}
@@ -18,7 +22,7 @@ export class CollectionsNode extends CollectionClassNode {
 
 	override getDescription(): string {
 		const graphs = this.getDocumentGraphs();
-		const collections = [...mentor.vocabulary.getCollections(graphs)];
+		const collections = [...this.vocabulary.getCollections(graphs)];
 
 		return collections.length.toString();
 	}
@@ -26,7 +30,7 @@ export class CollectionsNode extends CollectionClassNode {
 	override hasChildren(): boolean {
 		const graphs = this.getDocumentGraphs();
 
-		for(const _ of mentor.vocabulary.getCollections(graphs)) {
+		for(const _ of this.vocabulary.getCollections(graphs)) {
 			return true;
 		}
 
@@ -36,7 +40,7 @@ export class CollectionsNode extends CollectionClassNode {
 	override getChildren(): TreeNode[] {
 		const result = [];
 		const graphs = this.getDocumentGraphs();
-		const collections = [...mentor.vocabulary.getCollections(graphs)];
+		const collections = [...this.vocabulary.getCollections(graphs)];
 
 		for (const c of collections) {
 			result.push(this.createChildNode(CollectionClassNode, c));

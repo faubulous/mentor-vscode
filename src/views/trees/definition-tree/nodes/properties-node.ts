@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { PropertyNode } from "./property-node";
 import { PropertyClassNode } from "./property-class-node";
@@ -8,6 +9,10 @@ import { PropertyClassNode } from "./property-class-node";
  * Node of a property in the definition tree.
  */
 export class PropertiesNode extends PropertyClassNode {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getContextValue(): string {
 		return 'properties';
 	}
@@ -23,7 +28,7 @@ export class PropertiesNode extends PropertyClassNode {
 	override getDescription(): string {
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions();
-		const properties = [...mentor.vocabulary.getProperties(graphs, options)];
+		const properties = [...this.vocabulary.getProperties(graphs, options)];
 
 		return properties.length.toString();
 	}
@@ -34,13 +39,13 @@ export class PropertiesNode extends PropertyClassNode {
 		const showPropertyTypes = mentor.settings.get('view.showPropertyTypes', true);
 
 		if (showPropertyTypes) {
-			const types = mentor.vocabulary.getPropertyTypes(graphs, options);
+			const types = this.vocabulary.getPropertyTypes(graphs, options);
 
 			for (const _ of types) {
 				return true;
 			}
 		} else {
-			const properties = mentor.vocabulary.getSubProperties(graphs, undefined, options);
+			const properties = this.vocabulary.getSubProperties(graphs, undefined, options);
 
 			for (const _ of properties) {
 				return true;
@@ -57,13 +62,13 @@ export class PropertiesNode extends PropertyClassNode {
 		const showPropertyTypes = mentor.settings.get('view.showPropertyTypes', true);
 
 		if (showPropertyTypes) {
-			const types = mentor.vocabulary.getPropertyTypes(graphs, options);
+			const types = this.vocabulary.getPropertyTypes(graphs, options);
 
 			for (let type of types) {
 				result.push(this.createChildNode(PropertyClassNode, type));
 			}
 		} else {
-			const properties = mentor.vocabulary.getSubProperties(graphs, undefined, options);
+			const properties = this.vocabulary.getSubProperties(graphs, undefined, options);
 
 			for (let p of properties) {
 				result.push(this.createChildNode(PropertyNode, p));

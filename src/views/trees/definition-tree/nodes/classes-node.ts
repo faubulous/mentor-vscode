@@ -1,11 +1,15 @@
 import * as vscode from "vscode";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { ClassNode } from "./class-node";
 
 /**
  * The group node representing all classes defined in the document.
  */
 export class ClassesNode extends ClassNode {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getContextValue(): string {
 		return 'classes';
 	}
@@ -23,7 +27,7 @@ export class ClassesNode extends ClassNode {
 		const options = this.getQueryOptions();
 
 		// Note: We only want to display the number of classes defined in the document, hence {@link getDocumentGraphs}.
-		const classes = [...mentor.vocabulary.getClasses(graphs, options)];
+		const classes = [...this.vocabulary.getClasses(graphs, options)];
 
 		return classes.length.toString();
 	}
@@ -32,7 +36,7 @@ export class ClassesNode extends ClassNode {
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions();
 
-		return mentor.vocabulary.getSubClasses(graphs, undefined, options);
+		return this.vocabulary.getSubClasses(graphs, undefined, options);
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {

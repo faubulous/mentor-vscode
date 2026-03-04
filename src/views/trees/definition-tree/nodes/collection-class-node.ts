@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { ConceptClassNode } from "./concept-class-node";
 import { ClassNodeBase } from "./class-node-base";
@@ -8,8 +8,12 @@ import { ClassNodeBase } from "./class-node-base";
  * Node of a SKOS collection in the definition tree.
  */
 export class CollectionClassNode extends ClassNodeBase {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getIcon(): vscode.ThemeIcon | undefined {
-		const isOrdered = mentor.vocabulary.isOrderedCollection(this.getDocumentGraphs(), this.uri);
+		const isOrdered = this.vocabulary.isOrderedCollection(this.getDocumentGraphs(), this.uri);
 
 		return new vscode.ThemeIcon(isOrdered ? 'rdf-collection-ordered' : 'rdf-collection', this.getIconColor());
 	}
@@ -21,7 +25,7 @@ export class CollectionClassNode extends ClassNodeBase {
 	override hasChildren(): boolean {
 		const graphs = this.getDocumentGraphs();
 
-		for (const _ of mentor.vocabulary.getCollectionMembers(graphs, this.uri)) {
+		for (const _ of this.vocabulary.getCollectionMembers(graphs, this.uri)) {
 			return true;
 		}
 
@@ -32,11 +36,11 @@ export class CollectionClassNode extends ClassNodeBase {
 		const result = [];
 		const graphs = this.getDocumentGraphs();
 
-		for (const m of mentor.vocabulary.getCollectionMembers(graphs, this.uri)) {
+		for (const m of this.vocabulary.getCollectionMembers(graphs, this.uri)) {
 			result.push(this.createChildNode(ConceptClassNode, m));
 		}
 
-		if (mentor.vocabulary.isOrderedCollection(graphs, this.uri)) {
+		if (this.vocabulary.isOrderedCollection(graphs, this.uri)) {
 			// Preserve order for ordered collections.
 			return result;
 		} else {

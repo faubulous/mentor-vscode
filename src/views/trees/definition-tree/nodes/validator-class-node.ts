@@ -1,9 +1,13 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { mentor } from "@src/mentor";
+import { container, VocabularyRepository } from "@src/container";
 import { ClassNodeBase } from "./class-node-base";
 import { ValidatorNode } from "./validator-node";
 
 export class ValidatorClassNode extends ClassNodeBase {
+	private get vocabulary() {
+		return container.resolve(VocabularyRepository);
+	}
+
 	override getOntologyGraphs(): string[] {
 		return [_SH, ...this.document.graphs];
 	}
@@ -13,10 +17,10 @@ export class ValidatorClassNode extends ClassNodeBase {
 		options.notDefinedBy?.add(_SH);
 
 		const uri = this.uri.startsWith('mentor') ? SH.Validator : this.uri;
-		const classIris = mentor.vocabulary.getSubClasses(this.getOntologyGraphs(), uri);
+		const classIris = this.vocabulary.getSubClasses(this.getOntologyGraphs(), uri);
 
 		for (const c of classIris) {
-			if (mentor.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options)) {
+			if (this.vocabulary.hasSubjectsOfType(this.getDocumentGraphs(), c, options)) {
 				yield c;
 			}
 		}
