@@ -17,7 +17,6 @@ import {
 	SparqlQueryService,
 	TurtlePrefixDefinitionService,
 } from './services';
-import { WorkspaceUri } from './workspace/workspace-uri';
 
 /**
  * The Mentor extension identifier.
@@ -321,41 +320,6 @@ class MentorExtension {
 		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
 		this._onDidFinishInitializing.fire();
-	}
-
-	/**
-	 * Get the glob patterns to exclude files and folders from the workspace.
-	 * @param workspaceUri A workspace folder URI.
-	 * @returns A list of glob patterns to exclude files and folders.
-	 */
-	async getExcludePatterns(workspaceUri: vscode.Uri): Promise<string[]> {
-		let result = new Set<string>();
-
-		// Add the patterns from the configuration.
-		for (let pattern of this.configuration.get('index.ignoreFolders', [])) {
-			result.add(pattern);
-		}
-
-		// Add the patterns from the .gitignore file if it is enabled.
-		if (this.configuration.get('index.useGitIgnore')) {
-			const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
-
-			try {
-				const content = await vscode.workspace.fs.readFile(gitignore);
-
-				const excludePatterns = new TextDecoder().decode(content)
-					.split('\n')
-					.filter(line => !line.startsWith('#') && line.trim() !== '');
-
-				for (const pattern of excludePatterns) {
-					result.add(pattern);
-				}
-			} catch {
-				// If the .gitignore file does not exists, ingore it.
-			}
-		}
-
-		return Array.from(result);
 	}
 }
 
