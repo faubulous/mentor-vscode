@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
-import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { container } from 'tsyringe';
+import { configureContainer } from './container';
 import { DocumentContext } from './workspace/document-context';
 import { DocumentFactory } from './workspace/document-factory';
 import { Settings } from './settings';
@@ -15,22 +17,15 @@ import {
 	SparqlQueryService,
 	TurtlePrefixDefinitionService,
 } from './services';
-import { Quad_Graph } from '@rdfjs/types';
 import { WorkspaceUri } from './workspace/workspace-uri';
-import { InferenceUri } from './workspace/inference-uri';
 
 /**
  * The Mentor extension identifier.
  */
 export const MENTOR_EXTENSION_ID = 'faubulous.mentor';
 
-class MentorGraphUriGenerator implements GraphUriGenerator {
-	getGraphUri(uri: string | Quad_Graph): string {
-		const value = typeof uri === 'string' ? uri : uri.value;
-
-		return InferenceUri.toInferenceUri(value);
-	}
-}
+// Configure the DI container on module load
+configureContainer();
 
 /**
  * The Mentor extension instance.
@@ -68,17 +63,17 @@ class MentorExtension {
 	/**
 	 * The active reasoner used for the Mentor triple store.
 	 */
-	readonly reasoner = new OwlReasoner(new MentorGraphUriGenerator());
+	readonly reasoner = container.resolve(OwlReasoner);
 
 	/**
 	 * The Mentor RDF extension triple store.
 	 */
-	readonly store = new Store(this.reasoner);
+	readonly store = container.resolve(Store);
 
 	/**
 	 * A repository for retrieving ontology resources.
 	 */
-	readonly vocabulary = new VocabularyRepository(this.store);
+	readonly vocabulary = container.resolve(VocabularyRepository);
 
 	/**
 	 * A repository for retrieving workspace resources such as files and folders.

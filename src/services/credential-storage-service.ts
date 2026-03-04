@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
+import { injectable } from 'tsyringe';
 import { AuthCredential } from './credential';
 
 /**
  * Service for managing credentials using the SecretStorage of Visual Studio Code.
  */
+@injectable()
 export class CredentialStorageService {
     private _secretStorage?: vscode.SecretStorage;
 

@@ -1,4 +1,5 @@
 'use strict';
+import "reflect-metadata";
 import * as vscode from 'vscode';
 import * as languages from './languages';
 import * as commands from './commands';
@@ -6,10 +7,13 @@ import * as trees from './views/trees';
 import * as webviews from './views/webviews';
 import * as providers from './providers';
 import { mentor } from './mentor';
+import { registerDependencies } from './container';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
 
 export async function activate(context: vscode.ExtensionContext) {
+	registerDependencies(context);
+	
 	registerProviders(context);
 	registerUriHandlers(context);
 	registerLanguageClients(context);

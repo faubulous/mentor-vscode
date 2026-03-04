@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { injectable } from 'tsyringe';
 import { MENTOR_EXTENSION_ID } from '../mentor';
 import { Utils } from 'vscode-uri';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
@@ -58,6 +59,7 @@ export interface FileExtensionInfo {
 /**
  * A factory for creating RDF document contexts.
  */
+@injectable()
 export class DocumentFactory {
 	/**
 	 * The supported languages.

@@ -1,8 +1,10 @@
+import { injectable } from 'tsyringe';
 import { Memento } from "vscode";
 
 /**
  * A service for storing and retrieving data from the local storage.
  */
+@injectable()
 export class LocalStorageService {
 	private _storage: Memento | undefined;
 
