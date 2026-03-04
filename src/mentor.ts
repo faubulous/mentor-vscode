@@ -4,6 +4,7 @@ import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf'
 import { container } from 'tsyringe';
 import { configureContainer } from './container';
 import { DocumentContext } from './workspace/document-context';
+import { DocumentContextManager } from './workspace/document-context-manager';
 import { DocumentFactory } from './workspace/document-factory';
 import { Settings } from './settings';
 import { WorkspaceIndexer, DocumentIndex } from './workspace/workspace-indexer';
@@ -32,19 +33,47 @@ configureContainer();
  */
 class MentorExtension {
 	/**
-	 * Maps document URIs to loaded document contexts.
+	 * Cached reference to the DocumentContextManager from DI container.
 	 */
-	readonly contexts: DocumentIndex = {};
+	private _contextManager: DocumentContextManager | undefined;
+
+	/**
+	 * Get the DocumentContextManager singleton from the DI container.
+	 */
+	private get contextManager(): DocumentContextManager {
+		if (!this._contextManager) {
+			this._contextManager = container.resolve(DocumentContextManager);
+		}
+		return this._contextManager;
+	}
+
+	/**
+	 * Maps document URIs to loaded document contexts.
+	 * Delegates to DocumentContextManager.
+	 */
+	get contexts(): DocumentIndex {
+		return this.contextManager.contexts;
+	}
 
 	/**
 	 * The currently active document context or `undefined`.
+	 * Delegates to DocumentContextManager.
 	 */
-	activeContext: DocumentContext | undefined;
+	get activeContext(): DocumentContext | undefined {
+		return this.contextManager.activeContext;
+	}
+
+	set activeContext(value: DocumentContext | undefined) {
+		this.contextManager.activeContext = value;
+	}
 
 	/**
 	 * A factory for loading and creating document contexts.
+	 * Resolves from DI container.
 	 */
-	readonly documentFactory = new DocumentFactory();
+	get documentFactory(): DocumentFactory {
+		return container.resolve(DocumentFactory);
+	}
 
 	/**
 	 * The Visual Studio Code configuration section for the extension.
