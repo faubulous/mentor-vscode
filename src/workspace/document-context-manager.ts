@@ -301,6 +301,66 @@ export class DocumentContextManager {
 	}
 
 	/**
+	 * Handle active editor changed event.
+	 * Loads the document and fires context changed event.
+	 */
+	async handleActiveEditorChanged(): Promise<void> {
+		const editor = vscode.window.activeTextEditor;
+
+		if (!editor) return;
+
+		const uri = editor.document.uri;
+
+		if (!uri || uri === this.activeContext?.uri) return;
+
+		const context = await this.loadDocument(editor.document);
+
+		if (context) {
+			this.activeContext = context;
+			this.fireDocumentContextChanged(context);
+		}
+
+		const convertible = this.documentFactory.isConvertibleLanguage(editor.document.languageId);
+
+		vscode.commands.executeCommand("setContext", "mentor.command.convertFileFormat.executable", convertible);
+	}
+
+	/**
+	 * Handle active notebook editor changed event.
+	 * Loads all RDF cells in the notebook.
+	 * @param editor The notebook editor.
+	 */
+	async handleActiveNotebookEditorChanged(editor: vscode.NotebookEditor | undefined): Promise<void> {
+		if (!editor) return;
+
+		// Load all RDF cells in the notebook to ensure their graphs are created.
+		for (const cell of editor.notebook.getCells()) {
+			if (this.documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
+				await this.loadDocument(cell.document);
+			}
+		}
+	}
+
+	/**
+	 * Handle text document changed event.
+	 * Reloads the document and fires context changed event.
+	 * @param e The text document change event.
+	 */
+	async handleTextDocumentChanged(e: vscode.TextDocumentChangeEvent): Promise<void> {
+		// Reload the document context when the document has changed.
+		const context = await this.loadDocument(e.document, true);
+
+		if (!context) return;
+
+		// Update the active document context if it has changed.
+		this.activeContext = context;
+
+		this.fireDocumentContextChanged(context);
+
+		context.onDidChangeDocument(e);
+	}
+
+	/**
 	 * Handle text document closed event.
 	 * @param document The closed text document.
 	 */
