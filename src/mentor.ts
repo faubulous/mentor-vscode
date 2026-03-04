@@ -165,25 +165,12 @@ class MentorExtension {
 	readonly credentialStorageService = new CredentialStorageService();
 
 	/**
-	 * A map of pending token requests keyed by document URI.
-	 * Used to coordinate between loadDocument and language server token delivery.
-	 */
-	private readonly _pendingTokenRequests = new Map<string, {
-		resolve: (tokens: IToken[]) => void;
-		reject: (error: Error) => void;
-	}>();
-
-	/**
-	 * Default timeout in milliseconds for waiting for tokens from the language server.
-	 */
-	private readonly _tokenWaitTimeout = 5000;
-
-	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
-
-	/**
 	 * An event that is fired after the active document context has changed.
+	 * Delegates to DocumentContextManager.
 	 */
-	readonly onDidChangeVocabularyContext = this._onDidChangeDocumentContext.event;
+	get onDidChangeVocabularyContext() {
+		return this.contextManager.onDidChangeDocumentContext;
+	}
 
 	private readonly _onDidFinishInitializing = new vscode.EventEmitter<void>();
 
@@ -205,78 +192,30 @@ class MentorExtension {
 	dispose() {
 		this.sparqlQueryService.dispose();
 
-		this._onDidChangeDocumentContext.dispose();
 		this._onDidFinishInitializing.dispose();
 
-		// Reject any pending token requests
-		for (const [uri, pending] of this._pendingTokenRequests) {
-			pending.reject(new Error('Extension disposed'));
-		}
-
-		this._pendingTokenRequests.clear();
+		this.contextManager.dispose();
 	}
 
 	/**
 	 * Wait for tokens to be delivered from the language server for a document.
+	 * Delegates to DocumentContextManager.
 	 * @param uri The document URI to wait for tokens.
-	 * @param timeout Optional timeout in milliseconds (defaults to _tokenWaitTimeout).
+	 * @param timeout Optional timeout in milliseconds.
 	 * @returns A promise that resolves with the tokens or rejects on timeout.
 	 */
 	waitForTokens(uri: string, timeout?: number): Promise<IToken[]> {
-		const existingRequest = this._pendingTokenRequests.get(uri);
-
-		if (existingRequest) {
-			// Already waiting for this document
-			return new Promise((resolve, reject) => {
-				const originalResolve = existingRequest.resolve;
-				const originalReject = existingRequest.reject;
-
-				existingRequest.resolve = (tokens) => {
-					originalResolve(tokens);
-					resolve(tokens);
-				};
-
-				existingRequest.reject = (error) => {
-					originalReject(error);
-					reject(error);
-				};
-			});
-		}
-
-		return new Promise((resolve, reject) => {
-			const timeoutMs = timeout ?? this._tokenWaitTimeout;
-
-			const timeoutId = setTimeout(() => {
-				this._pendingTokenRequests.delete(uri);
-				reject(new Error(`Timeout waiting for tokens from language server for: ${uri}`));
-			}, timeoutMs);
-
-			this._pendingTokenRequests.set(uri, {
-				resolve: (tokens) => {
-					clearTimeout(timeoutId);
-					this._pendingTokenRequests.delete(uri);
-					resolve(tokens);
-				},
-				reject: (error) => {
-					clearTimeout(timeoutId);
-					this._pendingTokenRequests.delete(uri);
-					reject(error);
-				}
-			});
-		});
+		return this.contextManager.waitForTokens(uri, timeout);
 	}
 
 	/**
 	 * Resolve pending token requests for a document. Called by language clients when tokens arrive.
+	 * Delegates to DocumentContextManager.
 	 * @param uri The document URI.
 	 * @param tokens The tokens from the language server.
 	 */
 	resolveTokens(uri: string, tokens: IToken[]): void {
-		const pending = this._pendingTokenRequests.get(uri);
-
-		if (pending) {
-			pending.resolve(tokens);
-		}
+		this.contextManager.resolveTokens(uri, tokens);
 	}
 
 	/**
@@ -328,7 +267,7 @@ class MentorExtension {
 		this.loadDocument(editor.document).then((context) => {
 			if (context) {
 				this.activeContext = context;
-				this._onDidChangeDocumentContext?.fire(context);
+				this.contextManager.fireDocumentContextChanged(context);
 			}
 
 			const convertible = this.documentFactory.isConvertibleLanguage(editor.document.languageId);
@@ -356,7 +295,7 @@ class MentorExtension {
 			// Update the active document context if it has changed.
 			this.activeContext = context;
 
-			this._onDidChangeDocumentContext?.fire(context);
+			this.contextManager.fireDocumentContextChanged(context);
 
 			context.onDidChangeDocument(e);
 		});
