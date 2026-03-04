@@ -29,6 +29,12 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
+### Version 0.4.0: RDF 1.2 support and new parsers (experimental)
+- Added support for RDF 1.2 syntax in N-Triples, N-Quads, Turtle, TriG, N3
+  - Based on new [mentor-rdf-parsers](https://github.com/faubulous/mentor-rdf-parsers) library
+  - Will enable code formatting and linting in future releases
+- Up to 3x faster workspace indexing because of more efficient parsing
+
 ### Version 0.3.11: Minor improvements and bug fixes
 - Added support for highlighting unused variables in SPARQL queries
 - Added support for indexing notebook cells upon indexing the workspace
