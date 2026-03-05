@@ -171,7 +171,9 @@ class MentorExtension {
 	/**
 	 * A service for managing credentials using the SecretStorage of Visual Studio Code.
 	 */
-	readonly credentialStorageService = new CredentialStorageService();
+	get credentialStorageService(): CredentialStorageService {
+		return container.resolve(CredentialStorageService);
+	}
 
 	/**
 	 * An event that is fired after the active document context has changed.
@@ -293,9 +295,6 @@ class MentorExtension {
 
 		// Initialize the view settings.
 		this.settings.initialize(this.configuration);
-
-		// Initialize the credential storage service used for storing SPARQL endpoint credentials.
-		this.credentialStorageService.initialize(context.secrets);
 
 		// Load the endpoint configuration into memory.
 		this.sparqlConnectionService.initialize();

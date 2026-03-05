@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '../container';
-import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
+import { container } from '@src/container';
+import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 
 export const implementPrefixes = {
 	id: 'mentor.command.implementPrefixes',

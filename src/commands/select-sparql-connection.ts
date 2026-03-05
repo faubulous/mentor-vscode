@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '../container';
-import { SparqlConnectionService } from '../services';
+import { container } from '@src/container';
+import { SparqlConnectionService } from '@src/services';
 
 export const selectSparqlConnection = {
 	id: 'mentor.command.selectSparqlConnection',
