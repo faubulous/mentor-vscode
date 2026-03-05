@@ -47,17 +47,10 @@ export class SparqlConnectionService {
 	}
 
 	constructor(
-		private readonly configurationProvider: ConfigurationService,
-		private readonly workspaceStorage: WorkspaceStorageService,
-		private readonly credentialStorage: CredentialStorageService
-	) {}
-
-	/**
-	 * Get the VS Code configuration section for the extension.
-	 */
-	private get configuration(): vscode.WorkspaceConfiguration {
-		return this.configurationProvider.config();
-	}
+		private readonly _configurationService: ConfigurationService,
+		private readonly _workspaceStorage: WorkspaceStorageService,
+		private readonly _credentialStorage: CredentialStorageService
+	) { }
 
 	/**
 	 * Loads connections from the various configuration storage locactions into memory.
@@ -96,7 +89,7 @@ export class SparqlConnectionService {
 	 * @returns An array of SPARQL connections.
 	 */
 	private _loadConnectionsFromConfiguration(configTarget: vscode.ConfigurationTarget): SparqlConnection[] {
-		const inspect = this.configuration.inspect<SparqlConnection[]>(CONNECTIONS_CONFIG_KEY);
+		const inspect = this._configurationService.config.inspect<SparqlConnection[]>(CONNECTIONS_CONFIG_KEY);
 
 		if (inspect) {
 			const connections = [];
@@ -134,8 +127,8 @@ export class SparqlConnectionService {
 		const globalConnections = this._getEndpointDataForConfigScope(ConfigurationScope.User);
 		const workspaceConnections = this._getEndpointDataForConfigScope(ConfigurationScope.Workspace);
 
-		await this.configuration.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
-		await this.configuration.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
+		await this._configurationService.config.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
+		await this._configurationService.config.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
 
 		for (const connection of this._connections) {
 			connection.isNew = false;
@@ -248,7 +241,7 @@ export class SparqlConnectionService {
 	private _getConnectionIdForDocument(documentUri: vscode.Uri): string | undefined {
 		const key = this._getConnectionStorageKeyForDocument(documentUri);
 
-		return this.workspaceStorage.getValue(key, undefined);
+		return this._workspaceStorage.getValue(key, undefined);
 	}
 
 	/**
@@ -262,7 +255,7 @@ export class SparqlConnectionService {
 		} else {
 			const key = this._getConnectionStorageKeyForDocument(documentUri);
 
-			this.workspaceStorage.setValue(key, connectionId);
+			this._workspaceStorage.setValue(key, connectionId);
 		}
 
 		this._onDidChangeConnectionForDocument.fire(documentUri);
@@ -286,7 +279,7 @@ export class SparqlConnectionService {
 	 */
 	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource> {
 		const connection = this.getConnectionForDocument(documentUri);
-		
+
 		return this.getQuerySourceForConnection(connection);
 	}
 
@@ -427,7 +420,7 @@ export class SparqlConnectionService {
 			};
 
 			if (credential === undefined) {
-				credential = await this.credentialStorage.getCredential(connection.id);
+				credential = await this._credentialStorage.getCredential(connection.id);
 			}
 
 			const authHeaders = await this.getAuthHeaders(credential as AuthCredential);

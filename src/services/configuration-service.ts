@@ -5,8 +5,20 @@ import * as vscode from "vscode";
  * Returns fresh configuration on each call to capture updates.
  */
 export class ConfigurationService {
-	config(): vscode.WorkspaceConfiguration {
+	get config(): vscode.WorkspaceConfiguration {
 		return vscode.workspace.getConfiguration('mentor');
+	}
+
+
+	/**
+	 * Return a value from the configuration, or undefined if it doesn't exist.
+	 * @param key The key of the configuration value to get.
+	 * @param defaultValue An optional default value to return if the configuration value is not set.
+	 */
+	get<T>(key: string): T | undefined;
+	get<T>(key: string, defaultValue: T): T;
+	get<T>(key: string, defaultValue?: T): T | undefined {
+		return this.config.get<T>(key, defaultValue!);
 	}
 
 	/**
@@ -15,16 +27,15 @@ export class ConfigurationService {
 	 * @returns An array of glob patterns to exclude.
 	 */
 	async getExcludePatterns(workspaceUri: vscode.Uri): Promise<string[]> {
-		const config = this.config();
 		const result = new Set<string>();
 
 		// Add the patterns from the configuration.
-		for (const pattern of config.get<string[]>('index.ignoreFolders', [])) {
+		for (const pattern of this.get<string[]>('index.ignoreFolders', [])) {
 			result.add(pattern);
 		}
 
 		// Add the patterns from the .gitignore file if enabled.
-		if (config.get<boolean>('index.useGitIgnore')) {
+		if (this.get<boolean>('index.useGitIgnore')) {
 			const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
 
 			try {

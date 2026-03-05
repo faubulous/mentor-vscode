@@ -31,7 +31,7 @@ export const deleteGraph = {
 			container.resolve<Store>(ServiceToken.Store).deleteGraphs([graphIri.toString(true)]);
 		} else {
 			const configurationProvider = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
-			const query = configurationProvider.config().get<string>('sparql.dropGraphQuery');
+			const query = configurationProvider.get<string>('sparql.dropGraphQuery');
 
 			if (!query) {
 				vscode.window.showErrorMessage('Could not retrieve query from configuration: mentor.sparql.dropGraphQuery');

@@ -168,7 +168,8 @@ export class TurtleDocument extends DocumentContext {
 
 		// TODO: This should be handled in the prefix definition service 
 		// (listen to doc changes and react) instead of the document itself.
-		const config = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService).config();
+		const config = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService).config;
+		
 		if (change?.text.endsWith(':') && config.get('prefixes.autoDefinePrefixes')) {
 			// Do not auto-implement prefixes when manually typing a prefix.
 			const n = this.getTokenIndexAtPosition(change.range.start);

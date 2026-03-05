@@ -169,10 +169,11 @@ export abstract class DocumentContext {
 	};
 
 	constructor(documentUri: vscode.Uri) {
+		const configurationService = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
+		
 		this.uri = documentUri;
-		const config = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService).config();
-		this.predicates.label = config.get('predicates.label') ?? [];
-		this.predicates.description = config.get('predicates.description') ?? [];
+		this.predicates.label = configurationService.get('predicates.label') ?? [];
+		this.predicates.description = configurationService.get('predicates.description') ?? [];
 	}
 
 	/**

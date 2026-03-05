@@ -182,7 +182,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param prefixes The prefixes to be implemented.
 	 */
 	private async _implementPrefixes(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, prefixes: PrefixDefinition[]) {
-		const mode = await this.configuration.config().get('prefixes.prefixDefinitionMode');
+		const mode = await this.configuration.get('prefixes.prefixDefinitionMode');
 
 		if (mode === 'Sorted') {
 			await this._implementPrefixesSorted(edit, document, context, prefixes);

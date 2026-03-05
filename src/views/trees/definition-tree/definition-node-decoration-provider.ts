@@ -83,7 +83,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	private _getDecorationScopeFromConfiguration(): MissingLanguageTagDecorationScope {
-		const result = this.configurationProvider.config().get('definitionTree.decorateMissingLanguageTags');
+		const result = this.configurationProvider.get('definitionTree.decorateMissingLanguageTags');
 
 		switch (result) {
 			case 'Document': {

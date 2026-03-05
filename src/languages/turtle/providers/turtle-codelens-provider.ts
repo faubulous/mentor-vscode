@@ -43,7 +43,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 	constructor() {
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
-				this._enabled = this._configurationProvider.config().get('editor.codeLensEnabled', true);
+				this._enabled = this._configurationProvider.get('editor.codeLensEnabled', true);
 
 				// Fire the event to refresh the code lenses.
 				this._onDidChangeCodeLenses.fire();
@@ -55,7 +55,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 		this._initializing = true;
 		this._initialized = false;
 
-		this._enabled = this._configurationProvider.config().get('editor.codeLensEnabled', true);
+		this._enabled = this._configurationProvider.get('editor.codeLensEnabled', true);
 
 		this._workspaceIndexer.waitForIndexed().then(() => {
 			if (this._enabled) {

@@ -7,7 +7,7 @@ export const createDocumentFromLanguage = {
 	id: 'mentor.command.createDocumentFromLanguage',
 	handler: async (language: string) => {
 		const configurationProvider = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
-		const content = configurationProvider.config().get<string>(`language.${language}.defaultDocumentTemplate`, '');
+		const content = configurationProvider.get<string>(`language.${language}.defaultDocumentTemplate`, '');
 		
 		const document = await vscode.workspace.openTextDocument({ content, language });
 

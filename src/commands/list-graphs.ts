@@ -9,7 +9,7 @@ export const listGraphs = {
   id: 'mentor.command.listGraphs',
   handler: async (connection: SparqlConnection): Promise<void> => {
     const configurationProvider = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
-    const query = configurationProvider.config().get<string>('sparql.listGraphsQuery');
+    const query = configurationProvider.get<string>('sparql.listGraphsQuery');
 
     if (!query) {
       vscode.window.showErrorMessage('Could not retrieve query from configuration: mentor.sparql.listGraphsQuery');

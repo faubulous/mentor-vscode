@@ -91,7 +91,7 @@ export class SettingsService extends EventEmitter {
 		super();
 
 		// Initialize the default label rendering style.
-		const defaultStyle = configurationProvider.config().get('definitionTree.labelStyle');
+		const defaultStyle = configurationProvider.get('definitionTree.labelStyle');
 
 		switch (defaultStyle) {
 			case 'AnnotatedLabels':

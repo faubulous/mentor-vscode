@@ -286,7 +286,7 @@ export class DocumentContextService {
 		context.predicateStats = this.vocabulary.getPredicateUsageStats(context.graphs);
 
 		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
-		context.activeLanguageTag = this.configurationProvider.config().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
+		context.activeLanguageTag = this.configurationProvider.get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
 
