@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, IDocumentContextService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken, IDocumentContextService } from '@src/services';
 import { DocumentContext } from '@src/workspace/document-context';
 
 /**

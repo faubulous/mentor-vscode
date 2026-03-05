@@ -1,10 +1,10 @@
-import { container, WorkspaceIndexer } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken, IWorkspaceIndexer } from '@src/services';
 
 export const analyzeWorkspace = {
 	id: 'mentor.command.analyzeWorkspace',
 	handler: () => {
 		// Force re-indexing of the workspace, including oversized files.
-		container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer).indexWorkspace(true);
+		container.resolve<IWorkspaceIndexer>(ServiceToken.WorkspaceIndexer).indexWorkspace(true);
 	}
 };

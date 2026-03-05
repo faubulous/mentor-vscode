@@ -3,7 +3,7 @@ import { SparqlLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { ILocalStorageService, ICredentialStorageService, ISparqlConnectionService, ISparqlQueryResultSerializer } from '@src/services/interface';
+import { ILocalStorageService, ICredentialStorageService, ISparqlConnectionService, ISparqlQueryResultSerializer } from '@src/services';
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";

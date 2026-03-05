@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, Store, ISparqlConnectionService, IConfigurationService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container, Store } from '@src/services/service-container';
+import { ServiceToken, ISparqlConnectionService, IConfigurationService } from '@src/services';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
 
 export const deleteGraph = {

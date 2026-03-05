@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, ISparqlQueryService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken, ISparqlQueryService } from '@src/services';
 import { SparqlConnection } from '@src/services/shared/sparql-connection';
 import { MENTOR_WORKSPACE_STORE } from '@src/services/shared/sparql-connection-service';
 

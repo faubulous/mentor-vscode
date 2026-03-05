@@ -1,5 +1,5 @@
-import { container, ISettingsService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken, ISettingsService } from '@src/services';
 import { TreeLabelStyle } from '@src/services/shared/settings-service';
 
 export const showAnnotatedLabels = {

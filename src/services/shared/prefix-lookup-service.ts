@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { IConfigurationService, IDocumentContextService, ILocalStorageService } from '@src/services/interface';
+import { IConfigurationService, IDocumentContextService, ILocalStorageService } from '@src/services';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services/shared/prefix-downloader-service';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';

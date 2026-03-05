@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository, IDocumentContextService, ISettingsService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container, VocabularyRepository } from '@src/services/service-container';
+import { ServiceToken, IDocumentContextService, ISettingsService } from '@src/services';
 
 interface LanguageQuckPickItem extends vscode.QuickPickItem {
 	/**

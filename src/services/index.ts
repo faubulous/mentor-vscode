@@ -10,3 +10,4 @@ export { ISettingsService } from './interface/settings-service.interface';
 export { ISparqlConnectionService } from './interface/sparql-connection-service.interface';
 export { ISparqlQueryService } from './interface/sparql-query-service.interface';
 export { ISparqlQueryResultSerializer } from './interface/sparql-query-result-serializer.interface';
+export { IWorkspaceIndexer } from './interface/workspace-indexer.interface';

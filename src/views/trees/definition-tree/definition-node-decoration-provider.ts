@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, IDocumentContextService, IConfigurationService, ISettingsService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container, VocabularyRepository } from '@src/services/service-container';
+import { ServiceToken, IDocumentContextService, IConfigurationService, ISettingsService } from '@src/services';
 
 /**
  * Indicates the where missing language tags should be decorated.

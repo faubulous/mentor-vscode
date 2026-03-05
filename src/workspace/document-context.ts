@@ -4,8 +4,7 @@ import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, S
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import { IConfigurationService, ISettingsService } from '@src/services/interface';
-import { ServiceToken } from '@src/services';
+import { ServiceToken, IConfigurationService, ISettingsService  } from '@src/services';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { TreeLabelStyle } from '@src/services/shared/settings-service';
 import { Range } from 'vscode-languageserver-types';

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, IConfigurationService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken, IConfigurationService } from '@src/services';
 
 export const createDocumentFromLanguage = {
 	id: 'mentor.command.createDocumentFromLanguage',

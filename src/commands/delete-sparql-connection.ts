@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, ISparqlConnectionService, ICredentialStorageService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken, ISparqlConnectionService, ICredentialStorageService } from '@src/services';
 import { SparqlConnection } from '@src/services/shared/sparql-connection';
 
 export const deleteSparqlConnection = {

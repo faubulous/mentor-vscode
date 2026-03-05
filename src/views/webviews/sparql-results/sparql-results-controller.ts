@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, ISparqlQueryService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken, ISparqlQueryService } from '@src/services';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/services/shared/sparql-query-state';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';

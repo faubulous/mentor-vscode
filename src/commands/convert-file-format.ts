@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository, IDocumentContextService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { container, VocabularyRepository } from '@src/services/service-container';
+import { ServiceToken, IDocumentContextService } from '@src/services';
 import { DocumentFactory, LanguageInfo } from '@src/workspace/document-factory';
 
 export const convertFileFormat = {
