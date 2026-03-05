@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { container } from '../container';
-import { SparqlQueryService } from '../services';
+import { container } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
+import { SparqlQueryService } from '@src/services';
 import { QuadsResult } from '@src/services/sparql-query-state';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
@@ -72,7 +73,7 @@ export class NotebookController {
 		});
 
 		try {
-			const queryService = container.resolve(SparqlQueryService);
+			const queryService = container.resolve<SparqlQueryService>(InjectionToken.SparqlQueryService);
 			let queryState = queryService.createQueryFromDocument(cell);
 
 			queryState = await queryService.executeQuery(queryState, tokenSource);

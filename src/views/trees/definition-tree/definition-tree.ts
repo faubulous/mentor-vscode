@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container, DocumentContextService } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { Settings } from '@src/settings';
 import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
@@ -16,11 +17,11 @@ export class DefinitionTree implements TreeView {
 	readonly id = "mentor.view.definitionTree";
 
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	private get settings() {
-		return container.resolve(Settings);
+		return container.resolve<Settings>(InjectionToken.Settings);
 	}
 
 	/**

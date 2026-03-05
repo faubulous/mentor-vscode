@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container, DocumentContextService } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { PrefixLookupService } from '@src/services';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -9,7 +10,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 	protected readonly prefixTokenTypes = new Set([TOKENS.PREFIX.name, TOKENS.TTL_PREFIX.name]);
 
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	constructor(readonly onComplete: (uri: string) => string) {
@@ -51,7 +52,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		}
 
 		const prefix = currentToken.image.split(":")[0];
-		const prefixLookup = container.resolve(PrefixLookupService);
+		const prefixLookup = container.resolve<PrefixLookupService>(InjectionToken.PrefixLookupService);
 		const uri = prefixLookup.getUriForPrefix(document.uri.toString(), prefix);
 
 		if (uri) {

@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
-import { container, VocabularyRepository, ConfigurationProvider } from '@src/container';
+import { container } from 'tsyringe';
+import { VocabularyRepository } from '@faubulous/mentor-rdf';
+import { ConfigurationProvider } from '@src/services/configuration-provider';
+import { InjectionToken } from '@src/injection-token';
 import { DocumentContextService } from '@src/services/document-context-service';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { WorkspaceIndexer } from '@src/workspace/workspace-indexer';
@@ -33,23 +36,23 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	private _lintingEnabled: boolean = false;
 
 	private get configuration() {
-		return container.resolve(ConfigurationProvider).get();
+		return container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider).get();
 	}
 
 	private get vocabulary() {
-		return container.resolve<VocabularyRepository>("VocabularyRepository");
+		return container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
 	}
 
 	private get documentFactory() {
-		return container.resolve(DocumentFactory);
+		return container.resolve<DocumentFactory>(InjectionToken.DocumentFactory);
 	}
 
 	private get workspaceIndexer() {
-		return container.resolve(WorkspaceIndexer);
+		return container.resolve<WorkspaceIndexer>(InjectionToken.WorkspaceIndexer);
 	}
 
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	constructor() {

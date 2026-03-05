@@ -2,16 +2,17 @@ import * as vscode from 'vscode';
 import { Uri } from "@faubulous/mentor-rdf";
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container, DocumentContextService } from '@src/container';
-import { getIriFromIriReference, getNamespaceDefinition } from '@src/utilities';
+import { InjectionToken } from '@src/injection-token';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
+import { getIriFromIriReference, getNamespaceDefinition } from '@src/utilities';
 
 /**
  * A provider for RDF document code actions.
  */
 export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements vscode.CodeActionProvider {
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	/**

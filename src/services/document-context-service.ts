@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
-import { injectable, inject } from 'tsyringe';
 import { IToken } from 'chevrotain';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../workspace/document-context';
 import { DocumentFactory } from '../workspace/document-factory';
 import { WorkspaceUri } from '../workspace/workspace-uri';
-import { ConfigurationProvider } from '../container';
+import { ConfigurationProvider } from './configuration-provider';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -18,7 +17,6 @@ export interface DocumentIndex {
  * Manages document contexts and coordinates token delivery from language servers.
  * This is the central service for loading, tracking, and retrieving RDF document contexts.
  */
-@injectable()
 export class DocumentContextService {
 	/**
 	 * Maps document URIs to loaded document contexts.
@@ -60,9 +58,9 @@ export class DocumentContextService {
 	}
 
 	constructor(
-		@inject("VocabularyRepository") private readonly vocabulary: VocabularyRepository,
-		@inject(DocumentFactory) private readonly documentFactory: DocumentFactory,
-		@inject(ConfigurationProvider) private readonly configurationProvider: ConfigurationProvider
+		private readonly vocabulary: VocabularyRepository,
+		private readonly documentFactory: DocumentFactory,
+		private readonly configurationProvider: ConfigurationProvider
 	) { }
 
 	/**

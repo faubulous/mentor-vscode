@@ -1,15 +1,16 @@
 import * as vscode from 'vscode';
 import { container, DocumentContextService, DocumentFactory } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { LanguageClientBase, XmlDocument } from '@src/languages';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 
 export class XmlLanguageClient extends LanguageClientBase {
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	private get documentFactory() {
-		return container.resolve(DocumentFactory);
+		return container.resolve<DocumentFactory>(InjectionToken.DocumentFactory);
 	}
 
 	constructor() {

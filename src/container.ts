@@ -1,101 +1,18 @@
-/**
- * Dependency Injection Container Configuration
- * 
- * This module configures tsyringe for the Mentor extension.
- * Import this module at the extension entry point before resolving any services.
- */
 import "reflect-metadata";
 import * as vscode from "vscode";
-import { container, DependencyContainer, injectable } from "tsyringe";
+import { container, DependencyContainer } from "tsyringe";
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { Quad_Graph } from '@rdfjs/types';
+import { InjectionToken } from './injection-token';
 import { InferenceUri } from './workspace/inference-uri';
 import { DocumentFactory } from './workspace/document-factory';
+import { ConfigurationProvider } from './services/configuration-provider';
 import { DocumentContextService } from './services/document-context-service';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { Settings } from './settings';
-import { LocalStorageService, CredentialStorageService, SparqlConnectionService, SparqlQueryService, PrefixLookupService, PrefixDownloaderService, SparqlQueryResultSerializer } from './services';
+import { LocalStorageService, WorkspaceStorageService, GlobalStorageService, CredentialStorageService, SparqlConnectionService, SparqlQueryService, PrefixLookupService, PrefixDownloaderService, SparqlQueryResultSerializer } from './services';
 import { TurtlePrefixDefinitionService } from './languages/turtle/services/turtle-prefix-definition-service';
-
-/**
- * String token for injecting VS Code ExtensionContext.
- * Use with @inject("ExtensionContext").
- */
-export const EXTENSION_CONTEXT_TOKEN = "ExtensionContext";
-
-/**
- * String token for injecting VS Code SecretStorage.
- * Use with @inject("SecretStorage").
- */
-export const SECRET_STORAGE_TOKEN = "SecretStorage";
-
-/**
- * Injectable wrapper providing configuration getter.
- * Returns fresh configuration on each call to capture updates.
- */
-@injectable()
-export class ConfigurationProvider {
-	get(): vscode.WorkspaceConfiguration {
-		return vscode.workspace.getConfiguration('mentor');
-	}
-
-	/**
-	 * Gets the list of patterns to exclude from indexing operations.
-	 * @param workspaceUri The workspace URI to get patterns for.
-	 * @returns An array of glob patterns to exclude.
-	 */
-	async getExcludePatterns(workspaceUri: vscode.Uri): Promise<string[]> {
-		const config = this.get();
-		const result = new Set<string>();
-
-		// Add the patterns from the configuration.
-		for (const pattern of config.get<string[]>('index.ignoreFolders', [])) {
-			result.add(pattern);
-		}
-
-		// Add the patterns from the .gitignore file if enabled.
-		if (config.get<boolean>('index.useGitIgnore')) {
-			const gitignore = vscode.Uri.joinPath(workspaceUri, '.gitignore');
-
-			try {
-				const content = await vscode.workspace.fs.readFile(gitignore);
-
-				const excludePatterns = new TextDecoder().decode(content)
-					.split('\n')
-					.filter(line => !line.startsWith('#') && line.trim() !== '');
-
-				for (const pattern of excludePatterns) {
-					result.add(pattern);
-				}
-			} catch {
-				// If the .gitignore file does not exist, ignore it.
-			}
-		}
-
-		return Array.from(result);
-	}
-}
-
-/**
- * Injectable wrapper for workspace-scoped storage.
- */
-@injectable()
-export class WorkspaceStorageService extends LocalStorageService {
-	protected get storage() {
-		return container.resolve<vscode.ExtensionContext>(EXTENSION_CONTEXT_TOKEN).workspaceState;
-	}
-}
-
-/**
- * Injectable wrapper for global storage.
- */
-@injectable()
-export class GlobalStorageService extends LocalStorageService {
-	protected get storage() {
-		return container.resolve<vscode.ExtensionContext>(EXTENSION_CONTEXT_TOKEN).globalState;
-	}
-}
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
@@ -113,11 +30,12 @@ export class MentorGraphUriGenerator implements GraphUriGenerator {
  */
 export function configureDependencyContainer(context: vscode.ExtensionContext): DependencyContainer {
 	// Register the ExtensionContext and SecretStorage directly
-	container.registerInstance(EXTENSION_CONTEXT_TOKEN, context);
-	container.registerInstance(SECRET_STORAGE_TOKEN, context.secrets);
+	container.registerInstance(InjectionToken.ExtensionContext, context);
+	container.registerInstance(InjectionToken.SecretStorage, context.secrets);
 
-	// Register ConfigurationProvider singleton
-	container.registerSingleton(ConfigurationProvider);
+	// Register ConfigurationProvider instance
+	const configurationProvider = new ConfigurationProvider();
+	container.registerInstance(InjectionToken.ConfigurationProvider, configurationProvider);
 
 	// Create singleton instances for the core RDF services
 	const reasoner = new OwlReasoner(new MentorGraphUriGenerator());
@@ -125,46 +43,63 @@ export function configureDependencyContainer(context: vscode.ExtensionContext): 
 	const vocabulary = new VocabularyRepository(store);
 
 	// Register them as singleton instances using string tokens for external classes
-	container.registerInstance("OwlReasoner", reasoner);
-	container.registerInstance("Store", store);
-	container.registerInstance("VocabularyRepository", vocabulary);
+	container.registerInstance(InjectionToken.Store, store);
+	container.registerInstance(InjectionToken.VocabularyRepository, vocabulary);
 
-	container.registerSingleton(DocumentFactory);
+	// Register DocumentFactory instance
+	const documentFactory = new DocumentFactory();
+	container.registerInstance(InjectionToken.DocumentFactory, documentFactory);
 
-	// Create DocumentContextService instance manually to avoid circular dependency with ConfigurationProvider
-	const documentContextService = new DocumentContextService(
-		vocabulary,
-		container.resolve(DocumentFactory),
-		container.resolve(ConfigurationProvider)
-	);
-	container.registerInstance(DocumentContextService, documentContextService);
+	// Register storage services (they use container.resolve internally for ExtensionContext)
+	const workspaceStorageService = new WorkspaceStorageService();
+	container.registerInstance(InjectionToken.WorkspaceStorageService, workspaceStorageService);
 
-	// Register WorkspaceRepository and WorkspaceIndexer
-	container.registerSingleton(WorkspaceRepository);
-	container.registerSingleton(WorkspaceIndexer);
+	const globalStorageService = new GlobalStorageService();
+	container.registerInstance(InjectionToken.GlobalStorageService, globalStorageService);
 
-	container.registerSingleton(CredentialStorageService);
+	// Register CredentialStorageService (uses container.resolve internally for SecretStorage)
+	const credentialStorageService = new CredentialStorageService();
+	container.registerInstance(InjectionToken.CredentialStorageService, credentialStorageService);
 
-	// Register SparqlConnectionService (dependencies resolved at runtime)
-	container.registerSingleton(SparqlConnectionService);
+	// Create DocumentContextService instance
+	const documentContextService = new DocumentContextService(vocabulary, documentFactory, configurationProvider);
+	container.registerInstance(InjectionToken.DocumentContextService, documentContextService);
 
-	// Register SparqlQueryResultSerializer
-	container.registerSingleton(SparqlQueryResultSerializer);
+	// Register WorkspaceRepository instance
+	const workspaceRepository = new WorkspaceRepository(documentFactory, configurationProvider);
+	container.registerInstance(InjectionToken.WorkspaceRepository, workspaceRepository);
 
-	// Register SparqlQueryService
-	container.registerSingleton(SparqlQueryService);
+	// Register WorkspaceIndexer instance
+	const workspaceIndexer = new WorkspaceIndexer(documentFactory, configurationProvider, documentContextService);
+	container.registerInstance(InjectionToken.WorkspaceIndexer, workspaceIndexer);
 
-	// Register PrefixLookupService
-	container.registerSingleton(PrefixLookupService);
+	// Register SparqlConnectionService instance
+	const sparqlConnectionService = new SparqlConnectionService(configurationProvider, workspaceStorageService, credentialStorageService);
+	container.registerInstance(InjectionToken.SparqlConnectionService, sparqlConnectionService);
 
-	// Register PrefixDownloaderService
-	container.registerSingleton(PrefixDownloaderService);
+	// Register PrefixLookupService instance
+	const prefixLookupService = new PrefixLookupService(globalStorageService, configurationProvider, documentContextService);
+	container.registerInstance(InjectionToken.PrefixLookupService, prefixLookupService);
 
-	// Register TurtlePrefixDefinitionService
-	container.registerSingleton(TurtlePrefixDefinitionService);
+	// Register SparqlQueryResultSerializer instance
+	const sparqlQueryResultSerializer = new SparqlQueryResultSerializer(prefixLookupService);
+	container.registerInstance(InjectionToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
 
-	// Register Settings
-	container.registerSingleton(Settings);
+	// Register SparqlQueryService instance
+	const sparqlQueryService = new SparqlQueryService(sparqlConnectionService, workspaceStorageService, credentialStorageService, sparqlQueryResultSerializer);
+	container.registerInstance(InjectionToken.SparqlQueryService, sparqlQueryService);
+
+	// Register PrefixDownloaderService instance
+	const prefixDownloaderService = new PrefixDownloaderService();
+	container.registerInstance(InjectionToken.PrefixDownloaderService, prefixDownloaderService);
+
+	// Register TurtlePrefixDefinitionService instance
+	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(configurationProvider, documentContextService, prefixLookupService);
+	container.registerInstance(InjectionToken.TurtlePrefixDefinitionService, turtlePrefixDefinitionService);
+
+	// Register Settings instance
+	const settings = new Settings();
+	container.registerInstance(InjectionToken.Settings, settings);
 
 	return container;
 }
@@ -203,3 +138,13 @@ export { WorkspaceRepository };
  * Re-export PrefixDownloaderService for convenient access.
  */
 export { PrefixDownloaderService };
+
+/**
+ * Re-export ConfigurationProvider for convenient access.
+ */
+export { ConfigurationProvider };
+
+/**
+ * Re-export storage services for convenient access.
+ */
+export { WorkspaceStorageService, GlobalStorageService };

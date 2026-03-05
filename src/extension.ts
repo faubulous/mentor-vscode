@@ -8,6 +8,7 @@ import * as commands from './commands';
 import * as trees from './views/trees';
 import * as webviews from './views/webviews';
 import * as providers from './providers';
+import { InjectionToken } from './injection-token';
 import { configureDependencyContainer } from './container';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
@@ -24,14 +25,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	configureDependencyContainer(context);
 
 	// Initialize services.
-	const settings = container.resolve(Settings);
+	const settings = container.resolve<Settings>(InjectionToken.Settings);
 	settings.initialize(vscode.workspace.getConfiguration('mentor'));
 
-	container.resolve(SparqlConnectionService).initialize();
-	container.resolve(SparqlQueryService).initialize();
+	container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService).initialize();
+	container.resolve<SparqlQueryService>(InjectionToken.SparqlQueryService).initialize();
 
 	// Register event handlers for editor and document changes.
-	const contextService = container.resolve(DocumentContextService);
+	const contextService = container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 
 	subscribe(context, contextService.registerEventHandlers());
 	
@@ -47,30 +48,20 @@ export async function activate(context: vscode.ExtensionContext) {
 	contextService.activateDocument();
 
 	// Load the W3C and other common ontologies for providing hovers, completions and definitions.
-	await container.resolve<Store>("Store").loadFrameworkOntologies();
+	await container.resolve<Store>(InjectionToken.Store).loadFrameworkOntologies();
 
 	// Load the workspace files and folders for the explorer tree view.
-	await container.resolve(WorkspaceRepository).initialize();
+	await container.resolve<WorkspaceRepository>(InjectionToken.WorkspaceRepository).initialize();
 
 	// Index the entire workspace for providing hovers, completions and definitions.
-	await container.resolve(WorkspaceIndexer).indexWorkspace();
+	await container.resolve<WorkspaceIndexer>(InjectionToken.WorkspaceIndexer).indexWorkspace();
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 }
 
 export async function deactivate(context: vscode.ExtensionContext) {
-	container.resolve(SparqlQueryService).dispose();
-	container.resolve(DocumentContextService).dispose();
-}
-
-function subscribe(context: vscode.ExtensionContext, disposable: vscode.Disposable | vscode.Disposable[]) {
-	if (Array.isArray(disposable)) {
-		for (const d of disposable) {
-			context.subscriptions.push(d);
-		}
-	} else {
-		context.subscriptions.push(disposable);
-	}
+	container.resolve<SparqlQueryService>(InjectionToken.SparqlQueryService).dispose();
+	container.resolve<DocumentContextService>(InjectionToken.DocumentContextService).dispose();
 }
 
 function registerLanguageClients(context: vscode.ExtensionContext) {
@@ -121,4 +112,14 @@ function registerViews(context: vscode.ExtensionContext) {
 
 function registerCommands(context: vscode.ExtensionContext) {
 	subscribe(context, commands.commandRegistry.registerAll());
+}
+
+function subscribe(context: vscode.ExtensionContext, disposable: vscode.Disposable | vscode.Disposable[]) {
+	if (Array.isArray(disposable)) {
+		for (const d of disposable) {
+			context.subscriptions.push(d);
+		}
+	} else {
+		context.subscriptions.push(disposable);
+	}
 }

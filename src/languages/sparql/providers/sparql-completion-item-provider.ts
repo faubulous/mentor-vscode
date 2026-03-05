@@ -2,12 +2,13 @@ import * as vscode from "vscode";
 import { Store } from "@faubulous/mentor-rdf";
 import { TOKENS } from "@faubulous/mentor-rdf-parsers";
 import { container } from "@src/container";
+import { InjectionToken } from '@src/injection-token';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	private get store() {
-		return container.resolve<Store>("Store");
+		return container.resolve<Store>(InjectionToken.Store);
 	}
 
 	override getCompletionItems(document: vscode.TextDocument, context: any, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {

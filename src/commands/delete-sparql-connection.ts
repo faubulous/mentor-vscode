@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from '../container';
+import { InjectionToken } from '@src/injection-token';
 import { SparqlConnectionService, CredentialStorageService } from '../services';
 import { SparqlConnection } from '@src/services/sparql-connection';
 
@@ -16,8 +17,8 @@ export const deleteSparqlConnection = {
 			return;
 		}
 
-		const connectionService = container.resolve(SparqlConnectionService);
-		const credentialService = container.resolve(CredentialStorageService);
+		const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+		const credentialService = container.resolve<CredentialStorageService>(InjectionToken.CredentialStorageService);
 
 		await connectionService.deleteConnection(connection.id);
 		await connectionService.saveConfiguration();

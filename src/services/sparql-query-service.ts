@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
-import { injectable, inject, delay } from 'tsyringe';
 import { SparqlLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { WorkspaceStorageService } from "@src/container";
+import { WorkspaceStorageService } from "./local-storage-service";
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
@@ -31,7 +30,6 @@ const HISTORY_MAX_ENTRIES = 10;
  * excluding unsaved documents. This query history is then restored when the 
  * service is instantiated.
  */
-@injectable()
 export class SparqlQueryService {
 	private _initialized = false;
 
@@ -61,10 +59,10 @@ export class SparqlQueryService {
 	onDidQueryExecutionEnd: vscode.Event<SparqlQueryExecutionState> = this._onDidQueryExecutionEnd.event;
 
 	constructor(
-		@inject(SparqlConnectionService) private readonly _connectionService: SparqlConnectionService,
-		@inject(delay(() => WorkspaceStorageService)) private readonly workspaceStorage: WorkspaceStorageService,
-		@inject(CredentialStorageService) private readonly credentialStorage: CredentialStorageService,
-		@inject(SparqlQueryResultSerializer) private readonly _querySerializer: SparqlQueryResultSerializer
+		private readonly _connectionService: SparqlConnectionService,
+		private readonly workspaceStorage: WorkspaceStorageService,
+		private readonly credentialStorage: CredentialStorageService,
+		private readonly _querySerializer: SparqlQueryResultSerializer
 	) {}
 
 	/**

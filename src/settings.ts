@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events'
-import { injectable } from 'tsyringe';
 
 /**
  * Supported label styles of the definition tree.
@@ -37,7 +36,6 @@ export enum DefinitionTreeLayout {
 /**
  * An API for the configuration settings of the Mentor extension.
  */
-@injectable()
 export class Settings extends EventEmitter {
 	private _data: { [key: string]: any } = {};
 

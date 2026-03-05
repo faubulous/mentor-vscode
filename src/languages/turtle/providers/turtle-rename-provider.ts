@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container, DocumentContextService } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { TOKENS, isVariableToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -10,7 +11,7 @@ import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-prov
  */
 export class TurtleRenameProvider extends TurtleFeatureProvider implements vscode.RenameProvider {
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	public async prepareRename(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Range | null> {

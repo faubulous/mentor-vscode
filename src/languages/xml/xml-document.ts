@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Store } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { container } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { DocumentContext } from '@src/workspace/document-context';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { getIriFromPrefixedName } from '@src/utilities';
@@ -15,7 +16,7 @@ export class XmlDocument extends DocumentContext {
 	private _inferenceExecuted = false;
 
 	private get store() {
-		return container.resolve<Store>("Store");
+		return container.resolve<Store>(InjectionToken.Store);
 	}
 
 	/**

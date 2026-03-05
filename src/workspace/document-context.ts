@@ -3,7 +3,9 @@ import { Quad_Subject } from "@rdfjs/types";
 import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
-import { container, ConfigurationProvider } from '@src/container';
+import { container } from 'tsyringe';
+import { ConfigurationProvider } from '@src/services/configuration-provider';
+import { InjectionToken } from '@src/injection-token';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { TreeLabelStyle, Settings } from '@src/settings';
 import { Range } from 'vscode-languageserver-types';
@@ -168,7 +170,7 @@ export abstract class DocumentContext {
 
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
-		const config = container.resolve(ConfigurationProvider).get();
+		const config = container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider).get();
 		this.predicates.label = config.get('predicates.label') ?? [];
 		this.predicates.description = config.get('predicates.description') ?? [];
 	}
@@ -268,7 +270,7 @@ export abstract class DocumentContext {
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
-		const settings = container.resolve(Settings);
+		const settings = container.resolve<Settings>(InjectionToken.Settings);
 		const treeLabelStyle = settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
@@ -326,7 +328,7 @@ export abstract class DocumentContext {
 		let primaryLabel: Literal | undefined = undefined;
 		let fallbackLabel: Literal | undefined = undefined;
 
-		const store = container.resolve<Store>("Store");
+		const store = container.resolve<Store>(InjectionToken.Store);
 
 		for (let p of predicates) {
 			for (let q of store.matchAll(graphUris, subject, p, null, false)) {
@@ -390,7 +392,7 @@ export abstract class DocumentContext {
 	 */
 	getPropertyPathLabel(node: Quad_Subject): string {
 		let result = [];
-		const vocabulary = container.resolve<VocabularyRepository>("VocabularyRepository");
+		const vocabulary = container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
 
 		for (let c of vocabulary.getPropertyPathTokens(this.graphs, node)) {
 			if (typeof (c) === 'string') {

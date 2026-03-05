@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { container, WorkspaceRepository } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 
 // For a complete implementation of the FileSystemProvider API, see:
 // https://github.com/boltex/revealRangeTest/blob/main/src/fileExplorer.ts#L185
@@ -15,7 +16,7 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
 	private get workspace() {
-		return container.resolve(WorkspaceRepository);
+		return container.resolve<WorkspaceRepository>(InjectionToken.WorkspaceRepository);
 	}
 
 	constructor() {

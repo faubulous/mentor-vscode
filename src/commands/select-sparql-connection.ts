@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { SparqlConnectionService } from '@src/services';
 
 export const selectSparqlConnection = {
@@ -10,7 +11,7 @@ export const selectSparqlConnection = {
 			return;
 		}
 
-		const service = container.resolve(SparqlConnectionService);
+		const service = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
 
 		// Show a quick pick to select from existing SPARQL connections
 		const connections = await service.getConnections();

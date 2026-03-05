@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { container, DocumentFactory } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 
 export const createDocument = {
 	id: 'mentor.command.createDocument',
 	handler: async () => {
 		const items: any[] = [];
-		const documentFactory = container.resolve(DocumentFactory);
+		const documentFactory = container.resolve<DocumentFactory>(InjectionToken.DocumentFactory);
 
 		items.push({
 			label: '$(mentor-notebook) Mentor Notebook',

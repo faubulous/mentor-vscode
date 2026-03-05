@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { container, DocumentContextService } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 
 /**
  * Provides hover information for tokens.
  */
 export class HoverProvider implements vscode.HoverProvider {
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {

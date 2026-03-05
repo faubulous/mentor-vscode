@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
-import { injectable, inject, delay } from 'tsyringe';
+import { container } from 'tsyringe';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
-import { container, ConfigurationProvider, WorkspaceStorageService } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
+import { ConfigurationProvider } from './configuration-provider';
+import { WorkspaceStorageService } from './local-storage-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from './credential';
 import { CredentialStorageService } from './credential-storage-service';
@@ -24,7 +26,6 @@ export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 /**
  * Service for managing connections to SPARQL endpoints.
  */
-@injectable()
 export class SparqlConnectionService {
 
 	private _connections: SparqlConnection[] = [];
@@ -42,13 +43,13 @@ export class SparqlConnectionService {
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
 
 	private get store(): Store {
-		return container.resolve<Store>("Store");
+		return container.resolve<Store>(InjectionToken.Store);
 	}
 
 	constructor(
-		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider,
-		@inject(delay(() => WorkspaceStorageService)) private readonly workspaceStorage: WorkspaceStorageService,
-		@inject(CredentialStorageService) private readonly credentialStorage: CredentialStorageService
+		private readonly configurationProvider: ConfigurationProvider,
+		private readonly workspaceStorage: WorkspaceStorageService,
+		private readonly credentialStorage: CredentialStorageService
 	) {}
 
 	/**

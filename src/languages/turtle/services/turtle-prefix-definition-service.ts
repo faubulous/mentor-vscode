@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
 import { IToken, TokenType } from 'chevrotain';
-import { injectable, inject, delay } from 'tsyringe';
 import { Uri } from '@faubulous/mentor-rdf';
 import { TOKENS, isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
-import { ConfigurationProvider } from '@src/container';
+import { ConfigurationProvider } from '@src/services/configuration-provider';
 import { DocumentContextService } from '@src/services/document-context-service';
 import { PrefixLookupService } from '@src/services/prefix-lookup-service';
 import { getIriFromIriReference } from '@src/utilities';
@@ -28,12 +27,11 @@ export interface PrefixDefinition {
 /**
  * A service for declaring prefixes in RDF documents.
  */
-@injectable()
 export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	constructor(
-		@inject(delay(() => ConfigurationProvider)) private readonly configuration: ConfigurationProvider,
-		@inject(delay(() => DocumentContextService)) private readonly contextService: DocumentContextService,
-		@inject(delay(() => PrefixLookupService)) private readonly prefixLookupService: PrefixLookupService
+		private readonly configuration: ConfigurationProvider,
+		private readonly contextService: DocumentContextService,
+		private readonly prefixLookupService: PrefixLookupService
 	) {
 		super();
 	}

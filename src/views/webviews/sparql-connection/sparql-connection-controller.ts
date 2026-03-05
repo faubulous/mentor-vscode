@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { SparqlConnectionService, CredentialStorageService } from '@src/services';
 import { WebviewController } from '../webview-controller';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
@@ -52,7 +53,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                         connection: this.selectedConnection
                     });
                 } else {
-                    const connectionService = container.resolve(SparqlConnectionService);
+                    const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
                     // Note: This always returns at least one connection (the Mentor Store).
                     const connection = connectionService.getConnections()[0];
 
@@ -64,7 +65,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 return true;
             }
             case 'GetSparqlConnectionCredential': {
-                const credentialService = container.resolve(CredentialStorageService);
+                const credentialService = container.resolve<CredentialStorageService>(InjectionToken.CredentialStorageService);
                 const credential = await credentialService.getCredential(message.connectionId);
 
                 this.postMessage({
@@ -75,8 +76,8 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 return true;
             }
             case 'SaveSparqlConnection': {
-                const connectionService = container.resolve(SparqlConnectionService);
-                const credentialService = container.resolve(CredentialStorageService);
+                const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+                const credentialService = container.resolve<CredentialStorageService>(InjectionToken.CredentialStorageService);
 
                 await connectionService.updateEndpoint(message.connection);
                 await connectionService.saveConfiguration();
@@ -90,12 +91,12 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 return true;
             }
             case 'UpdateSparqlConnection': {
-                const connectionService = container.resolve(SparqlConnectionService);
+                const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
                 await connectionService.updateEndpoint(message.connection);
                 return true;
             }
             case 'TestSparqlConnection': {
-                const connectionService = container.resolve(SparqlConnectionService);
+                const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
                 const result = await connectionService.testConnection(message.connection, message.credential);
                 this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
                 return true;

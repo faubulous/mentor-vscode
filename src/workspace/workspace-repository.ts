@@ -1,13 +1,11 @@
 import * as vscode from 'vscode';
-import { inject, injectable, delay } from 'tsyringe';
 import { Utils } from 'vscode-uri';
-import { ConfigurationProvider } from '../container';
+import { ConfigurationProvider } from '../services/configuration-provider';
 import { DocumentFactory } from './document-factory';
 
 /**
  * A repository for retrieving workspace resources such as files and folders.
  */
-@injectable()
 export class WorkspaceRepository {
 	/**
 	 * The included file extensions as glob patterns.
@@ -50,8 +48,8 @@ export class WorkspaceRepository {
 	readonly onDidChangeWorkspaceContents = this._onDidChangeWorkspaceContents.event;
 
 	constructor(
-		@inject(delay(() => DocumentFactory)) documentFactory: DocumentFactory,
-		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider
+		documentFactory: DocumentFactory,
+		private readonly configurationProvider: ConfigurationProvider
 	) {
 		this._includePatterns = Object.keys(documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
 

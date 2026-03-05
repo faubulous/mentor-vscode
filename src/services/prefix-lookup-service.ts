@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { injectable, inject, delay } from 'tsyringe';
-import { ConfigurationProvider, GlobalStorageService } from '@src/container';
+import { ConfigurationProvider } from './configuration-provider';
+import { GlobalStorageService } from './local-storage-service';
 import { DocumentContextService } from '@src/services/document-context-service';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services/prefix-downloader-service';
@@ -9,12 +9,11 @@ import { WorkspaceUri } from '@src/workspace/workspace-uri';
 /**
  * A service for looking up prefixes in the project.
  */
-@injectable()
 export class PrefixLookupService {
 	constructor(
-		@inject(delay(() => GlobalStorageService)) private readonly globalStorage: GlobalStorageService,
-		@inject(delay(() => ConfigurationProvider)) private readonly configuration: ConfigurationProvider,
-		@inject(DocumentContextService) private readonly contextService: DocumentContextService
+		private readonly globalStorage: GlobalStorageService,
+		private readonly configuration: ConfigurationProvider,
+		private readonly contextService: DocumentContextService
 	) {}
 	/**
 	 * Get the a namespace map for the standard W3C prefix definitions used in inference graphs.

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container, Store } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { SparqlConnectionService } from '@src/services';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
 
@@ -19,7 +20,7 @@ export const deleteGraph = {
 			return;
 		}
 
-		const connectionService = container.resolve(SparqlConnectionService);
+		const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
 		const connection = connectionService.getConnectionForDocument(documentIri);
 
 		if (!connection) {
@@ -28,7 +29,7 @@ export const deleteGraph = {
 		}
 
 		if (connection.id === 'workspace') {
-			container.resolve<Store>("Store").deleteGraphs([graphIri.toString(true)]);
+			container.resolve<Store>(InjectionToken.Store).deleteGraphs([graphIri.toString(true)]);
 		} else {
 			const query = getConfiguration().get<string>('sparql.dropGraphQuery');
 

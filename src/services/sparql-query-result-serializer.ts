@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { injectable, inject, delay } from 'tsyringe';
 import { Store, Writer } from 'n3';
 import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
@@ -13,10 +12,9 @@ import { NamespaceMap } from '@src/utilities';
 /**
  * Handler for serializing SPARQL query results.
  */
-@injectable()
 export class SparqlQueryResultSerializer {
 	constructor(
-		@inject(delay(() => PrefixLookupService)) private readonly prefixLookupService: PrefixLookupService
+		private readonly prefixLookupService: PrefixLookupService
 	) {}
 
 	/**

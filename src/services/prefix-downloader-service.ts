@@ -1,5 +1,3 @@
-import { injectable } from 'tsyringe';
-
 export interface PrefixDefinitions {
 	/**
 	 * The date the prefixes were last updated.
@@ -15,7 +13,6 @@ export interface PrefixDefinitions {
 /**
  * A service that downloads prefixes from the web.
  */
-@injectable()
 export class PrefixDownloaderService {
 	/**
 	 * The URL of the endpoint to download prefixes from.

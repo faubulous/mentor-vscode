@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container, DocumentContextService } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { DocumentContext } from '@src/workspace/document-context';
 
 /**
@@ -7,7 +8,7 @@ import { DocumentContext } from '@src/workspace/document-context';
  */
 export class DefinitionProvider {
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	/**

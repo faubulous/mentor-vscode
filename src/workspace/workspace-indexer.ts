@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import { inject, injectable, delay } from 'tsyringe';
-import { ConfigurationProvider } from '@src/container';
+import { ConfigurationProvider } from '@src/services/configuration-provider';
 import { DocumentFactory } from './document-factory';
 import { DocumentContext } from './document-context';
 import { DocumentContextService } from '@src/services/document-context-service';
@@ -15,7 +14,6 @@ export interface DocumentIndex {
 /**
  * Indexes RDF documents in the current workspace.
  */
-@injectable()
 export class WorkspaceIndexer {
 	/**
 	 * Indicates if all workspace files have been indexed.
@@ -31,9 +29,9 @@ export class WorkspaceIndexer {
 	readonly onDidFinishIndexing = this._onDidFinishIndexing.event;
 
 	constructor(
-		@inject(delay(() => DocumentFactory)) private readonly documentFactory: DocumentFactory,
-		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider,
-		@inject(delay(() => DocumentContextService)) private readonly contextService: DocumentContextService
+		private readonly documentFactory: DocumentFactory,
+		private readonly configurationProvider: ConfigurationProvider,
+		private readonly contextService: DocumentContextService
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 	}

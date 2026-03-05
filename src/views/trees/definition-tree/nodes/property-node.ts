@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { XSD, RDF, RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from "@src/container";
+import { InjectionToken } from '@src/injection-token';
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 
@@ -9,7 +10,7 @@ import { DefinitionTreeNode } from "../definition-tree-node";
  */
 export class PropertyNode extends DefinitionTreeNode {
 	protected get vocabulary() {
-		return container.resolve<VocabularyRepository>("VocabularyRepository");
+		return container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
 	}
 
 	/**

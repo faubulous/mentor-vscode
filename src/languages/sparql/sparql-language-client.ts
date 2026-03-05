@@ -1,15 +1,16 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { container, DocumentContextService, DocumentFactory } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { LanguageClientBase, SparqlDocument } from '@src/languages';
 
 export class SparqlLanguageClient extends LanguageClientBase {
 	private get contextService() {
-		return container.resolve(DocumentContextService);
+		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
 	private get documentFactory() {
-		return container.resolve(DocumentFactory);
+		return container.resolve<DocumentFactory>(InjectionToken.DocumentFactory);
 	}
 
 	constructor() {

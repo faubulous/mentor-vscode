@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from '../container';
+import { InjectionToken } from '@src/injection-token';
 import { IToken } from 'chevrotain';
 import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
 import { getTokenPosition } from '@src/utilities';
@@ -12,7 +13,7 @@ export const implementPrefixForIri = {
 
 		if (document) {
 			const editor = vscode.window.activeTextEditor;
-			const service = container.resolve(TurtlePrefixDefinitionService);
+			const service = container.resolve<TurtlePrefixDefinitionService>(InjectionToken.TurtlePrefixDefinitionService);
 			const edit = await service.implementPrefixForIri(document, namespaceIri);
 
 			if (editor && edit.size > 0) {

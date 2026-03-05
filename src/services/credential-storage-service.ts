@@ -1,16 +1,14 @@
 import * as vscode from 'vscode';
-import { injectable } from 'tsyringe';
 import { container } from 'tsyringe';
 import { AuthCredential } from './credential';
-import { SECRET_STORAGE_TOKEN } from '../container';
+import { InjectionToken } from '../injection-token';
 
 /**
  * Service for managing credentials using the SecretStorage of Visual Studio Code.
  */
-@injectable()
 export class CredentialStorageService {
     private get secretStorage(): vscode.SecretStorage {
-        return container.resolve<vscode.SecretStorage>(SECRET_STORAGE_TOKEN);
+        return container.resolve<vscode.SecretStorage>(InjectionToken.SecretStorage);
     }
 
     private _getKey(uri: string): string {

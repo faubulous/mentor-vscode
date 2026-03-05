@@ -1,4 +1,7 @@
+import * as vscode from "vscode";
 import { Memento } from "vscode";
+import { container } from "tsyringe";
+import { InjectionToken } from "@src/injection-token";
 
 /**
  * A service for storing and retrieving data from the local storage.
@@ -23,5 +26,23 @@ export abstract class LocalStorageService {
 	 */
 	async setValue<T>(key: string, value: T): Promise<void> {
 		await this.storage.update(key, value);
+	}
+}
+
+/**
+ * Injectable wrapper for workspace-scoped storage.
+ */
+export class WorkspaceStorageService extends LocalStorageService {
+	protected get storage() {
+		return container.resolve<vscode.ExtensionContext>(InjectionToken.ExtensionContext).workspaceState;
+	}
+}
+
+/**
+ * Injectable wrapper for global storage.
+ */
+export class GlobalStorageService extends LocalStorageService {
+	protected get storage() {
+		return container.resolve<vscode.ExtensionContext>(InjectionToken.ExtensionContext).globalState;
 	}
 }

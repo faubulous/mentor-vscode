@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { SparqlQueryService } from '@src/services';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { MENTOR_WORKSPACE_STORE } from '@src/services/sparql-connection-service';
@@ -10,7 +11,7 @@ export const openGraph = {
 	id: 'mentor.command.openGraph',
 	handler: async (graphIri: vscode.Uri | string, connection?: SparqlConnection) => {
 		const targetConnection = connection ?? MENTOR_WORKSPACE_STORE;
-		const queryService = container.resolve(SparqlQueryService);
+		const queryService = container.resolve<SparqlQueryService>(InjectionToken.SparqlQueryService);
 
 		try {
 			// Check if the graph contains more than the threshold number of triples.

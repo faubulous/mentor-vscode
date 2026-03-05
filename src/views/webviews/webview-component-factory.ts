@@ -84,6 +84,7 @@ export class WebviewComponentFactory {
 				<head>
 					<meta charset="UTF-8">
 					<meta name="viewport" content="width=device-width, initial-scale=1.0">
+					<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} data:;">
 					<link href="${codeiconUrl}" rel="stylesheet" id="vscode-codicon-stylesheet">
 					<link href="${mentorIconsUrl}" rel="stylesheet" id="mentor-icons-stylesheet">
 					<script src="${elementsUrl}" type="module"></script>

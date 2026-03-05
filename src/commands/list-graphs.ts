@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { SparqlConnectionService } from '@src/services';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
@@ -22,7 +23,7 @@ export const listGraphs = {
       language: 'sparql'
     });
 
-    const connectionService = container.resolve(SparqlConnectionService);
+    const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
 
     // Set the connection for this document
     await connectionService.setQuerySourceForDocument(document.uri, connection.id);

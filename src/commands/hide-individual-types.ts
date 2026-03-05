@@ -1,9 +1,10 @@
 import { container } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { Settings } from '@src/settings';
 
 export const hideIndividualTypes = {
 	id: 'mentor.command.hideIndividualTypes',
 	handler: () => {
-		container.resolve(Settings).set('view.showIndividualTypes', false);
+		container.resolve<Settings>(InjectionToken.Settings).set('view.showIndividualTypes', false);
 	}
 };

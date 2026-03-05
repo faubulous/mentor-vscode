@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { container, WorkspaceRepository, DocumentFactory } from '@src/container';
+import { InjectionToken } from '@src/injection-token';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { getFileName, getPath } from '@src/utilities';
 
@@ -13,8 +14,8 @@ export const openFileFromLanguage = {
 	id: 'mentor.command.openFileFromLanguage',
 	handler: async (languageId: string) => {
 		const files: vscode.Uri[] = [];
-		const workspace = container.resolve(WorkspaceRepository);
-		const documentFactory = container.resolve(DocumentFactory);
+		const workspace = container.resolve<WorkspaceRepository>(InjectionToken.WorkspaceRepository);
+		const documentFactory = container.resolve<DocumentFactory>(InjectionToken.DocumentFactory);
 
 		for await (const file of workspace.getFilesByLanguageId(languageId)) {
 			files.push(file);

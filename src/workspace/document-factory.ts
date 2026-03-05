@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { injectable } from 'tsyringe';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContext } from './document-context';
 import { TurtleDocument, SparqlDocument, XmlDocument } from '../languages';
@@ -58,7 +57,6 @@ export interface FileExtensionInfo {
 /**
  * A factory for creating RDF document contexts.
  */
-@injectable()
 export class DocumentFactory {
 	/**
 	 * The supported languages.
