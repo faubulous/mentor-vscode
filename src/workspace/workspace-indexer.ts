@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { inject, injectable, delay } from 'tsyringe';
-import { ConfigurationProvider } from '../container';
+import { ConfigurationProvider } from '@src/container';
 import { DocumentFactory } from './document-factory';
 import { DocumentContext } from './document-context';
-import { DocumentContextManager } from './document-context-manager';
+import { DocumentContextService } from '@src/services/document-context-service';
 
 /**
  * Maps document URIs to RDF document contexts.
@@ -33,7 +33,7 @@ export class WorkspaceIndexer {
 	constructor(
 		@inject(delay(() => DocumentFactory)) private readonly documentFactory: DocumentFactory,
 		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider,
-		@inject(delay(() => DocumentContextManager)) private readonly contextManager: DocumentContextManager
+		@inject(delay(() => DocumentContextService)) private readonly contextService: DocumentContextService
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 	}
@@ -73,7 +73,7 @@ export class WorkspaceIndexer {
 					const uri = uris[i];
 					const u = uri.toString();
 
-					if (this.contextManager.contexts[u] && !force) {
+					if (this.contextService.contexts[u] && !force) {
 						continue;
 					}
 
@@ -120,7 +120,7 @@ export class WorkspaceIndexer {
 			const document = await vscode.workspace.openTextDocument(uri);
 
 			// Try to load the document so that its graph is created and can be used for showing definitions, descriptions etc..
-			await this.contextManager.loadDocument(document);
+			await this.contextService.loadDocument(document);
 		} catch (error) {
 			// VS Code may refuse to open files it considers binary (e.g., files containing
 			// ASCII control characters like W3C test files). Skip these gracefully.
@@ -143,13 +143,13 @@ export class WorkspaceIndexer {
 
 			const cellUri = cell.document.uri.toString();
 
-			if (this.contextManager.contexts[cellUri] && !force) {
+			if (this.contextService.contexts[cellUri] && !force) {
 				continue;
 			}
 
 			try {
 				// Load the cell document to create its context
-				await this.contextManager.loadDocument(cell.document);
+				await this.contextService.loadDocument(cell.document);
 			} catch (error) {
 				console.error(`Mentor: Failed to index notebook cell ${cellUri}:`, error);
 			}

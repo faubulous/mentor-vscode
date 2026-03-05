@@ -11,7 +11,7 @@ import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@fa
 import { Quad_Graph } from '@rdfjs/types';
 import { InferenceUri } from './workspace/inference-uri';
 import { DocumentFactory } from './workspace/document-factory';
-import { DocumentContextManager } from './workspace/document-context-manager';
+import { DocumentContextService } from './services/document-context-service';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { Settings } from './settings';
@@ -19,20 +19,16 @@ import { LocalStorageService, CredentialStorageService, SparqlConnectionService,
 import { TurtlePrefixDefinitionService } from './languages/turtle/services/turtle-prefix-definition-service';
 
 /**
- * Injectable wrapper for VS Code ExtensionContext.
+ * String token for injecting VS Code ExtensionContext.
+ * Use with @inject("ExtensionContext").
  */
-@injectable()
-export class ExtensionContextToken {
-	constructor(public readonly value: vscode.ExtensionContext) {}
-}
+export const EXTENSION_CONTEXT_TOKEN = "ExtensionContext";
 
 /**
- * Injectable wrapper for VS Code SecretStorage.
+ * String token for injecting VS Code SecretStorage.
+ * Use with @inject("SecretStorage").
  */
-@injectable()
-export class SecretStorageToken {
-	constructor(public readonly value: vscode.SecretStorage) {}
-}
+export const SECRET_STORAGE_TOKEN = "SecretStorage";
 
 /**
  * Injectable wrapper providing configuration getter.
@@ -85,13 +81,21 @@ export class ConfigurationProvider {
  * Injectable wrapper for workspace-scoped storage.
  */
 @injectable()
-export class WorkspaceStorageService extends LocalStorageService {}
+export class WorkspaceStorageService extends LocalStorageService {
+	protected get storage() {
+		return container.resolve<vscode.ExtensionContext>(EXTENSION_CONTEXT_TOKEN).workspaceState;
+	}
+}
 
 /**
  * Injectable wrapper for global storage.
  */
 @injectable()
-export class GlobalStorageService extends LocalStorageService {}
+export class GlobalStorageService extends LocalStorageService {
+	protected get storage() {
+		return container.resolve<vscode.ExtensionContext>(EXTENSION_CONTEXT_TOKEN).globalState;
+	}
+}
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
@@ -107,7 +111,11 @@ export class MentorGraphUriGenerator implements GraphUriGenerator {
  * Registers all services in the DI container.
  * Call this once at extension activation.
  */
-export function configureContainer(): DependencyContainer {
+export function configureDependencyContainer(context: vscode.ExtensionContext): DependencyContainer {
+	// Register the ExtensionContext and SecretStorage directly
+	container.registerInstance(EXTENSION_CONTEXT_TOKEN, context);
+	container.registerInstance(SECRET_STORAGE_TOKEN, context.secrets);
+
 	// Register ConfigurationProvider singleton
 	container.registerSingleton(ConfigurationProvider);
 
@@ -123,13 +131,13 @@ export function configureContainer(): DependencyContainer {
 
 	container.registerSingleton(DocumentFactory);
 
-	// Create DocumentContextManager instance manually to avoid circular dependency with ConfigurationProvider
-	const documentContextManager = new DocumentContextManager(
+	// Create DocumentContextService instance manually to avoid circular dependency with ConfigurationProvider
+	const documentContextService = new DocumentContextService(
 		vocabulary,
 		container.resolve(DocumentFactory),
 		container.resolve(ConfigurationProvider)
 	);
-	container.registerInstance(DocumentContextManager, documentContextManager);
+	container.registerInstance(DocumentContextService, documentContextService);
 
 	// Register WorkspaceRepository and WorkspaceIndexer
 	container.registerSingleton(WorkspaceRepository);
@@ -162,29 +170,6 @@ export function configureContainer(): DependencyContainer {
 }
 
 /**
- * Registers runtime dependencies.
- * Call this at extension activation with the ExtensionContext.
- */
-export function registerDependencies(context: vscode.ExtensionContext): void {
-	container.register(ExtensionContextToken, { useValue: new ExtensionContextToken(context) });
-	container.register(SecretStorageToken, { useValue: new SecretStorageToken(context.secrets) });
-
-	const workspaceStorage = new WorkspaceStorageService();
-
-	workspaceStorage.initialize(context.workspaceState);
-	container.registerInstance(WorkspaceStorageService, workspaceStorage);
-
-	const globalStorage = new GlobalStorageService();
-
-	globalStorage.initialize(context.globalState);
-	container.registerInstance(GlobalStorageService, globalStorage);
-
-	const credentialStorage = container.resolve(CredentialStorageService);
-
-	credentialStorage.initialize(context.secrets);
-}
-
-/**
  * Export the container for direct access when needed.
  */
 export { container };
@@ -195,9 +180,9 @@ export { container };
 export { VocabularyRepository, Store, OwlReasoner };
 
 /**
- * Re-export DocumentContextManager for convenient access.
+ * Re-export DocumentContextService for convenient access.
  */
-export { DocumentContextManager };
+export { DocumentContextService };
 
 /**
  * Re-export DocumentFactory for convenient access.

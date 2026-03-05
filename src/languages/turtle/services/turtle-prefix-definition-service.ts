@@ -4,7 +4,7 @@ import { injectable, inject, delay } from 'tsyringe';
 import { Uri } from '@faubulous/mentor-rdf';
 import { TOKENS, isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
 import { ConfigurationProvider } from '@src/container';
-import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { DocumentContextService } from '@src/services/document-context-service';
 import { PrefixLookupService } from '@src/services/prefix-lookup-service';
 import { getIriFromIriReference } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
@@ -32,7 +32,7 @@ export interface PrefixDefinition {
 export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	constructor(
 		@inject(delay(() => ConfigurationProvider)) private readonly configuration: ConfigurationProvider,
-		@inject(delay(() => DocumentContextManager)) private readonly contextManager: DocumentContextManager,
+		@inject(delay(() => DocumentContextService)) private readonly contextService: DocumentContextService,
 		@inject(delay(() => PrefixLookupService)) private readonly prefixLookupService: PrefixLookupService
 	) {
 		super();
@@ -59,7 +59,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param document The RDF document.
 	 */
 	public async sortPrefixes(document: vscode.TextDocument): Promise<vscode.WorkspaceEdit> {
-		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
+		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) return new vscode.WorkspaceEdit();
 
@@ -104,7 +104,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param prefixes The prefixes to delete.
 	 */
 	public async deletePrefixes(document: vscode.TextDocument, prefixes: string[]): Promise<vscode.WorkspaceEdit> {
-		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
+		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) return new vscode.WorkspaceEdit();
 
@@ -167,7 +167,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	public async implementPrefixes(document: vscode.TextDocument, prefixes: PrefixDefinition[]): Promise<vscode.WorkspaceEdit> {
 		const edit = new vscode.WorkspaceEdit();
 
-		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
+		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (context) {
 			await this._implementPrefixes(edit, document, context, prefixes);
@@ -361,7 +361,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param iri The namespace IRI for which to implement a prefix.
 	 */
 	async implementPrefixForIri(document: vscode.TextDocument, iri: string): Promise<vscode.WorkspaceEdit> {
-		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
+		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) return new vscode.WorkspaceEdit();
 

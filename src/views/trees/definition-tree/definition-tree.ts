@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextManager } from '@src/container';
+import { container, DocumentContextService } from '@src/container';
 import { Settings } from '@src/settings';
 import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
@@ -15,8 +15,8 @@ export class DefinitionTree implements TreeView {
 	 */
 	readonly id = "mentor.view.definitionTree";
 
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	private get settings() {
@@ -42,7 +42,7 @@ export class DefinitionTree implements TreeView {
 		this.updateView();
 		this.updateViewTitle();
 
-		this.contextManager.onDidChangeDocumentContext(() => {
+		this.contextService.onDidChangeDocumentContext(() => {
 			this.updateView();
 			this.updateViewTitle();
 		});
@@ -51,7 +51,7 @@ export class DefinitionTree implements TreeView {
 			this.updateView();
 			this.updateViewTitle();
 
-			this.treeDataProvider.refresh(this.contextManager.activeContext);
+			this.treeDataProvider.refresh(this.contextService.activeContext);
 		});
 
 		const showReferences = this.settings.get('view.showReferences', true);
@@ -73,7 +73,7 @@ export class DefinitionTree implements TreeView {
 	 * Shows a message in the tree view if no file is selected.
 	 */
 	private updateView() {
-		if (!this.contextManager.activeContext) {
+		if (!this.contextService.activeContext) {
 			this.treeView.message = "No file selected.";
 		} else {
 			this.treeView.message = undefined;
@@ -84,9 +84,9 @@ export class DefinitionTree implements TreeView {
 	 * Update the title of the tree view to include the active language.
 	 */
 	private updateViewTitle() {
-		if (this.contextManager.activeContext) {
+		if (this.contextService.activeContext) {
 			const title = this.treeView.title?.split(' - ')[0];
-			const language = this.contextManager.activeContext.activeLanguageTag;
+			const language = this.contextService.activeContext.activeLanguageTag;
 
 			if (language) {
 				this.treeView.title = `${title} - ${language}`;

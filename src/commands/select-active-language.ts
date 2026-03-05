@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container, VocabularyRepository } from '@src/container';
-import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { DocumentContextService } from '@src/services/document-context-service';
 import { Settings } from '@src/settings';
 
 interface LanguageQuckPickItem extends vscode.QuickPickItem {
@@ -19,8 +19,8 @@ export const selectActiveLanguage = {
 			return;
 		}
 
-		const contextManager = container.resolve(DocumentContextManager);
-		const context = contextManager.contexts[document.uri.toString()];
+		const contextService = container.resolve(DocumentContextService);
+		const context = contextService.contexts[document.uri.toString()];
 
 		if (!context) {
 			return;

@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
 import { TOKENS } from "@faubulous/mentor-rdf-parsers";
 import { container } from "@src/container";
-import { DocumentContextManager } from "@src/workspace/document-context-manager";
+import { DocumentContextService } from "@src/services/document-context-service";
 import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -47,8 +47,8 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	 */
 	readonly maxCompletionItems = 10;
 
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	private get vocabulary() {
@@ -60,7 +60,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	}
 
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
-		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
+		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
@@ -130,14 +130,14 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 			if (graphs) {
 				for (const g of graphs) {
-					const c = this.contextManager.getDocumentContextFromUri(g);
+					const c = this.contextService.getDocumentContextFromUri(g);
 
 					if (c) {
 						contexts.push(c);
 					}
 				}
 			} else {
-				contexts.push(...Object.values(this.contextManager.contexts));
+				contexts.push(...Object.values(this.contextService.contexts));
 			}
 
 			for (const c of contexts) {

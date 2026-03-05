@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextManager } from '@src/container';
+import { container, DocumentContextService } from '@src/container';
 import { DocumentContext } from '@src/workspace/document-context';
 
 /**
  * A provider that retrieves the locations of resource definitions in a document.
  */
 export class DefinitionProvider {
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	/**
@@ -17,7 +17,7 @@ export class DefinitionProvider {
 	 * @returns The definition of the resource at the specified position.
 	 */
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
-		const context = this.contextManager.contexts[document.uri.toString()];
+		const context = this.contextService.contexts[document.uri.toString()];
 
 		if (!context) {
 			return null;
@@ -78,7 +78,7 @@ export class DefinitionProvider {
 
 	private _getContextsDefiningIri(iri: string, primaryContext?: DocumentContext): DocumentContext[] {
 		const result: DocumentContext[] = [];
-		const contexts = Object.values(this.contextManager.contexts);
+		const contexts = Object.values(this.contextService.contexts);
 
 		for (const c of contexts.filter(c => c.typeDefinitions[iri])) {
 			if (primaryContext && c == primaryContext) {

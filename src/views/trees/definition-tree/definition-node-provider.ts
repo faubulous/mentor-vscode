@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri, _SH } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, DocumentContextManager, WorkspaceIndexer } from '@src/container';
+import { container, VocabularyRepository, DocumentContextService, WorkspaceIndexer } from '@src/container';
 import { Settings } from '@src/settings';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
@@ -37,8 +37,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return container.resolve(Settings);
 	}
 
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	private get workspaceIndexer() {
@@ -46,7 +46,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	constructor() {
-		this.contextManager.onDidChangeDocumentContext((context) => {
+		this.contextService.onDidChangeDocumentContext((context) => {
 			// Update the tree when the active document changed.
 			this.refresh(context);
 		});

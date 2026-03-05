@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextManager } from '@src/container';
+import { container, DocumentContextService } from '@src/container';
 
 /**
  * Provides hover information for tokens.
  */
 export class HoverProvider implements vscode.HoverProvider {
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
-		const context = this.contextManager.contexts[document.uri.toString()];
+		const context = this.contextService.contexts[document.uri.toString()];
 
 		if (!context) {
 			return null;

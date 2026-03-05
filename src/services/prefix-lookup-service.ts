@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { injectable, inject, delay } from 'tsyringe';
 import { ConfigurationProvider, GlobalStorageService } from '@src/container';
-import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { DocumentContextService } from '@src/services/document-context-service';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services/prefix-downloader-service';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
@@ -14,7 +14,7 @@ export class PrefixLookupService {
 	constructor(
 		@inject(delay(() => GlobalStorageService)) private readonly globalStorage: GlobalStorageService,
 		@inject(delay(() => ConfigurationProvider)) private readonly configuration: ConfigurationProvider,
-		@inject(DocumentContextManager) private readonly contextManager: DocumentContextManager
+		@inject(DocumentContextService) private readonly contextService: DocumentContextService
 	) {}
 	/**
 	 * Get the a namespace map for the standard W3C prefix definitions used in inference graphs.
@@ -47,7 +47,7 @@ export class PrefixLookupService {
 	 */
 	getPrefixForIri(documentUri: string, namespaceIri: string, defaultValue: string) {
 		// 1. Try to find the prefix in the document.
-		const documentContext = this.contextManager.contexts[documentUri];
+		const documentContext = this.contextService.contexts[documentUri];
 
 		if (documentContext) {
 			for (const [prefix, iri] of Object.entries(documentContext.namespaces)) {
@@ -69,7 +69,7 @@ export class PrefixLookupService {
 		}
 
 		// 3. Try to find the prefix in any of the other documents in the workspace.
-		for (const context of Object.values(this.contextManager.contexts)) {
+		for (const context of Object.values(this.contextService.contexts)) {
 			for (const [prefix, iri] of Object.entries(context.namespaces)) {
 				if (iri === namespaceIri) {
 					return prefix;
@@ -138,7 +138,7 @@ export class PrefixLookupService {
 		// Count the number of times each URI is used for the given prefix.
 		const uriCounts: { [uri: string]: number } = {};
 
-		for (let document of Object.values(this.contextManager.contexts)) {
+		for (let document of Object.values(this.contextService.contexts)) {
 			if (document.namespaces[prefix]) {
 				const uri = document.namespaces[prefix];
 

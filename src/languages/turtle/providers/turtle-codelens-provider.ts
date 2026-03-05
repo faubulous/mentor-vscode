@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextManager, WorkspaceIndexer } from '@src/container';
+import { container, DocumentContextService, WorkspaceIndexer } from '@src/container';
 import { ReferenceProvider } from '@src/providers';
 
 /**
@@ -27,8 +27,8 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	private get workspaceIndexer() {
@@ -62,7 +62,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 			}
 		});
 
-		this.contextManager.onDidChangeDocumentContext(() => {
+		this.contextService.onDidChangeDocumentContext(() => {
 			if (this._enabled) {
 				this._onDidChangeCodeLenses.fire();
 			}
@@ -86,7 +86,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 				return [];
 			}
 
-			const context = this.contextManager.contexts[document.uri.toString()];
+			const context = this.contextService.contexts[document.uri.toString()];
 
 			if (!context) {
 				return [];

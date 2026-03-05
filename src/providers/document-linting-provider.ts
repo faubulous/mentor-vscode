@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { container, VocabularyRepository, ConfigurationProvider } from '@src/container';
-import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { DocumentContextService } from '@src/services/document-context-service';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { WorkspaceIndexer } from '@src/workspace/workspace-indexer';
 import { DocumentContext } from '@src/workspace/document-context';
@@ -48,8 +48,8 @@ export class DocumentLintingProvider implements vscode.Disposable {
 		return container.resolve(WorkspaceIndexer);
 	}
 
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	constructor() {
@@ -277,7 +277,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 			return;
 		}
 
-		const context = this.contextManager.getDocumentContextFromUri(document.uri.toString());
+		const context = this.contextService.getDocumentContextFromUri(document.uri.toString());
 
 		if (!context) {
 			return;

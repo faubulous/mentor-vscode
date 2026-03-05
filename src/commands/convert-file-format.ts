@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container, VocabularyRepository } from '@src/container';
-import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { DocumentContextService } from '@src/services/document-context-service';
 import { DocumentFactory, LanguageInfo } from '@src/workspace/document-factory';
 
 export const convertFileFormat = {
@@ -22,8 +22,8 @@ export const convertFileFormat = {
 		}
 
 		const documentIri = document.uri.toString();
-		const contextManager = container.resolve(DocumentContextManager);
-		const context = contextManager.contexts[documentIri];
+		const contextService = container.resolve(DocumentContextService);
+		const context = contextService.contexts[documentIri];
 
 		if (!context) {
 			vscode.window.showErrorMessage('The document graph could not be retrieved.');

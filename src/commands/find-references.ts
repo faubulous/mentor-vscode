@@ -1,17 +1,17 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextManager } from '@src/container';
+import { container, DocumentContextService } from '@src/container';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 export const findReferences = {
 	id: 'mentor.command.findReferences',
 	handler: async (arg: DefinitionTreeNode | string) => {
-		const contextManager = container.resolve(DocumentContextManager);
+		const contextService = container.resolve(DocumentContextService);
 
-		contextManager.activateDocument().then((editor) => {
-			if (contextManager.activeContext && editor) {
+		contextService.activateDocument().then((editor) => {
+			if (contextService.activeContext && editor) {
 				const iri = getIriFromArgument(arg);
-				const location = new DefinitionProvider().provideDefinitionForIri(contextManager.activeContext, iri);
+				const location = new DefinitionProvider().provideDefinitionForIri(contextService.activeContext, iri);
 
 				if (location instanceof vscode.Location) {
 					// We need to set the selection before executing the findReferences command.

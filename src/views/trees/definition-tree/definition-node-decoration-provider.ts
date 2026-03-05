@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, DocumentContextManager } from '@src/container';
+import { container, VocabularyRepository, DocumentContextService } from '@src/container';
 import { Settings } from '@src/settings';
 
 /**
@@ -46,8 +46,8 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		return container.resolve(Settings);
 	}
 
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	constructor() {
@@ -62,7 +62,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			}
 		});
 
-		this.contextManager.onDidChangeDocumentContext((context) => {
+		this.contextService.onDidChangeDocumentContext((context) => {
 			if (context) {
 				// When the context changes, the label predicates need to be updated.
 				this._labelPredicates = new Set(context?.predicates.label ?? []);
@@ -94,7 +94,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
-		const context = this.contextManager.activeContext;
+		const context = this.contextService.activeContext;
 
 		if (!context || !uri || uri.scheme === 'mentor' || uri.scheme === 'file') {
 			return undefined;

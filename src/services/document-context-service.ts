@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { injectable, inject } from 'tsyringe';
 import { IToken } from 'chevrotain';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
-import { DocumentContext } from './document-context';
-import { DocumentFactory } from './document-factory';
-import { WorkspaceUri } from './workspace-uri';
+import { DocumentContext } from '../workspace/document-context';
+import { DocumentFactory } from '../workspace/document-factory';
+import { WorkspaceUri } from '../workspace/workspace-uri';
 import { ConfigurationProvider } from '../container';
 
 /**
@@ -19,7 +19,7 @@ export interface DocumentIndex {
  * This is the central service for loading, tracking, and retrieving RDF document contexts.
  */
 @injectable()
-export class DocumentContextManager {
+export class DocumentContextService {
 	/**
 	 * Maps document URIs to loaded document contexts.
 	 */
@@ -86,7 +86,7 @@ export class DocumentContextManager {
 
 		// Reject any pending token requests
 		for (const [, pending] of this._pendingTokenRequests) {
-			pending.reject(new Error('DocumentContextManager disposed'));
+			pending.reject(new Error('DocumentContextService disposed'));
 		}
 
 		this._pendingTokenRequests.clear();

@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextManager } from '@src/container';
+import { container, DocumentContextService } from '@src/container';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
-const contextManager = () => container.resolve(DocumentContextManager);
+const contextService = () => container.resolve(DocumentContextService);
 
 export const revealDefinition = {
 	id: 'mentor.command.revealDefinition',
 	handler: async (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
-		const ctx = contextManager();
+		const ctx = contextService();
 		ctx.activateDocument().then((editor) => {
 			const uri = getIriFromArgument(arg);
 

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
-import { container, DocumentContextManager } from '@src/container';
+import { container, DocumentContextService } from '@src/container';
 import { PrefixLookupService } from '@src/services';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -8,8 +8,8 @@ import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-prov
 export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implements vscode.InlineCompletionItemProvider {
 	protected readonly prefixTokenTypes = new Set([TOKENS.PREFIX.name, TOKENS.TTL_PREFIX.name]);
 
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	constructor(readonly onComplete: (uri: string) => string) {
@@ -17,7 +17,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 	}
 
 	provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, completion: vscode.InlineCompletionContext): vscode.ProviderResult<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
-		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
+		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;

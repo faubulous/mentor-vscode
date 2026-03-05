@@ -8,10 +8,10 @@ import * as commands from './commands';
 import * as trees from './views/trees';
 import * as webviews from './views/webviews';
 import * as providers from './providers';
-import { registerDependencies, configureContainer } from './container';
+import { configureDependencyContainer } from './container';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
-import { DocumentContextManager } from './workspace/document-context-manager';
+import { DocumentContextService } from './services/document-context-service';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { SparqlConnectionService, SparqlQueryService } from './services';
@@ -21,8 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
 
 	// Setup Dependency Injection container.
-	configureContainer();
-	registerDependencies(context);
+	configureDependencyContainer(context);
 
 	// Initialize services.
 	const settings = container.resolve(Settings);
@@ -32,9 +31,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	container.resolve(SparqlQueryService).initialize();
 
 	// Register event handlers for editor and document changes.
-	const contextManager = container.resolve(DocumentContextManager);
+	const contextService = container.resolve(DocumentContextService);
 
-	subscribe(context, contextManager.registerEventHandlers());
+	subscribe(context, contextService.registerEventHandlers());
 	
 	// Register application features.
 	registerProviders(context);
@@ -45,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerNotebookSerializers(context);
 
 	// Activate the current document if one is open.
-	contextManager.activateDocument();
+	contextService.activateDocument();
 
 	// Load the W3C and other common ontologies for providing hovers, completions and definitions.
 	await container.resolve<Store>("Store").loadFrameworkOntologies();
@@ -61,7 +60,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 export async function deactivate(context: vscode.ExtensionContext) {
 	container.resolve(SparqlQueryService).dispose();
-	container.resolve(DocumentContextManager).dispose();
+	container.resolve(DocumentContextService).dispose();
 }
 
 function subscribe(context: vscode.ExtensionContext, disposable: vscode.Disposable | vscode.Disposable[]) {

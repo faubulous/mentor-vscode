@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri } from "@faubulous/mentor-rdf";
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
-import { container, DocumentContextManager } from '@src/container';
+import { container, DocumentContextService } from '@src/container';
 import { getIriFromIriReference, getNamespaceDefinition } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -10,8 +10,8 @@ import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-prov
  * A provider for RDF document code actions.
  */
 export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements vscode.CodeActionProvider {
-	private get contextManager() {
-		return container.resolve(DocumentContextManager);
+	private get contextService() {
+		return container.resolve(DocumentContextService);
 	}
 
 	/**
@@ -37,7 +37,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 	 * @returns An array of code actions.
 	 */
 	private _provideRefactoringActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
-		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
+		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return [];

@@ -1,4 +1,5 @@
 export * from './credential-storage-service';
+export * from './document-context-service';
 export * from './local-storage-service';
 export * from './prefix-downloader-service';
 export * from './prefix-lookup-service';
