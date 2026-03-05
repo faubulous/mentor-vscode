@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { injectable, inject } from 'tsyringe';
 import { IToken } from 'chevrotain';
-import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from './document-context';
 import { DocumentFactory } from './document-factory';
 import { WorkspaceUri } from './workspace-uri';
@@ -63,7 +63,20 @@ export class DocumentContextManager {
 		@inject("VocabularyRepository") private readonly vocabulary: VocabularyRepository,
 		@inject(DocumentFactory) private readonly documentFactory: DocumentFactory,
 		@inject(ConfigurationProvider) private readonly configurationProvider: ConfigurationProvider
-	) {}
+	) { }
+
+	/**
+	 * Register the event handlers for editor and document changes.
+	 * @param context The extension context for managing subscriptions.
+	 */
+	registerEventHandlers(): vscode.Disposable[] {
+		return [
+			vscode.window.onDidChangeActiveTextEditor(() => this.handleActiveEditorChanged()),
+			vscode.window.onDidChangeActiveNotebookEditor((e) => this.handleActiveNotebookEditorChanged(e)),
+			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
+			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e))
+		];
+	}
 
 	/**
 	 * Dispose the manager and clean up resources.

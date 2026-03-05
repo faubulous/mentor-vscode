@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { injectable } from 'tsyringe';
-import { MENTOR_EXTENSION_ID } from '../mentor';
 import { Utils } from 'vscode-uri';
+import { injectable } from 'tsyringe';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContext } from './document-context';
 import { TurtleDocument, SparqlDocument, XmlDocument } from '../languages';
@@ -291,7 +290,7 @@ export class DocumentFactory {
 	 */
 	private async _getPackageJson(): Promise<any> {
 		try {
-			const extensionPath = vscode.extensions.getExtension(MENTOR_EXTENSION_ID)?.extensionPath;
+			const extensionPath = vscode.extensions.getExtension('faubulous.mentor')?.extensionPath;
 
 			if (!extensionPath) {
 				throw new Error('Extension path not found');

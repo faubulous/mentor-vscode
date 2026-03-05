@@ -1,20 +1,40 @@
 'use strict';
 import "reflect-metadata";
 import * as vscode from 'vscode';
+import { Store } from '@faubulous/mentor-rdf';
+import { container } from 'tsyringe';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
 import * as webviews from './views/webviews';
 import * as providers from './providers';
-import { mentor } from './mentor';
 import { registerDependencies, configureContainer } from './container';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
+import { DocumentContextManager } from './workspace/document-context-manager';
+import { WorkspaceRepository } from './workspace/workspace-repository';
+import { WorkspaceIndexer } from './workspace/workspace-indexer';
+import { SparqlConnectionService, SparqlQueryService } from './services';
+import { Settings } from './settings';
 
 export async function activate(context: vscode.ExtensionContext) {
+	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
+
 	// Setup Dependency Injection container.
 	configureContainer();
 	registerDependencies(context);
+
+	// Initialize services.
+	const settings = container.resolve(Settings);
+	settings.initialize(vscode.workspace.getConfiguration('mentor'));
+
+	container.resolve(SparqlConnectionService).initialize();
+	container.resolve(SparqlQueryService).initialize();
+
+	// Register event handlers for editor and document changes.
+	const contextManager = container.resolve(DocumentContextManager);
+
+	subscribe(context, contextManager.registerEventHandlers());
 	
 	// Register application features.
 	registerProviders(context);
@@ -24,12 +44,24 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerViews(context);
 	registerNotebookSerializers(context);
 
-	// Start the initialization of the extension.
-	mentor.initialize(context);
+	// Activate the current document if one is open.
+	contextManager.activateDocument();
+
+	// Load the W3C and other common ontologies for providing hovers, completions and definitions.
+	await container.resolve<Store>("Store").loadFrameworkOntologies();
+
+	// Load the workspace files and folders for the explorer tree view.
+	await container.resolve(WorkspaceRepository).initialize();
+
+	// Index the entire workspace for providing hovers, completions and definitions.
+	await container.resolve(WorkspaceIndexer).indexWorkspace();
+
+	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 }
 
 export async function deactivate(context: vscode.ExtensionContext) {
-	mentor.dispose();
+	container.resolve(SparqlQueryService).dispose();
+	container.resolve(DocumentContextManager).dispose();
 }
 
 function subscribe(context: vscode.ExtensionContext, disposable: vscode.Disposable | vscode.Disposable[]) {
