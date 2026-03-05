@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-
 import { analyzeWorkspace } from './analyze-workspace';
 import { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
 import { clearQueryHistory } from './clear-query-history';
@@ -32,8 +31,8 @@ import { manageSparqlConnections } from './manage-sparql-connections';
 import { openDocument } from './open-document';
 import { openFileFromLanguage } from './open-file-from-language';
 import { openGraph } from './open-graph';
-import { openMentorHomepage } from './open-mentor-homepage';
 import { openInBrowser } from './open-in-browser';
+import { openMentorHomepage } from './open-mentor-homepage';
 import { openSettings } from './open-settings';
 import { removeFromQueryHistory } from './remove-from-query-history';
 import { revealDefinition } from './reveal-definition';

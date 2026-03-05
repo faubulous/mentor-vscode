@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Setup Dependency Injection container.
 	configureServiceContainer(context);
-	
+
 	// Register application features.
 	registerProviders(context);
 	registerUriHandlers(context);
@@ -31,13 +31,16 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerNotebookSerializers(context);
 
 	// Load the W3C and other common ontologies for providing hovers, completions and definitions.
-	await container.resolve<Store>(ServiceToken.Store).loadFrameworkOntologies();
+	const store = container.resolve<Store>(ServiceToken.Store);
+	await store.loadFrameworkOntologies();
 
 	// Load the workspace files and folders for the explorer tree view.
-	await container.resolve<WorkspaceRepository>(ServiceToken.WorkspaceRepository).initialize();
+	const workspaceRepository = container.resolve<WorkspaceRepository>(ServiceToken.WorkspaceRepository);
+	await workspaceRepository.initialize();
 
 	// Index the entire workspace for providing hovers, completions and definitions.
-	await container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer).indexWorkspace();
+	const workspaceIndexer = container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
+	await workspaceIndexer.indexWorkspace();
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 }
