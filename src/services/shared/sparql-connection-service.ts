@@ -50,19 +50,7 @@ export class SparqlConnectionService {
 		private readonly _configurationService: ConfigurationService,
 		private readonly _workspaceStorage: WorkspaceStorageService,
 		private readonly _credentialStorage: CredentialStorageService
-	) { }
-
-	/**
-	 * Loads connections from the various configuration storage locactions into memory.
-	 */
-	initialize() {
-		this.loadConfiguration();
-	}
-
-	/**
-	 * Loads connections from the various configuration storage locactions into memory.
-	 */
-	loadConfiguration(): void {
+	) {
 		this._connections = [MENTOR_WORKSPACE_STORE];
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Workspace));

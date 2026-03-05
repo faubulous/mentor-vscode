@@ -3,8 +3,6 @@ import "reflect-metadata";
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
-import { ServiceToken } from './services/service-token';
-import { configureServiceContainer } from './services/service-container';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
 import { WorkspaceRepository } from './workspace/workspace-repository';
@@ -12,6 +10,8 @@ import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { DocumentContextService } from './services/shared/document-context-service';
 import { SparqlConnectionService } from './services/shared/sparql-connection-service';
 import { SparqlQueryService } from "./services/shared/sparql-query-service";
+import { ServiceToken } from './services/service-token';
+import { configureServiceContainer } from './services/service-container';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
@@ -25,7 +25,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	configureServiceContainer(context);
 
 	// Initialize services.
-	container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService).initialize();
 	container.resolve<SparqlQueryService>(ServiceToken.SparqlQueryService).initialize();
 
 	// Register event handlers for editor and document changes.
