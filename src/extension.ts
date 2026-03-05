@@ -8,7 +8,7 @@ import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { ServiceToken } from '@src/services/token';
 import { configureServiceContainer } from './services/config';
-import { IDocumentContextService } from './services/interface';
+import { IDocumentContextService } from './services/interfaces';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';

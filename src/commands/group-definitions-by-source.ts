@@ -1,6 +1,6 @@
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/token';
-import { ISettingsService } from '@src/services/interface';
+import { ISettingsService } from '@src/services/interfaces';
 import { DefinitionTreeLayout } from '@src/services/shared/settings-service';
 
 export const groupDefinitionsBySource = {

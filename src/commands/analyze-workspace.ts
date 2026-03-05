@@ -1,6 +1,6 @@
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/token';
-import { IWorkspaceIndexer } from '@src/services/interface';
+import { IWorkspaceIndexer } from '@src/services/interfaces';
 
 export const analyzeWorkspace = {
 	id: 'mentor.command.analyzeWorkspace',

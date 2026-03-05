@@ -3,7 +3,7 @@ import { IToken } from 'chevrotain';
 import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/token';
-import { IConfigurationService, IDocumentContextService } from '@src/services/interface';
+import { IConfigurationService, IDocumentContextService } from '@src/services/interfaces';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { WorkspaceIndexer } from '@src/workspace/workspace-indexer';
 import { DocumentContext } from '@src/workspace/document-context';
