@@ -53,19 +53,19 @@ export function configureServiceContainer(context: vscode.ExtensionContext): Dep
 	const vocabulary = new VocabularyRepository(store);
 	container.registerInstance(ServiceToken.VocabularyRepository, vocabulary);
 
-	const documentFactory = new DocumentFactory();
-	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
+	const globalStorageService = new GlobalStorageService();
+	container.registerInstance(ServiceToken.GlobalStorageService, globalStorageService);
 
 	const workspaceStorageService = new WorkspaceStorageService();
 	container.registerInstance(ServiceToken.WorkspaceStorageService, workspaceStorageService);
 
-	const globalStorageService = new GlobalStorageService();
-	container.registerInstance(ServiceToken.GlobalStorageService, globalStorageService);
-
 	const credentialStorageService = new CredentialStorageService();
 	container.registerInstance(ServiceToken.CredentialStorageService, credentialStorageService);
 
-	const documentContextService = new DocumentContextService(vocabulary, documentFactory, configurationProvider);
+	const documentFactory = new DocumentFactory();
+	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
+
+	const documentContextService = new DocumentContextService(context, vocabulary, documentFactory, configurationProvider);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
 
 	const workspaceRepository = new WorkspaceRepository(documentFactory, configurationProvider);
@@ -77,17 +77,17 @@ export function configureServiceContainer(context: vscode.ExtensionContext): Dep
 	const sparqlConnectionService = new SparqlConnectionService(configurationProvider, workspaceStorageService, credentialStorageService);
 	container.registerInstance(ServiceToken.SparqlConnectionService, sparqlConnectionService);
 
+	const prefixDownloaderService = new PrefixDownloaderService();
+	container.registerInstance(ServiceToken.PrefixDownloaderService, prefixDownloaderService);
+
 	const prefixLookupService = new PrefixLookupService(globalStorageService, configurationProvider, documentContextService);
 	container.registerInstance(ServiceToken.PrefixLookupService, prefixLookupService);
 
 	const sparqlQueryResultSerializer = new SparqlQueryResultSerializer(prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
 
-	const sparqlQueryService = new SparqlQueryService(sparqlConnectionService, workspaceStorageService, credentialStorageService, sparqlQueryResultSerializer);
+	const sparqlQueryService = new SparqlQueryService(context, workspaceStorageService, credentialStorageService, sparqlConnectionService, sparqlQueryResultSerializer);
 	container.registerInstance(ServiceToken.SparqlQueryService, sparqlQueryService);
-
-	const prefixDownloaderService = new PrefixDownloaderService();
-	container.registerInstance(ServiceToken.PrefixDownloaderService, prefixDownloaderService);
 
 	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(configurationProvider, documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.TurtlePrefixDefinitionService, turtlePrefixDefinitionService);

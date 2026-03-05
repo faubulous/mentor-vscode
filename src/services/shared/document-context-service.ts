@@ -50,10 +50,22 @@ export class DocumentContextService {
 	readonly onDidChangeDocumentContext = this._onDidChangeDocumentContext.event;
 
 	constructor(
-		private readonly vocabulary: VocabularyRepository,
-		private readonly documentFactory: DocumentFactory,
-		private readonly configurationProvider: ConfigurationService
+		private readonly _extensionContext: vscode.ExtensionContext,
+		private readonly _vocabulary: VocabularyRepository,
+		private readonly _documentFactory: DocumentFactory,
+		private readonly _configurationProvider: ConfigurationService
 	) {
+		// Register event handlers for editor and document changes.
+		const disposables = [
+			this._onDidChangeDocumentContext,
+			vscode.window.onDidChangeActiveTextEditor(() => this.handleActiveEditorChanged()),
+			vscode.window.onDidChangeActiveNotebookEditor((e) => this.handleActiveNotebookEditorChanged(e)),
+			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
+			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e))
+		];
+
+		this._extensionContext.subscriptions.push(...disposables);
+
 		// If there is an active editor on startup, load its document and set the active context.
 		this.handleActiveEditorChanged().then(() => {
 			this.activateDocument();
@@ -61,24 +73,9 @@ export class DocumentContextService {
 	}
 
 	/**
-	 * Register the event handlers for editor and document changes.
-	 * @param context The extension context for managing subscriptions.
-	 */
-	registerEventHandlers(): vscode.Disposable[] {
-		return [
-			vscode.window.onDidChangeActiveTextEditor(() => this.handleActiveEditorChanged()),
-			vscode.window.onDidChangeActiveNotebookEditor((e) => this.handleActiveNotebookEditorChanged(e)),
-			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
-			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e))
-		];
-	}
-
-	/**
 	 * Dispose the manager and clean up resources.
 	 */
 	dispose(): void {
-		this._onDidChangeDocumentContext.dispose();
-
 		// Reject any pending token requests
 		for (const [, pending] of this._pendingTokenRequests) {
 			pending.reject(new Error('DocumentContextService disposed'));
@@ -229,7 +226,7 @@ export class DocumentContextService {
 	 * @returns A promise that resolves to the document context or undefined if unsupported.
 	 */
 	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<DocumentContext | undefined> {
-		if (!document || !this.documentFactory.supportedLanguages.has(document.languageId)) {
+		if (!document || !this._documentFactory.supportedLanguages.has(document.languageId)) {
 			return;
 		}
 
@@ -250,7 +247,7 @@ export class DocumentContextService {
 		// Only create a new context if one doesn't exist or if force reloading.
 		// This preserves tokens from early language server notifications.
 		if (!context || forceReload) {
-			context = this.documentFactory.create(document.uri, document.languageId);
+			context = this._documentFactory.create(document.uri, document.languageId);
 
 			// Register context immediately so language client notification handlers can find it.
 			this.contexts[uri] = context;
@@ -283,10 +280,10 @@ export class DocumentContextService {
 		await context.infer();
 
 		// Set the language tag statistics for the document, needed for rendering multi-language labels.
-		context.predicateStats = this.vocabulary.getPredicateUsageStats(context.graphs);
+		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
 
 		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
-		context.activeLanguageTag = this.configurationProvider.get('definitionTree.defaultLanguageTag', context.primaryLanguage);
+		context.activeLanguageTag = this._configurationProvider.get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
 
@@ -336,7 +333,7 @@ export class DocumentContextService {
 			this._onDidChangeDocumentContext.fire(context);
 		}
 
-		const convertible = this.documentFactory.isConvertibleLanguage(editor.document.languageId);
+		const convertible = this._documentFactory.isConvertibleLanguage(editor.document.languageId);
 
 		vscode.commands.executeCommand("setContext", "mentor.command.convertFileFormat.executable", convertible);
 	}
@@ -351,7 +348,7 @@ export class DocumentContextService {
 
 		// Load all RDF cells in the notebook to ensure their graphs are created.
 		for (const cell of editor.notebook.getCells()) {
-			if (this.documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
+			if (this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
 				await this.loadDocument(cell.document);
 			}
 		}

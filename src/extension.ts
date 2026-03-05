@@ -8,8 +8,6 @@ import { NotebookController } from './workspace/notebook-controller';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { DocumentContextService } from './services/shared/document-context-service';
-import { SparqlConnectionService } from './services/shared/sparql-connection-service';
-import { SparqlQueryService } from "./services/shared/sparql-query-service";
 import { ServiceToken } from './services/service-token';
 import { configureServiceContainer } from './services/service-container';
 import * as languages from './languages';
@@ -23,14 +21,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Setup Dependency Injection container.
 	configureServiceContainer(context);
-
-	// Initialize services.
-	container.resolve<SparqlQueryService>(ServiceToken.SparqlQueryService).initialize();
-
-	// Register event handlers for editor and document changes.
-	const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
-
-	subscribe(context, contextService.registerEventHandlers());
 	
 	// Register application features.
 	registerProviders(context);
@@ -39,9 +29,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerCommands(context);
 	registerViews(context);
 	registerNotebookSerializers(context);
-
-	// Activate the current document if one is open.
-	contextService.activateDocument();
 
 	// Load the W3C and other common ontologies for providing hovers, completions and definitions.
 	await container.resolve<Store>(ServiceToken.Store).loadFrameworkOntologies();
@@ -56,8 +43,8 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export async function deactivate(context: vscode.ExtensionContext) {
-	container.resolve<SparqlQueryService>(ServiceToken.SparqlQueryService).dispose();
-	container.resolve<DocumentContextService>(ServiceToken.DocumentContextService).dispose();
+	const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+	contextService.dispose();
 }
 
 function registerLanguageClients(context: vscode.ExtensionContext) {

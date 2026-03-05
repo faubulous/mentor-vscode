@@ -31,8 +31,6 @@ const HISTORY_MAX_ENTRIES = 10;
  * service is instantiated.
  */
 export class SparqlQueryService {
-	private _initialized = false;
-
 	private readonly _history: SparqlQueryExecutionState[] = [];
 
 	private readonly _cancellationTokens = new Map<string, vscode.CancellationTokenSource>();
@@ -59,34 +57,21 @@ export class SparqlQueryService {
 	onDidQueryExecutionEnd: vscode.Event<SparqlQueryExecutionState> = this._onDidQueryExecutionEnd.event;
 
 	constructor(
+		private readonly _extensionContext: vscode.ExtensionContext,
+		private readonly _workspaceStorage: WorkspaceStorageService,
+		private readonly _credentialStorage: CredentialStorageService,
 		private readonly _connectionService: SparqlConnectionService,
-		private readonly workspaceStorage: WorkspaceStorageService,
-		private readonly credentialStorage: CredentialStorageService,
 		private readonly _querySerializer: SparqlQueryResultSerializer
-	) {}
-
-	/**
-	 * Load the query history from the workspace-scoped local storage.
-	 */
-	initialize() {
-		if (this._initialized) return;
-
+	) {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);
 		}
 
-		vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e));
+		const disposables = [
+			vscode.workspace.onDidCloseTextDocument((e) => this._onTextDocumentClosed(e))
+		];
 
-		this._initialized = true;
-	}
-
-	/**
-	 * Dispose the service and clean up resources.
-	 */
-	dispose() {
-		this._onDidHistoryChange.dispose();
-
-		this._initialized = false;
+		this._extensionContext.subscriptions.push(...disposables);
 	}
 
 	/**
@@ -162,7 +147,7 @@ export class SparqlQueryService {
 	}
 
 	private _loadQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
-		const history = this.workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
+		const history = this._workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
 
 		return history
 			.filter(q => q)
@@ -176,7 +161,7 @@ export class SparqlQueryService {
 			.filter(q => q && !q.documentIri.startsWith('untitled'))
 			.slice(0, HISTORY_MAX_ENTRIES);
 
-		await this.workspaceStorage.setValue(HISTORY_STORAGE_KEY, filteredHistory);
+		await this._workspaceStorage.setValue(HISTORY_STORAGE_KEY, filteredHistory);
 	}
 
 	/**
@@ -354,7 +339,7 @@ export class SparqlQueryService {
 
 		if (source.type === 'sparql') {
 			const connection = source.connection;
-			const credential = await this.credentialStorage.getCredential(connection.id);
+			const credential = await this._credentialStorage.getCredential(connection.id);
 			options.fetch = this._getFetchHandler(credential);
 		}
 
