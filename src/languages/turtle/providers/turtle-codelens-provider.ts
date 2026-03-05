@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { ConfigurationProvider, container, DocumentContextService, WorkspaceIndexer } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { ConfigurationProvider, container, DocumentContextService, WorkspaceIndexer } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { ReferenceProvider } from '@src/providers';
 
 /**
@@ -29,15 +29,15 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
 	private get _configurationProvider() {
-		return container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider);
+		return container.resolve<ConfigurationProvider>(ServiceToken.ConfigurationService);
 	}
 
 	private get _contextService() {
-		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	private get _workspaceIndexer() {
-		return container.resolve<WorkspaceIndexer>(InjectionToken.WorkspaceIndexer);
+		return container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
 	}
 
 	constructor() {

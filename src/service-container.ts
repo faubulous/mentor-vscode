@@ -3,10 +3,10 @@ import * as vscode from "vscode";
 import { container, DependencyContainer } from "tsyringe";
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { Quad_Graph } from '@rdfjs/types';
-import { InjectionToken } from './injection-token';
+import { ServiceToken } from './service-token';
 import { InferenceUri } from './workspace/inference-uri';
 import { DocumentFactory } from './workspace/document-factory';
-import { ConfigurationProvider } from './services/configuration-provider';
+import { ConfigurationService } from './services/configuration-service';
 import { DocumentContextService } from './services/document-context-service';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
@@ -25,66 +25,66 @@ export class MentorGraphUriGenerator implements GraphUriGenerator {
 }
 
 /**
- * Registers all services in the DI container.
- * Call this once at extension activation.
+ * Configures the service container with all necessary services and dependencies for the extension.
+ * @param context The VS Code extension context, used for registering services that require access to the extension's lifecycle and storage.
+ * @returns DependencyContainer instance with all services registered and ready for use throughout the extension.
  */
-export function configureDependencyContainer(context: vscode.ExtensionContext): DependencyContainer {
+export function configureServiceContainer(context: vscode.ExtensionContext): DependencyContainer {
 	// Register VS Code services and extension context.
-	container.registerInstance(InjectionToken.ExtensionContext, context);
-	container.registerInstance(InjectionToken.SecretStorage, context.secrets);
+	container.registerInstance(ServiceToken.ExtensionContext, context);
 
 	// Register application services.
-	const configurationProvider = new ConfigurationProvider();
-	container.registerInstance(InjectionToken.ConfigurationProvider, configurationProvider);
+	const configurationProvider = new ConfigurationService();
+	container.registerInstance(ServiceToken.ConfigurationService, configurationProvider);
 
 	const settingsService = new SettingsService(configurationProvider);
-	container.registerInstance(InjectionToken.SettingsService, settingsService);
+	container.registerInstance(ServiceToken.SettingsService, settingsService);
 
 	const reasoner = new OwlReasoner(new MentorGraphUriGenerator());
 	const store = new Store(reasoner);
-	container.registerInstance(InjectionToken.Store, store);
+	container.registerInstance(ServiceToken.Store, store);
 
 	const vocabulary = new VocabularyRepository(store);
-	container.registerInstance(InjectionToken.VocabularyRepository, vocabulary);
+	container.registerInstance(ServiceToken.VocabularyRepository, vocabulary);
 
 	const documentFactory = new DocumentFactory();
-	container.registerInstance(InjectionToken.DocumentFactory, documentFactory);
+	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
 
 	const workspaceStorageService = new WorkspaceStorageService();
-	container.registerInstance(InjectionToken.WorkspaceStorageService, workspaceStorageService);
+	container.registerInstance(ServiceToken.WorkspaceStorageService, workspaceStorageService);
 
 	const globalStorageService = new GlobalStorageService();
-	container.registerInstance(InjectionToken.GlobalStorageService, globalStorageService);
+	container.registerInstance(ServiceToken.GlobalStorageService, globalStorageService);
 
 	const credentialStorageService = new CredentialStorageService();
-	container.registerInstance(InjectionToken.CredentialStorageService, credentialStorageService);
+	container.registerInstance(ServiceToken.CredentialStorageService, credentialStorageService);
 
 	const documentContextService = new DocumentContextService(vocabulary, documentFactory, configurationProvider);
-	container.registerInstance(InjectionToken.DocumentContextService, documentContextService);
+	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
 
 	const workspaceRepository = new WorkspaceRepository(documentFactory, configurationProvider);
-	container.registerInstance(InjectionToken.WorkspaceRepository, workspaceRepository);
+	container.registerInstance(ServiceToken.WorkspaceRepository, workspaceRepository);
 
 	const workspaceIndexer = new WorkspaceIndexer(documentFactory, configurationProvider, documentContextService);
-	container.registerInstance(InjectionToken.WorkspaceIndexer, workspaceIndexer);
+	container.registerInstance(ServiceToken.WorkspaceIndexer, workspaceIndexer);
 
 	const sparqlConnectionService = new SparqlConnectionService(configurationProvider, workspaceStorageService, credentialStorageService);
-	container.registerInstance(InjectionToken.SparqlConnectionService, sparqlConnectionService);
+	container.registerInstance(ServiceToken.SparqlConnectionService, sparqlConnectionService);
 
 	const prefixLookupService = new PrefixLookupService(globalStorageService, configurationProvider, documentContextService);
-	container.registerInstance(InjectionToken.PrefixLookupService, prefixLookupService);
+	container.registerInstance(ServiceToken.PrefixLookupService, prefixLookupService);
 
 	const sparqlQueryResultSerializer = new SparqlQueryResultSerializer(prefixLookupService);
-	container.registerInstance(InjectionToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
+	container.registerInstance(ServiceToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
 
 	const sparqlQueryService = new SparqlQueryService(sparqlConnectionService, workspaceStorageService, credentialStorageService, sparqlQueryResultSerializer);
-	container.registerInstance(InjectionToken.SparqlQueryService, sparqlQueryService);
+	container.registerInstance(ServiceToken.SparqlQueryService, sparqlQueryService);
 
 	const prefixDownloaderService = new PrefixDownloaderService();
-	container.registerInstance(InjectionToken.PrefixDownloaderService, prefixDownloaderService);
+	container.registerInstance(ServiceToken.PrefixDownloaderService, prefixDownloaderService);
 
 	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(configurationProvider, documentContextService, prefixLookupService);
-	container.registerInstance(InjectionToken.TurtlePrefixDefinitionService, turtlePrefixDefinitionService);
+	container.registerInstance(ServiceToken.TurtlePrefixDefinitionService, turtlePrefixDefinitionService);
 
 	return container;
 }
@@ -127,7 +127,7 @@ export { PrefixDownloaderService };
 /**
  * Re-export ConfigurationProvider for convenient access.
  */
-export { ConfigurationProvider };
+export { ConfigurationService as ConfigurationProvider };
 
 /**
  * Re-export storage services for convenient access.

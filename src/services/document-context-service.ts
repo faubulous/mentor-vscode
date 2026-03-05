@@ -4,7 +4,7 @@ import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '../workspace/document-context';
 import { DocumentFactory } from '../workspace/document-factory';
 import { WorkspaceUri } from '../workspace/workspace-uri';
-import { ConfigurationProvider } from './configuration-provider';
+import { ConfigurationService } from './configuration-service';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -52,7 +52,7 @@ export class DocumentContextService {
 	constructor(
 		private readonly vocabulary: VocabularyRepository,
 		private readonly documentFactory: DocumentFactory,
-		private readonly configurationProvider: ConfigurationProvider
+		private readonly configurationProvider: ConfigurationService
 	) {
 		// If there is an active editor on startup, load its document and set the active context.
 		this.handleActiveEditorChanged().then(() => {

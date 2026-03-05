@@ -4,8 +4,8 @@ import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, S
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import { ConfigurationProvider } from '@src/services/configuration-provider';
-import { InjectionToken } from '@src/injection-token';
+import { ConfigurationService } from '@src/services/configuration-service';
+import { ServiceToken } from '@src/service-token';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { TreeLabelStyle, SettingsService } from '@src/services/settings-service';
 import { Range } from 'vscode-languageserver-types';
@@ -170,7 +170,7 @@ export abstract class DocumentContext {
 
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
-		const config = container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider).config();
+		const config = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService).config();
 		this.predicates.label = config.get('predicates.label') ?? [];
 		this.predicates.description = config.get('predicates.description') ?? [];
 	}
@@ -270,7 +270,7 @@ export abstract class DocumentContext {
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
-		const settings = container.resolve<SettingsService>(InjectionToken.SettingsService);
+		const settings = container.resolve<SettingsService>(ServiceToken.SettingsService);
 		const treeLabelStyle = settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
@@ -328,7 +328,7 @@ export abstract class DocumentContext {
 		let primaryLabel: Literal | undefined = undefined;
 		let fallbackLabel: Literal | undefined = undefined;
 
-		const store = container.resolve<Store>(InjectionToken.Store);
+		const store = container.resolve<Store>(ServiceToken.Store);
 
 		for (let p of predicates) {
 			for (let q of store.matchAll(graphUris, subject, p, null, false)) {
@@ -392,7 +392,7 @@ export abstract class DocumentContext {
 	 */
 	getPropertyPathLabel(node: Quad_Subject): string {
 		let result = [];
-		const vocabulary = container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
+		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 
 		for (let c of vocabulary.getPropertyPathTokens(this.graphs, node)) {
 			if (typeof (c) === 'string') {

@@ -5,8 +5,8 @@ import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
-import { ConfigurationProvider } from '@src/services/configuration-provider';
-import { InjectionToken } from '@src/injection-token';
+import { ConfigurationService } from '@src/services/configuration-service';
+import { ServiceToken } from '@src/service-token';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';
 import {
@@ -118,7 +118,7 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	public override async infer(): Promise<void> {
-		const store = container.resolve<Store>(InjectionToken.Store);
+		const store = container.resolve<Store>(ServiceToken.Store);
 		const reasoner = store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
@@ -135,7 +135,7 @@ export class TurtleDocument extends DocumentContext {
 	 */
 	public override async loadTriples(data: string): Promise<void> {
 		try {
-			const store = container.resolve<Store>(InjectionToken.Store);
+			const store = container.resolve<Store>(ServiceToken.Store);
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			const graphUri = this.graphIri.toString();
@@ -168,7 +168,7 @@ export class TurtleDocument extends DocumentContext {
 
 		// TODO: This should be handled in the prefix definition service 
 		// (listen to doc changes and react) instead of the document itself.
-		const config = container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider).config();
+		const config = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService).config();
 		if (change?.text.endsWith(':') && config.get('prefixes.autoDefinePrefixes')) {
 			// Do not auto-implement prefixes when manually typing a prefix.
 			const n = this.getTokenIndexAtPosition(change.range.start);
@@ -195,7 +195,7 @@ export class TurtleDocument extends DocumentContext {
 				// Do not implmenet prefixes that are already defined.
 				if (this.namespaces[prefix]) return;
 
-				const service = container.resolve<TurtlePrefixDefinitionService>(InjectionToken.TurtlePrefixDefinitionService);
+				const service = container.resolve<TurtlePrefixDefinitionService>(ServiceToken.TurtlePrefixDefinitionService);
 				const edit = await service.implementPrefixes(e.document, [{ prefix: prefix, namespaceIri: undefined }]);
 
 				if (edit.size > 0) {

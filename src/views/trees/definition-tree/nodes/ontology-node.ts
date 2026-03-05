@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { VocabularyRepository } from "@faubulous/mentor-rdf";
-import { container } from "@src/container";
-import { InjectionToken } from '@src/injection-token';
+import { container } from "@src/service-container";
+import { ServiceToken } from '@src/service-token';
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassesNode } from "./classes-node";
 import { PropertiesNode } from "./properties-node";
@@ -15,7 +15,7 @@ import { ValidatorsNode } from "./validators-node";
  */
 export class OntologyNode extends DefinitionTreeNode {
 	private get vocabulary() {
-		return container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
+		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 	}
 
 	isReferenced = false;

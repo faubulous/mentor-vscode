@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextService } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, DocumentContextService } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 export const findReferences = {
 	id: 'mentor.command.findReferences',
 	handler: async (arg: DefinitionTreeNode | string) => {
-		const contextService = container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 
 		contextService.activateDocument().then((editor) => {
 			if (contextService.activeContext && editor) {

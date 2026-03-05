@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ConfigurationProvider } from '@src/services/configuration-provider';
+import { ConfigurationService } from '@src/services/configuration-service';
 import { DocumentFactory } from './document-factory';
 import { DocumentContext } from './document-context';
 import { DocumentContextService } from '@src/services/document-context-service';
@@ -30,7 +30,7 @@ export class WorkspaceIndexer {
 
 	constructor(
 		private readonly documentFactory: DocumentFactory,
-		private readonly configurationProvider: ConfigurationProvider,
+		private readonly configurationProvider: ConfigurationService,
 		private readonly contextService: DocumentContextService
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);

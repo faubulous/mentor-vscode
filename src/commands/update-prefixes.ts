@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { PrefixDownloaderService, GlobalStorageService } from '@src/services';
-import { InjectionToken } from '@src/injection-token';
+import { ServiceToken } from '@src/service-token';
 
 export const updatePrefixes = {
 	id: 'mentor.command.updatePrefixes',
 	handler: async () => {
-		const prefixDownloader = container.resolve<PrefixDownloaderService>(InjectionToken.PrefixDownloaderService);
-		const globalStorage = container.resolve<GlobalStorageService>(InjectionToken.GlobalStorageService);
+		const prefixDownloader = container.resolve<PrefixDownloaderService>(ServiceToken.PrefixDownloaderService);
+		const globalStorage = container.resolve<GlobalStorageService>(ServiceToken.GlobalStorageService);
 
 		vscode.window.withProgress({
 			location: vscode.ProgressLocation.Window,

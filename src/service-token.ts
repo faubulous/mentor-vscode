@@ -1,22 +1,21 @@
 /**
- * Dependency injection tokens for services and VS Code APIs.
- * Use with @inject(InjectionToken.TokenName).
- * 
- * This file is separate from container.ts to avoid circular dependency issues.
+ * Note: This file is separate from container.ts to avoid circular dependency issues.
  * Service files can safely import InjectionToken from here without triggering
  * container.ts's imports of those same services.
  */
-export enum InjectionToken {
+
+/**
+ * Enumeration of injection tokens for dependency injection.
+ */
+export enum ServiceToken {
 	/** VS Code ExtensionContext for accessing extension APIs. */
 	ExtensionContext = "ExtensionContext",
-	/** VS Code SecretStorage for secure credential storage. */
-	SecretStorage = "SecretStorage",
 	/** RDF quad store for storing and querying triples. */
 	Store = "Store",
 	/** Repository for accessing vocabulary definitions. */
 	VocabularyRepository = "VocabularyRepository",
-	/** Provider for accessing VS Code workspace configuration. */
-	ConfigurationProvider = "ConfigurationProvider",
+	/** Configuration service for accessing static workspace configuration parameters. */
+	ConfigurationService = "ConfigurationService",
 	/** Factory for creating document contexts. */
 	DocumentFactory = "DocumentFactory",
 	/** Service for managing document contexts. */
@@ -43,6 +42,6 @@ export enum InjectionToken {
 	PrefixDownloaderService = "PrefixDownloaderService",
 	/** Service for Turtle prefix definitions. */
 	TurtlePrefixDefinitionService = "TurtlePrefixDefinitionService",
-	/** Application settings manager. */
+	/** Dynamic settings that can be changed during runtime without persisting. */
 	SettingsService = "SettingsService"
 }

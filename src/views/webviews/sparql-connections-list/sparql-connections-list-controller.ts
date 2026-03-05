@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { SparqlConnectionService } from '@src/services';
 import { WebviewController } from '../webview-controller';
 import { SparqlConnectionsListMessages } from './sparql-connections-list-messages';
@@ -23,7 +23,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
      */
     register(context: vscode.ExtensionContext): vscode.Disposable[] {
         const disposables = super.register(context);
-        const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+        const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
         // Listen for connection changes and update the webview
         this._disposables.push(
@@ -47,7 +47,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
      * Sends the current connections list to the webview.
      */
     private sendConnectionsUpdate() {
-        const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+        const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
         const connections = connectionService.getConnections();
         
         this.postMessage({
@@ -57,7 +57,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
     }
 
     protected async onDidReceiveMessage(message: SparqlConnectionsListMessages): Promise<boolean> {
-        const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+        const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
         switch (message.id) {
             case 'GetConnections': {

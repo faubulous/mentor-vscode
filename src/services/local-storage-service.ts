@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Memento } from "vscode";
 import { container } from "tsyringe";
-import { InjectionToken } from "@src/injection-token";
+import { ServiceToken } from "@src/service-token";
 
 /**
  * A service for storing and retrieving data from the local storage.
@@ -34,7 +34,7 @@ export abstract class LocalStorageService {
  */
 export class WorkspaceStorageService extends LocalStorageService {
 	protected get storage() {
-		return container.resolve<vscode.ExtensionContext>(InjectionToken.ExtensionContext).workspaceState;
+		return container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext).workspaceState;
 	}
 }
 
@@ -43,6 +43,6 @@ export class WorkspaceStorageService extends LocalStorageService {
  */
 export class GlobalStorageService extends LocalStorageService {
 	protected get storage() {
-		return container.resolve<vscode.ExtensionContext>(InjectionToken.ExtensionContext).globalState;
+		return container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext).globalState;
 	}
 }

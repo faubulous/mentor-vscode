@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, DocumentContextService, ConfigurationProvider } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, VocabularyRepository, DocumentContextService, ConfigurationProvider } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { SettingsService } from '@src/services/settings-service';
 
 /**
@@ -40,19 +40,19 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	private _decorationScope: MissingLanguageTagDecorationScope;
 
 	private get vocabulary() {
-		return container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
+		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 	}
 
 	private get settings() {
-		return container.resolve<SettingsService>(InjectionToken.SettingsService);
+		return container.resolve<SettingsService>(ServiceToken.SettingsService);
 	}
 
 	private get contextService() {
-		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	private get configurationProvider() {
-		return container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider);
+		return container.resolve<ConfigurationProvider>(ServiceToken.ConfigurationService);
 	}
 
 	constructor() {

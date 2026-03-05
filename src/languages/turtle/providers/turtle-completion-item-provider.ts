@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
 import { TOKENS } from "@faubulous/mentor-rdf-parsers";
-import { container } from "@src/container";
-import { InjectionToken } from '@src/injection-token';
+import { container } from "@src/service-container";
+import { ServiceToken } from '@src/service-token';
 import { DocumentContextService } from "@src/services/document-context-service";
 import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -49,11 +49,11 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	readonly maxCompletionItems = 10;
 
 	private get contextService() {
-		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	private get vocabulary() {
-		return container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
+		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 	}
 
 	resolveCompletionItem?(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {

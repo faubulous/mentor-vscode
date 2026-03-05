@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ConfigurationProvider } from './configuration-provider';
+import { ConfigurationService } from './configuration-service';
 import { GlobalStorageService } from './local-storage-service';
 import { DocumentContextService } from '@src/services/document-context-service';
 import { NamespaceMap } from '@src/utilities';
@@ -12,7 +12,7 @@ import { WorkspaceUri } from '@src/workspace/workspace-uri';
 export class PrefixLookupService {
 	constructor(
 		private readonly globalStorage: GlobalStorageService,
-		private readonly configuration: ConfigurationProvider,
+		private readonly configuration: ConfigurationService,
 		private readonly contextService: DocumentContextService
 	) {}
 	/**

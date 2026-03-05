@@ -8,8 +8,8 @@ import * as commands from './commands';
 import * as trees from './views/trees';
 import * as webviews from './views/webviews';
 import * as providers from './providers';
-import { InjectionToken } from './injection-token';
-import { configureDependencyContainer } from './container';
+import { ServiceToken } from './service-token';
+import { configureServiceContainer } from './service-container';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
 import { DocumentContextService } from './services/document-context-service';
@@ -22,14 +22,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
 
 	// Setup Dependency Injection container.
-	configureDependencyContainer(context);
+	configureServiceContainer(context);
 
 	// Initialize services.
-	container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService).initialize();
-	container.resolve<SparqlQueryService>(InjectionToken.SparqlQueryService).initialize();
+	container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService).initialize();
+	container.resolve<SparqlQueryService>(ServiceToken.SparqlQueryService).initialize();
 
 	// Register event handlers for editor and document changes.
-	const contextService = container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+	const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 
 	subscribe(context, contextService.registerEventHandlers());
 	
@@ -45,20 +45,20 @@ export async function activate(context: vscode.ExtensionContext) {
 	contextService.activateDocument();
 
 	// Load the W3C and other common ontologies for providing hovers, completions and definitions.
-	await container.resolve<Store>(InjectionToken.Store).loadFrameworkOntologies();
+	await container.resolve<Store>(ServiceToken.Store).loadFrameworkOntologies();
 
 	// Load the workspace files and folders for the explorer tree view.
-	await container.resolve<WorkspaceRepository>(InjectionToken.WorkspaceRepository).initialize();
+	await container.resolve<WorkspaceRepository>(ServiceToken.WorkspaceRepository).initialize();
 
 	// Index the entire workspace for providing hovers, completions and definitions.
-	await container.resolve<WorkspaceIndexer>(InjectionToken.WorkspaceIndexer).indexWorkspace();
+	await container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer).indexWorkspace();
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 }
 
 export async function deactivate(context: vscode.ExtensionContext) {
-	container.resolve<SparqlQueryService>(InjectionToken.SparqlQueryService).dispose();
-	container.resolve<DocumentContextService>(InjectionToken.DocumentContextService).dispose();
+	container.resolve<SparqlQueryService>(ServiceToken.SparqlQueryService).dispose();
+	container.resolve<DocumentContextService>(ServiceToken.DocumentContextService).dispose();
 }
 
 function registerLanguageClients(context: vscode.ExtensionContext) {

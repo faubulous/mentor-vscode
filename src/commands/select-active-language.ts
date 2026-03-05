@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, VocabularyRepository } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { DocumentContextService } from '@src/services/document-context-service';
 import { SettingsService } from '@src/services/settings-service';
 
@@ -20,7 +20,7 @@ export const selectActiveLanguage = {
 			return;
 		}
 
-		const contextService = container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 		const context = contextService.contexts[document.uri.toString()];
 
 		if (!context) {
@@ -36,7 +36,7 @@ export const selectActiveLanguage = {
 				language: undefined
 			}];
 		} else {
-			const vocabulary = container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
+			const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 			const languageStats = vocabulary.getLanguageTagUsageStats(context.graphs);
 
 			// Note: We translate the language code into a readable name in the UI language of the editor.
@@ -58,7 +58,7 @@ export const selectActiveLanguage = {
 					context.activeLanguageTag = language;
 
 					// Refresh the tree views..
-					const settings = container.resolve<SettingsService>(InjectionToken.SettingsService);
+					const settings = container.resolve<SettingsService>(ServiceToken.SettingsService);
 					settings.set('view.activeLanguage', language);
 
 					quickPick.dispose();

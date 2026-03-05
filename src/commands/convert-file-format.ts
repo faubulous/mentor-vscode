@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, VocabularyRepository } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { DocumentContextService } from '@src/services/document-context-service';
 import { DocumentFactory, LanguageInfo } from '@src/workspace/document-factory';
 
@@ -23,7 +23,7 @@ export const convertFileFormat = {
 		}
 
 		const documentIri = document.uri.toString();
-		const contextService = container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 		const context = contextService.contexts[documentIri];
 
 		if (!context) {
@@ -43,7 +43,7 @@ export const convertFileFormat = {
 		const targetLanguage = selectedLanguage.mimetypes[0];
 
 		try {
-			const vocabulary = container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
+			const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 			const data = await vocabulary.store.serializeGraph(sourceGraphIri, targetLanguage, targetGraphIri, context.namespaces);
 			const result = await vscode.workspace.openTextDocument({ content: data, language: selectedLanguage.id });
 
@@ -55,7 +55,7 @@ export const convertFileFormat = {
 };
 
 async function selectTargetLanguage(sourceLanguageId: string) {
-	const documentFactory = container.resolve<DocumentFactory>(InjectionToken.DocumentFactory);
+	const documentFactory = container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
 	const languages = await documentFactory.getSupportedLanguagesInfo();
 
 	type LanguagePickItem = vscode.QuickPickItem & {

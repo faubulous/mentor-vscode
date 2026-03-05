@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
-import { InjectionToken } from '@src/injection-token';
-import { ConfigurationProvider } from './configuration-provider';
+import { ServiceToken } from '@src/service-token';
+import { ConfigurationService } from './configuration-service';
 import { WorkspaceStorageService } from './local-storage-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from './credential';
@@ -43,11 +43,11 @@ export class SparqlConnectionService {
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
 
 	private get store(): Store {
-		return container.resolve<Store>(InjectionToken.Store);
+		return container.resolve<Store>(ServiceToken.Store);
 	}
 
 	constructor(
-		private readonly configurationProvider: ConfigurationProvider,
+		private readonly configurationProvider: ConfigurationService,
 		private readonly workspaceStorage: WorkspaceStorageService,
 		private readonly credentialStorage: CredentialStorageService
 	) {}

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository, DocumentContextService } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, VocabularyRepository, DocumentContextService } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
@@ -8,7 +8,7 @@ export const revealShapeDefinition = {
 	id: 'mentor.command.revealShapeDefinition',
 	handler: async (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
 		const uri = getIriFromArgument(arg);
-		const contextService = container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 		contextService.activateDocument().then((editor) => {
 
 			if (!uri || !editor || !contextService.activeContext) {
@@ -16,7 +16,7 @@ export const revealShapeDefinition = {
 				return;
 			}
 
-			const vocabulary = container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
+			const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 			const shapeUri = vocabulary.getShapes(contextService.activeContext.graphs, uri, { includeBlankNodes: true }).next().value;
 
 			if (!shapeUri) {

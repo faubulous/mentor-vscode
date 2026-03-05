@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { AuthCredential } from './credential';
-import { InjectionToken } from '../injection-token';
+import { ServiceToken } from '../service-token';
 
 /**
  * Service for managing credentials using the SecretStorage of Visual Studio Code.
  */
 export class CredentialStorageService {
-    private get secretStorage(): vscode.SecretStorage {
-        return container.resolve<vscode.SecretStorage>(InjectionToken.SecretStorage);
+    private get _secretStorage(): vscode.SecretStorage {
+        const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+        return context.secrets;
     }
 
     private _getKey(uri: string): string {
@@ -21,7 +22,7 @@ export class CredentialStorageService {
      * @param credential The credential to store.
      */
     async saveCredential(uri: string, credential: AuthCredential): Promise<void> {
-        await this.secretStorage.store(this._getKey(uri), JSON.stringify(credential));
+        await this._secretStorage.store(this._getKey(uri), JSON.stringify(credential));
     }
 
     /**
@@ -30,7 +31,7 @@ export class CredentialStorageService {
      * @returns The stored credential, or undefined if none is found.
      */
     async getCredential(uri: string): Promise<AuthCredential | undefined> {
-        const value = await this.secretStorage.get(this._getKey(uri));
+        const value = await this._secretStorage.get(this._getKey(uri));
         return value ? JSON.parse(value) as AuthCredential : undefined;
     }
 
@@ -39,7 +40,7 @@ export class CredentialStorageService {
      * @param uri The URI for which to delete the credential.
      */
     async deleteCredential(uri: string): Promise<void> {
-        await this.secretStorage.delete(this._getKey(uri));
+        await this._secretStorage.delete(this._getKey(uri));
     }
 
     /**

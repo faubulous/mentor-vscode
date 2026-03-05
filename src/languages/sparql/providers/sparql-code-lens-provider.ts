@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { SparqlConnectionService } from '@src/services';
 
 /**
@@ -12,7 +12,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+		const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		connectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();
 		});
@@ -24,7 +24,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	 * @returns A promise that resolves to an array of CodeLenses.
 	 */
 	public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-		const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+		const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const connection = await connectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {

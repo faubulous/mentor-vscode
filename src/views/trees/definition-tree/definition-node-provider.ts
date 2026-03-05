@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri, _SH } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, DocumentContextService, WorkspaceIndexer } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, VocabularyRepository, DocumentContextService, WorkspaceIndexer } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { SettingsService } from '@src/services/settings-service';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
@@ -31,19 +31,19 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
 
 	private get vocabulary() {
-		return container.resolve<VocabularyRepository>(InjectionToken.VocabularyRepository);
+		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 	}
 
 	private get settings() {
-		return container.resolve<SettingsService>(InjectionToken.SettingsService);
+		return container.resolve<SettingsService>(ServiceToken.SettingsService);
 	}
 
 	private get contextService() {
-		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	private get workspaceIndexer() {
-		return container.resolve<WorkspaceIndexer>(InjectionToken.WorkspaceIndexer);
+		return container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
 	}
 
 	constructor() {

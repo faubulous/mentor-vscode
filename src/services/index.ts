@@ -1,4 +1,4 @@
-export * from './configuration-provider';
+export * from './configuration-service';
 export * from './credential-storage-service';
 export * from './document-context-service';
 export * from './local-storage-service';

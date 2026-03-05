@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { container } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
-import { ConfigurationProvider, SparqlConnectionService } from '@src/services';
+import { container } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
+import { ConfigurationService, SparqlConnectionService } from '@src/services';
 import { SparqlConnection } from '@src/services/sparql-connection';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
 
 export const listGraphs = {
   id: 'mentor.command.listGraphs',
   handler: async (connection: SparqlConnection): Promise<void> => {
-    const configurationProvider = container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider);
+    const configurationProvider = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
     const query = configurationProvider.config().get<string>('sparql.listGraphsQuery');
 
     if (!query) {
@@ -22,7 +22,7 @@ export const listGraphs = {
       language: 'sparql'
     });
 
-    const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+    const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
     // Set the connection for this document
     await connectionService.setQuerySourceForDocument(document.uri, connection.id);

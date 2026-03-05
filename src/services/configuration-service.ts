@@ -4,7 +4,7 @@ import * as vscode from "vscode";
  * Injectable wrapper providing configuration getter.
  * Returns fresh configuration on each call to capture updates.
  */
-export class ConfigurationProvider {
+export class ConfigurationService {
 	config(): vscode.WorkspaceConfiguration {
 		return vscode.workspace.getConfiguration('mentor');
 	}

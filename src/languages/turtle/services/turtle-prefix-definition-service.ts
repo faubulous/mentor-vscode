@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { IToken, TokenType } from 'chevrotain';
 import { Uri } from '@faubulous/mentor-rdf';
 import { TOKENS, isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
-import { ConfigurationProvider } from '@src/services/configuration-provider';
+import { ConfigurationService } from '@src/services/configuration-service';
 import { DocumentContextService } from '@src/services/document-context-service';
 import { PrefixLookupService } from '@src/services/prefix-lookup-service';
 import { getIriFromIriReference } from '@src/utilities';
@@ -29,7 +29,7 @@ export interface PrefixDefinition {
  */
 export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	constructor(
-		private readonly configuration: ConfigurationProvider,
+		private readonly configuration: ConfigurationService,
 		private readonly contextService: DocumentContextService,
 		private readonly prefixLookupService: PrefixLookupService
 	) {

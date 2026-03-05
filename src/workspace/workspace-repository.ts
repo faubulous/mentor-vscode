@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { ConfigurationProvider } from '../services/configuration-provider';
+import { ConfigurationService } from '../services/configuration-service';
 import { DocumentFactory } from './document-factory';
 
 /**
@@ -49,7 +49,7 @@ export class WorkspaceRepository {
 
 	constructor(
 		documentFactory: DocumentFactory,
-		private readonly configurationProvider: ConfigurationProvider
+		private readonly configurationProvider: ConfigurationService
 	) {
 		this._includePatterns = Object.keys(documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
 

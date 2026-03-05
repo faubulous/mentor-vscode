@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
-import { container, DocumentContextService, DocumentFactory } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, DocumentContextService, DocumentFactory } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { LanguageClientBase, TurtleDocument } from '@src/languages';
 
 export class TurtleLanguageClient extends LanguageClientBase {
 	private get contextService() {
-		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	private get documentFactory() {
-		return container.resolve<DocumentFactory>(InjectionToken.DocumentFactory);
+		return container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
 	}
 
 	constructor(languageId = 'turtle', languageName = 'Turtle') {

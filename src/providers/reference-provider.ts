@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextService } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, DocumentContextService } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 
 /**
  * A provider that retrieves the locations of resource references in a document.
  */
 export class ReferenceProvider implements vscode.ReferenceProvider {
 	private get contextService() {
-		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {

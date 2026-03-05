@@ -1,14 +1,14 @@
 import * as vscode from "vscode";
 import { Store } from "@faubulous/mentor-rdf";
 import { TOKENS } from "@faubulous/mentor-rdf-parsers";
-import { container } from "@src/container";
-import { InjectionToken } from '@src/injection-token';
+import { container } from "@src/service-container";
+import { ServiceToken } from '@src/service-token';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	private get store() {
-		return container.resolve<Store>(InjectionToken.Store);
+		return container.resolve<Store>(ServiceToken.Store);
 	}
 
 	override getCompletionItems(document: vscode.TextDocument, context: any, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {

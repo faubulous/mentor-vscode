@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { container, Store } from '@src/container';
-import { InjectionToken } from '@src/injection-token';
+import { container, Store } from '@src/service-container';
+import { ServiceToken } from '@src/service-token';
 import { SparqlConnectionService } from '@src/services';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
-import { ConfigurationProvider } from '@src/services/configuration-provider';
+import { ConfigurationService } from '@src/services/configuration-service';
 
 export const deleteGraph = {
 	id: 'mentor.command.deleteGraph',
@@ -19,7 +19,7 @@ export const deleteGraph = {
 			return;
 		}
 
-		const connectionService = container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService);
+		const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const connection = connectionService.getConnectionForDocument(documentIri);
 
 		if (!connection) {
@@ -28,9 +28,9 @@ export const deleteGraph = {
 		}
 
 		if (connection.id === 'workspace') {
-			container.resolve<Store>(InjectionToken.Store).deleteGraphs([graphIri.toString(true)]);
+			container.resolve<Store>(ServiceToken.Store).deleteGraphs([graphIri.toString(true)]);
 		} else {
-			const configurationProvider = container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider);
+			const configurationProvider = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
 			const query = configurationProvider.config().get<string>('sparql.dropGraphQuery');
 
 			if (!query) {
