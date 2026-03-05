@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from '@src/services/service-container';
-import { ServiceToken, ISparqlQueryService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { ISparqlQueryService } from '@src/services/interface';
 import { QuadsResult } from '@src/services/shared/sparql-query-state';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';

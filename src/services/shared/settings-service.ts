@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events'
-import { IConfigurationService } from '@src/services';
+import { IConfigurationService } from '@src/services/interface';
 
 /**
  * Supported label styles of the definition tree.

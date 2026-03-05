@@ -1,5 +1,6 @@
 import { container } from '@src/services/service-container';
-import { ServiceToken, ISettingsService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { ISettingsService } from '@src/services/interface';
 
 export const showPropertyTypes = {
 	id: 'mentor.command.showPropertyTypes',

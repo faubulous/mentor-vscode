@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { Store } from '@faubulous/mentor-rdf';
 import { container } from '@src/services/service-container';
-import { ServiceToken, ISparqlConnectionService, IConfigurationService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { ISparqlConnectionService, IConfigurationService } from '@src/services/interface';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
 
 export const deleteGraph = {

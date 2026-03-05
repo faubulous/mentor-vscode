@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from '@src/services/service-container';
-import { ServiceToken, IConfigurationService, IDocumentContextService, IWorkspaceIndexer } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { IConfigurationService, IDocumentContextService, IWorkspaceIndexer } from '@src/services/interface';
 import { ReferenceProvider } from '@src/providers';
 
 /**

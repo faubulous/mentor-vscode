@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from '@src/services/service-container';
-import { ServiceToken, IPrefixLookupService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { IPrefixLookupService } from '@src/services/interface';
 import { Store } from '@faubulous/mentor-rdf';
 import { InferenceUri } from '@src/workspace/inference-uri';
 

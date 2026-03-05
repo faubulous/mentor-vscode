@@ -1,5 +1,6 @@
 import { container } from '@src/services/service-container';
-import { ServiceToken, ISettingsService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { ISettingsService } from '@src/services/interface';
 import { DefinitionTreeLayout } from '@src/services/shared/settings-service';
 
 export const groupDefinitionsByType = {

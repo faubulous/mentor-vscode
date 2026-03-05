@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from '@src/services/service-container';
-import { ServiceToken, IDocumentContextService, ISettingsService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { IDocumentContextService, ISettingsService } from '@src/services/interface';
 
 interface LanguageQuckPickItem extends vscode.QuickPickItem {
 	/**

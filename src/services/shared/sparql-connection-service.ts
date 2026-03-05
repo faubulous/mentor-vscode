@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
-import { ServiceToken, IConfigurationService, ICredentialStorageService, ILocalStorageService } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
+import { IConfigurationService, ICredentialStorageService, ILocalStorageService } from '@src/services/interface';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from './credential';
 import { SparqlConnection } from './sparql-connection';

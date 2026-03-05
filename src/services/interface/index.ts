@@ -1,0 +1,13 @@
+export { IConfigurationService } from './configuration-service.interface';
+export { ICredentialStorageService } from './credential-storage-service.interface';
+export { IDocumentContextService } from './document-context-service.interface';
+export { IDocumentFactory } from './document-factory.interface';
+export { ILocalStorageService } from './local-storage-service.interface';
+export { IMicrosoftAuthService } from './microsoft-auth-service.interface';
+export { IPrefixDownloaderService } from './prefix-downloader-service.interface';
+export { IPrefixLookupService } from './prefix-lookup-service.interface';
+export { ISettingsService } from './settings-service.interface';
+export { ISparqlConnectionService } from './sparql-connection-service.interface';
+export { ISparqlQueryService } from './sparql-query-service.interface';
+export { ISparqlQueryResultSerializer } from './sparql-query-result-serializer.interface';
+export { IWorkspaceIndexer } from './workspace-indexer.interface';

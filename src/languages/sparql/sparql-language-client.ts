@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { container } from '@src/services/service-container';
-import { ServiceToken, IDocumentContextService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { IDocumentContextService } from '@src/services/interface';
 import { LanguageClientBase, SparqlDocument } from '@src/languages';
 import { DocumentFactory } from '@src/workspace/document-factory';
 

@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { Uri, VocabularyRepository, _SH } from '@faubulous/mentor-rdf';
 import { container } from '@src/services/service-container';
-import { ServiceToken, ISettingsService, IDocumentContextService, IWorkspaceIndexer } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { ISettingsService, IDocumentContextService, IWorkspaceIndexer } from '@src/services/interface';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
 import { DefinitionTreeLayout } from '@src/services/shared/settings-service';

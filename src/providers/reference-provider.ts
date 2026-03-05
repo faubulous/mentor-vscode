@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from '@src/services/service-container';
-import { ServiceToken, IDocumentContextService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { IDocumentContextService } from '@src/services/interface';
 
 /**
  * A provider that retrieves the locations of resource references in a document.

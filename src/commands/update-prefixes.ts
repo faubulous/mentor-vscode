@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken, IPrefixDownloaderService, ILocalStorageService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { IPrefixDownloaderService, ILocalStorageService } from '@src/services/interface';
 
 export const updatePrefixes = {
 	id: 'mentor.command.updatePrefixes',

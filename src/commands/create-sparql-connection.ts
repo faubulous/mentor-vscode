@@ -1,5 +1,6 @@
 import { container } from '@src/services/service-container';
-import { ServiceToken, ISparqlConnectionService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { ISparqlConnectionService } from '@src/services/interface';
 import { sparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 
 export const createSparqlConnection = {

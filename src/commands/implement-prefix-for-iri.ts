@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from '../services/service-container';
-import { ServiceToken } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
 import { IToken } from 'chevrotain';
 import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
 import { getTokenPosition } from '@src/utilities';

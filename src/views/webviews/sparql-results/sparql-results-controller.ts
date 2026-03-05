@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from '@src/services/service-container';
-import { ServiceToken, ISparqlQueryService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { ISparqlQueryService } from '@src/services/interface';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/services/shared/sparql-query-state';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
@@ -28,7 +29,7 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
 
     private _postQueryHistory() {
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
-        
+
         this.postMessage({
             id: 'PostSparqlQueryHistory',
             history: queryService.getQueryHistory()

@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { container } from '@src/services/service-container';
 import { DocumentFactory } from '@src/workspace/document-factory';
-import { ServiceToken, IDocumentContextService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { IDocumentContextService } from '@src/services/interface';
 import { LanguageClientBase, TurtleDocument } from '@src/languages';
 
 export class TurtleLanguageClient extends LanguageClientBase {

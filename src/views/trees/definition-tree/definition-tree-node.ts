@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { container } from '@src/services/service-container';
-import { ServiceToken, ISettingsService } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { ISettingsService } from '@src/services/interface';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TreeNodeBase } from '@src/views/trees/tree-node';
 import { getIriFromNodeId } from '@src/utilities';

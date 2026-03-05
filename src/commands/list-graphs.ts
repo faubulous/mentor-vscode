@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container} from '@src/services/service-container';
-import { ServiceToken, IConfigurationService, ISparqlConnectionService  } from '@src/services';
+import { ServiceToken } from '@src/services/service-token';
+import { IConfigurationService, ISparqlConnectionService } from '@src/services/interface';
 import { SparqlConnection } from '@src/services/shared/sparql-connection';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
 
