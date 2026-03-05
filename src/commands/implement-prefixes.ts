@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/token';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 
 export const implementPrefixes = {

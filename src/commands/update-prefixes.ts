@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/service-token';
+import { ServiceToken } from '@src/services/token';
 import { IPrefixDownloaderService, ILocalStorageService } from '@src/services/interface';
 
 export const updatePrefixes = {

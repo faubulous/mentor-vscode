@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
-import { ServiceToken } from '@src/services/service-token';
+import { ServiceToken } from '@src/services/token';
 import { IConfigurationService, IDocumentContextService } from '@src/services/interface';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { WorkspaceIndexer } from '@src/workspace/workspace-indexer';

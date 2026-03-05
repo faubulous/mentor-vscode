@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Memento } from "vscode";
 import { container } from "tsyringe";
-import { ServiceToken } from "@src/services/service-token";
+import { ServiceToken } from "@src/services/token";
 
 /**
  * A service for storing and retrieving data from the local storage.

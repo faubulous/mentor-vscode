@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/token';
 import { ISparqlConnectionService } from '@src/services/interface';
 
 /**

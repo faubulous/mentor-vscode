@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { container, DependencyContainer } from "tsyringe";
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { Quad_Graph } from '@rdfjs/types';
-import { ServiceToken } from './service-token';
+import { ServiceToken } from './token';
 import { InferenceUri } from '../workspace/inference-uri';
 import { DocumentFactory } from '../workspace/document-factory';
 import { WorkspaceRepository } from '../workspace/workspace-repository';
@@ -94,8 +94,3 @@ export function configureServiceContainer(context: vscode.ExtensionContext): Dep
 
 	return container;
 }
-
-/**
- * Export the container for direct access when needed.
- */
-export { container };

@@ -1,5 +1,5 @@
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/token';
 import { IWorkspaceIndexer } from '@src/services/interface';
 
 export const analyzeWorkspace = {

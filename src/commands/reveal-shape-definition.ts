@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/token';
 import { IDocumentContextService } from '@src/services/interface';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';

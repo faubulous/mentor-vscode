@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
+import { container } from "tsyringe";
 import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
 import { TOKENS } from "@faubulous/mentor-rdf-parsers";
-import { container } from "@src/services/service-container";
-import { ServiceToken } from '@src/services/service-token';
+import { ServiceToken } from '@src/services/token';
 import { IDocumentContextService } from '@src/services/interface';
 import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';

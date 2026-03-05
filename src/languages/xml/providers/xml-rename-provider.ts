@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri } from '@faubulous/mentor-rdf';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/token';
 import { IDocumentContextService } from '@src/services/interface';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';

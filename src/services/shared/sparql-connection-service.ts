@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/token';
 import { IConfigurationService, ICredentialStorageService, ILocalStorageService } from '@src/services/interface';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from './credential';
