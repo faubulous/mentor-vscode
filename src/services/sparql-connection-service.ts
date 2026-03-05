@@ -56,7 +56,7 @@ export class SparqlConnectionService {
 	 * Get the VS Code configuration section for the extension.
 	 */
 	private get configuration(): vscode.WorkspaceConfiguration {
-		return this.configurationProvider.get();
+		return this.configurationProvider.config();
 	}
 
 	/**

@@ -5,7 +5,7 @@ import * as vscode from "vscode";
  * Returns fresh configuration on each call to capture updates.
  */
 export class ConfigurationProvider {
-	get(): vscode.WorkspaceConfiguration {
+	config(): vscode.WorkspaceConfiguration {
 		return vscode.workspace.getConfiguration('mentor');
 	}
 
@@ -15,7 +15,7 @@ export class ConfigurationProvider {
 	 * @returns An array of glob patterns to exclude.
 	 */
 	async getExcludePatterns(workspaceUri: vscode.Uri): Promise<string[]> {
-		const config = this.get();
+		const config = this.config();
 		const result = new Set<string>();
 
 		// Add the patterns from the configuration.

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container, VocabularyRepository } from '@src/container';
 import { InjectionToken } from '@src/injection-token';
 import { DocumentContextService } from '@src/services/document-context-service';
-import { Settings } from '@src/settings';
+import { SettingsService } from '@src/services/settings-service';
 
 interface LanguageQuckPickItem extends vscode.QuickPickItem {
 	/**
@@ -58,7 +58,7 @@ export const selectActiveLanguage = {
 					context.activeLanguageTag = language;
 
 					// Refresh the tree views..
-					const settings = container.resolve<Settings>(InjectionToken.Settings);
+					const settings = container.resolve<SettingsService>(InjectionToken.SettingsService);
 					settings.set('view.activeLanguage', language);
 
 					quickPick.dispose();

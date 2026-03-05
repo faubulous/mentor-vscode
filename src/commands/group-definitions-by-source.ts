@@ -1,10 +1,10 @@
 import { container } from '@src/container';
 import { InjectionToken } from '@src/injection-token';
-import { DefinitionTreeLayout, Settings } from '@src/settings';
+import { DefinitionTreeLayout, SettingsService } from '@src/services/settings-service';
 
 export const groupDefinitionsBySource = {
 	id: 'mentor.command.groupDefinitionsBySource',
 	handler: () => {
-		container.resolve<Settings>(InjectionToken.Settings).set('view.definitionTree.defaultLayout', DefinitionTreeLayout.BySource);
+		container.resolve<SettingsService>(InjectionToken.SettingsService).set('view.definitionTree.defaultLayout', DefinitionTreeLayout.BySource);
 	}
 };

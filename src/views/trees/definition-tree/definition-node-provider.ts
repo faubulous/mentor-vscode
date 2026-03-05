@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 import { Uri, _SH } from '@faubulous/mentor-rdf';
 import { container, VocabularyRepository, DocumentContextService, WorkspaceIndexer } from '@src/container';
 import { InjectionToken } from '@src/injection-token';
-import { Settings } from '@src/settings';
+import { SettingsService } from '@src/services/settings-service';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
-import { DefinitionTreeLayout } from '@src/settings';
+import { DefinitionTreeLayout } from '@src/services/settings-service';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { ClassesNode } from './nodes/classes-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
@@ -35,7 +35,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	private get settings() {
-		return container.resolve<Settings>(InjectionToken.Settings);
+		return container.resolve<SettingsService>(InjectionToken.SettingsService);
 	}
 
 	private get contextService() {

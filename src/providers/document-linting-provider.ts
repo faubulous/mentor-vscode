@@ -36,7 +36,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	private _lintingEnabled: boolean = false;
 
 	private get configuration() {
-		return container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider).get();
+		return container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider).config();
 	}
 
 	private get vocabulary() {

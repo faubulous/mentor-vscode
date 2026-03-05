@@ -57,7 +57,7 @@ export class PrefixLookupService {
 		}
 
 		// 2. Try to find the prefix in the project configuration.
-		const projectPrefixes = this.configuration.get().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+		const projectPrefixes = this.configuration.config().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
 		if (Array.isArray(projectPrefixes)) {
 			const prefix = projectPrefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
@@ -110,7 +110,7 @@ export class PrefixLookupService {
 			}
 
 			if (uri.includes('#')) {
-				const param = this.configuration.get().get<string>('prefixes.queryParameterName');
+				const param = this.configuration.config().get<string>('prefixes.queryParameterName');
 
 				return uri + '?' + param + '=';
 			} else if (!uri.endsWith('#')) {
@@ -123,7 +123,7 @@ export class PrefixLookupService {
 		let result: string | undefined = undefined;
 
 		// 1. Check if the prefix is declared in the project configuration as a default prefix.
-		const namespaces = this.configuration.get().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+		const namespaces = this.configuration.config().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
 		if (Array.isArray(namespaces)) {
 			result = namespaces.find(namespace => namespace.defaultPrefix === prefix)?.uri;

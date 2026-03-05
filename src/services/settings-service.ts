@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events'
+import { ConfigurationProvider } from '@src/container';
 
 /**
  * Supported label styles of the definition tree.
@@ -36,7 +37,7 @@ export enum DefinitionTreeLayout {
 /**
  * An API for the configuration settings of the Mentor extension.
  */
-export class Settings extends EventEmitter {
+export class SettingsService extends EventEmitter {
 	private _data: { [key: string]: any } = {};
 
 	readonly _onDidChange = new vscode.EventEmitter<{ key: string, oldValue: any, newValue: any }>();
@@ -86,13 +87,11 @@ export class Settings extends EventEmitter {
 		return this._data[key] != null;
 	}
 
-	/**
-	 * Initialize the view settings from the workspace configuration without emmiting change events.
-	 * @param configuration The workspace configuration.
-	 */
-	initialize(configuration: vscode.WorkspaceConfiguration) {
+	constructor(configurationProvider: ConfigurationProvider) {
+		super();
+
 		// Initialize the default label rendering style.
-		let defaultStyle = configuration.get('definitionTree.labelStyle');
+		const defaultStyle = configurationProvider.config().get('definitionTree.labelStyle');
 
 		switch (defaultStyle) {
 			case 'AnnotatedLabels':

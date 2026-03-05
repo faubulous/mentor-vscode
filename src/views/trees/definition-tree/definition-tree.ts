@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container, DocumentContextService } from '@src/container';
 import { InjectionToken } from '@src/injection-token';
-import { Settings } from '@src/settings';
+import { SettingsService } from '@src/services/settings-service';
 import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';
@@ -21,7 +21,7 @@ export class DefinitionTree implements TreeView {
 	}
 
 	private get settings() {
-		return container.resolve<Settings>(InjectionToken.Settings);
+		return container.resolve<SettingsService>(InjectionToken.SettingsService);
 	}
 
 	/**

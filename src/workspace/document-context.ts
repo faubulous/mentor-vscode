@@ -7,7 +7,7 @@ import { container } from 'tsyringe';
 import { ConfigurationProvider } from '@src/services/configuration-provider';
 import { InjectionToken } from '@src/injection-token';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
-import { TreeLabelStyle, Settings } from '@src/settings';
+import { TreeLabelStyle, SettingsService } from '@src/services/settings-service';
 import { Range } from 'vscode-languageserver-types';
 
 /**
@@ -170,7 +170,7 @@ export abstract class DocumentContext {
 
 	constructor(documentUri: vscode.Uri) {
 		this.uri = documentUri;
-		const config = container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider).get();
+		const config = container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider).config();
 		this.predicates.label = config.get('predicates.label') ?? [];
 		this.predicates.description = config.get('predicates.description') ?? [];
 	}
@@ -270,7 +270,7 @@ export abstract class DocumentContext {
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
-		const settings = container.resolve<Settings>(InjectionToken.Settings);
+		const settings = container.resolve<SettingsService>(InjectionToken.SettingsService);
 		const treeLabelStyle = settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {

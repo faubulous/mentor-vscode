@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextService, WorkspaceIndexer } from '@src/container';
+import { ConfigurationProvider, container, DocumentContextService, WorkspaceIndexer } from '@src/container';
 import { InjectionToken } from '@src/injection-token';
 import { ReferenceProvider } from '@src/providers';
 
@@ -28,22 +28,22 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
-	private get contextService() {
+	private get _configurationProvider() {
+		return container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider);
+	}
+
+	private get _contextService() {
 		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
 	}
 
-	private get workspaceIndexer() {
+	private get _workspaceIndexer() {
 		return container.resolve<WorkspaceIndexer>(InjectionToken.WorkspaceIndexer);
-	}
-
-	private get configuration() {
-		return vscode.workspace.getConfiguration('mentor');
 	}
 
 	constructor() {
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
-				this._enabled = this.configuration.get('editor.codeLensEnabled', true);
+				this._enabled = this._configurationProvider.config().get('editor.codeLensEnabled', true);
 
 				// Fire the event to refresh the code lenses.
 				this._onDidChangeCodeLenses.fire();
@@ -55,15 +55,15 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 		this._initializing = true;
 		this._initialized = false;
 
-		this._enabled = this.configuration.get('editor.codeLensEnabled', true);
+		this._enabled = this._configurationProvider.config().get('editor.codeLensEnabled', true);
 
-		this.workspaceIndexer.waitForIndexed().then(() => {
+		this._workspaceIndexer.waitForIndexed().then(() => {
 			if (this._enabled) {
 				this._onDidChangeCodeLenses.fire();
 			}
 		});
 
-		this.contextService.onDidChangeDocumentContext(() => {
+		this._contextService.onDidChangeDocumentContext(() => {
 			if (this._enabled) {
 				this._onDidChangeCodeLenses.fire();
 			}
@@ -87,7 +87,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 				return [];
 			}
 
-			const context = this.contextService.contexts[document.uri.toString()];
+			const context = this._contextService.contexts[document.uri.toString()];
 
 			if (!context) {
 				return [];

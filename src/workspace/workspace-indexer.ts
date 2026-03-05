@@ -51,7 +51,7 @@ export class WorkspaceIndexer {
 
 			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
 			// file size limit and make issues with the configuration more visible.
-			const maxSize = this.configurationProvider.get().get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
+			const maxSize = this.configurationProvider.config().get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
 
 			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 				const startTime = performance.now();

@@ -44,5 +44,5 @@ export enum InjectionToken {
 	/** Service for Turtle prefix definitions. */
 	TurtlePrefixDefinitionService = "TurtlePrefixDefinitionService",
 	/** Application settings manager. */
-	Settings = "Settings"
+	SettingsService = "SettingsService"
 }

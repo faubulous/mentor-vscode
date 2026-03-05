@@ -16,7 +16,7 @@ import { DocumentContextService } from './services/document-context-service';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { SparqlConnectionService, SparqlQueryService } from './services';
-import { Settings } from './settings';
+import { SettingsService } from './services/settings-service';
 
 export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
@@ -25,9 +25,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	configureDependencyContainer(context);
 
 	// Initialize services.
-	const settings = container.resolve<Settings>(InjectionToken.Settings);
-	settings.initialize(vscode.workspace.getConfiguration('mentor'));
-
 	container.resolve<SparqlConnectionService>(InjectionToken.SparqlConnectionService).initialize();
 	container.resolve<SparqlQueryService>(InjectionToken.SparqlQueryService).initialize();
 

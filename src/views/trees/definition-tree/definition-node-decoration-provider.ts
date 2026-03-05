@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, DocumentContextService } from '@src/container';
+import { container, VocabularyRepository, DocumentContextService, ConfigurationProvider } from '@src/container';
 import { InjectionToken } from '@src/injection-token';
-import { Settings } from '@src/settings';
+import { SettingsService } from '@src/services/settings-service';
 
 /**
  * Indicates the where missing language tags should be decorated.
@@ -44,11 +44,15 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	private get settings() {
-		return container.resolve<Settings>(InjectionToken.Settings);
+		return container.resolve<SettingsService>(InjectionToken.SettingsService);
 	}
 
 	private get contextService() {
 		return container.resolve<DocumentContextService>(InjectionToken.DocumentContextService);
+	}
+
+	private get configurationProvider() {
+		return container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider);
 	}
 
 	constructor() {
@@ -79,7 +83,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	private _getDecorationScopeFromConfiguration(): MissingLanguageTagDecorationScope {
-		const result = vscode.workspace.getConfiguration('mentor').get('definitionTree.decorateMissingLanguageTags');
+		const result = this.configurationProvider.config().get('definitionTree.decorateMissingLanguageTags');
 
 		switch (result) {
 			case 'Document': {

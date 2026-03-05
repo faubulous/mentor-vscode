@@ -49,19 +49,16 @@ export class DocumentContextService {
 	 */
 	readonly onDidChangeDocumentContext = this._onDidChangeDocumentContext.event;
 
-	/**
-	 * Fire the document context changed event.
-	 * @param context The document context that changed.
-	 */
-	fireDocumentContextChanged(context: DocumentContext | undefined): void {
-		this._onDidChangeDocumentContext.fire(context);
-	}
-
 	constructor(
 		private readonly vocabulary: VocabularyRepository,
 		private readonly documentFactory: DocumentFactory,
 		private readonly configurationProvider: ConfigurationProvider
-	) { }
+	) {
+		// If there is an active editor on startup, load its document and set the active context.
+		this.handleActiveEditorChanged().then(() => {
+			this.activateDocument();
+		});
+	}
 
 	/**
 	 * Register the event handlers for editor and document changes.
@@ -88,13 +85,6 @@ export class DocumentContextService {
 		}
 
 		this._pendingTokenRequests.clear();
-	}
-
-	/**
-	 * Get the VS Code configuration section for the extension.
-	 */
-	get configuration(): vscode.WorkspaceConfiguration {
-		return this.configurationProvider.get();
 	}
 
 	/**
@@ -296,7 +286,7 @@ export class DocumentContextService {
 		context.predicateStats = this.vocabulary.getPredicateUsageStats(context.graphs);
 
 		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
-		context.activeLanguageTag = this.configuration.get('definitionTree.defaultLanguageTag', context.primaryLanguage);
+		context.activeLanguageTag = this.configurationProvider.config().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
 
@@ -342,7 +332,8 @@ export class DocumentContextService {
 
 		if (context) {
 			this.activeContext = context;
-			this.fireDocumentContextChanged(context);
+
+			this._onDidChangeDocumentContext.fire(context);
 		}
 
 		const convertible = this.documentFactory.isConvertibleLanguage(editor.document.languageId);
@@ -380,7 +371,7 @@ export class DocumentContextService {
 		// Update the active document context if it has changed.
 		this.activeContext = context;
 
-		this.fireDocumentContextChanged(context);
+		this._onDidChangeDocumentContext.fire(context)
 
 		context.onDidChangeDocument(e);
 	}

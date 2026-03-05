@@ -3,8 +3,7 @@ import { container, Store } from '@src/container';
 import { InjectionToken } from '@src/injection-token';
 import { SparqlConnectionService } from '@src/services';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
-
-const getConfiguration = () => vscode.workspace.getConfiguration('mentor');
+import { ConfigurationProvider } from '@src/services/configuration-provider';
 
 export const deleteGraph = {
 	id: 'mentor.command.deleteGraph',
@@ -31,7 +30,8 @@ export const deleteGraph = {
 		if (connection.id === 'workspace') {
 			container.resolve<Store>(InjectionToken.Store).deleteGraphs([graphIri.toString(true)]);
 		} else {
-			const query = getConfiguration().get<string>('sparql.dropGraphQuery');
+			const configurationProvider = container.resolve<ConfigurationProvider>(InjectionToken.ConfigurationProvider);
+			const query = configurationProvider.config().get<string>('sparql.dropGraphQuery');
 
 			if (!query) {
 				vscode.window.showErrorMessage('Could not retrieve query from configuration: mentor.sparql.dropGraphQuery');

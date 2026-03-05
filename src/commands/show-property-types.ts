@@ -1,10 +1,10 @@
 import { container } from '@src/container';
 import { InjectionToken } from '@src/injection-token';
-import { Settings } from '@src/settings';
+import { SettingsService } from '@src/services/settings-service';
 
 export const showPropertyTypes = {
 	id: 'mentor.command.showPropertyTypes',
 	handler: () => {
-		container.resolve<Settings>(InjectionToken.Settings).set('view.showPropertyTypes', true);
+		container.resolve<SettingsService>(InjectionToken.SettingsService).set('view.showPropertyTypes', true);
 	}
 };
