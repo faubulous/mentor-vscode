@@ -95,7 +95,6 @@
     "@vscode/codicons": "^0.0.44",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",

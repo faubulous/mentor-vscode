@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import * as vscode from "vscode";
 import { container, DependencyContainer } from "tsyringe";
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';

@@ -1,5 +1,4 @@
 'use strict';
-import "reflect-metadata";
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
