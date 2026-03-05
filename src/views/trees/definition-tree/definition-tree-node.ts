@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { SettingsService } from '@src/services/shared/settings-service';
+import { container, ISettingsService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TreeNodeBase } from '@src/views/trees/tree-node';
 import { getIriFromNodeId } from '@src/utilities';
@@ -13,7 +12,7 @@ import { getIriFromNodeId } from '@src/utilities';
 export class DefinitionTreeNode extends TreeNodeBase {
 	
 	protected get settings() {
-		return container.resolve<SettingsService>(ServiceToken.SettingsService);
+		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
 	}
 
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;

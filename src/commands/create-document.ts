@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container, DocumentFactory } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { ServiceToken } from '@src/services';
 
 export const createDocument = {
 	id: 'mentor.command.createDocument',

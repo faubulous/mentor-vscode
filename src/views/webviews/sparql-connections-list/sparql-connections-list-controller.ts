@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { SparqlConnectionService } from '@src/services/shared/sparql-connection-service';
+import { container, ISparqlConnectionService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { WebviewController } from '../webview-controller';
 import { SparqlConnectionsListMessages } from './sparql-connections-list-messages';
 import { sparqlConnectionController } from '../sparql-connection/sparql-connection-controller';
@@ -23,7 +22,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
      */
     register(context: vscode.ExtensionContext): vscode.Disposable[] {
         const disposables = super.register(context);
-        const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+        const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
         // Listen for connection changes and update the webview
         this._disposables.push(
@@ -47,7 +46,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
      * Sends the current connections list to the webview.
      */
     private sendConnectionsUpdate() {
-        const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+        const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
         const connections = connectionService.getConnections();
         
         this.postMessage({
@@ -57,7 +56,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
     }
 
     protected async onDidReceiveMessage(message: SparqlConnectionsListMessages): Promise<boolean> {
-        const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+        const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
         switch (message.id) {
             case 'GetConnections': {

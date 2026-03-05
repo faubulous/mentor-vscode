@@ -3,13 +3,10 @@ import { SparqlLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { WorkspaceStorageService } from "./local-storage-service";
+import { ILocalStorageService, ICredentialStorageService, ISparqlConnectionService, ISparqlQueryResultSerializer } from '@src/services/interface';
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
-import { SparqlQueryResultSerializer } from './sparql-query-result-serializer';
-import { SparqlConnectionService } from './sparql-connection-service';
-import { CredentialStorageService } from './credential-storage-service';
 import { SparqlConnection } from './sparql-connection';
 import { AuthCredential } from './credential';
 
@@ -58,10 +55,10 @@ export class SparqlQueryService {
 
 	constructor(
 		private readonly _extensionContext: vscode.ExtensionContext,
-		private readonly _workspaceStorage: WorkspaceStorageService,
-		private readonly _credentialStorage: CredentialStorageService,
-		private readonly _connectionService: SparqlConnectionService,
-		private readonly _querySerializer: SparqlQueryResultSerializer
+		private readonly _workspaceStorage: ILocalStorageService,
+		private readonly _credentialStorage: ICredentialStorageService,
+		private readonly _connectionService: ISparqlConnectionService,
+		private readonly _querySerializer: ISparqlQueryResultSerializer
 	) {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);

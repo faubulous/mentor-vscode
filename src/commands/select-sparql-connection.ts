@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { SparqlConnectionService } from '@src/services/shared/sparql-connection-service';
+import { container, ISparqlConnectionService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 
 export const selectSparqlConnection = {
 	id: 'mentor.command.selectSparqlConnection',
@@ -11,7 +10,7 @@ export const selectSparqlConnection = {
 			return;
 		}
 
-		const service = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const service = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
 		// Show a quick pick to select from existing SPARQL connections
 		const connections = await service.getConnections();

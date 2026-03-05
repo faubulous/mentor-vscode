@@ -4,7 +4,7 @@ import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '@src/workspace/document-context';
 import { DocumentFactory } from '@src//workspace/document-factory';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
-import { ConfigurationService } from './configuration-service';
+import { IConfigurationService } from '@src/services/interface';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -53,7 +53,7 @@ export class DocumentContextService {
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _vocabulary: VocabularyRepository,
 		private readonly _documentFactory: DocumentFactory,
-		private readonly _configurationProvider: ConfigurationService
+		private readonly _configurationProvider: IConfigurationService
 	) {
 		// Register event handlers for editor and document changes.
 		const disposables = [

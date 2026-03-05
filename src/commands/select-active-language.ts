@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { DocumentContextService } from '@src/services/shared/document-context-service';
-import { SettingsService } from '@src/services/shared/settings-service';
+import { container, VocabularyRepository, IDocumentContextService, ISettingsService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 
 interface LanguageQuckPickItem extends vscode.QuickPickItem {
 	/**
@@ -20,7 +18,7 @@ export const selectActiveLanguage = {
 			return;
 		}
 
-		const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 		const context = contextService.contexts[document.uri.toString()];
 
 		if (!context) {
@@ -58,7 +56,7 @@ export const selectActiveLanguage = {
 					context.activeLanguageTag = language;
 
 					// Refresh the tree views..
-					const settings = container.resolve<SettingsService>(ServiceToken.SettingsService);
+					const settings = container.resolve<ISettingsService>(ServiceToken.SettingsService);
 					settings.set('view.activeLanguage', language);
 
 					quickPick.dispose();

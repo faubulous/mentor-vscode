@@ -4,7 +4,7 @@ import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { PrefixLookupService } from './prefix-lookup-service';
+import { IPrefixLookupService } from '@src/services/interface';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
 import { toArrayWithCancellation } from '@src/utilities/cancellation';
 import { NamespaceMap } from '@src/utilities';
@@ -14,7 +14,7 @@ import { NamespaceMap } from '@src/utilities';
  */
 export class SparqlQueryResultSerializer {
 	constructor(
-		private readonly prefixLookupService: PrefixLookupService
+		private readonly prefixLookupService: IPrefixLookupService
 	) {}
 
 	/**

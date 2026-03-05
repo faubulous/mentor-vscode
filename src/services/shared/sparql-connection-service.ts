@@ -2,12 +2,10 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
-import { ServiceToken } from '@src/services/service-token';
-import { ConfigurationService } from './configuration-service';
-import { WorkspaceStorageService } from './local-storage-service';
+import { ServiceToken } from '@src/services';
+import { IConfigurationService, ICredentialStorageService, ILocalStorageService } from '@src/services/interface';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from './credential';
-import { CredentialStorageService } from './credential-storage-service';
 import { SparqlConnection } from './sparql-connection';
 import { SparqlConnectionSource, ComunicaSource } from './sparql-query-source';
 
@@ -47,9 +45,9 @@ export class SparqlConnectionService {
 	}
 
 	constructor(
-		private readonly _configurationService: ConfigurationService,
-		private readonly _workspaceStorage: WorkspaceStorageService,
-		private readonly _credentialStorage: CredentialStorageService
+		private readonly _configurationService: IConfigurationService,
+		private readonly _workspaceStorage: ILocalStorageService,
+		private readonly _credentialStorage: ICredentialStorageService
 	) {
 		this._connections = [MENTOR_WORKSPACE_STORE];
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));

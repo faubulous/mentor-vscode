@@ -1,14 +1,18 @@
 import * as vscode from "vscode";
 
 /**
- * Injectable wrapper providing configuration getter.
- * Returns fresh configuration on each call to capture updates.
+ * Provides access to the extension's configuration settings. This service abstracts 
+ * away direct calls to vscode.workspace.getConfiguration and provides typed access to 
+ * configuration values. It also includes helper methods for retrieving specific 
+ * configuration values, such as exclude patterns for indexing.
  */
 export class ConfigurationService {
+	/**
+	 * Gets the VS Code workspace configuration for the 'mentor' extension.
+	 */
 	get config(): vscode.WorkspaceConfiguration {
 		return vscode.workspace.getConfiguration('mentor');
 	}
-
 
 	/**
 	 * Return a value from the configuration, or undefined if it doesn't exist.

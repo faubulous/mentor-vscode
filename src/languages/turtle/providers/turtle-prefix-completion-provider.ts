@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
-import { container, DocumentContextService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { PrefixLookupService } from '@src/services/shared/prefix-lookup-service';
+import { container, IDocumentContextService, IPrefixLookupService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
@@ -10,7 +9,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 	protected readonly prefixTokenTypes = new Set([TOKENS.PREFIX.name, TOKENS.TTL_PREFIX.name]);
 
 	private get contextService() {
-		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	constructor(readonly onComplete: (uri: string) => string) {
@@ -52,7 +51,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		}
 
 		const prefix = currentToken.image.split(":")[0];
-		const prefixLookup = container.resolve<PrefixLookupService>(ServiceToken.PrefixLookupService);
+		const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
 		const uri = prefixLookup.getUriForPrefix(document.uri.toString(), prefix);
 
 		if (uri) {

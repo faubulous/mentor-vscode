@@ -1,10 +1,9 @@
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { SettingsService } from '@src/services/shared/settings-service';
+import { container, ISettingsService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 
 export const hideReferences = {
 	id: 'mentor.command.hideReferences',
 	handler: () => {
-		container.resolve<SettingsService>(ServiceToken.SettingsService).set('view.showReferences', false);
+		container.resolve<ISettingsService>(ServiceToken.SettingsService).set('view.showReferences', false);
 	}
 };

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { SettingsService } from '@src/services/shared/settings-service';
+import { container, IDocumentContextService, ISettingsService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';
@@ -17,11 +16,11 @@ export class DefinitionTree implements TreeView {
 	readonly id = "mentor.view.definitionTree";
 
 	private get contextService() {
-		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	private get settings() {
-		return container.resolve<SettingsService>(ServiceToken.SettingsService);
+		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
 	}
 
 	/**

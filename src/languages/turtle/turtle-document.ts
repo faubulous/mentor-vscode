@@ -5,8 +5,8 @@ import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
-import { ConfigurationService } from '@src/services/shared/configuration-service';
-import { ServiceToken } from '@src/services/service-token';
+import { IConfigurationService } from '@src/services/interface';
+import { ServiceToken } from '@src/services';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';
 import {
@@ -168,7 +168,7 @@ export class TurtleDocument extends DocumentContext {
 
 		// TODO: This should be handled in the prefix definition service 
 		// (listen to doc changes and react) instead of the document itself.
-		const config = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService).config;
+		const config = container.resolve<IConfigurationService>(ServiceToken.ConfigurationService).config;
 		
 		if (change?.text.endsWith(':') && config.get('prefixes.autoDefinePrefixes')) {
 			// Do not auto-implement prefixes when manually typing a prefix.

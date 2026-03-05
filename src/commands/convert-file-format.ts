@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { DocumentContextService } from '@src/services/shared/document-context-service';
+import { container, VocabularyRepository, IDocumentContextService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { DocumentFactory, LanguageInfo } from '@src/workspace/document-factory';
 
 export const convertFileFormat = {
@@ -23,7 +22,7 @@ export const convertFileFormat = {
 		}
 
 		const documentIri = document.uri.toString();
-		const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 		const context = contextService.contexts[documentIri];
 
 		if (!context) {

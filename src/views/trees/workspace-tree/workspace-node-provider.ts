@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { container, WorkspaceRepository } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { ServiceToken } from '@src/services';
 
 // For a complete implementation of the FileSystemProvider API, see:
 // https://github.com/boltex/revealRangeTest/blob/main/src/fileExplorer.ts#L185

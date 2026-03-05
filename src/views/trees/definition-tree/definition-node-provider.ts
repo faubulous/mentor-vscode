@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri, _SH } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, DocumentContextService, WorkspaceIndexer } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { SettingsService } from '@src/services/shared/settings-service';
+import { container, VocabularyRepository, WorkspaceIndexer, ISettingsService, IDocumentContextService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
 import { DefinitionTreeLayout } from '@src/services/shared/settings-service';
@@ -35,11 +34,11 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	private get settings() {
-		return container.resolve<SettingsService>(ServiceToken.SettingsService);
+		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
 	}
 
 	private get contextService() {
-		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	private get workspaceIndexer() {

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { SparqlConnectionService } from '@src/services/shared/sparql-connection-service';
+import { container, ISparqlConnectionService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 
 /**
  * Provides a CodeLens to display and change the current SPARQL endpoint.
@@ -12,7 +11,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		connectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();
 		});
@@ -24,7 +23,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	 * @returns A promise that resolves to an array of CodeLenses.
 	 */
 	public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-		const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const connection = await connectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {

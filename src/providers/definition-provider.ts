@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container, IDocumentContextService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { DocumentContext } from '@src/workspace/document-context';
 
 /**
@@ -8,7 +8,7 @@ import { DocumentContext } from '@src/workspace/document-context';
  */
 export class DefinitionProvider {
 	private get contextService() {
-		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	/**

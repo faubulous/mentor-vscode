@@ -4,10 +4,10 @@ import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, S
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import { ConfigurationService } from '@src/services/shared/configuration-service';
-import { ServiceToken } from '@src/services/service-token';
+import { IConfigurationService, ISettingsService } from '@src/services/interface';
+import { ServiceToken } from '@src/services';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
-import { TreeLabelStyle, SettingsService } from '@src/services/shared/settings-service';
+import { TreeLabelStyle } from '@src/services/shared/settings-service';
 import { Range } from 'vscode-languageserver-types';
 
 /**
@@ -169,7 +169,7 @@ export abstract class DocumentContext {
 	};
 
 	constructor(documentUri: vscode.Uri) {
-		const configurationService = container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
+		const configurationService = container.resolve<IConfigurationService>(ServiceToken.ConfigurationService);
 		
 		this.uri = documentUri;
 		this.predicates.label = configurationService.get('predicates.label') ?? [];
@@ -271,7 +271,7 @@ export abstract class DocumentContext {
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
-		const settings = container.resolve<SettingsService>(ServiceToken.SettingsService);
+		const settings = container.resolve<ISettingsService>(ServiceToken.SettingsService);
 		const treeLabelStyle = settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {

@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import { ConfigurationService } from './configuration-service';
-import { GlobalStorageService } from './local-storage-service';
-import { DocumentContextService } from '@src/services/shared/document-context-service';
+import { IConfigurationService, IDocumentContextService, ILocalStorageService } from '@src/services/interface';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services/shared/prefix-downloader-service';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
@@ -11,9 +9,9 @@ import { WorkspaceUri } from '@src/workspace/workspace-uri';
  */
 export class PrefixLookupService {
 	constructor(
-		private readonly globalStorage: GlobalStorageService,
-		private readonly configuration: ConfigurationService,
-		private readonly contextService: DocumentContextService
+		private readonly globalStorage: ILocalStorageService,
+		private readonly configuration: IConfigurationService,
+		private readonly contextService: IDocumentContextService
 	) {}
 	/**
 	 * Get the a namespace map for the standard W3C prefix definitions used in inference graphs.

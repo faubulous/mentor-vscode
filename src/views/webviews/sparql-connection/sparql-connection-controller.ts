@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
-import { container } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { CredentialStorageService } from '@src/services/shared/credential-storage-service';
+import { container, ISparqlConnectionService, ICredentialStorageService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { MicrosoftAuthCredential } from '@src/services/shared/credential';
 import { SparqlConnection } from '@src/services/shared/sparql-connection';
-import { SparqlConnectionService } from '@src/services/shared/sparql-connection-service';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { WebviewController } from '../webview-controller';
 import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
@@ -54,7 +52,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                         connection: this.selectedConnection
                     });
                 } else {
-                    const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+                    const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
                     // Note: This always returns at least one connection (the Mentor Store).
                     const connection = connectionService.getConnections()[0];
 
@@ -66,7 +64,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 return true;
             }
             case 'GetSparqlConnectionCredential': {
-                const credentialService = container.resolve<CredentialStorageService>(ServiceToken.CredentialStorageService);
+                const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
                 const credential = await credentialService.getCredential(message.connectionId);
 
                 this.postMessage({
@@ -77,8 +75,8 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 return true;
             }
             case 'SaveSparqlConnection': {
-                const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
-                const credentialService = container.resolve<CredentialStorageService>(ServiceToken.CredentialStorageService);
+                const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+                const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
 
                 await connectionService.updateEndpoint(message.connection);
                 await connectionService.saveConfiguration();
@@ -92,12 +90,12 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 return true;
             }
             case 'UpdateSparqlConnection': {
-                const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+                const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
                 await connectionService.updateEndpoint(message.connection);
                 return true;
             }
             case 'TestSparqlConnection': {
-                const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+                const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
                 const result = await connectionService.testConnection(message.connection, message.credential);
                 this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
                 return true;

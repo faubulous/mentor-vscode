@@ -7,7 +7,7 @@ import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
-import { DocumentContextService } from './services/shared/document-context-service';
+import { IDocumentContextService } from './services/interface';
 import { ServiceToken } from './services/service-token';
 import { configureServiceContainer } from './services/service-container';
 import * as languages from './languages';
@@ -46,7 +46,7 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export async function deactivate(context: vscode.ExtensionContext) {
-	const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+	const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	contextService.dispose();
 }
 

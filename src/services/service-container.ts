@@ -20,6 +20,9 @@ import { SparqlQueryResultSerializer } from "./shared/sparql-query-result-serial
 import { SparqlQueryService } from "./shared/sparql-query-service";
 import { WorkspaceStorageService, GlobalStorageService } from "./shared/local-storage-service";
 
+// Re-export all interfaces for convenience
+export * from './interface';
+
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
  */

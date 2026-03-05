@@ -1,0 +1,12 @@
+export { ServiceToken } from './service-token';
+export { IConfigurationService } from './interface/configuration-service.interface';
+export { ICredentialStorageService } from './interface/credential-storage-service.interface';
+export { IDocumentContextService } from './interface/document-context-service.interface';
+export { ILocalStorageService } from './interface/local-storage-service.interface';
+export { IMicrosoftAuthService } from './interface/microsoft-auth-service.interface';
+export { IPrefixDownloaderService } from './interface/prefix-downloader-service.interface';
+export { IPrefixLookupService } from './interface/prefix-lookup-service.interface';
+export { ISettingsService } from './interface/settings-service.interface';
+export { ISparqlConnectionService } from './interface/sparql-connection-service.interface';
+export { ISparqlQueryService } from './interface/sparql-query-service.interface';
+export { ISparqlQueryResultSerializer } from './interface/sparql-query-result-serializer.interface';

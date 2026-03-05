@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events'
-import { ConfigurationService } from '@src/services/service-container';
+import { IConfigurationService } from '@src/services';
 
 /**
  * Supported label styles of the definition tree.
@@ -87,7 +87,7 @@ export class SettingsService extends EventEmitter {
 		return this._data[key] != null;
 	}
 
-	constructor(configurationService: ConfigurationService) {
+	constructor(configurationService: IConfigurationService) {
 		super();
 
 		// Initialize the default label rendering style.

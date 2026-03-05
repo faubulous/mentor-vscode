@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, DocumentContextService, ConfigurationService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
-import { SettingsService } from '@src/services/shared/settings-service';
+import { container, VocabularyRepository, IDocumentContextService, IConfigurationService, ISettingsService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 
 /**
  * Indicates the where missing language tags should be decorated.
@@ -44,15 +43,15 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	private get settings() {
-		return container.resolve<SettingsService>(ServiceToken.SettingsService);
+		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
 	}
 
 	private get contextService() {
-		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	private get configurationService() {
-		return container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
+		return container.resolve<IConfigurationService>(ServiceToken.ConfigurationService);
 	}
 
 	constructor() {

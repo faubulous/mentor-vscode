@@ -2,9 +2,8 @@ import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
-import { ConfigurationService } from '@src/services/shared/configuration-service';
-import { ServiceToken } from '@src/services/service-token';
-import { DocumentContextService } from '@src/services/shared/document-context-service';
+import { IConfigurationService, IDocumentContextService } from '@src/services/interface';
+import { ServiceToken } from '@src/services';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { WorkspaceIndexer } from '@src/workspace/workspace-indexer';
 import { DocumentContext } from '@src/workspace/document-context';
@@ -36,7 +35,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	private _lintingEnabled: boolean = false;
 
 	private get configuration() {
-		return container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
+		return container.resolve<IConfigurationService>(ServiceToken.ConfigurationService);
 	}
 
 	private get vocabulary() {
@@ -52,7 +51,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	}
 
 	private get contextService() {
-		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	constructor() {

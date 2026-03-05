@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri } from '@faubulous/mentor-rdf';
-import { container, DocumentContextService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container, IDocumentContextService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';
 
@@ -25,7 +25,7 @@ interface TextReplacement {
  */
 export class XmlRenameProvider extends XmlFeatureProvider implements vscode.RenameProvider {
 	private get contextService() {
-		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {

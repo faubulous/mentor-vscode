@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { Uri } from "@faubulous/mentor-rdf";
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
-import { container, DocumentContextService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services/service-token';
+import { container, IDocumentContextService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getIriFromIriReference, getNamespaceDefinition } from '@src/utilities';
@@ -12,7 +12,7 @@ import { getIriFromIriReference, getNamespaceDefinition } from '@src/utilities';
  */
 export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements vscode.CodeActionProvider {
 	private get contextService() {
-		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	/**
