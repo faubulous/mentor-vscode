@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { container } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
-import { SparqlConnectionService, CredentialStorageService } from '@src/services';
-import { WebviewController } from '../webview-controller';
-import { SparqlConnectionMessages } from './sparql-connection-messages';
-import { SparqlConnection } from '@src/services/sparql-connection';
+import { CredentialStorageService } from '@src/services/credential-storage-service';
 import { MicrosoftAuthCredential } from '@src/services/credential';
+import { SparqlConnection } from '@src/services/sparql-connection';
+import { SparqlConnectionService } from '@src/services/sparql-connection-service';
+import { SparqlConnectionMessages } from './sparql-connection-messages';
+import { WebviewController } from '../webview-controller';
 import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
 
 export class SparqlConnectionController extends WebviewController<SparqlConnectionMessages> {

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { PrefixDownloaderService, GlobalStorageService } from '@src/services';
+import { PrefixDownloaderService } from '@src/services/prefix-downloader-service';
+import { GlobalStorageService } from '@src/services/local-storage-service';
 import { ServiceToken } from '@src/service-token';
 
 export const updatePrefixes = {

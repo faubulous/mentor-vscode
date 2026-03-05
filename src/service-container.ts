@@ -11,8 +11,14 @@ import { DocumentContextService } from './services/document-context-service';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { SettingsService } from './services/settings-service';
-import { WorkspaceStorageService, GlobalStorageService, CredentialStorageService, SparqlConnectionService, SparqlQueryService, PrefixLookupService, PrefixDownloaderService, SparqlQueryResultSerializer } from './services';
 import { TurtlePrefixDefinitionService } from './languages/turtle/services/turtle-prefix-definition-service';
+import { CredentialStorageService } from "./services/credential-storage-service";
+import { PrefixDownloaderService } from "./services/prefix-downloader-service";
+import { PrefixLookupService } from "./services/prefix-lookup-service";
+import { SparqlConnectionService } from "./services/sparql-connection-service";
+import { SparqlQueryResultSerializer } from "./services/sparql-query-result-serializer";
+import { SparqlQueryService } from "./services/sparql-query-service";
+import { WorkspaceStorageService, GlobalStorageService } from "./services/local-storage-service";
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.

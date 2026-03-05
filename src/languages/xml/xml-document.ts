@@ -69,8 +69,6 @@ export class XmlDocument extends DocumentContext {
 		}
 
 		this._hasContent = true;
-
-		console.debug('setParsedData:', this.uri.toString());
 	}
 
 	getIriFromXmlString(value: string): string | undefined {

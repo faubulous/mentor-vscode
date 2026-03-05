@@ -1,13 +1,8 @@
 'use strict';
 import "reflect-metadata";
 import * as vscode from 'vscode';
-import { Store } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import * as languages from './languages';
-import * as commands from './commands';
-import * as trees from './views/trees';
-import * as webviews from './views/webviews';
-import * as providers from './providers';
+import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from './service-token';
 import { configureServiceContainer } from './service-container';
 import { NotebookSerializer } from './workspace/notebook-serializer';
@@ -15,7 +10,13 @@ import { NotebookController } from './workspace/notebook-controller';
 import { DocumentContextService } from './services/document-context-service';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
-import { SparqlConnectionService, SparqlQueryService } from './services';
+import { SparqlConnectionService } from './services/sparql-connection-service';
+import { SparqlQueryService } from "./services/sparql-query-service";
+import * as languages from './languages';
+import * as commands from './commands';
+import * as trees from './views/trees';
+import * as webviews from './views/webviews';
+import * as providers from './providers';
 
 export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);

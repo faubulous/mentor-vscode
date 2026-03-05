@@ -1,6 +1,6 @@
-import { container } from '../service-container';
+import { container } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
-import { SparqlQueryService } from '../services';
+import { SparqlQueryService } from '@src/services/sparql-query-service';
 
 export const clearQueryHistory = {
 	id: 'mentor.command.clearQueryHistory',
