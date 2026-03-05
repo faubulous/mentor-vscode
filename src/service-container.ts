@@ -127,7 +127,7 @@ export { PrefixDownloaderService };
 /**
  * Re-export ConfigurationProvider for convenient access.
  */
-export { ConfigurationService as ConfigurationProvider };
+export { ConfigurationService };
 
 /**
  * Re-export storage services for convenient access.

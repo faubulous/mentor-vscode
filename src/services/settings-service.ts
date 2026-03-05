@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events'
-import { ConfigurationProvider } from '@src/service-container';
+import { ConfigurationService } from '@src/service-container';
 
 /**
  * Supported label styles of the definition tree.
@@ -87,11 +87,11 @@ export class SettingsService extends EventEmitter {
 		return this._data[key] != null;
 	}
 
-	constructor(configurationProvider: ConfigurationProvider) {
+	constructor(configurationService: ConfigurationService) {
 		super();
 
 		// Initialize the default label rendering style.
-		const defaultStyle = configurationProvider.get('definitionTree.labelStyle');
+		const defaultStyle = configurationService.get('definitionTree.labelStyle');
 
 		switch (defaultStyle) {
 			case 'AnnotatedLabels':

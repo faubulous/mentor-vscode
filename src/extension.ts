@@ -16,7 +16,6 @@ import { DocumentContextService } from './services/document-context-service';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { SparqlConnectionService, SparqlQueryService } from './services';
-import { SettingsService } from './services/settings-service';
 
 export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);

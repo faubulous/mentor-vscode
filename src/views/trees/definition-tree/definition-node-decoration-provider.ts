@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, DocumentContextService, ConfigurationProvider } from '@src/service-container';
+import { container, VocabularyRepository, DocumentContextService, ConfigurationService } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
 import { SettingsService } from '@src/services/settings-service';
 
@@ -51,8 +51,8 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		return container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
-	private get configurationProvider() {
-		return container.resolve<ConfigurationProvider>(ServiceToken.ConfigurationService);
+	private get configurationService() {
+		return container.resolve<ConfigurationService>(ServiceToken.ConfigurationService);
 	}
 
 	constructor() {
@@ -83,7 +83,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	private _getDecorationScopeFromConfiguration(): MissingLanguageTagDecorationScope {
-		const result = this.configurationProvider.get('definitionTree.decorateMissingLanguageTags');
+		const result = this.configurationService.get('definitionTree.decorateMissingLanguageTags');
 
 		switch (result) {
 			case 'Document': {
