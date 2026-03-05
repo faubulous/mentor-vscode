@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { VocabularyRepository } from "@faubulous/mentor-rdf";
-import { container } from "@src/service-container";
-import { ServiceToken } from '@src/service-token';
+import { container } from "@src/services/service-container";
+import { ServiceToken } from '@src/services/service-token';
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassesNode } from "./classes-node";
 import { PropertiesNode } from "./properties-node";

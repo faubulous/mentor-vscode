@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { ConfigurationService, container, DocumentContextService, WorkspaceIndexer } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { ConfigurationService, container, DocumentContextService, WorkspaceIndexer } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 import { ReferenceProvider } from '@src/providers';
 
 /**

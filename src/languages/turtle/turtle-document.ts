@@ -6,7 +6,7 @@ import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubu
 import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ConfigurationService } from '@src/services/shared/configuration-service';
-import { ServiceToken } from '@src/service-token';
+import { ServiceToken } from '@src/services/service-token';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';
 import {

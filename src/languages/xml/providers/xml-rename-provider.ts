@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri } from '@faubulous/mentor-rdf';
-import { container, DocumentContextService } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { container, DocumentContextService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';
 

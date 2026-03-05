@@ -1,5 +1,5 @@
-import { container, WorkspaceIndexer } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { container, WorkspaceIndexer } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 
 export const analyzeWorkspace = {
 	id: 'mentor.command.analyzeWorkspace',

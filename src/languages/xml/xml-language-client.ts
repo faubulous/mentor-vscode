@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextService, DocumentFactory } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { container, DocumentContextService, DocumentFactory } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 import { LanguageClientBase, XmlDocument } from '@src/languages';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 

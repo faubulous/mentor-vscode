@@ -5,7 +5,7 @@ import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ConfigurationService } from '@src/services/shared/configuration-service';
-import { ServiceToken } from '@src/service-token';
+import { ServiceToken } from '@src/services/service-token';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { TreeLabelStyle, SettingsService } from '@src/services/shared/settings-service';
 import { Range } from 'vscode-languageserver-types';

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextService } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { container, DocumentContextService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 

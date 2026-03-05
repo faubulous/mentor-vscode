@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, WorkspaceRepository, DocumentFactory } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { container, WorkspaceRepository, DocumentFactory } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { getFileName, getPath } from '@src/utilities';
 

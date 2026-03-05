@@ -4,21 +4,21 @@ import { container, DependencyContainer } from "tsyringe";
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './service-token';
-import { InferenceUri } from './workspace/inference-uri';
-import { DocumentFactory } from './workspace/document-factory';
-import { WorkspaceRepository } from './workspace/workspace-repository';
-import { WorkspaceIndexer } from './workspace/workspace-indexer';
-import { ConfigurationService } from './services/shared/configuration-service';
-import { DocumentContextService } from './services/shared/document-context-service';
-import { SettingsService } from './services/shared/settings-service';
-import { TurtlePrefixDefinitionService } from './languages/turtle/services/turtle-prefix-definition-service';
-import { CredentialStorageService } from "./services/shared/credential-storage-service";
-import { PrefixDownloaderService } from "./services/shared/prefix-downloader-service";
-import { PrefixLookupService } from "./services/shared/prefix-lookup-service";
-import { SparqlConnectionService } from "./services/shared/sparql-connection-service";
-import { SparqlQueryResultSerializer } from "./services/shared/sparql-query-result-serializer";
-import { SparqlQueryService } from "./services/shared/sparql-query-service";
-import { WorkspaceStorageService, GlobalStorageService } from "./services/shared/local-storage-service";
+import { InferenceUri } from '../workspace/inference-uri';
+import { DocumentFactory } from '../workspace/document-factory';
+import { WorkspaceRepository } from '../workspace/workspace-repository';
+import { WorkspaceIndexer } from '../workspace/workspace-indexer';
+import { ConfigurationService } from './shared/configuration-service';
+import { DocumentContextService } from './shared/document-context-service';
+import { SettingsService } from './shared/settings-service';
+import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
+import { CredentialStorageService } from "./shared/credential-storage-service";
+import { PrefixDownloaderService } from "./shared/prefix-downloader-service";
+import { PrefixLookupService } from "./shared/prefix-lookup-service";
+import { SparqlConnectionService } from "./shared/sparql-connection-service";
+import { SparqlQueryResultSerializer } from "./shared/sparql-query-result-serializer";
+import { SparqlQueryService } from "./shared/sparql-query-service";
+import { WorkspaceStorageService, GlobalStorageService } from "./shared/local-storage-service";
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.

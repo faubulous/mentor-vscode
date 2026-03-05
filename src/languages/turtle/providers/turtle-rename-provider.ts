@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, DocumentContextService } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { container, DocumentContextService } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 import { TOKENS, isVariableToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';

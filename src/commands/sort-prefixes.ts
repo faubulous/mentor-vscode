@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { container } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 
 export const sortPrefixes = {

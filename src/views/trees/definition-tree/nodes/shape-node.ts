@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { _SH, NamedNode, BlankNode } from "@faubulous/mentor-rdf";
-import { container, VocabularyRepository } from "@src/service-container";
+import { container, VocabularyRepository } from "@src/services/service-container";
 import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassNodeBase } from "./class-node-base";
 import { PropertyNode } from "./property-node";

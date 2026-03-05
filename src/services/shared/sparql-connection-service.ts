@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
-import { ServiceToken } from '@src/service-token';
+import { ServiceToken } from '@src/services/service-token';
 import { ConfigurationService } from './configuration-service';
 import { WorkspaceStorageService } from './local-storage-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';

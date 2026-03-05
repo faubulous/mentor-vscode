@@ -1,5 +1,5 @@
-import { container } from '@src/service-container';
-import { ServiceToken } from '@src/service-token';
+import { container } from '@src/services/service-container';
+import { ServiceToken } from '@src/services/service-token';
 import { SparqlConnectionService } from '@src/services/shared/sparql-connection-service';
 import { sparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { PrefixDownloaderService } from '@src/services/shared/prefix-downloader-service';
 import { GlobalStorageService } from '@src/services/shared/local-storage-service';
-import { ServiceToken } from '@src/service-token';
+import { ServiceToken } from '@src/services/service-token';
 
 export const updatePrefixes = {
 	id: 'mentor.command.updatePrefixes',
