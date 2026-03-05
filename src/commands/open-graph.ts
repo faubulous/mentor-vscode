@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
-import { SparqlQueryService } from '@src/services/sparql-query-service';
-import { SparqlConnection } from '@src/services/sparql-connection';
-import { MENTOR_WORKSPACE_STORE } from '@src/services/sparql-connection-service';
+import { SparqlQueryService } from '@src/services/shared/sparql-query-service';
+import { SparqlConnection } from '@src/services/shared/sparql-connection';
+import { MENTOR_WORKSPACE_STORE } from '@src/services/shared/sparql-connection-service';
 
 const LARGE_GRAPH_THRESHOLD = 10000;
 

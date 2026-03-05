@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
-import { DocumentContext } from '../workspace/document-context';
-import { DocumentFactory } from '../workspace/document-factory';
-import { WorkspaceUri } from '../workspace/workspace-uri';
+import { DocumentContext } from '@src/workspace/document-context';
+import { DocumentFactory } from '@src//workspace/document-factory';
+import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { ConfigurationService } from './configuration-service';
 
 /**

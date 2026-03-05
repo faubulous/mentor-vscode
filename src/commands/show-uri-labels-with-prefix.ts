@@ -1,6 +1,6 @@
 import { container } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
-import { SettingsService, TreeLabelStyle } from '@src/services/settings-service';
+import { SettingsService, TreeLabelStyle } from '@src/services/shared/settings-service';
 
 export const showUriLabelsWithPrefix = {
 	id: 'mentor.command.showUriLabelsWithPrefix',

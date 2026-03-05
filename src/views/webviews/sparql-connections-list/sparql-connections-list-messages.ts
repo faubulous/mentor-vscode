@@ -1,4 +1,4 @@
-import { SparqlConnection } from '@src/services/sparql-connection';
+import { SparqlConnection } from '@src/services/shared/sparql-connection';
 import { ExecuteCommandMessage } from '../webview-messaging';
 
 export type SparqlConnectionsListMessages =

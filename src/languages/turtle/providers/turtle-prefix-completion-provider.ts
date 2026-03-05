@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container, DocumentContextService } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
-import { PrefixLookupService } from '@src/services/prefix-lookup-service';
+import { PrefixLookupService } from '@src/services/shared/prefix-lookup-service';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 

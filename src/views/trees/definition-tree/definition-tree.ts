@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container, DocumentContextService } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
-import { SettingsService } from '@src/services/settings-service';
+import { SettingsService } from '@src/services/shared/settings-service';
 import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';

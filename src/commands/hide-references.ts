@@ -1,6 +1,6 @@
 import { container } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
-import { SettingsService } from '@src/services/settings-service';
+import { SettingsService } from '@src/services/shared/settings-service';
 
 export const hideReferences = {
 	id: 'mentor.command.hideReferences',

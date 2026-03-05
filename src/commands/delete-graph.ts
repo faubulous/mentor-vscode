@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { container, Store } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
-import { SparqlConnectionService } from '@src/services/sparql-connection-service';
+import { SparqlConnectionService } from '@src/services/shared/sparql-connection-service';
+import { ConfigurationService } from '@src/services/shared/configuration-service';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
-import { ConfigurationService } from '@src/services/configuration-service';
 
 export const deleteGraph = {
 	id: 'mentor.command.deleteGraph',

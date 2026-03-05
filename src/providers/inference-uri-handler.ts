@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from '@src/service-container';
 import { ServiceToken } from '@src/service-token';
 import { Store } from '@faubulous/mentor-rdf';
-import { PrefixLookupService } from '@src/services/prefix-lookup-service';
+import { PrefixLookupService } from '@src/services/shared/prefix-lookup-service';
 import { InferenceUri } from '@src/workspace/inference-uri';
 
 export class InferenceUriHandler implements vscode.UriHandler {

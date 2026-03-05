@@ -1,5 +1,5 @@
-import { SparqlConnection } from "@src/services/sparql-connection";
-import { AuthCredential, MicrosoftAuthCredential } from '@src/services/credential';
+import { SparqlConnection } from "@src/services/shared/sparql-connection";
+import { AuthCredential, MicrosoftAuthCredential } from '@src/services/shared/credential';
 import { ExecuteCommandMessage } from '../webview-messaging';
 
 export type SparqlConnectionMessages =

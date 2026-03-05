@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
-import { BindingsResult } from '@src/services/sparql-query-state';
+import { BindingsResult } from '@src/services/shared/sparql-query-state';
 import { useStylesheet } from '@src/views/webviews/webview-hooks';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';

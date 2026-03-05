@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { BindingsResult } from '@src/services/sparql-query-state';
+import { BindingsResult } from '@src/services/shared/sparql-query-state';
 import { BindingsTablePagingState } from './bindings-table-paging-state';
 
 /**
