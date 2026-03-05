@@ -60,8 +60,7 @@ export class DocumentContextManager {
 	}
 
 	constructor(
-		@inject(Store) private readonly store: Store,
-		@inject(VocabularyRepository) private readonly vocabulary: VocabularyRepository,
+		@inject("VocabularyRepository") private readonly vocabulary: VocabularyRepository,
 		@inject(DocumentFactory) private readonly documentFactory: DocumentFactory,
 		@inject(ConfigurationProvider) private readonly configurationProvider: ConfigurationProvider
 	) {}
@@ -298,6 +297,21 @@ export class DocumentContextManager {
 		}
 
 		return context;
+	}
+
+	/**
+	 * Activate the document associated with the active context in the editor.
+	 * If the active context's document is not currently open in the editor, it will be opened.
+	 * @returns A promise that resolves to the active text editor or `undefined`.
+	 */
+	async activateDocument(): Promise<vscode.TextEditor | undefined> {
+		const documentUri = vscode.window.activeTextEditor?.document.uri;
+
+		if (this.activeContext && this.activeContext.uri != documentUri) {
+			await vscode.commands.executeCommand("vscode.open", this.activeContext.uri);
+		}
+
+		return vscode.window.activeTextEditor;
 	}
 
 	/**

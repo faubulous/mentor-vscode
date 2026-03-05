@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container, DocumentContextManager, WorkspaceIndexer } from '@src/container';
 import { ReferenceProvider } from '@src/providers';
 
 /**
@@ -27,10 +27,22 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
+	private get workspaceIndexer() {
+		return container.resolve(WorkspaceIndexer);
+	}
+
+	private get configuration() {
+		return vscode.workspace.getConfiguration('mentor');
+	}
+
 	constructor() {
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
-				this._enabled = mentor.configuration.get('editor.codeLensEnabled', true);
+				this._enabled = this.configuration.get('editor.codeLensEnabled', true);
 
 				// Fire the event to refresh the code lenses.
 				this._onDidChangeCodeLenses.fire();
@@ -42,15 +54,15 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 		this._initializing = true;
 		this._initialized = false;
 
-		this._enabled = mentor.configuration.get('editor.codeLensEnabled', true);
+		this._enabled = this.configuration.get('editor.codeLensEnabled', true);
 
-		mentor.workspaceIndexer.waitForIndexed().then(() => {
+		this.workspaceIndexer.waitForIndexed().then(() => {
 			if (this._enabled) {
 				this._onDidChangeCodeLenses.fire();
 			}
 		});
 
-		mentor.onDidChangeVocabularyContext(() => {
+		this.contextManager.onDidChangeDocumentContext(() => {
 			if (this._enabled) {
 				this._onDidChangeCodeLenses.fire();
 			}
@@ -74,7 +86,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 				return [];
 			}
 
-			const context = mentor.contexts[document.uri.toString()];
+			const context = this.contextManager.contexts[document.uri.toString()];
 
 			if (!context) {
 				return [];

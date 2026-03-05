@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container, DocumentContextManager } from '@src/container';
 import { TOKENS, isVariableToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -9,8 +9,12 @@ import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-prov
  * Provides renaming for URIs, resources labels and prefixes.
  */
 export class TurtleRenameProvider extends TurtleFeatureProvider implements vscode.RenameProvider {
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
 	public async prepareRename(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Range | null> {
-		const context = mentor.getDocumentContext(document, TurtleDocument);
+		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
@@ -31,7 +35,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 
 	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
 		const edits = new vscode.WorkspaceEdit();
-		const context = mentor.getDocumentContext(document, TurtleDocument);
+		const context = this.contextManager.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return edits;

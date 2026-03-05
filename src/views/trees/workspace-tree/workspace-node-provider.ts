@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { mentor } from '@src/mentor';
+import { container, WorkspaceRepository } from '@src/container';
 
 // For a complete implementation of the FileSystemProvider API, see:
 // https://github.com/boltex/revealRangeTest/blob/main/src/fileExplorer.ts#L185
@@ -14,9 +14,13 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
+	private get workspace() {
+		return container.resolve(WorkspaceRepository);
+	}
+
 	constructor() {
 		// Montior for changes in the workspace folders.
-		mentor.workspace.onDidChangeWorkspaceContents((e) => {
+		this.workspace.onDidChangeWorkspaceContents((e) => {
 			this._onDidChangeTreeData.fire(e.uri.toString());
 		});
 	}
@@ -42,7 +46,7 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 		}
 
 		if (!uri) {
-			await mentor.workspace.waitForInitialized();
+			await this.workspace.waitForInitialized();
 		}
 
 		const result = [];
@@ -51,16 +55,16 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 			// If the URI is provided, get the contents of the specified folder.
 			const folder = vscode.Uri.parse(uri);
 
-			result.push(...(await mentor.workspace.getFolderContents(folder)));
+			result.push(...(await this.workspace.getFolderContents(folder)));
 		} else if (!vscode.workspace.workspaceFile) {
 			// If this is not a workspace, then return the contents of the first folder.
 			const folder = vscode.workspace.workspaceFolders[0].uri;
 
-			result.push(...(await mentor.workspace.getFolderContents(folder)));
+			result.push(...(await this.workspace.getFolderContents(folder)));
 		} else {
 			// Iterate the workspace folders and push only the ones that have contents.
 			for (const folder of vscode.workspace.workspaceFolders) {
-				const contents = await mentor.workspace.getFolderContents(folder.uri);
+				const contents = await this.workspace.getFolderContents(folder.uri);
 
 				if (contents.length > 0) {
 					result.push(folder.uri);

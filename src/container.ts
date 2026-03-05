@@ -15,7 +15,8 @@ import { DocumentContextManager } from './workspace/document-context-manager';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { Settings } from './settings';
-import { LocalStorageService, CredentialStorageService, SparqlConnectionService, SparqlQueryService, PrefixLookupService, PrefixDownloaderService, TurtlePrefixDefinitionService, SparqlQueryResultSerializer } from './services';
+import { LocalStorageService, CredentialStorageService, SparqlConnectionService, SparqlQueryService, PrefixLookupService, PrefixDownloaderService, SparqlQueryResultSerializer } from './services';
+import { TurtlePrefixDefinitionService } from './languages/turtle/services/turtle-prefix-definition-service';
 
 /**
  * Injectable wrapper for VS Code ExtensionContext.
@@ -37,7 +38,6 @@ export class SecretStorageToken {
  * Injectable wrapper providing configuration getter.
  * Returns fresh configuration on each call to capture updates.
  */
-@injectable()
 @injectable()
 export class ConfigurationProvider {
 	get(): vscode.WorkspaceConfiguration {
@@ -96,7 +96,6 @@ export class GlobalStorageService extends LocalStorageService {}
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
  */
-@injectable()
 export class MentorGraphUriGenerator implements GraphUriGenerator {
 	getGraphUri(uri: string | Quad_Graph): string {
 		const value = typeof uri === 'string' ? uri : uri.value;
@@ -112,25 +111,20 @@ export function configureContainer(): DependencyContainer {
 	// Register ConfigurationProvider singleton
 	container.registerSingleton(ConfigurationProvider);
 
-	// Register MentorGraphUriGenerator as GraphUriGenerator
-	container.registerSingleton<GraphUriGenerator>("GraphUriGenerator", MentorGraphUriGenerator);
-
 	// Create singleton instances for the core RDF services
-	const graphUriGenerator = container.resolve<GraphUriGenerator>("GraphUriGenerator");
-	const reasoner = new OwlReasoner(graphUriGenerator);
+	const reasoner = new OwlReasoner(new MentorGraphUriGenerator());
 	const store = new Store(reasoner);
 	const vocabulary = new VocabularyRepository(store);
 
-	// Register them as singleton instances
-	container.registerInstance(OwlReasoner, reasoner);
-	container.registerInstance(Store, store);
-	container.registerInstance(VocabularyRepository, vocabulary);
+	// Register them as singleton instances using string tokens for external classes
+	container.registerInstance("OwlReasoner", reasoner);
+	container.registerInstance("Store", store);
+	container.registerInstance("VocabularyRepository", vocabulary);
 
 	container.registerSingleton(DocumentFactory);
 
 	// Create DocumentContextManager instance manually to avoid circular dependency with ConfigurationProvider
 	const documentContextManager = new DocumentContextManager(
-		store,
 		vocabulary,
 		container.resolve(DocumentFactory),
 		container.resolve(ConfigurationProvider)
@@ -199,3 +193,28 @@ export { container };
  * Re-export core RDF services for convenient access.
  */
 export { VocabularyRepository, Store, OwlReasoner };
+
+/**
+ * Re-export DocumentContextManager for convenient access.
+ */
+export { DocumentContextManager };
+
+/**
+ * Re-export DocumentFactory for convenient access.
+ */
+export { DocumentFactory };
+
+/**
+ * Re-export WorkspaceIndexer for convenient access.
+ */
+export { WorkspaceIndexer };
+
+/**
+ * Re-export WorkspaceRepository for convenient access.
+ */
+export { WorkspaceRepository };
+
+/**
+ * Re-export PrefixDownloaderService for convenient access.
+ */
+export { PrefixDownloaderService };

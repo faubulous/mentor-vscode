@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { Store, OwlReasoner, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import { configureContainer, WorkspaceStorageService, GlobalStorageService } from './container';
+import { WorkspaceStorageService, GlobalStorageService } from './container';
 import { DocumentContext } from './workspace/document-context';
 import { DocumentContextManager } from './workspace/document-context-manager';
 import { DocumentFactory } from './workspace/document-factory';
@@ -15,16 +15,13 @@ import {
 	PrefixLookupService,
 	SparqlConnectionService,
 	SparqlQueryService,
-	TurtlePrefixDefinitionService,
 } from './services';
+import { TurtlePrefixDefinitionService } from './languages/turtle/services/turtle-prefix-definition-service';
 
 /**
  * The Mentor extension identifier.
  */
 export const MENTOR_EXTENSION_ID = 'faubulous.mentor';
-
-// Configure the DI container on module load
-configureContainer();
 
 /**
  * The Mentor extension instance.
@@ -90,17 +87,23 @@ class MentorExtension {
 	/**
 	 * The active reasoner used for the Mentor triple store.
 	 */
-	readonly reasoner = container.resolve(OwlReasoner);
+	get reasoner(): OwlReasoner {
+		return container.resolve<OwlReasoner>("OwlReasoner");
+	}
 
 	/**
 	 * The Mentor RDF extension triple store.
 	 */
-	readonly store = container.resolve(Store);
+	get store(): Store {
+		return container.resolve<Store>("Store");
+	}
 
 	/**
 	 * A repository for retrieving ontology resources.
 	 */
-	readonly vocabulary = container.resolve(VocabularyRepository);
+	get vocabulary(): VocabularyRepository {
+		return container.resolve<VocabularyRepository>("VocabularyRepository");
+	}
 
 	/**
 	 * A repository for retrieving workspace resources such as files and folders.
@@ -263,16 +266,11 @@ class MentorExtension {
 
 	/**
 	 * Activate the document in the editor.
+	 * Delegates to DocumentContextManager.
 	 * @returns A promise that resolves to the active text editor or `undefined`.
 	 */
 	async activateDocument(): Promise<vscode.TextEditor | undefined> {
-		const documentUri = vscode.window.activeTextEditor?.document.uri;
-
-		if (this.activeContext && this.activeContext.uri != documentUri) {
-			await vscode.commands.executeCommand("vscode.open", this.activeContext.uri);
-		}
-
-		return vscode.window.activeTextEditor;
+		return this.contextManager.activateDocument();
 	}
 
 	/**
@@ -309,13 +307,13 @@ class MentorExtension {
 		this._onActiveEditorChanged();
 
 		// Load the W3C and other common ontologies for providing hovers, completions and definitions.
-		await mentor.store.loadFrameworkOntologies();
+		await this.store.loadFrameworkOntologies();
 
 		// Load the workspace files and folders for the explorer tree view.
-		await mentor.workspace.initialize();
+		await this.workspace.initialize();
 
 		// Index the entire workspace for providing hovers, completions and definitions.
-		await mentor.workspaceIndexer.indexWorkspace();
+		await this.workspaceIndexer.indexWorkspace();
 
 		vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 

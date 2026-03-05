@@ -1,13 +1,16 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container, DocumentContextManager } from '@src/container';
 
 /**
  * A provider that retrieves the locations of resource references in a document.
  */
 export class ReferenceProvider implements vscode.ReferenceProvider {
-	
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
-		const context = mentor.contexts[document.uri.toString()];
+		const context = this.contextManager.contexts[document.uri.toString()];
 
 		if (!context) {
 			return null;
@@ -30,7 +33,7 @@ export class ReferenceProvider implements vscode.ReferenceProvider {
 	provideReferencesForIri(iri: string): vscode.Location[] {
 		let result: vscode.Location[] = [];
 
-		for (const context of Object.values(mentor.contexts)) {
+		for (const context of Object.values(this.contextManager.contexts)) {
 			// Do not provide references for temporary, non-persisted git diff views or other in-memory documents.
 			if (context.isTemporary || !context.references[iri]) {
 				continue;

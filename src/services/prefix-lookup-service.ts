@@ -3,7 +3,7 @@ import { injectable, inject, delay } from 'tsyringe';
 import { ConfigurationProvider, GlobalStorageService } from '@src/container';
 import { DocumentContextManager } from '@src/workspace/document-context-manager';
 import { NamespaceMap } from '@src/utilities';
-import { DEFAULT_PREFIXES } from '@src/services';
+import { DEFAULT_PREFIXES } from '@src/services/prefix-downloader-service';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 
 /**

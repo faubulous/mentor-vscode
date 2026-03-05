@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { container, VocabularyRepository } from "@src/container";
+import { VocabularyRepository } from "@faubulous/mentor-rdf";
+import { container } from "@src/container";
 import { sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 
@@ -9,7 +10,7 @@ import { DefinitionTreeNode } from "../definition-tree-node";
  */
 export abstract class ClassNodeBase extends DefinitionTreeNode {
 	protected get vocabulary() {
-		return container.resolve(VocabularyRepository);
+		return container.resolve<VocabularyRepository>("VocabularyRepository");
 	}
 
 	/**

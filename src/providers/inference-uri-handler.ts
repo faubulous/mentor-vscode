@@ -1,11 +1,15 @@
 import * as vscode from 'vscode';
 import { container } from '@src/container';
-import { mentor } from '@src/mentor';
+import { Store } from '@faubulous/mentor-rdf';
 import { PrefixLookupService } from '@src/services';
 import { InferenceUri } from '@src/workspace/inference-uri';
 
 export class InferenceUriHandler implements vscode.UriHandler {
 	readonly extensionId: string;
+
+	private get store() {
+		return container.resolve<Store>("Store");
+	}
 
 	constructor(context: vscode.ExtensionContext) {
 		this.extensionId = context.extension.id;
@@ -29,10 +33,10 @@ export class InferenceUriHandler implements vscode.UriHandler {
 				// Decode the URI parameter
 				const inferenceUri = InferenceUri.toInferenceUri(targetUri);
 
-				if (mentor.store.hasGraph(inferenceUri)) {
+				if (this.store.hasGraph(inferenceUri)) {
 					const prefixLookup = container.resolve(PrefixLookupService);
 					const namespaces = prefixLookup.getInferencePrefixes();
-					const content = await mentor.store.serializeGraph(inferenceUri, 'text/turtle', undefined, namespaces);
+					const content = await this.store.serializeGraph(inferenceUri, 'text/turtle', undefined, namespaces);
 					const document = await vscode.workspace.openTextDocument({ content, language: 'turtle' });
 
 					await vscode.window.showTextDocument(document);

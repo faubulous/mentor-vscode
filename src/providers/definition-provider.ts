@@ -1,11 +1,15 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container, DocumentContextManager } from '@src/container';
 import { DocumentContext } from '@src/workspace/document-context';
 
 /**
  * A provider that retrieves the locations of resource definitions in a document.
  */
 export class DefinitionProvider {
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
 	/**
 	 * Get the definition of a resource at a specific position in a document.
 	 * @param document The document in which the resource is defined.
@@ -13,7 +17,7 @@ export class DefinitionProvider {
 	 * @returns The definition of the resource at the specified position.
 	 */
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
-		const context = mentor.contexts[document.uri.toString()];
+		const context = this.contextManager.contexts[document.uri.toString()];
 
 		if (!context) {
 			return null;
@@ -74,7 +78,7 @@ export class DefinitionProvider {
 
 	private _getContextsDefiningIri(iri: string, primaryContext?: DocumentContext): DocumentContext[] {
 		const result: DocumentContext[] = [];
-		const contexts = Object.values(mentor.contexts);
+		const contexts = Object.values(this.contextManager.contexts);
 
 		for (const c of contexts.filter(c => c.typeDefinitions[iri])) {
 			if (primaryContext && c == primaryContext) {

@@ -1,17 +1,18 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container, DocumentFactory } from '@src/container';
 
 export const createDocument = {
 	id: 'mentor.command.createDocument',
 	handler: async () => {
 		const items: any[] = [];
+		const documentFactory = container.resolve(DocumentFactory);
 
 		items.push({
 			label: '$(mentor-notebook) Mentor Notebook',
 			command: 'mentor.command.createNotebook'
 		});
 
-		for (const lang of await mentor.documentFactory.getSupportedLanguagesInfo()) {
+		for (const lang of await documentFactory.getSupportedLanguagesInfo()) {
 			items.push({
 				label: `$(${lang.icon})  ${lang.typeName}`,
 				command: 'mentor.command.createDocumentFromLanguage',

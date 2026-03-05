@@ -1,9 +1,17 @@
 import * as vscode from 'vscode';
-import { mentor } from '@src/mentor';
+import { container, DocumentContextManager, DocumentFactory } from '@src/container';
 import { LanguageClientBase, XmlDocument } from '@src/languages';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 
 export class XmlLanguageClient extends LanguageClientBase {
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
+	private get documentFactory() {
+		return container.resolve(DocumentFactory);
+	}
+
 	constructor() {
 		super('xml', 'RDF/XML');
 	}
@@ -13,14 +21,14 @@ export class XmlLanguageClient extends LanguageClientBase {
 
 		if (this.client) {
 			this.client.onNotification('mentor.message.updateContext', (params: { languageId: string, uri: string, parsedData: XmlParseResult }) => {
-				let documentContext = mentor.contexts[params.uri];
+				let documentContext = this.contextManager.contexts[params.uri];
 
 				if (documentContext === undefined) {
 					const uri = vscode.Uri.parse(params.uri);
 
-					documentContext = mentor.documentFactory.create(uri, this.languageId);
+					documentContext = this.documentFactory.create(uri, this.languageId);
 
-					mentor.contexts[params.uri] = documentContext;
+					this.contextManager.contexts[params.uri] = documentContext;
 				}
 
 				if (documentContext instanceof XmlDocument) {
@@ -30,7 +38,7 @@ export class XmlLanguageClient extends LanguageClientBase {
 					// Resolve any pending token requests for this document.
 					// This allows loadDocument to proceed with triple loading.
 					// We pass an empty array since XML doesn't use tokens.
-					mentor.resolveTokens(params.uri, []);
+					this.contextManager.resolveTokens(params.uri, []);
 				}
 			});
 		}

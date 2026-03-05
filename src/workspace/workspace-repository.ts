@@ -50,7 +50,7 @@ export class WorkspaceRepository {
 	readonly onDidChangeWorkspaceContents = this._onDidChangeWorkspaceContents.event;
 
 	constructor(
-		@inject(DocumentFactory) documentFactory: DocumentFactory,
+		@inject(delay(() => DocumentFactory)) documentFactory: DocumentFactory,
 		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider
 	) {
 		this._includePatterns = Object.keys(documentFactory.supportedExtensions).map(ext => `**/*${ext}`);

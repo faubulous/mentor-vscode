@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { NamedNode } from '@faubulous/mentor-rdf';
-import { mentor } from '@src/mentor';
-import { container, VocabularyRepository } from '@src/container';
+import { container, VocabularyRepository, DocumentContextManager } from '@src/container';
 import { Settings } from '@src/settings';
 
 /**
@@ -40,11 +39,15 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	private _decorationScope: MissingLanguageTagDecorationScope;
 
 	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
+		return container.resolve<VocabularyRepository>("VocabularyRepository");
 	}
 
 	private get settings() {
 		return container.resolve(Settings);
+	}
+
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
 	}
 
 	constructor() {
@@ -59,7 +62,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			}
 		});
 
-		mentor.onDidChangeVocabularyContext((context) => {
+		this.contextManager.onDidChangeDocumentContext((context) => {
 			if (context) {
 				// When the context changes, the label predicates need to be updated.
 				this._labelPredicates = new Set(context?.predicates.label ?? []);
@@ -75,7 +78,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	private _getDecorationScopeFromConfiguration(): MissingLanguageTagDecorationScope {
-		const result = mentor.configuration.get('definitionTree.decorateMissingLanguageTags');
+		const result = vscode.workspace.getConfiguration('mentor').get('definitionTree.decorateMissingLanguageTags');
 
 		switch (result) {
 			case 'Document': {
@@ -91,7 +94,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
-		const context = mentor.activeContext;
+		const context = this.contextManager.activeContext;
 
 		if (!context || !uri || uri.scheme === 'mentor' || uri.scheme === 'file') {
 			return undefined;

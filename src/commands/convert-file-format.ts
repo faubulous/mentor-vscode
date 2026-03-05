@@ -42,7 +42,7 @@ export const convertFileFormat = {
 		const targetLanguage = selectedLanguage.mimetypes[0];
 
 		try {
-			const vocabulary = container.resolve(VocabularyRepository);
+			const vocabulary = container.resolve<VocabularyRepository>("VocabularyRepository");
 			const data = await vocabulary.store.serializeGraph(sourceGraphIri, targetLanguage, targetGraphIri, context.namespaces);
 			const result = await vscode.workspace.openTextDocument({ content: data, language: selectedLanguage.id });
 

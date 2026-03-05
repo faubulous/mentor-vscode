@@ -1,9 +1,17 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
-import { mentor } from '@src/mentor';
+import { container, DocumentContextManager, DocumentFactory } from '@src/container';
 import { LanguageClientBase, SparqlDocument } from '@src/languages';
 
 export class SparqlLanguageClient extends LanguageClientBase {
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
+	private get documentFactory() {
+		return container.resolve(DocumentFactory);
+	}
+
 	constructor() {
 		super('sparql', 'SPARQL');
 	}
@@ -13,14 +21,14 @@ export class SparqlLanguageClient extends LanguageClientBase {
 
 		if (this.client) {
 			this.client.onNotification('mentor.message.updateContext', (params: { languageId: string, uri: string, tokens: IToken[] }) => {
-				let documentContext = mentor.contexts[params.uri];
+				let documentContext = this.contextManager.contexts[params.uri];
 
 				if (documentContext === undefined) {
 					const uri = vscode.Uri.parse(params.uri);
 
-					documentContext = mentor.documentFactory.create(uri, this.languageId);
+					documentContext = this.documentFactory.create(uri, this.languageId);
 
-					mentor.contexts[params.uri] = documentContext;
+					this.contextManager.contexts[params.uri] = documentContext;
 				}
 
 				if (documentContext instanceof SparqlDocument) {
@@ -29,7 +37,7 @@ export class SparqlLanguageClient extends LanguageClientBase {
 
 					// Resolve any pending token requests for this document.
 					// This allows loadDocument to proceed with triple loading.
-					mentor.resolveTokens(params.uri, params.tokens);
+					this.contextManager.resolveTokens(params.uri, params.tokens);
 				}
 			});
 		}

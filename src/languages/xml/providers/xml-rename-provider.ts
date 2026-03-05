@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri } from '@faubulous/mentor-rdf';
-import { mentor } from '@src/mentor';
+import { container, DocumentContextManager } from '@src/container';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';
 
@@ -23,9 +23,12 @@ interface TextReplacement {
  * Provides renaming for URIs, resources labels and prefixes.
  */
 export class XmlRenameProvider extends XmlFeatureProvider implements vscode.RenameProvider {
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
 
 	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
-		const context = mentor.getDocumentContext(document, XmlDocument);
+		const context = this.contextManager.getDocumentContext(document, XmlDocument);
 
 		if (!context) {
 			return undefined;
@@ -103,7 +106,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 	 * @returns The range of the prefix to be edited, or `undefined` if not found.
 	 */
 	private _getPrefixEditRange(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
-		const context = mentor.getDocumentContext(document, XmlDocument);
+		const context = this.contextManager.getDocumentContext(document, XmlDocument);
 
 		if (!context) {
 			return undefined;
@@ -192,7 +195,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 	 * @returns The range of the local name to be edited, or `undefined` if not found.
 	 */
 	private _getLocalNameEditRange(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
-		const context = mentor.getDocumentContext(document, XmlDocument);
+		const context = this.contextManager.getDocumentContext(document, XmlDocument);
 
 		if (!context) {
 			return undefined;

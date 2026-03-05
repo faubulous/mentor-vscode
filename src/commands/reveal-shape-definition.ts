@@ -1,23 +1,21 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
-import { container, VocabularyRepository } from '@src/container';
-import { DocumentContextManager } from '@src/workspace/document-context-manager';
+import { container, VocabularyRepository, DocumentContextManager } from '@src/container';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 export const revealShapeDefinition = {
 	id: 'mentor.command.revealShapeDefinition',
 	handler: async (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
-		mentor.activateDocument().then((editor) => {
-			const uri = getIriFromArgument(arg);
-			const contextManager = container.resolve(DocumentContextManager);
+		const uri = getIriFromArgument(arg);
+		const contextManager = container.resolve(DocumentContextManager);
+		contextManager.activateDocument().then((editor) => {
 
 			if (!uri || !editor || !contextManager.activeContext) {
 				// If no id is provided, we fail gracefully.
 				return;
 			}
 
-			const vocabulary = container.resolve(VocabularyRepository);
+			const vocabulary = container.resolve<VocabularyRepository>("VocabularyRepository");
 			const shapeUri = vocabulary.getShapes(contextManager.activeContext.graphs, uri, { includeBlankNodes: true }).next().value;
 
 			if (!shapeUri) {

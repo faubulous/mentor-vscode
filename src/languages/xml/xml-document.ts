@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
+import { Store } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
-import { mentor } from '@src/mentor';
+import { container } from '@src/container';
 import { DocumentContext } from '@src/workspace/document-context';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { getIriFromPrefixedName } from '@src/utilities';
@@ -12,6 +13,10 @@ export class XmlDocument extends DocumentContext {
 	readonly syntax: RdfSyntax;
 
 	private _inferenceExecuted = false;
+
+	private get store() {
+		return container.resolve<Store>("Store");
+	}
 
 	/**
 	 * Indicates whether parsed data has been received from the language server.
@@ -246,12 +251,12 @@ export class XmlDocument extends DocumentContext {
 	}
 
 	override async infer(): Promise<void> {
-		const reasoner = mentor.store.reasoner;
+		const reasoner = this.store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			mentor.store.executeInference(this.graphIri.toString());
+			this.store.executeInference(this.graphIri.toString());
 		}
 	}
 
@@ -270,7 +275,7 @@ export class XmlDocument extends DocumentContext {
 			this.graphs.push(graphUri);
 
 			// Load triples from the RDF/XML content into the store.
-			await mentor.store.loadFromXmlStream(data, graphUri, false);
+			await this.store.loadFromXmlStream(data, graphUri, false);
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 			console.error('Failed to load triples from RDF/XML:', e);

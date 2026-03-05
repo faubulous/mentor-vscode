@@ -35,7 +35,7 @@ export const selectActiveLanguage = {
 				language: undefined
 			}];
 		} else {
-			const vocabulary = container.resolve(VocabularyRepository);
+			const vocabulary = container.resolve<VocabularyRepository>("VocabularyRepository");
 			const languageStats = vocabulary.getLanguageTagUsageStats(context.graphs);
 
 			// Note: We translate the language code into a readable name in the UI language of the editor.

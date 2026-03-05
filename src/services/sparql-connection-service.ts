@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { injectable, inject, delay } from 'tsyringe';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
-import { ConfigurationProvider, WorkspaceStorageService } from '@src/container';
+import { container, ConfigurationProvider, WorkspaceStorageService } from '@src/container';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from './credential';
 import { CredentialStorageService } from './credential-storage-service';
@@ -41,8 +41,11 @@ export class SparqlConnectionService {
 
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
 
+	private get store(): Store {
+		return container.resolve<Store>("Store");
+	}
+
 	constructor(
-		@inject(Store) private readonly store: Store,
 		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider,
 		@inject(delay(() => WorkspaceStorageService)) private readonly workspaceStorage: WorkspaceStorageService,
 		@inject(CredentialStorageService) private readonly credentialStorage: CredentialStorageService

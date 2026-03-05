@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { Uri } from "@faubulous/mentor-rdf";
+import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
 import { TOKENS } from "@faubulous/mentor-rdf-parsers";
-import { container, VocabularyRepository } from "@src/container";
+import { container } from "@src/container";
 import { DocumentContextManager } from "@src/workspace/document-context-manager";
 import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -52,7 +52,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	}
 
 	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
+		return container.resolve<VocabularyRepository>("VocabularyRepository");
 	}
 
 	resolveCompletionItem?(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {

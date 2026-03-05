@@ -31,7 +31,7 @@ export class WorkspaceIndexer {
 	readonly onDidFinishIndexing = this._onDidFinishIndexing.event;
 
 	constructor(
-		@inject(DocumentFactory) private readonly documentFactory: DocumentFactory,
+		@inject(delay(() => DocumentFactory)) private readonly documentFactory: DocumentFactory,
 		@inject(delay(() => ConfigurationProvider)) private readonly configurationProvider: ConfigurationProvider,
 		@inject(delay(() => DocumentContextManager)) private readonly contextManager: DocumentContextManager
 	) {

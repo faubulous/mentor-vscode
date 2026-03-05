@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { mentor } from '../mentor';
+import { container, WorkspaceRepository, DocumentFactory } from '@src/container';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { getFileName, getPath } from '@src/utilities';
 
@@ -13,12 +13,14 @@ export const openFileFromLanguage = {
 	id: 'mentor.command.openFileFromLanguage',
 	handler: async (languageId: string) => {
 		const files: vscode.Uri[] = [];
+		const workspace = container.resolve(WorkspaceRepository);
+		const documentFactory = container.resolve(DocumentFactory);
 
-		for await (const file of mentor.workspace.getFilesByLanguageId(languageId)) {
+		for await (const file of workspace.getFilesByLanguageId(languageId)) {
 			files.push(file);
 		}
 
-		const language = await mentor.documentFactory.getLanguageInfo(languageId);
+		const language = await documentFactory.getLanguageInfo(languageId);
 		const languageName = language ? language.name : languageId;
 		const languageIcon = language ? language.icon : 'file';
 

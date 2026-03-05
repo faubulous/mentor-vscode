@@ -6,7 +6,7 @@ import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubu
 import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container, ConfigurationProvider } from '@src/container';
 import { DocumentContext } from '@src/workspace/document-context';
-import { TurtlePrefixDefinitionService } from '@src/services';
+import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';
 import {
 	countLeadingWhitespace,
 	countTrailingWhitespace,
@@ -116,7 +116,7 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	public override async infer(): Promise<void> {
-		const store = container.resolve(Store);
+		const store = container.resolve<Store>("Store");
 		const reasoner = store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
@@ -133,7 +133,7 @@ export class TurtleDocument extends DocumentContext {
 	 */
 	public override async loadTriples(data: string): Promise<void> {
 		try {
-			const store = container.resolve(Store);
+			const store = container.resolve<Store>("Store");
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			const graphUri = this.graphIri.toString();

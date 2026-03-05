@@ -5,7 +5,7 @@ import { Uri } from '@faubulous/mentor-rdf';
 import { TOKENS, isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
 import { ConfigurationProvider } from '@src/container';
 import { DocumentContextManager } from '@src/workspace/document-context-manager';
-import { PrefixLookupService } from '@src/services';
+import { PrefixLookupService } from '@src/services/prefix-lookup-service';
 import { getIriFromIriReference } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';

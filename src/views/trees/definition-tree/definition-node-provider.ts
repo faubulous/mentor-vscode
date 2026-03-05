@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri, _SH } from '@faubulous/mentor-rdf';
-import { mentor } from '@src/mentor';
-import { container, VocabularyRepository } from '@src/container';
+import { container, VocabularyRepository, DocumentContextManager, WorkspaceIndexer } from '@src/container';
 import { Settings } from '@src/settings';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
@@ -31,20 +30,28 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
 
 	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
+		return container.resolve<VocabularyRepository>("VocabularyRepository");
 	}
 
 	private get settings() {
 		return container.resolve(Settings);
 	}
 
+	private get contextManager() {
+		return container.resolve(DocumentContextManager);
+	}
+
+	private get workspaceIndexer() {
+		return container.resolve(WorkspaceIndexer);
+	}
+
 	constructor() {
-		mentor.onDidChangeVocabularyContext((context) => {
+		this.contextManager.onDidChangeDocumentContext((context) => {
 			// Update the tree when the active document changed.
 			this.refresh(context);
 		});
 
-		mentor.workspaceIndexer.onDidFinishIndexing(() => {
+		this.workspaceIndexer.onDidFinishIndexing(() => {
 			// Update the tree when the workspace has been indexed, incorporating definitions from external files.
 			this.refresh();
 		});

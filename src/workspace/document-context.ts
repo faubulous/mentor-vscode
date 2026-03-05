@@ -326,7 +326,7 @@ export abstract class DocumentContext {
 		let primaryLabel: Literal | undefined = undefined;
 		let fallbackLabel: Literal | undefined = undefined;
 
-		const store = container.resolve(Store);
+		const store = container.resolve<Store>("Store");
 
 		for (let p of predicates) {
 			for (let q of store.matchAll(graphUris, subject, p, null, false)) {
@@ -390,7 +390,7 @@ export abstract class DocumentContext {
 	 */
 	getPropertyPathLabel(node: Quad_Subject): string {
 		let result = [];
-		const vocabulary = container.resolve(VocabularyRepository);
+		const vocabulary = container.resolve<VocabularyRepository>("VocabularyRepository");
 
 		for (let c of vocabulary.getPropertyPathTokens(this.graphs, node)) {
 			if (typeof (c) === 'string') {

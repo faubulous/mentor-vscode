@@ -37,7 +37,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	}
 
 	private get vocabulary() {
-		return container.resolve(VocabularyRepository);
+		return container.resolve<VocabularyRepository>("VocabularyRepository");
 	}
 
 	private get documentFactory() {

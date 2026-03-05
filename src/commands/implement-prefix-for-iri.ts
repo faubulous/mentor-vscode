@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from '../container';
 import { IToken } from 'chevrotain';
-import { TurtlePrefixDefinitionService } from '../services';
+import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
 import { getTokenPosition } from '@src/utilities';
 
 export const implementPrefixForIri = {

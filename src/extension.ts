@@ -7,13 +7,16 @@ import * as trees from './views/trees';
 import * as webviews from './views/webviews';
 import * as providers from './providers';
 import { mentor } from './mentor';
-import { registerDependencies } from './container';
+import { registerDependencies, configureContainer } from './container';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
 
 export async function activate(context: vscode.ExtensionContext) {
+	// Setup Dependency Injection container.
+	configureContainer();
 	registerDependencies(context);
 	
+	// Register application features.
 	registerProviders(context);
 	registerUriHandlers(context);
 	registerLanguageClients(context);
@@ -21,6 +24,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerViews(context);
 	registerNotebookSerializers(context);
 
+	// Start the initialization of the extension.
 	mentor.initialize(context);
 }
 

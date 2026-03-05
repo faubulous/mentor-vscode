@@ -1,9 +1,9 @@
-import { mentor } from '../mentor';
+import { container, WorkspaceIndexer } from '@src/container';
 
 export const analyzeWorkspace = {
 	id: 'mentor.command.analyzeWorkspace',
 	handler: () => {
 		// Force re-indexing of the workspace, including oversized files.
-		mentor.workspaceIndexer.indexWorkspace(true);
+		container.resolve(WorkspaceIndexer).indexWorkspace(true);
 	}
 };

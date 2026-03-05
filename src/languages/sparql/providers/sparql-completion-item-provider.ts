@@ -1,10 +1,14 @@
 import * as vscode from "vscode";
+import { Store } from "@faubulous/mentor-rdf";
 import { TOKENS } from "@faubulous/mentor-rdf-parsers";
-import { mentor } from "@src/mentor";
+import { container } from "@src/container";
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
+	private get store() {
+		return container.resolve<Store>("Store");
+	}
 
 	override getCompletionItems(document: vscode.TextDocument, context: any, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
 		if (this.isGraphDefinitionContext(context, tokenIndex)) {
@@ -54,7 +58,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 			value = value.slice(0, -1);
 		}
 
-		const graphs = mentor.store.getGraphs();
+		const graphs = this.store.getGraphs();
 
 		for (const iri of graphs.filter(g => g.startsWith(value))) {
 			const label = iri.substring(value.length);
