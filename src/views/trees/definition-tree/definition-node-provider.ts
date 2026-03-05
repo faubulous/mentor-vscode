@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { Uri, _SH } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository, WorkspaceIndexer } from '@src/services/service-container';
-import { ServiceToken, ISettingsService, IDocumentContextService } from '@src/services';
+import { Uri, VocabularyRepository, _SH } from '@faubulous/mentor-rdf';
+import { container } from '@src/services/service-container';
+import { ServiceToken, ISettingsService, IDocumentContextService, IWorkspaceIndexer } from '@src/services';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
 import { DefinitionTreeLayout } from '@src/services/shared/settings-service';
@@ -42,7 +42,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	private get workspaceIndexer() {
-		return container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
+		return container.resolve<IWorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
 	}
 
 	constructor() {
@@ -146,7 +146,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			result.push(this.createRootNode(IndividualsNode, this.document, 'mentor:individuals'));
 		}
 
-		if (any(this.vocabulary.getShapes(this.document.graphs, undefined))	) {
+		if (any(this.vocabulary.getShapes(this.document.graphs, undefined))) {
 			result.push(this.createRootNode(ShapesNode, this.document, 'mentor:shapes'));
 		}
 

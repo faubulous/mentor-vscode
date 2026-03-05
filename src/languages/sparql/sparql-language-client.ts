@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
-import { container, DocumentFactory } from '@src/services/service-container';
+import { container } from '@src/services/service-container';
 import { ServiceToken, IDocumentContextService } from '@src/services';
 import { LanguageClientBase, SparqlDocument } from '@src/languages';
+import { DocumentFactory } from '@src/workspace/document-factory';
 
 export class SparqlLanguageClient extends LanguageClientBase {
 	private get contextService() {

@@ -2,6 +2,7 @@ export { ServiceToken } from './service-token';
 export { IConfigurationService } from './interface/configuration-service.interface';
 export { ICredentialStorageService } from './interface/credential-storage-service.interface';
 export { IDocumentContextService } from './interface/document-context-service.interface';
+export { IDocumentFactory } from './interface/document-factory.interface';
 export { ILocalStorageService } from './interface/local-storage-service.interface';
 export { IMicrosoftAuthService } from './interface/microsoft-auth-service.interface';
 export { IPrefixDownloaderService } from './interface/prefix-downloader-service.interface';

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository, DocumentContextService } from '@src/services/service-container';
-import { ServiceToken } from '@src/services';
+import { VocabularyRepository } from '@faubulous/mentor-rdf';
+import { container } from '@src/services/service-container';
+import { ServiceToken, IDocumentContextService } from '@src/services';
 import { DefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
@@ -8,7 +9,7 @@ export const revealShapeDefinition = {
 	id: 'mentor.command.revealShapeDefinition',
 	handler: async (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
 		const uri = getIriFromArgument(arg);
-		const contextService = container.resolve<DocumentContextService>(ServiceToken.DocumentContextService);
+		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 		contextService.activateDocument().then((editor) => {
 
 			if (!uri || !editor || !contextService.activeContext) {

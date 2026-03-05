@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { container, DocumentFactory } from '@src/services/service-container';
+import { container } from '@src/services/service-container';
 import { ServiceToken, IDocumentContextService } from '@src/services';
 import { LanguageClientBase, XmlDocument } from '@src/languages';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
+import { DocumentFactory } from '@src/workspace/document-factory';
 
 export class XmlLanguageClient extends LanguageClientBase {
 	private get contextService() {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { NamedNode } from '@faubulous/mentor-rdf';
-import { container, VocabularyRepository } from '@src/services/service-container';
+import { NamedNode, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { container } from '@src/services/service-container';
 import { ServiceToken, IDocumentContextService, IConfigurationService, ISettingsService } from '@src/services';
 
 /**

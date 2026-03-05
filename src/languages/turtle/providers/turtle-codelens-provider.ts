@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { container, WorkspaceIndexer} from '@src/services/service-container';
-import { ServiceToken, IConfigurationService, IDocumentContextService  } from '@src/services';
+import { container } from '@src/services/service-container';
+import { ServiceToken, IConfigurationService, IDocumentContextService, IWorkspaceIndexer } from '@src/services';
 import { ReferenceProvider } from '@src/providers';
 
 /**
@@ -37,7 +37,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 	}
 
 	private get _workspaceIndexer() {
-		return container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
+		return container.resolve<IWorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
 	}
 
 	constructor() {

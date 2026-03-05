@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { container, VocabularyRepository } from '@src/services/service-container';
+import { VocabularyRepository } from '@faubulous/mentor-rdf';
+import { container } from '@src/services/service-container';
 import { ServiceToken, IDocumentContextService } from '@src/services';
 import { DocumentFactory, LanguageInfo } from '@src/workspace/document-factory';
 

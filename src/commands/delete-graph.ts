@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { container, Store } from '@src/services/service-container';
+import { Store } from '@faubulous/mentor-rdf';
+import { container } from '@src/services/service-container';
 import { ServiceToken, ISparqlConnectionService, IConfigurationService } from '@src/services';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
 
