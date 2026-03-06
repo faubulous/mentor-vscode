@@ -1,5 +1,5 @@
-import * as vscode from "vscode";
-import { container, DependencyContainer } from "tsyringe";
+import * as vscode from 'vscode';
+import { container } from 'tsyringe';
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './tokens';
@@ -7,17 +7,17 @@ import { InferenceUri } from '../workspace/inference-uri';
 import { DocumentFactory } from '../workspace/document-factory';
 import { WorkspaceRepository } from '../workspace/workspace-repository';
 import { WorkspaceIndexer } from '../workspace/workspace-indexer';
-import { ConfigurationService } from './shared/configuration-service';
-import { DocumentContextService } from './shared/document-context-service';
-import { SettingsService } from './shared/settings-service';
+import { ConfigurationService } from './core/configuration-service';
+import { DocumentContextService } from './core/document-context-service';
+import { SettingsService } from './core/settings-service';
+import { CredentialStorageService } from './core/credential-storage-service';
+import { PrefixDownloaderService } from './core/prefix-downloader-service';
+import { PrefixLookupService } from './core/prefix-lookup-service';
+import { SparqlConnectionService } from './core/sparql-connection-service';
+import { SparqlQueryResultSerializer } from './core/sparql-query-result-serializer';
+import { SparqlQueryService } from './core/sparql-query-service';
+import { WorkspaceStorageService, GlobalStorageService } from './core/local-storage-service';
 import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
-import { CredentialStorageService } from "./shared/credential-storage-service";
-import { PrefixDownloaderService } from "./shared/prefix-downloader-service";
-import { PrefixLookupService } from "./shared/prefix-lookup-service";
-import { SparqlConnectionService } from "./shared/sparql-connection-service";
-import { SparqlQueryResultSerializer } from "./shared/sparql-query-result-serializer";
-import { SparqlQueryService } from "./shared/sparql-query-service";
-import { WorkspaceStorageService, GlobalStorageService } from "./shared/local-storage-service";
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.

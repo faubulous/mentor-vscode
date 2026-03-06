@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/interfaces';
+import { IDocumentContextService } from '@src/services/core';
 
 /**
  * Provides hover information for tokens.

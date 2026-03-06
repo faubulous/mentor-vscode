@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, ICredentialStorageService, ILocalStorageService } from '@src/services/interfaces';
+import { IConfigurationService, ICredentialStorageService, ILocalStorageService } from '@src/services/core';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from './credential';
 import { SparqlConnection } from './sparql-connection';

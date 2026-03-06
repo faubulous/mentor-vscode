@@ -1,7 +1,7 @@
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISettingsService } from '@src/services/interfaces';
-import { TreeLabelStyle } from '@src/services/shared/settings-service';
+import { ISettingsService } from '@src/services/core';
+import { TreeLabelStyle } from '@src/services/core/settings-service';
 
 export const showAnnotatedLabels = {
 	id: 'mentor.command.showAnnotatedLabels',

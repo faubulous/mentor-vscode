@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SparqlQueryExecutionState } from '@src/services/shared/sparql-query-state';
+import { SparqlQueryExecutionState } from '@src/services/core/sparql-query-state';
 import { sparqlResultsController } from '@src/views/webviews';
 import { executeNotebookCell } from './execute-notebook-cell';
 

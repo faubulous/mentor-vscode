@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/services/interfaces';
+import { ISparqlConnectionService } from '@src/services/core';
 
 /**
  * Provides a CodeLens to display and change the current SPARQL endpoint.

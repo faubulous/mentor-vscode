@@ -4,7 +4,7 @@ import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { DocumentContext } from '@src/workspace/document-context';
 import { DocumentFactory } from '@src//workspace/document-factory';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
-import { IConfigurationService } from '@src/services/interfaces';
+import { IConfigurationService } from '@src/services/core';
 
 /**
  * Maps document URIs to loaded document contexts.

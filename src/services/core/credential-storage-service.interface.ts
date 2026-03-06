@@ -1,4 +1,4 @@
-import { AuthCredential } from '@src/services/shared/credential';
+import { AuthCredential } from '@src/services/core/credential';
 
 /**
  * Interface for the CredentialStorageService.

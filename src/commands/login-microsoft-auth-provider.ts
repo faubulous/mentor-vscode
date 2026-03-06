@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { MicrosoftAuthService } from '@src/services/shared/microsoft-auth-service';
-import { CredentialFactory } from '@src/services/shared/credential-factory';
+import { MicrosoftAuthService } from '@src/services/core/microsoft-auth-service';
+import { CredentialFactory } from '@src/services/core/credential-factory';
 
 export const loginMicrosoftAuthProvider = {
     id: 'mentor.command.loginMicrosoftAuthProvider',

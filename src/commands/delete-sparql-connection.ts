@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ICredentialStorageService } from '@src/services/interfaces';
-import { SparqlConnection } from '@src/services/shared/sparql-connection';
+import { ISparqlConnectionService, ICredentialStorageService } from '@src/services/core';
+import { SparqlConnection } from '@src/services/core/sparql-connection';
 
 export const deleteSparqlConnection = {
 	id: 'mentor.command.deleteSparqlConnection',

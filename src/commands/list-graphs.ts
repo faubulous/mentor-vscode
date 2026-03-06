@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, ISparqlConnectionService } from '@src/services/interfaces';
-import { SparqlConnection } from '@src/services/shared/sparql-connection';
+import { IConfigurationService, ISparqlConnectionService } from '@src/services/core';
+import { SparqlConnection } from '@src/services/core/sparql-connection';
 import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
 
 export const listGraphs = {

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService } from '@src/services/interfaces';
+import { IConfigurationService } from '@src/services/core';
 
 export const createDocumentFromLanguage = {
 	id: 'mentor.command.createDocumentFromLanguage',

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { ConfigurationService } from '@src/services/shared/configuration-service';
+import { ConfigurationService } from '@src/services/core/configuration-service';
 import { DocumentFactory } from './document-factory';
 
 /**

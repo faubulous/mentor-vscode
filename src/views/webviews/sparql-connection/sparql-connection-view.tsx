@@ -4,9 +4,9 @@ import { useState, useCallback } from 'react';
 import { VscodeSingleSelect, VscodeTabs } from '@vscode-elements/elements';
 import { useWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
-import { SparqlConnection } from '@src/services/shared/sparql-connection';
-import { AuthCredential, BasicAuthCredential, BearerAuthCredential, MicrosoftAuthCredential } from '@src/services/shared/credential';
-import { CredentialFactory } from '@src/services/shared/credential-factory';
+import { SparqlConnection } from '@src/services/core/sparql-connection';
+import { AuthCredential, BasicAuthCredential, BearerAuthCredential, MicrosoftAuthCredential } from '@src/services/core/credential';
+import { CredentialFactory } from '@src/services/core/credential-factory';
 import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 import stylesheet from './sparql-connection-view.css';
 

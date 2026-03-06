@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { AuthCredential } from '@src/services/shared/credential';
-import { SparqlConnection } from '@src/services/shared/sparql-connection';
-import { ComunicaSource } from '@src/services/shared/sparql-query-source';
+import { AuthCredential } from '@src/services/core/credential';
+import { SparqlConnection } from '@src/services/core/sparql-connection';
+import { ComunicaSource } from '@src/services/core/sparql-query-source';
 
 /**
  * Interface for the SparqlConnectionService.

@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ICredentialStorageService } from '@src/services/interfaces';
-import { MicrosoftAuthCredential } from '@src/services/shared/credential';
-import { SparqlConnection } from '@src/services/shared/sparql-connection';
+import { ISparqlConnectionService, ICredentialStorageService } from '@src/services/core';
+import { MicrosoftAuthCredential } from '@src/services/core/credential';
+import { SparqlConnection } from '@src/services/core/sparql-connection';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { WebviewController } from '../webview-controller';
 import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';

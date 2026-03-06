@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISettingsService } from '@src/services/interfaces';
+import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TreeNodeBase } from '@src/views/trees/tree-node';
 import { getIriFromNodeId } from '@src/utilities';

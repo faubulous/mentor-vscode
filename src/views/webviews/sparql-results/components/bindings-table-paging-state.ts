@@ -1,4 +1,4 @@
-import { BindingsResult } from "@src/services/shared/sparql-query-state";
+import { BindingsResult } from "@src/services/core/sparql-query-state";
 
 /**
  * State for the SPARQL bindings pagination.

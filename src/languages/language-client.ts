@@ -50,10 +50,10 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(this);
 
-		this._start(context);
+		this.start(context);
 	}
 
-	private _start(context: vscode.ExtensionContext) {
+	protected start(context: vscode.ExtensionContext) {
 		// Absolute path to the server module.
 		const serverMain = vscode.Uri.joinPath(context.extensionUri, this.serverPath);
 
