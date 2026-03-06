@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { IToken } from 'chevrotain';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
+import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContext } from '@src/workspace/document-context';
 import { DocumentFactory } from '@src//workspace/document-factory';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';

@@ -1,6 +1,5 @@
 import { XSD } from '@faubulous/mentor-rdf';
-import { IParser, ILexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
-import { IToken, IRecognitionException } from 'chevrotain';
+import { IParser, ILexer, IToken, IRecognitionException, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import {
 	BrowserMessageReader,
 	BrowserMessageWriter,
@@ -84,7 +83,7 @@ export abstract class LanguageServerBase {
 	/**
 	 * Indicates whether the language server should provide tokens for the document to the client via 'mentor.message.updateContext'.
 	 */
-	isDocumentTokenProvider = false;
+	isRdfTokenProvider = false;
 
 	/**
 	 * The lexer used to tokenize the document. This is used to provide lexing diagnostics, but not for validating the document for errors, since that requires fully parsing it.
@@ -96,12 +95,12 @@ export abstract class LanguageServerBase {
 	 */
 	parser: IParser;
 
-	constructor(langaugeId: string, languageName: string, lexer: ILexer, parser: IParser, isDocumentTokenProvider = false) {
+	constructor(langaugeId: string, languageName: string, lexer: ILexer, parser: IParser, isRdfTokenProvider = false) {
 		this.languageName = languageName;
 		this.languageId = langaugeId;
 		this.lexer = lexer;
 		this.parser = parser;
-		this.isDocumentTokenProvider = isDocumentTokenProvider;
+		this.isRdfTokenProvider = isRdfTokenProvider;
 
 		const messageReader = new BrowserMessageReader(self);
 		const messageWriter = new BrowserMessageWriter(self);
@@ -280,7 +279,7 @@ export abstract class LanguageServerBase {
 
 		// Always send token notification to unblock the client, even for empty files or parsing errors.
 		// The client needs this to resolve pending token requests and avoid timeout errors.
-		if (this.isDocumentTokenProvider) {
+		if (this.isRdfTokenProvider) {
 			// This sends the tokens to the client so that they can be used to build a reference index.
 			this.connection.sendNotification('mentor.message.updateContext', {
 				uri: document.uri,
@@ -874,11 +873,11 @@ export abstract class LanguageServerBase {
 
 	getUnquotedLiteralValue(token: IToken): string {
 		switch (token?.tokenType.name) {
-			case TOKENS.STRING_LITERAL_QUOTE.name:
-			case TOKENS.STRING_LITERAL_SINGLE_QUOTE.name:
+			case RdfToken.STRING_LITERAL_QUOTE.name:
+			case RdfToken.STRING_LITERAL_SINGLE_QUOTE.name:
 				return token.image.substring(1, token.image.length - 1);
-			case TOKENS.STRING_LITERAL_LONG_QUOTE.name:
-			case TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE.name:
+			case RdfToken.STRING_LITERAL_LONG_QUOTE.name:
+			case RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE.name:
 				return token.image.substring(3, token.image.length - 3);
 		}
 

@@ -2,8 +2,7 @@
  * Note: Do not add import from 'vscode' here. This file is used in the 
  * language server where vscode is not available.
  */
-import { IToken } from "chevrotain";
-import { TOKENS } from "@faubulous/mentor-rdf-parsers";
+import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { Range } from "vscode-languageserver-types";
 
 /**
@@ -52,9 +51,9 @@ export function getTokenPosition(token: IToken): Range {
  * @returns A URI or undefined.
  */
 export function getIriFromToken(prefixes: PrefixMap, token: IToken): string | undefined {
-	if (token.tokenType.name === TOKENS.IRIREF.name) {
+	if (token.tokenType.name === RdfToken.IRIREF.name) {
 		return getIriFromIriReference(token.image);
-	} else if (token.tokenType.name === TOKENS.PNAME_LN.name || token.tokenType.name === TOKENS.PNAME_NS.name) {
+	} else if (token.tokenType.name === RdfToken.PNAME_LN.name || token.tokenType.name === RdfToken.PNAME_NS.name) {
 		return getIriFromPrefixedName(prefixes, token.image);
 	} else if (token.payload?.blankNodeId) {
 		return token.payload.blankNodeId;
@@ -116,7 +115,7 @@ export function getNamespaceIriFromPrefixedName(prefixes: PrefixMap, name: strin
  * @returns A namespace definition or undefined.
  */
 export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixDefinition | undefined {
-	if (token?.tokenType.name !== TOKENS.PREFIX.name && token?.tokenType.name !== TOKENS.TTL_PREFIX.name) {
+	if (token?.tokenType.name !== RdfToken.PREFIX.name && token?.tokenType.name !== RdfToken.TTL_PREFIX.name) {
 		return;
 	}
 
@@ -128,13 +127,13 @@ export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixD
 
 	const prefixToken = tokens[n + 1];
 
-	if (prefixToken?.tokenType.name !== TOKENS.PNAME_NS.name) {
+	if (prefixToken?.tokenType.name !== RdfToken.PNAME_NS.name) {
 		return;
 	}
 
 	const uriToken = tokens[n + 2];
 
-	if (uriToken?.tokenType.name !== TOKENS.IRIREF.name) {
+	if (uriToken?.tokenType.name !== RdfToken.IRIREF.name) {
 		return;
 	}
 
@@ -156,31 +155,31 @@ export function getTripleComponentType(tokens: IToken[], tokenIndex: number): Tr
 	const p = tokens[tokenIndex - 1];
 
 	switch (p.tokenType.name) {
-		case TOKENS.PERIOD.name: {
+		case RdfToken.PERIOD.name: {
 			// A dot is always followed by a subject.
 			return "subject";
 		}
-		case TOKENS.SEMICOLON.name: {
+		case RdfToken.SEMICOLON.name: {
 			// A semicolon is always followed by a predicate.
 			return "predicate";
 		}
-		case TOKENS.A.name: {
+		case RdfToken.A.name: {
 			// A type assertion is always followed by an object.
 			return "object";
 		}
-		case TOKENS.PNAME_LN.name:
-		case TOKENS.IRIREF.name: {
+		case RdfToken.PNAME_LN.name:
+		case RdfToken.IRIREF.name: {
 			// This could either be a predicate or an object.
 			const q = tokens[tokenIndex - 2];
 
 			switch (q?.tokenType.name) {
-				case TOKENS.SEMICOLON.name:
-				case TOKENS.LBRACKET.name:
-				case TOKENS.PNAME_LN.name:
-				case TOKENS.IRIREF.name: {
+				case RdfToken.SEMICOLON.name:
+				case RdfToken.LBRACKET.name:
+				case RdfToken.PNAME_LN.name:
+				case RdfToken.IRIREF.name: {
 					return "object";
 				}
-				case TOKENS.PERIOD.name: {
+				case RdfToken.PERIOD.name: {
 					return "predicate";
 				}
 			}

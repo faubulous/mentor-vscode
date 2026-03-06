@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
-import { IToken } from 'chevrotain';
 import { Position } from 'vscode-languageserver-types';
 import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IConfigurationService } from '@src/services/core';
@@ -80,12 +79,12 @@ export class TurtleDocument extends DocumentContext {
 
 		switch (token.tokenType.name) {
 			// Display the literal strings without the quotes for improved readability for long strings.
-			case TOKENS.STRING_LITERAL_SINGLE_QUOTE.name:
-			case TOKENS.STRING_LITERAL_QUOTE.name: {
+			case RdfToken.STRING_LITERAL_SINGLE_QUOTE.name:
+			case RdfToken.STRING_LITERAL_QUOTE.name: {
 				return token.image.slice(1, -1);
 			}
-			case TOKENS.STRING_LITERAL_LONG_QUOTE.name:
-			case TOKENS.STRING_LITERAL_LONG_SINGLE_QUOTE.name: {
+			case RdfToken.STRING_LITERAL_LONG_QUOTE.name:
+			case RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE.name: {
 				return token.image.slice(3, -3);
 			}
 			default: {
@@ -104,8 +103,8 @@ export class TurtleDocument extends DocumentContext {
 		const { start } = getTokenPosition(token);
 
 		switch (token.tokenType.name) {
-			case TOKENS.PNAME_NS.name:
-			case TOKENS.PNAME_LN.name: {
+			case RdfToken.PNAME_NS.name:
+			case RdfToken.PNAME_LN.name: {
 				const i = token.image.indexOf(":");
 				const n = position.character - start.character;
 
@@ -190,7 +189,7 @@ export class TurtleDocument extends DocumentContext {
 
 			const currentToken = this.tokens[n];
 
-			if (currentToken && currentToken.image && currentToken.tokenType.name === TOKENS.PNAME_NS.name) {
+			if (currentToken && currentToken.image && currentToken.tokenType.name === RdfToken.PNAME_NS.name) {
 				const prefix = currentToken.image.substring(0, currentToken.image.length - 1);
 
 				// Do not implmenet prefixes that are already defined.
@@ -333,8 +332,8 @@ export class TurtleDocument extends DocumentContext {
 
 		tokens.forEach((t: IToken, i: number) => {
 			switch (t.tokenType.name) {
-				case TOKENS.PREFIX.name:
-				case TOKENS.TTL_PREFIX.name: {
+				case RdfToken.PREFIX.name:
+				case RdfToken.TTL_PREFIX.name: {
 					const ns = getNamespaceDefinition(this.tokens, t);
 
 					// Only set the namespace if it is preceeded by a prefix keyword.
@@ -346,13 +345,13 @@ export class TurtleDocument extends DocumentContext {
 					}
 					break;
 				}
-				case TOKENS.PNAME_NS.name:
-				case TOKENS.PNAME_LN.name: {
+				case RdfToken.PNAME_NS.name:
+				case RdfToken.PNAME_LN.name: {
 					// Skip processing prefixes and iris in prefix definitions..
 					switch (previousToken?.tokenType.name) {
-						case TOKENS.PREFIX.name:
-						case TOKENS.TTL_PREFIX.name:
-						case TOKENS.PNAME_NS.name:
+						case RdfToken.PREFIX.name:
+						case RdfToken.TTL_PREFIX.name:
+						case RdfToken.PNAME_NS.name:
 							break;
 					}
 
@@ -373,7 +372,7 @@ export class TurtleDocument extends DocumentContext {
 					this._handleIriReference(tokens, t, iri);
 					break;
 				}
-				case TOKENS.IRIREF.name: {
+				case RdfToken.IRIREF.name: {
 					const iri = getIriFromIriReference(t.image);
 
 					if (t.startColumn === 1 && previousToken) {
@@ -385,7 +384,7 @@ export class TurtleDocument extends DocumentContext {
 					this._handleIriReference(tokens, t, iri);
 					break;
 				}
-				case TOKENS.A.name: {
+				case RdfToken.A.name: {
 					this._handleTypeAssertion(tokens, t, RDF.type, i);
 					this._handleTypeDefinition(tokens, t, RDF.type, i);
 					break;
@@ -399,7 +398,7 @@ export class TurtleDocument extends DocumentContext {
 	private _registerSubject(token: IToken, iri: string, previousToken: IToken) {
 		const previousType = previousToken.tokenType.name;
 
-		if (previousType === TOKENS.PERIOD.name) {
+		if (previousType === RdfToken.PERIOD.name) {
 			const range = this.getRangeFromToken(token);
 
 			if (!this.subjects[iri]) {

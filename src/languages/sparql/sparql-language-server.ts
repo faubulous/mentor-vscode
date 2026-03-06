@@ -1,5 +1,4 @@
-import { IToken } from 'chevrotain';
-import { SparqlLexer, SparqlParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { SparqlLexer, SparqlParser, IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { LanguageServerBase } from '@src/languages/language-server';
 import { Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver/browser';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -66,9 +65,9 @@ class SparqlLanguageServer extends LanguageServerBase {
 			// Only check the variable usage in SELECT/CONSTRUCT/DESCRIBE queries.
 			// In ASK queries, all variables are considered used.
 			switch (token.tokenType.name) {
-				case TOKENS.SELECT.name:
-				case TOKENS.CONSTRUCT.name:
-				case TOKENS.DESCRIBE.name: {
+				case RdfToken.SELECT.name:
+				case RdfToken.CONSTRUCT.name:
+				case RdfToken.DESCRIBE.name: {
 					// Start tracking a new query scope
 					const newScope: QueryScope = {
 						isStarSelect: false,
@@ -79,20 +78,20 @@ class SparqlLanguageServer extends LanguageServerBase {
 
 					scopeStack.push(newScope);
 
-					if (token.tokenType.name === TOKENS.SELECT.name) {
+					if (token.tokenType.name === RdfToken.SELECT.name) {
 						expectingSelectClause = true;
 						inSelectClause = true;
 					}
 					break;
 				}
-				case TOKENS.STAR.name: {
+				case RdfToken.STAR.name: {
 					// Check if this is a SELECT * (star in select clause)
 					if (inSelectClause && scopeStack.length > 0) {
 						scopeStack[scopeStack.length - 1].isStarSelect = true;
 					}
 					break;
 				}
-				case TOKENS.LCURLY.name: {
+				case RdfToken.LCURLY.name: {
 					currentDepth++;
 
 					// End of SELECT clause when we hit the first curly brace
@@ -102,7 +101,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 					}
 					break;
 				}
-				case TOKENS.RCURLY.name: {
+				case RdfToken.RCURLY.name: {
 					currentDepth--;
 
 					// Check if any scopes should be closed
@@ -112,8 +111,8 @@ class SparqlLanguageServer extends LanguageServerBase {
 					}
 					break;
 				}
-				case TOKENS.VAR1.name:
-				case TOKENS.VAR2.name: {
+				case RdfToken.VAR1.name:
+				case RdfToken.VAR2.name: {
 					// Track variable occurrences in the current scope
 					if (scopeStack.length > 0) {
 						const currentScope = scopeStack[scopeStack.length - 1];
@@ -123,7 +122,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 						if (inSelectClause && i > 0) {
 							const prevToken = tokens[i - 1];
 
-							if (prevToken?.tokenType?.name === TOKENS.AS_KW.name) {
+							if (prevToken?.tokenType?.name === RdfToken.AS_KW.name) {
 								currentScope.projectionVariables.add(varName);
 							}
 						}
@@ -136,7 +135,7 @@ class SparqlLanguageServer extends LanguageServerBase {
 					}
 					break;
 				}
-				case TOKENS.WHERE.name: {
+				case RdfToken.WHERE.name: {
 					// End of SELECT clause
 					if (expectingSelectClause) {
 						expectingSelectClause = false;

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { IToken } from 'chevrotain';
 import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
+import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { IConfigurationService, IWorkspaceIndexer } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';

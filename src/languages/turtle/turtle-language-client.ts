@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { IToken } from 'chevrotain';
 import { container } from 'tsyringe';
+import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';

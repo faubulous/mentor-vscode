@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { container } from "tsyringe";
 import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
-import { TOKENS } from "@faubulous/mentor-rdf-parsers";
+import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
@@ -114,7 +114,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		const currentToken = context.tokens[tokenIndex];
 		const currentType = currentToken?.tokenType.name;
 
-		return currentType === TOKENS.PNAME_LN.name || currentType === TOKENS.PNAME_NS.name;
+		return currentType === RdfToken.PNAME_LN.name || currentType === RdfToken.PNAME_NS.name;
 	}
 
 	private _getLocalPartCompletionItems(context: TurtleDocument, componentType: TripleComonentType, uri: string, graphs: string[] | undefined): vscode.CompletionItem[] {

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { TOKENS, isVariableToken } from '@faubulous/mentor-rdf-parsers';
+import { RdfToken, isVariableToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
@@ -57,8 +57,8 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 				const tokenType = t.tokenType.name;
 
 				switch (tokenType) {
-					case TOKENS.PNAME_NS.name:
-					case TOKENS.PNAME_LN.name: {
+					case RdfToken.PNAME_NS.name:
+					case RdfToken.PNAME_LN.name: {
 						const p = t.image.split(":")[0];
 
 						if (p === prefix) {

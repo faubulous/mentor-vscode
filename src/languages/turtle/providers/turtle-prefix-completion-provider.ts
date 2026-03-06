@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
@@ -8,7 +8,7 @@ import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
 export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implements vscode.InlineCompletionItemProvider {
-	protected readonly prefixTokenTypes = new Set([TOKENS.PREFIX.name, TOKENS.TTL_PREFIX.name]);
+	protected readonly prefixTokenTypes = new Set([RdfToken.PREFIX.name, RdfToken.TTL_PREFIX.name]);
 
 	private get contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
@@ -35,7 +35,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		const currentToken = context.tokens[n];
 		const currentType = currentToken.tokenType.name;
 
-		if (!currentType || currentType !== TOKENS.PNAME_NS.name) {
+		if (!currentType || currentType !== RdfToken.PNAME_NS.name) {
 			return;
 		}
 

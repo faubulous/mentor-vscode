@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { container } from 'tsyringe';
 import { Store } from "@faubulous/mentor-rdf";
-import { TOKENS } from "@faubulous/mentor-rdf-parsers";
+import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
@@ -35,9 +35,9 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		const previousToken = context.tokens[n - 1];
 
 		switch (previousToken?.tokenType.name) {
-			case TOKENS.GRAPH.name:
-			case TOKENS.FROM.name:
-			case TOKENS.NAMED.name:
+			case RdfToken.GRAPH.name:
+			case RdfToken.FROM.name:
+			case RdfToken.NAMED.name:
 				return true;
 			default:
 				return false;

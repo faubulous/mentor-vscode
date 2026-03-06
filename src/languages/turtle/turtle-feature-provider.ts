@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { Uri } from '@faubulous/mentor-rdf';
-import { TOKENS } from '@faubulous/mentor-rdf-parsers';
-import { IToken } from "chevrotain";
+import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { getTokenPosition } from "@src/utilities";
 
 /**
@@ -17,8 +16,8 @@ export class TurtleFeatureProvider {
 		const { start } = getTokenPosition(token);
 
 		switch (token.tokenType.name) {
-			case TOKENS.PNAME_NS.name:
-			case TOKENS.PNAME_LN.name: {
+			case RdfToken.PNAME_NS.name:
+			case RdfToken.PNAME_LN.name: {
 				const i = token.image.indexOf(":");
 
 				return new vscode.Range(
@@ -41,7 +40,7 @@ export class TurtleFeatureProvider {
 		const { start, end } = getTokenPosition(token);
 
 		switch (token.tokenType.name) {
-			case TOKENS.PNAME_LN.name: {
+			case RdfToken.PNAME_LN.name: {
 				const i = token.image.indexOf(":");
 
 				return new vscode.Range(
@@ -49,7 +48,7 @@ export class TurtleFeatureProvider {
 					new vscode.Position(end.line, end.character)
 				);
 			}
-			case TOKENS.IRIREF.name: {
+			case RdfToken.IRIREF.name: {
 				let uri = token.image.trim();
 				uri = uri.substring(1, uri.length - 1)
 
@@ -63,7 +62,7 @@ export class TurtleFeatureProvider {
 					new vscode.Position(end.line, start.character + i + label.length)
 				);
 			}
-			case TOKENS.VAR1.name: {
+			case RdfToken.VAR1.name: {
 				return new vscode.Range(
 					new vscode.Position(start.line, start.character + 1),
 					new vscode.Position(end.line, end.character)

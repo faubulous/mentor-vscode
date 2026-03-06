@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri } from "@faubulous/mentor-rdf";
-import { TOKENS } from '@faubulous/mentor-rdf-parsers';
+import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
@@ -54,7 +54,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		const result: vscode.CodeAction[] = [];
 
 		switch (token.tokenType.name) {
-			case TOKENS.IRIREF.name: {
+			case RdfToken.IRIREF.name: {
 				const namespaceIri = Uri.getNamespaceIri(getIriFromIriReference(token.image));
 
 				result.push({
@@ -70,9 +70,9 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 
 				break;
 			}
-			case TOKENS.PNAME_NS.name:
-			case TOKENS.PREFIX.name:
-			case TOKENS.TTL_PREFIX.name: {
+			case RdfToken.PNAME_NS.name:
+			case RdfToken.PREFIX.name:
+			case RdfToken.TTL_PREFIX.name: {
 				result.push({
 					kind: vscode.CodeActionKind.Refactor,
 					title: 'Sort prefixes',
@@ -85,9 +85,9 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 				});
 
 				// Add conversion actions for prefix definitions.
-				if (token.tokenType.name === TOKENS.PREFIX.name) {
+				if (token.tokenType.name === RdfToken.PREFIX.name) {
 					result.push(this._createConvertPrefixAction(document, context, token, 'turtle'));
-				} else if (token.tokenType.name === TOKENS.TTL_PREFIX.name) {
+				} else if (token.tokenType.name === RdfToken.TTL_PREFIX.name) {
 					result.push(this._createConvertPrefixAction(document, context, token, 'sparql'));
 				}
 
@@ -119,7 +119,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 
 		// Iterate over all tokens and convert all prefix definitions to the target style.
 		for (const t of context.tokens) {
-			if (t.tokenType.name === TOKENS.PREFIX.name || t.tokenType.name === TOKENS.TTL_PREFIX.name) {
+			if (t.tokenType.name === RdfToken.PREFIX.name || t.tokenType.name === RdfToken.TTL_PREFIX.name) {
 				const ns = getNamespaceDefinition(context.tokens, t);
 
 				if (ns) {

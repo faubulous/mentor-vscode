@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { IToken, TokenType } from 'chevrotain';
 import { Uri } from '@faubulous/mentor-rdf';
-import { TOKENS, isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
+import { IToken, RdfToken, TokenType } from '@faubulous/mentor-rdf-parsers';
+import { isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
 import { ConfigurationService } from '@src/services/core/configuration-service';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { PrefixLookupService } from '@src/services/document/prefix-lookup-service';
@@ -40,17 +40,17 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * The default token type for prefix definitions. This is used when appending 
 	 * new prefixes to the end of the prefix definition list.
 	 */
-	private _defaultPrefixTokenType = TOKENS.PREFIX;
+	private _defaultPrefixTokenType = RdfToken.PREFIX;
 
 	/**
 	 * A set of supported token types for prefix definitions.
 	 */
-	private _prefixTokenTypes = new Set([TOKENS.PREFIX.name, TOKENS.TTL_PREFIX.name]);
+	private _prefixTokenTypes = new Set([RdfToken.PREFIX.name, RdfToken.TTL_PREFIX.name]);
 
 	/**
 	 * A set of supported token types for base IRI definitions.
 	 */
-	private _baseTokenTypes = new Set([TOKENS.BASE.name, TOKENS.TTL_BASE.name]);
+	private _baseTokenTypes = new Set([RdfToken.BASE.name, RdfToken.TTL_BASE.name]);
 
 	/**
 	 * Sort the prefixes in a document.
@@ -116,8 +116,8 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 			const currentToken = context.tokens[i];
 
 			switch (currentToken.tokenType.name) {
-				case TOKENS.PREFIX.name:
-				case TOKENS.TTL_PREFIX.name: {
+				case RdfToken.PREFIX.name:
+				case RdfToken.TTL_PREFIX.name: {
 					n = n + 1;
 
 					const nextToken = context.tokens[i + 1];
@@ -224,10 +224,10 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 			return { name: 'XML_PREFIX' };
 		} else {
 			const hasDefaultPrefix = getFirstTokenOfType(context.tokens, this._defaultPrefixTokenType.name) !== undefined;
-			const hasTurtlePrefixes = getFirstTokenOfType(context.tokens, TOKENS.TTL_PREFIX.name) !== undefined;
+			const hasTurtlePrefixes = getFirstTokenOfType(context.tokens, RdfToken.TTL_PREFIX.name) !== undefined;
 
 			if (hasTurtlePrefixes && !hasDefaultPrefix) {
-				return TOKENS.TTL_PREFIX;
+				return RdfToken.TTL_PREFIX;
 			} else {
 				return this._defaultPrefixTokenType;
 			}
@@ -243,9 +243,9 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @returns The prefix definition string.
 	 */
 	private _getPrefixDefinition(tokenType: TokenType, upperCase: boolean, prefix: string, namespaceIri: string): string {
-		if (tokenType.name === TOKENS.PREFIX.name) {
+		if (tokenType.name === RdfToken.PREFIX.name) {
 			return `${upperCase ? 'PREFIX' : 'prefix'} ${prefix}: <${namespaceIri}>`;
-		} else if (tokenType.name === TOKENS.TTL_PREFIX.name) {
+		} else if (tokenType.name === RdfToken.TTL_PREFIX.name) {
 			return `@prefix ${prefix}: <${namespaceIri}> .`;
 		} else if (tokenType.name === 'XML_PREFIX') {
 			return `xmlns:${prefix}="${namespaceIri}"`;
@@ -389,7 +389,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		for (let i = 0; i < context.tokens.length; i++) {
 			const token = context.tokens[i];
 
-			if (token.tokenType.name !== TOKENS.IRIREF.name || !token.image.includes(namespaceIri)) {
+			if (token.tokenType.name !== RdfToken.IRIREF.name || !token.image.includes(namespaceIri)) {
 				continue;
 			}
 
