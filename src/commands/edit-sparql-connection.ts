@@ -1,4 +1,4 @@
-import { SparqlConnection } from '@src/services/core/sparql-connection';
+import { SparqlConnection } from '@src/services/sparql/sparql-connection';
 import { sparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 
 export const editSparqlConnection = {

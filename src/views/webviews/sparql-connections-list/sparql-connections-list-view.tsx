@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useWebviewMessaging, useStylesheet } from '../webview-hooks';
 import { SparqlConnectionsListMessages } from './sparql-connections-list-messages';
-import { SparqlConnection } from '@src/services/core/sparql-connection';
+import { SparqlConnection } from '@src/services/sparql/sparql-connection';
 import { ConfigurationScope, getConfigurationScopeLabel, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 import stylesheet from './sparql-connections-list-view.css';
 

@@ -1,8 +1,8 @@
 import { useStylesheet } from '@src/views/webviews/webview-hooks';
 import { useWebviewMessaging } from '@src/views/webviews/webview-hooks';
 import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
-import { BooleanResult } from '@src/services/core/sparql-query-state';
-import { SparqlQueryExecutionState } from '@src/services/core/sparql-query-state';
+import { BooleanResult } from '@src/services/sparql/sparql-query-state';
+import { SparqlQueryExecutionState } from '@src/services/sparql/sparql-query-state';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import { SparqlResultsProvider } from '../helpers/sparql-results-provider';
 import { SparqlResultsToolbar } from './sparql-results-toolbar';

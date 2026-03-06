@@ -13,9 +13,9 @@ import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
 import { PrefixDownloaderService } from './core/prefix-downloader-service';
 import { PrefixLookupService } from './core/prefix-lookup-service';
-import { SparqlConnectionService } from './core/sparql-connection-service';
-import { SparqlQueryResultSerializer } from './core/sparql-query-result-serializer';
-import { SparqlQueryService } from './core/sparql-query-service';
+import { SparqlConnectionService } from './sparql/sparql-connection-service';
+import { SparqlQueryResultSerializer } from './sparql/sparql-query-result-serializer';
+import { SparqlQueryService } from './sparql/sparql-query-service';
 import { WorkspaceStorageService, GlobalStorageService } from './core/local-storage-service';
 import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
 

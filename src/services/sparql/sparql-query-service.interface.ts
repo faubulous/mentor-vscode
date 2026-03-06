@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { SparqlQueryExecutionState } from '@src/services/core/sparql-query-state';
-import { SparqlConnection } from '@src/services/core/sparql-connection';
+import { SparqlQueryExecutionState } from '@src/services/sparql/sparql-query-state';
+import { SparqlConnection } from '@src/services/sparql/sparql-connection';
 
 /**
  * Interface for the SparqlQueryService.

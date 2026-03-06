@@ -3,12 +3,13 @@ import { SparqlLexer, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { ILocalStorageService, ICredentialStorageService, ISparqlConnectionService, ISparqlQueryResultSerializer } from '@src/services/core';
+import { AuthCredential } from '@src/services/core/credential';
+import { ILocalStorageService, ICredentialStorageService } from '@src/services/core';
+import { ISparqlConnectionService, ISparqlQueryResultSerializer } from '@src/services/sparql';
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';
-import { AuthCredential } from './credential';
 
 /**
  * The key for storing query history in local storage.

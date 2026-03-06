@@ -5,7 +5,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IConfigurationService, ICredentialStorageService, ILocalStorageService } from '@src/services/core';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { AuthCredential } from './credential';
+import { AuthCredential } from '../core/credential';
 import { SparqlConnection } from './sparql-connection';
 import { SparqlConnectionSource, ComunicaSource } from './sparql-query-source';
 

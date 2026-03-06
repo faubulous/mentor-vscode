@@ -1,6 +1,6 @@
 import { useContext, ReactNode } from 'react';
-import { SparqlQueryExecutionState } from '@src/services/core/sparql-query-state';
-import { BindingsResult } from '@src/services/core/sparql-query-state';
+import { SparqlQueryExecutionState } from '@src/services/sparql/sparql-query-state';
+import { BindingsResult } from '@src/services/sparql/sparql-query-state';
 import { useBindingsTablePaging } from '../components/bindings-table-paging-hook';
 import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';

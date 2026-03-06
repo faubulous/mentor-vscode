@@ -7,7 +7,4 @@ export { IMicrosoftAuthService } from './microsoft-auth-service.interface';
 export { IPrefixDownloaderService } from './prefix-downloader-service.interface';
 export { IPrefixLookupService } from './prefix-lookup-service.interface';
 export { ISettingsService } from './settings-service.interface';
-export { ISparqlConnectionService } from './sparql-connection-service.interface';
-export { ISparqlQueryService } from './sparql-query-service.interface';
-export { ISparqlQueryResultSerializer } from './sparql-query-result-serializer.interface';
 export { IWorkspaceIndexer } from './workspace-indexer.interface';

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from '@rdfjs/types';
-import { BindingsResult, SparqlQueryExecutionState } from '@src/services/core/sparql-query-state';
+import { BindingsResult, SparqlQueryExecutionState } from '@src/services/sparql/sparql-query-state';
 
 /**
  * Interface for the SparqlQueryResultSerializer.
