@@ -1,4 +1,5 @@
 'use strict';
+import 'reflect-metadata';
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
@@ -77,7 +78,7 @@ function registerProviders() {
 	new languages.TurtleTokenProvider();
 	new languages.TrigTokenProvider();
 	new languages.SparqlTokenProvider();
-	
+
 	new providers.DocumentLintingProvider();
 	new providers.WorkspaceUriLinkProvider();
 	new providers.WorkspaceFileSystemProvider();
