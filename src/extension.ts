@@ -28,9 +28,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	registerViews();
 	registerNotebookSerializers();
 
-	indexWorkspace();
-
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
+
+	// Do not await this, to allow the extension to finish activating while indexing 
+	// is still in progress. This may cause some language features to not be available 
+	// until indexing is complete, but provides a better user experience overall.
+	indexWorkspace();
 }
 
 export async function deactivate() {
