@@ -32,9 +32,8 @@ export class MentorGraphUriGenerator implements GraphUriGenerator {
 /**
  * Configures the service container with all necessary services and dependencies for the extension.
  * @param context The VS Code extension context, used for registering services that require access to the extension's lifecycle and storage.
- * @returns DependencyContainer instance with all services registered and ready for use throughout the extension.
  */
-export function configureServiceContainer(context: vscode.ExtensionContext): DependencyContainer {
+export function configureServiceContainer(context: vscode.ExtensionContext): void {
 	// Register VS Code services and extension context.
 	container.registerInstance(ServiceToken.ExtensionContext, context);
 
@@ -90,6 +89,4 @@ export function configureServiceContainer(context: vscode.ExtensionContext): Dep
 
 	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(configurationProvider, documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.TurtlePrefixDefinitionService, turtlePrefixDefinitionService);
-
-	return container;
 }

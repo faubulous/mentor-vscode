@@ -1,8 +1,4 @@
-/**
- * Note: This file is separate from container.ts to avoid circular dependency issues.
- * Service files can safely import InjectionToken from here without triggering
- * container.ts's imports of those same services.
- */
+// Note: This file is separate from container.ts to avoid circular dependency issues.
 
 /**
  * Enumeration of injection tokens for dependency injection.
