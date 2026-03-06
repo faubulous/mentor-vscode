@@ -8,13 +8,13 @@ import { DocumentFactory } from '../workspace/document-factory';
 import { WorkspaceRepository } from '../workspace/workspace-repository';
 import { WorkspaceIndexer } from '../workspace/workspace-indexer';
 import { ConfigurationService } from './core/configuration-service';
-import { DocumentContextService } from './core/document-context-service';
+import { DocumentContextService } from './document/document-context-service';
 import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
-import { PrefixDownloaderService } from './core/prefix-downloader-service';
-import { PrefixLookupService } from './core/prefix-lookup-service';
+import { PrefixDownloaderService } from './document/prefix-downloader-service';
+import { PrefixLookupService } from './document/prefix-lookup-service';
 import { SparqlConnectionService } from './sparql/sparql-connection-service';
-import { SparqlQueryResultSerializer } from './sparql/sparql-query-result-serializer';
+import { SparqlResultSerializer } from './sparql/sparql-result-serializer';
 import { SparqlQueryService } from './sparql/sparql-query-service';
 import { WorkspaceStorageService, GlobalStorageService } from './core/local-storage-service';
 import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
@@ -81,7 +81,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const prefixLookupService = new PrefixLookupService(globalStorageService, configurationProvider, documentContextService);
 	container.registerInstance(ServiceToken.PrefixLookupService, prefixLookupService);
 
-	const sparqlQueryResultSerializer = new SparqlQueryResultSerializer(prefixLookupService);
+	const sparqlQueryResultSerializer = new SparqlResultSerializer(prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
 
 	const sparqlQueryService = new SparqlQueryService(context, workspaceStorageService, credentialStorageService, sparqlConnectionService, sparqlQueryResultSerializer);

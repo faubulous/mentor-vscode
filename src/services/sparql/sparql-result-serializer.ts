@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
+import { AsyncIterator } from 'asynciterator';
 import { Store, Writer } from 'n3';
 import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
-import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { IPrefixLookupService } from '@src/services/core';
+import { IPrefixLookupService } from '@src/services/document';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
 import { toArrayWithCancellation } from '@src/utilities/cancellation';
 import { NamespaceMap } from '@src/utilities';
@@ -12,7 +12,7 @@ import { NamespaceMap } from '@src/utilities';
 /**
  * Handler for serializing SPARQL query results.
  */
-export class SparqlQueryResultSerializer {
+export class SparqlResultSerializer {
 	constructor(
 		private readonly prefixLookupService: IPrefixLookupService
 	) {}

@@ -5,7 +5,7 @@ import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
 import { AuthCredential } from '@src/services/core/credential';
 import { ILocalStorageService, ICredentialStorageService } from '@src/services/core';
-import { ISparqlConnectionService, ISparqlQueryResultSerializer } from '@src/services/sparql';
+import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/services/sparql';
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
@@ -59,7 +59,7 @@ export class SparqlQueryService {
 		private readonly _workspaceStorage: ILocalStorageService,
 		private readonly _credentialStorage: ICredentialStorageService,
 		private readonly _connectionService: ISparqlConnectionService,
-		private readonly _querySerializer: ISparqlQueryResultSerializer
+		private readonly _resultSerializer: ISparqlResultSerializer
 	) {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);
@@ -243,14 +243,14 @@ export class SparqlQueryService {
 			const result = await this._executeQueryOnSource(query, source, tokenSource.token);
 
 			if (result.type === 'bindings') {
-				context.result = await this._querySerializer.serializeBindings(context, result.bindings, tokenSource.token);
+				context.result = await this._resultSerializer.serializeBindings(context, result.bindings, tokenSource.token);
 			} else if (result.type === 'boolean') {
 				context.result = { type: 'boolean', value: result.value };
 			} else if (result.type === 'quads') {
 				context.result = {
 					type: 'quads',
 					mimeType: 'text/turtle',
-					document: await this._querySerializer.serializeQuads(context, result.quads, tokenSource.token)
+					document: await this._resultSerializer.serializeQuads(context, result.quads, tokenSource.token)
 				};
 			} else {
 				context.result = undefined;
@@ -294,7 +294,7 @@ export class SparqlQueryService {
 					quads.push(quad);
 				}
 
-				const data = await this._querySerializer.serializeQuadsToString(quads);
+				const data = await this._resultSerializer.serializeQuadsToString(quads);
 
 				return { type: 'quads', data };
 			} else if (result.type === 'bindings') {

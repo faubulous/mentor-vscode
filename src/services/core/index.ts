@@ -1,10 +1,6 @@
 export { IConfigurationService } from './configuration-service.interface';
 export { ICredentialStorageService } from './credential-storage-service.interface';
-export { IDocumentContextService } from './document-context-service.interface';
-export { IDocumentFactory } from './document-factory.interface';
 export { ILocalStorageService } from './local-storage-service.interface';
 export { IMicrosoftAuthService } from './microsoft-auth-service.interface';
-export { IPrefixDownloaderService } from './prefix-downloader-service.interface';
-export { IPrefixLookupService } from './prefix-lookup-service.interface';
 export { ISettingsService } from './settings-service.interface';
 export { IWorkspaceIndexer } from './workspace-indexer.interface';

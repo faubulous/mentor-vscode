@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/core';
+import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, SparqlDocument } from '@src/languages';
 import { DocumentFactory } from '@src/workspace/document-factory';
 

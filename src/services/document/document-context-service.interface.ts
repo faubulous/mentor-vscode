@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { IToken } from 'chevrotain';
 import { DocumentContext } from '@src/workspace/document-context';
-import { DocumentIndex } from '@src/services/core/document-context-service';
+import { DocumentIndex } from '@src/services/document/document-context-service';
 
 /**
  * Interface for the DocumentContextService.

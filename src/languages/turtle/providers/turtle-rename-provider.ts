@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/core';
+import { IDocumentContextService } from '@src/services/document';
 import { TOKENS, isVariableToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';

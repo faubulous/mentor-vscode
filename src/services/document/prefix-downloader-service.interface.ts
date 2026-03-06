@@ -1,4 +1,4 @@
-import { PrefixDefinitions } from '@src/services/core/prefix-downloader-service';
+import { PrefixDefinitions } from '@src/services/document/prefix-downloader-service';
 
 /**
  * Interface for the PrefixDownloaderService.

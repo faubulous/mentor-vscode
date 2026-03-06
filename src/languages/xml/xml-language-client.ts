@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/core';
+import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, XmlDocument } from '@src/languages';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { DocumentFactory } from '@src/workspace/document-factory';

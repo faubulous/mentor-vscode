@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigurationService } from '@src/services/core/configuration-service';
 import { DocumentFactory } from './document-factory';
 import { DocumentContext } from './document-context';
-import { DocumentContextService } from '@src/services/core/document-context-service';
+import { DocumentContextService } from '@src/services/document/document-context-service';
 
 /**
  * Maps document URIs to RDF document contexts.

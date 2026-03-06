@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/core';
+import { IDocumentContextService } from '@src/services/document';
 import { DocumentFactory, LanguageInfo } from '@src/workspace/document-factory';
 
 export const convertFileFormat = {

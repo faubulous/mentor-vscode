@@ -3,7 +3,7 @@ import { IToken } from 'chevrotain';
 import { container } from 'tsyringe';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/core';
+import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, TurtleDocument } from '@src/languages';
 
 export class TurtleLanguageClient extends LanguageClientBase {

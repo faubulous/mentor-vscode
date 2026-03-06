@@ -4,9 +4,9 @@ import { Bindings, Quad } from '@rdfjs/types';
 import { BindingsResult, SparqlQueryExecutionState } from '@src/services/sparql/sparql-query-state';
 
 /**
- * Interface for the SparqlQueryResultSerializer.
+ * Interface for the SparqlResultSerializer.
  */
-export interface ISparqlQueryResultSerializer {
+export interface ISparqlResultSerializer {
 	/**
 	 * Serializes SPARQL query results into a format suitable for the webview.
 	 * @param context The query execution context.
