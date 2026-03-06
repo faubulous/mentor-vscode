@@ -20,15 +20,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	configureServiceContainer(context);
 
+	await loadFrameworkOntologies();
+
 	registerLanguages();
 	registerProviders();
 	registerCommands(context);
 	registerViews();
 	registerNotebookSerializers();
 
-	await loadFrameworkOntologies();
-
-	await indexWorkspace();
+	indexWorkspace();
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 }
