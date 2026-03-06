@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, IWorkspaceIndexer } from '@src/services/core';
+import { IConfigurationService, IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ReferenceProvider } from '@src/providers';
 
@@ -38,8 +38,8 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
-	private get _workspaceIndexer() {
-		return container.resolve<IWorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
+	private get _workspaceIndexerService() {
+		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
 	}
 
 	constructor() {
@@ -59,7 +59,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 
 		this._enabled = this._configurationService.get('editor.codeLensEnabled', true);
 
-		this._workspaceIndexer.waitForIndexed().then(() => {
+		this._workspaceIndexerService.waitForIndexed().then(() => {
 			if (this._enabled) {
 				this._onDidChangeCodeLenses.fire();
 			}

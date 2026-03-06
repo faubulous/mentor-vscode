@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Uri, VocabularyRepository, _SH } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISettingsService, IWorkspaceIndexer } from '@src/services/core';
+import { ISettingsService, IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { any } from '@src/utilities';
 import { DocumentContext } from '@src/workspace/document-context';
@@ -43,8 +43,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
-	private get workspaceIndexer() {
-		return container.resolve<IWorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
+	private get workspaceIndexerService() {
+		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
 	}
 
 	constructor() {
@@ -53,7 +53,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			this.refresh(context);
 		});
 
-		this.workspaceIndexer.onDidFinishIndexing(() => {
+		this.workspaceIndexerService.onDidFinishIndexing(() => {
 			// Update the tree when the workspace has been indexed, incorporating definitions from external files.
 			this.refresh();
 		});

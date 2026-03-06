@@ -6,6 +6,13 @@ export const workspace = {
   workspaceFolders: [
     { name: 'root', index: 0, uri: workspaceRoot },
   ],
+  findFiles: async () => [] as any[],
+  createFileSystemWatcher: () => ({
+    onDidCreate: () => ({ dispose: () => {} }),
+    onDidChange: () => ({ dispose: () => {} }),
+    onDidDelete: () => ({ dispose: () => {} }),
+    dispose: () => {}
+  }),
 };
 
 // Provide a minimal Uri namespace compatible with vscode.Uri
@@ -25,3 +32,35 @@ export const commands = {
 export const env = {
   openExternal: async () => true,
 };
+
+export const FileChangeType = {
+  Created: 1,
+  Changed: 2,
+  Deleted: 3,
+};
+
+export const RelativePattern = class {
+  constructor(public base: any, public pattern: string) {}
+};
+
+/**
+ * Mock EventEmitter for tests.
+ */
+export class EventEmitter<T> {
+  private listeners: Array<(e: T) => void> = [];
+
+  get event() {
+    return (listener: (e: T) => void) => {
+      this.listeners.push(listener);
+      return { dispose: () => this.listeners = this.listeners.filter(l => l !== listener) };
+    };
+  }
+
+  fire(data: T) {
+    this.listeners.forEach(l => l(data));
+  }
+
+  dispose() {
+    this.listeners = [];
+  }
+}

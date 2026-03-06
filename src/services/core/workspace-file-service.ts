@@ -1,80 +1,83 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { ConfigurationService } from '@src/services/core/configuration-service';
-import { DocumentFactory } from './document-factory';
+import { ConfigurationService } from './configuration-service';
+import { DocumentFactory } from '../../workspace/document-factory';
+import { IWorkspaceFileService, WorkspaceFileChangeEvent } from './workspace-file-service.interface';
 
 /**
- * A repository for retrieving workspace resources such as files and folders.
+ * Service for discovering and watching workspace files that match supported extensions.
+ * Consolidates file discovery logic to avoid duplicate workspace scans.
  */
-export class WorkspaceRepository {
+export class WorkspaceFileService implements IWorkspaceFileService {
 	/**
 	 * The included file extensions as glob patterns.
 	 */
-	private _includePatterns: string[] = [];
+	private readonly _includePatterns: string[];
 
 	/**
-	 * The excluded file patterns loaded from the configuration.
-	 */
-	private _excludePatterns: string[] = [];
-
-	/**
-	 * A list of all RDF files in the workspace.
+	 * A list of all discovered files in the workspace.
 	 */
 	private _files: vscode.Uri[] = [];
 
 	/**
 	 * A file system watcher for the workspace.
 	 */
-	readonly watcher = vscode.workspace.createFileSystemWatcher('**/*', false, false, false);
+	private readonly _watcher: vscode.FileSystemWatcher;
 
 	/**
-	 * Indicates if the workspace has been initialized.
+	 * Indicates if file discovery has completed.
 	 */
 	private _initialized = false;
 
 	/**
-	 * An event that is fired when the workspace has been initialized.
+	 * Event emitter for discovery completion.
 	 */
-	private readonly _onDidFinishInitializing = new vscode.EventEmitter<boolean>();
+	private readonly _onDidFinishDiscovery = new vscode.EventEmitter<void>();
 
 	/**
-	 * An event that is fired when the workspace contents have changed.
+	 * Event emitter for file changes.
 	 */
-	private readonly _onDidChangeWorkspaceContents = new vscode.EventEmitter<vscode.FileChangeEvent>();
+	private readonly _onDidChangeFiles = new vscode.EventEmitter<WorkspaceFileChangeEvent>();
 
 	/**
-	 * An event that is fired when the workspace contents have changed.
+	 * An event that is fired when file discovery has completed.
 	 */
-	readonly onDidChangeWorkspaceContents = this._onDidChangeWorkspaceContents.event;
+	readonly onDidFinishDiscovery = this._onDidFinishDiscovery.event;
+
+	/**
+	 * An event that is fired when workspace file contents change.
+	 */
+	readonly onDidChangeFiles = this._onDidChangeFiles.event;
 
 	constructor(
-		documentFactory: DocumentFactory,
-		private readonly configurationProvider: ConfigurationService
+		private readonly documentFactory: DocumentFactory,
+		private readonly configurationService: ConfigurationService
 	) {
 		this._includePatterns = Object.keys(documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
 
-		this.watcher.onDidCreate((uri: vscode.Uri) => {
+		this._watcher = vscode.workspace.createFileSystemWatcher('**/*', false, false, false);
+
+		this._watcher.onDidCreate((uri: vscode.Uri) => {
 			if (!documentFactory.isSupportedFile(uri)) {
 				return;
 			}
 
 			this._files.push(uri);
 
-			this._onDidChangeWorkspaceContents.fire({
+			this._onDidChangeFiles.fire({
 				type: vscode.FileChangeType.Created,
 				uri: Utils.dirname(uri)
 			});
-
 		});
 
-		this.watcher.onDidDelete((uri: vscode.Uri) => {
+		this._watcher.onDidDelete((uri: vscode.Uri) => {
 			if (!documentFactory.isSupportedFile(uri)) {
 				return;
 			}
 
 			this._files = this._files.filter(f => f.path !== uri.path);
 
-			this._onDidChangeWorkspaceContents.fire({
+			this._onDidChangeFiles.fire({
 				type: vscode.FileChangeType.Deleted,
 				uri: Utils.dirname(uri)
 			});
@@ -82,48 +85,72 @@ export class WorkspaceRepository {
 	}
 
 	/**
-	 * Loads the root items of the workspace.
+	 * Get all discovered files in the workspace.
 	 */
-	async initialize(): Promise<void> {
+	get files(): ReadonlyArray<vscode.Uri> {
+		return this._files;
+	}
+
+	/**
+	 * Indicates if file discovery has completed.
+	 */
+	get initialized(): boolean {
+		return this._initialized;
+	}
+
+	/**
+	 * Get the include patterns for supported file extensions.
+	 */
+	get includePatterns(): ReadonlyArray<string> {
+		return this._includePatterns;
+	}
+
+	/**
+	 * Discovers all supported files in the workspace.
+	 */
+	async discoverFiles(): Promise<void> {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isInitializing', true);
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', true);
 
-		// Clear the root items.
 		this._files = [];
 
 		for (const folder of vscode.workspace.workspaceFolders ?? []) {
 			const workspaceUri = folder.uri;
 
-			this._excludePatterns = await this.configurationProvider.getExcludePatterns(workspaceUri);
+			const excludePatterns = await this.configurationService.getExcludePatterns(workspaceUri);
 
 			// Get the excluded folders pattern relative to the workspace folder.
-			const excludedFolders = new vscode.RelativePattern(workspaceUri, '{' + this._excludePatterns.join(",") + '}');
+			const excludedFolders = new vscode.RelativePattern(workspaceUri, '{' + excludePatterns.join(',') + '}');
 
-			// Get the included files relative to the requested folder.
-			const includedFiles = new vscode.RelativePattern(workspaceUri, '{' + this._includePatterns.join(",") + '}');
+			// Get the included files relative to the workspace folder.
+			const includedFiles = new vscode.RelativePattern(workspaceUri, '{' + this._includePatterns.join(',') + '}');
 
-			// This will only return files. We need to extract the subfolders separately.
-			this._files.push(...await vscode.workspace.findFiles(includedFiles, excludedFolders));
+			// Find all matching files.
+			const files = await vscode.workspace.findFiles(includedFiles, excludedFolders);
+
+			// Filter to ensure only files ending with supported extensions (glob may match mid-path).
+			const filteredFiles = files.filter(uri => this.documentFactory.isSupportedFile(uri));
+
+			this._files.push(...filteredFiles);
 		}
 
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', this._files.length === 0);
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isInitializing', false);
 
 		this._initialized = true;
-		this._onDidFinishInitializing.fire(true);
+		this._onDidFinishDiscovery.fire();
 	}
 
 	/**
-	 * Wait for the workspace root folders to be initialized.
-	 * @returns A promise that resolves when the workspace has been initialized.
+	 * Wait for file discovery to complete.
 	 */
-	async waitForInitialized(): Promise<void> {
+	async waitForDiscovery(): Promise<void> {
 		if (this._initialized) {
 			return;
 		}
 
 		return new Promise((resolve) => {
-			const listener = this._onDidFinishInitializing.event(() => {
+			const listener = this._onDidFinishDiscovery.event(() => {
 				listener.dispose();
 				resolve();
 			});
@@ -136,11 +163,10 @@ export class WorkspaceRepository {
 	 * @returns Generator yielding matching files one by one.
 	 */
 	async* getFilesByLanguageId(languageId: string): AsyncGenerator<vscode.Uri, void, unknown> {
-		// Get extensions for the language ID from VS Code configuration
 		const extensions = await this._getExtensionsForLanguageId(languageId);
 
 		if (extensions.length === 0) {
-			return; // No extensions found for this language
+			return;
 		}
 
 		const extSet = new Set<string>(extensions);
@@ -160,7 +186,6 @@ export class WorkspaceRepository {
 	 * @returns Array of file extensions (without dots)
 	 */
 	private async _getExtensionsForLanguageId(languageId: string): Promise<string[]> {
-		// Get all language configurations
 		const languages = vscode.extensions.all
 			.flatMap(ext => ext.packageJSON?.contributes?.languages || [])
 			.filter(lang => lang.id === languageId);
@@ -169,7 +194,6 @@ export class WorkspaceRepository {
 
 		for (const language of languages) {
 			if (language.extensions) {
-				// Remove the leading dot from extensions
 				const langExtensions = language.extensions.map((ext: string) =>
 					ext.startsWith('.') ? ext.substring(1) : ext
 				);
@@ -193,29 +217,23 @@ export class WorkspaceRepository {
 
 		const folder = folderUri.toString();
 
-		for (let file of this._files) {
-			// Skip files that are not in the requested folder.
+		for (const file of this._files) {
 			if (!file.toString().startsWith(folder)) {
 				continue;
 			}
 
-			// Get the portion of the URI relative to the folder.
 			const relativePath = file.toString().substring(folder.length + 1);
 
-			// If this includes a directory separator, we extract the folder name and add it ot the list of folders.
 			if (relativePath.includes('/')) {
 				const subFolderName = relativePath.substring(0, relativePath.indexOf('/'));
 				const subFolderUri = vscode.Uri.joinPath(folderUri, subFolderName);
 
 				if (!seenFolders.has(subFolderName)) {
 					folders.push(subFolderUri);
-
 					seenFolders.add(subFolderName);
 				}
 			} else if (!seenFiles.has(relativePath)) {
-				// Otherwise we add it to the list of files.
 				files.push(file);
-
 				seenFiles.add(relativePath);
 			}
 		}
@@ -224,5 +242,14 @@ export class WorkspaceRepository {
 			...folders.sort((a, b) => a.path.localeCompare(b.path)),
 			...files.sort((a, b) => a.path.localeCompare(b.path))
 		];
+	}
+
+	/**
+	 * Disposes of resources held by this service.
+	 */
+	dispose(): void {
+		this._watcher.dispose();
+		this._onDidFinishDiscovery.dispose();
+		this._onDidChangeFiles.dispose();
 	}
 }

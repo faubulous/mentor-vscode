@@ -5,8 +5,8 @@ import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './tokens';
 import { InferenceUri } from '../workspace/inference-uri';
 import { DocumentFactory } from '../workspace/document-factory';
-import { WorkspaceRepository } from '../workspace/workspace-repository';
-import { WorkspaceIndexer } from '../workspace/workspace-indexer';
+import { WorkspaceIndexerService } from './core/workspace-indexer-service';
+import { WorkspaceFileService } from './core/workspace-file-service';
 import { ConfigurationService } from './core/configuration-service';
 import { DocumentContextService } from './document/document-context-service';
 import { SettingsService } from './core/settings-service';
@@ -66,11 +66,11 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const documentContextService = new DocumentContextService(context, vocabularyRepository, documentFactory, configurationProvider);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
 
-	const workspaceRepository = new WorkspaceRepository(documentFactory, configurationProvider);
-	container.registerInstance(ServiceToken.WorkspaceRepository, workspaceRepository);
+	const workspaceFileService = new WorkspaceFileService(documentFactory, configurationProvider);
+	container.registerInstance(ServiceToken.WorkspaceFileService, workspaceFileService);
 
-	const workspaceIndexer = new WorkspaceIndexer(documentFactory, configurationProvider, documentContextService);
-	container.registerInstance(ServiceToken.WorkspaceIndexer, workspaceIndexer);
+	const workspaceIndexerService = new WorkspaceIndexerService(documentFactory, configurationProvider, documentContextService, workspaceFileService);
+	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
 	const sparqlConnectionService = new SparqlConnectionService(configurationProvider, workspaceStorageService, credentialStorageService);
 	container.registerInstance(ServiceToken.SparqlConnectionService, sparqlConnectionService);

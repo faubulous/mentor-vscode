@@ -5,8 +5,8 @@ import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
-import { WorkspaceRepository } from './workspace/workspace-repository';
-import { WorkspaceIndexer } from './workspace/workspace-indexer';
+import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
+import { IWorkspaceFileService } from './services/core';
 import { ServiceToken } from './services/tokens';
 import { configureServiceContainer } from './services/container';
 import * as languages from './languages';
@@ -110,11 +110,11 @@ async function loadFrameworkOntologies() {
  * Indexes the entire workspace to provide language features such as hovers, completions and definitions. This is done on activation to ensure that these features are available immediately after the extension is activated.
  */
 async function indexWorkspace() {
-	// Initialize the workspace repository to load all files and folders in the workspace.
-	const workspaceRepository = container.resolve<WorkspaceRepository>(ServiceToken.WorkspaceRepository);
-	await workspaceRepository.initialize();
+	// Discover all supported files in the workspace.
+	const workspaceFileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
+	await workspaceFileService.discoverFiles();
 
 	// Index the entire workspace for providing hovers, completions and definitions.
-	const workspaceIndexer = container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
-	await workspaceIndexer.indexWorkspace();
+	const workspaceIndexerService = container.resolve<WorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
+	await workspaceIndexerService.indexWorkspace();
 }

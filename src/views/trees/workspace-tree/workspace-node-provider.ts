@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { WorkspaceRepository } from '@src/workspace/workspace-repository';
+import { IWorkspaceFileService } from '@src/services/core';
 
 // For a complete implementation of the FileSystemProvider API, see:
 // https://github.com/boltex/revealRangeTest/blob/main/src/fileExplorer.ts#L185
@@ -16,13 +16,13 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-	private get workspace() {
-		return container.resolve<WorkspaceRepository>(ServiceToken.WorkspaceRepository);
+	private get workspaceFileService() {
+		return container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
 	}
 
 	constructor() {
-		// Montior for changes in the workspace folders.
-		this.workspace.onDidChangeWorkspaceContents((e) => {
+		// Monitor for changes in the workspace folders.
+		this.workspaceFileService.onDidChangeFiles((e) => {
 			this._onDidChangeTreeData.fire(e.uri.toString());
 		});
 	}
@@ -48,7 +48,7 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 		}
 
 		if (!uri) {
-			await this.workspace.waitForInitialized();
+			await this.workspaceFileService.waitForDiscovery();
 		}
 
 		const result = [];
@@ -57,16 +57,16 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 			// If the URI is provided, get the contents of the specified folder.
 			const folder = vscode.Uri.parse(uri);
 
-			result.push(...(await this.workspace.getFolderContents(folder)));
+			result.push(...(await this.workspaceFileService.getFolderContents(folder)));
 		} else if (!vscode.workspace.workspaceFile) {
 			// If this is not a workspace, then return the contents of the first folder.
 			const folder = vscode.workspace.workspaceFolders[0].uri;
 
-			result.push(...(await this.workspace.getFolderContents(folder)));
+			result.push(...(await this.workspaceFileService.getFolderContents(folder)));
 		} else {
 			// Iterate the workspace folders and push only the ones that have contents.
 			for (const folder of vscode.workspace.workspaceFolders) {
-				const contents = await this.workspace.getFolderContents(folder.uri);
+				const contents = await this.workspaceFileService.getFolderContents(folder.uri);
 
 				if (contents.length > 0) {
 					result.push(folder.uri);

@@ -3,4 +3,5 @@ export { ICredentialStorageService } from './credential-storage-service.interfac
 export { ILocalStorageService } from './local-storage-service.interface';
 export { IMicrosoftAuthService } from './microsoft-auth-service.interface';
 export { ISettingsService } from './settings-service.interface';
-export { IWorkspaceIndexer } from './workspace-indexer.interface';
+export { IWorkspaceIndexerService } from './workspace-indexer.interface';
+export { IWorkspaceFileService, WorkspaceFileChangeEvent } from './workspace-file-service.interface';

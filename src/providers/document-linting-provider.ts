@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, IWorkspaceIndexer } from '@src/services/core';
+import { IConfigurationService, IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { DocumentContext } from '@src/workspace/document-context';
@@ -46,8 +46,8 @@ export class DocumentLintingProvider implements vscode.Disposable {
 		return container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
 	}
 
-	private get _workspaceIndexer() {
-		return container.resolve<IWorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
+	private get _workspaceIndexerService() {
+		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
 	}
 
 	private get _contextService() {
@@ -64,7 +64,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 		context.subscriptions.push(this);
 
 		// Wait for workspace indexing to complete before starting validation
-		this._workspaceIndexer.waitForIndexed().then(() => {
+		this._workspaceIndexerService.waitForIndexed().then(() => {
 			// Subscribe to change events
 			this._subscribeChangeEvents();
 

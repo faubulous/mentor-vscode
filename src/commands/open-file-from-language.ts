@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
-import { WorkspaceRepository } from '@src/workspace/workspace-repository';
+import { IWorkspaceFileService } from '@src/services/core';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { getFileName, getPath } from '@src/utilities';
 
@@ -16,10 +16,10 @@ export const openFileFromLanguage = {
 	id: 'mentor.command.openFileFromLanguage',
 	handler: async (languageId: string) => {
 		const files: vscode.Uri[] = [];
-		const workspace = container.resolve<WorkspaceRepository>(ServiceToken.WorkspaceRepository);
+		const workspaceFileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
 		const documentFactory = container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
 
-		for await (const file of workspace.getFilesByLanguageId(languageId)) {
+		for await (const file of workspaceFileService.getFilesByLanguageId(languageId)) {
 			files.push(file);
 		}
 

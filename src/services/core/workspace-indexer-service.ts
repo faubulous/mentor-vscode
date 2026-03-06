@@ -1,25 +1,19 @@
 import * as vscode from 'vscode';
-import { ConfigurationService } from '@src/services/core/configuration-service';
-import { DocumentFactory } from './document-factory';
-import { DocumentContext } from './document-context';
-import { DocumentContextService } from '@src/services/document/document-context-service';
+import { ConfigurationService } from './configuration-service';
+import { IWorkspaceFileService } from './workspace-file-service.interface';
+import { IWorkspaceIndexerService } from './workspace-indexer.interface';
+import { DocumentFactory } from '../../workspace/document-factory';
+import { DocumentContextService } from '../document/document-context-service';
 
 /**
- * Maps document URIs to RDF document contexts.
+ * Service for indexing RDF documents in the current workspace.
+ * Uses WorkspaceFileService for file discovery to avoid duplicate workspace scans.
  */
-export interface DocumentIndex {
-	[key: string]: DocumentContext;
-}
-
-/**
- * Indexes RDF documents in the current workspace.
- */
-export class WorkspaceIndexer {
+export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	/**
 	 * Indicates if all workspace files have been indexed.
 	 */
 	private _indexed = false;
-
 
 	private readonly _onDidFinishIndexing = new vscode.EventEmitter<boolean>();
 
@@ -30,14 +24,23 @@ export class WorkspaceIndexer {
 
 	constructor(
 		private readonly documentFactory: DocumentFactory,
-		private readonly configurationProvider: ConfigurationService,
-		private readonly contextService: DocumentContextService
+		private readonly configurationService: ConfigurationService,
+		private readonly contextService: DocumentContextService,
+		private readonly workspaceFileService: IWorkspaceFileService
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 	}
 
 	/**
-	 * Builds an index of all RDF resources the current workspace.
+	 * Indicates if all workspace files have been indexed.
+	 */
+	get indexed(): boolean {
+		return this._indexed;
+	}
+
+	/**
+	 * Builds an index of all RDF resources in the current workspace.
+	 * Uses files discovered by WorkspaceFileService instead of scanning again.
 	 */
 	async indexWorkspace(force: boolean = false): Promise<void> {
 		return vscode.window.withProgress({
@@ -47,25 +50,17 @@ export class WorkspaceIndexer {
 		}, async (progress) => {
 			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
 
-			this.reportProgress(progress, 0);
+			this._reportProgress(progress, 0);
 
 			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
 			// file size limit and make issues with the configuration more visible.
-			const maxSize = this.configurationProvider.get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
+			const maxSize = this.configurationService.get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
 
-			if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+			// Use the files already discovered by WorkspaceFileService
+			const uris = this.workspaceFileService.files;
+
+			if (uris.length > 0) {
 				const startTime = performance.now();
-
-				const workspaceUri = vscode.workspace.workspaceFolders[0].uri;
-
-				const excludedFolders = '{' + (await this.configurationProvider.getExcludePatterns(workspaceUri)).join(",") + '}';
-
-				const includedExtensions = Object.keys(this.documentFactory.supportedExtensions).join(',');
-
-				let uris = await vscode.workspace.findFiles("**/*{" + includedExtensions + "}", excludedFolders);
-
-				// Only index files that *end* with the supported extensions. Glob also matches URIs that contain the extensions.
-				uris = uris.filter(uri => this.documentFactory.isSupportedFile(uri));
 
 				for (let i = 0; i < uris.length; i++) {
 					const uri = uris[i];
@@ -89,7 +84,7 @@ export class WorkspaceIndexer {
 						this._indexTextDocument(uri, force);
 					}
 
-					this.reportProgress(progress, Math.round(((i + 1) / uris.length) * 100));
+					this._reportProgress(progress, Math.round(((i + 1) / uris.length) * 100));
 				}
 
 				const endTime = performance.now();
@@ -99,7 +94,7 @@ export class WorkspaceIndexer {
 
 			this._indexed = true;
 
-			this.reportProgress(progress, 100);
+			this._reportProgress(progress, 100);
 
 			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 
@@ -159,7 +154,7 @@ export class WorkspaceIndexer {
 	 * @param progress The progress to report.
 	 * @param increment The increment to report.
 	 */
-	reportProgress(progress: vscode.Progress<{ message?: string, increment?: number }>, increment: number): void {
+	private _reportProgress(progress: vscode.Progress<{ message?: string, increment?: number }>, increment: number): void {
 		progress.report({ message: increment + "%" });
 	}
 
