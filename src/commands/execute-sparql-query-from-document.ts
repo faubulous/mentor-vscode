@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { sparqlResultsController } from '@src/views/webviews';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { SparqlResultsController } from '@src/views/webviews';
 
 export const executeSparqlQueryFromDocument = {
     id: 'mentor.command.executeSparqlQueryFromDocument',
@@ -10,6 +12,7 @@ export const executeSparqlQueryFromDocument = {
             throw new Error(`Document with IRI ${documentIri} not found.`);
         }
 
-        await sparqlResultsController.executeQueryFromTextDocument(document);
+        const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
+        await controller.executeQueryFromTextDocument(document);
     }
 };

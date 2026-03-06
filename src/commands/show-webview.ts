@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
-import { controllers } from '@src/views/webviews/webview-registry';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { WebviewControllerRegistry } from '@src/views/webviews';
 
 export const showWebview = {
   id: 'mentor.webview.show',
   handler: async (arg?: { id?: string } | string) => {
-    const targets = collectTargets();
+    const registry = container.resolve<WebviewControllerRegistry>(ServiceToken.WebviewControllerRegistry);
+    const targets = registry.collectTargets();
     const id = typeof arg === 'string' ? arg : arg?.id;
 
     let selectedView: Target | undefined = id
@@ -18,10 +21,7 @@ export const showWebview = {
       return;
     }
 
-    // Find controller instance
-    const controller = (controllers as any[]).find(c =>
-      (selectedView!.kind === 'panel' ? c.panelId === selectedView!.id : c.viewType === selectedView!.id)
-    );
+    const controller = registry.findById(selectedView.id);
 
     if (!controller) {
       vscode.window.showErrorMessage(`Webview not found for id: ${selectedView.id}`);
@@ -37,19 +37,3 @@ export const showWebview = {
 };
 
 type Target = { kind: 'panel' | 'view'; id: string; label: string };
-
-function collectTargets(): Target[] {
-  const items: Target[] = [];
-
-  for (const c of controllers as any[]) {
-    if (c.panelId && c.panelTitle) {
-      items.push({ kind: 'panel', id: c.panelId, label: `panel: ${c.panelId}` });
-    }
-
-    if (c.viewType) {
-      items.push({ kind: 'view', id: c.viewType, label: `view: ${c.viewType}` });
-    }
-  }
-
-  return items;
-}

@@ -83,7 +83,12 @@ function registerProviders() {
 function registerViews() {
 	new trees.WorkspaceTree();
 	new trees.DefinitionTree();
-	webviews.webviewRegistry.registerAll();
+
+	// Create registry and register all webview controllers..
+	const registry = new webviews.WebviewControllerRegistry(ServiceToken.WebviewControllerRegistry);
+	registry.register(ServiceToken.SparqlResultsController, new webviews.SparqlResultsController());
+	registry.register(ServiceToken.SparqlConnectionController, new webviews.SparqlConnectionController());
+	registry.register(ServiceToken.SparqlConnectionsListController, new webviews.SparqlConnectionsListController());
 }
 
 /**

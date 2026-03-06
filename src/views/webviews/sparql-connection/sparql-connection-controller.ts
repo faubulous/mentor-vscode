@@ -126,5 +126,3 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
         }
     }
 }
-
-export const sparqlConnectionController = new SparqlConnectionController();

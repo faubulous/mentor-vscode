@@ -1,7 +1,7 @@
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/services/sparql';
-import { sparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
+import { SparqlConnectionController } from '@src/views/webviews';
 
 export const createSparqlConnection = {
 	id: 'mentor.command.createSparqlConnection',
@@ -9,6 +9,7 @@ export const createSparqlConnection = {
 		const service = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const endpoint = await service.createConnection();
 		
-		sparqlConnectionController.edit(endpoint);
+		const controller = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+		controller.edit(endpoint);
 	}
 };

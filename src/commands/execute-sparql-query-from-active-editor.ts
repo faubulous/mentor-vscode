@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { sparqlResultsController } from '@src/views/webviews';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { SparqlResultsController } from '@src/views/webviews';
 
 export const executeSparqlQueryFromActiveEditor = {
     id: 'mentor.command.executeSparqlQueryFromActiveEditor',
@@ -11,6 +13,7 @@ export const executeSparqlQueryFromActiveEditor = {
             return;
         }
 
-        await sparqlResultsController.executeQueryFromTextDocument(editor.document);
+        const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
+        await controller.executeQueryFromTextDocument(editor.document);
     }
 };

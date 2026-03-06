@@ -4,7 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { IConfigurationService } from '@src/services/core';
 import { ISparqlConnectionService } from '@src/services/sparql';
 import { SparqlConnection } from '@src/services/sparql/sparql-connection';
-import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
+import { SparqlResultsController } from '@src/views/webviews';
 
 export const listGraphs = {
   id: 'mentor.command.listGraphs',
@@ -23,13 +23,15 @@ export const listGraphs = {
       language: 'sparql'
     });
 
-    const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
     // Set the connection for this document
+    const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
     await connectionService.setQuerySourceForDocument(document.uri, connection.id);
 
     // Show the document and execute the query
     await vscode.window.showTextDocument(document);
-    await sparqlResultsController.executeQueryFromTextDocument(document);
+
+    const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
+    await controller.executeQueryFromTextDocument(document);
   }
 };

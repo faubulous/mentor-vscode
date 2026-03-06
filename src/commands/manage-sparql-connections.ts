@@ -1,8 +1,11 @@
-import { sparqlConnectionsListController } from '@src/views/webviews/sparql-connections-list/sparql-connections-list-controller';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { SparqlConnectionsListController } from '@src/views/webviews';
 
 export const manageSparqlConnections = {
 	id: 'mentor.command.manageSparqlConnections',
 	handler: async () => {
-		await sparqlConnectionsListController.open();
+		const controller = container.resolve<SparqlConnectionsListController>(ServiceToken.SparqlConnectionsListController);
+		await controller.open();
 	}
 };

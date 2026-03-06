@@ -16,15 +16,9 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
             viewType: 'mentor.view.sparqlResultsView',
             componentPath: 'sparql-results-panel.js',
         });
-    }
 
-    register(context: vscode.ExtensionContext) {
-        const subscriptions = super.register(context);
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
-
-        subscriptions.push(queryService.onDidHistoryChange(this._postQueryHistory, this));
-
-        return subscriptions;
+        this.subscribe(queryService.onDidHistoryChange(this._postQueryHistory, this));
     }
 
     private _postQueryHistory() {
@@ -103,5 +97,3 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         await this._executeQuery(queryState);
     }
 }
-
-export const sparqlResultsController = new SparqlResultsController();

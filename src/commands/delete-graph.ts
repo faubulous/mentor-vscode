@@ -4,7 +4,7 @@ import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { IConfigurationService } from '@src/services/core';
 import { ISparqlConnectionService } from '@src/services/sparql';
-import { sparqlResultsController } from '@src/views/webviews/sparql-results/sparql-results-controller';
+import { SparqlResultsController } from '@src/views/webviews';
 
 export const deleteGraph = {
 	id: 'mentor.command.deleteGraph',
@@ -50,7 +50,9 @@ export const deleteGraph = {
 
 			// Show the document and execute the query
 			await vscode.window.showTextDocument(document);
-			await sparqlResultsController.executeQueryFromTextDocument(document);
+			
+			const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
+			await controller.executeQueryFromTextDocument(document);
 		}
 	}
 };

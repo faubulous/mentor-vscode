@@ -1,10 +1,14 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import { WebviewComponentFactory } from './webview-component-factory';
 import { ExecuteCommandMessage } from './webview-messaging';
 
 /**
  * Base controller for webviews providing unified lifecycle for both Views (WebviewView)
  * and Panels (WebviewPanel), plus typed message handling.
+ * 
+ * Subclasses automatically self-register with the extension context for disposal.
  */
 export abstract class WebviewController<M = any> implements vscode.WebviewViewProvider {
 	/**
@@ -34,7 +38,7 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	 */
 	protected readonly componentPath: string;
 
-	protected context?: vscode.ExtensionContext;
+	protected readonly context: vscode.ExtensionContext;
 
 	protected view?: vscode.WebviewView;
 
@@ -54,33 +58,33 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 		this.panelId = init.panelId;
 		this.panelTitle = init.panelTitle;
 		this.panelIcon = init.panelIcon;
-	}
 
-	/**
-	 * Register this controller with VS Code. Will register the WebviewView provider if viewType is present.
-	 * @param context The extension context to register with.
-	 * @return An array of disposables to be disposed on extension deactivation.
-	 */
-	register(context: vscode.ExtensionContext): vscode.Disposable[] {
-		this.context = context;
+		// Resolve the extension context from DI and self-register
+		this.context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 
 		if (this.viewType) {
 			this._subscriptions.push(vscode.window.registerWebviewViewProvider(this.viewType, this));
 		}
 
-		return this._subscriptions;
+		// Self-register with the extension context for automatic disposal
+		this.context.subscriptions.push(...this._subscriptions);
+	}
+
+	/**
+	 * Add disposables to be cleaned up when the extension is deactivated.
+	 * @param disposables The disposables to add.
+	 */
+	protected subscribe(...disposables: vscode.Disposable[]): void {
+		this._subscriptions.push(...disposables);
+		this.context.subscriptions.push(...disposables);
 	}
 
 	/**
 	 * Unified show for panel controllers. Creates or reveals the editor panel.
 	 * @param viewColumn The view column to show the panel in.
-	 * @throws If the controller is not registered or does not support panels.
+	 * @throws If the controller does not support panels.
 	 */
 	async show(viewColumn: vscode.ViewColumn = vscode.ViewColumn.Active) {
-		if (!this.context) {
-			throw new Error('Extension context is not initialized. Please register the controller first.');
-		}
-
 		if (!this.panelId || !this.panelTitle) {
 			throw new Error('This controller does not support panels (panelId or panelTitle are not set).');
 		}
@@ -101,10 +105,6 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	}
 
 	resolveWebviewView(webviewView: vscode.WebviewView): void | Thenable<void> {
-		if (!this.context) {
-			throw new Error('Extension context is not initialized. Please register the controller first.');
-		}
-
 		this.view = new WebviewComponentFactory(this.context, this.componentPath).createView(webviewView);
 		this.view.webview.onDidReceiveMessage((message: M) => this.onDidReceiveMessage(message), this, this._subscriptions);
 	}

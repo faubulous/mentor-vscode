@@ -39,5 +39,13 @@ export enum ServiceToken {
 	/** Service for Turtle prefix definitions. */
 	TurtlePrefixDefinitionService = "TurtlePrefixDefinitionService",
 	/** Dynamic settings that can be changed during runtime without persisting. */
-	SettingsService = "SettingsService"
+	SettingsService = "SettingsService",
+	/** Registry for all webview controllers. */
+	WebviewControllerRegistry = "WebviewControllerRegistry",
+	/** Controller for the SPARQL results webview. */
+	SparqlResultsController = "SparqlResultsController",
+	/** Controller for the SPARQL connection editor webview. */
+	SparqlConnectionController = "SparqlConnectionController",
+	/** Controller for the SPARQL connections list webview. */
+	SparqlConnectionsListController = "SparqlConnectionsListController"
 }

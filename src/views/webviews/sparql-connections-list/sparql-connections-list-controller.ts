@@ -4,11 +4,9 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/services/sparql';
 import { WebviewController } from '../webview-controller';
 import { SparqlConnectionsListMessages } from './sparql-connections-list-messages';
-import { sparqlConnectionController } from '../sparql-connection/sparql-connection-controller';
+import { SparqlConnectionController } from '../sparql-connection/sparql-connection-controller';
 
 export class SparqlConnectionsListController extends WebviewController<SparqlConnectionsListMessages> {
-    private _disposables: vscode.Disposable[] = [];
-
     constructor() {
         super({
             componentPath: 'sparql-connections-list-view.js',
@@ -16,23 +14,15 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
             panelTitle: 'Manage Connections',
             panelIcon: 'database-connection'
         });
-    }
 
-    /**
-     * Register this controller with VS Code.
-     */
-    register(context: vscode.ExtensionContext): vscode.Disposable[] {
-        const disposables = super.register(context);
         const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
         // Listen for connection changes and update the webview
-        this._disposables.push(
+        this.subscribe(
             connectionService.onDidChangeConnections(() => {
                 this.sendConnectionsUpdate();
             })
         );
-
-        return [...disposables, ...this._disposables];
     }
 
     /**
@@ -70,11 +60,13 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
             }
             case 'CreateConnection': {
                 const connection = await connectionService.createConnection();
-                sparqlConnectionController.edit(connection);
+                const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+                connectionController.edit(connection);
                 return true;
             }
             case 'EditConnection': {
-                sparqlConnectionController.edit(message.connection);
+                const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+                connectionController.edit(message.connection);
                 return true;
             }
             case 'DeleteConnection': {
@@ -130,5 +122,3 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
         }
     }
 }
-
-export const sparqlConnectionsListController = new SparqlConnectionsListController();

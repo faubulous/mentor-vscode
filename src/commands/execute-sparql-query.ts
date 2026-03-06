@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import { SparqlQueryExecutionState } from '@src/services/sparql/sparql-query-state';
-import { sparqlResultsController } from '@src/views/webviews';
+import { SparqlResultsController } from '@src/views/webviews';
 import { executeNotebookCell } from './execute-notebook-cell';
 
 export const executeSparqlQuery = {
@@ -11,10 +13,13 @@ export const executeSparqlQuery = {
             executeNotebookCell.handler(query.notebookIri, query.cellIndex);
         } else if (query.documentIri) {
             const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === query.documentIri);
+
             if (!document) {
                 throw new Error(`Document with IRI ${query.documentIri} not found.`);
             }
-            await sparqlResultsController.executeQueryFromTextDocument(document);
+            
+            const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
+            await controller.executeQueryFromTextDocument(document);
         }
     }
 };

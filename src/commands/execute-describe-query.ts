@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { sparqlResultsController } from '@src/views/webviews';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { SparqlResultsController } from '@src/views/webviews';
 
 export const executeDescribeQuery = {
 	id: 'mentor.command.executeDescribeQuery',
@@ -13,6 +15,7 @@ export const executeDescribeQuery = {
 
 		const query = `CONSTRUCT { <${resourceIri}> ?p ?o } WHERE { <${resourceIri}> ?p ?o }`;
 		
-		await sparqlResultsController.executeQuery(document, query);
+		const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
+		await controller.executeQuery(document, query);
 	}
 };
