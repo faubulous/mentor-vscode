@@ -37,7 +37,7 @@ export class TurtleTokenProvider {
 	 * Override in subclasses to register for different languages.
 	 */
 	protected getLanguages(): string[] {
-		return ['ntriples', 'nquads', 'turtle'];
+		return ['n3', 'ntriples', 'nquads', 'turtle'];
 	}
 
 	protected registerForLanguage(language: string): vscode.Disposable[] {

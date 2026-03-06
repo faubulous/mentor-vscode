@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient/browser';
 
 export abstract class LanguageClientBase implements vscode.Disposable {
@@ -44,9 +46,14 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 		this.channelId = `mentor.language.${languageId}`;
 		this.channel = vscode.window.createOutputChannel(this.channelName, this.channelId);
 		this.serverPath = `out/${languageId}-language-server.js`;
+
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		context.subscriptions.push(this);
+
+		this._start(context);
 	}
 
-	start(context: vscode.ExtensionContext) {
+	private _start(context: vscode.ExtensionContext) {
 		// Absolute path to the server module.
 		const serverMain = vscode.Uri.joinPath(context.extensionUri, this.serverPath);
 

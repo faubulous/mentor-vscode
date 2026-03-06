@@ -56,15 +56,14 @@ export class DocumentContextService {
 		private readonly _configurationProvider: IConfigurationService
 	) {
 		// Register event handlers for editor and document changes.
-		const disposables = [
-			this._onDidChangeDocumentContext,
+		this._extensionContext.subscriptions.push(...[
 			vscode.window.onDidChangeActiveTextEditor(() => this.handleActiveEditorChanged()),
 			vscode.window.onDidChangeActiveNotebookEditor((e) => this.handleActiveNotebookEditorChanged(e)),
 			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
-			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e))
-		];
-
-		this._extensionContext.subscriptions.push(...disposables);
+			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e)),
+			this._onDidChangeDocumentContext,
+			this
+		]);
 
 		// If there is an active editor on startup, load its document and set the active context.
 		this.handleActiveEditorChanged().then(() => {

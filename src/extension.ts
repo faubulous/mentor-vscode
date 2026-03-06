@@ -9,7 +9,6 @@ import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
 import { ServiceToken } from '@src/services/tokens';
 import { configureServiceContainer } from './services/container';
-import { IDocumentContextService } from './services/interfaces';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
@@ -19,82 +18,103 @@ import * as providers from './providers';
 export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
 
-	// Setup Dependency Injection container.
 	configureServiceContainer(context);
 
-	// Register application features (all self-register via DI).
+	registerLanguages();
 	registerProviders();
 	registerUriHandlers();
-	registerLanguageClients(context);
 	registerCommands();
 	registerViews();
 	registerNotebookSerializers();
 
-	// Load the W3C and other common ontologies for providing hovers, completions and definitions.
-	const store = container.resolve<Store>(ServiceToken.Store);
-	await store.loadFrameworkOntologies();
+	await loadFrameworkOntologies();
 
-	// Load the workspace files and folders for the explorer tree view.
-	const workspaceRepository = container.resolve<WorkspaceRepository>(ServiceToken.WorkspaceRepository);
-	await workspaceRepository.initialize();
-
-	// Index the entire workspace for providing hovers, completions and definitions.
-	const workspaceIndexer = container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
-	await workspaceIndexer.indexWorkspace();
+	await indexWorkspace();
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 }
 
-export async function deactivate(context: vscode.ExtensionContext) {
-	const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	contextService.dispose();
+export async function deactivate() {
+	// All disposables are automatically cleaned up via context.subscriptions
 }
 
-function registerLanguageClients(context: vscode.ExtensionContext) {
-	const clients: languages.LanguageClientBase[] = [
-		new languages.TurtleLanguageClient(),
-		new languages.TrigLanguageClient(),
-		new languages.NQuadsLanguageClient(),
-		new languages.NTriplesLanguageClient(),
-		new languages.N3LanguageClient(),
-		new languages.SparqlLanguageClient(),
-		new languages.XmlLanguageClient()
-	];
+/**
+ * Registers all language clients and token providers for supported languages.
+ */
+function registerLanguages() {
+	new languages.N3LanguageClient();
+	new languages.NQuadsLanguageClient();
+	new languages.NTriplesLanguageClient();
+	new languages.SparqlLanguageClient();
+	new languages.TrigLanguageClient();
+	new languages.TurtleLanguageClient();
 
-	for (const client of clients) {
-		context.subscriptions.push(client);
-		client.start(context);
-	}
+	new languages.DatalogTokenProvider();
+	new languages.SparqlTokenProvider();
+	new languages.TrigTokenProvider();
+	new languages.TurtleTokenProvider();
+	new languages.XmlLanguageClient();
+	new languages.XmlTokenProvider();
 }
 
+/**
+ * Registers the notebook serializer and controller for the Mentor Notebook.
+ */
 function registerNotebookSerializers() {
 	new NotebookController();
 	new NotebookSerializer();
 }
 
+/**
+ * Registers various providers for language features, file system access and URI handling.
+ */
 function registerProviders() {
-	new languages.DatalogTokenProvider();
-	new languages.XmlTokenProvider();
-	new languages.TurtleTokenProvider();
-	new languages.TrigTokenProvider();
-	new languages.SparqlTokenProvider();
-
 	new providers.DocumentLintingProvider();
 	new providers.WorkspaceUriLinkProvider();
 	new providers.WorkspaceFileSystemProvider();
 	new providers.InferenceUriLinkProvider();
 }
 
+/**
+ * Registers URI handlers for handling custom URIs within the extension.
+ */
 function registerUriHandlers() {
 	new providers.InferenceUriHandler();
 }
 
+/**
+ * Registers tree views and webviews for the extension.
+ */
 function registerViews() {
 	new trees.WorkspaceTree();
 	new trees.DefinitionTree();
 	webviews.webviewRegistry.registerAll();
 }
 
+/**
+ * Registers all commands for the extension.
+ */
 function registerCommands() {
 	commands.commandRegistry.registerAll();
+}
+
+/**
+ * Loads the RDF framework ontologies into the store, which are required for providing completions and hovers for built-in concepts.
+ */
+async function loadFrameworkOntologies() {
+	const store = container.resolve<Store>(ServiceToken.Store);
+	await store.loadFrameworkOntologies();
+}
+
+/**
+ * Indexes the entire workspace to provide language features such as hovers, completions and definitions. This is done on activation to ensure that these features are available immediately after the extension is activated.
+ */
+async function indexWorkspace() {
+	// Initialize the workspace repository to load all files and folders in the workspace.
+	const workspaceRepository = container.resolve<WorkspaceRepository>(ServiceToken.WorkspaceRepository);
+	await workspaceRepository.initialize();
+
+	// Index the entire workspace for providing hovers, completions and definitions.
+	const workspaceIndexer = container.resolve<WorkspaceIndexer>(ServiceToken.WorkspaceIndexer);
+	await workspaceIndexer.indexWorkspace();
 }
