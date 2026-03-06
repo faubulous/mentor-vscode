@@ -22,8 +22,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	registerLanguages();
 	registerProviders();
-	registerUriHandlers();
-	registerCommands();
+	registerCommands(context);
 	registerViews();
 	registerNotebookSerializers();
 
@@ -42,6 +41,7 @@ export async function deactivate() {
  * Registers all language clients and token providers for supported languages.
  */
 function registerLanguages() {
+	// Register the language clients for supported languages.
 	new languages.N3LanguageClient();
 	new languages.NQuadsLanguageClient();
 	new languages.NTriplesLanguageClient();
@@ -49,6 +49,7 @@ function registerLanguages() {
 	new languages.TrigLanguageClient();
 	new languages.TurtleLanguageClient();
 
+	// Token providers must be registered after the language clients.
 	new languages.DatalogTokenProvider();
 	new languages.SparqlTokenProvider();
 	new languages.TrigTokenProvider();
@@ -73,12 +74,6 @@ function registerProviders() {
 	new providers.WorkspaceUriLinkProvider();
 	new providers.WorkspaceFileSystemProvider();
 	new providers.InferenceUriLinkProvider();
-}
-
-/**
- * Registers URI handlers for handling custom URIs within the extension.
- */
-function registerUriHandlers() {
 	new providers.InferenceUriHandler();
 }
 
@@ -94,8 +89,11 @@ function registerViews() {
 /**
  * Registers all commands for the extension.
  */
-function registerCommands() {
-	commands.commandRegistry.registerAll();
+function registerCommands(context: vscode.ExtensionContext) {
+	// Register all commands exported in the commands module.
+	for (const command of Object.values(commands)) {
+		context.subscriptions.push(vscode.commands.registerCommand(command.id, command.handler));
+	}
 }
 
 /**

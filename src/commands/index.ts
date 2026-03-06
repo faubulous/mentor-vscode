@@ -1,121 +1,50 @@
-import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
-import { analyzeWorkspace } from './analyze-workspace';
-import { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
-import { clearQueryHistory } from './clear-query-history';
-import { convertFileFormat } from './convert-file-format';
-import { createDocument } from './create-document';
-import { createDocumentFromLanguage } from './create-document-from-language';
-import { createNotebook } from './create-notebook';
-import { createNotebookFromEditor } from './create-notebook-from-editor';
-import { createSparqlConnection } from './create-sparql-connection';
-import { deleteGraph } from './delete-graph';
-import { deletePrefixes } from './delete-prefixes';
-import { deleteSparqlConnection } from './delete-sparql-connection';
-import { editSparqlConnection } from './edit-sparql-connection';
-import { executeDescribeQuery } from './execute-describe-query';
-import { executeNotebookCell } from './execute-notebook-cell';
-import { executeSparqlQuery } from './execute-sparql-query';
-import { executeSparqlQueryFromActiveEditor } from './execute-sparql-query-from-active-editor';
-import { executeSparqlQueryFromDocument } from './execute-sparql-query-from-document';
-import { findReferences } from './find-references';
-import { groupDefinitionsBySource } from './group-definitions-by-source';
-import { groupDefinitionsByType } from './group-definitions-by-type';
-import { hideIndividualTypes } from './hide-individual-types';
-import { hidePropertyTypes } from './hide-property-types';
-import { hideReferences } from './hide-references';
-import { implementPrefixes } from './implement-prefixes';
-import { implementPrefixForIri } from './implement-prefix-for-iri';
-import { listGraphs } from './list-graphs';
-import { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
-import { manageSparqlConnections } from './manage-sparql-connections';
-import { openDocument } from './open-document';
-import { openFileFromLanguage } from './open-file-from-language';
-import { openGraph } from './open-graph';
-import { openInBrowser } from './open-in-browser';
-import { openMentorHomepage } from './open-mentor-homepage';
-import { openSettings } from './open-settings';
-import { removeFromQueryHistory } from './remove-from-query-history';
-import { revealDefinition } from './reveal-definition';
-import { revealShapeDefinition } from './reveal-shape-definition';
-import { saveSparqlQueryResults } from './save-sparql-query-results';
-import { selectActiveLanguage } from './select-active-language';
-import { selectSparqlConnection } from './select-sparql-connection';
-import { showAnnotatedLabels } from './show-annotated-labels';
-import { showIndividualTypes } from './show-individual-types';
-import { showPropertyTypes } from './show-property-types';
-import { showReferences } from './show-references';
-import { showUriLabels } from './show-uri-labels';
-import { showUriLabelsWithPrefix } from './show-uri-labels-with-prefix';
-import { showWebview } from './show-webview';
-import { sortPrefixes } from './sort-prefixes';
-import { updatePrefixes } from './update-prefixes';
-
-const commands = [
-	analyzeWorkspace,
-	cancelSparqlQueryExecution,
-	clearQueryHistory,
-	convertFileFormat,
-	createDocument,
-	createDocumentFromLanguage,
-	createNotebook,
-	createNotebookFromEditor,
-	createSparqlConnection,
-	deleteGraph,
-	deletePrefixes,
-	deleteSparqlConnection,
-	editSparqlConnection,
-	executeDescribeQuery,
-	executeNotebookCell,
-	executeSparqlQuery,
-	executeSparqlQueryFromActiveEditor,
-	executeSparqlQueryFromDocument,
-	findReferences,
-	groupDefinitionsBySource,
-	groupDefinitionsByType,
-	hideIndividualTypes,
-	hidePropertyTypes,
-	hideReferences,
-	implementPrefixes,
-	implementPrefixForIri,
-	listGraphs,
-	loginMicrosoftAuthProvider,
-	manageSparqlConnections,
-	openDocument,
-	openFileFromLanguage,
-	openGraph,
-	openMentorHomepage,
-	openInBrowser,
-	openSettings,
-	removeFromQueryHistory,
-	revealDefinition,
-	revealShapeDefinition,
-	saveSparqlQueryResults,
-	selectActiveLanguage,
-	selectSparqlConnection,
-	showAnnotatedLabels,
-	showIndividualTypes,
-	showPropertyTypes,
-	showReferences,
-	showUriLabels,
-	showUriLabelsWithPrefix,
-	showWebview,
-	sortPrefixes,
-	updatePrefixes,
-];
-
-export const commandRegistry = {
-	/**
-	 * Register all commands.
-	 * Self-registers with the extension context for automatic disposal.
-	 */
-	registerAll: (): void => {
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
-		for (const command of commands) {
-			context.subscriptions.push(
-				vscode.commands.registerCommand(command.id, command.handler)
-			);
-		}
-	}
-}
+export { analyzeWorkspace } from './analyze-workspace';
+export { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
+export { clearQueryHistory } from './clear-query-history';
+export { convertFileFormat } from './convert-file-format';
+export { createDocument } from './create-document';
+export { createDocumentFromLanguage } from './create-document-from-language';
+export { createNotebook } from './create-notebook';
+export { createNotebookFromEditor } from './create-notebook-from-editor';
+export { createSparqlConnection } from './create-sparql-connection';
+export { deleteGraph } from './delete-graph';
+export { deletePrefixes } from './delete-prefixes';
+export { deleteSparqlConnection } from './delete-sparql-connection';
+export { editSparqlConnection } from './edit-sparql-connection';
+export { executeDescribeQuery } from './execute-describe-query';
+export { executeNotebookCell } from './execute-notebook-cell';
+export { executeSparqlQuery } from './execute-sparql-query';
+export { executeSparqlQueryFromActiveEditor } from './execute-sparql-query-from-active-editor';
+export { executeSparqlQueryFromDocument } from './execute-sparql-query-from-document';
+export { findReferences } from './find-references';
+export { groupDefinitionsBySource } from './group-definitions-by-source';
+export { groupDefinitionsByType } from './group-definitions-by-type';
+export { hideIndividualTypes } from './hide-individual-types';
+export { hidePropertyTypes } from './hide-property-types';
+export { hideReferences } from './hide-references';
+export { implementPrefixes } from './implement-prefixes';
+export { implementPrefixForIri } from './implement-prefix-for-iri';
+export { listGraphs } from './list-graphs';
+export { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
+export { manageSparqlConnections } from './manage-sparql-connections';
+export { openDocument } from './open-document';
+export { openFileFromLanguage } from './open-file-from-language';
+export { openGraph } from './open-graph';
+export { openInBrowser } from './open-in-browser';
+export { openMentorHomepage } from './open-mentor-homepage';
+export { openSettings } from './open-settings';
+export { removeFromQueryHistory } from './remove-from-query-history';
+export { revealDefinition } from './reveal-definition';
+export { revealShapeDefinition } from './reveal-shape-definition';
+export { saveSparqlQueryResults } from './save-sparql-query-results';
+export { selectActiveLanguage } from './select-active-language';
+export { selectSparqlConnection } from './select-sparql-connection';
+export { showAnnotatedLabels } from './show-annotated-labels';
+export { showIndividualTypes } from './show-individual-types';
+export { showPropertyTypes } from './show-property-types';
+export { showReferences } from './show-references';
+export { showUriLabels } from './show-uri-labels';
+export { showUriLabelsWithPrefix } from './show-uri-labels-with-prefix';
+export { showWebview } from './show-webview';
+export { sortPrefixes } from './sort-prefixes';
+export { updatePrefixes } from './update-prefixes';
