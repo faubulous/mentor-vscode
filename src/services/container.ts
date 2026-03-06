@@ -49,8 +49,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext): Dep
 	const store = new Store(reasoner);
 	container.registerInstance(ServiceToken.Store, store);
 
-	const vocabulary = new VocabularyRepository(store);
-	container.registerInstance(ServiceToken.VocabularyRepository, vocabulary);
+	const vocabularyRepository = new VocabularyRepository(store);
+	container.registerInstance(ServiceToken.VocabularyRepository, vocabularyRepository);
 
 	const globalStorageService = new GlobalStorageService();
 	container.registerInstance(ServiceToken.GlobalStorageService, globalStorageService);
@@ -64,7 +64,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): Dep
 	const documentFactory = new DocumentFactory();
 	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
 
-	const documentContextService = new DocumentContextService(context, vocabulary, documentFactory, configurationProvider);
+	const documentContextService = new DocumentContextService(context, vocabularyRepository, documentFactory, configurationProvider);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
 
 	const workspaceRepository = new WorkspaceRepository(documentFactory, configurationProvider);
