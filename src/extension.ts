@@ -6,8 +6,8 @@ import { NotebookSerializer } from './workspace/notebook-serializer';
 import { NotebookController } from './workspace/notebook-controller';
 import { WorkspaceRepository } from './workspace/workspace-repository';
 import { WorkspaceIndexer } from './workspace/workspace-indexer';
-import { ServiceToken } from '@src/services/token';
-import { configureServiceContainer } from './services/config';
+import { ServiceToken } from '@src/services/tokens';
+import { configureServiceContainer } from './services/container';
 import { IDocumentContextService } from './services/interfaces';
 import * as languages from './languages';
 import * as commands from './commands';
@@ -21,13 +21,13 @@ export async function activate(context: vscode.ExtensionContext) {
 	// Setup Dependency Injection container.
 	configureServiceContainer(context);
 
-	// Register application features.
-	registerProviders(context);
-	registerUriHandlers(context);
+	// Register application features (all self-register via DI).
+	registerProviders();
+	registerUriHandlers();
 	registerLanguageClients(context);
-	registerCommands(context);
-	registerViews(context);
-	registerNotebookSerializers(context);
+	registerCommands();
+	registerViews();
+	registerNotebookSerializers();
 
 	// Load the W3C and other common ontologies for providing hovers, completions and definitions.
 	const store = container.resolve<Store>(ServiceToken.Store);
@@ -61,50 +61,39 @@ function registerLanguageClients(context: vscode.ExtensionContext) {
 	];
 
 	for (const client of clients) {
-		subscribe(context, client);
-
+		context.subscriptions.push(client);
 		client.start(context);
 	}
 }
 
-function registerNotebookSerializers(context: vscode.ExtensionContext) {
-	subscribe(context, new NotebookController());
-	subscribe(context, new NotebookSerializer().register());
+function registerNotebookSerializers() {
+	new NotebookController();
+	new NotebookSerializer();
 }
 
-function registerProviders(context: vscode.ExtensionContext) {
-	subscribe(context, new languages.DatalogTokenProvider().register());
-	subscribe(context, new languages.XmlTokenProvider().register());
-	subscribe(context, new languages.TurtleTokenProvider().register());
-	subscribe(context, new languages.TrigTokenProvider().register());
-	subscribe(context, new languages.SparqlTokenProvider().register());
-	subscribe(context, new providers.DocumentLintingProvider().register());
-	subscribe(context, new providers.WorkspaceUriLinkProvider().register());
-	subscribe(context, new providers.WorkspaceFileSystemProvider().register());
-	subscribe(context, new providers.InferenceUriLinkProvider().register());
+function registerProviders() {
+	new languages.DatalogTokenProvider();
+	new languages.XmlTokenProvider();
+	new languages.TurtleTokenProvider();
+	new languages.TrigTokenProvider();
+	new languages.SparqlTokenProvider();
+	
+	new providers.DocumentLintingProvider();
+	new providers.WorkspaceUriLinkProvider();
+	new providers.WorkspaceFileSystemProvider();
+	new providers.InferenceUriLinkProvider();
 }
 
-function registerUriHandlers(context: vscode.ExtensionContext) {
-	subscribe(context, new providers.InferenceUriHandler(context).register());
+function registerUriHandlers() {
+	new providers.InferenceUriHandler();
 }
 
-function registerViews(context: vscode.ExtensionContext) {
-	// TODO: Dispose the view providers in the trees.
-	subscribe(context, new trees.WorkspaceTree().treeView);
-	subscribe(context, new trees.DefinitionTree().treeView);
-	subscribe(context, webviews.webviewRegistry.registerAll(context));
+function registerViews() {
+	new trees.WorkspaceTree();
+	new trees.DefinitionTree();
+	webviews.webviewRegistry.registerAll();
 }
 
-function registerCommands(context: vscode.ExtensionContext) {
-	subscribe(context, commands.commandRegistry.registerAll());
-}
-
-function subscribe(context: vscode.ExtensionContext, disposable: vscode.Disposable | vscode.Disposable[]) {
-	if (Array.isArray(disposable)) {
-		for (const d of disposable) {
-			context.subscriptions.push(d);
-		}
-	} else {
-		context.subscriptions.push(disposable);
-	}
+function registerCommands() {
+	commands.commandRegistry.registerAll();
 }

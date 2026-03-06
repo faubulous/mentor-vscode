@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import {
 	ReferenceProvider,
 	DefinitionProvider,
@@ -15,7 +17,7 @@ import {
 } from '@src/languages/sparql/providers';
 
 export class SparqlTokenProvider {
-	register(): vscode.Disposable[] {
+	constructor() {
 		const codeActionsProvider = new TurtleCodeActionsProvider();
 		const codeLensProvider = new SparqlCodeLensProvider();
 		const completionProvider = new SparqlCompletionItemProvider();
@@ -25,7 +27,9 @@ export class SparqlTokenProvider {
 		const referenceProvider = new ReferenceProvider();
 		const renameProvider = new TurtleRenameProvider();
 
-		return [
+		// Self-register with the extension context for automatic disposal
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		context.subscriptions.push(
 			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider),
 			vscode.languages.registerCodeLensProvider({ language: 'sparql' }, codeLensProvider),
 			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':'),
@@ -34,6 +38,6 @@ export class SparqlTokenProvider {
 			vscode.languages.registerInlineCompletionItemProvider({ language: 'sparql' }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language: 'sparql' }, referenceProvider),
 			vscode.languages.registerRenameProvider({ language: 'sparql' }, renameProvider),
-		];
+		);
 	}
 }

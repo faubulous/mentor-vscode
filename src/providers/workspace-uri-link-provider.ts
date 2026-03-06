@@ -1,10 +1,20 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 
 /**
  * Provides document links for URIs with the 'workspace:' scheme.
  */
 export class WorkspaceUriLinkProvider implements vscode.DocumentLinkProvider {
+
+  constructor() {
+    // Self-register with the extension context for automatic disposal
+    const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+    context.subscriptions.push(
+      vscode.languages.registerDocumentLinkProvider({ scheme: 'file' }, this)
+    );
+  }
 
   provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const links: vscode.DocumentLink[] = [];
@@ -24,14 +34,5 @@ export class WorkspaceUriLinkProvider implements vscode.DocumentLinkProvider {
     }
 
     return links;
-  }
-
-  /**
-   * Registers the document link provider with VS Code.
-   * @returns An array of disposables for the provider.
-   */
-  register(): vscode.Disposable[] {
-    // Register the document link provider for all file schemes and content types.
-    return [vscode.languages.registerDocumentLinkProvider({ scheme: 'file' }, this)];
   }
 }

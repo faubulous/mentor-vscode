@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/interfaces';
 import { TOKENS, isVariableToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken } from '@src/utilities';

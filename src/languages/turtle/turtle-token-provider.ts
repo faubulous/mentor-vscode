@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import {
 	ReferenceProvider,
 	DefinitionProvider,
@@ -22,15 +24,23 @@ const referenceProvider = new ReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
 
 export class TurtleTokenProvider {
-	register(): vscode.Disposable[] {
-		return [
-			...this.registerForLanguage('ntriples'),
-			...this.registerForLanguage('nquads'),
-			...this.registerForLanguage('turtle')
-		];
+	constructor() {
+		// Self-register with the extension context for automatic disposal
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		for (const language of this.getLanguages()) {
+			context.subscriptions.push(...this.registerForLanguage(language));
+		}
 	}
 
-	registerForLanguage(language: string): vscode.Disposable[] {
+	/**
+	 * Returns the languages this provider should register for.
+	 * Override in subclasses to register for different languages.
+	 */
+	protected getLanguages(): string[] {
+		return ['ntriples', 'nquads', 'turtle'];
+	}
+
+	protected registerForLanguage(language: string): vscode.Disposable[] {
 		return [
 			vscode.languages.registerCodeActionsProvider({ language }, codeActionsProvider),
 			vscode.languages.registerCodeLensProvider({ language }, codelensProvider),

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/interfaces';
 import { DocumentContext } from '@src/workspace/document-context';
 
@@ -8,7 +8,7 @@ import { DocumentContext } from '@src/workspace/document-context';
  * A provider that retrieves the locations of resource definitions in a document.
  */
 export class DefinitionProvider {
-	private get contextService() {
+	private get _contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
@@ -19,7 +19,7 @@ export class DefinitionProvider {
 	 * @returns The definition of the resource at the specified position.
 	 */
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
-		const context = this.contextService.contexts[document.uri.toString()];
+		const context = this._contextService.contexts[document.uri.toString()];
 
 		if (!context) {
 			return null;
@@ -80,7 +80,7 @@ export class DefinitionProvider {
 
 	private _getContextsDefiningIri(iri: string, primaryContext?: DocumentContext): DocumentContext[] {
 		const result: DocumentContext[] = [];
-		const contexts = Object.values(this.contextService.contexts);
+		const contexts = Object.values(this._contextService.contexts);
 
 		for (const c of contexts.filter(c => c.typeDefinitions[iri])) {
 			if (primaryContext && c == primaryContext) {

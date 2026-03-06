@@ -4,8 +4,7 @@ import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, S
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
-import { configureServiceContainer } from '@src/services/config';
+import { ServiceToken } from '@src/services/tokens';
 import { IConfigurationService, ISettingsService  } from '@src/services/interfaces';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { TreeLabelStyle } from '@src/services/shared/settings-service';

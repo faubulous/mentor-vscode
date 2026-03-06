@@ -1,18 +1,18 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/interfaces';
 
 /**
  * A provider that retrieves the locations of resource references in a document.
  */
 export class ReferenceProvider implements vscode.ReferenceProvider {
-	private get contextService() {
+	private get _contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
-		const context = this.contextService.contexts[document.uri.toString()];
+		const context = this._contextService.contexts[document.uri.toString()];
 
 		if (!context) {
 			return null;
@@ -35,7 +35,7 @@ export class ReferenceProvider implements vscode.ReferenceProvider {
 	provideReferencesForIri(iri: string): vscode.Location[] {
 		let result: vscode.Location[] = [];
 
-		for (const context of Object.values(this.contextService.contexts)) {
+		for (const context of Object.values(this._contextService.contexts)) {
 			// Do not provide references for temporary, non-persisted git diff views or other in-memory documents.
 			if (context.isTemporary || !context.references[iri]) {
 				continue;

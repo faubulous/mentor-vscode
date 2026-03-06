@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { IPrefixLookupService } from '@src/services/interfaces';
 import { Store } from '@faubulous/mentor-rdf';
 import { InferenceUri } from '@src/workspace/inference-uri';
@@ -8,16 +8,17 @@ import { InferenceUri } from '@src/workspace/inference-uri';
 export class InferenceUriHandler implements vscode.UriHandler {
 	readonly extensionId: string;
 
-	private get store() {
+	private get _store() {
 		return container.resolve<Store>(ServiceToken.Store);
 	}
 
-	constructor(context: vscode.ExtensionContext) {
+	constructor() {
+		// Self-register with the extension context for automatic disposal
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		this.extensionId = context.extension.id;
-	}
-
-	register(): vscode.Disposable[] {
-		return [vscode.window.registerUriHandler(this)];
+		context.subscriptions.push(
+			vscode.window.registerUriHandler(this)
+		);
 	}
 
 	async handleUri(uri: vscode.Uri) {
@@ -34,10 +35,10 @@ export class InferenceUriHandler implements vscode.UriHandler {
 				// Decode the URI parameter
 				const inferenceUri = InferenceUri.toInferenceUri(targetUri);
 
-				if (this.store.hasGraph(inferenceUri)) {
+				if (this._store.hasGraph(inferenceUri)) {
 					const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
 					const namespaces = prefixLookup.getInferencePrefixes();
-					const content = await this.store.serializeGraph(inferenceUri, 'text/turtle', undefined, namespaces);
+					const content = await this._store.serializeGraph(inferenceUri, 'text/turtle', undefined, namespaces);
 					const document = await vscode.workspace.openTextDocument({ content, language: 'turtle' });
 
 					await vscode.window.showTextDocument(document);

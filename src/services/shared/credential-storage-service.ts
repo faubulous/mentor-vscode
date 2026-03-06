@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { AuthCredential } from './credential';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 
 /**
  * Service for managing credentials using the SecretStorage of Visual Studio Code.

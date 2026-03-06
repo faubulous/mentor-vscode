@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import { analyzeWorkspace } from './analyze-workspace';
 import { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
 import { clearQueryHistory } from './clear-query-history';
@@ -104,9 +106,16 @@ const commands = [
 ];
 
 export const commandRegistry = {
-	registerAll: (): vscode.Disposable[] => {
-		return commands.map(command => {
-			return vscode.commands.registerCommand(command.id, command.handler);
-		});
+	/**
+	 * Register all commands.
+	 * Self-registers with the extension context for automatic disposal.
+	 */
+	registerAll: (): void => {
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		for (const command of commands) {
+			context.subscriptions.push(
+				vscode.commands.registerCommand(command.id, command.handler)
+			);
+		}
 	}
 }

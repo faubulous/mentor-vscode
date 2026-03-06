@@ -43,7 +43,7 @@ export class SettingsService extends EventEmitter {
 	readonly _onDidChange = new vscode.EventEmitter<{ key: string, oldValue: any, newValue: any }>();
 
 	onDidChange(key: string, callback: (e: { key: string, oldValue: any, newValue: any }) => void) {
-		this._onDidChange.event((e) => {
+		return this._onDidChange.event((e) => {
 			if (e.key == key) {
 				callback(e);
 			}

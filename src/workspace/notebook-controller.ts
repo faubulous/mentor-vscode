@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { ISparqlQueryService } from '@src/services/interfaces';
 import { QuadsResult } from '@src/services/shared/sparql-query-state';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
 
-export class NotebookController {
+export class NotebookController implements vscode.Disposable {
 	private readonly _id = 'mentor-notebook-controller';
 
 	private readonly _label = 'Mentor Notebook';
@@ -31,6 +31,10 @@ export class NotebookController {
 
 		this._messaging = vscode.notebooks.createRendererMessaging('mentor.notebook.sparqlResultsRenderer');
 		this._messaging.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
+
+		// Self-register with the extension context for automatic disposal
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		context.subscriptions.push(this);
 	}
 
 	dispose(): void {

@@ -1,5 +1,5 @@
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/interfaces';
 import { DefinitionTreeLayout } from '@src/services/shared/settings-service';
 

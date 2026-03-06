@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import { TreeView } from '@src/views/trees/tree-view';
 import { WorkspaceNodeProvider } from './workspace-node-provider';
 
@@ -26,8 +28,15 @@ export class WorkspaceTree implements TreeView {
 
 		this.treeView.title = vscode.workspace.name ?? "Workspace";
 
-		vscode.commands.registerCommand('mentor.command.refreshWorkspaceTree', async () => {
-			this.treeDataProvider.refresh();
-		});
+		const disposables = [
+			this.treeView,
+			vscode.commands.registerCommand('mentor.command.refreshWorkspaceTree', async () => {
+				this.treeDataProvider.refresh();
+			})
+		];
+
+		// Self-register with the extension context for automatic disposal
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		context.subscriptions.push(...disposables);
 	}
 }

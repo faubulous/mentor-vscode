@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { container } from 'tsyringe';
 import { VocabularyRepository } from "@faubulous/mentor-rdf";
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../definition-tree-node";
 

@@ -9,7 +9,7 @@ export interface ISettingsService {
 	 * @param key The settings key to watch.
 	 * @param callback The callback to invoke when the key changes.
 	 */
-	onDidChange(key: string, callback: (e: { key: string, oldValue: any, newValue: any }) => void): void;
+	onDidChange(key: string, callback: (e: { key: string, oldValue: any, newValue: any }) => void): vscode.Disposable;
 
 	/**
 	 * Return a value from this configuration.

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { NamedNode, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService, IConfigurationService, ISettingsService } from '@src/services/interfaces';
 
 /**

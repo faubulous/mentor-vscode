@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
-import { IDocumentContextService, ISettingsService  } from '@src/services/interfaces';
+import { ServiceToken } from '@src/services/tokens';
+import { IDocumentContextService, ISettingsService } from '@src/services/interfaces';
 import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';
@@ -16,11 +16,11 @@ export class DefinitionTree implements TreeView {
 	 */
 	readonly id = "mentor.view.definitionTree";
 
-	private get contextService() {
+	private get _contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
-	private get settings() {
+	private get _settings() {
 		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
 	}
 
@@ -40,41 +40,60 @@ export class DefinitionTree implements TreeView {
 			showCollapseAll: true
 		});
 
-		this.updateView();
-		this.updateViewTitle();
+		this._onDidChangeDocumentContext();
 
-		this.contextService.onDidChangeDocumentContext(() => {
-			this.updateView();
-			this.updateViewTitle();
-		});
+		const disposables: vscode.Disposable[] = [
+			this.treeView,
+			this._registerDocumentContextHandler(),
+			this._registerDecorationProvider(),
+			this._registerActiveLanguageHandler(),
+			this._registerRefreshCommand()
+		];
 
-		vscode.commands.registerCommand('mentor.command.refreshDefinitionsTree', async () => {
-			this.updateView();
-			this.updateViewTitle();
-
-			this.treeDataProvider.refresh(this.contextService.activeContext);
-		});
-
-		const showReferences = this.settings.get('view.showReferences', true);
+		const showReferences = this._settings.get('view.showReferences', true);
 
 		vscode.commands.executeCommand("setContext", "view.showReferences", showReferences);
 		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", true);
 		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", true);
 
-		// Update the view and the title when the active language changes.
-		this.settings.onDidChange("view.activeLanguage", () => {
-			this.updateViewTitle();
-		});
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		context.subscriptions.push(...disposables);
+	}
 
-		// Support for decorating missing language tags through a file decoration provider.
-		vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider());
+	private _registerDocumentContextHandler(): vscode.Disposable {
+		return this._contextService.onDidChangeDocumentContext(() => {
+			this._onDidChangeDocumentContext();
+		});
+	}
+
+	private _registerActiveLanguageHandler(): vscode.Disposable {
+		return this._settings.onDidChange("view.activeLanguage", () => {
+			this._updateViewTitle();
+		});
+	}
+
+	private _registerRefreshCommand(): vscode.Disposable {
+		return vscode.commands.registerCommand('mentor.command.refreshDefinitionsTree', async () => {
+			this._updateView();
+			this._updateViewTitle();
+			this.treeDataProvider.refresh(this._contextService.activeContext);
+		});
+	}
+
+	private _registerDecorationProvider(): vscode.Disposable {
+		return vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider());
+	}
+
+	private _onDidChangeDocumentContext() {
+		this._updateView();
+		this._updateViewTitle();
 	}
 
 	/**
 	 * Shows a message in the tree view if no file is selected.
 	 */
-	private updateView() {
-		if (!this.contextService.activeContext) {
+	private _updateView() {
+		if (!this._contextService.activeContext) {
 			this.treeView.message = "No file selected.";
 		} else {
 			this.treeView.message = undefined;
@@ -84,10 +103,10 @@ export class DefinitionTree implements TreeView {
 	/**
 	 * Update the title of the tree view to include the active language.
 	 */
-	private updateViewTitle() {
-		if (this.contextService.activeContext) {
+	private _updateViewTitle() {
+		if (this._contextService.activeContext) {
 			const title = this.treeView.title?.split(' - ')[0];
-			const language = this.contextService.activeContext.activeLanguageTag;
+			const language = this._contextService.activeContext.activeLanguageTag;
 
 			if (language) {
 				this.treeView.title = `${title} - ${language}`;

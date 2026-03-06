@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { container, DependencyContainer } from "tsyringe";
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { Quad_Graph } from '@rdfjs/types';
-import { ServiceToken } from './token';
+import { ServiceToken } from './tokens';
 import { InferenceUri } from '../workspace/inference-uri';
 import { DocumentFactory } from '../workspace/document-factory';
 import { WorkspaceRepository } from '../workspace/workspace-repository';

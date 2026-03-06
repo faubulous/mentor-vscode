@@ -5,7 +5,7 @@ import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { RdfSyntax, TurtleReader, TurtleParser, TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { IConfigurationService } from '@src/services/interfaces';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';

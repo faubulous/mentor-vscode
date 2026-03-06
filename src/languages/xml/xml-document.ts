@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Store } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/workspace/document-context';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { getIriFromPrefixedName } from '@src/utilities';

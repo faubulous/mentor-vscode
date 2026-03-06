@@ -1,5 +1,5 @@
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/services/interfaces';
 import { sparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 

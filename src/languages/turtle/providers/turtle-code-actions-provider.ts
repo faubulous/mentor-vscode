@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Uri } from "@faubulous/mentor-rdf";
 import { TOKENS } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/interfaces';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';

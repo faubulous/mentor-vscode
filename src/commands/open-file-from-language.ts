@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/token';
+import { ServiceToken } from '@src/services/tokens';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { WorkspaceRepository } from '@src/workspace/workspace-repository';
 import { DocumentFactory } from '@src/workspace/document-factory';

@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import { NotSupportedError } from '@src/utilities/error';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 
@@ -9,6 +11,17 @@ export class WorkspaceFileSystemProvider implements vscode.FileSystemProvider {
 	private _onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
 
 	readonly onDidChangeFile = this._onDidChangeFile.event;
+
+	constructor() {
+		// Self-register with the extension context for automatic disposal
+		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		context.subscriptions.push(
+			vscode.workspace.registerFileSystemProvider(WorkspaceUri.uriScheme, this, {
+				isCaseSensitive: true,
+				isReadonly: false
+			})
+		);
+	}
 
 	stat(uri: vscode.Uri): vscode.FileStat | Thenable<vscode.FileStat> {
 		const fileUri = WorkspaceUri.toFileUri(uri);
@@ -46,12 +59,5 @@ export class WorkspaceFileSystemProvider implements vscode.FileSystemProvider {
 
 	watch(): vscode.Disposable {
 		return new vscode.Disposable(() => { });
-	}
-
-	register(): vscode.Disposable[] {
-		return [vscode.workspace.registerFileSystemProvider(WorkspaceUri.uriScheme, this, {
-			isCaseSensitive: true,
-			isReadonly: false
-		})];
 	}
 }
