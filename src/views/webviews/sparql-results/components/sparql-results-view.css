@@ -21,6 +21,8 @@
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	width: 100%;
+	min-width: 0;
 }
 
 .sparql-results-content-container {
@@ -28,6 +30,22 @@
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
+	box-sizing: border-box;
+}
+
+.sparql-results-container.error .sparql-results-content-container {
+	flex: 1 1 0;
+	min-height: 0;
+	min-width: 0;
+	width: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+.sparql-results-container.error .sparql-results-content-container pre {
+	white-space: pre;
+	width: fit-content;
+	min-width: 100%;
 }
 
 .sparql-results-content-container .header {
@@ -102,13 +120,27 @@
 }
 
 .mentor-panel .sparql-results-container {
-	height: 100vh;
+	height: 100%;
+	max-height: 100%;
+}
+
+.mentor-panel .sparql-results-container.error {
+	overflow: hidden;
+}
+
+.mentor-panel .sparql-results-container.error .sparql-results-content-container {
+	overflow-x: auto;
+	overflow-y: auto;
 }
 
 .mentor-notebook-output {
 	border: 1px solid var(--vscode-editorGroup-border) !important;
 	padding: 0 !important;
 	margin-top: -1px !important;
+}
+
+.mentor-notebook-output .sparql-results-container.error .sparql-results-content-container {
+	min-height: 150px;
 }
 
 .mentor-notebook-output vscode-table {
@@ -119,8 +151,6 @@
 .mentor-panel vscode-table {
 	flex: 1 1 auto;
 	min-height: 0;
-	/* Add a margin to the bottom to avoid cutting off the table content in the panel view. */
-	margin-bottom: 31px;
 }
 
 .mentor-notebook-output vscode-table-header-cell,
