@@ -119,6 +119,8 @@
 .mentor-panel vscode-table {
 	flex: 1 1 auto;
 	min-height: 0;
+	/* Add a margin to the bottom to avoid cutting off the table content in the panel view. */
+	margin-bottom: 31px;
 }
 
 .mentor-notebook-output vscode-table-header-cell,
