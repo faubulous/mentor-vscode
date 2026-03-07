@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import { Uri } from '@faubulous/mentor-rdf';
 import { IToken, RdfToken, TokenType } from '@faubulous/mentor-rdf-parsers';
 import { isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
-import { ConfigurationService } from '@src/services/core/configuration-service';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { PrefixLookupService } from '@src/services/document/prefix-lookup-service';
 import { getIriFromIriReference } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * Specifies a how a namespace prefix should be defined in a document.
@@ -29,7 +29,6 @@ export interface PrefixDefinition {
  */
 export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	constructor(
-		private readonly configuration: ConfigurationService,
 		private readonly contextService: DocumentContextService,
 		private readonly prefixLookupService: PrefixLookupService
 	) {
@@ -182,7 +181,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param prefixes The prefixes to be implemented.
 	 */
 	private async _implementPrefixes(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, prefixes: PrefixDefinition[]) {
-		const mode = await this.configuration.get('prefixes.prefixDefinitionMode');
+		const mode = await getConfig().get('prefixes.prefixDefinitionMode');
 
 		if (mode === 'Sorted') {
 			await this._implementPrefixesSorted(edit, document, context, prefixes);

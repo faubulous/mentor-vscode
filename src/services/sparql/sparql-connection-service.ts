@@ -3,11 +3,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, ICredentialStorageService, ILocalStorageService } from '@src/services/core';
+import { ICredentialStorageService } from '@src/services/core';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '../core/credential';
 import { SparqlConnection } from './sparql-connection';
 import { SparqlConnectionSource, ComunicaSource } from './sparql-query-source';
+import { getConfig } from '@src/utilities/config';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 
@@ -45,8 +46,7 @@ export class SparqlConnectionService {
 	}
 
 	constructor(
-		private readonly _configurationService: IConfigurationService,
-		private readonly _workspaceStorage: ILocalStorageService,
+		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _credentialStorage: ICredentialStorageService
 	) {
 		this._connections = [MENTOR_WORKSPACE_STORE];
@@ -75,7 +75,7 @@ export class SparqlConnectionService {
 	 * @returns An array of SPARQL connections.
 	 */
 	private _loadConnectionsFromConfiguration(configTarget: vscode.ConfigurationTarget): SparqlConnection[] {
-		const inspect = this._configurationService.config.inspect<SparqlConnection[]>(CONNECTIONS_CONFIG_KEY);
+		const inspect = getConfig().inspect<SparqlConnection[]>(CONNECTIONS_CONFIG_KEY);
 
 		if (inspect) {
 			const connections = [];
@@ -113,8 +113,9 @@ export class SparqlConnectionService {
 		const globalConnections = this._getEndpointDataForConfigScope(ConfigurationScope.User);
 		const workspaceConnections = this._getEndpointDataForConfigScope(ConfigurationScope.Workspace);
 
-		await this._configurationService.config.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
-		await this._configurationService.config.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
+		const config = getConfig();
+		await config.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
+		await config.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
 
 		for (const connection of this._connections) {
 			connection.isNew = false;
@@ -227,7 +228,7 @@ export class SparqlConnectionService {
 	private _getConnectionIdForDocument(documentUri: vscode.Uri): string | undefined {
 		const key = this._getConnectionStorageKeyForDocument(documentUri);
 
-		return this._workspaceStorage.getValue(key, undefined);
+		return this._extensionContext.workspaceState.get(key, undefined);
 	}
 
 	/**
@@ -241,7 +242,7 @@ export class SparqlConnectionService {
 		} else {
 			const key = this._getConnectionStorageKeyForDocument(documentUri);
 
-			this._workspaceStorage.setValue(key, connectionId);
+			this._extensionContext.workspaceState.update(key, connectionId);
 		}
 
 		this._onDidChangeConnectionForDocument.fire(documentUri);

@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
+import { Range } from 'vscode-languageserver-types';
+import { container } from 'tsyringe';
 import { Quad_Subject } from "@rdfjs/types";
 import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
-import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, ISettingsService  } from '@src/services/core';
+import { ISettingsService } from '@src/services/core';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
-import { Range } from 'vscode-languageserver-types';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * A literal value with optional language tag.
@@ -169,11 +170,11 @@ export abstract class DocumentContext {
 	};
 
 	constructor(documentUri: vscode.Uri) {
-		const configurationService = container.resolve<IConfigurationService>(ServiceToken.ConfigurationService);
-		
+		const config = getConfig();
+
 		this.uri = documentUri;
-		this.predicates.label = configurationService.get('predicates.label') ?? [];
-		this.predicates.description = configurationService.get('predicates.description') ?? [];
+		this.predicates.label = config.get('predicates.label') ?? [];
+		this.predicates.description = config.get('predicates.description') ?? [];
 	}
 
 	/**

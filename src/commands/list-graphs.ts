@@ -1,16 +1,15 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService } from '@src/services/core';
 import { ISparqlConnectionService } from '@src/services/sparql';
 import { SparqlConnection } from '@src/services/sparql/sparql-connection';
 import { SparqlResultsController } from '@src/views/webviews';
+import { getConfig } from '@src/utilities/config';
 
 export const listGraphs = {
   id: 'mentor.command.listGraphs',
   handler: async (connection: SparqlConnection): Promise<void> => {
-    const configurationProvider = container.resolve<IConfigurationService>(ServiceToken.ConfigurationService);
-    const query = configurationProvider.get<string>('sparql.listGraphsQuery');
+    const query = getConfig().get<string>('sparql.listGraphsQuery');
 
     if (!query) {
       vscode.window.showErrorMessage('Could not retrieve query from configuration: mentor.sparql.listGraphsQuery');

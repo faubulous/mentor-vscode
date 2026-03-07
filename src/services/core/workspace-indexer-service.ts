@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { ConfigurationService } from './configuration-service';
 import { IWorkspaceFileService } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService } from './workspace-indexer.interface';
 import { DocumentFactory } from '../../workspace/document-factory';
 import { DocumentContextService } from '../document/document-context-service';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * Service for indexing RDF documents in the current workspace.
@@ -24,7 +24,6 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 	constructor(
 		private readonly documentFactory: DocumentFactory,
-		private readonly configurationService: ConfigurationService,
 		private readonly contextService: DocumentContextService,
 		private readonly workspaceFileService: IWorkspaceFileService
 	) {
@@ -54,7 +53,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
 			// file size limit and make issues with the configuration more visible.
-			const maxSize = this.configurationService.get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
+			const maxSize = getConfig().get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
 
 			// Use the files already discovered by WorkspaceFileService
 			const uris = this.workspaceFileService.files;

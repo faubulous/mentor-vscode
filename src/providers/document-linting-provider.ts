@@ -3,12 +3,13 @@ import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, IWorkspaceIndexerService } from '@src/services/core';
+import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { DocumentFactory } from '@src/workspace/document-factory';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { getIriFromToken, getTokenPosition } from '@src/utilities';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * Provides additional diagnostics for RDF documents that require access 
@@ -33,10 +34,6 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Cached linting enabled state (kill switch).
 	 */
 	private _lintingEnabled: boolean = false;
-
-	private get _configuration() {
-		return container.resolve<IConfigurationService>(ServiceToken.ConfigurationService);
-	}
 
 	private get _vocabulary() {
 		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
@@ -78,7 +75,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Refresh the cached linting enabled state.
 	 */
 	private _loadLintingEnabledState(): void {
-		this._lintingEnabled = !!this._configuration.get<boolean>('linting.enabled', false);
+		this._lintingEnabled = !!getConfig().get<boolean>('linting.enabled', false);
 	}
 
 	/**
@@ -353,7 +350,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	}
 
 	private _getSeverityLevel(setting: string, defaultValue: string): vscode.DiagnosticSeverity | null {
-		const value = this._configuration.get(setting, defaultValue);
+		const value = getConfig().get(setting, defaultValue);
 
 		switch (value) {
 			case 'Error':

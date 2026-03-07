@@ -5,7 +5,6 @@ import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubu
 import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService } from '@src/services/core';
 import { DocumentContext } from '@src/workspace/document-context';
 import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';
 import {
@@ -17,6 +16,7 @@ import {
 	getNamespaceDefinition,
 	getTokenPosition
 } from '@src/utilities';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -167,8 +167,8 @@ export class TurtleDocument extends DocumentContext {
 
 		// TODO: This should be handled in the prefix definition service 
 		// (listen to doc changes and react) instead of the document itself.
-		const config = container.resolve<IConfigurationService>(ServiceToken.ConfigurationService).config;
-		
+		const config = getConfig();
+
 		if (change?.text.endsWith(':') && config.get('prefixes.autoDefinePrefixes')) {
 			// Do not auto-implement prefixes when manually typing a prefix.
 			const n = this.getTokenIndexAtPosition(change.range.start);

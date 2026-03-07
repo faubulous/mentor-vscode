@@ -7,7 +7,6 @@ import { InferenceUri } from '../workspace/inference-uri';
 import { DocumentFactory } from '../workspace/document-factory';
 import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
-import { ConfigurationService } from './core/configuration-service';
 import { DocumentContextService } from './document/document-context-service';
 import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
@@ -16,7 +15,6 @@ import { PrefixLookupService } from './document/prefix-lookup-service';
 import { SparqlConnectionService } from './sparql/sparql-connection-service';
 import { SparqlResultSerializer } from './sparql/sparql-result-serializer';
 import { SparqlQueryService } from './sparql/sparql-query-service';
-import { WorkspaceStorageService, GlobalStorageService } from './core/local-storage-service';
 import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
 
 /**
@@ -38,10 +36,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	container.registerInstance(ServiceToken.ExtensionContext, context);
 
 	// Register application services.
-	const configurationProvider = new ConfigurationService();
-	container.registerInstance(ServiceToken.ConfigurationService, configurationProvider);
-
-	const settingsService = new SettingsService(configurationProvider);
+	const settingsService = new SettingsService();
 	container.registerInstance(ServiceToken.SettingsService, settingsService);
 
 	const reasoner = new OwlReasoner(new MentorGraphUriGenerator());
@@ -51,42 +46,36 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const vocabularyRepository = new VocabularyRepository(store);
 	container.registerInstance(ServiceToken.VocabularyRepository, vocabularyRepository);
 
-	const globalStorageService = new GlobalStorageService();
-	container.registerInstance(ServiceToken.GlobalStorageService, globalStorageService);
-
-	const workspaceStorageService = new WorkspaceStorageService();
-	container.registerInstance(ServiceToken.WorkspaceStorageService, workspaceStorageService);
-
 	const credentialStorageService = new CredentialStorageService();
 	container.registerInstance(ServiceToken.CredentialStorageService, credentialStorageService);
 
 	const documentFactory = new DocumentFactory();
 	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
 
-	const documentContextService = new DocumentContextService(context, vocabularyRepository, documentFactory, configurationProvider);
+	const documentContextService = new DocumentContextService(context, vocabularyRepository, documentFactory);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
 
-	const workspaceFileService = new WorkspaceFileService(documentFactory, configurationProvider);
+	const workspaceFileService = new WorkspaceFileService(documentFactory);
 	container.registerInstance(ServiceToken.WorkspaceFileService, workspaceFileService);
 
-	const workspaceIndexerService = new WorkspaceIndexerService(documentFactory, configurationProvider, documentContextService, workspaceFileService);
+	const workspaceIndexerService = new WorkspaceIndexerService(documentFactory, documentContextService, workspaceFileService);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
-	const sparqlConnectionService = new SparqlConnectionService(configurationProvider, workspaceStorageService, credentialStorageService);
+	const sparqlConnectionService = new SparqlConnectionService(context, credentialStorageService);
 	container.registerInstance(ServiceToken.SparqlConnectionService, sparqlConnectionService);
 
 	const prefixDownloaderService = new PrefixDownloaderService();
 	container.registerInstance(ServiceToken.PrefixDownloaderService, prefixDownloaderService);
 
-	const prefixLookupService = new PrefixLookupService(globalStorageService, configurationProvider, documentContextService);
+	const prefixLookupService = new PrefixLookupService(context, documentContextService);
 	container.registerInstance(ServiceToken.PrefixLookupService, prefixLookupService);
 
 	const sparqlQueryResultSerializer = new SparqlResultSerializer(prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
 
-	const sparqlQueryService = new SparqlQueryService(context, workspaceStorageService, credentialStorageService, sparqlConnectionService, sparqlQueryResultSerializer);
+	const sparqlQueryService = new SparqlQueryService(context, credentialStorageService, sparqlConnectionService, sparqlQueryResultSerializer);
 	container.registerInstance(ServiceToken.SparqlQueryService, sparqlQueryService);
 
-	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(configurationProvider, documentContextService, prefixLookupService);
+	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.TurtlePrefixDefinitionService, turtlePrefixDefinitionService);
 }

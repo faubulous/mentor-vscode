@@ -1,19 +1,18 @@
 import * as vscode from 'vscode';
-import { IConfigurationService, ILocalStorageService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services/document/prefix-downloader-service';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * A service for looking up prefixes in the project.
  */
 export class PrefixLookupService {
 	constructor(
-		private readonly globalStorage: ILocalStorageService,
-		private readonly configuration: IConfigurationService,
+		private readonly extensionContext: vscode.ExtensionContext,
 		private readonly contextService: IDocumentContextService
-	) {}
+	) { }
 	/**
 	 * Get the a namespace map for the standard W3C prefix definitions used in inference graphs.
 	 * @returns A map of standard prefixes.
@@ -33,7 +32,7 @@ export class PrefixLookupService {
 	 * @returns A map of default prefixes.
 	 */
 	getDefaultPrefixes(): NamespaceMap {
-		return this.globalStorage.getValue('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
+		return this.extensionContext.globalState.get('defaultPrefixes', DEFAULT_PREFIXES).prefixes;
 	}
 
 	/**
@@ -56,7 +55,7 @@ export class PrefixLookupService {
 		}
 
 		// 2. Try to find the prefix in the project configuration.
-		const projectPrefixes = this.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+		const projectPrefixes = getConfig().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
 		if (Array.isArray(projectPrefixes)) {
 			const prefix = projectPrefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
@@ -109,7 +108,7 @@ export class PrefixLookupService {
 			}
 
 			if (uri.includes('#')) {
-				const param = this.configuration.get<string>('prefixes.queryParameterName');
+				const param = getConfig().get<string>('prefixes.queryParameterName');
 
 				return uri + '?' + param + '=';
 			} else if (!uri.endsWith('#')) {
@@ -122,7 +121,7 @@ export class PrefixLookupService {
 		let result: string | undefined = undefined;
 
 		// 1. Check if the prefix is declared in the project configuration as a default prefix.
-		const namespaces = this.configuration.get<{ defaultPrefix: string, uri: string }[]>('namespaces');
+		const namespaces = getConfig().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
 		if (Array.isArray(namespaces)) {
 			result = namespaces.find(namespace => namespace.defaultPrefix === prefix)?.uri;

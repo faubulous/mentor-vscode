@@ -4,7 +4,7 @@ import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContext } from '@src/workspace/document-context';
 import { DocumentFactory } from '@src//workspace/document-factory';
 import { WorkspaceUri } from '@src/workspace/workspace-uri';
-import { IConfigurationService } from '@src/services/core';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -52,8 +52,7 @@ export class DocumentContextService {
 	constructor(
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _vocabulary: VocabularyRepository,
-		private readonly _documentFactory: DocumentFactory,
-		private readonly _configurationProvider: IConfigurationService
+		private readonly _documentFactory: DocumentFactory
 	) {
 		// Register event handlers for editor and document changes.
 		this._extensionContext.subscriptions.push(...[
@@ -282,7 +281,7 @@ export class DocumentContextService {
 		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
 
 		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
-		context.activeLanguageTag = this._configurationProvider.get('definitionTree.defaultLanguageTag', context.primaryLanguage);
+		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
 

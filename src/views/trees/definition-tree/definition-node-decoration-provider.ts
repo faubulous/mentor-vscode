@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import { NamedNode, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, ISettingsService } from '@src/services/core';
+import { ISettingsService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * Indicates the where missing language tags should be decorated.
@@ -40,20 +41,16 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 	private _decorationScope: MissingLanguageTagDecorationScope;
 
-	private get vocabulary() {
+	private get _vocabulary() {
 		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 	}
 
-	private get settings() {
+	private get _settings() {
 		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
 	}
 
-	private get contextService() {
+	private get _contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
-
-	private get configurationService() {
-		return container.resolve<IConfigurationService>(ServiceToken.ConfigurationService);
 	}
 
 	constructor() {
@@ -68,7 +65,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			}
 		});
 
-		this.contextService.onDidChangeDocumentContext((context) => {
+		this._contextService.onDidChangeDocumentContext((context) => {
 			if (context) {
 				// When the context changes, the label predicates need to be updated.
 				this._labelPredicates = new Set(context?.predicates.label ?? []);
@@ -77,14 +74,14 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			}
 		});
 
-		this.settings.onDidChange("view.activeLanguage", () => {
+		this._settings.onDidChange("view.activeLanguage", () => {
 			// When the active language changes, the decorations need to be updated.
 			this._onDidChangeFileDecorations.fire(undefined);
 		});
 	}
 
 	private _getDecorationScopeFromConfiguration(): MissingLanguageTagDecorationScope {
-		const result = this.configurationService.get('definitionTree.decorateMissingLanguageTags');
+		const result = getConfig().get('definitionTree.decorateMissingLanguageTags');
 
 		switch (result) {
 			case 'Document': {
@@ -100,7 +97,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
-		const context = this.contextService.activeContext;
+		const context = this._contextService.activeContext;
 
 		if (!context || !uri || uri.scheme === 'mentor' || uri.scheme === 'file') {
 			return undefined;
@@ -134,7 +131,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 		let hasLabels = false;
 
-		for (let triple of this.vocabulary.store.matchAll(graphUris, node, null, null, false)) {
+		for (let triple of this._vocabulary.store.matchAll(graphUris, node, null, null, false)) {
 			if (triple.object.termType !== "Literal" || !this._labelPredicates.has(triple.predicate.value)) {
 				continue;
 			}

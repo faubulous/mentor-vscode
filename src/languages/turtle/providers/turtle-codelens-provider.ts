@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IConfigurationService, IWorkspaceIndexerService } from '@src/services/core';
+import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ReferenceProvider } from '@src/providers';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * Provides usage information for resource definitions in Turtle documents.
@@ -30,10 +31,6 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
-	private get _configurationService() {
-		return container.resolve<IConfigurationService>(ServiceToken.ConfigurationService);
-	}
-
 	private get _contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
@@ -45,7 +42,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 	constructor() {
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
-				this._enabled = this._configurationService.get('editor.codeLensEnabled', true);
+				this._enabled = getConfig().get('editor.codeLensEnabled', true);
 
 				// Fire the event to refresh the code lenses.
 				this._onDidChangeCodeLenses.fire();
@@ -57,7 +54,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 		this._initializing = true;
 		this._initialized = false;
 
-		this._enabled = this._configurationService.get('editor.codeLensEnabled', true);
+		this._enabled = getConfig().get('editor.codeLensEnabled', true);
 
 		this._workspaceIndexerService.waitForIndexed().then(() => {
 			if (this._enabled) {

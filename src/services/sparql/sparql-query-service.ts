@@ -4,7 +4,7 @@ import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
 import { AuthCredential } from '@src/services/core/credential';
-import { ILocalStorageService, ICredentialStorageService } from '@src/services/core';
+import { ICredentialStorageService } from '@src/services/core';
 import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/services/sparql';
 import { WorkspaceUri } from "@src/workspace/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
@@ -56,7 +56,6 @@ export class SparqlQueryService {
 
 	constructor(
 		private readonly _extensionContext: vscode.ExtensionContext,
-		private readonly _workspaceStorage: ILocalStorageService,
 		private readonly _credentialStorage: ICredentialStorageService,
 		private readonly _connectionService: ISparqlConnectionService,
 		private readonly _resultSerializer: ISparqlResultSerializer
@@ -145,7 +144,7 @@ export class SparqlQueryService {
 	}
 
 	private _loadQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
-		const history = this._workspaceStorage.getValue<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
+		const history = this._extensionContext.workspaceState.get<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
 
 		return history
 			.filter(q => q)
@@ -159,7 +158,7 @@ export class SparqlQueryService {
 			.filter(q => q && !q.documentIri.startsWith('untitled'))
 			.slice(0, HISTORY_MAX_ENTRIES);
 
-		await this._workspaceStorage.setValue(HISTORY_STORAGE_KEY, filteredHistory);
+		await this._extensionContext.workspaceState.update(HISTORY_STORAGE_KEY, filteredHistory);
 	}
 
 	/**
