@@ -13,6 +13,12 @@ export const workspace = {
     onDidDelete: () => ({ dispose: () => {} }),
     dispose: () => {}
   }),
+  getConfiguration: (section?: string) => ({
+    get: (key: string, defaultValue?: any) => defaultValue,
+    has: (key: string) => false,
+    inspect: (key: string) => undefined,
+    update: async (key: string, value: any) => {},
+  }),
 };
 
 // Provide a minimal Uri namespace compatible with vscode.Uri

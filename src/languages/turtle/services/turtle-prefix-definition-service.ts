@@ -353,6 +353,72 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	}
 
 	/**
+	 * Resolve a unique prefix for a namespace IRI in the context of a document.
+	 * 
+	 * The logic is as follows:
+	 * 1. If the IRI has a prefix defined in the local document, reuse it.
+	 * 2. If not in the local document, check other documents - reuse the prefix if found.
+	 * 3. If no prefix is defined anywhere, use the defaultValue.
+	 * 4. Ensure the returned prefix is unique by appending numbers if there's a conflict.
+	 * 5. For empty prefixes:
+	 *    - Valid if same namespace IRI in same document.
+	 *    - Valid if another document has it and current document has no empty prefix definition.
+	 *    - Never disambiguate empty prefixes with numbers - fall back to defaultValue instead.
+	 * 
+	 * @param context The RDF document context.
+	 * @param namespaceIri The namespace IRI to resolve a prefix for.
+	 * @param defaultValue The default prefix to use if no prefix is found.
+	 * @returns A unique prefix for the namespace IRI.
+	 */
+	getUniquePrefixForIri(context: TurtleDocument, namespaceIri: string, defaultValue: string): string {
+		const documentUri = context.uri.toString();
+
+		// Step 1: Check if the namespace IRI already has a prefix defined in the current document.
+		for (const [prefix, iri] of Object.entries(context.namespaces)) {
+			if (iri === namespaceIri) {
+				// The exact prefix for this IRI already exists in this document - reuse it.
+				return prefix;
+			}
+		}
+
+		// Step 2: Look up the prefix in other documents, configuration, or default prefixes.
+		// Note: getPrefixForIri returns empty prefix only from other documents, not as defaultValue.
+		let prefix = this.prefixLookupService.getPrefixForIri(documentUri, namespaceIri, defaultValue);
+
+		// Step 3: Handle empty prefix special rules.
+		if (prefix === '') {
+			// Check if the current document already has an empty prefix definition.
+			const localEmptyPrefixIri = context.namespaces[''];
+
+			if (localEmptyPrefixIri !== undefined) {
+				// Current document has an empty prefix, but for a different IRI (we already
+				// checked same IRI in step 1). We cannot use empty prefix - fall back to default.
+				prefix = defaultValue;
+			}
+			// Otherwise, empty prefix from another document can be used since this document
+			// doesn't have an empty prefix definition.
+		}
+
+		// Step 4: Ensure uniqueness for non-empty prefixes.
+		if (prefix !== '') {
+			const existingNamespaceIri = context.namespaces[prefix];
+
+			if (existingNamespaceIri && existingNamespaceIri !== namespaceIri) {
+				// There's a conflict - append a number to make it unique.
+				let n = 1;
+
+				while (context.namespaces[prefix + n] !== undefined) {
+					n++;
+				}
+
+				prefix = prefix + n;
+			}
+		}
+
+		return prefix;
+	}
+
+	/**
 	 * Implement a prefix for a IRI in a document.
 	 * @param document The RDF document.
 	 * @param iri The namespace IRI for which to implement a prefix.
@@ -364,25 +430,12 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 
 		// The provided IRI may be a full IRI or a namespace IRI.
 		const namespaceIri = Uri.getNamespaceIri(iri);
-		const documentIri = document.uri.toString();
 
-		// Look up the prefix for the namespace IRI in the document, configuration, or default prefixes.
-		let prefix = this.prefixLookupService.getPrefixForIri(documentIri, namespaceIri, 'ns');
+		// Resolve the prefix using the new logic.
+		const prefix = this.getUniquePrefixForIri(context, namespaceIri, 'ns');
 
-		// Check if the prefix is already defined and if the IRI are the same.
-		const existingNamspaceIri = context.namespaces[prefix];
-
-		if (existingNamspaceIri && existingNamspaceIri !== namespaceIri) {
-			// If there is a conflict, append a number to the prefix.
-			let n = 1;
-			let p = prefix;
-
-			do {
-				p = prefix + n;
-			} while (context.namespaces[p]);
-
-			prefix = p;
-		}
+		// Check if the prefix is already defined with the exact same namespace IRI.
+		const existingNamespaceIri = context.namespaces[prefix];
 
 		const edit = new vscode.WorkspaceEdit();
 
@@ -426,7 +479,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		}
 
 		// Only implement the prefix if not already defined.
-		if (!existingNamspaceIri || existingNamspaceIri !== namespaceIri) {
+		if (!existingNamespaceIri || existingNamespaceIri !== namespaceIri) {
 			await this._implementPrefixes(edit, document, context, [{ prefix, namespaceIri }]);
 		}
 

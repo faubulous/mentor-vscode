@@ -2,7 +2,6 @@ import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 import { URI } from 'vscode-uri';
 import { WorkspaceFileService } from './workspace-file-service';
-import { ConfigurationService } from './configuration-service';
 import { DocumentFactory } from '../../workspace/document-factory';
 
 // Mock implementations
@@ -18,20 +17,13 @@ const createMockDocumentFactory = () => ({
 	}
 }) as unknown as DocumentFactory;
 
-const createMockConfigurationService = (excludePatterns: string[] = ['**/node_modules/**']) => ({
-	getExcludePatterns: vi.fn().mockResolvedValue(excludePatterns),
-	get: vi.fn()
-}) as unknown as ConfigurationService;
-
 describe('WorkspaceFileService', () => {
 	let service: WorkspaceFileService;
 	let mockDocumentFactory: DocumentFactory;
-	let mockConfigurationService: ConfigurationService;
 	let findFilesSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
 		mockDocumentFactory = createMockDocumentFactory();
-		mockConfigurationService = createMockConfigurationService();
 
 		// Mock vscode.workspace.findFiles
 		findFilesSpy = vi.spyOn(vscode.workspace, 'findFiles');
@@ -44,7 +36,7 @@ describe('WorkspaceFileService', () => {
 
 	describe('constructor', () => {
 		test('should create include patterns from supported extensions', () => {
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
+			service = new WorkspaceFileService(mockDocumentFactory);
 
 			expect(service.includePatterns).toContain('**/*.ttl');
 			expect(service.includePatterns).toContain('**/*.rdf');
@@ -52,7 +44,7 @@ describe('WorkspaceFileService', () => {
 		});
 
 		test('should initialize with empty files array', () => {
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
+			service = new WorkspaceFileService(mockDocumentFactory);
 
 			expect(service.files).toEqual([]);
 			expect(service.initialized).toBe(false);
@@ -68,7 +60,7 @@ describe('WorkspaceFileService', () => {
 
 			findFilesSpy.mockResolvedValue(mockFiles as any);
 
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
+			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
 			expect(service.files.length).toBe(2);
@@ -90,25 +82,16 @@ describe('WorkspaceFileService', () => {
 
 			findFilesSpy.mockResolvedValue(mockFiles as any);
 
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
+			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
 			expect(service.files.length).toBe(2);
 		});
 
-		test('should call getExcludePatterns for each workspace folder', async () => {
-			findFilesSpy.mockResolvedValue([]);
-
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
-			await service.discoverFiles();
-
-			expect(mockConfigurationService.getExcludePatterns).toHaveBeenCalled();
-		});
-
 		test('should fire onDidFinishDiscovery event when complete', async () => {
 			findFilesSpy.mockResolvedValue([]);
 
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
+			service = new WorkspaceFileService(mockDocumentFactory);
 
 			const discoveryPromise = new Promise<void>((resolve) => {
 				service.onDidFinishDiscovery(() => resolve());
@@ -125,7 +108,7 @@ describe('WorkspaceFileService', () => {
 		test('should resolve immediately if already initialized', async () => {
 			findFilesSpy.mockResolvedValue([]);
 
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
+			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
 			// Should resolve immediately
@@ -135,7 +118,7 @@ describe('WorkspaceFileService', () => {
 		test('should wait for discovery to complete', async () => {
 			findFilesSpy.mockResolvedValue([]);
 
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
+			service = new WorkspaceFileService(mockDocumentFactory);
 
 			// Start waiting before discovery
 			const waitPromise = service.waitForDiscovery();
@@ -153,7 +136,7 @@ describe('WorkspaceFileService', () => {
 			const mockFiles = [URI.parse('file:///w/test.ttl')];
 			findFilesSpy.mockResolvedValue(mockFiles as any);
 
-			service = new WorkspaceFileService(mockDocumentFactory, mockConfigurationService);
+			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
 			const files = service.files;
