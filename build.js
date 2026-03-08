@@ -225,6 +225,23 @@ const copyVSCodeElementsBundle = () => {
   copyFile('bundled.js', sourceFolder, targetFolder, 'vscode-elements.js');
 }
 
+/**
+ * Removes source map files from the out directory.
+ */
+const removeSourceMaps = () => {
+  const outFolder = path.resolve(__dirname, 'out');
+  const mapFiles = glob.sync(path.join(outFolder, '**/*.map'));
+
+  if (mapFiles.length > 0) {
+    console.log(`Removing ${mapFiles.length} source map file(s) from out directory...`);
+
+    for (const file of mapFiles) {
+      fs.rmSync(file);
+      console.log(` Removed: ${file.substring(__dirname.length + 1)}`);
+    }
+  }
+}
+
 (async () => {
   const args = process.argv.slice(2);
   const productionBuild = isProductionBuild(args);
@@ -285,8 +302,11 @@ const copyVSCodeElementsBundle = () => {
         (await esbuild.context(config)).watch();
       }
     } else {
-      for (const config of configs) {
-        esbuild.build(config);
+      await Promise.all(configs.map(config => esbuild.build(config)));
+
+      // Remove source maps and glyphs from the out directory in production builds.
+      if (productionBuild) {
+        removeSourceMaps();
       }
     }
   } catch (e) {
