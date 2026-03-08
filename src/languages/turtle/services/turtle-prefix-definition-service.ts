@@ -364,9 +364,10 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 
 		// The provided IRI may be a full IRI or a namespace IRI.
 		const namespaceIri = Uri.getNamespaceIri(iri);
+		const documentIri = document.uri.toString();
 
 		// Look up the prefix for the namespace IRI in the document, configuration, or default prefixes.
-		let prefix = this.prefixLookupService.getPrefixForIri(document.uri.toString(), namespaceIri, 'ns');
+		let prefix = this.prefixLookupService.getPrefixForIri(documentIri, namespaceIri, 'ns');
 
 		// Check if the prefix is already defined and if the IRI are the same.
 		const existingNamspaceIri = context.namespaces[prefix];

@@ -40,7 +40,7 @@ export class DocumentContextService {
 	/**
 	 * Default timeout in milliseconds for waiting for tokens from the language server.
 	 */
-	private readonly _tokenWaitTimeout = 5000;
+	private readonly _tokenWaitTimeout = 10000;
 
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
 

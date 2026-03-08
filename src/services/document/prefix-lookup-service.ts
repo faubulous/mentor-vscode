@@ -49,19 +49,21 @@ export class PrefixLookupService {
 		if (documentContext) {
 			for (const [prefix, iri] of Object.entries(documentContext.namespaces)) {
 				if (iri === namespaceIri) {
+					// Here we do _not_ check if the prefix is empty because it is a valid prefix within the document.
 					return prefix;
 				}
 			}
 		}
 
-		// 2. Try to find the prefix in the project configuration.
+		// 2. Try to find the prefix in the project configuration. We need to ensure that the prefix 
+		// is not empty because empty prefixes are usually specific for documents.
 		const projectPrefixes = getConfig().get<{ defaultPrefix: string, uri: string }[]>('namespaces');
 
 		if (Array.isArray(projectPrefixes)) {
 			const prefix = projectPrefixes.find(namespace => namespace.uri === namespaceIri)?.defaultPrefix;
 
 			if (prefix) {
-				return prefix;
+				return this._ensureNonEmptyPrefix(prefix, defaultValue);
 			}
 		}
 
@@ -69,7 +71,7 @@ export class PrefixLookupService {
 		for (const context of Object.values(this.contextService.contexts)) {
 			for (const [prefix, iri] of Object.entries(context.namespaces)) {
 				if (iri === namespaceIri) {
-					return prefix;
+					return this._ensureNonEmptyPrefix(prefix, defaultValue);
 				}
 			}
 		}
@@ -79,11 +81,21 @@ export class PrefixLookupService {
 
 		for (const prefix in defaultPrefixes) {
 			if (defaultPrefixes[prefix] === namespaceIri) {
-				return prefix;
+				return this._ensureNonEmptyPrefix(prefix, defaultValue);
 			}
 		}
 
 		return defaultValue;
+	}
+
+	/**
+	 * Ensure that the prefix is not empty. If the prefix is empty, return the default value instead.
+	 * @param prefix The prefix to check.
+	 * @param defaultValue A default value to return if the prefix is empty.
+	 * @returns The given prefix if it is not empty. The default value otherwise.
+	 */
+	private _ensureNonEmptyPrefix(prefix: string, defaultValue: string): string {
+		return prefix === '' ? defaultValue : prefix;
 	}
 
 	/**
