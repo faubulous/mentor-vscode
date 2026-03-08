@@ -14,4 +14,6 @@ export type SparqlConnectionMessages =
     { id: 'FetchMicrosoftAuthCredential', connectionId: string, scopes: string[] } |
     { id: 'FetchMicrosoftAuthCredentialResult', connectionId: string, credential: MicrosoftAuthCredential | null } |
     { id: 'TestSparqlConnection', connection: SparqlConnection, credential: AuthCredential | null } |
-    { id: 'TestSparqlConnectionResult', error: { code: number, message: string } | null };
+    { id: 'TestSparqlConnectionResult', error: { code: number, message: string } | null } |
+    { id: 'ToggleInferenceEnabled', connectionId: string } |
+    { id: 'ToggleInferenceEnabledResult', connectionId: string, inferenceEnabled: boolean };

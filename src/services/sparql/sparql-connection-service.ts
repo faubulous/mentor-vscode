@@ -8,9 +8,12 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '../core/credential';
 import { SparqlConnection } from './sparql-connection';
 import { SparqlConnectionSource, ComunicaSource } from './sparql-query-source';
+import { createFilteredSource } from './sparql-inference-filter';
 import { getConfig } from '@src/utilities/config';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
+const DEFAULT_INFERENCE_ENABLED_CONFIG_KEY = 'sparql.defaultInferenceEnabled';
+const INFERENCE_ENABLED_STORAGE_KEY_PREFIX = 'mentor.inference.enabled:';
 
 /**
  * The non-removable workspace triple store.
@@ -19,7 +22,8 @@ export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 	id: 'workspace',
 	endpointUrl: 'workspace:',
 	configScope: ConfigurationScope.Workspace,
-	isProtected: true
+	isProtected: true,
+	inferenceSupported: true
 };
 
 /**
@@ -49,11 +53,99 @@ export class SparqlConnectionService {
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _credentialStorage: ICredentialStorageService
 	) {
-		this._connections = [MENTOR_WORKSPACE_STORE];
+		// Initialize workspace store with saved inference setting
+		const workspaceStore = this._createWorkspaceStoreConnection();
+		this._connections = [workspaceStore];
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Workspace));
 
 		this._onDidChangeConnections.fire();
+	}
+
+	/**
+	 * Creates the workspace store connection with the saved inference setting.
+	 */
+	private _createWorkspaceStoreConnection(): SparqlConnection {
+		const inferenceEnabled = this._getInferenceEnabledForConnection(MENTOR_WORKSPACE_STORE.id);
+
+		return {
+			...MENTOR_WORKSPACE_STORE,
+			inferenceEnabled
+		};
+	}
+
+	/**
+	 * Gets the default inference enabled setting from VS Code configuration.
+	 * @returns The default value for inference enabled.
+	 */
+	getDefaultInferenceEnabled(): boolean {
+		return getConfig().get<boolean>(DEFAULT_INFERENCE_ENABLED_CONFIG_KEY, false);
+	}
+
+	/**
+	 * Gets whether inference is enabled for a specific connection.
+	 * @param connectionId The ID of the connection.
+	 * @returns `true` if inference is enabled, `false` otherwise.
+	 */
+	getInferenceEnabled(connectionId: string): boolean {
+		const connection = this._connections.find(c => c.id === connectionId);
+		return connection?.inferenceEnabled ?? this.getDefaultInferenceEnabled();
+	}
+
+	/**
+	 * Sets whether inference should be enabled for a specific connection.
+	 * @param connectionId The ID of the connection.
+	 * @param inferenceEnabled `true` to enable inference, `false` to disable it.
+	 */
+	async setInferenceEnabled(connectionId: string, inferenceEnabled: boolean): Promise<void> {
+		const connection = this._connections.find(c => c.id === connectionId);
+		
+		if (!connection) {
+			throw new Error(`Connection not found: ${connectionId}`);
+		}
+
+		if (!connection.inferenceSupported) {
+			throw new Error(`Connection does not support inference toggling: ${connectionId}`);
+		}
+
+		// Store the inference setting
+		const storageKey = this._getInferenceStorageKey(connectionId);
+		await this._extensionContext.workspaceState.update(storageKey, inferenceEnabled);
+
+		// Update the in-memory connection
+		connection.inferenceEnabled = inferenceEnabled;
+
+		this._onDidChangeConnections.fire();
+	}
+
+	/**
+	 * Toggles the inference enabled state for a specific connection.
+	 * @param connectionId The ID of the connection.
+	 * @returns The new inference enabled state.
+	 */
+	async toggleInferenceEnabled(connectionId: string): Promise<boolean> {
+		const currentValue = this.getInferenceEnabled(connectionId);
+		const newValue = !currentValue;
+		await this.setInferenceEnabled(connectionId, newValue);
+		return newValue;
+	}
+
+	/**
+	 * Gets the storage key for storing inference enabled setting for a connection.
+	 */
+	private _getInferenceStorageKey(connectionId: string): string {
+		return `${INFERENCE_ENABLED_STORAGE_KEY_PREFIX}${connectionId}`;
+	}
+
+	/**
+	 * Gets the stored inference enabled setting for a connection.
+	 */
+	private _getInferenceEnabledForConnection(connectionId: string): boolean {
+		const storageKey = this._getInferenceStorageKey(connectionId);
+		return this._extensionContext.workspaceState.get<boolean>(
+			storageKey,
+			this.getDefaultInferenceEnabled()
+		);
 	}
 
 	/**
@@ -277,6 +369,15 @@ export class SparqlConnectionService {
 	 */
 	async getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaSource> {
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
+			// For the workspace store, apply inference filtering based on the connection setting.
+			// When inferenceEnabled is false, we filter out quads from inference graphs.
+			if (connection.inferenceEnabled === false) {
+				return {
+					type: 'rdfjs',
+					value: createFilteredSource(this.store),
+				};
+			}
+
 			return {
 				type: 'rdfjs',
 				value: this.store,

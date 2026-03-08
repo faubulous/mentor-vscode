@@ -713,6 +713,12 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.toggleSparqlConnectionInference",
+        "title": "Toggle Inference",
+        "icon": "$(lightbulb)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.deletePrefixes",
         "title": "Delete prefix definitions",
         "category": "Mentor"
@@ -1060,6 +1066,12 @@
             "type": "array",
             "description": "List of SPARQL endpoint connections.",
             "default": []
+          },
+          "mentor.sparql.defaultInferenceEnabled": {
+            "type": "boolean",
+            "title": "Default Inference Enabled",
+            "description": "Default value for whether inferred triples should be included in SPARQL query results. This applies to connections that support inference toggling (e.g., the workspace store).",
+            "default": false
           },
           "mentor.sparql.listGraphsQuery": {
             "type": "string",

@@ -85,6 +85,33 @@ export interface ISparqlConnectionService {
 	getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaSource>;
 
 	/**
+	 * Gets the default inference enabled setting from VS Code configuration.
+	 * @returns The default value for inference enabled.
+	 */
+	getDefaultInferenceEnabled(): boolean;
+
+	/**
+	 * Gets whether inference is enabled for a specific connection.
+	 * @param connectionId The ID of the connection.
+	 * @returns `true` if inference is enabled, `false` otherwise.
+	 */
+	getInferenceEnabled(connectionId: string): boolean;
+
+	/**
+	 * Sets whether inference should be enabled for a specific connection.
+	 * @param connectionId The ID of the connection.
+	 * @param inferenceEnabled `true` to enable inference, `false` to disable it.
+	 */
+	setInferenceEnabled(connectionId: string, inferenceEnabled: boolean): Promise<void>;
+
+	/**
+	 * Toggles the inference enabled state for a specific connection.
+	 * @param connectionId The ID of the connection.
+	 * @returns The new inference enabled state.
+	 */
+	toggleInferenceEnabled(connectionId: string): Promise<boolean>;
+
+	/**
 	 * Sets the connection for a specific notebook cell by editing its metadata.
 	 * @param cellUri The URI of the notebook cell.
 	 * @param connectionId The ID of the connection to set.

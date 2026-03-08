@@ -114,6 +114,16 @@ function SparqlConnectionView() {
 				}));
 				return;
 			}
+			case 'ToggleInferenceEnabledResult': {
+				setState(prev => ({
+					...prev,
+					endpoint: {
+						...prev.endpoint,
+						inferenceEnabled: message.inferenceEnabled
+					}
+				}));
+				return;
+			}
 		}
 	}, []);
 
@@ -490,6 +500,26 @@ function SparqlConnectionView() {
 						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}value="2">Workspace</vscode-option>
 					</vscode-single-select>
 				</section>
+				{endpoint.inferenceSupported && (
+					<section>
+						<span className='section-label'>Inference</span>
+						<vscode-form-helper>
+							When enabled, inferred triples are included in query results.
+						</vscode-form-helper>
+						<div className="inference-toggle-container">
+							<vscode-checkbox
+								checked={endpoint.inferenceEnabled ?? false}
+								onChange={() => {
+									messaging?.postMessage({
+										id: 'ToggleInferenceEnabled',
+										connectionId: endpoint.id
+									});
+								}}>
+								Include inferred triples in query results
+							</vscode-checkbox>
+						</div>
+					</section>
+				)}
 			</form>
 		</div>
 	);

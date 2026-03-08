@@ -47,4 +47,5 @@ export { showUriLabels } from './show-uri-labels';
 export { showUriLabelsWithPrefix } from './show-uri-labels-with-prefix';
 export { showWebview } from './show-webview';
 export { sortPrefixes } from './sort-prefixes';
+export { toggleSparqlConnectionInference } from './toggle-sparql-connection-inference';
 export { updatePrefixes } from './update-prefixes';

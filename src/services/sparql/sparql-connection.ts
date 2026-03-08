@@ -33,4 +33,20 @@ export interface SparqlConnection {
      * Indicates if this connection can be removed or modified by the user.
      */
     isProtected?: boolean;
+
+    /**
+     * Indicates if this connection supports inference toggling.
+     * When `true`, the connection can filter out inferred triples from query results.
+     * @remarks Currently only supported for the workspace store. Future implementations
+     * may support this for SPARQL endpoints that have inference capabilities.
+     */
+    inferenceSupported?: boolean;
+
+    /**
+     * Indicates if inference is currently enabled for this connection.
+     * When `false`, queries will only return asserted triples from the store.
+     * When `true`, inferred triples are included in query results.
+     * This setting is only applicable when `inferenceSupported` is `true`.
+     */
+    inferenceEnabled?: boolean;
 }

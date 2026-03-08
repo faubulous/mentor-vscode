@@ -1,0 +1,30 @@
+import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { ISparqlConnectionService } from '@src/services/sparql';
+import { SparqlConnection } from '@src/services/sparql/sparql-connection';
+
+export const toggleSparqlConnectionInference = {
+	id: 'mentor.command.toggleSparqlConnectionInference',
+	handler: async (connection?: SparqlConnection) => {
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		
+		// If no connection provided, use workspace store
+		const connectionId = connection?.id ?? 'workspace';
+		const targetConnection = connectionService.getConnection(connectionId);
+		
+		if (!targetConnection) {
+			vscode.window.showErrorMessage(`Connection not found: ${connectionId}`);
+			return;
+		}
+		
+		if (!targetConnection.inferenceSupported) {
+			vscode.window.showInformationMessage(`This connection does not support inference toggling.`);
+			return;
+		}
+		
+		const newValue = await connectionService.toggleInferenceEnabled(connectionId);
+		const statusText = newValue ? 'enabled' : 'disabled';
+		vscode.window.showInformationMessage(`Inference ${statusText} for ${targetConnection.endpointUrl}`);
+	}
+};

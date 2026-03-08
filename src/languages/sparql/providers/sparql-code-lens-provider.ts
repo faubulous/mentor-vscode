@@ -13,7 +13,12 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 
 	constructor() {
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+
 		connectionService.onDidChangeConnectionForDocument(() => {
+			this.refresh();
+		});
+
+		connectionService.onDidChangeConnections(() => {
 			this.refresh();
 		});
 	}
@@ -32,15 +37,37 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		}
 
 		const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
+		const codeLenses: vscode.CodeLens[] = [];
 
-		const codeLens = new vscode.CodeLens(range, {
+		// Connection CodeLens
+		const connectionCodeLens = new vscode.CodeLens(range, {
 			title: `$(database)\u00A0${connection.endpointUrl}`,
 			tooltip: 'Click to change the SPARQL endpoint for this file',
 			command: 'mentor.command.selectSparqlConnection',
 			arguments: [document],
 		});
 
-		return [codeLens];
+		codeLenses.push(connectionCodeLens);
+
+		// Inference status CodeLens (only for connections that support inference)
+		if (connection.inferenceSupported) {
+			const inferenceEnabled = connection.inferenceEnabled ?? connectionService.getDefaultInferenceEnabled();
+			const inferenceText = inferenceEnabled ? 'Inference: On' : 'Inference: Off';
+			const inferenceTooltip = inferenceEnabled
+				? 'Inferred triples are included. Click to exclude them.'
+				: 'Inferred triples are excluded. Click to include them.';
+
+			const inferenceCodeLens = new vscode.CodeLens(range, {
+				title: `$(lightbulb)\u00A0${inferenceText}`,
+				tooltip: inferenceTooltip,
+				command: 'mentor.command.toggleSparqlConnectionInference',
+				arguments: [connection],
+			});
+
+			codeLenses.push(inferenceCodeLens);
+		}
+
+		return codeLenses;
 	}
 
 	/**

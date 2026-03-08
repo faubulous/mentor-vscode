@@ -102,6 +102,16 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
                 return true;
             }
+            case 'ToggleInferenceEnabled': {
+                const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+                const newValue = await connectionService.toggleInferenceEnabled(message.connectionId);
+                this.postMessage({ 
+                    id: 'ToggleInferenceEnabledResult', 
+                    connectionId: message.connectionId,
+                    inferenceEnabled: newValue 
+                });
+                return true;
+            }
             case 'FetchMicrosoftAuthCredential': {
                 const command = loginMicrosoftAuthProvider.id;
                 const credential = await vscode.commands.executeCommand<MicrosoftAuthCredential | null>(command, message.scopes);
