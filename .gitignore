@@ -3,3 +3,11 @@
 **/coverage
 log.txt
 .vscode-test-web/**
+
+# Generated icon font artifacts
+media/mentor-icons.css
+media/mentor-icons-inline.css
+media/mentor-icons.woff
+media/codicon.css
+media/codicon-inline.css
+media/codicon.ttf
