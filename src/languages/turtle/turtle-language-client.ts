@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { DocumentFactory } from '@src/workspace/document-factory';
+import { DocumentFactory } from '@src/services/document/document-factory';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, TurtleDocument } from '@src/languages';

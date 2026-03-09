@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { WorkspaceUri } from '@src/workspace/workspace-uri';
+import { WorkspaceUri } from './workspace-uri';
 
 /**
  * Provides document links for URIs with the 'workspace:' scheme.

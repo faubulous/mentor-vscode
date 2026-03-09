@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { NotSupportedError } from '@src/utilities/error';
-import { WorkspaceUri } from '@src/workspace/workspace-uri';
+import { WorkspaceUri } from './workspace-uri';
 
 /**
  * Provides a file system provider for the 'workspace' scheme.

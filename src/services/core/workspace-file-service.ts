@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { DocumentFactory } from '../../workspace/document-factory';
+import { DocumentFactory } from '../document/document-factory';
 import { IWorkspaceFileService, WorkspaceFileChangeEvent } from './workspace-file-service.interface';
 import { getConfig } from '@src/utilities/config';
 

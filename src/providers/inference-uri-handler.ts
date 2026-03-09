@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IPrefixLookupService } from '@src/services/document';
 import { Store } from '@faubulous/mentor-rdf';
-import { InferenceUri } from '@src/workspace/inference-uri';
+import { InferenceUri } from '@src/providers/inference-uri';
 
 export class InferenceUriHandler implements vscode.UriHandler {
 	readonly extensionId: string;

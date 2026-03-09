@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { WorkspaceUri } from '@src/workspace/workspace-uri';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { IWorkspaceFileService } from '@src/services/core';
-import { DocumentFactory } from '@src/workspace/document-factory';
+import { DocumentFactory } from '@src/services/document/document-factory';
 import { getFileName, getPath } from '@src/utilities';
 
 export type FileQuickPickItem = vscode.QuickPickItem & {

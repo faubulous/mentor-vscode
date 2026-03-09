@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { IWorkspaceFileService } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService } from './workspace-indexer.interface';
-import { DocumentFactory } from '../../workspace/document-factory';
+import { DocumentFactory } from '../document/document-factory';
 import { DocumentContextService } from '../document/document-context-service';
 import { getConfig } from '@src/utilities/config';
 

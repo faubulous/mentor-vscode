@@ -4,7 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, XmlDocument } from '@src/languages';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
-import { DocumentFactory } from '@src/workspace/document-factory';
+import { DocumentFactory } from '@src/services/document/document-factory';
 
 export class XmlLanguageClient extends LanguageClientBase {
 	private get contextService() {

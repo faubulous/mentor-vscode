@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { InferenceUri } from '@src/workspace/inference-uri';
+import { InferenceUri } from '@src/providers/inference-uri';
 
 /**
  * Provides document links for URIs with the 'inference:' scheme.

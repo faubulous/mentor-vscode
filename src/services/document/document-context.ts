@@ -7,9 +7,10 @@ import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
-import { WorkspaceUri } from '@src/workspace/workspace-uri';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
 import { getConfig } from '@src/utilities/config';
+import { IDocumentContext } from './document-context.interface';
 
 /**
  * A literal value with optional language tag.
@@ -29,7 +30,7 @@ export interface Label {
 /**
  * A class that provides access to RDF document specific data such as namespaces, graphs and token maps.
  */
-export abstract class DocumentContext {
+export abstract class DocumentContext implements IDocumentContext {
 	/**
 	 * The URI of the document.
 	 */

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '@src/workspace/document-context';
-import { LanguageInfo, FileExtensionInfo } from '@src/workspace/document-factory';
+import { DocumentContext } from '@src/services/document/document-context';
+import { LanguageInfo, FileExtensionInfo } from '@src/services/document/document-factory';
 
 /**
  * Interface for the DocumentFactory.

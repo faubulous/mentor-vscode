@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContext } from './document-context';
-import { TurtleDocument, SparqlDocument, XmlDocument } from '../languages';
+import { TurtleDocument, SparqlDocument, XmlDocument } from '../../languages';
 
 /**
  * Information about a supported programming language.

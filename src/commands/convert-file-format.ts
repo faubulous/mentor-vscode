@@ -3,7 +3,7 @@ import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { DocumentFactory, LanguageInfo } from '@src/workspace/document-factory';
+import { DocumentFactory, LanguageInfo } from '@src/services/document/document-factory';
 
 export const convertFileFormat = {
 	id: 'mentor.command.convertFileFormat',

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { DocumentContext } from '@src/workspace/document-context';
+import { DocumentContext } from '@src/services/document/document-context';
 
 /**
  * A provider that retrieves the locations of resource definitions in a document.

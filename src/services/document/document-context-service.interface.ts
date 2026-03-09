@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { DocumentContext } from '@src/workspace/document-context';
+import { DocumentContext } from '@src/services/document/document-context';
 import { DocumentIndex } from '@src/services/document/document-context-service';
 
 /**

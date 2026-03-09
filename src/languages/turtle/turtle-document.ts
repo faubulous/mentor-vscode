@@ -5,7 +5,7 @@ import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubu
 import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { DocumentContext } from '@src/workspace/document-context';
+import { DocumentContext } from '@src/services/document/document-context';
 import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';
 import {
 	countLeadingWhitespace,

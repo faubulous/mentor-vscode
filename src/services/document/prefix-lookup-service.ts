@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { IDocumentContextService } from '@src/services/document';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services/document/prefix-downloader-service';
-import { WorkspaceUri } from '@src/workspace/workspace-uri';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/config';
 
 /**

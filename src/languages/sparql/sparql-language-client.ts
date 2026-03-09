@@ -4,7 +4,7 @@ import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, SparqlDocument } from '@src/languages';
-import { DocumentFactory } from '@src/workspace/document-factory';
+import { DocumentFactory } from '@src/services/document/document-factory';
 
 export class SparqlLanguageClient extends LanguageClientBase {
 	private get contextService() {

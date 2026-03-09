@@ -5,7 +5,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService, IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { any } from '@src/utilities';
-import { DocumentContext } from '@src/workspace/document-context';
+import { DocumentContext } from '@src/services/document/document-context';
 import { DefinitionTreeLayout } from '@src/services/core/settings-service';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { ClassesNode } from './nodes/classes-node';
