@@ -19,6 +19,7 @@ import {
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 const DEFAULT_INFERENCE_ENABLED_CONFIG_KEY = 'sparql.defaultInferenceEnabled';
 const INFERENCE_ENABLED_STORAGE_KEY_PREFIX = 'mentor.inference.enabled:';
+const DOCUMENT_INFERENCE_STORAGE_KEY_PREFIX = 'mentor.inference.document:';
 
 /**
  * The non-removable workspace triple store.
@@ -46,6 +47,15 @@ export class SparqlConnectionService {
 
 	public readonly onDidChangeConnectionForDocument = this._onDidChangeConnectionForDocument.event;
 
+	/**
+	 * Notifies listeners that the connection or inference settings for a document have changed.
+	 * Use this after bulk updates to cell metadata.
+	 * @param documentUri The URI of the document that changed.
+	 */
+	public notifyDocumentConnectionChanged(documentUri: vscode.Uri): void {
+		this._onDidChangeConnectionForDocument.fire(documentUri);
+	}
+
 	private _defaultEndpointUrl = 'https://';
 
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
@@ -72,7 +82,75 @@ export class SparqlConnectionService {
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Workspace));
 
+		// Listen for notebook changes to inherit settings when new cells are created
+		vscode.workspace.onDidChangeNotebookDocument(e => this._onNotebookDocumentChanged(e));
+
 		this._onDidChangeConnections.fire();
+	}
+
+	/**
+	 * Handles notebook document changes to inherit settings for newly added cells.
+	 */
+	private async _onNotebookDocumentChanged(e: vscode.NotebookDocumentChangeEvent): Promise<void> {
+		for (const change of e.contentChanges) {
+			if (change.addedCells.length > 0) {
+				await this._inheritSettingsForNewCells(e.notebook, change.addedCells);
+			}
+		}
+	}
+
+	/**
+	 * Inherits connection and inference settings for newly added cells from the previous cell.
+	 */
+	private async _inheritSettingsForNewCells(
+		notebook: vscode.NotebookDocument, 
+		addedCells: readonly vscode.NotebookCell[]
+	): Promise<void> {
+		const cells = notebook.getCells();
+		const edits: vscode.NotebookEdit[] = [];
+
+		for (const addedCell of addedCells) {
+			// Skip if cell already has settings
+			if (addedCell.metadata?.connectionId !== undefined || addedCell.metadata?.inferenceEnabled !== undefined) {
+				continue;
+			}
+
+			// Find the previous cell to inherit from
+			const cellIndex = addedCell.index;
+			let previousCell: vscode.NotebookCell | undefined;
+
+			for (let i = cellIndex - 1; i >= 0; i--) {
+				previousCell = cells[i];
+				break;
+			}
+
+			if (previousCell) {
+				const inheritedMetadata: Record<string, unknown> = { ...addedCell.metadata };
+				let hasInheritedSettings = false;
+
+				// Inherit connection ID
+				if (typeof previousCell.metadata?.connectionId === 'string') {
+					inheritedMetadata.connectionId = previousCell.metadata.connectionId;
+					hasInheritedSettings = true;
+				}
+
+				// Inherit inference setting
+				if (typeof previousCell.metadata?.inferenceEnabled === 'boolean') {
+					inheritedMetadata.inferenceEnabled = previousCell.metadata.inferenceEnabled;
+					hasInheritedSettings = true;
+				}
+
+				if (hasInheritedSettings) {
+					edits.push(vscode.NotebookEdit.updateCellMetadata(addedCell.index, inheritedMetadata));
+				}
+			}
+		}
+
+		if (edits.length > 0) {
+			const workspaceEdit = new vscode.WorkspaceEdit();
+			workspaceEdit.set(notebook.uri, edits);
+			await vscode.workspace.applyEdit(workspaceEdit);
+		}
 	}
 
 	/**
@@ -160,6 +238,138 @@ export class SparqlConnectionService {
 			storageKey,
 			this.getDefaultInferenceEnabled()
 		);
+	}
+
+	/**
+	 * Gets the storage key for document-level inference setting.
+	 */
+	private _getDocumentInferenceStorageKey(documentUri: vscode.Uri): string {
+		return `${DOCUMENT_INFERENCE_STORAGE_KEY_PREFIX}${documentUri.toString()}`;
+	}
+
+	/**
+	 * Gets the effective inference setting for a document or notebook cell.
+	 * Priority: document/cell setting → connection setting → global default.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns `true` if inference is enabled, `false` otherwise.
+	 */
+	getInferenceEnabledForDocument(documentUri: vscode.Uri): boolean {
+		const documentSetting = this._getDocumentInferenceSetting(documentUri);
+
+		if (documentSetting !== undefined) {
+			return documentSetting;
+		}
+
+		// Fall back to connection setting
+		const connection = this.getConnectionForDocument(documentUri);
+		return connection.inferenceEnabled ?? this.getDefaultInferenceEnabled();
+	}
+
+	/**
+	 * Gets the document-level inference setting (without fallback).
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns The document setting, or `undefined` if not set.
+	 */
+	private _getDocumentInferenceSetting(documentUri: vscode.Uri): boolean | undefined {
+		if (documentUri.scheme === 'vscode-notebook-cell') {
+			return this._getInferenceEnabledForCell(documentUri);
+		} else {
+			const key = this._getDocumentInferenceStorageKey(documentUri);
+			return this._extensionContext.workspaceState.get<boolean | undefined>(key, undefined);
+		}
+	}
+
+	/**
+	 * Gets the inference setting from notebook cell metadata.
+	 * Each cell is independent - no inheritance from previous cells.
+	 * @param cellUri The URI of the notebook cell.
+	 * @returns The inference setting, or `undefined` if not set.
+	 */
+	private _getInferenceEnabledForCell(cellUri: vscode.Uri): boolean | undefined {
+		const notebook = this._getNotebookFromCellUri(cellUri);
+
+		if (notebook) {
+			const cell = notebook.getCells().find(cell => cell.document.uri.toString() === cellUri.toString());
+
+			if (cell) {
+				const inferenceEnabled = cell.metadata?.inferenceEnabled;
+
+				if (typeof inferenceEnabled === 'boolean') {
+					return inferenceEnabled;
+				}
+			}
+		}
+
+		return undefined;
+	}
+
+	/**
+	 * Sets the inference setting for a document or notebook cell.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @param inferenceEnabled `true` to enable inference, `false` to disable, `undefined` to clear.
+	 */
+	async setInferenceEnabledForDocument(documentUri: vscode.Uri, inferenceEnabled: boolean | undefined): Promise<void> {
+		if (documentUri.scheme === 'vscode-notebook-cell') {
+			await this._setInferenceEnabledForCell(documentUri, inferenceEnabled);
+		} else {
+			const key = this._getDocumentInferenceStorageKey(documentUri);
+			await this._extensionContext.workspaceState.update(key, inferenceEnabled);
+		}
+
+		this._onDidChangeConnectionForDocument.fire(documentUri);
+	}
+
+	/**
+	 * Sets the inference setting for a notebook cell in its metadata.
+	 * @param cellUri The URI of the notebook cell.
+	 * @param inferenceEnabled The inference setting, or `undefined` to clear.
+	 */
+	private async _setInferenceEnabledForCell(cellUri: vscode.Uri, inferenceEnabled: boolean | undefined): Promise<void> {
+		const notebook = this._getNotebookFromCellUri(cellUri);
+
+		if (!notebook) {
+			throw new Error('Notebook document not found for the given cell URI: ' + cellUri.toString());
+		}
+
+		const cell = notebook.getCells().find(cell => cell.document.uri.toString() === cellUri.toString());
+
+		if (!cell) {
+			throw new Error('Cell not found in the notebook for the given cell URI: ' + cellUri.toString());
+		}
+
+		const metadata = { ...cell.metadata };
+
+		if (inferenceEnabled === undefined) {
+			delete metadata.inferenceEnabled;
+		} else {
+			metadata.inferenceEnabled = inferenceEnabled;
+		}
+
+		const notebookEdit = vscode.NotebookEdit.updateCellMetadata(cell.index, metadata);
+		const workspaceEdit = new vscode.WorkspaceEdit();
+		workspaceEdit.set(notebook.uri, [notebookEdit]);
+
+		await vscode.workspace.applyEdit(workspaceEdit);
+	}
+
+	/**
+	 * Toggles the inference setting for a document or notebook cell.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns The new inference enabled state.
+	 */
+	async toggleInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<boolean> {
+		const currentValue = this.getInferenceEnabledForDocument(documentUri);
+		const newValue = !currentValue;
+		await this.setInferenceEnabledForDocument(documentUri, newValue);
+		return newValue;
+	}
+
+	/**
+	 * Clears the document-level inference setting, reverting to connection default.
+	 * @param documentUri The URI of the document or notebook cell.
+	 */
+	async clearInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<void> {
+		await this.setInferenceEnabledForDocument(documentUri, undefined);
 	}
 
 	/**
@@ -293,26 +503,22 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Get a connection ID for a notebook cell, either by checking its own metadata or 
-	 * by inheriting from previous cells.
+	 * Get a connection ID for a notebook cell from its metadata.
+	 * Each cell is independent - no inheritance from previous cells.
 	 * @param cellUri The URI of the notebook cell.
-	 * @returns The inherited connection ID, or `undefined` if none is set.
+	 * @returns The connection ID, or `undefined` if none is set.
 	 */
 	private _getConnectionIdForCell(cellUri: vscode.Uri): string | undefined {
 		const notebook = this._getNotebookFromCellUri(cellUri);
 
 		if (notebook) {
-			const cells = notebook.getCells();
-			const cellIndex = cells.findIndex(cell => cell.document.uri.toString() === cellUri.toString());
+			const cell = notebook.getCells().find(cell => cell.document.uri.toString() === cellUri.toString());
 
-			if (cellIndex > -1) {
-				for (let i = cellIndex; i >= 0; i--) {
-					const cell = cells[i];
-					const connectionId = cell.metadata?.connectionId;
+			if (cell) {
+				const connectionId = cell.metadata?.connectionId;
 
-					if (typeof connectionId === 'string') {
-						return connectionId;
-					}
+				if (typeof connectionId === 'string') {
+					return connectionId;
 				}
 			}
 		}
@@ -366,14 +572,14 @@ export class SparqlConnectionService {
 
 	/**
 	 * Gets the Comunica-compatible query source for a given document (TextDocument or NotebookCell).
-	 * For notebooks, it inherits the connection from the previous cell.
-	 * Otherwise, it defaults to the Mentor Workspace Store.
+	 * Uses document-level inference setting if set, otherwise falls back to connection setting.
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @returns A promise that resolves to a ComunicaSource configuration.
 	 */
 	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource> {
 		const connection = this.getConnectionForDocument(documentUri);
-		return this.getQuerySourceForConnection(connection);
+		const inferenceEnabled = this.getInferenceEnabledForDocument(documentUri);
+		return this._querySourceFactory.createQuerySource(connection, inferenceEnabled);
 	}
 
 	/**
@@ -408,7 +614,7 @@ export class SparqlConnectionService {
 			throw new Error('Notebook document not found for the given cell URI: ' + cellUri.toString());
 		}
 
-		const cell = notebook.getCells().find(cell => cell.document.uri === cellUri);
+		const cell = notebook.getCells().find(cell => cell.document.uri.toString() === cellUri.toString());
 
 		if (!cell) {
 			throw new Error('Cell not found in the notebook for the given cell URI: ' + cellUri.toString());

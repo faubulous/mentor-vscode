@@ -112,6 +112,34 @@ export interface ISparqlConnectionService {
 	toggleInferenceEnabled(connectionId: string): Promise<boolean>;
 
 	/**
+	 * Gets the effective inference setting for a document or notebook cell.
+	 * Priority: document/cell setting → connection setting → global default.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns `true` if inference is enabled, `false` otherwise.
+	 */
+	getInferenceEnabledForDocument(documentUri: vscode.Uri): boolean;
+
+	/**
+	 * Sets the inference setting for a document or notebook cell.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @param inferenceEnabled `true` to enable inference, `false` to disable, `undefined` to clear.
+	 */
+	setInferenceEnabledForDocument(documentUri: vscode.Uri, inferenceEnabled: boolean | undefined): Promise<void>;
+
+	/**
+	 * Toggles the inference setting for a document or notebook cell.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns The new inference enabled state.
+	 */
+	toggleInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<boolean>;
+
+	/**
+	 * Clears the document-level inference setting, reverting to connection default.
+	 * @param documentUri The URI of the document or notebook cell.
+	 */
+	clearInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<void>;
+
+	/**
 	 * Checks if the given connection supports inference toggling.
 	 * @param connection The SPARQL connection to check.
 	 * @returns `true` if the connection supports inference, `false` otherwise.
@@ -124,6 +152,13 @@ export interface ISparqlConnectionService {
 	 * @param connectionId The ID of the connection to set.
 	 */
 	setConnectionForCell(cellUri: vscode.Uri, connectionId: string): Promise<void>;
+
+	/**
+	 * Notifies listeners that the connection or inference settings for a document have changed.
+	 * Use this after bulk updates to cell metadata.
+	 * @param documentUri The URI of the document that changed.
+	 */
+	notifyDocumentConnectionChanged(documentUri: vscode.Uri): void;
 
 	/**
 	 * Adds a new SPARQL connection.

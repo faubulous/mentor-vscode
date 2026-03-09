@@ -715,7 +715,25 @@
       {
         "command": "mentor.command.toggleSparqlConnectionInference",
         "title": "Toggle Inference",
-        "icon": "$(lightbulb)",
+        "icon": "$(lightbulb-sparkle)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.toggleDocumentInference",
+        "title": "Toggle Document Inference",
+        "icon": "$(lightbulb-sparkle)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.setNotebookConnection",
+        "title": "Set Connection",
+        "icon": "$(database)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.setNotebookInference",
+        "title": "Set Inference",
+        "icon": "$(lightbulb-sparkle)",
         "category": "Mentor"
       },
       {
@@ -903,6 +921,18 @@
           "command": "mentor.command.convertFileFormat",
           "group": "1_modification@99",
           "when": "editorTextFocus && !notebookCellType && mentor.command.convertFileFormat.executable"
+        }
+      ],
+      "notebook/toolbar": [
+        {
+          "command": "mentor.command.setNotebookConnection",
+          "when": "notebookType == 'mentor-notebook'",
+          "group": "navigation"
+        },
+        {
+          "command": "mentor.command.setNotebookInference",
+          "when": "notebookType == 'mentor-notebook'",
+          "group": "navigation"
         }
       ]
     },

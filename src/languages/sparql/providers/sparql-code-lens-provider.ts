@@ -51,8 +51,8 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 
 		// Inference status CodeLens (only for connections that support inference)
 		if (connectionService.supportsInference(connection)) {
-			const inferenceEnabled = connection.inferenceEnabled ?? connectionService.getDefaultInferenceEnabled();
-			const inferenceIcon = inferenceEnabled ? '$(lightbulb)' : '$(lightbulb)';
+			const inferenceEnabled = connectionService.getInferenceEnabledForDocument(document.uri);
+			const inferenceIcon = inferenceEnabled ? '$(lightbulb-sparkle)' : '$(lightbulb-sparkle)';
 			const inferenceText = inferenceEnabled ? 'on' : 'off';
 			const inferenceTooltip = inferenceEnabled
 				? 'Inferred triples are included. Click to exclude them.'
@@ -61,8 +61,8 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 			const inferenceCodeLens = new vscode.CodeLens(range, {
 				title: `${inferenceIcon}\u00A0${inferenceText}`,
 				tooltip: inferenceTooltip,
-				command: 'mentor.command.toggleSparqlConnectionInference',
-				arguments: [connection],
+				command: 'mentor.command.toggleDocumentInference',
+				arguments: [document.uri],
 			});
 
 			codeLenses.push(inferenceCodeLens);
