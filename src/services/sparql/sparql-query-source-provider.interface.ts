@@ -39,4 +39,15 @@ export interface ISparqlQuerySourceProvider {
         connection: SparqlConnection,
         options: QuerySourceOptions
     ): Promise<ComunicaSource>;
+
+    /**
+     * Retrieves the list of named graphs available from the query source.
+     * @param connection The SPARQL connection.
+     * @param options Options including inference settings.
+     * @returns A promise that resolves to an array of graph IRIs.
+     */
+    getGraphs(
+        connection: SparqlConnection,
+        options: QuerySourceOptions
+    ): Promise<string[]>;
 }

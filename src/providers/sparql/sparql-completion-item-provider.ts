@@ -1,19 +1,19 @@
 import * as vscode from "vscode";
 import { container } from 'tsyringe';
-import { Store } from "@faubulous/mentor-rdf";
 import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
+import { ISparqlConnectionService } from '@src/services/sparql';
 import { TurtleCompletionItemProvider } from "@src/providers/turtle";
 import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
-	private get store() {
-		return container.resolve<Store>(ServiceToken.Store);
+	private get connectionService() {
+		return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 	}
 
 	override getCompletionItems(document: vscode.TextDocument, context: any, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
 		if (this.isGraphDefinitionContext(context, tokenIndex)) {
-			return this.getGraphIriCompletionItems(context, tokenIndex);
+			return this.getGraphIriCompletionItems(document, context, tokenIndex);
 		} else {
 			return super.getCompletionItems(document, context, tokenIndex);
 		}
@@ -44,7 +44,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		}
 	}
 
-	getGraphIriCompletionItems(context: TurtleDocument, tokenIndex: number): vscode.CompletionItem[] {
+	async getGraphIriCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): Promise<vscode.CompletionItem[]> {
 		const result = [];
 		const token = context.tokens[tokenIndex];
 
@@ -59,7 +59,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 			value = value.slice(0, -1);
 		}
 
-		const graphs = this.store.getGraphs();
+		const graphs = await this.connectionService.getGraphsForDocument(document.uri);
 
 		for (const iri of graphs.filter(g => g.startsWith(value))) {
 			const label = iri.substring(value.length);

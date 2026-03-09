@@ -85,6 +85,14 @@ export interface ISparqlConnectionService {
 	getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaSource>;
 
 	/**
+	 * Retrieves the list of named graphs available for a document.
+	 * Takes into account the document's connection and inference settings.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns A promise that resolves to an array of graph IRIs.
+	 */
+	getGraphsForDocument(documentUri: vscode.Uri): Promise<string[]>;
+
+	/**
 	 * Gets the default inference enabled setting from VS Code configuration.
 	 * @returns The default value for inference enabled.
 	 */

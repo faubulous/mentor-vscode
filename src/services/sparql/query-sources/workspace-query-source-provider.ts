@@ -3,6 +3,7 @@ import { SparqlConnection, SparqlStoreType } from '../sparql-connection';
 import { ComunicaSource } from '../sparql-query-source';
 import { createFilteredSource } from '../sparql-inference-filter';
 import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-source-provider.interface';
+import { InferenceUri } from '@src/providers/core/inference-uri';
 
 /**
  * A function that returns the workspace RDF store.
@@ -43,5 +44,20 @@ export class WorkspaceQuerySourceProvider implements ISparqlQuerySourceProvider 
 				value: store,
 			};
 		}
+	}
+
+	async getGraphs(
+		_connection: SparqlConnection,
+		options: QuerySourceOptions
+	): Promise<string[]> {
+		const store = this._getStore();
+		let graphs = store.getGraphs();
+
+		// Filter out inference graphs if inference is disabled.
+		if (!options.inferenceEnabled) {
+			graphs = graphs.filter(g => !InferenceUri.isInferenceUri(g));
+		}
+
+		return graphs;
 	}
 }

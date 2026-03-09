@@ -65,4 +65,21 @@ export class SparqlQuerySourceFactory {
 
         return provider.createQuerySource(connection, { inferenceEnabled });
     }
+
+    /**
+     * Retrieves the list of named graphs available from the query source.
+     * @param connection The SPARQL connection.
+     * @param inferenceEnabled Whether inference should be enabled.
+     * @returns A promise that resolves to an array of graph IRIs.
+     */
+    async getGraphs(connection: SparqlConnection, inferenceEnabled: boolean): Promise<string[]> {
+        const storeType = connection.storeType ?? 'sparql';
+        const provider = this._providers.get(storeType) ?? this._defaultProvider;
+
+        if (!provider) {
+            throw new Error(`No query source provider registered for store type: ${storeType}`);
+        }
+
+        return provider.getGraphs(connection, { inferenceEnabled });
+    }
 }

@@ -27,4 +27,13 @@ export class DefaultSparqlQuerySourceProvider implements ISparqlQuerySourceProvi
 
         return source;
     }
+
+    async getGraphs(
+        _connection: SparqlConnection,
+        _options: QuerySourceOptions
+    ): Promise<string[]> {
+        // TODO: Implement generic SPARQL graph retrieval via SPARQL query
+        // e.g., SELECT DISTINCT ?g WHERE { GRAPH ?g { ?s ?p ?o } }
+        return [];
+    }
 }

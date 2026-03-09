@@ -593,6 +593,18 @@ export class SparqlConnectionService {
 	}
 
 	/**
+	 * Retrieves the list of named graphs available for a document.
+	 * Takes into account the document's connection and inference settings.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns A promise that resolves to an array of graph IRIs.
+	 */
+	async getGraphsForDocument(documentUri: vscode.Uri): Promise<string[]> {
+		const connection = this.getConnectionForDocument(documentUri);
+		const inferenceEnabled = this.getInferenceEnabledForDocument(documentUri);
+		return this._querySourceFactory.getGraphs(connection, inferenceEnabled);
+	}
+
+	/**
 	 * Checks if the given connection supports inference toggling.
 	 * @param connection The SPARQL connection to check.
 	 * @returns `true` if the connection supports inference, `false` otherwise.
@@ -666,7 +678,7 @@ export class SparqlConnectionService {
 	 * Updates an existing SPARQL connection.
 	 * @param connection The connection to update.
 	 */
-	async updateEndpoint(connection: SparqlConnection): Promise<void> {
+	async updateConnection(connection: SparqlConnection): Promise<void> {
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
 			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be modified.');
 			return;

@@ -31,4 +31,13 @@ export class GraphDbQuerySourceProvider implements ISparqlQuerySourceProvider {
 
         return source;
     }
+
+    async getGraphs(
+        _connection: SparqlConnection,
+        _options: QuerySourceOptions
+    ): Promise<string[]> {
+        // TODO: Implement GraphDB-specific graph retrieval via SPARQL query
+        // e.g., SELECT DISTINCT ?g WHERE { GRAPH ?g { ?s ?p ?o } }
+        return [];
+    }
 }

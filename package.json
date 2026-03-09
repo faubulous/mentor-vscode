@@ -726,13 +726,13 @@
       },
       {
         "command": "mentor.command.setNotebookConnection",
-        "title": "Set Connection",
+        "title": "Connection",
         "icon": "$(database)",
         "category": "Mentor"
       },
       {
         "command": "mentor.command.setNotebookInference",
-        "title": "Set Inference",
+        "title": "Inference",
         "icon": "$(lightbulb-sparkle)",
         "category": "Mentor"
       },
