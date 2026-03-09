@@ -6,7 +6,7 @@ import { IDocumentContextService } from '@src/services/document';
 /**
  * Provides hover information for tokens.
  */
-export class HoverProvider implements vscode.HoverProvider {
+export class ResourceTooltipProvider implements vscode.HoverProvider {
 	private get _contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}

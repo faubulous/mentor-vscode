@@ -7,7 +7,7 @@ import { DocumentContext } from '@src/services/document/document-context';
 /**
  * A provider that retrieves the locations of resource definitions in a document.
  */
-export class DefinitionProvider {
+export class ResourceDefinitionProvider {
 	private get _contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}

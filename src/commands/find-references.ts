@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { DefinitionProvider } from '@src/providers';
+import { ResourceDefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 export const findReferences = {
@@ -13,7 +13,7 @@ export const findReferences = {
 		contextService.activateDocument().then((editor) => {
 			if (contextService.activeContext && editor) {
 				const iri = getIriFromArgument(arg);
-				const location = new DefinitionProvider().provideDefinitionForIri(contextService.activeContext, iri);
+				const location = new ResourceDefinitionProvider().provideDefinitionForIri(contextService.activeContext, iri);
 
 				if (location instanceof vscode.Location) {
 					// We need to set the selection before executing the findReferences command.

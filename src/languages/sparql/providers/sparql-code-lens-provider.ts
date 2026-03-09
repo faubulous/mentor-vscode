@@ -50,7 +50,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		codeLenses.push(connectionCodeLens);
 
 		// Inference status CodeLens (only for connections that support inference)
-		if (connection.inferenceSupported) {
+		if (connectionService.supportsInference(connection)) {
 			const inferenceEnabled = connection.inferenceEnabled ?? connectionService.getDefaultInferenceEnabled();
 			const inferenceIcon = inferenceEnabled ? '$(lightbulb)' : '$(lightbulb)';
 			const inferenceText = inferenceEnabled ? 'on' : 'off';

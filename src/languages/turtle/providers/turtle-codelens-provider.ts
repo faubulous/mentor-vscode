@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
-import { ReferenceProvider } from '@src/providers';
+import { ResourceReferenceProvider } from '@src/providers';
 import { getConfig } from '@src/utilities/config';
 
 /**
@@ -25,7 +25,7 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 	 */
 	private _enabled: boolean = true;
 
-	private readonly _referenceProvider: ReferenceProvider = new ReferenceProvider();
+	private readonly _referenceProvider: ResourceReferenceProvider = new ResourceReferenceProvider();
 
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 

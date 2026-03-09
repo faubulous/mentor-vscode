@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './tokens';
-import { InferenceUri } from '../providers/inference-uri';
+import { InferenceUri } from '../providers/core/inference-uri';
 import { DocumentFactory } from './document/document-factory';
 import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';

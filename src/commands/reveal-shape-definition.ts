@@ -3,7 +3,7 @@ import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { DefinitionProvider } from '@src/providers';
+import { ResourceDefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 export const revealShapeDefinition = {
@@ -25,7 +25,7 @@ export const revealShapeDefinition = {
 				return;
 			}
 
-			const location = new DefinitionProvider().provideDefinitionForIri(contextService.activeContext, shapeUri, true);
+			const location = new ResourceDefinitionProvider().provideDefinitionForIri(contextService.activeContext, shapeUri, true);
 
 			if (location instanceof vscode.Location) {
 				editor.selection = new vscode.Selection(location.range.start, location.range.end);

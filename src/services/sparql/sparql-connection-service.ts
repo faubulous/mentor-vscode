@@ -7,9 +7,14 @@ import { ICredentialStorageService } from '@src/services/core';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '../core/credential';
 import { SparqlConnection } from './sparql-connection';
-import { SparqlConnectionSource, ComunicaSource } from './sparql-query-source';
-import { createFilteredSource } from './sparql-inference-filter';
+import { ComunicaSource } from './sparql-query-source';
 import { getConfig } from '@src/utilities/config';
+import { SparqlQuerySourceFactory } from './sparql-query-source-factory';
+import {
+	DefaultSparqlQuerySourceProvider,
+	GraphDbQuerySourceProvider,
+	WorkspaceQuerySourceProvider,
+} from '../../providers/sparql';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 const DEFAULT_INFERENCE_ENABLED_CONFIG_KEY = 'sparql.defaultInferenceEnabled';
@@ -23,7 +28,7 @@ export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 	endpointUrl: 'workspace:',
 	configScope: ConfigurationScope.Workspace,
 	isProtected: true,
-	inferenceSupported: true
+	storeType: 'workspace'
 };
 
 /**
@@ -45,6 +50,8 @@ export class SparqlConnectionService {
 
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
 
+	private _querySourceFactory: SparqlQuerySourceFactory;
+
 	private get store(): Store {
 		return container.resolve<Store>(ServiceToken.Store);
 	}
@@ -53,6 +60,12 @@ export class SparqlConnectionService {
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _credentialStorage: ICredentialStorageService
 	) {
+		// Initialize the query source factory with all providers
+		this._querySourceFactory = new SparqlQuerySourceFactory();
+		this._querySourceFactory.registerProvider(new WorkspaceQuerySourceProvider(() => this.store));
+		this._querySourceFactory.registerProvider(new GraphDbQuerySourceProvider());
+		this._querySourceFactory.registerProvider(new DefaultSparqlQuerySourceProvider());
+
 		// Initialize workspace store with saved inference setting
 		const workspaceStore = this._createWorkspaceStoreConnection();
 		this._connections = [workspaceStore];
@@ -70,6 +83,7 @@ export class SparqlConnectionService {
 
 		return {
 			...MENTOR_WORKSPACE_STORE,
+			inferenceSupported: this._querySourceFactory.supportsInference(MENTOR_WORKSPACE_STORE.storeType ?? 'workspace'),
 			inferenceEnabled
 		};
 	}
@@ -99,12 +113,12 @@ export class SparqlConnectionService {
 	 */
 	async setInferenceEnabled(connectionId: string, inferenceEnabled: boolean): Promise<void> {
 		const connection = this._connections.find(c => c.id === connectionId);
-		
+
 		if (!connection) {
 			throw new Error(`Connection not found: ${connectionId}`);
 		}
 
-		if (!connection.inferenceSupported) {
+		if (!this.supportsInference(connection)) {
 			throw new Error(`Connection does not support inference toggling: ${connectionId}`);
 		}
 
@@ -183,6 +197,7 @@ export class SparqlConnectionService {
 			return connections.map(c => ({
 				...c,
 				configScope: this._getConfigurationScopeFromTarget(configTarget),
+				inferenceSupported: this._querySourceFactory.supportsInference(c.storeType ?? 'sparql'),
 			}));
 		} else {
 			return [];
@@ -358,7 +373,6 @@ export class SparqlConnectionService {
 	 */
 	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource> {
 		const connection = this.getConnectionForDocument(documentUri);
-
 		return this.getQuerySourceForConnection(connection);
 	}
 
@@ -368,29 +382,18 @@ export class SparqlConnectionService {
 	 * @returns A promise that resolves to a ComunicaSource configuration.
 	 */
 	async getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaSource> {
-		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
-			// For the workspace store, apply inference filtering based on the connection setting.
-			// When inferenceEnabled is false, we filter out quads from inference graphs.
-			if (connection.inferenceEnabled === false) {
-				return {
-					type: 'rdfjs',
-					value: createFilteredSource(this.store),
-				};
-			}
+		const inferenceEnabled = connection.inferenceEnabled ?? this.getDefaultInferenceEnabled();
+		return this._querySourceFactory.createQuerySource(connection, inferenceEnabled);
+	}
 
-			return {
-				type: 'rdfjs',
-				value: this.store,
-			};
-		} else {
-			const source: SparqlConnectionSource = {
-				type: 'sparql',
-				value: connection.endpointUrl,
-				connection: connection,
-			};
-
-			return source;
-		}
+	/**
+	 * Checks if the given connection supports inference toggling.
+	 * @param connection The SPARQL connection to check.
+	 * @returns `true` if the connection supports inference, `false` otherwise.
+	 */
+	supportsInference(connection: SparqlConnection): boolean {
+		const storeType = connection.storeType ?? 'sparql';
+		return this._querySourceFactory.supportsInference(storeType);
 	}
 
 	/**
@@ -444,7 +447,7 @@ export class SparqlConnectionService {
 			isNew: true,
 			isModified: false,
 			endpointUrl: this._defaultEndpointUrl,
-			configScope: this._defaultConfigScope,
+			configScope: this._defaultConfigScope
 		};
 
 		this._connections.push(connection);

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { createRoot } from 'react-dom/client';
 import { useState, useCallback } from 'react';
-import { VscodeSingleSelect, VscodeTabs } from '@vscode-elements/elements';
+import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { useWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/services/sparql/sparql-connection';
@@ -33,7 +33,13 @@ const initialState: SparqlConnectionViewState = {
 	isChecking: false,
 	connectionError: undefined,
 	hasUnsavedChanges: false,
-	endpoint: { id: 'new', endpointUrl: 'https://', configScope: 1 },
+	endpoint: {
+		id: 'new',
+		endpointUrl: 'https://',
+		configScope: 1,
+		inferenceEnabled: false,
+		inferenceSupported: false
+	},
 	selectedAuthTypeIndex: AuthTypeIndex.None,
 	basicCredential: CredentialFactory.createBasicAuthCredential(),
 	bearerCredential: CredentialFactory.createBearerAuthCredential(),
@@ -497,7 +503,7 @@ function SparqlConnectionView() {
 						disabled={isFormReadOnly()}
 						className="connection-scope-select">
 						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.User)} value="1">User</vscode-option>
-						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}value="2">Workspace</vscode-option>
+						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)} value="2">Workspace</vscode-option>
 					</vscode-single-select>
 				</section>
 				{endpoint.inferenceSupported && (

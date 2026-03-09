@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import {
-	ReferenceProvider,
-	DefinitionProvider,
-	HoverProvider
+	ResourceReferenceProvider,
+	ResourceDefinitionProvider,
+	ResourceTooltipProvider
 } from '@src/providers';
 import {
 	TurtleCodeActionsProvider,
@@ -17,10 +17,10 @@ import {
 const codeActionsProvider = new TurtleCodeActionsProvider();
 const codelensProvider = new TurtleCodeLensProvider();
 const completionProvider = new TurtleCompletionItemProvider();
-const definitionProvider = new DefinitionProvider();
-const hoverProvider = new HoverProvider();
+const definitionProvider = new ResourceDefinitionProvider();
+const hoverProvider = new ResourceTooltipProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`);
-const referenceProvider = new ReferenceProvider();
+const referenceProvider = new ResourceReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
 
 export class TurtleTokenProvider {

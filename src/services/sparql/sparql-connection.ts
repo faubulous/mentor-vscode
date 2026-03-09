@@ -1,6 +1,12 @@
 import { ConfigurationScope } from '@src/utilities/config-scope';
 
 /**
+ * The type of SPARQL store. Determines how inference and other
+ * store-specific features are handled.
+ */
+export type SparqlStoreType = 'workspace' | 'sparql' | 'graphdb';
+
+/**
  * Connection information for a SPARQL endpoint.
  */
 export interface SparqlConnection {
@@ -20,6 +26,13 @@ export interface SparqlConnection {
     configScope: ConfigurationScope;
 
     /**
+     * The type of SPARQL store. Determines how inference and other
+     * store-specific features are handled.
+     * @default 'sparql'
+     */
+    storeType?: SparqlStoreType;
+
+    /**
      * Indicates if this connection is newly created and not yet saved.
      */
     isNew?: boolean;
@@ -35,18 +48,16 @@ export interface SparqlConnection {
     isProtected?: boolean;
 
     /**
-     * Indicates if this connection supports inference toggling.
-     * When `true`, the connection can filter out inferred triples from query results.
-     * @remarks Currently only supported for the workspace store. Future implementations
-     * may support this for SPARQL endpoints that have inference capabilities.
-     */
-    inferenceSupported?: boolean;
-
-    /**
      * Indicates if inference is currently enabled for this connection.
      * When `false`, queries will only return asserted triples from the store.
      * When `true`, inferred triples are included in query results.
-     * This setting is only applicable when `inferenceSupported` is `true`.
+     * This setting is only applicable for store types that support inference.
      */
     inferenceEnabled?: boolean;
+
+    /**
+     * Whether this connection supports inference toggling.
+     * Set by the connection service based on provider capability.
+     */
+    inferenceSupported?: boolean;
 }

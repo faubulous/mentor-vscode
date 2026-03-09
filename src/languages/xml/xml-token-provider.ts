@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ReferenceProvider, HoverProvider } from '@src/providers';
+import { ResourceReferenceProvider, ResourceTooltipProvider } from '@src/providers';
 import { TurtleCodeLensProvider } from '@src/languages/turtle/providers';
 import { XmlRenameProvider } from '@src/languages/xml/providers';
 
 const codelensProvider = new TurtleCodeLensProvider();
-const hoverProvider = new HoverProvider();
-const referenceProvider = new ReferenceProvider();
+const hoverProvider = new ResourceTooltipProvider();
+const referenceProvider = new ResourceReferenceProvider();
 const renameProvider = new XmlRenameProvider();
 
 export class XmlTokenProvider {

@@ -3,7 +3,7 @@ import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContext } from '@src/services/document/document-context';
 import { DocumentFactory } from '@src/services/document/document-factory';
-import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { WorkspaceUri } from '@src/providers/core/workspace-uri';
 import { getConfig } from '@src/utilities/config';
 
 /**

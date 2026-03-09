@@ -6,7 +6,7 @@ import { IDocumentContextService } from '@src/services/document';
 /**
  * A provider that retrieves the locations of resource references in a document.
  */
-export class ReferenceProvider implements vscode.ReferenceProvider {
+export class ResourceReferenceProvider implements vscode.ReferenceProvider {
 	private get _contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}

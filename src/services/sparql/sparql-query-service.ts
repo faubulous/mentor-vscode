@@ -6,7 +6,7 @@ import { Bindings, Quad } from "@rdfjs/types";
 import { AuthCredential } from '@src/services/core/credential';
 import { ICredentialStorageService } from '@src/services/core';
 import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/services/sparql';
-import { WorkspaceUri } from "@src/providers/workspace-uri";
+import { WorkspaceUri } from "@src/providers/core/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';

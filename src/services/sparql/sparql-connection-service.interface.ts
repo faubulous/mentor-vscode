@@ -112,6 +112,13 @@ export interface ISparqlConnectionService {
 	toggleInferenceEnabled(connectionId: string): Promise<boolean>;
 
 	/**
+	 * Checks if the given connection supports inference toggling.
+	 * @param connection The SPARQL connection to check.
+	 * @returns `true` if the connection supports inference, `false` otherwise.
+	 */
+	supportsInference(connection: SparqlConnection): boolean;
+
+	/**
 	 * Sets the connection for a specific notebook cell by editing its metadata.
 	 * @param cellUri The URI of the notebook cell.
 	 * @param connectionId The ID of the connection to set.

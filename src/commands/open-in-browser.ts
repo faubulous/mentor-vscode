@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
-import { InferenceUri } from '@src/providers/inference-uri';
+import { InferenceUri } from '@src/providers/core/inference-uri';
 
 export const openInBrowser = {
 	id: 'mentor.command.openInBrowser',

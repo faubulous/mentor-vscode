@@ -18,7 +18,7 @@ export const toggleSparqlConnectionInference = {
 			return;
 		}
 		
-		if (!targetConnection.inferenceSupported) {
+		if (!connectionService.supportsInference(targetConnection)) {
 			vscode.window.showErrorMessage(`This connection does not support inference toggling.`);
 			return;
 		}

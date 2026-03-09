@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { DefinitionProvider } from '@src/providers';
+import { ResourceDefinitionProvider } from '@src/providers';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 const contextService = () => container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
@@ -20,7 +20,7 @@ export const revealDefinition = {
 			}
 
 			if (ctx.activeContext && editor && uri) {
-				const location = new DefinitionProvider().provideDefinitionForIri(ctx.activeContext, uri, true);
+				const location = new ResourceDefinitionProvider().provideDefinitionForIri(ctx.activeContext, uri, true);
 
 				if (location instanceof vscode.Location) {
 					editor.selection = new vscode.Selection(location.range.start, location.range.end);
