@@ -1,8 +1,8 @@
 import { Store } from '@faubulous/mentor-rdf';
-import { SparqlConnection, SparqlStoreType } from '../../services/sparql/sparql-connection';
-import { ComunicaSource } from '../../services/sparql/sparql-query-source';
-import { createFilteredSource } from '../../services/sparql/sparql-inference-filter';
-import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../../services/sparql/sparql-query-source-provider.interface';
+import { SparqlConnection, SparqlStoreType } from '../sparql-connection';
+import { ComunicaSource } from '../sparql-query-source';
+import { createFilteredSource } from '../sparql-inference-filter';
+import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-source-provider.interface';
 
 /**
  * A function that returns the workspace RDF store.

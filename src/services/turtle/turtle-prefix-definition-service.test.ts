@@ -57,7 +57,7 @@ vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 	getLastTokenOfType: vi.fn()
 }));
 
-import { TurtlePrefixDefinitionService } from './turtle-prefix-definition-service';
+import { TurtlePrefixDefinitionService } from '../../languages/turtle/services/turtle-prefix-definition-service';
 
 // Type definition for the mock context
 interface MockContext {

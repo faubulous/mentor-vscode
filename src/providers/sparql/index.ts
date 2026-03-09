@@ -1,3 +1,2 @@
-export { WorkspaceQuerySourceProvider } from './workspace-query-source-provider';
-export { GraphDbQuerySourceProvider } from './graphdb-query-source-provider';
-export { DefaultSparqlQuerySourceProvider } from './default-query-source-provider';
+export * from './sparql-code-lens-provider';
+export * from './sparql-completion-item-provider';

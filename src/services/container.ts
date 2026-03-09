@@ -15,7 +15,7 @@ import { PrefixLookupService } from './document/prefix-lookup-service';
 import { SparqlConnectionService } from './sparql/sparql-connection-service';
 import { SparqlResultSerializer } from './sparql/sparql-result-serializer';
 import { SparqlQueryService } from './sparql/sparql-query-service';
-import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
+import { TurtlePrefixDefinitionService } from './turtle/turtle-prefix-definition-service';
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.

@@ -14,7 +14,7 @@ import {
 	DefaultSparqlQuerySourceProvider,
 	GraphDbQuerySourceProvider,
 	WorkspaceQuerySourceProvider,
-} from '../../providers/sparql';
+} from '@src/services/sparql/query-sources';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 const DEFAULT_INFERENCE_ENABLED_CONFIG_KEY = 'sparql.defaultInferenceEnabled';
@@ -103,7 +103,7 @@ export class SparqlConnectionService {
 	 * Inherits connection and inference settings for newly added cells from the previous cell.
 	 */
 	private async _inheritSettingsForNewCells(
-		notebook: vscode.NotebookDocument, 
+		notebook: vscode.NotebookDocument,
 		addedCells: readonly vscode.NotebookCell[]
 	): Promise<void> {
 		const cells = notebook.getCells();

@@ -10,11 +10,11 @@ import {
 	TurtleCodeActionsProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider
-} from '@src/languages/turtle/providers';
+} from '@src/providers/turtle';
 import {
 	SparqlCodeLensProvider,
 	SparqlCompletionItemProvider
-} from '@src/languages/sparql/providers';
+} from '@src/providers/sparql';
 
 export class SparqlTokenProvider {
 	constructor() {

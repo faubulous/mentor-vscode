@@ -6,7 +6,7 @@ import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubul
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
-import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';
+import { TurtlePrefixDefinitionService } from '../../services/turtle/turtle-prefix-definition-service';
 import {
 	countLeadingWhitespace,
 	countTrailingWhitespace,

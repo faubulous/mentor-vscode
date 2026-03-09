@@ -1,6 +1,6 @@
-import { SparqlConnection, SparqlStoreType } from '../../services/sparql/sparql-connection';
-import { ComunicaSource, SparqlConnectionSource } from '../../services/sparql/sparql-query-source';
-import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../../services/sparql/sparql-query-source-provider.interface';
+import { SparqlConnection, SparqlStoreType } from '../sparql-connection';
+import { ComunicaSource, SparqlConnectionSource } from '../sparql-query-source';
+import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-source-provider.interface';
 
 /**
  * Query source provider for Ontotext GraphDB SPARQL endpoints.

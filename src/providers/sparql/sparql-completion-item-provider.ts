@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { Store } from "@faubulous/mentor-rdf";
 import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
-import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
+import { TurtleCompletionItemProvider } from "@src/providers/turtle";
 import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
