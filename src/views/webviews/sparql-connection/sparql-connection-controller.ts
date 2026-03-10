@@ -80,7 +80,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
                 const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
 
-                await connectionService.updateEndpoint(message.connection);
+                await connectionService.updateConnection(message.connection);
                 await connectionService.saveConfiguration();
 
                 if (message.credential) {
@@ -93,7 +93,7 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
             }
             case 'UpdateSparqlConnection': {
                 const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-                await connectionService.updateEndpoint(message.connection);
+                await connectionService.updateConnection(message.connection);
                 return true;
             }
             case 'TestSparqlConnection': {

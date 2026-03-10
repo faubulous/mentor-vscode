@@ -178,7 +178,7 @@ export interface ISparqlConnectionService {
 	 * Updates an existing SPARQL connection.
 	 * @param connection The connection to update.
 	 */
-	updateEndpoint(connection: SparqlConnection): Promise<void>;
+	updateConnection(connection: SparqlConnection): Promise<void>;
 
 	/**
 	 * Deletes a SPARQL connection from the settings.
