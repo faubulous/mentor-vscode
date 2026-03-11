@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
-import { DocumentFactory } from '../document/document-factory';
+import { IDocumentFactory } from '../document/document-factory.interface';
 import { IWorkspaceFileService, WorkspaceFileChangeEvent } from './workspace-file-service.interface';
 import { getConfig } from '@src/utilities/config';
 
@@ -50,7 +50,7 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 	readonly onDidChangeFiles = this._onDidChangeFiles.event;
 
 	constructor(
-		private readonly documentFactory: DocumentFactory
+		private readonly documentFactory: IDocumentFactory
 	) {
 		this._includePatterns = Object.keys(documentFactory.supportedExtensions).map(ext => `**/*${ext}`);
 

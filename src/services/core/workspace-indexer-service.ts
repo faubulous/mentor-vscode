@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { IWorkspaceFileService } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService } from './workspace-indexer.interface';
-import { DocumentFactory } from '../document/document-factory';
+import { IDocumentFactory } from '../document/document-factory.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { getConfig } from '@src/utilities/config';
 
@@ -23,7 +23,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	readonly onDidFinishIndexing = this._onDidFinishIndexing.event;
 
 	constructor(
-		private readonly documentFactory: DocumentFactory,
+		private readonly documentFactory: IDocumentFactory,
 		private readonly contextService: DocumentContextService,
 		private readonly workspaceFileService: IWorkspaceFileService
 	) {

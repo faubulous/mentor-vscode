@@ -3,7 +3,7 @@ import { DefinitionQueryOptions } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
-import { DocumentContext } from '@src/services/document/document-context';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { TreeNodeBase } from '@src/views/trees/tree-node';
 import { getIriFromNodeId } from '@src/utilities';
 
@@ -11,7 +11,7 @@ import { getIriFromNodeId } from '@src/utilities';
  * Base class for a node in the definition tree.
  */
 export class DefinitionTreeNode extends TreeNodeBase {
-	
+
 	protected get settings() {
 		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
 	}
@@ -21,14 +21,14 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	/**
 	 * The documet context used to query definitions.
 	 */
-	document: DocumentContext;
+	document: IDocumentContext;
 
 	/**
 	 * The options for querying the children of the tree item.
 	 */
 	private _queryOptions?: DefinitionQueryOptions;
 
-	constructor(context: DocumentContext, id: string, uri: string, options?: DefinitionQueryOptions) {
+	constructor(context: IDocumentContext, id: string, uri: string, options?: DefinitionQueryOptions) {
 		super();
 
 		this.id = id;
@@ -45,7 +45,7 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	 * @returns A new instance of the child node.
 	 */
 	createChildNode<NodeType extends DefinitionTreeNode>(
-		NodeConstructor: new (document: DocumentContext, id: string, iri: string, options?: any) => NodeType,
+		NodeConstructor: new (document: IDocumentContext, id: string, iri: string, options?: any) => NodeType,
 		iri: string,
 		options?: any
 	): NodeType {

@@ -4,7 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, XmlDocument } from '@src/languages';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
-import { DocumentFactory } from '@src/services/document/document-factory';
+import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 
 export class XmlLanguageClient extends LanguageClientBase {
 	private get contextService() {
@@ -12,7 +12,7 @@ export class XmlLanguageClient extends LanguageClientBase {
 	}
 
 	private get documentFactory() {
-		return container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
+		return container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 	}
 
 	constructor() {

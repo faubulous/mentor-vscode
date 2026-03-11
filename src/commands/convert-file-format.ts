@@ -3,7 +3,7 @@ import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { DocumentFactory, LanguageInfo } from '@src/services/document/document-factory';
+import { IDocumentFactory, ILanguageInfo } from '@src/services/document/document-factory.interface';
 
 export const convertFileFormat = {
 	id: 'mentor.command.convertFileFormat',
@@ -56,11 +56,11 @@ export const convertFileFormat = {
 };
 
 async function selectTargetLanguage(sourceLanguageId: string) {
-	const documentFactory = container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
+	const documentFactory = container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 	const languages = await documentFactory.getSupportedLanguagesInfo();
 
 	type LanguagePickItem = vscode.QuickPickItem & {
-		language: LanguageInfo;
+		language: ILanguageInfo;
 	};
 
 	// TODO: Move isSerializableGraph into mentor-rdf.Store and add support for RDF/XML serialization

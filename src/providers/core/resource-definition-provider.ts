@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { DocumentContext } from '@src/services/document/document-context';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
 
 /**
  * A provider that retrieves the locations of resource definitions in a document.
@@ -41,7 +41,7 @@ export class ResourceDefinitionProvider {
 	 * @param primaryContextOnly Indicates whether only the primary document context should be used.
 	 * @returns The definition of the resource with the specified URI or `null` if no definition was found.
 	 */
-	provideDefinitionForIri(primaryContext: DocumentContext, iri: string, primaryContextOnly: boolean = false): vscode.Definition | null {
+	provideDefinitionForIri(primaryContext: IDocumentContext, iri: string, primaryContextOnly: boolean = false): vscode.Definition | null {
 		let range;
 		let context = primaryContext;
 
@@ -78,8 +78,8 @@ export class ResourceDefinitionProvider {
 		return null;
 	}
 
-	private _getContextsDefiningIri(iri: string, primaryContext?: DocumentContext): DocumentContext[] {
-		const result: DocumentContext[] = [];
+	private _getContextsDefiningIri(iri: string, primaryContext?: IDocumentContext): IDocumentContext[] {
+		const result: IDocumentContext[] = [];
 		const contexts = Object.values(this._contextService.contexts);
 
 		for (const c of contexts.filter(c => c.typeDefinitions[iri])) {

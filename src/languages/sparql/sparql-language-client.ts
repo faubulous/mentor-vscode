@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
+import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, SparqlDocument } from '@src/languages';
-import { DocumentFactory } from '@src/services/document/document-factory';
 
 export class SparqlLanguageClient extends LanguageClientBase {
 	private get contextService() {
@@ -12,7 +12,7 @@ export class SparqlLanguageClient extends LanguageClientBase {
 	}
 
 	private get documentFactory() {
-		return container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
+		return container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 	}
 
 	constructor() {

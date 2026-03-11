@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { DocumentContext } from '@src/services/document/document-context';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { DocumentIndex } from '@src/services/document/document-context-service';
 
 /**
@@ -15,12 +15,12 @@ export interface IDocumentContextService {
 	/**
 	 * The currently active document context or `undefined`.
 	 */
-	activeContext: DocumentContext | undefined;
+	activeContext: IDocumentContext | undefined;
 
 	/**
 	 * An event that is fired after the active document context has changed.
 	 */
-	readonly onDidChangeDocumentContext: vscode.Event<DocumentContext | undefined>;
+	readonly onDidChangeDocumentContext: vscode.Event<IDocumentContext | undefined>;
 
 	/**
 	 * Dispose the manager and clean up resources.
@@ -32,7 +32,7 @@ export interface IDocumentContextService {
 	 * @param uri A document or workspace URI.
 	 * @returns A document context if the document is loaded, `undefined` otherwise.
 	 */
-	getDocumentContextFromUri(uri: string): DocumentContext | undefined;
+	getDocumentContextFromUri(uri: string): IDocumentContext | undefined;
 
 	/**
 	 * Get the document context from a text document.
@@ -40,7 +40,7 @@ export interface IDocumentContextService {
 	 * @param contextType The expected type of the document context.
 	 * @returns A document context of the specified type if the document is loaded and matches the type, null otherwise.
 	 */
-	getDocumentContext<T extends DocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null;
+	getDocumentContext<T extends IDocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null;
 
 	/**
 	 * Wait for tokens to be delivered from the language server for a document.
@@ -62,7 +62,7 @@ export interface IDocumentContextService {
 	 * @param uri A document or workspace URI.
 	 * @returns A document context if the document is loaded, `undefined` otherwise.
 	 */
-	getContextFromUri(uri: string): DocumentContext | undefined;
+	getContextFromUri(uri: string): IDocumentContext | undefined;
 
 	/**
 	 * Get the document context from a text document.
@@ -70,7 +70,7 @@ export interface IDocumentContextService {
 	 * @param contextType The expected type of the document context.
 	 * @returns A document context of the specified type if the document is loaded and matches the type, null otherwise.
 	 */
-	getContext<T extends DocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null;
+	getContext<T extends IDocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null;
 
 	/**
 	 * Load a text document into a document context.
@@ -78,7 +78,7 @@ export interface IDocumentContextService {
 	 * @param forceReload Indicates whether a new context should be created for existing contexts.
 	 * @returns A promise that resolves to the document context or undefined if unsupported.
 	 */
-	loadDocument(document: vscode.TextDocument, forceReload?: boolean): Promise<DocumentContext | undefined>;
+	loadDocument(document: vscode.TextDocument, forceReload?: boolean): Promise<IDocumentContext | undefined>;
 
 	/**
 	 * Activate the document associated with the active context in the editor.

@@ -5,7 +5,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService, IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { any } from '@src/utilities';
-import { DocumentContext } from '@src/services/document/document-context';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { DefinitionTreeLayout } from '@src/services/core/settings-service';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { ClassesNode } from './nodes/classes-node';
@@ -25,7 +25,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	/**
 	 * The vocabulary document context.
 	 */
-	public document: DocumentContext | undefined;
+	public document: IDocumentContext | undefined;
 
 	private _onDidChangeTreeData: vscode.EventEmitter<DefinitionTreeNode | undefined> = new vscode.EventEmitter<DefinitionTreeNode | undefined>();
 
@@ -69,7 +69,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	/**
 	 * Refresh the tree view.
 	 */
-	refresh(document?: DocumentContext): void {
+	refresh(document?: IDocumentContext): void {
 		if (document) {
 			this.document = document;
 		}
@@ -98,8 +98,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	protected createRootNode<NodeType extends DefinitionTreeNode>(
-		NodeConstructor: new (document: DocumentContext, id: string, iri: string, options?: any) => NodeType,
-		document: DocumentContext,
+		NodeConstructor: new (document: IDocumentContext, id: string, iri: string, options?: any) => NodeType,
+		document: IDocumentContext,
 		iri: string,
 		options?: any
 	): NodeType {

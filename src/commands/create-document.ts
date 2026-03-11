@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { DocumentFactory } from '@src/services/document/document-factory';
+import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 
 export const createDocument = {
 	id: 'mentor.command.createDocument',
 	handler: async () => {
 		const items: any[] = [];
-		const documentFactory = container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
+		const documentFactory = container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 
 		items.push({
 			label: '$(mentor-notebook) Mentor Notebook',

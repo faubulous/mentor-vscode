@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { DocumentFactory } from '@src/services/document/document-factory';
 import { ServiceToken } from '@src/services/tokens';
+import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { IDocumentContextService } from '@src/services/document';
 import { LanguageClientBase, TurtleDocument } from '@src/languages';
 
@@ -12,7 +12,7 @@ export class TurtleLanguageClient extends LanguageClientBase {
 	}
 
 	private get documentFactory() {
-		return container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
+		return container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 	}
 
 	constructor(languageId = 'turtle', languageName = 'Turtle') {

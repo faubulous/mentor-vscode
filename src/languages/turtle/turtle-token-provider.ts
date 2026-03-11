@@ -11,7 +11,8 @@ import {
 	TurtleCodeLensProvider,
 	TurtleCompletionItemProvider,
 	TurtlePrefixCompletionProvider,
-	TurtleRenameProvider
+	TurtleRenameProvider,
+	TurtleCodeFormattingProvider
 } from '@src/providers/turtle';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
@@ -22,6 +23,7 @@ const hoverProvider = new ResourceTooltipProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`);
 const referenceProvider = new ResourceReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
+const formattingProvider = new TurtleCodeFormattingProvider();
 
 export class TurtleTokenProvider {
 	constructor() {
@@ -37,7 +39,7 @@ export class TurtleTokenProvider {
 	 * Override in subclasses to register for different languages.
 	 */
 	protected getLanguages(): string[] {
-		return ['n3', 'ntriples', 'nquads', 'turtle'];
+		return ['ntriples', 'nquads', 'turtle', 'n3'];
 	}
 
 	protected registerForLanguage(language: string): vscode.Disposable[] {
@@ -47,6 +49,7 @@ export class TurtleTokenProvider {
 			vscode.languages.registerCompletionItemProvider({ language }, completionProvider, ':'),
 			vscode.languages.registerDefinitionProvider({ language }, definitionProvider),
 			vscode.languages.registerHoverProvider({ language }, hoverProvider),
+			vscode.languages.registerDocumentFormattingEditProvider({ language }, formattingProvider),
 			vscode.languages.registerInlineCompletionItemProvider({ language }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language }, referenceProvider),
 			vscode.languages.registerRenameProvider({ language }, renameProvider),

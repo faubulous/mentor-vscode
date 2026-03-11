@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { DocumentContext } from '@src/services/document/document-context';
-import { DocumentFactory } from '@src/services/document/document-factory';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { WorkspaceUri } from '@src/providers/core/workspace-uri';
 import { getConfig } from '@src/utilities/config';
 
@@ -10,7 +10,7 @@ import { getConfig } from '@src/utilities/config';
  * Maps document URIs to loaded document contexts.
  */
 export interface DocumentIndex {
-	[key: string]: DocumentContext;
+	[key: string]: IDocumentContext;
 }
 
 /**
@@ -26,7 +26,7 @@ export class DocumentContextService {
 	/**
 	 * The currently active document context or `undefined`.
 	 */
-	activeContext: DocumentContext | undefined;
+	activeContext: IDocumentContext | undefined;
 
 	/**
 	 * A map of pending token requests keyed by document URI.
@@ -42,7 +42,7 @@ export class DocumentContextService {
 	 */
 	private readonly _tokenWaitTimeout = 10000;
 
-	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<DocumentContext | undefined>();
+	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<IDocumentContext | undefined>();
 
 	/**
 	 * An event that is fired after the active document context has changed.
@@ -52,7 +52,7 @@ export class DocumentContextService {
 	constructor(
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _vocabulary: VocabularyRepository,
-		private readonly _documentFactory: DocumentFactory
+		private readonly _documentFactory: IDocumentFactory
 	) {
 		// Register event handlers for editor and document changes.
 		this._extensionContext.subscriptions.push(...[
@@ -87,7 +87,7 @@ export class DocumentContextService {
 	 * @param uri A document or workspace URI.
 	 * @returns A document context if the document is loaded, `undefined` otherwise.
 	 */
-	getDocumentContextFromUri(uri: string): DocumentContext | undefined {
+	getDocumentContextFromUri(uri: string): IDocumentContext | undefined {
 		if (uri.startsWith(WorkspaceUri.uriScheme)) {
 			const u = WorkspaceUri.toFileUri(vscode.Uri.parse(uri)).toString();
 			return this.contexts[u];
@@ -102,7 +102,7 @@ export class DocumentContextService {
 	 * @param contextType The expected type of the document context.
 	 * @returns A document context of the specified type if the document is loaded and matches the type, null otherwise.
 	 */
-	getDocumentContext<T extends DocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null {
+	getDocumentContext<T extends IDocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null {
 		const uri = document.uri.toString();
 
 		if (!this.contexts[uri]) {
@@ -186,7 +186,7 @@ export class DocumentContextService {
 	 * @param uri A document or workspace URI.
 	 * @returns A document context if the document is loaded, `undefined` otherwise.
 	 */
-	getContextFromUri(uri: string): DocumentContext | undefined {
+	getContextFromUri(uri: string): IDocumentContext | undefined {
 		if (uri.startsWith(WorkspaceUri.uriScheme)) {
 			const u = WorkspaceUri.toFileUri(vscode.Uri.parse(uri)).toString();
 			return this.contexts[u];
@@ -201,7 +201,7 @@ export class DocumentContextService {
 	 * @param contextType The expected type of the document context.
 	 * @returns A document context of the specified type if the document is loaded and matches the type, null otherwise.
 	 */
-	getContext<T extends DocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null {
+	getContext<T extends IDocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null {
 		const uri = document.uri.toString();
 
 		if (!this.contexts[uri]) {
@@ -223,7 +223,7 @@ export class DocumentContextService {
 	 * @param forceReload Indicates whether a new context should be created for existing contexts.
 	 * @returns A promise that resolves to the document context or undefined if unsupported.
 	 */
-	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<DocumentContext | undefined> {
+	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<IDocumentContext | undefined> {
 		if (!document || !this._documentFactory.supportedLanguages.has(document.languageId)) {
 			return;
 		}

@@ -3,6 +3,7 @@ import { Range } from 'vscode-languageserver-types';
 import { Quad_Subject } from '@rdfjs/types';
 import { PredicateUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
+import { IToken } from '@faubulous/mentor-rdf-parsers';
 
 /**
  * Interface for document context that provides access to RDF document specific data.
@@ -191,4 +192,14 @@ export interface IDocumentContext {
 	 * @returns A markdown string containing the label, description and URI of the resource.
 	 */
 	getResourceTooltip(subjectUri: string): vscode.MarkdownString;
+}
+
+/**
+ * Interface for document contexts that have been tokenized and thus provide access to the tokens of the document.
+ */
+export interface ITokenDocumentContext extends IDocumentContext {
+	/**
+	 * The tokens of the document, if the document has been tokenized.
+	 */
+	tokens: IToken[];
 }

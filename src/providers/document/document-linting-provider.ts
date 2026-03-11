@@ -5,8 +5,8 @@ import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
-import { DocumentFactory } from '@src/services/document/document-factory';
-import { DocumentContext } from '@src/services/document/document-context';
+import { IDocumentFactory } from '@src/services/document/document-factory.interface';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { getIriFromToken, getTokenPosition } from '@src/utilities';
 import { getConfig } from '@src/utilities/config';
@@ -40,7 +40,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	}
 
 	private get _documentFactory() {
-		return container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
+		return container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 	}
 
 	private get _workspaceIndexerService() {
@@ -291,7 +291,7 @@ export class DocumentLintingProvider implements vscode.Disposable {
 	 * Get diagnostics for undefined IRI references.
 	 * Only works for token-based documents (Turtle, TriG, SPARQL).
 	 */
-	private async _getUndefinedIriDiagnostics(document: vscode.TextDocument, context: DocumentContext): Promise<vscode.Diagnostic[]> {
+	private async _getUndefinedIriDiagnostics(document: vscode.TextDocument, context: IDocumentContext): Promise<vscode.Diagnostic[]> {
 		// Only token-based documents support IRI validation
 		if (!(context instanceof TurtleDocument)) {
 			return [];

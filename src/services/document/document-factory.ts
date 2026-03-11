@@ -1,43 +1,9 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
-import { DocumentContext } from './document-context';
-import { TurtleDocument, SparqlDocument, XmlDocument } from '../../languages';
-
-/**
- * Information about a supported programming language.
- */
-export interface LanguageInfo {
-	/**
-	 * The language identifier, (e.g. 'turtle' or 'sparql').
-	 */
-	id: string;
-
-	/**
-	 * The human-readable name of the language.
-	 */
-	name: string;
-
-	/**
-	 * Get the displayed name of the file type (e.g. 'Turtle Document', 'SPARQL Query').
-	 */
-	typeName: string;
-
-	/**
-	 * The icon associated with the language, if any.
-	 */
-	icon: string;
-
-	/**
-	 * The file extensions associated with the language (e.g. '.ttl', '.sparql').
-	 */
-	extensions: string[];
-
-	/**
-	 * The MIME types associated with the language (e.g. 'text/turtle', 'application/sparql-query').
-	 */
-	mimetypes: string[];
-}
+import { TurtleDocument, SparqlDocument, XmlDocument } from '@src/languages';
+import { IDocumentContext } from './document-context.interface';
+import { ILanguageInfo } from './document-factory.interface';
 
 /**
  * Metadata about a supported file extension.
@@ -159,7 +125,7 @@ export class DocumentFactory {
 	 * @param document A text document.
 	 * @returns A document context.
 	 */
-	create(documentUri: vscode.Uri, languageId?: string): DocumentContext {
+	create(documentUri: vscode.Uri, languageId?: string): IDocumentContext {
 		// If the language ID is provided, use it to create the document context
 		// as this is more reliable than the file extension. For unsaved documents,
 		// the file extension is not available.
@@ -222,9 +188,9 @@ export class DocumentFactory {
 	 * @param factory The DocumentFactory instance.
 	 * @returns An array of language information objects.
 	 */
-	async getSupportedLanguagesInfo(): Promise<LanguageInfo[]> {
+	async getSupportedLanguagesInfo(): Promise<ILanguageInfo[]> {
 		const packageJson = await this._getPackageJson();
-		const languageMap = new Map<string, LanguageInfo>();
+		const languageMap = new Map<string, ILanguageInfo>();
 
 		for (const language of this.supportedLanguages) {
 			languageMap.set(language, {
@@ -269,7 +235,7 @@ export class DocumentFactory {
 	 * @param languageId The language identifier.
 	 * @returns A `LanguageInfo` object if the language is supported by this factory, `undefined` otherwise.
 	 */
-	async getLanguageInfo(languageId: string): Promise<LanguageInfo | undefined> {
+	async getLanguageInfo(languageId: string): Promise<ILanguageInfo | undefined> {
 		return (await this.getSupportedLanguagesInfo()).find(l => l.id === languageId);
 	}
 
@@ -278,7 +244,7 @@ export class DocumentFactory {
 	 * @param mimetype The MIME type to look up.
 	 * @returns The corresponding `LanguageInfo` object, or `undefined` if not found.
 	 */
-	async getLanguageInfoFromMimeType(mimetype: string): Promise<LanguageInfo | undefined> {
+	async getLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined> {
 		return (await this.getSupportedLanguagesInfo()).find(l => l.mimetypes.includes(mimetype));
 	}
 

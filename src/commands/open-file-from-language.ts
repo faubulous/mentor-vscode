@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { WorkspaceUri } from '@src/providers/core/workspace-uri';
 import { IWorkspaceFileService } from '@src/services/core';
-import { DocumentFactory } from '@src/services/document/document-factory';
+import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { getFileName, getPath } from '@src/utilities';
 
 export type FileQuickPickItem = vscode.QuickPickItem & {
@@ -17,7 +17,7 @@ export const openFileFromLanguage = {
 	handler: async (languageId: string) => {
 		const files: vscode.Uri[] = [];
 		const workspaceFileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
-		const documentFactory = container.resolve<DocumentFactory>(ServiceToken.DocumentFactory);
+		const documentFactory = container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 
 		for await (const file of workspaceFileService.getFilesByLanguageId(languageId)) {
 			files.push(file);

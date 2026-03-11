@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { DocumentContext } from '@src/services/document/document-context';
-import { LanguageInfo, FileExtensionInfo } from '@src/services/document/document-factory';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { FileExtensionInfo } from '@src/services/document/document-factory';
 
 /**
  * Interface for the DocumentFactory.
@@ -64,25 +64,60 @@ export interface IDocumentFactory {
 	 * @param languageId Optional language ID to use.
 	 * @returns A document context.
 	 */
-	create(documentUri: vscode.Uri, languageId?: string): DocumentContext;
+	create(documentUri: vscode.Uri, languageId?: string): IDocumentContext;
 
 	/**
 	 * Retrieves language information including readable names and icons from package.json.
 	 * @returns An array of language information objects.
 	 */
-	getSupportedLanguagesInfo(): Promise<LanguageInfo[]>;
+	getSupportedLanguagesInfo(): Promise<ILanguageInfo[]>;
 
 	/**
 	 * Get language metadata such as the name and extensions from package.json.
 	 * @param languageId The language identifier.
-	 * @returns A `LanguageInfo` object if the language is supported by this factory, `undefined` otherwise.
+	 * @returns A `ILanguageInfo` object if the language is supported by this factory, `undefined` otherwise.
 	 */
-	getLanguageInfo(languageId: string): Promise<LanguageInfo | undefined>;
+	getLanguageInfo(languageId: string): Promise<ILanguageInfo | undefined>;
 
 	/**
 	 * Retrieves language information from a MIME type.
 	 * @param mimetype The MIME type to look up.
-	 * @returns The corresponding `LanguageInfo` object, or `undefined` if not found.
+	 * @returns The corresponding `ILanguageInfo` object, or `undefined` if not found.
 	 */
-	getLanguageInfoFromMimeType(mimetype: string): Promise<LanguageInfo | undefined>;
+	getLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined>;
+}
+
+/**
+ * Information about a supported programming language.
+ */
+export interface ILanguageInfo {
+	/**
+	 * The language identifier, (e.g. 'turtle' or 'sparql').
+	 */
+	id: string;
+
+	/**
+	 * The human-readable name of the language.
+	 */
+	name: string;
+
+	/**
+	 * Get the displayed name of the file type (e.g. 'Turtle Document', 'SPARQL Query').
+	 */
+	typeName: string;
+
+	/**
+	 * The icon associated with the language, if any.
+	 */
+	icon: string;
+
+	/**
+	 * The file extensions associated with the language (e.g. '.ttl', '.sparql').
+	 */
+	extensions: string[];
+
+	/**
+	 * The MIME types associated with the language (e.g. 'text/turtle', 'application/sparql-query').
+	 */
+	mimetypes: string[];
 }

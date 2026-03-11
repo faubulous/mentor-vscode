@@ -13,7 +13,8 @@ import {
 } from '@src/providers/turtle';
 import {
 	SparqlCodeLensProvider,
-	SparqlCompletionItemProvider
+	SparqlCompletionItemProvider,
+	SparqlCodeFormattingProvider
 } from '@src/providers/sparql';
 
 export class SparqlTokenProvider {
@@ -22,6 +23,7 @@ export class SparqlTokenProvider {
 		const codeLensProvider = new SparqlCodeLensProvider();
 		const completionProvider = new SparqlCompletionItemProvider();
 		const definitionProvider = new ResourceDefinitionProvider();
+		const formattingProvider = new SparqlCodeFormattingProvider();
 		const hoverProvider = new ResourceTooltipProvider();
 		const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
 		const referenceProvider = new ResourceReferenceProvider();
@@ -34,6 +36,7 @@ export class SparqlTokenProvider {
 			vscode.languages.registerCodeLensProvider({ language: 'sparql' }, codeLensProvider),
 			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':', '<'),
 			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, definitionProvider),
+			vscode.languages.registerDocumentFormattingEditProvider({ language: 'sparql' }, formattingProvider),
 			vscode.languages.registerHoverProvider({ language: 'sparql' }, hoverProvider),
 			vscode.languages.registerInlineCompletionItemProvider({ language: 'sparql' }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language: 'sparql' }, referenceProvider),
