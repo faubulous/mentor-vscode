@@ -16,9 +16,6 @@ export class TurtleCodeFormattingProvider implements vscode.DocumentFormattingEd
             indent: options.insertSpaces ? ' '.repeat(options.tabSize) : '\t',
             prettyPrint: true,
             uppercaseKeywords: config.get('uppercaseKeywords', true),
-            alignPatterns: config.get('alignPatterns', true),
-            sameBraceLine: config.get('sameBraceLine', true),
-            separateClauses: config.get('separateClauses', true),
             maxLineWidth: config.get('maxLineWidth', 120),
             spaceBeforePunctuation: config.get('spaceBeforePunctuation', true),
         });
