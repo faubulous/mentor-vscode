@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlFormatter } from '@faubulous/mentor-rdf-serializers';
+import { getConfig } from '@src/utilities/config';
 
 export class SparqlCodeFormattingProvider implements vscode.DocumentFormattingEditProvider {
     private _formatter = new SparqlFormatter();
@@ -9,7 +10,7 @@ export class SparqlCodeFormattingProvider implements vscode.DocumentFormattingEd
         options: vscode.FormattingOptions,
         token: vscode.CancellationToken
     ): vscode.TextEdit[] {
-        const config = vscode.workspace.getConfiguration('mentor.formatting.sparql');
+        const config = getConfig('formatting.sparql');
 
         const text = document.getText();
         const result = this._formatter.formatFromText(text, {
