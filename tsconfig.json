@@ -18,11 +18,11 @@
         "src/*"
       ],
       "$/*": [
-        "out/*"
+        "dist/*"
       ]
     },
     "rootDir": "./src",
-    "outDir": "./out",
+    "outDir": "./dist",
     "sourceMap": true, // Do we need this when using esbuild?
     "strict": true,
     "noEmit": true, // Do not emit output files, just check for errors.

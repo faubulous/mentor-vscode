@@ -50,15 +50,15 @@
   "categories": [
     "Programming Languages"
   ],
-  "browser": "./out/extension.js",
+  "browser": "./dist/extension.js",
   "scripts": {
-    "clean": "rm -Rf node_modules && rm -Rf out && rm -Rf media/*.woff",
+    "clean": "rm -Rf node_modules && rm -Rf dist && rm -Rf out && rm -Rf media/*.woff",
     "build": "npm run build:font && node ./build.js",
     "build:watch": "npm run build:font && node ./build.js --watch",
     "build:font": "node ./build-font.mjs",
     "compile": "npm run build:font && tsc -p tsconfig.json",
-    "package": "npm run build:font && node ./build.js --production && vsce package --dependencies -o out/mentor.vsix",
-    "package:install": "npm run package && code --install-extension out/mentor.vsix --force",
+    "package": "npm run build:font && node ./build.js --production && vsce package --dependencies -o dist/mentor.vsix",
+    "package:install": "npm run package && code --install-extension dist/mentor.vsix --force",
     "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -92,6 +92,7 @@
     "@comunica/query-sparql": "^5.0.3",
     "@faubulous/mentor-rdf": "^1.1.0",
     "@faubulous/mentor-rdf-parsers": "^1.4.0",
+    "@faubulous/mentor-rdf-serializers": "^1.0.0",
     "@vscode/codicons": "^0.0.44",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
@@ -175,7 +176,7 @@
       {
         "id": "mentor.notebook.sparqlResultsRenderer",
         "displayName": "SPARQL Results Renderer",
-        "entrypoint": "./out/sparql-results-notebook-renderer.js",
+        "entrypoint": "./dist/sparql-results-notebook-renderer.js",
         "notebookType": "mentor-notebook",
         "requiresMessaging": "always",
         "mimeTypes": [
@@ -187,37 +188,37 @@
       {
         "language": "trig",
         "scopeName": "source.trig",
-        "path": "./out/trig.tmLanguage.json"
+        "path": "./dist/trig.tmLanguage.json"
       },
       {
         "language": "turtle",
         "scopeName": "source.turtle",
-        "path": "./out/turtle.tmLanguage.json"
+        "path": "./dist/turtle.tmLanguage.json"
       },
       {
         "language": "n3",
         "scopeName": "source.turtle",
-        "path": "./out/turtle.tmLanguage.json"
+        "path": "./dist/turtle.tmLanguage.json"
       },
       {
         "language": "ntriples",
         "scopeName": "source.turtle",
-        "path": "./out/turtle.tmLanguage.json"
+        "path": "./dist/turtle.tmLanguage.json"
       },
       {
         "language": "nquads",
         "scopeName": "source.turtle",
-        "path": "./out/turtle.tmLanguage.json"
+        "path": "./dist/turtle.tmLanguage.json"
       },
       {
         "language": "sparql",
         "scopeName": "source.sparql",
-        "path": "./out/sparql.tmLanguage.json"
+        "path": "./dist/sparql.tmLanguage.json"
       },
       {
         "language": "datalog",
         "scopeName": "source.datalog",
-        "path": "./out/datalog.tmLanguage.json"
+        "path": "./dist/datalog.tmLanguage.json"
       }
     ],
     "languages": [
@@ -233,7 +234,7 @@
         "mimetypes": [
           "application/n-triples"
         ],
-        "configuration": "./out/turtle-language-config.json",
+        "configuration": "./dist/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/light/rdf-file.svg",
           "dark": "./media/icons/dark/rdf-file.svg"
@@ -251,7 +252,7 @@
         "mimetypes": [
           "application/n-quads"
         ],
-        "configuration": "./out/turtle-language-config.json",
+        "configuration": "./dist/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/light/rdf-file.svg",
           "dark": "./media/icons/dark/rdf-file.svg"
@@ -269,7 +270,7 @@
         "mimetypes": [
           "text/n3"
         ],
-        "configuration": "./out/turtle-language-config.json",
+        "configuration": "./dist/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/light/rdf-file.svg",
           "dark": "./media/icons/dark/rdf-file.svg"
@@ -287,7 +288,7 @@
         "mimetypes": [
           "text/turtle"
         ],
-        "configuration": "./out/turtle-language-config.json",
+        "configuration": "./dist/turtle-language-config.json",
         "icon": {
           "light": "./media/icons/light/rdf-file.svg",
           "dark": "./media/icons/dark/rdf-file.svg"
@@ -305,7 +306,7 @@
         "mimetypes": [
           "application/trig"
         ],
-        "configuration": "./out/trig-language-config.json",
+        "configuration": "./dist/trig-language-config.json",
         "icon": {
           "light": "./media/icons/light/rdf-file.svg",
           "dark": "./media/icons/dark/rdf-file.svg"
@@ -324,7 +325,7 @@
         "mimetypes": [
           "application/sparql-query"
         ],
-        "configuration": "./out/sparql-language-config.json",
+        "configuration": "./dist/sparql-language-config.json",
         "icon": {
           "light": "./media/icons/light/sparql-file.svg",
           "dark": "./media/icons/dark/sparql-file.svg"
@@ -344,7 +345,7 @@
         "mimetypes": [
           "text/x-datalog"
         ],
-        "configuration": "./out/datalog-language-config.json",
+        "configuration": "./dist/datalog-language-config.json",
         "icon": {
           "light": "./media/icons/light/datalog-file.svg",
           "dark": "./media/icons/dark/datalog-file.svg"

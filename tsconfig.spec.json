@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "./out",
+    "outDir": "./dist",
     "module": "commonjs",
     "sourceMap": true,
     "types": [
@@ -11,7 +11,7 @@
   },
   "exclude": [
     "node_modules",
-    "out"
+    "dist"
   ],
   "include": [
     "vitest.config.ts",

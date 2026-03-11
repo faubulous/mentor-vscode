@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
+import { TurtlePrefixDefinitionService } from './turtle-prefix-definition-service';
 
 // Mock all problematic modules BEFORE importing the service
 vi.mock('@src/languages', () => ({
@@ -56,8 +57,6 @@ vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 	getFirstTokenOfType: vi.fn(),
 	getLastTokenOfType: vi.fn()
 }));
-
-import { TurtlePrefixDefinitionService } from '../../languages/turtle/services/turtle-prefix-definition-service';
 
 // Type definition for the mock context
 interface MockContext {

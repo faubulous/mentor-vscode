@@ -34,7 +34,7 @@ export abstract class WebviewController<M = any> implements vscode.WebviewViewPr
 	readonly panelIcon?: string;
 
 	/**
-	 * Relative JS bundle path inside out/ used by this controller (e.g. "sparql-endpoint-view.js").
+	 * Relative JS bundle path inside dist/ used by this controller (e.g. "sparql-endpoint-view.js").
 	 */
 	protected readonly componentPath: string;
 

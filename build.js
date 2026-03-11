@@ -44,7 +44,7 @@ const getExtensionConfig = (args) => {
   return {
     ...getBaseConfig(args),
     entryPoints: ["./src/extension.ts"],
-    outfile: "./out/extension.js"
+    outfile: "./dist/extension.js"
   }
 }
 
@@ -55,7 +55,7 @@ const getLanguageConfig = (args, type, language) => {
   return {
     ...getBaseConfig(args),
     entryPoints: [entryPoint],
-    outfile: `./out/${file}.js`
+    outfile: `./dist/${file}.js`
   }
 }
 
@@ -64,7 +64,7 @@ const getReactViewConfig = (args, folder, file) => {
     ...getBaseConfig(args),
     format: "esm", // Ensure ES module format for the VS Code notebook renderer
     entryPoints: [`./src/views/webviews/${folder}/${file}.tsx`],
-    outfile: `./out/${file}.js`
+    outfile: `./dist/${file}.js`
   }
 }
 
@@ -73,7 +73,7 @@ const getReactViewConfig = (args, folder, file) => {
  */
 const copyFontGlyphs = () => {
   const sourceFolder = path.resolve(__dirname, 'media', 'glyphs');
-  const targetFolder = path.resolve(__dirname, 'out', 'media', 'glyphs');
+  const targetFolder = path.resolve(__dirname, 'dist', 'media', 'glyphs');
 
   console.log(`Copying font glyphs to: ${targetFolder}`);
 
@@ -218,7 +218,7 @@ const copyVSCodeElementsBundle = () => {
     'dist'
   );
 
-  const targetFolder = path.resolve(__dirname, 'out');
+  const targetFolder = path.resolve(__dirname, 'dist');
 
   console.log(`Copying VSCode Elements bundle to...`);
 
@@ -226,14 +226,14 @@ const copyVSCodeElementsBundle = () => {
 }
 
 /**
- * Removes source map files from the out directory.
+ * Removes source map files from the dist directory.
  */
 const removeSourceMaps = () => {
-  const outFolder = path.resolve(__dirname, 'out');
+  const outFolder = path.resolve(__dirname, 'dist');
   const mapFiles = glob.sync(path.join(outFolder, '**/*.map'));
 
   if (mapFiles.length > 0) {
-    console.log(`Removing ${mapFiles.length} source map file(s) from out directory...`);
+    console.log(`Removing ${mapFiles.length} source map file(s) from dist directory...`);
 
     for (const file of mapFiles) {
       fs.rmSync(file);
@@ -252,7 +252,7 @@ const removeSourceMaps = () => {
   console.log("Extension config:", extensionConfig);
 
   try {
-    const outFolder = path.resolve(__dirname, 'out');
+    const outFolder = path.resolve(__dirname, 'dist');
 
     if (fs.existsSync(outFolder)) {
       console.log(`Deleting existing output directory: ${outFolder}`);
@@ -268,10 +268,10 @@ const removeSourceMaps = () => {
     createMentorIconsInlineCSS();
     copyVSCodeElementsBundle();
 
-    // Copy the language config files to the out directory.
+    // Copy the language config files to the dist directory.
     for (const file of glob.sync('./src/languages/**/*.json')) {
       const fileName = file.split('/').pop();
-      const targetPath = `./out/${fileName}`;
+      const targetPath = `./dist/${fileName}`;
 
       fs.copyFileSync(file, targetPath);
     }
@@ -304,7 +304,7 @@ const removeSourceMaps = () => {
     } else {
       await Promise.all(configs.map(config => esbuild.build(config)));
 
-      // Remove source maps and glyphs from the out directory in production builds.
+      // Remove source maps and glyphs from the dist directory in production builds.
       if (productionBuild) {
         removeSourceMaps();
       }

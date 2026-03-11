@@ -45,7 +45,7 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 		this.channelName = `Mentor Language (${languageName})`;
 		this.channelId = `mentor.language.${languageId}`;
 		this.channel = vscode.window.createOutputChannel(this.channelName, this.channelId);
-		this.serverPath = `out/${languageId}-language-server.js`;
+		this.serverPath = `dist/${languageId}-language-server.js`;
 
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(this);
