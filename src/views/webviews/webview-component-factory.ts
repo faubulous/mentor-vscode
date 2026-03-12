@@ -56,7 +56,7 @@ export class WebviewComponentFactory {
 		return {
 			enableScripts: true,
 			localResourceRoots: [
-				vscode.Uri.joinPath(this._context.extensionUri, 'out'),
+				vscode.Uri.joinPath(this._context.extensionUri, 'dist'),
 				vscode.Uri.joinPath(this._context.extensionUri, 'media')
 			]
 		};
@@ -72,11 +72,11 @@ export class WebviewComponentFactory {
 		);
 
 		const elementsUrl = webview.asWebviewUri(
-			vscode.Uri.joinPath(this._context.extensionUri, 'out', 'vscode-elements.js')
+			vscode.Uri.joinPath(this._context.extensionUri, 'dist', 'vscode-elements.js')
 		);
 
 		const componentUrl = webview.asWebviewUri(
-			vscode.Uri.joinPath(this._context.extensionUri, 'out', this._componentPath)
+			vscode.Uri.joinPath(this._context.extensionUri, 'dist', this._componentPath)
 		);
 
 		return `<!DOCTYPE html>
