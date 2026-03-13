@@ -6,7 +6,7 @@ import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/ment
 import { Bindings, Quad } from "@rdfjs/types";
 import { IPrefixLookupService } from '@src/services/document';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
-import { toArrayWithCancellation } from '@src/utilities/cancellation';
+import { toArrayWithCancellation } from '@src/utilities/vscode/cancellation';
 import { NamespaceMap } from '@src/utilities';
 
 /**

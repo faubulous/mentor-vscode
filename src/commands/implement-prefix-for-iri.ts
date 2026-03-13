@@ -4,7 +4,7 @@ import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
 import { getTokenPosition } from '@src/utilities';
-import { calculateLineOffset } from '@src/utilities/edit';
+import { calculateLineOffset } from '@src/utilities/vscode/edit';
 
 export const implementPrefixForIri = {
 	id: 'mentor.command.implementPrefixForIri',

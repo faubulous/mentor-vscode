@@ -8,7 +8,7 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { WebviewController } from '../webview-controller';
 import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 export class SparqlConnectionController extends WebviewController<SparqlConnectionMessages> {
     private selectedConnection?: SparqlConnection;

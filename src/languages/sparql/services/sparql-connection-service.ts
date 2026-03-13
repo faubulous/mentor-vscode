@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 import { ServiceToken } from '@src/services/tokens';
 import { ICredentialStorageService } from '@src/services/core';
 import { ConfigurationScope } from '@src/utilities/config-scope';

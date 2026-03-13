@@ -16,7 +16,7 @@ import {
 	getNamespaceDefinition,
 	getTokenPosition
 } from '@src/utilities';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * A document context for Turtle and TriG documents.

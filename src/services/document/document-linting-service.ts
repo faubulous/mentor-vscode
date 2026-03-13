@@ -9,7 +9,7 @@ import { IDocumentFactory } from '@src/services/document/document-factory.interf
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { getIriFromToken, getTokenPosition } from '@src/utilities';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * Provides additional diagnostics for RDF documents that require access

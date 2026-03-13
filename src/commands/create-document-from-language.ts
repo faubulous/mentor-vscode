@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 export const createDocumentFromLanguage = {
 	id: 'mentor.command.createDocumentFromLanguage',

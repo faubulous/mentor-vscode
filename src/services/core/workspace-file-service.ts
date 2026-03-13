@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { IWorkspaceFileService, WorkspaceFileChangeEvent } from './workspace-file-service.interface';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * Service for discovering and watching workspace files that match supported extensions.

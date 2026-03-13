@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlFormatter } from '@faubulous/mentor-rdf-serializers';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 export class SparqlCodeFormattingProvider implements vscode.DocumentFormattingEditProvider {
     private _formatter = new SparqlFormatter();

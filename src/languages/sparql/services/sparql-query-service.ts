@@ -7,7 +7,7 @@ import { AuthCredential } from '@src/services/core/credential';
 import { ICredentialStorageService } from '@src/services/core';
 import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/languages/sparql/services';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
-import { CancellationError, withCancellation } from '@src/utilities/cancellation';
+import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';
 

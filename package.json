@@ -776,6 +776,11 @@
         "title": "Convert File Format..",
         "icon": "$(file-zip)",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.cleanDocument",
+        "title": "Clean..",
+        "category": "Mentor"
       }
     ],
     "menus": {
@@ -910,6 +915,11 @@
           "command": "mentor.command.convertFileFormat",
           "group": "1_modification@99",
           "when": "editorTextFocus && !notebookCellType && mentor.command.convertFileFormat.executable"
+        },
+        {
+          "command": "mentor.command.cleanDocument",
+          "group": "1_modification@98",
+          "when": "editorTextFocus && !notebookCellType && (editorLangId == 'sparql' || editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads')"
         }
       ],
       "notebook/toolbar": [

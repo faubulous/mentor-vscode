@@ -4,7 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * Provides usage information for resource definitions in Turtle documents.

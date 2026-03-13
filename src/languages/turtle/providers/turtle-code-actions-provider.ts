@@ -7,6 +7,7 @@ import { IDocumentContextService } from '@src/services/document';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getIriFromIriReference, getIriFromPrefixedName, getNamespaceDefinition, getTokenPosition } from '@src/utilities';
+import { getPrefixesWithErrorCode } from '@src/utilities/vscode/diagnostic';
 
 /**
  * A provider for RDF document code actions.
@@ -257,7 +258,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		const documentDiagnostics = vscode.languages.getDiagnostics(document.uri);
 
 		// 1. Find all unused prefixes in the whole document, and add them as a repair option on top.
-		const undefinedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'UndefinedNamespacePrefixError');
+		const undefinedPrefixes = getPrefixesWithErrorCode(document, documentDiagnostics, 'UndefinedNamespacePrefixError');
 
 		if (undefinedPrefixes.length > 0) {
 			// Fixing missing prefixes is implemented as a command instead of a static edit because 
@@ -275,7 +276,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		}
 
 		// Note, the unused prefix diagnostics contain the _whole_ line of the prefix definition, so we need to extract the prefix from it.
-		const unusedPrefixes = this._getPrefixesWithErrorCode(document, documentDiagnostics, 'UnusedNamespacePrefixHint');
+		const unusedPrefixes = getPrefixesWithErrorCode(document, documentDiagnostics, 'UnusedNamespacePrefixHint');
 
 		if (unusedPrefixes.length > 0) {
 			result.push({
@@ -291,7 +292,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		}
 
 		// 2. Find all unused prefixes in the context and add them as the second repair option.
-		for (let prefix of this._getPrefixesWithErrorCode(document, actionContext.diagnostics, 'UndefinedNamespacePrefixError')) {
+		for (let prefix of getPrefixesWithErrorCode(document, actionContext.diagnostics, 'UndefinedNamespacePrefixError')) {
 			result.push({
 				kind: vscode.CodeActionKind.QuickFix,
 				title: `Implement missing prefix: ${prefix}`,
@@ -304,7 +305,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 			});
 		}
 
-		for (let prefix of this._getPrefixesWithErrorCode(document, actionContext.diagnostics, 'UnusedNamespacePrefixHint')) {
+		for (let prefix of getPrefixesWithErrorCode(document, actionContext.diagnostics, 'UnusedNamespacePrefixHint')) {
 			result.push({
 				kind: vscode.CodeActionKind.QuickFix,
 				title: `Remove unused prefix: ${prefix}`,
@@ -320,32 +321,4 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		return result;
 	}
 
-	/**
-	 * Get prefixes with a specific error code from a diagnostic collection.
-	 * @param document The document to search.
-	 * @param diagnostics The diagnostics to search.
-	 * @param errorCode The error code to search for.
-	 * @returns The prefixes with the specified error code.
-	 */
-	private _getPrefixesWithErrorCode(document: vscode.TextDocument, diagnostics: Iterable<vscode.Diagnostic>, errorCode: string) {
-		const result = new Set<string>();
-
-		for (let diagnostic of diagnostics) {
-			if (diagnostic.code === errorCode) {
-				let prefix = document.getText(diagnostic.range).split(':')[0];
-
-				if (errorCode === 'UnusedNamespacePrefixHint') {
-					// Note: The unused prefix diagnostics contain the _whole_ line of the prefix definition, 
-					// so we need to extract the prefix from it. At this point the line still contains the PREFIX keyword.
-					prefix = prefix.split(' ')[1];
-				}
-
-				if (prefix !== undefined) {
-					result.add(prefix);
-				}
-			}
-		}
-
-		return Array.from(result);
-	}
 }

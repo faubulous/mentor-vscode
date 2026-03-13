@@ -7,7 +7,7 @@ import { PrefixLookupService } from '@src/services/document/prefix-lookup-servic
 import { getIriFromIriReference } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * Specifies a how a namespace prefix should be defined in a document.

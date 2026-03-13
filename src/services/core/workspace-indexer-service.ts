@@ -3,7 +3,7 @@ import { IWorkspaceFileService } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService } from './workspace-indexer.interface';
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { DocumentContextService } from '../document/document-context-service';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * Service for indexing RDF documents in the current workspace.

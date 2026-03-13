@@ -4,7 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { SparqlResultsController } from '@src/views/webviews';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 export const listGraphs = {
   id: 'mentor.command.listGraphs',

@@ -3,7 +3,7 @@ import { IDocumentContextService } from '@src/services/document';
 import { NamespaceMap } from '@src/utilities';
 import { DEFAULT_PREFIXES } from '@src/services/document/prefix-downloader-service';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * A service for looking up prefixes in the project.

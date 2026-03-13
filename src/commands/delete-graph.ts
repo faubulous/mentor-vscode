@@ -4,7 +4,7 @@ import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { SparqlResultsController } from '@src/views/webviews';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 export const deleteGraph = {
 	id: 'mentor.command.deleteGraph',

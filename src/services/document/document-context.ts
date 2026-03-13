@@ -9,7 +9,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 import { IDocumentContext } from './document-context.interface';
 
 /**

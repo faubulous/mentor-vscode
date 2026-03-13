@@ -4,7 +4,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * Indicates the where missing language tags should be decorated.

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TurtleFormatter } from '@faubulous/mentor-rdf-serializers';
-import { getConfig } from '@src/utilities/config';
+import { getConfig } from '@src/utilities/vscode/config';
 
 export class TurtleCodeFormattingProvider implements vscode.DocumentFormattingEditProvider {
     private _formatter = new TurtleFormatter();
