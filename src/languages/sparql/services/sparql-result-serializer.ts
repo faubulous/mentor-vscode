@@ -3,7 +3,7 @@ import { AsyncIterator } from 'asynciterator';
 import { Store, Writer } from 'n3';
 import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
-import { Bindings, Quad } from "@rdfjs/types";
+import { Bindings, Quad, Term } from "@rdfjs/types";
 import { IPrefixLookupService } from '@src/services/document';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
 import { toArrayWithCancellation } from '@src/utilities/vscode/cancellation';
@@ -46,27 +46,35 @@ export class SparqlResultSerializer {
 		const namespaces = new Set<string>();
 		const rows: Record<string, any>[] = [];
 
+		const serializeTerm = (value: Term): Record<string, any> => {
+			const term: Record<string, any> = {
+				termType: value.termType,
+				value: value.value,
+			};
+
+			if (value.termType === 'NamedNode') {
+				namespaces.add(Uri.getNamespaceIri(value.value));
+			} else if (value.termType === 'Literal') {
+				term.datatype = { termType: 'NamedNode', value: value.datatype.value };
+				term.language = value.language;
+			} else if (value.termType === 'Quad') {
+				term.subject = serializeTerm(value.subject);
+				term.predicate = serializeTerm(value.predicate);
+				term.object = serializeTerm(value.object);
+			}
+
+			return term;
+		};
+
 		for (const binding of bindings) {
 			const row: Record<string, any> = {};
 
 			for (const [key, value] of binding) {
-				if (value.termType === 'NamedNode') {
-					namespaces.add(Uri.getNamespaceIri(value.value));
-				}
-
-				const datatype = value.termType === 'Literal' ? value.datatype.value : undefined;
-				const language = value.termType === 'Literal' ? value.language : undefined;
-
 				if (!parsedColumns.includes(key.value)) {
 					parsedColumns.push(key.value);
 				}
 
-				row[key.value] = {
-					termType: value.termType,
-					value: value.value,
-					datatype: datatype,
-					language: language
-				};
+				row[key.value] = serializeTerm(value);
 			}
 
 			rows.push(row);
@@ -76,9 +84,9 @@ export class SparqlResultSerializer {
 		const namespaceMap: NamespaceMap = {};
 
 		for (const iri of namespaces) {
-			const prefix = this.prefixLookupService.getPrefixForIri(documentIri, iri, '');
+			const prefix = this.prefixLookupService.getPrefixForIri(documentIri, iri, '\0');
 
-			if (prefix !== '') {
+			if (prefix !== '\0') {
 				namespaceMap[iri] = prefix;
 			}
 		}

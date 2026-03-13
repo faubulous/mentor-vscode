@@ -1,11 +1,14 @@
 import { useRef } from 'react';
-import { Term } from '@rdfjs/types';
+import { Quad, Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
+import { NTriplesSerializer } from '@faubulous/mentor-rdf-serializers';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { useStylesheet } from '@src/views/webviews/webview-hooks';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
 import stylesheet from './bindings-table.css';
+
+const ntriplesSerializer = new NTriplesSerializer();
 
 /**
  * Component to display SPARQL bindings results in a table with pagination.
@@ -83,7 +86,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 
 	const handleNamedNodeClick = (node: Term) => {
 		const value = node.value;
-		
+
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.openInBrowser',
@@ -110,7 +113,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		const namespaceIri = Uri.getNamespaceIri(binding.value);
 		const prefix = namespaceMap ? namespaceMap[namespaceIri] : undefined;
 
-		if (prefix) {
+		if (prefix !== undefined) {
 			const localName = binding.value.replace(namespaceIri, '');
 			value = (<span>{prefix}:<span className="label">{localName}</span></span>);
 		}
@@ -118,97 +121,122 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		return value;
 	};
 
-	const renderGraphNode = (binding: Term, namespaceMap?: Record<string, string>) => {
-		const label = getNamedNodeLabel(binding, namespaceMap);
-
-		return (
-			<div className="cell">
-				<pre className="cell-value">
+	/**
+	 * Renders the inline content of a node without cell wrapper or actions.
+	 */
+	const renderNodeContent = (binding: Term, namespaceMap?: Record<string, string>): React.ReactNode => {
+		switch (binding.termType) {
+			case 'NamedNode': {
+				const label = getNamedNodeLabel(binding, namespaceMap);
+				return (
 					<a href="#" onClick={() => handleDescribeNamedNode(binding)}>
 						{label}
 					</a>
-				</pre>
-				<div className="cell-actions">
-					<vscode-toolbar-button
-						title="Copy Cell Value"
-						onClick={() => handleCopyCellClick(binding)}>
-						<span className="codicon codicon-copy"></span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button
-						title="Download Graph"
-						onClick={() => handleOpenGraph(binding)}>
-						<span className="codicon codicon-download"></span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button
-						title="Delete Graph"
-						onClick={() => handleDeleteGraph(binding)}>
-						<span className="codicon codicon-trash"></span>
-					</vscode-toolbar-button>
-				</div>
-			</div>
-		);
-	};
-
-	const renderNamedNode = (binding: Term, namespaceMap?: Record<string, string>) => {
-		const label = getNamedNodeLabel(binding, namespaceMap);
-
-		return (
-			<div className="cell">
-				<pre className="cell-value">
-					<a href="#" onClick={() => handleDescribeNamedNode(binding)}>
-						{label}
-					</a>
-				</pre>
-				<div className="cell-actions">
-					<vscode-toolbar-button
-						title="Open in Browser"
-						onClick={() => handleNamedNodeClick(binding)}>
-						<span className="codicon codicon-link-external"></span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button
-						title="Copy Cell Value"
-						onClick={() => handleCopyCellClick(binding)}>
-						<span className="codicon codicon-copy"></span>
-					</vscode-toolbar-button>
-				</div>
-			</div>
-		);
-	};
-
-	const renderBlankNode = (binding: Term) => (
-		<pre>{binding.value}</pre>
-	);
-
-	const renderLiteral = (binding: Term) => (
-		<div className="cell">
-			<pre className="cell-value">
-				{binding.value}
-			</pre>
-			<div className="cell-actions">
-				<vscode-toolbar-button
-					title="Copy Cell Value"
-					onClick={() => handleCopyCellClick(binding)}>
-					<span className="codicon codicon-copy"></span>
-				</vscode-toolbar-button>
-			</div>
-		</div>
-	);
-
-	const renderCell = (binding: Term | undefined, header: string, namespaceMap?: Record<string, string>) => {
-		switch (binding?.termType) {
-			case 'NamedNode':
-				if (graphHeaders.has(header)) {
-					return renderGraphNode(binding, namespaceMap);
-				} else {
-					return renderNamedNode(binding, namespaceMap);
-				}
+				);
+			}
 			case 'BlankNode':
-				return renderBlankNode(binding);
+				return binding.value;
 			case 'Literal':
-				return renderLiteral(binding);
+				return binding.value;
+			case 'Quad':
+				return (
+					<>
+						{renderNodeContent(binding.subject, namespaceMap)}
+						{' '}
+						{renderNodeContent(binding.predicate, namespaceMap)}
+						{' '}
+						{renderNodeContent(binding.object, namespaceMap)}
+						{' .'}
+					</>
+				);
 			default:
 				return '';
 		}
+	};
+
+	/**
+	 * Renders the action buttons for a cell based on the term type and context.
+	 */
+	const renderNodeActions = (binding: Term, isGraph: boolean): React.ReactNode => {
+		switch (binding.termType) {
+			case 'NamedNode':
+				if (isGraph) {
+					return (
+						<>
+							<vscode-toolbar-button
+								title="Copy Cell Value"
+								onClick={() => handleCopyCellClick(binding)}>
+								<span className="codicon codicon-copy"></span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button
+								title="Download Graph"
+								onClick={() => handleOpenGraph(binding)}>
+								<span className="codicon codicon-download"></span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button
+								title="Delete Graph"
+								onClick={() => handleDeleteGraph(binding)}>
+								<span className="codicon codicon-trash"></span>
+							</vscode-toolbar-button>
+						</>
+					);
+				} else {
+					return (
+						<>
+							<vscode-toolbar-button
+								title="Open in Browser"
+								onClick={() => handleNamedNodeClick(binding)}>
+								<span className="codicon codicon-link-external"></span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button
+								title="Copy Cell Value"
+								onClick={() => handleCopyCellClick(binding)}>
+								<span className="codicon codicon-copy"></span>
+							</vscode-toolbar-button>
+						</>
+					);
+				}
+			case 'Literal':
+				return (
+					<vscode-toolbar-button
+						title="Copy Cell Value"
+						onClick={() => handleCopyCellClick(binding)}>
+						<span className="codicon codicon-copy"></span>
+					</vscode-toolbar-button>
+				);
+			case 'Quad':
+				return (
+					<vscode-toolbar-button
+						title="Copy as N-Triples"
+						onClick={() => navigator.clipboard.writeText(ntriplesSerializer.serializeQuad(binding as unknown as Quad))}>
+						<span className="codicon codicon-copy"></span>
+					</vscode-toolbar-button>
+				);
+			default:
+				return null;
+		}
+	};
+
+	const renderCell = (binding: Term | undefined, header: string, namespaceMap?: Record<string, string>) => {
+		if (!binding) return '';
+
+		const isGraph = graphHeaders.has(header);
+
+		// Blank nodes get minimal rendering without cell wrapper
+		if (binding.termType === 'BlankNode') {
+			return <pre>{renderNodeContent(binding, namespaceMap)}</pre>;
+		}
+
+		return (
+			<div className="cell">
+				<pre className="cell-value">
+					{renderNodeContent(binding, namespaceMap)}
+				</pre>
+				<div className="cell-actions">
+					{renderNodeActions(binding, isGraph)}
+				</div>
+			</div>
+		);
 	};
 
 	if (result) {
