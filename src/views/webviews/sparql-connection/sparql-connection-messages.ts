@@ -15,5 +15,7 @@ export type SparqlConnectionMessages =
     { id: 'FetchMicrosoftAuthCredentialResult', connectionId: string, credential: MicrosoftAuthCredential | null } |
     { id: 'TestSparqlConnection', connection: SparqlConnection, credential: AuthCredential | null } |
     { id: 'TestSparqlConnectionResult', error: { code: number, message: string } | null } |
-    { id: 'ToggleInferenceEnabled', connectionId: string } |
-    { id: 'ToggleInferenceEnabledResult', connectionId: string, inferenceEnabled: boolean };
+    { id: 'GetInferenceFeatureEnabled' } |
+    { id: 'GetInferenceFeatureEnabledResult', value: boolean } |
+    { id: 'ToggleSparqlConnectionInference', connectionId: string } |
+    { id: 'ToggleSparqlConnectionInferenceResult', connectionId: string, inferenceEnabled: boolean };

@@ -27,6 +27,7 @@ interface SparqlConnectionViewState {
 	bearerCredential: BearerAuthCredential;
 	microsoftCredential: MicrosoftAuthCredential;
 	passwordVisible: boolean;
+	inferenceFeatureEnabled: boolean;
 }
 
 const initialState: SparqlConnectionViewState = {
@@ -44,7 +45,8 @@ const initialState: SparqlConnectionViewState = {
 	basicCredential: CredentialFactory.createBasicAuthCredential(),
 	bearerCredential: CredentialFactory.createBearerAuthCredential(),
 	microsoftCredential: CredentialFactory.createMicrosoftAuthCredential(),
-	passwordVisible: false
+	passwordVisible: false,
+	inferenceFeatureEnabled: false
 };
 
 /**
@@ -120,7 +122,14 @@ function SparqlConnectionView() {
 				}));
 				return;
 			}
-			case 'ToggleInferenceEnabledResult': {
+			case 'GetInferenceFeatureEnabledResult': {
+				setState(prev => ({
+					...prev,
+					inferenceFeatureEnabled: message.value,
+				}));
+				return;
+			}
+			case 'ToggleSparqlConnectionInferenceResult': {
 				setState(prev => ({
 					...prev,
 					endpoint: {
@@ -141,6 +150,7 @@ function SparqlConnectionView() {
 	// Request initial connection on mount
 	React.useEffect(() => {
 		messaging?.postMessage({ id: 'GetSparqlConnection' });
+		messaging?.postMessage({ id: 'GetInferenceFeatureEnabled' });
 	}, []);
 
 	// Refs for vscode-elements with event handlers
@@ -506,7 +516,7 @@ function SparqlConnectionView() {
 						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)} value="2">Workspace</vscode-option>
 					</vscode-single-select>
 				</section>
-				{endpoint.inferenceSupported && (
+				{state.inferenceFeatureEnabled && endpoint.inferenceSupported && (
 					<section>
 						<span className='section-label'>Inference</span>
 						<vscode-form-helper>
@@ -517,7 +527,7 @@ function SparqlConnectionView() {
 								checked={endpoint.inferenceEnabled ?? false}
 								onChange={() => {
 									messaging?.postMessage({
-										id: 'ToggleInferenceEnabled',
+										id: 'ToggleSparqlConnectionInference',
 										connectionId: endpoint.id
 									});
 								}}>

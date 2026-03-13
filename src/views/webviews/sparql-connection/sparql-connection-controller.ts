@@ -8,6 +8,7 @@ import { SparqlConnection } from '@src/services/sparql/sparql-connection';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { WebviewController } from '../webview-controller';
 import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
+import { getConfig } from '@src/utilities/config';
 
 export class SparqlConnectionController extends WebviewController<SparqlConnectionMessages> {
     private selectedConnection?: SparqlConnection;
@@ -102,13 +103,18 @@ export class SparqlConnectionController extends WebviewController<SparqlConnecti
                 this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
                 return true;
             }
-            case 'ToggleInferenceEnabled': {
+            case 'GetInferenceFeatureEnabled': {
+                const value = getConfig().get<boolean>('inference.enabled', false);
+                this.postMessage({ id: 'GetInferenceFeatureEnabledResult', value });
+                return true;
+            }
+            case 'ToggleSparqlConnectionInference': {
                 const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
                 const newValue = await connectionService.toggleInferenceEnabled(message.connectionId);
-                this.postMessage({ 
-                    id: 'ToggleInferenceEnabledResult', 
+                this.postMessage({
+                    id: 'ToggleSparqlConnectionInferenceResult',
                     connectionId: message.connectionId,
-                    inferenceEnabled: newValue 
+                    inferenceEnabled: newValue
                 });
                 return true;
             }
