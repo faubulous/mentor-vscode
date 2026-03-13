@@ -27,7 +27,7 @@ export default defineConfig({
     alias: {
       '@src': path.resolve(__dirname, 'src'),
       // Map vscode module to local stub for tests so the test explorer can resolve it
-      'vscode': path.resolve(__dirname, 'src/mocks/vscode.ts')
+      'vscode': path.resolve(__dirname, 'src/utilities/mocks/vscode.ts')
     }
   }
 });

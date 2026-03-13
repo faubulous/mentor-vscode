@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/services/sparql';
+import { getConfig } from '@src/utilities/config';
 
 /**
  * Provides a CodeLens to display and change the current SPARQL endpoint.
@@ -9,16 +10,18 @@ import { ISparqlConnectionService } from '@src/services/sparql';
 export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
+	private _connectionService: ISparqlConnectionService;
+
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		this._connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
-		connectionService.onDidChangeConnectionForDocument(() => {
+		this._connectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();
 		});
 
-		connectionService.onDidChangeConnections(() => {
+		this._connectionService.onDidChangeConnections(() => {
 			this.refresh();
 		});
 	}
@@ -29,8 +32,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	 * @returns A promise that resolves to an array of CodeLenses.
 	 */
 	public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		const connection = await connectionService.getConnectionForDocument(document.uri);
+		const connection = this._connectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {
 			return [];
@@ -49,9 +51,11 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 
 		codeLenses.push(connectionCodeLens);
 
+		const config = getConfig();
+
 		// Inference status CodeLens (only for connections that support inference)
-		if (connectionService.supportsInference(connection)) {
-			const inferenceEnabled = connectionService.getInferenceEnabledForDocument(document.uri);
+		if (config.get('inference.enabled') && this._connectionService.supportsInference(connection)) {
+			const inferenceEnabled = this._connectionService.getInferenceEnabledForDocument(document.uri);
 			const inferenceIcon = inferenceEnabled ? '$(lightbulb-sparkle)' : '$(lightbulb-sparkle)';
 			const inferenceText = inferenceEnabled ? 'on' : 'off';
 			const inferenceTooltip = inferenceEnabled
