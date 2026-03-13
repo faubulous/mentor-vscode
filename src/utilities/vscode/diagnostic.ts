@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 
 export type PrefixDiagnosticCode = 'UndefinedNamespacePrefixError' | 'UnusedNamespacePrefixHint' | string;
 
@@ -55,50 +53,4 @@ export function getPrefixesWithErrorCode(document: vscode.TextDocument, diagnost
 	}
 
 	return Array.from(result);
-}
-
-/**
- * Identify prefixes that are declared in the document but not used anywhere.
- * @param document The document to analyze.
- * @param context The document context, which should include namespace definitions and tokens.
- * @returns An array of unused prefix names.
- */
-export function getUnusedPrefixes(document: vscode.TextDocument, context: TurtleDocument): string[] {
-	const declared = Object.keys(context.namespaceDefinitions ?? {});
-
-	if (declared.length === 0) {
-		return [];
-	}
-
-	const prefixDeclarationLines = new Set<number>();
-
-	for (const token of context.tokens) {
-		const type = token.tokenType.name;
-
-		if (type === RdfToken.PREFIX.name || type === RdfToken.TTL_PREFIX.name) {
-			prefixDeclarationLines.add((token.startLine ?? 1) - 1);
-		}
-	}
-
-	const used = new Set<string>();
-
-	for (const token of context.tokens) {
-		const type = token.tokenType.name;
-
-		if (type !== RdfToken.PNAME_NS.name && type !== RdfToken.PNAME_LN.name) {
-			continue;
-		}
-
-		const line = (token.startLine ?? 1) - 1;
-
-		if (prefixDeclarationLines.has(line)) {
-			continue;
-		}
-
-		const prefix = token.image.split(':')[0];
-
-		if (prefix) used.add(prefix);
-	}
-
-	return declared.filter(p => !used.has(p));
 }

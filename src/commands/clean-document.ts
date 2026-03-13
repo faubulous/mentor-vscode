@@ -1,9 +1,5 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/document';
-import { TurtleDocument } from '@src/languages/turtle/turtle-document';
-import { getUnusedPrefixes } from '@src/utilities/vscode/diagnostic';
+import { getPrefixesWithErrorCode } from '@src/utilities/vscode/diagnostic';
 
 export const cleanDocument = {
 	id: 'mentor.command.cleanDocument',
@@ -31,14 +27,8 @@ export const cleanDocument = {
 };
 
 async function removeUnusedPrefixes(document: vscode.TextDocument): Promise<boolean> {
-	const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	const context = contextService.getDocumentContext(document, TurtleDocument);
-
-	if (!context) {
-		return false;
-	}
-
-	const unusedPrefixes = getUnusedPrefixes(document, context);
+	const documentDiagnostics = vscode.languages.getDiagnostics(document.uri);
+	const unusedPrefixes = getPrefixesWithErrorCode(document, documentDiagnostics, 'UnusedNamespacePrefixHint');
 
 	if (unusedPrefixes.length === 0) {
 		return false;

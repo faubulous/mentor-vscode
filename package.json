@@ -773,13 +773,13 @@
       },
       {
         "command": "mentor.command.convertFileFormat",
-        "title": "Convert File Format..",
+        "title": "Convert Format..",
         "icon": "$(file-zip)",
         "category": "Mentor"
       },
       {
         "command": "mentor.command.cleanDocument",
-        "title": "Clean..",
+        "title": "Clean Document",
         "category": "Mentor"
       }
     ],
@@ -913,13 +913,13 @@
       "editor/context": [
         {
           "command": "mentor.command.convertFileFormat",
-          "group": "1_modification@99",
-          "when": "editorTextFocus && !notebookCellType && mentor.command.convertFileFormat.executable"
+          "group": "1_modification@98",
+          "when": "editorTextFocus && mentor.command.convertFileFormat.executable"
         },
         {
           "command": "mentor.command.cleanDocument",
-          "group": "1_modification@98",
-          "when": "editorTextFocus && !notebookCellType && (editorLangId == 'sparql' || editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads')"
+          "group": "1_modification@4",
+          "when": "editorTextFocus && (editorLangId == 'sparql' || editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads' || editorLangId == 'datalog')"
         }
       ],
       "notebook/toolbar": [
