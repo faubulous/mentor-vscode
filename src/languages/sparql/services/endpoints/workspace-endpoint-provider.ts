@@ -18,7 +18,7 @@ export type StoreGetter = () => Store;
  * RDF/JS store used by the Mentor extension. Inference is supported
  * by filtering out quads from inference graphs when disabled.
  */
-export class WorkspaceQuerySourceProvider implements ISparqlEndpointProvider {
+export class WorkspaceEndpointProvider implements ISparqlEndpointProvider {
 	readonly storeType: SparqlStoreType = 'workspace';
 
 	readonly supportsInference = true;

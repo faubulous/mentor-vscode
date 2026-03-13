@@ -11,10 +11,10 @@ import { SparqlConnection } from './sparql-connection';
 import { ComunicaEndpoint } from './sparql-endpoint';
 import { SparqlEndpointFactory } from './sparql-endpoint-factory';
 import {
-	DefaultSparqlQuerySourceProvider,
-	GraphDbQuerySourceProvider,
-	WorkspaceQuerySourceProvider,
-} from '@src/languages/sparql/services/query-sources';
+	DefaultSparqlEndpointProvider,
+	GraphDbEndpointProvider,
+	WorkspaceEndpointProvider,
+} from '@src/languages/sparql/services/endpoints';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 const DEFAULT_INFERENCE_ENABLED_CONFIG_KEY = 'sparql.defaultInferenceEnabled';
@@ -72,9 +72,9 @@ export class SparqlConnectionService {
 	) {
 		// Initialize the query source factory with all providers
 		this._querySourceFactory = new SparqlEndpointFactory();
-		this._querySourceFactory.registerProvider(new WorkspaceQuerySourceProvider(() => this.store));
-		this._querySourceFactory.registerProvider(new GraphDbQuerySourceProvider());
-		this._querySourceFactory.registerProvider(new DefaultSparqlQuerySourceProvider());
+		this._querySourceFactory.registerProvider(new WorkspaceEndpointProvider(() => this.store));
+		this._querySourceFactory.registerProvider(new GraphDbEndpointProvider());
+		this._querySourceFactory.registerProvider(new DefaultSparqlEndpointProvider());
 
 		// Initialize workspace store with saved inference setting
 		const workspaceStore = this._createWorkspaceStoreConnection();

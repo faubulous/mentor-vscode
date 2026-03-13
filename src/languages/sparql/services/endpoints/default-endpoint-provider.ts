@@ -10,7 +10,7 @@ import { ISparqlEndpointProvider, SparqlEndpointOptions } from '../sparql-endpoi
  * It serves as a fallback when no specific provider is registered for
  * a store type.
  */
-export class DefaultSparqlQuerySourceProvider implements ISparqlEndpointProvider {
+export class DefaultSparqlEndpointProvider implements ISparqlEndpointProvider {
     readonly storeType: SparqlStoreType = 'sparql';
 
     readonly supportsInference = false;

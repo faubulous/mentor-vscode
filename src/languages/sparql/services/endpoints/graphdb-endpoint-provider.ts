@@ -11,7 +11,7 @@ import { ISparqlEndpointProvider, SparqlEndpointOptions } from '../sparql-endpoi
  * 
  * @see https://graphdb.ontotext.com/documentation/10.0/sparql-api.html
  */
-export class GraphDbQuerySourceProvider implements ISparqlEndpointProvider {
+export class GraphDbEndpointProvider implements ISparqlEndpointProvider {
     readonly storeType: SparqlStoreType = 'graphdb';
 
     readonly supportsInference = true;
