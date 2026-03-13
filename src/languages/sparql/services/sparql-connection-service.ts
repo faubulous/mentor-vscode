@@ -8,8 +8,8 @@ import { ICredentialStorageService } from '@src/services/core';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '@src/services/core/credential';
 import { SparqlConnection } from './sparql-connection';
-import { ComunicaSource } from './sparql-query-source';
-import { SparqlQuerySourceFactory } from './sparql-query-source-factory';
+import { ComunicaEndpoint } from './sparql-endpoint';
+import { SparqlEndpointFactory } from './sparql-endpoint-factory';
 import {
 	DefaultSparqlQuerySourceProvider,
 	GraphDbQuerySourceProvider,
@@ -60,7 +60,7 @@ export class SparqlConnectionService {
 
 	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
 
-	private _querySourceFactory: SparqlQuerySourceFactory;
+	private _querySourceFactory: SparqlEndpointFactory;
 
 	private get store(): Store {
 		return container.resolve<Store>(ServiceToken.Store);
@@ -71,7 +71,7 @@ export class SparqlConnectionService {
 		private readonly _credentialStorage: ICredentialStorageService
 	) {
 		// Initialize the query source factory with all providers
-		this._querySourceFactory = new SparqlQuerySourceFactory();
+		this._querySourceFactory = new SparqlEndpointFactory();
 		this._querySourceFactory.registerProvider(new WorkspaceQuerySourceProvider(() => this.store));
 		this._querySourceFactory.registerProvider(new GraphDbQuerySourceProvider());
 		this._querySourceFactory.registerProvider(new DefaultSparqlQuerySourceProvider());
@@ -576,7 +576,7 @@ export class SparqlConnectionService {
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @returns A promise that resolves to a ComunicaSource configuration.
 	 */
-	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource> {
+	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaEndpoint> {
 		const connection = this.getConnectionForDocument(documentUri);
 		const inferenceEnabled = this.getInferenceEnabledForDocument(documentUri);
 		return this._querySourceFactory.createQuerySource(connection, inferenceEnabled);
@@ -587,7 +587,7 @@ export class SparqlConnectionService {
 	 * @param connection The SPARQL connection.
 	 * @returns A promise that resolves to a ComunicaSource configuration.
 	 */
-	async getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaSource> {
+	async getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaEndpoint> {
 		const inferenceEnabled = connection.inferenceEnabled ?? this.getDefaultInferenceEnabled();
 		return this._querySourceFactory.createQuerySource(connection, inferenceEnabled);
 	}

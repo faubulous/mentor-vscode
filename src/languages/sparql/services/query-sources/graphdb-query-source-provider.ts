@@ -1,6 +1,6 @@
 import { SparqlConnection, SparqlStoreType } from '../sparql-connection';
-import { ComunicaSource, SparqlConnectionSource } from '../sparql-query-source';
-import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-source-provider.interface';
+import { ComunicaEndpoint, SparqlEndpoint } from '../sparql-endpoint';
+import { ISparqlEndpointProvider, SparqlEndpointOptions } from '../sparql-endpoint-provider.interface';
 
 /**
  * Query source provider for Ontotext GraphDB SPARQL endpoints.
@@ -11,19 +11,19 @@ import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-
  * 
  * @see https://graphdb.ontotext.com/documentation/10.0/sparql-api.html
  */
-export class GraphDbQuerySourceProvider implements ISparqlQuerySourceProvider {
+export class GraphDbQuerySourceProvider implements ISparqlEndpointProvider {
     readonly storeType: SparqlStoreType = 'graphdb';
 
     readonly supportsInference = true;
 
-    async createQuerySource(
+    async createEndpoint(
         connection: SparqlConnection,
-        options: QuerySourceOptions
-    ): Promise<ComunicaSource> {
+        options: SparqlEndpointOptions
+    ): Promise<ComunicaEndpoint> {
         const url = new URL(connection.endpointUrl);
         url.searchParams.set('infer', options.inferenceEnabled ? 'true' : 'false');
 
-        const source: SparqlConnectionSource = {
+        const source: SparqlEndpoint = {
             type: 'sparql',
             value: url.toString(),
             connection: connection,
@@ -34,7 +34,7 @@ export class GraphDbQuerySourceProvider implements ISparqlQuerySourceProvider {
 
     async getGraphs(
         _connection: SparqlConnection,
-        _options: QuerySourceOptions
+        _options: SparqlEndpointOptions
     ): Promise<string[]> {
         // TODO: Implement GraphDB-specific graph retrieval via SPARQL query
         // e.g., SELECT DISTINCT ?g WHERE { GRAPH ?g { ?s ?p ?o } }

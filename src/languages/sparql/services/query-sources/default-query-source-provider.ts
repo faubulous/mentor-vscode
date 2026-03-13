@@ -1,6 +1,6 @@
 import { SparqlConnection, SparqlStoreType } from '../sparql-connection';
-import { ComunicaSource, SparqlConnectionSource } from '../sparql-query-source';
-import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-source-provider.interface';
+import { ComunicaEndpoint, SparqlEndpoint } from '../sparql-endpoint';
+import { ISparqlEndpointProvider, SparqlEndpointOptions } from '../sparql-endpoint-provider.interface';
 
 /**
  * Default query source provider for generic SPARQL endpoints.
@@ -10,16 +10,16 @@ import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-
  * It serves as a fallback when no specific provider is registered for
  * a store type.
  */
-export class DefaultSparqlQuerySourceProvider implements ISparqlQuerySourceProvider {
+export class DefaultSparqlQuerySourceProvider implements ISparqlEndpointProvider {
     readonly storeType: SparqlStoreType = 'sparql';
 
     readonly supportsInference = false;
 
-    async createQuerySource(
+    async createEndpoint(
         connection: SparqlConnection,
-        _options: QuerySourceOptions
-    ): Promise<ComunicaSource> {
-        const source: SparqlConnectionSource = {
+        _options: SparqlEndpointOptions
+    ): Promise<ComunicaEndpoint> {
+        const source: SparqlEndpoint = {
             type: 'sparql',
             value: connection.endpointUrl,
             connection: connection,
@@ -30,7 +30,7 @@ export class DefaultSparqlQuerySourceProvider implements ISparqlQuerySourceProvi
 
     async getGraphs(
         _connection: SparqlConnection,
-        _options: QuerySourceOptions
+        _options: SparqlEndpointOptions
     ): Promise<string[]> {
         // TODO: Implement generic SPARQL graph retrieval via SPARQL query
         // e.g., SELECT DISTINCT ?g WHERE { GRAPH ?g { ?s ?p ?o } }

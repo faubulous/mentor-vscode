@@ -1,8 +1,8 @@
 import { Store } from '@faubulous/mentor-rdf';
 import { SparqlConnection, SparqlStoreType } from '../sparql-connection';
-import { ComunicaSource } from '../sparql-query-source';
+import { ComunicaEndpoint } from '../sparql-endpoint';
 import { createFilteredSource } from '../sparql-inference-filter';
-import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-source-provider.interface';
+import { ISparqlEndpointProvider, SparqlEndpointOptions } from '../sparql-endpoint-provider.interface';
 import { InferenceUri } from '@src/providers/inference-uri';
 
 /**
@@ -18,17 +18,17 @@ export type StoreGetter = () => Store;
  * RDF/JS store used by the Mentor extension. Inference is supported
  * by filtering out quads from inference graphs when disabled.
  */
-export class WorkspaceQuerySourceProvider implements ISparqlQuerySourceProvider {
+export class WorkspaceQuerySourceProvider implements ISparqlEndpointProvider {
 	readonly storeType: SparqlStoreType = 'workspace';
 
 	readonly supportsInference = true;
 
 	constructor(private readonly _getStore: StoreGetter) { }
 
-	async createQuerySource(
+	async createEndpoint(
 		_connection: SparqlConnection,
-		options: QuerySourceOptions
-	): Promise<ComunicaSource> {
+		options: SparqlEndpointOptions
+	): Promise<ComunicaEndpoint> {
 		const store = this._getStore();
 
 		if (!options.inferenceEnabled) {
@@ -48,7 +48,7 @@ export class WorkspaceQuerySourceProvider implements ISparqlQuerySourceProvider 
 
 	async getGraphs(
 		_connection: SparqlConnection,
-		options: QuerySourceOptions
+		options: SparqlEndpointOptions
 	): Promise<string[]> {
 		const store = this._getStore();
 		let graphs = store.getGraphs();

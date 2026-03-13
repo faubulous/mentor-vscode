@@ -1,10 +1,10 @@
 import { SparqlConnection, SparqlStoreType } from './sparql-connection';
-import { ComunicaSource } from './sparql-query-source';
+import { ComunicaEndpoint } from './sparql-endpoint';
 
 /**
  * Options for creating a query source.
  */
-export interface QuerySourceOptions {
+export interface SparqlEndpointOptions {
     /**
      * Whether inference should be enabled for the query source.
      */
@@ -18,7 +18,7 @@ export interface QuerySourceOptions {
  * Each provider handles a specific store type and knows how to configure
  * inference and other store-specific features.
  */
-export interface ISparqlQuerySourceProvider {
+export interface ISparqlEndpointProvider {
     /**
      * The store type this provider handles.
      */
@@ -35,10 +35,10 @@ export interface ISparqlQuerySourceProvider {
      * @param options Options including inference settings.
      * @returns A promise that resolves to a ComunicaSource configuration.
      */
-    createQuerySource(
+    createEndpoint(
         connection: SparqlConnection,
-        options: QuerySourceOptions
-    ): Promise<ComunicaSource>;
+        options: SparqlEndpointOptions
+    ): Promise<ComunicaEndpoint>;
 
     /**
      * Retrieves the list of named graphs available from the query source.
@@ -48,6 +48,6 @@ export interface ISparqlQuerySourceProvider {
      */
     getGraphs(
         connection: SparqlConnection,
-        options: QuerySourceOptions
+        options: SparqlEndpointOptions
     ): Promise<string[]>;
 }

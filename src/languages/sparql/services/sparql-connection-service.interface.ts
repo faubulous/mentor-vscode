@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '@src/services/core/credential';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { ComunicaSource } from '@src/languages/sparql/services/sparql-query-source';
+import { ComunicaEndpoint } from '@src/languages/sparql/services/sparql-endpoint';
 
 /**
  * Interface for the SparqlConnectionService.
@@ -75,14 +75,14 @@ export interface ISparqlConnectionService {
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @returns A promise that resolves to a ComunicaSource configuration.
 	 */
-	getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaSource>;
+	getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaEndpoint>;
 
 	/**
 	 * Gets a Comunica query source for a specific connection.
 	 * @param connection The SPARQL connection.
 	 * @returns A promise that resolves to a ComunicaSource configuration.
 	 */
-	getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaSource>;
+	getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaEndpoint>;
 
 	/**
 	 * Retrieves the list of named graphs available for a document.

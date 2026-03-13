@@ -1,6 +1,6 @@
 import { SparqlConnection, SparqlStoreType } from './sparql-connection';
-import { ComunicaSource } from './sparql-query-source';
-import { ISparqlQuerySourceProvider } from './sparql-query-source-provider.interface';
+import { ComunicaEndpoint } from './sparql-endpoint';
+import { ISparqlEndpointProvider } from './sparql-endpoint-provider.interface';
 
 /**
  * Factory for creating Comunica-compatible query sources based on connection type.
@@ -9,16 +9,16 @@ import { ISparqlQuerySourceProvider } from './sparql-query-source-provider.inter
  * It delegates query source creation to the appropriate provider based on the
  * connection's store type.
  */
-export class SparqlQuerySourceFactory {
-    private readonly _providers = new Map<SparqlStoreType, ISparqlQuerySourceProvider>();
+export class SparqlEndpointFactory {
+    private readonly _providers = new Map<SparqlStoreType, ISparqlEndpointProvider>();
 	
-    private _defaultProvider?: ISparqlQuerySourceProvider;
+    private _defaultProvider?: ISparqlEndpointProvider;
 
     /**
      * Registers a query source provider for a specific store type.
      * @param provider The provider to register.
      */
-    registerProvider(provider: ISparqlQuerySourceProvider): void {
+    registerProvider(provider: ISparqlEndpointProvider): void {
         this._providers.set(provider.storeType, provider);
     }
 
@@ -26,7 +26,7 @@ export class SparqlQuerySourceFactory {
      * Sets the default provider to use when no specific provider is found.
      * @param provider The default provider.
      */
-    setDefaultProvider(provider: ISparqlQuerySourceProvider): void {
+    setDefaultProvider(provider: ISparqlEndpointProvider): void {
         this._defaultProvider = provider;
     }
 
@@ -35,7 +35,7 @@ export class SparqlQuerySourceFactory {
      * @param storeType The store type.
      * @returns The provider, or undefined if not found.
      */
-    getProvider(storeType: SparqlStoreType): ISparqlQuerySourceProvider | undefined {
+    getProvider(storeType: SparqlStoreType): ISparqlEndpointProvider | undefined {
         return this._providers.get(storeType);
     }
 
@@ -55,7 +55,7 @@ export class SparqlQuerySourceFactory {
      * @param inferenceEnabled Whether inference should be enabled.
      * @returns A promise that resolves to a ComunicaSource configuration.
      */
-    async createQuerySource(connection: SparqlConnection, inferenceEnabled: boolean): Promise<ComunicaSource> {
+    async createQuerySource(connection: SparqlConnection, inferenceEnabled: boolean): Promise<ComunicaEndpoint> {
         const storeType = connection.storeType ?? 'sparql';
         const provider = this._providers.get(storeType) ?? this._defaultProvider;
 
@@ -63,7 +63,7 @@ export class SparqlQuerySourceFactory {
             throw new Error(`No query source provider registered for store type: ${storeType}`);
         }
 
-        return provider.createQuerySource(connection, { inferenceEnabled });
+        return provider.createEndpoint(connection, { inferenceEnabled });
     }
 
     /**
