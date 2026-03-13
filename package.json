@@ -714,18 +714,6 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.toggleSparqlConnectionInference",
-        "title": "Toggle Inference",
-        "icon": "$(lightbulb-sparkle)",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.toggleDocumentInference",
-        "title": "Toggle Document Inference",
-        "icon": "$(lightbulb-sparkle)",
-        "category": "Mentor"
-      },
-      {
         "command": "mentor.command.setNotebookConnection",
         "title": "Connection",
         "icon": "$(database)",
