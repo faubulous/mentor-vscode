@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { WorkspaceUri } from '@src/providers/core/workspace-uri';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { IWorkspaceFileService } from '@src/services/core';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { getFileName, getPath } from '@src/utilities';

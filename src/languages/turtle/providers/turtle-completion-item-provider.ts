@@ -7,7 +7,7 @@ import { IDocumentContextService } from '@src/services/document';
 import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
-import { WorkspaceUri } from "@src/providers/core/workspace-uri";
+import { WorkspaceUri } from "@src/providers/workspace-uri";
 
 /**
  * Represents a completion item that has an associated IRI (Internationalized Resource Identifier).

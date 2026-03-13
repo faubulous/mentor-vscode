@@ -2,19 +2,19 @@ import * as vscode from 'vscode';
 import { v4 as uuidv4 } from 'uuid';
 import { Store } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
+import { getConfig } from '@src/utilities/config';
 import { ServiceToken } from '@src/services/tokens';
 import { ICredentialStorageService } from '@src/services/core';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { AuthCredential } from '../core/credential';
+import { AuthCredential } from '@src/services/core/credential';
 import { SparqlConnection } from './sparql-connection';
 import { ComunicaSource } from './sparql-query-source';
-import { getConfig } from '@src/utilities/config';
 import { SparqlQuerySourceFactory } from './sparql-query-source-factory';
 import {
 	DefaultSparqlQuerySourceProvider,
 	GraphDbQuerySourceProvider,
 	WorkspaceQuerySourceProvider,
-} from '@src/services/sparql/query-sources';
+} from '@src/languages/sparql/services/query-sources';
 
 const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
 const DEFAULT_INFERENCE_ENABLED_CONFIG_KEY = 'sparql.defaultInferenceEnabled';

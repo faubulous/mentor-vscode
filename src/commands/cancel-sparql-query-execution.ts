@@ -1,6 +1,6 @@
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlQueryService } from '@src/services/sparql';
+import { ISparqlQueryService } from '@src/languages/sparql/services';
 
 export const cancelSparqlQueryExecution = {
 	id: 'mentor.command.cancelSparqlQueryExecution',

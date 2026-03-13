@@ -12,14 +12,14 @@ import { getIriFromToken, getTokenPosition } from '@src/utilities';
 import { getConfig } from '@src/utilities/config';
 
 /**
- * Provides additional diagnostics for RDF documents that require access 
+ * Provides additional diagnostics for RDF documents that require access
  * to the mentor in-memory triple store.
- * 
- * This provider supplements the LSP-based diagnostics from the language 
+ *
+ * This service supplements the LSP-based diagnostics from the language
  * servers with diagnostics that require knowledge of the workspace RDF data,
  * such as validating that referenced IRIs exist in the triple store.
  */
-export class DocumentLintingProvider implements vscode.Disposable {
+export class DocumentLintingService implements vscode.Disposable {
 	/**
 	 * The diagnostic collection for document linting.
 	 */

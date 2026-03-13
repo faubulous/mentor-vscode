@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { DatalogRenameProvider } from '@src/providers/datalog';
+import { DatalogRenameProvider } from '@src/languages/datalog/providers';
 
 const renameProvider = new DatalogRenameProvider();
 

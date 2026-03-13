@@ -9,6 +9,7 @@ import { IWorkspaceFileService } from './services/core';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
+import { DocumentLintingService } from './services/document/document-linting-service';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
@@ -73,7 +74,7 @@ function registerNotebookSerializers() {
  * Registers various providers for language features, file system access and URI handling.
  */
 function registerProviders() {
-	new providers.DocumentLintingProvider();
+	new DocumentLintingService();
 	new providers.WorkspaceUriLinkProvider();
 	new providers.WorkspaceFileSystemProvider();
 	new providers.InferenceUriLinkProvider();

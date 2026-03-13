@@ -3,7 +3,7 @@ import { SparqlConnection, SparqlStoreType } from '../sparql-connection';
 import { ComunicaSource } from '../sparql-query-source';
 import { createFilteredSource } from '../sparql-inference-filter';
 import { ISparqlQuerySourceProvider, QuerySourceOptions } from '../sparql-query-source-provider.interface';
-import { InferenceUri } from '@src/providers/core/inference-uri';
+import { InferenceUri } from '@src/providers/inference-uri';
 
 /**
  * A function that returns the workspace RDF store.

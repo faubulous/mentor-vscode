@@ -7,7 +7,7 @@ import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
-import { WorkspaceUri } from '@src/providers/core/workspace-uri';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
 import { getConfig } from '@src/utilities/config';
 import { IDocumentContext } from './document-context.interface';

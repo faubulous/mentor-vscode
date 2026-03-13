@@ -1,5 +1,5 @@
 import * as rdfjs from '@rdfjs/types';
-import { InferenceUri } from '@src/providers/core/inference-uri';
+import { InferenceUri } from '@src/providers/inference-uri';
 
 /**
  * Creates a filtered source that wraps an RDF/JS store and filters out quads

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWebviewMessaging, useStylesheet } from '@src/views/webviews/webview-hooks';
-import { SparqlQueryExecutionState, getDisplayName } from '@src/services/sparql/sparql-query-state';
+import { SparqlQueryExecutionState, getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import stylesheet from './sparql-welcome-view.css';
 

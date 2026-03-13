@@ -1,0 +1,4 @@
+export { ISparqlConnectionService } from './sparql-connection-service.interface';
+export { ISparqlQueryService } from './sparql-query-service.interface';
+export { ISparqlResultSerializer } from './sparql-result-serializer.interface';
+export { createFilteredSource } from './sparql-inference-filter';

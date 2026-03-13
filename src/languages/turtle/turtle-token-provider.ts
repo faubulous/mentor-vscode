@@ -13,7 +13,7 @@ import {
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider,
 	TurtleCodeFormattingProvider
-} from '@src/providers/turtle';
+} from '@src/languages/turtle/providers';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
 const codelensProvider = new TurtleCodeLensProvider();

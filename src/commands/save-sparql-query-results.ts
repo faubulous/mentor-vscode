@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SparqlQueryExecutionState, BindingsResult } from '@src/services/sparql/sparql-query-state';
+import { SparqlQueryExecutionState, BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 
 export const saveSparqlQueryResults = {
     id: 'mentor.command.saveSparqlQueryResults',

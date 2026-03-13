@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
-import { TurtlePrefixDefinitionService } from './turtle-prefix-definition-service';
+import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 
 // Mock all problematic modules BEFORE importing the service
 vi.mock('@src/languages', () => ({

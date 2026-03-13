@@ -1,6 +1,6 @@
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { SparqlConnection } from '@src/services/sparql/sparql-connection';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { SparqlConnectionController } from '@src/views/webviews';
 
 export const editSparqlConnection = {

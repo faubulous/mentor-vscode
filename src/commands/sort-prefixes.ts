@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { TurtlePrefixDefinitionService } from '@src/services/turtle/turtle-prefix-definition-service';
+import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 
 export const sortPrefixes = {
 	id: 'mentor.command.sortPrefixes',

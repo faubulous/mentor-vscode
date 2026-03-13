@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/services/sparql';
+import { ISparqlConnectionService } from '@src/languages/sparql/services';
 
 export const toggleDocumentInference = {
 	id: 'mentor.command.toggleDocumentInference',

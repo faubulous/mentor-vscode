@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './tokens';
-import { InferenceUri } from '../providers/core/inference-uri';
+import { InferenceUri } from '../providers/inference-uri';
 import { DocumentFactory } from './document/document-factory';
 import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
@@ -12,10 +12,10 @@ import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
 import { PrefixDownloaderService } from './document/prefix-downloader-service';
 import { PrefixLookupService } from './document/prefix-lookup-service';
-import { SparqlConnectionService } from './sparql/sparql-connection-service';
-import { SparqlResultSerializer } from './sparql/sparql-result-serializer';
-import { SparqlQueryService } from './sparql/sparql-query-service';
-import { TurtlePrefixDefinitionService } from './turtle/turtle-prefix-definition-service';
+import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
+import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
+import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
+import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.

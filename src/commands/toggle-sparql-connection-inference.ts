@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/services/sparql';
-import { SparqlConnection } from '@src/services/sparql/sparql-connection';
+import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
 export const toggleSparqlConnectionInference = {
 	id: 'mentor.command.toggleSparqlConnectionInference',

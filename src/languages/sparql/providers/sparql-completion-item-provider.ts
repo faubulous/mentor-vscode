@@ -2,8 +2,8 @@ import * as vscode from "vscode";
 import { container } from 'tsyringe';
 import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/services/sparql';
-import { TurtleCompletionItemProvider } from "@src/providers/turtle";
+import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {

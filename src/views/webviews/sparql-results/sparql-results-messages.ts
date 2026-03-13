@@ -1,4 +1,4 @@
-import { SparqlQueryExecutionState } from "@src/services/sparql/sparql-query-state";
+import { SparqlQueryExecutionState } from "@src/languages/sparql/services/sparql-query-state";
 import { ExecuteCommandMessage } from '../webview-messaging';
 
 export type SparqlResultsWebviewMessages =

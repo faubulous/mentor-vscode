@@ -1,4 +1,4 @@
-import { SparqlConnection } from "@src/services/sparql/sparql-connection";
+import { SparqlConnection } from "@src/languages/sparql/services/sparql-connection";
 import { AuthCredential, MicrosoftAuthCredential } from '@src/services/core/credential';
 import { ExecuteCommandMessage } from '../webview-messaging';
 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { SparqlQueryExecutionState } from '@src/services/sparql/sparql-query-state';
+import { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlResultsController } from '@src/views/webviews';
 import { executeNotebookCell } from './execute-notebook-cell';
 
