@@ -47,5 +47,7 @@ export enum ServiceToken {
 	/** Controller for the SPARQL connection editor webview. */
 	SparqlConnectionController = "SparqlConnectionController",
 	/** Controller for the SPARQL connections list webview. */
-	SparqlConnectionsListController = "SparqlConnectionsListController"
+	SparqlConnectionsListController = "SparqlConnectionsListController",
+	/** Factory for creating platform-specific language clients (browser Worker vs Node.js IPC). */
+	LanguageClientFactory = "LanguageClientFactory"
 }

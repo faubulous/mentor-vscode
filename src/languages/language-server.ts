@@ -1,10 +1,7 @@
 import { XSD } from '@faubulous/mentor-rdf';
 import { IParser, ILexer, IToken, IRecognitionException, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import {
-	BrowserMessageReader,
-	BrowserMessageWriter,
 	Connection,
-	createConnection,
 	Diagnostic,
 	DiagnosticSeverity,
 	DiagnosticTag,
@@ -95,17 +92,14 @@ export abstract class LanguageServerBase {
 	 */
 	parser: IParser;
 
-	constructor(langaugeId: string, languageName: string, lexer: ILexer, parser: IParser, isRdfTokenProvider = false) {
+	constructor(connection: Connection, langaugeId: string, languageName: string, lexer: ILexer, parser: IParser, isRdfTokenProvider = false) {
 		this.languageName = languageName;
 		this.languageId = langaugeId;
 		this.lexer = lexer;
 		this.parser = parser;
 		this.isRdfTokenProvider = isRdfTokenProvider;
 
-		const messageReader = new BrowserMessageReader(self);
-		const messageWriter = new BrowserMessageWriter(self);
-
-		this.connection = createConnection(messageReader, messageWriter);
+		this.connection = connection;
 		this.connection.onInitialize(this.onInitializeConnection.bind(this));
 		this.connection.onInitialized(this.onConnectionInitialized.bind(this));
 		this.connection.onDidChangeConfiguration(this.onDidChangeConfiguration.bind(this));

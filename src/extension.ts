@@ -10,6 +10,7 @@ import { WorkspaceIndexerService } from './services/core/workspace-indexer-servi
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
 import { DocumentLintingService } from './services/document/document-linting-service';
+import { createBrowserLanguageClient } from './languages/language-client-factory-browser';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
@@ -20,6 +21,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
 
 	configureServiceContainer(context);
+
+	// Register the browser-specific language client factory.
+	// This creates language clients that use Web Workers to communicate with language servers.
+	container.registerInstance(ServiceToken.LanguageClientFactory, createBrowserLanguageClient);
 
 	await loadFrameworkOntologies();
 

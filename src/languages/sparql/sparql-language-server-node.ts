@@ -1,4 +1,4 @@
-import { BrowserMessageReader, BrowserMessageWriter, createConnection, Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver/browser';
+import { createConnection, ProposedFeatures, Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver/node';
 import { SparqlLexer, SparqlParser, IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { LanguageServerBase } from '@src/languages/language-server';
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -28,9 +28,10 @@ interface QueryScope {
 	projectionVariables: Set<string>;
 }
 
+const connection = createConnection(ProposedFeatures.all);
+
 class SparqlLanguageServer extends LanguageServerBase {
 	constructor() {
-		const connection = createConnection(new BrowserMessageReader(self), new BrowserMessageWriter(self));
 		super(connection, 'sparql', 'SPARQL', new SparqlLexer(), new SparqlParser(), true);
 	}
 
@@ -63,13 +64,10 @@ class SparqlLanguageServer extends LanguageServerBase {
 				continue;
 			}
 
-			// Only check the variable usage in SELECT/CONSTRUCT/DESCRIBE queries.
-			// In ASK queries, all variables are considered used.
 			switch (token.tokenType.name) {
 				case RdfToken.SELECT.name:
 				case RdfToken.CONSTRUCT.name:
 				case RdfToken.DESCRIBE.name: {
-					// Start tracking a new query scope
 					const newScope: QueryScope = {
 						isStarSelect: false,
 						depth: currentDepth,
@@ -86,7 +84,6 @@ class SparqlLanguageServer extends LanguageServerBase {
 					break;
 				}
 				case RdfToken.STAR.name: {
-					// Check if this is a SELECT * (star in select clause)
 					if (inSelectClause && scopeStack.length > 0) {
 						scopeStack[scopeStack.length - 1].isStarSelect = true;
 					}
@@ -95,7 +92,6 @@ class SparqlLanguageServer extends LanguageServerBase {
 				case RdfToken.LCURLY.name: {
 					currentDepth++;
 
-					// End of SELECT clause when we hit the first curly brace
 					if (expectingSelectClause) {
 						expectingSelectClause = false;
 						inSelectClause = false;
@@ -105,7 +101,6 @@ class SparqlLanguageServer extends LanguageServerBase {
 				case RdfToken.RCURLY.name: {
 					currentDepth--;
 
-					// Check if any scopes should be closed
 					while (scopeStack.length > 0 && scopeStack[scopeStack.length - 1].depth > currentDepth) {
 						const closedScope = scopeStack.pop()!;
 						diagnostics.push(...this._checkScopeForUnusedVariables(document, closedScope));
@@ -114,12 +109,10 @@ class SparqlLanguageServer extends LanguageServerBase {
 				}
 				case RdfToken.VAR1.name:
 				case RdfToken.VAR2.name: {
-					// Track variable occurrences in the current scope
 					if (scopeStack.length > 0) {
 						const currentScope = scopeStack[scopeStack.length - 1];
 						const varName = token.image;
 
-						// Check if this variable is a projection target (preceded by AS in SELECT clause)
 						if (inSelectClause && i > 0) {
 							const prevToken = tokens[i - 1];
 
@@ -137,7 +130,6 @@ class SparqlLanguageServer extends LanguageServerBase {
 					break;
 				}
 				case RdfToken.WHERE.name: {
-					// End of SELECT clause
 					if (expectingSelectClause) {
 						expectingSelectClause = false;
 						inSelectClause = false;
@@ -147,7 +139,6 @@ class SparqlLanguageServer extends LanguageServerBase {
 			}
 		}
 
-		// Check any remaining scopes at end of document
 		while (scopeStack.length > 0) {
 			const closedScope = scopeStack.pop()!;
 
@@ -163,14 +154,11 @@ class SparqlLanguageServer extends LanguageServerBase {
 	private _checkScopeForUnusedVariables(document: TextDocument, scope: QueryScope): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 
-		// Don't report unused variables if this is a SELECT * query
 		if (scope.isStarSelect) {
 			return diagnostics;
 		}
 
 		for (const [varName, occurrences] of scope.variables) {
-			// A variable that appears only once is considered unused,
-			// unless it's a projection target in the SELECT clause (AS ?x)
 			if (occurrences.length === 1 && !scope.projectionVariables.has(varName)) {
 				const token = occurrences[0];
 

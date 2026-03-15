@@ -48,6 +48,59 @@ const getExtensionConfig = (args) => {
   }
 }
 
+/**
+ * Returns the Node.js base build configuration with platform: 'node'.
+ * This configuration is used for the desktop extension host and Node.js language servers.
+ */
+const getNodeBaseConfig = (args) => {
+  const productionBuild = isProductionBuild(args);
+
+  return {
+    bundle: true,
+    minify: productionBuild,
+    sourcemap: !productionBuild,
+    format: "cjs",
+    external: ["vscode"],
+    platform: 'node',
+    loader: {
+      '.html': 'text',
+      '.css': 'text'
+    },
+    plugins: [
+      {
+        name: 'rebuild-notify',
+        setup(build) {
+          build.onStart(() => {
+            console.log("Build started (node)..");
+          });
+
+          build.onEnd(result => {
+            console.log(`Build ended (node).`);
+          })
+        },
+      }],
+  }
+}
+
+const getNodeExtensionConfig = (args) => {
+  return {
+    ...getNodeBaseConfig(args),
+    entryPoints: ["./src/extension-node.ts"],
+    outfile: "./dist/extension-node.js"
+  }
+}
+
+const getNodeLanguageConfig = (args, type, language) => {
+  const file = language ? `${language}-language-${type}-node` : `language-${type}-node`;
+  const entryPoint = language ? `./src/languages/${language}/${file}.ts` : `./src/languages/${file}.ts`;
+
+  return {
+    ...getNodeBaseConfig(args),
+    entryPoints: [entryPoint],
+    outfile: `./dist/${file}.js`
+  }
+}
+
 const getLanguageConfig = (args, type, language) => {
   const file = language ? `${language}-language-${type}` : `language-${type}`;
   const entryPoint = language ? `./src/languages/${language}/${file}.ts` : `./src/languages/${file}.ts`;
@@ -277,6 +330,7 @@ const removeSourceMaps = () => {
     }
 
     const configs = [
+      // Browser builds (Web Workers for language servers, browser extension host)
       extensionConfig,
       getLanguageConfig(args, 'server'),
       getLanguageConfig(args, 'server', 'turtle'),
@@ -292,6 +346,16 @@ const removeSourceMaps = () => {
       getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
       getReactViewConfig(args, 'sparql-connection', 'sparql-connection-view'),
       getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list-view'),
+
+      // Node.js builds (IPC for language servers, desktop extension host)
+      getNodeExtensionConfig(args),
+      getNodeLanguageConfig(args, 'server', 'turtle'),
+      getNodeLanguageConfig(args, 'server', 'trig'),
+      getNodeLanguageConfig(args, 'server', 'nquads'),
+      getNodeLanguageConfig(args, 'server', 'ntriples'),
+      getNodeLanguageConfig(args, 'server', 'n3'),
+      getNodeLanguageConfig(args, 'server', 'sparql'),
+      getNodeLanguageConfig(args, 'server', 'xml'),
     ]
 
     if (args.includes("--watch")) {

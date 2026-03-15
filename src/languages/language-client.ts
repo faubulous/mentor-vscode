@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { LanguageClient, LanguageClientOptions } from 'vscode-languageclient/browser';
+import { LanguageClientFactory, ILanguageClient } from './language-client-factory';
 
 export abstract class LanguageClientBase implements vscode.Disposable {
 	/**
@@ -37,7 +37,7 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 	/**
 	 * The VS Code language client.
 	 */
-	client: LanguageClient | undefined;
+	client: ILanguageClient | undefined;
 
 	constructor(languageId: string, languageName: string) {
 		this.languageName = languageName;
@@ -54,19 +54,16 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 	}
 
 	protected start(context: vscode.ExtensionContext) {
-		// Absolute path to the server module.
-		const serverMain = vscode.Uri.joinPath(context.extensionUri, this.serverPath);
+		const factory = container.resolve<LanguageClientFactory>(ServiceToken.LanguageClientFactory);
 
-		// Create a new worker for the language server.
-		const worker = new Worker(serverMain.toString(true));
-
-		const clientOptions: LanguageClientOptions = {
-			diagnosticCollectionName: this.channelId,
-			documentSelector: [{ language: this.languageId }],
+		this.client = factory(context, {
+			channelId: this.channelId,
+			languageName: this.languageName,
+			serverPath: this.serverPath,
+			languageId: this.languageId,
 			outputChannel: this.channel
-		};
+		});
 
-		this.client = new LanguageClient(this.channelId, `${this.languageName} Language Client`, clientOptions, worker);
 		this.client.start();
 	}
 
