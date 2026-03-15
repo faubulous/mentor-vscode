@@ -6,7 +6,8 @@ import { getConfig } from '@src/utilities/vscode/config';
 import { ServiceToken } from '@src/services/tokens';
 import { ICredentialStorageService } from '@src/services/core';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { AuthCredential } from '@src/services/core/credential';
+import { AuthCredential, EntraClientAuthCredential } from '@src/services/core/credential';
+import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
 import { SparqlConnection } from './sparql-connection';
 import { ComunicaEndpoint } from './sparql-endpoint';
 import { SparqlEndpointFactory } from './sparql-endpoint-factory';
@@ -800,7 +801,12 @@ export class SparqlConnectionService {
 			headers.Authorization = `Bearer ${credential.accessToken}`;
 		}
 
-		console.log('Auth headers:', credential, headers);
+		if (credential?.type === 'entra-client-credentials') {
+			const tokenService = new EntraClientCredentialService();
+			const accessToken = await tokenService.acquireToken(credential as EntraClientAuthCredential);
+
+			headers.Authorization = `Bearer ${accessToken}`;
+		}
 
 		return headers;
 	}

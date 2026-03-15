@@ -5,7 +5,7 @@ import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { useWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SparqlConnectionMessages } from './sparql-connection-messages';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { AuthCredential, BasicAuthCredential, BearerAuthCredential, MicrosoftAuthCredential } from '@src/services/core/credential';
+import { AuthCredential, BasicAuthCredential, BearerAuthCredential, EntraClientAuthCredential, MicrosoftAuthCredential } from '@src/services/core/credential';
 import { CredentialFactory } from '@src/services/core/credential-factory';
 import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 import stylesheet from './sparql-connection-view.css';
@@ -14,7 +14,8 @@ enum AuthTypeIndex {
 	None = 0,
 	Basic = 1,
 	Bearer = 2,
-	Microsoft = 3
+	Microsoft = 3,
+	EntraClientCredentials = 4
 }
 
 interface SparqlConnectionViewState {
@@ -26,6 +27,7 @@ interface SparqlConnectionViewState {
 	basicCredential: BasicAuthCredential;
 	bearerCredential: BearerAuthCredential;
 	microsoftCredential: MicrosoftAuthCredential;
+	entraClientCredential: EntraClientAuthCredential;
 	passwordVisible: boolean;
 	inferenceFeatureEnabled: boolean;
 }
@@ -45,6 +47,7 @@ const initialState: SparqlConnectionViewState = {
 	basicCredential: CredentialFactory.createBasicAuthCredential(),
 	bearerCredential: CredentialFactory.createBearerAuthCredential(),
 	microsoftCredential: CredentialFactory.createMicrosoftAuthCredential(),
+	entraClientCredential: CredentialFactory.createEntraClientCredential(),
 	passwordVisible: false,
 	inferenceFeatureEnabled: false
 };
@@ -66,6 +69,7 @@ function SparqlConnectionView() {
 					basicCredential: CredentialFactory.createBasicAuthCredential(),
 					bearerCredential: CredentialFactory.createBearerAuthCredential(),
 					microsoftCredential: CredentialFactory.createMicrosoftAuthCredential(),
+					entraClientCredential: CredentialFactory.createEntraClientCredential(),
 					isChecking: false,
 					connectionError: undefined,
 					hasUnsavedChanges: false
@@ -99,6 +103,12 @@ function SparqlConnectionView() {
 						...prev,
 						selectedAuthTypeIndex: AuthTypeIndex.Microsoft,
 						microsoftCredential: message.credential as MicrosoftAuthCredential
+					}));
+				} else if (credential.type === 'entra-client-credentials') {
+					setState(prev => ({
+						...prev,
+						selectedAuthTypeIndex: AuthTypeIndex.EntraClientCredentials,
+						entraClientCredential: message.credential as EntraClientAuthCredential
 					}));
 				}
 				return;
@@ -197,6 +207,8 @@ function SparqlConnectionView() {
 				return state.bearerCredential;
 			case AuthTypeIndex.Microsoft:
 				return state.microsoftCredential;
+			case AuthTypeIndex.EntraClientCredentials:
+				return state.entraClientCredential;
 			default:
 				return null;
 		}
@@ -403,6 +415,93 @@ function SparqlConnectionView() {
 		);
 	};
 
+	const renderEntraClientCredentialsFields = () => {
+		const credential = state.entraClientCredential;
+
+		return (
+			<vscode-form-group variant='vertical'>
+				<vscode-label>Tenant ID</vscode-label>
+				<vscode-textfield
+					value={credential?.tenantId ?? ''}
+					placeholder="00000000-0000-0000-0000-000000000000"
+					label="Tenant ID"
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
+						setState(prev => ({
+							...prev,
+							entraClientCredential: {
+								...credential,
+								tenantId: (e.target as HTMLInputElement).value
+							},
+							hasUnsavedChanges: true
+						}));
+					}}
+				/>
+				<vscode-label>Client ID</vscode-label>
+				<vscode-textfield
+					value={credential?.clientId ?? ''}
+					placeholder="00000000-0000-0000-0000-000000000000"
+					label="Client ID"
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
+						setState(prev => ({
+							...prev,
+							entraClientCredential: {
+								...credential,
+								clientId: (e.target as HTMLInputElement).value
+							},
+							hasUnsavedChanges: true
+						}));
+					}}
+				/>
+				<vscode-label>Client Secret</vscode-label>
+				<vscode-textfield
+					value={credential?.clientSecret ?? ''}
+					placeholder="Client Secret"
+					label="Client Secret"
+					type={state.passwordVisible ? 'text' : 'password'}
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
+						setState(prev => ({
+							...prev,
+							entraClientCredential: {
+								...credential,
+								clientSecret: (e.target as HTMLInputElement).value
+							},
+							hasUnsavedChanges: true
+						}));
+					}}
+				>
+					<vscode-icon
+						slot="content-after"
+						name={state.passwordVisible ? 'eye-closed' : 'eye'}
+						title="Toggle visibility"
+						action-icon
+						onClick={() => setState(prev => ({ ...prev, passwordVisible: !prev.passwordVisible }))}
+					></vscode-icon>
+				</vscode-textfield>
+				<vscode-label>Scopes</vscode-label>
+				<vscode-textarea
+					rows={3}
+					value={credential?.scopes.join('\n') ?? ''}
+					placeholder="api://your-app-id/.default"
+					label="Scopes"
+					disabled={isFormReadOnly()}
+					onInput={(e: React.FormEvent<HTMLElement>) => {
+						setState(prev => ({
+							...prev,
+							entraClientCredential: {
+								...credential,
+								scopes: (e.target as HTMLInputElement).value.split('\n').filter(s => s.trim())
+							},
+							hasUnsavedChanges: true
+						}));
+					}}
+				/>
+			</vscode-form-group>
+		);
+	};
+
 	const endpoint = state.endpoint;
 
 	if (!endpoint) {
@@ -493,12 +592,14 @@ function SparqlConnectionView() {
 								<vscode-option value="1">Basic</vscode-option>
 								<vscode-option value="2">Bearer</vscode-option>
 								<vscode-option value="3">Microsoft Entra</vscode-option>
+								<vscode-option value="4">Entra Client Credentials</vscode-option>
 							</vscode-single-select>
 						</div>
 						{state.selectedAuthTypeIndex !== AuthTypeIndex.None && <div className="vertical-separator">
 							{state.selectedAuthTypeIndex === AuthTypeIndex.Basic && renderBasicAuthFields()}
 							{state.selectedAuthTypeIndex === AuthTypeIndex.Bearer && renderBearerAuthFields()}
 							{state.selectedAuthTypeIndex === AuthTypeIndex.Microsoft && renderMicrosoftAuthFields()}
+							{state.selectedAuthTypeIndex === AuthTypeIndex.EntraClientCredentials && renderEntraClientCredentialsFields()}
 						</div>}
 					</div>
 				</section>

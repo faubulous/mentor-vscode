@@ -1,7 +1,7 @@
 /**
  * Represents a credential, either Basic (username/password) or Bearer token.
  */
-export type AuthCredential = BasicAuthCredential | BearerAuthCredential | MicrosoftAuthCredential;
+export type AuthCredential = BasicAuthCredential | BearerAuthCredential | MicrosoftAuthCredential | EntraClientAuthCredential;
 
 /**
  * Credential type for HTTP Basic authentication.
@@ -57,4 +57,42 @@ export type MicrosoftAuthCredential = {
 	 * The scopes associated with the access token.
 	 */
 	scopes: string[];
+};
+
+/**
+ * Credential type for Microsoft Entra ID Client Credentials Flow (OAuth 2.0).
+ * Used for service-to-service authentication without user interaction.
+ */
+export type EntraClientAuthCredential = {
+	type: 'entra-client-credentials';
+
+	/**
+	 * The Azure AD tenant ID.
+	 */
+	tenantId: string;
+
+	/**
+	 * The application (client) ID registered in Azure AD.
+	 */
+	clientId: string;
+
+	/**
+	 * The client secret for the application.
+	 */
+	clientSecret: string;
+
+	/**
+	 * The scopes to request (e.g., "https://graph.microsoft.com/.default").
+	 */
+	scopes: string[];
+
+	/**
+	 * The cached access token obtained from the token endpoint.
+	 */
+	accessToken?: string;
+
+	/**
+	 * The expiration time (Unix timestamp in milliseconds) of the cached access token.
+	 */
+	accessTokenExpiresAt?: number;
 };

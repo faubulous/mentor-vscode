@@ -1,6 +1,7 @@
 import {
 	BasicAuthCredential,
 	BearerAuthCredential,
+	EntraClientAuthCredential,
 	MicrosoftAuthCredential
 } from "./credential";
 
@@ -13,7 +14,7 @@ export class CredentialFactory {
 	 * @returns An array of supported credential types.
 	 */
 	static getCredentialTypes(): string[] {
-		return ['basic', 'bearer', 'microsoft'];
+		return ['basic', 'bearer', 'microsoft', 'entra-client-credentials'];
 	}
 
 	/**
@@ -61,6 +62,30 @@ export class CredentialFactory {
 			scopes,
 			sessionId,
 			accessToken
+		};
+	}
+
+	/**
+	 * Creates a Microsoft Entra ID Client Credentials credential object.
+	 * Used for service-to-service authentication (OAuth 2.0 Client Credentials Grant).
+	 * @param tenantId The Azure AD tenant ID.
+	 * @param clientId The application (client) ID.
+	 * @param clientSecret The client secret.
+	 * @param scopes The scopes to request.
+	 * @returns An `EntraClientCredential` object.
+	 */
+	static createEntraClientCredential(
+		tenantId: string = '',
+		clientId: string = '',
+		clientSecret: string = '',
+		scopes: string[] = ['https://graph.microsoft.com/.default']
+	): EntraClientAuthCredential {
+		return {
+			type: 'entra-client-credentials',
+			tenantId,
+			clientId,
+			clientSecret,
+			scopes
 		};
 	}
 }

@@ -3,8 +3,9 @@ import { SparqlLexer, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { AuthCredential } from '@src/services/core/credential';
+import { AuthCredential, EntraClientAuthCredential } from '@src/services/core/credential';
 import { ICredentialStorageService } from '@src/services/core';
+import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
 import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/languages/sparql/services';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
@@ -376,7 +377,43 @@ export class SparqlQueryService {
 		}
 
 		if (credential?.type === 'bearer') {
-			throw new Error('Not implemented.');
+			const prefix = credential.prefix || 'Bearer';
+			const token = credential.token;
+
+			return (input: RequestInfo | URL, init?: RequestInit) => {
+				const headers = new Headers(init?.headers || {});
+				headers.set("Authorization", `${prefix} ${token}`);
+
+				return fetch(input, { ...init, headers });
+			};
+		}
+
+		if (credential?.type === 'microsoft') {
+			const accessToken = credential.accessToken;
+
+			if (!accessToken) {
+				return undefined;
+			}
+
+			return (input: RequestInfo | URL, init?: RequestInit) => {
+				const headers = new Headers(init?.headers || {});
+				headers.set("Authorization", `Bearer ${accessToken}`);
+
+				return fetch(input, { ...init, headers });
+			};
+		}
+
+		if (credential?.type === 'entra-client-credentials') {
+			const entraCredential = credential as EntraClientAuthCredential;
+			const tokenService = new EntraClientCredentialService();
+
+			return async (input: RequestInfo | URL, init?: RequestInit) => {
+				const accessToken = await tokenService.acquireToken(entraCredential);
+				const headers = new Headers(init?.headers || {});
+				headers.set("Authorization", `Bearer ${accessToken}`);
+
+				return fetch(input, { ...init, headers });
+			};
 		}
 
 		return undefined;
