@@ -29,11 +29,11 @@ const getBaseConfig = (args) => {
         name: 'rebuild-notify',
         setup(build) {
           build.onStart(() => {
-            console.log("Build started..");
+            console.log("Build started (browser)..");
           });
 
           build.onEnd(result => {
-            console.log(`Build ended.`);
+            console.log(`Build ended (browser).`);
           })
         },
       }],
@@ -101,7 +101,7 @@ const getNodeLanguageConfig = (args, type, language) => {
   }
 }
 
-const getLanguageConfig = (args, type, language) => {
+const getBrowserLanguageConfig = (args, type, language) => {
   const file = language ? `${language}-language-${type}` : `language-${type}`;
   const sourceFile = language ? `${file}.browser` : file;
   const entryPoint = language ? `./src/languages/${language}/${sourceFile}.ts` : `./src/languages/${sourceFile}.ts`;
@@ -210,7 +210,7 @@ const copyVSCodeCodiconCSS = () => {
   const cssTarget = path.join(mediaFolder, 'codicon.css');
 
   fs.writeFileSync(cssTarget, css);
-  
+
   console.log(` codicon.css → media/codicon.css`);
 
   // Also create a version with inline base64 font for notebook renderers
@@ -333,20 +333,14 @@ const removeSourceMaps = () => {
     const configs = [
       // Browser builds (Web Workers for language servers, browser extension host)
       extensionConfig,
-      getLanguageConfig(args, 'server'),
-      getLanguageConfig(args, 'server', 'turtle'),
-      getLanguageConfig(args, 'server', 'trig'),
-      getLanguageConfig(args, 'server', 'nquads'),
-      getLanguageConfig(args, 'server', 'ntriples'),
-      getLanguageConfig(args, 'server', 'n3'),
-      getLanguageConfig(args, 'server', 'sparql'),
-      getLanguageConfig(args, 'server', 'xml'),
-      // Note: Language clients run in the extension host, not as separate bundles.
-      // They are bundled into extension.js via the languages/index.ts barrel export.
-      getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
-      getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
-      getReactViewConfig(args, 'sparql-connection', 'sparql-connection-view'),
-      getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list-view'),
+      getBrowserLanguageConfig(args, 'server'),
+      getBrowserLanguageConfig(args, 'server', 'turtle'),
+      getBrowserLanguageConfig(args, 'server', 'trig'),
+      getBrowserLanguageConfig(args, 'server', 'nquads'),
+      getBrowserLanguageConfig(args, 'server', 'ntriples'),
+      getBrowserLanguageConfig(args, 'server', 'n3'),
+      getBrowserLanguageConfig(args, 'server', 'sparql'),
+      getBrowserLanguageConfig(args, 'server', 'xml'),
 
       // Node.js builds (IPC for language servers, desktop extension host)
       getNodeExtensionConfig(args),
@@ -357,6 +351,13 @@ const removeSourceMaps = () => {
       getNodeLanguageConfig(args, 'server', 'n3'),
       getNodeLanguageConfig(args, 'server', 'sparql'),
       getNodeLanguageConfig(args, 'server', 'xml'),
+
+      // Note: Language clients run in the extension host, not as separate bundles.
+      // They are bundled into extension.js via the languages/index.ts barrel export.
+      getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
+      getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
+      getReactViewConfig(args, 'sparql-connection', 'sparql-connection-view'),
+      getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list-view'),
     ]
 
     if (args.includes("--watch")) {
