@@ -30,7 +30,7 @@ interface QueryScope {
 
 class SparqlLanguageServer extends LanguageServerBase {
 	constructor() {
-		super('sparql', 'SPARQL', new SparqlLexer(), new SparqlParser(), true);
+		super('sparql', 'SPARQL', new SparqlLexer({ templateSyntax: true }), new SparqlParser(), true);
 	}
 
 	override getLintDiagnostics(document: TextDocument, content: string, tokens: IToken[]): Diagnostic[] {
