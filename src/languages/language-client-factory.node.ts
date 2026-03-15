@@ -13,7 +13,7 @@ export const createNodeLanguageClient: LanguageClientFactory = (
 ) => {
 	// Resolve the Node.js language server module path.
 	// Node servers are built with a '-node' suffix (e.g. turtle-language-server-node.js).
-	const nodeServerPath = options.serverPath.replace('.js', '-node.js');
+	const nodeServerPath = options.serverPath.replace('.js', '.node.js');
 	const serverModule = context.asAbsolutePath(nodeServerPath);
 
 	const serverOptions: ServerOptions = {

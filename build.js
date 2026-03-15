@@ -43,7 +43,7 @@ const getBaseConfig = (args) => {
 const getExtensionConfig = (args) => {
   return {
     ...getBaseConfig(args),
-    entryPoints: ["./src/extension.ts"],
+    entryPoints: ["./src/extension.browser.ts"],
     outfile: "./dist/extension.js"
   }
 }
@@ -85,25 +85,26 @@ const getNodeBaseConfig = (args) => {
 const getNodeExtensionConfig = (args) => {
   return {
     ...getNodeBaseConfig(args),
-    entryPoints: ["./src/extension-node.ts"],
-    outfile: "./dist/extension-node.js"
+    entryPoints: ["./src/extension.node.ts"],
+    outfile: "./dist/extension.node.js"
   }
 }
 
 const getNodeLanguageConfig = (args, type, language) => {
-  const file = language ? `${language}-language-${type}-node` : `language-${type}-node`;
-  const entryPoint = language ? `./src/languages/${language}/${file}.ts` : `./src/languages/${file}.ts`;
+  const file = language ? `${language}-language-${type}` : `language-${type}`;
+  const entryPoint = language ? `./src/languages/${language}/${file}.node.ts` : `./src/languages/${file}.node.ts`;
 
   return {
     ...getNodeBaseConfig(args),
     entryPoints: [entryPoint],
-    outfile: `./dist/${file}.js`
+    outfile: `./dist/${file}.node.js`
   }
 }
 
 const getLanguageConfig = (args, type, language) => {
   const file = language ? `${language}-language-${type}` : `language-${type}`;
-  const entryPoint = language ? `./src/languages/${language}/${file}.ts` : `./src/languages/${file}.ts`;
+  const sourceFile = language ? `${file}.browser` : file;
+  const entryPoint = language ? `./src/languages/${language}/${sourceFile}.ts` : `./src/languages/${sourceFile}.ts`;
 
   return {
     ...getBaseConfig(args),

@@ -50,7 +50,7 @@
   "categories": [
     "Programming Languages"
   ],
-  "main": "./dist/extension-node.js",
+  "main": "./dist/extension.node.js",
   "browser": "./dist/extension.js",
   "scripts": {
     "clean": "rm -Rf node_modules && rm -Rf dist && rm -Rf out && rm -Rf media/*.woff",

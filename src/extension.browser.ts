@@ -10,7 +10,7 @@ import { WorkspaceIndexerService } from './services/core/workspace-indexer-servi
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
 import { DocumentLintingService } from './services/document/document-linting-service';
-import { createBrowserLanguageClient } from './languages/language-client-factory-browser';
+import { createBrowserLanguageClient } from './languages/language-client-factory.browser';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
