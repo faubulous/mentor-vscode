@@ -2,16 +2,10 @@ import {
 	Connection,
 	Diagnostic,
 	DiagnosticSeverity,
-	DidChangeConfigurationNotification,
-	DidChangeConfigurationParams,
-	InitializeParams,
-	InitializeResult,
 	Range,
-	TextDocumentChangeEvent,
-	TextDocuments,
-	TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { LanguageServerBase } from '@src/languages/language-server';
 import { XmlParseResult } from './xml-types';
 
 // Inline namespace constants to avoid importing @faubulous/mentor-rdf which has CommonJS dependencies
@@ -22,124 +16,12 @@ const _SH = 'http://www.w3.org/ns/shacl#';
 const _SKOS = 'http://www.w3.org/2004/02/skos/core#';
 const _SKOS_XL = 'http://www.w3.org/2008/05/skos-xl#';
 
-/**
- * Parser settings for RDF/XML documents.
- */
-interface ParserSettings {
-	maxNumberOfProblems: number;
-}
-
-const defaultSettings: ParserSettings = {
-	maxNumberOfProblems: 1000
-};
-
-export class XmlLanguageServer {
-	readonly languageName = 'RDF/XML';
-	readonly languageId = 'xml';
-
-	readonly connection: Connection;
-	readonly documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
-	readonly documentSettings: Map<string, Thenable<ParserSettings>> = new Map();
-
-	hasConfigurationCapability = false;
-	hasWorkspaceFolderCapability = false;
-	hasDiagnosticRelatedInformationCapability = false;
-
-	globalSettings: ParserSettings = defaultSettings;
-
+export class XmlLanguageServer extends LanguageServerBase {
 	constructor(connection: Connection) {
-		this.connection = connection;
-		this.connection.onInitialize(this.onInitializeConnection.bind(this));
-		this.connection.onInitialized(this.onConnectionInitialized.bind(this));
-		this.connection.onDidChangeConfiguration(this.onDidChangeConfiguration.bind(this));
-
-		this.documents.onDidClose(this.onDidClose.bind(this));
-		this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
+		super(connection, 'xml', 'RDF/XML');
 	}
 
-	protected log(message: string) {
-		const msg = `[Server] ${message}`;
-
-		if (this.connection.console) {
-			this.connection.console.log(msg);
-		} else {
-			console.log(msg);
-		}
-	}
-
-	start() {
-		this.documents.listen(this.connection);
-		this.connection.listen();
-		this.log(`Started ${this.languageName} Language Server.`);
-	}
-
-	protected onInitializeConnection(params: InitializeParams) {
-		const capabilities = params.capabilities;
-
-		this.hasConfigurationCapability = !!(
-			capabilities.workspace && !!capabilities.workspace.configuration
-		);
-
-		this.hasWorkspaceFolderCapability = !!(
-			capabilities.workspace && !!capabilities.workspace.workspaceFolders
-		);
-
-		this.hasDiagnosticRelatedInformationCapability = !!(
-			capabilities.textDocument &&
-			capabilities.textDocument.publishDiagnostics &&
-			capabilities.textDocument.publishDiagnostics.relatedInformation
-		);
-
-		const result: InitializeResult = {
-			capabilities: {
-				textDocumentSync: TextDocumentSyncKind.Incremental
-			}
-		};
-
-		if (this.hasWorkspaceFolderCapability) {
-			result.capabilities.workspace = {
-				workspaceFolders: {
-					supported: true
-				}
-			};
-		}
-
-		return result;
-	}
-
-	protected onConnectionInitialized() {
-		if (this.hasConfigurationCapability) {
-			this.connection.client.register(DidChangeConfigurationNotification.type, undefined);
-		}
-
-		if (this.hasWorkspaceFolderCapability) {
-			this.connection.workspace.onDidChangeWorkspaceFolders(_event => {
-				this.log('Workspace folder change event received.');
-			});
-		}
-	}
-
-	protected onDidChangeConfiguration(change: DidChangeConfigurationParams) {
-		this.log(`Configuration changed.`);
-
-		if (this.hasConfigurationCapability) {
-			this.documentSettings.clear();
-		} else {
-			this.globalSettings = <ParserSettings>((change.settings.languageServerExample || defaultSettings));
-		}
-
-		this.documents.all().forEach(doc => this.validateTextDocument(doc));
-	}
-
-	protected onDidClose(e: TextDocumentChangeEvent<TextDocument>) {
-		this.documentSettings.delete(e.document.uri);
-	}
-
-	protected onDidChangeContent(change: TextDocumentChangeEvent<TextDocument>) {
-		this.validateTextDocument(change.document);
-	}
-
-	async validateTextDocument(document: TextDocument): Promise<void> {
+	override async validateTextDocument(document: TextDocument): Promise<void> {
 		if (!this?.connection) {
 			return;
 		}

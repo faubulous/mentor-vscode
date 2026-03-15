@@ -58,7 +58,7 @@ const defaultSettings: ParserSettings = {
 	maxNumberOfProblems: 1000
 };
 
-export abstract class LanguageServerBase {
+export class LanguageServerBase {
 	readonly languageName: string;
 
 	readonly languageId: string;
@@ -85,14 +85,14 @@ export abstract class LanguageServerBase {
 	/**
 	 * The lexer used to tokenize the document. This is used to provide lexing diagnostics, but not for validating the document for errors, since that requires fully parsing it.
 	 */
-	lexer: ILexer;
+	lexer?: ILexer;
 
 	/**
 	 * The parser used to tokenize and validate the document.
 	 */
-	parser: IParser;
+	parser?: IParser;
 
-	constructor(connection: Connection, langaugeId: string, languageName: string, lexer: ILexer, parser: IParser, isRdfTokenProvider = false) {
+	constructor(connection: Connection, langaugeId: string, languageName: string, lexer?: ILexer, parser?: IParser, isRdfTokenProvider = false) {
 		this.languageName = languageName;
 		this.languageId = langaugeId;
 		this.lexer = lexer;
@@ -186,7 +186,7 @@ export abstract class LanguageServerBase {
 		}
 
 		// Revalidate all open text documents.
-		this.documents.all().forEach(this.validateTextDocument);
+		this.documents.all().forEach(doc => this.validateTextDocument(doc));
 	}
 
 	protected onDidChangeWatchedFiles(change: DidChangeWatchedFilesParams) {
@@ -214,6 +214,10 @@ export abstract class LanguageServerBase {
 	 * @returns 
 	 */
 	protected async parse(content: string): Promise<TokenizationResults> {
+		if (!this.lexer || !this.parser) {
+			throw new Error('Lexer and parser are required for tokenization.');
+		}
+
 		const lexResult = this.lexer.tokenize(content);
 
 		this.parser.parse(lexResult.tokens, false);

@@ -1,13 +1,4 @@
-import { createConnection, ProposedFeatures } from 'vscode-languageserver/node';
 import { NTriplesLexer, NTriplesParser } from '@faubulous/mentor-rdf-parsers';
-import { LanguageServerBase } from '@src/languages/language-server';
+import { startNodeLanguageServer } from '../start-language-server.node';
 
-const connection = createConnection(ProposedFeatures.all);
-
-class NTriplesLanguageServer extends LanguageServerBase {
-	constructor() {
-		super(connection, 'ntriples', 'N-Triples', new NTriplesLexer(), new NTriplesParser(), true);
-	}
-}
-
-new NTriplesLanguageServer().start();
+startNodeLanguageServer('ntriples', 'N-Triples', new NTriplesLexer(), new NTriplesParser());

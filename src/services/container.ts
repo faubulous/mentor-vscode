@@ -12,6 +12,7 @@ import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
 import { PrefixDownloaderService } from './document/prefix-downloader-service';
 import { PrefixLookupService } from './document/prefix-lookup-service';
+import { LanguageClientFactory } from '@src/languages/language-client-factory';
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
@@ -30,8 +31,9 @@ export class MentorGraphUriGenerator implements GraphUriGenerator {
 /**
  * Configures the service container with all necessary services and dependencies for the extension.
  * @param context The VS Code extension context, used for registering services that require access to the extension's lifecycle and storage.
+ * @param languageClientFactory Platform-specific factory for creating language clients.
  */
-export function configureServiceContainer(context: vscode.ExtensionContext): void {
+export function configureServiceContainer(context: vscode.ExtensionContext, languageClientFactory: LanguageClientFactory): void {
 	// Register VS Code services and extension context.
 	container.registerInstance(ServiceToken.ExtensionContext, context);
 
@@ -78,4 +80,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.TurtlePrefixDefinitionService, turtlePrefixDefinitionService);
+
+	// Register the platform-specific language client factory.
+	container.registerInstance(ServiceToken.LanguageClientFactory, languageClientFactory);
 }
