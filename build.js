@@ -4,6 +4,7 @@ const esbuild = require("esbuild");
 const path = require("path");
 
 const isProductionBuild = (args) => args.includes("--production");
+const isWatchMode = (args) => args.includes("--watch");
 
 const getBaseConfig = (args) => {
   const productionBuild = isProductionBuild(args);
@@ -28,13 +29,15 @@ const getBaseConfig = (args) => {
       {
         name: 'rebuild-notify',
         setup(build) {
-          build.onStart(() => {
-            console.log("Build started (browser)..");
-          });
+          if (isWatchMode(args)) {
+            build.onStart(() => {
+              console.log("- browser: Build started..");
+            });
 
-          build.onEnd(result => {
-            console.log(`Build ended (browser).`);
-          })
+            build.onEnd(result => {
+              console.log("- browser: Build ended.");
+            })
+          }
         },
       }],
   }
@@ -70,13 +73,15 @@ const getNodeBaseConfig = (args) => {
       {
         name: 'rebuild-notify',
         setup(build) {
-          build.onStart(() => {
-            console.log("Build started (node)..");
-          });
+          if (isWatchMode(args)) {
+            build.onStart(() => {
+              console.log("- node: Build started..");
+            });
 
-          build.onEnd(result => {
-            console.log(`Build ended (node).`);
-          })
+            build.onEnd(result => {
+              console.log("- node: Build ended.");
+            });
+          }
         },
       }],
   }
@@ -119,27 +124,6 @@ const getReactViewConfig = (args, folder, file) => {
     format: "esm", // Ensure ES module format for the VS Code notebook renderer
     entryPoints: [`./src/views/webviews/${folder}/${file}.tsx`],
     outfile: `./dist/${file}.js`
-  }
-}
-
-/**
- * Copies SVG glyph files from the extension media directory to the package media directory.
- */
-const copyFontGlyphs = () => {
-  const sourceFolder = path.resolve(__dirname, 'media', 'glyphs');
-  const targetFolder = path.resolve(__dirname, 'dist', 'media', 'glyphs');
-
-  console.log(`Copying font glyphs to: ${targetFolder}`);
-
-  if (!fs.existsSync(targetFolder)) {
-    fs.mkdirSync(targetFolder, { recursive: true });
-  }
-
-  for (const file of fs.readdirSync(sourceFolder)) {
-    const sourceFile = path.join(sourceFolder, file);
-    const targetFile = path.join(targetFolder, file);
-
-    fs.copyFileSync(sourceFile, targetFile);
   }
 }
 
@@ -360,7 +344,10 @@ const removeSourceMaps = () => {
       getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list-view'),
     ]
 
-    if (args.includes("--watch")) {
+    console.log(`\nStarting build with ${configs.length} configuration(s)..`);
+    const startTime = Date.now();
+
+    if (isWatchMode(args)) {
       // `esbuild.context` is the advanced long-running form sof 
       // `build` that supports additional features such as watch 
       // mode and a local development server.
@@ -375,6 +362,8 @@ const removeSourceMaps = () => {
         removeSourceMaps();
       }
     }
+
+    console.log(`\nBuild completed in ${(Date.now() - startTime)}ms.`);
   } catch (e) {
     process.stderr.write(e.stderr);
     process.exit(1);
