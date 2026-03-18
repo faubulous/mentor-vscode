@@ -517,23 +517,33 @@ function SparqlConnectionView() {
 						<div className="form-title">
 							<h2>Edit Connection</h2>
 						</div>
-						{isFormReadOnly() && <div className="form-read-only">
-							<vscode-icon name="lock" /><span>This connection cannot be edited.</span>
-						</div>}
-						{!isFormReadOnly() && <div className="form-buttons">
-							<vscode-toolbar-button
-								onClick={handleDeleteEndpoint}>
-								<vscode-icon
-									name="trash"
-									title="Delete"
-								></vscode-icon>
-							</vscode-toolbar-button>
-							<vscode-button
-								type="submit"
-								disabled={!isFormValid() || !state.hasUnsavedChanges}>
-								Save
-							</vscode-button>
-						</div>}
+						<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
+							{isFormReadOnly() && <>
+								<vscode-icon name="lock" />
+							</>}
+							{!isFormReadOnly() && <>
+								<vscode-toolbar-button
+									onClick={handleDeleteEndpoint}>
+									<vscode-icon
+										name="trash"
+										title="Delete"
+									></vscode-icon>
+								</vscode-toolbar-button>
+								<vscode-single-select
+									ref={configScopeSelectRef}
+									value={endpoint.configScope.toString()}
+									disabled={isFormReadOnly()}
+									className="connection-scope-select">
+									<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.User)} value="1">User</vscode-option>
+									<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)} value="2">Workspace</vscode-option>
+								</vscode-single-select>
+								<vscode-button
+									type="submit"
+									disabled={!isFormValid() || !state.hasUnsavedChanges}>
+									Save
+								</vscode-button>
+							</>}
+						</div>
 					</div>
 				</section>
 				<section>
@@ -602,20 +612,6 @@ function SparqlConnectionView() {
 							{state.selectedAuthTypeIndex === AuthTypeIndex.EntraClientCredentials && renderEntraClientCredentialsFields()}
 						</div>}
 					</div>
-				</section>
-				<section>
-					<span className='section-label'>Scope</span>
-					<vscode-form-helper>
-						Select where the connection settings should be stored:
-					</vscode-form-helper>
-					<vscode-single-select
-						ref={configScopeSelectRef}
-						value={endpoint.configScope.toString()}
-						disabled={isFormReadOnly()}
-						className="connection-scope-select">
-						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.User)} value="1">User</vscode-option>
-						<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)} value="2">Workspace</vscode-option>
-					</vscode-single-select>
 				</section>
 				{state.inferenceFeatureEnabled && endpoint.inferenceSupported && (
 					<section>
