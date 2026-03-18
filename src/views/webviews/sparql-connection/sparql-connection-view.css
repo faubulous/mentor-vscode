@@ -88,7 +88,7 @@
 .sparql-connection-view-container vscode-form-helper {
 	margin-top: 0;
 	margin-bottom: 1.5em;
-    color: var(--vscode-descriptionForeground);
+	color: var(--vscode-descriptionForeground);
 }
 
 .sparql-connection-view-container vscode-context-menu {
@@ -96,12 +96,20 @@
 	z-index: 10;
 }
 
+.sparql-connection-view-container .label-optional {
+	font-weight: 400;
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+	text-transform: none;
+	letter-spacing: 0;
+}
+
 .sparql-connection-view-container .section-label {
 	color: var(--vscode-foreground);
-    font-size: 1em;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
+	font-size: 1em;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	font-weight: 600;
 	line-height: 2em;
 }
 
@@ -128,6 +136,10 @@
 
 .sparql-connection-view-container .section-endpoint-url vscode-icon.icon-error {
 	color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.sparql-connection-view-container .section-endpoint-description vscode-textfield {
+	width: 100%;
 }
 
 .sparql-connection-view-container .section-endpoint-status {

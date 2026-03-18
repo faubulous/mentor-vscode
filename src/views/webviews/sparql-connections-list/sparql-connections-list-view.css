@@ -77,9 +77,9 @@
 
 .connection-item {
     display: flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 0 8px;
+    align-items: flex-start;
+    min-height: 36px;
+    padding: 4px 8px;
     box-sizing: border-box;
     background: var(--vscode-settings-textInputBackground);
     border-radius: 2px;
@@ -106,6 +106,8 @@
 
 .connection-item-icon {
     margin-right: 8px;
+    margin-top: 4px;
+    flex-shrink: 0;
 }
 
 .connection-item-content {
@@ -113,19 +115,32 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
+    padding: 3px 0;
+}
+
+.connection-item-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.4;
 }
 
 .connection-item-url {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.85em;
+    color: var(--vscode-descriptionForeground);
+    line-height: 1.4;
 }
 
 .connection-item-lock {
     font-size: 14px;
     color: var(--vscode-descriptionForeground);
     margin-left: 8px;
+    margin-top: 4px;
+    flex-shrink: 0;
 }
 
 .connection-item-icon.icon-testing {
@@ -146,6 +161,8 @@
     gap: 4px;
     opacity: 0;
     transition: opacity 0.1s ease;
+    align-items: flex-start;
+    flex-shrink: 0;
 }
 
 .connection-item:hover .connection-item-actions {

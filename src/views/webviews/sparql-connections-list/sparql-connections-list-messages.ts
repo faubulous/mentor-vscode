@@ -11,4 +11,5 @@ export type SparqlConnectionsListMessages =
     { id: 'CreateConnection' } |
     { id: 'ListGraphs', connection: SparqlConnection } |
     { id: 'TestConnection', connection: SparqlConnection } |
-    { id: 'TestConnectionResult', connectionId: string, success: boolean, error?: string };
+    { id: 'TestConnectionResult', connectionId: string, success: boolean, error?: string } |
+    { id: 'OpenInBrowser', url: string };

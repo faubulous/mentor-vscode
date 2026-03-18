@@ -44,7 +44,7 @@ export const setNotebookConnection = {
 
 		const items = connections.map(connection => ({
 			label: `$(database) ${connection.endpointUrl}`,
-			description: connection.id === 'workspace' ? '(Workspace Store)' : undefined,
+			description: connection.description,
 			connection
 		}));
 

@@ -28,6 +28,7 @@ const DOCUMENT_INFERENCE_STORAGE_KEY_PREFIX = 'mentor.inference.document:';
 export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
 	id: 'workspace',
 	endpointUrl: 'workspace:',
+	description: 'In-memory triple store of the workspace.',
 	configScope: ConfigurationScope.Workspace,
 	isProtected: true,
 	storeType: 'workspace'
@@ -420,6 +421,7 @@ export class SparqlConnectionService {
 			.filter(c => c.configScope === configScope && c.id !== MENTOR_WORKSPACE_STORE.id)
 			.map(c => ({
 				id: c.id,
+				...(c.description ? { description: c.description } : {}),
 				endpointUrl: c.endpointUrl
 			}));
 	}

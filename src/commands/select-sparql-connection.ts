@@ -23,6 +23,7 @@ export const selectSparqlConnection = {
 
 		const items: any[] = connections.map(connection => ({
 			label: `$(database) ${connection.endpointUrl}`,
+			description: connection.description,
 			connection: connection,
 			buttons: [{
 				iconPath: new vscode.ThemeIcon('edit'),

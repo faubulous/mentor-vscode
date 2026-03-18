@@ -235,6 +235,18 @@ function SparqlConnectionView() {
 	};
 
 	// Event handlers
+	const handleDescriptionChange = (e: React.FormEvent<HTMLElement>) => {
+		const value = (e.target as HTMLInputElement).value;
+		setState(prev => {
+			const endpoint = { ...prev.endpoint, description: value || undefined };
+			messaging?.postMessage({
+				id: 'UpdateSparqlConnection',
+				connection: endpoint
+			});
+			return { ...prev, endpoint, hasUnsavedChanges: true };
+		});
+	};
+
 	const handleEndpointUrlChange = (e: React.FormEvent<HTMLElement>) => {
 		const value = (e.target as HTMLInputElement).value;
 		setState(prev => {
@@ -584,6 +596,14 @@ function SparqlConnectionView() {
 							disabled={!isFormValid() || isFormReadOnly() || isConnectionTesting()}
 							onClick={handleTestEndpoint}>
 						</vscode-button>
+					</div>
+					<div className="section-endpoint-description">
+						<vscode-label>Description <span className="label-optional">(optional)</span></vscode-label>
+						<vscode-textfield
+							value={endpoint.description ?? ''}
+							disabled={isFormReadOnly()}
+							onInput={handleDescriptionChange}
+						/>
 					</div>
 				</section>
 				<section>

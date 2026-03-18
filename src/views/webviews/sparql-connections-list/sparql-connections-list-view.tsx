@@ -123,6 +123,11 @@ function SparqlConnectionsListView() {
 		messaging?.postMessage({ id: 'TestConnection', connection });
 	};
 
+	const handleOpenInBrowser = (connection: SparqlConnection, e: React.MouseEvent) => {
+		e.stopPropagation();
+		messaging?.postMessage({ id: 'OpenInBrowser', url: connection.endpointUrl });
+	};
+
 	const handleTestAllConnections = () => {
 		// Get all testable connections (not workspace store)
 		const testableConnections = state.connections;
@@ -201,15 +206,28 @@ function SparqlConnectionsListView() {
 				key={connection.id}
 				className={getConnectionItemClass()}
 				onClick={() => handleEditConnection(connection)}
-				title={isWorkspaceStore ? 'Edit workspace store settings' : `Edit ${connection.endpointUrl}`}
+					title={isWorkspaceStore ? 'Edit workspace store settings' : `Edit ${connection.endpointUrl}`}
 			>
 				{getConnectionIcon()}
 				<div className="connection-item-content">
-					<span className="connection-item-url">
+					<span className="connection-item-name">
 						{connection.endpointUrl}
 					</span>
+					{connection.description && (
+						<span className="connection-item-url">
+							{connection.description}
+						</span>
+					)}
 				</div>
 				<div className="connection-item-actions">
+					{!isWorkspaceStore && (
+						<vscode-toolbar-button
+							title="Open in browser"
+							onClick={(e: React.MouseEvent) => handleOpenInBrowser(connection, e)}
+						>
+						<vscode-icon name="link-external" />
+						</vscode-toolbar-button>
+					)}
 					<vscode-toolbar-button
 						title="List graphs"
 						onClick={(e: React.MouseEvent) => handleListGraphs(connection, e)}

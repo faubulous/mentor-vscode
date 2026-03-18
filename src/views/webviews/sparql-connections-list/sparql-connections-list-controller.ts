@@ -70,8 +70,9 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                 return true;
             }
             case 'DeleteConnection': {
+                const displayName = message.connection.name ?? message.connection.endpointUrl;
                 const answer = await vscode.window.showWarningMessage(
-                    `Are you sure you want to delete the connection "${message.connection.endpointUrl}"?`,
+                    `Are you sure you want to delete the connection "${displayName}"?`,
                     { modal: true },
                     'Delete'
                 );
@@ -115,6 +116,10 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                     success: result === null,
                     error: result?.message
                 });
+                return true;
+            }
+            case 'OpenInBrowser': {
+                await vscode.env.openExternal(vscode.Uri.parse(message.url));
                 return true;
             }
             default:

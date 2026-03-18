@@ -16,6 +16,11 @@ export interface SparqlConnection {
     id: string;
 
     /**
+     * An optional description providing context for the connection.
+     */
+    description?: string;
+
+    /**
      * The SPARQL endpoint URL (e.g., 'https://dbpedia.org/sparql' or 'workspace:')
      */
     endpointUrl: string;
