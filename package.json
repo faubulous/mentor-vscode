@@ -149,7 +149,7 @@
     "viewsWelcome": [
       {
         "view": "mentor.view.workspaceTree",
-        "contents": "Welcome to the Mentor extension for Visual Studio Code! This view shows all RDF files in your current workspace for quick access.\n\n There are currently no RDF documents in your workspace.\n\n[Create Document](command:mentor.command.createDocument)\n\nFind more information and help at [mentor-vscode.dev](command:mentor.command.openMentorHomepage)",
+        "contents": "Welcome to the Mentor extension for Visual Studio Code! This view shows all RDF files in your current workspace for quick access.\n\n There are currently no RDF documents in your workspace.\n\n[Create Document](command:mentor.command.createDocument)\n\n[Manage Connections](command:mentor.command.manageSparqlConnections)\n\nFind more information and help at [mentor-vscode.dev](command:mentor.command.openMentorHomepage)",
         "when": "!mentor.workspace.isInitializing && mentor.workspace.isEmpty"
       }
     ],
