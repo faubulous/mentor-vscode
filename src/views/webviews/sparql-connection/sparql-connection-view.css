@@ -47,7 +47,21 @@
 .sparql-connection-view-container form {
 	display: flex;
 	flex-direction: column;
-	gap: 1.3em;
+	gap: 1em;
+}
+
+.sparql-connection-view-container .form-body,
+.sparql-connection-view-container section {
+	display: flex;
+	flex-direction: column;
+}
+
+.sparql-connection-view-container .form-body {
+	gap: 2.5em;
+}
+
+.sparql-connection-view-container section {
+	gap: 1em;
 }
 
 .sparql-connection-view-container .form-actions {
@@ -66,8 +80,16 @@
 	width: 20px;
 }
 
+.sparql-connection-view-container vscode-label {
+	margin-bottom: 0.25em;
+}
+
 .sparql-connection-view-container vscode-single-select {
 	width: 100px;
+}
+
+.sparql-connection-view-container vscode-single-select.wide {
+	width: 175px;
 }
 
 .sparql-connection-view-container vscode-progress-bar {
@@ -87,7 +109,6 @@
 
 .sparql-connection-view-container vscode-form-helper {
 	margin-top: 0;
-	margin-bottom: 1.5em;
 	color: var(--vscode-descriptionForeground);
 }
 

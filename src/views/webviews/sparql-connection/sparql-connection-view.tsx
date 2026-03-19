@@ -558,101 +558,110 @@ function SparqlConnectionView() {
 						</div>
 					</div>
 				</section>
-				<section>
-					<vscode-label>Endpoint URL</vscode-label>
-					<div className={getEndpointSectionClassName()}>
-						<vscode-textfield
-							required
-							value={endpoint.endpointUrl}
-							title='Endpoint URL'
-							placeholder="https://example.org/sparql"
-							disabled={isFormReadOnly()}
-							onInput={handleEndpointUrlChange}
-						>
-							{!wasConnectionTested() && <vscode-icon
-								slot="content-before"
-								name="database"
-							></vscode-icon>}
-							{isConnectionTesting() && <vscode-icon
-								slot="content-before"
-								name="ellipsis"
-								className="icon-testing"
-							></vscode-icon>}
-							{hasConnectionError() && <vscode-icon
-								slot="content-before"
-								name="error"
-								className="icon-error"
-							></vscode-icon>}
-							{isConnectionSuccessful() && <vscode-icon
-								slot="content-before"
-								name="pass"
-								className="icon-success"
-							></vscode-icon>}
-						</vscode-textfield>
-						<vscode-button
-							type="button"
-							icon="debug-disconnect"
-							title="Test Connection"
-							disabled={!isFormValid() || isFormReadOnly() || isConnectionTesting()}
-							onClick={handleTestEndpoint}>
-						</vscode-button>
-					</div>
-					<div className="section-endpoint-description">
-						<vscode-label>Description <span className="label-optional">(optional)</span></vscode-label>
-						<vscode-textfield
-							value={endpoint.description ?? ''}
-							disabled={isFormReadOnly()}
-							onInput={handleDescriptionChange}
-						/>
-					</div>
-				</section>
-				<section>
-					<span className='section-label'>Authentication</span>
-					<vscode-form-helper>
-						Select the authentication method to use when connecting to the SPARQL endpoint:
-					</vscode-form-helper>
-					<div className="section-authentication-container">
-						<div className="column-1">
-							<vscode-label>Type</vscode-label>
-							<vscode-single-select
-								ref={authTypeSelectRef}
-								value={state.selectedAuthTypeIndex.toString()}
-								disabled={isFormReadOnly()}>
-								<vscode-option value="0">None</vscode-option>
-								<vscode-option value="1">Basic</vscode-option>
-								<vscode-option value="2">Bearer</vscode-option>
-								<vscode-option value="3">Microsoft Entra</vscode-option>
-								<vscode-option value="4">Entra Client Credentials</vscode-option>
-							</vscode-single-select>
-						</div>
-						{state.selectedAuthTypeIndex !== AuthTypeIndex.None && <div className="vertical-separator">
-							{state.selectedAuthTypeIndex === AuthTypeIndex.Basic && renderBasicAuthFields()}
-							{state.selectedAuthTypeIndex === AuthTypeIndex.Bearer && renderBearerAuthFields()}
-							{state.selectedAuthTypeIndex === AuthTypeIndex.Microsoft && renderMicrosoftAuthFields()}
-							{state.selectedAuthTypeIndex === AuthTypeIndex.EntraClientCredentials && renderEntraClientCredentialsFields()}
-						</div>}
-					</div>
-				</section>
-				{state.inferenceFeatureEnabled && endpoint.inferenceSupported && (
+				<div className="form-body">
 					<section>
-						<span className='section-label'>Inference</span>
-						<vscode-form-helper>
-							When enabled, inferred triples are included in query results.
-						</vscode-form-helper>
-						<div className="inference-toggle-container">
-							<vscode-checkbox
-								checked={endpoint.inferenceEnabled ?? false}
-								onChange={() => {
-									messaging?.postMessage({
-										id: 'ToggleSparqlConnectionInference',
-										connectionId: endpoint.id
-									});
-								}}>
-								Include inferred triples in query results
-							</vscode-checkbox>
+						<div>
+							<vscode-label>Endpoint URL</vscode-label>
+							<div className={getEndpointSectionClassName()}>
+								<vscode-textfield
+									required
+									value={endpoint.endpointUrl}
+									title='Endpoint URL'
+									placeholder="https://example.org/sparql"
+									disabled={isFormReadOnly()}
+									onInput={handleEndpointUrlChange}
+								>
+									{!wasConnectionTested() && <vscode-icon
+										slot="content-before"
+										name="database"
+									></vscode-icon>}
+									{isConnectionTesting() && <vscode-icon
+										slot="content-before"
+										name="ellipsis"
+										className="icon-testing"
+									></vscode-icon>}
+									{hasConnectionError() && <vscode-icon
+										slot="content-before"
+										name="error"
+										className="icon-error"
+									></vscode-icon>}
+									{isConnectionSuccessful() && <vscode-icon
+										slot="content-before"
+										name="pass"
+										className="icon-success"
+									></vscode-icon>}
+								</vscode-textfield>
+								<vscode-button
+									type="button"
+									icon="debug-disconnect"
+									title="Test Connection"
+									disabled={!isFormValid() || isFormReadOnly() || isConnectionTesting()}
+									onClick={handleTestEndpoint}>
+								</vscode-button>
+							</div>
+						</div>
+						<div className="section-endpoint-description">
+							<vscode-label>Description <span className="label-optional">(optional)</span></vscode-label>
+							<vscode-textfield
+								value={endpoint.description ?? ''}
+								disabled={isFormReadOnly()}
+								onInput={handleDescriptionChange}
+							/>
 						</div>
 					</section>
-				)}
+					<section>
+						<div>
+							<span className='section-label'>Authentication</span>
+							<vscode-form-helper>
+								Select the authentication method to use when connecting to the SPARQL endpoint:
+							</vscode-form-helper>
+						</div>
+						<div className="section-authentication-container">
+							<div className="column-1">
+								<vscode-label>Type</vscode-label>
+								<vscode-single-select
+									className="wide"
+									ref={authTypeSelectRef}
+									value={state.selectedAuthTypeIndex.toString()}
+									disabled={isFormReadOnly()}>
+									<vscode-option value="0">None</vscode-option>
+									<vscode-option value="1">Basic</vscode-option>
+									<vscode-option value="2">Bearer</vscode-option>
+									<vscode-option value="3">Entra SSO</vscode-option>
+									<vscode-option value="4">Entra Client Credentials</vscode-option>
+								</vscode-single-select>
+							</div>
+							{state.selectedAuthTypeIndex !== AuthTypeIndex.None && <div className="vertical-separator">
+								{state.selectedAuthTypeIndex === AuthTypeIndex.Basic && renderBasicAuthFields()}
+								{state.selectedAuthTypeIndex === AuthTypeIndex.Bearer && renderBearerAuthFields()}
+								{state.selectedAuthTypeIndex === AuthTypeIndex.Microsoft && renderMicrosoftAuthFields()}
+								{state.selectedAuthTypeIndex === AuthTypeIndex.EntraClientCredentials && renderEntraClientCredentialsFields()}
+							</div>}
+						</div>
+					</section>
+					{state.inferenceFeatureEnabled && endpoint.inferenceSupported && (
+						<section>
+							<div>
+								<span className='section-label'>Inference</span>
+								<vscode-form-helper>
+									When enabled, inferred triples are included in query results.
+								</vscode-form-helper>
+							</div>
+							<div className="inference-toggle-container">
+								<vscode-checkbox
+									checked={endpoint.inferenceEnabled ?? false}
+									onChange={() => {
+										messaging?.postMessage({
+											id: 'ToggleSparqlConnectionInference',
+											connectionId: endpoint.id
+										});
+									}}>
+									Include inferred triples in query results
+								</vscode-checkbox>
+							</div>
+						</section>
+					)}
+				</div>
 			</form>
 		</div>
 	);
