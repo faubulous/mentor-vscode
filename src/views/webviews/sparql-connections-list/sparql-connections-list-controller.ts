@@ -70,7 +70,7 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                 return true;
             }
             case 'DeleteConnection': {
-                const displayName = message.connection.name ?? message.connection.endpointUrl;
+                const displayName = message.connection.endpointUrl;
                 const answer = await vscode.window.showWarningMessage(
                     `Are you sure you want to delete the connection "${displayName}"?`,
                     { modal: true },
