@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
@@ -31,27 +30,53 @@ export const selectActiveLanguage = {
 		const quickPick = vscode.window.createQuickPick<LanguageQuckPickItem>();
 		quickPick.title = 'Select active document language';
 
-		if (!context.primaryLanguage) {
+		const noLanguageKey = '__unspecified__';
+		const languageStats = new Map<string, number>();
+
+		for (const predicateStats of Object.values(context.predicateStats)) {
+			for (const [languageTag, count] of Object.entries(predicateStats.languageTags)) {
+				const key = languageTag && languageTag !== 'undefined' ? languageTag : noLanguageKey;
+
+				languageStats.set(key, (languageStats.get(key) ?? 0) + count);
+			}
+		}
+
+		const languageEntries = Array.from(languageStats.entries());
+
+		if (languageEntries.length === 0) {
 			quickPick.items = [{
 				label: 'No language tagged literals found.',
 				language: undefined
 			}];
 		} else {
-			const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
-			const languageStats = vocabulary.getLanguageTagUsageStats(context.graphs);
-
 			// Note: We translate the language code into a readable name in the UI language of the editor.
 			const languageNames = new Intl.DisplayNames([vscode.env.language], { type: 'language' });
 
-			quickPick.items = Object.entries(languageStats).map(([l, count]) => {
+			quickPick.items = languageEntries.map(([l, count]) => {
+				const language = l === noLanguageKey ? undefined : l;
 				const values = count === 1 ? 'value' : 'values';
+				const displayName = language ? (languageNames.of(language) ?? language) : 'undefined';
 
 				return {
-					language: l,
-					label: `${l} - ${languageNames.of(l.toUpperCase())}`,
+					language,
+					label: language ? `${language} - ${displayName}` : displayName,
 					description: `${count} ${values}`,
 				};
-			}).sort((a, b) => a.language.localeCompare(b.language));
+			}).sort((a, b) => {
+				if (!a.language && b.language) {
+					return -1;
+				}
+
+				if (a.language && !b.language) {
+					return 1;
+				}
+
+				if (!a.language && !b.language) {
+					return 0;
+				}
+
+				return a.language!.localeCompare(b.language!);
+			});
 
 			quickPick.onDidChangeSelection((selection) => {
 				if (selection.length > 0) {

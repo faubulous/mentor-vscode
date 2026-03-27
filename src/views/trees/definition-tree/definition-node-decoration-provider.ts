@@ -118,7 +118,8 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		}
 
 		if (!context.primaryLanguage || !context.activeLanguage) {
-			// Note: The document may not have a language set if there are no language tags used in the document.
+			// Note: The document may not have a language set if 
+			// there are no language tags used in the document.
 			return undefined;
 		}
 
@@ -137,7 +138,8 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			}
 
 			if (!triple.object.language || triple.object.language.startsWith(activeLanguage)) {
-				// Either there is no language tag (valid for all languages) or the language tag is in the active language.
+				// Either there is no language tag (valid for all languages) 
+				// or the language tag is in the active language.
 				return undefined;
 			}
 

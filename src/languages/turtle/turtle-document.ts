@@ -363,7 +363,7 @@ export class TurtleDocument extends DocumentContext {
 					// with the vscode.Uri.toString() output.
 					iri = Uri.getNormalizedUri(iri);
 
-					if (t.startColumn === 1 && previousToken) {
+					if (previousToken) {
 						this._registerSubject(t, iri, previousToken);
 					}
 
@@ -391,7 +391,11 @@ export class TurtleDocument extends DocumentContext {
 				}
 			}
 
-			previousToken = t;
+			if (t.tokenType.name !== RdfToken.COMMENT.name) {
+				// Skip comments for previous token tracking to avoid skipping important 
+				// registrations when comments are present between tokens.
+				previousToken = t;
+			}
 		});
 	}
 
