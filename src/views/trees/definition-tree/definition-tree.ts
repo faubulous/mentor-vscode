@@ -48,7 +48,8 @@ export class DefinitionTree implements TreeView {
 			this._registerDocumentContextHandler(),
 			this._registerDecorationProvider(),
 			this._registerActiveLanguageHandler(),
-			this._registerRefreshCommand()
+			this._registerRefreshCommand(),
+			this._registerEditorSelectionHandler()
 		];
 
 		const showReferences = this._settings.get('view.showReferences', true);
@@ -83,6 +84,44 @@ export class DefinitionTree implements TreeView {
 
 	private _registerDecorationProvider(): vscode.Disposable {
 		return vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider());
+	}
+
+	private _registerEditorSelectionHandler(): vscode.Disposable {
+		let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+		return vscode.window.onDidChangeTextEditorSelection((e) => {
+			if (debounceTimer) {
+				clearTimeout(debounceTimer);
+			}
+
+			debounceTimer = setTimeout(() => {
+				const context = this._contextService.contexts[e.textEditor.document.uri.toString()];
+
+				if (!context) {
+					return;
+				}
+
+				const position = e.selections[0]?.active;
+
+				if (!position) {
+					return;
+				}
+
+				const iri = context.getIriAtPosition(position);
+
+				if (iri) {
+					this._revealForUri(iri);
+				}
+			}, 300);
+		});
+	}
+
+	private _revealForUri(iri: string): void {
+		const node = this.treeDataProvider.getNodeForUri(iri);
+
+		if (node) {
+			this.treeView.reveal(node, { select: true, focus: false, expand: true });
+		}
 	}
 
 	private _onDidChangeDocumentContext() {

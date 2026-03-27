@@ -19,6 +19,11 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	initialCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
 
 	/**
+	 * The parent node in the tree, or undefined if this is a root node.
+	 */
+	parent: DefinitionTreeNode | undefined;
+
+	/**
 	 * The documet context used to query definitions.
 	 */
 	document: IDocumentContext;
@@ -52,7 +57,10 @@ export class DefinitionTreeNode extends TreeNodeBase {
 		// TODO: Move ID creation to a separate method in uri module.
 		const id = `${this.id}/<${iri}>`;
 
-		return new NodeConstructor(this.document, id, iri, this.getQueryOptions(options));
+		const node = new NodeConstructor(this.document, id, iri, this.getQueryOptions(options));
+		node.parent = this;
+
+		return node;
 	}
 
 	getCommand(): vscode.Command | undefined {
