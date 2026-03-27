@@ -121,7 +121,7 @@ export abstract class DocumentContext implements IDocumentContext {
 			this._primaryLanguage = undefined;
 
 			for (let [lang, frequency] of Object.entries(languageStats)) {
-				if (frequency > maxFrequency) {
+				if (lang && frequency > maxFrequency) {
 					maxFrequency = frequency;
 
 					this._primaryLanguage = lang;

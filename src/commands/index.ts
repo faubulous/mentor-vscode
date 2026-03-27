@@ -2,7 +2,13 @@ export { analyzeWorkspace } from './analyze-workspace';
 export { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
 export { clearQueryHistory } from './clear-query-history';
 export { cleanDocument } from './clean-document';
-export { convertFileFormat } from './convert-file-format';
+export {
+	convertFileFormat,
+	convertFileFormatToNTriplesSubmenu,
+	convertFileFormatToNQuadsSubmenu,
+	convertFileFormatToTurtleSubmenu,
+	convertFileFormatToXmlSubmenu
+} from './convert-file-format';
 export { createDocument } from './create-document';
 export { createDocumentFromLanguage } from './create-document-from-language';
 export { createNotebook } from './create-notebook';

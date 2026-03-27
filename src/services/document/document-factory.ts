@@ -24,6 +24,8 @@ export interface FileExtensionInfo {
  * A factory for creating RDF document contexts.
  */
 export class DocumentFactory {
+	private readonly _convertibleLanguages = ['ntriples', 'nquads', 'turtle', 'xml'];
+
 	/**
 	 * The supported languages.
 	 */
@@ -74,10 +76,20 @@ export class DocumentFactory {
 	 * @returns `true` if the document can be converted, otherwise `false`.
 	 */
 	isConvertibleLanguage(languageId: string): boolean {
-		return languageId === 'ntriples' ||
-			languageId === 'nquads' ||
-			languageId === 'turtle' ||
-			languageId === 'xml';
+		return this._convertibleLanguages.includes(languageId);
+	}
+
+	/**
+	 * Gets the target languages a document can be converted to.
+	 * @param sourceLanguageId The source document language ID.
+	 * @returns The supported target language IDs.
+	 */
+	getConvertibleTargetLanguageIds(sourceLanguageId: string): string[] {
+		if (!this.isConvertibleLanguage(sourceLanguageId)) {
+			return [];
+		}
+
+		return this._convertibleLanguages.filter(languageId => languageId !== sourceLanguageId);
 	}
 
 	/**

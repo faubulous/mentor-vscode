@@ -18,6 +18,8 @@ export interface DocumentIndex {
  * This is the central service for loading, tracking, and retrieving RDF document contexts.
  */
 export class DocumentContextService {
+	private readonly _convertTargetLanguageIds = ['ntriples', 'nquads', 'turtle', 'xml'];
+
 	/**
 	 * Maps document URIs to loaded document contexts.
 	 */
@@ -317,11 +319,21 @@ export class DocumentContextService {
 	async handleActiveEditorChanged(): Promise<void> {
 		const editor = vscode.window.activeTextEditor;
 
-		if (!editor) return;
+		if (!editor) {
+			await this._setConvertFileFormatContexts();
+			return;
+		}
 
 		const uri = editor.document.uri;
 
-		if (!uri || uri === this.activeContext?.uri) return;
+		if (!uri) {
+			await this._setConvertFileFormatContexts();
+			return;
+		}
+
+		await this._setConvertFileFormatContexts(editor.document.languageId);
+
+		if (uri === this.activeContext?.uri) return;
 
 		const context = await this.loadDocument(editor.document);
 
@@ -330,10 +342,27 @@ export class DocumentContextService {
 
 			this._onDidChangeDocumentContext.fire(context);
 		}
+	}
 
-		const convertible = this._documentFactory.isConvertibleLanguage(editor.document.languageId);
+	/**
+	 * Set the context for convert file format commands based on the current language ID to 
+	 * support menu visibility and enablement of conversion related commands.
+	 * @param languageId The language ID of the current document. If `undefined`, all convert file format contexts will be set to `false`.
+	 * @returns A promise that resolves when the contexts have been set.
+	 */
+	private async _setConvertFileFormatContexts(languageId?: string): Promise<void> {
+		const targets = new Set(languageId ? this._documentFactory.getConvertibleTargetLanguageIds(languageId) : []);
+		const convertible = languageId ? this._documentFactory.isConvertibleLanguage(languageId) : false;
 
-		vscode.commands.executeCommand("setContext", "mentor.command.convertFileFormat.executable", convertible);
+		await vscode.commands.executeCommand('setContext', 'mentor.command.convertFileFormat.executable', convertible);
+
+		for (const targetLanguageId of this._convertTargetLanguageIds) {
+			await vscode.commands.executeCommand(
+				'setContext',
+				`mentor.command.convertFileFormat.target.${targetLanguageId}`,
+				targets.has(targetLanguageId)
+			);
+		}
 	}
 
 	/**

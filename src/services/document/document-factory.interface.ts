@@ -31,6 +31,13 @@ export interface IDocumentFactory {
 	isConvertibleLanguage(languageId: string): boolean;
 
 	/**
+	 * Gets the target languages a document can be converted to.
+	 * @param sourceLanguageId The source document language ID.
+	 * @returns The supported target language IDs.
+	 */
+	getConvertibleTargetLanguageIds(sourceLanguageId: string): string[];
+
+	/**
 	 * Checks if a file is supported by the factory.
 	 * @param uri The URI of the file.
 	 * @returns `true` if the file is supported, otherwise `false`.

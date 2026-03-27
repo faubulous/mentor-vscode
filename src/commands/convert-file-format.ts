@@ -8,65 +8,97 @@ import { IDocumentFactory, ILanguageInfo } from '@src/services/document/document
 export const convertFileFormat = {
 	id: 'mentor.command.convertFileFormat',
 	handler: async () => {
-		const document = vscode.window.activeTextEditor?.document;
-
-		if (!document) {
-			vscode.window.showErrorMessage('No document selected.');
-			return;
-		}
-
-		const diagnostics = vscode.languages.getDiagnostics(document.uri);
-		const hasErrors = diagnostics.some((d) => d.severity === vscode.DiagnosticSeverity.Error);
-
-		if (hasErrors) {
-			await vscode.window.showErrorMessage('This document has syntax errors and cannot be converted.');
-			return;
-		}
-
-		const documentIri = document.uri.toString();
-		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-		const context = contextService.contexts[documentIri];
-
-		if (!context) {
-			vscode.window.showErrorMessage('The document graph could not be retrieved.');
-			return;
-		}
-
-		const selectedLanguage = await selectTargetLanguage(document.languageId);
-
-		if (!selectedLanguage) {
-			// The user cancelled the action.
-			return;
-		}
-
-		const sourceGraphIri = context.graphIri.toString();
-		const targetGraphIri = await selectTargetGraphIri(sourceGraphIri, selectedLanguage.id);
-		const targetLanguage = selectedLanguage.mimetypes[0];
-
-		try {
-			const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
-			const data = await vocabulary.store.serializeGraph(sourceGraphIri, targetLanguage, targetGraphIri, context.namespaces);
-			const result = await vscode.workspace.openTextDocument({ content: data, language: selectedLanguage.id });
-
-			vscode.window.showTextDocument(result);
-		} catch (error) {
-			vscode.window.showErrorMessage(`Error converting file format: ${error}`);
-		}
+		await convertFileFormatHandler();
 	}
 };
+
+export const convertFileFormatToNTriplesSubmenu = {
+	id: 'mentor.command.convertFileFormatToNTriplesSubmenu',
+	handler: async () => {
+		await convertFileFormatHandler('ntriples');
+	}
+};
+
+export const convertFileFormatToNQuadsSubmenu = {
+	id: 'mentor.command.convertFileFormatToNQuadsSubmenu',
+	handler: async () => {
+		await convertFileFormatHandler('nquads');
+	}
+};
+
+export const convertFileFormatToTurtleSubmenu = {
+	id: 'mentor.command.convertFileFormatToTurtleSubmenu',
+	handler: async () => {
+		await convertFileFormatHandler('turtle');
+	}
+};
+
+export const convertFileFormatToXmlSubmenu = {
+	id: 'mentor.command.convertFileFormatToXmlSubmenu',
+	handler: async () => {
+		await convertFileFormatHandler('xml');
+	}
+};
+
+async function convertFileFormatHandler(targetLanguageId?: string) {
+	const document = vscode.window.activeTextEditor?.document;
+
+	if (!document) {
+		vscode.window.showErrorMessage('No document selected.');
+		return;
+	}
+
+	const diagnostics = vscode.languages.getDiagnostics(document.uri);
+	const hasErrors = diagnostics.some((d) => d.severity === vscode.DiagnosticSeverity.Error);
+
+	if (hasErrors) {
+		await vscode.window.showErrorMessage('This document has syntax errors and cannot be converted.');
+		return;
+	}
+
+	const documentIri = document.uri.toString();
+	const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+	const context = contextService.contexts[documentIri];
+
+	if (!context) {
+		vscode.window.showErrorMessage('The document graph could not be retrieved.');
+		return;
+	}
+
+	const selectedLanguage = targetLanguageId
+		? await selectConfiguredTargetLanguage(document.languageId, targetLanguageId)
+		: await selectTargetLanguage(document.languageId);
+
+	if (!selectedLanguage) {
+		return;
+	}
+
+	const sourceGraphIri = context.graphIri.toString();
+	const targetGraphIri = await selectTargetGraphIri(sourceGraphIri, selectedLanguage.id);
+	const targetLanguage = selectedLanguage.mimetypes[0];
+
+	try {
+		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
+		const data = await vocabulary.store.serializeGraph(sourceGraphIri, targetLanguage, targetGraphIri, context.namespaces);
+		const result = await vscode.workspace.openTextDocument({ content: data, language: selectedLanguage.id });
+
+		vscode.window.showTextDocument(result);
+	} catch (error) {
+		vscode.window.showErrorMessage(`Error converting file format: ${error}`);
+	}
+}
 
 async function selectTargetLanguage(sourceLanguageId: string) {
 	const documentFactory = container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 	const languages = await documentFactory.getSupportedLanguagesInfo();
+	const targetLanguageIds = new Set(documentFactory.getConvertibleTargetLanguageIds(sourceLanguageId));
 
 	type LanguagePickItem = vscode.QuickPickItem & {
 		language: ILanguageInfo;
 	};
 
-	// TODO: Move isSerializableGraph into mentor-rdf.Store and add support for RDF/XML serialization
 	const items: LanguagePickItem[] = languages
-		.filter(lang => lang.id !== sourceLanguageId)
-		.filter(lang => documentFactory.isConvertibleLanguage(lang.id))
+		.filter(lang => targetLanguageIds.has(lang.id))
 		.map((lang) => ({
 			label: lang.name,
 			description: (lang.extensions ?? []).join(", "),
@@ -79,6 +111,18 @@ async function selectTargetLanguage(sourceLanguageId: string) {
 	});
 
 	return selected?.language;
+}
+
+async function selectConfiguredTargetLanguage(sourceLanguageId: string, targetLanguageId: string) {
+	const documentFactory = container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
+	const targetLanguageIds = new Set(documentFactory.getConvertibleTargetLanguageIds(sourceLanguageId));
+
+	if (!targetLanguageIds.has(targetLanguageId)) {
+		vscode.window.showErrorMessage('The selected target format is not supported for this document.');
+		return undefined;
+	}
+
+	return documentFactory.getLanguageInfo(targetLanguageId);
 }
 
 /**

@@ -809,12 +809,36 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.convertFileFormatToNTriplesSubmenu",
+        "title": "N-Triples",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.convertFileFormatToNQuadsSubmenu",
+        "title": "N-Quads",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.convertFileFormatToTurtleSubmenu",
+        "title": "Turtle",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.convertFileFormatToXmlSubmenu",
+        "title": "RDF/XML",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.cleanDocument",
         "title": "Clean Document",
         "category": "Mentor"
       }
     ],
     "submenus": [
+      {
+        "id": "mentor.submenu.convertDocument",
+        "label": "Convert Document"
+      },
       {
         "id": "mentor.submenu.sortDocument",
         "label": "Sort Document"
@@ -949,7 +973,7 @@
       ],
       "editor/context": [
         {
-          "command": "mentor.command.convertFileFormat",
+          "submenu": "mentor.submenu.convertDocument",
           "group": "1_modification@98",
           "when": "editorTextFocus && mentor.command.convertFileFormat.executable"
         },
@@ -962,6 +986,28 @@
           "command": "mentor.command.cleanDocument",
           "group": "1_modification@4",
           "when": "editorTextFocus && (editorLangId == 'sparql' || editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads' || editorLangId == 'datalog')"
+        }
+      ],
+      "mentor.submenu.convertDocument": [
+        {
+          "command": "mentor.command.convertFileFormatToNTriplesSubmenu",
+          "group": "1_convert@1",
+          "when": "editorTextFocus && mentor.command.convertFileFormat.target.ntriples"
+        },
+        {
+          "command": "mentor.command.convertFileFormatToNQuadsSubmenu",
+          "group": "1_convert@2",
+          "when": "editorTextFocus && mentor.command.convertFileFormat.target.nquads"
+        },
+        {
+          "command": "mentor.command.convertFileFormatToTurtleSubmenu",
+          "group": "1_convert@3",
+          "when": "editorTextFocus && mentor.command.convertFileFormat.target.turtle"
+        },
+        {
+          "command": "mentor.command.convertFileFormatToXmlSubmenu",
+          "group": "1_convert@4",
+          "when": "editorTextFocus && mentor.command.convertFileFormat.target.xml"
         }
       ],
       "mentor.submenu.sortDocument": [
@@ -982,6 +1028,22 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "mentor.command.convertFileFormatToNTriplesSubmenu",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.convertFileFormatToNQuadsSubmenu",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.convertFileFormatToTurtleSubmenu",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.convertFileFormatToXmlSubmenu",
+          "when": "false"
+        },
         {
           "command": "mentor.command.sortDocumentAlphabeticallySubmenu",
           "when": "false"
