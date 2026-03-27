@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
-import { StatementSerializer, TurtleSerializer, SortingStrategy } from '@faubulous/mentor-rdf-serializers';
+import { QuadContextSerializer, TurtleSerializer, QuadSortingStrategy } from '@faubulous/mentor-rdf-serializers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
@@ -12,7 +12,7 @@ import { IDocumentContextService } from '@src/services/document';
  * @param documentUri Optional URI of the document to sort; defaults to the active editor's document.
  * @param strategy The sorting strategy to apply.
  */
-export async function sortDocument(documentUri: vscode.Uri | undefined, strategy: SortingStrategy): Promise<void> {
+export async function sortDocument(documentUri: vscode.Uri | undefined, strategy: QuadSortingStrategy): Promise<void> {
 	const targetUri = documentUri ?? vscode.window.activeTextEditor?.document.uri;
 
 	if (!targetUri) {
@@ -53,12 +53,13 @@ export async function sortDocument(documentUri: vscode.Uri | undefined, strategy
 		const reader = new TurtleReader();
 		const quadContexts = reader.readQuadContexts(cst, lexResult.tokens);
 
-		// Serialize using the StatementSerializer with the chosen sorting strategy.
-		const serializer = new StatementSerializer(new TurtleSerializer());
+		// Serialize using the QuadContextSerializer with the chosen sorting strategy.
+		const serializer = new QuadContextSerializer(new TurtleSerializer());
 		const output = serializer.serialize(quadContexts, {
 			prefixes: context.namespaces,
 			baseIri: context.baseIri,
-			sort: strategy,
+			sortingStrategy: strategy,
+			inlineSingleUseBlankNodes: true
 		});
 
 		// Replace the entire document content with the sorted output.
