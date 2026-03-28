@@ -29,6 +29,10 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
+### Version 0.5.2: New SPARQL query editor and improved notebooks
+- Implemented reveal API which selects terms in the definition tree when placing the cursor in the editor.
+- Bug fixes related to the new parsing infrastructure.
+
 ### Version 0.4.0: RDF 1.2 support and new parsers (experimental)
 - Added support for RDF 1.2 syntax in N-Triples, N-Quads, Turtle, TriG, N3
   - Based on new [mentor-rdf-parsers](https://github.com/faubulous/mentor-rdf-parsers) library
@@ -39,13 +43,6 @@ The developer friendly IDE for RDF knowledge graphs.
 - Added support for highlighting unused variables in SPARQL queries
 - Added support for indexing notebook cells upon indexing the workspace
 - Fixed invalid syntax highlighting of prefixes that contain '-' characters
-
-### Version 0.3.10: Improved SPARQL connection management
-- Moved SPARQL connection management into dedicated view
-    - Removed old connection management tree view
-- Added basic graph management:
-    - Can list SPARQL endpoint graphs in connection view
-    - Can drop graphs to binding result view
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 
