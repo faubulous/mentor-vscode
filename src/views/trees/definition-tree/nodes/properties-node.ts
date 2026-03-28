@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
+import { RDF } from "@faubulous/mentor-rdf";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
+import { DefinitionTreeNode } from "../definition-tree-node";
 import { PropertyNode } from "./property-node";
 import { PropertyClassNode } from "./property-class-node";
 
@@ -74,5 +76,32 @@ export class PropertiesNode extends PropertyClassNode {
 
 	override getTooltip(): vscode.MarkdownString | undefined {
 		return undefined;
+	}
+
+	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
+		if (!this.vocabulary.hasType(this.getOntologyGraphs(), iri, RDF.Property)) {
+			return undefined;
+		}
+
+		const options = this.getQueryOptions();
+		const rootToTarget = [
+			...this.vocabulary.getRootPropertiesPath(this.getOntologyGraphs(), iri, options)
+		].reverse();
+		rootToTarget.push(iri);
+
+		if (this.settings.get('view.showPropertyTypes', true)) {
+			// Properties are grouped by type — try each type branch.
+			for (const typeNode of this.getChildren() as DefinitionTreeNode[]) {
+				const found = typeNode.walkHierarchyPath(rootToTarget);
+
+				if (found) {
+					return found;
+				}
+			}
+
+			return undefined;
+		}
+
+		return this.walkHierarchyPath(rootToTarget);
 	}
 }

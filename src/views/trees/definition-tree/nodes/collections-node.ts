@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
+import { DefinitionTreeNode } from "../definition-tree-node";
 import { CollectionClassNode } from "./collection-class-node";
 
 export class CollectionsNode extends CollectionClassNode {
@@ -46,5 +47,10 @@ export class CollectionsNode extends CollectionClassNode {
 
 	override getTooltip(): vscode.MarkdownString | undefined {
 		return undefined;
+	}
+
+	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
+		const children = this.getChildren() as DefinitionTreeNode[];
+		return children.find(n => n.uri === iri);
 	}
 }

@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import { RDFS } from "@faubulous/mentor-rdf";
+import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassNode } from "./class-node";
 
 /**
@@ -36,5 +38,19 @@ export class ClassesNode extends ClassNode {
 
 	override getTooltip(): vscode.MarkdownString | undefined {
 		return undefined;
+	}
+
+	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
+		if (!this.vocabulary.hasType(this.getOntologyGraphs(), iri, RDFS.Class)) {
+			return undefined;
+		}
+
+		const options = this.getQueryOptions();
+		const rootToTarget = [
+			...this.vocabulary.getRootClassPath(this.getOntologyGraphs(), iri, options)
+		].reverse();
+		rootToTarget.push(iri);
+
+		return this.walkHierarchyPath(rootToTarget);
 	}
 }

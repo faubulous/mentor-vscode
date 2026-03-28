@@ -120,6 +120,39 @@ export class DefinitionTreeNode extends TreeNodeBase {
 	}
 
 	/**
+	 * Resolve a descendant node matching the given IRI. Override in container nodes
+	 * to provide efficient, type-aware resolution instead of brute-force traversal.
+	 * @param iri The resource IRI to search for.
+	 * @returns The matching tree node, or `undefined` if this subtree cannot resolve it.
+	 */
+	resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
+		return undefined;
+	}
+
+	/**
+	 * Walk a hierarchy path of IRIs through the children of this node, expanding
+	 * each level lazily. Returns the node matching the last IRI in the path.
+	 * @param path An array of IRIs ordered from root ancestor to target.
+	 * @returns The node at the end of the path, or `undefined` if any step fails.
+	 */
+	walkHierarchyPath(path: string[]): DefinitionTreeNode | undefined {
+		let children = this.getChildren() as DefinitionTreeNode[];
+		let found: DefinitionTreeNode | undefined;
+
+		for (const pathIri of path) {
+			found = children.find(n => n.uri === pathIri);
+
+			if (!found) {
+				return undefined;
+			}
+
+			children = found.getChildren() as DefinitionTreeNode[];
+		}
+
+		return found;
+	}
+
+	/**
 	 * Get the query options for the tree item.
 	 * @param additionalOptions Query options that will override or be added to the associated query options.
 	 * @returns A query options object.

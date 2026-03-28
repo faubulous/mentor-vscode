@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
+import { DefinitionTreeNode } from "../definition-tree-node";
 import { IndividualNode } from "./individual-node";
 import { IndividualClassNode } from "./individual-class-node";
 
@@ -58,5 +59,30 @@ export class IndividualsNode extends IndividualClassNode {
 
 	override getTooltip(): vscode.MarkdownString | undefined {
 		return undefined;
+	}
+
+	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
+		const children = this.getChildren() as DefinitionTreeNode[];
+
+		if (this.settings.get('view.showIndividualTypes', true)) {
+			// Individuals are grouped by type — find the matching type node, then the individual within it.
+			for (const typeIri of this.vocabulary.getIndividualTypes(this.getDocumentGraphs(), iri)) {
+				const typeNode = children.find(n => n.uri === typeIri);
+
+				if (typeNode) {
+					const instances = typeNode.getChildren() as DefinitionTreeNode[];
+					const found = instances.find(n => n.uri === iri);
+
+					if (found) {
+						return found;
+					}
+				}
+			}
+
+			return undefined;
+		}
+
+		// Flat list — direct lookup.
+		return children.find(n => n.uri === iri);
 	}
 }

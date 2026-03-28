@@ -49,4 +49,16 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 
 		return result;
 	}
+
+	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
+		for (const child of this.getChildren()) {
+			const found = child.resolveNodeForUri(iri);
+
+			if (found) {
+				return found;
+			}
+		}
+
+		return undefined;
+	}
 }

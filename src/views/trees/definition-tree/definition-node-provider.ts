@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { RDF, Uri, VocabularyRepository, _RDFS, _SH } from '@faubulous/mentor-rdf';
+import { Uri, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService, IWorkspaceIndexerService } from '@src/services/core';
@@ -113,9 +113,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	/**
-	 * Find the tree node for a given resource IRI. Falls back to a two-level
-	 * traversal of the tree so the node can be revealed even before the user has
-	 * manually expanded it.
+	 * Find the tree node for a given resource IRI. Delegates resolution to each
+	 * root node which uses type-aware, hierarchy-driven lookup internally.
 	 * @param iri The resource IRI to search for.
 	 * @returns The matching tree node, or undefined if not found.
 	 */
@@ -124,187 +123,14 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return this._nodeCache.get(iri);
 		}
 
-		const classNode = this._getClassNodeFromPath(iri);
+		const roots = this.getChildren(undefined as unknown as DefinitionTreeNode) ?? [];
 
-		if (classNode) {
-			this._nodeCache.set(iri, classNode);
-			return classNode;
-		}
+		for (const root of roots) {
+			const node = root.resolveNodeForUri(iri);
 
-		const propertyNode = this._getPropertyNodeFromPath(iri);
-
-		if (propertyNode) {
-			this._nodeCache.set(iri, propertyNode);
-			return propertyNode;
-		}
-
-		// Traverse the tree breadth-first so deeply nested nodes (e.g. subclasses)
-		// can also be found and revealed.
-		const queue = [...(this.getChildren(undefined as unknown as DefinitionTreeNode) ?? [])];
-		const visited = new Set<string>();
-		const maxNodes = 5000;
-		let inspected = 0;
-
-		while (queue.length > 0 && inspected < maxNodes) {
-			const node = queue.shift()!;
-
-			if (visited.has(node.id)) {
-				continue;
-			}
-
-			visited.add(node.id);
-			inspected++;
-
-			if (node.uri === iri) {
+			if (node) {
 				this._nodeCache.set(iri, node);
 				return node;
-			}
-
-			const children = this.getChildren(node) ?? [];
-
-			for (const child of children) {
-				if (!visited.has(child.id)) {
-					queue.push(child);
-				}
-			}
-		}
-
-		return this._nodeCache.get(iri);
-	}
-
-	/**
-	 * Resolve a class node by following the class hierarchy path from root to leaf.
-	 * This is more efficient and deterministic than a full tree traversal for class IRIs.
-	 */
-	private _getClassNodeFromPath(iri: string): DefinitionTreeNode | undefined {
-		if (!this.document) {
-			return undefined;
-		}
-
-		const includeReferenced = this.settings.get('view.showReferences', true);
-
-		if (!this.vocabulary.hasType(this.document.graphs, iri, _RDFS.Class)) {
-			return undefined;
-		}
-
-		const rootToTargetPath = [
-			...this.vocabulary.getRootClassPath(this.document.graphs, iri, { includeReferenced })
-		].reverse();
-		rootToTargetPath.push(iri);
-
-		const roots = this.getChildren(undefined as unknown as DefinitionTreeNode) ?? [];
-		const classContainers: DefinitionTreeNode[] = [];
-
-		for (const root of roots) {
-			if (root.uri === 'mentor:classes') {
-				classContainers.push(root);
-			}
-
-			for (const child of this.getChildren(root) ?? []) {
-				if (child.uri === 'mentor:classes') {
-					classContainers.push(child);
-				}
-			}
-		}
-
-		for (const container of classContainers) {
-			let children = this.getChildren(container) ?? [];
-			let found: DefinitionTreeNode | undefined;
-
-			for (const pathIri of rootToTargetPath) {
-				found = children.find((n) => n.uri === pathIri);
-
-				if (!found) {
-					break;
-				}
-
-				children = this.getChildren(found) ?? [];
-			}
-
-			if (found?.uri === iri) {
-				return found;
-			}
-		}
-
-		return undefined;
-	}
-
-	/**
-	 * Resolve a property node by following the property hierarchy path from root to leaf.
-	 * This avoids a full-tree traversal for property IRIs.
-	 */
-	private _getPropertyNodeFromPath(iri: string): DefinitionTreeNode | undefined {
-		if (!this.document) {
-			return undefined;
-		}
-
-		const includeReferenced = this.settings.get('view.showReferences', true);
-
-		if (!this.vocabulary.hasType(this.document.graphs, iri, RDF.Property)) {
-			return undefined;
-		}
-
-		const rootToTargetPath = [
-			...this.vocabulary.getRootPropertiesPath(this.document.graphs, iri, { includeReferenced })
-		].reverse();
-		rootToTargetPath.push(iri);
-
-		const roots = this.getChildren(undefined as unknown as DefinitionTreeNode) ?? [];
-		const propertyContainers: DefinitionTreeNode[] = [];
-
-		for (const root of roots) {
-			if (root.uri === 'mentor:properties') {
-				propertyContainers.push(root);
-			}
-
-			for (const child of this.getChildren(root) ?? []) {
-				if (child.uri === 'mentor:properties') {
-					propertyContainers.push(child);
-				}
-			}
-		}
-
-		for (const container of propertyContainers) {
-			let startNodes = this.getChildren(container) ?? [];
-
-			// If properties are grouped by type, each child is a property type node.
-			// Try every type branch and follow the property path inside that branch.
-			if (this.settings.get('view.showPropertyTypes', true)) {
-				for (const typeNode of startNodes) {
-					let children = this.getChildren(typeNode) ?? [];
-					let found: DefinitionTreeNode | undefined;
-
-					for (const pathIri of rootToTargetPath) {
-						found = children.find((n) => n.uri === pathIri);
-
-						if (!found) {
-							break;
-						}
-
-						children = this.getChildren(found) ?? [];
-					}
-
-					if (found?.uri === iri) {
-						return found;
-					}
-				}
-			} else {
-				let children = startNodes;
-				let found: DefinitionTreeNode | undefined;
-
-				for (const pathIri of rootToTargetPath) {
-					found = children.find((n) => n.uri === pathIri);
-
-					if (!found) {
-						break;
-					}
-
-					children = this.getChildren(found) ?? [];
-				}
-
-				if (found?.uri === iri) {
-					return found;
-				}
 			}
 		}
 
