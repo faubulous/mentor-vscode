@@ -29,6 +29,11 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
+### Version 0.5.3: Service Release
+- Fixed bug where () brackets in Turtle got improperly formatted
+- Fixed bug where definitions of terms contianing referenced classes were not revealed in the tree
+- Adapted syntax highlighting to not show red prefixes with new VS Code theme
+
 ### Version 0.5.2: New SPARQL query editor and improved notebooks
 - Implemented reveal API which selects terms in the definition tree when placing the cursor in the editor.
 - Bug fixes related to the new parsing infrastructure.
