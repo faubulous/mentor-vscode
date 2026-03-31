@@ -44,7 +44,7 @@
                     "end": "\\.",
                     "patterns": [
                         {
-                            "name": "storage.type.prefix.datalog",
+                            "name": "storage.modifier storage.modifier.prefix.datalog",
                             "match": "([a-zA-Z0-9_]*)?:"
                         },
                         {
@@ -195,7 +195,7 @@
             "match": "(([a-zA-Z0-9_]*)?(:))([a-zA-Z0-9_\\.-]*)?",
             "captures": {
                 "1": {
-                    "name": "storage.type.prefix.datalog"
+                    "name": "storage.modifier storage.modifier.prefix.datalog"
                 }
             }
         },

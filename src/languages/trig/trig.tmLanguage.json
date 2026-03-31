@@ -127,7 +127,7 @@
                     "include": "#iri"
                 },
                 {
-                    "name": "storage.type.prefix.trig",
+                    "name": "storage.modifier storage.modifier.prefix.trig",
                     "match": "([a-zA-Z0-9_]*)?:"
                 }
             ]
@@ -220,7 +220,7 @@
             "match": "(([a-zA-Z0-9_]*)?(:))([a-zA-Z0-9_\\.-]*)?",
             "captures": {
                 "1": {
-                    "name": "storage.type.prefix.trig"
+                    "name": "storage.modifier storage.modifier.prefix.trig"
                 }
             }
         },
