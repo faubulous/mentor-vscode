@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -1448,22 +1448,32 @@
               "typeOrder": {
                 "type": "array",
                 "description": "RDF type IRIs in priority order. Resources of the first listed type appear first in the document.",
-                "items": { "type": "string" }
+                "items": {
+                  "type": "string"
+                }
               },
               "predicateOrder": {
                 "type": "array",
                 "description": "Predicate IRIs in priority order for secondary sorting within each type group.",
-                "items": { "type": "string" }
+                "items": {
+                  "type": "string"
+                }
               },
               "unmatchedPosition": {
                 "type": "string",
                 "description": "Where to place resources that do not match any type in typeOrder.",
-                "enum": [ "start", "end" ]
+                "enum": [
+                  "start",
+                  "end"
+                ]
               },
               "unmatchedSort": {
                 "type": "string",
                 "description": "How to sort resources that do not match any type in typeOrder.",
-                "enum": [ "alphabetical", "none" ]
+                "enum": [
+                  "alphabetical",
+                  "none"
+                ]
               }
             },
             "default": {
