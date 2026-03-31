@@ -79,20 +79,27 @@ export class PropertiesNode extends PropertyClassNode {
 	}
 
 	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
-		if (!this.vocabulary.hasType(this.getOntologyGraphs(), iri, RDF.Property)) {
+		const graphs = this.getOntologyGraphs();
+
+		if (!this.vocabulary.hasType(graphs, iri, RDF.Property)) {
 			return undefined;
 		}
 
 		const options = this.getQueryOptions();
-		const rootToTarget = [
-			...this.vocabulary.getRootPropertiesPath(this.getOntologyGraphs(), iri, options)
-		].reverse();
-		rootToTarget.push(iri);
+
+		if (options.includeReferenced) {
+			// If referenced classes are included, we want to include classes 
+			// that are defined in other ontologies.
+			options.definedBy = null;
+		}
+
+		const rootToNode = [...this.vocabulary.getRootPropertiesPath(graphs, iri, options)].reverse();
+		rootToNode.push(iri);
 
 		if (this.settings.get('view.showPropertyTypes', true)) {
 			// Properties are grouped by type — try each type branch.
 			for (const typeNode of this.getChildren() as DefinitionTreeNode[]) {
-				const found = typeNode.walkHierarchyPath(rootToTarget);
+				const found = typeNode.walkHierarchyPath(rootToNode);
 
 				if (found) {
 					return found;
@@ -102,6 +109,6 @@ export class PropertiesNode extends PropertyClassNode {
 			return undefined;
 		}
 
-		return this.walkHierarchyPath(rootToTarget);
+		return this.walkHierarchyPath(rootToNode);
 	}
 }

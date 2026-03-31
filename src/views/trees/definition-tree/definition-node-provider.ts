@@ -89,7 +89,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return node.parent;
 	}
 
-	getChildren(node: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
+	getChildren(node?: DefinitionTreeNode): DefinitionTreeNode[] | null | undefined {
 		let children: DefinitionTreeNode[];
 
 		if (!node) {
@@ -123,7 +123,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			return this._nodeCache.get(iri);
 		}
 
-		const roots = this.getChildren(undefined as unknown as DefinitionTreeNode) ?? [];
+		const roots = this.getChildren(undefined) ?? [];
 
 		for (const root of roots) {
 			const node = root.resolveNodeForUri(iri);

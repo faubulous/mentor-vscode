@@ -41,16 +41,23 @@ export class ClassesNode extends ClassNode {
 	}
 
 	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
-		if (!this.vocabulary.hasType(this.getOntologyGraphs(), iri, RDFS.Class)) {
+		const graphs = this.getOntologyGraphs();
+
+		if (!this.vocabulary.hasType(graphs, iri, RDFS.Class)) {
 			return undefined;
 		}
 
 		const options = this.getQueryOptions();
-		const rootToTarget = [
-			...this.vocabulary.getRootClassPath(this.getOntologyGraphs(), iri, options)
-		].reverse();
-		rootToTarget.push(iri);
 
-		return this.walkHierarchyPath(rootToTarget);
+		if (options.includeReferenced) {
+			// If referenced classes are included, we want to include classes 
+			// that are defined in other ontologies.
+			options.definedBy = null;
+		}
+
+		const rootToNode = [...this.vocabulary.getRootClassPath(graphs, iri, options)].reverse();
+		rootToNode.push(iri);
+
+		return this.walkHierarchyPath(rootToNode);
 	}
 }
