@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { VocabularyRepository } from "@faubulous/mentor-rdf";
 import { ServiceToken } from '@src/services/tokens';
 import { sortByLabel } from "@src/views/trees/tree-node";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 
 /**
  * Base class for all nodes that represent classes in the definition tree, such as classes and properties.

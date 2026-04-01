@@ -1,14 +1,11 @@
 import * as vscode from "vscode";
 import { SH } from "@faubulous/mentor-rdf";
-import { DefinitionTreeNode } from "../definition-tree-node";
-import { ValidatorClassNode } from "./validator-class-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
+import { ShapeClassNode } from "./shape-class-node";
 
-/**
- * Node of a SHACL rule in the definition tree.
- */
-export class ValidatorsNode extends ValidatorClassNode {
-	override getContextValue(): string {
-		return "validators";
+export class ShapesNode extends ShapeClassNode {
+	override getContextValue() {
+		return "shapes";
 	}
 
 	override getIcon() {
@@ -16,15 +13,15 @@ export class ValidatorsNode extends ValidatorClassNode {
 	}
 
 	override getLabel() {
-		return { label: "Validators" };
+		return { label: "Shapes" };
 	}
 
 	override getDescription(): string {
 		const graphs = this.getDocumentGraphs();
 		const options = this.getQueryOptions();
-		const validators = this.vocabulary.getValidators(graphs, options);
+		const shapes = this.vocabulary.getShapes(graphs, undefined, options);
 
-		return [...validators].length.toString();
+		return [...shapes].length.toString();
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {
@@ -35,13 +32,15 @@ export class ValidatorsNode extends ValidatorClassNode {
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions();
 
-		if (this.vocabulary.hasType(graphs, iri, SH.Validator)) {
+		// Check if the IRI is a shape class — resolve via hierarchy path.
+		if (this.vocabulary.hasType(graphs, iri, SH.Shape)) {
 			const rootToTarget = [...this.vocabulary.getRootShapePath(graphs, iri, options)].reverse();
 			rootToTarget.push(iri);
 
 			return this.walkHierarchyPath(rootToTarget);
 		}
 
+		// Otherwise it is an individual shape instance — find its type class, then the instance within it.
 		for (const typeIri of this.vocabulary.getIndividualTypes(graphs, iri)) {
 			const rootToType = [...this.vocabulary.getRootShapePath(graphs, typeIri, options)].reverse();
 			rootToType.push(typeIri);

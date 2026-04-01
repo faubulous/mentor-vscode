@@ -1,6 +1,6 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { ClassNodeBase } from "./class-node-base";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { ClassNodeBase } from "../classes/class-node-base";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 import { RuleNode } from "./rule-node";
 
 export class RuleClassNode extends ClassNodeBase {

@@ -1,6 +1,6 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { ClassNodeBase } from "./class-node-base";
-import { NodeShapeNode, PropertyShapeNode, ParameterNode } from "./shape-node";
+import { ClassNodeBase } from "../classes/class-node-base";
+import { NodeShapeNode, PropertyShapeNode, ParameterNode } from "../shapes/shape-node";
 
 export class ShapeClassNode extends ClassNodeBase {
 	override getOntologyGraphs(): string[] {

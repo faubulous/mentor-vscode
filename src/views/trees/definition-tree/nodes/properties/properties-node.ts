@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
 import { RDF } from "@faubulous/mentor-rdf";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 import { PropertyNode } from "./property-node";
-import { PropertyClassNode } from "./property-class-node";
+import { PropertyClassNode } from "../properties/property-class-node";
 
 /**
  * Node of a property in the definition tree.

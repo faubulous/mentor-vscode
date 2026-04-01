@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
-import { ConceptClassNode } from "./concept-class-node";
-import { ClassNodeBase } from "./class-node-base";
+import { ConceptClassNode } from "../concepts/concept-class-node";
+import { ClassNodeBase } from "../classes/class-node-base";
 
 /**
  * Node of a SKOS collection in the definition tree.

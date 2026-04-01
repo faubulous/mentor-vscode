@@ -1,5 +1,5 @@
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
-import { ClassNodeBase } from "./class-node-base";
+import { ClassNodeBase } from "../classes/class-node-base";
 import { PropertyNode } from "./property-node";
 
 /**

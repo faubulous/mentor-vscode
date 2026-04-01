@@ -3,12 +3,12 @@ import { container } from 'tsyringe';
 import { VocabularyRepository } from "@faubulous/mentor-rdf";
 import { ServiceToken } from '@src/services/tokens';
 import { DefinitionTreeNode } from "../definition-tree-node";
-import { ClassesNode } from "./classes-node";
-import { PropertiesNode } from "./properties-node";
-import { IndividualsNode } from "./individuals-node";
-import { ShapesNode } from "./shapes-node";
-import { RulesNode } from "./rules-node";
-import { ValidatorsNode } from "./validators-node";
+import { ClassesNode } from "./classes/classes-node";
+import { PropertiesNode } from "./properties/properties-node";
+import { IndividualsNode } from "./individuals/individuals-node";
+import { ShapesNode } from "./shapes/shapes-node";
+import { RulesNode } from "./rules/rules-node";
+import { ValidatorsNode } from "./validators/validators-node";
 
 /**
  * Node of a ontology header in the definition tree.

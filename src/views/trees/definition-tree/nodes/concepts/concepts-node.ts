@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 import { ConceptClassNode } from "./concept-class-node";
 
 export class ConceptsNode extends ConceptClassNode {

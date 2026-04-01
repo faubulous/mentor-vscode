@@ -1,7 +1,7 @@
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 import { IndividualNode } from "./individual-node";
-import { ClassNodeBase } from "./class-node-base";
+import { ClassNodeBase } from "../classes/class-node-base";
 
 /**
  * Node of a class instance in the definition tree.

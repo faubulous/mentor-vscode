@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ClassNodeBase } from "./class-node-base";
+import { ClassNodeBase } from "../classes/class-node-base";
 
 /**
  * Node of a SKOS concept in the definition tree.

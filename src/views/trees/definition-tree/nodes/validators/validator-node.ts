@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { _SH } from "@faubulous/mentor-rdf";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 
 /**
  * Node of a SHACL validator in the definition tree.

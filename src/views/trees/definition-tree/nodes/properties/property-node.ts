@@ -3,7 +3,7 @@ import { XSD, RDF, RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 
 /**
  * Node of a property in the definition tree.

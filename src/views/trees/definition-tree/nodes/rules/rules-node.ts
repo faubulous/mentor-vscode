@@ -1,11 +1,14 @@
 import * as vscode from "vscode";
 import { SH } from "@faubulous/mentor-rdf";
-import { DefinitionTreeNode } from "../definition-tree-node";
-import { ShapeClassNode } from "./shape-class-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
+import { RuleClassNode } from "./rule-class-node";
 
-export class ShapesNode extends ShapeClassNode {
+/**
+ * Node of a SHACL rule in the definition tree.
+ */
+export class RulesNode extends RuleClassNode {
 	override getContextValue() {
-		return "shapes";
+		return 'rules';
 	}
 
 	override getIcon() {
@@ -13,15 +16,15 @@ export class ShapesNode extends ShapeClassNode {
 	}
 
 	override getLabel() {
-		return { label: "Shapes" };
+		return { label: "Rules" };
 	}
 
 	override getDescription(): string {
 		const graphs = this.getDocumentGraphs();
 		const options = this.getQueryOptions();
-		const shapes = this.vocabulary.getShapes(graphs, undefined, options);
+		const rules = this.vocabulary.getRules(graphs, options);
 
-		return [...shapes].length.toString();
+		return [...rules].length.toString();
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {
@@ -32,15 +35,13 @@ export class ShapesNode extends ShapeClassNode {
 		const graphs = this.getOntologyGraphs();
 		const options = this.getQueryOptions();
 
-		// Check if the IRI is a shape class — resolve via hierarchy path.
-		if (this.vocabulary.hasType(graphs, iri, SH.Shape)) {
+		if (this.vocabulary.hasType(graphs, iri, SH.Rule)) {
 			const rootToTarget = [...this.vocabulary.getRootShapePath(graphs, iri, options)].reverse();
 			rootToTarget.push(iri);
 
 			return this.walkHierarchyPath(rootToTarget);
 		}
 
-		// Otherwise it is an individual shape instance — find its type class, then the instance within it.
 		for (const typeIri of this.vocabulary.getIndividualTypes(graphs, iri)) {
 			const rootToType = [...this.vocabulary.getRootShapePath(graphs, typeIri, options)].reverse();
 			rootToType.push(typeIri);

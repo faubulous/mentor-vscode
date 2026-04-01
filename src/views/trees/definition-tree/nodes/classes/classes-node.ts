@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { RDFS } from "@faubulous/mentor-rdf";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 import { ClassNode } from "./class-node";
 
 /**

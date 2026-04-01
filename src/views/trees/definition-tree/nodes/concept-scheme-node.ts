@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { DefinitionTreeNode } from "../definition-tree-node";
-import { ConceptsNode } from "./concepts-node";
-import { CollectionsNode } from "./collections-node";
+import { ConceptsNode } from "./concepts/concepts-node";
+import { CollectionsNode } from "./collections/collections-node";
 
 /**
  * Node of a SKOS concept scheme in the definition tree.

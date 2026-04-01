@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { _SH, NamedNode, BlankNode } from "@faubulous/mentor-rdf";
-import { DefinitionTreeNode } from "../definition-tree-node";
-import { ClassNodeBase } from "./class-node-base";
-import { PropertyNode } from "./property-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
+import { ClassNodeBase } from "../classes/class-node-base";
+import { PropertyNode } from "../properties/property-node";
 
 export class NodeShapeNode extends ClassNodeBase {
 	override getIcon() {

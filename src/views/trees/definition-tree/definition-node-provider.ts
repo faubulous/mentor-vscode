@@ -8,14 +8,14 @@ import { any } from '@src/utilities';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { DefinitionTreeLayout } from '@src/services/core/settings-service';
 import { DefinitionTreeNode } from './definition-tree-node';
-import { ClassesNode } from './nodes/classes-node';
+import { ClassesNode } from './nodes/classes/classes-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
-import { IndividualsNode } from './nodes/individuals-node';
+import { IndividualsNode } from './nodes/individuals/individuals-node';
 import { OntologyNode } from './nodes/ontology-node';
-import { PropertiesNode } from './nodes/properties-node';
-import { RulesNode } from './nodes/rules-node';
-import { ShapesNode } from './nodes/shapes-node';
-import { ValidatorsNode } from './nodes/validators-node';
+import { PropertiesNode } from './nodes/properties/properties-node';
+import { RulesNode } from './nodes/rules/rules-node';
+import { ShapesNode } from './nodes/shapes/shapes-node';
+import { ValidatorsNode } from './nodes/validators/validators-node';
 import { TreeNode, sortByLabel } from '../tree-node';
 
 /**

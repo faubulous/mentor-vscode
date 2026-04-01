@@ -1,5 +1,5 @@
 import { ClassNodeBase } from "./class-node-base";
-import { IndividualNode } from "./individual-node";
+import { IndividualNode } from "../individuals/individual-node";
 
 /**
  * Node of a RDFS or OWL class in the definition tree.

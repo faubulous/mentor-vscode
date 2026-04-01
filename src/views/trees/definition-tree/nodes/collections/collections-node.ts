@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 import { CollectionClassNode } from "./collection-class-node";
 
 export class CollectionsNode extends CollectionClassNode {

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { DefinitionTreeNode } from "../definition-tree-node";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 
 /**
  * Node of a class instance in the definition tree.

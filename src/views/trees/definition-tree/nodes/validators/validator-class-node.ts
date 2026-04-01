@@ -1,5 +1,5 @@
 import { _SH, SH } from "@faubulous/mentor-rdf";
-import { ClassNodeBase } from "./class-node-base";
+import { ClassNodeBase } from "../classes/class-node-base";
 import { ValidatorNode } from "./validator-node";
 
 export class ValidatorClassNode extends ClassNodeBase {
