@@ -60,11 +60,6 @@ export interface IDocumentContext {
 	typeDefinitions: { [key: string]: Range[] };
 
 	/**
-	 * Maps blank node ids to indexed tokens.
-	 */
-	blankNodes: { [key: string]: Range };
-
-	/**
 	 * Information about the language tags used in the document.
 	 */
 	predicateStats: PredicateUsageStats;

@@ -88,11 +88,6 @@ export abstract class DocumentContext implements IDocumentContext {
 	typeDefinitions: { [key: string]: Range[] } = {};
 
 	/**
-	 * Maps blank node ids to indexed tokens.
-	 */
-	blankNodes: { [key: string]: Range } = {};
-
-	/**
 	 * Information about the language tags used in the document.
 	 */
 	predicateStats: PredicateUsageStats = {};
@@ -193,7 +188,7 @@ export abstract class DocumentContext implements IDocumentContext {
 	 * Indicates whether the document is temporary and not persisted.
 	 */
 	get isTemporary(): boolean {
-		return this.uri.scheme == 'git';
+		return this.uri.scheme == 'git' || this.uri.scheme == 'untitled';
 	}
 
 	/**

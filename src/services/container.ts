@@ -43,6 +43,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 
 	const reasoner = new OwlReasoner(new MentorGraphUriGenerator());
 	const store = new Store(reasoner);
+
 	container.registerInstance(ServiceToken.Store, store);
 
 	const vocabularyRepository = new VocabularyRepository(store);
@@ -54,7 +55,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const documentFactory = new DocumentFactory();
 	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
 
-	const documentContextService = new DocumentContextService(context, vocabularyRepository, documentFactory);
+	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
 
 	const workspaceFileService = new WorkspaceFileService(documentFactory);
