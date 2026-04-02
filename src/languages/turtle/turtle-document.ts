@@ -6,7 +6,6 @@ import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubul
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
-import { TurtlePrefixDefinitionService } from './services/turtle-prefix-definition-service';
 import {
 	countLeadingWhitespace,
 	countTrailingWhitespace,
@@ -16,7 +15,6 @@ import {
 	getNamespaceDefinition,
 	getTokenPosition
 } from '@src/utilities';
-import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -162,47 +160,8 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	override async onDidChangeDocument(e: vscode.TextDocumentChangeEvent): Promise<void> {
-		// Automatically declare prefixes when a colon is typed.
-		const change = e.contentChanges[0];
-
-		// TODO: This should be handled in the prefix definition service 
-		// (listen to doc changes and react) instead of the document itself.
-		const config = getConfig();
-
-		if (change?.text.endsWith(':') && config.get('prefixes.autoDefinePrefixes')) {
-			// Do not auto-implement prefixes when manually typing a prefix.
-			const n = this.getTokenIndexAtPosition(change.range.start);
-
-			if (n < 1) return;
-
-			// Determine the token type at the change position.
-			const previousToken = this.tokens[n - 1]?.image.toLowerCase();
-
-			// Note: We check the token image instead of the type name to also account 
-			// for Turtle style prefix definitions in SPARQL queries. These are not supported 
-			// by SPARQL and detected as language tags. Although this kind of prefix declaration 
-			// is not valid in SPARQL, implementing the prefix should be avoided.
-			if (previousToken === 'prefix' || previousToken === '@prefix') return;
-
-			// Also do not implement prefixes for URI schemes..
-			if (previousToken === '<') return;
-
-			const currentToken = this.tokens[n];
-
-			if (currentToken && currentToken.image && currentToken.tokenType.name === RdfToken.PNAME_NS.name) {
-				const prefix = currentToken.image.substring(0, currentToken.image.length - 1);
-
-				// Do not implmenet prefixes that are already defined.
-				if (this.namespaces[prefix]) return;
-
-				const service = container.resolve<TurtlePrefixDefinitionService>(ServiceToken.TurtlePrefixDefinitionService);
-				const edit = await service.implementPrefixes(e.document, [{ prefix: prefix, namespaceIri: undefined }]);
-
-				if (edit.size > 0) {
-					vscode.workspace.applyEdit(edit);
-				}
-			}
-		}
+		// Auto-prefix definition is handled by TurtleAutoDefinePrefixProvider
+		// which waits for fresh tokens from the language server before processing.
 	}
 
 	/**

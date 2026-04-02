@@ -7,6 +7,7 @@ import {
 	ResourceTooltipProvider
 } from '@src/providers';
 import {
+	TurtleAutoDefinePrefixProvider,
 	TurtleCodeActionsProvider,
 	TurtleCodeLensProvider,
 	TurtleCompletionItemProvider,
@@ -29,6 +30,10 @@ export class TurtleTokenProvider {
 	constructor() {
 		// Self-register with the extension context for automatic disposal
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+
+		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(this.getLanguages());
+		context.subscriptions.push(autoDefinePrefixProvider);
+
 		for (const language of this.getLanguages()) {
 			context.subscriptions.push(...this.registerForLanguage(language));
 		}

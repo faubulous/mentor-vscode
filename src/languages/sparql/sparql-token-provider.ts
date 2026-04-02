@@ -7,6 +7,7 @@ import {
 	ResourceTooltipProvider
 } from '@src/providers';
 import {
+	TurtleAutoDefinePrefixProvider,
 	TurtleCodeActionsProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider
@@ -28,10 +29,12 @@ export class SparqlTokenProvider {
 		const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
 		const referenceProvider = new ResourceReferenceProvider();
 		const renameProvider = new TurtleRenameProvider();
+		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(['sparql']);
 
 		// Self-register with the extension context for automatic disposal
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(
+			autoDefinePrefixProvider,
 			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider),
 			vscode.languages.registerCodeLensProvider({ language: 'sparql' }, codeLensProvider),
 			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':', '<'),
