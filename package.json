@@ -583,13 +583,13 @@
       {
         "command": "mentor.command.createNotebookFromEditor",
         "title": "Create Notebook from Editor",
-        "icon": "$(notebook)",
+        "icon": "$(add-notebook)",
         "category": "Mentor"
       },
       {
         "command": "mentor.command.createSparqlQueryFromDocument",
         "title": "Query Document",
-        "icon": "$(ask)",
+        "icon": "$(query-document)",
         "category": "Mentor"
       },
       {
@@ -1227,6 +1227,20 @@
         "default": {
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e014"
+        }
+      },
+      "query-document": {
+        "description": "Query Document",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e015"
+        }
+      },
+      "add-notebook": {
+        "description": "Add to Notebook",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e016"
         }
       }
     },

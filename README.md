@@ -29,8 +29,17 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.5.3: Service Release
+### Version 0.5.5: Service Release
+- Fixed bug where definition tree would become empty after editing a file
+- Fixed bug where reveal property shape command would not work for blank node shape definitions
+- Fixed broken auto-implementation of prefixes
+- Properly deleting graphs of untitled files when closing them without saving
+- Added command to query the graph of the currently edited document using SPARQL
+
+### Version 0.5.4: Service Release
 - Fixed bug where () brackets in Turtle got improperly formatted
+
+### Version 0.5.3: Service Release
 - Fixed bug where definitions of terms contianing referenced classes were not revealed in the tree
 - Adapted syntax highlighting to not show red prefixes with new VS Code theme
 
