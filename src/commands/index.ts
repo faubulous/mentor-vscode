@@ -13,6 +13,7 @@ export { createDocument } from './create-document';
 export { createDocumentFromLanguage } from './create-document-from-language';
 export { createNotebook } from './create-notebook';
 export { createNotebookFromEditor } from './create-notebook-from-editor';
+export { createSparqlQueryFromDocument } from './create-sparql-query-from-document';
 export { createSparqlConnection } from './create-sparql-connection';
 export { deleteGraph } from './delete-graph';
 export { deletePrefixes } from './delete-prefixes';

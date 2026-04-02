@@ -587,6 +587,12 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.createSparqlQueryFromDocument",
+        "title": "Query Document",
+        "icon": "$(ask)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "title": "Execute SPARQL Query",
         "icon": "$(play)",
@@ -849,6 +855,11 @@
         {
           "command": "mentor.command.executeSparqlQueryFromActiveEditor",
           "when": "editorLangId == 'sparql'",
+          "group": "navigation@0"
+        },
+        {
+          "command": "mentor.command.createSparqlQueryFromDocument",
+          "when": "editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads'",
           "group": "navigation@0"
         },
         {
@@ -1530,6 +1541,13 @@
             "title": "Default SPARQL Document Template",
             "description": "The default SPARQL document template to be used when creating a new SPARQL document.",
             "default": "SELECT ?s ?p ?o\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
+            "editPresentation": "multilineText"
+          },
+          "mentor.language.sparql.documentQueryTemplate": {
+            "type": "string",
+            "title": "Document Query Template",
+            "description": "The SPARQL query template used when creating a query for an RDF document. Use {{documentUri}} as a placeholder for the document URI.",
+            "default": "SELECT ?s ?p ?o\nFROM <{{documentUri}}>\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
             "editPresentation": "multilineText"
           },
           "mentor.language.turtle.defaultDocumentTemplate": {
