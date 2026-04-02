@@ -28,30 +28,30 @@ export class ResourceDefinitionProvider {
 		const iri = context.getIriAtPosition(position);
 
 		if (iri) {
-			return this.provideDefinitionForIri(context, iri);
+			return this.provideDefinitionForResource(context, iri);
 		} else {
 			return null;
 		}
 	}
 
 	/**
-	 * Get the definition of a resource with a specific IRI.
+	 * Get the definition of a resource with a specific IRI or blank node ID.
 	 * @param primaryContext The primary document context.
-	 * @param uri The URI of the resource.
+	 * @param id The IRI or blank node ID of the resource.
 	 * @param primaryContextOnly Indicates whether only the primary document context should be used.
-	 * @returns The definition of the resource with the specified URI or `null` if no definition was found.
+	 * @returns The definition of the resource with the specified IRI or blank node ID, or `null` if no definition was found.
 	 */
-	provideDefinitionForIri(primaryContext: IDocumentContext, iri: string, primaryContextOnly: boolean = false): vscode.Definition | null {
+	provideDefinitionForResource(primaryContext: IDocumentContext, id: string, primaryContextOnly: boolean = false): vscode.Definition | null {
 		let range;
 		let context = primaryContext;
 
 		if (!primaryContextOnly) {
-			// Find all contexts that define the URI.
-			const contexts = this._getContextsDefiningIri(iri, primaryContext);
+			// Find all contexts that define the IRI or blank node ID.
+			const contexts = this._getContextsDefiningResource(id, primaryContext);
 
-			for (let c of contexts.filter(c => c.typeDefinitions[iri])) {
+			for (let c of contexts.filter(c => c.typeDefinitions[id])) {
 				// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
-				range = c.typeDefinitions[iri][0];
+				range = c.typeDefinitions[id][0];
 				context = c;
 
 				break;
@@ -60,14 +60,14 @@ export class ResourceDefinitionProvider {
 
 		// If no class or property definition was found, look for namespace definitions or references in the primary document.
 		if (!range) {
-			if (primaryContext.typeDefinitions[iri]) {
-				range = primaryContext.typeDefinitions[iri][0];
-			} else if (primaryContext.typeAssertions[iri]) {
-				range = primaryContext.typeAssertions[iri][0];
-			} else if (primaryContext.namespaceDefinitions[iri]) {
-				range = primaryContext.namespaceDefinitions[iri][0];
-			} else if (primaryContext.references[iri]) {
-				range = primaryContext.references[iri][0];
+			if (primaryContext.typeDefinitions[id]) {
+				range = primaryContext.typeDefinitions[id][0];
+			} else if (primaryContext.typeAssertions[id]) {
+				range = primaryContext.typeAssertions[id][0];
+			} else if (primaryContext.namespaceDefinitions[id]) {
+				range = primaryContext.namespaceDefinitions[id][0];
+			} else if (primaryContext.references[id]) {
+				range = primaryContext.references[id][0];
 			}
 		}
 
@@ -78,11 +78,11 @@ export class ResourceDefinitionProvider {
 		return null;
 	}
 
-	private _getContextsDefiningIri(iri: string, primaryContext?: IDocumentContext): IDocumentContext[] {
+	private _getContextsDefiningResource(iriOrBlankId: string, primaryContext?: IDocumentContext): IDocumentContext[] {
 		const result: IDocumentContext[] = [];
 		const contexts = Object.values(this._contextService.contexts);
 
-		for (const c of contexts.filter(c => c.typeDefinitions[iri])) {
+		for (const c of contexts.filter(c => c.typeDefinitions[iriOrBlankId])) {
 			if (primaryContext && c == primaryContext) {
 				result.unshift(c);
 			} else {

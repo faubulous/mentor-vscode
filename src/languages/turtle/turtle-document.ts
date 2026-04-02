@@ -369,7 +369,7 @@ export class TurtleDocument extends DocumentContext {
 
 					this._handleTypeAssertion(tokens, t, iri, i);
 					this._handleTypeDefinition(tokens, t, iri, i);
-					this._handleIriReference(tokens, t, iri);
+					this._handleResourceReference(tokens, t, iri);
 					break;
 				}
 				case RdfToken.IRIREF.name: {
@@ -381,12 +381,25 @@ export class TurtleDocument extends DocumentContext {
 
 					this._handleTypeAssertion(tokens, t, iri, i);
 					this._handleTypeDefinition(tokens, t, iri, i);
-					this._handleIriReference(tokens, t, iri);
+					this._handleResourceReference(tokens, t, iri);
 					break;
 				}
 				case RdfToken.A.name: {
 					this._handleTypeAssertion(tokens, t, RDF.type, i);
 					this._handleTypeDefinition(tokens, t, RDF.type, i);
+					break;
+				}
+				case RdfToken.LBRACKET.name: {
+					// Store the position of anonymous blank nodes so they can be revealed in the editor.
+					const id = t.payload?.blankNodeId;
+
+					if(!id) break;
+
+					this._handleResourceReference(tokens, t, id);
+					break;
+				}
+				case RdfToken.BLANK_NODE_LABEL.name: {
+					this._handleResourceReference(tokens, t, t.image);
 					break;
 				}
 			}
@@ -413,14 +426,14 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
-	private _handleIriReference(tokens: IToken[], token: IToken, uri: string) {
-		if (!this.references[uri]) {
-			this.references[uri] = [];
+	private _handleResourceReference(tokens: IToken[], token: IToken, iriOrBlankId: string) {
+		if (!this.references[iriOrBlankId]) {
+			this.references[iriOrBlankId] = [];
 		}
 
 		const range = this.getRangeFromToken(token);
 
-		this.references[uri].push(range);
+		this.references[iriOrBlankId].push(range);
 	}
 
 	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {

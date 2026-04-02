@@ -25,7 +25,7 @@ export const revealShapeDefinition = {
 				return;
 			}
 
-			const location = new ResourceDefinitionProvider().provideDefinitionForIri(contextService.activeContext, shapeUri, true);
+			const location = new ResourceDefinitionProvider().provideDefinitionForResource(contextService.activeContext, shapeUri, true);
 
 			if (location instanceof vscode.Location) {
 				editor.selection = new vscode.Selection(location.range.start, location.range.end);

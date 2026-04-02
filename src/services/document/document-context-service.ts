@@ -51,18 +51,6 @@ export class DocumentContextService {
 	 */
 	private readonly _tokenWaitTimeout = 10000;
 
-	/**
-	 * Per-URI debounce timers for text document change events.
-	 * Coalesces rapid edits so that only the last change within the debounce
-	 * window triggers a full reload, reducing redundant concurrent loads.
-	 */
-	private readonly _documentChangeTimers = new Map<string, ReturnType<typeof setTimeout>>();
-
-	/**
-	 * Debounce delay in milliseconds for text document change events.
-	 */
-	private readonly _documentChangeDebounceMs = 250;
-
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<IDocumentContext | undefined>();
 
 	/**
@@ -102,12 +90,6 @@ export class DocumentContextService {
 
 		this._pendingTokenRequests.clear();
 		this._tokenLoadGeneration.clear();
-
-		for (const timer of this._documentChangeTimers.values()) {
-			clearTimeout(timer);
-		}
-
-		this._documentChangeTimers.clear();
 	}
 
 	/**
@@ -211,22 +193,22 @@ export class DocumentContextService {
 			return;
 		}
 
-		// Tokens arrived but no load was waiting for them. This happens when a language
-		// server notification arrives after the load has already completed (e.g. due to
-		// rapid edits where an older notification resolved the wait, and a newer notification
-		// arrives with no active waiter). Reload the triples to stay in sync.
+		// Tokens arrived but no load was waiting for them. This is the normal path
+		// for document edits: handleTextDocumentChanged does not trigger a loadDocument,
+		// so when the language server sends updated tokens there is no pending waiter.
+		// Reload the triples to bring the context up to date.
 		const context = this.contexts[uri];
 
-		if (context?.isLoaded) {
+		if (context?.hasTokens) {
 			this._reloadContextTriples(uri).catch(e => {
-				console.warn('Mentor: Failed to reload context after late token delivery:', e);
+				console.warn('Mentor: Failed to reload context after token delivery:', e);
 			});
 		}
 	}
 
 	/**
 	 * Reload triples on an existing context using its current tokens and the latest document content.
-	 * Used when tokens arrive after the initial load has already completed.
+	 * Called when the language server delivers updated tokens for an already-loaded document.
 	 * @param uri The document URI.
 	 */
 	private async _reloadContextTriples(uri: string): Promise<void> {
@@ -246,6 +228,13 @@ export class DocumentContextService {
 
 		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
 		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
+
+		// Update the active context if this document is in the active editor.
+		const activeEditor = vscode.window.activeTextEditor;
+
+		if (activeEditor && uri === activeEditor.document?.uri.toString()) {
+			this.activeContext = context;
+		}
 
 		this._onDidChangeDocumentContext.fire(context);
 	}
@@ -475,40 +464,27 @@ export class DocumentContextService {
 	}
 
 	/**
-	 * Handle text document changed event.
-	 * Debounces rapid edits per URI so that only the last change within the
-	 * debounce window triggers a full document reload.
+	 * Handle text document changed event. Does not trigger a full document reload. 
+	 * Instead, the existing contextis kept visible and the reload happens when the 
+	 * language server delivers updated tokens via resolveTokens → _reloadContextTriples.
 	 * @param e The text document change event.
 	 */
 	async handleTextDocumentChanged(e: vscode.TextDocumentChangeEvent): Promise<void> {
+		if (!this._documentFactory.supportedLanguages.has(e.document.languageId)) return;
+
 		const uri = e.document.uri.toString();
+		let context = this.contexts[uri];
 
-		// Clear any pending debounce timer for this URI.
-		const existing = this._documentChangeTimers.get(uri);
-
-		if (existing) {
-			clearTimeout(existing);
+		if (!context) {
+			// No context exists yet — create one so the language client notification
+			// handler can find it and set tokens on it.
+			context = this._documentFactory.create(e.document.uri, e.document.languageId);
+			
+			this.contexts[uri] = context;
 		}
 
-		// Notify the current context about the change immediately (e.g. for auto-prefix).
-		const currentContext = this.contexts[uri];
-
-		if (currentContext) {
-			currentContext.onDidChangeDocument(e);
-		}
-
-		// Debounce the expensive reload.
-		this._documentChangeTimers.set(uri, setTimeout(async () => {
-			this._documentChangeTimers.delete(uri);
-
-			const context = await this.loadDocument(e.document, true);
-
-			if (!context) return;
-
-			this.activeContext = context;
-
-			this._onDidChangeDocumentContext.fire(context);
-		}, this._documentChangeDebounceMs));
+		// Notify the context for immediate lightweight reactions (e.g. auto-prefix).
+		context.onDidChangeDocument(e);
 	}
 
 	/**
