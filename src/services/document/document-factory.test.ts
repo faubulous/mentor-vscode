@@ -1,5 +1,6 @@
 import 'reflect-metadata';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import * as vscode from 'vscode';
 
 vi.mock('@src/languages', () => ({
 	TurtleDocument: class {},
@@ -311,6 +312,156 @@ describe('DocumentFactory', () => {
 			const result = await factory.getLanguageInfoFromMimeType('text/turtle');
 
 			expect(result).toBeUndefined();
+		});
+
+		it('returns language info when package.json is available and mimetypes are populated', async () => {
+			(vscode.extensions as any).getExtension = vi.fn(() => ({ extensionPath: '/fake/ext' }));
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
+				new TextEncoder().encode(JSON.stringify({
+					contributes: {
+						languages: [
+							{ id: 'turtle', aliases: ['Turtle'], mimetypes: ['text/turtle'] },
+							{ id: 'sparql', aliases: ['SPARQL'], mimetypes: ['application/sparql-query'] },
+						]
+					}
+				})) as any
+			);
+
+			const result = await factory.getLanguageInfoFromMimeType('text/turtle');
+
+			expect(result).toBeDefined();
+			expect(result?.id).toBe('turtle');
+
+			(vscode.extensions as any).getExtension = undefined;
+			vi.restoreAllMocks();
+		});
+	});
+
+	describe('getSupportedLanguagesInfo (with package.json)', () => {
+		beforeEach(() => {
+			(vscode.extensions as any).getExtension = vi.fn(() => ({ extensionPath: '/fake/ext' }));
+		});
+
+		afterEach(() => {
+			(vscode.extensions as any).getExtension = undefined;
+			vi.restoreAllMocks();
+		});
+
+		it('populates language names and mimetypes from package.json', async () => {
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
+				new TextEncoder().encode(JSON.stringify({
+					contributes: {
+						languages: [
+							{ id: 'turtle', aliases: ['Turtle'], mimetypes: ['text/turtle'] },
+							{ id: 'sparql', aliases: ['SPARQL'], mimetypes: ['application/sparql-query'] },
+						]
+					}
+				})) as any
+			);
+
+			const result = await factory.getSupportedLanguagesInfo();
+			const turtle = result.find(l => l.id === 'turtle');
+			const sparql = result.find(l => l.id === 'sparql');
+
+			expect(turtle?.name).toBe('Turtle');
+			expect(turtle?.mimetypes).toContain('text/turtle');
+			expect(turtle?.typeName).toContain('Turtle');
+			expect(sparql?.name).toBe('SPARQL');
+			expect(sparql?.mimetypes).toContain('application/sparql-query');
+			expect(sparql?.typeName).toContain('Query');
+		});
+
+		it('uses language id as typeName fallback when _getTypeName returns empty', async () => {
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
+				new TextEncoder().encode(JSON.stringify({
+					contributes: {
+						languages: [
+							{ id: 'ntriples', aliases: ['N-Triples'], mimetypes: ['application/n-triples'] },
+						]
+					}
+				})) as any
+			);
+
+			const result = await factory.getSupportedLanguagesInfo();
+			const ntriples = result.find(l => l.id === 'ntriples');
+
+			expect(ntriples?.name).toBe('N-Triples');
+			expect(ntriples?.typeName).toBeTruthy();
+		});
+
+		it('returns icon name for known RDF languages', async () => {
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
+				new TextEncoder().encode(JSON.stringify({
+					contributes: {
+						languages: [
+							{ id: 'xml', aliases: ['RDF/XML'], mimetypes: ['application/rdf+xml'] },
+						]
+					}
+				})) as any
+			);
+
+			const result = await factory.getSupportedLanguagesInfo();
+			const xml = result.find(l => l.id === 'xml');
+
+			expect(xml?.icon).toBe('rdf-file');
+		});
+
+		it('returns sparql icon for the sparql language', async () => {
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
+				new TextEncoder().encode(JSON.stringify({
+					contributes: { languages: [{ id: 'sparql', aliases: ['SPARQL'], mimetypes: [] }] }
+				})) as any
+			);
+
+			const result = await factory.getSupportedLanguagesInfo();
+			const sparql = result.find(l => l.id === 'sparql');
+
+			expect(sparql?.icon).toBe('sparql-file');
+		});
+
+		it('returns file icon for an unknown language id', async () => {
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
+				new TextEncoder().encode(JSON.stringify({
+					contributes: {
+						languages: [
+							{ id: 'json', aliases: ['JSON-LD'], mimetypes: ['application/ld+json'] },
+						]
+					}
+				})) as any
+			);
+
+			const result = await factory.getSupportedLanguagesInfo();
+			const json = result.find(l => l.id === 'json');
+
+			expect(json?.icon).toBe('rdf-file');
+		});
+	});
+
+	describe('getLanguageInfo (with package.json)', () => {
+		beforeEach(() => {
+			(vscode.extensions as any).getExtension = vi.fn(() => ({ extensionPath: '/fake/ext' }));
+		});
+
+		afterEach(() => {
+			(vscode.extensions as any).getExtension = undefined;
+			vi.restoreAllMocks();
+		});
+
+		it('returns turtle language info including mime type', async () => {
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
+				new TextEncoder().encode(JSON.stringify({
+					contributes: {
+						languages: [
+							{ id: 'turtle', aliases: ['Turtle'], mimetypes: ['text/turtle'] },
+						]
+					}
+				})) as any
+			);
+
+			const result = await factory.getLanguageInfo('turtle');
+
+			expect(result?.name).toBe('Turtle');
+			expect(result?.mimetypes).toContain('text/turtle');
 		});
 	});
 

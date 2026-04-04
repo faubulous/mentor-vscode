@@ -706,6 +706,115 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('loadDocument supersession guards', () => {
+		it('returns undefined when generation is bumped before tokens arrive (line 403)', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const loadPromise = service.loadDocument(doc);
+
+			// Bump the generation to simulate a newer load superseding this one
+			// while waitForTokens is still pending.
+			const gen = (service as any)._tokenLoadGeneration.get(uri);
+			(service as any)._tokenLoadGeneration.set(uri, gen + 1);
+
+			// Resolve tokens — waitForTokens succeeds, but generation check on line 402 fails
+			service.resolveTokens(uri, []);
+
+			const result = await loadPromise;
+
+			expect(result).toBeUndefined();
+		});
+
+		it('returns undefined when generation is bumped during loadTriples (line 411)', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			// loadTriples bumps the generation to simulate concurrent supersession
+			ctx.loadTriples = vi.fn(async () => {
+				const gen = (service as any)._tokenLoadGeneration.get(uri);
+				(service as any)._tokenLoadGeneration.set(uri, gen + 1);
+			});
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const loadPromise = service.loadDocument(doc);
+			service.resolveTokens(uri, []);
+
+			const result = await loadPromise;
+
+			expect(result).toBeUndefined();
+		});
+
+		it('returns undefined when generation is bumped during infer (line 419)', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			// infer bumps the generation to simulate concurrent supersession
+			ctx.infer = vi.fn(async () => {
+				const gen = (service as any)._tokenLoadGeneration.get(uri);
+				(service as any)._tokenLoadGeneration.set(uri, gen + 1);
+			});
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const loadPromise = service.loadDocument(doc);
+			service.resolveTokens(uri, []);
+
+			const result = await loadPromise;
+
+			expect(result).toBeUndefined();
+		});
+
+		it('returns undefined in catch when generation is bumped before rejection (line 387)', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const loadPromise = service.loadDocument(doc);
+
+			// Bump generation so the catch-block supersession guard fires
+			const gen = (service as any)._tokenLoadGeneration.get(uri);
+			(service as any)._tokenLoadGeneration.set(uri, gen + 1);
+
+			// Dispose rejects all pending waitForTokens — triggers the catch block
+			service.dispose();
+
+			const result = await loadPromise;
+
+			expect(result).toBeUndefined();
+		});
+	});
+
 	describe('loadDocument (activeContext assignment)', () => {
 		afterEach(() => {
 			(vscode.window as any).activeTextEditor = undefined;

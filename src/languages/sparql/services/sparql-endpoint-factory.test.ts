@@ -164,5 +164,14 @@ describe('SparqlEndpointFactory', () => {
 			
 			expect(result).toEqual(['http://example.org/graph1', 'http://example.org/graph2']);
 		});
+
+		it('defaults to sparql store type when storeType is not set (line 76 ?? fallback)', async () => {
+			factory.registerProvider(createMockProvider('sparql'));
+
+			const connection: SparqlConnection = { id: 'x', endpointUrl: 'https://example.org/sparql', configScope: 2 };
+			const result = await factory.getGraphs(connection, false);
+
+			expect(result).toEqual(['http://example.org/graph1', 'http://example.org/graph2']);
+		});
 	});
 });

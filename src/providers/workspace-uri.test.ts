@@ -138,4 +138,17 @@ describe('WorkspaceUri', () => {
 
 		expect(() => WorkspaceUri.toNotebookCellUri(wsUri)).toThrow('Workspace URI does not have a fragment for the notebook cell');
 	});
+
+	it('handles workspace: URI whose path does not start with / in toFileUri (line 81 else branch)', () => {
+		// URI.parse with no authority gives a path without a leading slash
+		const wsUri = vscode.Uri.parse('workspace:some/path.ttl');
+
+		// Path should not start with '/'
+		expect(wsUri.path.startsWith('/')).toBe(false);
+
+		const fileUri = WorkspaceUri.toFileUri(wsUri);
+
+		expect(fileUri.scheme).toBe('file');
+		expect(fileUri.toString()).toBe('file:///w/some/path.ttl');
+	});
 });

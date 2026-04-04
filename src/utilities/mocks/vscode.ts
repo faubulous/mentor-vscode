@@ -24,12 +24,16 @@ export const workspace = {
   }),
   onDidChangeTextDocument: (_handler: any) => ({ dispose: () => {} }),
   onDidCloseTextDocument: (_handler: any) => ({ dispose: () => {} }),
+  onDidChangeConfiguration: (_handler: any) => ({ dispose: () => {} }),
+  onDidChangeNotebookDocument: (_handler: any) => ({ dispose: () => {} }),
+  applyEdit: async (_edit: any) => true,
   textDocuments: [] as any[],
 };
 
 // Provide a minimal Uri namespace compatible with vscode.Uri
 export const Uri = {
   parse: (value: string) => _URI.parse(value),
+  file: (path: string) => _URI.file(path),
   joinPath: (base: any, ...pathSegments: string[]) => Utils.joinPath(base, ...pathSegments),
 };
 
@@ -55,6 +59,29 @@ export const languages = {
     clear: () => {},
     dispose: () => {},
   }),
+  getDiagnostics: (_uri?: any) => [] as any[],
+  registerCodeActionsProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
+  registerCodeLensProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
+  registerCompletionItemProvider: (_selector: any, _provider: any, ..._triggers: string[]) => ({ dispose: () => {} }),
+  registerDefinitionProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
+  registerDocumentFormattingEditProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
+  registerHoverProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
+  registerInlineCompletionItemProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
+  registerReferenceProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
+  registerRenameProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
+};
+
+export const CodeActionKind = {
+  Empty: { value: '' },
+  QuickFix: { value: 'quickfix' },
+  Refactor: { value: 'refactor' },
+  RefactorExtract: { value: 'refactor.extract' },
+  RefactorInline: { value: 'refactor.inline' },
+  RefactorMove: { value: 'refactor.move' },
+  RefactorRewrite: { value: 'refactor.rewrite' },
+  Source: { value: 'source' },
+  SourceOrganizeImports: { value: 'source.organizeImports' },
+  SourceFixAll: { value: 'source.fixAll' },
 };
 
 export const FileChangeType = {
@@ -129,11 +156,70 @@ export class WorkspaceEdit {
   }
 }
 
+export class TextEdit {
+  constructor(
+    public readonly range: Range,
+    public readonly newText: string,
+  ) {}
+
+  static replace(range: Range, newText: string): TextEdit {
+    return new TextEdit(range, newText);
+  }
+
+  static insert(position: Position, newText: string): TextEdit {
+    return new TextEdit(new Range(position, position), newText);
+  }
+
+  static delete(range: Range): TextEdit {
+    return new TextEdit(range, '');
+  }
+}
+
 export class DiagnosticCollection {
   set() {}
   delete() {}
   clear() {}
   dispose() {}
+}
+
+export class SnippetString {
+  constructor(public value: string = '') {}
+}
+
+export const CompletionItemKind = {
+  Text: 0, Method: 1, Function: 2, Constructor: 3, Field: 4,
+  Variable: 5, Class: 6, Interface: 7, Module: 8, Property: 9,
+  Unit: 10, Value: 11, Enum: 12, Keyword: 13, Snippet: 14,
+  Color: 15, Reference: 16, File: 17, Folder: 18, EnumMember: 19,
+  Constant: 20, Struct: 21, Event: 22, Operator: 23, TypeParameter: 24,
+};
+
+export class CompletionItem {
+  detail?: string;
+  documentation?: string;
+  sortText?: string;
+  filterText?: string;
+  insertText?: string | SnippetString;
+  range?: Range;
+  command?: any;
+
+  constructor(public label: string | any, public kind?: any) {}
+}
+
+export class CompletionList {
+  constructor(public items: CompletionItem[] = [], public isIncomplete = false) {}
+}
+
+export class InlineCompletionItem {
+  constructor(public insertText: string | SnippetString, public range?: Range, public command?: any) {}
+}
+
+export class InlineCompletionList {
+  constructor(public items: InlineCompletionItem[]) {}
+}
+
+export class CodeLens {
+  constructor(public range: Range, public command?: any) {}
 }
 
 export const extensions = {
