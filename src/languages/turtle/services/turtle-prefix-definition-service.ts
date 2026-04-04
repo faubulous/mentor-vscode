@@ -213,11 +213,11 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	}
 
 	/**
- * Get the token type for prefix definitions in a document. This is determined by checking the first prefix definition in the document or defaulting to the default token type if no prefix definitions are found.
- * @param document The text document.
- * @param context The RDF document context.
- * @returns The token type for prefix definitions in the document.
- */
+	 * Get the token type for prefix definitions in a document. This is determined by checking the first prefix definition in the document or defaulting to the default token type if no prefix definitions are found.
+	 * @param document The text document.
+	 * @param context The RDF document context.
+	 * @returns The token type for prefix definitions in the document.
+	 */
 	private _getPrefixTokenType(document: vscode.TextDocument, context: TurtleDocument): TokenType {
 		if (document.languageId === 'xml') {
 			return { name: 'XML_PREFIX' };

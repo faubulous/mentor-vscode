@@ -323,6 +323,22 @@ describe('WorkspaceFileService', () => {
 			expect(contents.length).toBe(1);
 			expect(contents[0].toString()).toContain('x.ttl');
 		});
+
+		test('sorts multiple flat files alphabetically (covers files.sort comparator)', async () => {
+			findFilesSpy.mockResolvedValue([
+				URI.parse('file:///w/zebra.ttl'),
+				URI.parse('file:///w/alpha.ttl'),
+			] as any);
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const contents = await service.getFolderContents(URI.parse('file:///w') as any);
+
+			expect(contents.length).toBe(2);
+			expect(contents[0].toString()).toContain('alpha.ttl');
+			expect(contents[1].toString()).toContain('zebra.ttl');
+		});
 	});
 
 	describe('getExcludePatterns', () => {

@@ -440,6 +440,222 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('getContextFromUri', () => {
+		it('returns context for a file: URI directly', () => {
+			const { service } = createService();
+			const uri = 'file:///test.ttl';
+			const context = createMockContext();
+			service.contexts[uri] = context;
+
+			expect(service.getContextFromUri(uri)).toBe(context);
+		});
+
+		it('resolves a workspace: URI to the underlying file: context', () => {
+			const { service } = createService();
+			const fileUri = 'file:///w/test.ttl';
+			const context = createMockContext();
+			service.contexts[fileUri] = context;
+
+			expect(service.getContextFromUri('workspace:/test.ttl')).toBe(context);
+		});
+
+		it('returns undefined for an unknown URI', () => {
+			const { service } = createService();
+			expect(service.getContextFromUri('file:///missing.ttl')).toBeUndefined();
+		});
+	});
+
+	describe('getContext', () => {
+		it('returns null when no context exists for the document', () => {
+			const { service } = createService();
+			const doc = { uri: vscode.Uri.parse('file:///missing.ttl') } as any;
+
+			class Ctx { }
+
+			expect(service.getContext(doc, Ctx as any)).toBeNull();
+		});
+
+		it('returns null when the context is not of the expected type', () => {
+			const { service } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const doc = { uri } as any;
+
+			class CtxA { }
+			class CtxB { }
+
+			service.contexts[uri.toString()] = new CtxA() as any;
+
+			expect(service.getContext(doc, CtxB as any)).toBeNull();
+		});
+
+		it('returns the typed context when it matches', () => {
+			const { service } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const doc = { uri } as any;
+
+			class Ctx { }
+
+			const ctx = new Ctx();
+			service.contexts[uri.toString()] = ctx as any;
+
+			expect(service.getContext(doc, Ctx as any)).toBe(ctx);
+		});
+	});
+
+	describe('_reloadContextTriples (via resolveTokens)', () => {
+		it('reloads an already-loaded context when tokens arrive with no pending request', async () => {
+			const { service } = createService();
+			const uri = 'file:///test.ttl';
+			const mockDoc = { getText: vi.fn(() => '@prefix ex: <http://example.org/> .') } as any;
+
+			// Put a loaded context + the document into workspace.textDocuments
+			const ctx = createMockContext({
+				uri: vscode.Uri.parse(uri),
+				hasTokens: true,
+			});
+			service.contexts[uri] = ctx;
+			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
+
+			// resolveTokens with no pending request → triggers _reloadContextTriples
+			service.resolveTokens(uri, []);
+
+			// Allow microtask queue to flush
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			expect(ctx.loadTriples).toHaveBeenCalled();
+			expect(ctx.infer).toHaveBeenCalled();
+
+			// cleanup
+			(vscode.workspace.textDocuments as any[]).pop();
+		});
+
+		it('does not reload when context.hasTokens is false', async () => {
+			const { service } = createService();
+			const uri = 'file:///test.ttl';
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: false });
+			service.contexts[uri] = ctx;
+
+			service.resolveTokens(uri, []);
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			expect(ctx.loadTriples).not.toHaveBeenCalled();
+		});
+
+		it('does not reload when there is no text document open for the URI', async () => {
+			const { service } = createService();
+			const uri = 'file:///notopen.ttl';
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			service.contexts[uri] = ctx;
+
+			service.resolveTokens(uri, []);
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			expect(ctx.loadTriples).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('handleActiveEditorChanged', () => {
+		afterEach(() => {
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+
+		it('clears convert-file-format contexts when no editor is active', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(vscode.window as any).activeTextEditor = undefined;
+
+			await service.handleActiveEditorChanged();
+
+			// When no editor is active, isConvertibleLanguage is not called (languageId undefined → fast path)
+			expect(mockDocumentFactory.isConvertibleLanguage).not.toHaveBeenCalled();
+		});
+
+		it('loads the document and fires context-changed when a new editor becomes active', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const doc = {
+				languageId: 'turtle',
+				uri,
+				scheme: 'file',
+				getText: () => '',
+			};
+			(vscode.window as any).activeTextEditor = { document: doc };
+
+			// Pre-populate a loaded context so loadDocument returns immediately
+			const ctx = createMockContext({ uri, isLoaded: true });
+			service.contexts[uri.toString()] = ctx;
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const fired: any[] = [];
+			service.onDidChangeDocumentContext(c => fired.push(c));
+
+			await service.handleActiveEditorChanged();
+
+			expect(service.activeContext).toBe(ctx);
+			expect(fired).toContain(ctx);
+		});
+
+		it('does nothing when the active editor URI is unchanged from activeContext', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const ctx = createMockContext({ uri });
+			service.contexts[uri.toString()] = ctx;
+			service.activeContext = ctx;
+			(vscode.window as any).activeTextEditor = { document: { languageId: 'turtle', uri, getText: () => '' } };
+
+			const fired: any[] = [];
+			service.onDidChangeDocumentContext(c => fired.push(c));
+
+			await service.handleActiveEditorChanged();
+
+			// context-changed should NOT fire because uri === activeContext.uri
+			expect(fired).toHaveLength(0);
+		});
+	});
+
+	describe('handleActiveNotebookEditorChanged', () => {
+		it('does nothing when editor is undefined', async () => {
+			const { service, mockDocumentFactory } = createService();
+
+			await service.handleActiveNotebookEditorChanged(undefined);
+
+			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
+		});
+
+		it('loads triple-source cells from the notebook', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
+
+			const cellDoc = { languageId: 'turtle', uri: vscode.Uri.parse('file:///nb.mnb#cell0'), scheme: 'vscode-notebook-cell', getText: () => '' };
+			const ctx = createMockContext({ uri: cellDoc.uri, isLoaded: false, hasTokens: true });
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const editor = {
+				notebook: {
+					getCells: () => [{ document: cellDoc }],
+				},
+			} as any;
+
+			await service.handleActiveNotebookEditorChanged(editor);
+
+			expect(mockDocumentFactory.create).toHaveBeenCalledWith(cellDoc.uri, cellDoc.languageId);
+		});
+
+		it('skips non-triple-source cells', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(false);
+
+			const editor = {
+				notebook: {
+					getCells: () => [{ document: { languageId: 'sparql', uri: vscode.Uri.parse('file:///nb.mnb#cell0') } }],
+				},
+			} as any;
+
+			await service.handleActiveNotebookEditorChanged(editor);
+
+			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
+		});
+	});
+
 	describe('handleTextDocumentChanged', () => {
 		it('creates a context for a new supported document', async () => {
 			const { service, mockDocumentFactory } = createService();
@@ -485,6 +701,85 @@ describe('DocumentContextService', () => {
 			} as any;
 
 			await service.handleTextDocumentChanged(e);
+
+			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('loadDocument (activeContext assignment)', () => {
+		afterEach(() => {
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+
+		it('sets activeContext when the loaded document matches the active editor (line 434)', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///active.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			// Set the active editor to the same document that is being loaded.
+			(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse(uri) } };
+
+			const loadPromise = service.loadDocument(doc);
+			service.resolveTokens(uri, []);
+			const context = await loadPromise;
+
+			expect(context).toBeDefined();
+			expect(service.activeContext).toBe(context);
+		});
+	});
+
+	describe('activateDocument', () => {
+		afterEach(() => {
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+
+		it('opens the active context document when it differs from the active editor (line 449)', async () => {
+			const { service } = createService();
+			const contextUri = vscode.Uri.parse('file:///context.ttl');
+
+			// Set an active context whose URI doesn't match the active editor.
+			service.activeContext = createMockContext({ uri: contextUri });
+			(vscode.window as any).activeTextEditor = undefined;
+
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand');
+
+			await service.activateDocument();
+
+			expect(executeCommandSpy).toHaveBeenCalledWith('vscode.open', contextUri);
+
+			executeCommandSpy.mockRestore();
+		});
+
+		it('returns the active editor without opening when activeContext is not set', async () => {
+			const { service } = createService();
+			(vscode.window as any).activeTextEditor = undefined;
+
+			const result = await service.activateDocument();
+
+			expect(result).toBeUndefined();
+		});
+	});
+
+	describe('handleActiveEditorChanged (null URI branch)', () => {
+		afterEach(() => {
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+
+		it('calls _setConvertFileFormatContexts and returns when editor document has no URI (lines 470-471)', async () => {
+			const { service, mockDocumentFactory } = createService();
+
+			// Provide an editor where document.uri is null/falsy.
+			(vscode.window as any).activeTextEditor = {
+				document: { languageId: 'turtle', uri: null },
+			};
+
+			// Should not throw and should not attempt to load a document.
+			await service.handleActiveEditorChanged();
 
 			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
 		});

@@ -261,7 +261,7 @@ describe('DocumentFactory', () => {
 		it('returns info for all supported languages', async () => {
 			const result = await factory.getSupportedLanguagesInfo();
 			const ids = result.map(l => l.id);
-			
+
 			expect(ids).toContain('turtle');
 			expect(ids).toContain('sparql');
 			expect(ids).toContain('ntriples');
@@ -311,6 +311,52 @@ describe('DocumentFactory', () => {
 			const result = await factory.getLanguageInfoFromMimeType('text/turtle');
 
 			expect(result).toBeUndefined();
+		});
+	});
+
+	describe('create', () => {
+		const uri = { path: '/test/file.ttl' } as any;
+
+		it('creates a TurtleDocument for language turtle', () => {
+			const ctx = factory.create(uri, 'turtle');
+			expect(ctx).toBeDefined();
+		});
+
+		it('creates a TurtleDocument for language ntriples', () => {
+			expect(factory.create(uri, 'ntriples')).toBeDefined();
+		});
+
+		it('creates a TurtleDocument for language nquads', () => {
+			expect(factory.create(uri, 'nquads')).toBeDefined();
+		});
+
+		it('creates a TurtleDocument for language n3', () => {
+			expect(factory.create(uri, 'n3')).toBeDefined();
+		});
+
+		it('creates a TurtleDocument for language trig', () => {
+			expect(factory.create(uri, 'trig')).toBeDefined();
+		});
+
+		it('creates a SparqlDocument for language sparql', () => {
+			expect(factory.create(uri, 'sparql')).toBeDefined();
+		});
+
+		it('creates an XmlDocument for language xml', () => {
+			expect(factory.create(uri, 'xml')).toBeDefined();
+		});
+
+		it('infers language from file extension when languageId is omitted', () => {
+			// .ttl → turtle
+			expect(factory.create({ path: '/test/file.ttl' } as any)).toBeDefined();
+		});
+
+		it('throws for an unsupported language', () => {
+			expect(() => factory.create(uri, 'unknown')).toThrow('Unsupported language');
+		});
+
+		it('throws when language cannot be determined from the URI', () => {
+			expect(() => factory.create({ path: '/test/file.xyz' } as any)).toThrow('Unable to determine the document language');
 		});
 	});
 });
