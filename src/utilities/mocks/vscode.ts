@@ -19,6 +19,9 @@ export const workspace = {
     inspect: (key: string) => undefined,
     update: async (key: string, value: any) => {},
   }),
+  onDidChangeTextDocument: (_handler: any) => ({ dispose: () => {} }),
+  onDidCloseTextDocument: (_handler: any) => ({ dispose: () => {} }),
+  textDocuments: [] as any[],
 };
 
 // Provide a minimal Uri namespace compatible with vscode.Uri
@@ -29,6 +32,9 @@ export const Uri = {
 
 export const window = {
   activeColorTheme: { kind: 1 },
+  activeTextEditor: undefined as any,
+  onDidChangeActiveTextEditor: (_handler: any) => ({ dispose: () => {} }),
+  onDidChangeActiveNotebookEditor: (_handler: any) => ({ dispose: () => {} }),
 };
 
 export const commands = {
