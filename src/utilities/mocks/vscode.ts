@@ -42,6 +42,19 @@ export const window = {
   activeTextEditor: undefined as any,
   onDidChangeActiveTextEditor: (_handler: any) => ({ dispose: () => {} }),
   onDidChangeActiveNotebookEditor: (_handler: any) => ({ dispose: () => {} }),
+  showErrorMessage: (_message: string, ..._items: any[]) => Promise.resolve(undefined as any),
+  showWarningMessage: (_message: string, ..._items: any[]) => Promise.resolve(undefined as any),
+  showInformationMessage: (_message: string, ..._items: any[]) => Promise.resolve(undefined as any),
+  showInputBox: (_options?: any) => Promise.resolve(undefined as any),
+  showQuickPick: (_items: any, _options?: any) => Promise.resolve(undefined as any),
+  createOutputChannel: (_name: string) => ({
+    appendLine: () => {},
+    append: () => {},
+    clear: () => {},
+    dispose: () => {},
+    show: () => {},
+    hide: () => {},
+  }),
 };
 
 export const commands = {
@@ -88,6 +101,27 @@ export const FileChangeType = {
   Created: 1,
   Changed: 2,
   Deleted: 3,
+};
+
+export const ConfigurationTarget = {
+  Global: 1,
+  Workspace: 2,
+  WorkspaceFolder: 3,
+};
+
+export const ViewColumn = {
+  Active: -1,
+  Beside: -2,
+  One: 1,
+  Two: 2,
+  Three: 3,
+};
+
+export const NotebookEdit = {
+  updateCellMetadata: (_index: number, _metadata: any) => ({ type: 'updateCellMetadata', index: _index, metadata: _metadata }),
+  insertCells: (_index: number, _cells: any[]) => ({ type: 'insertCells', index: _index, cells: _cells }),
+  deleteCells: (_range: any) => ({ type: 'deleteCells', range: _range }),
+  updateNotebookMetadata: (_metadata: any) => ({ type: 'updateNotebookMetadata', metadata: _metadata }),
 };
 
 export const RelativePattern = class {
