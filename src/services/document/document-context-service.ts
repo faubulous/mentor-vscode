@@ -40,6 +40,15 @@ export class DocumentContextService {
 	}>();
 
 	/**
+	 * One-shot listeners waiting for the next token delivery for a given URI.
+	 * Used by feature providers to sync with the language server without blocking document loading.
+	 */
+	private readonly _nextTokenListeners = new Map<string, Array<{
+		resolve: (tokens: IToken[]) => void;
+		reject: (error: Error) => void;
+	}>>();
+
+	/**
 	 * Tracks the current load generation per URI. Incremented each time 
 	 * a new load starts for a URI, allowing older loads to detect
 	 * they have been superseded and should abandon their work.
@@ -166,6 +175,43 @@ export class DocumentContextService {
 	}
 
 	/**
+	 * Returns a promise that resolves with the next token delivery from the language server for the given URI.
+	 * This is a one-shot listener; it does not cancel or interfere with any pending loadDocument request.
+	 * @param uri The document URI.
+	 * @param timeout Timeout in milliseconds.
+	 * @returns A promise that resolves with the tokens or rejects on timeout.
+	 */
+	onNextTokenDelivery(uri: string, timeout: number): Promise<IToken[]> {
+		return new Promise((resolve, reject) => {
+			const timeoutId = setTimeout(() => {
+				const listeners = this._nextTokenListeners.get(uri);
+
+				if (listeners) {
+					const idx = listeners.findIndex(l => l.resolve === resolve);
+
+					if (idx >= 0) listeners.splice(idx, 1);
+					if (listeners.length === 0) this._nextTokenListeners.delete(uri);
+				}
+
+				reject(new Error(`Timeout waiting for next token delivery for: ${uri}`));
+			}, timeout);
+
+			const entry = {
+				resolve: (tokens: IToken[]) => { clearTimeout(timeoutId); resolve(tokens); },
+				reject: (error: Error) => { clearTimeout(timeoutId); reject(error); }
+			};
+
+			const existing = this._nextTokenListeners.get(uri);
+
+			if (existing) {
+				existing.push(entry);
+			} else {
+				this._nextTokenListeners.set(uri, [entry]);
+			}
+		});
+	}
+
+	/**
 	 * Cancel any pending token request for the given URI.
 	 * This rejects the existing promise, which causes any `loadDocument` awaiting it
 	 * to enter its catch block and detect that it has been superseded.
@@ -187,6 +233,17 @@ export class DocumentContextService {
 	 * @param tokens The tokens from the language server.
 	 */
 	resolveTokens(uri: string, tokens: IToken[]): void {
+		// Notify one-shot listeners (e.g. completion providers waiting for fresh tokens).
+		const listeners = this._nextTokenListeners.get(uri);
+
+		if (listeners?.length) {
+			for (const listener of listeners) {
+				listener.resolve(tokens);
+			}
+
+			this._nextTokenListeners.delete(uri);
+		}
+
 		const pending = this._pendingTokenRequests.get(uri);
 
 		if (pending) {

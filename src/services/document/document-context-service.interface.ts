@@ -58,6 +58,15 @@ export interface IDocumentContextService {
 	resolveTokens(uri: string, tokens: IToken[]): void;
 
 	/**
+	 * Returns a promise that resolves with the next token delivery from the language server for the given URI.
+	 * Unlike waitForTokens, this does not interfere with document loading — it is a one-shot listener.
+	 * @param uri The document URI.
+	 * @param timeout Timeout in milliseconds.
+	 * @returns A promise that resolves with the tokens or rejects on timeout.
+	 */
+	onNextTokenDelivery(uri: string, timeout: number): Promise<IToken[]>;
+
+	/**
 	 * Get the document context from a file or workspace URI.
 	 * @param uri A document or workspace URI.
 	 * @returns A document context if the document is loaded, `undefined` otherwise.

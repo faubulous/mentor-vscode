@@ -7,8 +7,55 @@ import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
 export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
+	/**
+	 * The characters that trigger completion when typed.
+	 * 
+	 * @remarks The provider will also trigger on any position where the current 
+	 * token starts with a trigger character, even if the character itself is 
+	 * not yet typed (e.g. when completing an IRI that starts with '<', the 
+	 * completion will trigger as soon as the user types '<' or when they start 
+	 * typing an IRI that was auto-closed with '>' (e.g. <htt>), without 
+	 * requiring them to type another trigger character. This is to provide a 
+	 * smoother completion experience for IRIs.
+	 */
+	public readonly triggerCharacters = new Set([':', '<']);
+
+	/**
+	 * Timeout in milliseconds to wait for fresh tokens from the language server
+	 * when the stored tokens are stale at the moment a trigger-character completion fires.
+	 */
+	private readonly _tokenSyncTimeout = 2000;
+
 	private get connectionService() {
 		return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+	}
+
+	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | null> {
+		const context = this.contextService.getDocumentContext(document, TurtleDocument);
+
+		if (!context) {
+			return null;
+		}
+
+		let n = context.getTokenIndexAtPosition(position);
+
+		if (n < 1) {
+			// Tokens are stale — the language server hasn't delivered an update yet.
+			// Wait for the next token delivery before retrying.
+			try {
+				await this.contextService.onNextTokenDelivery(document.uri.toString(), this._tokenSyncTimeout);
+			} catch {
+				return null;
+			}
+
+			n = context.getTokenIndexAtPosition(position);
+
+			if (n < 1) {
+				return null;
+			}
+		}
+
+		return this.getCompletionItems(document, context, n) as Promise<vscode.CompletionItem[] | null>;
 	}
 
 	override getCompletionItems(document: vscode.TextDocument, context: any, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
@@ -62,7 +109,14 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		const graphs = await this.connectionService.getGraphsForDocument(document.uri);
 
 		for (const iri of graphs.filter(g => g.startsWith(value))) {
-			const label = iri.substring(value.length);
+			let label = iri.substring(value.length);
+
+			// If the user has already typed a trigger character, we should 
+			// not include it in the completion item label as this would result 
+			// in duplication (e.g. 'workspace::' instead of 'ex:').
+			if (this.triggerCharacters.has(label[0])) {
+				label = label.slice(1);
+			}
 
 			const item = new vscode.CompletionItem(label, vscode.CompletionItemKind.Reference);
 			item.detail = iri;

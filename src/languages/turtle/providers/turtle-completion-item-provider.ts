@@ -48,7 +48,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	 */
 	readonly maxCompletionItems = 10;
 
-	private get contextService() {
+	protected get contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 

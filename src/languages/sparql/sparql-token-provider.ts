@@ -37,7 +37,7 @@ export class SparqlTokenProvider {
 			autoDefinePrefixProvider,
 			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider),
 			vscode.languages.registerCodeLensProvider({ language: 'sparql' }, codeLensProvider),
-			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ':', '<'),
+			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ...completionProvider.triggerCharacters),
 			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, definitionProvider),
 			vscode.languages.registerDocumentFormattingEditProvider({ language: 'sparql' }, formattingProvider),
 			vscode.languages.registerHoverProvider({ language: 'sparql' }, hoverProvider),
