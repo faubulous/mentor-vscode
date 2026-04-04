@@ -29,6 +29,9 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
+### Version 0.5.6: Service Release
+- Fixed autocomplete for FROM and FROM NAMED clauses in SPARQL queries
+
 ### Version 0.5.5: Service Release
 - Fixed bug where definition tree would become empty after editing a file
 - Fixed bug where reveal property shape command would not work for blank node shape definitions
