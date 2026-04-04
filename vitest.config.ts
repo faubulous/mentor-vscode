@@ -12,6 +12,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.ts'],
       exclude: [
         'node_modules/',
         'dist/',
@@ -19,7 +20,10 @@ export default defineConfig({
         '**/*.d.ts',
         'test/',
         'vitest.config.ts',
-        'jest.config.ts'
+        'jest.config.ts',
+        '**/mocks/**',
+        '**/*.test.ts',
+        '**/*.spec.ts'
       ]
     },
   },

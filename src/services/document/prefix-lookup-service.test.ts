@@ -1,7 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { PrefixLookupService } from './prefix-lookup-service';
 import { DEFAULT_PREFIXES } from './prefix-downloader-service';
 import { IDocumentContextService } from './document-context-service.interface';
+
+vi.mock('@src/utilities/vscode/config', () => ({
+	getConfig: vi.fn(() => ({ get: vi.fn(() => undefined) }))
+}));
+
+vi.mock('@src/providers/workspace-uri', () => ({
+	WorkspaceUri: {
+		supportedSchemes: new Set(['file', 'vscode-notebook-cell', 'vscode-vfs']),
+		toWorkspaceUri: vi.fn(() => undefined),
+	}
+}));
 
 function createMockContextService(contexts: Record<string, { namespaces: Record<string, string> }> = {}): IDocumentContextService {
 	return { contexts } as any;
@@ -55,8 +66,7 @@ describe('PrefixLookupService', () => {
 	});
 
 	describe('getPrefixForIri', () => {
-		it('returns the prefix from the document context (highest priority)', () => {
-			const service = new PrefixLookupService(
+		it('returns the prefix from the document context (highest priority)', () => {			const service = new PrefixLookupService(
 				createMockExtensionContext(),
 				createMockContextService({
 					'file:///doc.ttl': { namespaces: { ex: 'http://example.org/' } },
@@ -125,6 +135,147 @@ describe('PrefixLookupService', () => {
 			);
 
 			expect(service.getPrefixForIri('file:///doc.ttl', 'http://totally-unknown.org/', 'unknown')).toBe('unknown');
+		});
+
+		it('returns prefix from project configuration namespaces', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({
+				get: vi.fn().mockImplementation((key: string) => {
+					if (key === 'namespaces') {
+						return [{ defaultPrefix: 'proj', uri: 'http://project.example/' }];
+					}
+					return undefined;
+				})
+			});
+
+			const service = new PrefixLookupService(
+				createMockExtensionContext(),
+				createMockContextService(),
+			);
+
+			expect(service.getPrefixForIri('file:///doc.ttl', 'http://project.example/', 'fallback')).toBe('proj');
+		});
+	});
+
+	describe('getUriForPrefix', () => {
+		it('returns IRI + # for non-fragment file URI with empty prefix', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
+
+			const service = new PrefixLookupService(
+				createMockExtensionContext(),
+				createMockContextService(),
+			);
+
+			// 'file' is a supported scheme but toWorkspaceUri returns undefined → falls back to original uri
+			const result = service.getUriForPrefix('file:///workspace/test.ttl', '');
+
+			// URI does not contain '#', so result is uri + '#'
+			expect(result).toBe('file:///workspace/test.ttl#');
+		});
+
+		it('returns prefix URI from project config when configured', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({
+				get: vi.fn().mockImplementation((key: string) => {
+					if (key === 'namespaces') {
+						return [{ defaultPrefix: 'ex', uri: 'http://example.org/' }];
+					}
+					return undefined;
+				})
+			});
+
+			const service = new PrefixLookupService(
+				createMockExtensionContext(),
+				createMockContextService(),
+			);
+
+			expect(service.getUriForPrefix('file:///doc.ttl', 'ex')).toBe('http://example.org/');
+		});
+
+		it('returns most frequently used URI from workspace documents', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
+
+			const service = new PrefixLookupService(
+				createMockExtensionContext(),
+				createMockContextService({
+					'file:///a.ttl': { namespaces: { ex: 'http://example.org/' } },
+					'file:///b.ttl': { namespaces: { ex: 'http://example.org/' } },
+					'file:///c.ttl': { namespaces: { ex: 'http://other.org/' } },
+				}),
+			);
+
+			// 'http://example.org/' appears twice, 'http://other.org/' only once
+			expect(service.getUriForPrefix('file:///doc.ttl', 'ex')).toBe('http://example.org/');
+		});
+
+		it('falls through to default prefixes when not in workspace docs', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
+
+			const service = new PrefixLookupService(
+				createMockExtensionContext(),
+				createMockContextService(),
+			);
+
+			// 'rdf' is in DEFAULT_PREFIXES
+			const rdfIri = DEFAULT_PREFIXES.prefixes['rdf'];
+			expect(rdfIri).toBeDefined();
+			expect(service.getUriForPrefix('file:///doc.ttl', 'rdf')).toBe(rdfIri);
+		});
+
+		it('returns empty string for unknown prefix', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
+
+			const service = new PrefixLookupService(
+				createMockExtensionContext(),
+				createMockContextService(),
+			);
+
+			expect(service.getUriForPrefix('file:///doc.ttl', 'completelyunknown')).toBe('');
+		});
+
+		it('uses the workspace-relative URI when toWorkspaceUri returns a value (line 118)', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
+
+			const { WorkspaceUri } = await import('@src/providers/workspace-uri');
+			(WorkspaceUri.toWorkspaceUri as any).mockReturnValueOnce({ toString: () => 'workspace:/test.ttl' });
+
+			const service = new PrefixLookupService(
+				createMockExtensionContext(),
+				createMockContextService(),
+			);
+
+			// WorkspaceUri.toWorkspaceUri returned 'workspace:/test.ttl' which doesn't end with '#'
+			const result = service.getUriForPrefix('file:///w/test.ttl', '');
+
+			expect(result).toBe('workspace:/test.ttl#');
+		});
+
+		it('returns uri + query param when URI contains a fragment (#)', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({
+				get: vi.fn().mockImplementation((key: string) => {
+					if (key === 'prefixes.queryParameterName') return 'named';
+					return undefined;
+				})
+			});
+
+			const { WorkspaceUri } = await import('@src/providers/workspace-uri');
+			(WorkspaceUri.toWorkspaceUri as any).mockReturnValue(undefined);
+
+			const service = new PrefixLookupService(
+				createMockExtensionContext(),
+				createMockContextService(),
+			);
+
+			// URI that contains '#' → uses query param
+			const result = service.getUriForPrefix('http://not-a-file-scheme/doc#cell1', '');
+
+			expect(result).toContain('?named=');
 		});
 	});
 });

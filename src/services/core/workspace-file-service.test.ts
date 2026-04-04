@@ -4,6 +4,10 @@ import { URI } from 'vscode-uri';
 import { WorkspaceFileService } from './workspace-file-service';
 import { DocumentFactory } from '../../workspace/document-factory';
 
+vi.mock('@src/utilities/vscode/config', () => ({
+	getConfig: vi.fn(() => ({ get: vi.fn((_key: string, defaultValue?: any) => defaultValue) })),
+}));
+
 // Mock implementations
 const createMockDocumentFactory = () => ({
 	supportedExtensions: {
@@ -149,6 +153,237 @@ describe('WorkspaceFileService', () => {
 
 			// The internal state should remain unchanged on next access
 			// (depending on implementation)
+		});
+	});
+
+	describe('file system watcher events', () => {
+		let createCallback: ((uri: vscode.Uri) => void) | null;
+		let deleteCallback: ((uri: vscode.Uri) => void) | null;
+
+		beforeEach(() => {
+			createCallback = null;
+			deleteCallback = null;
+
+			vi.spyOn(vscode.workspace, 'createFileSystemWatcher').mockReturnValue({
+				onDidCreate: (cb: any) => { createCallback = cb; return { dispose: () => {} }; },
+				onDidChange: () => ({ dispose: () => {} }),
+				onDidDelete: (cb: any) => { deleteCallback = cb; return { dispose: () => {} }; },
+				dispose: () => {},
+			} as any);
+		});
+
+		test('adds a supported file to the list when it is created', () => {
+			service = new WorkspaceFileService(mockDocumentFactory);
+
+			const newFile = URI.parse('file:///w/new.ttl');
+			createCallback!(newFile as any);
+
+			expect(service.files.some(f => f.toString() === newFile.toString())).toBe(true);
+		});
+
+		test('ignores creation of unsupported files', () => {
+			service = new WorkspaceFileService(mockDocumentFactory);
+
+			const unsupported = URI.parse('file:///w/readme.md');
+			createCallback!(unsupported as any);
+
+			expect(service.files.length).toBe(0);
+		});
+
+		test('fires onDidChangeFiles with Created when a supported file is created', () => {
+			service = new WorkspaceFileService(mockDocumentFactory);
+			const eventSpy = vi.fn();
+			service.onDidChangeFiles(eventSpy);
+
+			const newFile = URI.parse('file:///w/new.ttl');
+			createCallback!(newFile as any);
+
+			expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({
+				type: vscode.FileChangeType.Created,
+			}));
+		});
+
+		test('removes a file from the list when it is deleted', async () => {
+			findFilesSpy.mockResolvedValue([URI.parse('file:///w/test.ttl') as any]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const deletedFile = URI.parse('file:///w/test.ttl');
+			deleteCallback!(deletedFile as any);
+
+			expect(service.files.length).toBe(0);
+		});
+
+		test('ignores deletion of unsupported files', async () => {
+			findFilesSpy.mockResolvedValue([URI.parse('file:///w/test.ttl') as any]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const unsupported = URI.parse('file:///w/readme.md');
+			deleteCallback!(unsupported as any);
+
+			// Supported file remains
+			expect(service.files.length).toBe(1);
+		});
+
+		test('fires onDidChangeFiles with Deleted when a supported file is deleted', async () => {
+			findFilesSpy.mockResolvedValue([URI.parse('file:///w/test.ttl') as any]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const eventSpy = vi.fn();
+			service.onDidChangeFiles(eventSpy);
+
+			deleteCallback!(URI.parse('file:///w/test.ttl') as any);
+
+			expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({
+				type: vscode.FileChangeType.Deleted,
+			}));
+		});
+	});
+
+	describe('getFilesByLanguageId', () => {
+		test('yields files matching the given language extensions', async () => {
+			// Set up extensions mock with turtle language supporting .ttl and .rdf
+			vscode.extensions.all = [{
+				packageJSON: {
+					contributes: {
+						languages: [{ id: 'turtle', extensions: ['.ttl', '.rdf'] }]
+					}
+				}
+			}] as any[];
+
+			findFilesSpy.mockResolvedValue([
+				URI.parse('file:///w/model.ttl'),
+				URI.parse('file:///w/data.rdf'),
+				URI.parse('file:///w/query.sparql'),
+			] as any);
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const results: vscode.Uri[] = [];
+			for await (const uri of service.getFilesByLanguageId('turtle')) {
+				results.push(uri);
+			}
+
+			expect(results.length).toBe(2);
+			expect(results.some(r => r.toString().endsWith('.ttl'))).toBe(true);
+			expect(results.some(r => r.toString().endsWith('.rdf'))).toBe(true);
+		});
+
+		test('yields nothing when no extensions are configured for the language', async () => {
+			vscode.extensions.all = [];
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+
+			const results: vscode.Uri[] = [];
+			for await (const uri of service.getFilesByLanguageId('unknownlang')) {
+				results.push(uri);
+			}
+
+			expect(results.length).toBe(0);
+		});
+	});
+
+	describe('getFolderContents', () => {
+		test('groups files by sub-folder and returns them sorted', async () => {
+			findFilesSpy.mockResolvedValue([
+				URI.parse('file:///w/models/thing.ttl'),
+				URI.parse('file:///w/models/other.ttl'),
+				URI.parse('file:///w/queries/q.sparql'),
+				URI.parse('file:///w/root.ttl'),
+			] as any);
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const contents = await service.getFolderContents(URI.parse('file:///w') as any);
+
+			const names = contents.map(u => u.toString().replace('file:///w/', ''));
+
+			// Two sub-folders and one root file
+			expect(contents.length).toBe(3);
+			expect(names).toContain('models');
+			expect(names).toContain('queries');
+			expect(names).toContain('root.ttl');
+		});
+
+		test('returns only files that are inside the given folder', async () => {
+			findFilesSpy.mockResolvedValue([
+				URI.parse('file:///w/a/x.ttl'),
+				URI.parse('file:///w/b/y.ttl'),
+			] as any);
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const contents = await service.getFolderContents(URI.parse('file:///w/a') as any);
+
+			expect(contents.length).toBe(1);
+			expect(contents[0].toString()).toContain('x.ttl');
+		});
+	});
+
+	describe('getExcludePatterns', () => {
+		test('includes patterns from ignoreFolders config', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({
+				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
+					if (key === 'index.ignoreFolders') return ['node_modules', 'dist'];
+					return defaultValue;
+				})
+			});
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			const result = await (service as any).getExcludePatterns(URI.parse('file:///w'));
+
+			expect(result).toContain('node_modules');
+			expect(result).toContain('dist');
+		});
+
+		test('includes gitignore patterns when useGitIgnore is enabled', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({
+				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
+					if (key === 'index.ignoreFolders') return [];
+					if (key === 'index.useGitIgnore') return true;
+					return defaultValue;
+				})
+			});
+
+			// Mock readFile to return a fake .gitignore
+			const gitignoreContent = '# comment\nnode_modules\nbuild\n';
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValue(
+				new TextEncoder().encode(gitignoreContent) as any
+			);
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			const result = await (service as any).getExcludePatterns(URI.parse('file:///w'));
+
+			expect(result).toContain('node_modules');
+			expect(result).toContain('build');
+			expect(result).not.toContain('# comment');
+		});
+
+		test('skips gitignore errors gracefully when useGitIgnore is enabled', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({
+				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
+					if (key === 'index.ignoreFolders') return ['vendor'];
+					if (key === 'index.useGitIgnore') return true;
+					return defaultValue;
+				})
+			});
+
+			// readFile throws (no .gitignore) — already the default mock behaviour
+			vi.spyOn(vscode.workspace.fs, 'readFile').mockRejectedValue(new Error('not found'));
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			const result = await (service as any).getExcludePatterns(URI.parse('file:///w'));
+
+			// Still gets ignoreFolders but no gitignore content
+			expect(result).toContain('vendor');
 		});
 	});
 });

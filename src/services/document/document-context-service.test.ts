@@ -298,4 +298,195 @@ describe('DocumentContextService', () => {
 			await expect(promise).rejects.toThrow();
 		});
 	});
+
+	describe('loadDocument', () => {
+		it('returns undefined for unsupported language', async () => {
+			const { service } = createService();
+			const doc = {
+				languageId: 'python',
+				uri: vscode.Uri.parse('file:///test.py'),
+				getText: () => '',
+			} as any;
+
+			const result = await service.loadDocument(doc);
+
+			expect(result).toBeUndefined();
+		});
+
+		it('returns undefined when document is null/undefined', async () => {
+			const { service } = createService();
+
+			const result = await service.loadDocument(null as any);
+
+			expect(result).toBeUndefined();
+		});
+
+		it('loads a document and delivers its context when tokens arrive', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '@prefix ex: <http://example.org/> .',
+			} as any;
+
+			const loadPromise = service.loadDocument(doc);
+
+			// Simulate language server delivering tokens
+			service.resolveTokens(uri, []);
+
+			const context = await loadPromise;
+
+			expect(context).toBeDefined();
+			expect(mockDocumentFactory.create).toHaveBeenCalled();
+			expect((context as any).loadTriples).toHaveBeenCalled();
+		});
+
+		it('returns existing context immediately when already loaded and not force-reloading', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			// Pre-populate context as already loaded
+			const existingCtx = createMockContext({ uri: doc.uri, isLoaded: true });
+			service.contexts[uri] = existingCtx;
+			(mockDocumentFactory.create as any).mockReturnValue(existingCtx);
+
+			const result = await service.loadDocument(doc);
+
+			// Should re-use existing context without creating a new one
+			expect(result).toBe(existingCtx);
+			expect(existingCtx.infer).toHaveBeenCalled();
+		});
+
+		it('force-reloads and replaces an already loaded context', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			// Pre-populate context as already loaded
+			const existingCtx = createMockContext({ uri: doc.uri, isLoaded: true });
+			service.contexts[uri] = existingCtx;
+
+			const newCtx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			(mockDocumentFactory.create as any).mockReturnValue(newCtx);
+
+			const loadPromise = service.loadDocument(doc, true);
+
+			// Deliver tokens for force-reload
+			service.resolveTokens(uri, []);
+
+			const result = await loadPromise;
+
+			expect(result).toBe(newCtx);
+			expect(mockDocumentFactory.create).toHaveBeenCalled();
+		});
+
+		it('does not block when context already has tokens', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			// Context created with tokens already available
+			const ctxWithTokens = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			(mockDocumentFactory.create as any).mockReturnValue(ctxWithTokens);
+
+			// Should resolve without needing resolveTokens to be called
+			const result = await service.loadDocument(doc);
+
+			expect(result).toBe(ctxWithTokens);
+			expect(ctxWithTokens.loadTriples).toHaveBeenCalled();
+		});
+
+		it('returns context (partial load) on token timeout', async () => {
+			vi.useFakeTimers();
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			const partialCtx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			(mockDocumentFactory.create as any).mockReturnValue(partialCtx);
+
+			const loadPromise = service.loadDocument(doc);
+
+			// Advance clock past the token wait timeout
+			vi.advanceTimersByTime(15000);
+
+			const result = await loadPromise;
+
+			// Returns context even on timeout (partial load)
+			expect(result).toBe(partialCtx);
+		});
+	});
+
+	describe('handleTextDocumentChanged', () => {
+		it('creates a context for a new supported document', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///new.ttl');
+			const e = {
+				document: {
+					languageId: 'turtle',
+					uri,
+				}
+			} as any;
+
+			await service.handleTextDocumentChanged(e);
+
+			expect(service.contexts[uri.toString()]).toBeDefined();
+			expect(mockDocumentFactory.create).toHaveBeenCalled();
+		});
+
+		it('calls onDidChangeDocument on an existing context', async () => {
+			const { service } = createService();
+			const uri = vscode.Uri.parse('file:///existing.ttl');
+			const ctx = createMockContext({ uri });
+			service.contexts[uri.toString()] = ctx;
+
+			const e = {
+				document: {
+					languageId: 'turtle',
+					uri,
+				}
+			} as any;
+
+			await service.handleTextDocumentChanged(e);
+
+			expect(ctx.onDidChangeDocument).toHaveBeenCalledWith(e);
+		});
+
+		it('does nothing for unsupported language documents', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const e = {
+				document: {
+					languageId: 'markdown',
+					uri: vscode.Uri.parse('file:///readme.md'),
+				}
+			} as any;
+
+			await service.handleTextDocumentChanged(e);
+
+			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
+		});
+	});
 });

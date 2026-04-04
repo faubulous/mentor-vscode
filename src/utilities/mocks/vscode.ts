@@ -13,6 +13,9 @@ export const workspace = {
     onDidDelete: () => ({ dispose: () => {} }),
     dispose: () => {}
   }),
+  fs: {
+    readFile: async (_uri: any): Promise<Uint8Array> => { throw new Error('file not found'); }
+  },
   getConfiguration: (section?: string) => ({
     get: (key: string, defaultValue?: any) => defaultValue,
     has: (key: string) => false,
@@ -43,6 +46,15 @@ export const commands = {
 
 export const env = {
   openExternal: async () => true,
+};
+
+export const languages = {
+  createDiagnosticCollection: (_name?: string) => ({
+    set: () => {},
+    delete: () => {},
+    clear: () => {},
+    dispose: () => {},
+  }),
 };
 
 export const FileChangeType = {
@@ -76,3 +88,54 @@ export class EventEmitter<T> {
     this.listeners = [];
   }
 }
+
+export class Position {
+  constructor(public readonly line: number, public readonly character: number) {}
+
+  translate(lineDelta: number, characterDelta: number = 0): Position {
+    return new Position(this.line + lineDelta, this.character + characterDelta);
+  }
+
+  isEqual(other: Position): boolean {
+    return this.line === other.line && this.character === other.character;
+  }
+}
+
+export class Range {
+  constructor(public readonly start: Position, public readonly end: Position) {}
+}
+
+export class WorkspaceEdit {
+  private readonly _edits: Array<{ uri: any; type: string; range?: Range; newText?: string; position?: Position; text?: string }> = [];
+
+  replace(uri: any, range: Range, newText: string): void {
+    this._edits.push({ uri, type: 'replace', range, newText });
+  }
+
+  insert(uri: any, position: Position, text: string): void {
+    this._edits.push({ uri, type: 'insert', position, text });
+  }
+
+  delete(uri: any, range: Range): void {
+    this._edits.push({ uri, type: 'delete', range });
+  }
+
+  get size(): number {
+    return this._edits.length;
+  }
+
+  get entries(): Array<{ uri: any; type: string; range?: Range; newText?: string; position?: Position; text?: string }> {
+    return this._edits;
+  }
+}
+
+export class DiagnosticCollection {
+  set() {}
+  delete() {}
+  clear() {}
+  dispose() {}
+}
+
+export const extensions = {
+  all: [] as any[],
+};

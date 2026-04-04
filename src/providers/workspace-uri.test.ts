@@ -95,4 +95,47 @@ describe('WorkspaceUri', () => {
 		// Restore the original workspace folders.
 		(vscode.workspace as any).workspaceFolders = workspaceFolders;
 	});
+
+	it('returns the URI unchanged when input is already a workspace: URI', () => {
+		const wsUri = vscode.Uri.parse('workspace:/some/file.ttl');
+		const result = WorkspaceUri.toWorkspaceUri(wsUri);
+
+		expect(result).toBe(wsUri);
+		expect(result?.scheme).toBe('workspace');
+	});
+
+	it('returns undefined when no workspace folders are open (toWorkspaceUri)', () => {
+		const saved = vscode.workspace.workspaceFolders;
+		(vscode.workspace as any).workspaceFolders = [];
+
+		const fileUri = vscode.Uri.parse('file:///anywhere/file.ttl');
+		const result = WorkspaceUri.toWorkspaceUri(fileUri);
+
+		expect(result).toBeUndefined();
+
+		(vscode.workspace as any).workspaceFolders = saved;
+	});
+
+	it('throws when no workspace folders are open (toFileUri)', () => {
+		const saved = vscode.workspace.workspaceFolders;
+		(vscode.workspace as any).workspaceFolders = [];
+
+		const wsUri = vscode.Uri.parse('workspace:/some/file.ttl');
+
+		expect(() => WorkspaceUri.toFileUri(wsUri)).toThrow('No workspace folders are open.');
+
+		(vscode.workspace as any).workspaceFolders = saved;
+	});
+
+	it('throws when a non-workspace URI is passed to toNotebookCellUri', () => {
+		const fileUri = vscode.Uri.parse('file:///w/notebook.mnb');
+
+		expect(() => WorkspaceUri.toNotebookCellUri(fileUri)).toThrow('Cannot convert non-workspace URI to notebook cell URI');
+	});
+
+	it('throws when a workspace URI with no fragment is passed to toNotebookCellUri', () => {
+		const wsUri = vscode.Uri.parse('workspace:/notebook.mnb');  // no fragment
+
+		expect(() => WorkspaceUri.toNotebookCellUri(wsUri)).toThrow('Workspace URI does not have a fragment for the notebook cell');
+	});
 });

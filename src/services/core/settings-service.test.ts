@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SettingsService, TreeLabelStyle, DefinitionTreeLayout } from './settings-service';
 
 vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: () => ({ get: (_key: string, defaultValue?: any) => defaultValue }),
+	getConfig: vi.fn(() => ({ get: vi.fn((_key: string, defaultValue?: any) => defaultValue) })),
 }));
 
 describe('SettingsService', () => {
@@ -107,10 +107,33 @@ describe('SettingsService', () => {
 	});
 
 	describe('constructor defaults', () => {
+		beforeEach(async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockImplementation(() => ({ get: vi.fn((_key: string, defaultValue?: any) => defaultValue) }));
+		});
+
 		it('defaults view.definitionTree.labelStyle to UriLabels when config returns no style', () => {
 			const service = new SettingsService();
 
 			expect(service.get('view.definitionTree.labelStyle')).toBe(TreeLabelStyle.UriLabels);
+		});
+
+		it('sets label style to AnnotatedLabels when config says AnnotatedLabels', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockImplementation(() => ({ get: vi.fn().mockReturnValue('AnnotatedLabels') }));
+
+			const service = new SettingsService();
+
+			expect(service.get('view.definitionTree.labelStyle')).toBe(TreeLabelStyle.AnnotatedLabels);
+		});
+
+		it('sets label style to UriLabelsWithPrefix when config says UriLabelsWithPrefix', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockImplementation(() => ({ get: vi.fn().mockReturnValue('UriLabelsWithPrefix') }));
+
+			const service = new SettingsService();
+
+			expect(service.get('view.definitionTree.labelStyle')).toBe(TreeLabelStyle.UriLabelsWithPrefix);
 		});
 	});
 
