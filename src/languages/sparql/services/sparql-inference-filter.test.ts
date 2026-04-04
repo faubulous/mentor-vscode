@@ -31,7 +31,7 @@ describe('createFilteredSource', () => {
     });
 
     it('filters out quads from inference graphs', () => {
-        const inferenceQuad = makeQuad('http://example.org/graphinference');
+        const inferenceQuad = makeQuad('http://example.org/graph?inference');
         const store = makeStore([inferenceQuad]);
         const filtered = createFilteredSource(store as any);
         const result = filtered.match(null, null, null, null) as any;
@@ -40,7 +40,7 @@ describe('createFilteredSource', () => {
 
     it('keeps normal quads and removes inference graph quads', () => {
         const normalQuad = makeQuad('http://example.org/graph');
-        const inferenceQuad = makeQuad('http://example.org/graphinference');
+        const inferenceQuad = makeQuad('http://example.org/graph?inference');
         const store = makeStore([normalQuad, inferenceQuad]);
         const filtered = createFilteredSource(store as any);
         const result = filtered.match(null, null, null, null) as any;
