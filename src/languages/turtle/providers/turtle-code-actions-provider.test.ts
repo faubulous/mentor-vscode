@@ -259,6 +259,115 @@ describe('TurtleCodeActionsProvider', () => {
                 const inlineAction = result.find(a => a.title?.startsWith('Inline prefix'));
                 expect(inlineAction).toBeUndefined();
             });
+
+            it('returns undefined when prefix declaration token has no namespace definition', async () => {
+                // A PREFIX token that getNamespaceDefinition cannot resolve (no IRIREF after it)
+                const prefixToken = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', 1, 1);
+                mockGetDocumentContext.mockReturnValue({
+                    tokens: [prefixToken],
+                    getTokenAtPosition: vi.fn(() => null),
+                });
+
+                const selection = new Range(new Position(0, 0), new Position(0, 50));
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
+                const inlineAction = result.find(a => a.title?.startsWith('Inline'));
+                expect(inlineAction).toBeUndefined();
+            });
+
+            it('handles PNAME token on same line as prefix declaration (skip usage)', async () => {
+                // @prefix ex: <http://example.org/> .  on line 0
+                // ex: (PNAME_NS also on line 0, same as prefix decl → should be skipped as replacement)
+                const ttlPrefix = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', 1, 1);
+                const pnameDecl = makeToken(RdfToken.PNAME_NS.name, 'ex:', 1, 9);
+                const irirefDecl = makeToken(RdfToken.IRIREF.name, '<http://example.org/>', 1, 13);
+                const period = makeToken(RdfToken.PERIOD.name, '.', 1, 35);
+                const tokens = [ttlPrefix, pnameDecl, irirefDecl, period];
+
+                mockGetDocumentContext.mockReturnValue({
+                    tokens,
+                    getTokenAtPosition: vi.fn(() => null),
+                });
+
+                const selection = new Range(new Position(0, 0), new Position(0, 40));
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
+                // PNAME on same declaration line is skipped (no replacement), but prefix line is deleted
+                // → edit.size > 0 (delete edit present), action IS returned
+                const inlineAction = result.find(a => a.title?.startsWith('Inline'));
+                expect(inlineAction).toBeDefined();
+            });
+
+            it('handles PNAME token with unknown prefix (not in prefixToIri map)', async () => {
+                // @prefix ex: <http://example.org/> .   (line 0)
+                // other:Foo on line 1 — prefix 'other' not in selected declarations
+                const ttlPrefix = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', 1, 1);
+                const pnameDecl = makeToken(RdfToken.PNAME_NS.name, 'ex:', 1, 9);
+                const irirefDecl = makeToken(RdfToken.IRIREF.name, '<http://example.org/>', 1, 13);
+                const period = makeToken(RdfToken.PERIOD.name, '.', 1, 35);
+                const otherPname = { ...makeToken(RdfToken.PNAME_LN.name, 'other:Foo', 2, 1), startLine: 2, endLine: 2 };
+                const tokens = [ttlPrefix, pnameDecl, irirefDecl, period, otherPname];
+
+                mockGetDocumentContext.mockReturnValue({
+                    tokens,
+                    getTokenAtPosition: vi.fn(() => null),
+                });
+
+                const selection = new Range(new Position(0, 0), new Position(0, 40));
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
+                // 'other' prefix is not in prefixToIri map → skipped (no replacement added)
+                // declaration delete is still added → edit.size > 0, action IS returned
+                const inlineAction = result.find(a => a.title?.startsWith('Inline'));
+                expect(inlineAction).toBeDefined();
+            });
+
+            it('skips prefix declaration line when it is out of document bounds', async () => {
+                // Cover line 164: `if (line < 0 || line >= document.lineCount) continue`
+                // Token on line 25 (0-indexed = 24) which is >= mockDoc.lineCount (20)
+                const ttlPrefix = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', 25, 1);
+                const pnameDecl = makeToken(RdfToken.PNAME_NS.name, 'ex:', 25, 9);
+                const irirefDecl = makeToken(RdfToken.IRIREF.name, '<http://example.org/>', 25, 13);
+                const period = makeToken(RdfToken.PERIOD.name, '.', 25, 35);
+                const tokens = [ttlPrefix, pnameDecl, irirefDecl, period];
+
+                mockGetDocumentContext.mockReturnValue({
+                    tokens,
+                    getTokenAtPosition: vi.fn(() => null),
+                });
+
+                const selection = new Range(new Position(24, 0), new Position(24, 40));
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
+                // No edit was added (declaration line is out of bounds, no PNAME replacements)
+                // → edit.size === 0 → action not returned
+                const inlineAction = result.find(a => a.title?.startsWith('Inline'));
+                expect(inlineAction).toBeUndefined();
+            });
+
+            it('skips PNAME token when expanded IRI is undefined', async () => {
+                // Cover line 187: `if (!expandedIri) continue`
+                // Create a PNAME_LN token whose image has no colon → getIriFromPrefixedName returns undefined
+                const ttlPrefix = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', 1, 1);
+                const pnameDecl = makeToken(RdfToken.PNAME_NS.name, 'ex:', 1, 9);
+                const irirefDecl = makeToken(RdfToken.IRIREF.name, '<http://example.org/>', 1, 13);
+                const period = makeToken(RdfToken.PERIOD.name, '.', 1, 35);
+                // PNAME_LN token with no colon in image → getIriFromPrefixedName returns undefined
+                const noColonToken = { ...makeToken(RdfToken.PNAME_LN.name, 'ex', 2, 1), startLine: 2, endLine: 2 };
+                const tokens = [ttlPrefix, pnameDecl, irirefDecl, period, noColonToken];
+
+                mockGetDocumentContext.mockReturnValue({
+                    tokens,
+                    getTokenAtPosition: vi.fn(() => null),
+                });
+
+                const selection = new Range(new Position(0, 0), new Position(0, 40));
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
+                // Declaration line is deleted (edit.size > 0), action IS returned (just no replacement for 'ex')
+                const inlineAction = result.find(a => a.title?.startsWith('Inline'));
+                expect(inlineAction).toBeDefined();
+            });
         });
 
         describe('_provideFixMissingPrefixesActions', () => {

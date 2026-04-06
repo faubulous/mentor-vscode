@@ -44,6 +44,20 @@ function makeService() {
     );
 }
 
+/**
+ * Builds a mock notebook-cell URI with scheme 'vscode-notebook-cell'.
+ * The path matches the notebook path so _getNotebookFromCellUri can find it.
+ */
+function _buildCellUri(notebookPath: string) {
+    const base = Uri.parse(notebookPath);
+    // Return a plain object that mimics a vscode-notebook-cell URI
+    return {
+        scheme: 'vscode-notebook-cell',
+        path: base.path,
+        toString: () => `vscode-notebook-cell:${base.path}#cell0`,
+    };
+}
+
 describe('SparqlConnectionService', () => {
     describe('MENTOR_WORKSPACE_STORE constant', () => {
         it('has the expected id', () => {
@@ -194,6 +208,15 @@ describe('SparqlConnectionService', () => {
             expect(svc.getConnections().length).toBe(before + 1);
             expect(svc.getConnection('brand-new')).toBeDefined();
         });
+
+        it('does not modify the workspace store connection', async () => {
+            const svc = makeService();
+            const before = svc.getConnections().length;
+            await svc.updateConnection({ ...MENTOR_WORKSPACE_STORE, endpointUrl: 'https://changed.org' });
+            // Workspace store should not be modified
+            expect(svc.getConnection(MENTOR_WORKSPACE_STORE.id)?.endpointUrl).toBe('workspace:');
+            expect(svc.getConnections().length).toBe(before);
+        });
     });
 
     describe('getConnectionForDocument', () => {
@@ -286,6 +309,531 @@ describe('SparqlConnectionService', () => {
             svc.onDidChangeConnections(() => { fired = true; });
             await svc.updateConnection(conn);
             expect(fired).toBe(true);
+        });
+    });
+
+    describe('notifyDocumentConnectionChanged', () => {
+        it('fires the onDidChangeConnectionForDocument event with the URI', () => {
+            const svc = makeService();
+            const uri = Uri.parse('file:///test.sparql');
+            let firedUri: any;
+            svc.onDidChangeConnectionForDocument(u => { firedUri = u; });
+            svc.notifyDocumentConnectionChanged(uri as any);
+            expect(firedUri).toBe(uri);
+        });
+    });
+
+    describe('getInferenceEnabled', () => {
+        it('returns false for an unknown connection (falls back to default)', () => {
+            const svc = makeService();
+            expect(svc.getInferenceEnabled('nonexistent-id')).toBe(false);
+        });
+
+        it('returns the stored inference setting for a known connection', async () => {
+            const svc = makeService();
+            const conn = await svc.createConnection();
+            conn.storeType = 'graphdb';
+            // Manually set inferenceEnabled on the connection object
+            conn.inferenceEnabled = true;
+            await svc.updateConnection(conn);
+            expect(svc.getInferenceEnabled(conn.id)).toBe(true);
+        });
+    });
+
+    describe('setInferenceEnabled', () => {
+        it('throws when connection is not found', async () => {
+            const svc = makeService();
+            await expect(svc.setInferenceEnabled('not-found', true)).rejects.toThrow('Connection not found');
+        });
+
+        it('throws when connection does not support inference', async () => {
+            const svc = makeService();
+            const conn = await svc.createConnection();
+            conn.storeType = 'sparql';
+            await svc.updateConnection(conn);
+            await expect(svc.setInferenceEnabled(conn.id, true)).rejects.toThrow('does not support inference');
+        });
+    });
+
+    describe('toggleInferenceEnabled', () => {
+        it('flips false to true for workspace store (which supports inference)', async () => {
+            const svc = makeService();
+            // workspace store starts with inferenceEnabled = false (default)
+            const before = svc.getInferenceEnabled(MENTOR_WORKSPACE_STORE.id);
+            const result = await svc.toggleInferenceEnabled(MENTOR_WORKSPACE_STORE.id);
+            expect(result).toBe(!before);
+        });
+    });
+
+    describe('getInferenceEnabledForDocument', () => {
+        it('returns false for a plain file URI with no stored setting', () => {
+            const svc = makeService();
+            const uri = Uri.parse('file:///test.sparql');
+            expect(svc.getInferenceEnabledForDocument(uri as any)).toBe(false);
+        });
+
+        it('returns the stored document-level setting when one is set', async () => {
+            const ctx = makeContext();
+            const svc = new SparqlConnectionService(ctx as any, makeCredentialStorage() as any);
+            const uri = Uri.parse('file:///doc.sparql');
+            await svc.setInferenceEnabledForDocument(uri as any, true);
+            expect(svc.getInferenceEnabledForDocument(uri as any)).toBe(true);
+        });
+    });
+
+    describe('setInferenceEnabledForDocument', () => {
+        it('stores and retrieves a file-level inference setting', async () => {
+            const svc = makeService();
+            const uri = Uri.parse('file:///doc.sparql');
+            await svc.setInferenceEnabledForDocument(uri as any, true);
+            expect(svc.getInferenceEnabledForDocument(uri as any)).toBe(true);
+        });
+    });
+
+    describe('toggleInferenceEnabledForDocument', () => {
+        it('toggles false to true for a file URI', async () => {
+            const svc = makeService();
+            const uri = Uri.parse('file:///doc2.sparql');
+            // Default is false
+            const result = await svc.toggleInferenceEnabledForDocument(uri as any);
+            expect(result).toBe(true);
+        });
+    });
+
+    describe('clearInferenceEnabledForDocument', () => {
+        it('clears the document-level setting (reverts to default)', async () => {
+            const svc = makeService();
+            const uri = Uri.parse('file:///doc3.sparql');
+            await svc.setInferenceEnabledForDocument(uri as any, true);
+            await svc.clearInferenceEnabledForDocument(uri as any);
+            // After clearing, falls back to connection default (false)
+            expect(svc.getInferenceEnabledForDocument(uri as any)).toBe(false);
+        });
+    });
+
+    describe('saveConfiguration', () => {
+        it('fires onDidChangeConnections and marks connections as not new/modified', async () => {
+            const svc = makeService();
+            const conn = await svc.createConnection();
+            conn.isNew = true;
+            conn.isModified = true;
+            await svc.updateConnection(conn);
+
+            let fired = false;
+            svc.onDidChangeConnections(() => { fired = true; });
+            await svc.saveConfiguration();
+
+            expect(fired).toBe(true);
+            expect(svc.getConnection(conn.id)?.isNew).toBe(false);
+            expect(svc.getConnection(conn.id)?.isModified).toBe(false);
+        });
+    });
+
+    describe('getConnectionForEndpoint', () => {
+        it('returns the connection with the matching endpoint URL', async () => {
+            const svc = makeService();
+            const conn = await svc.createConnection();
+            conn.endpointUrl = 'https://example.org/sparql';
+            await svc.updateConnection(conn);
+            const found = svc.getConnectionForEndpoint('https://example.org/sparql');
+            expect(found?.id).toBe(conn.id);
+        });
+
+        it('returns undefined when no connection matches the endpoint URL', () => {
+            const svc = makeService();
+            expect(svc.getConnectionForEndpoint('https://not-found.org/sparql')).toBeUndefined();
+        });
+    });
+
+    describe('getQuerySourceForDocument', () => {
+        it('returns a ComunicaEndpoint for a file URI', async () => {
+            const svc = makeService();
+            const uri = Uri.parse('file:///test.sparql');
+            const source = await svc.getQuerySourceForDocument(uri as any);
+            expect(source).toBeDefined();
+        });
+    });
+
+    describe('getQuerySourceForConnection', () => {
+        it('returns a ComunicaEndpoint for the workspace store', async () => {
+            const svc = makeService();
+            const conn = svc.getConnection(MENTOR_WORKSPACE_STORE.id)!;
+            const source = await svc.getQuerySourceForConnection(conn);
+            expect(source).toBeDefined();
+        });
+    });
+
+    describe('getGraphsForDocument', () => {
+        it('returns an array for a file URI', async () => {
+            const { container } = await import('tsyringe');
+            vi.spyOn(container, 'resolve').mockReturnValue({ getGraphs: () => [] } as any);
+            const svc = makeService();
+            const uri = Uri.parse('file:///test.sparql');
+            const graphs = await svc.getGraphsForDocument(uri as any);
+            expect(Array.isArray(graphs)).toBe(true);
+            vi.restoreAllMocks();
+        });
+    });
+
+    describe('setQuerySourceForDocument', () => {
+        it('stores the connection ID for a file URI and fires connectionForDocument event', async () => {
+            const svc = makeService();
+            const conn = await svc.createConnection();
+            const uri = Uri.parse('file:///test.sparql');
+            let firedUri: any;
+            svc.onDidChangeConnectionForDocument(u => { firedUri = u; });
+            await svc.setQuerySourceForDocument(uri as any, conn.id);
+            expect(firedUri).toBeDefined();
+            // After storing, getConnectionForDocument should return the set connection
+            const found = svc.getConnectionForDocument(uri as any);
+            expect(found.id).toBe(conn.id);
+        });
+
+        it('invokes setConnectionForCell for a notebook-cell URI', async () => {
+            const vscode = await import('vscode');
+            const svc = makeService();
+            const conn = await svc.createConnection();
+
+            const cellUri = _buildCellUri('file:///nb-sq.sparql-book');
+            const mockCell = { document: { uri: cellUri }, metadata: {}, index: 0 };
+            const mockNotebook = { uri: Uri.parse('file:///nb-sq.sparql-book'), getCells: () => [mockCell] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            let firedUri: any;
+            svc.onDidChangeConnectionForDocument(u => { firedUri = u; });
+            await svc.setQuerySourceForDocument(cellUri as any, conn.id);
+            expect(firedUri).toBeDefined();
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+    });
+
+    describe('testConnection', () => {
+        it('returns null immediately for the workspace store', async () => {
+            const svc = makeService();
+            const conn = svc.getConnection(MENTOR_WORKSPACE_STORE.id)!;
+            const result = await svc.testConnection(conn);
+            expect(result).toBeNull();
+        });
+
+        it('returns an error when fetch fails', async () => {
+            const svc = makeService();
+            const conn: SparqlConnection = {
+                id: 'test-endpoint',
+                endpointUrl: 'https://invalid.example.org/sparql',
+                configScope: ConfigurationScope.User,
+            };
+            // Global fetch will fail for non-existent host - mock it
+            vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
+            const result = await svc.testConnection(conn);
+            expect(result).not.toBeNull();
+            expect(result?.message).toContain('Network error');
+            vi.unstubAllGlobals();
+        });
+
+        it('returns null when fetch succeeds (ok response)', async () => {
+            const svc = makeService();
+            const conn: SparqlConnection = {
+                id: 'test-endpoint',
+                endpointUrl: 'https://example.org/sparql',
+                configScope: ConfigurationScope.User,
+            };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+            const result = await svc.testConnection(conn, null);
+            expect(result).toBeNull();
+            vi.unstubAllGlobals();
+        });
+
+        it('returns error details when fetch returns non-ok response', async () => {
+            const svc = makeService();
+            const conn: SparqlConnection = {
+                id: 'test-endpoint',
+                endpointUrl: 'https://example.org/sparql',
+                configScope: ConfigurationScope.User,
+            };
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+                ok: false,
+                status: 401,
+                statusText: 'Unauthorized',
+                text: async () => 'Auth required',
+            }));
+            const result = await svc.testConnection(conn, null);
+            expect(result?.code).toBe(401);
+            expect(result?.message).toBe('Auth required');
+            vi.unstubAllGlobals();
+        });
+    });
+
+    describe('_loadConnectionsFromConfiguration (via constructor with mocked inspect)', () => {
+        it('loads global connections when inspect returns globalValue', async () => {
+            const vscode = await import('vscode');
+            const originalGetConfig = vscode.workspace.getConfiguration;
+            // Temporarily override getConfiguration to return a config with inspect that has globalValue
+            const mockConn: SparqlConnection = { id: 'global-1', endpointUrl: 'https://global.example.org/sparql', configScope: ConfigurationScope.User };
+            (vscode.workspace as any).getConfiguration = () => ({
+                get: (key: string, def: any) => def,
+                has: () => false,
+                inspect: () => ({ globalValue: [mockConn], workspaceValue: undefined }),
+                update: async () => {},
+            });
+            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+            (vscode.workspace as any).getConfiguration = originalGetConfig;
+
+            const connections = svc.getConnectionsForConfigurationScope(ConfigurationScope.User);
+            expect(connections.some(c => c.endpointUrl === 'https://global.example.org/sparql')).toBe(true);
+        });
+
+        it('loads workspace connections when inspect returns workspaceValue', async () => {
+            const vscode = await import('vscode');
+            const originalGetConfig = vscode.workspace.getConfiguration;
+            const mockConn: SparqlConnection = { id: 'ws-1', endpointUrl: 'https://workspace.example.org/sparql', configScope: ConfigurationScope.Workspace };
+            (vscode.workspace as any).getConfiguration = () => ({
+                get: (key: string, def: any) => def,
+                has: () => false,
+                inspect: () => ({ globalValue: undefined, workspaceValue: [mockConn] }),
+                update: async () => {},
+            });
+            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+            (vscode.workspace as any).getConfiguration = originalGetConfig;
+
+            const connections = svc.getConnectionsForConfigurationScope(ConfigurationScope.Workspace);
+            // workspace store is also Workspace-scoped; the loaded connection should also appear
+            expect(connections.some(c => c.endpointUrl === 'https://workspace.example.org/sparql')).toBe(true);
+        });
+    });
+
+    describe('getConnectionForDocument — notebook-cell branch', () => {
+        it('returns workspace store when cell has no connectionId metadata', async () => {
+            const vscode = await import('vscode');
+            const cellUri = _buildCellUri('file:///nb.sparql-book');
+            const mockCell = { document: { uri: cellUri }, metadata: {}, index: 0 };
+            const mockNotebook = { uri: Uri.parse('file:///nb.sparql-book'), getCells: () => [mockCell] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const svc = makeService();
+            const conn = svc.getConnectionForDocument(cellUri as any);
+            expect(conn.id).toBe(MENTOR_WORKSPACE_STORE.id);
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+
+        it('returns a specific connection when cell metadata has connectionId', async () => {
+            const vscode = await import('vscode');
+            const svc = makeService();
+            const userConn = await svc.createConnection();
+            userConn.endpointUrl = 'https://cell.example.org/sparql';
+            await svc.updateConnection(userConn);
+
+            const cellUri = _buildCellUri('file:///nb.sparql-book');
+            const mockCell = { document: { uri: cellUri }, metadata: { connectionId: userConn.id }, index: 0 };
+            const mockNotebook = { uri: Uri.parse('file:///nb.sparql-book'), getCells: () => [mockCell] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const conn = svc.getConnectionForDocument(cellUri as any);
+            expect(conn.id).toBe(userConn.id);
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+    });
+
+    describe('getInferenceEnabledForDocument — notebook-cell branch', () => {
+        it('returns undefined (falls back to connection) when cell has no inferenceEnabled metadata', async () => {
+            const vscode = await import('vscode');
+            const cellUri = _buildCellUri('file:///nb2.sparql-book');
+            const mockCell = { document: { uri: cellUri }, metadata: {}, index: 0 };
+            const mockNotebook = { uri: Uri.parse('file:///nb2.sparql-book'), getCells: () => [mockCell] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const svc = makeService();
+            // Falls back to connection setting (false)
+            expect(svc.getInferenceEnabledForDocument(cellUri as any)).toBe(false);
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+
+        it('returns the cell-level inferenceEnabled when set in metadata', async () => {
+            const vscode = await import('vscode');
+            const cellUri = _buildCellUri('file:///nb3.sparql-book');
+            const mockCell = { document: { uri: cellUri }, metadata: { inferenceEnabled: true }, index: 0 };
+            const mockNotebook = { uri: Uri.parse('file:///nb3.sparql-book'), getCells: () => [mockCell] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const svc = makeService();
+            expect(svc.getInferenceEnabledForDocument(cellUri as any)).toBe(true);
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+    });
+
+    describe('setConnectionForCell', () => {
+        it('throws when notebook is not found', async () => {
+            const svc = makeService();
+            const cellUri = _buildCellUri('file:///missing.sparql-book');
+            await expect(svc.setConnectionForCell(cellUri as any, 'some-id')).rejects.toThrow('Notebook document not found');
+        });
+
+        it('throws when cell is not found in the notebook', async () => {
+            const vscode = await import('vscode');
+            const cellUri = _buildCellUri('file:///nb4.sparql-book');
+            const mockNotebook = { uri: Uri.parse('file:///nb4.sparql-book'), getCells: () => [] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const svc = makeService();
+            await expect(svc.setConnectionForCell(cellUri as any, 'some-id')).rejects.toThrow('Cell not found');
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+
+        it('applies workspace edit when cell is found', async () => {
+            const vscode = await import('vscode');
+            const cellUri = _buildCellUri('file:///nb5.sparql-book');
+            const mockCell = { document: { uri: cellUri }, metadata: {}, index: 0 };
+            const mockNotebook = { uri: Uri.parse('file:///nb5.sparql-book'), getCells: () => [mockCell] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const svc = makeService();
+            await svc.setConnectionForCell(cellUri as any, 'conn-xyz');
+            // If no error thrown, the edit was applied successfully
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+    });
+
+    describe('setInferenceEnabledForDocument — notebook-cell branch', () => {
+        it('throws when notebook is not found for cell URI', async () => {
+            const svc = makeService();
+            const cellUri = _buildCellUri('file:///missing.sparql-book');
+            await expect(svc.setInferenceEnabledForDocument(cellUri as any, true)).rejects.toThrow('Notebook document not found');
+        });
+
+        it('throws when cell is not found in notebook', async () => {
+            const vscode = await import('vscode');
+            const cellUri = _buildCellUri('file:///nb6.sparql-book');
+            const mockNotebook = { uri: Uri.parse('file:///nb6.sparql-book'), getCells: () => [] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const svc = makeService();
+            await expect(svc.setInferenceEnabledForDocument(cellUri as any, true)).rejects.toThrow('Cell not found');
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+
+        it('applies a workspace edit to set inferenceEnabled on the cell', async () => {
+            const vscode = await import('vscode');
+            const cellUri = _buildCellUri('file:///nb7.sparql-book');
+            const mockCell = { document: { uri: cellUri }, metadata: {}, index: 0 };
+            const mockNotebook = { uri: Uri.parse('file:///nb7.sparql-book'), getCells: () => [mockCell] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const svc = makeService();
+            await svc.setInferenceEnabledForDocument(cellUri as any, true);
+            // No throw = success
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+
+        it('applies a workspace edit to clear inferenceEnabled (undefined)', async () => {
+            const vscode = await import('vscode');
+            const cellUri = _buildCellUri('file:///nb8.sparql-book');
+            const mockCell = { document: { uri: cellUri }, metadata: { inferenceEnabled: true }, index: 0 };
+            const mockNotebook = { uri: Uri.parse('file:///nb8.sparql-book'), getCells: () => [mockCell] };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            const svc = makeService();
+            await svc.setInferenceEnabledForDocument(cellUri as any, undefined);
+            // No throw = success
+
+            (vscode.workspace as any).notebookDocuments = [];
+        });
+    });
+
+    describe('_onNotebookDocumentChanged — adds cells with inherited settings', () => {
+        it('inherits connectionId and inferenceEnabled from the previous cell when new cells are added', async () => {
+            const vscode = await import('vscode');
+            // Create a service and capture the notebookDocumentChanged handler
+            let notebookChangeHandler: ((e: any) => Promise<void>) | undefined;
+            (vscode.workspace as any).onDidChangeNotebookDocument = (handler: any) => {
+                notebookChangeHandler = handler;
+                return { dispose: () => {} };
+            };
+
+            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+
+            // Set up a mock notebook with a previous cell having metadata
+            const nbUri = Uri.parse('file:///nb9.sparql-book');
+            const existingCellUri = _buildCellUri('file:///nb9.sparql-book');
+            const newCellUri = _buildCellUri('file:///nb9.sparql-book');
+
+            const existingCell = {
+                document: { uri: existingCellUri },
+                metadata: { connectionId: 'conn-prev', inferenceEnabled: true },
+                index: 0
+            };
+            const newCell = {
+                document: { uri: newCellUri },
+                metadata: {},
+                index: 1
+            };
+            const mockNotebook = {
+                uri: nbUri,
+                getCells: () => [existingCell, newCell]
+            };
+            (vscode.workspace as any).notebookDocuments = [mockNotebook];
+
+            // Trigger the handler
+            if (notebookChangeHandler) {
+                await notebookChangeHandler({
+                    notebook: mockNotebook,
+                    contentChanges: [{ addedCells: [newCell] }]
+                });
+            }
+            // applyEdit was called (no throw)
+            (vscode.workspace as any).notebookDocuments = [];
+            (vscode.workspace as any).onDidChangeNotebookDocument = (_handler: any) => ({ dispose: () => {} });
+        });
+
+        it('does not inherit settings when new cell already has metadata', async () => {
+            const vscode = await import('vscode');
+            let notebookChangeHandler: ((e: any) => Promise<void>) | undefined;
+            (vscode.workspace as any).onDidChangeNotebookDocument = (handler: any) => {
+                notebookChangeHandler = handler;
+                return { dispose: () => {} };
+            };
+
+            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+
+            const nbUri = Uri.parse('file:///nb10.sparql-book');
+            const newCellUri = _buildCellUri('file:///nb10.sparql-book');
+            const newCell = {
+                document: { uri: newCellUri },
+                metadata: { connectionId: 'already-set' },
+                index: 0
+            };
+            const mockNotebook = {
+                uri: nbUri,
+                getCells: () => [newCell]
+            };
+
+            if (notebookChangeHandler) {
+                await notebookChangeHandler({
+                    notebook: mockNotebook,
+                    contentChanges: [{ addedCells: [newCell] }]
+                });
+            }
+            // No error = success
+            (vscode.workspace as any).onDidChangeNotebookDocument = (_handler: any) => ({ dispose: () => {} });
+        });
+    });
+
+    describe('getAuthHeaders — entra-client-credentials branch', () => {
+        it('acquires a token and sets Bearer header', async () => {
+            const { EntraClientCredentialService } = await import('@src/services/core/entra-client-credential-service');
+            vi.spyOn(EntraClientCredentialService.prototype, 'acquireToken').mockResolvedValue('entra-token');
+
+            const svc = makeService();
+            const cred: any = { type: 'entra-client-credentials', tenantId: 't', clientId: 'c', clientSecret: 's' };
+            const headers = await svc.getAuthHeaders(cred);
+            expect(headers.Authorization).toBe('Bearer entra-token');
         });
     });
 });

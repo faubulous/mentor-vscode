@@ -157,4 +157,46 @@ describe('TurtleCodeLensProvider', () => {
             expect(fired.length).toBe(1);
         });
     });
+
+    describe('_initialize callbacks', () => {
+        it('fires onDidChangeCodeLenses after waitForIndexed resolves when enabled', async () => {
+            let resolveWait!: () => void;
+            mockIndexerService.waitForIndexed.mockReturnValue(new Promise<void>(res => { resolveWait = res; }));
+
+            const provider = new TurtleCodeLensProvider();
+            // Trigger _initialize by calling provideCodeLenses
+            mockContextService.contexts['file:///idx.ttl'] = { subjects: {} };
+            provider.provideCodeLenses({ uri: { toString: () => 'file:///idx.ttl' } } as any, null as any);
+            // Wait for _initialize to complete
+            await new Promise(r => setTimeout(r, 0));
+
+            const fired: number[] = [];
+            provider.onDidChangeCodeLenses(() => fired.push(1));
+
+            resolveWait();
+            await new Promise(r => setTimeout(r, 0));
+
+            expect(fired.length).toBe(1);
+        });
+
+        it('fires onDidChangeCodeLenses when context change event fires and enabled', async () => {
+            let capturedCtxHandler: (() => void) | undefined;
+            mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
+                capturedCtxHandler = handler;
+                return { dispose: vi.fn() };
+            });
+
+            const provider = new TurtleCodeLensProvider();
+            mockContextService.contexts['file:///ctx.ttl'] = { subjects: {} };
+            provider.provideCodeLenses({ uri: { toString: () => 'file:///ctx.ttl' } } as any, null as any);
+            await new Promise(r => setTimeout(r, 0));
+
+            const fired: number[] = [];
+            provider.onDidChangeCodeLenses(() => fired.push(1));
+
+            expect(capturedCtxHandler).toBeDefined();
+            capturedCtxHandler!();
+            expect(fired.length).toBe(1);
+        });
+    });
 });

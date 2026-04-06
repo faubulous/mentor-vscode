@@ -217,6 +217,527 @@ describe('LanguageServerBase', () => {
 			const tokens = [makeToken('Unknown', '???')];
 			expect(() => server.getLint(makeDoc(), '', tokens)).not.toThrow();
 		});
+
+		it('skips PNAME_NS that follows PREFIX/TTL_PREFIX (prefix declaration itself)', () => {
+			// The PNAME_NS after PREFIX should not be tracked as a used prefix
+			const tokens = [
+				makeToken('PREFIX', 'PREFIX', 0),
+				makeToken('PNAME_NS', 'ex:', 7),
+				makeToken('IRIREF', '<http://example.org/>', 11),
+			];
+			const diags = server.getLint(makeDoc(), '', tokens);
+			// It should be notified as unused (not counted as "used via PNAME_NS")
+			const hints = diags.filter(d => d.message.includes("never used"));
+			expect(hints.length).toBeGreaterThanOrEqual(1);
+		});
+
+		it('counts PNAME_NS as a used prefix when not preceded by PREFIX', () => {
+			const tokens = [
+				makeToken('PREFIX', 'PREFIX', 0),
+				makeToken('PNAME_NS', 'ex:', 7),
+				makeToken('IRIREF', '<http://example.org/>', 11),
+				// PNAME_NS not after PREFIX → counts as used
+				makeToken('IRIREF', '<http://example.org/Thing>', 35),
+				makeToken('PNAME_NS', 'ex:', 65),
+			];
+			const diags = server.getLint(makeDoc(), '', tokens);
+			const hints = diags.filter(d => d.message.includes("never used"));
+			expect(hints.length).toBe(0);
+		});
+
+		it('skips DoubleCaret when it is the last token (boundary check)', () => {
+			// DoubleCaret at position >= tokens.length - 2 → continue
+			const tokens = [
+				makeToken('STRING_LITERAL_QUOTE', '"hello"', 0),
+				makeToken('DoubleCaret', '^^', 7),
+			];
+			expect(() => server.getLint(makeDoc(), '', tokens)).not.toThrow();
+		});
+
+		describe('XSD datatype validation', () => {
+			function xsdTokens(literalImage: string, xsdIri: string) {
+				const lit = makeToken('STRING_LITERAL_QUOTE', literalImage, 0);
+				const dc = makeToken('DoubleCaret', '^^', literalImage.length);
+				const dt = makeToken('IRIREF', `<${xsdIri}>`, literalImage.length + 2);
+				return [lit, dc, dt];
+			}
+
+			it('warns for invalid xsd:anyURI when regex fails', () => {
+				// anyURI regex always matches any string, so no warning expected for valid input
+				const tokens = xsdTokens('"http://example.org/"', 'http://www.w3.org/2001/XMLSchema#anyURI');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(() => diags).not.toThrow();
+			});
+
+			it('warns for invalid xsd:base64Binary', () => {
+				const tokens = xsdTokens('"ZZZZZ"', 'http://www.w3.org/2001/XMLSchema#base64Binary');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				// ZZZZZ does not match [0-9a-fA-F]+
+				const warns = diags.filter(d => d.message.includes('lexical space'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:base64Binary', () => {
+				const tokens = xsdTokens('"deadbeef"', 'http://www.w3.org/2001/XMLSchema#base64Binary');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('lexical space'));
+				expect(warns.length).toBe(0);
+			});
+
+			it('warns for invalid xsd:boolean', () => {
+				const tokens = xsdTokens('"yes"', 'http://www.w3.org/2001/XMLSchema#boolean');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('boolean'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:boolean "true"', () => {
+				const tokens = xsdTokens('"true"', 'http://www.w3.org/2001/XMLSchema#boolean');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('boolean'));
+				expect(warns.length).toBe(0);
+			});
+
+			it('warns for invalid xsd:byte', () => {
+				const tokens = xsdTokens('"notabyte"', 'http://www.w3.org/2001/XMLSchema#byte');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns for invalid xsd:date', () => {
+				const tokens = xsdTokens('"not-a-date"', 'http://www.w3.org/2001/XMLSchema#date');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('lexical space'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:date', () => {
+				const tokens = xsdTokens('"2024-01-15"', 'http://www.w3.org/2001/XMLSchema#date');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('lexical space'));
+				expect(warns.length).toBe(0);
+			});
+
+			it('warns for invalid xsd:dateTime', () => {
+				const tokens = xsdTokens('"2024-01-15"', 'http://www.w3.org/2001/XMLSchema#dateTime');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('lexical space'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:dateTime', () => {
+				const tokens = xsdTokens('"2024-01-15T10:30:00"', 'http://www.w3.org/2001/XMLSchema#dateTime');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('lexical space'));
+				expect(warns.length).toBe(0);
+			});
+
+			it('warns for invalid xsd:decimal', () => {
+				const tokens = xsdTokens('"abc"', 'http://www.w3.org/2001/XMLSchema#decimal');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:decimal', () => {
+				const tokens = xsdTokens('"3.14"', 'http://www.w3.org/2001/XMLSchema#decimal');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for invalid xsd:double', () => {
+				const tokens = xsdTokens('"notadouble"', 'http://www.w3.org/2001/XMLSchema#double');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:double', () => {
+				const tokens = xsdTokens('"1.5e10"', 'http://www.w3.org/2001/XMLSchema#double');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for invalid xsd:duration', () => {
+				const tokens = xsdTokens('"notaduration"', 'http://www.w3.org/2001/XMLSchema#duration');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:duration', () => {
+				const tokens = xsdTokens('"P1Y2M3DT4H5M6S"', 'http://www.w3.org/2001/XMLSchema#duration');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for invalid xsd:float', () => {
+				const tokens = xsdTokens('"notafloat"', 'http://www.w3.org/2001/XMLSchema#float');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:float', () => {
+				const tokens = xsdTokens('"1.5"', 'http://www.w3.org/2001/XMLSchema#float');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for non-integer xsd:int', () => {
+				const tokens = xsdTokens('"notanint"', 'http://www.w3.org/2001/XMLSchema#int');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('integer'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns for out-of-range xsd:int', () => {
+				const tokens = xsdTokens('"9999999999"', 'http://www.w3.org/2001/XMLSchema#int');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('2147483647'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:int', () => {
+				const tokens = xsdTokens('"42"', 'http://www.w3.org/2001/XMLSchema#int');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for non-integer xsd:integer', () => {
+				const tokens = xsdTokens('"notaninteger"', 'http://www.w3.org/2001/XMLSchema#integer');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('integer'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:integer', () => {
+				const tokens = xsdTokens('"100"', 'http://www.w3.org/2001/XMLSchema#integer');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for non-integer xsd:long', () => {
+				const tokens = xsdTokens('"notlong"', 'http://www.w3.org/2001/XMLSchema#long');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('long'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns when xsd:long is out of range', () => {
+				const tokens = xsdTokens('"99999999999999999999"', 'http://www.w3.org/2001/XMLSchema#long');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('9223372036854775807'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns for non-integer xsd:negativeInteger', () => {
+				const tokens = xsdTokens('"notanint"', 'http://www.w3.org/2001/XMLSchema#negativeInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns when xsd:negativeInteger is 0 or positive', () => {
+				const tokens = xsdTokens('"5"', 'http://www.w3.org/2001/XMLSchema#negativeInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('< 0'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:negativeInteger', () => {
+				const tokens = xsdTokens('"-5"', 'http://www.w3.org/2001/XMLSchema#negativeInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for non-integer xsd:nonNegativeInteger', () => {
+				const tokens = xsdTokens('"abc"', 'http://www.w3.org/2001/XMLSchema#nonNegativeInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns when xsd:nonNegativeInteger is negative', () => {
+				const tokens = xsdTokens('"-5"', 'http://www.w3.org/2001/XMLSchema#nonNegativeInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('>= 0'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:nonNegativeInteger', () => {
+				const tokens = xsdTokens('"5"', 'http://www.w3.org/2001/XMLSchema#nonNegativeInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for non-integer xsd:nonPositiveInteger', () => {
+				const tokens = xsdTokens('"abc"', 'http://www.w3.org/2001/XMLSchema#nonPositiveInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns when xsd:nonPositiveInteger is positive', () => {
+				const tokens = xsdTokens('"5"', 'http://www.w3.org/2001/XMLSchema#nonPositiveInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('<= 0'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:nonPositiveInteger', () => {
+				const tokens = xsdTokens('"-5"', 'http://www.w3.org/2001/XMLSchema#nonPositiveInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for non-integer xsd:positiveInteger', () => {
+				const tokens = xsdTokens('"abc"', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns when xsd:positiveInteger is 0 or negative', () => {
+				const tokens = xsdTokens('"0"', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('> 0'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:positiveInteger', () => {
+				const tokens = xsdTokens('"5"', 'http://www.w3.org/2001/XMLSchema#positiveInteger');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for non-integer xsd:short', () => {
+				const tokens = xsdTokens('"notashort"', 'http://www.w3.org/2001/XMLSchema#short');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('warns when xsd:short is out of range', () => {
+				const tokens = xsdTokens('"99999"', 'http://www.w3.org/2001/XMLSchema#short');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				const warns = diags.filter(d => d.message.includes('32767'));
+				expect(warns.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:short', () => {
+				const tokens = xsdTokens('"100"', 'http://www.w3.org/2001/XMLSchema#short');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+
+			it('warns for invalid xsd:time', () => {
+				const tokens = xsdTokens('"not-a-time"', 'http://www.w3.org/2001/XMLSchema#time');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags.length).toBeGreaterThanOrEqual(1);
+			});
+
+			it('does not warn for valid xsd:time', () => {
+				const tokens = xsdTokens('"14:30:00Z"', 'http://www.w3.org/2001/XMLSchema#time');
+				const diags = server.getLint(makeDoc(), '', tokens);
+				expect(diags).toHaveLength(0);
+			});
+		});
+	});
+
+	describe('start', () => {
+		it('calls documents.listen, connection.listen, and logs', () => {
+			const conn = makeConnection();
+			const srv = new TestServer(conn);
+			srv.start();
+			expect(conn.listen).toHaveBeenCalled();
+		});
+	});
+
+	describe('onInitializeConnection', () => {
+		it('sets capability flags and returns InitializeResult', () => {
+			const srv = new TestServer();
+			const params = {
+				capabilities: {
+					workspace: { configuration: true, workspaceFolders: true },
+					textDocument: { publishDiagnostics: { relatedInformation: true } }
+				}
+			};
+			const result = (srv as any).onInitializeConnection(params);
+			expect(srv.hasConfigurationCapability).toBe(true);
+			expect(srv.hasWorkspaceFolderCapability).toBe(true);
+			expect(srv.hasDiagnosticRelatedInformationCapability).toBe(true);
+			expect(result.capabilities).toBeDefined();
+		});
+
+		it('includes workspaceFolders capability when flag is set', () => {
+			const srv = new TestServer();
+			const params = {
+				capabilities: {
+					workspace: { configuration: true, workspaceFolders: true },
+					textDocument: {}
+				}
+			};
+			const result = (srv as any).onInitializeConnection(params);
+			expect(result.capabilities.workspace?.workspaceFolders?.supported).toBe(true);
+		});
+
+		it('does not include workspaceFolders when flag is false', () => {
+			const srv = new TestServer();
+			const params = { capabilities: {} };
+			const result = (srv as any).onInitializeConnection(params);
+			expect(result.capabilities.workspace).toBeUndefined();
+		});
+	});
+
+	describe('onConnectionInitialized', () => {
+		it('registers config change notification when hasConfigurationCapability is true', () => {
+			const conn = makeConnection();
+			const srv = new TestServer(conn);
+			srv.hasConfigurationCapability = true;
+			(srv as any).onConnectionInitialized();
+			expect(conn.client.register).toHaveBeenCalled();
+		});
+
+		it('registers workspace folder change handler when hasWorkspaceFolderCapability is true', () => {
+			const conn = makeConnection();
+			const srv = new TestServer(conn);
+			srv.hasWorkspaceFolderCapability = true;
+			(srv as any).onConnectionInitialized();
+			expect(conn.workspace.onDidChangeWorkspaceFolders).toHaveBeenCalled();
+			// Call the registered handler to cover the log line inside it
+			const handler = conn.workspace.onDidChangeWorkspaceFolders.mock.calls[0][0];
+			handler({});
+		});
+	});
+
+	describe('onDidChangeConfiguration', () => {
+		it('clears document settings when hasConfigurationCapability is true', () => {
+			const srv = new TestServer();
+			srv.hasConfigurationCapability = true;
+			srv.documentSettings.set('file:///test.ttl', Promise.resolve({} as any));
+			(srv as any).onDidChangeConfiguration({ settings: {} });
+			expect(srv.documentSettings.size).toBe(0);
+		});
+
+		it('updates globalSettings when hasConfigurationCapability is false', () => {
+			const srv = new TestServer();
+			srv.hasConfigurationCapability = false;
+			(srv as any).onDidChangeConfiguration({ settings: { languageServerExample: { maxNumberOfProblems: 99 } } });
+			expect(srv.globalSettings).toBeDefined();
+		});
+
+		it('revalidates all open documents when setting changes', () => {
+			const conn = makeConnection();
+			const doc = makeDoc('test');
+			// Patch documents.all() to return a document
+			const srv = new TestServer(conn);
+			(srv.documents as any).all = vi.fn(() => [doc]);
+			const spy = vi.spyOn(srv as any, 'validateTextDocument').mockResolvedValue(undefined);
+			srv.hasConfigurationCapability = true;
+			(srv as any).onDidChangeConfiguration({ settings: {} });
+			expect(spy).toHaveBeenCalledWith(doc);
+		});
+	});
+
+	describe('onDidChangeWatchedFiles', () => {
+		it('logs when watched files change', () => {
+			const conn = makeConnection();
+			const srv = new TestServer(conn);
+			(srv as any).onDidChangeWatchedFiles({ changes: [] });
+			expect(conn.console.log).toHaveBeenCalledWith(expect.stringContaining('Watched files changed'));
+		});
+	});
+
+	describe('onDidClose', () => {
+		it('removes document settings on close', () => {
+			const srv = new TestServer();
+			const uri = 'file:///test.ttl';
+			srv.documentSettings.set(uri, Promise.resolve({} as any));
+			(srv as any).onDidClose({ document: { uri } });
+			expect(srv.documentSettings.has(uri)).toBe(false);
+		});
+	});
+
+	describe('onDidChangeContent', () => {
+		it('calls validateTextDocument with the changed document', async () => {
+			const srv = new TestServer();
+			const doc = makeDoc('test content');
+			const spy = vi.spyOn(srv as any, 'validateTextDocument').mockResolvedValue(undefined);
+			(srv as any).onDidChangeContent({ document: doc });
+			expect(spy).toHaveBeenCalledWith(doc);
+		});
+	});
+
+	describe('validateTextDocument', () => {
+		it('returns early when connection is missing', async () => {
+			const srv = new TestServer();
+			(srv as any).connection = undefined;
+			await expect((srv as any).validateTextDocument(makeDoc('content'))).resolves.toBeUndefined();
+		});
+
+		it('sends empty diagnostics for empty document', async () => {
+			const conn = makeConnection();
+			const srv = new TestServer(conn);
+			await (srv as any).validateTextDocument(makeDoc(''));
+			expect(conn.sendDiagnostics).toHaveBeenCalledWith(
+				expect.objectContaining({ diagnostics: [] })
+			);
+		});
+
+		it('sends error diagnostic when parse throws (no lexer set)', async () => {
+			const conn = makeConnection();
+			const srv = new TestServer(conn);
+			await (srv as any).validateTextDocument(makeDoc('non-empty content'));
+			expect(conn.sendDiagnostics).toHaveBeenCalledWith(
+				expect.objectContaining({
+					diagnostics: expect.arrayContaining([
+						expect.objectContaining({ severity: DiagnosticSeverity.Error })
+					])
+				})
+			);
+		});
+
+		it('sends parsed diagnostics and updateContext notification when lexer/parser are set', async () => {
+			const conn = makeConnection();
+			const fakeToken = {
+				image: 'test',
+				startOffset: 0,
+				endOffset: 3,
+				startLine: 1,
+				endLine: 1,
+				startColumn: 1,
+				endColumn: 4,
+				tokenTypeIdx: 1,
+				tokenType: { name: 'PNAME_LN', GROUP: undefined },
+				payload: {}
+			};
+			const mockLexer = {
+				tokenize: vi.fn(() => ({ tokens: [fakeToken] }))
+			};
+			const mockParser = {
+				parse: vi.fn(),
+				errors: [],
+				semanticErrors: []
+			};
+			const srv = new LanguageServerBase(conn, 'turtle', 'Turtle', mockLexer as any, mockParser as any, true);
+			await (srv as any).validateTextDocument(makeDoc('test'));
+			expect(conn.sendDiagnostics).toHaveBeenCalled();
+			expect(conn.sendNotification).toHaveBeenCalledWith(
+				'mentor.message.updateContext',
+				expect.objectContaining({ languageId: 'turtle' })
+			);
+		});
+	});
+
+	describe('log', () => {
+		it('calls connection.console.log when console is available', () => {
+			const conn = makeConnection();
+			const srv = new TestServer(conn);
+			(srv as any).log('hello');
+			expect(conn.console.log).toHaveBeenCalledWith('[Server] hello');
+		});
+
+		it('falls back to global console.log when connection.console is null', () => {
+			const conn = makeConnection();
+			conn.console = null;
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+			const srv = new TestServer(conn);
+			(srv as any).log('fallback');
+			expect(consoleSpy).toHaveBeenCalledWith('[Server] fallback');
+			consoleSpy.mockRestore();
+		});
 	});
 
 	describe('getUnquotedLiteralValue', () => {

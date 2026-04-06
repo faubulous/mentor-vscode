@@ -281,6 +281,53 @@ describe('XmlDocument', () => {
             const iri = doc.getIriAtPosition({ line: 0, character: 5 });
             expect(iri).toBeUndefined();
         });
+
+        it('returns undefined when text document line is empty', () => {
+            const uriStr = 'file:///empty.xml';
+            const fakeDoc = {
+                uri: { toString: () => uriStr },
+                lineAt: vi.fn(() => ({ text: '' })),
+                getText: vi.fn(() => ''),
+            };
+            (vscode.workspace as any).textDocuments = [fakeDoc];
+            const doc = makeDoc(uriStr);
+            doc.setParsedData(makeParseResult());
+            const iri = doc.getIriAtPosition({ line: 0, character: 0 });
+            expect(iri).toBeUndefined();
+        });
+
+        it('returns IRI from prefixed name when a prefixed name is at position', () => {
+            const uriStr = 'file:///prefixed.xml';
+            const line = 'rdf:type';
+            const fakeDoc = {
+                uri: { toString: () => uriStr },
+                lineAt: vi.fn(() => ({ text: line })),
+                getText: vi.fn((_range?: any) => _range ? 'rdf:type' : line),
+            };
+            (vscode.workspace as any).textDocuments = [fakeDoc];
+            // Set up a document with the rdf namespace
+            const doc = makeDoc(uriStr);
+            doc.setParsedData(makeParseResult({ namespaces: { rdf: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#' } }));
+            // Cursor at character 4 (inside 'rdf:type')
+            const iri = doc.getIriAtPosition({ line: 0, character: 4 });
+            expect(iri).toBe('http://www.w3.org/1999/02/22-rdf-syntax-ns#type');
+        });
+
+        it('returns IRI from attribute value when cursor is inside a quoted attribute value', () => {
+            const uriStr = 'file:///attrval.xml';
+            const line = 'rdf:about="http://example.org/Thing"';
+            const fakeDoc = {
+                uri: { toString: () => uriStr },
+                lineAt: vi.fn(() => ({ text: line })),
+                getText: vi.fn((_range?: any) => _range ? 'http://example.org/Thing' : line),
+            };
+            (vscode.workspace as any).textDocuments = [fakeDoc];
+            const doc = makeDoc(uriStr);
+            doc.setParsedData(makeParseResult());
+            // position inside the quoted value (char 12, within 'http://example.org/Thing')
+            const iri = doc.getIriAtPosition({ line: 0, character: 15 });
+            expect(iri).toBeDefined();
+        });
     });
 
     describe('getLiteralAtPosition', () => {

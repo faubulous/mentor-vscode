@@ -4,6 +4,29 @@ import { SparqlResultSerializer } from './sparql-result-serializer';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+// Control flag: when set, the next Writer.end() call will invoke callback with an error
+const writerControl = vi.hoisted(() => ({ shouldError: false }));
+
+vi.mock('n3', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('n3')>();
+    class WriterMock {
+        private _real: any;
+        constructor(...args: any[]) {
+            this._real = new actual.Writer(...args);
+        }
+        addQuads(quads: any[]) { return this._real.addQuads(quads); }
+        end(callback: (error: Error | null, result: string) => void) {
+            if (writerControl.shouldError) {
+                writerControl.shouldError = false;
+                callback(new Error('writer error'), '');
+            } else {
+                this._real.end(callback);
+            }
+        }
+    }
+    return { ...actual, Writer: WriterMock };
+});
+
 // Minimal cancellation token that is never cancelled
 const token = {
     isCancellationRequested: false,
@@ -243,6 +266,124 @@ describe('SparqlResultSerializer', () => {
             const result = await serializer.serializeQuadsToString(quads);
             expect(result).toContain('http://example.org/a');
             expect(result).toContain('http://example.org/c');
+        });
+
+        it('uses inference/default prefix when it matches a namespace IRI', async () => {
+            // Cover lines 229-231: inner loop where prefixIri === iri
+            const prefixService = {
+                getPrefixForIri: (_d: any, _i: any, def: any) => def,
+                getInferencePrefixes: () => ({ ex: 'http://example.org/' }),
+                getDefaultPrefixes: () => ({}),
+            };
+            const serializer = new SparqlResultSerializer(prefixService as any);
+            const quad = DataFactory.quad(
+                DataFactory.namedNode('http://example.org/subject'),
+                DataFactory.namedNode('http://example.org/predicate'),
+                DataFactory.namedNode('http://example.org/object'),
+                DataFactory.defaultGraph()
+            );
+            const result = await serializer.serializeQuadsToString([quad]);
+            // The prefix 'ex' matched 'http://example.org/' → result uses ex: prefix
+            expect(result).toContain('ex:');
+        });
+
+        it('returns empty string and logs error when serialization throws', async () => {
+            // Cover catch block lines 254-255: getInferencePrefixes throws (no namespaces arg path)
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const throwingPrefixService = {
+                getPrefixForIri: (_d: any, _i: any, def: any) => def,
+                getInferencePrefixes: () => { throw new Error('prefix error'); },
+                getDefaultPrefixes: () => ({}),
+            };
+            const serializer = new SparqlResultSerializer(throwingPrefixService as any);
+            const quad = DataFactory.quad(
+                DataFactory.namedNode('http://example.org/s'),
+                DataFactory.namedNode('http://example.org/p'),
+                DataFactory.namedNode('http://example.org/o'),
+                DataFactory.defaultGraph()
+            );
+            const result = await serializer.serializeQuadsToString([quad]);
+            expect(result).toBe('');
+            expect(consoleSpy).toHaveBeenCalled();
+            consoleSpy.mockRestore();
+        });
+    });
+
+    describe('serializeBindings - Quad termType', () => {
+        it('serializes a Quad-termType value recursively', async () => {
+            // Cover lines 60-63: the Quad branch in serializeTerm
+            const serializer = new SparqlResultSerializer(noPrefixService as any);
+            const quadValue = DataFactory.quad(
+                DataFactory.namedNode('http://example.org/s'),
+                DataFactory.namedNode('http://example.org/p'),
+                DataFactory.namedNode('http://example.org/o'),
+                DataFactory.defaultGraph()
+            );
+            const binding = new Map([
+                [{ termType: 'Variable', value: 'q' }, quadValue],
+            ]);
+            const result = await serializer.serializeBindings(
+                makeContext() as any,
+                asyncGen(binding) as any,
+                token as any
+            );
+            const row = result.rows[0];
+            expect(row['q'].termType).toBe('Quad');
+            expect(row['q'].subject).toBeDefined();
+            expect(row['q'].predicate).toBeDefined();
+            expect(row['q'].object).toBeDefined();
+        });
+    });
+
+    describe('serializeQuads - error paths', () => {
+        it('returns empty string and logs error when quad stream throws', async () => {
+            // Cover catch block lines 178-179 by having the async stream throw
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            async function* throwingStream(): AsyncIterable<any> {
+                throw new Error('stream error');
+            }
+            const serializer = new SparqlResultSerializer(noPrefixService as any);
+            const result = await serializer.serializeQuads(
+                makeContext() as any,
+                throwingStream() as any,
+                token as any
+            );
+            expect(result).toBe('');
+            consoleSpy.mockRestore();
+        });
+
+        it('rejects and catches error when Writer.end returns error in serializeQuads', async () => {
+            // Cover line 171: reject(error) in writer.end callback
+            writerControl.shouldError = true;
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const serializer = new SparqlResultSerializer(noPrefixService as any);
+            const quad = DataFactory.quad(
+                DataFactory.namedNode('http://example.org/s'),
+                DataFactory.namedNode('http://example.org/p'),
+                DataFactory.namedNode('http://example.org/o'),
+                DataFactory.defaultGraph()
+            );
+            await expect(serializer.serializeQuads(
+                makeContext() as any,
+                asyncGen(quad) as any,
+                token as any
+            )).rejects.toThrow('writer error');
+            consoleSpy.mockRestore();
+        });
+
+        it('rejects and catches error when Writer.end returns error in serializeQuadsToString', async () => {
+            // Cover line 247: reject(error) in writer.end callback
+            writerControl.shouldError = true;
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const serializer = new SparqlResultSerializer(noPrefixService as any);
+            const quad = DataFactory.quad(
+                DataFactory.namedNode('http://example.org/s'),
+                DataFactory.namedNode('http://example.org/p'),
+                DataFactory.namedNode('http://example.org/o'),
+                DataFactory.defaultGraph()
+            );
+            await expect(serializer.serializeQuadsToString([quad])).rejects.toThrow('writer error');
+            consoleSpy.mockRestore();
         });
     });
 });

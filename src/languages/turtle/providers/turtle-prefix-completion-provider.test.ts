@@ -111,6 +111,19 @@ describe('TurtlePrefixCompletionProvider', () => {
             expect(result).toBeUndefined();
         });
 
+        it('returns null when previous token is undefined', () => {
+            mockGetDocumentContext.mockReturnValue({
+                getTokenIndexAtPosition: vi.fn(() => 1),
+                tokens: [
+                    undefined,
+                    { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
+                ],
+            });
+            const provider = new TurtlePrefixCompletionProvider(() => '');
+            const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
+            expect(result).toBeNull();
+        });
+
         it('returns null when previous token type is not a prefix keyword', () => {
             mockGetDocumentContext.mockReturnValue({
                 getTokenIndexAtPosition: vi.fn(() => 1),

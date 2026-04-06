@@ -72,4 +72,17 @@ describe('TurtleTokenProvider', () => {
 		// One rename provider registration per language (ntriples, nquads, turtle, n3)
 		expect(spy).toHaveBeenCalledTimes(4);
 	});
+
+	it('inline completion provider onComplete callback returns formatted IRI string', () => {
+		const inlineSpy = vi.spyOn(vscode.languages, 'registerInlineCompletionItemProvider');
+		new TurtleTokenProvider();
+		// The turtle token provider registers a TurtlePrefixCompletionProvider with onComplete = (uri) => ` <${uri}> .`
+		// Pick any call (all use the same prefixCompletionProvider instance)
+		const call = inlineSpy.mock.calls[0];
+		expect(call).toBeDefined();
+		const provider = call![1] as any;
+		// Invoke the onComplete callback to cover the anonymous arrow function
+		const result = provider.onComplete('http://example.org/');
+		expect(result).toBe(' <http://example.org/> .');
+	});
 });

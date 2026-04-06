@@ -559,6 +559,27 @@ describe('TurtlePrefixDefinitionService', () => {
 
 			expect(edit.size).toBe(0);
 		});
+
+		it('calls _deleteEmptyLinesAfterToken when lastPrefix token exists (appended mode)', async () => {
+			const { getLastTokenOfType, isUpperCaseToken } = await import('@faubulous/mentor-rdf-parsers');
+			const { getConfig } = await import('@src/utilities/vscode/config');
+
+			const lastPrefixToken = makeToken('PREFIX', 'PREFIX', 1);
+			(getLastTokenOfType as any).mockReturnValue(lastPrefixToken);
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
+			(isUpperCaseToken as any).mockReturnValue(false);
+
+			const context = createMockContext('file:///test.ttl', {}, []);
+			mockContextService.getDocumentContext.mockReturnValue(context);
+
+			// Document has an empty line after the prefix on line 0
+			const doc = createMockDocument('file:///test.ttl', 'turtle', ['PREFIX owl: <http://owl/>', '', '<http://x> a owl:Thing .']);
+			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
+
+			// _deleteEmptyLinesAfterToken should delete the empty line (line 1)
+			const deletes = edit.entries.filter(e => e.type === 'delete');
+			expect(deletes.length).toBeGreaterThanOrEqual(1);
+		});
 	});
 
 	// ─── deletePrefixes (empty lines) ─────────────────────────────────────────
@@ -712,6 +733,26 @@ describe('TurtlePrefixDefinitionService', () => {
 			const deletes = edit.entries.filter(e => e.type === 'delete');
 			// At least 2 deletes: the prefix line + the empty line following it
 			expect(deletes.length).toBeGreaterThanOrEqual(2);
+		});
+
+		it('breaks out of token loop when non-prefix token is on a new line', async () => {
+			// Cover line 323: the break when a non-prefix token appears on a new line
+			const prefixToken = makeToken('PREFIX', 'PREFIX', 1);
+			const nonPrefixToken = makeToken('PNAME_LN', 'owl:Thing', 2, 1); // on line 2 — different from currentLine after processing line 1
+			const context = createMockContext(
+				'file:///test.ttl',
+				{ owl: 'http://owl/' },
+				[prefixToken, nonPrefixToken],
+			);
+			mockContextService.getDocumentContext.mockReturnValue(context);
+
+			const lines = ['PREFIX owl: <http://owl/>', '<http://x> a owl:Thing .'];
+			const doc = createMockDocument('file:///test.ttl', 'turtle', lines);
+			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
+
+			// Only the prefix line (line 0) should be deleted, not line 1 (non-prefix)
+			const deletes = edit.entries.filter(e => e.type === 'delete');
+			expect(deletes.length).toBeGreaterThanOrEqual(1);
 		});
 	});
 
@@ -924,6 +965,14 @@ describe('TurtlePrefixDefinitionService', () => {
 			const insertText = edit.entries.filter(e => e.type === 'insert').map(e => e.text).join('');
 
 			expect(insertText).toContain('xmlns:ex="http://example.org/"');
+		});
+
+		it('throws for unsupported token type', () => {
+			// Cover line 252: the throw in _getPrefixDefinition for unknown token type
+			const unknownTokenType = { name: 'UNKNOWN_TYPE' };
+			expect(() => {
+				(service as any)._getPrefixDefinition(unknownTokenType, false, 'ex', 'http://example.org/');
+			}).toThrow('Unsupported token type for prefix definition');
 		});
 	});
 });

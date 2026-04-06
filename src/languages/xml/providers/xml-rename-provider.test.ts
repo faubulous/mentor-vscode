@@ -468,6 +468,31 @@ describe('XmlRenameProvider', () => {
             const result = (provider as any)._getLocalNameEditRange(doc, new Position(0, 14));
             expect(result).toBeUndefined();
         });
+
+        it('returns undefined for IRI attribute value with no local name', () => {
+            // An IRI ending in '/' has no local name → Uri.getLocalPart returns undefined
+            const attrValueRange = new Range(new Position(0, 11), new Position(0, 34));
+            const attrNameRange = new Range(new Position(0, 1), new Position(0, 10));
+            mockGetDocumentContext.mockReturnValue({
+                getPrefixedNameRangeAtPosition: vi.fn(() => null),
+                getAttributeValueRangeAtPosition: vi.fn(() => attrValueRange),
+                getAttributeNameRangeNearPosition: vi.fn(() => attrNameRange),
+            });
+
+            // IRI with colon but trailing '/' → getLocalPart returns undefined
+            const attributeValue = 'http://example.org/';
+            const line = ` rdf:about="${attributeValue}"`;
+            const doc = makeDocument(line) as any;
+            doc.getText = vi.fn((r?: Range) => {
+                if (!r) return line;
+                if (r.start.character === 11) return attributeValue;
+                if (r.start.character === 1) return 'rdf:about';
+                return '';
+            });
+
+            const result = (provider as any)._getLocalNameEditRange(doc, new Position(0, 14));
+            expect(result).toBeUndefined();
+        });
     });
 
     describe('_getPrefixTextReplacements', () => {

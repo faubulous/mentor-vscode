@@ -99,4 +99,16 @@ describe('SparqlTokenProvider', () => {
 		const call = spy.mock.calls.find(args => (args[0] as any)?.language === 'sparql');
 		expect(call).toBeDefined();
 	});
+
+	it('inline completion provider onComplete callback returns formatted IRI string', () => {
+		const inlineSpy = vi.spyOn(vscode.languages, 'registerInlineCompletionItemProvider');
+		new SparqlTokenProvider();
+		// The sparql token provider registers a TurtlePrefixCompletionProvider with onComplete = (uri) => ` <${uri}>`
+		const call = inlineSpy.mock.calls.find(args => (args[0] as any)?.language === 'sparql');
+		expect(call).toBeDefined();
+		const provider = call![1] as any;
+		// Invoke the onComplete callback to cover the anonymous arrow function
+		const result = provider.onComplete('http://example.org/');
+		expect(result).toBe(' <http://example.org/>');
+	});
 });

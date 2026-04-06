@@ -319,4 +319,30 @@ describe('TurtleCompletionItemProvider', () => {
             expect(result.length).toBeLessThanOrEqual(provider.maxCompletionItems);
         });
     });
+
+    describe('getter bodies', () => {
+        it('contextService getter calls container.resolve', () => {
+            const provider = new TurtleCompletionItemProvider();
+            // No spy — real getter body (line 52) must execute
+            const service = (provider as any).contextService;
+            expect(service).toBeDefined();
+        });
+
+        it('vocabulary getter calls container.resolve', () => {
+            const provider = new TurtleCompletionItemProvider();
+            // No spy — real getter body (line 56) must execute
+            const vocab = (provider as any).vocabulary;
+            expect(vocab).toBeDefined();
+        });
+    });
+
+    describe('_addLocalPartCompletionItem', () => {
+        it('returns early without adding item when localPart is empty', () => {
+            const provider = new TurtleCompletionItemProvider();
+            const result: Record<string, any> = {};
+            // IRI ending in '/' has empty local part → triggers the !localPart return
+            (provider as any)._addLocalPartCompletionItem(result, 'http://example.org/', 'http://example.org/');
+            expect(Object.keys(result)).toHaveLength(0);
+        });
+    });
 });

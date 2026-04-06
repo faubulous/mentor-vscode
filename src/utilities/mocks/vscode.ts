@@ -472,3 +472,18 @@ export class TreeItem {
     this.collapsibleState = collapsibleState ?? TreeItemCollapsibleState.None;
   }
 }
+
+export class CancellationTokenSource {
+  private _isCancellationRequested = false;
+
+  readonly token = {
+    get isCancellationRequested() { return false; },
+    onCancellationRequested: (_handler: any) => ({ dispose: () => {} }),
+  };
+
+  cancel() {
+    this._isCancellationRequested = true;
+  }
+
+  dispose() {}
+}

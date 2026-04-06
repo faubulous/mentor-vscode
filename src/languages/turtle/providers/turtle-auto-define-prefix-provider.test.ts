@@ -314,4 +314,71 @@ describe('TurtleAutoDefinePrefixProvider', () => {
             expect(applyEditSpy).toHaveBeenCalledWith(fakeEdit);
         });
     });
+
+    describe('onDidChangeTextDocument constructor callback', () => {
+        it('ignores documents with non-matching language (early return)', () => {
+            let capturedHandler: ((e: any) => void) | undefined;
+            vi.spyOn(vscode.workspace, 'onDidChangeTextDocument').mockImplementation((handler: any) => {
+                capturedHandler = handler;
+                return { dispose: vi.fn() } as any;
+            });
+
+            const onChangeSpy = vi.fn();
+            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
+            vi.spyOn(provider as any, '_onDidChangeTextDocument').mockImplementation(onChangeSpy);
+
+            // Fire with a non-turtle language — filter doesn't match → early return
+            capturedHandler!({ document: { languageId: 'sparql' } });
+            expect(onChangeSpy).not.toHaveBeenCalled();
+        });
+
+        it('calls _onDidChangeTextDocument for documents with matching language', () => {
+            let capturedHandler: ((e: any) => void) | undefined;
+            vi.spyOn(vscode.workspace, 'onDidChangeTextDocument').mockImplementation((handler: any) => {
+                capturedHandler = handler;
+                return { dispose: vi.fn() } as any;
+            });
+
+            const onChangeSpy = vi.fn();
+            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
+            vi.spyOn(provider as any, '_onDidChangeTextDocument').mockImplementation(onChangeSpy);
+
+            const event = { document: { languageId: 'turtle' } };
+            capturedHandler!(event);
+            expect(onChangeSpy).toHaveBeenCalledWith(event);
+        });
+    });
+
+    describe('onDidChangeDocumentContext constructor callback', () => {
+        it('calls _onDidChangeDocumentContext when context is truthy', async () => {
+            let capturedCtxHandler: ((ctx: any) => void) | undefined;
+            mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
+                capturedCtxHandler = handler;
+                return { dispose: vi.fn() };
+            });
+
+            const onCtxChangeSpy = vi.fn();
+            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
+            vi.spyOn(provider as any, '_onDidChangeDocumentContext').mockImplementation(onCtxChangeSpy);
+
+            const ctx = { uri: { toString: () => 'file:///test.ttl' } };
+            capturedCtxHandler!(ctx);
+            expect(onCtxChangeSpy).toHaveBeenCalledWith('file:///test.ttl');
+        });
+
+        it('does not call _onDidChangeDocumentContext when context is null', () => {
+            let capturedCtxHandler: ((ctx: any) => void) | undefined;
+            mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
+                capturedCtxHandler = handler;
+                return { dispose: vi.fn() };
+            });
+
+            const onCtxChangeSpy = vi.fn();
+            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
+            vi.spyOn(provider as any, '_onDidChangeDocumentContext').mockImplementation(onCtxChangeSpy);
+
+            capturedCtxHandler!(null);
+            expect(onCtxChangeSpy).not.toHaveBeenCalled();
+        });
+    });
 });

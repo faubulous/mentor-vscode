@@ -175,5 +175,87 @@ describe('TurtleRenameProvider', () => {
             const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
             expect((edits as any).size).toBe(1);
         });
+
+        it('returns empty edits when token is not prefix/variable and getIriFromToken returns null', () => {
+            const context = makeDoc();
+            // A period token: not a prefix token, not a variable → else branch; getIriFromToken → null
+            const token = makeToken(RdfToken.PERIOD.name, '.', { startLine: 1, startColumn: 1, endColumn: 1 });
+            context.setTokens([token] as any);
+
+            const provider = makeProvider(context);
+            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'newName');
+            expect((edits as any).size).toBe(0);
+        });
+
+        it('returns empty edits when IRI has no registered references', () => {
+            const context = makeDoc();
+            const token = makeToken(RdfToken.IRIREF.name, '<http://example.org/NoRef>', {
+                startLine: 1, startColumn: 1, endColumn: 24
+            });
+            context.setTokens([token] as any);
+            // Clear references so the IRI has no entries
+            (context as any).references = {};
+
+            const provider = makeProvider(context);
+            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
+            expect((edits as any).size).toBe(0);
+        });
+
+        it('skips prefix token when getPrefixEditRange returns null', () => {
+            // Cover line 67: `if (!r) continue` in the PNAME_NS/PNAME_LN case
+            const context = makeDoc();
+            const prefixToken = makeToken(RdfToken.PNAME_NS.name, 'ex:', { startLine: 1, startColumn: 1, endColumn: 3 });
+            context.setTokens([prefixToken] as any);
+
+            const provider = makeProvider(context);
+            vi.spyOn(provider as any, 'getPrefixEditRange').mockReturnValue(null);
+            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'ns');
+            expect((edits as any).size).toBe(0);
+        });
+
+        it('skips variable token when getLabelEditRange returns null', () => {
+            // Cover line 84: `if (!r) continue` in the variable branch
+            const context = makeDoc();
+            const varToken = makeToken(RdfToken.VAR1.name, '?x', { startLine: 1, startColumn: 1, endColumn: 2 });
+            context.setTokens([varToken] as any);
+
+            const provider = makeProvider(context);
+            vi.spyOn(provider as any, 'getLabelEditRange').mockReturnValue(null);
+            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 1) as any, '?y');
+            expect((edits as any).size).toBe(0);
+        });
+
+        it('skips reference when getTokenAtPosition returns null', () => {
+            // Cover line 100: `if (!token) continue` in the IRI reference branch
+            const context = makeDoc();
+            const iriToken = makeToken(RdfToken.IRIREF.name, '<http://example.org/Thing>', {
+                startLine: 1, startColumn: 1, endColumn: 25
+            });
+            context.setTokens([iriToken] as any);
+
+            const provider = makeProvider(context);
+            // First call (cursor lookup) returns the IRI token; subsequent calls (reference loop) return null
+            vi.spyOn(context, 'getTokenAtPosition')
+                .mockReturnValueOnce(iriToken as any)
+                .mockReturnValue(null as any);
+            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
+            expect((edits as any).size).toBe(0);
+        });
+
+        it('skips reference when getLabelEditRange returns null for reference token', () => {
+            // Cover line 104: `if (!editRange) continue`
+            const context = makeDoc();
+            const iriToken = makeToken(RdfToken.IRIREF.name, '<http://example.org/Thing>', {
+                startLine: 1, startColumn: 1, endColumn: 25
+            });
+            context.setTokens([iriToken] as any);
+
+            const provider = makeProvider(context);
+            // getTokenAtPosition returns a token, but getLabelEditRange returns null
+            vi.spyOn(context, 'getTokenAtPosition').mockReturnValue(iriToken as any);
+            vi.spyOn(provider as any, 'getLabelEditRange').mockReturnValue(null);
+            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
+            expect((edits as any).size).toBe(0);
+        });
     });
 });
