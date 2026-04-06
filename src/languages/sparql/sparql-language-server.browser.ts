@@ -2,4 +2,5 @@ import { BrowserMessageReader, BrowserMessageWriter, createConnection } from 'vs
 import { SparqlLanguageServer } from './sparql-language-server';
 
 const connection = createConnection(new BrowserMessageReader(self), new BrowserMessageWriter(self));
+
 new SparqlLanguageServer(connection).start();

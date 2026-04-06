@@ -3,9 +3,13 @@ import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+const { mockResolve } = vi.hoisted(() => ({
+    mockResolve: vi.fn(() => ({}))
+}));
+
 // Mock DI container — methods that use container.resolve() are not under test
 vi.mock('tsyringe', () => ({
-    container: { resolve: vi.fn(() => ({})) },
+    container: { resolve: mockResolve },
     injectable: () => (_target: any) => _target,
     inject: () => () => {},
     singleton: () => (_target: any) => _target,
@@ -192,6 +196,112 @@ describe('SparqlCompletionItemProvider', () => {
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]);
             const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
             expect(items).toHaveLength(0);
+        });
+
+        it('strips trigger character from label when it starts with a trigger char', async () => {
+            // value typed = 'workspace', graph = 'workspace:g1' → label = ':g1' → stripped to 'g1'
+            const p = makeProviderWithGraphs(['workspace:g1']);
+            const context = makeContext([makeToken(RdfToken.IRIREF.name, '<workspace')]);
+            const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
+            expect(items.length).toBe(1);
+            expect(items[0].label).toBe('g1');
+        });
+    });
+
+    describe('getCompletionItems', () => {
+        it('delegates to getGraphIriCompletionItems when in graph definition context', async () => {
+            const p = new SparqlCompletionItemProvider();
+            const doc = makeDoc() as any;
+            const context = makeContext([
+                makeToken(RdfToken.GRAPH.name, 'GRAPH'),
+                makeToken(RdfToken.IRIREF.name, '<'),
+            ]) as any;
+            vi.spyOn(p, 'getGraphIriCompletionItems').mockResolvedValue([]);
+            await p.getCompletionItems(doc, context, 1);
+            expect(p.getGraphIriCompletionItems).toHaveBeenCalledWith(doc, context, 1);
+        });
+
+        it('calls super.getCompletionItems when not in graph definition context', () => {
+            const p = new SparqlCompletionItemProvider();
+            const doc = makeDoc() as any;
+            const context = makeContext([
+                makeToken('DOT', '.'),
+                makeToken('PNAME_NS', 'ex:'),
+            ]) as any;
+            // isGraphDefinitionContext returns false → parent mock returns null
+            const result = p.getCompletionItems(doc, context, 1);
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('provideCompletionItems', () => {
+        it('returns null when context is null', async () => {
+            const p = new SparqlCompletionItemProvider();
+            vi.spyOn(p as any, 'contextService', 'get').mockReturnValue({
+                getDocumentContext: vi.fn(() => null),
+            });
+            const result = await p.provideCompletionItems(
+                makeDoc() as any, {} as any, {} as any, {} as any
+            );
+            expect(result).toBeNull();
+        });
+
+        it('returns null when n < 1 and token delivery rejects', async () => {
+            const p = new SparqlCompletionItemProvider();
+            vi.spyOn(p as any, 'contextService', 'get').mockReturnValue({
+                getDocumentContext: vi.fn(() => ({
+                    getTokenIndexAtPosition: vi.fn(() => 0),
+                    tokens: [],
+                })),
+                onNextTokenDelivery: vi.fn(() => Promise.reject(new Error('timeout'))),
+            });
+            const result = await p.provideCompletionItems(
+                makeDoc() as any, {} as any, {} as any, {} as any
+            );
+            expect(result).toBeNull();
+        });
+
+        it('returns null when n < 1 after token delivery resolves', async () => {
+            const p = new SparqlCompletionItemProvider();
+            vi.spyOn(p as any, 'contextService', 'get').mockReturnValue({
+                getDocumentContext: vi.fn(() => ({
+                    getTokenIndexAtPosition: vi.fn(() => 0),
+                    tokens: [],
+                })),
+                onNextTokenDelivery: vi.fn(() => Promise.resolve()),
+            });
+            const result = await p.provideCompletionItems(
+                makeDoc() as any, {} as any, {} as any, {} as any
+            );
+            expect(result).toBeNull();
+        });
+
+        it('calls getCompletionItems when n >= 1', async () => {
+            const p = new SparqlCompletionItemProvider();
+            vi.spyOn(p as any, 'contextService', 'get').mockReturnValue({
+                getDocumentContext: vi.fn(() => ({
+                    getTokenIndexAtPosition: vi.fn(() => 1),
+                    tokens: [
+                        makeToken('DOT', '.'),
+                        makeToken('PNAME_NS', 'ex:'),
+                    ],
+                })),
+            });
+            // super.getCompletionItems (mock) returns null; this confirms the flow reached line 58
+            const result = await p.provideCompletionItems(
+                makeDoc() as any, {} as any, {} as any, {} as any
+            );
+            expect(result).toBeNull();
+        });
+
+        it('connectionService getter calls container.resolve', async () => {
+            const mockConnection = { getGraphsForDocument: async () => ['http://example.org/g'] };
+            mockResolve.mockReturnValueOnce(mockConnection);
+            const p = new SparqlCompletionItemProvider();
+            // Call the getter without a spy so line 30 executes
+            const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]) as any;
+            const items = await p.getGraphIriCompletionItems(makeDoc() as any, context, 0);
+            expect(items.length).toBe(1);
         });
     });
 });

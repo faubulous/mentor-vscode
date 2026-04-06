@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 vi.mock('tsyringe', () => ({
-    container: { resolve: vi.fn(() => ({})) },
+    container: { resolve: vi.fn(() => ({ getDocumentContext: () => null })) },
     injectable: () => (_target: any) => _target,
     inject: () => () => {},
     singleton: () => (_target: any) => _target,
@@ -55,6 +55,70 @@ function makeProvider(context: TurtleDocument | null): TurtleRenameProvider {
 }
 
 describe('TurtleRenameProvider', () => {
+    describe('contextService getter', () => {
+        it('returns the document context service via container (getter body executed)', async () => {
+            // No spy on contextService: the real getter body (line 15) executes.
+            // The container mock returns { getDocumentContext: () => null },
+            // so prepareRename returns null without further logic.
+            const provider = new TurtleRenameProvider();
+            const result = await provider.prepareRename(
+                { uri: Uri.parse('file:///test.ttl') } as any,
+                new Position(0, 0) as any
+            );
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('prepareRename', () => {
+        it('returns null when context is null', async () => {
+            const provider = makeProvider(null);
+            const result = await provider.prepareRename(
+                { uri: Uri.parse('file:///test.ttl') } as any,
+                new Position(0, 0) as any
+            );
+            expect(result).toBeNull();
+        });
+
+        it('throws when no token found at position', async () => {
+            const context = makeDoc();
+            const provider = makeProvider(context);
+            await expect(
+                provider.prepareRename(
+                    { uri: Uri.parse('file:///test.ttl') } as any,
+                    new Position(0, 0) as any
+                )
+            ).rejects.toThrow('No token found at the given position.');
+        });
+
+        it('returns prefix edit range when cursor is within the prefix part', async () => {
+            const context = makeDoc();
+            // PNAME_NS 'ex:' at line 1, col 1; colon is at index 2
+            const token = makeToken(RdfToken.PNAME_NS.name, 'ex:', { startLine: 1, startColumn: 1, endColumn: 3 });
+            context.setTokens([token] as any);
+            const provider = makeProvider(context);
+            // Position(0, 0) → character 0, which is before the colon → isPrefixTokenAtPosition = true
+            const result = await provider.prepareRename(
+                { uri: Uri.parse('file:///test.ttl') } as any,
+                new Position(0, 0) as any
+            );
+            expect(result).not.toBeNull();
+        });
+
+        it('returns label edit range when cursor is in the local name part', async () => {
+            const context = makeDoc();
+            // PNAME_LN 'ex:Thing' at line 1, col 1; colon is at index 2
+            const token = makeToken(RdfToken.PNAME_LN.name, 'ex:Thing', { startLine: 1, startColumn: 1, endColumn: 8 });
+            context.setTokens([token] as any);
+            const provider = makeProvider(context);
+            // Position(0, 5) → character 5 > 2 (colon index) → isPrefixTokenAtPosition = false
+            const result = await provider.prepareRename(
+                { uri: Uri.parse('file:///test.ttl') } as any,
+                new Position(0, 5) as any
+            );
+            expect(result).not.toBeNull();
+        });
+    });
+
     describe('provideRenameEdits', () => {
         const docUri = Uri.parse('file:///test.ttl') as any;
 

@@ -1,21 +1,67 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as vscode from 'vscode';
+import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+const { mockGetDocumentContext, mockGetPrefixesWithErrorCode } = vi.hoisted(() => ({
+    mockGetDocumentContext: vi.fn(),
+    mockGetPrefixesWithErrorCode: vi.fn(() => [] as string[]),
+}));
+
 vi.mock('tsyringe', () => ({
-    container: { resolve: vi.fn(() => ({})) },
+    container: {
+        resolve: vi.fn((token: string) => {
+            if (token === 'DocumentContextService') return { getDocumentContext: mockGetDocumentContext };
+            return {};
+        }),
+    },
     injectable: () => (_target: any) => _target,
     inject: () => () => {},
     singleton: () => (_target: any) => _target,
 }));
 
-// The diagnostic utility imports vscode.DiagnosticSeverity; mock it here
 vi.mock('@src/utilities/vscode/diagnostic', () => ({
-    getPrefixesWithErrorCode: vi.fn(() => []),
+    getPrefixesWithErrorCode: (...args: any[]) => mockGetPrefixesWithErrorCode(...args),
+}));
+
+vi.mock('@src/services/tokens', () => ({
+    ServiceToken: { DocumentContextService: 'DocumentContextService' },
 }));
 
 import { TurtleCodeActionsProvider } from './turtle-code-actions-provider';
-import { CodeActionKind } from '@src/utilities/mocks/vscode';
+import { CodeActionKind, Range, Position } from '@src/utilities/mocks/vscode';
+
+// A mock document with lineAt/lineCount support
+const mockDoc = {
+    uri: vscode.Uri.parse('file:///test.ttl'),
+    getText: () => '',
+    lineCount: 20,
+    lineAt: (line: number) => ({
+        range: new Range(new Position(line, 0), new Position(line, 80)),
+        rangeIncludingLineBreak: new Range(new Position(line, 0), new Position(line + 1, 0)),
+    }),
+} as any;
+
+const emptyRange = new Range(new Position(0, 0), new Position(0, 0));
+
+// Token factory helpers
+function makeToken(name: string, image: string, line = 1, col = 1): any {
+    return {
+        tokenType: { name },
+        image,
+        startLine: line,
+        startColumn: col,
+        endLine: line,
+        endColumn: col + image.length - 1,
+    };
+}
+
+beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetDocumentContext.mockReturnValue(null);
+    mockGetPrefixesWithErrorCode.mockReturnValue([]);
+});
 
 describe('TurtleCodeActionsProvider', () => {
     describe('providedCodeActionKinds', () => {
@@ -24,13 +70,11 @@ describe('TurtleCodeActionsProvider', () => {
         });
 
         it('contains a QuickFix kind', () => {
-            const kinds = TurtleCodeActionsProvider.providedCodeActionKinds;
-            expect(kinds).toContainEqual(CodeActionKind.QuickFix);
+            expect(TurtleCodeActionsProvider.providedCodeActionKinds).toContainEqual(CodeActionKind.QuickFix);
         });
 
         it('contains a Refactor kind', () => {
-            const kinds = TurtleCodeActionsProvider.providedCodeActionKinds;
-            expect(kinds).toContainEqual(CodeActionKind.Refactor);
+            expect(TurtleCodeActionsProvider.providedCodeActionKinds).toContainEqual(CodeActionKind.Refactor);
         });
 
         it('contains exactly two kinds', () => {
@@ -43,4 +87,243 @@ describe('TurtleCodeActionsProvider', () => {
             expect(() => new TurtleCodeActionsProvider()).not.toThrow();
         });
     });
+
+    describe('provideCodeActions', () => {
+        it('returns empty array when no document context', async () => {
+            mockGetDocumentContext.mockReturnValue(null);
+            const provider = new TurtleCodeActionsProvider();
+            const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+            expect(Array.isArray(result)).toBe(true);
+        });
+
+        it('returns array when context exists but no tokens', async () => {
+            mockGetDocumentContext.mockReturnValue({
+                tokens: [],
+                getTokenAtPosition: vi.fn(() => null),
+                getTokenIndexAtPosition: vi.fn(() => -1),
+            });
+            const provider = new TurtleCodeActionsProvider();
+            const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+            expect(Array.isArray(result)).toBe(true);
+        });
+
+        it('calls _provideFixMissingPrefixesActions with diagnostics', async () => {
+            mockGetDocumentContext.mockReturnValue(null);
+            mockGetPrefixesWithErrorCode.mockReturnValue([]);
+            const provider = new TurtleCodeActionsProvider();
+            const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [{ code: 'missingPrefix', message: '' }], triggerKind: 1 } as any);
+            expect(Array.isArray(result)).toBe(true);
+        });
+
+        describe('IRIREF token → Define prefix for IRI action', () => {
+            it('returns a code action to define prefix for IRI when cursor is on IRIREF', async () => {
+                const irirefToken = makeToken(RdfToken.IRIREF.name, '<http://example.org/foo#Bar>');
+                mockGetDocumentContext.mockReturnValue({
+                    tokens: [irirefToken],
+                    getTokenAtPosition: vi.fn(() => irirefToken),
+                    getTokenIndexAtPosition: vi.fn(() => 0),
+                });
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+
+                const action = result.find(a => a.command?.command === 'mentor.command.implementPrefixForIri');
+                expect(action).toBeDefined();
+                expect(action!.title).toBe('Define prefix for IRI');
+                expect(action!.kind).toEqual(CodeActionKind.Refactor);
+            });
+        });
+
+        describe('PNAME_NS token → Sort prefixes action', () => {
+            it('returns sort prefixes action when cursor is on PNAME_NS', async () => {
+                const pnameToken = makeToken(RdfToken.PNAME_NS.name, 'ex:');
+                mockGetDocumentContext.mockReturnValue({
+                    tokens: [pnameToken],
+                    getTokenAtPosition: vi.fn(() => pnameToken),
+                    getTokenIndexAtPosition: vi.fn(() => 0),
+                });
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+
+                const sortAction = result.find(a => a.command?.command === 'mentor.command.sortPrefixes');
+                expect(sortAction).toBeDefined();
+                expect(sortAction!.title).toBe('Sort prefixes');
+            });
+
+            it('does NOT return a convert action for PNAME_NS (only PREFIX/TTL_PREFIX get convert actions)', async () => {
+                const pnameToken = makeToken(RdfToken.PNAME_NS.name, 'ex:');
+                mockGetDocumentContext.mockReturnValue({
+                    tokens: [pnameToken],
+                    getTokenAtPosition: vi.fn(() => pnameToken),
+                    getTokenIndexAtPosition: vi.fn(() => 0),
+                });
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+
+                const convertAction = result.find(a => a.title?.startsWith('Convert all'));
+                expect(convertAction).toBeUndefined();
+            });
+        });
+
+        describe('PREFIX token → Convert all to @prefix', () => {
+            it('returns sort and convert-to-@prefix actions for PREFIX token', async () => {
+                const prefixToken = makeToken(RdfToken.PREFIX.name, 'PREFIX', 1, 1);
+                const pnameNsToken = makeToken(RdfToken.PNAME_NS.name, 'ex:', 1, 8);
+                const irirefToken = makeToken(RdfToken.IRIREF.name, '<http://example.org/>', 1, 12);
+                const tokens = [prefixToken, pnameNsToken, irirefToken];
+
+                mockGetDocumentContext.mockReturnValue({
+                    tokens,
+                    getTokenAtPosition: vi.fn(() => prefixToken),
+                    getTokenIndexAtPosition: vi.fn(() => 0),
+                });
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+
+                const sortAction = result.find(a => a.command?.command === 'mentor.command.sortPrefixes');
+                expect(sortAction).toBeDefined();
+
+                const convertAction = result.find(a => a.title === 'Convert all to @prefix');
+                expect(convertAction).toBeDefined();
+                expect(convertAction!.kind).toEqual(CodeActionKind.Refactor);
+            });
+        });
+
+        describe('TTL_PREFIX token → Convert all to PREFIX', () => {
+            it('returns sort and convert-to-PREFIX actions for TTL_PREFIX token', async () => {
+                const ttlPrefixToken = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', 1, 1);
+                const pnameNsToken = makeToken(RdfToken.PNAME_NS.name, 'rdfs:', 1, 9);
+                const irirefToken = makeToken(RdfToken.IRIREF.name, '<http://www.w3.org/2000/01/rdf-schema#>', 1, 15);
+                const tokens = [ttlPrefixToken, pnameNsToken, irirefToken];
+
+                mockGetDocumentContext.mockReturnValue({
+                    tokens,
+                    getTokenAtPosition: vi.fn(() => ttlPrefixToken),
+                    getTokenIndexAtPosition: vi.fn(() => 0),
+                });
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+
+                const sortAction = result.find(a => a.command?.command === 'mentor.command.sortPrefixes');
+                expect(sortAction).toBeDefined();
+
+                const convertAction = result.find(a => a.title === 'Convert all to PREFIX');
+                expect(convertAction).toBeDefined();
+            });
+        });
+
+        describe('_createInlineSelectedPrefixesAction', () => {
+            it('returns inline action when selection contains a prefix declaration with usages', async () => {
+                // @prefix ex: <http://example.org/> .   (line 0)
+                // ex:Foo rdfs:type ex:Bar .             (line 1)
+                const ttlPrefix = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', 1, 1);
+                const pnameDecl = makeToken(RdfToken.PNAME_NS.name, 'ex:', 1, 9);
+                const irirefDecl = makeToken(RdfToken.IRIREF.name, '<http://example.org/>', 1, 13);
+                const pnameLn = { ...makeToken(RdfToken.PNAME_LN.name, 'ex:Foo', 2, 1), startLine: 2, endLine: 2 };
+                const period = makeToken(RdfToken.PERIOD.name, '.', 1, 35);
+                const tokens = [ttlPrefix, pnameDecl, irirefDecl, period, pnameLn];
+
+                mockGetDocumentContext.mockReturnValue({
+                    tokens,
+                    getTokenAtPosition: vi.fn(() => null),
+                    getTokenIndexAtPosition: vi.fn(() => -1),
+                });
+
+                // Selection spans line 0 (where @prefix is)
+                const selection = new Range(new Position(0, 0), new Position(0, 40));
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
+
+                const inlineAction = result.find(a => a.title?.startsWith('Inline prefix'));
+                expect(inlineAction).toBeDefined();
+            });
+
+            it('does not return inline action when selection has no prefix declarations', async () => {
+                const pnameLn = makeToken(RdfToken.PNAME_LN.name, 'ex:Foo', 2, 1);
+                mockGetDocumentContext.mockReturnValue({
+                    tokens: [pnameLn],
+                    getTokenAtPosition: vi.fn(() => null),
+                    getTokenIndexAtPosition: vi.fn(() => -1),
+                });
+
+                const selection = new Range(new Position(1, 0), new Position(1, 10));
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
+
+                const inlineAction = result.find(a => a.title?.startsWith('Inline prefix'));
+                expect(inlineAction).toBeUndefined();
+            });
+        });
+
+        describe('_provideFixMissingPrefixesActions', () => {
+            it('returns "Implement missing prefixes" when document has undefined prefixes', async () => {
+                mockGetDocumentContext.mockReturnValue(null);
+                mockGetPrefixesWithErrorCode.mockImplementation((_doc, _diag, code) =>
+                    code === 'UndefinedNamespacePrefixError' ? ['owl'] : []
+                );
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+
+                const action = result.find(a => a.title === 'Implement missing prefixes');
+                expect(action).toBeDefined();
+                expect(action!.command?.command).toBe('mentor.command.implementPrefixes');
+                expect(action!.kind).toEqual(CodeActionKind.QuickFix);
+            });
+
+            it('returns "Remove unused prefixes" when document has unused prefixes', async () => {
+                mockGetDocumentContext.mockReturnValue(null);
+                mockGetPrefixesWithErrorCode.mockImplementation((_doc, _diag, code) =>
+                    code === 'UnusedNamespacePrefixHint' ? ['rdfs'] : []
+                );
+
+                const provider = new TurtleCodeActionsProvider();
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
+
+                const action = result.find(a => a.title === 'Remove unused prefixes');
+                expect(action).toBeDefined();
+                expect(action!.command?.command).toBe('mentor.command.deletePrefixes');
+            });
+
+            it('returns per-diagnostic "Implement missing prefix: X" action', async () => {
+                mockGetDocumentContext.mockReturnValue(null);
+                // Document-level calls return empty, per-diagnostic call returns ['foaf']
+                mockGetPrefixesWithErrorCode.mockImplementation((_doc, diagnostics, code) => {
+                    if (code === 'UndefinedNamespacePrefixError' && Array.isArray(diagnostics) && diagnostics.length > 0) return ['foaf'];
+                    return [];
+                });
+
+                const provider = new TurtleCodeActionsProvider();
+                const diag = [{ code: 'UndefinedNamespacePrefixError', message: 'foaf: not defined' }];
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: diag, triggerKind: 1 } as any);
+
+                const action = result.find(a => a.title === 'Implement missing prefix: foaf');
+                expect(action).toBeDefined();
+                expect(action!.command?.command).toBe('mentor.command.implementPrefixes');
+            });
+
+            it('returns per-diagnostic "Remove unused prefix: X" action', async () => {
+                mockGetDocumentContext.mockReturnValue(null);
+                mockGetPrefixesWithErrorCode.mockImplementation((_doc, diagnostics, code) => {
+                    if (code === 'UnusedNamespacePrefixHint' && Array.isArray(diagnostics) && diagnostics.length > 0) return ['skos'];
+                    return [];
+                });
+
+                const provider = new TurtleCodeActionsProvider();
+                const diag = [{ code: 'UnusedNamespacePrefixHint', message: 'skos: unused' }];
+                const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: diag, triggerKind: 1 } as any);
+
+                const action = result.find(a => a.title === 'Remove unused prefix: skos');
+                expect(action).toBeDefined();
+                expect(action!.command?.command).toBe('mentor.command.deletePrefixes');
+            });
+        });
+    });
 });
+

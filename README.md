@@ -1,5 +1,5 @@
 # Mentor for Visual Studio Code
-[![License: GPL-V3](https://img.shields.io/badge/license-GPL3-brightgreen)](./LICENSE) [![Website](https://img.shields.io/badge/website-mentor--vscode.dev-blue)](https://mentor-vscode.dev)
+[![License: GPL-V3](https://img.shields.io/badge/license-GPL3-brightgreen)](./LICENSE) [![Website](https://img.shields.io/badge/website-mentor--vscode.dev-blue)](https://mentor-vscode.dev) [![Coverage](https://img.shields.io/endpoint?url=https://faubulous.github.io/mentor-vscode/coverage-badge.json)](https://faubulous.github.io/mentor-vscode/)
 
 The developer friendly IDE for RDF knowledge graphs.
 

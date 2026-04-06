@@ -1,0 +1,179 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
+
+let mockVocabularyStub: any;
+let mockSettingsGet: (key: string, defaultValue?: any) => any;
+
+vi.mock('tsyringe', () => ({
+	container: {
+		resolve: vi.fn((token: string) => {
+			if (token === 'SettingsService') {
+				return { get: (k: string, d?: any) => mockSettingsGet(k, d) };
+			}
+			if (token === 'VocabularyRepository') {
+				return mockVocabularyStub;
+			}
+			return {};
+		}),
+	},
+	injectable: () => (t: any) => t,
+	inject: () => () => {},
+	singleton: () => (t: any) => t,
+}));
+
+import * as vscode from 'vscode';
+import { ValidatorNode } from './validator-node';
+import { ValidatorClassNode } from './validator-class-node';
+import { ValidatorsNode } from './validators-node';
+
+function makeContext(): any {
+	return {
+		graphs: ['urn:g1'],
+		getResourceLabel: () => ({ value: 'Label', language: undefined }),
+		getResourceTooltip: () => undefined,
+		activeLanguageTag: undefined,
+		activeLanguage: undefined,
+	};
+}
+
+function makeNode<T>(Ctor: new (ctx: any, id: string, uri: string) => T, uri = 'urn:ex#x'): T {
+	return new Ctor(makeContext(), `root/<${uri}>`, uri);
+}
+
+beforeEach(() => {
+	mockSettingsGet = (k: string, d?: any) => {
+		if (k === 'view.showReferences') return true;
+		return d;
+	};
+	mockVocabularyStub = {
+		hasIndividuals: vi.fn(() => false),
+		getSubClasses: vi.fn(function*() {}),
+		hasSubjectsOfType: vi.fn(() => false),
+		getSubjectsOfType: vi.fn(function*() {}),
+		getValidators: vi.fn(function*() {}),
+		hasType: vi.fn(() => false),
+		getRootShapePath: vi.fn(function*() {}),
+		getIndividualTypes: vi.fn(function*() {}),
+	};
+});
+
+// ---- ValidatorNode ----
+
+describe('ValidatorNode', () => {
+	describe('getIcon', () => {
+		it('should return a ThemeIcon for rdf-class', () => {
+			const icon = makeNode(ValidatorNode).getIcon();
+			expect(icon).toBeInstanceOf(vscode.ThemeIcon);
+			expect(icon?.id).toBe('rdf-class');
+		});
+	});
+
+	describe('getIconColor', () => {
+		it('should return ThemeColor for mentor.color.class', () => {
+			expect(makeNode(ValidatorNode).getIconColor()).toBeInstanceOf(vscode.ThemeColor);
+		});
+	});
+
+	describe('getResourceUri', () => {
+		it('should return undefined', () => {
+			expect(makeNode(ValidatorNode).getResourceUri()).toBeUndefined();
+		});
+	});
+});
+
+// ---- ValidatorClassNode ----
+
+describe('ValidatorClassNode', () => {
+	describe('getOntologyGraphs', () => {
+		it('should include the _SH graph plus document graphs', () => {
+			const graphs = makeNode(ValidatorClassNode).getOntologyGraphs();
+			expect(graphs.length).toBeGreaterThanOrEqual(2);
+		});
+	});
+
+	describe('getSubClassIris', () => {
+		it('should yield class IRIs that have subjects of that type', () => {
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield 'urn:sh#Validator'; });
+			mockVocabularyStub.hasSubjectsOfType = vi.fn(() => true);
+			const iris = [...makeNode(ValidatorClassNode).getSubClassIris()];
+			expect(iris).toHaveLength(1);
+		});
+
+		it('should skip class IRIs with no subjects', () => {
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield 'urn:sh#Validator'; });
+			mockVocabularyStub.hasSubjectsOfType = vi.fn(() => false);
+			expect([...makeNode(ValidatorClassNode).getSubClassIris()]).toHaveLength(0);
+		});
+	});
+
+	describe('getClassNode', () => {
+		it('should return a ValidatorClassNode', () => {
+			expect(makeNode(ValidatorClassNode).getClassNode('urn:ex#sub')).toBeInstanceOf(ValidatorClassNode);
+		});
+	});
+
+	describe('getIndividualNode', () => {
+		it('should return a ValidatorNode', () => {
+			expect(makeNode(ValidatorClassNode).getIndividualNode('urn:ex#v')).toBeInstanceOf(ValidatorNode);
+		});
+	});
+});
+
+// ---- ValidatorsNode ----
+
+describe('ValidatorsNode', () => {
+	describe('getContextValue', () => {
+		it('should return "validators"', () => {
+			expect(makeNode(ValidatorsNode).getContextValue()).toBe('validators');
+		});
+	});
+
+	describe('getIcon', () => {
+		it('should return undefined', () => {
+			expect(makeNode(ValidatorsNode).getIcon()).toBeUndefined();
+		});
+	});
+
+	describe('getLabel', () => {
+		it('should return "Validators"', () => {
+			expect(makeNode(ValidatorsNode).getLabel()).toEqual({ label: 'Validators' });
+		});
+	});
+
+	describe('getTooltip', () => {
+		it('should return undefined', () => {
+			expect(makeNode(ValidatorsNode).getTooltip()).toBeUndefined();
+		});
+	});
+
+	describe('getDescription', () => {
+		it('should return count of validators as string', () => {
+			mockVocabularyStub.getValidators = vi.fn(function*() { yield 'urn:ex#v1'; });
+			expect(makeNode(ValidatorsNode).getDescription()).toBe('1');
+		});
+	});
+
+	describe('resolveNodeForUri', () => {
+		it('should return undefined when IRI is not a validator', () => {
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() {});
+			expect(makeNode(ValidatorsNode).resolveNodeForUri('urn:ex#x')).toBeUndefined();
+		});
+
+		it('should walk hierarchy for validator IRIs', () => {
+			mockVocabularyStub.hasType = vi.fn(() => true);
+			mockVocabularyStub.getRootShapePath = vi.fn(function*() {});
+			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
+			expect(makeNode(ValidatorsNode).resolveNodeForUri('urn:ex#v')).toBeUndefined();
+		});
+
+		it('should search by individual type when not a direct validator', () => {
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield 'urn:ex#T'; });
+			mockVocabularyStub.getRootShapePath = vi.fn(function*() {});
+			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
+			expect(makeNode(ValidatorsNode).resolveNodeForUri('urn:ex#v')).toBeUndefined();
+		});
+	});
+});
