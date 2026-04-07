@@ -38,6 +38,7 @@ export const workspace = {
   openNotebookDocument: async (_type: string, _content?: any) => undefined as any,
   notebookDocuments: [] as any[],
   registerFileSystemProvider: (_scheme: string, _provider: any, _options?: any) => ({ dispose: () => {} }),
+  registerNotebookSerializer: (_type: string, _serializer: any, _options?: any) => ({ dispose: () => {} }),
 };
 
 // Provide a minimal Uri namespace compatible with vscode.Uri
@@ -487,3 +488,43 @@ export class CancellationTokenSource {
 
   dispose() {}
 }
+
+export class NotebookCellOutput {
+  constructor(public items: any[], public metadata?: Record<string, any>) {}
+}
+
+export class NotebookCellOutputItem {
+  constructor(public data: Uint8Array, public mime: string) {}
+
+  static json(value: any, mime = 'application/json'): NotebookCellOutputItem {
+    return new NotebookCellOutputItem(new TextEncoder().encode(JSON.stringify(value)), mime);
+  }
+
+  static text(value: string, mime = 'text/plain'): NotebookCellOutputItem {
+    return new NotebookCellOutputItem(new TextEncoder().encode(value), mime);
+  }
+
+  static error(err: Error): NotebookCellOutputItem {
+    return new NotebookCellOutputItem(new TextEncoder().encode(err.message), 'application/vnd.code.notebook.error');
+  }
+}
+
+export const notebooks = {
+  createNotebookController: (_id: string, _type: string, _label: string) => ({
+    executeHandler: undefined as any,
+    supportedLanguages: [] as string[],
+    supportsExecutionOrder: false,
+    createNotebookCellExecution: (_cell: any) => ({
+      executionOrder: 0,
+      token: { onCancellationRequested: (_h: any) => ({ dispose: () => {} }) },
+      start: (_time?: number) => {},
+      end: (_success: boolean, _time?: number) => {},
+      replaceOutput: async (_output: any) => {},
+    }),
+    dispose: () => {},
+  }),
+  createRendererMessaging: (_rendererId: string) => ({
+    onDidReceiveMessage: (_handler: any) => ({ dispose: () => {} }),
+    postMessage: async (_message: any, _editorOrCells?: any) => undefined as any,
+  }),
+};
