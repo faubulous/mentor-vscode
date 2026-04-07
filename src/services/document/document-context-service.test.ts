@@ -893,4 +893,195 @@ describe('DocumentContextService', () => {
 			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
 		});
 	});
+
+	describe('onNextTokenDelivery timeout cleanup', () => {
+		it('cleans up the listener entry when the timeout fires', async () => {
+			vi.useFakeTimers();
+			const { service } = createService();
+			const uri = 'file:///test.sparql';
+
+			// Register two listeners — the timeout of the first fires while the second persists
+			const p1 = service.onNextTokenDelivery(uri, 100);
+			const p2 = service.onNextTokenDelivery(uri, 5000);
+
+			// Advance past the first timeout only
+			vi.advanceTimersByTime(100);
+
+			await expect(p1).rejects.toThrow(/Timeout/);
+
+			// The second listener is still present; resolve it to clean up
+			service.resolveTokens(uri, []);
+			await expect(p2).resolves.toBeDefined();
+		});
+
+		it('rejects with a timeout error when the timeout fires before delivery', async () => {
+			vi.useFakeTimers();
+			const { service } = createService();
+			const uri = 'file:///test.sparql';
+
+			const p1 = service.onNextTokenDelivery(uri, 100);
+
+			vi.advanceTimersByTime(100);
+
+			await expect(p1).rejects.toThrow(/Timeout/);
+		});
+	});
+
+	describe('_reloadContextTriples edge cases', () => {
+		it('catches and logs errors thrown during reload', async () => {
+			const { service } = createService();
+			const uri = 'file:///test.ttl';
+			const mockDoc = { getText: vi.fn(() => 'x') } as any;
+
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			// Make loadTriples throw to trigger the .catch handler
+			(ctx.loadTriples as any).mockRejectedValue(new Error('load failed'));
+			service.contexts[uri] = ctx;
+			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
+
+			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+			service.resolveTokens(uri, []);
+			await new Promise(resolve => setTimeout(resolve, 10));
+
+			expect(warnSpy).toHaveBeenCalledWith(
+				expect.stringContaining('Failed to reload'),
+				expect.any(Error)
+			);
+
+			warnSpy.mockRestore();
+			(vscode.workspace.textDocuments as any[]).pop();
+		});
+
+		it('returns early after the supersession guard fires (line 285) without updating activeContext', async () => {
+			const { service } = createService();
+			const uri = 'file:///test.ttl';
+			const mockDoc = { getText: vi.fn(() => '') } as any;
+
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			// Replace the context during loadTriples so the supersession guard fires at line 285.
+			// Note: infer() (line 282) is called BEFORE the guard, so it executes once.
+			const newCtx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			(ctx.loadTriples as any).mockImplementation(async () => {
+				service.contexts[uri] = newCtx;
+			});
+			service.contexts[uri] = ctx;
+			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
+
+			// Make the active editor match so activeContext assignment (line 294) would normally fire.
+			(vscode.window as any).activeTextEditor = {
+				document: { uri: { toString: () => uri } },
+			};
+
+			service.resolveTokens(uri, []);
+			await new Promise(resolve => setTimeout(resolve, 10));
+
+			// The supersession guard fires at line 285 (after infer) so activeContext
+			// should NOT be set to the original ctx.
+			expect(service.activeContext).not.toBe(ctx);
+
+			(vscode.workspace.textDocuments as any[]).pop();
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+
+		it('sets activeContext when active editor matches during _reloadContextTriples', async () => {
+			const { service } = createService();
+			const uri = 'file:///test.ttl';
+			const mockDoc = { getText: vi.fn(() => '') } as any;
+
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			service.contexts[uri] = ctx;
+			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
+
+			// Set the active editor to match the URI being reloaded
+			(vscode.window as any).activeTextEditor = {
+				document: { uri: vscode.Uri.parse(uri) },
+			};
+
+			service.resolveTokens(uri, []);
+			await new Promise(resolve => setTimeout(resolve, 10));
+
+			expect(service.activeContext).toBe(ctx);
+
+			(vscode.workspace.textDocuments as any[]).pop();
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+	});
+
+	describe('loadDocument (vscode-notebook-cell scheme)', () => {
+		it('logs the document URI when loading a notebook cell', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///nb.mnb#cell0';
+			const doc = {
+				languageId: 'turtle',
+				uri: { toString: () => uri, scheme: 'vscode-notebook-cell' },
+				getText: () => '',
+			} as any;
+
+			const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			await service.loadDocument(doc);
+
+			expect(logSpy).toHaveBeenCalledWith(doc.uri);
+			logSpy.mockRestore();
+		});
+	});
+
+	describe('constructor event callback lambdas (lines 78-81)', () => {
+		it('invokes handleActiveEditorChanged via the registered onDidChangeActiveTextEditor callback', async () => {
+			let capturedHandler: Function | undefined;
+			vi.spyOn(vscode.window, 'onDidChangeActiveTextEditor').mockImplementationOnce((handler: any) => {
+				capturedHandler = handler;
+				return { dispose: () => {} };
+			});
+			createService();
+			await capturedHandler?.();
+		});
+
+		it('invokes handleActiveNotebookEditorChanged via the registered onDidChangeActiveNotebookEditor callback', async () => {
+			let capturedHandler: Function | undefined;
+			vi.spyOn(vscode.window, 'onDidChangeActiveNotebookEditor').mockImplementationOnce((handler: any) => {
+				capturedHandler = handler;
+				return { dispose: () => {} };
+			});
+			createService();
+			await capturedHandler?.();
+		});
+
+		it('invokes handleTextDocumentChanged via the registered onDidChangeTextDocument callback', async () => {
+			let capturedHandler: Function | undefined;
+			vi.spyOn(vscode.workspace, 'onDidChangeTextDocument').mockImplementationOnce((handler: any) => {
+				capturedHandler = handler;
+				return { dispose: () => {} };
+			});
+			createService();
+			// Provide a fake event with an unsupported language to avoid side-effects
+			await capturedHandler?.({ document: { languageId: 'plaintext', uri: vscode.Uri.parse('file:///x.txt') } });
+		});
+
+		it('invokes handleTextDocumentClosed via the registered onDidCloseTextDocument callback', async () => {
+			let capturedHandler: Function | undefined;
+			vi.spyOn(vscode.workspace, 'onDidCloseTextDocument').mockImplementationOnce((handler: any) => {
+				capturedHandler = handler;
+				return { dispose: () => {} };
+			});
+			createService();
+			await capturedHandler?.({ languageId: 'plaintext', uri: vscode.Uri.parse('file:///x.txt') });
+		});
+	});
+
+	describe('_reloadContextTriples – hasTokens=false early return (line 275)', () => {
+		it('returns early without loading triples when context.hasTokens is false', async () => {
+			const { service } = createService();
+			const uri = 'file:///test.ttl';
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: false });
+			service.contexts[uri] = ctx;
+
+			await (service as any)._reloadContextTriples(uri);
+
+			expect(ctx.loadTriples).not.toHaveBeenCalled();
+		});
+	});
 });

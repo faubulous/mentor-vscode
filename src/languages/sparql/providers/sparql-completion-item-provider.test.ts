@@ -146,40 +146,50 @@ describe('SparqlCompletionItemProvider', () => {
 
         function makeProviderWithGraphs(available: string[]): SparqlCompletionItemProvider {
             const p = new SparqlCompletionItemProvider();
+
             vi.spyOn(p as any, 'connectionService', 'get').mockReturnValue({
                 getGraphsForDocument: async () => available,
             });
+            
             return p;
         }
 
         it('returns completion items for all graphs when token image is <', async () => {
             const p = makeProviderWithGraphs(graphs);
+
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]);
             const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
+
             expect(items.length).toBe(3);
         });
 
         it('filters graphs by the already-typed prefix', async () => {
             const p = makeProviderWithGraphs(graphs);
+
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<http://example')]);
             const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
+
             expect(items.length).toBe(2);
             expect(items.every(i => (i.detail as string).startsWith('http://example.org'))).toBe(true);
         });
 
         it('sets the detail to the full graph IRI', async () => {
             const p = makeProviderWithGraphs(graphs);
+
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]);
             const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
             const iris = items.map(i => i.detail as string);
+
             expect(iris).toEqual(expect.arrayContaining(graphs));
         });
 
         it('strips the trailing > from a closed token image', async () => {
             const p = makeProviderWithGraphs(['http://example.org/g']);
+
             // Closed token e.g. <htt> produced by VS Code IRI auto-close
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<htt>')]);
             const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
+
             // The typed value is 'htt', which 'http://example.org/g' starts with
             expect(items.length).toBe(1);
         });
