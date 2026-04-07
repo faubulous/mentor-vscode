@@ -217,5 +217,59 @@ describe('PropertiesNode', () => {
 			mockVocabularyStub.getSubProperties = vi.fn(function*() {});
 			expect(makeNode(PropertiesNode).resolveNodeForUri('urn:ex#p')).toBeUndefined();
 		});
+
+		it('should set definedBy to null when includeReferenced is true', () => {
+			// Ensures the options.definedBy = null branch is exercised
+			mockSettingsGet = (k: string, d?: any) => {
+				if (k === 'view.showReferences') return true; // includeReferenced = true
+				if (k === 'view.showPropertyTypes') return true;
+				return d;
+			};
+			mockVocabularyStub.hasType = vi.fn(() => true);
+			mockVocabularyStub.getRootPropertiesPath = vi.fn(function*() {});
+			mockVocabularyStub.getPropertyTypes = vi.fn(function*() {});
+			expect(makeNode(PropertiesNode).resolveNodeForUri('urn:ex#p')).toBeUndefined();
+		});
+
+		it('should return found node when typeNode walkHierarchyPath succeeds', () => {
+			// Covers lines 102-105: typeNode.walkHierarchyPath returns a PropertyNode
+			const typeIri = 'urn:ex#ObjectProperty';
+			const propIri = 'urn:ex#prop1';
+
+			mockSettingsGet = (k: string, d?: any) => {
+				if (k === 'view.showPropertyTypes') return true;
+				if (k === 'view.showReferences') return false;
+				return d;
+			};
+			mockVocabularyStub.hasType = vi.fn(() => true);
+			mockVocabularyStub.getRootPropertiesPath = vi.fn(function*() {}); // empty → rootToNode = [propIri]
+			mockVocabularyStub.getPropertyTypes = vi.fn(function*() { yield typeIri; }); // type nodes
+			// PropertyClassNode(typeIri).getChildren() calls getRootPropertiesOfType(graphs, typeIri, opts)
+			mockVocabularyStub.getRootPropertiesOfType = vi.fn(function*() { yield propIri; });
+
+			const result = makeNode(PropertiesNode).resolveNodeForUri(propIri);
+			expect(result).not.toBeUndefined();
+			expect(result!.uri).toBe(propIri);
+		});
+
+		it('should return undefined when typeNode exists but walkHierarchyPath fails', () => {
+			// Covers the if(found) FALSE branch at line 104: typeNode is present but getRootPropertiesOfType
+			// yields nothing so walkHierarchyPath returns undefined, loop continues, returns undefined
+			const typeIri = 'urn:ex#ObjectProperty';
+			const propIri = 'urn:ex#prop1';
+
+			mockSettingsGet = (k: string, d?: any) => {
+				if (k === 'view.showPropertyTypes') return true;
+				if (k === 'view.showReferences') return false;
+				return d;
+			};
+			mockVocabularyStub.hasType = vi.fn(() => true);
+			mockVocabularyStub.getRootPropertiesPath = vi.fn(function*() {}); // empty → rootToNode = [propIri]
+			mockVocabularyStub.getPropertyTypes = vi.fn(function*() { yield typeIri; }); // type node exists
+			mockVocabularyStub.getRootPropertiesOfType = vi.fn(function*() {}); // yields nothing → walkHierarchyPath returns undefined
+
+			const result = makeNode(PropertiesNode).resolveNodeForUri(propIri);
+			expect(result).toBeUndefined();
+		});
 	});
 });

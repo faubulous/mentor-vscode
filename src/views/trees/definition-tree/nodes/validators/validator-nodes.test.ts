@@ -175,5 +175,44 @@ describe('ValidatorsNode', () => {
 			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
 			expect(makeNode(ValidatorsNode).resolveNodeForUri('urn:ex#v')).toBeUndefined();
 		});
+
+		it('should return validator instance when typeNode contains the individual', () => {
+			const typeIri = 'urn:ex#ValidatorClass';
+			const validatorIri = 'urn:ex#myValidator';
+
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.getRootShapePath = vi.fn(function*() {}); // empty → rootToType = [typeIri]
+			// Use unconditional mock so the 'mentor:validators' URI always yields typeIri
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === typeIri);
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*(_g: any, uri: any) {
+				if (uri === typeIri) yield validatorIri;
+			});
+
+			// Use 'mentor:validators' so the root ValidatorsNode uses SH.Validator in getSubClassIris
+			const result = makeNode(ValidatorsNode, 'mentor:validators').resolveNodeForUri(validatorIri);
+			expect(result).not.toBeUndefined();
+			expect(result!.uri).toBe(validatorIri);
+		});
+
+		it('should return undefined when typeNode found but target instance not in its children', () => {
+			// Covers the if(found) FALSE branch: typeNode exists but instances don't contain the target
+			const typeIri = 'urn:ex#ValidatorClass';
+			const searchIri = 'urn:ex#notFound';
+
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.getRootShapePath = vi.fn(function*() {});
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield typeIri; }); // typeNode found
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === typeIri);
+			// instances don't contain searchIri
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*(_g: any, uri: any) {
+				if (uri === typeIri) yield 'urn:ex#otherValidator';
+			});
+
+			const result = makeNode(ValidatorsNode, 'mentor:validators').resolveNodeForUri(searchIri);
+			expect(result).toBeUndefined();
+		});
 	});
 });

@@ -156,5 +156,19 @@ describe('ConceptsNode', () => {
 			const node = new ConceptsNode(ctx, `root/<${schemeUri}>`, schemeUri);
 			expect(node.resolveNodeForUri(schemeUri)).toBeUndefined();
 		});
+
+		it('should call walkHierarchyPath when walkPath is non-empty', () => {
+			const schemeUri = 'urn:ex#scheme';
+			const conceptIri = 'urn:ex#concept1';
+			// Path has the concept IRI (not the scheme), so walkPath = [conceptIri]
+			mockVocabularyStub.getConceptSchemePath = vi.fn(() => [conceptIri]);
+			// Make narrower concepts yield the concept so the child exists
+			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() { yield conceptIri; });
+			const ctx = makeContext();
+			const node = new ConceptsNode(ctx, `root/<${schemeUri}>`, schemeUri);
+			// walkPath is [conceptIri], walkHierarchyPath traverses children
+			const result = node.resolveNodeForUri(conceptIri);
+			expect(result).not.toBeUndefined();
+		});
 	});
 });

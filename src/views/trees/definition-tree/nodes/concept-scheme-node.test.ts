@@ -118,5 +118,32 @@ describe('ConceptSchemeNode', () => {
 		it('should return undefined when no children contain the URI', () => {
 			expect(makeNode(ConceptSchemeNode).resolveNodeForUri('urn:ex#z')).toBeUndefined();
 		});
+
+		it('should return the node when a child resolves the URI', () => {
+			// Set up a concept that has a scheme path leading back to this scheme
+			const conceptIri = 'urn:ex#c1';
+			// Make getNarrowerConcepts yield the concept so ConceptsNode.hasChildren() is true
+			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() { yield conceptIri; });
+			// getConceptSchemePath returns a path so walkHierarchyPath finds the node
+			// Path: [conceptIri] (already at top-level, scheme stripped makes walkPath = [conceptIri])
+			mockVocabularyStub.getConceptSchemePath = vi.fn((g: any, iri: any) => {
+				if (iri === conceptIri) return [conceptIri];
+				return [];
+			});
+			// Make the ConceptsNode URI match 'mentor:concepts' so schemeIndex is not found
+			// walkPath = [conceptIri] → finds the child in getNarrowerConcepts
+			const node = makeNode(ConceptSchemeNode, 'urn:ex#scheme');
+			const result = node.resolveNodeForUri(conceptIri);
+			expect(result).not.toBeUndefined();
+		});
+
+		it('should return undefined when child does not resolve the URI', () => {
+			// Loop runs (children exist) but child.resolveNodeForUri(iri) returns undefined
+			// Covers the if(found) FALSE branch inside the loop
+			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() { yield 'urn:ex#c1'; }); // children exist
+			mockVocabularyStub.getConceptSchemePath = vi.fn(() => []); // empty path → can't resolve target
+			const node = makeNode(ConceptSchemeNode, 'urn:ex#scheme');
+			expect(node.resolveNodeForUri('urn:ex#notFound')).toBeUndefined();
+		});
 	});
 });

@@ -236,6 +236,32 @@ describe('IndividualsNode', () => {
 			const result = node.resolveNodeForUri('urn:ex#missing');
 			expect(result).toBeUndefined();
 		});
+
+		it('should return undefined when type from resolveNodeForUri is not in children', () => {
+			// Covers if(typeNode) FALSE branch: getIndividualTypes for resolveNodeForUri yields
+			// a typeIri that is NOT in the children array (different from what getChildren() produces)
+			mockSettingsGet = (k: string, d?: any) => {
+				if (k === 'view.showIndividualTypes') return true;
+				return d;
+			};
+			// getChildren() uses getIndividualTypes(getOntologyGraphs(), undefined)
+			// resolveNodeForUri uses getIndividualTypes(getDocumentGraphs(), iri)
+			// Make them return DIFFERENT type IRIs so typeNode is not found in children
+			let callCount = 0;
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() {
+				callCount++;
+				if (callCount === 1) {
+					yield 'urn:ex#TypeInChildren'; // first call: getChildren()
+				} else {
+					yield 'urn:ex#TypeNotInChildren'; // second call: resolveNodeForUri
+				}
+			});
+			mockVocabularyStub.getIndividuals = vi.fn(function*() {});
+
+			const node = makeNode(IndividualsNode);
+			const result = node.resolveNodeForUri('urn:ex#ind');
+			expect(result).toBeUndefined();
+		});
 	});
 
 	describe('resolveNodeForUri (with showIndividualTypes = false)', () => {

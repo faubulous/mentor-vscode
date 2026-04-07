@@ -280,5 +280,32 @@ describe('ClassesNode', () => {
 			const result = node.resolveNodeForUri('urn:ex#X');
 			expect(result).toBeUndefined();
 		});
+
+		it('should set definedBy to null when includeReferenced is true', () => {
+			// When includeReferenced=true, options.definedBy gets set to null
+			// We verify it still processes without error and returns undefined for unknown class
+			mockSettingsGet = (k: string, d?: any) => {
+				if (k === 'view.showReferences') return true;  // enables includeReferenced
+				return d;
+			};
+			mockVocabularyStub.hasType = vi.fn(() => true);
+			mockVocabularyStub.getRootClassPath = vi.fn(function*() {});
+			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
+			const result = makeClassesNode().resolveNodeForUri('urn:ex#Ref');
+			expect(result).toBeUndefined();
+		});
+
+		it('should not set definedBy when includeReferenced is false', () => {
+			// Covers the if(options.includeReferenced) FALSE branch
+			mockSettingsGet = (k: string, d?: any) => {
+				if (k === 'view.showReferences') return false; // includeReferenced = false
+				return d;
+			};
+			mockVocabularyStub.hasType = vi.fn(() => true);
+			mockVocabularyStub.getRootClassPath = vi.fn(function*() {});
+			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
+			const result = makeClassesNode().resolveNodeForUri('urn:ex#X');
+			expect(result).toBeUndefined();
+		});
 	});
 });

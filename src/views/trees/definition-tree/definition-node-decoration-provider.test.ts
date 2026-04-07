@@ -5,8 +5,9 @@ vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({ serialize: vi.fn() }));
 
+let mockConfigValue: string | undefined = undefined;
 vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: () => ({ get: (_k: string, d?: any) => d }),
+	getConfig: () => ({ get: (_k: string, _d?: any) => mockConfigValue }),
 }));
 
 vi.mock('@faubulous/mentor-rdf', () => ({
@@ -38,7 +39,7 @@ const mockSettings = {
 	}),
 };
 
-const mockVocabularyRepository = {
+const mockVocabularyRepository: { store: { matchAll: any } } = {
 	store: {
 		matchAll: vi.fn(() => []),
 	},
@@ -66,6 +67,7 @@ describe('DefinitionNodeDecorationProvider', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockConfigValue = undefined;
 		mockContextChangeHandlers.length = 0;
 		mockSettingsChangeHandlers.clear();
 		configChangeHandlers = [];
@@ -151,6 +153,14 @@ describe('DefinitionNodeDecorationProvider', () => {
 		// No error thrown, label predicates set to empty
 	});
 
+	it('uses empty label predicates when context has no label predicate list', () => {
+		// Covers the `?? []` fallback when context.predicates.label is undefined
+		for (const h of mockContextChangeHandlers) {
+			h({ predicates: { label: undefined } });
+		}
+		// No error thrown
+	});
+
 	it('fires file decoration change when configuration affectsConfiguration returns true', () => {
 		const mockFn = vi.fn();
 		(provider as any)._onDidChangeFileDecorations = { fire: mockFn, event: vi.fn() };
@@ -159,5 +169,166 @@ describe('DefinitionNodeDecorationProvider', () => {
 			h(configEvent);
 		}
 		// Decoration scope updated - no error
+	});
+
+	it('fires onDidChangeFileDecorations when active language setting changes', () => {
+		const fireSpy = vi.spyOn((provider as any)._onDidChangeFileDecorations, 'fire');
+		const handlers = mockSettingsChangeHandlers.get('view.activeLanguage') ?? [];
+		for (const h of handlers) { h(); }
+		expect(fireSpy).toHaveBeenCalled();
+	});
+
+	it('sets decorationScope to Document when config returns "Document"', () => {
+		mockConfigValue = 'Document';
+		const dec = new DefinitionNodeDecorationProvider();
+		expect((dec as any)._decorationScope).toBe(2); // MissingLanguageTagDecorationScope.Document = 2
+	});
+
+	it('sets decorationScope to All when config returns "All"', () => {
+		mockConfigValue = 'All';
+		const dec = new DefinitionNodeDecorationProvider();
+		expect((dec as any)._decorationScope).toBe(1); // MissingLanguageTagDecorationScope.All = 1
+	});
+});
+
+describe('DefinitionNodeDecorationProvider — provideFileDecoration (non-Disabled scope)', () => {
+	const LABEL_PREDICATE = 'http://www.w3.org/2000/01/rdf-schema#label';
+	const IRI = 'http://example.org/Class';
+
+	function makeActiveContext(graphs = ['urn:g1']): any {
+		return {
+			subjects: { [IRI]: true },
+			references: { [IRI]: true },
+			predicates: { label: [LABEL_PREDICATE] },
+			activeLanguage: 'en',
+			primaryLanguage: 'en',
+			graphs,
+		};
+	}
+
+	let fireSpy: any;
+	let dec: any;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockConfigValue = undefined;
+		mockContextChangeHandlers.length = 0;
+		mockSettingsChangeHandlers.clear();
+
+		(vscode.workspace as any).onDidChangeConfiguration = vi.fn((handler: any) => {
+			handler({ affectsConfiguration: () => false });
+			return { dispose: () => {} };
+		});
+
+		mockContextService.activeContext = undefined;
+
+		dec = new DefinitionNodeDecorationProvider();
+
+		// Enable All scope (1 = All, 2 = Document)
+		(dec as any)._decorationScope = 1;
+
+		// Populate label predicates by firing context-change handler
+		const ctx = makeActiveContext();
+		for (const h of mockContextChangeHandlers) { h(ctx); }
+
+		mockContextService.activeContext = ctx;
+	});
+
+	it('returns undefined when no primary language is set', () => {
+		mockContextService.activeContext = {
+			...makeActiveContext(),
+			primaryLanguage: undefined,
+		};
+		const uri = vscode.Uri.parse(IRI);
+		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
+	});
+
+	it('returns undefined when no active language is set', () => {
+		mockContextService.activeContext = {
+			...makeActiveContext(),
+			activeLanguage: undefined,
+		};
+		const uri = vscode.Uri.parse(IRI);
+		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
+	});
+
+	it('returns undefined when subject has no references entry', () => {
+		mockContextService.activeContext = {
+			...makeActiveContext(),
+			references: {},
+		};
+		const uri = vscode.Uri.parse(IRI);
+		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
+	});
+
+	it('returns undefined when store provides no label triples', () => {
+		mockVocabularyRepository.store.matchAll = vi.fn(() => []);
+		const uri = vscode.Uri.parse(IRI);
+		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
+	});
+
+	it('returns undefined when triple is not a Literal (wrong termType)', () => {
+		mockVocabularyRepository.store.matchAll = vi.fn(() => [{
+			object: { termType: 'NamedNode', value: 'http://example.org/Other' },
+			predicate: { value: LABEL_PREDICATE },
+		}]);
+		const uri = vscode.Uri.parse(IRI);
+		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
+	});
+
+	it('returns undefined when predicate is not a label predicate', () => {
+		mockVocabularyRepository.store.matchAll = vi.fn(() => [{
+			object: { termType: 'Literal', language: 'de', value: 'Test' },
+			predicate: { value: 'http://example.org/unknown-predicate' },
+		}]);
+		const uri = vscode.Uri.parse(IRI);
+		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
+	});
+
+	it('returns undefined when label triple matches the active language', () => {
+		mockVocabularyRepository.store.matchAll = vi.fn(() => [{
+			object: { termType: 'Literal', language: 'en', value: 'Example' },
+			predicate: { value: LABEL_PREDICATE },
+		}]);
+		const uri = vscode.Uri.parse(IRI);
+		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
+	});
+
+	it('returns undefined when label triple has no language (valid for all languages)', () => {
+		mockVocabularyRepository.store.matchAll = vi.fn(() => [{
+			object: { termType: 'Literal', language: '', value: 'Example' },
+			predicate: { value: LABEL_PREDICATE },
+		}]);
+		const uri = vscode.Uri.parse(IRI);
+		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
+	});
+
+	it('returns warning decoration when label exists only in the wrong language', () => {
+		mockVocabularyRepository.store.matchAll = vi.fn(() => [{
+			object: { termType: 'Literal', language: 'de', value: 'Beispiel' },
+			predicate: { value: LABEL_PREDICATE },
+		}]);
+		const uri = vscode.Uri.parse(IRI);
+		const decoration = dec.provideFileDecoration(uri, {} as any);
+		expect(decoration).toBeDefined();
+		expect(decoration!.tooltip).toContain('@en');
+		expect(decoration!.propagate).toBe(true);
+	});
+
+	it('uses document graphs as filter when scope is Document', () => {
+		(dec as any)._decorationScope = 2; // Document scope
+		const graphs = ['urn:g1'];
+		mockContextService.activeContext = makeActiveContext(graphs);
+		let capturedGraphUris: any;
+		mockVocabularyRepository.store.matchAll = vi.fn((g: any) => {
+			capturedGraphUris = g;
+			return [{
+				object: { termType: 'Literal', language: 'fr', value: 'Exemple' },
+				predicate: { value: LABEL_PREDICATE },
+			}];
+		});
+		const uri = vscode.Uri.parse(IRI);
+		dec.provideFileDecoration(uri, {} as any);
+		expect(capturedGraphUris).toEqual(graphs);
 	});
 });

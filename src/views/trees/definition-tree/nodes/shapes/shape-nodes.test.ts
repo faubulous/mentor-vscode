@@ -167,6 +167,14 @@ describe('ShapeClassNode', () => {
 			const iris = [...makeNode(ShapeClassNode).getSubClassIris()];
 			expect(iris).toContain('urn:ex#SubShape');
 		});
+
+		it('should not yield class IRI when hasSubjectsOfType returns false', () => {
+			// Covers the if(hasSubjectsOfType) FALSE branch at line 18
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield 'urn:ex#SubShape'; });
+			// hasSubjectsOfType defaults to () => false from beforeEach
+			const iris = [...makeNode(ShapeClassNode).getSubClassIris()];
+			expect(iris).toEqual([]);
+		});
 	});
 
 	describe('getClassNode', () => {
@@ -263,5 +271,126 @@ describe('ShapesNode', () => {
 			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
 			expect(makeNode(ShapesNode).resolveNodeForUri('urn:ex#i')).toBeUndefined();
 		});
+
+		it('should return shape instance when typeNode exists and contains the individual', () => {
+			const typeIri = 'urn:ex#ShapeClass';
+			const shapeIri = 'urn:ex#shapeInst';
+
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.getRootShapePath = vi.fn(function*() {}); // empty path → rootToType = [typeIri]
+			// Use unconditional mock so the 'mentor:shapes' URI always yields typeIri
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === typeIri);
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*(_g: any, uri: any) {
+				if (uri === typeIri) yield shapeIri;
+			});
+
+			// Use 'mentor:shapes' so the root ShapesNode uses SH.Shape in getSubClassIris
+			const result = makeNode(ShapesNode, 'mentor:shapes').resolveNodeForUri(shapeIri);
+			expect(result).not.toBeUndefined();
+			expect(result!.uri).toBe(shapeIri);
+		});
+
+		it('should return undefined when typeNode found but target instance not in its children', () => {
+			// Covers if(found) FALSE branch: typeNode exists but instances don't contain the target
+			const typeIri = 'urn:ex#ShapeClass';
+			const searchIri = 'urn:ex#notFound';
+
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.getRootShapePath = vi.fn(function*() {});
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield typeIri; }); // typeNode found
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === typeIri);
+			// instances don't contain searchIri
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*(_g: any, uri: any) {
+				if (uri === typeIri) yield 'urn:ex#otherShape';
+			});
+
+			const result = makeNode(ShapesNode, 'mentor:shapes').resolveNodeForUri(searchIri);
+			expect(result).toBeUndefined();
+		});
+	});
+});
+
+// ---- ClassNodeBase (showIndividuals = true path) via ShapeClassNode ----
+
+describe('ClassNodeBase via ShapeClassNode (showIndividuals = true)', () => {
+	describe('hasChildren', () => {
+		it('should return true via individual path when no sub-classes but individuals exist', () => {
+			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*() { yield 'urn:ex#shape1'; });
+			expect(makeNode(ShapeClassNode).hasChildren()).toBe(true);
+		});
+
+		it('should return false when showIndividuals=true but no sub-classes and no individuals', () => {
+			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*() {});
+			expect(makeNode(ShapeClassNode).hasChildren()).toBe(false);
+		});
+	});
+
+	describe('getChildren', () => {
+		it('should include individual nodes when getSubjectsOfType yields IRIs', () => {
+			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*() { yield 'urn:ex#ns1'; });
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			const children = makeNode(ShapeClassNode).getChildren();
+			expect(children.some(c => c instanceof NodeShapeNode)).toBe(true);
+		});
+	});
+});
+
+// ---- ShapeClassNode with notDefinedBy options (line 18 coverage) ----
+
+describe('ShapeClassNode.getSubClassIris with pre-populated notDefinedBy', () => {
+	it('should add _SH to an existing notDefinedBy set', () => {
+		const { _SH } = require('@faubulous/mentor-rdf');
+		mockVocabularyStub.getSubClasses = vi.fn(function*() { yield 'urn:ex#SubShape'; });
+		mockVocabularyStub.hasSubjectsOfType = vi.fn(() => true);
+		const ctx = makeContext();
+		const node = new ShapeClassNode(ctx, 'root/<urn:ex#x>', 'urn:ex#x', { notDefinedBy: new Set(['urn:ex#existing']) });
+		const iris = [...node.getSubClassIris()];
+		expect(iris).toContain('urn:ex#SubShape');
+	});
+});
+
+// ---- Blank node URI for NodeShapeNode and PropertyShapeNode ----
+
+describe('NodeShapeNode.getIcon with blank node URI', () => {
+	it('should use BlankNode when URI contains no colon', () => {
+		const ctx = makeContext();
+		const node = new NodeShapeNode(ctx, 'root/<blank>', 'blank_node_without_colon');
+		mockVocabularyStub.getShapeTargets = vi.fn(function*() {});
+		const icon = node.getIcon();
+		expect(icon).toBeInstanceOf(vscode.ThemeIcon);
+	});
+
+	it('should use BlankNode with target and resolve class icon', () => {
+		const ctx = makeContext();
+		const node = new NodeShapeNode(ctx, 'root/<blank>', 'blank_node_without_colon');
+		mockVocabularyStub.getShapeTargets = vi.fn(function*() { yield 'urn:ex#TargetClass'; });
+		mockVocabularyStub.hasIndividuals = vi.fn(() => false);
+		const icon = node.getIcon();
+		expect(icon).toBeInstanceOf(vscode.ThemeIcon);
+	});
+});
+
+describe('PropertyShapeNode.getIcon with blank node URI', () => {
+	it('should use BlankNode when URI contains no colon', () => {
+		const ctx = makeContext();
+		const node = new PropertyShapeNode(ctx, 'root/<blank>', 'blank_node_without_colon');
+		mockVocabularyStub.getShapeTargets = vi.fn(function*() {});
+		const icon = node.getIcon();
+		expect(icon).toBeInstanceOf(vscode.ThemeIcon);
+	});
+
+	it('should use BlankNode with target and resolve property range icon', () => {
+		const ctx = makeContext();
+		const node = new PropertyShapeNode(ctx, 'root/<blank>', 'blank_node_without_colon');
+		mockVocabularyStub.getShapeTargets = vi.fn(function*() { yield 'urn:ex#target'; });
+		mockVocabularyStub.getRange = vi.fn(() => 'http://www.w3.org/2001/XMLSchema#string');
+		const icon = node.getIcon();
+		expect(icon).toBeInstanceOf(vscode.ThemeIcon);
 	});
 });

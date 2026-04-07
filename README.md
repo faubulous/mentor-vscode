@@ -1,5 +1,5 @@
 # Mentor for Visual Studio Code
-[![License: GPL-V3](https://img.shields.io/badge/license-GPL3-brightgreen)](./LICENSE) [![Website](https://img.shields.io/badge/website-mentor--vscode.dev-blue)](https://mentor-vscode.dev) [![Coverage](https://img.shields.io/endpoint?url=https://faubulous.github.io/mentor-vscode/coverage-badge.json)](https://faubulous.github.io/mentor-vscode/)
+[![Website](https://img.shields.io/badge/website-mentor--vscode.dev-blue)](https://mentor-vscode.dev) [![License: GPL-V3](https://img.shields.io/badge/license-GPL3-brightgreen)](./LICENSE) [![Coverage](https://img.shields.io/endpoint?url=https://faubulous.github.io/mentor-vscode/coverage-badge.json)](https://faubulous.github.io/mentor-vscode/)
 
 The developer friendly IDE for RDF knowledge graphs.
 
@@ -38,28 +38,6 @@ The developer friendly IDE for RDF knowledge graphs.
 - Fixed broken auto-implementation of prefixes
 - Properly deleting graphs of untitled files when closing them without saving
 - Added command to query the graph of the currently edited document using SPARQL
-
-### Version 0.5.4: Service Release
-- Fixed bug where () brackets in Turtle got improperly formatted
-
-### Version 0.5.3: Service Release
-- Fixed bug where definitions of terms contianing referenced classes were not revealed in the tree
-- Adapted syntax highlighting to not show red prefixes with new VS Code theme
-
-### Version 0.5.2: New SPARQL query editor and improved notebooks
-- Implemented reveal API which selects terms in the definition tree when placing the cursor in the editor.
-- Bug fixes related to the new parsing infrastructure.
-
-### Version 0.4.0: RDF 1.2 support and new parsers (experimental)
-- Added support for RDF 1.2 syntax in N-Triples, N-Quads, Turtle, TriG, N3
-  - Based on new [mentor-rdf-parsers](https://github.com/faubulous/mentor-rdf-parsers) library
-  - Will enable code formatting and linting in future releases
-- Up to 3x faster workspace indexing because of more efficient parsing
-
-### Version 0.3.11: Minor improvements and bug fixes
-- Added support for highlighting unused variables in SPARQL queries
-- Added support for indexing notebook cells upon indexing the workspace
-- Fixed invalid syntax highlighting of prefixes that contain '-' characters
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 

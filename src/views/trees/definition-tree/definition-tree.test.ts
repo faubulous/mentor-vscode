@@ -78,7 +78,7 @@ describe('DefinitionTree', () => {
 	let selectionHandlers: Array<(e: any) => void>;
 
 	beforeEach(() => {
-		vi.clearAllMocks();
+		vi.resetAllMocks();
 		mockSubscriptions.length = 0;
 		mockContextChangeHandlers.length = 0;
 		mockSettingsChangeHandlers.clear();
@@ -169,5 +169,110 @@ describe('DefinitionTree', () => {
 		await new Promise(r => setTimeout(r, 400));
 		// No reveal called since no context
 		expect(mockDefinitionNodeProvider.getNodeForUri).not.toHaveBeenCalled();
+	});
+
+	it('reveals node in treeView when selection matches an IRI with a known node', async () => {
+		const iri = 'urn:ex#MyClass';
+		const mockNode = { uri: iri, id: 'some-id' };
+		// mockDefinitionNodeProvider.getNodeForUri is the original hoisted mock — use mockReturnValue
+		mockDefinitionNodeProvider.getNodeForUri.mockReturnValue(mockNode as any);
+
+		const mockContext = { getIriAtPosition: vi.fn(() => iri) };
+		mockContextService.contexts = { 'file:///test.ttl': mockContext };
+
+		const revealSpy = vi.spyOn(tree.treeView, 'reveal').mockResolvedValue(undefined);
+
+		const mockEvent = {
+			textEditor: { document: { uri: vscode.Uri.parse('file:///test.ttl') } },
+			selections: [{ active: new vscode.Position(5, 10) }],
+		};
+		for (const h of selectionHandlers) {
+			h(mockEvent);
+		}
+		await new Promise(r => setTimeout(r, 400));
+
+		expect(mockDefinitionNodeProvider.getNodeForUri).toHaveBeenCalledWith(iri);
+		expect(revealSpy).toHaveBeenCalledWith(mockNode, { select: true, focus: false, expand: true });
+	});
+
+	it('does not call reveal when getNodeForUri returns undefined', async () => {
+		// The default mock returns undefined — no need to override
+		const mockContext = { getIriAtPosition: vi.fn(() => 'urn:ex#Missing') };
+		mockContextService.contexts = { 'file:///test.ttl': mockContext };
+
+		const revealSpy = vi.spyOn(tree.treeView, 'reveal').mockResolvedValue(undefined);
+
+		const mockEvent = {
+			textEditor: { document: { uri: vscode.Uri.parse('file:///test.ttl') } },
+			selections: [{ active: new vscode.Position(5, 10) }],
+		};
+		for (const h of selectionHandlers) {
+			h(mockEvent);
+		}
+		await new Promise(r => setTimeout(r, 400));
+
+		expect(revealSpy).not.toHaveBeenCalled();
+	});
+
+	it('does not call reveal when context has no IRI at position', async () => {
+		const mockContext = { getIriAtPosition: vi.fn(() => null) };
+		mockContextService.contexts = { 'file:///test.ttl': mockContext };
+
+		const revealSpy = vi.spyOn(tree.treeView, 'reveal').mockResolvedValue(undefined);
+
+		const mockEvent = {
+			textEditor: { document: { uri: vscode.Uri.parse('file:///test.ttl') } },
+			selections: [{ active: new vscode.Position(5, 10) }],
+		};
+		for (const h of selectionHandlers) {
+			h(mockEvent);
+		}
+		await new Promise(r => setTimeout(r, 400));
+
+		expect(revealSpy).not.toHaveBeenCalled();
+	});
+
+	it('sets view title without language tag when context has no activeLanguageTag', () => {
+		mockContextService.activeContext = { activeLanguageTag: undefined };
+		(tree.treeView as any).title = 'Definition Tree';
+		for (const h of mockContextChangeHandlers) {
+			h();
+		}
+		expect(tree.treeView.title).toBe('Definition Tree');
+	});
+
+	it('cancels previous debounce timer when a second selection fires before timeout', async () => {
+		// Fire two events quickly — the first debounce should be cancelled
+		const mockContext = { getIriAtPosition: vi.fn(() => null) };
+		mockContextService.contexts = { 'file:///test.ttl': mockContext };
+
+		const revealSpy = vi.spyOn(tree.treeView, 'reveal').mockResolvedValue(undefined);
+		const mockEvent = {
+			textEditor: { document: { uri: vscode.Uri.parse('file:///test.ttl') } },
+			selections: [{ active: new vscode.Position(1, 0) }],
+		};
+
+		for (const h of selectionHandlers) { h(mockEvent); }
+		// Immediately fire a second event before the 300ms debounce expires
+		for (const h of selectionHandlers) { h(mockEvent); }
+
+		await new Promise(r => setTimeout(r, 400));
+		// reveal not called (getIriAtPosition returns null)
+		expect(revealSpy).not.toHaveBeenCalled();
+	});
+
+	it('does not call reveal when event has no active selection position', async () => {
+		const mockContext = { getIriAtPosition: vi.fn(() => 'urn:ex#X') };
+		mockContextService.contexts = { 'file:///test.ttl': mockContext };
+
+		const revealSpy = vi.spyOn(tree.treeView, 'reveal').mockResolvedValue(undefined);
+		const mockEvent = {
+			textEditor: { document: { uri: vscode.Uri.parse('file:///test.ttl') } },
+			selections: [], // no selections → e.selections[0]?.active is undefined
+		};
+
+		for (const h of selectionHandlers) { h(mockEvent); }
+		await new Promise(r => setTimeout(r, 400));
+		expect(revealSpy).not.toHaveBeenCalled();
 	});
 });

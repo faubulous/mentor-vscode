@@ -168,5 +168,44 @@ describe('RulesNode', () => {
 			// walkHierarchyPath with empty path → not found → returns undefined
 			expect(makeNode(RulesNode).resolveNodeForUri('urn:ex#rule')).toBeUndefined();
 		});
+
+		it('should return rule instance when typeNode contains the individual', () => {
+			const typeIri = 'urn:ex#RuleClass';
+			const ruleIri = 'urn:ex#myRule';
+
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.getRootShapePath = vi.fn(function*() {}); // empty → rootToType = [typeIri]
+			// Use unconditional mock so the 'mentor:rules' URI always yields typeIri
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === typeIri);
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*(_g: any, uri: any) {
+				if (uri === typeIri) yield ruleIri;
+			});
+
+			// Use 'mentor:rules' so the root RulesNode uses SH.Rule in getSubClassIris
+			const result = makeNode(RulesNode, 'mentor:rules').resolveNodeForUri(ruleIri);
+			expect(result).not.toBeUndefined();
+			expect(result!.uri).toBe(ruleIri);
+		});
+
+		it('should return undefined when typeNode found but target instance not in its children', () => {
+			// Covers the if(found) FALSE branch: typeNode exists but instances don't contain the target
+			const typeIri = 'urn:ex#RuleClass';
+			const searchIri = 'urn:ex#notFound';
+
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield typeIri; });
+			mockVocabularyStub.getRootShapePath = vi.fn(function*() {});
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield typeIri; }); // typeNode found
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === typeIri);
+			// instances don't contain searchIri
+			mockVocabularyStub.getSubjectsOfType = vi.fn(function*(_g: any, uri: any) {
+				if (uri === typeIri) yield 'urn:ex#otherRule'; // different instance
+			});
+
+			const result = makeNode(RulesNode, 'mentor:rules').resolveNodeForUri(searchIri);
+			expect(result).toBeUndefined();
+		});
 	});
 });

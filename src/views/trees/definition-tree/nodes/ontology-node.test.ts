@@ -131,7 +131,15 @@ describe('OntologyNode', () => {
 			const desc = makeOntologyNode().getDescription();
 			expect(desc).toContain('1.0.0');
 		});
-	});
+
+                it('should return base description when uri is empty string', () => {
+                        // Covers the if(this.uri) FALSE branch at line 43
+                        mockVocabularyStub.getOntologyVersionInfo = vi.fn(() => '1.0.0');
+                        const desc = makeOntologyNode('').getDescription();
+                        expect(typeof desc).toBe('string');
+                        expect(desc).not.toContain('1.0.0');
+                });
+        });
 
 	describe('getTooltip', () => {
 		it('should return MarkdownString for mentor:unknown', () => {
@@ -166,11 +174,73 @@ describe('OntologyNode', () => {
 			const hasProps = children.some(c => c instanceof PropertiesNode);
 			expect(hasProps).toBe(true);
 		});
+
+		it('should include IndividualsNode when individuals exist', () => {
+			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield 'urn:ex#T'; });
+			const children = makeOntologyNode().getChildren();
+			expect(children.some(c => c instanceof IndividualsNode)).toBe(true);
+		});
+
+		it('should include ShapesNode when shapes exist', () => {
+			const { SH } = require('@faubulous/mentor-rdf');
+			mockVocabularyStub.getSubClasses = vi.fn(function*(g: any, uri: any) {
+				if (uri === SH.Shape) yield 'urn:ex#S';
+			});
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === 'urn:ex#S');
+			const children = makeOntologyNode().getChildren();
+			expect(children.some(c => c instanceof ShapesNode)).toBe(true);
+		});
+
+		it('should include RulesNode when rules exist', () => {
+			const { SH } = require('@faubulous/mentor-rdf');
+			mockVocabularyStub.getSubClasses = vi.fn(function*(g: any, uri: any) {
+				if (uri === SH.Rule) yield 'urn:ex#R';
+			});
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === 'urn:ex#R');
+			const children = makeOntologyNode().getChildren();
+			expect(children.some(c => c instanceof RulesNode)).toBe(true);
+		});
+
+		it('should include ValidatorsNode when validators exist', () => {
+			const { SH } = require('@faubulous/mentor-rdf');
+			mockVocabularyStub.getSubClasses = vi.fn(function*(g: any, uri: any) {
+				if (uri === SH.Validator) yield 'urn:ex#V';
+			});
+			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === 'urn:ex#V');
+			const children = makeOntologyNode().getChildren();
+			expect(children.some(c => c instanceof ValidatorsNode)).toBe(true);
+		});
 	});
 
 	describe('resolveNodeForUri', () => {
 		it('should return undefined when no children have the URI', () => {
 			expect(makeOntologyNode().resolveNodeForUri('urn:ex#x')).toBeUndefined();
+		});
+
+		it('should return undefined when children exist but none resolves the URI', () => {
+			// Covers the if(found) FALSE branch: loop runs but resolveNodeForUri returns undefined
+			// Include ClassesNode (getSubClasses yields something) but hasType=false → ClassesNode.resolveNodeForUri returns undefined
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield 'urn:ex#C1'; });
+			mockVocabularyStub.hasSubjectsOfType = vi.fn(() => true);
+			mockVocabularyStub.hasType = vi.fn(() => false);
+			const found = makeOntologyNode().resolveNodeForUri('urn:ex#nonexistent');
+			expect(found).toBeUndefined();
+		});
+
+		it('should return found node when a child resolves the URI', () => {
+			// Set up ClassesNode child to resolve a class IRI
+			const classIri = 'urn:ex#C1';
+			const { RDFS } = require('@faubulous/mentor-rdf');
+			mockVocabularyStub.getClasses = vi.fn(function*() { yield classIri; });
+			mockVocabularyStub.hasType = vi.fn((_g: any, _iri: any, type: any) => type === RDFS.Class);
+			mockVocabularyStub.getRootClassPath = vi.fn(function*() {}); // empty → rootToNode = [classIri]
+			// ClassesNode.getSubClassIris() via ClassNodeBase builds ClassNode(classIri)
+			mockVocabularyStub.getSubClasses = vi.fn(function*() { yield classIri; });
+			mockVocabularyStub.hasSubjectsOfType = vi.fn(() => true);
+
+			const found = makeOntologyNode().resolveNodeForUri(classIri);
+			expect(found).not.toBeUndefined();
+			expect(found!.uri).toBe(classIri);
 		});
 	});
 });

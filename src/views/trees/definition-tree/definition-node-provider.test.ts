@@ -73,6 +73,32 @@ describe('DefinitionNodeProvider', () => {
 			expect(mockWorkspaceIndexerStub.onDidFinishIndexing).toHaveBeenCalled();
 			expect(mockSettingsStub.onDidChange).toHaveBeenCalled();
 		});
+
+		it('should refresh tree when onDidChangeDocumentContext handler fires', () => {
+			let ctxHandler: any;
+			mockContextServiceStub.onDidChangeDocumentContext = vi.fn((h: any) => {
+				ctxHandler = h;
+				return { dispose: vi.fn() };
+			});
+			const provider = new DefinitionNodeProvider();
+			provider.document = makeContext();
+			const fireSpy = vi.spyOn((provider as any)._onDidChangeTreeData, 'fire');
+			ctxHandler(makeContext());
+			expect(fireSpy).toHaveBeenCalled();
+		});
+
+		it('should refresh tree when onDidFinishIndexing handler fires', () => {
+			let indexHandler: any;
+			mockWorkspaceIndexerStub.onDidFinishIndexing = vi.fn((h: any) => {
+				indexHandler = h;
+				return { dispose: vi.fn() };
+			});
+			const provider = new DefinitionNodeProvider();
+			provider.document = makeContext();
+			const fireSpy = vi.spyOn((provider as any)._onDidChangeTreeData, 'fire');
+			indexHandler();
+			expect(fireSpy).toHaveBeenCalled();
+		});
 	});
 
 	describe('getParent', () => {
@@ -201,6 +227,174 @@ describe('DefinitionNodeProvider', () => {
 		it('should return undefined when node cache is empty and no roots', () => {
 			const provider = new DefinitionNodeProvider();
 			expect(provider.getNodeForUri('urn:ex#NotFound')).toBeUndefined();
+		});
+
+		it('should return cached node when URI was seen during getChildren', () => {
+			mockSettingsStub.get = vi.fn((k: string, d?: any) => {
+				if (k === 'view.definitionTree.defaultLayout') return DefinitionTreeLayout.ByType;
+				return true;
+			});
+			mockVocabularyStub.getOntologies = vi.fn(function*() { yield 'urn:ex#onto'; });
+
+			const provider = new DefinitionNodeProvider();
+			provider.document = makeContext();
+
+			// Calling getChildren populates the internal node cache for non-mentor: URIs
+			provider.getChildren(undefined);
+
+			// Second call uses the cache path (early return)
+			const result = provider.getNodeForUri('urn:ex#onto');
+			expect(result).toBeDefined();
+			expect(result).toBeInstanceOf(OntologyNode);
+		});
+
+		it('should return cache hit on repeated getNodeForUri call', () => {
+			mockSettingsStub.get = vi.fn((k: string, d?: any) => {
+				if (k === 'view.definitionTree.defaultLayout') return DefinitionTreeLayout.ByType;
+				return true;
+			});
+			mockVocabularyStub.getOntologies = vi.fn(function*() { yield 'urn:ex#onto2'; });
+
+			const provider = new DefinitionNodeProvider();
+			provider.document = makeContext();
+			provider.getChildren(undefined);
+
+			const first = provider.getNodeForUri('urn:ex#onto2');
+			const second = provider.getNodeForUri('urn:ex#onto2');
+			expect(first).toBe(second); // same cached instance
+		});
+
+		it('should find node via resolveNodeForUri when not in cache', () => {
+			const provider = new DefinitionNodeProvider();
+			const ctx = makeContext();
+			const mockNode = new DefinitionTreeNode(ctx, 'root/child', 'urn:ex#Child');
+			const mockRoot = new DefinitionTreeNode(ctx, 'root', 'urn:ex#Root');
+			(mockRoot as any).resolveNodeForUri = vi.fn((iri: string) => iri === 'urn:ex#Child' ? mockNode : undefined);
+			vi.spyOn(provider, 'getChildren').mockReturnValue([mockRoot]);
+
+			const found = provider.getNodeForUri('urn:ex#Child');
+			expect(found).toBe(mockNode);
+		});
+	});
+
+	describe('getRootNodes — no document', () => {
+		it('should return empty array when document is not set', () => {
+			const provider = new DefinitionNodeProvider();
+			expect(provider.getRootNodes()).toEqual([]);
+		});
+	});
+
+	describe('getRootNodes — all vocabulary types', () => {
+		function makeByTypeProvider() {
+			mockSettingsStub.get = vi.fn((k: string, d?: any) => {
+				if (k === 'view.definitionTree.defaultLayout') return DefinitionTreeLayout.ByType;
+				return true;
+			});
+			const provider = new DefinitionNodeProvider();
+			provider.document = makeContext();
+			return provider;
+		}
+
+		it('should include PropertiesNode when properties exist', () => {
+			mockVocabularyStub.getProperties = vi.fn(function*() { yield 'urn:ex#p1'; });
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'PropertiesNode')).toBe(true);
+		});
+
+		it('should include IndividualsNode when individuals exist', () => {
+			mockVocabularyStub.getIndividuals = vi.fn(function*() { yield 'urn:ex#i1'; });
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'IndividualsNode')).toBe(true);
+		});
+
+		it('should include ShapesNode when shapes exist', () => {
+			mockVocabularyStub.getShapes = vi.fn(function*() { yield 'urn:ex#s1'; });
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'ShapesNode')).toBe(true);
+		});
+
+		it('should include RulesNode when rules exist', () => {
+			mockVocabularyStub.getRules = vi.fn(function*() { yield 'urn:ex#r1'; });
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'RulesNode')).toBe(true);
+		});
+
+		it('should include ValidatorsNode when validators exist', () => {
+			mockVocabularyStub.getValidators = vi.fn(function*() { yield 'urn:ex#v1'; });
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'ValidatorsNode')).toBe(true);
+		});
+
+		it('should include ConceptSchemeNode when concept schemes exist', () => {
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() { yield 'urn:ex#scheme1'; });
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c instanceof OntologyNode || c.constructor.name === 'ConceptSchemeNode')).toBe(true);
+		});
+	});
+
+	describe('getRootNodesWithSources — source nodes and unknown', () => {
+		function makeBySourceProvider() {
+			mockSettingsStub.get = vi.fn((k: string, d?: any) => {
+				if (k === 'view.definitionTree.defaultLayout') return DefinitionTreeLayout.BySource;
+				return d;
+			});
+			const provider = new DefinitionNodeProvider();
+			provider.document = makeContext();
+			return provider;
+		}
+
+		it('should create source OntologyNode for definition sources not matching any ontology', () => {
+			mockVocabularyStub.getOntologies = vi.fn(function*() {});
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() {});
+			mockVocabularyStub.getDefinitionSources = vi.fn(function*() { yield 'urn:ex#source1'; });
+
+			const children = makeBySourceProvider().getChildren(undefined);
+			const sourceNode = children!.find(c => c instanceof OntologyNode) as OntologyNode | undefined;
+			expect(sourceNode).toBeDefined();
+			expect(sourceNode!.isReferenced).toBe(true);
+		});
+
+		it('should skip definition source when it matches an ontology URI', () => {
+			mockVocabularyStub.getOntologies = vi.fn(function*() { yield 'urn:ex#onto'; });
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() {});
+			mockVocabularyStub.getDefinitionSources = vi.fn(function*() { yield 'urn:ex#onto'; });
+
+			const children = makeBySourceProvider().getChildren(undefined);
+			// Only the ontology node should be present, not a second source node
+			const ontologyNodes = children!.filter(c => c instanceof OntologyNode);
+			expect(ontologyNodes).toHaveLength(1);
+		});
+
+		it('should add unknown node when there are definitions with no declared source', () => {
+			mockVocabularyStub.getOntologies = vi.fn(function*() {});
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() {});
+			mockVocabularyStub.getDefinitionSources = vi.fn(function*() {});
+			// Make getClasses yield something so hasUnknown = true
+			mockVocabularyStub.getClasses = vi.fn(function*() { yield 'urn:ex#C'; });
+
+			const children = makeBySourceProvider().getChildren(undefined);
+			const unknownNode = children!.find(c => c instanceof OntologyNode && c.uri === 'mentor:unknown');
+			expect(unknownNode).toBeDefined();
+		});
+
+		it('should expand the single result when only one source exists', () => {
+			mockVocabularyStub.getOntologies = vi.fn(function*() { yield 'urn:ex#solo'; });
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() {});
+			mockVocabularyStub.getDefinitionSources = vi.fn(function*() {});
+
+			const children = makeBySourceProvider().getChildren(undefined);
+			expect(children!.length).toBe(1);
+			// Single result gets Expanded state (2 = Expanded in vscode.TreeItemCollapsibleState)
+			expect(children![0].initialCollapsibleState).toBe(2);
+		});
+
+		it('should include ConceptSchemeNode for each concept scheme in BySource layout', () => {
+			mockVocabularyStub.getOntologies = vi.fn(function*() {});
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() { yield 'urn:ex#scheme1'; });
+			mockVocabularyStub.getDefinitionSources = vi.fn(function*() {});
+
+			const children = makeBySourceProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'ConceptSchemeNode')).toBe(true);
 		});
 	});
 });
