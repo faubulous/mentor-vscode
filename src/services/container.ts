@@ -7,6 +7,7 @@ import { InferenceUri } from '../providers/inference-uri';
 import { DocumentFactory } from './document/document-factory';
 import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
+import { WorkspaceService } from './core/workspace-service';
 import { DocumentContextService } from './document/document-context-service';
 import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
@@ -57,6 +58,9 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 
 	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
+
+	const workspaceService = new WorkspaceService();
+	container.registerInstance(ServiceToken.WorkspaceService, workspaceService);
 
 	const workspaceFileService = new WorkspaceFileService(documentFactory);
 	container.registerInstance(ServiceToken.WorkspaceFileService, workspaceFileService);

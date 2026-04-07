@@ -48,6 +48,8 @@ export enum ServiceToken {
 	SparqlConnectionController = "SparqlConnectionController",
 	/** Controller for the SPARQL connections list webview. */
 	SparqlConnectionsListController = "SparqlConnectionsListController",
+	/** Service for discovering VS Code workspace files and their identifiers. */
+	WorkspaceService = "WorkspaceService",
 	/** Factory for creating platform-specific language clients (browser Worker vs Node.js IPC). */
 	LanguageClientFactory = "LanguageClientFactory"
 }

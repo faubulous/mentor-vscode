@@ -5,7 +5,7 @@ import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { configureServiceContainer } from './services/container';
 import { ServiceToken } from './services/tokens';
-import { IWorkspaceFileService } from './services/core';
+import { IWorkspaceFileService, IWorkspaceService } from './services/core';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
@@ -123,6 +123,10 @@ async function loadFrameworkOntologies() {
  * Indexes the entire workspace to provide language features such as hovers, completions and definitions. This is done on activation to ensure that these features are available immediately after the extension is activated.
  */
 async function indexWorkspace() {
+	// Discover all VS Code workspace files for workspace ID resolution.
+	const workspaceService = container.resolve<IWorkspaceService>(ServiceToken.WorkspaceService);
+	await workspaceService.discoverWorkspaces();
+
 	// Discover all supported files in the workspace.
 	const workspaceFileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
 	await workspaceFileService.discoverFiles();
