@@ -190,7 +190,7 @@ describe('DefinitionTreeNode', () => {
 			const node = new DefinitionTreeNode(makeContext(), 'id', 'urn:x', { definedBy: 'urn:ontology' });
 			const opts = node.getQueryOptions({ includeSubTypes: false });
 			expect(opts.definedBy).toBe('urn:ontology');
-			expect(opts.includeSubTypes).toBe(false);
+			expect((opts as any).includeSubTypes).toBe(false);
 		});
 
 		it('should let additionalOptions override base options', () => {

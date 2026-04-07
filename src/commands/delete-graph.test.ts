@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-let mockGetConnectionForDocument: ReturnType<typeof vi.fn>;
-let mockDeleteGraphs: ReturnType<typeof vi.fn>;
+let mockGetConnectionForDocument: Mock;
+let mockDeleteGraphs: Mock;
 
 const { mockSetQuerySourceForDocument, mockExecuteQueryFromTextDocument, mockGetConfig } = vi.hoisted(() => ({
 	mockSetQuerySourceForDocument: vi.fn(async () => {}),
@@ -18,7 +18,7 @@ vi.mock('tsyringe', () => ({
 			if (token === 'SparqlConnectionService') {
 				return {
 					getConnectionForDocument: (...args: any[]) => mockGetConnectionForDocument(...args),
-					setQuerySourceForDocument: (...args: any[]) => mockSetQuerySourceForDocument(...args),
+					setQuerySourceForDocument: mockSetQuerySourceForDocument,
 					getConnections: vi.fn(() => []),
 				};
 			}
@@ -26,7 +26,7 @@ vi.mock('tsyringe', () => ({
 				return { deleteGraphs: (...args: any[]) => mockDeleteGraphs(...args) };
 			}
 			if (token === 'SparqlResultsController') {
-				return { executeQueryFromTextDocument: (...args: any[]) => mockExecuteQueryFromTextDocument(...args) };
+				return { executeQueryFromTextDocument: mockExecuteQueryFromTextDocument };
 			}
 			return {};
 		}),
@@ -37,7 +37,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: (...args: any[]) => mockGetConfig(...args),
+	getConfig: mockGetConfig,
 }));
 
 import * as vscode from 'vscode';

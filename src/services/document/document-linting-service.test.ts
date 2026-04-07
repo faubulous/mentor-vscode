@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
@@ -11,7 +11,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 let mockSubscriptions: any[];
-let mockWaitForIndexed: ReturnType<typeof vi.fn>;
+let mockWaitForIndexed: Mock;
 let mockSupportedLanguages: Set<string>;
 let mockDiagnosticCollectionDispose: ReturnType<typeof vi.fn>;
 let mockDiagnosticCollectionClear: ReturnType<typeof vi.fn>;

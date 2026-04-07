@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-let mockImplementPrefixes: ReturnType<typeof vi.fn>;
+let mockImplementPrefixes: Mock;
 
 vi.mock('tsyringe', () => ({
 	container: {

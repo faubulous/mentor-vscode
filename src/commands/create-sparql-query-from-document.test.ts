@@ -8,7 +8,7 @@ const { mockGetConfig } = vi.hoisted(() => ({
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: (...args: any[]) => mockGetConfig(...args),
+	getConfig: mockGetConfig,
 }));
 
 vi.mock('tsyringe', () => ({

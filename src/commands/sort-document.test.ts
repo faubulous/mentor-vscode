@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-
-const mockVscode = await import('@src/utilities/mocks/vscode');
+import * as mockVscode from '@src/utilities/mocks/vscode';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({

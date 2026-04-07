@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-let mockGetQueryStateForDocument: ReturnType<typeof vi.fn>;
-let mockRemoveQueryState: ReturnType<typeof vi.fn>;
+let mockGetQueryStateForDocument: Mock;
+let mockRemoveQueryState: Mock;
 
 vi.mock('tsyringe', () => ({
 	container: {

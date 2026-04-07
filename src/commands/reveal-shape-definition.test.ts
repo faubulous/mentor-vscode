@@ -5,7 +5,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 const { mockActivateDocument, mockActiveContext, mockGetShapes } = vi.hoisted(() => ({
 	mockActivateDocument: vi.fn(),
 	mockActiveContext: { graphs: ['urn:g1'] },
-	mockGetShapes: vi.fn(function*() {}),
+	mockGetShapes: vi.fn(function*(): Generator<string, void, unknown> {}),
 }));
 
 vi.mock('tsyringe', () => ({

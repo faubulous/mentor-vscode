@@ -7,8 +7,8 @@ const { mockGetConfig, mockGetContext, mockImplementPrefixes, mockContextService
     const mockGetContext = vi.fn(() => null as any);
     const mockImplementPrefixes = vi.fn(async () => ({ size: 0 }));
     const mockContextService = {
-        onDidChangeDocumentContext: vi.fn(() => ({ dispose: vi.fn() })),
-        getContext: (...args: any[]) => mockGetContext(...args),
+        onDidChangeDocumentContext: vi.fn((_handler?: any) => ({ dispose: vi.fn() })),
+        getContext: mockGetContext,
         contexts: {},
     };
     const mockGetConfig = vi.fn(() => ({ get: (_k: string, d?: any) => d }));
@@ -16,7 +16,7 @@ const { mockGetConfig, mockGetContext, mockImplementPrefixes, mockContextService
 });
 
 vi.mock('@src/utilities/vscode/config', () => ({
-    getConfig: (...args: any[]) => mockGetConfig(...args),
+    getConfig: mockGetConfig,
 }));
 
 vi.mock('tsyringe', () => ({

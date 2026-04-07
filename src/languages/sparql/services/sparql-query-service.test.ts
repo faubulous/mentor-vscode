@@ -6,7 +6,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 const queryMock = vi.fn();
 
 vi.mock('@comunica/query-sparql', () => ({
-    QueryEngine: vi.fn().mockImplementation(function() {
+    QueryEngine: vi.fn().mockImplementation(function(this: any) {
         this.query = queryMock;
     }),
 }));

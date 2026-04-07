@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-let mockExecuteQueryOnConnection: ReturnType<typeof vi.fn>;
+let mockExecuteQueryOnConnection: Mock;
 
 const { MENTOR_WORKSPACE_STORE } = vi.hoisted(() => ({
 	MENTOR_WORKSPACE_STORE: { id: 'workspace', endpointUrl: 'workspace' },

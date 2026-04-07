@@ -15,12 +15,12 @@ vi.mock('tsyringe', () => ({
 			if (token === 'SparqlConnectionService') {
 				return {
 					getConnectionForDocument: vi.fn(() => undefined),
-					setQuerySourceForDocument: (...args: any[]) => mockSetQuerySourceForDocument(...args),
+					setQuerySourceForDocument: mockSetQuerySourceForDocument,
 					getConnections: vi.fn(() => []),
 				};
 			}
 			if (token === 'SparqlResultsController') {
-				return { executeQueryFromTextDocument: (...args: any[]) => mockExecuteQueryFromTextDocument(...args) };
+				return { executeQueryFromTextDocument: mockExecuteQueryFromTextDocument };
 			}
 			return {};
 		}),
@@ -31,7 +31,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: (...args: any[]) => mockGetConfig(...args),
+	getConfig: mockGetConfig,
 }));
 
 import * as vscode from 'vscode';

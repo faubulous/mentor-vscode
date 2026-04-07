@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
@@ -10,9 +10,9 @@ vi.mock('@src/utilities/vscode/config', () => ({
 import * as vscode from 'vscode';
 import { WorkspaceIndexerService } from './workspace-indexer-service';
 
-let mockIsSupportedNotebookFile: ReturnType<typeof vi.fn>;
-let mockIsTripleSourceLanguage: ReturnType<typeof vi.fn>;
-let mockLoadDocument: ReturnType<typeof vi.fn>;
+let mockIsSupportedNotebookFile: Mock;
+let mockIsTripleSourceLanguage: Mock;
+let mockLoadDocument: Mock;
 let mockContexts: Record<string, any>;
 
 let mockDocumentFactory: any;
