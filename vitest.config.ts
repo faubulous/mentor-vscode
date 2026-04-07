@@ -21,9 +21,12 @@ export default defineConfig({
         'test/',
         'vitest.config.ts',
         'jest.config.ts',
+        'extension.ts',
         '**/mocks/**',
         '**/*.test.ts',
-        '**/*.spec.ts'
+        '**/*.spec.ts',
+        '**/*.browser.ts',
+        '**/*.node.ts',
       ]
     },
   },

@@ -26,7 +26,6 @@
     "sourceMap": true, // Do we need this when using esbuild?
     "strict": true,
     "noEmit": true, // Do not emit output files, just check for errors.
-    "declaration": true,
     "skipLibCheck": true, // Don't fail on errors in imported libraries. 
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
@@ -44,8 +43,5 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.d.ts"
-  ],
-  "references": [
-    { "path": "./tsconfig.spec.json" }
   ]
 }
