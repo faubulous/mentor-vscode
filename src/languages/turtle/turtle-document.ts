@@ -6,6 +6,7 @@ import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubul
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
 	countLeadingWhitespace,
 	countTrailingWhitespace,
@@ -121,7 +122,7 @@ export class TurtleDocument extends DocumentContext {
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			store.executeInference(this.graphIri.toString());
+			store.executeInference(WorkspaceUri.toCanonicalString(this.graphIri));
 		}
 	}
 
@@ -135,7 +136,7 @@ export class TurtleDocument extends DocumentContext {
 			const store = container.resolve<Store>(ServiceToken.Store);
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
-			const graphUri = this.graphIri.toString();
+			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 			const g = store.dataFactory.namedNode(graphUri);
 
 			this.graphs.length = 0;

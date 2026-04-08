@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Utils } from 'vscode-uri';
 
 /**
  * A helper class which provides methods to convert between absolute file system 
@@ -43,8 +44,39 @@ export class WorkspaceUri {
 	static rootUri: vscode.Uri | undefined;
 
 	/**
+	 * Returns the canonical string representation of a workspace URI.
+	 * 
+	 * This is needed because `vscode.Uri.toString()` drops the empty authority,
+	 * serializing `workspace:///path` as `workspace:/path`. This method ensures the
+	 * canonical triple-slash form `workspace:///path` is always produced.
+	 * 
+	 * For non-workspace URIs, delegates to `toString(true)` (skip encoding).
+	 * For string inputs, returns the string unchanged.
+	 */
+	static toCanonicalString(uri: vscode.Uri | string): string {
+		if (typeof uri === 'string') {
+			return uri;
+		}
+
+		if (uri.scheme !== this.uriScheme) {
+			return uri.toString(true);
+		}
+
+		const query = uri.query ? `?${uri.query}` : '';
+		const fragment = uri.fragment ? `#${uri.fragment}` : '';
+
+		return `${this.uriScheme}://${uri.path}${query}${fragment}`;
+	}
+
+	/**
 	 * Returns the effective root URI for workspace-relative path resolution.
-	 * Falls back to the first workspace folder if no monorepo root is configured.
+	 *
+	 * Priority:
+	 * 1. Explicit monorepo root (`rootUri` set via `mentor.workspace.rootOffset`).
+	 * 2. Parent directory of the active `.code-workspace` file — this ensures that
+	 *    folder names are preserved in workspace URIs (e.g. `workspace:///examples/file.ttl`
+	 *    instead of `workspace:///file.ttl`).
+	 * 3. First workspace folder (single-folder workspace, no workspace file).
 	 */
 	static getEffectiveRootUri(): vscode.Uri | undefined {
 		if (this.rootUri) {
@@ -55,6 +87,14 @@ export class WorkspaceUri {
 
 		if (!folders || folders.length === 0) {
 			return undefined;
+		}
+
+		// When a .code-workspace file is open, its parent directory is the natural root —
+		// all folder paths in the workspace file are relative to it.
+		const workspaceFile = vscode.workspace.workspaceFile;
+
+		if (workspaceFile) {
+			return Utils.dirname(workspaceFile);
 		}
 
 		return folders[0].uri;

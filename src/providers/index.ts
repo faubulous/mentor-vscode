@@ -5,5 +5,6 @@ export * from './resource-definition-provider';
 export * from './resource-reference-provider';
 export * from './resource-tooltip-provider';
 export * from './workspace-uri';
+export * from './workspace-uri-diagnostic-provider';
 export * from './workspace-file-system-provider';
 export * from './workspace-uri-link-provider';

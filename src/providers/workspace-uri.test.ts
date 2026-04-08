@@ -15,9 +15,8 @@ describe('WorkspaceUri', () => {
 
 		expect(workspaceUri).toBeTruthy();
 		expect(workspaceUri.scheme).toBe('workspace');
-
-		// Expect relative path preserved (ignore how toString formats slashes)
 		expect(workspaceUri.path).toBe('/dir/file.ttl');
+		expect(WorkspaceUri.toCanonicalString(workspaceUri)).toBe('workspace:///dir/file.ttl');
 	});
 
 	it('converts vscode-notebook-cell: -> workspace: and preserves fragments', () => {
@@ -167,6 +166,7 @@ describe('WorkspaceUri', () => {
 
 			expect(workspaceUri.scheme).toBe('workspace');
 			expect(workspaceUri.path).toBe('/shared/core.ttl');
+			expect(WorkspaceUri.toCanonicalString(workspaceUri)).toBe('workspace:///shared/core.ttl');
 		});
 
 		it('uses the monorepo root for toFileUri when rootUri is set', () => {
@@ -240,6 +240,102 @@ describe('WorkspaceUri', () => {
 
 			// Should use /w (the mock workspace folder root).
 			expect(wsUri.path).toBe('/dir/file.ttl');
+		});
+	});
+
+	describe('with .code-workspace file (multi-folder workspace)', () => {
+		const savedWorkspaceFile = (vscode.workspace as any).workspaceFile;
+		const savedFolders = (vscode.workspace as any).workspaceFolders;
+
+		afterEach(() => {
+			(vscode.workspace as any).workspaceFile = savedWorkspaceFile;
+			(vscode.workspace as any).workspaceFolders = savedFolders;
+		});
+
+		it('includes the folder name in workspace URIs when a workspace file is open', () => {
+			// Workspace file at the project root; folders are subdirectories.
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///project/workspace.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'examples', index: 0, uri: vscode.Uri.parse('file:///project/examples') },
+				{ name: 'onto2', index: 1, uri: vscode.Uri.parse('file:///project/onto2/example2') },
+			];
+
+			const fileUri = vscode.Uri.parse('file:///project/examples/mytaxonomy.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+			expect(wsUri.scheme).toBe('workspace');
+			// Folder name must be preserved.
+			expect(wsUri.path).toBe('/examples/mytaxonomy.ttl');
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///examples/mytaxonomy.ttl');
+		});
+
+		it('resolves files in a second workspace folder correctly', () => {
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///project/workspace.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'examples', index: 0, uri: vscode.Uri.parse('file:///project/examples') },
+				{ name: 'onto2', index: 1, uri: vscode.Uri.parse('file:///project/onto2/example2') },
+			];
+
+			const fileUri = vscode.Uri.parse('file:///project/onto2/example2/electrochemistry.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+			expect(wsUri.scheme).toBe('workspace');
+			expect(wsUri.path).toBe('/onto2/example2/electrochemistry.ttl');
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///onto2/example2/electrochemistry.ttl');
+		});
+
+		it('round-trips workspace file URIs correctly', () => {
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///project/workspace.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'examples', index: 0, uri: vscode.Uri.parse('file:///project/examples') },
+			];
+
+			const original = vscode.Uri.parse('file:///project/examples/pizza.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(original)!;
+			const restored = WorkspaceUri.toFileUri(wsUri);
+
+			expect(restored.path).toBe('/project/examples/pizza.ttl');
+		});
+	});
+
+	describe('toCanonicalString', () => {
+		it('produces triple-slash format for workspace URIs', () => {
+			const wsUri = vscode.Uri.parse('workspace:///dir/file.ttl');
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///dir/file.ttl');
+		});
+
+		it('preserves query parameters', () => {
+			const wsUri = vscode.Uri.parse('workspace:///dir/file.ttl?inference');
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///dir/file.ttl?inference');
+		});
+
+		it('preserves fragments', () => {
+			const wsUri = vscode.Uri.parse('workspace:///notebook.mnb#cell5');
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///notebook.mnb#cell5');
+		});
+
+		it('delegates to toString(true) for non-workspace URIs', () => {
+			const httpUri = vscode.Uri.parse('http://example.org/ontology');
+			expect(WorkspaceUri.toCanonicalString(httpUri)).toBe('http://example.org/ontology');
+		});
+
+		it('returns string inputs unchanged', () => {
+			expect(WorkspaceUri.toCanonicalString('workspace:///dir/file.ttl')).toBe('workspace:///dir/file.ttl');
+			expect(WorkspaceUri.toCanonicalString('http://example.org')).toBe('http://example.org');
+		});
+
+		it('round-trips file -> workspace -> canonical string correctly', () => {
+			const fileUri = vscode.Uri.parse('file:///w/ontologies/pizza.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///ontologies/pizza.ttl');
+		});
+
+		it('round-trips with monorepo root correctly', () => {
+			WorkspaceUri.rootUri = vscode.Uri.parse('file:///monorepo');
+
+			const fileUri = vscode.Uri.parse('file:///monorepo/shared/core.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///shared/core.ttl');
 		});
 	});
 });

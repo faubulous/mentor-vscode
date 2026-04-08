@@ -101,12 +101,7 @@ export const env = {
 };
 
 export const languages = {
-  createDiagnosticCollection: (_name?: string) => ({
-    set: () => {},
-    delete: () => {},
-    clear: () => {},
-    dispose: () => {},
-  }),
+  createDiagnosticCollection: (_name?: string) => new DiagnosticCollection(),
   getDiagnostics: (_uri?: any) => [] as any[],
   registerCodeActionsProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
   registerCodeLensProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
@@ -132,6 +127,15 @@ export const CodeActionKind = {
   SourceOrganizeImports: { value: 'source.organizeImports' },
   SourceFixAll: { value: 'source.fixAll' },
 };
+
+export class CodeAction {
+  diagnostics?: any[];
+  isPreferred?: boolean;
+  edit?: WorkspaceEdit;
+  command?: any;
+
+  constructor(public title: string, public kind?: any) {}
+}
 
 export const FileChangeType = {
   Created: 1,
@@ -273,6 +277,25 @@ export class Range {
       (end.line < this.end.line || (end.line === this.end.line && end.character <= this.end.character))
     );
   }
+
+  intersection(other: Range): Range | undefined {
+    const startLine = Math.max(this.start.line, other.start.line);
+    const endLine = Math.min(this.end.line, other.end.line);
+
+    if (startLine > endLine) return undefined;
+
+    const startChar = startLine === this.start.line && startLine === other.start.line
+      ? Math.max(this.start.character, other.start.character)
+      : startLine === this.start.line ? this.start.character : other.start.character;
+
+    const endChar = endLine === this.end.line && endLine === other.end.line
+      ? Math.min(this.end.character, other.end.character)
+      : endLine === this.end.line ? this.end.character : other.end.character;
+
+    if (startLine === endLine && startChar > endChar) return undefined;
+
+    return new Range(new Position(startLine, startChar), new Position(endLine, endChar));
+  }
 }
 
 export class Location {
@@ -366,9 +389,11 @@ export class TextEdit {
 }
 
 export class DiagnosticCollection {
-  set() {}
-  delete() {}
-  clear() {}
+  private _entries = new Map<string, any[]>();
+  set(uri: any, diagnostics: any[]) { this._entries.set(uri?.toString?.() ?? '', diagnostics); }
+  get(uri: any) { return this._entries.get(uri?.toString?.() ?? ''); }
+  delete(uri: any) { this._entries.delete(uri?.toString?.() ?? ''); }
+  clear() { this._entries.clear(); }
   dispose() {}
 }
 
@@ -440,6 +465,23 @@ export const DiagnosticSeverity = {
   Information: 2,
   Hint: 3,
 };
+
+export const DiagnosticTag = {
+  Unnecessary: 1,
+  Deprecated: 2,
+};
+
+export class Diagnostic {
+  code?: string | number;
+  source?: string;
+  tags?: number[];
+
+  constructor(
+    public range: Range,
+    public message: string,
+    public severity: number = DiagnosticSeverity.Error,
+  ) {}
+}
 
 export const TreeItemCollapsibleState = {
   None: 0,

@@ -4,6 +4,7 @@ import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { getIriFromPrefixedName } from '@src/utilities';
 
@@ -255,7 +256,7 @@ export class XmlDocument extends DocumentContext {
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			this.store.executeInference(this.graphIri.toString());
+			this.store.executeInference(WorkspaceUri.toCanonicalString(this.graphIri));
 		}
 	}
 
@@ -266,7 +267,7 @@ export class XmlDocument extends DocumentContext {
 	 */
 	override async loadTriples(data: string): Promise<void> {
 		try {
-			const graphUri = this.graphIri.toString();
+			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.

@@ -4,6 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISparqlQueryService } from '@src/languages/sparql/services';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { MENTOR_WORKSPACE_STORE } from '@src/languages/sparql/services/sparql-connection-service';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 const LARGE_GRAPH_THRESHOLD = 10000;
 
@@ -20,7 +21,7 @@ export const openGraph = {
 				WHERE {
 					SELECT ?s
 					WHERE {
-						GRAPH <${graphIri.toString(true)}> {
+						GRAPH <${WorkspaceUri.toCanonicalString(graphIri)}> {
 							?s ?p ?o .
 						}
 					}
@@ -49,7 +50,7 @@ export const openGraph = {
 				CONSTRUCT {
 					?s ?p ?o .
 				} WHERE {
-					GRAPH <${graphIri.toString(true)}> {
+					GRAPH <${WorkspaceUri.toCanonicalString(graphIri)}> {
 						?s ?p ?o .
 					}
 				}`;

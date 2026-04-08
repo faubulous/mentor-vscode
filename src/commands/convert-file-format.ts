@@ -4,6 +4,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentFactory, ILanguageInfo } from '@src/services/document/document-factory.interface';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 export const convertFileFormat = {
 	id: 'mentor.command.convertFileFormat',
@@ -73,7 +74,7 @@ async function convertFileFormatHandler(targetLanguageId?: string) {
 		return;
 	}
 
-	const sourceGraphIri = context.graphIri.toString();
+	const sourceGraphIri = WorkspaceUri.toCanonicalString(context.graphIri);
 	const targetGraphIri = await selectTargetGraphIri(sourceGraphIri, selectedLanguage.id);
 	const targetLanguage = selectedLanguage.mimetypes[0];
 

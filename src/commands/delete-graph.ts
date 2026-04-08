@@ -5,13 +5,14 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { SparqlResultsController } from '@src/views/webviews';
 import { getConfig } from '@src/utilities/vscode/config';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 export const deleteGraph = {
 	id: 'mentor.command.deleteGraph',
 	handler: async (documentIri: string, graphIri: vscode.Uri | string) => {
 		// Ask for confirmation before deleting
 		const answer = await vscode.window.showWarningMessage(
-			`Are you sure you want to delete the graph "${graphIri.toString(true)}"? This action cannot be undone.`,
+			`Are you sure you want to delete the graph "${WorkspaceUri.toCanonicalString(graphIri)}"? This action cannot be undone.`,
 			{ modal: true },
 			'Delete'
 		);
@@ -29,7 +30,7 @@ export const deleteGraph = {
 		}
 
 		if (connection.id === 'workspace') {
-			container.resolve<Store>(ServiceToken.Store).deleteGraphs([graphIri.toString(true)]);
+			container.resolve<Store>(ServiceToken.Store).deleteGraphs([WorkspaceUri.toCanonicalString(graphIri)]);
 		} else {
 			const query = getConfig().get<string>('sparql.dropGraphQuery');
 
@@ -40,7 +41,7 @@ export const deleteGraph = {
 
 			// Create an untitled SPARQL document with the drop graph query
 			const document = await vscode.workspace.openTextDocument({
-				content: query.replace('@graphIri', graphIri.toString(true)),
+				content: query.replace('@graphIri', WorkspaceUri.toCanonicalString(graphIri)),
 				language: 'sparql'
 			});
 
