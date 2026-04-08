@@ -57,6 +57,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 
 	const handleOpenGraph = (node: Term) => {
 		const value = node.value;
+
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.openGraph',
@@ -124,13 +125,14 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 	/**
 	 * Renders the inline content of a node without cell wrapper or actions.
 	 */
-	const renderNodeContent = (binding: Term, namespaceMap?: Record<string, string>): React.ReactNode => {
+	const renderNodeContent = (binding: Term, namespaceMap?: Record<string, string>, isGraph?: boolean): React.ReactNode => {
 		switch (binding.termType) {
 			case 'NamedNode': {
-				const label = getNamedNodeLabel(binding, namespaceMap);
+				const clickHandler = isGraph ? handleOpenGraph : handleDescribeNamedNode;
+
 				return (
-					<a href="#" onClick={() => handleDescribeNamedNode(binding)}>
-						{label}
+					<a href="#" onClick={() => clickHandler(binding)}>
+						{getNamedNodeLabel(binding, namespaceMap)}
 					</a>
 				);
 			}
@@ -230,7 +232,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		return (
 			<div className="cell">
 				<pre className="cell-value">
-					{renderNodeContent(binding, namespaceMap)}
+					{renderNodeContent(binding, namespaceMap, isGraph)}
 				</pre>
 				<div className="cell-actions">
 					{renderNodeActions(binding, isGraph)}
