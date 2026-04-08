@@ -6,6 +6,11 @@ import * as vscode from 'vscode';
  * to provide shortened document URIs that are also resolvable when stored in a
  * version control system repository.
  * 
+ * When a monorepo root is configured (via the `mentor.workspace.rootOffset` setting in
+ * a `.code-workspace` file), all workspace-relative paths are resolved against that root.
+ * This ensures that graph IRIs are identical across different workspaces that share the 
+ * same monorepo root.
+ * 
  * @note We need vscode.workspaces here to resolve the URIs. So this helper cannot be used
  * in webview or LSP processes.
  */
@@ -31,9 +36,34 @@ export class WorkspaceUri {
 	]);
 
 	/**
+	 * The monorepo root URI to resolve workspace-relative paths against.
+	 * When set, all workspace URIs are relative to this root instead of the first workspace folder.
+	 * Set by `WorkspaceService` after discovery.
+	 */
+	static rootUri: vscode.Uri | undefined;
+
+	/**
+	 * Returns the effective root URI for workspace-relative path resolution.
+	 * Falls back to the first workspace folder if no monorepo root is configured.
+	 */
+	static getEffectiveRootUri(): vscode.Uri | undefined {
+		if (this.rootUri) {
+			return this.rootUri;
+		}
+
+		const folders = vscode.workspace.workspaceFolders;
+
+		if (!folders || folders.length === 0) {
+			return undefined;
+		}
+
+		return folders[0].uri;
+	}
+
+	/**
 	 * Converts an absolute file system URI (file://..) to a workspace-relative Mentor VFS URI that
 	 * can be resolved by the Mentor document link provider and the Mentor virtual file system provider.
-	 * @param uri The absolute file system URI to convert.
+	 * @param documentIri The absolute file system URI to convert.
 	 * @returns The corresponding Mentor VFS URI.
 	 */
 	static toWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
@@ -41,24 +71,40 @@ export class WorkspaceUri {
 			return documentIri;
 		}
 
-		const workspaceFolders = vscode.workspace.workspaceFolders;
+		const root = this.getEffectiveRootUri();
 
-		if (!workspaceFolders || workspaceFolders.length === 0) {
+		if (!root) {
 			return undefined;
 		}
 
 		const absolutePath = documentIri.path;
+		const rootPath = root.path;
 
-		for (const workspaceFolder of workspaceFolders) {
-			const workspacePath = workspaceFolder.uri.path;
+		if (absolutePath.startsWith(rootPath)) {
+			const relativePath = absolutePath.substring(rootPath.length);
+			const fragment = documentIri.fragment ? `#${documentIri.fragment}` : '';
 
-			if (absolutePath.startsWith(workspacePath)) {
-				const relativePath = absolutePath.substring(workspacePath.length);
-				const fragment = documentIri.fragment ? `#${documentIri.fragment}` : '';
+			return vscode.Uri.parse(`${this.uriScheme}://${relativePath}${fragment}`);
+		}
 
-				return vscode.Uri.parse(`${this.uriScheme}://${relativePath}${fragment}`);
+		// Fallback: try workspace folders if the monorepo root didn't match
+		// (e.g. file is outside the monorepo root but inside a workspace folder).
+		if (this.rootUri) {
+			const folders = vscode.workspace.workspaceFolders;
+
+			if (folders) {
+				for (const folder of folders) {
+					if (absolutePath.startsWith(folder.uri.path)) {
+						const relativePath = absolutePath.substring(folder.uri.path.length);
+						const fragment = documentIri.fragment ? `#${documentIri.fragment}` : '';
+
+						return vscode.Uri.parse(`${this.uriScheme}://${relativePath}${fragment}`);
+					}
+				}
 			}
 		}
+
+		return undefined;
 	}
 
 	/**
@@ -71,13 +117,12 @@ export class WorkspaceUri {
 			throw new Error('Cannot convert non-workspace URI to file URI: ' + workspaceUri.toString());
 		}
 
-		const workspaceFolders = vscode.workspace.workspaceFolders;
+		const root = this.getEffectiveRootUri();
 
-		if (!workspaceFolders || workspaceFolders.length === 0) {
+		if (!root) {
 			throw new Error('No workspace folders are open.');
 		}
 
-		const root = workspaceFolders[0].uri;
 		const path = workspaceUri.path.startsWith('/') ? workspaceUri.path.substring(1) : workspaceUri.path;
 		const fileUri = vscode.Uri.joinPath(root, path);
 

@@ -92,4 +92,57 @@ describe('WorkspaceUriLinkProvider', () => {
     expect(links[0].range.start.character).toBe(matchStart);
     expect(links[0].range.end.character).toBe(matchEnd);
   });
+
+  it('returns a link for a triple-slash workspace URI', () => {
+    const provider = new WorkspaceUriLinkProvider();
+    const text = 'See workspace:///documents/example.ttl for details';
+    const doc = {
+      getText: () => text,
+      positionAt: (offset: number) => new vscode.Position(0, offset),
+    } as any;
+    const links = provider.provideDocumentLinks(doc);
+    expect(links.length).toBe(1);
+    expect(links[0]).toBeInstanceOf(vscode.DocumentLink);
+  });
+
+  it('link range covers the full triple-slash URI text', () => {
+    const provider = new WorkspaceUriLinkProvider();
+    const text = 'Link: workspace:///shared/core.ttl done.';
+    const matchStart = text.indexOf('workspace:///');
+    const matchEnd = matchStart + 'workspace:///shared/core.ttl'.length;
+    const doc = {
+      getText: () => text,
+      positionAt: (offset: number) => new vscode.Position(0, offset),
+    } as any;
+    const links = provider.provideDocumentLinks(doc);
+    expect(links.length).toBe(1);
+    expect(links[0].range.start.character).toBe(matchStart);
+    expect(links[0].range.end.character).toBe(matchEnd);
+  });
+
+  it('returns links for mixed double-slash and triple-slash URIs', () => {
+    const provider = new WorkspaceUriLinkProvider();
+    const text = 'Old workspace://a/b.ttl and new workspace:///c/d.ttl here.';
+    const doc = {
+      getText: () => text,
+      positionAt: (offset: number) => new vscode.Position(0, offset),
+    } as any;
+    const links = provider.provideDocumentLinks(doc);
+    expect(links.length).toBe(2);
+  });
+
+  it('matches triple-slash URI with query parameter', () => {
+    const provider = new WorkspaceUriLinkProvider();
+    const text = 'Graph workspace:///documents/example.ttl?inference is inferred.';
+    const doc = {
+      getText: () => text,
+      positionAt: (offset: number) => new vscode.Position(0, offset),
+    } as any;
+    const links = provider.provideDocumentLinks(doc);
+    expect(links.length).toBe(1);
+    const matchStart = text.indexOf('workspace:///');
+    const matchEnd = matchStart + 'workspace:///documents/example.ttl?inference'.length;
+    expect(links[0].range.start.character).toBe(matchStart);
+    expect(links[0].range.end.character).toBe(matchEnd);
+  });
 });

@@ -23,6 +23,19 @@ export interface WorkspaceDescriptor {
 	 * The file system path relative to the project root, using forward slashes.
 	 */
 	readonly relativePath: string;
+
+	/**
+	 * The `mentor.workspace.rootOffset` setting from the workspace file, if present.
+	 * A relative path from the `.code-workspace` file's directory to the monorepo root.
+	 * Defaults to `undefined` when no offset is configured.
+	 */
+	readonly rootOffset: string | undefined;
+
+	/**
+	 * The resolved monorepo root URI computed from the workspace file location and `rootOffset`.
+	 * When `rootOffset` is `undefined`, this is `undefined` as well.
+	 */
+	readonly rootUri: vscode.Uri | undefined;
 }
 
 /**
@@ -30,6 +43,13 @@ export interface WorkspaceDescriptor {
  * and providing fast access to their identifiers and paths.
  */
 export interface IWorkspaceService {
+	/**
+	 * The resolved monorepo root URI for the currently active workspace.
+	 * Derived from the active `.code-workspace` file's location and its `rootOffset` setting.
+	 * `undefined` when no workspace file is active or no `rootOffset` is configured.
+	 */
+	readonly activeRootUri: vscode.Uri | undefined;
+
 	/**
 	 * All discovered workspace descriptors.
 	 */
@@ -42,7 +62,7 @@ export interface IWorkspaceService {
 	getWorkspaceById(id: string): WorkspaceDescriptor | undefined;
 
 	/**
-	 * Discovers all `.code-workspace` files in the project directory.
+	 * Discovers all `.code-workspace` files in the project directory and parses their settings.
 	 */
 	discoverWorkspaces(): Promise<void>;
 }

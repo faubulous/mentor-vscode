@@ -1,9 +1,14 @@
 import * as vscode from 'vscode';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { WorkspaceUri } from './workspace-uri';
 
 
 describe('WorkspaceUri', () => {
+	afterEach(() => {
+		// Reset the monorepo root after each test.
+		WorkspaceUri.rootUri = undefined;
+	});
+
 	it('converts file: -> workspace: for a path inside the workspace', () => {
 		const fileUri = vscode.Uri.parse('file:///w/dir/file.ttl');
 		const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
@@ -150,5 +155,91 @@ describe('WorkspaceUri', () => {
 
 		expect(fileUri.scheme).toBe('file');
 		expect(fileUri.toString()).toBe('file:///w/some/path.ttl');
+	});
+
+	describe('with monorepo root', () => {
+		it('uses the monorepo root for toWorkspaceUri when rootUri is set', () => {
+			// Monorepo root is the parent of the workspace folder.
+			WorkspaceUri.rootUri = vscode.Uri.parse('file:///monorepo');
+
+			const fileUri = vscode.Uri.parse('file:///monorepo/shared/core.ttl');
+			const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+			expect(workspaceUri.scheme).toBe('workspace');
+			expect(workspaceUri.path).toBe('/shared/core.ttl');
+		});
+
+		it('uses the monorepo root for toFileUri when rootUri is set', () => {
+			WorkspaceUri.rootUri = vscode.Uri.parse('file:///monorepo');
+
+			const wsUri = vscode.Uri.parse('workspace:///shared/core.ttl');
+			const fileUri = WorkspaceUri.toFileUri(wsUri);
+
+			expect(fileUri.scheme).toBe('file');
+			expect(fileUri.path).toBe('/monorepo/shared/core.ttl');
+		});
+
+		it('produces identical workspace URIs regardless of which workspace folder is active', () => {
+			// Both workspaces share the same monorepo root.
+			WorkspaceUri.rootUri = vscode.Uri.parse('file:///monorepo');
+
+			const fileUri = vscode.Uri.parse('file:///monorepo/shared/core.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+			expect(wsUri).toBeTruthy();
+			expect(wsUri!.path).toBe('/shared/core.ttl');
+		});
+
+		it('round-trips through monorepo root correctly', () => {
+			WorkspaceUri.rootUri = vscode.Uri.parse('file:///monorepo');
+
+			const original = vscode.Uri.parse('file:///monorepo/ontologies/pizza.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(original)!;
+			const restored = WorkspaceUri.toFileUri(wsUri);
+
+			expect(restored.toString()).toBe(original.toString());
+		});
+
+		it('falls back to workspace folders when file is outside the monorepo root', () => {
+			WorkspaceUri.rootUri = vscode.Uri.parse('file:///monorepo');
+
+			// File is inside the workspace folder (/w) but outside the monorepo root.
+			const fileUri = vscode.Uri.parse('file:///w/external/file.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+			// Should fall back to workspace folder root (/w).
+			expect(wsUri).toBeTruthy();
+			expect(wsUri!.scheme).toBe('workspace');
+			expect(wsUri!.path).toBe('/external/file.ttl');
+		});
+
+		it('returns undefined when file is outside both monorepo root and workspace folders', () => {
+			WorkspaceUri.rootUri = vscode.Uri.parse('file:///monorepo');
+
+			const fileUri = vscode.Uri.parse('file:///completely/elsewhere/file.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+			expect(wsUri).toBeUndefined();
+		});
+
+		it('preserves fragments when using monorepo root', () => {
+			WorkspaceUri.rootUri = vscode.Uri.parse('file:///monorepo');
+
+			const fileUri = vscode.Uri.parse('file:///monorepo/notebook.mnb#cell5');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+			expect(wsUri.scheme).toBe('workspace');
+			expect(wsUri.path).toBe('/notebook.mnb');
+			expect(wsUri.fragment).toBe('cell5');
+		});
+
+		it('falls back to first workspace folder when rootUri is not set', () => {
+			// rootUri is undefined (default).
+			const fileUri = vscode.Uri.parse('file:///w/dir/file.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+			// Should use /w (the mock workspace folder root).
+			expect(wsUri.path).toBe('/dir/file.ttl');
+		});
 	});
 });

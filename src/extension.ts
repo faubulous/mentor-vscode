@@ -7,6 +7,7 @@ import { configureServiceContainer } from './services/container';
 import { ServiceToken } from './services/tokens';
 import { IWorkspaceFileService, IWorkspaceService } from './services/core';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
+import { WorkspaceUri } from './providers/workspace-uri';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
 import { DocumentLintingService } from './services/document/document-linting-service';
@@ -126,6 +127,9 @@ async function indexWorkspace() {
 	// Discover all VS Code workspace files for workspace ID resolution.
 	const workspaceService = container.resolve<IWorkspaceService>(ServiceToken.WorkspaceService);
 	await workspaceService.discoverWorkspaces();
+
+	// Set the monorepo root for workspace URI resolution.
+	WorkspaceUri.rootUri = workspaceService.activeRootUri;
 
 	// Discover all supported files in the workspace.
 	const workspaceFileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
