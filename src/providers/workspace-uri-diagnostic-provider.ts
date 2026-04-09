@@ -79,7 +79,6 @@ export class WorkspaceUriDiagnosticProvider implements vscode.CodeActionProvider
 
 			diagnostic.code = DEPRECATED_WORKSPACE_URI_CODE;
 			diagnostic.source = 'Mentor';
-			diagnostic.tags = [vscode.DiagnosticTag.Deprecated];
 
 			diagnostics.push(diagnostic);
 		}

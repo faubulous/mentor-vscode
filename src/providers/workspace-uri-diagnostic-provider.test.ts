@@ -118,18 +118,6 @@ describe('WorkspaceUriDiagnosticProvider', () => {
 			expect(capturedDiagnostics[0].message).toContain('workspace:///old.ttl');
 		});
 
-		it('marks the diagnostic with the Deprecated tag', () => {
-			const document = makeDocument('workspace:/dir/file.ttl');
-			const provider = new WorkspaceUriDiagnosticProvider() as any;
-
-			let capturedDiagnostics: vscode.Diagnostic[] = [];
-
-			provider._diagnosticCollection.set = (_uri: any, diags: any) => { capturedDiagnostics = diags; };
-			provider.updateDiagnostics(document);
-
-			expect(capturedDiagnostics[0].tags).toContain(vscode.DiagnosticTag.Deprecated);
-		});
-
 		it('diagnostic range covers the full old URI text', () => {
 			const text = 'Link: workspace:/my/path.ttl done.';
 			const document = makeDocument(text);
