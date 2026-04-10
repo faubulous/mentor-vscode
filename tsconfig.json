@@ -9,16 +9,15 @@
       "dom",
       "dom.iterable",
     ],
-    "baseUrl": "./",
     "paths": {
       "@media/*": [
-        "media/*"
+        "./media/*"
       ],
       "@src/*": [
-        "src/*"
+        "./src/*"
       ],
       "$/*": [
-        "dist/*"
+        "./dist/*"
       ]
     },
     "rootDir": "./src",

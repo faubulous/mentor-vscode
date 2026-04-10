@@ -1,110 +1,128 @@
-import svgtofont from 'svgtofont';
-import * as fs from 'fs';
-import * as path from 'path';
+import { SVGIcons2SVGFontStream } from 'svgicons2svgfont';
+import { Font } from 'fonteditor-core';
+import fs from 'fs';
+import path from 'path';
 
-const sourceFolder = path.resolve(process.cwd(), 'media', 'glyphs');
+const fontName = 'mentor-icons';
+const sourceDir = path.resolve(process.cwd(), 'media', 'glyphs');
+const targetDir = path.resolve(process.cwd(), 'media');
 
-console.log("Building icon font...");
-console.log(`Font source: ${sourceFolder}`);
+console.log('Building icon font...');
+console.log(`Font source: ${sourceDir}`);
 
-const icons = fs.readdirSync(sourceFolder)
+const glyphFiles = fs.readdirSync(sourceDir)
   .filter(f => f.toLowerCase().endsWith('.svg'))
-  .map(f => path.join(sourceFolder, f).replace(/\\/g, '/'))
   .sort((a, b) => {
-    // Sort the file names in ascending order based on the number before the first hyphen.
-    const numA = parseInt(path.basename(a).split('-')[0]);
-    const numB = parseInt(path.basename(b).split('-')[0]);
-
-    return numA - numB;
+    const cpA = parseInt(a.match(/^u([0-9a-fA-F]+)-/)[1], 16);
+    const cpB = parseInt(b.match(/^u([0-9a-fA-F]+)-/)[1], 16);
+    return cpA - cpB;
   });
 
-console.log(icons);
+console.log(glyphFiles.map(f => path.join(sourceDir, f)));
 
-/**
- * Post-process the generated CSS to create friendlier class names.
- * Converts `.mentor-icons-ue020-databases` to `.mentor-icon.databases`
- * Usage: <span className="mentor-icon databases"></span>
- */
-function postProcessCss(cssPath) {
-  if (!fs.existsSync(cssPath)) {
-    console.warn(`CSS file not found: ${cssPath}`);
-    return;
+function buildSvgFont() {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const stream = new SVGIcons2SVGFontStream({
+      fontName,
+      fontHeight: 1000,
+      normalize: true,
+    });
+
+    stream.on('data', chunk => chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+
+    for (const [index, file] of glyphFiles.entries()) {
+      const match = file.match(/^u([0-9a-fA-F]+)-(.+)\.svg$/);
+      if (!match) continue;
+
+      const codepoint = 0xE000 + index;
+      const name = match[2];
+
+      const glyph = fs.createReadStream(path.join(sourceDir, file));
+      glyph.metadata = {
+        unicode: [String.fromCodePoint(codepoint)],
+        name,
+      };
+
+      stream.write(glyph);
+    }
+
+    stream.end();
+  });
+}
+
+function generateCss() {
+  const lines = [
+    `@font-face {`,
+    `  font-family: "${fontName}";`,
+    `  src: url('${fontName}.woff') format('woff');`,
+    `}`,
+    ``,
+    `.mentor-icon {`,
+    `  font-family: '${fontName}' !important;`,
+    `  font-style:normal;`,
+    `  -webkit-font-smoothing: antialiased;`,
+    `  -moz-osx-font-smoothing: grayscale;`,
+    `}`,
+    ``,
+  ];
+
+  for (const [index, file] of glyphFiles.entries()) {
+    const match = file.match(/^u([0-9a-fA-F]+)-(.+)\.svg$/);
+    if (!match) continue;
+
+    const codepoint = (0xE000 + index).toString(16);
+    const name = match[2];
+
+    lines.push(`.mentor-icon.${name}::before { content: "\\${codepoint}"; }`);
   }
 
-  let css = fs.readFileSync(cssPath, 'utf-8');
-
-  // Replace the selector pattern to use simpler class names
-  // From: .mentor-icons-ue000-mentor -> .mentor-icon.mentor
-  css = css.replace(/\.mentor-icons-ue[0-9a-f]+-/g, '.mentor-icon.');
-
-  // Update the class prefix selector to target the base .mentor-icon class
-  css = css.replace(
-    /\[class\^="mentor-icons-"\], \[class\*=" mentor-icons-"\]/g,
-    '.mentor-icon'
-  );
-
-  fs.writeFileSync(cssPath, css, 'utf-8');
-  console.log(`CSS post-processed: ${cssPath}`);
+  lines.push('');
+  return lines.join('\n');
 }
 
 async function generateFont() {
-  const fontName = 'mentor-icons';
-  const sourceDir = path.resolve(process.cwd(), 'media', 'glyphs');
-  const targetDir = path.resolve(process.cwd(), 'media');
-  const targetFontName = fontName + '.woff';
-  const targetFontPath = path.resolve(targetDir, targetFontName);
-  const targetStyleName = fontName + '.css';
-  const targetStylePath = path.resolve(targetDir, targetStyleName);
-
   try {
-    await svgtofont({
-      src: sourceDir,
-      dest: targetDir,
-      outputDir: '',
-      fontName: fontName,
-      css: true,
-      startUnicode: 0xE000,
-      excludeFormat: ["eot", "woff2", "ttf", "svg", "symbol.svg"],
-      svgicons2svgfont: {
-        fontHeight: 1000,
-        normalize: true
-      }
-    });
+    // Step 1: SVG icons → SVG font
+    const svgFontBuffer = await buildSvgFont();
+    
+    console.log(`\nSVG font generated (${svgFontBuffer.length} bytes)`);
 
-    const outputDir = path.resolve(process.cwd(), 'fonts');
-    const outputFilePath = path.join(outputDir, targetFontName);
-    const outputStylePath = path.join(outputDir, targetStyleName);
+    // Step 2: SVG font → WOFF via fonteditor-core
+    const font = Font.create(svgFontBuffer.toString('utf-8'), { type: 'svg' });
 
-    console.log(`\nCSS created at: ${outputStylePath}`);
+    // Fix vertical metrics: fonteditor-core auto-calculates usWinAscent from glyph
+    // bounding boxes, which ends up smaller than hhea.ascent and clips the tops of glyphs.
+    // Force OS/2 win and typo metrics to match the declared hhea ascent/descent.
+    const fontData = font.get();
+    const ascent = fontData.hhea.ascent;
+    const descent = Math.abs(fontData.hhea.descent);
+    fontData['OS/2'].usWinAscent = ascent;
+    fontData['OS/2'].usWinDescent = descent;
+    fontData['OS/2'].sTypoAscender = ascent;
+    fontData['OS/2'].sTypoDescender = -descent;
+    font.set(fontData);
 
-    if (fs.existsSync(outputStylePath)) {
-      fs.renameSync(outputStylePath, targetStylePath);
+    const woff = font.write({ type: 'woff' });
+    const woffPath = path.join(targetDir, `${fontName}.woff`);
 
-      console.log(`CSS moved to: ${targetStylePath}`);
+    fs.writeFileSync(woffPath, Buffer.from(woff));
 
-      // Post-process the CSS to generate friendlier class names
-      postProcessCss(targetStylePath);
-    }
+    console.log(`WOFF written to: ${woffPath}`);
 
-    console.log(`\nFont created at: ${outputFilePath}`);
+    // Step 3: Generate CSS
+    const css = generateCss();
+    const cssPath = path.join(targetDir, `${fontName}.css`);
+    fs.writeFileSync(cssPath, css, 'utf-8');
 
-    if (fs.existsSync(outputFilePath)) {
-      fs.renameSync(outputFilePath, targetFontPath);
-    }
+    console.log(`CSS written to: ${cssPath}`);
 
-    console.log(`Font moved to: ${targetFontPath}`);
-
-    if (fs.existsSync(outputDir)) {
-      fs.rmSync(outputDir, { recursive: true, force: true });
-    }
-
-    console.log(`Font creation successful.`);
-
+    console.log('\nFont creation successful.');
   } catch (e) {
     console.error('Font creation failed.', e);
   }
-
-  console.log();
 }
 
 generateFont();

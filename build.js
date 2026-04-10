@@ -16,6 +16,10 @@ const getBaseConfig = (args) => {
     format: "cjs",
     external: ["vscode"],
     platform: 'browser',
+    // Prefer the ESM export condition over CJS when resolving packages.
+    // This avoids bundling CJS builds that use Node.js built-ins (e.g.
+    // lru-cache@11 uses node:diagnostics_channel only in its CJS bundle).
+    conditions: ['import', 'browser', 'default'],
     loader: {
       // Configure HTML and CSS files to be imported as strings
       '.html': 'text',
@@ -365,7 +369,8 @@ const removeSourceMaps = () => {
 
     console.log(`\nBuild completed in ${(Date.now() - startTime)}ms.`);
   } catch (e) {
-    process.stderr.write(e.stderr);
+    const msg = e.stderr ?? (e instanceof Error ? e.message : String(e));
+    if (msg) process.stderr.write(msg + '\n');
     process.exit(1);
   }
 })();
