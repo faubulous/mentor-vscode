@@ -820,7 +820,7 @@ describe('DocumentContextService', () => {
 			(vscode.window as any).activeTextEditor = undefined;
 		});
 
-		it('sets activeContext when the loaded document matches the active editor (line 434)', async () => {
+		it('does not set activeContext — activation is handleActiveEditorChanged\'s responsibility', async () => {
 			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///active.ttl';
 			const doc = {
@@ -830,7 +830,6 @@ describe('DocumentContextService', () => {
 				getText: () => '',
 			} as any;
 
-			// Set the active editor to the same document that is being loaded.
 			(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse(uri) } };
 
 			const loadPromise = service.loadDocument(doc);
@@ -838,7 +837,8 @@ describe('DocumentContextService', () => {
 			const context = await loadPromise;
 
 			expect(context).toBeDefined();
-			expect(service.activeContext).toBe(context);
+			// loadDocument no longer sets activeContext; handleActiveEditorChanged does.
+			expect(service.activeContext).toBeUndefined();
 		});
 	});
 
@@ -984,7 +984,7 @@ describe('DocumentContextService', () => {
 			(vscode.window as any).activeTextEditor = undefined;
 		});
 
-		it('sets activeContext when active editor matches during _reloadContextTriples', async () => {
+		it('sets activeContext when active context URI matches during _reloadContextTriples', async () => {
 			const { service } = createService();
 			const uri = 'file:///test.ttl';
 			const mockDoc = { getText: vi.fn(() => '') } as any;
@@ -993,10 +993,8 @@ describe('DocumentContextService', () => {
 			service.contexts[uri] = ctx;
 			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
 
-			// Set the active editor to match the URI being reloaded
-			(vscode.window as any).activeTextEditor = {
-				document: { uri: vscode.Uri.parse(uri) },
-			};
+			// Set the active context to match the URI being reloaded (new guard uses activeContext, not activeTextEditor)
+			service.activeContext = ctx;
 
 			service.resolveTokens(uri, []);
 			await new Promise(resolve => setTimeout(resolve, 10));

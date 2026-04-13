@@ -41,7 +41,8 @@ export class DocumentContextService {
 
 	/**
 	 * One-shot listeners waiting for the next token delivery for a given URI.
-	 * Used by feature providers to sync with the language server without blocking document loading.
+	 * Used by feature providers to sync with the language server without blocking 
+	 * document loading.
 	 */
 	private readonly _nextTokenListeners = new Map<string, Array<{
 		resolve: (tokens: IToken[]) => void;
@@ -287,14 +288,10 @@ export class DocumentContextService {
 		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
 		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
-		// Update the active context if this document is in the active editor.
-		const activeEditor = vscode.window.activeTextEditor;
-
-		if (activeEditor && uri === activeEditor.document?.uri.toString()) {
+		if (this.activeContext?.uri.toString() === uri) {
 			this.activeContext = context;
+			this._onDidChangeDocumentContext.fire(context);
 		}
-
-		this._onDidChangeDocumentContext.fire(context);
 	}
 
 	/**
@@ -427,13 +424,6 @@ export class DocumentContextService {
 
 		this.contexts[uri] = context;
 
-		// Only set the active context if it matches the active text editor document.
-		const activeEditor = vscode.window.activeTextEditor;
-
-		if (activeEditor && uri === activeEditor.document?.uri.toString()) {
-			this.activeContext = context;
-		}
-
 		return context;
 	}
 
@@ -479,7 +469,6 @@ export class DocumentContextService {
 
 		if (context) {
 			this.activeContext = context;
-
 			this._onDidChangeDocumentContext.fire(context);
 		}
 	}

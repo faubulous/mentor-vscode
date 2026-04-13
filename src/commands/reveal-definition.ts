@@ -10,28 +10,29 @@ const contextService = () => container.resolve<IDocumentContextService>(ServiceT
 export const revealDefinition = {
 	id: 'mentor.command.revealDefinition',
 	handler: async (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
-		const ctx = contextService();
-		ctx.activateDocument().then((editor) => {
-			const uri = getIriFromArgument(arg);
+		const uri = getIriFromArgument(arg);
 
-			if (!uri) {
-				// If no id is provided, we fail gracefully.
-				return;
-			}
+		if (!uri) {
+			// If no id is provided, we fail gracefully.
+			return;
+		}
 
-			if (ctx.activeContext && editor && uri) {
-				const location = new ResourceDefinitionProvider().provideDefinitionForResource(ctx.activeContext, uri, true);
+		const context = contextService();
+		const editor = await context.activateDocument();
 
-				if (location instanceof vscode.Location) {
-					editor.selection = new vscode.Selection(location.range.start, location.range.end);
-					editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
+		if (context.activeContext && editor && uri) {
+			const location = new ResourceDefinitionProvider().provideDefinitionForResource(context.activeContext, uri, true);
 
-					if (restoreFocus) {
-						// Reset the focus to the definition tree.
-						vscode.commands.executeCommand('mentor.view.definitionTree.focus');
-					}
+			if (location instanceof vscode.Location) {
+				editor.selection = new vscode.Selection(location.range.start, location.range.end);
+				
+				editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
+
+				if (restoreFocus) {
+					// Reset the focus to the definition tree.
+					vscode.commands.executeCommand('mentor.view.definitionTree.focus');
 				}
 			}
-		});
+		}
 	}
 };

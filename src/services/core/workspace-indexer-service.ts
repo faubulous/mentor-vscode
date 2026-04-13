@@ -111,6 +111,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			// Open the document to trigger the language server to analyze it.
 			const document = await vscode.workspace.openTextDocument(uri);
 
+			// Re-check after the async open: handleActiveEditorChanged may have registered
+			// this context while we were awaiting openTextDocument (TOCTOU guard).
+			if (this.contextService.contexts[document.uri.toString()] && !force) {
+				return;
+			}
+
 			// Try to load the document so that its graph is created and can be used for showing definitions, descriptions etc..
 			await this.contextService.loadDocument(document);
 		} catch (error) {

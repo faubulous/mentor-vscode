@@ -274,6 +274,10 @@ export class XmlDocument extends DocumentContext {
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
 
+			// Reset inference flag: loadFromXmlStream clears both the source graph and
+			// the inference graph, so inference must re-run after each reload.
+			this._inferenceExecuted = false;
+
 			// Load triples from the RDF/XML content into the store.
 			await this.store.loadFromXmlStream(data, graphUri, false);
 		} catch (e) {

@@ -74,17 +74,20 @@ export class XmlLanguageServer extends LanguageServerBase {
 
 		// Parse elements and attributes
 		this._parseElements(lines, result);
-
+		
 		return result;
 	}
 
 	private _parseDoctypeEntities(data: string, result: XmlParseResult): void {
 		// Match DOCTYPE section
-		const doctypeMatch = data.match(/<!DOCTYPE[^>]*\[([^\]]*)\]>/s);
-		if (!doctypeMatch) return;
+		const doctype = data.match(/<!DOCTYPE[^>]*\[([^\]]*)\]>/s);
 
-		const doctypeContent = doctypeMatch[1];
-		const lines = data.substring(0, data.indexOf(doctypeMatch[0]) + doctypeMatch[0].length).split('\n');
+		if (!doctype) {
+			return;
+		}
+
+		const lines = data.substring(0, data.indexOf(doctype[0]) + doctype[0].length).split('\n');
+		const doctypeContent = doctype[1];
 		const doctypeStartLine = lines.length - doctypeContent.split('\n').length;
 
 		// Find ENTITY definitions
@@ -94,22 +97,23 @@ export class XmlLanguageServer extends LanguageServerBase {
 		while ((match = entityRegex.exec(doctypeContent)) !== null) {
 			const prefix = match[1];
 			const namespaceIri = match[2];
-			
+
 			// Find line number for this entity
 			const beforeMatch = doctypeContent.substring(0, match.index);
 			const lineOffset = beforeMatch.split('\n').length - 1;
 			const lineNumber = doctypeStartLine + lineOffset;
-			
+
 			// Find column position
 			const lineStart = beforeMatch.lastIndexOf('\n') + 1;
 			const lineText = doctypeContent.substring(lineStart);
 			const column = lineText.indexOf(prefix);
 
 			result.namespaces[prefix] = namespaceIri;
-			
+
 			if (!result.namespaceDefinitions[prefix]) {
 				result.namespaceDefinitions[prefix] = [];
 			}
+
 			result.namespaceDefinitions[prefix].push(Range.create(
 				lineNumber, column,
 				lineNumber, column + prefix.length
@@ -122,9 +126,10 @@ export class XmlLanguageServer extends LanguageServerBase {
 			const line = lines[lineNumber];
 
 			// Check for xml:base attribute
-			const baseMatch = line.match(/xml:base\s*=\s*["']([^"']+)["']/i);
-			if (baseMatch) {
-				result.baseIri = baseMatch[1];
+			const base = line.match(/xml:base\s*=\s*["']([^"']+)["']/i);
+
+			if (base) {
+				result.baseIri = base[1];
 			}
 
 			// Find xmlns definitions
@@ -137,7 +142,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 				const column = nsMatch.index + 6; // "xmlns:" length
 
 				result.namespaces[prefix] = namespaceIri;
-				
+
 				if (!result.namespaceDefinitions[prefix]) {
 					result.namespaceDefinitions[prefix] = [];
 				}
@@ -167,10 +172,11 @@ export class XmlLanguageServer extends LanguageServerBase {
 				const localName = tagMatch[2].toLowerCase();
 				const fullName = `${prefix}:${localName}`;
 				const column = tagMatch.index + 1; // After '<'
-
 				const namespaceIri = result.namespaces[prefix];
+
 				if (namespaceIri && !this._isXmlSpecificTagName(prefix, localName, namespaceIri)) {
 					const iri = namespaceIri + localName;
+
 					this._addRangeToIndex(result.references, iri, Range.create(
 						lineNumber, column,
 						lineNumber, column + fullName.length
@@ -179,8 +185,10 @@ export class XmlLanguageServer extends LanguageServerBase {
 
 				// Track element end for text literal detection
 				const tagEnd = line.indexOf('>', tagMatch.index);
+
 				if (tagEnd !== -1) {
 					const isSelfClosing = line[tagEnd - 1] === '/';
+
 					if (!isSelfClosing) {
 						inElement = true;
 						elementEndLine = lineNumber;
@@ -195,11 +203,14 @@ export class XmlLanguageServer extends LanguageServerBase {
 			// Track text content for literal ranges
 			if (inElement) {
 				const closeTagMatch = line.match(/<\/([\w-]+:[\w-]+)>/);
+
 				if (closeTagMatch) {
 					const textEndColumn = line.indexOf(closeTagMatch[0]);
+
 					if (textEndColumn > elementEndColumn || lineNumber > elementEndLine) {
 						// Check if there's actual text content
 						let hasText = false;
+
 						if (lineNumber === elementEndLine) {
 							hasText = line.substring(elementEndColumn, textEndColumn).trim().length > 0;
 						} else {
@@ -213,6 +224,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 							));
 						}
 					}
+
 					inElement = false;
 				}
 			}
@@ -227,7 +239,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 		while ((attrMatch = attrRegex.exec(line)) !== null) {
 			const attrName = attrMatch[1].toLowerCase();
 			const attrValue = attrMatch[2];
-			
+
 			// Find the column where the value starts (inside quotes)
 			const valueStart = line.indexOf(attrValue, attrMatch.index);
 			const range = Range.create(
@@ -237,28 +249,31 @@ export class XmlLanguageServer extends LanguageServerBase {
 
 			const iri = this._getIriFromXmlString(attrValue, result.namespaces, result.baseIri);
 
-			if (attrName === 'about' && iri) {
-				this._addRangeToIndex(result.subjects, iri, range);
-				
-				// Check if this is a typed subject (not rdf:Description)
-				const tagMatch = line.match(/<([\w-]+):([\w-]+)/);
-				if (tagMatch) {
-					const tagPrefix = tagMatch[1].toLowerCase();
-					const tagLocal = tagMatch[2].toLowerCase();
-					const tagNamespace = result.namespaces[tagPrefix];
+			if (iri) {
+				this._addRangeToIndex(result.references, iri, range);
 
-					if (!(tagNamespace === _RDF && tagLocal === 'description')) {
-						this._addRangeToIndex(result.typeAssertions, iri, range);
+				if (attrName === 'about') {
+					this._addRangeToIndex(result.subjects, iri, range);
 
-						if (this._isDefinitionNamespace(tagNamespace)) {
-							this._addRangeToIndex(result.typeDefinitions, iri, range);
+					// Check if this is a typed subject (not rdf:Description)
+					const tag = line.match(/<([\w-]+):([\w-]+)/);
+
+					if (tag) {
+						const tagPrefix = tag[1].toLowerCase();
+						const tagLocal = tag[2].toLowerCase();
+						const tagNamespace = result.namespaces[tagPrefix];
+
+						// If the tag is not rdf:Description, we treat the subject as 
+						// having the type of the tag name.
+						if (tagNamespace !== _RDF && tagLocal !== 'description') {
+							this._addRangeToIndex(result.typeAssertions, iri, range);
+
+							if (this._isDefinitionNamespace(tagNamespace)) {
+								this._addRangeToIndex(result.typeDefinitions, iri, range);
+							}
 						}
 					}
 				}
-			}
-
-			if (iri) {
-				this._addRangeToIndex(result.references, iri, range);
 			}
 		}
 	}
