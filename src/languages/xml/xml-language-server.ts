@@ -16,6 +16,10 @@ const _SH = 'http://www.w3.org/ns/shacl#';
 const _SKOS = 'http://www.w3.org/2004/02/skos/core#';
 const _SKOS_XL = 'http://www.w3.org/2008/05/skos-xl#';
 
+// XML NCName character class per the XML Namespaces 1.0 spec:
+// letters, digits, hyphens, periods, underscores (and Unicode ranges, approximated by \w).
+const _NC_NAME = '[\\w\\-.]';
+
 export class XmlLanguageServer extends LanguageServerBase {
 	constructor(connection: Connection) {
 		super(connection, 'xml', 'RDF/XML');
@@ -74,7 +78,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 
 		// Parse elements and attributes
 		this._parseElements(lines, result);
-		
+
 		return result;
 	}
 
@@ -91,7 +95,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 		const doctypeStartLine = lines.length - doctypeContent.split('\n').length;
 
 		// Find ENTITY definitions
-		const entityRegex = /<!ENTITY\s+(\w+)\s+"([^"]+)">/g;
+		const entityRegex = new RegExp(`<!ENTITY\\s+(${_NC_NAME}+)\\s+"([^"]+)">`, 'g');
 		let match;
 
 		while ((match = entityRegex.exec(doctypeContent)) !== null) {
@@ -133,7 +137,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 			}
 
 			// Find xmlns definitions
-			const xmlnsRegex = /xmlns:(\w+)\s*=\s*["']([^"']+)["']/gi;
+			const xmlnsRegex = new RegExp(`xmlns:(${_NC_NAME}+)\\s*=\\s*["']([^"']+)["']`, 'gi');
 			let nsMatch;
 
 			while ((nsMatch = xmlnsRegex.exec(line)) !== null) {
@@ -164,18 +168,27 @@ export class XmlLanguageServer extends LanguageServerBase {
 			const line = lines[lineNumber];
 
 			// Find opening tags with prefixes (e.g., <owl:Class, <rdf:Property)
-			const tagRegex = /<([\w-]+):([\w-]+)/g;
-			let tagMatch;
+			const tagRegex = new RegExp(`<(${_NC_NAME}+):(${_NC_NAME}+)`, 'g');
+			let tag;
 
-			while ((tagMatch = tagRegex.exec(line)) !== null) {
-				const prefix = tagMatch[1].toLowerCase();
-				const localName = tagMatch[2].toLowerCase();
-				const fullName = `${prefix}:${localName}`;
-				const column = tagMatch.index + 1; // After '<'
+			while ((tag = tagRegex.exec(line)) !== null) {
+				const prefix = tag[1].toLowerCase();
 				const namespaceIri = result.namespaces[prefix];
+
+				const localName = tag[2].toLowerCase();
+				const fullName = `${prefix}:${localName}`;
+				const column = tag.index + 1; // After '<'
 
 				if (namespaceIri && !this._isXmlSpecificTagName(prefix, localName, namespaceIri)) {
 					const iri = namespaceIri + localName;
+
+					if (namespaceIri === 'https://spec.industrialontologies.org/ontology/construct/') {
+						console.log(`Found construct reference (${iri}) at line ${lineNumber}`);
+					}
+
+					if (iri === "https://spec.industrialontologies.org/ontology/construct/MeasurementCapability") {
+						console.log("Found MeasurementCapability reference at line " + lineNumber);
+					}
 
 					this._addRangeToIndex(result.references, iri, Range.create(
 						lineNumber, column,
@@ -184,7 +197,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 				}
 
 				// Track element end for text literal detection
-				const tagEnd = line.indexOf('>', tagMatch.index);
+				const tagEnd = line.indexOf('>', tag.index);
 
 				if (tagEnd !== -1) {
 					const isSelfClosing = line[tagEnd - 1] === '/';
@@ -202,7 +215,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 
 			// Track text content for literal ranges
 			if (inElement) {
-				const closeTagMatch = line.match(/<\/([\w-]+:[\w-]+)>/);
+				const closeTagMatch = line.match(new RegExp(`<\\/(${_NC_NAME}+:${_NC_NAME}+)>`));
 
 				if (closeTagMatch) {
 					const textEndColumn = line.indexOf(closeTagMatch[0]);
@@ -256,7 +269,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 					this._addRangeToIndex(result.subjects, iri, range);
 
 					// Check if this is a typed subject (not rdf:Description)
-					const tag = line.match(/<([\w-]+):([\w-]+)/);
+					const tag = line.match(new RegExp(`<(${_NC_NAME}+):(${_NC_NAME}+)`));
 
 					if (tag) {
 						const tagPrefix = tag[1].toLowerCase();
