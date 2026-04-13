@@ -1,19 +1,19 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { DEPRECATED_WORKSPACE_URI_CODE } from '@src/languages/diagnostics/deprecated-workspace-uri-lint-provider';
+import { DEPRECATED_WORKSPACE_URI_CODE } from '@src/languages/linters/deprecated-workspace-uri-linter';
 
 export { DEPRECATED_WORKSPACE_URI_CODE };
 
 /**
- * Regex to extract the canonical URI from the diagnostic message produced by `DeprecatedWorkspaceUriLintProvider`.
+ * Regex to extract the canonical URI from the diagnostic message produced by `DeprecatedWorkspaceUriLinter`.
  * Matches: `Deprecated workspace URI scheme. Use 'workspace:///path' instead.`
  */
 const CANONICAL_FROM_MESSAGE_REGEX = /Use '([^']+)' instead/;
 
 /**
  * Provides Quick Fix code actions for deprecated `workspace:/path` URI diagnostics
- * emitted by the language server's {@link DeprecatedWorkspaceUriLintProvider}.
+ * emitted by the language server's {@link DeprecatedWorkspaceUriLinter}.
  *
  * This provider does **not** scan the document itself — it reacts to diagnostics
  * that already carry the {@link DEPRECATED_WORKSPACE_URI_CODE} code.
@@ -107,7 +107,7 @@ export class WorkspaceUriCodeActionProvider implements vscode.CodeActionProvider
 }
 
 /**
- * Extracts the canonical URI from a {@link DeprecatedWorkspaceUriLintProvider} diagnostic message.
+ * Extracts the canonical URI from a {@link DeprecatedWorkspaceUriLinter} diagnostic message.
  */
 function extractCanonicalUri(message: string): string | undefined {
 	return message.match(CANONICAL_FROM_MESSAGE_REGEX)?.[1];

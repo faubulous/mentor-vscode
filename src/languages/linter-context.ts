@@ -3,6 +3,10 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { PrefixMap } from '@src/utilities';
 
 /**
+ * @note This code is in the languages directory because the providers may not import vscode APIs.
+ */
+
+/**
  * Context passed to each lint rule during diagnostic evaluation.
  */
 export interface LintDiagnosticsContext {

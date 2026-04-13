@@ -249,7 +249,7 @@ describe('LanguageServerBase', () => {
 			// DoubleCaret at position >= tokens.length - 2 → continue
 			const tokens = [
 				makeToken('STRING_LITERAL_QUOTE', '"hello"', 0),
-				makeToken('DoubleCaret', '^^', 7),
+				makeToken('DCARET', '^^', 7),
 			];
 			expect(() => server.getLint(makeDoc(), '', tokens)).not.toThrow();
 		});
@@ -257,7 +257,7 @@ describe('LanguageServerBase', () => {
 		describe('XSD datatype validation', () => {
 			function xsdTokens(literalImage: string, xsdIri: string) {
 				const lit = makeToken('STRING_LITERAL_QUOTE', literalImage, 0);
-				const dc = makeToken('DoubleCaret', '^^', literalImage.length);
+				const dc = makeToken('DCARET', '^^', literalImage.length);
 				const dt = makeToken('IRIREF', `<${xsdIri}>`, literalImage.length + 2);
 				return [lit, dc, dt];
 			}

@@ -1,10 +1,8 @@
-import { XSD } from '@faubulous/mentor-rdf';
-import { IParser, ILexer, IToken, IRecognitionException, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { IParser, ILexer, IToken, IRecognitionException } from '@faubulous/mentor-rdf-parsers';
 import {
 	Connection,
 	Diagnostic,
 	DiagnosticSeverity,
-	DiagnosticTag,
 	DidChangeConfigurationNotification,
 	DidChangeConfigurationParams,
 	DidChangeWatchedFilesParams,
@@ -17,15 +15,16 @@ import {
 	TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { LintDiagnosticsContext } from './lint-diagnostics-context';
-import { LintDiagnosticsProvider } from './lint-diagnostics-provider';
+import { LintDiagnosticsContext } from './linter-context';
+import { Linter } from './linter';
 import {
-	DeprecatedWorkspaceUriLintProvider,
-	XsdAnyUriLiteralLintProvider
-} from './diagnostics';
+	DeprecatedWorkspaceUriLinter,
+	NamespacePrefixLinter,
+	XsdAnyUriLiteralLinter,
+	XsdDatatypeValidationLinter,
+} from './linters';
 import {
 	getNamespaceDefinition,
-	getIriFromToken,
 	PrefixMap,
 } from '@src/utilities';
 
@@ -101,9 +100,11 @@ export class LanguageServerBase {
 	/**
 	 * Pluggable lint rules that produce additional diagnostics from parsed tokens.
 	 */
-	readonly linters: LintDiagnosticsProvider[] = [
-		new DeprecatedWorkspaceUriLintProvider(),
-		new XsdAnyUriLiteralLintProvider(),
+	readonly linters: Linter[] = [
+		new DeprecatedWorkspaceUriLinter(),
+		new NamespacePrefixLinter(),
+		new XsdAnyUriLiteralLinter(),
+		new XsdDatatypeValidationLinter(),
 	];
 
 	constructor(connection: Connection, langaugeId: string, languageName: string, lexer?: ILexer, parser?: IParser, isRdfTokenProvider = false) {
@@ -384,522 +385,36 @@ export class LanguageServerBase {
 	}
 
 	protected getLintDiagnostics(document: TextDocument, content: string, tokens: IToken[]): Diagnostic[] {
-		let result: Diagnostic[] = [];
-		let prefixes: PrefixMap = {};
-		let usedPrefixes: Set<string> = new Set();
+		const prefixes: PrefixMap = {};
+		const context: LintDiagnosticsContext = { document, content, tokens, prefixes };
+		const result: Diagnostic[] = [];
+
+		for (const linter of this.linters) {
+			linter.reset?.();
+		}
 
 		for (let i = 0; i < tokens.length; i++) {
-			const t = tokens[i];
-			const type = t.tokenType?.name;
+			const token = tokens[i];
+			const type = token.tokenType?.name;
 
-			if (!type || type === 'Unknown') {
-				continue;
+			// Keep the shared prefix map current so IRI-resolving providers see up-to-date prefixes.
+			if (type === 'PREFIX' || type === 'TTL_PREFIX') {
+				const ns = getNamespaceDefinition(tokens, token);
+
+				if (ns) {
+					prefixes[ns.prefix] = ns.uri;
+				}
 			}
 
-			switch (type) {
-				case 'PREFIX':
-				case 'TTL_PREFIX': {
-					const ns = getNamespaceDefinition(tokens, t);
-
-					if (ns) {
-						if (prefixes[ns.prefix]) {
-							const n = t.startLine ? t.startLine - 1 : 0;
-
-							result.push({
-								severity: DiagnosticSeverity.Warning,
-								message: `The prefix '${ns.prefix}' is already defined.`,
-								range: {
-									start: { line: n, character: 0 },
-									end: { line: n, character: Number.MAX_SAFE_INTEGER },
-								}
-							})
-						}
-
-						prefixes[ns.prefix] = ns.uri;
-
-						const u = tokens[i + 2];
-
-						if (ns.uri == '') {
-							result.push({
-								severity: DiagnosticSeverity.Error,
-								message: `Invalid namespace URI.`,
-								range: {
-									start: document.positionAt(u.startOffset),
-									end: document.positionAt(u.endOffset ?? 0)
-								}
-							});
-						}
-						else if (!ns.uri.endsWith('/') && !ns.uri.endsWith('#') && !ns.uri.endsWith('_') && !ns.uri.endsWith('=') && !ns.uri.endsWith(':')) {
-							result.push({
-								severity: DiagnosticSeverity.Warning,
-								message: `An RDF namespace URI should end with a '/', '#', '_', '=' or ':' character.`,
-								range: {
-									start: document.positionAt(u.startOffset),
-									end: document.positionAt(u.endOffset ?? 0)
-								}
-							});
-						}
-					}
-
-					break;
-				}
-				case 'PNAME_NS': {
-					const prefix = t.image.split(':')[0];
-					const previousType = tokens[i - 1]?.tokenType?.name;
-
-					// Count prefixed names if they are not part of a prefix declaration.
-					if (previousType !== 'PREFIX' && previousType !== 'TTL_PREFIX') {
-						usedPrefixes.add(prefix);
-					}
-
-					break;
-				}
-				case 'PNAME_LN': {
-					const prefix = t.image.split(':')[0];
-
-					usedPrefixes.add(prefix);
-
-					break;
-				}
-				case 'DoubleCaret':
-					if (i > (tokens.length - 2)) {
-						// We do not flag a linter error because this is a 
-						// syntax error which should be covered by the parser.
-						continue;
-					}
-
-					let value = tokens[i - 1];
-					let datatype = getIriFromToken(prefixes, tokens[i + 1]);
-
-					switch (datatype) {
-						case XSD.anyURI: {
-							// See: https://www.w3.org/TR/xmlschema-2/#anyURI
-							const regex = /(([^:/?#]+):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
-
-							if (!regex.test(this.getUnquotedLiteralValue(value))) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the valid lexical space: [scheme:]scheme-specific-part[#fragment]",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.base64Binary: {
-							// See: https://www.w3.org/TR/xmlschema-2/#hexBinary
-							const regex = /[0-9a-fA-F]+/;
-
-							if (!regex.test(this.getUnquotedLiteralValue(value))) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the valid lexical space: [0-9a-fA-F]+",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.boolean: {
-							// See: https://www.w3.org/TR/xmlschema-2/#boolean
-							const v = this.getUnquotedLiteralValue(value);
-
-							if (v !== 'true' && v !== 'false') {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid boolean: true or false.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.byte: {
-							// See: https://www.w3.org/TR/xmlschema-2/#byte
-							const regex = /-?0*[0-9]+/;
-
-							if (!regex.test(this.getUnquotedLiteralValue(value))) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the valid lexical space: [-]0*[0-9]+",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.date: {
-							// See: https://www.w3.org/TR/xmlschema-2/#date
-							const regex = /(-)?\d{4}-\d{2}-\d{2}(Z|[+-]\d{2}:\d{2})?$/;
-
-							if (!regex.test(this.getUnquotedLiteralValue(value))) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the valid lexical space: [-]YYYY-MM-DD[Z|(+|-)hh:mm]",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.dateTime: {
-							// See: https://www.w3.org/TR/xmlschema-2/#dateTime
-							const regex = /-?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/;
-
-							if (!regex.test(this.getUnquotedLiteralValue(value))) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the valid the lexical space: [-]YYYY-MM-DDThh:mm:ss[Z|(+|-)hh:mm]",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.decimal: {
-							// See: https://www.w3.org/TR/xmlschema-2/#decimal
-							const n = parseFloat(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid decimal.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.double: {
-							// See: https://www.w3.org/TR/xmlschema-2/#double
-							const n = parseFloat(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid double.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.duration: {
-							// See: https://www.w3.org/TR/xmlschema-2/#duration
-							const regex = /(-)?P(\d+Y)?(\d+M)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$/;
-
-							if (!regex.test(this.getUnquotedLiteralValue(value))) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the valid lexical space: PnYnMnDTnHnMnS",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.float: {
-							// See: https://www.w3.org/TR/xmlschema-2/#float
-							const n = parseFloat(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid float.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.int: {
-							// See: https://www.w3.org/TR/xmlschema-2/#int
-							const n = parseInt(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid integer.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-
-							if (n < -2147483648 || n > 2147483647) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the allowed value space: [-2147483648, 2147483647]",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.integer: {
-							// See: https://www.w3.org/TR/xmlschema-2/#integer
-							const n = parseInt(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid integer.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.long: {
-							// See: https://www.w3.org/TR/xmlschema-2/#long
-							const n = parseInt(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid long.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-
-							if (n < -9223372036854775808 || n > 9223372036854775807) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the allowed value space: [-9223372036854775808, 9223372036854775807]",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.negativeInteger: {
-							// See: https://www.w3.org/TR/xmlschema-2/#negativeInteger
-							const n = parseInt(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid negative integer.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-
-							if (n >= 0) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the allowed value space: < 0",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.nonNegativeInteger: {
-							// See: https://www.w3.org/TR/xmlschema-2/#nonNegativeInteger
-							const n = parseInt(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid non-negative integer.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-
-							if (n < 0) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the allowed value space: >= 0",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.nonPositiveInteger: {
-							// See: https://www.w3.org/TR/xmlschema-2/#nonPositiveInteger
-							const n = parseInt(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid non-positive integer.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-
-							if (n > 0) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the allowed value space: <= 0",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.positiveInteger: {
-							// See: https://www.w3.org/TR/xmlschema-2/#positiveInteger
-							const n = parseInt(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid positive integer.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-
-							if (n <= 0) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the allowed value space: > 0",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.short: {
-							// See: https://www.w3.org/TR/xmlschema-2/#short
-							const n = parseInt(this.getUnquotedLiteralValue(value));
-
-							if (isNaN(n)) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is not a valid short.",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-
-							if (n < -32768 || n > 32767) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside the allowed value space: [-32768, 32767]",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-						case XSD.time: {
-							// See: https://www.w3.org/TR/xmlschema-2/#time
-							const regex = /\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})/;
-
-							if (!regex.test(this.getUnquotedLiteralValue(value))) {
-								result.push({
-									severity: DiagnosticSeverity.Warning,
-									message: "The value is outside valid the lexical space: hh:mm:ss[Z|(+|-)hh:mm].",
-									range: {
-										start: document.positionAt(value.startOffset),
-										end: document.positionAt((value.endOffset ?? 0) + 1)
-									}
-								});
-							}
-							break;
-						}
-					}
-
-					break;
+			for (const linter of this.linters) {
+				result.push(...linter.visitToken(context, token, i));
 			}
 		}
 
-		for (let prefix of Object.keys(prefixes)) {
-			if (!usedPrefixes.has(prefix)) {
-				const prefixToken = tokens.find(t => t.image === `${prefix}:`);
-
-				if (prefixToken) {
-					const n = prefixToken.startLine ? prefixToken.startLine - 1 : 0;
-
-					result.push({
-						code: 'UnusedNamespacePrefixHint',
-						severity: DiagnosticSeverity.Hint,
-						tags: [DiagnosticTag.Unnecessary],
-						message: `Prefix '${prefix}' is declared but never used.`,
-						range: {
-							start: { line: n, character: 0 },
-							end: { line: n, character: Number.MAX_SAFE_INTEGER },
-						}
-					});
-				}
-			}
-		}
-
-		// Run pluggable lint rules.
-		const ruleContext: LintDiagnosticsContext = { document, content, tokens, prefixes };
-
-		for (const rule of this.linters) {
-			result.push(...rule.getDiagnostics(ruleContext));
+		for (const linter of this.linters) {
+			result.push(...(linter.finalize?.(context) ?? []));
 		}
 
 		return result;
-	}
-
-	getUnquotedLiteralValue(token: IToken): string {
-		switch (token?.tokenType.name) {
-			case RdfToken.STRING_LITERAL_QUOTE.name:
-			case RdfToken.STRING_LITERAL_SINGLE_QUOTE.name:
-				return token.image.substring(1, token.image.length - 1);
-			case RdfToken.STRING_LITERAL_LONG_QUOTE.name:
-			case RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE.name:
-				return token.image.substring(3, token.image.length - 3);
-		}
-
-		return token.image;
 	}
 }

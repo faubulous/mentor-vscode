@@ -1,19 +1,19 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { XSD_ANY_URI_LITERAL_CODE } from '@src/languages/diagnostics/xsd-any-uri-literal-lint-provider';
+import { XSD_ANY_URI_LITERAL_CODE } from '@src/languages/linters/xsd-any-uri-literal-linter';
 
 export { XSD_ANY_URI_LITERAL_CODE };
 
 /**
- * Regex to extract the URI value from the diagnostic message produced by `XsdAnyUriLiteralLintProvider`.
+ * Regex to extract the URI value from the diagnostic message produced by `XsdAnyUriLiteralLinter`.
  * Matches: `Use the IRI reference '<http://...>' instead of a typed string literal.`
  */
 const IRI_FROM_MESSAGE_REGEX = /^Use the IRI reference '<(.+)>'/;
 
 /**
  * Provides Quick Fix code actions for `"http(s)://..."^^xsd:anyURI` diagnostics
- * emitted by the language server's {@link XsdAnyUriLiteralLintProvider}.
+ * emitted by the language server's {@link XsdAnyUriLiteralLinter}.
  *
  * This provider does **not** scan the document itself — it reacts to diagnostics
  * that already carry the {@link XSD_ANY_URI_LITERAL_CODE} code.
@@ -63,7 +63,7 @@ export class XsdAnyUriCodeActionProvider implements vscode.CodeActionProvider {
 			const newText = `<${iriValue}>`;
 
 			const fix = new vscode.CodeAction(
-				`Replace with IRI reference '${newText}'`,
+				`Replace with IRI reference ${newText}`,
 				vscode.CodeActionKind.QuickFix,
 			);
 
@@ -109,7 +109,7 @@ export class XsdAnyUriCodeActionProvider implements vscode.CodeActionProvider {
 }
 
 /**
- * Extracts the IRI value from an {@link XsdAnyUriLiteralLintProvider} diagnostic message.
+ * Extracts the IRI value from an {@link XsdAnyUriLiteralLinter} diagnostic message.
  */
 function extractIriFromMessage(message: string): string | undefined {
 	return message.match(IRI_FROM_MESSAGE_REGEX)?.[1];
