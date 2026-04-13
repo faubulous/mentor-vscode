@@ -51,26 +51,26 @@ function makeDiagnostic(startChar: number, endChar: number, iriValue: string): v
 	return d;
 }
 
-describe('XsdAnyUriDiagnosticProvider', () => {
-	let XsdAnyUriDiagnosticProvider: any;
+describe('XsdAnyUriCodeActionProvider', () => {
+	let XsdAnyUriCodeActionProvider: any;
 	let XSD_ANY_URI_LITERAL_CODE: string;
 
 	beforeEach(async () => {
 		mockSubscriptions.length = 0;
 		vi.resetModules();
 
-		const module = await import('../xsd-any-uri-diagnostic-provider');
-		XsdAnyUriDiagnosticProvider = module.XsdAnyUriDiagnosticProvider;
+		const module = await import('./xsd-any-uri-code-action-provider');
+		XsdAnyUriCodeActionProvider = module.XsdAnyUriCodeActionProvider;
 		XSD_ANY_URI_LITERAL_CODE = module.XSD_ANY_URI_LITERAL_CODE;
 	});
 
 	describe('constructor', () => {
 		it('creates without error', () => {
-			expect(() => new XsdAnyUriDiagnosticProvider()).not.toThrow();
+			expect(() => new XsdAnyUriCodeActionProvider()).not.toThrow();
 		});
 
 		it('registers a code action provider', () => {
-			new XsdAnyUriDiagnosticProvider();
+			new XsdAnyUriCodeActionProvider();
 			expect(mockSubscriptions.length).toBeGreaterThan(0);
 		});
 	});
@@ -78,7 +78,7 @@ describe('XsdAnyUriDiagnosticProvider', () => {
 	describe('provideCodeActions', () => {
 		it('returns empty array when no matching diagnostics in context', () => {
 			const document = makeDocument('<http://example.com/> a owl:Class .');
-			const provider = new XsdAnyUriDiagnosticProvider();
+			const provider = new XsdAnyUriCodeActionProvider();
 
 			const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 5));
 			const actions = provider.provideCodeActions(document, range, { diagnostics: [] } as any);
@@ -88,7 +88,7 @@ describe('XsdAnyUriDiagnosticProvider', () => {
 
 		it('returns a Quick Fix when context contains an XsdAnyUriLiteral diagnostic', () => {
 			const document = makeDocument('"http://example.com/"^^xsd:anyURI');
-			const provider = new XsdAnyUriDiagnosticProvider();
+			const provider = new XsdAnyUriCodeActionProvider();
 
 			const diagnostic = makeDiagnostic(0, 32, 'http://example.com/');
 			const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 32));
@@ -102,7 +102,7 @@ describe('XsdAnyUriDiagnosticProvider', () => {
 
 		it('Quick Fix edit replaces the diagnostic range with IRI reference', () => {
 			const document = makeDocument('"http://example.com/"^^xsd:anyURI');
-			const provider = new XsdAnyUriDiagnosticProvider();
+			const provider = new XsdAnyUriCodeActionProvider();
 
 			const diagnostic = makeDiagnostic(0, 32, 'http://example.com/');
 			const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 32));
@@ -119,7 +119,7 @@ describe('XsdAnyUriDiagnosticProvider', () => {
 
 		it('ignores diagnostics with a different code', () => {
 			const document = makeDocument('test');
-			const provider = new XsdAnyUriDiagnosticProvider();
+			const provider = new XsdAnyUriCodeActionProvider();
 
 			const unrelatedDiag = new vscode.Diagnostic(
 				new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 4)),
