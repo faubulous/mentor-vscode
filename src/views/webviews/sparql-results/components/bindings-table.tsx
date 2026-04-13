@@ -186,14 +186,14 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 					return (
 						<>
 							<vscode-toolbar-button
-								title="Open in Browser"
-								onClick={() => handleNamedNodeClick(binding)}>
-								<span className="codicon codicon-link-external"></span>
-							</vscode-toolbar-button>
-							<vscode-toolbar-button
 								title="Copy Cell Value"
 								onClick={() => handleCopyCellClick(binding)}>
 								<span className="codicon codicon-copy"></span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button
+								title="Open in Browser"
+								onClick={() => handleNamedNodeClick(binding)}>
+								<span className="codicon codicon-link-external"></span>
 							</vscode-toolbar-button>
 						</>
 					);
