@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Uri } from "@faubulous/mentor-rdf";
-import { RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { RdfToken, IToken } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
@@ -210,7 +210,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 	 * @param targetStyle The target style to convert to ('turtle' for @prefix, 'sparql' for PREFIX).
 	 * @returns A code action for converting all prefix definitions.
 	 */
-	private _createConvertPrefixAction(document: vscode.TextDocument, context: TurtleDocument, token: import('chevrotain').IToken, targetStyle: 'turtle' | 'sparql'): vscode.CodeAction {
+	private _createConvertPrefixAction(document: vscode.TextDocument, context: TurtleDocument, token: IToken, targetStyle: 'turtle' | 'sparql'): vscode.CodeAction {
 		const title = targetStyle === 'turtle' ? 'Convert all to @prefix' : 'Convert all to PREFIX';
 
 		const action: vscode.CodeAction = {

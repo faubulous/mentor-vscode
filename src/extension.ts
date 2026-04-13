@@ -83,8 +83,9 @@ function registerNotebookSerializers() {
 function registerProviders() {
 	new DocumentLintingService();
 	new providers.WorkspaceUriLinkProvider();
-	new providers.WorkspaceUriDiagnosticProvider();
+	new providers.WorkspaceUriCodeActionProvider();
 	new providers.WorkspaceFileSystemProvider();
+	new providers.XsdAnyUriCodeActionProvider();
 	new providers.InferenceUriLinkProvider();
 	new providers.InferenceUriHandler();
 }

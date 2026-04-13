@@ -17,6 +17,12 @@ import {
 	TextDocumentSyncKind
 } from 'vscode-languageserver/browser';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+import { LintDiagnosticsContext } from './lint-diagnostics-context';
+import { LintDiagnosticsProvider } from './lint-diagnostics-provider';
+import {
+	DeprecatedWorkspaceUriLintProvider,
+	XsdAnyUriLiteralLintProvider
+} from './diagnostics';
 import {
 	getNamespaceDefinition,
 	getIriFromToken,
@@ -91,6 +97,14 @@ export class LanguageServerBase {
 	 * The parser used to tokenize and validate the document.
 	 */
 	parser?: IParser;
+
+	/**
+	 * Pluggable lint rules that produce additional diagnostics from parsed tokens.
+	 */
+	readonly linters: LintDiagnosticsProvider[] = [
+		new DeprecatedWorkspaceUriLintProvider(),
+		new XsdAnyUriLiteralLintProvider(),
+	];
 
 	constructor(connection: Connection, langaugeId: string, languageName: string, lexer?: ILexer, parser?: IParser, isRdfTokenProvider = false) {
 		this.languageName = languageName;
@@ -864,6 +878,13 @@ export class LanguageServerBase {
 					});
 				}
 			}
+		}
+
+		// Run pluggable lint rules.
+		const ruleContext: LintDiagnosticsContext = { document, content, tokens, prefixes };
+
+		for (const rule of this.linters) {
+			result.push(...rule.getDiagnostics(ruleContext));
 		}
 
 		return result;
