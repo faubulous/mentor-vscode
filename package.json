@@ -861,12 +861,12 @@
         },
         {
           "command": "mentor.command.createSparqlQueryFromDocument",
-          "when": "editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads'",
+          "when": "mentor.editor.isRdfDocument",
           "group": "navigation@0"
         },
         {
           "command": "mentor.command.createNotebookFromEditor",
-          "when": "editorLangId == 'sparql' || editorLangId == 'ntriples' || editorLangId == 'nquads' || editorLangId == 'turtle' || editorLangId == 'trig'",
+          "when": "mentor.editor.isRdfDocument || editorLangId == 'sparql'",
           "group": "navigation@1"
         }
       ],

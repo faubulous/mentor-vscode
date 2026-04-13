@@ -461,7 +461,7 @@ export class DocumentContextService {
 			return;
 		}
 
-		await this._setConvertFileFormatContexts(editor.document.languageId);
+		await this._setConvertFileFormatContexts(editor.document.languageId, uri.toString());
 
 		if (uri === this.activeContext?.uri) return;
 
@@ -471,6 +471,12 @@ export class DocumentContextService {
 			this.activeContext = context;
 			this._onDidChangeDocumentContext.fire(context);
 		}
+
+		// For XML, isRdfDocument could not be determined from the language ID alone;
+		// update it now that loading is complete.
+		if (editor.document.languageId === 'xml') {
+			await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', context?.isLoaded === true);
+		}
 	}
 
 	/**
@@ -479,11 +485,18 @@ export class DocumentContextService {
 	 * @param languageId The language ID of the current document. If `undefined`, all convert file format contexts will be set to `false`.
 	 * @returns A promise that resolves when the contexts have been set.
 	 */
-	private async _setConvertFileFormatContexts(languageId?: string): Promise<void> {
+	private async _setConvertFileFormatContexts(languageId?: string, uri?: string): Promise<void> {
 		const targets = new Set(languageId ? this._documentFactory.getConvertibleTargetLanguageIds(languageId) : []);
 		const convertible = languageId ? this._documentFactory.isConvertibleLanguage(languageId) : false;
 
+		// For non-XML triple-source languages the language ID is unambiguous.
+		// For XML the language ID is shared with plain XML documents, so we only
+		// confirm it is RDF/XML once the document context has been successfully loaded.
+		const isTripleSource = languageId ? this._documentFactory.isTripleSourceLanguage(languageId) : false;
+		const isRdfDocument = isTripleSource && (languageId !== 'xml' || (uri !== undefined && this.contexts[uri]?.isLoaded === true));
+
 		await vscode.commands.executeCommand('setContext', 'mentor.command.convertFileFormat.executable', convertible);
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', isRdfDocument);
 
 		for (const targetLanguageId of this._convertTargetLanguageIds) {
 			await vscode.commands.executeCommand(
