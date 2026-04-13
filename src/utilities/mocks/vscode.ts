@@ -45,6 +45,7 @@ export const workspace = {
 export const Uri = {
   parse: (value: string) => _URI.parse(value),
   file: (path: string) => _URI.file(path),
+  from: (components: { scheme: string; authority?: string; path?: string; query?: string; fragment?: string }) => _URI.from(components),
   joinPath: (base: any, ...pathSegments: string[]) => Utils.joinPath(base, ...pathSegments),
 };
 

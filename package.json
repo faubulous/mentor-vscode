@@ -74,7 +74,7 @@
     "@types/node": "^25.5.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/vscode": "^1.115.0",
+    "@types/vscode": "^1.110.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.58.1",
@@ -857,7 +857,7 @@
         {
           "command": "mentor.command.executeSparqlQueryFromActiveEditor",
           "when": "editorLangId == 'sparql'",
-          "group": "navigation@0"
+          "group": "navigation@2"
         },
         {
           "command": "mentor.command.createSparqlQueryFromDocument",

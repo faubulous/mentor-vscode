@@ -106,9 +106,11 @@ export class WorkspaceUri {
 	 * @param documentIri The absolute file system URI to convert.
 	 * @returns The corresponding Mentor VFS URI.
 	 */
-	static toWorkspaceUri(documentIri: vscode.Uri): vscode.Uri | undefined {
+	static toWorkspaceUri(documentIri: vscode.Uri): CanonicalWorkspaceUri | undefined {
 		if (documentIri.scheme === this.uriScheme) {
-			return documentIri;
+			return documentIri instanceof CanonicalWorkspaceUri
+				? documentIri
+				: new CanonicalWorkspaceUri(documentIri);
 		}
 
 		const root = this.getEffectiveRootUri();
@@ -122,9 +124,12 @@ export class WorkspaceUri {
 
 		if (absolutePath.startsWith(rootPath)) {
 			const relativePath = absolutePath.substring(rootPath.length);
-			const fragment = documentIri.fragment ? `#${documentIri.fragment}` : '';
 
-			return vscode.Uri.parse(`${this.uriScheme}://${relativePath}${fragment}`);
+			return new CanonicalWorkspaceUri(vscode.Uri.from({
+				scheme: this.uriScheme,
+				path: relativePath,
+				fragment: documentIri.fragment || undefined
+			}));
 		}
 
 		// Fallback: try workspace folders if the monorepo root didn't match
@@ -136,9 +141,12 @@ export class WorkspaceUri {
 				for (const folder of folders) {
 					if (absolutePath.startsWith(folder.uri.path)) {
 						const relativePath = absolutePath.substring(folder.uri.path.length);
-						const fragment = documentIri.fragment ? `#${documentIri.fragment}` : '';
 
-						return vscode.Uri.parse(`${this.uriScheme}://${relativePath}${fragment}`);
+						return new CanonicalWorkspaceUri(vscode.Uri.from({
+							scheme: this.uriScheme,
+							path: relativePath,
+							fragment: documentIri.fragment || undefined
+						}));
 					}
 				}
 			}
@@ -182,5 +190,39 @@ export class WorkspaceUri {
 		const fileUri = this.toFileUri(workspaceUri);
 
 		return vscode.Uri.parse(`vscode-notebook-cell://${fileUri.authority}${fileUri.path}#${workspaceUri.fragment}`);
+	}
+}
+
+/**
+ * A workspace-scheme URI whose `toString()` always returns the canonical `workspace:///path`
+ * form. Obtain instances through {@link WorkspaceUri.toWorkspaceUri}.
+ *
+ * `vscode.Uri.toString()` drops the empty authority component for `workspace:` URIs and returns
+ * the deprecated `workspace:/path` form. This class encodes the correct serialisation directly,
+ * so callers can safely use `.toString()` without any extra conversion step.
+ */
+export class CanonicalWorkspaceUri {
+	constructor(private readonly _inner: vscode.Uri) {}
+
+	get scheme(): string { return this._inner.scheme; }
+	get authority(): string { return this._inner.authority; }
+	get path(): string { return this._inner.path; }
+	get query(): string { return this._inner.query; }
+	get fragment(): string { return this._inner.fragment; }
+	get fsPath(): string { return this._inner.fsPath; }
+
+	with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): vscode.Uri {
+		return this._inner.with(change);
+	}
+
+	/** Always returns the canonical `workspace:///path` form. */
+	toString(_skipEncoding?: boolean): string {
+		const query = this._inner.query ? `?${this._inner.query}` : '';
+		const fragment = this._inner.fragment ? `#${this._inner.fragment}` : '';
+		return `workspace://${this._inner.path}${query}${fragment}`;
+	}
+
+	toJSON(): object {
+		return this._inner.toJSON();
 	}
 }

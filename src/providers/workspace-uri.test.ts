@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { describe, it, expect, afterEach } from 'vitest';
-import { WorkspaceUri } from './workspace-uri';
+import { WorkspaceUri, CanonicalWorkspaceUri } from './workspace-uri';
 
 
 describe('WorkspaceUri', () => {
@@ -17,6 +17,17 @@ describe('WorkspaceUri', () => {
 		expect(workspaceUri.scheme).toBe('workspace');
 		expect(workspaceUri.path).toBe('/dir/file.ttl');
 		expect(WorkspaceUri.toCanonicalString(workspaceUri)).toBe('workspace:///dir/file.ttl');
+	});
+
+	it('toWorkspaceUri produces workspace:/// URIs, not the deprecated workspace:/ form', () => {
+		const fileUri = vscode.Uri.parse('file:///w/dir/file.ttl');
+		const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+		// Both direct toString() and toCanonicalString() must produce workspace:///
+		// so that callers do not need to remember to call toCanonicalString().
+		expect(workspaceUri.toString()).toBe('workspace:///dir/file.ttl');
+		expect(WorkspaceUri.toCanonicalString(workspaceUri)).toBe('workspace:///dir/file.ttl');
+		expect(workspaceUri.toString()).not.toMatch(/^workspace:\/[^/]/);
 	});
 
 	it('converts vscode-notebook-cell: -> workspace: and preserves fragments', () => {
@@ -100,12 +111,21 @@ describe('WorkspaceUri', () => {
 		(vscode.workspace as any).workspaceFolders = workspaceFolders;
 	});
 
-	it('returns the URI unchanged when input is already a workspace: URI', () => {
+	it('wraps an existing workspace: URI in a CanonicalWorkspaceUri', () => {
 		const wsUri = vscode.Uri.parse('workspace:/some/file.ttl');
-		const result = WorkspaceUri.toWorkspaceUri(wsUri);
+		const result = WorkspaceUri.toWorkspaceUri(wsUri)!;
 
-		expect(result).toBe(wsUri);
-		expect(result?.scheme).toBe('workspace');
+		expect(result).toBeInstanceOf(CanonicalWorkspaceUri);
+		expect(result.scheme).toBe('workspace');
+		expect(result.toString()).toBe('workspace:///some/file.ttl');
+	});
+
+	it('returns the same CanonicalWorkspaceUri instance when it is already canonical', () => {
+		const wsUri = vscode.Uri.parse('workspace:/some/file.ttl');
+		const first = WorkspaceUri.toWorkspaceUri(wsUri)!;
+		const second = WorkspaceUri.toWorkspaceUri(first)!;
+
+		expect(second).toBe(first);
 	});
 
 	it('returns undefined when no workspace folders are open (toWorkspaceUri)', () => {
