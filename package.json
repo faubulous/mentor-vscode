@@ -1005,11 +1005,6 @@
           "command": "mentor.command.cleanDocument",
           "group": "1_modification@4",
           "when": "editorTextFocus && (editorLangId == 'sparql' || editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads' || editorLangId == 'datalog')"
-        },
-        {
-          "command": "mentor.command.inlineBlankNodes",
-          "group": "1_modification@5",
-          "when": "editorTextFocus && (editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3')"
         }
       ],
       "mentor.submenu.convertDocument": [

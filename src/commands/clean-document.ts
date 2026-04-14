@@ -18,10 +18,13 @@ export const cleanDocument = {
 			? vscode.window.activeTextEditor
 			: undefined;
 
-		// Clean step 1: remove unused prefixes (if any).
+		// Step 1: Remove unused prefixes (if any).
 		await removeUnusedPrefixes(document);
 
-		// Clean step 2: format document (if a formatter exists).
+		// Step 2: Sort the prefixes.
+		await vscode.commands.executeCommand('mentor.command.sortPrefixes', document.uri);
+
+		// Step 3: Format document (if a formatter exists).
 		await formatDocument(targetUri, activeEditor);
 	}
 };

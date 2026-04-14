@@ -19,6 +19,7 @@ import { LintDiagnosticsContext } from './linter-context';
 import { Linter } from './linter';
 import {
 	DeprecatedWorkspaceUriLinter,
+	InlineSingleUseBlankNodesLinter,
 	NamespacePrefixLinter,
 	XsdAnyUriLiteralLinter,
 	XsdDatatypeValidationLinter,
@@ -102,6 +103,7 @@ export class LanguageServerBase {
 	 */
 	readonly linters: Linter[] = [
 		new DeprecatedWorkspaceUriLinter(),
+		new InlineSingleUseBlankNodesLinter(),
 		new NamespacePrefixLinter(),
 		new XsdAnyUriLiteralLinter(),
 		new XsdDatatypeValidationLinter(),

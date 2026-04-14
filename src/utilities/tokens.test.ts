@@ -2,15 +2,19 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 	RdfToken: {
-		IRIREF:    { name: 'IRIREF' },
-		PNAME_LN:  { name: 'PNAME_LN' },
-		PNAME_NS:  { name: 'PNAME_NS' },
-		PREFIX:    { name: 'PREFIX' },
-		TTL_PREFIX:{ name: 'TTL_PREFIX' },
-		PERIOD:    { name: 'PERIOD' },
-		SEMICOLON: { name: 'SEMICOLON' },
-		A:         { name: 'A' },
-		LBRACKET:  { name: 'LBRACKET' },
+		IRIREF:                        { name: 'IRIREF' },
+		PNAME_LN:                      { name: 'PNAME_LN' },
+		PNAME_NS:                      { name: 'PNAME_NS' },
+		PREFIX:                        { name: 'PREFIX' },
+		TTL_PREFIX:                    { name: 'TTL_PREFIX' },
+		PERIOD:                        { name: 'PERIOD' },
+		SEMICOLON:                     { name: 'SEMICOLON' },
+		A:                             { name: 'A' },
+		LBRACKET:                      { name: 'LBRACKET' },
+		STRING_LITERAL_QUOTE:          { name: 'STRING_LITERAL_QUOTE' },
+		STRING_LITERAL_SINGLE_QUOTE:   { name: 'STRING_LITERAL_SINGLE_QUOTE' },
+		STRING_LITERAL_LONG_QUOTE:     { name: 'STRING_LITERAL_LONG_QUOTE' },
+		STRING_LITERAL_LONG_SINGLE_QUOTE: { name: 'STRING_LITERAL_LONG_SINGLE_QUOTE' },
 	},
 }));
 
@@ -22,6 +26,7 @@ import {
 	getNamespaceIriFromPrefixedName,
 	getNamespaceDefinition,
 	getTripleComponentType,
+	getUnquotedLiteralValue,
 } from './tokens';
 
 function makeToken(typeName: string, image: string, startLine = 1, startColumn = 1, endLine = 1, endColumn = 10, payload?: any): any {
@@ -243,5 +248,27 @@ describe('getTripleComponentType', () => {
 	it('returns undefined for unrecognised preceding token', () => {
 		const tokens = [makeToken('STRING_LITERAL', '"hello"'), makeToken('IRIREF', '<http://example.org/>')];
 		expect(getTripleComponentType(tokens, 1)).toBeUndefined();
+	});
+});
+
+describe('getUnquotedLiteralValue', () => {
+	it('strips double quotes from STRING_LITERAL_QUOTE', () => {
+		expect(getUnquotedLiteralValue(makeToken('STRING_LITERAL_QUOTE', '"world"'))).toBe('world');
+	});
+
+	it('strips single quotes from STRING_LITERAL_SINGLE_QUOTE', () => {
+		expect(getUnquotedLiteralValue(makeToken('STRING_LITERAL_SINGLE_QUOTE', "'hello'"))).toBe('hello');
+	});
+
+	it('strips triple double quotes from STRING_LITERAL_LONG_QUOTE', () => {
+		expect(getUnquotedLiteralValue(makeToken('STRING_LITERAL_LONG_QUOTE', '"""multi"""'))).toBe('multi');
+	});
+
+	it('strips triple single quotes from STRING_LITERAL_LONG_SINGLE_QUOTE', () => {
+		expect(getUnquotedLiteralValue(makeToken('STRING_LITERAL_LONG_SINGLE_QUOTE', "'''multi'''"))).toBe('multi');
+	});
+
+	it('returns raw image for non-literal tokens', () => {
+		expect(getUnquotedLiteralValue(makeToken('INTEGER', '42'))).toBe('42');
 	});
 });

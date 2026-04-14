@@ -3,7 +3,7 @@ import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver/browser';
 import { LintDiagnosticsContext } from '../linter-context';
 import { Linter } from '../linter';
-import { getIriFromToken } from '@src/utilities';
+import { getIriFromToken, getUnquotedLiteralValue } from '@src/utilities';
 
 /**
  * Validates XSD-typed literals against their declared datatype's lexical space.
@@ -34,7 +34,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 				// See: https://www.w3.org/TR/xmlschema-2/#anyURI
 				const regex = /(([^:/?#]+):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
 
-				if (!regex.test(this._getUnquotedLiteralValue(value))) {
+				if (!regex.test(getUnquotedLiteralValue(value))) {
 					result.push({
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: [scheme:]scheme-specific-part[#fragment]",
@@ -50,7 +50,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 				// See: https://www.w3.org/TR/xmlschema-2/#hexBinary
 				const regex = /[0-9a-fA-F]+/;
 
-				if (!regex.test(this._getUnquotedLiteralValue(value))) {
+				if (!regex.test(getUnquotedLiteralValue(value))) {
 					result.push({
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: [0-9a-fA-F]+",
@@ -64,7 +64,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.boolean: {
 				// See: https://www.w3.org/TR/xmlschema-2/#boolean
-				const v = this._getUnquotedLiteralValue(value);
+				const v = getUnquotedLiteralValue(value);
 
 				if (v !== 'true' && v !== 'false') {
 					result.push({
@@ -82,7 +82,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 				// See: https://www.w3.org/TR/xmlschema-2/#byte
 				const regex = /-?0*[0-9]+/;
 
-				if (!regex.test(this._getUnquotedLiteralValue(value))) {
+				if (!regex.test(getUnquotedLiteralValue(value))) {
 					result.push({
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: [-]0*[0-9]+",
@@ -98,7 +98,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 				// See: https://www.w3.org/TR/xmlschema-2/#date
 				const regex = /(-)?\d{4}-\d{2}-\d{2}(Z|[+-]\d{2}:\d{2})?$/;
 
-				if (!regex.test(this._getUnquotedLiteralValue(value))) {
+				if (!regex.test(getUnquotedLiteralValue(value))) {
 					result.push({
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: [-]YYYY-MM-DD[Z|(+|-)hh:mm]",
@@ -114,7 +114,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 				// See: https://www.w3.org/TR/xmlschema-2/#dateTime
 				const regex = /-?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/;
 
-				if (!regex.test(this._getUnquotedLiteralValue(value))) {
+				if (!regex.test(getUnquotedLiteralValue(value))) {
 					result.push({
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid the lexical space: [-]YYYY-MM-DDThh:mm:ss[Z|(+|-)hh:mm]",
@@ -128,7 +128,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.decimal: {
 				// See: https://www.w3.org/TR/xmlschema-2/#decimal
-				const n = parseFloat(this._getUnquotedLiteralValue(value));
+				const n = parseFloat(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -144,7 +144,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.double: {
 				// See: https://www.w3.org/TR/xmlschema-2/#double
-				const n = parseFloat(this._getUnquotedLiteralValue(value));
+				const n = parseFloat(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -162,7 +162,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 				// See: https://www.w3.org/TR/xmlschema-2/#duration
 				const regex = /(-)?P(\d+Y)?(\d+M)?(\d+D)?(T(\d+H)?(\d+M)?(\d+(\.\d+)?S)?)?$/;
 
-				if (!regex.test(this._getUnquotedLiteralValue(value))) {
+				if (!regex.test(getUnquotedLiteralValue(value))) {
 					result.push({
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: PnYnMnDTnHnMnS",
@@ -176,7 +176,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.float: {
 				// See: https://www.w3.org/TR/xmlschema-2/#float
-				const n = parseFloat(this._getUnquotedLiteralValue(value));
+				const n = parseFloat(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -192,7 +192,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.int: {
 				// See: https://www.w3.org/TR/xmlschema-2/#int
-				const n = parseInt(this._getUnquotedLiteralValue(value));
+				const n = parseInt(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -219,7 +219,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.integer: {
 				// See: https://www.w3.org/TR/xmlschema-2/#integer
-				const n = parseInt(this._getUnquotedLiteralValue(value));
+				const n = parseInt(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -235,7 +235,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.long: {
 				// See: https://www.w3.org/TR/xmlschema-2/#long
-				const n = parseInt(this._getUnquotedLiteralValue(value));
+				const n = parseInt(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -262,7 +262,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.negativeInteger: {
 				// See: https://www.w3.org/TR/xmlschema-2/#negativeInteger
-				const n = parseInt(this._getUnquotedLiteralValue(value));
+				const n = parseInt(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -289,7 +289,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.nonNegativeInteger: {
 				// See: https://www.w3.org/TR/xmlschema-2/#nonNegativeInteger
-				const n = parseInt(this._getUnquotedLiteralValue(value));
+				const n = parseInt(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -316,7 +316,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.nonPositiveInteger: {
 				// See: https://www.w3.org/TR/xmlschema-2/#nonPositiveInteger
-				const n = parseInt(this._getUnquotedLiteralValue(value));
+				const n = parseInt(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -343,7 +343,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.positiveInteger: {
 				// See: https://www.w3.org/TR/xmlschema-2/#positiveInteger
-				const n = parseInt(this._getUnquotedLiteralValue(value));
+				const n = parseInt(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -370,7 +370,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 			}
 			case XSD.short: {
 				// See: https://www.w3.org/TR/xmlschema-2/#short
-				const n = parseInt(this._getUnquotedLiteralValue(value));
+				const n = parseInt(getUnquotedLiteralValue(value));
 
 				if (isNaN(n)) {
 					result.push({
@@ -399,7 +399,7 @@ export class XsdDatatypeValidationLinter implements Linter {
 				// See: https://www.w3.org/TR/xmlschema-2/#time
 				const regex = /\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})/;
 
-				if (!regex.test(this._getUnquotedLiteralValue(value))) {
+				if (!regex.test(getUnquotedLiteralValue(value))) {
 					result.push({
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside valid the lexical space: hh:mm:ss[Z|(+|-)hh:mm].",
@@ -414,18 +414,5 @@ export class XsdDatatypeValidationLinter implements Linter {
 		}
 
 		return result;
-	}
-
-	private _getUnquotedLiteralValue(token: IToken): string {
-		switch (token?.tokenType.name) {
-			case RdfToken.STRING_LITERAL_QUOTE.name:
-			case RdfToken.STRING_LITERAL_SINGLE_QUOTE.name:
-				return token.image.substring(1, token.image.length - 1);
-			case RdfToken.STRING_LITERAL_LONG_QUOTE.name:
-			case RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE.name:
-				return token.image.substring(3, token.image.length - 3);
-		}
-
-		return token.image;
 	}
 }

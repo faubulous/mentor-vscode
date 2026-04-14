@@ -32,6 +32,7 @@ export { hidePropertyTypes } from './hide-property-types';
 export { hideReferences } from './hide-references';
 export { implementPrefixes } from './implement-prefixes';
 export { implementPrefixForIri } from './implement-prefix-for-iri';
+export { inlineBlankNodes } from './inline-blank-nodes';
 export { listGraphs } from './list-graphs';
 export { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
 export { manageSparqlConnections } from './manage-sparql-connections';

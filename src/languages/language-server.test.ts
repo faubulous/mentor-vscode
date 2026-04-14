@@ -41,7 +41,6 @@ class TestServer extends LanguageServerBase {
 	getLex(doc: TextDocument, tokens: any[]) { return this.getLexDiagnostics(doc, tokens); }
 	getParse(doc: TextDocument, errors: any[]) { return this.getParseDiagnostics(doc, errors); }
 	getLint(doc: TextDocument, content: string, tokens: any[]) { return this.getLintDiagnostics(doc, content, tokens); }
-	getUnquoted(token: any) { return this.getUnquotedLiteralValue(token); }
 }
 
 function makeDoc(content = '') {
@@ -740,30 +739,4 @@ describe('LanguageServerBase', () => {
 		});
 	});
 
-	describe('getUnquotedLiteralValue', () => {
-		it('strips single quotes from STRING_LITERAL_SINGLE_QUOTE', () => {
-			const token = makeToken('STRING_LITERAL_SINGLE_QUOTE', "'hello'");
-			expect(server.getUnquoted(token)).toBe('hello');
-		});
-
-		it('strips double quotes from STRING_LITERAL_QUOTE', () => {
-			const token = makeToken('STRING_LITERAL_QUOTE', '"world"');
-			expect(server.getUnquoted(token)).toBe('world');
-		});
-
-		it('strips triple double quotes from STRING_LITERAL_LONG_QUOTE', () => {
-			const token = makeToken('STRING_LITERAL_LONG_QUOTE', '"""multi"""');
-			expect(server.getUnquoted(token)).toBe('multi');
-		});
-
-		it('strips triple single quotes from STRING_LITERAL_LONG_SINGLE_QUOTE', () => {
-			const token = makeToken('STRING_LITERAL_LONG_SINGLE_QUOTE', "'''multi'''");
-			expect(server.getUnquoted(token)).toBe('multi');
-		});
-
-		it('returns raw image for non-literal tokens', () => {
-			const token = makeToken('INTEGER', '42');
-			expect(server.getUnquoted(token)).toBe('42');
-		});
-	});
 });

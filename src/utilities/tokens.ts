@@ -143,6 +143,26 @@ export function getNamespaceDefinition(tokens: IToken[], token: IToken): PrefixD
 	return { prefix, uri };
 }
 
+/**
+ * Get the unquoted string value from a literal token.
+ * Strips the surrounding quote characters from single-quoted, double-quoted,
+ * and long (triple-quoted) string literal tokens.
+ * @param token A literal token.
+ * @returns The unquoted string value.
+ */
+export function getUnquotedLiteralValue(token: IToken): string {
+	switch (token?.tokenType.name) {
+		case RdfToken.STRING_LITERAL_QUOTE.name:
+		case RdfToken.STRING_LITERAL_SINGLE_QUOTE.name:
+			return token.image.substring(1, token.image.length - 1);
+		case RdfToken.STRING_LITERAL_LONG_QUOTE.name:
+		case RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE.name:
+			return token.image.substring(3, token.image.length - 3);
+	}
+
+	return token.image;
+}
+
 export type TripleComonentType = "subject" | "predicate" | "object" | undefined;
 
 export function getTripleComponentType(tokens: IToken[], tokenIndex: number): TripleComonentType {

@@ -3,7 +3,7 @@ import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver/browser';
 import { LintDiagnosticsContext } from '../linter-context';
 import { Linter } from '../linter';
-import { getIriFromToken } from '@src/utilities';
+import { getIriFromToken, getUnquotedLiteralValue } from '@src/utilities';
 
 /**
  * The diagnostic code for xsd:anyURI string literals that should be IRI references.
@@ -32,7 +32,7 @@ export class XsdAnyUriLiteralLinter implements Linter {
 		}
 
 		const valueToken = tokens[index - 1];
-		const value = this._getUnquotedLiteralValue(valueToken);
+		const value = getUnquotedLiteralValue(valueToken);
 
 		if (!/^https?:\/\//.test(value)) {
 			return [];
@@ -48,18 +48,5 @@ export class XsdAnyUriLiteralLinter implements Linter {
 				end: document.positionAt((tokens[index + 1].endOffset ?? tokens[index + 1].startOffset) + 1),
 			}
 		}];
-	}
-
-	private _getUnquotedLiteralValue(token: import('@faubulous/mentor-rdf-parsers').IToken): string {
-		switch (token?.tokenType.name) {
-			case RdfToken.STRING_LITERAL_QUOTE.name:
-			case RdfToken.STRING_LITERAL_SINGLE_QUOTE.name:
-				return token.image.substring(1, token.image.length - 1);
-			case RdfToken.STRING_LITERAL_LONG_QUOTE.name:
-			case RdfToken.STRING_LITERAL_LONG_SINGLE_QUOTE.name:
-				return token.image.substring(3, token.image.length - 3);
-		}
-
-		return token.image;
 	}
 }

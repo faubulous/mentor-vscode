@@ -8,6 +8,7 @@ import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getIriFromIriReference, getIriFromPrefixedName, getNamespaceDefinition, getTokenPosition } from '@src/utilities';
 import { getPrefixesWithErrorCode } from '@src/utilities/vscode/diagnostic';
+import { INLINE_SINGLE_USE_BLANK_NODE_CODE } from '@src/languages/linters';
 
 /**
  * A provider for RDF document code actions.
@@ -28,8 +29,64 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 	async provideCodeActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): Promise<vscode.CodeAction[]> {
 		return [
 			...this._provideRefactoringActions(document, range, actionContext),
+			...this._provideInlineBlankNodesActions(document, actionContext),
 			...this._provideFixMissingPrefixesActions(document, actionContext)
 		];
+	}
+
+	/**
+	 * Get code actions for single-use blank nodes that can be inlined.
+	 *
+	 * When the cursor is over a single-use blank node diagnostic, a QuickFix action is provided.
+	 * When any single-use blank nodes exist in the document, a Refactor action is always offered.
+	 * @param document An RDF document.
+	 * @param actionContext The action context.
+	 * @returns An array of code actions.
+	 */
+	private _provideInlineBlankNodesActions(document: vscode.TextDocument, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
+		const allDiagnostics = vscode.languages.getDiagnostics(document.uri)
+			.filter(d => d.code === INLINE_SINGLE_USE_BLANK_NODE_CODE);
+
+		if (allDiagnostics.length === 0) {
+			return [];
+		}
+
+		const result: vscode.CodeAction[] = [];
+
+		// QuickFix at each blank node definition site.
+		for (const diagnostic of actionContext.diagnostics) {
+			if (diagnostic.code !== INLINE_SINGLE_USE_BLANK_NODE_CODE) {
+				continue;
+			}
+
+			const fix = new vscode.CodeAction(
+				`Inline all single-use blank nodes (${allDiagnostics.length})`,
+				vscode.CodeActionKind.QuickFix,
+			);
+
+			fix.command = {
+				title: 'Inline Blank Nodes',
+				command: 'mentor.command.inlineBlankNodes',
+				arguments: [document.uri],
+			};
+			fix.diagnostics = [diagnostic];
+			fix.isPreferred = true;
+
+			result.push(fix);
+		}
+
+		// Refactor action always shown when single-use blank nodes exist.
+		result.push({
+			kind: vscode.CodeActionKind.Refactor,
+			title: `Inline single-use blank nodes (${allDiagnostics.length})`,
+			command: {
+				title: 'Inline Blank Nodes',
+				command: 'mentor.command.inlineBlankNodes',
+				arguments: [document.uri],
+			},
+		});
+
+		return result;
 	}
 
 	/**
