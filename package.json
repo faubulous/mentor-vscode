@@ -71,32 +71,32 @@
     "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@rdfjs/types": "^2.0.1",
     "@types/n3": "^1.26.1",
-    "@types/node": "^25.5.2",
+    "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
-    "@typescript-eslint/eslint-plugin": "^8.58.1",
-    "@typescript-eslint/parser": "^8.58.1",
-    "@vitest/coverage-v8": "^4.1.3",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "@typescript-eslint/parser": "^8.58.2",
+    "@vitest/coverage-v8": "^4.1.4",
     "@vscode-elements/react-elements": "^2.4.0",
     "@vscode/test-web": "^0.0.80",
     "esbuild": "^0.28.0",
-    "rimraf": "^6.0.1",
+    "rimraf": "^6.1.3",
     "esbuild-plugin-copy": "^2.1.1",
     "eslint": "^10.2.0",
     "fonteditor-core": "^2.6.3",
     "glob": "^13.0.6",
     "svgicons2svgfont": "^15.0.1",
     "typescript": "^6.0.2",
-    "vitest": "^4.1.3",
+    "vitest": "^4.1.4",
     "vscode-uri": "^3.1.0"
   },
   "dependencies": {
-    "@comunica/query-sparql": "^5.1.3",
+    "@comunica/query-sparql": "^5.2.0",
     "@faubulous/mentor-rdf": "^1.3.0",
-    "@faubulous/mentor-rdf-parsers": "^1.7.2",
-    "@faubulous/mentor-rdf-serializers": "^1.4.7",
+    "@faubulous/mentor-rdf-parsers": "^1.7.3",
+    "@faubulous/mentor-rdf-serializers": "^1.4.8",
     "@vscode/codicons": "^0.0.45",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
@@ -841,6 +841,11 @@
         "command": "mentor.command.cleanDocument",
         "title": "Clean Document",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.inlineBlankNodes",
+        "title": "Inline Blank Nodes",
+        "category": "Mentor"
       }
     ],
     "submenus": [
@@ -1000,6 +1005,11 @@
           "command": "mentor.command.cleanDocument",
           "group": "1_modification@4",
           "when": "editorTextFocus && (editorLangId == 'sparql' || editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads' || editorLangId == 'datalog')"
+        },
+        {
+          "command": "mentor.command.inlineBlankNodes",
+          "group": "1_modification@5",
+          "when": "editorTextFocus && (editorLangId == 'turtle' || editorLangId == 'trig' || editorLangId == 'n3')"
         }
       ],
       "mentor.submenu.convertDocument": [
