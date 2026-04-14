@@ -353,13 +353,19 @@ export class TurtleDocument extends DocumentContext {
 					// Store the position of anonymous blank nodes so they can be revealed in the editor.
 					const id = t.payload?.blankNodeId;
 
-					if(!id) break;
+					if (!id) break;
 
 					this._handleResourceReference(tokens, t, id);
 					break;
 				}
 				case RdfToken.BLANK_NODE_LABEL.name: {
-					this._handleResourceReference(tokens, t, t.image);
+					const id = t.image;
+
+					if (t.startColumn === 1 && previousToken) {
+						this._registerSubject(t, id, previousToken);
+					}
+
+					this._handleResourceReference(tokens, t, id);
 					break;
 				}
 			}
@@ -372,17 +378,17 @@ export class TurtleDocument extends DocumentContext {
 		});
 	}
 
-	private _registerSubject(token: IToken, iri: string, previousToken: IToken) {
+	private _registerSubject(token: IToken, iriOrBlankId: string, previousToken: IToken) {
 		const previousType = previousToken.tokenType.name;
 
 		if (previousType === RdfToken.PERIOD.name) {
 			const range = this.getRangeFromToken(token);
 
-			if (!this.subjects[iri]) {
-				this.subjects[iri] = [];
+			if (!this.subjects[iriOrBlankId]) {
+				this.subjects[iriOrBlankId] = [];
 			}
 
-			this.subjects[iri].push(range);
+			this.subjects[iriOrBlankId].push(range);
 		}
 	}
 

@@ -389,7 +389,7 @@ export class DocumentContextService {
 				// In this case, we proceed with loading the document without tokens, and log a warning.
 				const message = e instanceof Error ? e.message : String(e);
 
-				console.warn(`Mentor: Timeout waiting for tokens: ${uri}`, message);
+				console.debug(`Mentor: Timeout waiting for tokens: ${uri}`, message);
 
 				return context;
 			}
