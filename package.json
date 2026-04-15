@@ -56,7 +56,7 @@
     "clean": "rimraf node_modules dist out media/*.woff",
     "build": "npm run build:font && node ./build.js",
     "build:watch": "npm run build:font && node ./build.js --watch",
-    "build:font": "node ./build-font.mjs", 
+    "build:font": "node ./build-font.mjs",
     "compile": "npm run build:font && tsc -p tsconfig.json",
     "package": "rimraf dist && npm run build:font && node ./build.js --production && vsce package -o dist/mentor.vsix",
     "package:install": "npm run package && code --install-extension dist/mentor.vsix --force",
@@ -82,11 +82,11 @@
     "@vscode-elements/react-elements": "^2.4.0",
     "@vscode/test-web": "^0.0.80",
     "esbuild": "^0.28.0",
-    "rimraf": "^6.1.3",
     "esbuild-plugin-copy": "^2.1.1",
     "eslint": "^10.2.0",
     "fonteditor-core": "^2.6.3",
     "glob": "^13.0.6",
+    "rimraf": "^6.1.3",
     "svgicons2svgfont": "^15.0.1",
     "typescript": "^6.0.2",
     "vitest": "^4.1.4",
@@ -101,6 +101,7 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "reflect-metadata": "^0.2.2",
+    "shacl-engine": "^1.1.0",
     "tsyringe": "^4.10.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
@@ -846,6 +847,24 @@
         "command": "mentor.command.inlineBlankNodes",
         "title": "Inline Blank Nodes",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.validateDocument",
+        "title": "Validate Document (SHACL)",
+        "icon": "$(check-all)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.manageShaclShapes",
+        "title": "Configure SHACL Shapes",
+        "icon": "$(settings-gear)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.exportShaclReport",
+        "title": "Export SHACL Report",
+        "icon": "$(export)",
+        "category": "Mentor"
       }
     ],
     "submenus": [
@@ -1529,6 +1548,27 @@
               "unmatchedPosition": "end",
               "unmatchedSort": "alphabetical"
             }
+          },
+          "mentor.shacl.defaultShapes": {
+            "type": "array",
+            "title": "Default SHACL Shapes",
+            "description": "Workspace-relative paths to SHACL shape files that are applied to all RDF documents during validation.",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "mentor.shacl.validation": {
+            "type": "object",
+            "title": "SHACL Validation Configuration",
+            "description": "Maps glob patterns to arrays of workspace-relative SHACL shape file paths. Documents matching a pattern will be validated against the specified shapes.",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "default": {}
           },
           "mentor.linting.enabled": {
             "type": "boolean",

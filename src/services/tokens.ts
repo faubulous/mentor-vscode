@@ -10,8 +10,6 @@ export enum ServiceToken {
 	Store = "Store",
 	/** Repository for accessing vocabulary definitions. */
 	VocabularyRepository = "VocabularyRepository",
-	/** Configuration service for accessing static workspace configuration parameters. */
-	ConfigurationService = "ConfigurationService",
 	/** Factory for creating document contexts. */
 	DocumentFactory = "DocumentFactory",
 	/** Service for managing document contexts. */
@@ -51,5 +49,7 @@ export enum ServiceToken {
 	/** Service for discovering VS Code workspace files and their identifiers. */
 	WorkspaceService = "WorkspaceService",
 	/** Factory for creating platform-specific language clients (browser Worker vs Node.js IPC). */
-	LanguageClientFactory = "LanguageClientFactory"
+	LanguageClientFactory = "LanguageClientFactory",
+	/** Service for validating RDF documents against SHACL shapes. */
+	ShaclValidationService = "ShaclValidationService"
 }
