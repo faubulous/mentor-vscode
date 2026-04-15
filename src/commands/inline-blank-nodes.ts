@@ -11,7 +11,7 @@ export const inlineBlankNodes = {
 	id: 'mentor.command.inlineBlankNodes',
 	handler: async (documentUri?: vscode.Uri) => {
 		documentUri = documentUri ?? vscode.window.activeTextEditor?.document.uri;
-		
+
 		if (!documentUri) {
 			vscode.window.showErrorMessage('Invalid document URI.');
 			return;
