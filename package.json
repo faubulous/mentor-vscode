@@ -861,9 +861,9 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.exportShaclReport",
-        "title": "Export SHACL Report",
-        "icon": "$(export)",
+        "command": "mentor.command.viewShaclReport",
+        "title": "View SHACL Report",
+        "icon": "$(open-preview)",
         "category": "Mentor"
       }
     ],

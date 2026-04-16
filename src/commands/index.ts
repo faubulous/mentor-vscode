@@ -24,7 +24,7 @@ export { executeNotebookCell } from './execute-notebook-cell';
 export { executeSparqlQuery } from './execute-sparql-query';
 export { executeSparqlQueryFromActiveEditor } from './execute-sparql-query-from-active-editor';
 export { executeSparqlQueryFromDocument } from './execute-sparql-query-from-document';
-export { exportShaclReport } from './export-shacl-report';
+export { viewShaclReport } from './export-shacl-report';
 export { findReferences } from './find-references';
 export { groupDefinitionsBySource } from './group-definitions-by-source';
 export { groupDefinitionsByType } from './group-definitions-by-type';

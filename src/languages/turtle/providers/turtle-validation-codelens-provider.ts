@@ -10,7 +10,7 @@ import { ShaclValidationService } from '@src/services/validation/shacl-validatio
  */
 export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider {
 	private _initialized: boolean = false;
-	
+
 	private _initializing: boolean = false;
 
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
@@ -75,8 +75,18 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			const shapeFiles = this._validationService.getEffectiveShapeGraphs(document.uri);
 			const shapeCount = shapeFiles.length;
 
+			let title = "";
+
+			if (shapeCount > 1) {
+				title += `$(check-all)\u00A0${shapeCount} shape sources`;
+			} else if (shapeCount === 1) {
+				title += `$(check-all)\u00A0${shapeCount} shape source`;
+			} else {
+				title += `$(check-all)\u00A0No shape sources`;
+			}
+
 			result.push(new vscode.CodeLens(range, {
-				title: `$(check-all)\u00A0Shapes: ${shapeCount > 0 ? shapeCount + ' configured' : 'none'}`,
+				title: title,
 				command: 'mentor.command.manageShaclShapes',
 				tooltip: shapeCount > 0
 					? `Configured SHACL shapes: ${shapeFiles.join(', ')}`
@@ -96,13 +106,13 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 
 			if (lastResult) {
 				const statusTitle = lastResult.conforms
-					? '$(pass) Conforms'
-					: `$(error) ${lastResult.results.length} issue(s)`;
+					? '$(pass)\u00A0Conforms'
+					: `$(error)\u00A0${lastResult.results.length} issue(s)`;
 
 				result.push(new vscode.CodeLens(range, {
 					title: statusTitle,
-					command: 'mentor.command.exportShaclReport',
-					tooltip: 'Export the SHACL validation report'
+					command: 'mentor.command.viewShaclReport',
+					tooltip: 'View the SHACL validation report'
 				}));
 			}
 

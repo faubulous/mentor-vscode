@@ -9,7 +9,7 @@ import { getConfig } from '@src/utilities/vscode/config';
 /**
  * Provides usage information for resource definitions in Turtle documents.
  */
-export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
+export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 	/**
 	 * Indicates whether the workspace has been initialized.
 	 */

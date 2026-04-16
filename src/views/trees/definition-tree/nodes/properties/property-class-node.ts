@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { ClassNodeBase } from "../classes/class-node-base";
 import { PropertyNode } from "./property-node";
@@ -6,6 +7,10 @@ import { PropertyNode } from "./property-node";
  * Node of a property in the definition tree.
  */
 export class PropertyClassNode extends ClassNodeBase {
+	override getResourceUri(): vscode.Uri | undefined {
+		return vscode.Uri.parse('mentor:properties:' + this.uri);
+	}
+
 	override getChildren(): TreeNode[] {
 		const result = [];
 		const properties = this.vocabulary.getRootPropertiesOfType(this.getDocumentGraphs(), this.uri!, this.getQueryOptions());

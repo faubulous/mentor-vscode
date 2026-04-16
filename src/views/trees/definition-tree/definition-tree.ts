@@ -83,7 +83,7 @@ export class DefinitionTree implements TreeView {
 	}
 
 	private _registerDecorationProvider(): vscode.Disposable {
-		return vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider());
+		return vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider(this.treeDataProvider));
 	}
 
 	private _registerEditorSelectionHandler(): vscode.Disposable {

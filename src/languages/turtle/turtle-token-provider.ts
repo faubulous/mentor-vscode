@@ -9,7 +9,7 @@ import {
 import {
 	TurtleAutoDefinePrefixProvider,
 	TurtleCodeActionsProvider,
-	TurtleCodeLensProvider,
+	TurtleUsageCodeLensProvider,
 	TurtleCompletionItemProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider,
@@ -18,7 +18,7 @@ import {
 } from '@src/languages/turtle/providers';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
-const codelensProvider = new TurtleCodeLensProvider();
+const codelensProvider = new TurtleUsageCodeLensProvider();
 const completionProvider = new TurtleCompletionItemProvider();
 const definitionProvider = new ResourceDefinitionProvider();
 const hoverProvider = new ResourceTooltipProvider();

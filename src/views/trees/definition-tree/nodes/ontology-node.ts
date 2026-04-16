@@ -44,7 +44,7 @@ export class OntologyNode extends DefinitionTreeNode {
 			const version = this.vocabulary.getOntologyVersionInfo(this.getDocumentGraphs(), this.uri);
 
 			if (version) {
-				result += " " + version;
+				result += " Version " + version;
 			}
 		}
 
