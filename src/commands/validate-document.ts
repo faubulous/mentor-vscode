@@ -13,6 +13,15 @@ export const validateDocument = {
 		}
 
 		const service = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+
+		// If no SHACL shapes are configured for this document, open shape configuration first.
+		const effectiveShapes = service.getEffectiveShapeGraphs(editor.document.uri);
+
+		if (effectiveShapes.length === 0) {
+			await vscode.commands.executeCommand('mentor.command.manageShaclShapes');
+			return;
+		}
+
 		const result = await service.validateDocument(editor.document.uri);
 
 		if (result) {

@@ -885,6 +885,11 @@
           "group": "navigation@2"
         },
         {
+          "command": "mentor.command.validateDocument",
+          "when": "mentor.editor.isRdfDocument",
+          "group": "navigation@1"
+        },
+        {
           "command": "mentor.command.createSparqlQueryFromDocument",
           "when": "mentor.editor.isRdfDocument",
           "group": "navigation@0"
