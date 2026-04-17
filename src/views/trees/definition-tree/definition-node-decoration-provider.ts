@@ -320,21 +320,21 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	 */
 	private _buildShaclDecoration(severity: string | undefined, propagate: boolean): vscode.FileDecoration | undefined {
 		if (severity === SH.Violation) {
-			const result = new vscode.FileDecoration(undefined, undefined, this._errorColor);
+			const result = new vscode.FileDecoration('●', 'SHACL violation', this._errorColor);
 			result.propagate = propagate;
 			result.tooltip = 'This node has a SHACL violation.';
 			return result;
 		}
 
 		if (severity === SH.Warning) {
-			const result = new vscode.FileDecoration(undefined, undefined, this._warningColor);
+			const result = new vscode.FileDecoration('●', 'SHACL warning', this._warningColor);
 			result.propagate = propagate;
 			result.tooltip = 'This node has a SHACL warning.';
 			return result;
 		}
 
 		if (severity === SH.Info) {
-			const result = new vscode.FileDecoration(undefined, undefined, this._warningColor);
+			const result = new vscode.FileDecoration('●', 'SHACL info', this._warningColor);
 			result.propagate = false;
 			result.tooltip = 'This node has a SHACL info message.';
 			return result;

@@ -4,6 +4,7 @@ import { rdf, sh, Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { InferenceUri } from '@src/providers';
 
 interface ShapePickItem extends vscode.QuickPickItem {
 	graphUri: string;
@@ -22,6 +23,10 @@ export const manageShaclShapes = {
 		const quickPickItems: ShapePickItem[] = [];
 
 		for (const graphUri of store.getGraphs().sort()) {
+			if(InferenceUri.isInferenceUri(graphUri)) {
+				continue;
+			}
+
 			if (store.any(graphUri, null, rdf.type, sh.NodeShape) || store.any(graphUri, null, rdf.type, sh.PropertyShape)) {
 				quickPickItems.push({
 					label: graphUri.replace(/^workspace:\/\/\//, ''),
