@@ -65,11 +65,15 @@ export const manageShaclShapes = {
 		const quickPickItems: ShapePickItem[] = [];
 
 		for (const graphUri of store.getGraphs().sort()) {
-			if(InferenceUri.isInferenceUri(graphUri)) {
+			if (InferenceUri.isInferenceUri(graphUri)) {
 				continue;
 			}
 
-			if (store.any(graphUri, null, rdf.type, sh.NodeShape) || store.any(graphUri, null, rdf.type, sh.PropertyShape)) {
+			const hasShapes =
+				store.any(graphUri, null, rdf.type, sh.NodeShape) ||
+				store.any(graphUri, null, rdf.type, sh.PropertyShape);
+
+			if (hasShapes) {
 				quickPickItems.push({
 					label: graphUri.replace(/^workspace:\/\/\//, ''),
 					graphUri
@@ -101,7 +105,6 @@ export const manageShaclShapes = {
 
 			return {
 				label: shapeGraphUri.replace(/^workspace:\/\/\//, ''),
-				detail: shapeGraphUri,
 				description: isDefaultShape ? '- Default' : undefined,
 				picked: selectedShapeGraphUris.has(shapeGraphUri),
 				graphUri: shapeGraphUri,
