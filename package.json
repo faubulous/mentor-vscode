@@ -1554,26 +1554,57 @@
               "unmatchedSort": "alphabetical"
             }
           },
-          "mentor.shacl.defaultShapes": {
-            "type": "array",
-            "title": "Default SHACL Shapes",
-            "description": "Workspace-relative paths to SHACL shape files that are applied to all RDF documents during validation.",
-            "items": {
-              "type": "string"
-            },
-            "default": []
-          },
           "mentor.shacl.validation": {
             "type": "object",
             "title": "SHACL Validation Configuration",
-            "description": "Maps glob patterns to arrays of workspace-relative SHACL shape file paths. Documents matching a pattern will be validated against the specified shapes.",
-            "additionalProperties": {
-              "type": "array",
-              "items": {
-                "type": "string"
+            "description": "Explicit SHACL shape configuration. Configure workspace defaults and per-graph include/exclude rules.",
+            "properties": {
+              "defaults": {
+                "type": "array",
+                "description": "Default SHACL shape graph URIs applied when a graph does not override defaults.",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "graphs": {
+                "type": "object",
+                "description": "Per-graph SHACL shape settings keyed by canonical workspace graph URI.",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "includeDefaults": {
+                      "type": "boolean",
+                      "description": "If true, include default SHACL shape graphs for this graph before applying include/exclude rules.",
+                      "default": true
+                    },
+                    "includeShapes": {
+                      "type": "array",
+                      "description": "Additional SHACL shape graph URIs included for this graph.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    },
+                    "excludeShapes": {
+                      "type": "array",
+                      "description": "SHACL shape graph URIs removed from the effective set for this graph. Exclusions win over includes.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    }
+                  }
+                },
+                "default": {}
               }
             },
-            "default": {}
+            "additionalProperties": false,
+            "default": {
+              "defaults": [],
+              "graphs": {}
+            }
           },
           "mentor.linting.enabled": {
             "type": "boolean",

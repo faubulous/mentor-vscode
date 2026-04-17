@@ -11,6 +11,7 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 import { getConfig } from '@src/utilities/vscode/config';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
+import { resolveEffectiveShapeGraphs, ShaclValidationConfiguration } from './shacl-validation-configuration';
 
 /**
  * A read-only DatasetCore view over a subset of graphs in the internal Store.
@@ -167,10 +168,12 @@ export class ShaclValidationService implements vscode.Disposable {
 	 * Get the effective shape graph URIs for a given document.
 	 */
 	getEffectiveShapeGraphs(documentUri: vscode.Uri): string[] {
-		const validationConfig = getConfig('shacl').get<Record<string, string[]>>('validation', {});
+		const shaclConfig = getConfig('shacl');
+		const validationConfig = shaclConfig.get<ShaclValidationConfiguration>('validation', {});
 		const wsUri = WorkspaceUri.toWorkspaceUri(documentUri);
 		const key = wsUri ? WorkspaceUri.toCanonicalString(wsUri) : documentUri.toString();
-		return validationConfig[key] ?? [];
+
+		return resolveEffectiveShapeGraphs(validationConfig, key);
 	}
 
 	/**
@@ -201,7 +204,9 @@ export class ShaclValidationService implements vscode.Disposable {
 		}
 
 		const fileName = documentUri.path.split('/').pop() ?? documentUri.toString();
-		vscode.window.showInformationMessage(`SHACL validation started for: ${fileName}`);
+		const statusBarMessage = vscode.window.setStatusBarMessage(`$(loading~spin) Running SHACL validation for: ${fileName}`);
+		const statusBarMessageStartTime = Date.now();
+		const minStatusBarMessageDurationMs = 300;
 
 		// Create read-only views over the store — no triple copying needed.
 		const shapesDataset = new StoreDatasetView(this._store, shapeGraphUris);
@@ -209,6 +214,9 @@ export class ShaclValidationService implements vscode.Disposable {
 
 		// Run SHACL validation
 		const validator = new Validator(shapesDataset, { factory: rdfFactory });
+
+		// Yield once so VS Code can paint the status bar spinner before validation starts.
+		await new Promise(resolve => setTimeout(resolve, 0));
 
 		try {
 			const report = await validator.validate({ dataset: dataDataset });
@@ -229,6 +237,14 @@ export class ShaclValidationService implements vscode.Disposable {
 		} catch (error) {
 			vscode.window.showErrorMessage(`SHACL validation failed: ${error}`);
 			return undefined;
+		} finally {
+			const elapsedMs = Date.now() - statusBarMessageStartTime;
+
+			if (elapsedMs < minStatusBarMessageDurationMs) {
+				await new Promise(resolve => setTimeout(resolve, minStatusBarMessageDurationMs - elapsedMs));
+			}
+
+			statusBarMessage.dispose();
 		}
 	}
 
