@@ -7,6 +7,7 @@ import { TreeView } from '@src/views/trees/tree-view';
 import { DefinitionNodeProvider } from './definition-node-provider';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { DefinitionNodeDecorationProvider } from './definition-node-decoration-provider';
+import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 
 /**
  * Provides a combined explorer for classes, properties and individuals.
@@ -25,10 +26,16 @@ export class DefinitionTree implements TreeView {
 		return container.resolve<ISettingsService>(ServiceToken.SettingsService);
 	}
 
+	private get _validationService() {
+		return container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+	}
+
 	/**
 	 * The tree node provider.
 	 */
 	readonly treeDataProvider = new DefinitionNodeProvider();
+
+	private readonly _decorationProvider: DefinitionNodeDecorationProvider;
 
 	/**
 	 * The tree view.
@@ -36,6 +43,9 @@ export class DefinitionTree implements TreeView {
 	readonly treeView: vscode.TreeView<DefinitionTreeNode>;
 
 	constructor() {
+		this._decorationProvider = new DefinitionNodeDecorationProvider(this.treeDataProvider);
+		this.treeDataProvider.setIssueColorProvider(this._decorationProvider);
+
 		this.treeView = vscode.window.createTreeView<DefinitionTreeNode>(this.id, {
 			treeDataProvider: this.treeDataProvider,
 			showCollapseAll: true
@@ -47,6 +57,7 @@ export class DefinitionTree implements TreeView {
 			this.treeView,
 			this._registerDocumentContextHandler(),
 			this._registerDecorationProvider(),
+			this._registerValidationHandler(),
 			this._registerActiveLanguageHandler(),
 			this._registerRefreshCommand(),
 			this._registerEditorSelectionHandler()
@@ -83,7 +94,13 @@ export class DefinitionTree implements TreeView {
 	}
 
 	private _registerDecorationProvider(): vscode.Disposable {
-		return vscode.window.registerFileDecorationProvider(new DefinitionNodeDecorationProvider(this.treeDataProvider));
+		return vscode.window.registerFileDecorationProvider(this._decorationProvider);
+	}
+
+	private _registerValidationHandler(): vscode.Disposable {
+		return this._validationService.onDidValidate(() => {
+			this.treeDataProvider.refresh(this._contextService.activeContext);
+		});
 	}
 
 	private _registerEditorSelectionHandler(): vscode.Disposable {

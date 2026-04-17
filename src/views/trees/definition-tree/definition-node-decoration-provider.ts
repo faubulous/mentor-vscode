@@ -248,21 +248,17 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			return undefined;
 		}
 
-		// Container nodes (mentor: scheme) and intermediate ancestor nodes are decorated
-		// via the ancestor severity map, built by walking .parent from each violated node.
 		if (uri.scheme === 'mentor') {
-			return this._buildShaclDecoration(this._ancestorSeverity.get(uri.toString()), false);
+			return this._buildShaclDecoration(this._getShaclSeverity(uri), false);
 		}
 
-		const node = new NamedNode(uri.toString());
-
-		// Check SHACL validation results for this node first — violations must override
-		// every other decoration, including the "not in active document" indicator.
-		const shaclDecoration = this._buildShaclDecoration(this._shaclViolations.get(node.value), false);
+		const shaclDecoration = this._buildShaclDecoration(this._getShaclSeverity(uri), false);
 
 		if (shaclDecoration) {
 			return shaclDecoration;
 		}
+
+		const node = new NamedNode(uri.toString());
 
 		if (!context.subjects[node.value]) {
 			const result = new vscode.FileDecoration(undefined, undefined, this._disabledColor);
@@ -313,6 +309,38 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 			return result;
 		}
+	}
+
+	/**
+	 * Returns the SHACL issue color for the given resource URI.
+	 * Only warning and violation severities are treated as issues for tree icon coloring.
+	 */
+	getIssueColor(uri: vscode.Uri | undefined): vscode.ThemeColor | undefined {
+		const severity = this._getShaclSeverity(uri);
+
+		if (severity === SH.Violation) {
+			return this._errorColor;
+		}
+
+		if (severity === SH.Warning) {
+			return this._warningColor;
+		}
+
+		return undefined;
+	}
+
+	private _getShaclSeverity(uri: vscode.Uri | undefined): string | undefined {
+		if (!uri) {
+			return undefined;
+		}
+
+		// Container nodes (mentor: scheme) and intermediate ancestor nodes are decorated
+		// via the ancestor severity map, built by walking .parent from each violated node.
+		if (uri.scheme === 'mentor') {
+			return this._ancestorSeverity.get(uri.toString());
+		}
+
+		return this._shaclViolations.get(uri.toString());
 	}
 
 	/**

@@ -32,6 +32,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	 */
 	private _nodeCache = new Map<string, DefinitionTreeNode>();
 
+	private _issueColorProvider: DefinitionNodeIssueColorProvider | undefined;
+
 	private _onDidChangeTreeData: vscode.EventEmitter<DefinitionTreeNode | undefined> = new vscode.EventEmitter<DefinitionTreeNode | undefined>();
 
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
@@ -52,7 +54,9 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
 	}
 
-	constructor() {
+	constructor(issueColorProvider?: DefinitionNodeIssueColorProvider) {
+		this._issueColorProvider = issueColorProvider;
+
 		this.contextService.onDidChangeDocumentContext((context) => {
 			// Update the tree when the active document changed.
 			this.refresh(context);
@@ -69,6 +73,10 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		this.settings.onDidChange("view.showPropertyTypes", () => this.refresh());
 		this.settings.onDidChange("view.showIndividualTypes", () => this.refresh());
 		this.settings.onDidChange("view.activeLanguage", () => this.refresh());
+	}
+
+	setIssueColorProvider(issueColorProvider: DefinitionNodeIssueColorProvider | undefined): void {
+		this._issueColorProvider = issueColorProvider;
 	}
 
 	/**
@@ -281,16 +289,38 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	getTreeItem(node: DefinitionTreeNode): vscode.TreeItem {
+		const icon = this._getIconWithIssueColor(node);
+
 		return {
 			id: node.id,
 			collapsibleState: node.getCollapsibleState(),
 			contextValue: node.getContextValue(),
 			resourceUri: node.getResourceUri(),
-			iconPath: node.getIcon(),
+			iconPath: icon,
 			label: node.getLabel(),
 			description: node.getDescription(),
 			command: node.getCommand(),
 			tooltip: node.getTooltip()
 		};
 	}
+
+	private _getIconWithIssueColor(node: DefinitionTreeNode): vscode.ThemeIcon | undefined {
+		const icon = node.getIcon();
+
+		if (!(icon instanceof vscode.ThemeIcon)) {
+			return icon;
+		}
+
+		const issueColor = this._issueColorProvider?.getIssueColor(node.getResourceUri());
+
+		if (!issueColor) {
+			return icon;
+		}
+
+		return new vscode.ThemeIcon(icon.id, issueColor);
+	}
+}
+
+export interface DefinitionNodeIssueColorProvider {
+	getIssueColor(uri: vscode.Uri | undefined): vscode.ThemeColor | undefined;
 }

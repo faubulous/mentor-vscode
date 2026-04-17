@@ -61,7 +61,7 @@ const mockValidationService = {
 		mockValidationHandlers.push(handler);
 		return { dispose: () => {} };
 	}),
-	getLastResult: vi.fn(() => undefined),
+	getLastResult: vi.fn(() => undefined as any),
 };
 
 vi.mock('tsyringe', () => ({
@@ -355,6 +355,61 @@ describe('DefinitionNodeDecorationProvider — provideFileDecoration (non-Disabl
 	});
 });
 
+describe('DefinitionNodeDecorationProvider — getIssueColor', () => {
+	const SH_Violation = 'http://www.w3.org/ns/shacl#Violation';
+	const SH_Warning = 'http://www.w3.org/ns/shacl#Warning';
+	const SH_Info = 'http://www.w3.org/ns/shacl#Info';
+
+	let dec: DefinitionNodeDecorationProvider;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockConfigValue = undefined;
+		mockContextChangeHandlers.length = 0;
+		mockSettingsChangeHandlers.clear();
+		mockValidationHandlers.length = 0;
+
+		(vscode.workspace as any).onDidChangeConfiguration = vi.fn((handler: any) => {
+			handler({ affectsConfiguration: () => false });
+			return { dispose: () => {} };
+		});
+
+		dec = new DefinitionNodeDecorationProvider(mockNodeProvider as any);
+	});
+
+	it('returns error color for SHACL violations', () => {
+		(dec as any)._shaclViolations.set('http://example.org/A', SH_Violation);
+
+		const color = dec.getIssueColor(vscode.Uri.parse('http://example.org/A'));
+
+		expect(color?.id).toBe('list.errorForeground');
+	});
+
+	it('returns warning color for SHACL warnings', () => {
+		(dec as any)._shaclViolations.set('http://example.org/B', SH_Warning);
+
+		const color = dec.getIssueColor(vscode.Uri.parse('http://example.org/B'));
+
+		expect(color?.id).toBe('list.warningForeground');
+	});
+
+	it('returns warning color for mentor ancestor nodes with warning severity', () => {
+		(dec as any)._ancestorSeverity.set('mentor:shapes', SH_Warning);
+
+		const color = dec.getIssueColor(vscode.Uri.parse('mentor:shapes'));
+
+		expect(color?.id).toBe('list.warningForeground');
+	});
+
+	it('returns undefined for SHACL info severity', () => {
+		(dec as any)._shaclViolations.set('http://example.org/C', SH_Info);
+
+		const color = dec.getIssueColor(vscode.Uri.parse('http://example.org/C'));
+
+		expect(color).toBeUndefined();
+	});
+});
+
 describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propagation', () => {
 	const SH_Violation = 'http://www.w3.org/ns/shacl#Violation';
 	const SH_Warning = 'http://www.w3.org/ns/shacl#Warning';
@@ -591,7 +646,7 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 		// Should fire with specific URIs (violated + ancestor) and then with undefined
 		expect(fireSpy).toHaveBeenCalledTimes(2);
 		// First call: array of URIs
-		const firstCallArg = fireSpy.mock.calls[0][0];
+		const firstCallArg = fireSpy.mock.calls[0][0] as vscode.Uri[];
 		expect(Array.isArray(firstCallArg)).toBe(true);
 		expect(firstCallArg.length).toBe(2); // 1 violated + 1 ancestor
 		// Second call: undefined for full refresh

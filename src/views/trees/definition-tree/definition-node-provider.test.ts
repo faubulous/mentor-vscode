@@ -129,6 +129,45 @@ describe('DefinitionNodeProvider', () => {
 			expect(item).toHaveProperty('collapsibleState');
 			expect(item).toHaveProperty('label');
 		});
+
+		it('should override ThemeIcon color when issue color is provided', () => {
+			const provider = new DefinitionNodeProvider({
+				getIssueColor: vi.fn(() => new vscode.ThemeColor('list.errorForeground')),
+			});
+			const ctx = makeContext();
+
+			class IconNode extends DefinitionTreeNode {
+				override getIcon() {
+					return new vscode.ThemeIcon('rdf-class', new vscode.ThemeColor('mentor.color.class'));
+				}
+			}
+
+			const node = new IconNode(ctx, 'root', 'urn:ex#x');
+			const item = provider.getTreeItem(node);
+
+			expect(item.iconPath).toBeInstanceOf(vscode.ThemeIcon);
+			expect((item.iconPath as vscode.ThemeIcon).id).toBe('rdf-class');
+			expect((item.iconPath as vscode.ThemeIcon).color?.id).toBe('list.errorForeground');
+		});
+
+		it('should keep original ThemeIcon color when no issue color is provided', () => {
+			const provider = new DefinitionNodeProvider({
+				getIssueColor: vi.fn(() => undefined),
+			});
+			const ctx = makeContext();
+
+			class IconNode extends DefinitionTreeNode {
+				override getIcon() {
+					return new vscode.ThemeIcon('rdf-class', new vscode.ThemeColor('mentor.color.class'));
+				}
+			}
+
+			const node = new IconNode(ctx, 'root', 'urn:ex#x');
+			const item = provider.getTreeItem(node);
+
+			expect(item.iconPath).toBeInstanceOf(vscode.ThemeIcon);
+			expect((item.iconPath as vscode.ThemeIcon).color?.id).toBe('mentor.color.class');
+		});
 	});
 
 	describe('getChildren — no document set', () => {
