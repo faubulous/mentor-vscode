@@ -65,6 +65,35 @@ describe('sortDocument', () => {
 		expect(showErrorSpy).toHaveBeenCalledWith('This document has syntax errors and cannot be sorted.');
 	});
 
+	it('should ignore SHACL error diagnostics and continue sorting', async () => {
+		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
+		const fakeDoc = {
+			uri,
+			getText: () => '@prefix ex: <urn:ex#> .\nex:A a ex:B .',
+			positionAt: (offset: number) => new (mockVscode as any).Position(0, offset),
+		};
+		(mockVscode.workspace as any).textDocuments = [fakeDoc];
+
+		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([
+			{ severity: 0, source: 'SHACL' } as any,
+		]);
+
+		const docKey = uri.toString();
+		mockDocumentContextService.contexts = {
+			[docKey]: { namespaces: {}, baseIri: undefined },
+		};
+
+		const showErrorSpy = vi.spyOn(mockVscode.window, 'showErrorMessage');
+		const applyEditSpy = vi.spyOn(mockVscode.workspace, 'applyEdit');
+		showErrorSpy.mockClear();
+		applyEditSpy.mockClear();
+
+		await sortDocument(uri, {} as any);
+
+		expect(showErrorSpy.mock.calls.some((call) => call[0] === 'This document has syntax errors and cannot be sorted.')).toBe(false);
+		expect(applyEditSpy).toHaveBeenCalled();
+	});
+
 	it('should show error when document context is not available', async () => {
 		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
 		const fakeDoc = { uri, getText: () => 'valid turtle' };

@@ -17,6 +17,7 @@ import { resolveEffectiveShapeGraphs, ShaclValidationConfiguration } from './sha
  * A read-only DatasetCore view over a subset of graphs in the internal Store.
  * Avoids copying triples by delegating match() and iteration directly to the store.
  */
+// TODO: Move this into mentor-rdf
 class StoreDatasetView implements DatasetCore {
 	private readonly _graphUris: readonly string[];
 	private readonly _s: Term | null;

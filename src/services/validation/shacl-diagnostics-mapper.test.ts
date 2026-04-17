@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
 import * as vscode from 'vscode';
+import { describe, it, expect, vi } from 'vitest';
+import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
+import type { ShaclValidationResult, ShaclValidationResultEntry } from './shacl-validation-service';
 
 vi.mock('vscode', async () => await import('../../utilities/mocks/vscode'));
 
@@ -10,9 +12,6 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 		Info: 'http://www.w3.org/ns/shacl#Info',
 	},
 }));
-
-import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
-import type { ShaclValidationResult, ShaclValidationResultEntry } from './shacl-validation-service';
 
 function range(startLine: number, startChar: number, endLine: number, endChar: number) {
 	return { start: { line: startLine, character: startChar }, end: { line: endLine, character: endChar } };

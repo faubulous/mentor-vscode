@@ -5,6 +5,11 @@ import { QuadContextSerializer, TurtleSerializer, QuadSortingStrategy } from '@f
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
+function isShaclDiagnostic(diagnostic: vscode.Diagnostic): boolean {
+	return typeof diagnostic.source === 'string'
+		&& diagnostic.source.toLowerCase().includes('shacl');
+}
+
 /**
  * Sorts the active RDF document according to a given sorting strategy using the StatementSerializer.
  * Re-lexes and re-parses the document to extract QuadContexts (with comments), then
@@ -24,7 +29,7 @@ export async function sortDocument(documentUri: vscode.Uri | undefined, strategy
 		?? await vscode.workspace.openTextDocument(targetUri);
 
 	const diagnostics = vscode.languages.getDiagnostics(document.uri);
-	const hasErrors = diagnostics.some((d) => d.severity === vscode.DiagnosticSeverity.Error);
+	const hasErrors = diagnostics.some((d) => d.severity === vscode.DiagnosticSeverity.Error && !isShaclDiagnostic(d));
 
 	if (hasErrors) {
 		await vscode.window.showErrorMessage('This document has syntax errors and cannot be sorted.');
