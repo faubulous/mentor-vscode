@@ -16,7 +16,7 @@ interface ShapePickItem extends vscode.QuickPickItem {
 	graphUri: string;
 }
 
-function getGraphUriFromItem(item: vscode.QuickPickItem): string | undefined {
+function getGraphUriFromItem(item: vscode.QuickPickItem, knownItems?: ReadonlyArray<ShapePickItem>): string | undefined {
 	const quickPickItem = item as Partial<ShapePickItem>;
 
 	if (typeof quickPickItem.graphUri === 'string' && quickPickItem.graphUri.length > 0) {
@@ -25,6 +25,14 @@ function getGraphUriFromItem(item: vscode.QuickPickItem): string | undefined {
 
 	if (typeof item.detail === 'string' && item.detail.length > 0) {
 		return item.detail;
+	}
+
+	if (knownItems) {
+		const fallback = knownItems.find(knownItem => knownItem.label === item.label);
+
+		if (fallback) {
+			return fallback.graphUri;
+		}
 	}
 
 	return undefined;
@@ -141,7 +149,7 @@ export const manageShaclShapes = {
 				}
 
 				const selectedUris = items
-					.map(item => getGraphUriFromItem(item))
+					.map(item => getGraphUriFromItem(item, quickPickItems))
 					.filter((uri): uri is string => !!uri);
 
 				selectedShapeGraphUris = new Set(selectedUris);
@@ -160,7 +168,7 @@ export const manageShaclShapes = {
 			});
 
 			quickPick.onDidTriggerItemButton(e => {
-				const graphUri = getGraphUriFromItem(e.item);
+				const graphUri = getGraphUriFromItem(e.item, quickPickItems);
 
 				if (!graphUri) {
 					return;
