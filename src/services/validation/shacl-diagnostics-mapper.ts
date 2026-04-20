@@ -24,6 +24,9 @@ export class ShaclDiagnosticsMapper {
 			const diagnostic = new vscode.Diagnostic(range, message, severity);
 			diagnostic.source = 'SHACL';
 			diagnostic.code = this._extractLocalName(entry.constraintComponent);
+			(diagnostic as vscode.Diagnostic & { data?: { focusNode: string } }).data = {
+				focusNode: entry.focusNode,
+			};
 
 			diagnostics.push(diagnostic);
 		}

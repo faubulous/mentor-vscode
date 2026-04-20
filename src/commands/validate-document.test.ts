@@ -84,4 +84,36 @@ describe('validateDocument command', () => {
 		expect(mockValidationService.getEffectiveShapeGraphs).not.toHaveBeenCalled();
 		expect(mockValidationService.validateDocument).not.toHaveBeenCalled();
 	});
+
+	it('focuses the Problems panel when View is selected for validation issues', async () => {
+		mockValidationService.validateDocument.mockResolvedValue({
+			conforms: false,
+			results: [{}],
+		});
+		(vscode.window as any).showWarningMessage = vi.fn(async () => 'View');
+
+		await validateDocument.handler();
+
+		expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+			'SHACL validation: 1 issue(s) found.',
+			'View'
+		);
+		expect(vscode.commands.executeCommand).toHaveBeenCalledWith('workbench.panel.markers.view.focus');
+	});
+
+	it('does not focus the Problems panel when View is not selected', async () => {
+		mockValidationService.validateDocument.mockResolvedValue({
+			conforms: false,
+			results: [{}, {}],
+		});
+		(vscode.window as any).showWarningMessage = vi.fn(async () => undefined);
+
+		await validateDocument.handler();
+
+		expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
+			'SHACL validation: 2 issue(s) found.',
+			'View'
+		);
+		expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('workbench.panel.markers.view.focus');
+	});
 });

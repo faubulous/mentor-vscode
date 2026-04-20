@@ -34,7 +34,14 @@ export const validateDocument = {
 		} else if (result.conforms) {
 			vscode.window.showInformationMessage('SHACL validation: No issues found.');
 		} else {
-			vscode.window.showWarningMessage(`SHACL validation: ${result.results.length} issue(s) found.`);
+			const action = await vscode.window.showWarningMessage(
+				`SHACL validation: ${result.results.length} issue(s) found.`,
+				'View'
+			);
+
+			if (action === 'View') {
+				await vscode.commands.executeCommand('workbench.panel.markers.view.focus');
+			}
 		}
 	}
 };

@@ -128,13 +128,22 @@ export class DefinitionTree implements TreeView {
 					return;
 				}
 
-				const iri = context.getIriAtPosition(position);
+				const iri = this._getShaclFocusNodeForSelection(e.textEditor.document.uri, position)
+					?? context.getIriAtPosition(position);
 
 				if (iri) {
 					this._revealForUri(iri);
 				}
 			}, 300);
 		});
+	}
+
+	private _getShaclFocusNodeForSelection(documentUri: vscode.Uri, position: vscode.Position): string | undefined {
+		const diagnostics = vscode.languages.getDiagnostics(documentUri);
+		const shaclDiagnostic = diagnostics.find((d) => d.source === 'SHACL' && d.range.contains(position));
+		const focusNode = (shaclDiagnostic as vscode.Diagnostic & { data?: { focusNode?: string } } | undefined)?.data?.focusNode;
+
+		return typeof focusNode === 'string' && focusNode.length > 0 ? focusNode : undefined;
 	}
 
 	private _revealForUri(iri: string): void {

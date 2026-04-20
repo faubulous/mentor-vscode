@@ -244,6 +244,15 @@ describe('ShaclDiagnosticsMapper', () => {
 			expect(diagnostics[0].message).toBe('Value must be of type xsd:string; Also needs language tag');
 		});
 
+		it('adds the focus node IRI to diagnostic metadata for navigation', () => {
+			const focusNode = 'http://example.org/FocusNode';
+			const context = makeContext({ subjects: { [focusNode]: [range(0, 0, 0, 10)] } });
+			const entry = makeEntry({ focusNode });
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context);
+
+			expect((diagnostics[0] as any).data?.focusNode).toBe(focusNode);
+		});
+
 		it('builds fallback message from constraint component', () => {
 			const context = makeContext({ subjects: { 'http://example.org/FocusNode': [range(0, 0, 0, 10)] } });
 			const entry = makeEntry({

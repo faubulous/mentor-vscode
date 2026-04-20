@@ -105,6 +105,7 @@ describe('DefinitionTree', () => {
 		(vscode.window as any).registerFileDecorationProvider = mockRegisterFileDecoration;
 		(vscode.commands as any).executeCommand = mockExecuteCommand;
 		(vscode.window as any).onDidChangeTextEditorSelection = mockOnDidChangeTextEditorSelection;
+		(vscode.languages as any).getDiagnostics = vi.fn(() => []);
 
 		mockContextService.activeContext = undefined;
 		mockContextService.contexts = {};
@@ -305,5 +306,37 @@ describe('DefinitionTree', () => {
 		for (const h of selectionHandlers) { h(mockEvent); }
 		await new Promise(r => setTimeout(r, 400));
 		expect(revealSpy).not.toHaveBeenCalled();
+	});
+
+	it('prefers SHACL focus node from diagnostics when selection is inside a SHACL problem range', async () => {
+		const predicateIri = 'http://www.w3.org/2000/01/rdf-schema#label';
+		const focusNodeIri = 'http://example.org/Person123';
+		const mockNode = { uri: focusNodeIri, id: 'focus-node-id' };
+		mockDefinitionNodeProvider.getNodeForUri.mockReturnValue(mockNode as any);
+
+		const mockContext = { getIriAtPosition: vi.fn(() => predicateIri) };
+		mockContextService.contexts = { 'file:///test.ttl': mockContext };
+		(vscode.languages as any).getDiagnostics = vi.fn(() => [
+			{
+				source: 'SHACL',
+				range: new vscode.Range(5, 0, 5, 20),
+				data: { focusNode: focusNodeIri },
+			},
+		]);
+
+		const revealSpy = vi.spyOn(tree.treeView, 'reveal').mockResolvedValue(undefined);
+		const mockEvent = {
+			textEditor: { document: { uri: vscode.Uri.parse('file:///test.ttl') } },
+			selections: [{ active: new vscode.Position(5, 10) }],
+		};
+
+		for (const h of selectionHandlers) {
+			h(mockEvent);
+		}
+		await new Promise(r => setTimeout(r, 400));
+
+		expect(mockContext.getIriAtPosition).not.toHaveBeenCalled();
+		expect(mockDefinitionNodeProvider.getNodeForUri).toHaveBeenCalledWith(focusNodeIri);
+		expect(revealSpy).toHaveBeenCalledWith(mockNode, { select: true, focus: false, expand: true });
 	});
 });

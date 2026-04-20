@@ -586,7 +586,7 @@
       },
       {
         "command": "mentor.command.addActiveEditorToNotebook",
-        "title": "Add Active Editor to Notebook",
+        "title": "Add Document to Notebook",
         "icon": "$(add-notebook)",
         "category": "Mentor"
       },
