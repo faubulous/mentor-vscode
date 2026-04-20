@@ -1,4 +1,5 @@
 export { analyzeWorkspace } from './analyze-workspace';
+export { addActiveEditorToNotebook } from './add-active-editor-to-notebook';
 export { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
 export { clearQueryHistory } from './clear-query-history';
 export { cleanDocument } from './clean-document';
@@ -12,7 +13,6 @@ export {
 export { createDocument } from './create-document';
 export { createDocumentFromLanguage } from './create-document-from-language';
 export { createNotebook } from './create-notebook';
-export { createNotebookFromEditor } from './create-notebook-from-editor';
 export { createSparqlQueryFromDocument } from './create-sparql-query-from-document';
 export { createSparqlConnection } from './create-sparql-connection';
 export { deleteGraph } from './delete-graph';

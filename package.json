@@ -585,8 +585,8 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.createNotebookFromEditor",
-        "title": "Create Notebook from Editor",
+        "command": "mentor.command.addActiveEditorToNotebook",
+        "title": "Add Active Editor to Notebook",
         "icon": "$(add-notebook)",
         "category": "Mentor"
       },
@@ -895,7 +895,7 @@
           "group": "navigation@6"
         },
         {
-          "command": "mentor.command.createNotebookFromEditor",
+          "command": "mentor.command.addActiveEditorToNotebook",
           "when": "mentor.editor.isRdfDocument || editorLangId == 'sparql'",
           "group": "navigation@7"
         }
