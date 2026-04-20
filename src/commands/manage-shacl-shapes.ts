@@ -37,8 +37,8 @@ function getIncludeDefaultsButton(includeDefaults: boolean): vscode.QuickInputBu
 	return {
 		iconPath: new vscode.ThemeIcon(includeDefaults ? 'check-all' : 'exclude'),
 		tooltip: includeDefaults
-			? 'Include default SHACL shape datasets for this graph'
-			: 'Exclude default SHACL shape datasets for this graph'
+			? 'Include as default SHACL shape file'
+			: 'Exclude as default SHACL shape file'
 	};
 }
 
@@ -97,7 +97,7 @@ export const manageShaclShapes = {
 		selectedShapeGraphUris = new Set(effectiveShapes);
 
 		const quickPick = vscode.window.createQuickPick<ShapePickItem>();
-		quickPick.title = 'SHACL Configuration';
+		quickPick.title = 'SHACL Validation Settings';
 		quickPick.canSelectMany = true;
 
 		const toItem = (shapeGraphUri: string): ShapePickItem => {
@@ -111,8 +111,8 @@ export const manageShaclShapes = {
 				buttons: [{
 					iconPath: isDefaultShape ? DEFAULT_SHAPE_ON_ICON : DEFAULT_SHAPE_OFF_ICON,
 					tooltip: isDefaultShape
-						? 'Unset as default shape dataset'
-						: 'Set as default shape dataset'
+						? 'Remove as default shape file'
+						: 'Add as default shape file'
 				}]
 			};
 		};

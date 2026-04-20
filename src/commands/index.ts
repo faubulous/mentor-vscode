@@ -55,6 +55,7 @@ export { setNotebookInference } from './set-notebook-inference';
 export { showAnnotatedLabels } from './show-annotated-labels';
 export { showIndividualTypes } from './show-individual-types';
 export { showPropertyTypes } from './show-property-types';
+export { showShapeReferences } from './show-shape-references';
 export { showReferences } from './show-references';
 export { showUriLabels } from './show-uri-labels';
 export { showUriLabelsWithPrefix } from './show-uri-labels-with-prefix';

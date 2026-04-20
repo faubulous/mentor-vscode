@@ -112,6 +112,10 @@ export class DefinitionTree implements TreeView {
 			}
 
 			debounceTimer = setTimeout(() => {
+				if (this.treeView.visible === false) {
+					return;
+				}
+
 				const context = this._contextService.contexts[e.textEditor.document.uri.toString()];
 
 				if (!context) {

@@ -74,30 +74,31 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 
 			const shapeFiles = this._validationService.getEffectiveShapeGraphs(document.uri);
 			const shapeCount = shapeFiles.length;
+			const shapeFilesTooltip = shapeCount > 0
+				? `Configured SHACL shapes:\n\n${shapeFiles.map(shapeFile => `- ${shapeFile}`).join('\n')}`
+				: 'Configure SHACL shape files for this document';
 
 			let title = "";
 
 			if (shapeCount > 1) {
-				title += `$(check-all)\u00A0${shapeCount} shape sources`;
+				title += `$(document-check)\u00A0${shapeCount} shape files active`;
 			} else if (shapeCount === 1) {
-				title += `$(check-all)\u00A0${shapeCount} shape source`;
+				title += `$(document-check)\u00A0${shapeCount} shape file active`;
 			} else {
-				title += `$(check-all)\u00A0No shape sources`;
+				title += `$(document-check)\u00A0No shape files active`;
 			}
 
 			result.push(new vscode.CodeLens(range, {
 				title: title,
 				command: 'mentor.command.manageShaclShapes',
-				tooltip: shapeCount > 0
-					? `Configured SHACL shapes: ${shapeFiles.join(', ')}`
-					: 'Configure SHACL shape files for this document'
+				tooltip: shapeFilesTooltip
 			}));
 
 			if (shapeCount > 0) {
 				result.push(new vscode.CodeLens(range, {
-					title: 'Validate',
+					title: '$(run-coverage)\u00A0Validate',
 					command: 'mentor.command.validateDocument',
-					tooltip: 'Validate this document against configured SHACL shapes'
+					tooltip: 'Validate this document against configured SHACL shape files'
 				}));
 			}
 
