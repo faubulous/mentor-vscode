@@ -72,6 +72,12 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 			codeLenses.push(inferenceCodeLens);
 		}
 
+		codeLenses.push(new vscode.CodeLens(range, {
+			title: '$(play)\u00A0Execute',
+			command: 'mentor.command.executeSparqlQuery',
+			tooltip: 'Execute this SPARQL query'
+		}));
+
 		return codeLenses;
 	}
 

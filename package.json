@@ -882,22 +882,22 @@
         {
           "command": "mentor.command.validateDocument",
           "when": "mentor.editor.isRdfDocument",
-          "group": "navigation@5"
+          "group": "navigation@-3"
         },
         {
           "command": "mentor.command.executeSparqlQueryFromActiveEditor",
           "when": "editorLangId == 'sparql'",
-          "group": "navigation@5"
+          "group": "navigation@-2"
         },
         {
           "command": "mentor.command.createSparqlQueryFromDocument",
           "when": "mentor.editor.isRdfDocument",
-          "group": "navigation@6"
+          "group": "navigation@-1"
         },
         {
           "command": "mentor.command.addActiveEditorToNotebook",
           "when": "mentor.editor.isRdfDocument || editorLangId == 'sparql'",
-          "group": "navigation@7"
+          "group": "navigation@0"
         }
       ],
       "view/title": [

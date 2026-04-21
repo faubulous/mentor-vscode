@@ -81,11 +81,11 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			let title = "";
 
 			if (shapeCount > 1) {
-				title += `$(document-check)\u00A0${shapeCount} shape files active`;
+				title += `$(file)\u00A0${shapeCount} shape files active`;
 			} else if (shapeCount === 1) {
-				title += `$(document-check)\u00A0${shapeCount} shape file active`;
+				title += `$(file)\u00A0${shapeCount} shape file active`;
 			} else {
-				title += `$(document-check)\u00A0No shape files active`;
+				title += `$(file)\u00A0No shape files active`;
 			}
 
 			result.push(new vscode.CodeLens(range, {
