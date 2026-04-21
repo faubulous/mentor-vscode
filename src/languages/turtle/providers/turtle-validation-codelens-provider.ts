@@ -4,6 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
+import { getConfig } from '@src/utilities/vscode/config';
 
 /**
  * Provides SHACL validation CodeLens actions at the top of RDF documents.
@@ -12,6 +13,8 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 	private _initialized: boolean = false;
 
 	private _initializing: boolean = false;
+
+	private _enabled: boolean = false;
 
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
@@ -31,7 +34,8 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 
 	constructor() {
 		vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('mentor.shacl')) {
+			if (e.affectsConfiguration('mentor.shacl') || e.affectsConfiguration('mentor.shacl.enabled')) {
+				this._enabled = getConfig().get('shacl.enabled', false);
 				this._onDidChangeCodeLenses.fire();
 			}
 		});
@@ -41,12 +45,18 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 		this._initializing = true;
 		this._initialized = false;
 
+		this._enabled = getConfig().get('shacl.enabled', false);
+
 		this._workspaceIndexerService.waitForIndexed().then(() => {
-			this._onDidChangeCodeLenses.fire();
+			if (this._enabled) {
+				this._onDidChangeCodeLenses.fire();
+			}
 		});
 
 		this._contextService.onDidChangeDocumentContext(() => {
-			this._onDidChangeCodeLenses.fire();
+			if (this._enabled) {
+				this._onDidChangeCodeLenses.fire();
+			}
 		});
 
 		this._initialized = true;
@@ -61,6 +71,10 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 
 			if (!this._initialized) {
 				await this._initialize();
+			}
+
+			if (!this._enabled) {
+				return resolve([]);
 			}
 
 			const context = this._contextService.contexts[document.uri.toString()];

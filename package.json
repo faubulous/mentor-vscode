@@ -881,7 +881,7 @@
       "editor/title": [
         {
           "command": "mentor.command.validateDocument",
-          "when": "mentor.editor.isRdfDocument",
+          "when": "mentor.editor.isRdfDocument && config.mentor.shacl.enabled",
           "group": "navigation@-3"
         },
         {
@@ -1614,6 +1614,13 @@
               "defaults": [],
               "graphs": {}
             }
+          },
+          "mentor.shacl.enabled": {
+            "type": "boolean",
+            "title": "Enable Experimental SHACL Validation Features",
+            "description": "If enabled, Mentor will show experimental SHACL validation features including the titlebar validate button and SHACL validation code lenses.",
+            "default": false,
+            "experimental": true
           },
           "mentor.linting.enabled": {
             "type": "boolean",
