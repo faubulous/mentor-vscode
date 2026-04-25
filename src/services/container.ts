@@ -18,6 +18,7 @@ import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-
 import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
+import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
@@ -88,4 +89,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 
 	// Register the platform-specific language client factory.
 	container.registerInstance(ServiceToken.LanguageClientFactory, languageClientFactory);
+
+	// Register the SHACL validation service.
+	const shaclValidationService = new ShaclValidationService();
+	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 }

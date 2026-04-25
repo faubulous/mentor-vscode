@@ -1,10 +1,19 @@
 import * as vscode from 'vscode';
-import { NamedNode, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { NamedNode, VocabularyRepository, SH } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { getConfig } from '@src/utilities/vscode/config';
+import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
+import { DefinitionNodeProvider } from './definition-node-provider';
+
+/**
+ * Maximum number of violated focus nodes for which ancestor walks are performed.
+ * Limits the cost of tree traversal when there are many violations.
+ * Direct leaf decorations are unaffected by this cap.
+ */
+const MAX_DECORATED_VIOLATIONS = 100;
 
 /**
  * Indicates the where missing language tags should be decorated.
@@ -31,9 +40,25 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 	private readonly _warningColor = new vscode.ThemeColor("list.warningForeground");
 
+	private readonly _errorColor = new vscode.ThemeColor("list.errorForeground");
+
 	private readonly _disabledColor = new vscode.ThemeColor("descriptionForeground");
 
 	private _labelPredicates = new Set<string>();
+
+	/**
+	 * Maps focus node IRIs to their worst SHACL severity (`sh:Violation`, `sh:Warning`, `sh:Info`)
+	 * for the currently active document's validation result.
+	 */
+	private _shaclViolations = new Map<string, string>();
+
+	/**
+	 * Maps ancestor node resource URIs to the worst SHACL severity among their descendant focus
+	 * nodes. Built by walking the `.parent` chain of each violated tree node. Only `mentor:`
+	 * URIs are recorded — real-IRI nodes that appear in multiple branches use synthetic
+	 * `mentor:properties:<iri>` / `mentor:individuals:<iri>` URIs via `getResourceUri()`.
+	 */
+	private _ancestorSeverity = new Map<string, string>();
 
 	private readonly _onDidChangeFileDecorations = new vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>();
 
@@ -53,7 +78,11 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	}
 
-	constructor() {
+	private get _validationService() {
+		return container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+	}
+
+	constructor(private readonly _nodeProvider?: DefinitionNodeProvider) {
 		this._decorationScope = this._getDecorationScopeFromConfiguration();
 
 		// If the configuration for decorating missing language tags changes, update the decoration provider.
@@ -72,12 +101,128 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			} else {
 				this._labelPredicates = new Set();
 			}
+
+			// Reload SHACL violations for the new active document and refresh decorations.
+			this._updateShaclViolations();
+			this._onDidChangeFileDecorations.fire(undefined);
+		});
+
+		this._validationService.onDidValidate(() => {
+			// Reload violations for the currently active document and refresh decorations.
+			this._updateShaclViolations();
+
+			// Fire for violated URIs and ancestor URIs so VS Code proactively caches
+			// their decorations, then fire undefined to refresh all visible items.
+			const violatedUris = [...this._shaclViolations.keys()].map(iri => vscode.Uri.parse(iri));
+			const ancestorUris = [...this._ancestorSeverity.keys()].map(uri => vscode.Uri.parse(uri));
+			const allUris = [...violatedUris, ...ancestorUris];
+
+			if (allUris.length > 0) {
+				this._onDidChangeFileDecorations.fire(allUris);
+			}
+
+			this._onDidChangeFileDecorations.fire(undefined);
 		});
 
 		this._settings.onDidChange("view.activeLanguage", () => {
 			// When the active language changes, the decorations need to be updated.
 			this._onDidChangeFileDecorations.fire(undefined);
 		});
+	}
+
+	/**
+	 * Rebuild the violations map from the last validation result for the currently active document.
+	 */
+	private _updateShaclViolations(): void {
+		this._shaclViolations.clear();
+		this._ancestorSeverity.clear();
+
+		const activeContext = this._contextService.activeContext;
+		const documentUri = activeContext?.uri;
+
+		if (!documentUri) {
+			return;
+		}
+
+		const last = this._validationService.getLastResult(documentUri);
+
+		if (!last) {
+			return;
+		}
+
+		// Severity precedence: Violation > Warning > Info
+		const severityRank: Record<string, number> = {
+			[SH.Violation]: 3,
+			[SH.Warning]: 2,
+			[SH.Info]: 1,
+		};
+
+		// Step 1: Build per-focus-node severity map.
+		// Only include violations whose focus node is a subject in the active document.
+		// This prevents false-positive decorations for nodes that are merely referenced
+		// (e.g. as sh:path objects) but have violations originating from imported shapes.
+		const subjects = activeContext?.subjects;
+
+		for (const entry of last.results) {
+			const iri = entry.focusNode;
+
+			if (subjects && !subjects[iri]) {
+				continue;
+			}
+
+			const newRank = severityRank[entry.severity] ?? 0;
+			const existing = this._shaclViolations.get(iri);
+			const existingRank = existing ? (severityRank[existing] ?? 0) : 0;
+
+			if (newRank > existingRank) {
+				this._shaclViolations.set(iri, entry.severity);
+			}
+		}
+
+		// Step 2: Walk ancestors for each violated node (capped for performance).
+		// Only record severity for `mentor:` container nodes — intermediate nodes
+		// with real IRIs are skipped because FileDecorationProvider decorates by URI,
+		// and the same IRI may appear in multiple tree branches (e.g. a property that
+		// is both an ancestor under shapes and a leaf under properties).
+		if (this._nodeProvider) {
+			// Sort by severity so the most important violations are processed first
+			// when we hit the cap.
+			const entries = [...this._shaclViolations.entries()]
+				.sort((a, b) => (severityRank[b[1]] ?? 0) - (severityRank[a[1]] ?? 0));
+
+			const limit = Math.min(entries.length, MAX_DECORATED_VIOLATIONS);
+
+			for (let i = 0; i < limit; i++) {
+				const [iri, severity] = entries[i];
+				const treeNode = this._nodeProvider.getNodeForUri(iri);
+
+				if (!treeNode) {
+					continue;
+				}
+
+				const rank = severityRank[severity] ?? 0;
+				let ancestor = treeNode.parent;
+
+				while (ancestor) {
+					// Use the node's resourceUri as the decoration key. Intermediate grouping
+					// nodes (e.g. PropertyClassNode, IndividualClassNode) override getResourceUri()
+					// to return a synthetic mentor: URI so they can be safely decorated without
+					// causing false positives on other tree branches that share the same real IRI.
+					const resourceUri = ancestor.getResourceUri()?.toString();
+
+					if (resourceUri?.startsWith('mentor:')) {
+						const existingAncestor = this._ancestorSeverity.get(resourceUri);
+						const existingAncestorRank = existingAncestor ? (severityRank[existingAncestor] ?? 0) : 0;
+
+						if (rank > existingAncestorRank) {
+							this._ancestorSeverity.set(resourceUri, severity);
+						}
+					}
+
+					ancestor = ancestor.parent;
+				}
+			}
+		}
 	}
 
 	private _getDecorationScopeFromConfiguration(): MissingLanguageTagDecorationScope {
@@ -99,8 +244,18 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
 		const context = this._contextService.activeContext;
 
-		if (!context || !uri || uri.scheme === 'mentor' || uri.scheme === 'file') {
+		if (!context || !uri || uri.scheme === 'file' || uri.scheme === 'untitled') {
 			return undefined;
+		}
+
+		if (uri.scheme === 'mentor') {
+			return this._buildShaclDecoration(this._getShaclSeverity(uri), false);
+		}
+
+		const shaclDecoration = this._buildShaclDecoration(this._getShaclSeverity(uri), false);
+
+		if (shaclDecoration) {
+			return shaclDecoration;
 		}
 
 		const node = new NamedNode(uri.toString());
@@ -154,5 +309,65 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 			return result;
 		}
+	}
+
+	/**
+	 * Returns the SHACL issue color for the given resource URI.
+	 * Only warning and violation severities are treated as issues for tree icon coloring.
+	 */
+	getIssueColor(uri: vscode.Uri | undefined): vscode.ThemeColor | undefined {
+		const severity = this._getShaclSeverity(uri);
+
+		if (severity === SH.Violation) {
+			return this._errorColor;
+		}
+
+		if (severity === SH.Warning) {
+			return this._warningColor;
+		}
+
+		return undefined;
+	}
+
+	private _getShaclSeverity(uri: vscode.Uri | undefined): string | undefined {
+		if (!uri) {
+			return undefined;
+		}
+
+		// Container nodes (mentor: scheme) and intermediate ancestor nodes are decorated
+		// via the ancestor severity map, built by walking .parent from each violated node.
+		if (uri.scheme === 'mentor') {
+			return this._ancestorSeverity.get(uri.toString());
+		}
+
+		return this._shaclViolations.get(uri.toString());
+	}
+
+	/**
+	 * Build a SHACL decoration for the given severity, or undefined if no severity is set.
+	 */
+	private _buildShaclDecoration(severity: string | undefined, propagate: boolean): vscode.FileDecoration | undefined {
+		if (severity === SH.Violation) {
+			const result = new vscode.FileDecoration('●', 'SHACL violation', this._errorColor);
+			result.propagate = propagate;
+			result.tooltip = 'This node has a SHACL violation.';
+			return result;
+		}
+
+		if (severity === SH.Warning) {
+			const result = new vscode.FileDecoration('●', 'SHACL warning', this._warningColor);
+			result.propagate = propagate;
+			result.tooltip = 'This node has a SHACL warning.';
+			return result;
+		}
+
+		if (severity === SH.Info) {
+			const result = new vscode.FileDecoration('●', 'SHACL info', this._warningColor);
+			result.propagate = false;
+			result.tooltip = 'This node has a SHACL info message.';
+			return result;
+		}
+
+		return undefined;
 	}
 }

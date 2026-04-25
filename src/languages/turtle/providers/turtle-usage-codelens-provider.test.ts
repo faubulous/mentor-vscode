@@ -1,15 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
 
-vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
+vi.mock('vscode', () => import('../../../utilities/mocks/vscode'));
 
-const { mockContextService, mockIndexerService } = vi.hoisted(() => ({
+const { mockContextService, mockIndexerService, mockVocabulary } = vi.hoisted(() => ({
     mockContextService: {
         contexts: {} as Record<string, any>,
         onDidChangeDocumentContext: vi.fn(() => ({ dispose: vi.fn() })),
     },
     mockIndexerService: {
-        waitForIndexed: vi.fn(() => new Promise(() => {})), // never resolves
+        waitForIndexed: vi.fn(() => new Promise(() => { })), // never resolves
+    },
+    mockVocabulary: {
+        hasType: vi.fn(() => false),
+        getShapes: vi.fn(function*() {}),
     },
 }));
 
@@ -18,11 +22,12 @@ vi.mock('tsyringe', () => ({
         resolve: vi.fn((token: string) => {
             if (token === 'DocumentContextService') return mockContextService;
             if (token === 'WorkspaceIndexerService') return mockIndexerService;
+            if (token === 'VocabularyRepository') return mockVocabulary;
             return {};
         }),
     },
     injectable: () => (_target: any) => _target,
-    inject: () => () => {},
+    inject: () => () => { },
     singleton: () => (_target: any) => _target,
 }));
 
@@ -33,40 +38,42 @@ vi.mock('@src/utilities/vscode/config', () => ({
     }),
 }));
 
-import { TurtleCodeLensProvider } from './turtle-codelens-provider';
+import { TurtleUsageCodeLensProvider } from './turtle-usage-codelens-provider';
 
 beforeEach(() => {
     vi.clearAllMocks();
     mockContextService.contexts = {};
-    mockIndexerService.waitForIndexed.mockReturnValue(new Promise(() => {}));
+    mockIndexerService.waitForIndexed.mockReturnValue(new Promise(() => { }));
     mockContextService.onDidChangeDocumentContext.mockReturnValue({ dispose: vi.fn() });
+    mockVocabulary.hasType.mockReturnValue(false);
+    mockVocabulary.getShapes.mockImplementation(function*() {});
 });
 
-describe('TurtleCodeLensProvider', () => {
+describe('TurtleUsageCodeLensProvider', () => {
     describe('constructor', () => {
         it('can be instantiated without throwing', () => {
-            expect(() => new TurtleCodeLensProvider()).not.toThrow();
+            expect(() => new TurtleUsageCodeLensProvider()).not.toThrow();
         });
     });
 
     describe('initial state', () => {
         it('_enabled is true by default', () => {
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             expect((provider as any)._enabled).toBe(true);
         });
 
         it('_initialized is false before provideCodeLenses is called', () => {
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             expect((provider as any)._initialized).toBe(false);
         });
 
         it('_initializing is false before provideCodeLenses is called', () => {
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             expect((provider as any)._initializing).toBe(false);
         });
 
         it('exposes onDidChangeCodeLenses as an event', () => {
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             expect(typeof provider.onDidChangeCodeLenses).toBe('function');
         });
     });
@@ -82,18 +89,87 @@ describe('TurtleCodeLensProvider', () => {
                 isTemporary: false,
             };
 
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             const fakeDoc = { uri: { toString: () => uriStr } };
             const codeLenses = await provider.provideCodeLenses(fakeDoc as any, null as any) as any[];
             expect(Array.isArray(codeLenses)).toBe(true);
             expect(codeLenses.length).toBeGreaterThanOrEqual(1);
         });
 
+        it('adds shape count and go-to-first-shape lenses when shapes exist', async () => {
+            const uriStr = 'file:///doc-shapes.ttl';
+            mockContextService.contexts[uriStr] = {
+                graphs: ['urn:g1'],
+                subjects: {
+                    'urn:ex#Subject': [{ start: { line: 1, character: 0 }, end: { line: 1, character: 10 } }]
+                },
+                references: {},
+                isTemporary: false,
+            };
+
+            mockVocabulary.getShapes.mockImplementation(function*() {
+                yield 'urn:shape#A';
+                yield 'urn:shape#B';
+            });
+
+            const provider = new TurtleUsageCodeLensProvider();
+            const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
+
+            expect(codeLenses).toHaveLength(2);
+            expect(codeLenses[0].command?.command).toBe('mentor.command.findReferences');
+            expect(codeLenses[1].command?.command).toBe('mentor.command.showShapeReferences');
+            expect(codeLenses[1].command?.title).toBe('2 shapes');
+        });
+
+        it('does not add shape lenses when no shapes exist', async () => {
+            const uriStr = 'file:///doc-no-shapes.ttl';
+            mockContextService.contexts[uriStr] = {
+                graphs: ['urn:g1'],
+                subjects: {
+                    'urn:ex#Subject': [{ start: { line: 2, character: 0 }, end: { line: 2, character: 10 } }]
+                },
+                references: {},
+                isTemporary: false,
+            };
+
+            mockVocabulary.getShapes.mockImplementation(function*() {});
+
+            const provider = new TurtleUsageCodeLensProvider();
+            const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
+
+            expect(codeLenses).toHaveLength(1);
+            expect(codeLenses[0].command?.command).toBe('mentor.command.findReferences');
+        });
+
+        it('does not add shape lenses for shape resources', async () => {
+            const uriStr = 'file:///doc-shape-resource.ttl';
+            mockContextService.contexts[uriStr] = {
+                graphs: ['urn:g1'],
+                subjects: {
+                    'urn:ex#ShapeResource': [{ start: { line: 3, character: 0 }, end: { line: 3, character: 10 } }]
+                },
+                references: {},
+                isTemporary: false,
+            };
+
+            mockVocabulary.hasType.mockReturnValue(true);
+            mockVocabulary.getShapes.mockImplementation(function*() {
+                yield 'urn:shape#A';
+            });
+
+            const provider = new TurtleUsageCodeLensProvider();
+            const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
+
+            expect(codeLenses).toHaveLength(1);
+            expect(codeLenses[0].command?.command).toBe('mentor.command.findReferences');
+            expect(mockVocabulary.getShapes).not.toHaveBeenCalled();
+        });
+
         it('should initialize on first call and set _initialized to true', async () => {
             const uriStr = 'file:///doc2.ttl';
             mockContextService.contexts[uriStr] = { subjects: {}, references: {}, isTemporary: false };
 
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             expect((provider as any)._initialized).toBe(false);
 
             await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any);
@@ -102,7 +178,7 @@ describe('TurtleCodeLensProvider', () => {
         });
 
         it('returns a Promise that stays pending when _initializing is true', () => {
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             (provider as any)._initializing = true;
             // The executor runs synchronously and hits `return []` (line 78) before any await
             provider.provideCodeLenses({ uri: { toString: () => 'file:///x.ttl' } } as any, null as any);
@@ -111,7 +187,7 @@ describe('TurtleCodeLensProvider', () => {
         });
 
         it('returns a Promise that stays pending when _enabled is false', () => {
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             (provider as any)._enabled = false;
             (provider as any)._initialized = true;
             // Synchronously hits `return []` at line 86 (no await before it when _initialized=true)
@@ -121,7 +197,7 @@ describe('TurtleCodeLensProvider', () => {
 
         it('returns a Promise that stays pending when context is not found', () => {
             const uriStr = 'file:///unknown.ttl';
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             (provider as any)._initialized = true;
             // contexts has no entry for uriStr → hits `return []` at line 92
             provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any);
@@ -131,7 +207,7 @@ describe('TurtleCodeLensProvider', () => {
 
     describe('resolveCodeLens', () => {
         it('throws a not-implemented error', () => {
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             expect(() => provider.resolveCodeLens!({} as any, null as any)).toThrow('Method not implemented.');
         });
     });
@@ -144,7 +220,7 @@ describe('TurtleCodeLensProvider', () => {
                 return { dispose: vi.fn() } as any;
             });
 
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             expect(capturedHandler).toBeDefined();
 
             const fired: number[] = [];
@@ -163,7 +239,7 @@ describe('TurtleCodeLensProvider', () => {
             let resolveWait!: () => void;
             mockIndexerService.waitForIndexed.mockReturnValue(new Promise<void>(res => { resolveWait = res; }));
 
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             // Trigger _initialize by calling provideCodeLenses
             mockContextService.contexts['file:///idx.ttl'] = { subjects: {} };
             provider.provideCodeLenses({ uri: { toString: () => 'file:///idx.ttl' } } as any, null as any);
@@ -186,7 +262,7 @@ describe('TurtleCodeLensProvider', () => {
                 return { dispose: vi.fn() };
             });
 
-            const provider = new TurtleCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider();
             mockContextService.contexts['file:///ctx.ttl'] = { subjects: {} };
             provider.provideCodeLenses({ uri: { toString: () => 'file:///ctx.ttl' } } as any, null as any);
             await new Promise(r => setTimeout(r, 0));

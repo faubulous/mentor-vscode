@@ -9,15 +9,16 @@ import {
 import {
 	TurtleAutoDefinePrefixProvider,
 	TurtleCodeActionsProvider,
-	TurtleCodeLensProvider,
+	TurtleUsageCodeLensProvider,
 	TurtleCompletionItemProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider,
-	TurtleCodeFormattingProvider
+	TurtleCodeFormattingProvider,
+	TurtleValidationCodeLensProvider
 } from '@src/languages/turtle/providers';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
-const codelensProvider = new TurtleCodeLensProvider();
+const codelensProvider = new TurtleUsageCodeLensProvider();
 const completionProvider = new TurtleCompletionItemProvider();
 const definitionProvider = new ResourceDefinitionProvider();
 const hoverProvider = new ResourceTooltipProvider();
@@ -25,6 +26,7 @@ const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <
 const referenceProvider = new ResourceReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
 const formattingProvider = new TurtleCodeFormattingProvider();
+const validationCodelensProvider = new TurtleValidationCodeLensProvider();
 
 export class TurtleTokenProvider {
 	constructor() {
@@ -58,6 +60,7 @@ export class TurtleTokenProvider {
 			vscode.languages.registerInlineCompletionItemProvider({ language }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language }, referenceProvider),
 			vscode.languages.registerRenameProvider({ language }, renameProvider),
+			vscode.languages.registerCodeLensProvider({ language }, validationCodelensProvider),
 		]
 	}
 }

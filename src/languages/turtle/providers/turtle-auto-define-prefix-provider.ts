@@ -6,6 +6,7 @@ import { IDocumentContextService } from '@src/services/document';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { getConfig } from '@src/utilities/vscode/config';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
 
 /**
  * Describes a pending prefix that should be auto-defined once fresh tokens arrive.

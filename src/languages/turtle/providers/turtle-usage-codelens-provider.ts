@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { SH, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
@@ -9,7 +10,7 @@ import { getConfig } from '@src/utilities/vscode/config';
 /**
  * Provides usage information for resource definitions in Turtle documents.
  */
-export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
+export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 	/**
 	 * Indicates whether the workspace has been initialized.
 	 */
@@ -37,6 +38,10 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 
 	private get _workspaceIndexerService() {
 		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
+	}
+
+	private get _vocabulary() {
+		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 	}
 
 	constructor() {
@@ -95,17 +100,36 @@ export class TurtleCodeLensProvider implements vscode.CodeLensProvider {
 			const result = [];
 
 			for (const iri of Object.keys(context.subjects)) {
+				const isShapeResource = this._vocabulary.hasType(context.graphs, iri, SH.Shape, { includeBlankNodes: true });
+				const shapeUris = isShapeResource
+					? []
+					: [...new Set(this._vocabulary.getShapes(context.graphs, iri, { includeBlankNodes: true }))];
+				const shapeCount = shapeUris.length;
+				const shapeTitle = `${shapeCount} shape${shapeCount === 1 ? '' : 's'}`;
+
 				for (const range of context.subjects[iri]) {
 					let n = Math.max(this._referenceProvider.provideReferencesForIri(iri).length - 1, 0);
-
-					result.push(new vscode.CodeLens(new vscode.Range(
+					
+					const codeLensRange = new vscode.Range(
 						new vscode.Position(range.start.line, range.start.character),
 						new vscode.Position(range.end.line, range.end.character)
-					), {
+					);
+
+					const usageTitle = `${n} usage${n === 1 ? '' : 's'}`;
+
+					result.push(new vscode.CodeLens(codeLensRange, {
 						command: 'mentor.command.findReferences',
-						title: n + ' usages',
+						title: usageTitle,
 						arguments: [iri]
 					}));
+
+					if (shapeCount > 0) {
+						result.push(new vscode.CodeLens(codeLensRange, {
+							command: 'mentor.command.showShapeReferences',
+							title: shapeTitle,
+							arguments: [iri]
+						}));
+					}
 				}
 			}
 

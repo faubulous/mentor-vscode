@@ -76,31 +76,32 @@
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
-    "@typescript-eslint/eslint-plugin": "^8.58.2",
-    "@typescript-eslint/parser": "^8.58.2",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
     "@vitest/coverage-v8": "^4.1.5",
     "@vscode-elements/react-elements": "^2.4.0",
     "@vscode/test-web": "^0.0.80",
     "esbuild": "^0.28.0",
     "esbuild-plugin-copy": "^2.1.1",
-    "eslint": "^10.2.0",
+    "eslint": "^10.2.1",
     "fonteditor-core": "^2.6.3",
     "glob": "^13.0.6",
     "rimraf": "^6.1.3",
-    "svgicons2svgfont": "^15.0.1",
-    "typescript": "^6.0.2",
+    "svgicons2svgfont": "=15.0.1",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.5",
     "vscode-uri": "^3.1.0"
   },
   "dependencies": {
-    "@comunica/query-sparql": "^5.2.0",
-    "@faubulous/mentor-rdf": "^1.3.0",
-    "@faubulous/mentor-rdf-parsers": "^1.7.3",
-    "@faubulous/mentor-rdf-serializers": "^1.4.8",
+    "@comunica/query-sparql": "^5.2.1",
+    "@faubulous/mentor-rdf": "^1.3.1",
+    "@faubulous/mentor-rdf-parsers": "^1.7.4",
+    "@faubulous/mentor-rdf-serializers": "^1.6.1",
     "@vscode/codicons": "^0.0.45",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "reflect-metadata": "^0.2.2",
+    "shacl-engine": "^1.1.0",
     "tsyringe": "^4.10.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
@@ -584,21 +585,21 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.createNotebookFromEditor",
-        "title": "Create Notebook from Editor",
+        "command": "mentor.command.addActiveEditorToNotebook",
+        "title": "Add Document to Notebook",
         "icon": "$(add-notebook)",
         "category": "Mentor"
       },
       {
         "command": "mentor.command.createSparqlQueryFromDocument",
-        "title": "Query Document",
+        "title": "Query Document with SPARQL",
         "icon": "$(query-document)",
         "category": "Mentor"
       },
       {
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "title": "Execute SPARQL Query",
-        "icon": "$(play)",
+        "icon": "$(run-query)",
         "category": "Mentor"
       },
       {
@@ -635,12 +636,6 @@
         "command": "mentor.command.revealDefinition",
         "title": "Go to Definition",
         "icon": "$(go-to-file)",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.revealShapeDefinition",
-        "title": "Go to Shape Definition",
-        "icon": "$(go-to-shape)",
         "category": "Mentor"
       },
       {
@@ -846,6 +841,30 @@
         "command": "mentor.command.inlineBlankNodes",
         "title": "Inline Blank Nodes",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.validateDocument",
+        "title": "Validate Document using SHACL",
+        "icon": "$(run-coverage)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.manageShaclShapes",
+        "title": "Configure SHACL Shapes",
+        "icon": "$(settings-gear)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.viewShaclReport",
+        "title": "View SHACL Report",
+        "icon": "$(open-preview)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.showShapeReferences",
+        "title": "Show Shape References",
+        "icon": "$(list-selection)",
+        "category": "Mentor"
       }
     ],
     "submenus": [
@@ -861,19 +880,24 @@
     "menus": {
       "editor/title": [
         {
+          "command": "mentor.command.validateDocument",
+          "when": "mentor.editor.isRdfDocument && config.mentor.shacl.enabled",
+          "group": "navigation@-3"
+        },
+        {
           "command": "mentor.command.executeSparqlQueryFromActiveEditor",
           "when": "editorLangId == 'sparql'",
-          "group": "navigation@2"
+          "group": "navigation@-2"
         },
         {
           "command": "mentor.command.createSparqlQueryFromDocument",
           "when": "mentor.editor.isRdfDocument",
-          "group": "navigation@0"
+          "group": "navigation@-1"
         },
         {
-          "command": "mentor.command.createNotebookFromEditor",
+          "command": "mentor.command.addActiveEditorToNotebook",
           "when": "mentor.editor.isRdfDocument || editorLangId == 'sparql'",
-          "group": "navigation@1"
+          "group": "navigation@0"
         }
       ],
       "view/title": [
@@ -963,11 +987,6 @@
           "command": "mentor.command.openInBrowser",
           "when": "viewItem =~ /resource/",
           "group": "z_commands"
-        },
-        {
-          "command": "mentor.command.revealShapeDefinition",
-          "when": "viewItem != shapes && viewItem =~ / shape-target/",
-          "group": "inline"
         },
         {
           "command": "mentor.command.showPropertyTypes",
@@ -1250,6 +1269,20 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e016"
         }
+      },
+      "document-check": {
+        "description": "Document Checked",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e017"
+        }
+      },
+      "run-query": {
+        "description": "Run Query",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e018"
+        }
       }
     },
     "configuration": [
@@ -1529,6 +1562,65 @@
               "unmatchedPosition": "end",
               "unmatchedSort": "alphabetical"
             }
+          },
+          "mentor.shacl.validation": {
+            "type": "object",
+            "title": "SHACL Validation Configuration",
+            "description": "Explicit SHACL shape configuration. Configure workspace defaults and per-graph include/exclude rules.",
+            "properties": {
+              "defaults": {
+                "type": "array",
+                "description": "Default SHACL shape graph URIs applied when a graph does not override defaults.",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "graphs": {
+                "type": "object",
+                "description": "Per-graph SHACL shape settings keyed by canonical workspace graph URI.",
+                "additionalProperties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "includeDefaults": {
+                      "type": "boolean",
+                      "description": "If true, include default SHACL shape graphs for this graph before applying include/exclude rules.",
+                      "default": true
+                    },
+                    "includeShapes": {
+                      "type": "array",
+                      "description": "Additional SHACL shape graph URIs included for this graph.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    },
+                    "excludeShapes": {
+                      "type": "array",
+                      "description": "SHACL shape graph URIs removed from the effective set for this graph. Exclusions win over includes.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    }
+                  }
+                },
+                "default": {}
+              }
+            },
+            "additionalProperties": false,
+            "default": {
+              "defaults": [],
+              "graphs": {}
+            }
+          },
+          "mentor.shacl.enabled": {
+            "type": "boolean",
+            "title": "Enable Experimental SHACL Validation Features",
+            "description": "If enabled, Mentor will show experimental SHACL validation features including the titlebar validate button and SHACL validation code lenses.",
+            "default": false,
+            "experimental": true
           },
           "mentor.linting.enabled": {
             "type": "boolean",
