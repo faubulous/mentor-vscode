@@ -29,15 +29,14 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.5.6: Service Release
-- Fixed autocomplete for FROM and FROM NAMED clauses in SPARQL queries
-
-### Version 0.5.5: Service Release
-- Fixed bug where definition tree would become empty after editing a file
-- Fixed bug where reveal property shape command would not work for blank node shape definitions
-- Fixed broken auto-implementation of prefixes
-- Properly deleting graphs of untitled files when closing them without saving
-- Added command to query the graph of the currently edited document using SPARQL
+### Version 0.5.7: Service Release
+- Added experimental SHACL validation with violation decorations and diagnostics
+  - Enable in settings: vscode://settings/mentor.shacl.enabled
+- Added "Execute" code lens for SPARQL documents
+- Replaced "Create Notebook" command with "Add to Notebook" command that asks if you want to add the current file to an existing notebook or create a new one
+- Fixed definition trees, usage code lenses and toolbar buttons for RDF/XML documents
+- Fixed URI serialization when creating a SPARQL query from an RDF document
+- Security update for dependencies
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 

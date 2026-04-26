@@ -100,7 +100,7 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 			const result = [];
 
 			for (const iri of Object.keys(context.subjects)) {
-				const isShapeResource = this._vocabulary.hasType(context.graphs, iri, SH.Shape, { includeBlankNodes: true });
+				const isShapeResource = this._vocabulary.hasType(context.graphs, iri, SH.Shape);
 				const shapeUris = isShapeResource
 					? []
 					: [...new Set(this._vocabulary.getShapes(context.graphs, iri, { includeBlankNodes: true }))];
