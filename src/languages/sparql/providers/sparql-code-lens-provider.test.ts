@@ -116,13 +116,13 @@ describe('SparqlCodeLensProvider', () => {
             expect(lenses[0].command?.command).toBe('mentor.command.selectSparqlConnection');
         });
 
-        it('only has connection lens when inference is not enabled in config', async () => {
+        it('only has connection and execute lenses when inference is not enabled in config', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            // inference.enabled returns false, so only 1 lens
-            expect(lenses.length).toBe(1);
+            // inference.enabled returns false, so only connection and execute lenses
+            expect(lenses.length).toBe(2);
         });
 
         it('connection lens title contains the endpoint URL', async () => {
@@ -135,7 +135,7 @@ describe('SparqlCodeLensProvider', () => {
     });
 
     describe('provideCodeLenses with inference', () => {
-        it('returns two lenses when inference is enabled and connection supports it', async () => {
+        it('returns three lenses when inference is enabled and connection supports it', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = true;
             getInferenceEnabledResult = false;
@@ -144,7 +144,7 @@ describe('SparqlCodeLensProvider', () => {
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            expect(lenses.length).toBe(2);
+            expect(lenses.length).toBe(3);
             expect(lenses[1].command?.command).toBe('mentor.command.toggleDocumentInference');
         });
 
@@ -180,7 +180,7 @@ describe('SparqlCodeLensProvider', () => {
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            expect(lenses.length).toBe(1);
+            expect(lenses.length).toBe(2);
         });
 
         it('does not add inference lens when connection does not support inference', async () => {
@@ -191,7 +191,7 @@ describe('SparqlCodeLensProvider', () => {
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            expect(lenses.length).toBe(1);
+            expect(lenses.length).toBe(2);
         });
     });
 });
