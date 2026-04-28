@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
 import { getConfig } from '@src/utilities/vscode/config';
 
 /**
@@ -11,11 +11,13 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
 	private _connectionService: ISparqlConnectionService;
+	private _queryService: ISparqlQueryService;
 
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
 		this._connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		this._queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 
 		this._connectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();
@@ -75,7 +77,8 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		codeLenses.push(new vscode.CodeLens(range, {
 			title: '$(play)\u00A0Execute',
 			command: 'mentor.command.executeSparqlQuery',
-			tooltip: 'Execute this SPARQL query'
+			tooltip: 'Execute this SPARQL query',
+			arguments: [this._queryService.createQueryFromDocument(document)],
 		}));
 
 		return codeLenses;

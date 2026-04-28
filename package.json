@@ -76,8 +76,8 @@
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
-    "@typescript-eslint/eslint-plugin": "^8.59.0",
-    "@typescript-eslint/parser": "^8.59.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.1",
+    "@typescript-eslint/parser": "^8.59.1",
     "@vitest/coverage-v8": "^4.1.5",
     "@vscode-elements/react-elements": "^2.4.0",
     "@vscode/test-web": "^0.0.80",
@@ -95,7 +95,7 @@
   "dependencies": {
     "@comunica/query-sparql": "^5.2.1",
     "@faubulous/mentor-rdf": "^1.3.1",
-    "@faubulous/mentor-rdf-parsers": "^1.7.4",
+    "@faubulous/mentor-rdf-parsers": "^1.8.0",
     "@faubulous/mentor-rdf-serializers": "^1.6.1",
     "@vscode/codicons": "^0.0.45",
     "react": "^19.2.5",
@@ -1315,6 +1315,13 @@
             "title": "Drop Graph Query",
             "description": "SPARQL query used to drop a named graph from a SPARQL endpoint.",
             "default": "DROP GRAPH <@graphIri>",
+            "editPresentation": "multilineText"
+          },
+          "mentor.sparql.describeQueryTemplate": {
+            "type": "string",
+            "title": "Describe Query Template",
+            "description": "SPARQL query template used by the describe command. Use {{resourceIri}} for the selected resource and {{fromClauses}} for optional FROM clauses generated from graph URIs.",
+            "default": "CONSTRUCT { <{{resourceIri}}> ?p ?o }{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }",
             "editPresentation": "multilineText"
           },
           "mentor.definitionTree.labelStyle": {

@@ -1,8 +1,13 @@
 .sparql-results-toolbar {
 	/* Make the toolbar appear slim and unobtrusive */
 	flex: 0 0 auto;
-	padding: 2px 8px;
+    gap: 10px;
+	padding: 2px 4px;
 	border-bottom: 1px solid var(--vscode-editorGroup-border);
+}
+
+.sparql-results-toolbar slot.textOnly:not(.empty) {
+    padding: 0;
 }
 
 .sparql-results-toolbar .codicon-debug-stop {
@@ -58,4 +63,11 @@
 
 .sparql-results-range {
 	padding-right: 6px;
+}
+
+.sparql-results-stopwatch {
+	display: inline-block;
+	min-width: 6ch;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
 }

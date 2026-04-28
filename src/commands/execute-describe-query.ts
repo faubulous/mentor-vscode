@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { SparqlResultsController } from '@src/views/webviews';
+import { getConfig } from '@src/utilities/vscode/config';
 
 export const executeDescribeQuery = {
 	id: 'mentor.command.executeDescribeQuery',
-	handler: async (documentUri: vscode.Uri, resourceIri: string) => {
+	handler: async (documentUri: vscode.Uri | string, resourceIri: string, graphUris?: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (!document) {
@@ -13,9 +15,39 @@ export const executeDescribeQuery = {
 			return;
 		}
 
-		const query = `CONSTRUCT { <${resourceIri}> ?p ?o } WHERE { <${resourceIri}> ?p ?o }`;
-		
+		const template = getConfig().get<string>('sparql.describeQueryTemplate');
+
+		if(!template) {
+			vscode.window.showErrorMessage('Describe query template is not defined in the configuration: mentor.sparql.describeQueryTemplate');
+			return;
+		}
+
+		const fromClauses = getFromClauses(graphUris);
+
+		const query = template
+			.replace(/\{\{resourceIri\}\}/g, resourceIri)
+			.replace(/\{\{fromClauses\}\}/g, fromClauses);
+
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connection = connectionService.getConnectionForDocument(document.uri);
+
+		const describeDocument = await vscode.workspace.openTextDocument({
+			content: query,
+			language: 'sparql'
+		});
+
+		await connectionService.setQuerySourceForDocument(describeDocument.uri, connection.id);
+		await vscode.window.showTextDocument(describeDocument);
+
 		const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
-		await controller.executeQuery(document, query);
+		await controller.executeQueryFromTextDocument(describeDocument);
 	}
 };
+
+function getFromClauses(graphUris?: string[]): string {
+	if (!graphUris || graphUris.length === 0) {
+		return '';
+	} else {
+		return graphUris.map(uri => `\nFROM <${uri}>`).join();
+	}
+}

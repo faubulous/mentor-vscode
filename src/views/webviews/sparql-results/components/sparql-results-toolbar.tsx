@@ -67,10 +67,25 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 		});
 	};
 
+	const editQuery = () => {
+		messaging?.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.command.openDocument',
+			args: [queryContext.documentIri, queryContext.query]
+		});
+	};
+
 	return (
 		<vscode-toolbar-container className="sparql-results-toolbar">
+			<vscode-toolbar-button title="Edit query" onClick={() => editQuery()}>
+				<span className="codicon codicon-edit"></span>
+			</vscode-toolbar-button>
+
+			<span className="divider divider-vertical"></span>
+
 			<Stopwatch />
-			<span className="divider divider-vertical" style={{ marginLeft: '6px' }}></span>
+
+			<span className="divider divider-vertical"></span>
 
 			{queryContext.error && (
 				<Fragment>

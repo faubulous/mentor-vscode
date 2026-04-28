@@ -39,6 +39,22 @@ describe('openDocument', () => {
 		expect(showError).toHaveBeenCalledWith(expect.stringContaining('No document IRI'));
 	});
 
+	it('should create an untitled SPARQL document when documentIri is empty but query is provided', async () => {
+		const fakeDoc = { uri: { toString: () => 'untitled:query.sparql' } };
+		vi.spyOn(vscode.workspace as any, 'openTextDocument').mockResolvedValue(fakeDoc);
+		const showDoc = vi.spyOn(vscode.window as any, 'showTextDocument');
+
+		await openDocument.handler('', 'SELECT * WHERE { ?s ?p ?o }');
+
+		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
+			expect.objectContaining({
+				content: 'SELECT * WHERE { ?s ?p ?o }',
+				language: 'sparql'
+			})
+		);
+		expect(showDoc).toHaveBeenCalledWith(fakeDoc);
+	});
+
 	it('should open a text document for file scheme URIs', async () => {
 		const fakeDoc = { uri: { toString: () => 'file:///test.ttl' } };
 		vi.spyOn(vscode.workspace as any, 'openTextDocument').mockResolvedValue(fakeDoc);

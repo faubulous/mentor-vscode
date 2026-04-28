@@ -2,7 +2,17 @@ import * as vscode from 'vscode';
 
 export const openDocument = {
     id: 'mentor.command.openDocument',
-    handler: async (documentIri: string) => {
+    handler: async (documentIri: string, query?: string) => {
+        if (!documentIri && query) {
+            const document = await vscode.workspace.openTextDocument({
+                content: query,
+                language: 'sparql'
+            });
+
+            await vscode.window.showTextDocument(document);
+            return;
+        }
+
         if (!documentIri) {
             vscode.window.showErrorMessage('No document IRI provided.');
             return;

@@ -5,6 +5,7 @@ import { NTriplesSerializer } from '@faubulous/mentor-rdf-serializers';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { useStylesheet } from '@src/views/webviews/webview-hooks';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
+import { getDescribeQueryCommandArgs } from '../helpers/describe-query-args';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
 import stylesheet from './bindings-table.css';
 
@@ -81,7 +82,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.executeDescribeQuery',
-			args: [queryContext.documentIri, value]
+			args: getDescribeQueryCommandArgs(queryContext.documentIri, value, queryContext.query)
 		});
 	};
 
@@ -129,9 +130,10 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		switch (binding.termType) {
 			case 'NamedNode': {
 				const clickHandler = isGraph ? handleOpenGraph : handleDescribeNamedNode;
+				const tooltip = isGraph ? 'Serialize Graph' : 'Describe Resource';
 
 				return (
-					<a href="#" onClick={() => clickHandler(binding)}>
+					<a href="#" title={tooltip} onClick={() => clickHandler(binding)}>
 						{getNamedNodeLabel(binding, namespaceMap)}
 					</a>
 				);
