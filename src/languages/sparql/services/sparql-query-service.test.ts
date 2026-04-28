@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+// Mock getConfig utility
+vi.mock('@src/utilities/vscode/config', () => ({
+    getConfig: vi.fn().mockReturnValue({
+        get: vi.fn().mockReturnValue(30000), // default timeout
+    }),
+}));
+
 // Shared mutable mock for QueryEngine.prototype.query — configure per test via queryMock
 const queryMock = vi.fn();
 
@@ -49,6 +56,50 @@ function makeService(context = makeContext()) {
         {} as any,    // credentialStorage (not used in history tests)
         {} as any,    // connectionService (not used in history tests)
         {} as any,    // resultSerializer (not used in history tests)
+    );
+}
+
+function makeFullService() {
+    const connectionService = {
+        getQuerySourceForDocument: vi.fn().mockResolvedValue({ type: 'sparql', connection: { id: 'test' } }),
+        getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'file', file: 'test.nt' }),
+    };
+    const credentialStorage = {
+        getCredential: vi.fn().mockResolvedValue(null),
+    };
+    const resultSerializer = {
+        serializeBindings: vi.fn().mockResolvedValue({ type: 'bindings', rows: [] }),
+        serializeQuads: vi.fn().mockResolvedValue(''),
+        serializeQuadsToString: vi.fn().mockResolvedValue(''),
+    };
+    return new SparqlQueryService(
+        makeContext(),
+        credentialStorage as any,
+        connectionService as any,
+        resultSerializer as any,
+    );
+}
+
+function makeConnectionService() {
+    const connectionService = {
+        getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'file', file: 'test.nt' }),
+    };
+
+    const credentialStorage = {
+        getCredential: vi.fn().mockResolvedValue(null),
+    };
+
+    const resultSerializer = {
+        serializeBindings: vi.fn().mockResolvedValue({ type: 'bindings', rows: [] }),
+        serializeQuads: vi.fn().mockResolvedValue(''),
+        serializeQuadsToString: vi.fn().mockResolvedValue('<turtle data>'),
+    };
+
+    return new SparqlQueryService(
+        makeContext(),
+        credentialStorage as any,
+        connectionService as any,
+        resultSerializer as any,
     );
 }
 
@@ -558,26 +609,6 @@ describe('SparqlQueryService – _getQueryText', () => {
 // executeQuery
 // ---------------------------------------------------------------------------
 describe('SparqlQueryService – executeQuery', () => {
-    function makeFullService() {
-        const connectionService = {
-            getQuerySourceForDocument: vi.fn().mockResolvedValue({ type: 'sparql', connection: { id: 'test' } }),
-        };
-        const credentialStorage = {
-            getCredential: vi.fn().mockResolvedValue(null),
-        };
-        const resultSerializer = {
-            serializeBindings: vi.fn().mockResolvedValue({ type: 'bindings', rows: [] }),
-            serializeQuads: vi.fn().mockResolvedValue(''),
-            serializeQuadsToString: vi.fn().mockResolvedValue(''),
-        };
-        return new SparqlQueryService(
-            makeContext(),
-            credentialStorage as any,
-            connectionService as any,
-            resultSerializer as any,
-        );
-    }
-
     it('returns a context with an error when query text is unavailable', async () => {
         const service = makeFullService();
         const ctx: any = {
@@ -695,24 +726,6 @@ describe('SparqlQueryService – executeQuery', () => {
 // executeQueryOnConnection
 // ---------------------------------------------------------------------------
 describe('SparqlQueryService – executeQueryOnConnection', () => {
-    function makeConnectionService() {
-        const connectionService = {
-            getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'sparql', connection: { id: 'test' } }),
-        };
-        const credentialStorage = {
-            getCredential: vi.fn().mockResolvedValue(null),
-        };
-        const resultSerializer = {
-            serializeQuadsToString: vi.fn().mockResolvedValue('<turtle data>'),
-        };
-        return new SparqlQueryService(
-            makeContext(),
-            credentialStorage as any,
-            connectionService as any,
-            resultSerializer as any,
-        );
-    }
-
     const mockConn: any = { id: 'test', endpointUrl: 'https://example.org/sparql', configScope: 'user' };
 
     it('returns boolean result for ASK query', async () => {
@@ -786,5 +799,85 @@ describe('SparqlQueryService – executeQueryOnConnection', () => {
             {} as any,
         );
         await expect(service.executeQueryOnConnection('FAIL', mockConn)).rejects.toThrow('Query execution failed: Engine error');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// _executeQueryOnSource – Timeout Configuration
+// ---------------------------------------------------------------------------
+describe('SparqlQueryService – _executeQueryOnSource with timeout', () => {
+    it('applies timeout from configuration when greater than 0', async () => {
+        const { getConfig } = await import('@src/utilities/vscode/config');
+        const mockedGetConfig = vi.mocked(getConfig);
+
+        mockedGetConfig.mockReturnValue({
+            get: vi.fn().mockReturnValue(60000),
+        } as any);
+
+        queryMock.mockResolvedValue({
+            resultType: 'boolean',
+            execute: vi.fn().mockResolvedValue(true),
+        });
+
+        const service = makeFullService();
+        const source = { type: 'file', file: 'test.nt' };
+
+        await (service as any)._executeQueryOnSource('ASK {}', source);
+
+        expect(queryMock).toHaveBeenCalled();
+
+        const callArgs = queryMock.mock.calls[queryMock.mock.calls.length - 1][1];
+        
+        expect(callArgs.timeout).toBe(60000);
+    });
+
+    it('does not apply timeout when configuration value is 0', async () => {
+        const { getConfig } = await import('@src/utilities/vscode/config');
+        const mockedGetConfig = vi.mocked(getConfig);
+        
+        mockedGetConfig.mockReturnValue({
+            get: vi.fn().mockReturnValue(0),
+        } as any);
+
+        queryMock.mockResolvedValue({
+            resultType: 'boolean',
+            execute: vi.fn().mockResolvedValue(true),
+        });
+
+        const service = makeFullService();
+        const source = { type: 'file', file: 'test.nt' };
+
+        await (service as any)._executeQueryOnSource('ASK {}', source);
+
+        expect(queryMock).toHaveBeenCalled();
+
+        const callArgs = queryMock.mock.calls[queryMock.mock.calls.length - 1][1];
+        
+        expect(callArgs.timeout).toBeUndefined();
+    });
+
+    it('uses default timeout (30000ms) when configuration is not set', async () => {
+        const { getConfig } = await import('@src/utilities/vscode/config');
+        const mockedGetConfig = vi.mocked(getConfig);
+
+        mockedGetConfig.mockReturnValue({
+            get: vi.fn().mockReturnValue(30000), // default
+        } as any);
+
+        queryMock.mockResolvedValue({
+            resultType: 'boolean',
+            execute: vi.fn().mockResolvedValue(true),
+        });
+
+        const service = makeFullService();
+        const source = { type: 'file', file: 'test.nt' };
+
+        await (service as any)._executeQueryOnSource('ASK {}', source);
+
+        expect(queryMock).toHaveBeenCalled();
+
+        const callArgs = queryMock.mock.calls[queryMock.mock.calls.length - 1][1];
+        
+        expect(callArgs.timeout).toBe(30000);
     });
 });

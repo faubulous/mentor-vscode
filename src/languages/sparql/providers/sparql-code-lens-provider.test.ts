@@ -11,11 +11,11 @@ let getInferenceEnabledResult = false;
 const mockConnectionService = {
     onDidChangeConnections: (handler: any) => {
         onChangeConnectionsHandler = handler;
-        return { dispose: () => {} };
+        return { dispose: () => { } };
     },
     onDidChangeConnectionForDocument: (handler: any) => {
         onChangeConnectionForDocHandler = handler;
-        return { dispose: () => {} };
+        return { dispose: () => { } };
     },
     getConnectionForDocument: () => getConnectionForDocumentResult,
     supportsInference: () => supportsInferenceResult,
@@ -23,10 +23,29 @@ const mockConnectionService = {
     getGraphsForDocument: async () => [],
 };
 
+const mockQueryService = {
+    createQueryFromDocument: vi.fn((doc: any) => ({
+        id: 'test-query-id',
+        documentIri: doc.uri,
+        query: 'SELECT * WHERE { ?s ?p ?o }',
+        queryType: 'SELECT',
+        startTime: Date.now(),
+    })),
+};
+
 vi.mock('tsyringe', () => ({
-    container: { resolve: vi.fn(() => mockConnectionService) },
+    container: {
+        resolve: vi.fn((token: any) => {
+            // Return different services based on token
+            if (token?.toString().includes('SparqlQueryService')) {
+                return mockQueryService;
+            } else {
+                return mockConnectionService;
+            }
+        }),
+    },
     injectable: () => (_target: any) => _target,
-    inject: () => () => {},
+    inject: () => () => { },
     singleton: () => (_target: any) => _target,
 }));
 
@@ -47,6 +66,7 @@ beforeEach(() => {
     supportsInferenceResult = false;
     getInferenceEnabledResult = false;
     mockGetConfig.mockReturnValue({ get: (_key: string, defaultValue?: any) => defaultValue });
+    mockQueryService.createQueryFromDocument.mockClear();
 });
 
 describe('SparqlCodeLensProvider', () => {

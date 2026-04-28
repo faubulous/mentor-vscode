@@ -21,6 +21,22 @@ export const openDocument = {
         try {
             const uri = vscode.Uri.parse(documentIri);
 
+            // For closed untitled documents fall back to opening a new editor with the
+            // query text, because the buffer no longer exists in VS Code's memory.
+            if (uri.scheme === 'untitled' && query) {
+                const isOpen = vscode.workspace.textDocuments.some(d => d.uri.toString() === documentIri);
+
+                if (!isOpen) {
+                    const document = await vscode.workspace.openTextDocument({
+                        content: query,
+                        language: 'sparql'
+                    });
+
+                    await vscode.window.showTextDocument(document);
+                    return;
+                }
+            }
+
             if (uri.scheme === 'vscode-notebook-cell') {
                 // Get the notebook URI (remove the cell fragment)
                 const notebookUri = uri.with({ scheme: 'file', fragment: '' });

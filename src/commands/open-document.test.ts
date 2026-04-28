@@ -90,4 +90,42 @@ describe('openDocument', () => {
 
 		expect(showError).toHaveBeenCalledWith(expect.stringContaining('Failed to open document'));
 	});
+
+	it('should recover a closed untitled document by opening a new editor with the query text', async () => {
+		const untitledDocument = { uri: { toString: () => 'untitled:recovered.sparql' } };
+
+		vi.spyOn(vscode.workspace as any, 'openTextDocument').mockResolvedValue(untitledDocument);
+
+		const showDocument = vi.spyOn(vscode.window as any, 'showTextDocument');
+
+		// textDocuments is empty — the untitled doc is no longer open
+		(vscode.workspace as any).textDocuments = [];
+
+		await openDocument.handler('untitled:query-1', 'SELECT * WHERE { ?s ?p ?o }');
+
+		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
+			expect.objectContaining({
+				content: 'SELECT * WHERE { ?s ?p ?o }',
+				language: 'sparql'
+			})
+		);
+
+		expect(showDocument).toHaveBeenCalledWith(untitledDocument);
+	});
+
+	it('should re-open an untitled document that is still open', async () => {
+		const untitledDocument = { uri: { toString: () => 'untitled:query-2', scheme: 'untitled' } };
+		(vscode.workspace as any).textDocuments = [untitledDocument];
+
+		vi.spyOn(vscode.workspace as any, 'openTextDocument').mockResolvedValue(untitledDocument);
+		
+		const showDocument = vi.spyOn(vscode.window as any, 'showTextDocument');
+
+		await openDocument.handler('untitled:query-2', 'SELECT * WHERE { ?s ?p ?o }');
+
+		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
+			expect.objectContaining({ scheme: 'untitled' })
+		);
+		expect(showDocument).toHaveBeenCalledWith(untitledDocument);
+	});
 });

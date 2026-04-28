@@ -9,6 +9,7 @@ import { EntraClientCredentialService } from '@src/services/core/entra-client-cr
 import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/languages/sparql/services';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
+import { getConfig } from '@src/utilities/vscode/config';
 import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';
 
@@ -339,6 +340,13 @@ export class SparqlQueryService {
 			const connection = source.connection;
 			const credential = await this._credentialStorage.getCredential(connection.id);
 			options.fetch = this._getFetchHandler(credential);
+		}
+
+		// Apply query timeout from configuration (0 means no timeout)
+		const timeout = getConfig('sparql').get<number>('queryTimeout', 30000);
+		
+		if (timeout > 0) {
+			options.timeout = timeout;
 		}
 
 		const preparedQuery = await new QueryEngine().query(query, options);

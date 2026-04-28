@@ -1324,6 +1324,13 @@
             "default": "CONSTRUCT { <{{resourceIri}}> ?p ?o }{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }",
             "editPresentation": "multilineText"
           },
+          "mentor.sparql.queryTimeout": {
+            "type": "integer",
+            "title": "Query Timeout",
+            "description": "Timeout in milliseconds for SPARQL query execution. Set to 0 for no timeout.",
+            "default": 30000,
+            "minimum": 0
+          },
           "mentor.definitionTree.labelStyle": {
             "type": "string",
             "title": "Default Tree Label Style",

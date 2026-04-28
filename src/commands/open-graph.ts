@@ -14,6 +14,15 @@ export const openGraph = {
 		const targetConnection = connection ?? MENTOR_WORKSPACE_STORE;
 		const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 
+		// Hoisted so the catch block can offer it in the error notification.
+		const constructQuery = `CONSTRUCT {
+	?s ?p ?o .
+} WHERE {
+	GRAPH <${WorkspaceUri.toCanonicalString(graphIri)}> {
+		?s ?p ?o .
+	}
+}`;
+
 		try {
 			// Check if the graph contains more than the threshold number of triples.
 			const countQuery = `
@@ -45,16 +54,6 @@ export const openGraph = {
 				}
 			}
 
-			// Execute CONSTRUCT query to get the graph contents
-			const constructQuery = `
-				CONSTRUCT {
-					?s ?p ?o .
-				} WHERE {
-					GRAPH <${WorkspaceUri.toCanonicalString(graphIri)}> {
-						?s ?p ?o .
-					}
-				}`;
-
 			await vscode.window.withProgress({
 				location: vscode.ProgressLocation.Notification,
 				title: 'Exporting graph...',
@@ -74,7 +73,14 @@ export const openGraph = {
 				}
 			});
 		} catch (error: any) {
-			vscode.window.showErrorMessage(`Failed to open graph: ${error.message}`);
+			const action = await vscode.window.showErrorMessage(
+				`Failed to serialize graph: ${error.message}`,
+				'Edit Query'
+			);
+
+			if (action === 'Edit Query') {
+				await vscode.commands.executeCommand('mentor.command.openDocument', '', constructQuery);
+			}
 		}
 	}
 };

@@ -120,7 +120,24 @@ describe('openGraph command', () => {
 	it('should show error when query throws', async () => {
 		mockExecuteQueryOnConnection.mockRejectedValue(new Error('Query failed'));
 		await openGraph.handler('http://example.org/graph');
-		expect(vscode.window.showErrorMessage).toHaveBeenCalled();
+		expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+			expect.stringContaining('Failed to serialize graph'),
+			'Edit Query'
+		);
+	});
+
+	it('should open a new SPARQL editor with the CONSTRUCT query when Edit Query is clicked on error', async () => {
+		mockExecuteQueryOnConnection.mockRejectedValue(new Error('Query failed'));
+		(vscode.window as any).showErrorMessage = vi.fn(async () => 'Edit Query');
+		(vscode.commands as any).executeCommand = vi.fn(async () => undefined);
+
+		await openGraph.handler('http://example.org/graph');
+
+		expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
+			'mentor.command.openDocument',
+			'',
+			expect.stringContaining('CONSTRUCT')
+		);
 	});
 
 	it('should use provided connection when given', async () => {
