@@ -239,6 +239,6 @@ export const manageShaclShapes = {
 			delete nextValidationConfig.graphs;
 		}
 
-		await shacl.update('validation', nextValidationConfig, vscode.ConfigurationTarget.Workspace);
+		await shacl.update('validation', nextValidationConfig, vscode.ConfigurationTarget.Global);
 	}
 };

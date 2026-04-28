@@ -4,6 +4,7 @@ vi.mock('vscode', () => import('../utilities/mocks/vscode'));
 
 const { mockSparqlResultsController, mockConnectionService } = vi.hoisted(() => ({
 	mockSparqlResultsController: {
+		executeQuery: vi.fn(async () => undefined),
 		executeQueryFromTextDocument: vi.fn(async () => undefined),
 	},
 	mockConnectionService: {
@@ -64,7 +65,7 @@ describe('executeDescribeQuery', () => {
 		const docUri = vscode.Uri.parse('file:///no-such.ttl');
 		await executeDescribeQuery.handler(docUri, 'urn:ex#res');
 		expect(warn).toHaveBeenCalled();
-		expect(mockSparqlResultsController.executeQueryFromTextDocument).not.toHaveBeenCalled();
+		expect(mockSparqlResultsController.executeQuery).not.toHaveBeenCalled();
 		warn.mockRestore();
 	});
 
@@ -77,14 +78,15 @@ describe('executeDescribeQuery', () => {
 
 		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res');
 
-		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
-			expect.objectContaining({ language: 'sparql', content: expect.stringContaining('urn:ex#res') })
+		expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
+		expect(vscode.window.showTextDocument).not.toHaveBeenCalled();
+		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
+			fakeDoc,
+			expect.stringContaining('urn:ex#res')
 		);
-		expect(vscode.window.showTextDocument).toHaveBeenCalled();
-		expect(mockSparqlResultsController.executeQueryFromTextDocument).toHaveBeenCalled();
 	});
 
-	it('should set connection on the generated SPARQL document', async () => {
+	it('should execute query without creating a temporary SPARQL document', async () => {
 		mockDescribeTemplate();
 		mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'my-conn' });
 
@@ -94,25 +96,23 @@ describe('executeDescribeQuery', () => {
 
 		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res');
 
-		expect(mockConnectionService.setQuerySourceForDocument).toHaveBeenCalledWith(
-			expect.anything(),
-			'my-conn'
-		);
+		expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
+		expect(mockConnectionService.setQuerySourceForDocument).not.toHaveBeenCalled();
+		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalled();
 	});
 
 	it('should build query from template without FROM clauses when graph URIs are not provided', async () => {
 		mockDescribeTemplate();
 
 		const uriStr = 'file:///test.sparql';
-		(vscode.workspace as any).textDocuments = [{ uri: { toString: () => uriStr } }];
+		const fakeDoc = { uri: { toString: () => uriStr } };
+		(vscode.workspace as any).textDocuments = [fakeDoc];
 
 		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res');
 
-		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
-			expect.objectContaining({
-				content: 'CONSTRUCT { <urn:ex#res> ?p ?o }\n\nWHERE { <urn:ex#res> ?p ?o }',
-				language: 'sparql',
-			})
+		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
+			fakeDoc,
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\n\nWHERE { <urn:ex#res> ?p ?o }'
 		);
 	});
 
@@ -120,15 +120,14 @@ describe('executeDescribeQuery', () => {
 		mockDescribeTemplate();
 
 		const uriStr = 'file:///test.sparql';
-		(vscode.workspace as any).textDocuments = [{ uri: { toString: () => uriStr } }];
+		const fakeDoc = { uri: { toString: () => uriStr } };
+		(vscode.workspace as any).textDocuments = [fakeDoc];
 
 		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res', ['https://example.org/graph']);
 
-		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
-			expect.objectContaining({
-				content: 'CONSTRUCT { <urn:ex#res> ?p ?o }\nFROM <https://example.org/graph>\nWHERE { <urn:ex#res> ?p ?o }',
-				language: 'sparql',
-			})
+		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
+			fakeDoc,
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\n\nFROM <https://example.org/graph>\nWHERE { <urn:ex#res> ?p ?o }'
 		);
 	});
 
@@ -136,18 +135,17 @@ describe('executeDescribeQuery', () => {
 		mockDescribeTemplate();
 
 		const uriStr = 'file:///test.sparql';
-		(vscode.workspace as any).textDocuments = [{ uri: { toString: () => uriStr } }];
+		const fakeDoc = { uri: { toString: () => uriStr } };
+		(vscode.workspace as any).textDocuments = [fakeDoc];
 
 		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res', [
 			'https://example.org/graph-a',
 			'https://example.org/graph-b',
 		]);
 
-		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
-			expect.objectContaining({
-				content: 'CONSTRUCT { <urn:ex#res> ?p ?o }\nFROM <https://example.org/graph-a>\nFROM <https://example.org/graph-b>\nWHERE { <urn:ex#res> ?p ?o }',
-				language: 'sparql',
-			})
+		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
+			fakeDoc,
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\n\nFROM <https://example.org/graph-a>\nFROM <https://example.org/graph-b>\nWHERE { <urn:ex#res> ?p ?o }'
 		);
 	});
 });

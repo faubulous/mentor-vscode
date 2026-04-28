@@ -27,9 +27,7 @@ export const listGraphs = {
     const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
     await connectionService.setQuerySourceForDocument(document.uri, connection.id);
 
-    // Show the document and execute the query
-    await vscode.window.showTextDocument(document);
-
+    // Execute the query without showing the document (internal query)
     const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
     await controller.executeQueryFromTextDocument(document);
   }

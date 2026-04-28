@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { SparqlResultsController } from '@src/views/webviews';
 import { getConfig } from '@src/utilities/vscode/config';
 
@@ -28,19 +27,8 @@ export const executeDescribeQuery = {
 			.replace(/\{\{resourceIri\}\}/g, resourceIri)
 			.replace(/\{\{fromClauses\}\}/g, fromClauses);
 
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		const connection = connectionService.getConnectionForDocument(document.uri);
-
-		const describeDocument = await vscode.workspace.openTextDocument({
-			content: query,
-			language: 'sparql'
-		});
-
-		await connectionService.setQuerySourceForDocument(describeDocument.uri, connection.id);
-		await vscode.window.showTextDocument(describeDocument);
-
 		const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
-		await controller.executeQueryFromTextDocument(describeDocument);
+		await controller.executeQuery(document, query);
 	}
 };
 
@@ -48,6 +36,6 @@ function getFromClauses(graphUris?: string[]): string {
 	if (!graphUris || graphUris.length === 0) {
 		return '';
 	} else {
-		return graphUris.map(uri => `\nFROM <${uri}>`).join();
+		return graphUris.map(uri => `\nFROM <${uri}>`).join('');
 	}
 }

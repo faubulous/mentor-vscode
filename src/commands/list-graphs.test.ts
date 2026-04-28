@@ -66,7 +66,6 @@ describe('listGraphs command', () => {
 			language: 'sparql',
 		});
 		expect(mockSetQuerySourceForDocument).toHaveBeenCalledWith(expect.anything(), 'conn-1');
-		expect(vscode.window.showTextDocument).toHaveBeenCalled();
 		expect(mockExecuteQueryFromTextDocument).toHaveBeenCalled();
 	});
 });

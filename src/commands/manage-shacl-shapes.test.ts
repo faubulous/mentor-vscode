@@ -120,7 +120,7 @@ describe('manageShaclShapes', () => {
 			expect.objectContaining({
 				defaults: ['workspace:///shapes/default.ttl'],
 			}),
-			vscode.ConfigurationTarget.Workspace
+			vscode.ConfigurationTarget.Global
 		);
 
 		const persistedConfig = (mockConfigUpdate as Mock).mock.calls[0][1];
@@ -187,7 +187,7 @@ describe('manageShaclShapes', () => {
 			expect.objectContaining({
 				defaults: ['workspace:///shapes/default.ttl'],
 			}),
-			vscode.ConfigurationTarget.Workspace
+			vscode.ConfigurationTarget.Global
 		);
 	});
 
