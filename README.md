@@ -29,14 +29,13 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.5.7: Service Release
-- Added experimental SHACL validation with violation decorations and diagnostics
-  - Enable in settings: vscode://settings/mentor.shacl.enabled
-- Added "Execute" code lens for SPARQL documents
-- Replaced "Create Notebook" command with "Add to Notebook" command that asks if you want to add the current file to an existing notebook or create a new one
-- Fixed definition trees, usage code lenses and toolbar buttons for RDF/XML documents
-- Fixed URI serialization when creating a SPARQL query from an RDF document
-- Security update for dependencies
+### Version 0.5.8: Service Release
+- Fixed broken 'Execute' buttons in SPARQL queries
+- Fixed issues with whitespaces in file paths and folder names
+  - Wrong display in the workspace tree
+  - Missing escape characters in the generated workspace: URIs
+  - Folders with whitespaces do not show content when expanded in the workspace tree
+- Fixed escaping of '_' characters in local names (e.g. `ex:foo_bar` -> `ex:foo\_bar`)
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 
