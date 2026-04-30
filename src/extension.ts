@@ -8,6 +8,8 @@ import { ServiceToken } from './services/tokens';
 import { IWorkspaceFileService, IWorkspaceService } from './services/core';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { WorkspaceUri } from './providers/workspace-uri';
+import { SparqlConnectionService } from './languages/sparql/services/sparql-connection-service';
+import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
 import { DocumentLintingService } from './services/document/document-linting-service';
@@ -35,6 +37,7 @@ export async function activateExtension(context: vscode.ExtensionContext, langua
 	registerCommands(context);
 	registerViews();
 	registerNotebookSerializers();
+	registerRenameHandlers(context);
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
@@ -113,6 +116,26 @@ function registerCommands(context: vscode.ExtensionContext) {
 		context.subscriptions.push(vscode.commands.registerCommand(command.id, command.handler));
 	}
 }
+
+/**
+ * Registers rename/move handlers that migrate per-document settings when files or folders
+ * are renamed in the workspace.
+ */
+function registerRenameHandlers(context: vscode.ExtensionContext) {
+	context.subscriptions.push(
+		vscode.workspace.onDidRenameFiles(async (e) => {
+			// Migrate SPARQL workspaceState keys (document connection + inference settings).
+			const sparqlService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+			await sparqlService.handleFileRenames(e.files);
+
+			// Migrate SHACL global settings (graphs keys and defaults entries).
+			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+			await shaclService.migrateShaclSettings(e.files);
+		})
+	);
+}
+
+
 
 /**
  * Loads the RDF framework ontologies into the store, which are required for providing completions and hovers for built-in concepts.

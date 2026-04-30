@@ -836,4 +836,123 @@ describe('SparqlConnectionService', () => {
             expect(headers.Authorization).toBe('Bearer entra-token');
         });
     });
+
+    describe('handleFileRenames', () => {
+        function makeServiceWithState(initial: Record<string, any>) {
+            const store = new Map<string, any>(Object.entries(initial));
+            const ctx = {
+                workspaceState: {
+                    get: (key: string, defaultValue?: any) => store.has(key) ? store.get(key) : defaultValue,
+                    update: async (key: string, value: any) => {
+                        if (value === undefined) {
+                            store.delete(key);
+                        } else {
+                            store.set(key, value);
+                        }
+                    },
+                    keys: () => [...store.keys()],
+                },
+                subscriptions: [],
+            };
+            const svc = new SparqlConnectionService(ctx as any, { getCredential: async () => null } as any);
+            return { svc, store };
+        }
+
+        it('migrates sparql.connection: key on file rename', async () => {
+            const { svc, store } = makeServiceWithState({
+                'sparql.connection:file:///workspace/old.ttl': 'conn-1',
+            });
+
+            await svc.handleFileRenames([{
+                oldUri: Uri.parse('file:///workspace/old.ttl'),
+                newUri: Uri.parse('file:///workspace/new.ttl'),
+            }]);
+
+            expect(store.has('sparql.connection:file:///workspace/new.ttl')).toBe(true);
+            expect(store.get('sparql.connection:file:///workspace/new.ttl')).toBe('conn-1');
+            expect(store.has('sparql.connection:file:///workspace/old.ttl')).toBe(false);
+        });
+
+        it('migrates mentor.inference.document: key on file rename', async () => {
+            const { svc, store } = makeServiceWithState({
+                'mentor.inference.document:file:///workspace/old.ttl': true,
+            });
+
+            await svc.handleFileRenames([{
+                oldUri: Uri.parse('file:///workspace/old.ttl'),
+                newUri: Uri.parse('file:///workspace/new.ttl'),
+            }]);
+
+            expect(store.has('mentor.inference.document:file:///workspace/new.ttl')).toBe(true);
+            expect(store.get('mentor.inference.document:file:///workspace/new.ttl')).toBe(true);
+            expect(store.has('mentor.inference.document:file:///workspace/old.ttl')).toBe(false);
+        });
+
+        it('migrates both key prefixes in a single rename', async () => {
+            const { svc, store } = makeServiceWithState({
+                'sparql.connection:file:///workspace/old.ttl': 'conn-1',
+                'mentor.inference.document:file:///workspace/old.ttl': false,
+            });
+
+            await svc.handleFileRenames([{
+                oldUri: Uri.parse('file:///workspace/old.ttl'),
+                newUri: Uri.parse('file:///workspace/new.ttl'),
+            }]);
+
+            expect(store.has('sparql.connection:file:///workspace/new.ttl')).toBe(true);
+            expect(store.has('mentor.inference.document:file:///workspace/new.ttl')).toBe(true);
+            expect(store.has('sparql.connection:file:///workspace/old.ttl')).toBe(false);
+            expect(store.has('mentor.inference.document:file:///workspace/old.ttl')).toBe(false);
+        });
+
+        it('migrates all keys under a renamed folder', async () => {
+            const { svc, store } = makeServiceWithState({
+                'sparql.connection:file:///workspace/models/a.ttl': 'conn-a',
+                'sparql.connection:file:///workspace/models/sub/b.ttl': 'conn-b',
+                'mentor.inference.document:file:///workspace/models/a.ttl': true,
+            });
+
+            await svc.handleFileRenames([{
+                oldUri: Uri.parse('file:///workspace/models'),
+                newUri: Uri.parse('file:///workspace/renamed'),
+            }]);
+
+            expect(store.has('sparql.connection:file:///workspace/renamed/a.ttl')).toBe(true);
+            expect(store.has('sparql.connection:file:///workspace/renamed/sub/b.ttl')).toBe(true);
+            expect(store.has('mentor.inference.document:file:///workspace/renamed/a.ttl')).toBe(true);
+            expect(store.has('sparql.connection:file:///workspace/models/a.ttl')).toBe(false);
+            expect(store.has('sparql.connection:file:///workspace/models/sub/b.ttl')).toBe(false);
+            expect(store.has('mentor.inference.document:file:///workspace/models/a.ttl')).toBe(false);
+        });
+
+        it('does not migrate a sibling folder with a common name prefix', async () => {
+            const { svc, store } = makeServiceWithState({
+                'sparql.connection:file:///workspace/models/a.ttl': 'conn-a',
+                'sparql.connection:file:///workspace/models-extra/b.ttl': 'conn-b',
+            });
+
+            await svc.handleFileRenames([{
+                oldUri: Uri.parse('file:///workspace/models'),
+                newUri: Uri.parse('file:///workspace/renamed'),
+            }]);
+
+            expect(store.has('sparql.connection:file:///workspace/renamed/a.ttl')).toBe(true);
+            expect(store.has('sparql.connection:file:///workspace/models-extra/b.ttl')).toBe(true);
+        });
+
+        it('does not migrate unrelated keys', async () => {
+            const { svc, store } = makeServiceWithState({
+                'sparql.connection:file:///workspace/other.ttl': 'conn-x',
+                'mentor.inference.enabled:some-connection-id': true,
+            });
+
+            await svc.handleFileRenames([{
+                oldUri: Uri.parse('file:///workspace/old.ttl'),
+                newUri: Uri.parse('file:///workspace/new.ttl'),
+            }]);
+
+            expect(store.has('sparql.connection:file:///workspace/other.ttl')).toBe(true);
+            expect(store.has('mentor.inference.enabled:some-connection-id')).toBe(true);
+        });
+    });
 });

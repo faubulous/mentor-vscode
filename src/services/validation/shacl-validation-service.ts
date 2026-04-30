@@ -11,7 +11,7 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 import { getConfig } from '@src/utilities/vscode/config';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
-import { resolveEffectiveShapeGraphs, ShaclValidationConfiguration } from './shacl-validation-configuration';
+import { migrateShaclValidationConfig, resolveEffectiveShapeGraphs, ShaclValidationConfiguration } from './shacl-validation-configuration';
 
 /**
  * A read-only DatasetCore view over a subset of graphs in the internal Store.
@@ -348,6 +348,46 @@ export class ShaclValidationService implements vscode.Disposable {
 		if (severity.endsWith('Warning')) return 'Warning';
 		if (severity.endsWith('Info')) return 'Info';
 		return severity;
+	}
+
+	/**
+	 * Migrates SHACL validation settings for renamed/moved files or folders.
+	 *
+	 * Keys in `mentor.shacl.validation` are workspace-relative `workspace:///...` URIs.
+	 * Only renames for files whose old URI can be resolved to a workspace-relative URI
+	 * are migrated — this prevents cross-workspace key contamination since the settings
+	 * are stored globally and may contain keys from prior workspace sessions.
+	 */
+	async migrateShaclSettings(files: ReadonlyArray<{ oldUri: vscode.Uri; newUri: vscode.Uri }>): Promise<void> {
+		const renames: { oldKey: string; newKey: string }[] = [];
+
+		for (const { oldUri, newUri } of files) {
+			const oldWorkspaceUri = WorkspaceUri.toWorkspaceUri(oldUri);
+
+			if (!oldWorkspaceUri) {
+				// File is outside the current workspace root — skip to avoid
+				// accidentally migrating keys from a different workspace session.
+				continue;
+			}
+
+			const newWorkspaceUri = WorkspaceUri.toWorkspaceUri(newUri);
+			const oldKey = WorkspaceUri.toCanonicalString(oldWorkspaceUri);
+			const newKey = newWorkspaceUri
+				? WorkspaceUri.toCanonicalString(newWorkspaceUri)
+				: newUri.toString();
+
+			renames.push({ oldKey, newKey });
+		}
+
+		if (renames.length === 0) {
+			return;
+		}
+
+		const shacl = vscode.workspace.getConfiguration('mentor.shacl');
+		const current = shacl.get<ShaclValidationConfiguration>('validation', {});
+		const migrated = migrateShaclValidationConfig(current, renames);
+
+		await shacl.update('validation', migrated, vscode.ConfigurationTarget.Global);
 	}
 
 	dispose(): void {

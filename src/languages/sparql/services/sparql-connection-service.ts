@@ -812,4 +812,53 @@ export class SparqlConnectionService {
 
 		return headers;
 	}
+
+	/**
+	 * Updates all document-scoped workspace state keys (SPARQL connection and inference
+	 * settings) when files or folders are renamed in the workspace.
+	 *
+	 * Both prefixes use the full absolute `file://` URI as the key suffix. For folder
+	 * renames the match is done by URI prefix (with a trailing `/` guard to avoid
+	 * accidentally matching sibling folders that share a common name prefix).
+	 *
+	 * Notebook cell settings are stored in cell metadata and travel with the notebook
+	 * automatically — they do not need to be migrated here.
+	 *
+	 * @param files The list of file rename events from `vscode.workspace.onDidRenameFiles`.
+	 */
+	async handleFileRenames(files: ReadonlyArray<{ oldUri: vscode.Uri; newUri: vscode.Uri }>): Promise<void> {
+		const prefixes = [
+			'sparql.connection:',
+			DOCUMENT_INFERENCE_STORAGE_KEY_PREFIX,
+		];
+
+		for (const { oldUri, newUri } of files) {
+			const oldUriStr = oldUri.toString();
+			const newUriStr = newUri.toString();
+
+			for (const key of this._extensionContext.workspaceState.keys()) {
+				for (const prefix of prefixes) {
+					if (!key.startsWith(prefix)) {
+						continue;
+					}
+
+					const uriPart = key.slice(prefix.length);
+
+					// Match exact file rename or any path under a renamed folder
+					// (the trailing '/' guard prevents 'models' from matching 'models-extra').
+					const isMatch =
+						uriPart === oldUriStr ||
+						uriPart.startsWith(oldUriStr + '/');
+
+					if (isMatch) {
+						const newKey = prefix + newUriStr + uriPart.slice(oldUriStr.length);
+						const value = this._extensionContext.workspaceState.get(key);
+
+						await this._extensionContext.workspaceState.update(newKey, value);
+						await this._extensionContext.workspaceState.update(key, undefined);
+					}
+				}
+			}
+		}
+	}
 }

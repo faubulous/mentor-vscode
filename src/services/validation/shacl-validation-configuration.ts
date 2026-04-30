@@ -209,3 +209,55 @@ export function getGraphSelectionState(
 		source: 'implicit',
 	};
 }
+
+/**
+ * Migrates a SHACL validation configuration when files or folders are renamed.
+ *
+ * Both `graphs` keys and `defaults` entries use workspace-relative `workspace:///...`
+ * URI strings as identifiers. For folder renames the match is done by URI prefix with
+ * a trailing `/` guard so that renaming `workspace:///models` does not accidentally
+ * affect `workspace:///models-extra/thing.ttl`.
+ *
+ * This function is pure: it returns a new configuration object and does not write
+ * to VS Code settings. The caller is responsible for persisting the result.
+ *
+ * @param config The current SHACL validation configuration.
+ * @param renames An array of `{ oldKey, newKey }` pairs using workspace-relative URI strings.
+ * @returns A new configuration with all affected keys/entries migrated.
+ */
+export function migrateShaclValidationConfig(
+	config: ShaclValidationConfiguration | undefined,
+	renames: ReadonlyArray<{ oldKey: string; newKey: string }>
+): ShaclValidationConfiguration {
+	if (!config) {
+		return {};
+	}
+
+	const migrateUri = (uri: string): string => {
+		for (const { oldKey, newKey } of renames) {
+			if (uri === oldKey || uri.startsWith(oldKey + '/')) {
+				return newKey + uri.slice(oldKey.length);
+			}
+		}
+
+		return uri;
+	};
+
+	const migratedDefaults = config.defaults?.map(migrateUri);
+
+	let migratedGraphs: Record<string, ShaclGraphShapeConfiguration> | undefined;
+
+	if (config.graphs) {
+		migratedGraphs = {};
+
+		for (const [key, value] of Object.entries(config.graphs)) {
+			migratedGraphs[migrateUri(key)] = value;
+		}
+	}
+
+	return {
+		...config,
+		...(migratedDefaults !== undefined ? { defaults: migratedDefaults } : {}),
+		...(migratedGraphs !== undefined ? { graphs: migratedGraphs } : {}),
+	};
+}

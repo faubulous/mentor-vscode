@@ -3,6 +3,7 @@ import {
 	buildGraphShapeConfigurationFromSelection,
 	getGraphSelectionState,
 	isImplicitGraphShapeConfiguration,
+	migrateShaclValidationConfig,
 	resolveEffectiveShapeGraphs,
 	resolveEffectiveShapesFromGraphConfiguration,
 	toUniqueStringArray,
@@ -154,6 +155,107 @@ describe('shacl-validation-configuration', () => {
 				includeShapes: [],
 				excludeShapes: [],
 			})).toBe(false);
+		});
+	});
+
+	describe('migrateShaclValidationConfig', () => {
+		it('returns an empty object for undefined config', () => {
+			expect(migrateShaclValidationConfig(undefined, [{ oldKey: 'workspace:///a.ttl', newKey: 'workspace:///b.ttl' }])).toEqual({});
+		});
+
+		it('returns config unchanged when no renames match', () => {
+			const config: ShaclValidationConfiguration = {
+				defaults: ['workspace:///shapes.ttl'],
+				graphs: {
+					'workspace:///data.ttl': { includeDefaults: true, includeShapes: [], excludeShapes: [] },
+				},
+			};
+
+			const result = migrateShaclValidationConfig(config, [{ oldKey: 'workspace:///other.ttl', newKey: 'workspace:///new.ttl' }]);
+
+			expect(result.defaults).toEqual(['workspace:///shapes.ttl']);
+			expect(result.graphs).toHaveProperty('workspace:///data.ttl');
+			expect(result.graphs).not.toHaveProperty('workspace:///new.ttl');
+		});
+
+		it('migrates a graphs key on file rename', () => {
+			const config: ShaclValidationConfiguration = {
+				graphs: {
+					'workspace:///models/data.ttl': { includeDefaults: false, includeShapes: ['workspace:///shapes.ttl'], excludeShapes: [] },
+				},
+			};
+
+			const result = migrateShaclValidationConfig(config, [
+				{ oldKey: 'workspace:///models/data.ttl', newKey: 'workspace:///models/renamed.ttl' },
+			]);
+
+			expect(result.graphs).toHaveProperty('workspace:///models/renamed.ttl');
+			expect(result.graphs).not.toHaveProperty('workspace:///models/data.ttl');
+		});
+
+		it('migrates a defaults entry on file rename', () => {
+			const config: ShaclValidationConfiguration = {
+				defaults: ['workspace:///shapes/old.ttl', 'workspace:///shapes/other.ttl'],
+			};
+
+			const result = migrateShaclValidationConfig(config, [
+				{ oldKey: 'workspace:///shapes/old.ttl', newKey: 'workspace:///shapes/new.ttl' },
+			]);
+
+			expect(result.defaults).toContain('workspace:///shapes/new.ttl');
+			expect(result.defaults).toContain('workspace:///shapes/other.ttl');
+			expect(result.defaults).not.toContain('workspace:///shapes/old.ttl');
+		});
+
+		it('migrates all graphs keys and defaults entries under a renamed folder', () => {
+			const config: ShaclValidationConfiguration = {
+				defaults: ['workspace:///shapes/a.ttl'],
+				graphs: {
+					'workspace:///models/x.ttl': { includeDefaults: true, includeShapes: [], excludeShapes: [] },
+					'workspace:///models/sub/y.ttl': { includeDefaults: false, includeShapes: [], excludeShapes: [] },
+					'workspace:///other/z.ttl': { includeDefaults: true, includeShapes: [], excludeShapes: [] },
+				},
+			};
+
+			const result = migrateShaclValidationConfig(config, [
+				{ oldKey: 'workspace:///models', newKey: 'workspace:///renamed' },
+			]);
+
+			expect(result.graphs).toHaveProperty('workspace:///renamed/x.ttl');
+			expect(result.graphs).toHaveProperty('workspace:///renamed/sub/y.ttl');
+			expect(result.graphs).toHaveProperty('workspace:///other/z.ttl');
+			expect(result.graphs).not.toHaveProperty('workspace:///models/x.ttl');
+			expect(result.graphs).not.toHaveProperty('workspace:///models/sub/y.ttl');
+		});
+
+		it('does not migrate a sibling folder with a common name prefix', () => {
+			const config: ShaclValidationConfiguration = {
+				graphs: {
+					'workspace:///models/a.ttl': { includeDefaults: true, includeShapes: [], excludeShapes: [] },
+					'workspace:///models-extra/b.ttl': { includeDefaults: true, includeShapes: [], excludeShapes: [] },
+				},
+			};
+
+			const result = migrateShaclValidationConfig(config, [
+				{ oldKey: 'workspace:///models', newKey: 'workspace:///renamed' },
+			]);
+
+			expect(result.graphs).toHaveProperty('workspace:///renamed/a.ttl');
+			expect(result.graphs).toHaveProperty('workspace:///models-extra/b.ttl');
+			expect(result.graphs).not.toHaveProperty('workspace:///models/a.ttl');
+		});
+
+		it('preserves graph configuration values when migrating keys', () => {
+			const graphConfig = { includeDefaults: false, includeShapes: ['workspace:///extra.ttl'], excludeShapes: ['workspace:///skip.ttl'] };
+			const config: ShaclValidationConfiguration = {
+				graphs: { 'workspace:///old.ttl': graphConfig },
+			};
+
+			const result = migrateShaclValidationConfig(config, [
+				{ oldKey: 'workspace:///old.ttl', newKey: 'workspace:///new.ttl' },
+			]);
+
+			expect(result.graphs?.['workspace:///new.ttl']).toEqual(graphConfig);
 		});
 	});
 });

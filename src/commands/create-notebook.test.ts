@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
+vi.mock('vscode', () => import('../utilities/mocks/vscode'));
 
 vi.mock('tsyringe', () => ({
 	container: { resolve: vi.fn(() => ({})) },
