@@ -357,5 +357,64 @@ describe('WorkspaceUri', () => {
 			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
 			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///shared/core.ttl');
 		});
+
+		it('percent-encodes spaces in path segments', () => {
+			const wsUri = vscode.Uri.parse('workspace:///Sub Folder/file.ttl');
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///Sub%20Folder/file.ttl');
+		});
+
+		it('percent-encodes spaces when round-tripping file -> workspace -> canonical string', () => {
+			const fileUri = vscode.Uri.file('/w/Sub Folder/file.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///Sub%20Folder/file.ttl');
+		});
+	});
+
+	describe('with paths containing whitespace', () => {
+		it('produces percent-encoded workspace: URIs for files inside folders with spaces', () => {
+			const fileUri = vscode.Uri.file('/w/My Ontologies/pizza.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+			expect(wsUri).toBeTruthy();
+			expect(wsUri.scheme).toBe('workspace');
+			// .path returns the decoded form — the encoded form is only in toString()
+			expect(wsUri.path).toBe('/My Ontologies/pizza.ttl');
+			expect(wsUri.toString()).toBe('workspace:///My%20Ontologies/pizza.ttl');
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///My%20Ontologies/pizza.ttl');
+		});
+
+		it('does not produce the deprecated workspace:/ form for paths with spaces', () => {
+			const fileUri = vscode.Uri.file('/w/Folder With Spaces/file.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+			expect(wsUri.toString()).not.toMatch(/^workspace:\/[^/]/);
+		});
+
+		it('round-trips file (with spaces) -> workspace: -> file: without data loss', () => {
+			const original = vscode.Uri.file('/w/My Ontologies/pizza.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(original)!;
+			const restored = WorkspaceUri.toFileUri(wsUri);
+
+			expect(restored.scheme).toBe('file');
+			expect(restored.path).toBe('/w/My Ontologies/pizza.ttl');
+		});
+
+		it('percent-encodes spaces when using a monorepo root with spaces in the path', () => {
+			WorkspaceUri.rootUri = vscode.Uri.file('/monorepo');
+
+			const fileUri = vscode.Uri.file('/monorepo/Sub Project/core.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
+
+			expect(wsUri.toString()).toBe('workspace:///Sub%20Project/core.ttl');
+			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///Sub%20Project/core.ttl');
+		});
+
+		it('preserves fragments when the path contains spaces', () => {
+			const fileUri = vscode.Uri.file('/w/My Ontologies/notebook.mnb');
+			const uriWithFragment = fileUri.with({ fragment: 'cell3' });
+			const wsUri = WorkspaceUri.toWorkspaceUri(uriWithFragment)!;
+
+			expect(wsUri.toString()).toBe('workspace:///My%20Ontologies/notebook.mnb#cell3');
+		});
 	});
 });

@@ -62,10 +62,9 @@ export class WorkspaceUri {
 			return uri.toString(true);
 		}
 
-		const query = uri.query ? `?${uri.query}` : '';
-		const fragment = uri.fragment ? `#${uri.fragment}` : '';
-
-		return `${this.uriScheme}://${uri.path}${query}${fragment}`;
+		// uri.toString() produces properly percent-encoded path segments but drops the empty authority,
+		// serialising `workspace:///path` as `workspace:/path`. Fix the authority component.
+		return uri.toString().replace(/^workspace:\/(?!\/)/, 'workspace:///');
 	}
 
 	/**
@@ -215,11 +214,11 @@ export class CanonicalWorkspaceUri {
 		return this._inner.with(change);
 	}
 
-	/** Always returns the canonical `workspace:///path` form. */
+	/** Always returns the canonical `workspace:///path` form with percent-encoded path segments. */
 	toString(_skipEncoding?: boolean): string {
-		const query = this._inner.query ? `?${this._inner.query}` : '';
-		const fragment = this._inner.fragment ? `#${this._inner.fragment}` : '';
-		return `workspace://${this._inner.path}${query}${fragment}`;
+		// this._inner.toString() produces properly percent-encoded path segments but drops the empty
+		// authority, serialising `workspace:///path` as `workspace:/path`. Fix the authority component.
+		return this._inner.toString().replace(/^workspace:\/(?!\/)/, 'workspace:///');
 	}
 
 	toJSON(): object {

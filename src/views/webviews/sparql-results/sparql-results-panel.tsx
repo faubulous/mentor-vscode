@@ -41,7 +41,10 @@ function SparqlResultsPanel() {
 			return {
 				...previousState,
 				activeTabIndex: 0,
-				activeQueries: activeQueries.filter(q => !q.documentIri.startsWith('untitled:'))
+				activeQueries: activeQueries.filter(q =>
+					q.documentIri &&
+					!q.documentIri.startsWith('untitled:')
+				)
 			};
 		}
 
