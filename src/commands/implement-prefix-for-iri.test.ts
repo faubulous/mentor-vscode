@@ -40,7 +40,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { implementPrefixForIri } from './implement-prefix-for-iri';
+import { implementPrefixForIri } from '@src/commands/implement-prefix-for-iri';
 
 const makeToken = () => ({
 	type: 'IRI_REF',

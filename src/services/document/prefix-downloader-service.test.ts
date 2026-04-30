@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { PrefixDownloaderService } from './prefix-downloader-service';
+import { PrefixDownloaderService } from '@src/services/document/prefix-downloader-service';
 
 describe('PrefixDownloaderService', () => {
 	afterEach(() => {

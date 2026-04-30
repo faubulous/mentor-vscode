@@ -15,7 +15,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { showUriLabelsWithPrefix } from './show-uri-labels-with-prefix';
+import { showUriLabelsWithPrefix } from '@src/commands/show-uri-labels-with-prefix';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
 
 beforeEach(() => {

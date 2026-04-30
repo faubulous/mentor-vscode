@@ -22,7 +22,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { deletePrefixes } from './delete-prefixes';
+import { deletePrefixes } from '@src/commands/delete-prefixes';
 
 beforeEach(() => {
 	mockDeletePrefixes = vi.fn(async () => ({ size: 0 }));

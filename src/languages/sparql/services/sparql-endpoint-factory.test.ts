@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { SparqlEndpointFactory } from './sparql-endpoint-factory';
-import { ISparqlEndpointProvider } from './sparql-endpoint-provider.interface';
-import { SparqlConnection, SparqlStoreType } from './sparql-connection';
-import { ComunicaEndpoint } from './sparql-endpoint';
+import { SparqlEndpointFactory } from '@src/languages/sparql/services/sparql-endpoint-factory';
+import { ISparqlEndpointProvider } from '@src/languages/sparql/services/sparql-endpoint-provider.interface';
+import { SparqlConnection, SparqlStoreType } from '@src/languages/sparql/services/sparql-connection';
+import { ComunicaEndpoint } from '@src/languages/sparql/services/sparql-endpoint';
 
 function createMockProvider(storeType: SparqlStoreType, supportsInference: boolean = false): ISparqlEndpointProvider {
 	return {

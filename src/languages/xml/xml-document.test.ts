@@ -22,7 +22,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { Uri } from '@src/utilities/mocks/vscode';
-import { XmlDocument } from './xml-document';
+import { XmlDocument } from '@src/languages/xml/xml-document';
 
 beforeEach(() => {
     vi.clearAllMocks();

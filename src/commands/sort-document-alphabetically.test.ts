@@ -18,7 +18,7 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({
 
 beforeEach(() => { mockSortDocument.mockReset(); });
 
-import { sortDocumentAlphabetically, sortDocumentAlphabeticallySubmenu } from './sort-document-alphabetically';
+import { sortDocumentAlphabetically, sortDocumentAlphabeticallySubmenu } from '@src/commands/sort-document-alphabetically';
 import { AlphabeticalSortingStrategy } from '@faubulous/mentor-rdf-serializers';
 
 describe('sortDocumentAlphabetically command', () => {

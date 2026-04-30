@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DiagnosticSeverity } from 'vscode-languageserver/browser';
-import { XsdAnyUriLiteralLinter, XSD_ANY_URI_LITERAL_CODE } from './xsd-any-uri-literal-linter';
+import { XsdAnyUriLiteralLinter, XSD_ANY_URI_LITERAL_CODE } from '@src/languages/linters/xsd-any-uri-literal-linter';
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 

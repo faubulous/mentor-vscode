@@ -19,7 +19,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { clearQueryHistory } from './clear-query-history';
+import { clearQueryHistory } from '@src/commands/clear-query-history';
 
 beforeEach(() => {
 	mockClearQueryHistory = vi.fn();

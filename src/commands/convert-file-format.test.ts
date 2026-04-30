@@ -67,7 +67,7 @@ import {
 	convertFileFormatToNQuadsSubmenu,
 	convertFileFormatToTurtleSubmenu,
 	convertFileFormatToXmlSubmenu,
-} from './convert-file-format';
+} from '@src/commands/convert-file-format';
 
 describe('convertFileFormat', () => {
 	beforeEach(() => {

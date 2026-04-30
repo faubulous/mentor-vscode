@@ -43,7 +43,7 @@ afterEach(() => {
 	(mockVscode.window as any).activeTextEditor = undefined;
 });
 
-import { sortDocument } from './sort-document';
+import { sortDocument } from '@src/commands/sort-document';
 
 describe('sortDocument', () => {
 	it('should show error when no URI and no active editor', async () => {

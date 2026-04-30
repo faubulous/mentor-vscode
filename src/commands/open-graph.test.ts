@@ -30,7 +30,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { openGraph } from './open-graph';
+import { openGraph } from '@src/commands/open-graph';
 
 beforeEach(() => {
 	mockExecuteQueryOnConnection = vi.fn(async () => ({

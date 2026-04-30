@@ -29,7 +29,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { manageShaclShapes } from './manage-shacl-shapes';
+import { manageShaclShapes } from '@src/commands/manage-shacl-shapes';
 
 describe('manageShaclShapes', () => {
 	beforeEach(() => {

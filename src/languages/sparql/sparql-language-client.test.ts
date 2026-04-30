@@ -50,7 +50,7 @@ vi.mock('@src/languages', async () => {
 	};
 });
 
-import { SparqlLanguageClient } from './sparql-language-client';
+import { SparqlLanguageClient } from '@src/languages/sparql/sparql-language-client';
 
 describe('SparqlLanguageClient', () => {
 	beforeEach(() => {

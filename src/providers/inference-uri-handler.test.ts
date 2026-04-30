@@ -48,7 +48,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { InferenceUriHandler } from './inference-uri-handler';
+import { InferenceUriHandler } from '@src/providers/inference-uri-handler';
 
 describe('InferenceUriHandler', () => {
 	let handler: InferenceUriHandler;

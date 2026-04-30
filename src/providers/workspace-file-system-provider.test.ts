@@ -27,7 +27,7 @@ describe('WorkspaceFileSystemProvider', () => {
     beforeEach(async () => {
         mockSubscriptions.length = 0;
         vi.resetModules();
-        const mod = await import('./workspace-file-system-provider');
+        const mod = await import('@src/providers/workspace-file-system-provider');
         WorkspaceFileSystemProvider = mod.WorkspaceFileSystemProvider;
     });
 

@@ -27,7 +27,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { findReferences } from './find-references';
+import { findReferences } from '@src/commands/find-references';
 
 function makeEditor(uriStr = 'file:///doc.ttl') {
 	return {

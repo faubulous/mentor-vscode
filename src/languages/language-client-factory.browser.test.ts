@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createBrowserLanguageClient } from './language-client-factory.browser';
+import { createBrowserLanguageClient } from '@src/languages/language-client-factory.browser';
 import { Uri } from '@src/utilities/mocks/vscode';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { describe, it, expect, afterEach } from 'vitest';
-import { WorkspaceUri, CanonicalWorkspaceUri } from './workspace-uri';
+import { WorkspaceUri, CanonicalWorkspaceUri } from '@src/providers/workspace-uri';
 
 
 describe('WorkspaceUri', () => {

@@ -22,7 +22,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { setNotebookInference } from './set-notebook-inference';
+import { setNotebookInference } from '@src/commands/set-notebook-inference';
 
 beforeEach(() => {
 	mockNotifyDocumentConnectionChanged = vi.fn();

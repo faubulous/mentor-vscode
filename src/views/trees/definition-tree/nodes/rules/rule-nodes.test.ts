@@ -23,9 +23,9 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { RuleNode } from './rule-node';
-import { RuleClassNode } from './rule-class-node';
-import { RulesNode } from './rules-node';
+import { RuleNode } from '@src/views/trees/definition-tree/nodes/rules/rule-node';
+import { RuleClassNode } from '@src/views/trees/definition-tree/nodes/rules/rule-class-node';
+import { RulesNode } from '@src/views/trees/definition-tree/nodes/rules/rules-node';
 
 function makeContext(): any {
 	return {

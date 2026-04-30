@@ -10,7 +10,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { Uri, Position, Range } from '@src/utilities/mocks/vscode';
-import { TurtleRenameProvider } from './turtle-rename-provider';
+import { TurtleRenameProvider } from '@src/languages/turtle/providers/turtle-rename-provider';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
 

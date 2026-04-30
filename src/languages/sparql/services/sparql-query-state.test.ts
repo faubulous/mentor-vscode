@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDisplayName } from './sparql-query-state';
+import { getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
 
 function makeState(documentIri: string, notebookIri?: string, cellIndex?: number): any {
 	return {

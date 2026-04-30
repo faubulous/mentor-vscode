@@ -16,9 +16,9 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ResourceDefinitionProvider } from './resource-definition-provider';
-import { ResourceTooltipProvider } from './resource-tooltip-provider';
-import { ResourceReferenceProvider } from './resource-reference-provider';
+import { ResourceDefinitionProvider } from '@src/providers/resource-definition-provider';
+import { ResourceTooltipProvider } from '@src/providers/resource-tooltip-provider';
+import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 
 function makeRange(line = 0, char = 0) {
 	return { start: { line, character: char }, end: { line, character: char + 5 } };

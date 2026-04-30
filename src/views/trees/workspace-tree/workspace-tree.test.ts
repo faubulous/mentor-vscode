@@ -33,7 +33,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { WorkspaceTree } from './workspace-tree';
+import { WorkspaceTree } from '@src/views/trees/workspace-tree/workspace-tree';
 
 const mockSubscriptions: any[] = [];
 

@@ -18,7 +18,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { DatalogTokenProvider } from './datalog-token-provider';
+import { DatalogTokenProvider } from '@src/languages/datalog/datalog-token-provider';
 
 beforeEach(() => {
 	mockSubscriptions.length = 0;

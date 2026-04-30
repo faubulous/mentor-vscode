@@ -19,7 +19,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { createSparqlQueryFromDocument } from './create-sparql-query-from-document';
+import { createSparqlQueryFromDocument } from '@src/commands/create-sparql-query-from-document';
 
 beforeEach(() => {
 	vi.clearAllMocks();

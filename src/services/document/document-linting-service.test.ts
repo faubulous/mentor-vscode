@@ -44,7 +44,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { DocumentLintingService } from './document-linting-service';
+import { DocumentLintingService } from '@src/services/document/document-linting-service';
 
 beforeEach(() => {
 	mockSubscriptions = [];

@@ -25,7 +25,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { WorkspaceNodeProvider } from './workspace-node-provider';
+import { WorkspaceNodeProvider } from '@src/views/trees/workspace-tree/workspace-node-provider';
 
 beforeEach(() => {
 	vi.clearAllMocks();

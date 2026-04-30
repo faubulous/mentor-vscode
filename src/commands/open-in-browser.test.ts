@@ -11,7 +11,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { openInBrowser } from './open-in-browser';
+import { openInBrowser } from '@src/commands/open-in-browser';
 
 beforeEach(() => {
 	(vscode.commands as any).executeCommand = vi.fn(async () => undefined);

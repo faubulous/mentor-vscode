@@ -49,7 +49,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { openFileFromLanguage } from './open-file-from-language';
+import { openFileFromLanguage } from '@src/commands/open-file-from-language';
 
 describe('openFileFromLanguage', () => {
 	let mockQuickPick: any;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import * as mockVscode from '../utilities/mocks/vscode';
-vi.mock('vscode', () => import('../utilities/mocks/vscode'));
+import * as mockVscode from '@src/utilities/mocks/vscode';
+vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({
 	QuadContextSerializer: class {
@@ -66,8 +66,8 @@ afterEach(() => {
 	(mockVscode.window as any).activeTextEditor = undefined;
 });
 
-import { inlineBlankNodes } from './inline-blank-nodes';
-import { TurtleDocument } from '../languages';
+import { inlineBlankNodes } from '@src/commands/inline-blank-nodes';
+import { TurtleDocument } from '@src/languages';
 
 describe('inlineBlankNodes command', () => {
 	it('should have the correct id', () => {

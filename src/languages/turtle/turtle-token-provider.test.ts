@@ -36,7 +36,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { TurtleTokenProvider } from './turtle-token-provider';
+import { TurtleTokenProvider } from '@src/languages/turtle/turtle-token-provider';
 
 beforeEach(() => {
 	mockSubscriptions.length = 0;

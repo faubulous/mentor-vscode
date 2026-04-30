@@ -18,7 +18,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { NotebookSerializer } from './notebook-serializer';
+import { NotebookSerializer } from '@src/services/notebook/notebook-serializer';
 
 const cancelToken = {} as vscode.CancellationToken;
 

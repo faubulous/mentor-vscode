@@ -10,7 +10,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { openSettings } from './open-settings';
+import { openSettings } from '@src/commands/open-settings';
 
 describe('openSettings command', () => {
 	it('should have the correct id', () => {

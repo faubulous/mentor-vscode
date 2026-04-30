@@ -26,7 +26,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { deleteSparqlConnection } from './delete-sparql-connection';
+import { deleteSparqlConnection } from '@src/commands/delete-sparql-connection';
 
 beforeEach(() => {
 	vi.clearAllMocks();

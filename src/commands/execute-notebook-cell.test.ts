@@ -13,7 +13,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { executeNotebookCell } from './execute-notebook-cell';
+import { executeNotebookCell } from '@src/commands/execute-notebook-cell';
 
 beforeEach(() => {
 	(vscode.window as any).showErrorMessage = vi.fn(async () => undefined);

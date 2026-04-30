@@ -25,7 +25,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { toggleSparqlConnectionInference } from './toggle-sparql-connection-inference';
+import { toggleSparqlConnectionInference } from '@src/commands/toggle-sparql-connection-inference';
 
 beforeEach(() => {
 	vi.clearAllMocks();

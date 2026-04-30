@@ -1,7 +1,7 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 import { URI } from 'vscode-uri';
-import { WorkspaceService } from './workspace-service';
+import { WorkspaceService } from '@src/services/core/workspace-service';
 
 describe('WorkspaceService', () => {
 	let service: WorkspaceService;

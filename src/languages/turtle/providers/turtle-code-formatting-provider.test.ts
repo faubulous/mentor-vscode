@@ -18,7 +18,7 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({
 	},
 }));
 
-import { TurtleCodeFormattingProvider } from './turtle-code-formatting-provider';
+import { TurtleCodeFormattingProvider } from '@src/languages/turtle/providers/turtle-code-formatting-provider';
 
 function makeDocument(text: string) {
 	return {

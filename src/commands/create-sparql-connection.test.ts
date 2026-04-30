@@ -25,7 +25,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { createSparqlConnection } from './create-sparql-connection';
+import { createSparqlConnection } from '@src/commands/create-sparql-connection';
 
 beforeEach(() => {
 	vi.clearAllMocks();

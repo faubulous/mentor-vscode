@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CancellationError, withCancellation, toArrayWithCancellation } from './cancellation';
+import { CancellationError, withCancellation, toArrayWithCancellation } from '@src/utilities/vscode/cancellation';
 
 function makeToken(cancelled = false) {
 	const listeners: Array<() => void> = [];

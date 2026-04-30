@@ -49,7 +49,7 @@ vi.mock('@src/languages', async () => {
         };
 });
 
-import { XmlLanguageClient } from './xml-language-client';
+import { XmlLanguageClient } from '@src/languages/xml/xml-language-client';
 
 describe('XmlLanguageClient', () => {
         beforeEach(() => {

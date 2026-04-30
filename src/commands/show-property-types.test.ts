@@ -15,7 +15,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { showPropertyTypes } from './show-property-types';
+import { showPropertyTypes } from '@src/commands/show-property-types';
 
 beforeEach(() => {
 	mockSettingsSet = vi.fn();

@@ -39,7 +39,7 @@ vi.mock('@src/languages', async () => {
 	};
 });
 
-import { TrigLanguageClient } from './trig-language-client';
+import { TrigLanguageClient } from '@src/languages/trig/trig-language-client';
 
 describe('TrigLanguageClient', () => {
 	it('constructs with trig languageId', () => {

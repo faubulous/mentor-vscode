@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { DocumentContextService } from './document-context-service';
-import { IDocumentContext } from './document-context.interface';
+import { DocumentContextService } from '@src/services/document/document-context-service';
+import { IDocumentContext } from '@src/services/document/document-context.interface';
 
 vi.mock('@faubulous/mentor-rdf', () => ({
 	Store: class { deleteGraphs = vi.fn(); },

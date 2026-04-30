@@ -23,10 +23,10 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { DefinitionNodeProvider } from './definition-node-provider';
-import { DefinitionTreeNode } from './definition-tree-node';
-import { OntologyNode } from './nodes/ontology-node';
-import { ClassesNode } from './nodes/classes/classes-node';
+import { DefinitionNodeProvider } from '@src/views/trees/definition-tree/definition-node-provider';
+import { DefinitionTreeNode } from '@src/views/trees/definition-tree/definition-tree-node';
+import { OntologyNode } from '@src/views/trees/definition-tree/nodes/ontology-node';
+import { ClassesNode } from '@src/views/trees/definition-tree/nodes/classes/classes-node';
 import { DefinitionTreeLayout } from '@src/services/core/settings-service';
 
 function makeContext(): any {

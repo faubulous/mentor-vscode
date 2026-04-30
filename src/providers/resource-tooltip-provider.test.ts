@@ -25,7 +25,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { ResourceTooltipProvider } from './resource-tooltip-provider';
+import { ResourceTooltipProvider } from '@src/providers/resource-tooltip-provider';
 
 describe('ResourceTooltipProvider', () => {
 	let provider: ResourceTooltipProvider;

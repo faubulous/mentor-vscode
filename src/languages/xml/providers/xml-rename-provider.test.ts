@@ -23,7 +23,7 @@ vi.mock('@src/services/tokens', () => ({
     ServiceToken: { DocumentContextService: 'DocumentContextService' },
 }));
 
-import { XmlRenameProvider } from './xml-rename-provider';
+import { XmlRenameProvider } from '@src/languages/xml/providers/xml-rename-provider';
 
 beforeEach(() => {
     mockGetDocumentContext.mockReset();

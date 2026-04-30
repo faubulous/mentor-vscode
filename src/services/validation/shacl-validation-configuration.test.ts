@@ -8,7 +8,7 @@ import {
 	resolveEffectiveShapesFromGraphConfiguration,
 	toUniqueStringArray,
 	ShaclValidationConfiguration,
-} from './shacl-validation-configuration';
+} from '@src/services/validation/shacl-validation-configuration';
 
 describe('shacl-validation-configuration', () => {
 	describe('toUniqueStringArray', () => {

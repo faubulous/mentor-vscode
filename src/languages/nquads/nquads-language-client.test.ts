@@ -39,7 +39,7 @@ vi.mock('@src/languages', async () => {
 	};
 });
 
-import { NQuadsLanguageClient } from './nquads-language-client';
+import { NQuadsLanguageClient } from '@src/languages/nquads/nquads-language-client';
 
 describe('NQuadsLanguageClient', () => {
 	it('constructs with nquads languageId', () => {

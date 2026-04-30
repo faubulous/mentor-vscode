@@ -35,7 +35,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { updatePrefixes } from './update-prefixes';
+import { updatePrefixes } from '@src/commands/update-prefixes';
 
 beforeEach(() => {
 	mockFetchPrefixes = vi.fn(async () => ({}));

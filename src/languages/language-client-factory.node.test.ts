@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createNodeLanguageClient } from './language-client-factory.node';
+import { createNodeLanguageClient } from '@src/languages/language-client-factory.node';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 

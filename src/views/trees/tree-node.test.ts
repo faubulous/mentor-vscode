@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
-import { TreeNodeBase, sortByLabel } from './tree-node';
+import { TreeNodeBase, sortByLabel } from '@src/views/trees/tree-node';
 
 // Minimal concrete implementation for testing TreeNodeBase
 class TestNode extends TreeNodeBase {

@@ -39,7 +39,7 @@ vi.mock('@src/languages', async () => {
 	};
 });
 
-import { N3LanguageClient } from './n3-language-client';
+import { N3LanguageClient } from '@src/languages/n3/n3-language-client';
 
 describe('N3LanguageClient', () => {
 	it('constructs with n3 languageId', () => {

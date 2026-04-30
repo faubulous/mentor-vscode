@@ -57,7 +57,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
     getConfig: (...args: any[]) => mockGetConfig(...args),
 }));
 
-import { SparqlCodeLensProvider } from './sparql-code-lens-provider';
+import { SparqlCodeLensProvider } from '@src/languages/sparql/providers/sparql-code-lens-provider';
 
 beforeEach(() => {
     onChangeConnectionsHandler = null;

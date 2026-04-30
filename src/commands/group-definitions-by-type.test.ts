@@ -15,7 +15,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { groupDefinitionsByType } from './group-definitions-by-type';
+import { groupDefinitionsByType } from '@src/commands/group-definitions-by-type';
 import { DefinitionTreeLayout } from '@src/services/core/settings-service';
 
 beforeEach(() => {

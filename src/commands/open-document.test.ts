@@ -16,7 +16,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { openDocument } from './open-document';
+import { openDocument } from '@src/commands/open-document';
 
 beforeEach(() => {
 	vi.clearAllMocks();

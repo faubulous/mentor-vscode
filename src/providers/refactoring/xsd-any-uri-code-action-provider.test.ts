@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 
 const mockSubscriptions: any[] = [];
 
-vi.mock('vscode', async () => await import('../../utilities/mocks/vscode'));
+vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
@@ -59,7 +59,7 @@ describe('XsdAnyUriCodeActionProvider', () => {
 		mockSubscriptions.length = 0;
 		vi.resetModules();
 
-		const module = await import('./xsd-any-uri-code-action-provider');
+		const module = await import('@src/providers/refactoring/xsd-any-uri-code-action-provider');
 		XsdAnyUriCodeActionProvider = module.XsdAnyUriCodeActionProvider;
 		XSD_ANY_URI_LITERAL_CODE = module.XSD_ANY_URI_LITERAL_CODE;
 	});

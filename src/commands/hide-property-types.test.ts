@@ -15,7 +15,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { hidePropertyTypes } from './hide-property-types';
+import { hidePropertyTypes } from '@src/commands/hide-property-types';
 
 beforeEach(() => {
 	mockSettingsSet = vi.fn();

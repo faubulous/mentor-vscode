@@ -19,7 +19,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { analyzeWorkspace } from './analyze-workspace';
+import { analyzeWorkspace } from '@src/commands/analyze-workspace';
 
 beforeEach(() => {
 	mockIndexWorkspace = vi.fn();

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { validateDocument } from './validate-document';
+import { validateDocument } from '@src/commands/validate-document';
 
-vi.mock('vscode', () => import('../utilities/mocks/vscode'));
+vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 vi.mock('tsyringe', () => ({
 	container: {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { any, take } from './iterator';
+import { any, take } from '@src/utilities/iterator';
 
 describe('any', () => {
 	it('returns true for a non-empty iterator', () => {

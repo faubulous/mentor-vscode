@@ -18,8 +18,8 @@ vi.mock('@comunica/query-sparql', () => ({
     }),
 }));
 
-import { SparqlQueryService } from './sparql-query-service';
-import type { SparqlQueryExecutionState } from './sparql-query-state';
+import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
+import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { Uri } from '@src/utilities/mocks/vscode';
 
 // ---------------------------------------------------------------------------

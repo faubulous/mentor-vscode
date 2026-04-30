@@ -31,7 +31,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { Uri, Position } from '@src/utilities/mocks/vscode';
-import { TurtleDocument } from './turtle-document';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { RdfSyntax, RdfToken, TurtleLexer } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 

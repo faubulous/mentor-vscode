@@ -21,7 +21,7 @@ vi.mock('tsyringe', () => ({
     singleton: () => (t: any) => t,
 }));
 
-import { ResourceDefinitionProvider } from './resource-definition-provider';
+import { ResourceDefinitionProvider } from '@src/providers/resource-definition-provider';
 
 describe('ResourceDefinitionProvider', () => {
     const docUri = vscode.Uri.parse('file:///test.ttl');

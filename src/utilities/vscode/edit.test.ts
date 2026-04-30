@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateLineOffset } from './edit';
+import { calculateLineOffset } from '@src/utilities/vscode/edit';
 
 function makeEdit(entries: Array<[any, Array<{ startLine: number; endLine: number; newText: string }>]>) {
 	return {

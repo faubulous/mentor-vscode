@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
 
-vi.mock('vscode', () => import('../../../utilities/mocks/vscode'));
+vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 const { mockContextService, mockIndexerService, mockVocabulary } = vi.hoisted(() => ({
     mockContextService: {
@@ -38,7 +38,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
     }),
 }));
 
-import { TurtleUsageCodeLensProvider } from './turtle-usage-codelens-provider';
+import { TurtleUsageCodeLensProvider } from '@src/languages/turtle/providers/turtle-usage-codelens-provider';
 
 beforeEach(() => {
     vi.clearAllMocks();

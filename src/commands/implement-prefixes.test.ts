@@ -22,7 +22,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { implementPrefixes } from './implement-prefixes';
+import { implementPrefixes } from '@src/commands/implement-prefixes';
 
 beforeEach(() => {
 	mockImplementPrefixes = vi.fn(async () => ({ size: 0 }));

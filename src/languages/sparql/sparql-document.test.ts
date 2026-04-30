@@ -28,7 +28,7 @@ vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 }));
 
 // Import after mocks are set up
-import { SparqlDocument } from './sparql-document';
+import { SparqlDocument } from '@src/languages/sparql/sparql-document';
 import { Uri } from '@src/utilities/mocks/vscode';
 
 describe('SparqlDocument', () => {

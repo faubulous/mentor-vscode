@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countLeadingWhitespace, countTrailingWhitespace, findPosition } from './string';
+import { countLeadingWhitespace, countTrailingWhitespace, findPosition } from '@src/utilities/string';
 
 describe('countLeadingWhitespace', () => {
 	it('returns 0 for a string with no leading whitespace', () => {

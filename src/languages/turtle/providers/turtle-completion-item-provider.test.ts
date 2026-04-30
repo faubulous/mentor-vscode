@@ -11,7 +11,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { Uri, Position } from '@src/utilities/mocks/vscode';
-import { TurtleCompletionItemProvider } from './turtle-completion-item-provider';
+import { TurtleCompletionItemProvider } from '@src/languages/turtle/providers/turtle-completion-item-provider';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 

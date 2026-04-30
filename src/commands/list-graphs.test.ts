@@ -35,7 +35,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { listGraphs } from './list-graphs';
+import { listGraphs } from '@src/commands/list-graphs';
 
 beforeEach(() => {
 	vi.clearAllMocks();

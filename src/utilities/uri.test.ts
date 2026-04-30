@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, getFileName, getPath } from './uri';
+import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, getFileName, getPath } from '@src/utilities/uri';
 
 describe('toJsonId', () => {
 	it('converts http URI to dot-separated identifier', () => {

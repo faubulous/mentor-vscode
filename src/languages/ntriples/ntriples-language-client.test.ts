@@ -39,7 +39,7 @@ vi.mock('@src/languages', async () => {
 	};
 });
 
-import { NTriplesLanguageClient } from './ntriples-language-client';
+import { NTriplesLanguageClient } from '@src/languages/ntriples/ntriples-language-client';
 
 describe('NTriplesLanguageClient', () => {
 	it('constructs with ntriples languageId', () => {

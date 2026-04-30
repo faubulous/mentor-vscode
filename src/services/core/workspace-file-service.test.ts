@@ -1,8 +1,8 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 import { URI } from 'vscode-uri';
-import { WorkspaceFileService } from './workspace-file-service';
-import { DocumentFactory } from '../../workspace/document-factory';
+import { WorkspaceFileService } from '@src/services/core/workspace-file-service';
+import { DocumentFactory } from '@src/workspace/document-factory';
 
 vi.mock('@src/utilities/vscode/config', () => ({
 	getConfig: vi.fn(() => ({ get: vi.fn((_key: string, defaultValue?: any) => defaultValue) })),

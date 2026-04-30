@@ -27,7 +27,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { LanguageClientBase } from './language-client';
+import { LanguageClientBase } from '@src/languages/language-client';
 
 /** Concrete subclass to allow instantiation of the abstract base. */
 class ConcreteClient extends LanguageClientBase {

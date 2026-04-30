@@ -28,7 +28,7 @@ vi.mock('@src/services/tokens', () => ({
     },
 }));
 
-import { TurtlePrefixCompletionProvider } from './turtle-prefix-completion-provider';
+import { TurtlePrefixCompletionProvider } from '@src/languages/turtle/providers/turtle-prefix-completion-provider';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 
 const mockDocument = {

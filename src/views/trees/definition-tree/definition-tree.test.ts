@@ -76,7 +76,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { DefinitionTree } from './definition-tree';
+import { DefinitionTree } from '@src/views/trees/definition-tree/definition-tree';
 
 describe('DefinitionTree', () => {
 	let tree: DefinitionTree;

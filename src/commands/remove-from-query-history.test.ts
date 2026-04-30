@@ -23,7 +23,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { removeFromQueryHistory } from './remove-from-query-history';
+import { removeFromQueryHistory } from '@src/commands/remove-from-query-history';
 
 beforeEach(() => {
 	mockGetQueryStateForDocument = vi.fn(() => undefined);

@@ -15,7 +15,7 @@ vi.mock('vscode-languageserver/browser', async () => {
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { DiagnosticSeverity } from 'vscode-languageserver/browser';
-import { SparqlLanguageServer } from './sparql-language-server';
+import { SparqlLanguageServer } from '@src/languages/sparql/sparql-language-server';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 
 function makeConnection() {

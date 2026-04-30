@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createDocument } from './create-document';
+import { createDocument } from '@src/commands/create-document';
 
 const mockShowQuickPick = vi.fn(async () => undefined as any);
 const mockExecuteCommand = vi.fn(async () => undefined as any);

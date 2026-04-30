@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createFilteredSource } from './sparql-inference-filter';
+import { createFilteredSource } from '@src/languages/sparql/services/sparql-inference-filter';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 

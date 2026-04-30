@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { WebviewHost } from './webview-host';
+import { WebviewHost } from '@src/views/webviews/webview-host';
 
 describe('WebviewHost', () => {
     let mockVsCodeApi: any;

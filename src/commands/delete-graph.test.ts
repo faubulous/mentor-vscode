@@ -41,7 +41,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { deleteGraph } from './delete-graph';
+import { deleteGraph } from '@src/commands/delete-graph';
 
 beforeEach(() => {
 	mockGetConnectionForDocument = vi.fn(() => undefined);

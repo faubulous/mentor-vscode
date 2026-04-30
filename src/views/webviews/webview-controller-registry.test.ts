@@ -7,7 +7,7 @@ vi.mock('tsyringe', () => ({
     },
 }));
 
-import { WebviewControllerRegistry } from './webview-controller-registry';
+import { WebviewControllerRegistry } from '@src/views/webviews/webview-controller-registry';
 import { container } from 'tsyringe';
 
 describe('WebviewControllerRegistry', () => {

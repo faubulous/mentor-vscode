@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { DataFactory } from 'n3';
-import { SparqlResultSerializer } from './sparql-result-serializer';
+import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 

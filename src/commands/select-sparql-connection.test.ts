@@ -24,7 +24,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { selectSparqlConnection } from './select-sparql-connection';
+import { selectSparqlConnection } from '@src/commands/select-sparql-connection';
 
 beforeEach(() => {
 	mockGetConnections = vi.fn(async () => []);

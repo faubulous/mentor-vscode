@@ -27,7 +27,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { revealDefinition } from './reveal-definition';
+import { revealDefinition } from '@src/commands/reveal-definition';
 
 function makeEditor(uriStr = 'file:///doc.ttl') {
 	return {

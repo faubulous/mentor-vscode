@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DefaultSparqlEndpointProvider } from './default-endpoint-provider';
-import { GraphDbEndpointProvider } from './graphdb-endpoint-provider';
-import { WorkspaceEndpointProvider } from './workspace-endpoint-provider';
+import { DefaultSparqlEndpointProvider } from '@src/languages/sparql/services/endpoints/default-endpoint-provider';
+import { GraphDbEndpointProvider } from '@src/languages/sparql/services/endpoints/graphdb-endpoint-provider';
+import { WorkspaceEndpointProvider } from '@src/languages/sparql/services/endpoints/workspace-endpoint-provider';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 

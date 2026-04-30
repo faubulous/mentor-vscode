@@ -27,7 +27,7 @@ import {
 	getNamespaceDefinition,
 	getTripleComponentType,
 	getUnquotedLiteralValue,
-} from './tokens';
+} from '@src/utilities/tokens';
 
 function makeToken(typeName: string, image: string, startLine = 1, startColumn = 1, endLine = 1, endColumn = 10, payload?: any): any {
 	return { tokenType: { name: typeName }, image, startLine, startColumn, endLine, endColumn, payload };

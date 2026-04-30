@@ -15,7 +15,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { saveSparqlQueryResults } from './save-sparql-query-results';
+import { saveSparqlQueryResults } from '@src/commands/save-sparql-query-results';
 
 beforeEach(() => {
 	(vscode.workspace as any).openTextDocument = vi.fn(async () => ({

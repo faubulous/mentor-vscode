@@ -20,7 +20,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { showWebview } from './show-webview';
+import { showWebview } from '@src/commands/show-webview';
 
 beforeEach(() => {
 	mockWebviewRegistry = {

@@ -59,7 +59,7 @@ vi.mock('@src/languages', async () => {
 	};
 });
 
-import { TurtleLanguageClient } from './turtle-language-client';
+import { TurtleLanguageClient } from '@src/languages/turtle/turtle-language-client';
 
 describe('TurtleLanguageClient', () => {
 	beforeEach(() => {

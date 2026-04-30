@@ -15,7 +15,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { hideIndividualTypes } from './hide-individual-types';
+import { hideIndividualTypes } from '@src/commands/hide-individual-types';
 
 beforeEach(() => {
 	mockSettingsSet = vi.fn();

@@ -31,7 +31,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { revealShapeDefinition } from './reveal-shape-definition';
+import { revealShapeDefinition } from '@src/commands/reveal-shape-definition';
 
 function makeEditor(uriStr = 'file:///doc.ttl') {
 	return {

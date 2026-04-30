@@ -18,7 +18,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { XmlTokenProvider } from './xml-token-provider';
+import { XmlTokenProvider } from '@src/languages/xml/xml-token-provider';
 
 beforeEach(() => {
 	mockSubscriptions.length = 0;

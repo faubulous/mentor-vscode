@@ -20,7 +20,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { editSparqlConnection } from './edit-sparql-connection';
+import { editSparqlConnection } from '@src/commands/edit-sparql-connection';
 
 beforeEach(() => {
 	vi.clearAllMocks();

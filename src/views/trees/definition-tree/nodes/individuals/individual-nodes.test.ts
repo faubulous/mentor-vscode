@@ -23,9 +23,9 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { IndividualNode } from './individual-node';
-import { IndividualClassNode } from './individual-class-node';
-import { IndividualsNode } from './individuals-node';
+import { IndividualNode } from '@src/views/trees/definition-tree/nodes/individuals/individual-node';
+import { IndividualClassNode } from '@src/views/trees/definition-tree/nodes/individuals/individual-class-node';
+import { IndividualsNode } from '@src/views/trees/definition-tree/nodes/individuals/individuals-node';
 
 function makeContext(): any {
 	return {

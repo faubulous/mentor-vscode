@@ -23,9 +23,9 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ClassNode } from './class-node';
-import { ClassesNode } from './classes-node';
-import { IndividualNode } from '../individuals/individual-node';
+import { ClassNode } from '@src/views/trees/definition-tree/nodes/classes/class-node';
+import { ClassesNode } from '@src/views/trees/definition-tree/nodes/classes/classes-node';
+import { IndividualNode } from '@src/views/trees/definition-tree/nodes/individuals/individual-node';
 
 function makeContext(graphs: string[] = ['urn:g1']): any {
 	return {

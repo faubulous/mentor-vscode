@@ -25,7 +25,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { toggleDocumentInference } from './toggle-document-inference';
+import { toggleDocumentInference } from '@src/commands/toggle-document-inference';
 
 beforeEach(() => {
 	vi.clearAllMocks();

@@ -27,7 +27,7 @@ afterEach(() => {
 	(mockVscode.workspace as any).textDocuments = [];
 });
 
-import { sortPrefixes } from './sort-prefixes';
+import { sortPrefixes } from '@src/commands/sort-prefixes';
 
 describe('sortPrefixes command', () => {
 	it('should have the correct id', () => {

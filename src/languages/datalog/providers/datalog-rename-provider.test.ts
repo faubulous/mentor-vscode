@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DatalogRenameProvider } from './datalog-rename-provider';
+import { DatalogRenameProvider } from '@src/languages/datalog/providers/datalog-rename-provider';
 import { Position, Range, Uri, WorkspaceEdit } from '@src/utilities/mocks/vscode';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));

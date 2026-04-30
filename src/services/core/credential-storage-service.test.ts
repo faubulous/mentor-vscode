@@ -22,8 +22,8 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { CredentialStorageService } from './credential-storage-service';
-import type { AuthCredential } from './credential';
+import { CredentialStorageService } from '@src/services/core/credential-storage-service';
+import type { AuthCredential } from '@src/services/core/credential';
 
 let service: CredentialStorageService;
 

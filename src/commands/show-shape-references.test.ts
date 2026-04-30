@@ -39,7 +39,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { showShapeReferences } from './show-shape-references';
+import { showShapeReferences } from '@src/commands/show-shape-references';
 
 function makeRange(sl: number, sc: number, el: number, ec: number) {
 	return new (vscode as any).Range(sl, sc, el, ec);

@@ -23,10 +23,10 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { DefinitionTreeNode } from '../../definition-tree-node';
-import { NodeShapeNode, PropertyShapeNode, ParameterNode } from './shape-node';
-import { ShapeClassNode } from './shape-class-node';
-import { ShapesNode } from './shapes-node';
+import { DefinitionTreeNode } from '@src/views/trees/definition-tree/definition-tree-node';
+import { NodeShapeNode, PropertyShapeNode, ParameterNode } from '@src/views/trees/definition-tree/nodes/shapes/shape-node';
+import { ShapeClassNode } from '@src/views/trees/definition-tree/nodes/shapes/shape-class-node';
+import { ShapesNode } from '@src/views/trees/definition-tree/nodes/shapes/shapes-node';
 
 function makeContext(): any {
 	return {

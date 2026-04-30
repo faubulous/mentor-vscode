@@ -33,7 +33,7 @@ describe('InferenceUriLinkProvider', () => {
         mockSubscriptions.length = 0;
         parseSpy = vi.spyOn(vscode.Uri, 'parse').mockReturnValue(mockUri);
         vi.resetModules();
-        const mod = await import('./inference-uri-link-provider');
+        const mod = await import('@src/providers/inference-uri-link-provider');
         InferenceUriLinkProvider = mod.InferenceUriLinkProvider;
     });
 

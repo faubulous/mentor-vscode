@@ -25,7 +25,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { ResourceReferenceProvider } from './resource-reference-provider';
+import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 
 describe('ResourceReferenceProvider', () => {
 	let provider: ResourceReferenceProvider;

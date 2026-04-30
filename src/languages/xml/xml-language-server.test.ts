@@ -14,7 +14,7 @@ vi.mock('vscode-languageserver/browser', async () => {
 });
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { XmlLanguageServer } from './xml-language-server';
+import { XmlLanguageServer } from '@src/languages/xml/xml-language-server';
 
 function makeConnection() {
 	return {

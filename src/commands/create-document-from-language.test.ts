@@ -16,7 +16,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { createDocumentFromLanguage } from './create-document-from-language';
+import { createDocumentFromLanguage } from '@src/commands/create-document-from-language';
 
 beforeEach(() => {
 	vi.clearAllMocks();

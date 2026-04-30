@@ -17,7 +17,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { loginMicrosoftAuthProvider } from './login-microsoft-auth-provider';
+import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
 
 beforeEach(() => {
 	(vscode.window as any).showWarningMessage = vi.fn(async () => undefined);

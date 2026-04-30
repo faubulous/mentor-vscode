@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { HttpStatusCodes } from './http-status-codes';
+import { HttpStatusCodes } from '@src/utilities/http-status-codes';
 
 describe('HttpStatusCodes', () => {
 	it('contains a 200 OK entry', () => {

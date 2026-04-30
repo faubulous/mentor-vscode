@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ConfigurationScope, getConfigurationScopeLabel, getConfigurationScopeDescription } from './config-scope';
+import { ConfigurationScope, getConfigurationScopeLabel, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 
 describe('ConfigurationScope', () => {
 	it('has numeric value 1 for User', () => {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanDocument } from './clean-document';
+import { cleanDocument } from '@src/commands/clean-document';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 

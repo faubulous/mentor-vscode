@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SettingsService, TreeLabelStyle, DefinitionTreeLayout } from './settings-service';
+import { SettingsService, TreeLabelStyle, DefinitionTreeLayout } from '@src/services/core/settings-service';
 
 vi.mock('@src/utilities/vscode/config', () => ({
 	getConfig: vi.fn(() => ({ get: vi.fn((_key: string, defaultValue?: any) => defaultValue) })),

@@ -15,7 +15,7 @@ vi.mock('vscode-languageserver/browser', async () => {
 });
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { LanguageServerBase } from './language-server';
+import { LanguageServerBase } from '@src/languages/language-server';
 import { DiagnosticSeverity } from 'vscode-languageserver/browser';
 
 /** Minimal mock for the LSP Connection */

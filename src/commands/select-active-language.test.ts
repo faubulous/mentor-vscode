@@ -30,7 +30,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { selectActiveLanguage } from './select-active-language';
+import { selectActiveLanguage } from '@src/commands/select-active-language';
 
 describe('selectActiveLanguage', () => {
 	let mockQuickPick: any;

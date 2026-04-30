@@ -10,7 +10,7 @@ vi.mock('tsyringe', () => ({
     container: { resolve: vi.fn() },
 }));
 
-import { WebviewController } from './webview-controller';
+import { WebviewController } from '@src/views/webviews/webview-controller';
 import { container } from 'tsyringe';
 
 // Create a concrete implementation to test the abstract controller

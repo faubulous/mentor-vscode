@@ -36,7 +36,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { executeSparqlQuery } from './execute-sparql-query';
+import { executeSparqlQuery } from '@src/commands/execute-sparql-query';
 
 describe('executeSparqlQuery', () => {
 	beforeEach(() => {

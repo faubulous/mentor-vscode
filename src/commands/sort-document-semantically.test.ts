@@ -18,7 +18,7 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({
 
 beforeEach(() => { mockSortDocument.mockReset(); });
 
-import { sortDocumentSemantically, sortDocumentSemanticallySubmenu } from './sort-document-semantically';
+import { sortDocumentSemantically, sortDocumentSemanticallySubmenu } from '@src/commands/sort-document-semantically';
 import { SemanticSortingStrategy } from '@faubulous/mentor-rdf-serializers';
 
 describe('sortDocumentSemantically command', () => {

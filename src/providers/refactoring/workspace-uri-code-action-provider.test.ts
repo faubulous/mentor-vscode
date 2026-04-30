@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 
 const mockSubscriptions: any[] = [];
 
-vi.mock('vscode', async () => await import('../../utilities/mocks/vscode'));
+vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
@@ -61,7 +61,7 @@ describe('WorkspaceUriCodeActionProvider', () => {
 		mockSubscriptions.length = 0;
 		vi.resetModules();
 
-		const module = await import('./workspace-uri-code-action-provider');
+		const module = await import('@src/providers/refactoring/workspace-uri-code-action-provider');
 		WorkspaceUriCodeActionProvider = module.WorkspaceUriCodeActionProvider;
 		DEPRECATED_WORKSPACE_URI_CODE = module.DEPRECATED_WORKSPACE_URI_CODE;
 	});

@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { describe, it, expect, vi } from 'vitest';
-import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
-import type { ShaclValidationResult, ShaclValidationResultEntry } from './shacl-validation-service';
+import { ShaclDiagnosticsMapper } from '@src/services/validation/shacl-diagnostics-mapper';
+import type { ShaclValidationResult, ShaclValidationResultEntry } from '@src/services/validation/shacl-validation-service';
 
-vi.mock('vscode', async () => await import('../../utilities/mocks/vscode'));
+vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
 
 vi.mock('@faubulous/mentor-rdf', () => ({
 	SH: {

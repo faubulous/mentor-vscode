@@ -13,9 +13,9 @@ vi.mock('tsyringe', () => ({
 vi.mock('uuid', () => ({ v4: () => 'test-uuid-1234' }));
 
 import { Uri } from '@src/utilities/mocks/vscode';
-import { SparqlConnectionService, MENTOR_WORKSPACE_STORE } from './sparql-connection-service';
+import { SparqlConnectionService, MENTOR_WORKSPACE_STORE } from '@src/languages/sparql/services/sparql-connection-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import type { SparqlConnection } from './sparql-connection';
+import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import type { AuthCredential } from '@src/services/core/credential';
 
 /**

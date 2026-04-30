@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('vscode', () => import('../utilities/mocks/vscode'));
+vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 vi.mock('tsyringe', () => ({
 	container: { resolve: vi.fn(() => ({})) },
@@ -16,7 +16,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { createNotebook } from './create-notebook';
+import { createNotebook } from '@src/commands/create-notebook';
 
 beforeEach(() => {
 	vi.clearAllMocks();

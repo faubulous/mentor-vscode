@@ -35,7 +35,7 @@ describe('WorkspaceUriLinkProvider', () => {
   beforeEach(async () => {
     mockSubscriptions.length = 0;
     vi.resetModules();
-    const mod = await import('./workspace-uri-link-provider');
+    const mod = await import('@src/providers/workspace-uri-link-provider');
     WorkspaceUriLinkProvider = mod.WorkspaceUriLinkProvider;
   });
 

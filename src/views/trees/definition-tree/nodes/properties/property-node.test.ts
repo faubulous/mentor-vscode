@@ -24,7 +24,7 @@ vi.mock('tsyringe', () => ({
 
 import { XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
 import * as vscode from 'vscode';
-import { PropertyNode } from './property-node';
+import { PropertyNode } from '@src/views/trees/definition-tree/nodes/properties/property-node';
 
 function makeContext(overrides: Partial<{ graphs: string[] }> = {}): any {
 	return {

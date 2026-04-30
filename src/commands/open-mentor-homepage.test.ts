@@ -26,7 +26,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { openMentorHomepage } from './open-mentor-homepage';
+import { openMentorHomepage } from '@src/commands/open-mentor-homepage';
 
 beforeEach(() => {
 	vi.clearAllMocks();

@@ -24,7 +24,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { setNotebookConnection } from './set-notebook-connection';
+import { setNotebookConnection } from '@src/commands/set-notebook-connection';
 
 beforeEach(() => {
 	mockGetConnections = vi.fn(() => []);

@@ -19,7 +19,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
+import { cancelSparqlQueryExecution } from '@src/commands/cancel-sparql-query-execution';
 
 beforeEach(() => {
 	mockCancelQuery = vi.fn();

@@ -23,9 +23,9 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ValidatorNode } from './validator-node';
-import { ValidatorClassNode } from './validator-class-node';
-import { ValidatorsNode } from './validators-node';
+import { ValidatorNode } from '@src/views/trees/definition-tree/nodes/validators/validator-node';
+import { ValidatorClassNode } from '@src/views/trees/definition-tree/nodes/validators/validator-class-node';
+import { ValidatorsNode } from '@src/views/trees/definition-tree/nodes/validators/validators-node';
 
 function makeContext(): any {
 	return {

@@ -13,7 +13,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { addActiveEditorToNotebook } from './add-active-editor-to-notebook';
+import { addActiveEditorToNotebook } from '@src/commands/add-active-editor-to-notebook';
 
 beforeEach(() => {
 	(vscode.window as any).activeTextEditor = undefined;

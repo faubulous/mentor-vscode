@@ -18,7 +18,7 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({
 
 beforeEach(() => { mockSortDocument.mockReset(); });
 
-import { sortDocumentByType, sortDocumentByTypeSubmenu } from './sort-document-by-type';
+import { sortDocumentByType, sortDocumentByTypeSubmenu } from '@src/commands/sort-document-by-type';
 import { PrioritySortingStrategy } from '@faubulous/mentor-rdf-serializers';
 
 describe('sortDocumentByType command', () => {

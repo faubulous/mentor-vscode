@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getPrefixesWithErrorCode } from './diagnostic';
+import { getPrefixesWithErrorCode } from '@src/utilities/vscode/diagnostic';
 
 function makeDocument(textByRange: Map<string, string> | string) {
 	return {

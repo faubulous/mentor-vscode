@@ -29,7 +29,7 @@ vi.mock('@src/services/tokens', () => ({
     ServiceToken: { DocumentContextService: 'DocumentContextService' },
 }));
 
-import { TurtleCodeActionsProvider } from './turtle-code-actions-provider';
+import { TurtleCodeActionsProvider } from '@src/languages/turtle/providers/turtle-code-actions-provider';
 import { CodeActionKind, Range, Position } from '@src/utilities/mocks/vscode';
 
 // A mock document with lineAt/lineCount support

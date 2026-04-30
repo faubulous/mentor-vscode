@@ -23,8 +23,8 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ConceptClassNode } from './concept-class-node';
-import { ConceptsNode } from './concepts-node';
+import { ConceptClassNode } from '@src/views/trees/definition-tree/nodes/concepts/concept-class-node';
+import { ConceptsNode } from '@src/views/trees/definition-tree/nodes/concepts/concepts-node';
 
 function makeContext(): any {
 	return {

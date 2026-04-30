@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('vscode', () => import('../utilities/mocks/vscode'));
+vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 const { mockSparqlResultsController, mockConnectionService } = vi.hoisted(() => ({
 	mockSparqlResultsController: {
@@ -27,7 +27,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { executeDescribeQuery } from './execute-describe-query';
+import { executeDescribeQuery } from '@src/commands/execute-describe-query';
 
 const DESCRIBE_TEMPLATE = 'CONSTRUCT { <{{resourceIri}}> ?p ?o }\n{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }';
 

@@ -15,7 +15,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { showAnnotatedLabels } from './show-annotated-labels';
+import { showAnnotatedLabels } from '@src/commands/show-annotated-labels';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
 
 beforeEach(() => {

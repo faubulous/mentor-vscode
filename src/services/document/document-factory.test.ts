@@ -8,7 +8,7 @@ vi.mock('@src/languages', () => ({
 	XmlDocument: class {},
 }));
 
-import { DocumentFactory } from './document-factory';
+import { DocumentFactory } from '@src/services/document/document-factory';
 
 describe('DocumentFactory', () => {
 	let factory: DocumentFactory;

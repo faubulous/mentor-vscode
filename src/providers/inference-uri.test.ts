@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { URI } from 'vscode-uri';
-import { InferenceUri } from './inference-uri';
+import { InferenceUri } from '@src/providers/inference-uri';
 
 describe('InferenceUri (with vscode-uri)', () => {
 	test('toInferenceUri appends ?inference=mentor when no query is present', () => {

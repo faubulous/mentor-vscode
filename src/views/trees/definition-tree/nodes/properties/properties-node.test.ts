@@ -24,9 +24,9 @@ vi.mock('tsyringe', () => ({
 
 import { RDF } from '@faubulous/mentor-rdf';
 import * as vscode from 'vscode';
-import { PropertyClassNode } from './property-class-node';
-import { PropertiesNode } from './properties-node';
-import { PropertyNode } from './property-node';
+import { PropertyClassNode } from '@src/views/trees/definition-tree/nodes/properties/property-class-node';
+import { PropertiesNode } from '@src/views/trees/definition-tree/nodes/properties/properties-node';
+import { PropertyNode } from '@src/views/trees/definition-tree/nodes/properties/property-node';
 
 function makeContext(): any {
 	return {

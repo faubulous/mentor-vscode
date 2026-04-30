@@ -8,7 +8,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { WorkspaceIndexerService } from './workspace-indexer-service';
+import { WorkspaceIndexerService } from '@src/services/core/workspace-indexer-service';
 
 let mockIsSupportedNotebookFile: Mock;
 let mockIsTripleSourceLanguage: Mock;

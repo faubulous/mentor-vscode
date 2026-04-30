@@ -15,7 +15,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { hideReferences } from './hide-references';
+import { hideReferences } from '@src/commands/hide-references';
 
 beforeEach(() => {
 	mockSettingsSet = vi.fn();

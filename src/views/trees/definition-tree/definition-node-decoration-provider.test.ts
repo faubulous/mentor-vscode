@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
 
-vi.mock('vscode', async () => await import('../../../utilities/mocks/vscode'));
+vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({ serialize: vi.fn() }));
 
@@ -79,7 +79,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { DefinitionNodeDecorationProvider } from './definition-node-decoration-provider';
+import { DefinitionNodeDecorationProvider } from '@src/views/trees/definition-tree/definition-node-decoration-provider';
 
 describe('DefinitionNodeDecorationProvider', () => {
 	let provider: DefinitionNodeDecorationProvider;

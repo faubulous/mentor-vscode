@@ -44,7 +44,7 @@ vi.mock('@src/languages/turtle', () => ({
     }
 }));
 
-import { SparqlCompletionItemProvider } from './sparql-completion-item-provider';
+import { SparqlCompletionItemProvider } from '@src/languages/sparql/providers/sparql-completion-item-provider';
 
 /**
  * Creates a minimal fake IToken for testing.

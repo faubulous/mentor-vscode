@@ -63,7 +63,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { SparqlTokenProvider } from './sparql-token-provider';
+import { SparqlTokenProvider } from '@src/languages/sparql/sparql-token-provider';
 
 beforeEach(() => {
 	mockSubscriptions.length = 0;

@@ -4,7 +4,7 @@ import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 // Import after mocks are set up
-import { TurtleFeatureProvider } from '../turtle-feature-provider';
+import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
 /**
  * Creates a minimal fake IToken for testing.

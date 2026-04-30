@@ -35,7 +35,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { TrigTokenProvider } from './trig-token-provider';
+import { TrigTokenProvider } from '@src/languages/trig/trig-token-provider';
 
 beforeEach(() => {
 	mockSubscriptions.length = 0;

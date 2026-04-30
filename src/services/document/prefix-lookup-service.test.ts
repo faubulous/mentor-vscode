@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { PrefixLookupService } from './prefix-lookup-service';
-import { DEFAULT_PREFIXES } from './prefix-downloader-service';
-import { IDocumentContextService } from './document-context-service.interface';
+import { PrefixLookupService } from '@src/services/document/prefix-lookup-service';
+import { DEFAULT_PREFIXES } from '@src/services/document/prefix-downloader-service';
+import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
 
 vi.mock('@src/utilities/vscode/config', () => ({
 	getConfig: vi.fn(() => ({ get: vi.fn(() => undefined) }))

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CredentialFactory } from './credential-factory';
+import { CredentialFactory } from '@src/services/core/credential-factory';
 
 describe('CredentialFactory', () => {
 	describe('getCredentialTypes', () => {

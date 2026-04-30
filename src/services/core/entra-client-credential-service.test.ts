@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EntraClientCredentialService } from './entra-client-credential-service';
-import type { EntraClientAuthCredential } from './credential';
+import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
+import type { EntraClientAuthCredential } from '@src/services/core/credential';
 
 const credential: EntraClientAuthCredential = {
 	type: 'entra-client-credentials',

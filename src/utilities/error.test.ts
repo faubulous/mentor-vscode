@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NotSupportedError } from './error';
+import { NotSupportedError } from '@src/utilities/error';
 
 describe('NotSupportedError', () => {
 	it('is an instance of Error', () => {

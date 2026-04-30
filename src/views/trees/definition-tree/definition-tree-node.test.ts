@@ -19,7 +19,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { DefinitionTreeNode, getIriFromArgument } from './definition-tree-node';
+import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
 
 // Minimal IDocumentContext stub
 function makeContext(overrides: Partial<{

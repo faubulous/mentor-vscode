@@ -29,7 +29,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { NotebookController } from './notebook-controller';
+import { NotebookController } from '@src/services/notebook/notebook-controller';
 
 function makeExecution() {
 	return {

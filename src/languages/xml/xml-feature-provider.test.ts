@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { XmlFeatureProvider } from './xml-feature-provider';
+import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';
 
 describe('XmlFeatureProvider', () => {
 	it('constructs without throwing', () => {

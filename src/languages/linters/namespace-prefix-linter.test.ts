@@ -6,7 +6,7 @@ import {
 	DUPLICATE_PREFIX_CODE,
 	INVALID_NAMESPACE_URI_CODE,
 	UNUSED_NAMESPACE_PREFIX_CODE,
-} from './namespace-prefix-linter';
+} from '@src/languages/linters/namespace-prefix-linter';
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 

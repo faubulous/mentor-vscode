@@ -23,13 +23,13 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ClassesNode } from './classes/classes-node';
-import { PropertiesNode } from './properties/properties-node';
-import { IndividualsNode } from './individuals/individuals-node';
-import { ShapesNode } from './shapes/shapes-node';
-import { RulesNode } from './rules/rules-node';
-import { ValidatorsNode } from './validators/validators-node';
-import { OntologyNode } from './ontology-node';
+import { ClassesNode } from '@src/views/trees/definition-tree/nodes/classes/classes-node';
+import { PropertiesNode } from '@src/views/trees/definition-tree/nodes/properties/properties-node';
+import { IndividualsNode } from '@src/views/trees/definition-tree/nodes/individuals/individuals-node';
+import { ShapesNode } from '@src/views/trees/definition-tree/nodes/shapes/shapes-node';
+import { RulesNode } from '@src/views/trees/definition-tree/nodes/rules/rules-node';
+import { ValidatorsNode } from '@src/views/trees/definition-tree/nodes/validators/validators-node';
+import { OntologyNode } from '@src/views/trees/definition-tree/nodes/ontology-node';
 
 function makeContext(): any {
 	return {

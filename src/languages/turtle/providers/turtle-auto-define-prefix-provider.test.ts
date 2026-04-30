@@ -32,7 +32,7 @@ vi.mock('tsyringe', () => ({
     singleton: () => (target: any) => target,
 }));
 
-import { TurtleAutoDefinePrefixProvider } from './turtle-auto-define-prefix-provider';
+import { TurtleAutoDefinePrefixProvider } from '@src/languages/turtle/providers/turtle-auto-define-prefix-provider';
 
 beforeEach(() => {
     vi.clearAllMocks();
