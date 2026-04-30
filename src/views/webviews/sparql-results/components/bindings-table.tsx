@@ -123,6 +123,10 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		return value;
 	};
 
+	const getBlankNodeLabel = (binding: Term) => (
+		<span>_:<span className="label">{binding.value}</span></span>
+	);
+
 	/**
 	 * Renders the inline content of a node without cell wrapper or actions.
 	 */
@@ -139,7 +143,11 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 				);
 			}
 			case 'BlankNode':
-				return binding.value;
+				return (
+					<a href="#" title="Describe Resource" onClick={() => handleDescribeNamedNode(binding)}>
+						{getBlankNodeLabel(binding)}
+					</a>
+				);
 			case 'Literal':
 				return binding.value;
 			case 'Quad':
@@ -200,6 +208,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 						</>
 					);
 				}
+			case 'BlankNode':
 			case 'Literal':
 				return (
 					<vscode-toolbar-button
@@ -225,11 +234,6 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		if (!binding) return '';
 
 		const isGraph = graphHeaders.has(header);
-
-		// Blank nodes get minimal rendering without cell wrapper
-		if (binding.termType === 'BlankNode') {
-			return <pre>{renderNodeContent(binding, namespaceMap)}</pre>;
-		}
 
 		return (
 			<div className="cell">
