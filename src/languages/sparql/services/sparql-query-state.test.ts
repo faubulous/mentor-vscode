@@ -78,3 +78,59 @@ describe('getDisplayName', () => {
 		expect(getDisplayName(state)).toBe('my notebook.sparqlbook:Cell-1');
 	});
 });
+
+describe('getDisplayName – background queries', () => {
+	it('returns the connection name for a background query', () => {
+		const state: any = {
+			id: 'test-id',
+			background: true,
+			connectionName: 'My Endpoint',
+			startTime: Date.now(),
+		};
+
+		expect(getDisplayName(state)).toBe('My Endpoint');
+	});
+
+	it('truncates a long connection name to 20 characters with an ellipsis', () => {
+		const state: any = {
+			id: 'test-id',
+			background: true,
+			connectionName: 'https://very-long-endpoint.example.org/sparql',
+			startTime: Date.now(),
+		};
+
+		const result = getDisplayName(state);
+		expect(result.length).toBeLessThanOrEqual(20);
+		expect(result.endsWith('…')).toBe(true);
+	});
+
+	it('does not truncate a connection name that is exactly 20 characters', () => {
+		const name = 'A'.repeat(20);
+		const state: any = {
+			id: 'test-id',
+			background: true,
+			connectionName: name,
+			startTime: Date.now(),
+		};
+
+		expect(getDisplayName(state)).toBe(name);
+	});
+
+	it('falls back to filename logic when background is false', () => {
+		const state: any = {
+			id: 'test-id',
+			background: false,
+			connectionName: 'should-not-appear',
+			documentIri: 'file:///workspace/query.sparql',
+			startTime: Date.now(),
+		};
+
+		expect(getDisplayName(state)).toBe('query.sparql');
+	});
+
+	it('falls back to filename logic when background is undefined', () => {
+		const state = makeState('file:///workspace/query.sparql');
+
+		expect(getDisplayName(state)).toBe('query.sparql');
+	});
+});

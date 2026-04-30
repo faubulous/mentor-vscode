@@ -22,6 +22,15 @@ export interface ISparqlQueryService {
 	readonly onDidQueryExecutionEnd: vscode.Event<SparqlQueryExecutionState>;
 
 	/**
+	 * Creates a new SPARQL query state for a background query with no associated document.
+	 * @param connection The SPARQL connection to execute the query against.
+	 * @param query The SPARQL query string.
+	 * @param label A human-readable label shown as the tab title (e.g. 'List Graphs').
+	 * @returns A new SparqlQueryExecutionState instance marked as a background query.
+	 */
+	createBackgroundQuery(connection: SparqlConnection, query: string, label: string): SparqlQueryExecutionState;
+
+	/**
 	 * Creates a new SPARQL query state from a query string.
 	 * @param querySource The source document or notebook cell where the query is stored.
 	 * @param query The SPARQL query string.

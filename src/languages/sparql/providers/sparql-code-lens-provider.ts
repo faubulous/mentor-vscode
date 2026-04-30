@@ -74,12 +74,18 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 			codeLenses.push(inferenceCodeLens);
 		}
 
-		codeLenses.push(new vscode.CodeLens(range, {
-			title: '$(play)\u00A0Execute',
-			command: 'mentor.command.executeSparqlQuery',
-			tooltip: 'Execute this SPARQL query',
-			arguments: [this._queryService.createQueryFromDocument(document)],
-		}));
+		// Only show the Execute code lens for regular SPARQL documents.
+		// Notebook cells have a native run button that outputs results inline;
+		// triggering executeSparqlQuery from a cell document would route to the
+		// SPARQL results panel instead.
+		if (document.uri.scheme !== 'vscode-notebook-cell') {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: '$(play)\u00A0Execute',
+				command: 'mentor.command.executeSparqlQuery',
+				tooltip: 'Execute this SPARQL query',
+				arguments: [this._queryService.createQueryFromDocument(document)],
+			}));
+		}
 
 		return codeLenses;
 	}

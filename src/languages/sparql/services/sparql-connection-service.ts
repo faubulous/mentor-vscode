@@ -49,6 +49,14 @@ export class SparqlConnectionService {
 
 	public readonly onDidChangeConnectionForDocument = this._onDidChangeConnectionForDocument.event;
 
+	private _onDidConnectionTestStart = new vscode.EventEmitter<SparqlConnection>();
+
+	public readonly onDidConnectionTestStart = this._onDidConnectionTestStart.event;
+
+	private _onDidConnectionTestEnd = new vscode.EventEmitter<{ connection: SparqlConnection; error: { code: number; message: string } | null }>();
+
+	public readonly onDidConnectionTestEnd = this._onDidConnectionTestEnd.event;
+
 	/**
 	 * Notifies listeners that the connection or inference settings for a document have changed.
 	 * Use this after bulk updates to cell metadata.
@@ -725,6 +733,8 @@ export class SparqlConnectionService {
 			return null;
 		}
 
+		this._onDidConnectionTestStart.fire(connection);
+
 		try {
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/sparql-query',
@@ -748,14 +758,16 @@ export class SparqlConnectionService {
 			});
 
 			if (response.ok) {
+				this._onDidConnectionTestEnd.fire({ connection, error: null });
 				return null;
 			} else {
 				const error = {
 					code: response.status,
 					message: await response.text() || response.statusText
-				}
+				};
 
 				this._showErrorMessage(connection.endpointUrl, error);
+				this._onDidConnectionTestEnd.fire({ connection, error });
 
 				return error;
 			}
@@ -766,6 +778,7 @@ export class SparqlConnectionService {
 			};
 
 			this._showErrorMessage(connection.endpointUrl, error);
+			this._onDidConnectionTestEnd.fire({ connection, error });
 
 			return error;
 		}

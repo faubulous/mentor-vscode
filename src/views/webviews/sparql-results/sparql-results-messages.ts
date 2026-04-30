@@ -8,4 +8,6 @@ export type SparqlResultsWebviewMessages =
     { readonly id: 'SparqlQueryExecutionStarted', queryState: SparqlQueryExecutionState } |
     { readonly id: 'SparqlQueryExecutionEnded', queryState: SparqlQueryExecutionState } |
     { readonly id: 'CancelSparqlQueryExecution', queryState: SparqlQueryExecutionState } |
-    { readonly id: 'SparqlQueryExecutionCancelled', queryState: SparqlQueryExecutionState };
+    { readonly id: 'SparqlQueryExecutionCancelled', queryState: SparqlQueryExecutionState } |
+    { readonly id: 'EditBackgroundQuery', queryId: string } |
+    { readonly id: 'UpdateQueryDocumentIri', queryId: string, documentIri: string };

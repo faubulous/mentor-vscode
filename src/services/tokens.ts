@@ -51,5 +51,7 @@ export enum ServiceToken {
 	/** Factory for creating platform-specific language clients (browser Worker vs Node.js IPC). */
 	LanguageClientFactory = "LanguageClientFactory",
 	/** Service for validating RDF documents against SHACL shapes. */
-	ShaclValidationService = "ShaclValidationService"
+	ShaclValidationService = "ShaclValidationService",
+	/** Service that shows SPARQL activity (query execution, connection testing) in the status bar. */
+	SparqlStatusBarService = "SparqlStatusBarService"
 }

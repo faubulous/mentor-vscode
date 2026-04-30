@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlQueryService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
 
@@ -36,9 +37,38 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
                 this._postQueryHistory();
                 return true;
             }
+            case 'EditBackgroundQuery': {
+                await this._handleEditBackgroundQuery(message.queryId);
+                return true;
+            }
             default:
                 return super.onDidReceiveMessage(message);
         }
+    }
+
+    private async _handleEditBackgroundQuery(queryId: string) {
+        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const queryState = queryService.getQueryHistory().find(q => q.id === queryId);
+
+        if (!queryState?.query || !queryState.connectionId) {
+            return;
+        }
+
+        const document = await vscode.workspace.openTextDocument({
+            content: queryState.query,
+            language: 'sparql'
+        });
+
+        const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+        await connectionService.setQuerySourceForDocument(document.uri, queryState.connectionId);
+
+        this.postMessage({
+            id: 'UpdateQueryDocumentIri',
+            queryId,
+            documentIri: document.uri.toString()
+        });
+
+        await vscode.window.showTextDocument(document);
     }
 
     private async _prepareQueryExecution(queryContext: vscode.TextDocument | vscode.NotebookCell) {
@@ -93,6 +123,27 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
 
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
         const queryState = queryService.createQueryFromDocument(queryContext);
+
+        await this._executeQuery(queryState);
+    }
+
+    /**
+     * Executes a SPARQL query in the background without opening an editor document.
+     * The results panel is opened with a tab titled by the connection name.
+     * @param connection The SPARQL connection to execute the query against.
+     * @param query The SPARQL query string.
+     * @param label A human-readable label for the query (e.g. 'List Graphs').
+     */
+    async executeBackgroundQuery(connection: SparqlConnection, query: string, label: string) {
+        if (!this.view) {
+            await vscode.commands.executeCommand('workbench.action.togglePanel');
+            await vscode.commands.executeCommand(`${this.viewType}.focus`);
+        } else {
+            this.view.show();
+        }
+
+        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const queryState = queryService.createBackgroundQuery(connection, query, label);
 
         await this._executeQuery(queryState);
     }

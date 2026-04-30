@@ -16,8 +16,33 @@ export interface SparqlQueryExecutionState {
 	/**
 	 * The TextDocument where the SPARQL query is defined. In case of a Notebook, this 
 	 * is the IRI of the document that is associated with the cell.
+	 * For background queries this is initially `undefined` and set only after the user clicks Edit.
 	 */
-	documentIri: string;
+	documentIri?: string;
+
+	/**
+	 * A human-readable label for the query, used when no document is associated (background queries).
+	 * For example: 'List Graphs'.
+	 */
+	label?: string;
+
+	/**
+	 * The ID of the SPARQL connection used to execute the query.
+	 * Set for background queries that are not associated with a document.
+	 */
+	connectionId?: string;
+
+	/**
+	 * The display name of the SPARQL connection used to execute the query.
+	 * Used as the tab title for background queries.
+	 */
+	connectionName?: string;
+
+	/**
+	 * When `true`, the query was executed as a background query without an open editor document.
+	 * Background queries are excluded from the Recent Queries history list.
+	 */
+	background?: boolean;
 
 	/**
 	 * The workspace relative URI of the `documentIri`.
@@ -66,10 +91,23 @@ export interface SparqlQueryExecutionState {
 }
 
 /**
+ * Maximum length for a truncated connection name used as a tab title.
+ */
+const MAX_CONNECTION_NAME_LENGTH = 20;
+
+/**
  * Get the formatted file name of the associated document or notebook cell.
+ * For background queries, returns the truncated connection name.
  */
 export function getDisplayName(queryState: SparqlQueryExecutionState): string {
-	const fileName = getFileName(queryState.documentIri);
+	if (queryState.background && queryState.connectionName) {
+		const name = queryState.connectionName;
+		return name.length > MAX_CONNECTION_NAME_LENGTH
+			? name.slice(0, MAX_CONNECTION_NAME_LENGTH - 1) + '…'
+			: name;
+	}
+
+	const fileName = getFileName(queryState.documentIri ?? '');
 
 	if (queryState.notebookIri && queryState.cellIndex !== undefined) {
 		return `${fileName.split('#')[0]}:Cell-${queryState.cellIndex}`;
