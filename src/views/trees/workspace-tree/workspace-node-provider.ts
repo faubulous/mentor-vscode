@@ -83,7 +83,12 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 
 		const item = new vscode.TreeItem(uri);
 		item.resourceUri = resourceUri;
-		item.label = Utils.basename(resourceUri);
+
+		// Use the workspace folder name when the URI matches a top-level workspace folder.
+		// This respects custom folder names defined in a .code-workspace file,
+		// keeping the tree consistent with the VS Code Explorer.
+		const workspaceFolder = vscode.workspace.workspaceFolders?.find(f => f.uri.toString() === uri);
+		item.label = workspaceFolder?.name ?? decodeURIComponent(Utils.basename(resourceUri));
 		item.collapsibleState = isDirectory ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None;
 
 		if (!isDirectory) {

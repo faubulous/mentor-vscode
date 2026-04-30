@@ -91,6 +91,61 @@ describe('WorkspaceNodeProvider', () => {
 			expect(item.collapsibleState).toBe(vscode.TreeItemCollapsibleState.Collapsed);
 			expect(item.command).toBeUndefined();
 		});
+
+		it('should decode percent-encoded spaces in folder names', () => {
+			const provider = new WorkspaceNodeProvider();
+			const uri = 'file:///workspace/my%20folder%20with%20spaces';
+			const item = provider.getTreeItem(uri);
+			expect(item).toHaveProperty('label', 'my folder with spaces');
+			expect(item.collapsibleState).toBe(vscode.TreeItemCollapsibleState.Collapsed);
+		});
+
+		it('should decode percent-encoded spaces in file names', () => {
+			const provider = new WorkspaceNodeProvider();
+			const uri = 'file:///workspace/my%20file.ttl';
+			const item = provider.getTreeItem(uri);
+			expect(item).toHaveProperty('label', 'my file.ttl');
+			expect(item.collapsibleState).toBe(vscode.TreeItemCollapsibleState.None);
+		});
+
+		it('should use the workspace folder name for a top-level workspace folder URI', () => {
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'My Project', index: 0, uri: vscode.Uri.parse('file:///workspace') }
+			];
+
+			const provider = new WorkspaceNodeProvider();
+			const item = provider.getTreeItem('file:///workspace');
+			expect(item).toHaveProperty('label', 'My Project');
+			expect(item.collapsibleState).toBe(vscode.TreeItemCollapsibleState.Collapsed);
+		});
+
+		it('should use the custom workspace folder name from a .code-workspace config', () => {
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///repos/work.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'Backend Models', index: 0, uri: vscode.Uri.parse('file:///repos/backend') },
+				{ name: 'Frontend Models', index: 1, uri: vscode.Uri.parse('file:///repos/frontend') },
+			];
+
+			const provider = new WorkspaceNodeProvider();
+
+			const backendItem = provider.getTreeItem('file:///repos/backend');
+			expect(backendItem).toHaveProperty('label', 'Backend Models');
+
+			const frontendItem = provider.getTreeItem('file:///repos/frontend');
+			expect(frontendItem).toHaveProperty('label', 'Frontend Models');
+		});
+
+		it('should fall back to decoded URI basename for a sub-folder that is not a workspace root', () => {
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///repos/work.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'Root', index: 0, uri: vscode.Uri.parse('file:///repos/root') }
+			];
+
+			const provider = new WorkspaceNodeProvider();
+			const item = provider.getTreeItem('file:///repos/root/sub%20folder');
+			expect(item).toHaveProperty('label', 'sub folder');
+			expect(item.collapsibleState).toBe(vscode.TreeItemCollapsibleState.Collapsed);
+		});
 	});
 
 	describe('getChildren', () => {

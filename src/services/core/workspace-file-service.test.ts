@@ -324,6 +324,24 @@ describe('WorkspaceFileService', () => {
 			expect(contents[0].toString()).toContain('x.ttl');
 		});
 
+		test('returns children of a folder whose name contains spaces', async () => {
+			findFilesSpy.mockResolvedValue([
+				URI.parse('file:///w/my%20folder/data.ttl'),
+			] as any);
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			// Discover: root shows the folder
+			const rootContents = await service.getFolderContents(URI.parse('file:///w') as any);
+			expect(rootContents.length).toBe(1);
+
+			// Expanding the folder must yield the file, not an empty array
+			const folderContents = await service.getFolderContents(rootContents[0] as any);
+			expect(folderContents.length).toBe(1);
+			expect(folderContents[0].toString()).toContain('data.ttl');
+		});
+
 		test('sorts multiple flat files alphabetically (covers files.sort comparator)', async () => {
 			findFilesSpy.mockResolvedValue([
 				URI.parse('file:///w/zebra.ttl'),

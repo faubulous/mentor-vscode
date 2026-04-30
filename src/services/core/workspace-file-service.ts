@@ -225,7 +225,7 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 
 			if (relativePath.includes('/')) {
 				const subFolderName = relativePath.substring(0, relativePath.indexOf('/'));
-				const subFolderUri = vscode.Uri.joinPath(folderUri, subFolderName);
+				const subFolderUri = vscode.Uri.joinPath(folderUri, decodeURIComponent(subFolderName));
 
 				if (!seenFolders.has(subFolderName)) {
 					folders.push(subFolderUri);
