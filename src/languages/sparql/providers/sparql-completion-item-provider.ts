@@ -18,7 +18,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 * requiring them to type another trigger character. This is to provide a 
 	 * smoother completion experience for IRIs.
 	 */
-	public readonly triggerCharacters = new Set([':', '<']);
+	public readonly triggerCharacters = new Set([':', '<', '/']);
 
 	/**
 	 * Timeout in milliseconds to wait for fresh tokens from the language server
@@ -66,16 +66,39 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		}
 	}
 
-	isGraphDefinitionContext(context: TurtleDocument, tokenIndex: number) {
-		let n = -1;
-
+	/**
+	 * Scans backwards from `tokenIndex` to find the index of the opening `<`
+	 * that started the incomplete IRI being typed. Returns `tokenIndex` itself
+	 * when the current token already starts with `<` (single-token IRI or
+	 * auto-closed IRI such as `<htt>`). Returns -1 when no opening `<` is found.
+	 */
+	private findIriOpenIndex(context: TurtleDocument, tokenIndex: number): number {
 		if (context.tokens[tokenIndex].image.startsWith('<')) {
-			// If the current token is either '<' or an IRI that was auto-closed with '>' (e.g. <htt>)
-			n = tokenIndex;
-		} else if (context.tokens[tokenIndex - 1]?.image === '<') {
-			// If the token is not yet closed, then the previous token must be '<'
-			n = tokenIndex - 1;
-		} else {
+			return tokenIndex;
+		}
+
+		// When a URL is partially typed (e.g. `<http://example.org/`), the lexer
+		// cannot produce a single IRIREF token (which requires a closing `>`).
+		// It emits `<` as an LT token, then the URL fragments as separate tokens.
+		// Scan backwards to find that opening `<`.
+		const stopImages = new Set([';', '{', '}', '(', ')', '>']);
+		for (let i = tokenIndex - 1; i >= 0; i--) {
+			const img = context.tokens[i].image;
+			if (img === '<') {
+				return i;
+			}
+			if (img.startsWith('<') || stopImages.has(img)) {
+				break;
+			}
+		}
+
+		return -1;
+	}
+
+	isGraphDefinitionContext(context: TurtleDocument, tokenIndex: number) {
+		const n = this.findIriOpenIndex(context, tokenIndex);
+
+		if (n < 0) {
 			return false;
 		}
 
@@ -93,16 +116,28 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 
 	async getGraphIriCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): Promise<vscode.CompletionItem[]> {
 		const result = [];
-		const token = context.tokens[tokenIndex];
 
-		// The token might be completely or partially enclosed in angle brackets.
-		let value = token.image;
+		// The IRI being typed may span multiple tokens when it is incomplete (no closing `>`).
+		// The lexer also skips characters it cannot tokenize (e.g. plain hostnames, path segments),
+		// so concatenating token images would produce an incomplete URL. Instead, read the raw
+		// document text from the opening `<` token through the current token.
+		const iriOpenIndex = this.findIriOpenIndex(context, tokenIndex);
+		const iriOpenToken = context.tokens[iriOpenIndex];
+		const currentToken = context.tokens[tokenIndex];
+
+		// Chevrotain positions are 1-based; VS Code positions are 0-based.
+		// endColumn is the last char (1-based), so endColumn (without -1) is the exclusive end in 0-based terms.
+		const iriStart = new vscode.Position(iriOpenToken.startLine! - 1, iriOpenToken.startColumn! - 1);
+		const iriEnd = new vscode.Position(currentToken.endLine! - 1, currentToken.endColumn!);
+		let value = document.getText(new vscode.Range(iriStart, iriEnd));
 
 		if (value.startsWith('<')) {
 			value = value.slice(1);
 		}
 
-		if (value.endsWith('>')) {
+		const alreadyClosed = value.endsWith('>');
+
+		if (alreadyClosed) {
 			value = value.slice(0, -1);
 		}
 
@@ -120,7 +155,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 
 			const item = new vscode.CompletionItem(label, vscode.CompletionItemKind.Reference);
 			item.detail = iri;
-			item.insertText = new vscode.SnippetString(label);
+			item.insertText = new vscode.SnippetString(alreadyClosed ? label : label + '>');
 
 			result.push(item);
 		}

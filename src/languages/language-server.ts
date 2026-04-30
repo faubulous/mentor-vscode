@@ -1,4 +1,4 @@
-import { IParser, ILexer, IToken, IRecognitionException } from '@faubulous/mentor-rdf-parsers';
+import { IParser, ILexer, IToken, IRecognitionException, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
 import {
 	Connection,
 	Diagnostic,
@@ -230,9 +230,13 @@ export class LanguageServerBase {
 	 * @param content 
 	 * @returns 
 	 */
-	protected async parse(content: string): Promise<TokenizationResults> {
+	protected async parse(content: string, uri?: string): Promise<TokenizationResults> {
 		if (!this.lexer || !this.parser) {
 			throw new Error('Lexer and parser are required for tokenization.');
+		}
+
+		if (uri) {
+			this.lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(uri);
 		}
 
 		const lexResult = this.lexer.tokenize(content);
@@ -268,7 +272,7 @@ export class LanguageServerBase {
 				// Validating the document for errors requires fully parsing it, including building the CST.
 				// Since this is a potentially expensive operation, we only do it in the language server and
 				// send the result to the client to not block the UI..
-				const result = await this.parse(content);
+				const result = await this.parse(content, document.uri);
 
 				tokens = result.tokens;
 

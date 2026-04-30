@@ -32,7 +32,7 @@ vi.mock('tsyringe', () => ({
 
 import { Uri, Position } from '@src/utilities/mocks/vscode';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
-import { RdfSyntax, RdfToken, TurtleLexer } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax, RdfToken, TurtleLexer, TurtleParser, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
 import { RDF } from '@faubulous/mentor-rdf';
 
 /**
@@ -612,5 +612,33 @@ describe('TurtleDocument', () => {
             const doc = makeDoc();
             await expect(doc.loadTriples('')).resolves.toBeUndefined();
         });
+    });
+});
+
+describe('blank node collision prevention', () => {
+    const parse = (input: string, uri: string) => {
+        const tokens = new TurtleLexer(createFileBlankNodeIdGenerator(uri)).tokenize(input).tokens;
+        return new TurtleReader().visit(new TurtleParser().parse(tokens)) as any[];
+    };
+
+    const blankNodeValues = (quads: any[]): string[] =>
+        quads.flatMap(q => [q.subject, q.object].filter(t => t.termType === 'BlankNode').map((t: any) => t.value));
+
+    it('anonymous blank nodes do not collide across documents', () => {
+        const input = '[ <http://example.org/p> "v" ] .';
+        const idsA = blankNodeValues(parse(input, 'mentor://workspace/a.ttl'));
+        const idsB = blankNodeValues(parse(input, 'mentor://workspace/b.ttl'));
+        expect(idsA.length).toBeGreaterThan(0);
+        expect(idsB.length).toBeGreaterThan(0);
+        expect(idsA.some(id => idsB.includes(id))).toBe(false);
+    });
+
+    it('named blank nodes do not collide across documents', () => {
+        const input = '_:foo <http://example.org/p> "v" .';
+        const idsA = blankNodeValues(parse(input, 'mentor://workspace/a.ttl'));
+        const idsB = blankNodeValues(parse(input, 'mentor://workspace/b.ttl'));
+        expect(idsA.length).toBeGreaterThan(0);
+        expect(idsB.length).toBeGreaterThan(0);
+        expect(idsA.some(id => idsB.includes(id))).toBe(false);
     });
 });
