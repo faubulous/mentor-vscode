@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { getFileName } from '@src/utilities';
 
 type ActionItem = vscode.QuickPickItem & {
 	action: 'create-new' | 'add-existing';
@@ -16,8 +17,7 @@ function getEditorCellData(editor: vscode.TextEditor): vscode.NotebookCellData {
 }
 
 function getNotebookFileName(uri: vscode.Uri): string {
-	const parts = uri.path.split('/');
-	return parts[parts.length - 1] || uri.toString();
+	return getFileName(uri.toString()) || uri.toString();
 }
 
 async function getWorkspaceMentorNotebookUris(): Promise<vscode.Uri[]> {

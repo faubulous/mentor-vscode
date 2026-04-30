@@ -54,12 +54,24 @@ export function getLocalPartAndQuery(iri: string): string {
 	}
 }
 /**
+ * Strip the URI scheme and authority from a URI string and decode percent-encoded characters,
+ * returning a human-readable path suitable for display.
+ * @param uri A URI string (e.g. `workspace:///my%20shapes/file.ttl` or a plain path).
+ * @returns The decoded path without scheme prefix, or the decoded input if it contains no scheme.
+ */
+export function toDisplayPath(uri: string): string {
+	const stripped = uri.replace(/^[^:]+:\/\/\//, '');
+
+	return decodeURIComponent(stripped);
+}
+
+/**
  * Get the file name from a URI string.
  * @param uri A URI string.
  * @returns The file name, or the URI itself if it does not contain a file name.
  */
 export function getFileName(uri: string): string {
-	const parts = uri.split('/');
+	const parts = toDisplayPath(uri).split('/');
 
 	return parts.length > 0 ? parts[parts.length - 1] : uri;
 }
@@ -70,7 +82,7 @@ export function getFileName(uri: string): string {
  * @returns The folder path, or the URI itself if it does not contain a path.
  */
 export function getPath(uri: string): string {
-	const parts = uri.split('/');
+	const parts = toDisplayPath(uri).split('/');
 
 	if (parts.length > 1) {
 		return parts.slice(0, -1).join('/');

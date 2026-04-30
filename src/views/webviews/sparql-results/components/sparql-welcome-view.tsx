@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWebviewMessaging, useStylesheet } from '@src/views/webviews/webview-hooks';
 import { SparqlQueryExecutionState, getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
+import { toDisplayPath, getPath } from '@src/utilities/uri';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import stylesheet from './sparql-welcome-view.css';
 
@@ -38,8 +39,7 @@ export function SparqlWelcomeView() {
 
 	const getWorkspacePath = (queryState: SparqlQueryExecutionState): string | undefined => {
 		if (queryState.workspaceIri) {
-			const workspacePath = queryState.workspaceIri.split(':')[1];
-			const folderPath = workspacePath.split('/').slice(0, -1).join('/');
+			const folderPath = getPath(toDisplayPath(queryState.workspaceIri));
 
 			return folderPath.length > 0 ? `~${folderPath}` : '~';
 		}

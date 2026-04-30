@@ -171,4 +171,24 @@ describe('addActiveEditorToNotebook command', () => {
 		expect(quickPickItems).toHaveLength(2);
 		expect(quickPickItems[1].label).toContain('a.mnb');
 	});
+
+	it('should display decoded filename when notebook path contains percent-encoded characters', async () => {
+		(vscode.window as any).activeTextEditor = {
+			document: {
+				getText: vi.fn(() => 'SELECT * WHERE { ?s ?p ?o }'),
+				languageId: 'sparql',
+			},
+		};
+
+		(vscode.workspace as any).findFiles = vi.fn(async () => [
+			vscode.Uri.parse('file:///my%20workspace/my%20notebook.mnb'),
+		]);
+		(vscode.window as any).showQuickPick = vi.fn(async () => undefined);
+
+		await addActiveEditorToNotebook.handler();
+
+		const quickPickItems = ((vscode.window.showQuickPick as any).mock.calls[0] ?? [])[0] ?? [];
+		expect(quickPickItems[1].label).toContain('my notebook.mnb');
+		expect(quickPickItems[1].label).not.toContain('%20');
+	});
 });

@@ -61,4 +61,20 @@ describe('getDisplayName', () => {
 		
 		expect(getDisplayName(state)).toBe('myquery.sparql');
 	});
+
+	it('decodes percent-encoded characters in the document filename', () => {
+		const state = makeState('file:///my%20workspace/queries/my%20query.sparql');
+
+		expect(getDisplayName(state)).toBe('my query.sparql');
+	});
+
+	it('decodes percent-encoded filename in notebook cell label', () => {
+		const state = makeState(
+			'file:///my%20workspace/my%20notebook.sparqlbook#Cell-1',
+			'file:///my%20workspace/my%20notebook.sparqlbook',
+			1,
+		);
+
+		expect(getDisplayName(state)).toBe('my notebook.sparqlbook:Cell-1');
+	});
 });

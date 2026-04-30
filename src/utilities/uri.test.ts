@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, getFileName, getPath } from '@src/utilities/uri';
+import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, toDisplayPath, getFileName, getPath } from '@src/utilities/uri';
 
 describe('toJsonId', () => {
 	it('converts http URI to dot-separated identifier', () => {
@@ -77,6 +77,32 @@ describe('getLocalPartAndQuery', () => {
 	});
 });
 
+describe('toDisplayPath', () => {
+	it('strips workspace:/// scheme and decodes percent-encoded characters', () => {
+		expect(toDisplayPath('workspace:///my%20shapes/file.ttl')).toBe('my shapes/file.ttl');
+	});
+
+	it('strips file:/// scheme and decodes percent-encoded characters', () => {
+		expect(toDisplayPath('file:///home/user/my%20project/query.sparql')).toBe('home/user/my project/query.sparql');
+	});
+
+	it('returns a plain path unchanged (no scheme, no encoding)', () => {
+		expect(toDisplayPath('models/thing.ttl')).toBe('models/thing.ttl');
+	});
+
+	it('does not strip two-slash scheme (http://)', () => {
+		expect(toDisplayPath('http://example.org/path')).toBe('http://example.org/path');
+	});
+
+	it('decodes multiple encoded segments', () => {
+		expect(toDisplayPath('workspace:///my%20folder/sub%20dir/file.ttl')).toBe('my folder/sub dir/file.ttl');
+	});
+
+	it('is a no-op for an already-decoded native path', () => {
+		expect(toDisplayPath('/home/user/my project/file.ttl')).toBe('/home/user/my project/file.ttl');
+	});
+});
+
 describe('getFileName', () => {
 	it('returns the last path segment', () => {
 		expect(getFileName('file:///workspace/models/thing.ttl')).toBe('thing.ttl');
@@ -93,11 +119,19 @@ describe('getFileName', () => {
 	it('works with a plain filename', () => {
 		expect(getFileName('data.rdf')).toBe('data.rdf');
 	});
+
+	it('decodes percent-encoded filename from workspace URI', () => {
+		expect(getFileName('workspace:///shapes/my%20shapes.ttl')).toBe('my shapes.ttl');
+	});
+
+	it('decodes percent-encoded filename from file URI', () => {
+		expect(getFileName('file:///home/user/my%20project/query.sparql')).toBe('query.sparql');
+	});
 });
 
 describe('getPath', () => {
-	it('returns the directory part of a URI', () => {
-		expect(getPath('file:///workspace/models/thing.ttl')).toBe('file:///workspace/models');
+	it('returns the directory part of a URI without scheme prefix', () => {
+		expect(getPath('file:///workspace/models/thing.ttl')).toBe('workspace/models');
 	});
 
 	it('returns the URI itself when there are no slashes', () => {
@@ -106,5 +140,13 @@ describe('getPath', () => {
 
 	it('strips only the last segment', () => {
 		expect(getPath('http://example.org/a/b/c')).toBe('http://example.org/a/b');
+	});
+
+	it('decodes percent-encoded path from workspace URI', () => {
+		expect(getPath('workspace:///my%20shapes/sub%20dir/file.ttl')).toBe('my shapes/sub dir');
+	});
+
+	it('leaves an already-decoded native path unchanged', () => {
+		expect(getPath('/home/user/my project/models/thing.ttl')).toBe('/home/user/my project/models');
 	});
 });

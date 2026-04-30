@@ -5,6 +5,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { InferenceUri } from '@src/providers';
+import { toDisplayPath } from '@src/utilities';
 import {
 	buildGraphShapeConfigurationFromSelection,
 	getGraphSelectionState,
@@ -83,7 +84,7 @@ export const manageShaclShapes = {
 
 			if (hasShapes) {
 				quickPickItems.push({
-					label: graphUri.replace(/^workspace:\/\/\//, ''),
+					label: toDisplayPath(graphUri),
 					graphUri
 				});
 			}
@@ -112,7 +113,7 @@ export const manageShaclShapes = {
 			const isDefaultShape = defaultShapeGraphUris.includes(shapeGraphUri);
 
 			return {
-				label: shapeGraphUri.replace(/^workspace:\/\/\//, ''),
+			label: toDisplayPath(shapeGraphUri),
 				description: isDefaultShape ? '- Default' : undefined,
 				picked: selectedShapeGraphUris.has(shapeGraphUri),
 				graphUri: shapeGraphUri,

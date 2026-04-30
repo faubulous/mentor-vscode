@@ -127,6 +127,41 @@ describe('manageShaclShapes', () => {
 		expect(persistedConfig.graphs).toBeUndefined();
 	});
 
+	it('shows decoded label when shape file path contains percent-encoded characters', async () => {
+		mockStore.getGraphs.mockReturnValue(['workspace:///my%20shapes/default%20shapes.ttl']);
+
+		let capturedItems: any[] = [];
+
+		const quickPick = {
+			title: '',
+			placeholder: '',
+			items: [] as any[],
+			buttons: [] as any[],
+			canSelectMany: false,
+			onDidChangeSelection: vi.fn(() => ({ dispose: () => {} })),
+			onDidTriggerButton: vi.fn(() => ({ dispose: () => {} })),
+			onDidTriggerItemButton: vi.fn(() => ({ dispose: () => {} })),
+			onDidAccept: vi.fn(() => ({ dispose: () => {} })),
+			onDidHide: vi.fn((handler: () => void) => {
+				// Trigger hide immediately to resolve the promise
+				setImmediate(handler);
+				return { dispose: () => {} };
+			}),
+			hide: vi.fn(),
+			dispose: vi.fn(),
+			show: vi.fn(() => {
+				capturedItems = quickPick.items;
+			}),
+		};
+
+		(vscode.window as any).createQuickPick = vi.fn(() => quickPick);
+
+		await manageShaclShapes.handler();
+
+		expect(capturedItems[0].label).toBe('my shapes/default shapes.ttl');
+		expect(capturedItems[0].graphUri).toBe('workspace:///my%20shapes/default%20shapes.ttl');
+	});
+
 	it('persists default shape when selection events provide plain QuickPickItem values', async () => {
 		let onDidChangeSelection: ((items: any[]) => void) | undefined;
 		let onDidTriggerItemButton: ((e: any) => void) | undefined;
