@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: 'npm'
@@ -44,9 +44,12 @@ jobs:
           SAFE_BRANCH="${BRANCH//\//-}"
           echo "name=mentor-${VERSION}-${SAFE_BRANCH}" >> "$GITHUB_OUTPUT"
 
+      - name: Rename VSIX
+        run: mv dist/mentor.vsix "dist/${{ steps.artifact.outputs.name }}.vsix"
+
       - name: Upload VSIX artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ steps.artifact.outputs.name }}
-          path: dist/mentor.vsix
+          path: "dist/${{ steps.artifact.outputs.name }}.vsix"
           if-no-files-found: error
