@@ -42,6 +42,7 @@ function SparqlResultsPanel() {
 				...previousState,
 				activeTabIndex: 0,
 				activeQueries: activeQueries.filter(q =>
+					!q.background &&
 					q.documentIri &&
 					!q.documentIri.startsWith('untitled:')
 				)
@@ -61,6 +62,13 @@ function SparqlResultsPanel() {
 	const handleMessage = useCallback((message: SparqlResultsWebviewMessages) => {
 		if (message.id === 'PostSparqlQueryHistory') {
 			onDidChangeQueryHistory(message.history);
+		} else if (message.id === 'UpdateQueryDocumentIri') {
+			setState(prev => ({
+				...prev,
+				activeQueries: prev.activeQueries.map(q =>
+					q.id === message.queryId ? { ...q, documentIri: message.documentIri } : q
+				)
+			}));
 		}
 	}, []);
 
@@ -127,13 +135,43 @@ function SparqlResultsPanel() {
 				return prevState;
 			}
 
-			const n = prevState.activeQueries.findIndex(q => q.documentIri === query.documentIri);
+			// For background queries also match tabs that carry label+connectionId but
+			// lost the background flag because they were replaced by a doc execution
+			// (i.e., the user clicked Edit → ran from the untitled doc).
+			const n = query.background
+				? prevState.activeQueries.findIndex(q => q.label === query.label && q.connectionId === query.connectionId)
+				: prevState.activeQueries.findIndex(q => q.documentIri === query.documentIri);
 
 			const activeQueries = [...prevState.activeQueries];
 			let activeQueryIndex = n;
 
 			if (n >= 0) {
-				activeQueries.splice(n, 1, query);
+				const existingTab = activeQueries[n];
+
+				// When a background-query tab is replaced by a doc execution, carry over
+				// the routing metadata (id, label, connectionId, connectionName) so the
+				// tab can still be matched and reload can fall back to the background
+				// path after the document is closed.
+				//
+				// IMPORTANT: we test for the presence of label+connectionId rather than
+				// existingTab.background===true because _logQueryExecution fires TWICE
+				// per execution (start + end). The first fire merges correctly but sets
+				// background=false on the stored entry; the second fire would then see
+				// existingTab.background===false and skip the merge, losing the metadata.
+				const existingHasBgMetadata = !!(existingTab.label && existingTab.connectionId);
+
+				const mergedQuery =
+					!query.background && existingHasBgMetadata
+						? {
+								...query,
+								id: existingTab.id,
+								label: existingTab.label,
+								connectionId: query.connectionId ?? existingTab.connectionId,
+								connectionName: existingTab.connectionName,
+							}
+						: query;
+
+				activeQueries.splice(n, 1, mergedQuery);
 				activeQueryIndex = n;
 			} else {
 				activeQueries.push(query);
@@ -163,9 +201,9 @@ function SparqlResultsPanel() {
 		return true;
 	};
 
-	const closeQuery = (documentIri: string) => {
+	const closeQuery = (query: SparqlQueryExecutionState) => {
 		setState(prevState => {
-			const activeQueries = prevState.activeQueries.filter(q => q.documentIri !== documentIri);
+			const activeQueries = prevState.activeQueries.filter(q => q.id !== query.id);
 			let activeTabIndex = prevState.activeTabIndex;
 
 			if (activeTabIndex > activeQueries.length) {
@@ -210,15 +248,15 @@ function SparqlResultsPanel() {
 					<SparqlWelcomeView />
 				</vscode-tab-panel>
 				{state.activeQueries.map((query, index) => (
-					<Fragment key={query.documentIri}>
-						<vscode-tab-header slot="header" id={(index + 1).toString()}>
-							<div className="tab-header-content">
-								{getQueryTypeIcon(query)}
-								<span>{getDisplayName(query)}</span>
-								<a className="codicon codicon-close" role="button" title="Close"
-									onClick={(e) => {
-										e.stopPropagation();
-										closeQuery(query.documentIri);
+				<Fragment key={query.id}>
+					<vscode-tab-header slot="header" id={(index + 1).toString()}>
+						<div className="tab-header-content">
+							{getQueryTypeIcon(query)}
+							<span>{getDisplayName(query)}</span>
+							<a className="codicon codicon-close" role="button" title="Close"
+								onClick={(e) => {
+									e.stopPropagation();
+									closeQuery(query);
 									}}
 								></a>
 							</div>

@@ -881,3 +881,114 @@ describe('SparqlQueryService – _executeQueryOnSource with timeout', () => {
         expect(callArgs.timeout).toBe(30000);
     });
 });
+
+// ---------------------------------------------------------------------------
+// createBackgroundQuery
+// ---------------------------------------------------------------------------
+describe('SparqlQueryService – createBackgroundQuery', () => {
+    it('creates a background query state with the correct fields', () => {
+        const service = makeService();
+        const connection = { id: 'conn-1', endpointUrl: 'http://localhost:7200/sparql' } as any;
+        const query = 'SELECT DISTINCT ?g WHERE { GRAPH ?g { } }';
+
+        const state = service.createBackgroundQuery(connection, query, 'List Graphs');
+
+        expect(state.background).toBe(true);
+        expect(state.label).toBe('List Graphs');
+        expect(state.connectionId).toBe('conn-1');
+        expect(state.connectionName).toBe('http://localhost:7200/sparql');
+        expect(state.query).toBe(query);
+        expect(state.queryType).toBe('bindings');
+        expect(state.documentIri).toBeUndefined();
+        expect(state.id).toBeDefined();
+        expect(state.startTime).toBeGreaterThan(0);
+    });
+
+    it('assigns a unique id on each call', () => {
+        const service = makeService();
+        const connection = { id: 'conn-1', endpointUrl: 'http://localhost:7200/sparql' } as any;
+
+        const s1 = service.createBackgroundQuery(connection, 'SELECT * {}', 'Test');
+        const s2 = service.createBackgroundQuery(connection, 'SELECT * {}', 'Test');
+
+        expect(s1.id).not.toBe(s2.id);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// executeQuery – background query (uses connectionId)
+// ---------------------------------------------------------------------------
+describe('SparqlQueryService – executeQuery (background query)', () => {
+    it('resolves the endpoint from connectionId when documentIri is absent', async () => {
+        queryMock.mockResolvedValue({
+            resultType: 'bindings',
+            execute: vi.fn().mockResolvedValue({
+                [Symbol.asyncIterator]: () => ({ next: vi.fn().mockResolvedValue({ done: true }) }),
+            }),
+        });
+
+        const connection = { id: 'conn-bg', endpointUrl: 'http://example.org/sparql' } as any;
+        const connectionService = {
+            getConnection: vi.fn().mockReturnValue(connection),
+            getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'sparql', connection }),
+            getQuerySourceForDocument: vi.fn(),
+        };
+        const credentialStorage = { getCredential: vi.fn().mockResolvedValue(null) };
+        const resultSerializer = {
+            serializeBindings: vi.fn().mockResolvedValue({ type: 'bindings', rows: [] }),
+        };
+        const service = new SparqlQueryService(
+            makeContext(),
+            credentialStorage as any,
+            connectionService as any,
+            resultSerializer as any,
+        );
+
+        const ctx: any = {
+            id: 'bg-test-id',
+            background: true,
+            label: 'List Graphs',
+            connectionId: 'conn-bg',
+            connectionName: 'http://example.org/sparql',
+            query: 'SELECT DISTINCT ?g WHERE { GRAPH ?g { } }',
+            queryType: 'bindings',
+            startTime: Date.now(),
+        };
+
+        const result = await service.executeQuery(ctx);
+
+        expect(connectionService.getConnection).toHaveBeenCalledWith('conn-bg');
+        expect(connectionService.getQuerySourceForConnection).toHaveBeenCalledWith(connection);
+        expect(connectionService.getQuerySourceForDocument).not.toHaveBeenCalled();
+        expect(result.error).toBeUndefined();
+    });
+
+    it('sets an error when connectionId refers to an unknown connection', async () => {
+        const connectionService = {
+            getConnection: vi.fn().mockReturnValue(undefined),
+            getQuerySourceForConnection: vi.fn(),
+            getQuerySourceForDocument: vi.fn(),
+        };
+        const service = new SparqlQueryService(
+            makeContext(),
+            {} as any,
+            connectionService as any,
+            {} as any,
+        );
+
+        const ctx: any = {
+            id: 'bg-missing',
+            background: true,
+            connectionId: 'unknown-conn',
+            query: 'SELECT * {}',
+            queryType: 'bindings',
+            startTime: Date.now(),
+        };
+
+        const result = await service.executeQuery(ctx);
+
+        expect(result.error).toBeDefined();
+        expect(result.error.message).toContain('unknown-conn');
+    });
+});
+

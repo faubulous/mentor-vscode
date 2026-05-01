@@ -48,16 +48,25 @@ import { SparqlCompletionItemProvider } from '@src/languages/sparql/providers/sp
 
 /**
  * Creates a minimal fake IToken for testing.
+ * Positions are 1-based (Chevrotain convention) and place the token at line 1, col 1.
  */
 function makeToken(name: string, image: string) {
-    return { tokenType: { name }, image };
+    return { tokenType: { name }, image, startLine: 1, startColumn: 1, endLine: 1, endColumn: image.length };
 }
 
 /**
  * Stub document for tests that need document.uri.
+ * Accepts an optional content string that getText(range) extracts from.
  */
-function makeDoc(uri = 'file:///test.sparql') {
-    return { uri, getText: () => '', positionAt: () => ({ line: 0, character: 0 }) };
+function makeDoc(uri = 'file:///test.sparql', content = '') {
+    return {
+        uri,
+        getText: (range?: any) => {
+            if (!range) return content;
+            return content.substring(range.start.character, range.end.character);
+        },
+        positionAt: () => ({ line: 0, character: 0 })
+    };
 }
 
 /**
@@ -167,7 +176,7 @@ describe('SparqlCompletionItemProvider', () => {
             const p = makeProviderWithGraphs(graphs);
 
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<http://example')]);
-            const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
+            const items = await p.getGraphIriCompletionItems(makeDoc('file:///test.sparql', '<http://example') as any, context as any, 0);
 
             expect(items.length).toBe(2);
             expect(items.every(i => (i.detail as string).startsWith('http://example.org'))).toBe(true);
@@ -197,7 +206,7 @@ describe('SparqlCompletionItemProvider', () => {
         it('returns empty array when no graphs match', async () => {
             const p = makeProviderWithGraphs(graphs);
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<https://nomatch')]);
-            const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
+            const items = await p.getGraphIriCompletionItems(makeDoc('file:///test.sparql', '<https://nomatch') as any, context as any, 0);
             expect(items.length).toBe(0);
         });
 
@@ -212,7 +221,7 @@ describe('SparqlCompletionItemProvider', () => {
             // value typed = 'workspace', graph = 'workspace:g1' → label = ':g1' → stripped to 'g1'
             const p = makeProviderWithGraphs(['workspace:g1']);
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<workspace')]);
-            const items = await p.getGraphIriCompletionItems(makeDoc() as any, context as any, 0);
+            const items = await p.getGraphIriCompletionItems(makeDoc('file:///test.sparql', '<workspace') as any, context as any, 0);
             expect(items.length).toBe(1);
             expect(items[0].label).toBe('g1');
         });

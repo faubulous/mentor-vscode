@@ -82,7 +82,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.executeDescribeQuery',
-			args: getDescribeQueryCommandArgs(queryContext.documentIri, value, queryContext.query)
+			args: getDescribeQueryCommandArgs(queryContext.documentIri ?? '', value, queryContext.query)
 		});
 	};
 

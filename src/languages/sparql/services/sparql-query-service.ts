@@ -79,7 +79,7 @@ export class SparqlQueryService {
 	 */
 	private _onTextDocumentClosed(document: vscode.TextDocument) {
 		if (document.uri.scheme === 'untitled') {
-			const i = this._history.findIndex(q => q.documentIri === document.uri.toString());
+			const i = this._history.findIndex(q => q.documentIri && q.documentIri === document.uri.toString());
 
 			this.removeQueryStateAt(i);
 		}
@@ -102,6 +102,28 @@ export class SparqlQueryService {
 			workspaceIri: workspaceIri?.toString(),
 			notebookIri: source.notebookIri?.toString(),
 			cellIndex: source.cellIndex,
+			query,
+			queryType,
+			startTime: Date.now()
+		};
+	}
+
+	/**
+	 * Creates a new SPARQL query state for a background query with no associated document.
+	 * @param connection The SPARQL connection to execute the query against.
+	 * @param query The SPARQL query string.
+	 * @param label A human-readable label shown as the tab title (e.g. 'List Graphs').
+	 * @returns A new SparqlQueryExecutionState instance marked as a background query.
+	 */
+	createBackgroundQuery(connection: SparqlConnection, query: string, label: string): SparqlQueryExecutionState {
+		const queryType = this._getQueryType(query);
+
+		return {
+			id: crypto.randomUUID(),
+			label,
+			connectionId: connection.id,
+			connectionName: connection.endpointUrl,
+			background: true,
 			query,
 			queryType,
 			startTime: Date.now()
@@ -157,7 +179,7 @@ export class SparqlQueryService {
 	private async _persistQueryHistory(): Promise<void> {
 		// Filter the query history to exclude execution states that would not be valid after a restart.
 		const filteredHistory = this._history
-			.filter(q => q && !q.documentIri.startsWith('untitled'))
+			.filter(q => q && !q.background && q.documentIri && !q.documentIri.startsWith('untitled'))
 			.slice(0, HISTORY_MAX_ENTRIES);
 
 		await this._extensionContext.workspaceState.update(HISTORY_STORAGE_KEY, filteredHistory);
@@ -238,8 +260,20 @@ export class SparqlQueryService {
 
 			this._logQueryExecutionStart(context);
 
-			const documentIri = vscode.Uri.parse(context.documentIri);
-			const source = await this._connectionService.getQuerySourceForDocument(documentIri);
+			let source: any;
+
+			if (context.connectionId && !context.documentIri) {
+				const connection = this._connectionService.getConnection(context.connectionId);
+
+				if (!connection) {
+					throw new Error('Could not find connection with ID: ' + context.connectionId);
+				}
+
+				source = await this._connectionService.getQuerySourceForConnection(connection);
+			} else {
+				const documentIri = vscode.Uri.parse(context.documentIri!);
+				source = await this._connectionService.getQuerySourceForDocument(documentIri);
+			}
 
 			const result = await this._executeQueryOnSource(query, source, tokenSource.token);
 

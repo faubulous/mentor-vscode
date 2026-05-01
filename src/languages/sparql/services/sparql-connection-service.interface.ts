@@ -19,6 +19,19 @@ export interface ISparqlConnectionService {
 	readonly onDidChangeConnectionForDocument: vscode.Event<vscode.Uri>;
 
 	/**
+	 * Event fired immediately before a connection test begins.
+	 * Not fired for the workspace pseudo-connection.
+	 */
+	readonly onDidConnectionTestStart: vscode.Event<SparqlConnection>;
+
+	/**
+	 * Event fired when a connection test completes.
+	 * `error` is `null` on success, or contains the error code and message on failure.
+	 * Not fired for the workspace pseudo-connection.
+	 */
+	readonly onDidConnectionTestEnd: vscode.Event<{ connection: SparqlConnection; error: { code: number; message: string } | null }>;
+
+	/**
 	 * Persists the in-memory connections to configuration.
 	 */
 	saveConfiguration(): Promise<void>;

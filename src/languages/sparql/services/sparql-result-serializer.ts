@@ -80,7 +80,7 @@ export class SparqlResultSerializer {
 			rows.push(row);
 		}
 
-		const documentIri = context.documentIri;
+		const documentIri = context.documentIri ?? '';
 		const namespaceMap: NamespaceMap = {};
 
 		for (const iri of namespaces) {
@@ -129,7 +129,7 @@ export class SparqlResultSerializer {
 			}
 
 			// Get namespace prefixes for better formatting
-			const documentIri = context.documentIri;
+			const documentIri = context.documentIri ?? '';
 			const prefixMap: Record<string, string> = {};
 
 			// Collect unique namespace IRIs from the quads

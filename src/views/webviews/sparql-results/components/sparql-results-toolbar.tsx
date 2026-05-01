@@ -46,17 +46,31 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 	};
 
 	const reloadQuery = () => {
-		messaging?.postMessage({
-			id: 'ExecuteCommand',
-			command: 'mentor.command.executeSparqlQuery',
-			args: [{
-				documentIri: queryContext.documentIri,
-				workspaceIri: queryContext.workspaceIri,
-				notebookIri: queryContext.notebookIri,
-				cellIndex: queryContext.cellIndex,
-				query: queryContext.query
-			}]
-		});
+		if (queryContext.documentIri) {
+			messaging?.postMessage({
+				id: 'ExecuteCommand',
+				command: 'mentor.command.executeSparqlQuery',
+				args: [{
+					documentIri: queryContext.documentIri,
+					workspaceIri: queryContext.workspaceIri,
+					notebookIri: queryContext.notebookIri,
+					cellIndex: queryContext.cellIndex,
+					connectionId: queryContext.connectionId,
+					query: queryContext.query,
+					label: queryContext.label
+				}]
+			});
+		} else {
+			messaging?.postMessage({
+				id: 'ExecuteCommand',
+				command: 'mentor.command.executeSparqlQuery',
+				args: [{
+					connectionId: queryContext.connectionId,
+					query: queryContext.query,
+					label: queryContext.label
+				}]
+			});
+		}
 	};
 
 	const saveResults = () => {
@@ -68,11 +82,18 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 	};
 
 	const editQuery = () => {
-		messaging?.postMessage({
-			id: 'ExecuteCommand',
-			command: 'mentor.command.openDocument',
-			args: [queryContext.documentIri, queryContext.query]
-		});
+		if (queryContext.documentIri) {
+			messaging?.postMessage({
+				id: 'ExecuteCommand',
+				command: 'mentor.command.openDocument',
+				args: [queryContext.documentIri, queryContext.query]
+			});
+		} else {
+			messaging?.postMessage({
+				id: 'EditBackgroundQuery',
+				queryId: queryContext.id
+			});
+		}
 	};
 
 	return (
