@@ -1,6 +1,7 @@
 .vscode
 build*.
 src/**
+coverage/**
 node_modules/**
 ../**
 **/media/screenshot*.png
