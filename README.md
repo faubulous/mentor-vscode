@@ -36,6 +36,7 @@ The developer friendly IDE for RDF knowledge graphs.
   - Missing escape characters in the generated workspace: URIs
   - Folders with whitespaces do not show content when expanded in the workspace tree
 - Fixed escaping of '_' characters in local names (e.g. `ex:foo_bar` -> `ex:foo\_bar`)
+- Fixed issue where aggregate functions on blank nodes won't return results [#70](https://github.com/faubulous/mentor-vscode/issues/70)
 
 [Full Release History](https://mentor-vscode.dev/about/release-history)
 
