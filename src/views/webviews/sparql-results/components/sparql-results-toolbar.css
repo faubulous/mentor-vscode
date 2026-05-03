@@ -6,6 +6,14 @@
 	border-bottom: 1px solid var(--vscode-editorGroup-border);
 }
 
+.mentor-notebook-output .sparql-results-toolbar {
+	border-bottom: none;
+}
+
+.mentor-notebook-output .not-notebook {
+	display: none !important;
+}
+
 .sparql-results-toolbar slot.textOnly:not(.empty) {
     padding: 0;
 }

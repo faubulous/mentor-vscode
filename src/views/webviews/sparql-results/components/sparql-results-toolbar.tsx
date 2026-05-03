@@ -98,12 +98,6 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 
 	return (
 		<vscode-toolbar-container className="sparql-results-toolbar">
-			<vscode-toolbar-button title="Edit query" onClick={() => editQuery()}>
-				<span className="codicon codicon-edit"></span>
-			</vscode-toolbar-button>
-
-			<span className="divider divider-vertical"></span>
-
 			<Stopwatch />
 
 			<span className="divider divider-vertical"></span>
@@ -185,6 +179,10 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 			)}
 
 			<span className="spacer"></span>
+
+			<vscode-toolbar-button title="Edit query" onClick={() => editQuery()} className="not-notebook">
+				<span className="codicon codicon-edit"></span>
+			</vscode-toolbar-button>
 		</vscode-toolbar-container>
 	);
 }

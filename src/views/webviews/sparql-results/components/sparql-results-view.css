@@ -135,8 +135,9 @@
 
 .mentor-notebook-output {
 	border: 1px solid var(--vscode-editorGroup-border) !important;
+	border-radius: 7px;
 	padding: 0 !important;
-	margin-top: -1px !important;
+	margin-top: 5px !important;
 }
 
 .mentor-notebook-output .sparql-results-container.error .sparql-results-content-container {
