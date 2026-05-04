@@ -866,6 +866,18 @@
         "title": "Show Shape References",
         "icon": "$(list-selection)",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.editNotebookCellSlug",
+        "title": "Edit Cell Slug",
+        "icon": "$(tag)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.renumberNotebookCells",
+        "title": "Renumber Cells",
+        "icon": "$(list-ordered)",
+        "category": "Mentor"
       }
     ],
     "submenus": [
@@ -1068,6 +1080,10 @@
       ],
       "commandPalette": [
         {
+          "command": "mentor.command.editNotebookCellSlug",
+          "when": "false"
+        },
+        {
           "command": "mentor.command.convertFileFormatToNTriplesSubmenu",
           "when": "false"
         },
@@ -1105,6 +1121,11 @@
         {
           "command": "mentor.command.setNotebookInference",
           "when": "notebookType == 'mentor-notebook' && config.mentor.inference.enabled",
+          "group": "navigation"
+        },
+        {
+          "command": "mentor.command.renumberNotebookCells",
+          "when": "notebookType == 'mentor-notebook'",
           "group": "navigation"
         }
       ]
