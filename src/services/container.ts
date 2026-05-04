@@ -20,6 +20,7 @@ import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-re
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { SparqlStatusBarService } from '@src/services/sparql-status-bar-service';
+import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
@@ -100,4 +101,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlConnectionService);
 	container.registerInstance(ServiceToken.SparqlStatusBarService, sparqlStatusBarService);
 	context.subscriptions.push(sparqlStatusBarService);
+
+	// Register the reference update service for cross-workspace URI rename support.
+	const referenceUpdateService = new ReferenceUpdateService(documentContextService);
+	container.registerInstance(ServiceToken.ReferenceUpdateService, referenceUpdateService);
 }

@@ -10,6 +10,7 @@ import { WorkspaceIndexerService } from './services/core/workspace-indexer-servi
 import { WorkspaceUri } from './providers/workspace-uri';
 import { SparqlConnectionService } from './languages/sparql/services/sparql-connection-service';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
+import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
 import { DocumentLintingService } from './services/document/document-linting-service';
@@ -131,6 +132,11 @@ function registerRenameHandlers(context: vscode.ExtensionContext) {
 			// Migrate SHACL global settings (graphs keys and defaults entries).
 			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 			await shaclService.migrateShaclSettings(e.files);
+
+			// Update all workspace: URI references across indexed documents.
+			const referenceUpdateService = container.resolve<ReferenceUpdateService>(ServiceToken.ReferenceUpdateService);
+			const changes = referenceUpdateService.buildChangesForRenames(e.files);
+			await referenceUpdateService.batchUpdate(changes);
 		})
 	);
 }

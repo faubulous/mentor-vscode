@@ -53,5 +53,7 @@ export enum ServiceToken {
 	/** Service for validating RDF documents against SHACL shapes. */
 	ShaclValidationService = "ShaclValidationService",
 	/** Service that shows SPARQL activity (query execution, connection testing) in the status bar. */
-	SparqlStatusBarService = "SparqlStatusBarService"
+	SparqlStatusBarService = "SparqlStatusBarService",
+	/** Service for updating workspace: URI references across all indexed documents on rename. */
+	ReferenceUpdateService = "ReferenceUpdateService"
 }
