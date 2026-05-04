@@ -4,7 +4,8 @@ import { ServiceToken } from '@src/services/tokens';
 import {
 	ResourceReferenceProvider,
 	ResourceDefinitionProvider,
-	ResourceTooltipProvider
+	ResourceTooltipProvider,
+	WorkspaceGraphDefinitionProvider
 } from '@src/providers';
 import {
 	TurtleAutoDefinePrefixProvider,
@@ -24,6 +25,7 @@ const completionProvider = new TurtleCompletionItemProvider();
 const definitionProvider = new ResourceDefinitionProvider();
 const hoverProvider = new ResourceTooltipProvider();
 const notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider();
+const workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`);
 const referenceProvider = new ResourceReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
@@ -55,15 +57,16 @@ export class TurtleTokenProvider {
 		return [
 			vscode.languages.registerCodeActionsProvider({ language }, codeActionsProvider),
 			vscode.languages.registerCodeLensProvider({ language }, codelensProvider),
-			vscode.languages.registerCodeLensProvider({ language }, notebookSlugCodelensProvider),
 			vscode.languages.registerCompletionItemProvider({ language }, completionProvider, ':'),
 			vscode.languages.registerDefinitionProvider({ language }, definitionProvider),
+			vscode.languages.registerDefinitionProvider({ language }, workspaceGraphDefinitionProvider),
 			vscode.languages.registerHoverProvider({ language }, hoverProvider),
 			vscode.languages.registerDocumentFormattingEditProvider({ language }, formattingProvider),
 			vscode.languages.registerInlineCompletionItemProvider({ language }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language }, referenceProvider),
 			vscode.languages.registerRenameProvider({ language }, renameProvider),
 			vscode.languages.registerCodeLensProvider({ language }, validationCodelensProvider),
+			vscode.languages.registerCodeLensProvider({ language }, notebookSlugCodelensProvider),
 		]
 	}
 }

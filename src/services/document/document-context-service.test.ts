@@ -414,6 +414,95 @@ describe('DocumentContextService', () => {
 			expect(ctxWithTokens.loadTriples).toHaveBeenCalled();
 		});
 
+		it('sets ctx.slug before calling loadTriples when a slug is provided', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///nb.mnb#cell1';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'vscode-notebook-cell',
+				getText: () => '',
+			} as any;
+
+			let slugAtLoadTime: string | undefined;
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			(ctx.loadTriples as any).mockImplementation(async () => {
+				slugAtLoadTime = (ctx as any).slug;
+			});
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			await service.loadDocument(doc, false, 'my-data');
+
+			expect(slugAtLoadTime).toBe('my-data');
+			expect((ctx as any).slug).toBe('my-data');
+		});
+
+		it('does not set ctx.slug when no slug argument is provided', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			await service.loadDocument(doc);
+
+			expect((ctx as any).slug).toBeUndefined();
+		});
+
+		it('updates ctx.slug and triggers reload when context is already loaded with a different slug', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///nb.mnb#cell1';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'vscode-notebook-cell',
+				getText: () => '',
+			} as any;
+
+			// Pre-populate a context that is already loaded but has NO slug (race condition:
+			// handleActiveEditorChanged loaded it first without slug).
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: true, hasTokens: true });
+			service.contexts[uri] = ctx;
+
+			// Provide the document in textDocuments so _reloadContextTriples can find it.
+			(vscode.workspace as any).textDocuments = [doc];
+
+			await service.loadDocument(doc, false, 'my-data');
+
+			expect((ctx as any).slug).toBe('my-data');
+			// loadTriples should have been called by the async _reloadContextTriples.
+			expect(ctx.loadTriples).toHaveBeenCalled();
+
+			// Restore
+			(vscode.workspace as any).textDocuments = [];
+		});
+
+		it('does not reload when already-loaded context has the same slug', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///nb.mnb#cell1';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'vscode-notebook-cell',
+				getText: () => '',
+			} as any;
+
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: true, hasTokens: true });
+			(ctx as any).slug = 'my-data';
+			service.contexts[uri] = ctx;
+
+			await service.loadDocument(doc, false, 'my-data');
+
+			// loadTriples should NOT be called because slug hasn't changed.
+			expect(ctx.loadTriples).not.toHaveBeenCalled();
+		});
+
 		it('returns context (partial load) on token timeout', async () => {
 			vi.useFakeTimers();
 			const { service, mockDocumentFactory } = createService();
@@ -609,6 +698,33 @@ describe('DocumentContextService', () => {
 
 			// context-changed should NOT fire because uri === activeContext.uri
 			expect(fired).toHaveLength(0);
+		});
+
+		it('passes slug from notebookDocuments to loadDocument for notebook-cell URIs', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const cellUri = vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#abc123');
+			const cellDoc = {
+				languageId: 'turtle',
+				uri: cellUri,
+				getText: () => '',
+			};
+			(vscode.window as any).activeTextEditor = { document: cellDoc };
+
+			// Set up a matching notebook with the cell and its slug metadata.
+			const cell = { document: cellDoc, metadata: { slug: 'my-data' } };
+			(vscode.workspace as any).notebookDocuments = [{
+				getCells: () => [cell],
+			}];
+
+			const ctx = createMockContext({ uri: cellUri, isLoaded: false, hasTokens: true });
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			await service.handleActiveEditorChanged();
+
+			expect((ctx as any).slug).toBe('my-data');
+
+			// Restore
+			(vscode.workspace as any).notebookDocuments = [];
 		});
 	});
 
@@ -1007,7 +1123,7 @@ describe('DocumentContextService', () => {
 	});
 
 	describe('loadDocument (vscode-notebook-cell scheme)', () => {
-		it('logs the document URI when loading a notebook cell', async () => {
+		it('does not log the document URI when loading a notebook cell', async () => {
 			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///nb.mnb#cell0';
 			const doc = {
@@ -1022,7 +1138,7 @@ describe('DocumentContextService', () => {
 
 			await service.loadDocument(doc);
 
-			expect(logSpy).toHaveBeenCalledWith(doc.uri);
+			expect(logSpy).not.toHaveBeenCalledWith(doc.uri);
 			logSpy.mockRestore();
 		});
 	});

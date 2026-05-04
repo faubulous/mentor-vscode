@@ -131,7 +131,7 @@ describe('WorkspaceIndexerService', () => {
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
 			await service.indexWorkspace();
 			expect(vscode.workspace.openNotebookDocument).toHaveBeenCalledWith(notebookUri);
-			expect(mockLoadDocument).toHaveBeenCalledWith(mockCell.document);
+			expect(mockLoadDocument).toHaveBeenCalledWith(mockCell.document, false, undefined);
 		});
 
 		it('should index SPARQL notebook cells even though they are not triple-source', async () => {
@@ -149,7 +149,7 @@ describe('WorkspaceIndexerService', () => {
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
 			await service.indexWorkspace();
 			// SPARQL cell must be indexed so its references map is populated for rename support
-			expect(mockLoadDocument).toHaveBeenCalledWith(sparqlCell.document);
+			expect(mockLoadDocument).toHaveBeenCalledWith(sparqlCell.document, false, undefined);
 		});
 
 		it('should skip unsupported-language notebook cells such as markdown', async () => {
@@ -190,9 +190,9 @@ describe('WorkspaceIndexerService', () => {
 			await service.indexWorkspace();
 			// Turtle (triple-source) and SPARQL (supported non-triple-source) are indexed; markdown is skipped
 			expect(mockLoadDocument).toHaveBeenCalledTimes(2);
-			expect(mockLoadDocument).toHaveBeenCalledWith(turtleCell.document);
-			expect(mockLoadDocument).toHaveBeenCalledWith(sparqlCell.document);
-			expect(mockLoadDocument).not.toHaveBeenCalledWith(markdownCell.document);
+			expect(mockLoadDocument).toHaveBeenCalledWith(turtleCell.document, false, undefined);
+			expect(mockLoadDocument).toHaveBeenCalledWith(sparqlCell.document, false, undefined);
+			expect(mockLoadDocument).not.toHaveBeenCalledWith(markdownCell.document, false, undefined);
 		});
 
 		it('should fire onDidFinishIndexing after indexing', async () => {
@@ -201,6 +201,38 @@ describe('WorkspaceIndexerService', () => {
 			service.onDidFinishIndexing(() => { fired = true; });
 			await service.indexWorkspace();
 			expect(fired).toBe(true);
+		});
+
+		it('should pass cell slug from metadata as the third argument to loadDocument', async () => {
+			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			mockWorkspaceFileService.files = [notebookUri];
+			mockIsSupportedNotebookFile.mockReturnValue(true);
+			const sluggedCell = {
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///test.mnb#cell1'), languageId: 'turtle' },
+				metadata: { slug: 'my-data' },
+			};
+			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
+				getCells: vi.fn(() => [sluggedCell]),
+			}));
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
+			await service.indexWorkspace();
+			expect(mockLoadDocument).toHaveBeenCalledWith(sluggedCell.document, false, 'my-data');
+		});
+
+		it('should pass undefined slug when cell metadata has no slug', async () => {
+			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			mockWorkspaceFileService.files = [notebookUri];
+			mockIsSupportedNotebookFile.mockReturnValue(true);
+			const noSlugCell = {
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///test.mnb#cell1'), languageId: 'turtle' },
+				metadata: {},
+			};
+			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
+				getCells: vi.fn(() => [noSlugCell]),
+			}));
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
+			await service.indexWorkspace();
+			expect(mockLoadDocument).toHaveBeenCalledWith(noSlugCell.document, false, undefined);
 		});
 	});
 

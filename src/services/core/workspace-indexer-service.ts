@@ -151,21 +151,10 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			}
 
 			try {
-				// Load the cell document to create its context
-				await this.contextService.loadDocument(cell.document);
-
-				// Propagate the cell slug to its document context so that graphIri
-				// uses the human-readable slug as the URI fragment instead of the
-				// opaque VS Code-assigned cell fragment.
+				// Load the cell document to create its context, passing the slug so that
+				// graphIri is slug-based from the very first loadTriples call.
 				const slug = cell.metadata?.slug as string | undefined;
-
-				if (slug) {
-					const ctx = this.contextService.contexts[cellUri];
-
-					if (ctx) {
-						ctx.slug = slug;
-					}
-				}
+				await this.contextService.loadDocument(cell.document, false, slug);
 			} catch (error) {
 				console.error(`Mentor: Failed to index notebook cell ${cellUri}:`, error);
 			}

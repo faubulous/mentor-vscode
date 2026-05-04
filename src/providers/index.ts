@@ -5,6 +5,7 @@ export * from './refactoring/workspace-uri-code-action-provider';
 export * from './refactoring/xsd-any-uri-code-action-provider';
 export * from './resource-definition-provider';
 export * from './resource-reference-provider';
+export * from './workspace-graph-definition-provider';
 export * from './resource-tooltip-provider';
 export * from './workspace-file-system-provider';
 export * from './workspace-uri-link-provider';

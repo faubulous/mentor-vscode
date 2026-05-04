@@ -16,6 +16,7 @@ vi.mock('tsyringe', () => ({
             return {
                 reasoner: storeControl.reasoner,
                 executeInference: vi.fn(),
+                deleteGraphs: vi.fn(),
                 dataFactory: {
                     namedNode: (iri: string) => ({ termType: 'NamedNode', value: iri }),
                     quad: (s: any, p: any, o: any, g: any) => ({ subject: s, predicate: p, object: o, graph: g }),
@@ -589,6 +590,35 @@ describe('TurtleDocument', () => {
             (container.resolve as any).mockImplementation(() => ({
                 reasoner: storeControl.reasoner,
                 executeInference: vi.fn(),
+                deleteGraphs: vi.fn(),
+                dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
+                add: vi.fn(),
+            }));
+        });
+
+        it('re-executes inference after loadTriples resets the flag', async () => {
+            const executeInference = vi.fn();
+            const deleteGraphs = vi.fn();
+            const { container } = await import('tsyringe');
+            (container.resolve as any).mockImplementation(() => ({
+                reasoner: { infer: vi.fn() },
+                executeInference,
+                deleteGraphs,
+                dataFactory: { namedNode: (v: string) => ({ termType: 'NamedNode', value: v }), quad: vi.fn() },
+                add: vi.fn(),
+            }));
+            const doc = makeDoc();
+            await doc.infer();
+            expect(executeInference).toHaveBeenCalledTimes(1);
+            // Simulate a slug update reload: loadTriples must reset the flag
+            await doc.loadTriples('');
+            await doc.infer();
+            expect(executeInference).toHaveBeenCalledTimes(2);
+            // Restore to default mock
+            (container.resolve as any).mockImplementation(() => ({
+                reasoner: storeControl.reasoner,
+                executeInference: vi.fn(),
+                deleteGraphs: vi.fn(),
                 dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
                 add: vi.fn(),
             }));

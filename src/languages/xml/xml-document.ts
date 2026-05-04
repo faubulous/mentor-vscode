@@ -269,6 +269,12 @@ export class XmlDocument extends DocumentContext {
 		try {
 			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 
+			// Delete old graphs to handle slug changes. loadFromXmlStream handles
+			// clearing the target graph itself via its clearGraph option.
+			if (this.graphs.length > 0) {
+				this.store.deleteGraphs([...this.graphs]);
+			}
+
 			// Initialize the graphs *before* trying to load the document so 
 			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;

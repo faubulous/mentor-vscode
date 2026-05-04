@@ -21,10 +21,10 @@ export class XmlTokenProvider {
 	protected registerForLanguage(language: string): vscode.Disposable[] {
 		return [
 			vscode.languages.registerCodeLensProvider({ language }, codelensProvider),
-			vscode.languages.registerCodeLensProvider({ language }, notebookSlugCodelensProvider),
 			vscode.languages.registerHoverProvider({ language }, hoverProvider),
 			vscode.languages.registerReferenceProvider({ language }, referenceProvider),
-			vscode.languages.registerRenameProvider({ language }, renameProvider)
+			vscode.languages.registerRenameProvider({ language }, renameProvider),
+			vscode.languages.registerCodeLensProvider({ language }, notebookSlugCodelensProvider),
 		];
 	}
 }

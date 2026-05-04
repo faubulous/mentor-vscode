@@ -334,22 +334,32 @@ export class DocumentContextService {
 	 * Load a text document into a document context.
 	 * @param document The text document to load.
 	 * @param forceReload Indicates whether a new context should be created for existing contexts.
+	 * @param slug Optional slug to assign to the context before triples are loaded. This ensures
+	 * the graph IRI uses the human-readable slug from the start (important for notebook cells).
 	 * @returns A promise that resolves to the document context or undefined if superseded/unsupported.
 	 */
-	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false): Promise<IDocumentContext | undefined> {
+	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false, slug?: string): Promise<IDocumentContext | undefined> {
 		if (!document || !this._documentFactory.supportedLanguages.has(document.languageId)) {
 			return;
 		}
 
 		const uri = document.uri.toString();
 
-		if (document.uri.scheme === 'vscode-notebook-cell') {
-			console.log(document.uri);
-		}
-
 		let context = this.contexts[uri];
 
 		if (context?.isLoaded && !forceReload) {
+			// If a slug is provided and differs from the current slug, update it now and
+			// trigger a reload so the triples are stored under the correct graph IRI.
+			// This handles the race where handleActiveEditorChanged loaded the cell without
+			// a slug before the workspace indexer ran.
+			if (slug !== undefined && context.slug !== slug) {
+				context.slug = slug;
+
+				this._reloadContextTriples(uri).catch(e => {
+					console.warn('Mentor: Failed to reload context after slug update:', e);
+				});
+			}
+
 			// Compute the inference graph on the document, if it does not exist.
 			context.infer();
 			return context;
@@ -368,6 +378,13 @@ export class DocumentContextService {
 
 			// Register context immediately so language client notification handlers can find it.
 			this.contexts[uri] = context;
+		}
+
+		// Set the slug before loading triples so that graphIri uses the human-readable
+		// slug as the URI fragment from the very first load (rather than the opaque
+		// VS Code-assigned cell fragment).
+		if (slug !== undefined) {
+			context.slug = slug;
 		}
 
 		const content = document.getText();
@@ -465,7 +482,24 @@ export class DocumentContextService {
 
 		if (uri === this.activeContext?.uri) return;
 
-		const context = await this.loadDocument(editor.document);
+		// For notebook cells, find the slug from the cell metadata so that the
+		// graph IRI uses the human-readable slug from the very first load.
+		let slug: string | undefined;
+
+		if (editor.document.uri.scheme === 'vscode-notebook-cell') {
+			const uriStr = editor.document.uri.toString();
+
+			for (const nb of vscode.workspace.notebookDocuments) {
+				const cell = nb.getCells().find(c => c.document.uri.toString() === uriStr);
+
+				if (cell) {
+					slug = cell.metadata?.slug as string | undefined;
+					break;
+				}
+			}
+		}
+
+		const context = await this.loadDocument(editor.document, false, slug);
 
 		if (context) {
 			this.activeContext = context;
@@ -518,7 +552,8 @@ export class DocumentContextService {
 		// Load all RDF cells in the notebook to ensure their graphs are created.
 		for (const cell of editor.notebook.getCells()) {
 			if (this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
-				await this.loadDocument(cell.document);
+				const slug = cell.metadata?.slug as string | undefined;
+				await this.loadDocument(cell.document, false, slug);
 			}
 		}
 	}

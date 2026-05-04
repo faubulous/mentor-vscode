@@ -82,12 +82,14 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		// It emits `<` as an LT token, then the URL fragments as separate tokens.
 		// Scan backwards to find that opening `<`.
 		const stopImages = new Set([';', '{', '}', '(', ')', '>']);
+
 		for (let i = tokenIndex - 1; i >= 0; i--) {
-			const img = context.tokens[i].image;
-			if (img === '<') {
+			const image = context.tokens[i].image;
+
+			if (image === '<') {
 				return i;
 			}
-			if (img.startsWith('<') || stopImages.has(img)) {
+			if (image.startsWith('<') || stopImages.has(image)) {
 				break;
 			}
 		}
@@ -114,13 +116,34 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		}
 	}
 
-	async getGraphIriCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): Promise<vscode.CompletionItem[]> {
-		const result = [];
+	/**
+	 * Collects graph IRIs from all indexed workspace documents and notebook cells.
+	 * Each context's `graphIri` is a portable `workspace:` URI (or the raw URI for
+	 * documents outside the workspace root). The current document is excluded.
+	 */
+	private getWorkspaceGraphUris(currentDocumentUri: vscode.Uri): string[] {
+		const selfUri = currentDocumentUri.toString();
+		const result: string[] = [];
 
-		// The IRI being typed may span multiple tokens when it is incomplete (no closing `>`).
-		// The lexer also skips characters it cannot tokenize (e.g. plain hostnames, path segments),
-		// so concatenating token images would produce an incomplete URL. Instead, read the raw
-		// document text from the opening `<` token through the current token.
+		for (const ctx of Object.values(this.contextService.contexts ?? {})) {
+			if (ctx.uri.toString() === selfUri) {
+				continue;
+			}
+
+			result.push(ctx.graphIri.toString());
+		}
+
+		return result;
+	}
+
+	/**
+	 * Reads the IRI text the user is currently typing from the raw document content.
+	 * Handles multi-token IRIs (incomplete, no closing `>`) by reading from the `<`
+	 * opening token through the current token.
+	 * @returns The typed IRI value (without `<`/`>`), the closing state, the opening
+	 *   token, and the end position — all needed to build replacement ranges.
+	 */
+	private _readTypedIri(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number) {
 		const iriOpenIndex = this.findIriOpenIndex(context, tokenIndex);
 		const iriOpenToken = context.tokens[iriOpenIndex];
 		const currentToken = context.tokens[tokenIndex];
@@ -129,6 +152,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		// endColumn is the last char (1-based), so endColumn (without -1) is the exclusive end in 0-based terms.
 		const iriStart = new vscode.Position(iriOpenToken.startLine! - 1, iriOpenToken.startColumn! - 1);
 		const iriEnd = new vscode.Position(currentToken.endLine! - 1, currentToken.endColumn!);
+
 		let value = document.getText(new vscode.Range(iriStart, iriEnd));
 
 		if (value.startsWith('<')) {
@@ -141,23 +165,113 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 			value = value.slice(0, -1);
 		}
 
-		const graphs = await this.connectionService.getGraphsForDocument(document.uri);
+		return { value, alreadyClosed, iriOpenToken, iriEnd };
+	}
 
-		for (const iri of graphs.filter(g => g.startsWith(value))) {
-			let label = iri.substring(value.length);
+	/**
+	 * Merges remote endpoint graph IRIs and workspace document/cell IRIs into a
+	 * single deduplicated list. Endpoint graphs come first.
+	 */
+	private async _mergeGraphUris(documentUri: vscode.Uri): Promise<string[]> {
+		const endpointGraphs = await this.connectionService.getGraphsForDocument(documentUri);
+		const workspaceGraphs = this.getWorkspaceGraphUris(documentUri);
 
-			// If the user has already typed a trigger character, we should 
-			// not include it in the completion item label as this would result 
-			// in duplication (e.g. 'workspace::' instead of 'ex:').
-			if (this.triggerCharacters.has(label[0])) {
-				label = label.slice(1);
+		const seen = new Set<string>();
+		const result: string[] = [];
+
+		for (const iri of [...endpointGraphs, ...workspaceGraphs]) {
+			if (!seen.has(iri)) {
+				seen.add(iri);
+				result.push(iri);
 			}
+		}
 
-			const item = new vscode.CompletionItem(label, vscode.CompletionItemKind.Reference);
-			item.detail = iri;
-			item.insertText = new vscode.SnippetString(alreadyClosed ? label : label + '>');
+		return result;
+	}
 
-			result.push(item);
+	/**
+	 * Builds a single completion item for a graph IRI candidate, or returns `null`
+	 * when the candidate does not match the typed value.
+	 *
+	 * Matching strategy:
+	 * - **Prefix match**: IRI starts with the typed value → label is the remaining suffix.
+	 * - **Substring match**: typed value is `workspace:///` + a search term that appears
+	 *   anywhere in the IRI path/fragment → label is the full IRI and the item carries a
+	 *   replacement range so the entire typed text is overwritten.
+	 */
+	private _buildGraphCompletionItem(
+		iri: string,
+		value: string,
+		alreadyClosed: boolean,
+		iriOpenToken: any,
+		iriEnd: vscode.Position,
+	): vscode.CompletionItem | null {
+		const workspaceScheme = 'workspace:///';
+		const substringTerm = value.startsWith(workspaceScheme) ? value.slice(workspaceScheme.length) : null;
+
+		const isPrefixMatch = iri.startsWith(value);
+		const isSubstringMatch =
+			!isPrefixMatch &&
+			substringTerm !== null &&
+			substringTerm.length > 0 &&
+			iri.startsWith(workspaceScheme) &&
+			iri.slice(workspaceScheme.length).includes(substringTerm);
+
+		if (!isPrefixMatch && !isSubstringMatch) {
+			return null;
+		}
+
+		let label: string;
+		let insertText: string;
+
+		if (isPrefixMatch) {
+			const suffix = iri.substring(value.length);
+
+			// Strip a leading ':' from the display label to avoid visual duplication
+			// when the user typed a namespace prefix (e.g. typed 'ex' → label ':Thing').
+			// Only ':' is stripped, never '/' — stripping '/' would corrupt URI paths.
+			// insertText always uses the full suffix so the inserted value is correct.
+			label = (suffix[0] === ':') ? suffix.slice(1) : suffix;
+			insertText = alreadyClosed ? suffix : suffix + '>';
+		} else {
+			// Substring match: replace everything the user typed with the full IRI.
+			label = iri;
+			insertText = alreadyClosed ? iri : iri + '>';
+		}
+
+		const item = new vscode.CompletionItem(label, vscode.CompletionItemKind.Reference);
+		item.insertText = new vscode.SnippetString(insertText);
+
+		// For workspace IRIs, set filterText to the path+fragment with '#' replaced by
+		// a space. VS Code treats spaces as word boundaries in its fuzzy scorer, so slug
+		// names after '#' (e.g. 'cell-1' in 'notebook.mnb#cell-1') become word starts
+		// and the user can type 'cell' to filter to that cell even though the label
+		// starts with the notebook filename.
+		if (iri.startsWith(workspaceScheme)) {
+			item.filterText = iri.slice(workspaceScheme.length).replace('#', ' ');
+		}
+
+		if (isSubstringMatch) {
+			// Replace the entire typed text (from after '<' to the current position).
+			// iriOpenToken.startColumn is 1-based; +0 gives us column of the char after '<'.
+			const contentStart = new vscode.Position(iriOpenToken.startLine! - 1, iriOpenToken.startColumn!);
+			item.range = new vscode.Range(contentStart, iriEnd);
+		}
+
+		return item;
+	}
+
+	async getGraphIriCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): Promise<vscode.CompletionItem[]> {
+		const { value, alreadyClosed, iriOpenToken, iriEnd } = this._readTypedIri(document, context, tokenIndex);
+		const graphs = await this._mergeGraphUris(document.uri);
+		const result: vscode.CompletionItem[] = [];
+
+		for (const iri of graphs) {
+			const item = this._buildGraphCompletionItem(iri, value, alreadyClosed, iriOpenToken, iriEnd);
+
+			if (item) {
+				result.push(item);
+			}
 		}
 
 		return result;

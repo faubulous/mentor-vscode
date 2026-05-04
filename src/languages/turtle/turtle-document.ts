@@ -134,13 +134,26 @@ export class TurtleDocument extends DocumentContext {
 	public override async loadTriples(data: string): Promise<void> {
 		try {
 			const store = container.resolve<Store>(ServiceToken.Store);
-			// Initialize the graphs *before* trying to load the document so 
-			// that they are initialized even when loading the document fails.
 			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 			const g = store.dataFactory.namedNode(graphUri);
 
+			// Capture old graph URIs before resetting (needed to clean up slug changes).
+			const oldGraphs = [...this.graphs];
+
+			// Initialize the graphs *before* trying to load the document so 
+			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
+
+			// Delete old graphs (handles slug changes and stale triples removed from the
+			// document). Done after resetting this.graphs so the invariant holds on error.
+			store.deleteGraphs([...oldGraphs, graphUri]);
+
+			// Reset inference flag so that infer() re-runs after each reload.
+			// This is essential when a slug update triggers a reload: the old inference
+			// graph (based on the opaque cell ID) has already been deleted above, and
+			// a fresh inference pass is needed to populate the slug-based graph.
+			this._inferenceExecuted = false;
 
 			// Only updates the existing graphs if the document was parsed successfully.
 			// Uses existing tokens that were set by the language server.

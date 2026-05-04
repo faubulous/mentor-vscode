@@ -32,6 +32,10 @@ export class NotebookCellSlugCodeLensProvider implements vscode.CodeLensProvider
 
 		// Refresh CodeLenses whenever any document context changes (slug may have been updated).
 		this._contextService.onDidChangeDocumentContext(() => this._onDidChangeCodeLenses.fire());
+
+		// Refresh CodeLenses when a notebook is opened so cells indexed in the background
+		// are reflected once the workspace indexer finishes.
+		vscode.workspace.onDidOpenNotebookDocument(() => this._onDidChangeCodeLenses.fire());
 	}
 
 	public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
@@ -41,8 +45,23 @@ export class NotebookCellSlugCodeLensProvider implements vscode.CodeLensProvider
 			return [];
 		}
 
+		// Prefer the slug from the indexed document context. When the workspace
+		// indexer has not yet run (e.g. on first render), fall back to the slug
+		// stored directly in the notebook cell's metadata so the CodeLens appears
+		// immediately without waiting for background indexing to complete.
 		const ctx = this._contextService.contexts[document.uri.toString()];
-		const slug = ctx?.slug;
+		let slug = ctx?.slug;
+
+		if (!slug) {
+			const uriStr = document.uri.toString();
+			for (const nb of vscode.workspace.notebookDocuments) {
+				const cell = nb.getCells().find(c => c.document.uri.toString() === uriStr);
+				if (cell) {
+					slug = cell.metadata?.slug as string | undefined;
+					break;
+				}
+			}
+		}
 
 		if (!slug) {
 			return [];
@@ -52,7 +71,7 @@ export class NotebookCellSlugCodeLensProvider implements vscode.CodeLensProvider
 
 		return [
 			new vscode.CodeLens(range, {
-				title: `$(tag)\u00A0#${slug}`,
+				title: `#${slug}`,
 				tooltip: 'Click to rename this cell\'s slug (graph URI fragment)',
 				command: 'mentor.command.editNotebookCellSlug',
 				arguments: [document.uri],
