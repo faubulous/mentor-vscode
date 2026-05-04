@@ -417,4 +417,56 @@ describe('WorkspaceUri', () => {
 			expect(wsUri.toString()).toBe('workspace:///My%20Ontologies/notebook.mnb#cell3');
 		});
 	});
+
+	describe('fragmentOverride (notebook cell slugs)', () => {
+		it('uses the slug as the fragment instead of the URI fragment', () => {
+			const cellUri = vscode.Uri.parse('vscode-notebook-cell:/w/notebook.mnb#opaqueCell7');
+			const wsUri = WorkspaceUri.toWorkspaceUri(cellUri, 'my-ontology')!;
+
+			expect(wsUri.scheme).toBe('workspace');
+			expect(wsUri.path).toBe('/notebook.mnb');
+			expect(wsUri.fragment).toBe('my-ontology');
+			expect(wsUri.toString()).toBe('workspace:///notebook.mnb#my-ontology');
+		});
+
+		it('uses the slug as the fragment for a file: URI with an existing fragment', () => {
+			const fileUri = vscode.Uri.parse('file:///w/notebook.mnb#opaqueCell7');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri, 'cell-3')!;
+
+			expect(wsUri.fragment).toBe('cell-3');
+			expect(wsUri.toString()).toBe('workspace:///notebook.mnb#cell-3');
+		});
+
+		it('uses the slug as the fragment for a file: URI with no existing fragment', () => {
+			const fileUri = vscode.Uri.parse('file:///w/data.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri, 'my-dataset')!;
+
+			expect(wsUri.fragment).toBe('my-dataset');
+			expect(wsUri.toString()).toBe('workspace:///data.ttl#my-dataset');
+		});
+
+		it('overrides the fragment even when an existing workspace: URI already has one', () => {
+			const wsUriWithOldFragment = vscode.Uri.parse('workspace:///notebook.mnb#old-slug');
+			const wsUri = WorkspaceUri.toWorkspaceUri(wsUriWithOldFragment, 'new-slug')!;
+
+			expect(wsUri.fragment).toBe('new-slug');
+			expect(wsUri.toString()).toBe('workspace:///notebook.mnb#new-slug');
+		});
+
+		it('does not add a fragment when slug is undefined (preserves normal behaviour)', () => {
+			const cellUri = vscode.Uri.parse('vscode-notebook-cell:/w/notebook.mnb#opaqueCell7');
+			const wsUri = WorkspaceUri.toWorkspaceUri(cellUri)!;
+
+			expect(wsUri.fragment).toBe('opaqueCell7');
+		});
+
+		it('produces a canonical workspace:/// URI with a slug fragment', () => {
+			const cellUri = vscode.Uri.parse('vscode-notebook-cell:/w/notebook.mnb#opaqueCell99');
+			const wsUri = WorkspaceUri.toWorkspaceUri(cellUri, 'cell-5')!;
+
+			expect(wsUri.toString()).not.toMatch(/^workspace:\/[^/]/);
+			expect(wsUri.toString()).toBe('workspace:///notebook.mnb#cell-5');
+		});
+	});
 });
+
