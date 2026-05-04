@@ -28,6 +28,7 @@ beforeEach(() => {
 	mockDocumentFactory = {
 		isSupportedNotebookFile: (...args: any[]) => mockIsSupportedNotebookFile(...args),
 		isTripleSourceLanguage: (...args: any[]) => mockIsTripleSourceLanguage(...args),
+		supportedLanguages: new Set(['turtle', 'n3', 'ntriples', 'nquads', 'trig', 'sparql', 'xml']),
 	};
 
 	mockContextService = {
@@ -131,6 +132,67 @@ describe('WorkspaceIndexerService', () => {
 			await service.indexWorkspace();
 			expect(vscode.workspace.openNotebookDocument).toHaveBeenCalledWith(notebookUri);
 			expect(mockLoadDocument).toHaveBeenCalledWith(mockCell.document);
+		});
+
+		it('should index SPARQL notebook cells even though they are not triple-source', async () => {
+			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			mockWorkspaceFileService.files = [notebookUri];
+			mockIsSupportedNotebookFile.mockReturnValue(true);
+			// SPARQL is not a triple-source language
+			mockIsTripleSourceLanguage.mockReturnValue(false);
+			const sparqlCell = {
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///test.mnb#cell1'), languageId: 'sparql' },
+			};
+			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
+				getCells: vi.fn(() => [sparqlCell]),
+			}));
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
+			await service.indexWorkspace();
+			// SPARQL cell must be indexed so its references map is populated for rename support
+			expect(mockLoadDocument).toHaveBeenCalledWith(sparqlCell.document);
+		});
+
+		it('should skip unsupported-language notebook cells such as markdown', async () => {
+			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			mockWorkspaceFileService.files = [notebookUri];
+			mockIsSupportedNotebookFile.mockReturnValue(true);
+			mockIsTripleSourceLanguage.mockReturnValue(false);
+			const markdownCell = {
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///test.mnb#cell2'), languageId: 'markdown' },
+			};
+			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
+				getCells: vi.fn(() => [markdownCell]),
+			}));
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
+			await service.indexWorkspace();
+			// Markdown is not a supported language — it must be skipped
+			expect(mockLoadDocument).not.toHaveBeenCalled();
+		});
+
+		it('should index triple-source cells and SPARQL cells together in the same notebook', async () => {
+			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			mockWorkspaceFileService.files = [notebookUri];
+			mockIsSupportedNotebookFile.mockReturnValue(true);
+			const turtleCell = {
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///test.mnb#cell1'), languageId: 'turtle' },
+			};
+			const sparqlCell = {
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///test.mnb#cell2'), languageId: 'sparql' },
+			};
+			const markdownCell = {
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///test.mnb#cell3'), languageId: 'markdown' },
+			};
+			mockIsTripleSourceLanguage.mockImplementation((lang: string) => lang === 'turtle');
+			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
+				getCells: vi.fn(() => [turtleCell, sparqlCell, markdownCell]),
+			}));
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
+			await service.indexWorkspace();
+			// Turtle (triple-source) and SPARQL (supported non-triple-source) are indexed; markdown is skipped
+			expect(mockLoadDocument).toHaveBeenCalledTimes(2);
+			expect(mockLoadDocument).toHaveBeenCalledWith(turtleCell.document);
+			expect(mockLoadDocument).toHaveBeenCalledWith(sparqlCell.document);
+			expect(mockLoadDocument).not.toHaveBeenCalledWith(markdownCell.document);
 		});
 
 		it('should fire onDidFinishIndexing after indexing', async () => {

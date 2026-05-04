@@ -135,7 +135,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		const notebook = await vscode.workspace.openNotebookDocument(notebookUri);
 
 		for (const cell of notebook.getCells()) {
-			if (!this.documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
+			const lang = cell.document.languageId;
+
+			// Index triple-source cells (Turtle, TriG, etc.) for RDF graph data, and
+			// also index supported non-triple-source cells (e.g. SPARQL) so that their
+			// token-based `references` maps are populated for cross-file rename support.
+			if (!this.documentFactory.isTripleSourceLanguage(lang) && !this.documentFactory.supportedLanguages.has(lang)) {
 				continue;
 			}
 
