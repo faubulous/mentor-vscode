@@ -7,7 +7,10 @@ import { IDocumentContextService } from '@src/services/document';
 import { any } from '@src/utilities';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { DefinitionTreeLayout } from '@src/services/core/settings-service';
+import { SparqlDocument } from '@src/languages/sparql/sparql-document';
+import { SparqlQuerySplitter } from '@src/languages/sparql/services/sparql-query-splitter';
 import { DefinitionTreeNode } from './definition-tree-node';
+import { QueryNode } from './nodes/queries/query-node';
 import { ClassesNode } from './nodes/classes/classes-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
 import { IndividualsNode } from './nodes/individuals/individuals-node';
@@ -72,6 +75,7 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		this.settings.onDidChange("view.showReferences", () => this.refresh());
 		this.settings.onDidChange("view.showPropertyTypes", () => this.refresh());
 		this.settings.onDidChange("view.showIndividualTypes", () => this.refresh());
+		this.settings.onDidChange("view.showVariablesFolder", () => this.refresh());
 		this.settings.onDidChange("view.activeLanguage", () => this.refresh());
 	}
 
@@ -101,11 +105,15 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		let children: DefinitionTreeNode[];
 
 		if (!node) {
-			const layout = this.settings.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
+			if (this.document instanceof SparqlDocument) {
+				children = this._getSparqlRootNodes();
+			} else {
+				const layout = this.settings.get<DefinitionTreeLayout>('view.definitionTree.defaultLayout');
 
-			children = layout === DefinitionTreeLayout.ByType
-				? this.getRootNodes()
-				: this.getRootNodesWithSources() as DefinitionTreeNode[];
+				children = layout === DefinitionTreeLayout.ByType
+					? this.getRootNodes()
+					: this.getRootNodesWithSources() as DefinitionTreeNode[];
+			}
 		} else {
 			children = node.getChildren() as DefinitionTreeNode[];
 		}
@@ -143,6 +151,34 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		}
 
 		return undefined;
+	}
+
+	/**
+	 * Build root nodes for a SPARQL document by parsing its queries structurally.
+	 */
+	private _getSparqlRootNodes(): DefinitionTreeNode[] {
+		if (!this.document) {
+			return [];
+		}
+
+		const vsDoc = vscode.workspace.textDocuments.find(
+			d => d.uri.toString() === this.document!.uri.toString()
+		);
+		const text = vsDoc?.getText() ?? '';
+
+		const queries = new SparqlQuerySplitter().splitFile(text);
+
+		return queries.map((info, i) => {
+			const nodeId  = `mentor:query:${info.startLine}`;
+			const nodeUri = `mentor:query:${info.startLine}`;
+			const node = new QueryNode(this.document!, nodeId, nodeUri, info);
+
+			if (i === 0) {
+				node.initialCollapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+			}
+
+			return node;
+		});
 	}
 
 	protected createRootNode<NodeType extends DefinitionTreeNode>(

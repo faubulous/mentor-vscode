@@ -720,6 +720,18 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.showVariablesFolder",
+        "title": "Show Variables in Folder",
+        "icon": "$(rdf-tree)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.hideVariablesFolder",
+        "title": "Show Variables Flat",
+        "icon": "$(rdf-list)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.setNotebookConnection",
         "title": "Connection",
         "icon": "$(database)",
@@ -1019,6 +1031,16 @@
         {
           "command": "mentor.command.hideIndividualTypes",
           "when": "view.showIndividualTypes === true && viewItem == individuals",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.command.showVariablesFolder",
+          "when": "view.showVariablesFolder === false && viewItem == query",
+          "group": "inline"
+        },
+        {
+          "command": "mentor.command.hideVariablesFolder",
+          "when": "view.showVariablesFolder === true && viewItem == query",
           "group": "inline"
         }
       ],

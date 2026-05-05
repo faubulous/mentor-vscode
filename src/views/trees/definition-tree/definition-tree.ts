@@ -68,6 +68,7 @@ export class DefinitionTree implements TreeView {
 		vscode.commands.executeCommand("setContext", "view.showReferences", showReferences);
 		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", true);
 		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", true);
+		vscode.commands.executeCommand("setContext", "view.showVariablesFolder", true);
 
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(...disposables);
