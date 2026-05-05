@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { describe, it, expect, vi } from 'vitest';
 import { ShaclDiagnosticsMapper } from '@src/services/validation/shacl-diagnostics-mapper';
 import type { ShaclValidationResult, ShaclValidationResultEntry } from '@src/services/validation/shacl-validation-service';
+import type { QuadContext } from '@faubulous/mentor-rdf-parsers';
 
 vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
 
@@ -50,6 +51,23 @@ function makeResult(entries: ShaclValidationResultEntry[]): ShaclValidationResul
 
 describe('ShaclDiagnosticsMapper', () => {
 	const mapper = new ShaclDiagnosticsMapper();
+
+	function makeToken(startLine: number, startColumn: number, endLine: number, endColumn: number, image: string) {
+		return { startLine, startColumn, endLine, endColumn, image, tokenType: { name: 'PNAME_LN' }, tokenTypeIdx: 0 } as any;
+	}
+
+	function makeQuadContext(subjectIri: string, predicateIri: string, objectIri: string, objectToken: any): QuadContext {
+		return {
+			subject: { termType: 'NamedNode', value: subjectIri, equals: () => false },
+			predicate: { termType: 'NamedNode', value: predicateIri, equals: () => false },
+			object: { termType: 'NamedNode', value: objectIri, equals: () => false },
+			graph: { termType: 'DefaultGraph', value: '', equals: () => false },
+			subjectToken: makeToken(1, 1, 1, 10, 'ex:Subject'),
+			predicateToken: makeToken(1, 12, 1, 20, 'ex:predicate'),
+			objectToken,
+			equals: () => false,
+		} as any;
+	}
 
 	describe('_resolveRange — basic fallback cascade', () => {
 		it('highlights the value IRI when available and found', () => {
@@ -265,6 +283,329 @@ describe('ShaclDiagnosticsMapper', () => {
 			expect(diagnostics[0].message).toContain('MinCountConstraintComponent');
 			expect(diagnostics[0].message).toContain('comment');
 			expect(diagnostics[0].message).toContain('http://example.org/BadValue');
+		});
+	});
+
+	describe('_resolveRange — QuadContext step 0', () => {
+		it('uses objectToken from QuadContext when focusNode+path+value match', () => {
+			// objectToken at 1-based line 8, col 18-35 → 0-based line 7, col 17-35
+			const objectToken = makeToken(8, 18, 8, 35, 'dbr:Dorothy_Comingore');
+			const quadContexts = [makeQuadContext(
+				'http://dbpedia.org/resource/Citizen_Kane',
+				'http://dbpedia.org/ontology/starring',
+				'http://dbpedia.org/resource/Dorothy_Comingore',
+				objectToken,
+			)];
+			const context = makeContext({
+				subjects: { 'http://dbpedia.org/resource/Citizen_Kane': [range(4, 0, 4, 30)] },
+				references: {
+					'http://dbpedia.org/ontology/starring': [range(4, 17, 4, 29)],
+				},
+			});
+			const entry = makeEntry({
+				focusNode: 'http://dbpedia.org/resource/Citizen_Kane',
+				path: 'http://dbpedia.org/ontology/starring',
+				value: 'http://dbpedia.org/resource/Dorothy_Comingore',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context, quadContexts);
+
+			expect(diagnostics[0].range.start.line).toBe(7);
+			expect(diagnostics[0].range.start.character).toBe(17);
+		});
+
+		it('falls back to references lookup when quadContexts present but no match', () => {
+			const objectToken = makeToken(8, 18, 8, 35, 'dbr:Dorothy_Comingore');
+			const quadContexts = [makeQuadContext(
+				'http://example.org/OtherSubject',
+				'http://dbpedia.org/ontology/starring',
+				'http://dbpedia.org/resource/Dorothy_Comingore',
+				objectToken,
+			)];
+			const context = makeContext({
+				subjects: { 'http://dbpedia.org/resource/Citizen_Kane': [range(4, 0, 4, 30)] },
+				references: {
+					'http://dbpedia.org/resource/Dorothy_Comingore': [range(4, 32, 4, 54)],
+				},
+			});
+			const entry = makeEntry({
+				focusNode: 'http://dbpedia.org/resource/Citizen_Kane',
+				path: 'http://dbpedia.org/ontology/starring',
+				value: 'http://dbpedia.org/resource/Dorothy_Comingore',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context, quadContexts);
+
+			// Falls back to the references lookup (line 4), not the unmatched objectToken (line 7)
+			expect(diagnostics[0].range.start.line).toBe(4);
+		});
+
+		it('reproduces lab_1_sh_class.ttl: same subject on two lines, value outside heuristic window', () => {
+			// Citizen_Kane dbo:starring dbr:Orson_Welles .        <- line 4 (0-based)
+			// Orson_Welles rdf:type dbo:Actor .                   <- line 5
+			// Citizen_Kane dbo:starring dbr:Dorothy_Comingore .   <- line 7
+			// Dorothy_Comingore rdf:type dbo:Director .           <- line 8
+			//
+			// Without QuadContext: window is [4,5), Dorothy_Comingore is outside → wrong predicate highlighted
+			// With QuadContext: objectToken at line 7 → correct
+			const objectToken = makeToken(8, 18, 8, 39, 'dbr:Dorothy_Comingore');
+			const quadContexts = [
+				makeQuadContext(
+					'http://dbpedia.org/resource/Citizen_Kane',
+					'http://dbpedia.org/ontology/starring',
+					'http://dbpedia.org/resource/Orson_Welles',
+					makeToken(5, 18, 5, 30, 'dbr:Orson_Welles'),
+				),
+				makeQuadContext(
+					'http://dbpedia.org/resource/Citizen_Kane',
+					'http://dbpedia.org/ontology/starring',
+					'http://dbpedia.org/resource/Dorothy_Comingore',
+					objectToken,
+				),
+			];
+			const context = makeContext({
+				subjects: {
+					'http://dbpedia.org/resource/Citizen_Kane': [range(4, 0, 4, 14)],
+					'http://dbpedia.org/resource/Orson_Welles': [range(5, 0, 5, 14)],
+					'http://dbpedia.org/resource/Dorothy_Comingore': [range(8, 0, 8, 14)],
+				},
+				references: {
+					'http://dbpedia.org/ontology/starring': [range(4, 16, 4, 29), range(7, 16, 7, 29)],
+					'http://dbpedia.org/resource/Dorothy_Comingore': [range(7, 31, 7, 52), range(8, 0, 8, 21)],
+				},
+			});
+			const entry = makeEntry({
+				focusNode: 'http://dbpedia.org/resource/Citizen_Kane',
+				path: 'http://dbpedia.org/ontology/starring',
+				value: 'http://dbpedia.org/resource/Dorothy_Comingore',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context, quadContexts);
+
+			// With QuadContext: highlights the objectToken at line 7 (0-based)
+			expect(diagnostics[0].range.start.line).toBe(7);
+
+			// Without QuadContext: heuristic window [4,5) misses Dorothy_Comingore and falls back
+			// to the first dbo:starring at line 4 — wrong predicate on wrong line
+			const diagnosticsNoQC = mapper.mapToDiagnostics(makeResult([entry]), context);
+			expect(diagnosticsNoQC[0].range.start.line).toBe(4);
+		});
+	});
+
+	describe('constraint component scenarios', () => {
+		// -----------------------------------------------------------------------
+		// Group A: both sh:resultPath (path) and sh:value are present.
+		// Step 0 (QuadContext) highlights the exact object token.
+		// -----------------------------------------------------------------------
+
+		it('DatatypeConstraintComponent: literal value with QuadContext → highlights the literal object token', () => {
+			// Literal values are NOT indexed in context.references, so Step 1 always misses.
+			// With a QuadContext, Step 0 matches on qc.object.value (the lexical form)
+			// and returns the exact token range from the source file.
+			const objectToken = makeToken(6, 14, 6, 25, '"twenty two"');
+			const qc = makeQuadContext(
+				'http://example.org/Bob',
+				'http://example.org/age',
+				'twenty two',
+				objectToken,
+			);
+			(qc as any).object = { termType: 'Literal', value: 'twenty two', equals: () => false };
+			const quadContexts = [qc];
+
+			const context = makeContext({
+				subjects: { 'http://example.org/Bob': [range(5, 0, 5, 9)] },
+				references: { 'http://example.org/age': [range(6, 4, 6, 13)] },
+			});
+			const entry = makeEntry({
+				focusNode: 'http://example.org/Bob',
+				path: 'http://example.org/age',
+				value: 'twenty two',
+				constraintComponent: 'http://www.w3.org/ns/shacl#DatatypeConstraintComponent',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context, quadContexts);
+
+			// 1-based line 6, col 14 → 0-based line 5, col 13
+			expect(diagnostics[0].range.start.line).toBe(5);
+			expect(diagnostics[0].range.start.character).toBe(13);
+		});
+
+		it('DatatypeConstraintComponent: literal value without QuadContext → falls back to predicate', () => {
+			// Literals are not in context.references, so Step 1 always misses for literal values.
+			// Without a QuadContext, Step 2 (predicate) is the next-best position.
+			const context = makeContext({
+				subjects: { 'http://example.org/Bob': [range(5, 0, 5, 9)] },
+				references: { 'http://example.org/age': [range(6, 4, 6, 13)] },
+			});
+			const entry = makeEntry({
+				focusNode: 'http://example.org/Bob',
+				path: 'http://example.org/age',
+				value: 'twenty two',
+				constraintComponent: 'http://www.w3.org/ns/shacl#DatatypeConstraintComponent',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context);
+
+			// Step 1 misses (literal not in references), Step 2 finds the predicate at line 6.
+			expect(diagnostics[0].range.start.line).toBe(6);
+		});
+
+		it('ClosedConstraintComponent: disallowed predicate + object IRI, QuadContext match → highlights disallowed object', () => {
+			// sh:ClosedConstraintComponent always populates sh:resultPath = disallowed predicate
+			// and sh:value = the disallowed object (guaranteed by the SHACL spec).
+			// With a QuadContext, Step 0 highlights the object token instead of the predicate.
+			const objectToken = makeToken(4, 22, 4, 36, 'ex:birthDate_value');
+			const quadContexts = [makeQuadContext(
+				'http://example.org/Bob',
+				'http://example.org/birthDate',
+				'http://example.org/birthDate_value',
+				objectToken,
+			)];
+			const context = makeContext({
+				subjects: { 'http://example.org/Bob': [range(3, 0, 3, 9)] },
+				references: {
+					'http://example.org/birthDate': [range(4, 4, 4, 20)],
+				},
+			});
+			const entry = makeEntry({
+				focusNode: 'http://example.org/Bob',
+				path: 'http://example.org/birthDate',
+				value: 'http://example.org/birthDate_value',
+				constraintComponent: 'http://www.w3.org/ns/shacl#ClosedConstraintComponent',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context, quadContexts);
+
+			// 1-based line 4, col 22 → 0-based line 3, col 21
+			expect(diagnostics[0].range.start.line).toBe(3);
+			expect(diagnostics[0].range.start.character).toBe(21);
+		});
+
+		// -----------------------------------------------------------------------
+		// Group B: sh:resultPath is present but sh:value is absent.
+		// The engine cannot supply a value because the violation concerns a missing
+		// or absent triple (e.g. sh:minCount, sh:hasValue).
+		// -----------------------------------------------------------------------
+
+		it('HasValueConstraintComponent: no value, predicate present in block → highlights predicate', () => {
+			// sh:HasValueConstraintComponent: the required value is absent so no sh:value is produced.
+			// Step 0 is bypassed (no value), Step 1 is bypassed (no value).
+			// Step 2 finds the predicate token in the focus node's block.
+			const context = makeContext({
+				subjects: { 'http://example.org/Alice': [range(8, 0, 8, 30)] },
+				references: { 'http://example.org/alumniOf': [range(9, 4, 9, 20)] },
+			});
+			const entry = makeEntry({
+				focusNode: 'http://example.org/Alice',
+				path: 'http://example.org/alumniOf',
+				value: undefined,
+				constraintComponent: 'http://www.w3.org/ns/shacl#HasValueConstraintComponent',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context);
+
+			expect(diagnostics[0].range.start.line).toBe(9);
+		});
+
+		it('MinCountConstraintComponent: no value, predicate completely absent → highlights focus node', () => {
+			// When the required property was never stated (sh:minCount violation with 0 values),
+			// sh:value is absent and there is no reference to the predicate in the document.
+			// Step 3 falls back to the focus node position.
+			const context = makeContext({
+				subjects: { 'http://example.org/Bob': [range(15, 0, 15, 30)] },
+				// No references entry for the required property.
+			});
+			const entry = makeEntry({
+				focusNode: 'http://example.org/Bob',
+				path: 'http://example.org/requiredProp',
+				value: undefined,
+				constraintComponent: 'http://www.w3.org/ns/shacl#MinCountConstraintComponent',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context);
+
+			expect(diagnostics[0].range.start.line).toBe(15);
+		});
+
+		// -----------------------------------------------------------------------
+		// Node-level constraint components (no sh:resultPath, no sh:value).
+		// Applied to node shapes, these produce results without a property path.
+		// -----------------------------------------------------------------------
+
+		it('node-level logical constraint with no path and no value → highlights focus node', () => {
+			// sh:AndConstraintComponent / sh:OrConstraintComponent applied to a node shape
+			// produce a result with no sh:resultPath (not a property shape constraint).
+			// Steps 0–2 are all bypassed; Step 3 highlights the focus node.
+			const context = makeContext({
+				subjects: { 'http://example.org/FocusNode': [range(20, 0, 20, 40)] },
+			});
+			const entry = makeEntry({
+				focusNode: 'http://example.org/FocusNode',
+				path: undefined,
+				value: undefined,
+				constraintComponent: 'http://www.w3.org/ns/shacl#AndConstraintComponent',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context);
+
+			expect(diagnostics[0].range.start.line).toBe(20);
+		});
+
+		it('complex property path: path is undefined but value IRI is in focus node block → highlights value', () => {
+			// When sh:path is a non-predicate path (e.g. a sequence path), _mapResults cannot
+			// extract a single predicate IRI, leaving entry.path undefined.
+			// Step 0 is bypassed (needs both path and value), but Step 1 still looks up
+			// the value IRI in context.references using the focus-node-anchored window.
+			const context = makeContext({
+				subjects: {
+					'http://example.org/FocusNode': [range(10, 0, 10, 40)],
+					'http://example.org/OtherNode': [range(20, 0, 20, 40)],
+				},
+				references: {
+					// Value appears within the focus node's block (between lines 10 and 20).
+					'http://example.org/BadValue': [range(12, 4, 12, 30)],
+				},
+			});
+			const entry = makeEntry({
+				focusNode: 'http://example.org/FocusNode',
+				path: undefined,
+				value: 'http://example.org/BadValue',
+				constraintComponent: 'http://www.w3.org/ns/shacl#NodeConstraintComponent',
+			});
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult([entry]), context);
+
+			// Step 0 skipped (no path), Step 1 finds the value reference at line 12.
+			expect(diagnostics[0].range.start.line).toBe(12);
+		});
+
+		// -----------------------------------------------------------------------
+		// Iteration behaviour.
+		// -----------------------------------------------------------------------
+
+		it('produces one diagnostic per result entry', () => {
+			const context = makeContext({
+				subjects: {
+					'http://example.org/Alice': [range(5, 0, 5, 20)],
+					'http://example.org/Bob': [range(10, 0, 10, 20)],
+				},
+			});
+			const entries = [
+				makeEntry({ focusNode: 'http://example.org/Alice' }),
+				makeEntry({ focusNode: 'http://example.org/Bob' }),
+			];
+
+			const diagnostics = mapper.mapToDiagnostics(makeResult(entries), context);
+
+			expect(diagnostics).toHaveLength(2);
+			expect(diagnostics[0].range.start.line).toBe(5);
+			expect(diagnostics[1].range.start.line).toBe(10);
+		});
+
+		it('returns no diagnostics when the validation result set is empty', () => {
+			const diagnostics = mapper.mapToDiagnostics(makeResult([]), makeContext());
+
+			expect(diagnostics).toHaveLength(0);
 		});
 	});
 });

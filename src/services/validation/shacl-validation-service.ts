@@ -4,7 +4,9 @@ import { DatasetCore, Quad, Term } from '@rdfjs/types';
 import { RdfStore } from 'rdf-stores';
 import { Validator } from 'shacl-engine';
 import { container } from 'tsyringe';
-import { Store } from '@faubulous/mentor-rdf';
+import { _RDF, _SH, _XSD, Store } from '@faubulous/mentor-rdf';
+import { QuadContext } from '@faubulous/mentor-rdf-parsers';
+import { TurtleDocument } from '@src/languages';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
@@ -39,17 +41,29 @@ class StoreDatasetView implements DatasetCore {
 
 	get size(): number {
 		let n = 0;
-		for (const _ of this) n++;
+
+		for (const _ of this) {
+			n++;
+		}
+
 		return n;
 	}
 
-	add(_quad: Quad): this { return this; }
-	delete(_quad: Quad): this { return this; }
+	add(_quad: Quad): this {
+		return this;
+	}
+
+	delete(_quad: Quad): this {
+		return this;
+	}
 
 	has(quad: Quad): boolean {
 		for (const q of this) {
-			if (q.equals(quad)) return true;
+			if (q.equals(quad)) {
+				return true;
+			}
 		}
+
 		return false;
 	}
 
@@ -57,6 +71,7 @@ class StoreDatasetView implements DatasetCore {
 		const graphUris = g != null
 			? (this._graphUris.includes(g.value) ? [g.value] : [])
 			: this._graphUris as string[];
+			
 		return new StoreDatasetView(this._store, graphUris, s ?? null, p ?? null, o ?? null);
 	}
 
@@ -92,11 +107,19 @@ const rdfFactory = {
  * Result of a SHACL validation operation.
  */
 export interface ShaclValidationResult {
-	/** Whether the data conforms to all shapes. */
+	/**
+	 * Whether the data conforms to all shapes.
+	 */
 	conforms: boolean;
-	/** The validation report as an RDF dataset. */
+
+	/**
+	 * The validation report as an RDF dataset.
+	 */
 	reportDataset: DatasetCore;
-	/** Individual validation results. */
+
+	/**
+	 * Individual validation results.
+	 */
 	results: ShaclValidationResultEntry[];
 }
 
@@ -104,19 +127,39 @@ export interface ShaclValidationResult {
  * An individual SHACL validation result entry.
  */
 export interface ShaclValidationResultEntry {
-	/** The focus node that was validated. */
+	/** 
+	 * The focus node that was validated.
+	 */
 	focusNode: string;
-	/** The severity of the violation (sh:Violation, sh:Warning, sh:Info). */
+
+	/**
+	 * The severity of the violation (sh:Violation, sh:Warning, sh:Info).
+	 */
 	severity: string;
-	/** The constraint component that triggered the result. */
+
+	/**
+	 * The constraint component that triggered the result.
+	 */
 	constraintComponent: string;
-	/** The result message(s). */
+
+	/**
+	 * The result message(s).
+	 */
 	messages: string[];
-	/** The result path (property), if applicable. */
+
+	/**
+	 * The result path (property), if applicable.
+	 */
 	path?: string;
-	/** The value that caused the violation, if applicable. */
+
+	/**
+	 * The value that caused the violation, if applicable.
+	 */
 	value?: string;
-	/** The source shape URI. */
+
+	/**
+	 * The source shape URI.
+	 */
 	sourceShape: string;
 }
 
@@ -188,6 +231,7 @@ export class ShaclValidationService implements vscode.Disposable {
 
 		if (!context) {
 			vscode.window.showInformationMessage('No document context available. Please open the document first.');
+
 			return undefined;
 		}
 
@@ -195,6 +239,7 @@ export class ShaclValidationService implements vscode.Disposable {
 
 		if (shapeGraphUris.length === 0) {
 			vscode.window.showInformationMessage('No SHACL shape files configured for this document.');
+
 			return undefined;
 		}
 
@@ -231,12 +276,16 @@ export class ShaclValidationService implements vscode.Disposable {
 
 			// Cache and publish diagnostics
 			this._lastResults.set(documentUri.toString(), result);
-			this._publishDiagnostics(documentUri, context, result);
+			const quadContexts = context instanceof TurtleDocument ? context.getQuadContexts() : undefined;
+
+			this._publishDiagnostics(documentUri, context, result, quadContexts);
+
 			this._onDidValidate.fire(documentUri);
 
 			return result;
 		} catch (error) {
 			vscode.window.showErrorMessage(`SHACL validation failed: ${error}`);
+
 			return undefined;
 		} finally {
 			const elapsedMs = Date.now() - statusBarMessageStartTime;
@@ -284,15 +333,19 @@ export class ShaclValidationService implements vscode.Disposable {
 		for (const r of result.results) {
 			lines.push(`  Focus Node: ${r.focusNode}`);
 			lines.push(`  Severity:   ${this._severityLabel(r.severity)}`);
+
 			if (r.path) {
 				lines.push(`  Path:       ${r.path}`);
 			}
+
 			for (const msg of r.messages) {
 				lines.push(`  Message:    ${msg}`);
 			}
+
 			if (r.value) {
 				lines.push(`  Value:      ${r.value}`);
 			}
+
 			lines.push(`  Shape:      ${r.sourceShape}`);
 			lines.push('');
 		}
@@ -312,7 +365,6 @@ export class ShaclValidationService implements vscode.Disposable {
 
 		// Use the store's serialization capabilities to write the report dataset as Turtle.
 		const tempStore = new Store();
-
 		const tempGraphUri = 'urn:shacl:report';
 
 		for (const q of result.reportDataset) {
@@ -320,9 +372,9 @@ export class ShaclValidationService implements vscode.Disposable {
 		}
 
 		return tempStore.serializeGraph(tempGraphUri, 'text/turtle', undefined, {
-			'sh': 'http://www.w3.org/ns/shacl#',
-			'xsd': 'http://www.w3.org/2001/XMLSchema#',
-			'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+			'sh': _SH,
+			'xsd': _XSD,
+			'rdf': _RDF
 		});
 	}
 
@@ -338,8 +390,8 @@ export class ShaclValidationService implements vscode.Disposable {
 		}));
 	}
 
-	private _publishDiagnostics(documentUri: vscode.Uri, context: IDocumentContext, result: ShaclValidationResult): void {
-		const diagnostics = this._diagnosticsMapper.mapToDiagnostics(result, context);
+	private _publishDiagnostics(documentUri: vscode.Uri, context: IDocumentContext, result: ShaclValidationResult, quadContexts?: QuadContext[]): void {
+		const diagnostics = this._diagnosticsMapper.mapToDiagnostics(result, context, quadContexts);
 		this._diagnosticCollection.set(documentUri, diagnostics);
 	}
 

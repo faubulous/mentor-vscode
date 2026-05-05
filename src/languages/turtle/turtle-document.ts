@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Position } from 'vscode-languageserver-types';
 import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken, QuadContext } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
@@ -157,6 +157,25 @@ export class TurtleDocument extends DocumentContext {
 			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
+		}
+	}
+
+	/**
+	 * Parse the current tokens and return quad contexts with source token positions.
+	 * Computed on-demand; callers should not store the result long-term.
+	 * @return An array of quad contexts, which include the RDF quads and their associated token positions for subjects, predicates, objects and graph names.
+	 */
+	getQuadContexts(): QuadContext[] {
+		if (!this._tokens.length) {
+			return [];
+		} else {
+			try {
+				const cst = new TurtleParser().parse(this._tokens);
+
+				return new TurtleReader().readQuadContexts(cst, this._tokens);
+			} catch {
+				return [];
+			}
 		}
 	}
 
