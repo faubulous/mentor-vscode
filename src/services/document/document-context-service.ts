@@ -79,6 +79,7 @@ export class DocumentContextService {
 			vscode.window.onDidChangeActiveTextEditor(() => this.handleActiveEditorChanged()),
 			vscode.window.onDidChangeActiveNotebookEditor((e) => this.handleActiveNotebookEditorChanged(e)),
 			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
+			vscode.workspace.onDidChangeNotebookDocument((e) => this.handleNotebookDocumentChanged(e)),
 			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e)),
 			this._onDidChangeDocumentContext,
 			this
@@ -368,7 +369,7 @@ export class DocumentContextService {
 		// Increment the load generation for this URI. This invalidates any concurrent
 		// load that may be in progress (awaiting tokens or loading triples).
 		const generation = (this._tokenLoadGeneration.get(uri) ?? 0) + 1;
-		
+
 		this._tokenLoadGeneration.set(uri, generation);
 
 		// Only create a new context if one doesn't exist or if force reloading.
@@ -559,13 +560,105 @@ export class DocumentContextService {
 	}
 
 	/**
+	 * Handle notebook document changed event.
+	 * Assigns auto-generated slugs to newly inserted RDF cells so their ID CodeLens appears immediately.
+	 * @param e The notebook document change event.
+	 */
+	async handleNotebookDocumentChanged(e: vscode.NotebookDocumentChangeEvent): Promise<void> {
+		const addedCells: vscode.NotebookCell[] = [];
+
+		for (const change of e.contentChanges) {
+			for (const cell of change.addedCells) {
+				const isTripleSource = this._documentFactory.isTripleSourceLanguage(cell.document.languageId);
+				const hasSlug = typeof cell.metadata?.slug === 'string';
+
+				if (isTripleSource && !hasSlug) {
+					addedCells.push(cell);
+				}
+			}
+		}
+
+		if (addedCells.length === 0) {
+			return;
+		}
+
+		const cellEdits: {
+			cell: vscode.NotebookCell;
+			metadata: { [key: string]: any },
+			edit: vscode.NotebookEdit;
+		}[] = [];
+
+		let n = this._getMaxCellSlugNumber(e.notebook) + 1;
+
+		for (const cell of addedCells) {
+			const metadata = {
+				...cell.metadata,
+				slug: `cell-${n}`,
+				slugIsAuto: true
+			};
+
+			cellEdits.push({
+				cell,
+				metadata: metadata,
+				edit: vscode.NotebookEdit.updateCellMetadata(cell.index, metadata),
+			});
+
+			n++;
+		}
+
+		if (cellEdits.length > 0) {
+			const workspaceEdit = new vscode.WorkspaceEdit();
+			workspaceEdit.set(e.notebook.uri, cellEdits.map(e => e.edit));
+
+			await vscode.workspace.applyEdit(workspaceEdit);
+
+			for (const cellEdit of cellEdits) {
+				const document = cellEdit.cell.document;
+				const context = await this.loadDocument(document, false, cellEdit.metadata.slug);
+
+				if (context) {
+					this._onDidChangeDocumentContext.fire(context);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Returns the highest auto-generated slug number in the notebook.
+	 * @param notebook The notebook document.
+	 * @returns The highest auto-generated slug number.
+	 */
+	private _getMaxCellSlugNumber(notebook: vscode.NotebookDocument): number {
+		const slugPattern = /^cell-(\d+)$/;
+
+		let maxNumber = 0;
+
+		for (const c of notebook.getCells()) {
+			const slug: string | undefined = c.metadata?.slug;
+			const match = typeof slug === 'string' ? slug.match(slugPattern) : null;
+
+			if (match) {
+				const n = parseInt(match[1], 10);
+
+				if (n > maxNumber) {
+					maxNumber = n;
+				}
+			}
+		}
+
+		return maxNumber;
+	}
+
+	/**
 	 * Handle text document changed event. Does not trigger a full document reload. 
 	 * Instead, the existing contextis kept visible and the reload happens when the 
 	 * language server delivers updated tokens via resolveTokens → _reloadContextTriples.
 	 * @param e The text document change event.
 	 */
 	async handleTextDocumentChanged(e: vscode.TextDocumentChangeEvent): Promise<void> {
-		if (!this._documentFactory.supportedLanguages.has(e.document.languageId)) return;
+		if (!this._documentFactory.supportedLanguages.has(e.document.languageId)) {
+			return;
+		}
 
 		const uri = e.document.uri.toString();
 		let context = this.contexts[uri];
@@ -574,7 +667,7 @@ export class DocumentContextService {
 			// No context exists yet — create one so the language client notification
 			// handler can find it and set tokens on it.
 			context = this._documentFactory.create(e.document.uri, e.document.languageId);
-			
+
 			this.contexts[uri] = context;
 		}
 

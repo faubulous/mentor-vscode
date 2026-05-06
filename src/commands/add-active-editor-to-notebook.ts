@@ -1,53 +1,6 @@
 import * as vscode from 'vscode';
 import { getFileName } from '@src/utilities';
-
-type ActionItem = vscode.QuickPickItem & {
-	action: 'create-new' | 'add-existing';
-	notebookUri?: vscode.Uri;
-};
-
-function getEditorCellData(editor: vscode.TextEditor): vscode.NotebookCellData {
-	const document = editor.document;
-
-	return new vscode.NotebookCellData(
-		vscode.NotebookCellKind.Code,
-		document.getText(),
-		document.languageId
-	);
-}
-
-function getNotebookFileName(uri: vscode.Uri): string {
-	return getFileName(uri.toString()) || uri.toString();
-}
-
-async function getWorkspaceMentorNotebookUris(): Promise<vscode.Uri[]> {
-	const notebookUris = await vscode.workspace.findFiles('**/*.mnb');
-
-	return notebookUris.sort((a, b) => a.path.localeCompare(b.path));
-}
-
-async function createNewNotebook(cellData: vscode.NotebookCellData): Promise<void> {
-	const data = new vscode.NotebookData([cellData]);
-	const notebook = await vscode.workspace.openNotebookDocument('mentor-notebook', data);
-
-	await vscode.window.showNotebookDocument(notebook);
-}
-
-async function addToExistingNotebook(notebookUri: vscode.Uri, cellData: vscode.NotebookCellData): Promise<void> {
-	const notebook = vscode.workspace.notebookDocuments.find(n => n.uri.toString() === notebookUri.toString())
-		?? await vscode.workspace.openNotebookDocument(notebookUri);
-	const newCellIndex = notebook.cellCount;
-
-	const workspaceEdit = new vscode.WorkspaceEdit();
-	workspaceEdit.set(notebook.uri, [vscode.NotebookEdit.insertCells(notebook.cellCount, [cellData])]);
-
-	await vscode.workspace.applyEdit(workspaceEdit);
-	const notebookEditor = await vscode.window.showNotebookDocument(notebook);
-	const newCellRange = new vscode.NotebookRange(newCellIndex, newCellIndex + 1);
-
-	notebookEditor.selections = [newCellRange];
-	notebookEditor.revealRange(newCellRange, vscode.NotebookEditorRevealType.InCenter);
-}
+import { findOpenNotebookByUri } from '@src/utilities/vscode/notebook';
 
 export const addActiveEditorToNotebook = {
 	id: 'mentor.command.addActiveEditorToNotebook',
@@ -93,3 +46,51 @@ export const addActiveEditorToNotebook = {
 		await addToExistingNotebook(selectedAction.notebookUri, cellData);
 	}
 };
+
+type ActionItem = vscode.QuickPickItem & {
+	action: 'create-new' | 'add-existing';
+	notebookUri?: vscode.Uri;
+};
+
+function getEditorCellData(editor: vscode.TextEditor): vscode.NotebookCellData {
+	const document = editor.document;
+
+	return new vscode.NotebookCellData(
+		vscode.NotebookCellKind.Code,
+		document.getText(),
+		document.languageId
+	);
+}
+
+function getNotebookFileName(uri: vscode.Uri): string {
+	return getFileName(uri.toString()) || uri.toString();
+}
+
+async function getWorkspaceMentorNotebookUris(): Promise<vscode.Uri[]> {
+	const notebookUris = await vscode.workspace.findFiles('**/*.mnb');
+
+	return notebookUris.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+async function createNewNotebook(cellData: vscode.NotebookCellData): Promise<void> {
+	const data = new vscode.NotebookData([cellData]);
+	const notebook = await vscode.workspace.openNotebookDocument('mentor-notebook', data);
+
+	await vscode.window.showNotebookDocument(notebook);
+}
+
+async function addToExistingNotebook(notebookUri: vscode.Uri, cellData: vscode.NotebookCellData): Promise<void> {
+	const notebook = findOpenNotebookByUri(notebookUri)
+		?? await vscode.workspace.openNotebookDocument(notebookUri);
+	const newCellIndex = notebook.cellCount;
+
+	const workspaceEdit = new vscode.WorkspaceEdit();
+	workspaceEdit.set(notebook.uri, [vscode.NotebookEdit.insertCells(notebook.cellCount, [cellData])]);
+
+	await vscode.workspace.applyEdit(workspaceEdit);
+	const notebookEditor = await vscode.window.showNotebookDocument(notebook);
+	const newCellRange = new vscode.NotebookRange(newCellIndex, newCellIndex + 1);
+
+	notebookEditor.selections = [newCellRange];
+	notebookEditor.revealRange(newCellRange, vscode.NotebookEditorRevealType.InCenter);
+}

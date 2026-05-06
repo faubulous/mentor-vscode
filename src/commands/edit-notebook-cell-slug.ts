@@ -4,6 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { findNotebookContainingCell } from '@src/utilities/vscode/notebook';
 
 /**
  * A regular expression that validates a notebook cell slug.
@@ -20,9 +21,7 @@ export const editNotebookCellSlug = {
 		}
 
 		// Find the notebook that contains this cell.
-		const notebook = vscode.workspace.notebookDocuments.find(
-			nb => nb.getCells().some(c => c.document.uri.toString() === cellDocumentUri.toString())
-		);
+		const notebook = findNotebookContainingCell(cellDocumentUri);
 
 		if (!notebook) {
 			vscode.window.showWarningMessage('Could not find the notebook containing this cell.');

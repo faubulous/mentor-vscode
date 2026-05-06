@@ -772,6 +772,105 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('handleNotebookDocumentChanged', () => {
+		it('assigns auto slugs to newly added RDF notebook cells and loads their contexts', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
+			(mockDocumentFactory.create as any).mockReturnValue(
+				createMockContext({
+					uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell2'),
+					isLoaded: false,
+					hasTokens: true,
+				})
+			);
+
+			const applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValue(true as any);
+
+			const existingCell = {
+				index: 0,
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell1') },
+				metadata: { slug: 'cell-1', slugIsAuto: true },
+			};
+
+			const addedCellDoc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell2'),
+				getText: () => '',
+			};
+
+			const addedCell = {
+				index: 1,
+				document: addedCellDoc,
+				metadata: {},
+			};
+
+			const notebook = {
+				uri: vscode.Uri.parse('file:///nb.mnb'),
+				getCells: () => [existingCell, addedCell],
+			};
+
+			await service.handleNotebookDocumentChanged({
+				notebook,
+				contentChanges: [{
+					addedCells: [addedCell],
+					removedCells: [],
+					start: 1,
+					deletedCount: 0,
+				}],
+			} as any);
+
+			expect(applyEditSpy).toHaveBeenCalled();
+			expect(mockDocumentFactory.create).toHaveBeenCalledWith(addedCellDoc.uri, 'turtle');
+
+			applyEditSpy.mockRestore();
+		});
+
+		it('keeps an existing slug for newly added RDF notebook cells', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
+			(mockDocumentFactory.create as any).mockReturnValue(
+				createMockContext({
+					uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell7'),
+					isLoaded: false,
+					hasTokens: true,
+				})
+			);
+
+			const applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValue(true as any);
+
+			const addedCellDoc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell7'),
+				getText: () => '',
+			};
+
+			const addedCell = {
+				index: 0,
+				document: addedCellDoc,
+				metadata: { slug: 'custom-slug', slugIsAuto: false },
+			};
+
+			const notebook = {
+				uri: vscode.Uri.parse('file:///nb.mnb'),
+				getCells: () => [addedCell],
+			};
+
+			await service.handleNotebookDocumentChanged({
+				notebook,
+				contentChanges: [{
+					addedCells: [addedCell],
+					removedCells: [],
+					start: 0,
+					deletedCount: 0,
+				}],
+			} as any);
+
+			expect(applyEditSpy).not.toHaveBeenCalled();
+
+			applyEditSpy.mockRestore();
+		});
+	});
+
 	describe('handleTextDocumentChanged', () => {
 		it('creates a context for a new supported document', async () => {
 			const { service, mockDocumentFactory } = createService();
@@ -1183,6 +1282,16 @@ describe('DocumentContextService', () => {
 			});
 			createService();
 			await capturedHandler?.({ languageId: 'plaintext', uri: vscode.Uri.parse('file:///x.txt') });
+		});
+
+		it('invokes handleNotebookDocumentChanged via the registered onDidChangeNotebookDocument callback', async () => {
+			let capturedHandler: Function | undefined;
+			vi.spyOn(vscode.workspace, 'onDidChangeNotebookDocument').mockImplementationOnce((handler: any) => {
+				capturedHandler = handler;
+				return { dispose: () => {} };
+			});
+			createService();
+			await capturedHandler?.({ notebook: { getCells: () => [] }, contentChanges: [] });
 		});
 	});
 
