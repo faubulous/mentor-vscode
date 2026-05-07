@@ -9,71 +9,6 @@ import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { ILanguageClientRegistry } from '@src/languages/language-client-registry';
 
 /**
- * Shared immutable inputs for a single workspace indexing run.
- */
-type IndexingRun = {
-	/**
-	 * The workspace files discovered before pre-scan filtering is applied.
-	 */
-	fileUris: ReadonlyArray<vscode.Uri>;
-
-	/**
-	 * The configured include globs that can override file size exclusions.
-	 */
-	includeMatchers: picomatch.Matcher[];
-
-	/**
-	 * The maximum file size allowed for indexing unless explicitly included.
-	 */
-	maxSize: number;
-
-	/**
-	 * Indicates whether already indexed files should be indexed again.
-	 */
-	reindex: boolean;
-
-	/**
-	 * The VS Code progress reporter for the active indexing run.
-	 */
-	progress: vscode.Progress<{ message?: string, increment?: number }>;
-};
-
-/**
- * The result of scanning workspace files before scheduling indexing tasks.
- */
-type IndexScanResult = {
-	/**
-	 * The file URIs that passed pre-scan checks and should be indexed.
-	 */
-	targetFileUris: vscode.Uri[];
-
-	/**
-	 * The file identifiers skipped during the pre-scan phase.
-	 */
-	skippedFiles: string[];
-};
-
-/**
- * Settlement summary for the asynchronous indexing tasks in a run.
- */
-type IndexingTaskSummary = {
-	/**
-	 * The number of indexing tasks that reached a settled state.
-	 */
-	completed: number;
-
-	/**
-	 * The number of indexing tasks that settled with a rejection.
-	 */
-	errorCount: number;
-
-	/**
-	 * The settled results for every scheduled indexing task.
-	 */
-	results: PromiseSettledResult<void>[];
-};
-
-/**
  * Service for indexing RDF documents in the current workspace.
  * Uses WorkspaceFileService for file discovery to avoid duplicate workspace scans.
  */
@@ -93,11 +28,6 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	 * An event that is fired when all workspace files have been indexed.
 	 */
 	readonly onDidFinishIndexing = this._onDidFinishIndexing.event;
-
-	/**
-	 * The maximum number of files to index concurrently.
-	 */
-	private readonly _maxTaskConcurrency = 4;
 
 	/**
 	 * A log output channel for indexing-related messages.
@@ -143,16 +73,19 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 			if (run.fileUris.length === 0) {
 				this._finishIndexing();
-				this._reportProgress(progress, 100);
-				return;
+				this._reportProgress(progress, 0, 0);
+			} else {
+
+				const startTime = performance.now();
+				const scanResult = await this._scanIndexFiles(run);
+
+				this._reportProgress(progress, 0, scanResult.targetFileUris.length);
+				
+				const summary = await this._runIndexingTasks(scanResult.targetFileUris, run);
+
+				this._finalizeIndexingRun(run.fileUris.length, scanResult.skippedFiles, summary, startTime);
+				this._reportProgress(progress, summary.completed, scanResult.targetFileUris.length);
 			}
-
-			const startTime = performance.now();
-			const scanResult = await this._scanIndexFiles(run);
-			const summary = await this._runIndexingTasks(scanResult.targetFileUris, run);
-
-			this._finalizeIndexingRun(run.fileUris.length, scanResult.skippedFiles, summary, startTime);
-			this._reportProgress(progress, 100);
 		});
 	}
 
@@ -173,8 +106,6 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		this._statusBarItem.hide();
 		this._statusLog.info(`Started workspace indexing${reindex ? ' (reindex)' : ''}...`);
-		
-		this._reportProgress(progress, 0);
 
 		// The default value is set to Number.MAX_SAFE_INTEGER to disable the
 		// file size limit and make issues with the configuration more visible.
@@ -234,45 +165,28 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	}
 
 	/**
-	 * Schedules indexing tasks with bounded concurrency and waits for all of them to settle.
+	 * Indexes each file sequentially and returns a completion summary.
 	 * @param indexedUris The file URIs that should be indexed.
 	 * @param run The shared indexing run state.
-	 * @returns Settlement and error summary for the scheduled tasks.
+	 * @returns Completion and error counts for the run.
 	 */
 	private async _runIndexingTasks(indexedUris: readonly vscode.Uri[], run: IndexingRun): Promise<IndexingTaskSummary> {
 		let completed = 0;
-		let nextFileIndex = 0;
-		const backgroundTasks: Promise<void>[] = [];
-		const workerCount = Math.min(this._maxTaskConcurrency, indexedUris.length);
+		let errorCount = 0;
 
-		const workers = Array.from({ length: workerCount }, () => (async () => {
-			while (true) {
-				const fileIndex = nextFileIndex++;
-
-				if (fileIndex >= indexedUris.length) {
-					return;
-				}
-
-				const task = this._indexWorkspaceFile(indexedUris[fileIndex], run.reindex);
-
-				backgroundTasks.push(task);
-
-				void task.then(() => {
-					completed++;
-					this._reportIndexingProgress(run.progress, completed, indexedUris.length);
-				}, () => {
-					completed++;
-					this._reportIndexingProgress(run.progress, completed, indexedUris.length);
-				});
+		for (const fileUri of indexedUris) {
+			try {
+				await this._indexWorkspaceFile(fileUri, run.reindex);
+			} catch {
+				errorCount++;
 			}
-		})());
 
-		await Promise.all(workers);
+			completed++;
 
-		const results = await Promise.allSettled(backgroundTasks);
-		const errorCount = results.filter(r => r.status === 'rejected').length;
+			this._reportIndexingProgress(run.progress, completed, indexedUris.length);
+		}
 
-		return { completed, errorCount, results };
+		return { completed, errorCount };
 	}
 
 	/**
@@ -282,9 +196,6 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	 * @returns A promise that settles when indexing of the file completes.
 	 */
 	private _indexWorkspaceFile(fileUri: vscode.Uri, reindex: boolean): Promise<void> {
-		// Note: We are intentionally not awaiting each individual file indexing.
-		// The promise is tracked by the caller so we can report accurate completion
-		// status and timing after all tasks have settled.
 		return this.documentFactory.isSupportedNotebookFile(fileUri)
 			? this._indexNotebookDocument(fileUri, reindex)
 			: this._indexTextDocument(fileUri, reindex);
@@ -309,7 +220,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
 
-		const parts = [`$(app-mentor) Indexed ${successfulFiles} files`];
+		const parts = [`$(app-mentor) Loaded ${successfulFiles} files`];
 
 		if (summary.errorCount > 0) {
 			parts.push(`${summary.errorCount} error${summary.errorCount > 1 ? 's' : ''}`);
@@ -326,7 +237,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	}
 
 	/**
-	 * Reports per-file indexing progress as a percentage of scheduled files.
+	 * Reports per-file indexing progress using completed and total file counts.
 	 * @param progress The progress reporter for the current run.
 	 * @param completed The number of completed indexing tasks.
 	 * @param total The total number of scheduled indexing tasks.
@@ -340,7 +251,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			return;
 		}
 
-		this._reportProgress(progress, Math.round((completed / total) * 100));
+		this._reportProgress(progress, completed, total);
 	}
 
 	/**
@@ -522,10 +433,15 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	/**
 	 * Reports progress to the user.
 	 * @param progress The progress to report.
-	 * @param increment The increment to report.
+	 * @param completed The number of files indexed so far.
+	 * @param total The total number of files to index.
 	 */
-	private _reportProgress(progress: vscode.Progress<{ message?: string, increment?: number }>, increment: number): void {
-		progress.report({ message: increment + "%" });
+	private _reportProgress(
+		progress: vscode.Progress<{ message?: string, increment?: number }>,
+		completed: number,
+		total: number
+	): void {
+		progress.report({ message: `${completed} of ${total} files...` });
 	}
 
 	/**
@@ -552,3 +468,63 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		this._statusLog.show();
 	}
 }
+
+/**
+ * Shared immutable inputs for a single workspace indexing run.
+ */
+type IndexingRun = {
+	/**
+	 * The workspace files discovered before pre-scan filtering is applied.
+	 */
+	fileUris: ReadonlyArray<vscode.Uri>;
+
+	/**
+	 * The configured include globs that can override file size exclusions.
+	 */
+	includeMatchers: picomatch.Matcher[];
+
+	/**
+	 * The maximum file size allowed for indexing unless explicitly included.
+	 */
+	maxSize: number;
+
+	/**
+	 * Indicates whether already indexed files should be indexed again.
+	 */
+	reindex: boolean;
+
+	/**
+	 * The VS Code progress reporter for the active indexing run.
+	 */
+	progress: vscode.Progress<{ message?: string, increment?: number }>;
+};
+
+/**
+ * The result of scanning workspace files before scheduling indexing tasks.
+ */
+type IndexScanResult = {
+	/**
+	 * The file URIs that passed pre-scan checks and should be indexed.
+	 */
+	targetFileUris: vscode.Uri[];
+
+	/**
+	 * The file identifiers skipped during the pre-scan phase.
+	 */
+	skippedFiles: string[];
+};
+
+/**
+ * Settlement summary for the indexing tasks in a run.
+ */
+type IndexingTaskSummary = {
+	/**
+	 * The number of indexing tasks that completed.
+	 */
+	completed: number;
+
+	/**
+	 * The number of indexing tasks that failed.
+	 */
+	errorCount: number;
+};
