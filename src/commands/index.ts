@@ -20,6 +20,7 @@ export { deletePrefixes } from './delete-prefixes';
 export { deleteSparqlConnection } from './delete-sparql-connection';
 export { editSparqlConnection } from './edit-sparql-connection';
 export { editNotebookCellSlug } from './edit-notebook-cell-slug';
+export { triggerNotebookCellSlugAction } from './trigger-notebook-cell-slug-action';
 export { executeDescribeQuery } from './execute-describe-query';
 export { executeNotebookCell } from './execute-notebook-cell';
 export { executeSparqlQuery } from './execute-sparql-query';

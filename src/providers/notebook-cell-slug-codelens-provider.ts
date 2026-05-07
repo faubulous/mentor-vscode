@@ -72,8 +72,8 @@ export class NotebookCellSlugCodeLensProvider implements vscode.CodeLensProvider
 		return [
 			new vscode.CodeLens(range, {
 				title: `#${slug}`,
-				tooltip: 'Click to rename this cell\'s slug (graph URI fragment)',
-				command: 'mentor.command.editNotebookCellSlug',
+				tooltip: 'Click to edit slug or copy cell URI',
+				command: 'mentor.command.triggerNotebookCellSlugAction',
 				arguments: [document.uri],
 			})
 		];

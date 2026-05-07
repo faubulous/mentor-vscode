@@ -1,6 +1,7 @@
 export * from './inference-uri-handler';
 export * from './inference-uri-link-provider';
 export * from './inference-uri';
+export * from './notebook-cell-slug-codelens-provider';
 export * from './refactoring/workspace-uri-code-action-provider';
 export * from './refactoring/xsd-any-uri-code-action-provider';
 export * from './resource-definition-provider';

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ResourceReferenceProvider, ResourceTooltipProvider } from '@src/providers';
-import { TurtleUsageCodeLensProvider, NotebookCellSlugCodeLensProvider } from '@src/languages/turtle/providers';
+import { ResourceReferenceProvider, ResourceTooltipProvider, NotebookCellSlugCodeLensProvider } from '@src/providers';
+import { TurtleUsageCodeLensProvider } from '@src/languages/turtle/providers';
 import { XmlRenameProvider } from '@src/languages/xml/providers';
 
 const codelensProvider = new TurtleUsageCodeLensProvider();

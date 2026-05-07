@@ -5,12 +5,12 @@ import {
 	ResourceReferenceProvider,
 	ResourceDefinitionProvider,
 	ResourceTooltipProvider,
-	WorkspaceGraphDefinitionProvider
+	WorkspaceGraphDefinitionProvider,
+	NotebookCellSlugCodeLensProvider
 } from '@src/providers';
 import {
 	TurtleAutoDefinePrefixProvider,
 	TurtleCodeActionsProvider,
-	NotebookCellSlugCodeLensProvider,
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider
 } from '@src/languages/turtle/providers';

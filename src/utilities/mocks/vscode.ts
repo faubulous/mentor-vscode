@@ -119,6 +119,10 @@ export const authentication = {
 export const env = {
   openExternal: async () => true,
   language: 'en',
+  clipboard: {
+    writeText: async (_text: string) => {},
+    readText: async () => '',
+  },
 };
 
 export const languages = {
