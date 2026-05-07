@@ -95,6 +95,7 @@ describe('WorkspaceIndexerService', () => {
 		it('should mark workspace as indexed after completion', async () => {
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace();
+			await service.waitForIndexed();
 			expect(service.indexingFinished).toBe(true);
 		});
 
@@ -109,6 +110,7 @@ describe('WorkspaceIndexerService', () => {
 
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace(true);
+			await service.waitForIndexed();
 
 			expect(mockLanguageClientRegistry.requestContextRefresh).toHaveBeenCalledWith('turtle', uri.toString());
 		});
@@ -119,6 +121,7 @@ describe('WorkspaceIndexerService', () => {
 			mockWorkspaceFileService.files = [uri1, uri2];
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace();
+			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledTimes(2);
 		});
 
@@ -137,6 +140,7 @@ describe('WorkspaceIndexerService', () => {
 			mockContexts[uri.toString()] = { loaded: true }; // already indexed
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace(true);
+			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledTimes(1);
 		});
 
@@ -165,6 +169,7 @@ describe('WorkspaceIndexerService', () => {
 			(vscode.workspace as any).fs.stat = vi.fn(async () => ({ size: 100 }));
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace();
+			await service.waitForIndexed();
 			expect(vscode.workspace.openNotebookDocument).toHaveBeenCalledWith(notebookUri);
 			expect(mockLoadDocument).toHaveBeenCalledWith(mockCell.document, false, undefined);
 		});
@@ -183,6 +188,7 @@ describe('WorkspaceIndexerService', () => {
 			}));
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace();
+			await service.waitForIndexed();
 			// SPARQL cell must be indexed so its references map is populated for rename support
 			expect(mockLoadDocument).toHaveBeenCalledWith(sparqlCell.document, false, undefined);
 		});
@@ -223,6 +229,7 @@ describe('WorkspaceIndexerService', () => {
 			}));
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace();
+			await service.waitForIndexed();
 			// Turtle (triple-source) and SPARQL (supported non-triple-source) are indexed; markdown is skipped
 			expect(mockLoadDocument).toHaveBeenCalledTimes(2);
 			expect(mockLoadDocument).toHaveBeenCalledWith(turtleCell.document, false, undefined);
@@ -235,6 +242,7 @@ describe('WorkspaceIndexerService', () => {
 			let fired = false;
 			service.onDidFinishIndexing(() => { fired = true; });
 			await service.indexWorkspace();
+			await service.waitForIndexed();
 			expect(fired).toBe(true);
 		});
 
@@ -251,6 +259,7 @@ describe('WorkspaceIndexerService', () => {
 			}));
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace();
+			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledWith(sluggedCell.document, false, 'my-data');
 		});
 
@@ -267,6 +276,7 @@ describe('WorkspaceIndexerService', () => {
 			}));
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace();
+			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledWith(noSlugCell.document, false, undefined);
 		});
 
@@ -279,6 +289,7 @@ describe('WorkspaceIndexerService', () => {
 
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace(false);
+			await service.waitForIndexed();
 
 			expect(mockLoadDocument).toHaveBeenCalledTimes(1);
 		});
@@ -292,6 +303,7 @@ describe('WorkspaceIndexerService', () => {
 
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace(false);
+			await service.waitForIndexed();
 
 			expect(mockLoadDocument).toHaveBeenCalledTimes(1);
 		});
@@ -301,8 +313,143 @@ describe('WorkspaceIndexerService', () => {
 		it('should resolve immediately if already indexed', async () => {
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			await service.indexWorkspace();
-			// Now indexed=true, so waitForIndexed should resolve immediately
+			await service.waitForIndexed(); // wait for background tasks to settle
+			// Now indexed=true, so a second waitForIndexed should resolve immediately
 			await expect(service.waitForIndexed()).resolves.toBeUndefined();
+		});
+	});
+
+	describe('background task settlement', () => {
+		it('should keep indexingFinished false while background tasks are pending', async () => {
+			const uri = vscode.Uri.parse('file:///w/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+
+			let resolveLoad!: () => void;
+			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const indexPromise = service.indexWorkspace();
+
+			// Let indexing dispatch and block on the unresolved load.
+			for (let i = 0; i < 10 && !resolveLoad; i++) {
+				await Promise.resolve();
+			}
+			expect(resolveLoad).toBeTypeOf('function');
+			expect(service.indexingFinished).toBe(false);
+
+			// Unblock background task and wait for settlement.
+			resolveLoad();
+			await indexPromise;
+			expect(service.indexingFinished).toBe(true);
+		});
+
+		it('should set indexingFinished to false until background tasks settle', async () => {
+			const uri = vscode.Uri.parse('file:///w/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+
+			let resolveLoad!: () => void;
+			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const indexPromise = service.indexWorkspace();
+			for (let i = 0; i < 10 && !resolveLoad; i++) {
+				await Promise.resolve();
+			}
+			expect(resolveLoad).toBeTypeOf('function');
+
+			expect(service.indexingFinished).toBe(false);
+
+			resolveLoad();
+			await indexPromise;
+
+			expect(service.indexingFinished).toBe(true);
+		});
+
+		it('should fire onDidFinishIndexing only after background tasks settle', async () => {
+			const uri = vscode.Uri.parse('file:///w/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+
+			let resolveLoad!: () => void;
+			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			let fired = false;
+			service.onDidFinishIndexing(() => { fired = true; });
+
+			const indexPromise = service.indexWorkspace();
+			for (let i = 0; i < 10 && !resolveLoad; i++) {
+				await Promise.resolve();
+			}
+			expect(resolveLoad).toBeTypeOf('function');
+			expect(fired).toBe(false);
+
+			resolveLoad();
+			await indexPromise;
+			expect(fired).toBe(true);
+		});
+
+		it('should resolve waitForIndexed only after background tasks settle', async () => {
+			const uri = vscode.Uri.parse('file:///w/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+
+			let resolveLoad!: () => void;
+			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const indexPromise = service.indexWorkspace();
+			for (let i = 0; i < 10 && !resolveLoad; i++) {
+				await Promise.resolve();
+			}
+			expect(resolveLoad).toBeTypeOf('function');
+
+			let settled = false;
+			const waitPromise = service.waitForIndexed().then(() => { settled = true; });
+
+			// Not settled yet
+			await Promise.resolve();
+			expect(settled).toBe(false);
+
+			resolveLoad();
+			await indexPromise;
+			await waitPromise;
+			expect(settled).toBe(true);
+		});
+
+		it('should count errors from failed background tasks in the status bar text', async () => {
+			const uri = vscode.Uri.parse('file:///w/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+			mockLoadDocument = vi.fn(async () => { throw new Error('load failed'); });
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			await service.indexWorkspace();
+			await service.waitForIndexed();
+
+			expect((service as any)._statusBarItem.text).toMatch(/1 error/);
+		});
+
+		it('should only show the custom status bar summary after completion', async () => {
+			const uri = vscode.Uri.parse('file:///w/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+
+			let resolveLoad!: () => void;
+			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const indexPromise = service.indexWorkspace();
+			for (let i = 0; i < 10 && !resolveLoad; i++) {
+				await Promise.resolve();
+			}
+			expect(resolveLoad).toBeTypeOf('function');
+
+			const textWhilePending = (service as any)._statusBarItem.text;
+			expect(textWhilePending).toBe('');
+
+			// Unblock background task and wait for settlement
+			resolveLoad();
+			await indexPromise;
+			const textAfterSettlement = (service as any)._statusBarItem.text;
+
+			expect(textAfterSettlement).toMatch(/Indexed/);
 		});
 	});
 });

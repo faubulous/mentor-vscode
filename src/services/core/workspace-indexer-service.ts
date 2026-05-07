@@ -9,23 +9,95 @@ import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { ILanguageClientRegistry } from '@src/languages/language-client-registry';
 
 /**
+ * Shared immutable inputs for a single workspace indexing run.
+ */
+type IndexingRun = {
+	/**
+	 * The workspace files discovered before pre-scan filtering is applied.
+	 */
+	fileUris: ReadonlyArray<vscode.Uri>;
+
+	/**
+	 * The configured include globs that can override file size exclusions.
+	 */
+	includeMatchers: picomatch.Matcher[];
+
+	/**
+	 * The maximum file size allowed for indexing unless explicitly included.
+	 */
+	maxSize: number;
+
+	/**
+	 * Indicates whether already indexed files should be indexed again.
+	 */
+	reindex: boolean;
+
+	/**
+	 * The VS Code progress reporter for the active indexing run.
+	 */
+	progress: vscode.Progress<{ message?: string, increment?: number }>;
+};
+
+/**
+ * The result of scanning workspace files before scheduling indexing tasks.
+ */
+type IndexScanResult = {
+	/**
+	 * The file URIs that passed pre-scan checks and should be indexed.
+	 */
+	targetFileUris: vscode.Uri[];
+
+	/**
+	 * The file identifiers skipped during the pre-scan phase.
+	 */
+	skippedFiles: string[];
+};
+
+/**
+ * Settlement summary for the asynchronous indexing tasks in a run.
+ */
+type IndexingTaskSummary = {
+	/**
+	 * The number of indexing tasks that reached a settled state.
+	 */
+	completed: number;
+
+	/**
+	 * The number of indexing tasks that settled with a rejection.
+	 */
+	errorCount: number;
+
+	/**
+	 * The settled results for every scheduled indexing task.
+	 */
+	results: PromiseSettledResult<void>[];
+};
+
+/**
  * Service for indexing RDF documents in the current workspace.
  * Uses WorkspaceFileService for file discovery to avoid duplicate workspace scans.
  */
 export class WorkspaceIndexerService implements IWorkspaceIndexerService {
-	private static readonly _maxConcurrentFileIndexing = 4;
-
 	/**
 	 * Indicates if all workspace files have been indexed.
 	 */
 	private _indexingFinished = false;
 
+	/**
+	 * A promise that resolves when all background indexing tasks have 
+	 * settled (either fulfilled or rejected).
+	 */
 	private readonly _onDidFinishIndexing = new vscode.EventEmitter<boolean>();
 
 	/**
 	 * An event that is fired when all workspace files have been indexed.
 	 */
 	readonly onDidFinishIndexing = this._onDidFinishIndexing.event;
+
+	/**
+	 * The maximum number of files to index concurrently.
+	 */
+	private readonly _maxTaskConcurrency = 4;
 
 	/**
 	 * A log output channel for indexing-related messages.
@@ -67,123 +139,208 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			title: "Indexing workspace",
 			cancellable: false
 		}, async (progress) => {
-			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
+			const run = this._startIndexingRun(reindex, progress);
 
-			this._statusBarItem.hide();
-			this._statusLog.info(`Started workspace indexing${reindex ? ' (reindex)' : ''}...`);
-
-			this._reportProgress(progress, 0);
-
-			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
-			// file size limit and make issues with the configuration more visible.
-			const maxSize = getConfig().get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
-
-			this._statusLog.info(`Using max file size of ${maxSize} bytes`);
-
-			// Load include patterns from the configuration to determine which files 
-			// to index regardless of teir size.
-			const includeMatchers = this._loadIncludePatterns();
-			const skippedFiles: string[] = [];
-
-			// Use the files already discovered by WorkspaceFileService
-			const fileUris = this.workspaceFileService.files;
-			const indexedUris: vscode.Uri[] = [];
-
-			if (fileUris.length > 0) {
-				const startTime = performance.now();
-
-				for (let i = 0; i < fileUris.length; i++) {
-					const fileUri = fileUris[i];
-
-					if (this.contextService.contexts[fileUri.toString()] && !reindex) {
-						continue;
-					}
-
-					const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri);
-
-					if (!workspaceUri) {
-						const message = `Could not parse workspace URI from ${fileUri.toString()}`;
-						this._statusLog.error(message);
-
-						skippedFiles.push(fileUri.toString());
-						continue;
-					}
-
-					const path = this._normalizeFilePath(workspaceUri.path);
-					const stat = await vscode.workspace.fs.stat(fileUri);
-					const size = stat.size;
-
-					if (size > maxSize && !includeMatchers.some(match => match(path))) {
-						const message = `Skipped large file ${fileUri.toString()} (${size} bytes)`;
-						this._statusLog.warn(message);
-
-						skippedFiles.push(fileUri.toString());
-						continue;
-					}
-
-					indexedUris.push(fileUri);
-				}
-
-				let completed = 0;
-				let nextFileIndex = 0;
-
-				const workerCount = Math.min(
-					WorkspaceIndexerService._maxConcurrentFileIndexing,
-					indexedUris.length
-				);
-
-				const workers = Array.from({ length: workerCount }, () => (async () => {
-					while (true) {
-						const fileIndex = nextFileIndex++;
-
-						if (fileIndex >= indexedUris.length) {
-							return;
-						}
-
-						const fileUri = indexedUris[fileIndex];
-
-						// Note: We are intentionally not awaiting each individual file indexing.
-						if (this.documentFactory.isSupportedNotebookFile(fileUri)) {
-							this._indexNotebookDocument(fileUri, reindex);
-						} else {
-							this._indexTextDocument(fileUri, reindex);
-						}
-
-						completed++;
-
-						this._reportProgress(progress, Math.round((completed / fileUris.length) * 100));
-					}
-				})());
-
-				await Promise.all(workers);
-
-				const totalFiles = fileUris.length;
-				const indexedFiles = fileUris.length - skippedFiles.length;
-				const endTime = performance.now();
-				const duration = Math.round(endTime - startTime);
-
-				this._statusLog.info(`Indexed ${indexedFiles} of ${totalFiles} files in ${duration} ms`);
-
-				let message = [`$(app-mentor) Indexed ${indexedFiles} files`];
-
-				if (skippedFiles.length > 0) {
-					message.push(`Skipped ${skippedFiles.length}`);
-				}
-
-				this._statusBarItem.text = message.join('; ');
-				this._statusBarItem.show();
+			if (run.fileUris.length === 0) {
+				this._finishIndexing();
+				this._reportProgress(progress, 100);
+				return;
 			}
 
-			this._indexingFinished = true;
+			const startTime = performance.now();
+			const scanResult = await this._scanIndexFiles(run);
+			const summary = await this._runIndexingTasks(scanResult.targetFileUris, run);
 
-			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
-
-			this._onDidFinishIndexing.fire(true);
-
+			this._finalizeIndexingRun(run.fileUris.length, scanResult.skippedFiles, summary, startTime);
 			this._reportProgress(progress, 100);
-
-			this._statusLog.info('Finished workspace indexing.');
 		});
+	}
+
+	/**
+	 * Initializes a workspace indexing run and returns the immutable inputs shared
+	 * across the remaining indexing phases.
+	 * @param reindex Whether to force re-indexing of already indexed files.
+	 * @param progress The progress reporter for the current run.
+	 * @returns The shared indexing run state.
+	 */
+	private _startIndexingRun(
+		reindex: boolean,
+		progress: vscode.Progress<{ message?: string, increment?: number }>
+	): IndexingRun {
+		this._indexingFinished = false;
+
+		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
+
+		this._statusBarItem.hide();
+		this._statusLog.info(`Started workspace indexing${reindex ? ' (reindex)' : ''}...`);
+		
+		this._reportProgress(progress, 0);
+
+		// The default value is set to Number.MAX_SAFE_INTEGER to disable the
+		// file size limit and make issues with the configuration more visible.
+		const maxSize = getConfig().get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
+
+		this._statusLog.info(`Using max file size of ${maxSize} bytes`);
+
+		return {
+			fileUris: this.workspaceFileService.files,
+			includeMatchers: this._loadIncludePatterns(),
+			maxSize,
+			reindex,
+			progress,
+		};
+	}
+
+	/**
+	 * Filters workspace files down to the URIs that should be indexed for this run.
+	 * @param run The shared indexing run state.
+	 * @returns The URIs to index and the skipped file paths for reporting.
+	 */
+	private async _scanIndexFiles(run: IndexingRun): Promise<IndexScanResult> {
+		const indexedUris: vscode.Uri[] = [];
+		const skippedFiles: string[] = [];
+
+		for (const fileUri of run.fileUris) {
+			if (this.contextService.contexts[fileUri.toString()] && !run.reindex) {
+				continue;
+			}
+
+			const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+			if (!workspaceUri) {
+				const message = `Could not parse workspace URI from ${fileUri.toString()}`;
+				this._statusLog.error(message);
+
+				skippedFiles.push(fileUri.toString());
+				continue;
+			}
+
+			const path = this._normalizeFilePath(workspaceUri.path);
+			const stat = await vscode.workspace.fs.stat(fileUri);
+			const size = stat.size;
+
+			if (size > run.maxSize && !run.includeMatchers.some(match => match(path))) {
+				const message = `Skipped large file ${fileUri.toString()} (${size} bytes)`;
+				this._statusLog.warn(message);
+
+				skippedFiles.push(fileUri.toString());
+				continue;
+			}
+
+			indexedUris.push(fileUri);
+		}
+
+		return { targetFileUris: indexedUris, skippedFiles };
+	}
+
+	/**
+	 * Schedules indexing tasks with bounded concurrency and waits for all of them to settle.
+	 * @param indexedUris The file URIs that should be indexed.
+	 * @param run The shared indexing run state.
+	 * @returns Settlement and error summary for the scheduled tasks.
+	 */
+	private async _runIndexingTasks(indexedUris: readonly vscode.Uri[], run: IndexingRun): Promise<IndexingTaskSummary> {
+		let completed = 0;
+		let nextFileIndex = 0;
+		const backgroundTasks: Promise<void>[] = [];
+		const workerCount = Math.min(this._maxTaskConcurrency, indexedUris.length);
+
+		const workers = Array.from({ length: workerCount }, () => (async () => {
+			while (true) {
+				const fileIndex = nextFileIndex++;
+
+				if (fileIndex >= indexedUris.length) {
+					return;
+				}
+
+				const task = this._indexWorkspaceFile(indexedUris[fileIndex], run.reindex);
+
+				backgroundTasks.push(task);
+
+				void task.then(() => {
+					completed++;
+					this._reportIndexingProgress(run.progress, completed, indexedUris.length);
+				}, () => {
+					completed++;
+					this._reportIndexingProgress(run.progress, completed, indexedUris.length);
+				});
+			}
+		})());
+
+		await Promise.all(workers);
+
+		const results = await Promise.allSettled(backgroundTasks);
+		const errorCount = results.filter(r => r.status === 'rejected').length;
+
+		return { completed, errorCount, results };
+	}
+
+	/**
+	 * Routes a workspace file to the appropriate indexing strategy.
+	 * @param fileUri The URI of the workspace file to index.
+	 * @param reindex Whether to force re-indexing of already indexed data.
+	 * @returns A promise that settles when indexing of the file completes.
+	 */
+	private _indexWorkspaceFile(fileUri: vscode.Uri, reindex: boolean): Promise<void> {
+		// Note: We are intentionally not awaiting each individual file indexing.
+		// The promise is tracked by the caller so we can report accurate completion
+		// status and timing after all tasks have settled.
+		return this.documentFactory.isSupportedNotebookFile(fileUri)
+			? this._indexNotebookDocument(fileUri, reindex)
+			: this._indexTextDocument(fileUri, reindex);
+	}
+
+	/**
+	 * Finalizes a completed indexing run by updating status output and lifecycle state.
+	 * @param totalFiles The total number of discovered workspace files.
+	 * @param skippedFiles The file URIs skipped before indexing.
+	 * @param summary The settled task summary.
+	 * @param startTime The run start time in milliseconds.
+	 */
+	private _finalizeIndexingRun(
+		totalFiles: number,
+		skippedFiles: string[],
+		summary: IndexingTaskSummary,
+		startTime: number
+	): void {
+		const indexedFiles = totalFiles - skippedFiles.length;
+		const duration = Math.round(performance.now() - startTime);
+		const successfulFiles = indexedFiles - summary.errorCount;
+
+		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
+
+		const parts = [`$(app-mentor) Indexed ${successfulFiles} files`];
+
+		if (summary.errorCount > 0) {
+			parts.push(`${summary.errorCount} error${summary.errorCount > 1 ? 's' : ''}`);
+		}
+
+		if (skippedFiles.length > 0) {
+			parts.push(`${skippedFiles.length} skipped`);
+		}
+
+		this._statusBarItem.text = parts.join('; ');
+		this._statusBarItem.show();
+
+		this._finishIndexing();
+	}
+
+	/**
+	 * Reports per-file indexing progress as a percentage of scheduled files.
+	 * @param progress The progress reporter for the current run.
+	 * @param completed The number of completed indexing tasks.
+	 * @param total The total number of scheduled indexing tasks.
+	 */
+	private _reportIndexingProgress(
+		progress: vscode.Progress<{ message?: string, increment?: number }>,
+		completed: number,
+		total: number
+	): void {
+		if (total === 0) {
+			return;
+		}
+
+		this._reportProgress(progress, Math.round((completed / total) * 100));
 	}
 
 	/**
@@ -295,8 +452,10 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			await loadPromise;
 		} catch (error) {
 			// VS Code may refuse to open files it considers binary (e.g., files containing
-			// ASCII control characters like W3C test files). Skip these gracefully.
+			// ASCII control characters like W3C test files). Log and rethrow so the
+			// background settlement can count failures accurately.
 			this._statusLog.error(`File ${uri.toString()} cannot be opened as text`);
+			throw error;
 		}
 	}
 
@@ -328,7 +487,6 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				// Load the cell document to create its context, passing the slug so that
 				// graphIri is slug-based from the very first loadTriples call.
 				const slug = cell.metadata?.slug as string | undefined;
-
 				const loadPromise = this.contextService.loadDocument(cell.document, reindex, slug);
 
 				if (reindex) {
@@ -341,9 +499,24 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 				await loadPromise;
 			} catch (error) {
+				// Log and rethrow so the background settlement can count failures accurately.
 				this._statusLog.error(`Failed to index notebook cell ${cellUri}:`, error);
+				throw error;
 			}
 		}
+	}
+
+	/**
+	 * Marks indexing as finished, fires the completion event, and resets the VS Code context flag.
+	 */
+	private _finishIndexing(): void {
+		this._indexingFinished = true;
+
+		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
+
+		this._onDidFinishIndexing.fire(true);
+
+		this._statusLog.info('Finished workspace indexing.');
 	}
 
 	/**
