@@ -365,7 +365,7 @@ describe('DocumentContextService', () => {
 			expect(existingCtx.infer).toHaveBeenCalled();
 		});
 
-		it('force-reloads and replaces an already loaded context', async () => {
+		it('force-reloads an already loaded context without replacing it', async () => {
 			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
@@ -378,19 +378,13 @@ describe('DocumentContextService', () => {
 			// Pre-populate context as already loaded
 			const existingCtx = createMockContext({ uri: doc.uri, isLoaded: true });
 			service.contexts[uri] = existingCtx;
+			existingCtx.hasTokens = true;
 
-			const newCtx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
-			(mockDocumentFactory.create as any).mockReturnValue(newCtx);
+			const result = await service.loadDocument(doc, true);
 
-			const loadPromise = service.loadDocument(doc, true);
-
-			// Deliver tokens for force-reload
-			service.resolveTokens(uri, []);
-
-			const result = await loadPromise;
-
-			expect(result).toBe(newCtx);
-			expect(mockDocumentFactory.create).toHaveBeenCalled();
+			expect(result).toBe(existingCtx);
+			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
+			expect(existingCtx.loadTriples).toHaveBeenCalled();
 		});
 
 		it('does not block when context already has tokens', async () => {

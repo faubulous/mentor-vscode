@@ -109,6 +109,12 @@ export class LanguageServerBase {
 		new XsdDatatypeValidationLinter(),
 	];
 
+
+	/**
+	 * ID of the request sent by the client to trigger a manual document refresh.
+	 */
+	protected static readonly refreshDocumentRequest = 'mentor.request.refreshDocument';
+
 	constructor(connection: Connection, langaugeId: string, languageName: string, lexer?: ILexer, parser?: IParser, isRdfTokenProvider = false) {
 		this.languageName = languageName;
 		this.languageId = langaugeId;
@@ -120,6 +126,8 @@ export class LanguageServerBase {
 		this.connection.onInitialize(this.onInitializeConnection.bind(this));
 		this.connection.onInitialized(this.onConnectionInitialized.bind(this));
 		this.connection.onDidChangeConfiguration(this.onDidChangeConfiguration.bind(this));
+
+		this.connection.onRequest(LanguageServerBase.refreshDocumentRequest, this.onDidRequestDocumentRefresh.bind(this));
 
 		this.documents.onDidClose(this.onDidClose.bind(this));
 		this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
@@ -219,6 +227,24 @@ export class LanguageServerBase {
 		// The content of a text document has changed. This event is emitted
 		// when the text document first opened or when its content has changed.
 		this.validateTextDocument(change.document);
+	}
+
+	private async onDidRequestDocumentRefresh(params: { uri?: string }): Promise<boolean> {
+		const uri = params?.uri;
+
+		if (!uri) {
+			return false;
+		}
+
+		const document = this.documents.get(uri);
+
+		if (!document) {
+			return false;
+		}
+
+		await this.validateTextDocument(document);
+
+		return true;
 	}
 
 	/**

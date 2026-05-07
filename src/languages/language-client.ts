@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { LanguageClientFactory, ILanguageClient } from './language-client-factory';
+import { ILanguageClientRegistry } from './language-client-registry';
 
 export abstract class LanguageClientBase implements vscode.Disposable {
 	/**
@@ -39,6 +40,8 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 	 */
 	client: ILanguageClient | undefined;
 
+	private readonly _languageClientRegistry: Partial<ILanguageClientRegistry>;
+
 	constructor(languageId: string, languageName: string) {
 		this.languageName = languageName;
 		this.languageId = languageId;
@@ -46,6 +49,7 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 		this.channelId = `mentor.language.${languageId}`;
 		this.channel = vscode.window.createOutputChannel(this.channelName, this.channelId);
 		this.serverPath = `dist/${languageId}-language-server.js`;
+		this._languageClientRegistry = container.resolve<Partial<ILanguageClientRegistry>>(ServiceToken.LanguageClientRegistry);
 
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(this);
@@ -64,10 +68,14 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 			outputChannel: this.channel
 		});
 
+		this._languageClientRegistry.register?.(this.languageId, this.client);
+
 		this.client.start();
 	}
 
 	async dispose() {
+		this._languageClientRegistry.unregister?.(this.languageId);
+
 		if (this.client) {
 			await this.client.stop();
 		}

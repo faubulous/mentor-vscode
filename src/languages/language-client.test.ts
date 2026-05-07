@@ -7,11 +7,20 @@ const mockClientStart = vi.fn(async () => {});
 const mockClientStop = vi.fn(async () => {});
 const mockClientOnNotification = vi.fn(() => ({ dispose: () => {} }));
 const mockSubscriptions: { push: ReturnType<typeof vi.fn> } = { push: vi.fn() };
+const mockRegistryRegister = vi.fn();
+const mockRegistryUnregister = vi.fn();
 
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
 			if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
+			if (token === 'LanguageClientRegistry') {
+				return {
+					register: mockRegistryRegister,
+					unregister: mockRegistryUnregister,
+					requestContextRefresh: vi.fn(async () => false),
+				};
+			}
 			if (token === 'LanguageClientFactory') {
 				return (_ctx: any, _opts: any) => ({
 					start: mockClientStart,
@@ -68,6 +77,11 @@ describe('LanguageClientBase', () => {
 		expect(mockClientStart).toHaveBeenCalled();
 	});
 
+	it('registers the language client in registry during startup', () => {
+		new ConcreteClient();
+		expect(mockRegistryRegister).toHaveBeenCalledWith('test', expect.any(Object));
+	});
+
 	it('pushes to extension context subscriptions', () => {
 		new ConcreteClient();
 		expect(mockSubscriptions.push).toHaveBeenCalled();
@@ -76,6 +90,7 @@ describe('LanguageClientBase', () => {
 	it('dispose calls client.stop()', async () => {
 		const client = new ConcreteClient();
 		await client.dispose();
+		expect(mockRegistryUnregister).toHaveBeenCalledWith('test');
 		expect(mockClientStop).toHaveBeenCalled();
 	});
 

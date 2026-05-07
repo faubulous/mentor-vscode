@@ -14,6 +14,7 @@ import { CredentialStorageService } from './core/credential-storage-service';
 import { PrefixDownloaderService } from './document/prefix-downloader-service';
 import { PrefixLookupService } from './document/prefix-lookup-service';
 import { LanguageClientFactory } from '@src/languages/language-client-factory';
+import { LanguageClientRegistry } from '@src/languages/language-client-registry';
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
@@ -68,7 +69,15 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const workspaceFileService = new WorkspaceFileService(documentFactory);
 	container.registerInstance(ServiceToken.WorkspaceFileService, workspaceFileService);
 
-	const workspaceIndexerService = new WorkspaceIndexerService(documentFactory, documentContextService, workspaceFileService);
+	const languageClientRegistry = new LanguageClientRegistry();
+	container.registerInstance(ServiceToken.LanguageClientRegistry, languageClientRegistry);
+
+	const workspaceIndexerService = new WorkspaceIndexerService(
+		documentFactory,
+		documentContextService,
+		workspaceFileService,
+		languageClientRegistry
+	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
 	const sparqlConnectionService = new SparqlConnectionService(context, credentialStorageService);

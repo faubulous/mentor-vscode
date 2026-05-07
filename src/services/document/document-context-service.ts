@@ -20,10 +20,14 @@ export interface DocumentIndex {
 export class DocumentContextService {
 	private readonly _convertTargetLanguageIds = ['ntriples', 'nquads', 'turtle', 'xml'];
 
+	private _contexts: DocumentIndex = {};
+
 	/**
 	 * Maps document URIs to loaded document contexts.
 	 */
-	readonly contexts: DocumentIndex = {};
+	get contexts(): DocumentIndex {
+		return this._contexts;
+	}
 
 	/**
 	 * The currently active document context or `undefined`.
@@ -102,6 +106,13 @@ export class DocumentContextService {
 
 		this._pendingTokenRequests.clear();
 		this._tokenLoadGeneration.clear();
+	}
+
+	/**
+	 * Clear all loaded document contexts. Used when re-indexing the workspace to reset state.
+	 */
+	clear(): void {
+		this._contexts = {};
 	}
 
 	/**
@@ -372,9 +383,11 @@ export class DocumentContextService {
 
 		this._tokenLoadGeneration.set(uri, generation);
 
-		// Only create a new context if one doesn't exist or if force reloading.
-		// This preserves tokens from early language server notifications.
-		if (!context || forceReload) {
+		// Create a new context only when one doesn't exist.
+		// On force reload we intentionally reuse the existing context so that
+		// already available tokens can be reused and reindexing does not block
+		// on token delivery timeouts.
+		if (!context) {
 			context = this._documentFactory.create(document.uri, document.languageId);
 
 			// Register context immediately so language client notification handlers can find it.

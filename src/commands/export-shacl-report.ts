@@ -15,7 +15,7 @@ export const viewShaclReport = {
 
 		const indexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
 
-		if (!indexer.indexed) {
+		if (!indexer.indexingFinished) {
 			// Wait for indexing to finish; allow the user to cancel.
 			const proceeded = await vscode.window.withProgress(
 				{

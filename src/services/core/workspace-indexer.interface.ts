@@ -8,7 +8,7 @@ export interface IWorkspaceIndexerService {
 	/**
 	 * Indicates if all workspace files have been indexed.
 	 */
-	readonly indexed: boolean;
+	readonly indexingFinished: boolean;
 
 	/**
 	 * An event that is fired when all workspace files have been indexed.

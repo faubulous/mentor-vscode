@@ -54,6 +54,12 @@ export interface ILanguageClient {
 	 * The exact types of the parameters depend on the language server's implementation and are not specified in this interface.
 	 */
 	onNotification(method: string, handler: (...params: any[]) => any): vscode.Disposable;
+
+	/**
+	 * Send a request to the language server and await a response.
+	 * Optional because some test doubles may not implement request handling.
+	 */
+	sendRequest?<T = any>(method: string, params?: any): Promise<T>;
 }
 
 /**

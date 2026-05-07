@@ -1,4 +1,4 @@
-export { analyzeWorkspace } from './analyze-workspace';
+export { reindexWorkspace } from './reindex-workspace';
 export { addActiveEditorToNotebook } from './add-active-editor-to-notebook';
 export { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
 export { clearQueryHistory } from './clear-query-history';

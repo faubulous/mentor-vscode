@@ -612,9 +612,9 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.analyzeWorkspace",
-        "title": "Find Problems",
-        "icon": "$(debug-alt)",
+        "command": "mentor.command.reindexWorkspace",
+        "title": "Reindex Workspace...",
+        "icon": "$(app-mentor)",
         "category": "Mentor"
       },
       {
@@ -923,9 +923,9 @@
       ],
       "view/title": [
         {
-          "command": "mentor.command.analyzeWorkspace",
+          "command": "mentor.command.reindexWorkspace",
           "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
-          "group": "navigation@1"
+          "group": "2_workspace"
         },
         {
           "command": "mentor.command.createDocument",
@@ -1521,7 +1521,7 @@
           "mentor.index.maxFileSize": {
             "type": "number",
             "title": "Max File Size",
-            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors. Opening a larger file in an editor or running the 'Analyze Workspace' command will index files above this limit.",
+            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors.",
             "default": 1500000
           },
           "mentor.editor.codeLensEnabled": {
