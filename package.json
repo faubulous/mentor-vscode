@@ -1504,7 +1504,7 @@
           },
           "mentor.index.ignoreFolders": {
             "type": "array",
-            "title": "Excluded Folders",
+            "title": "Ignored Folders",
             "description": "Manage the folders that should be skipped when indexing the workspace.",
             "default": [
               ".vscode",
@@ -1515,7 +1515,7 @@
           "mentor.index.includeFiles": {
             "type": "array",
             "title": "Included Files",
-            "description": "Manage the files that should not be skipped when indexing the workspace. The files must be provided as workspace: URIs so that they are portable across different systems. You can use glob patterns to include multiple files. For example, to include all .ttl files in the data folder, you can add 'workspace:///data/*.ttl'.",
+            "description": "Allows to manage a list of files as glob patterns that should be included in the workspace index even if they exceed the max file size limit.",
             "default": []
           },
           "mentor.index.maxFileSize": {
