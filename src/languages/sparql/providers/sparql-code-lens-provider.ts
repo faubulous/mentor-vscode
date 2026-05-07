@@ -45,7 +45,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 
 		// Connection CodeLens
 		const connectionCodeLens = new vscode.CodeLens(range, {
-			title: `$(database)\u00A0${connection.endpointUrl}`,
+			title: `$(database)\u00A0Connection: ${connection.endpointUrl}`,
 			tooltip: 'Click to change the SPARQL endpoint for this file',
 			command: 'mentor.command.selectSparqlConnection',
 			arguments: [document],
@@ -65,7 +65,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 				: 'Inferred triples are excluded. Click to include them.';
 
 			const inferenceCodeLens = new vscode.CodeLens(range, {
-				title: `${inferenceIcon}\u00A0${inferenceText}`,
+				title: `${inferenceIcon}\u00A0Inference: ${inferenceText}`,
 				tooltip: inferenceTooltip,
 				command: 'mentor.command.toggleDocumentInference',
 				arguments: [document.uri],

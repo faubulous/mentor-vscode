@@ -337,7 +337,7 @@ export class TurtleDocument extends DocumentContext {
 					iri = Uri.getNormalizedUri(iri);
 
 					if (previousToken) {
-						this._registerSubject(t, iri, previousToken);
+						this._registerSubject(tokens, i, t, iri, previousToken);
 					}
 
 					this._handleTypeAssertion(tokens, t, iri, i);
@@ -349,7 +349,7 @@ export class TurtleDocument extends DocumentContext {
 					const iri = getIriFromIriReference(t.image);
 
 					if (t.startColumn === 1 && previousToken) {
-						this._registerSubject(t, iri, previousToken);
+						this._registerSubject(tokens, i, t, iri, previousToken);
 					}
 
 					this._handleTypeAssertion(tokens, t, iri, i);
@@ -375,7 +375,7 @@ export class TurtleDocument extends DocumentContext {
 					const id = t.image;
 
 					if (t.startColumn === 1 && previousToken) {
-						this._registerSubject(t, id, previousToken);
+						this._registerSubject(tokens, i, t, id, previousToken);
 					}
 
 					this._handleResourceReference(tokens, t, id);
@@ -391,10 +391,25 @@ export class TurtleDocument extends DocumentContext {
 		});
 	}
 
-	private _registerSubject(token: IToken, iriOrBlankId: string, previousToken: IToken) {
+	private _registerSubject(tokens: IToken[], tokenIndex: number, token: IToken, iriOrBlankId: string, previousToken: IToken) {
 		const previousType = previousToken.tokenType.name;
 
+		let isSubject = false;
+
 		if (previousType === RdfToken.PERIOD.name) {
+			isSubject = true;
+		} else if (previousType === RdfToken.IRIREF.name) {
+			// SPARQL-style PREFIX declarations end with an IRIREF (no period).
+			// If the token two places back is a PNAME_NS, the IRIREF was a namespace URI,
+			// meaning the current token opens the first triple after those PREFIX declarations.
+			const tokenBeforePrevious = tokens[tokenIndex - 2];
+			
+			if (tokenBeforePrevious?.tokenType.name === RdfToken.PNAME_NS.name) {
+				isSubject = true;
+			}
+		}
+
+		if (isSubject) {
 			const range = this.getRangeFromToken(token);
 
 			if (!this.subjects[iriOrBlankId]) {
