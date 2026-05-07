@@ -26,4 +26,9 @@ export interface IWorkspaceIndexerService {
 	 * @returns A promise that resolves when all workspace files were indexed.
 	 */
 	waitForIndexed(): Promise<void>;
+
+	/**
+	 * Open the debug console and show detailed log messages from the indexing process.
+	 */
+	showIndexStatus(): void;
 }

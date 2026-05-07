@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
+vi.mock('vscode', () => import('../mocks/vscode'));
 
 import * as vscode from 'vscode';
 import {
 	findNotebookContainingCell,
 	findOpenNotebookByUri,
 	resolveNotebookFromContext,
-} from '@src/commands/notebook-context';
+} from './notebook';
 
 beforeEach(() => {
 	(vscode.workspace as any).notebookDocuments = [];

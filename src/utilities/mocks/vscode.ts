@@ -79,13 +79,33 @@ export const window = {
   createOutputChannel: (_name: string) => ({
     appendLine: () => {},
     append: () => {},
+    trace: () => {},
+    debug: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
     clear: () => {},
     dispose: () => {},
     show: () => {},
     hide: () => {},
   }),
+  createStatusBarItem: (_alignment?: number, _priority?: number) => ({
+    alignment: _alignment,
+    priority: _priority,
+    text: '',
+    tooltip: '',
+    command: undefined as any,
+    show: () => {},
+    hide: () => {},
+    dispose: () => {},
+  }),
   registerFileDecorationProvider: (_provider: any) => ({ dispose: () => {} }),
   registerUriHandler: (_handler: any) => ({ dispose: () => {} }),
+};
+
+export const StatusBarAlignment = {
+  Left: 1,
+  Right: 2,
 };
 
 export const commands = {

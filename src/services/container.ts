@@ -15,11 +15,11 @@ import { PrefixDownloaderService } from './document/prefix-downloader-service';
 import { PrefixLookupService } from './document/prefix-lookup-service';
 import { LanguageClientFactory } from '@src/languages/language-client-factory';
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
+import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
-import { SparqlStatusBarService } from '@src/services/sparql-status-bar-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 
 /**

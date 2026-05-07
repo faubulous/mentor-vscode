@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
+import picomatch from 'picomatch';
 import { IWorkspaceFileService } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService } from './workspace-indexer.interface';
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { getConfig } from '@src/utilities/vscode/config';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 /**
  * Service for indexing RDF documents in the current workspace.
@@ -22,12 +24,26 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	 */
 	readonly onDidFinishIndexing = this._onDidFinishIndexing.event;
 
+	/**
+	 * A log output channel for indexing-related messages.
+	 */
+	private readonly _statusLog: vscode.LogOutputChannel = vscode.window.createOutputChannel('Mentor Indexer', { log: true });
+
+	/**
+	 * A status bar item to show indexing related status messages.
+	 */
+	private readonly _statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+
 	constructor(
 		private readonly documentFactory: IDocumentFactory,
 		private readonly contextService: DocumentContextService,
 		private readonly workspaceFileService: IWorkspaceFileService
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
+
+		this._statusBarItem.command = 'mentor.command.showIndexStatus';
+		this._statusBarItem.tooltip = 'Show Indexer Status Log';
+		this._statusLog.clear();
 	}
 
 	/**
@@ -49,56 +65,170 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		}, async (progress) => {
 			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
 
+			this._statusLog.info(`Started workspace indexing${force ? ' (forced)' : ''}...`);
+
 			this._reportProgress(progress, 0);
 
 			// The default value is set to Number.MAX_SAFE_INTEGER to disable the 
 			// file size limit and make issues with the configuration more visible.
 			const maxSize = getConfig().get<number>('index.maxFileSize', Number.MAX_SAFE_INTEGER);
 
-			// Use the files already discovered by WorkspaceFileService
-			const uris = this.workspaceFileService.files;
+			this._statusLog.info(`Using max file size of ${maxSize} bytes`);
 
-			if (uris.length > 0) {
+			// Load include patterns from the configuration to determine which files 
+			// to index regardless of teir size.
+			const includeMatchers = this._loadIncludePatterns();
+			const skippedFiles: string[] = [];
+
+			// Use the files already discovered by WorkspaceFileService
+			const fileUris = this.workspaceFileService.files;
+
+			if (fileUris.length > 0) {
 				const startTime = performance.now();
 
-				for (let i = 0; i < uris.length; i++) {
-					const uri = uris[i];
-					const u = uri.toString();
+				for (let i = 0; i < fileUris.length; i++) {
+					const fileUri = fileUris[i];
 
-					if (this.contextService.contexts[u] && !force) {
+					if (this.contextService.contexts[fileUri.toString()] && !force) {
 						continue;
 					}
 
-					const stat = await vscode.workspace.fs.stat(uri);
+					const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+					if (!workspaceUri) {
+						const message = `Could not parse workspace URI from ${fileUri.toString()}`;
+						this._statusLog.error(message);
+
+						skippedFiles.push(fileUri.toString());
+						continue;
+					}
+
+					const path = this._normalizeFilePath(workspaceUri.path);
+					const stat = await vscode.workspace.fs.stat(fileUri);
 					const size = stat.size;
 
-					if (size > maxSize && !force) {
-						console.debug(`Mentor: Skipping large file ${uri.toString()} (${size} bytes)`);
-						continue;
+					if (!force && size > maxSize) {
+						const skip = !includeMatchers.some(match => match(path));
+
+						if (skip) {
+							const message = `Skipping large file ${fileUri.toString()} (${size} bytes)`;
+							this._statusLog.warn(message);
+
+							skippedFiles.push(fileUri.toString());
+							continue;
+						}
 					}
 
-					if (this.documentFactory.isSupportedNotebookFile(uri)) {
-						this._indexNotebookDocument(uri, force);
+					if (this.documentFactory.isSupportedNotebookFile(fileUri)) {
+						this._indexNotebookDocument(fileUri, force);
 					} else {
-						this._indexTextDocument(uri, force);
+						this._indexTextDocument(fileUri, force);
 					}
 
-					this._reportProgress(progress, Math.round(((i + 1) / uris.length) * 100));
+					this._reportProgress(progress, Math.round(((i + 1) / fileUris.length) * 100));
 				}
 
+				const totalFiles = fileUris.length;
+				const indexedFiles = fileUris.length - skippedFiles.length;
 				const endTime = performance.now();
+				const duration = Math.round(endTime - startTime);
 
-				console.debug(`Mentor: Indexing took ${endTime - startTime} ms`);
+				const message = `Indexed ${indexedFiles} of ${totalFiles} files in ${duration} ms`;
+				this._statusLog.info(message);
+
+				this._statusBarItem.text = `$(app-mentor) ${message}`;
+				this._statusBarItem.show();
 			}
 
 			this._indexed = true;
 
-			this._reportProgress(progress, 100);
-
 			vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 
 			this._onDidFinishIndexing.fire(true);
+
+			this._reportProgress(progress, 100);
+
+			this._statusLog.info('Finished workspace indexing.');
 		});
+	}
+
+	/**
+	 * Gets the list of files to include in the workspace index, based on the 
+	 * 'mentor.index.includeFiles' configuration setting.
+	 * @returns An array of canonical workspace URIs as strings.
+	 */
+	private _loadIncludePatterns(): picomatch.Matcher[] {
+		const result: picomatch.Matcher[] = [];
+
+		let hasErrors = false;
+
+		for (const rawPattern of getConfig().get<string[]>('index.includeFiles', [])) {
+			const pattern = this._normalizeGlobPattern(rawPattern);
+
+			if (!pattern) {
+				this._statusLog.error("Empty pattern in 'mentor.index.includeFiles'.");
+				hasErrors = true;
+				continue;
+			}
+
+			try {
+				// Treat patterns as repository/workspace-relative globs.
+				// Examples: data/**/*.ttl, ontologies/*.trig
+				const matcher = picomatch(pattern, {
+					dot: true,
+					nocase: false,
+					bash: false
+				});
+
+				result.push(matcher);
+
+				this._statusLog.info(`Loaded include glob: ${pattern}`);
+			} catch (error) {
+				this._statusLog.error(`Invalid glob pattern in 'mentor.index.includeFiles': ${rawPattern}`, error);
+				hasErrors = true;
+			}
+		}
+
+		if (hasErrors) {
+			const message = "One or more invalid glob patterns detected in mentor.index.includeFiles";
+			const action = "View Log";
+
+			void vscode.window.showWarningMessage(message, action).then(selected => {
+				if (selected === action) {
+					void vscode.commands.executeCommand("mentor.command.showIndexStatus");
+				}
+			});
+		}
+
+		return result;
+	}
+
+	/**
+	 * Normalizes a glob pattern by trimming whitespace, converting backslashes to forward 
+	 * slashes, and removing leading './' or '/' characters. This ensures consistent matching 
+	 * against normalized file paths.
+	 * @param pattern The glob pattern to normalize.
+	 * @returns The normalized glob pattern.
+	 */
+	private _normalizeGlobPattern(pattern: string): string {
+		return pattern
+			.trim()
+			.replace(/\\/g, "/")
+			.replace(/^\.\/+/, "")
+			.replace(/^\/+/, "");
+	}
+
+	/**
+	 * Normalizes a file path by trimming whitespace, converting backslashes to forward slashes,
+	 * and removing leading slashes. This ensures consistent matching against normalized glob patterns.
+	 * @param path The file path to normalize.
+	 * @returns The normalized file path.
+	 */
+	private _normalizeFilePath(path: string): string {
+		return path
+			.trim()
+			.replace(/\\/g, "/")
+			.replace(/^\/+/, "");
 	}
 
 	/**
@@ -122,7 +252,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		} catch (error) {
 			// VS Code may refuse to open files it considers binary (e.g., files containing
 			// ASCII control characters like W3C test files). Skip these gracefully.
-			console.warn(`Mentor: Skipping file ${uri.toString()} (cannot be opened as text)`);
+			this._statusLog.error(`Skipping non-text file ${uri.toString()} (cannot be opened as text)`);
 		}
 	}
 
@@ -154,9 +284,10 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				// Load the cell document to create its context, passing the slug so that
 				// graphIri is slug-based from the very first loadTriples call.
 				const slug = cell.metadata?.slug as string | undefined;
+
 				await this.contextService.loadDocument(cell.document, false, slug);
 			} catch (error) {
-				console.error(`Mentor: Failed to index notebook cell ${cellUri}:`, error);
+				this._statusLog.error(`Failed to index notebook cell ${cellUri}:`, error);
 			}
 		}
 	}
@@ -185,5 +316,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				resolve();
 			});
 		});
+	}
+
+	/**
+	 * Open the debug console and show detailed log messages from the indexing process.
+	 */
+	showIndexStatus(): void {
+		this._statusLog.show();
 	}
 }

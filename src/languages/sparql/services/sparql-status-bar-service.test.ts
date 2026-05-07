@@ -25,7 +25,7 @@ vi.mock('vscode', async () => {
 });
 
 import type { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
-import { SparqlStatusBarService } from '@src/services/sparql-status-bar-service';
+import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { EventEmitter } from '@src/utilities/mocks/vscode';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection-state';

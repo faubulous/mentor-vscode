@@ -72,6 +72,7 @@
     "@rdfjs/types": "^2.0.1",
     "@types/n3": "^1.26.1",
     "@types/node": "^25.6.0",
+    "@types/picomatch": "^4.0.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0",
@@ -99,6 +100,7 @@
     "@faubulous/mentor-rdf-parsers": "^1.9.0",
     "@faubulous/mentor-rdf-serializers": "^1.6.2",
     "@vscode/codicons": "^0.0.45",
+    "picomatch": "^4.0.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "reflect-metadata": "^0.2.2",
@@ -878,6 +880,12 @@
         "title": "Renumber Cells",
         "icon": "$(list-ordered)",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.showIndexStatus",
+        "title": "Show Index Status",
+        "icon": "$(list-ordered)",
+        "category": "Mentor"
       }
     ],
     "submenus": [
@@ -1503,6 +1511,12 @@
               ".git",
               "node_modules"
             ]
+          },
+          "mentor.index.includeFiles": {
+            "type": "array",
+            "title": "Included Files",
+            "description": "Manage the files that should not be skipped when indexing the workspace. The files must be provided as workspace: URIs so that they are portable across different systems. You can use glob patterns to include multiple files. For example, to include all .ttl files in the data folder, you can add 'workspace:///data/*.ttl'.",
+            "default": []
           },
           "mentor.index.maxFileSize": {
             "type": "number",

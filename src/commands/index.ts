@@ -56,6 +56,7 @@ export { setNotebookConnection } from './set-notebook-connection';
 export { setNotebookInference } from './set-notebook-inference';
 export { showAnnotatedLabels } from './show-annotated-labels';
 export { showIndividualTypes } from './show-individual-types';
+export { showIndexStatus } from './show-index-status';
 export { showPropertyTypes } from './show-property-types';
 export { showShapeReferences } from './show-shape-references';
 export { showReferences } from './show-references';

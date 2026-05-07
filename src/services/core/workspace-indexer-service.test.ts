@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
 vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: () => ({ get: (_k: string, d?: any) => d }),
+	getConfig: () => ({ get: (k: string, d?: any) => mockConfigValues[k] ?? d }),
 }));
 
 import * as vscode from 'vscode';
@@ -18,6 +18,7 @@ let mockContexts: Record<string, any>;
 let mockDocumentFactory: any;
 let mockContextService: any;
 let mockWorkspaceFileService: any;
+let mockConfigValues: Record<string, any>;
 
 beforeEach(() => {
 	mockIsSupportedNotebookFile = vi.fn(() => false);
@@ -39,6 +40,8 @@ beforeEach(() => {
 	mockWorkspaceFileService = {
 		files: [] as vscode.Uri[],
 	};
+
+	mockConfigValues = {};
 
 	(vscode.commands as any).executeCommand = vi.fn(async () => undefined);
 	(vscode.window as any).withProgress = vi.fn(async (_opts: any, task: any) => {
@@ -79,8 +82,8 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('should index all workspace files', async () => {
-			const uri1 = vscode.Uri.parse('file:///test1.ttl');
-			const uri2 = vscode.Uri.parse('file:///test2.ttl');
+			const uri1 = vscode.Uri.parse('file:///w/test1.ttl');
+			const uri2 = vscode.Uri.parse('file:///w/test2.ttl');
 			mockWorkspaceFileService.files = [uri1, uri2];
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
 			await service.indexWorkspace();
@@ -97,7 +100,7 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('should re-index already indexed files when force=true', async () => {
-			const uri = vscode.Uri.parse('file:///test.ttl');
+			const uri = vscode.Uri.parse('file:///w/test.ttl');
 			mockWorkspaceFileService.files = [uri];
 			mockContexts[uri.toString()] = { loaded: true }; // already indexed
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
@@ -118,7 +121,7 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('should index notebook files via openNotebookDocument', async () => {
-			const notebookUri = vscode.Uri.parse('file:///test.mentor-notebook');
+			const notebookUri = vscode.Uri.parse('file:///w/test.mentor-notebook');
 			mockWorkspaceFileService.files = [notebookUri];
 			mockIsSupportedNotebookFile.mockReturnValue(true);
 			const mockCell = {
@@ -135,7 +138,7 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('should index SPARQL notebook cells even though they are not triple-source', async () => {
-			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			const notebookUri = vscode.Uri.parse('file:///w/test.mnb');
 			mockWorkspaceFileService.files = [notebookUri];
 			mockIsSupportedNotebookFile.mockReturnValue(true);
 			// SPARQL is not a triple-source language
@@ -170,7 +173,7 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('should index triple-source cells and SPARQL cells together in the same notebook', async () => {
-			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			const notebookUri = vscode.Uri.parse('file:///w/test.mnb');
 			mockWorkspaceFileService.files = [notebookUri];
 			mockIsSupportedNotebookFile.mockReturnValue(true);
 			const turtleCell = {
@@ -204,7 +207,7 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('should pass cell slug from metadata as the third argument to loadDocument', async () => {
-			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			const notebookUri = vscode.Uri.parse('file:///w/test.mnb');
 			mockWorkspaceFileService.files = [notebookUri];
 			mockIsSupportedNotebookFile.mockReturnValue(true);
 			const sluggedCell = {
@@ -220,7 +223,7 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('should pass undefined slug when cell metadata has no slug', async () => {
-			const notebookUri = vscode.Uri.parse('file:///test.mnb');
+			const notebookUri = vscode.Uri.parse('file:///w/test.mnb');
 			mockWorkspaceFileService.files = [notebookUri];
 			mockIsSupportedNotebookFile.mockReturnValue(true);
 			const noSlugCell = {
@@ -233,6 +236,32 @@ describe('WorkspaceIndexerService', () => {
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
 			await service.indexWorkspace();
 			expect(mockLoadDocument).toHaveBeenCalledWith(noSlugCell.document, false, undefined);
+		});
+
+		it('should treat include glob with leading slash as workspace-relative', async () => {
+			const uri = vscode.Uri.parse('file:///w/data/ontologies/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+			(vscode.workspace as any).fs.stat = vi.fn(async () => ({ size: Number.MAX_SAFE_INTEGER + 1 }));
+			mockConfigValues['index.maxFileSize'] = Number.MAX_SAFE_INTEGER;
+			mockConfigValues['index.includeFiles'] = ['/data/ontologies/*.ttl'];
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
+			await service.indexWorkspace(false);
+
+			expect(mockLoadDocument).toHaveBeenCalledTimes(1);
+		});
+
+		it('should treat include glob without leading slash as workspace-relative', async () => {
+			const uri = vscode.Uri.parse('file:///w/data/ontologies/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+			(vscode.workspace as any).fs.stat = vi.fn(async () => ({ size: Number.MAX_SAFE_INTEGER + 1 }));
+			mockConfigValues['index.maxFileSize'] = Number.MAX_SAFE_INTEGER;
+			mockConfigValues['index.includeFiles'] = ['data/ontologies/*.ttl'];
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService);
+			await service.indexWorkspace(false);
+
+			expect(mockLoadDocument).toHaveBeenCalledTimes(1);
 		});
 	});
 
