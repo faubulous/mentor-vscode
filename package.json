@@ -1700,6 +1700,27 @@
             "default": "Warning",
             "experimental": true
           },
+          "mentor.linting.unresolvedWorkspaceGraphSeverity": {
+            "type": "string",
+            "title": "Severity: Unresolved Workspace Graphs",
+            "description": "The severity level for workspace: URI references that do not resolve to a known graph in the store.",
+            "enum": [
+              "Error",
+              "Warning",
+              "Information",
+              "Hint",
+              "Disabled"
+            ],
+            "enumDescriptions": [
+              "Unresolved workspace graphs will be treated as errors.",
+              "Unresolved workspace graphs will be treated as warnings.",
+              "Unresolved workspace graphs will be treated as information messages.",
+              "Unresolved workspace graphs will be treated as hints.",
+              "Unresolved workspace graphs will not be reported."
+            ],
+            "default": "Warning",
+            "experimental": true
+          },
           "mentor.language.sparql.defaultDocumentTemplate": {
             "type": "string",
             "title": "Default SPARQL Document Template",

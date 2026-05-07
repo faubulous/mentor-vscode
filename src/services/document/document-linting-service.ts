@@ -8,7 +8,8 @@ import { IDocumentContextService } from '@src/services/document';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
-import { getIriFromToken, getTokenPosition } from '@src/utilities';
+import { getIriFromToken, getIriFromIriReference, getTokenPosition } from '@src/utilities';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
 
 /**
@@ -97,10 +98,25 @@ export class DocumentLintingService implements vscode.Disposable {
 	}
 
 	private _subscribeChangeEvents() {
+		// Validate after the context service has fully rebuilt tokens and triples.
+		// This fires only for the active document, which is the correct point to
+		// read fresh context — text-change events fire before the language server
+		// delivers updated tokens, so validating there reads stale data.
+		this._disposables.push(this._contextService.onDidChangeDocumentContext((context) => {
+			if (!context) {
+				return;
+			}
+
+			const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === context.uri.toString());
+
+			if (document && this._isSupportedLanguage(document.languageId)) {
+				this._validateDocument(document);
+			}
+		}));
+
 		// Subscribe to text document events
 		this._disposables.push(vscode.workspace.onDidOpenTextDocument((doc) => this._onDocumentOpened(doc)));
 		this._disposables.push(vscode.workspace.onDidCloseTextDocument((doc) => this._onDocumentClosed(doc)));
-		this._disposables.push(vscode.workspace.onDidChangeTextDocument((e) => this._onDocumentChanged(e)));
 
 		// Subscribe to notebook document events
 		this._disposables.push(vscode.workspace.onDidOpenNotebookDocument((notebook) => this._onNotebookOpened(notebook)));
@@ -109,22 +125,19 @@ export class DocumentLintingService implements vscode.Disposable {
 
 		// Subscribe to configuration change events
 		this._disposables.push(vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('mentor.linting.unresolvedReferenceSeverity')) {
+			if (e.affectsConfiguration('mentor.linting.unresolvedReferenceSeverity') ||
+				e.affectsConfiguration('mentor.linting.unresolvedWorkspaceGraphSeverity')) {
 				this._diagnosticCollection.clear();
 
 				this._validateAllOpenDocuments();
+				this._validateAllOpenNotebooks();
 			}
 
 			if (e.affectsConfiguration('mentor.linting.enabled')) {
 				this._loadLintingEnabledState();
 
-				// Kill switch: if linting is disabled, clear all diagnostics and stop.
-				if (!this._lintingEnabled) {
-					this._diagnosticCollection.clear();
-					return;
-				}
+				this._diagnosticCollection.clear();
 
-				// If it was enabled, validate everything again.
 				this._validateAllOpenDocuments();
 				this._validateAllOpenNotebooks();
 			}
@@ -132,26 +145,9 @@ export class DocumentLintingService implements vscode.Disposable {
 	}
 
 	/**
-	 * Handle document change events.
-	 */
-	private _onDocumentChanged(e: vscode.TextDocumentChangeEvent): void {
-		if (!this._lintingEnabled) {
-			return;
-		}
-
-		if (this._isSupportedLanguage(e.document.languageId)) {
-			this._validateDocument(e.document);
-		}
-	}
-
-	/**
 	 * Handle document open events.
 	 */
 	private _onDocumentOpened(document: vscode.TextDocument): void {
-		if (!this._lintingEnabled) {
-			return;
-		}
-
 		if (this._isSupportedLanguage(document.languageId)) {
 			this._validateDocument(document);
 		}
@@ -170,10 +166,6 @@ export class DocumentLintingService implements vscode.Disposable {
 	 * Handle notebook open events.
 	 */
 	private _onNotebookOpened(notebook: vscode.NotebookDocument): void {
-		if (!this._lintingEnabled) {
-			return;
-		}
-
 		this._validateNotebook(notebook);
 	}
 
@@ -193,26 +185,10 @@ export class DocumentLintingService implements vscode.Disposable {
 	 * Handle notebook change events.
 	 */
 	private _onNotebookChanged(e: vscode.NotebookDocumentChangeEvent): void {
-		if (!this._lintingEnabled) {
-			return;
-		}
-
-		// Validate cells that had content changes
-		for (const cellChange of e.cellChanges) {
-			if (cellChange.document && this._isSupportedLanguage(cellChange.cell.document.languageId)) {
-				this._validateDocument(cellChange.cell.document);
-			}
-		}
-
-		// Validate newly added cells
+		// Cell content changes are handled by onDidChangeDocumentContext once the
+		// language server delivers fresh tokens. Only handle structural changes here.
 		for (const contentChange of e.contentChanges) {
-			for (const cell of contentChange.addedCells) {
-				if (this._isSupportedLanguage(cell.document.languageId)) {
-					this._validateDocument(cell.document);
-				}
-			}
-
-			// Clear diagnostics for removed cells
+			// Clear diagnostics for removed cells.
 			for (const cell of contentChange.removedCells) {
 				if (this._isSupportedLanguage(cell.document.languageId)) {
 					this._diagnosticCollection.delete(cell.document.uri);
@@ -225,10 +201,6 @@ export class DocumentLintingService implements vscode.Disposable {
 	 * Validate all currently open RDF documents.
 	 */
 	private _validateAllOpenDocuments(): void {
-		if (!this._lintingEnabled) {
-			return;
-		}
-
 		for (const document of vscode.workspace.textDocuments) {
 			if (this._isSupportedLanguage(document.languageId)) {
 				this._validateDocument(document);
@@ -240,10 +212,6 @@ export class DocumentLintingService implements vscode.Disposable {
 	 * Validate all currently open notebooks.
 	 */
 	private _validateAllOpenNotebooks(): void {
-		if (!this._lintingEnabled) {
-			return;
-		}
-
 		for (const notebook of vscode.workspace.notebookDocuments) {
 			this._validateNotebook(notebook);
 		}
@@ -253,10 +221,6 @@ export class DocumentLintingService implements vscode.Disposable {
 	 * Validate all supported cells in a notebook.
 	 */
 	private _validateNotebook(notebook: vscode.NotebookDocument): void {
-		if (!this._lintingEnabled) {
-			return;
-		}
-
 		for (const cell of notebook.getCells()) {
 			if (this._isSupportedLanguage(cell.document.languageId)) {
 				this._validateDocument(cell.document);
@@ -269,11 +233,6 @@ export class DocumentLintingService implements vscode.Disposable {
 	 * @param document The document to validate.
 	 */
 	private async _validateDocument(document: vscode.TextDocument): Promise<void> {
-		if (!this._lintingEnabled) {
-			this._diagnosticCollection.delete(document.uri);
-			return;
-		}
-
 		const context = this._contextService.getDocumentContextFromUri(document.uri.toString());
 
 		if (!context) {
@@ -281,10 +240,69 @@ export class DocumentLintingService implements vscode.Disposable {
 		}
 
 		const diagnostics: vscode.Diagnostic[] = [
-			...await this._getUndefinedIriDiagnostics(document, context),
+			...await this._getInvalidWorkspaceGraphDiagnostics(document, context),
+			...(this._lintingEnabled ? await this._getUndefinedIriDiagnostics(document, context) : []),
 		];
 
 		this._diagnosticCollection.set(document.uri, diagnostics);
+	}
+
+	/**
+	 * Get diagnostics for workspace: URI references that do not resolve to a known graph in the store.
+	 * Only works for token-based documents (Turtle, TriG, SPARQL).
+	 */
+	private async _getInvalidWorkspaceGraphDiagnostics(document: vscode.TextDocument, context: IDocumentContext): Promise<vscode.Diagnostic[]> {
+		if (!(context instanceof TurtleDocument)) {
+			return [];
+		}
+
+		const severity = this._getSeverityLevel('linting.unresolvedWorkspaceGraphSeverity', 'Warning');
+
+		if (severity === null) {
+			return [];
+		}
+
+		const diagnostics: vscode.Diagnostic[] = [];
+		const cache = new Map<string, boolean>();
+
+		for (const token of context.tokens) {
+			if (token.tokenType?.name !== 'IRIREF') {
+				continue;
+			}
+
+			const iri = getIriFromIriReference(token.image);
+
+			if (!iri.startsWith('workspace:')) {
+				continue;
+			}
+
+			// Skip deprecated workspace:/path URIs — already reported by DeprecatedWorkspaceUriLinter.
+			if (/^workspace:\/(?!\/)/.test(iri)) {
+				continue;
+			}
+
+			const canonicalUri = WorkspaceUri.toCanonicalString(iri);
+
+			let exists = cache.get(canonicalUri);
+
+			if (exists === undefined) {
+				exists = this._vocabulary.store.hasGraph(canonicalUri);
+				cache.set(canonicalUri, exists);
+			}
+
+			if (!exists) {
+				const diagnostic = this._createDiagnosticForToken(
+					token,
+					`Workspace graph not found: '${canonicalUri}'.`,
+					severity,
+					'UnresolvedWorkspaceGraph'
+				);
+
+				diagnostics.push(diagnostic);
+			}
+		}
+
+		return diagnostics;
 	}
 
 	/**
@@ -313,7 +331,7 @@ export class DocumentLintingService implements vscode.Disposable {
 			const previousToken = context.tokens[i - 1];
 
 			if (previousToken.tokenType?.name === 'PNAME_NS') {
-				// Do not check IRI references for prefix definitions. Wrong prefixes 
+				// Do not check IRI references for prefix definitions. Wrong prefixes
 				// will be detected by non-resolvable IRIs in the document.
 				continue;
 			}
@@ -372,11 +390,17 @@ export class DocumentLintingService implements vscode.Disposable {
 		return this._vocabulary.store.getGraphs().filter(g => !excluded.has(g));
 	}
 
-	private _createDiagnosticForToken(token: IToken, message: string, severity: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Error): vscode.Diagnostic {
+	private _createDiagnosticForToken(token: IToken, message: string, severity: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Error, code?: string): vscode.Diagnostic {
 		const position = getTokenPosition(token);
 		const start = new vscode.Position(position.start.line, position.start.character);
 		const end = new vscode.Position(position.end.line, position.end.character);
 
-		return new vscode.Diagnostic(new vscode.Range(start, end), message, severity);
+		const diagnostic = new vscode.Diagnostic(new vscode.Range(start, end), message, severity);
+
+		if (code !== undefined) {
+			diagnostic.code = code;
+		}
+
+		return diagnostic;
 	}
 }
