@@ -3,6 +3,8 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
 import { getConfig } from '@src/utilities/vscode/config';
+import { MENTOR_WORKSPACE_STORE } from '../services/sparql-connection-service';
+import { SparqlConnection } from '../services/sparql-connection';
 
 /**
  * Provides a CodeLens to display and change the current SPARQL endpoint.
@@ -44,8 +46,9 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		const codeLenses: vscode.CodeLens[] = [];
 
 		// Connection CodeLens
+		const connectionUrl = this._getConnectionLabel(connection);
 		const connectionCodeLens = new vscode.CodeLens(range, {
-			title: `$(database)\u00A0Connection: ${connection.endpointUrl}`,
+			title: `$(database)\u00A0Connection: ${connectionUrl}`,
 			tooltip: 'Click to change the SPARQL endpoint for this file',
 			command: 'mentor.command.selectSparqlConnection',
 			arguments: [document],
@@ -88,6 +91,14 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		}
 
 		return codeLenses;
+	}
+
+	private _getConnectionLabel(connection: SparqlConnection): string {
+		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
+			return connection.id;
+		} else {
+			return connection.endpointUrl;
+		}
 	}
 
 	/**

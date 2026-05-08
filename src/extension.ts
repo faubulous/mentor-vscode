@@ -34,7 +34,7 @@ export async function activateExtension(context: vscode.ExtensionContext, langua
 	await loadFrameworkOntologies();
 
 	registerLanguages();
-	registerProviders();
+	registerProviders(context);
 	registerCommands(context);
 	registerViews();
 	registerNotebookSerializers();
@@ -92,6 +92,7 @@ function registerProviders() {
 	new providers.XsdAnyUriCodeActionProvider();
 	new providers.InferenceUriLinkProvider();
 	new providers.InferenceUriHandler();
+	new providers.ResourceTooltipProvider();
 }
 
 /**

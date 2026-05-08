@@ -4,7 +4,6 @@ import { ServiceToken } from '@src/services/tokens';
 import {
 	ResourceReferenceProvider,
 	ResourceDefinitionProvider,
-	ResourceTooltipProvider,
 	WorkspaceGraphDefinitionProvider,
 	NotebookCellSlugCodeLensProvider
 } from '@src/providers';
@@ -23,7 +22,6 @@ const codeActionsProvider = new TurtleCodeActionsProvider();
 const codelensProvider = new TurtleUsageCodeLensProvider();
 const completionProvider = new TurtleCompletionItemProvider();
 const definitionProvider = new ResourceDefinitionProvider();
-const hoverProvider = new ResourceTooltipProvider();
 const notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider();
 const workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`);
@@ -60,7 +58,6 @@ export class TurtleTokenProvider {
 			vscode.languages.registerCompletionItemProvider({ language }, completionProvider, ':'),
 			vscode.languages.registerDefinitionProvider({ language }, definitionProvider),
 			vscode.languages.registerDefinitionProvider({ language }, workspaceGraphDefinitionProvider),
-			vscode.languages.registerHoverProvider({ language }, hoverProvider),
 			vscode.languages.registerDocumentFormattingEditProvider({ language }, formattingProvider),
 			vscode.languages.registerInlineCompletionItemProvider({ language }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language }, referenceProvider),

@@ -4,7 +4,6 @@ import { ServiceToken } from '@src/services/tokens';
 import {
 	ResourceReferenceProvider,
 	ResourceDefinitionProvider,
-	ResourceTooltipProvider,
 	WorkspaceGraphDefinitionProvider,
 	NotebookCellSlugCodeLensProvider
 } from '@src/providers';
@@ -29,7 +28,6 @@ export class SparqlTokenProvider {
 		const definitionProvider = new ResourceDefinitionProvider();
 		const workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider();
 		const formattingProvider = new SparqlCodeFormattingProvider();
-		const hoverProvider = new ResourceTooltipProvider();
 		const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
 		const referenceProvider = new ResourceReferenceProvider();
 		const renameProvider = new TurtleRenameProvider();
@@ -45,7 +43,6 @@ export class SparqlTokenProvider {
 			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, definitionProvider),
 			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, workspaceGraphDefinitionProvider),
 			vscode.languages.registerDocumentFormattingEditProvider({ language: 'sparql' }, formattingProvider),
-			vscode.languages.registerHoverProvider({ language: 'sparql' }, hoverProvider),
 			vscode.languages.registerInlineCompletionItemProvider({ language: 'sparql' }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language: 'sparql' }, referenceProvider),
 			vscode.languages.registerRenameProvider({ language: 'sparql' }, renameProvider),
