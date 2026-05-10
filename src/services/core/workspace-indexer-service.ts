@@ -178,7 +178,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			try {
 				await this._indexWorkspaceFile(fileUri, run.reindex);
 
-				this._statusLog.info(`Loaded ${fileUri.toString()}`);
+				// this._statusLog.info(`Loaded ${fileUri.toString()}`);
 			} catch {
 				errorCount++;
 			}

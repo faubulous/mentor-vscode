@@ -107,6 +107,7 @@ function registerViews() {
 	registry.register(ServiceToken.SparqlResultsController, new webviews.SparqlResultsController());
 	registry.register(ServiceToken.SparqlConnectionController, new webviews.SparqlConnectionController());
 	registry.register(ServiceToken.SparqlConnectionsListController, new webviews.SparqlConnectionsListController());
+	registry.register(ServiceToken.SettingsPanelController, new webviews.SettingsPanelController());
 }
 
 /**

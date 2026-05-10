@@ -346,6 +346,7 @@ const removeSourceMaps = () => {
       getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
       getReactViewConfig(args, 'sparql-connection', 'sparql-connection-view'),
       getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list-view'),
+      getReactViewConfig(args, 'settings', 'settings-panel'),
     ]
 
     console.log(`\nStarting build with ${configs.length} configuration(s)..`);

@@ -57,5 +57,7 @@ export enum ServiceToken {
 	/** Service that shows SPARQL activity (query execution, connection testing) in the status bar. */
 	SparqlStatusBarService = "SparqlStatusBarService",
 	/** Service for updating workspace: URI references across all indexed documents on rename. */
-	ReferenceUpdateService = "ReferenceUpdateService"
+	ReferenceUpdateService = "ReferenceUpdateService",
+	/** Controller for the custom Mentor settings panel. */
+	SettingsPanelController = "SettingsPanelController"
 }

@@ -79,6 +79,10 @@ export class WebviewComponentFactory {
 			vscode.Uri.joinPath(this._context.extensionUri, 'dist', this._componentPath)
 		);
 
+		const mentorIconUrl = webview.asWebviewUri(
+			vscode.Uri.joinPath(this._context.extensionUri, 'media', 'icons', 'mentor.svg')
+		);
+
 		return `<!DOCTYPE html>
 			<html lang="en">
 				<head>
@@ -92,7 +96,7 @@ export class WebviewComponentFactory {
 					<!-- Note: Do not add any styles here, as they will not be applied in notebook renderers. -->
 				</head>
 				<body>
-					<div id="root"></div>
+					<div id="root" data-mentor-icon-url="${mentorIconUrl}"></div>
 				</body>
 			</html>`;
 	}

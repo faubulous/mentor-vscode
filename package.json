@@ -1673,6 +1673,60 @@
             "default": false,
             "experimental": true
           },
+          "mentor.formatting.turtle.maxLineWidth": {
+            "type": "number",
+            "title": "Turtle: Max Line Width",
+            "description": "Maximum line width before the Turtle formatter wraps long lines. Set to 0 to disable wrapping.",
+            "default": 120
+          },
+          "mentor.formatting.turtle.spaceBeforePunctuation": {
+            "type": "boolean",
+            "title": "Turtle: Space Before Punctuation",
+            "description": "Insert a space before statement-ending punctuation characters (. ; ,) in Turtle documents.",
+            "default": true
+          },
+          "mentor.formatting.turtle.blankLinesBetweenSubjects": {
+            "type": "boolean",
+            "title": "Turtle: Blank Lines Between Subjects",
+            "description": "Insert a blank line between each top-level subject block in Turtle documents.",
+            "default": true
+          },
+          "mentor.formatting.sparql.uppercaseKeywords": {
+            "type": "boolean",
+            "title": "SPARQL: Uppercase Keywords",
+            "description": "Format SPARQL keywords (SELECT, WHERE, etc.) in uppercase.",
+            "default": true
+          },
+          "mentor.formatting.sparql.alignPatterns": {
+            "type": "boolean",
+            "title": "SPARQL: Align Patterns",
+            "description": "Align triple patterns in the WHERE clause.",
+            "default": true
+          },
+          "mentor.formatting.sparql.sameBraceLine": {
+            "type": "boolean",
+            "title": "SPARQL: Opening Brace on Same Line",
+            "description": "Place opening braces on the same line as SPARQL keywords.",
+            "default": true
+          },
+          "mentor.formatting.sparql.separateClauses": {
+            "type": "boolean",
+            "title": "SPARQL: Separate Clauses",
+            "description": "Insert blank lines between major SPARQL clauses (SELECT, WHERE, etc.).",
+            "default": true
+          },
+          "mentor.formatting.sparql.maxLineWidth": {
+            "type": "number",
+            "title": "SPARQL: Max Line Width",
+            "description": "Maximum line width before the SPARQL formatter wraps long lines. Set to 0 to disable wrapping.",
+            "default": 120
+          },
+          "mentor.formatting.sparql.spaceBeforePunctuation": {
+            "type": "boolean",
+            "title": "SPARQL: Space Before Punctuation",
+            "description": "Insert a space before punctuation characters in SPARQL documents.",
+            "default": true
+          },
           "mentor.linting.enabled": {
             "type": "boolean",
             "title": "Enable Linting",
