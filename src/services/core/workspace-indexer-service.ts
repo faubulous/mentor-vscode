@@ -177,6 +177,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		for (const fileUri of indexedUris) {
 			try {
 				await this._indexWorkspaceFile(fileUri, run.reindex);
+
+				this._statusLog.info(`Loaded ${fileUri.toString()}`);
 			} catch {
 				errorCount++;
 			}
@@ -381,10 +383,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		for (const cell of notebook.getCells()) {
 			const lang = cell.document.languageId;
 
-			// Index triple-source cells (Turtle, TriG, etc.) for RDF graph data, and
-			// also index supported non-triple-source cells (e.g. SPARQL) so that their
-			// token-based `references` maps are populated for cross-file rename support.
-			if (!this.documentFactory.isTripleSourceLanguage(lang) && !this.documentFactory.supportedLanguages.has(lang)) {
+			if (!this.documentFactory.supportedLanguages.has(lang)) {
 				continue;
 			}
 

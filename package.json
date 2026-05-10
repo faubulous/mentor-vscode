@@ -111,6 +111,7 @@
     "vscode-languageserver-textdocument": "^1.0.12"
   },
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:xml",
     "onNotebook:mentor-notebook"
   ],
