@@ -2,28 +2,6 @@
 {
   "version": "0.2.0",
   "configurations": [
-        {
-      "name": "Run Extension (Web)",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "debugWebWorkerHost": true,
-      "debugWebviews": true,
-      "trace": true,
-      "args": [
-        "--inspect",
-        "--extensionDevelopmentPath=${workspaceFolder}",
-        "--extensionDevelopmentKind=web"
-      ],
-      "sourceMaps": true,
-      "skipFiles": [
-        "**/node_modules/**",
-      ],
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ],
-      "preLaunchTask": "npm: build"
-    },
     {
       "name": "Run Extension (Node)",
       "type": "extensionHost",
@@ -35,6 +13,28 @@
       "args": [
         "--inspect",
         "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "sourceMaps": true,
+      "skipFiles": [
+        "**/node_modules/**",
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "preLaunchTask": "npm: build"
+    },
+    {
+      "name": "Run Extension (Web)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "debugWebWorkerHost": true,
+      "debugWebviews": true,
+      "trace": true,
+      "args": [
+        "--inspect",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionDevelopmentKind=web"
       ],
       "sourceMaps": true,
       "skipFiles": [

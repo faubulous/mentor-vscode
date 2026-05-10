@@ -45,7 +45,7 @@
     "url": "https://github.com/faubulous/mentor-vscode"
   },
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.119.0"
   },
   "categories": [
     "Programming Languages"
@@ -75,7 +75,7 @@
     "@types/picomatch": "^4.0.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/vscode": "^1.110.0",
+    "@types/vscode": "^1.119.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@typescript-eslint/eslint-plugin": "^8.59.1",
     "@typescript-eslint/parser": "^8.59.1",
@@ -111,10 +111,290 @@
     "vscode-languageserver-textdocument": "^1.0.12"
   },
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:xml",
-    "onNotebook:mentor-notebook"
+    "onNotebook:mentor-notebook",
+    "onChatParticipant:faubulous.mentor.chat"
   ],
   "contributes": {
+    "languageModelTools": [
+      {
+        "name": "mentor_list_graphs",
+        "toolReferenceName": "mentorListGraphs",
+        "displayName": "List RDF Graphs",
+        "modelDescription": "Lists all named graphs currently loaded in the Mentor workspace RDF store, including both asserted and inferred graphs. Use this to discover what data is available before formulating GRAPH-scoped SPARQL queries.",
+        "userDescription": "List named graphs in the workspace triple store",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(list-tree)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "mentor_get_vocabulary",
+        "toolReferenceName": "mentorGetVocabulary",
+        "displayName": "Get Vocabulary",
+        "modelDescription": "Returns the full ontology and taxonomy vocabulary loaded in the Mentor workspace: OWL classes with superclass hierarchy, all RDF/OWL properties (ObjectProperty, DatatypeProperty, AnnotationProperty, rdf:Property) with type, domain and range, SKOS concept schemes and concepts with broader hierarchy, SHACL shapes with target classes and property constraints, and ontology metadata. Labels and descriptions are arrays of language-tagged values. Use this before writing SPARQL queries to know the real IRIs, class hierarchy, and property domains/ranges.",
+        "userDescription": "Get ontology classes, properties, and SKOS concepts from the workspace",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(type-hierarchy)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "includeProperties": {
+              "type": "boolean",
+              "description": "Whether to include OWL/RDF properties with domain and range. Defaults to true.",
+              "default": true
+            },
+            "includeConcepts": {
+              "type": "boolean",
+              "description": "Whether to include SKOS concepts and concept schemes. Defaults to true.",
+              "default": true
+            },
+            "includeShapes": {
+              "type": "boolean",
+              "description": "Whether to include SHACL shapes with target classes and property constraints. Defaults to true.",
+              "default": true
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of items per category (classes, properties, concepts). Defaults to 500.",
+              "default": 500,
+              "minimum": 1,
+              "maximum": 5000
+            }
+          }
+        }
+      },
+      {
+        "name": "mentor_get_prefixes",
+        "toolReferenceName": "mentorGetPrefixes",
+        "displayName": "Get Namespace Prefixes",
+        "modelDescription": "Returns the namespace prefix map for the Mentor workspace, aggregated from all loaded RDF documents and the extension configuration. Use this to write compact SPARQL queries with prefix notation (e.g. foaf:Person instead of the full IRI).",
+        "userDescription": "Get namespace prefixes declared in the workspace RDF documents",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(symbol-namespace)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "mentor_execute_sparql",
+        "toolReferenceName": "mentorExecuteSparql",
+        "displayName": "Execute SPARQL Query",
+        "modelDescription": "Executes a SPARQL SELECT, ASK, CONSTRUCT, or DESCRIBE query against the Mentor workspace RDF store and returns the results. SELECT returns variable bindings as rows. ASK returns a boolean. CONSTRUCT and DESCRIBE return Turtle-encoded RDF triples. Use mentor_get_vocabulary and mentor_get_prefixes first to obtain the correct IRIs and prefix declarations.",
+        "userDescription": "Execute a SPARQL query against the workspace triple store",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(play)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "The SPARQL query to execute (SELECT, ASK, CONSTRUCT, or DESCRIBE)."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of result rows to return for SELECT queries. Defaults to 200.",
+              "default": 200,
+              "minimum": 1,
+              "maximum": 10000
+            }
+          },
+          "required": ["query"]
+        }
+      },
+      {
+        "name": "mentor_search_by_label",
+        "toolReferenceName": "mentorSearchByLabel",
+        "displayName": "Search Resources by Label",
+        "modelDescription": "Searches the Mentor workspace RDF store for resources whose labels (rdfs:label, skos:prefLabel, dct:title, etc.) contain the given text. Returns matching resource IRIs with their labels, language tags, and the matched predicate. Use this to find the correct IRI for a concept described in natural language before formulating SPARQL queries.",
+        "userDescription": "Find RDF resources by label text in the workspace store",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(search)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "labelText": {
+              "type": "string",
+              "description": "Text to search for in resource labels (case-insensitive substring match)."
+            },
+            "language": {
+              "type": "string",
+              "description": "Optional ISO language tag to filter results (e.g. 'en', 'de'). If omitted, all languages are returned."
+            }
+          },
+          "required": ["labelText"]
+        }
+      },
+      {
+        "name": "mentor_describe_resource",
+        "toolReferenceName": "mentorDescribeResource",
+        "displayName": "Describe RDF Resource",
+        "modelDescription": "Returns all asserted RDF triples about a specific resource IRI from the Mentor workspace store, serialized as Turtle. Use this to inspect the full definition of a class, property, or individual — including its types, labels, annotations, and relationships.",
+        "userDescription": "Get all triples about a specific RDF resource from the workspace store",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(info)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "resourceIri": {
+              "type": "string",
+              "description": "The fully qualified IRI of the resource to describe."
+            }
+          },
+          "required": ["resourceIri"]
+        }
+      },
+      {
+        "name": "mentor_validate_sparql",
+        "toolReferenceName": "mentorValidateSparql",
+        "displayName": "Validate SPARQL Query",
+        "modelDescription": "Validates a SPARQL query string for syntax correctness without executing it. Returns whether the query is syntactically valid and, if not, a list of lexer errors with line and column information. Use this as a self-check after formulating SPARQL queries from natural language.",
+        "userDescription": "Validate the syntax of a SPARQL query without executing it",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(check)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "The SPARQL query string to validate."
+            }
+          },
+          "required": ["query"]
+        }
+      },
+      {
+        "name": "mentor_get_class_properties",
+        "toolReferenceName": "mentorGetClassProperties",
+        "displayName": "Get Class Properties",
+        "modelDescription": "Given an OWL class IRI, returns all RDF predicates actually used on instances of that class in the workspace store, with per-property occurrence counts and a sample value. At depth=2 it follows each object-valued property one hop further and reports the types of the range nodes and their properties — directly revealing multi-hop patterns like hasQuantity→numericValue. Call this when the vocabulary schema alone does not make clear which property carries a specific value.",
+        "userDescription": "Inspect which properties instances of a given class actually use in the data",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(symbol-class)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "classIri": {
+              "type": "string",
+              "description": "The fully qualified IRI of the OWL class whose instances to inspect."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "How many hops to follow from each instance. 1 = direct properties only (default). 2 = also expand object-valued properties one hop further to reveal nested structures.",
+              "default": 1,
+              "minimum": 1,
+              "maximum": 2
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of distinct predicates to return per level. Defaults to 50.",
+              "default": 50,
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          "required": ["classIri"]
+        }
+      },
+      {
+        "name": "mentor_list_datasets",
+        "toolReferenceName": "mentorListDatasets",
+        "displayName": "List DCAT Datasets",
+        "modelDescription": "Lists all dcat:Dataset instances in the Mentor workspace store with their labels, descriptions, distributions, keywords, themes, publisher, license, and temporal metadata (dct:created, dct:issued, dct:modified). Always use this tool to answer questions about dataset identity, provenance, or dates — do not read workspace files directly, as that fails on remote connections and bypasses the RDF index.",
+        "userDescription": "List DCAT datasets registered in the workspace triple store",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(database)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of datasets to return. Defaults to 200.",
+              "default": 200,
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        }
+      },
+      {
+        "name": "mentor_list_instances",
+        "toolReferenceName": "mentorListInstances",
+        "displayName": "List Class Instances",
+        "modelDescription": "Returns all named individuals (instances) of a given OWL class in the workspace store, with their IRIs and labels. Use this to enumerate instances of a class without writing SPARQL — for example, to discover which production calendars exist, what datasets are registered, or which organisations are loaded. Each result includes all language-tagged labels so the agent can match the user's natural-language description to the correct IRI.",
+        "userDescription": "List all instances of a given class with their IRIs and labels",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(list-flat)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "classIri": {
+              "type": "string",
+              "description": "The fully qualified IRI of the OWL class whose instances to list."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of instances to return. Defaults to 200.",
+              "default": 200,
+              "minimum": 1,
+              "maximum": 2000
+            }
+          },
+          "required": ["classIri"]
+        }
+      },
+      {
+        "name": "mentor_get_query_context",
+        "toolReferenceName": "mentorGetQueryContext",
+        "displayName": "Get Query Context",
+        "modelDescription": "Given a list of natural-language terms from the user's question (e.g. [\"Part\", \"SOCOP\", \"Södertälje\"]), returns everything needed to write a correct SPARQL query in one call: matched class/instance/property IRIs with labels, depth-2 property chains revealing how data is connected (e.g. Part→hasIntroCO→ECO→hasSOCOP→SOCOP→hasEvent→inCalendar), which named graphs contain instances of each matched class, and a focused prefix map covering only the namespaces used. Call this as the first step when the user asks a domain-specific question requiring SPARQL — it replaces the combination of mentor_get_prefixes, mentor_search_by_label, mentor_get_class_properties, and mentor_list_graphs. Also use with the NAME OF A RELATED CLASS (e.g. \"Stock\", \"Quantity\") — not abstract vocabulary terms — to get its depth-2 property chain and discover how the ontology encodes semantic concepts indirectly (e.g. a unit property whose example values are volume IRIs indicates fluid content).",
+        "userDescription": "Assemble SPARQL query context from natural-language terms in one call",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(search-view-icon)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "terms": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Natural-language terms from the user's question to look up in the workspace store, e.g. [\"Part\", \"SOCOP\", \"Södertälje\"]. Each term is matched as a case-insensitive substring against all configured label predicates."
+            },
+            "language": {
+              "type": "string",
+              "description": "Optional ISO 639-1 language tag to filter label matches, e.g. \"en\"."
+            },
+            "depth": {
+              "type": "integer",
+              "description": "Property chain depth for matched classes. 1 = direct properties only. 2 = also expand object-valued properties one hop to reveal nested structures like hasQuantity→numericValue (default, recommended).",
+              "default": 2,
+              "minimum": 1,
+              "maximum": 2
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of matching resources to return per term. Defaults to 10.",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "required": ["terms"]
+        }
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "faubulous.mentor.chat",
+        "name": "mentor",
+        "fullName": "Mentor Assistant",
+        "description": "Ask questions about your knowledge graphs.",
+        "isSticky": true
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {

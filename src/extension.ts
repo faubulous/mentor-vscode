@@ -2,19 +2,24 @@
 import 'reflect-metadata';
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { Store } from '@faubulous/mentor-rdf';
+import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { configureServiceContainer } from './services/container';
 import { ServiceToken } from './services/tokens';
 import { IWorkspaceFileService, IWorkspaceService } from './services/core';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { WorkspaceUri } from './providers/workspace-uri';
 import { SparqlConnectionService } from './languages/sparql/services/sparql-connection-service';
+import { SparqlQueryService } from './languages/sparql/services/sparql-query-service';
+import { PrefixLookupService } from './services/document/prefix-lookup-service';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
+import { IDocumentContextService } from './services/document';
 import { DocumentLintingService } from './services/document/document-linting-service';
 import { LanguageClientFactory } from './languages/language-client-factory';
+import { registerMcpTools } from './mcp';
+import { registerMentorParticipant } from './chat/mentor-participant';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
@@ -31,14 +36,27 @@ export async function activateExtension(context: vscode.ExtensionContext, langua
 
 	configureServiceContainer(context, languageClientFactory);
 
+	// Register the chat participant immediately — before any async work — so VS Code's
+	// chat routing finds it on the first @mentor message regardless of activation timing.
+	registerMentorParticipant(context);
+
 	await loadFrameworkOntologies();
 
 	registerLanguages();
-	registerProviders(context);
+	registerProviders();
 	registerCommands(context);
 	registerViews();
 	registerNotebookSerializers();
 	registerRenameHandlers(context);
+	registerMcpTools(context, {
+		store: container.resolve<Store>(ServiceToken.Store),
+		vocabulary: container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository),
+		connectionService: container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService),
+		queryService: container.resolve<SparqlQueryService>(ServiceToken.SparqlQueryService),
+		prefixService: container.resolve<PrefixLookupService>(ServiceToken.PrefixLookupService),
+		contextService: container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService),
+		indexerService: container.resolve<WorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService),
+	});
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
@@ -141,8 +159,6 @@ function registerRenameHandlers(context: vscode.ExtensionContext) {
 		})
 	);
 }
-
-
 
 /**
  * Loads the RDF framework ontologies into the store, which are required for providing completions and hovers for built-in concepts.
