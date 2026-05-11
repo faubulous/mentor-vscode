@@ -1323,6 +1323,30 @@
         "id": "mentorSettings",
         "title": "Mentor",
         "order": 1,
+        "x-nav-groups": [
+          {
+            "id": "appearance",
+            "label": "Appearance",
+            "sections": [
+              { "id": "appearance.display",          "label": "Display" },
+              { "id": "appearance.definitions-tree", "label": "Definitions Tree" }
+            ]
+          },
+          {
+            "id": "editor",
+            "label": "Editor",
+            "sections": [
+              { "id": "editor.general",    "label": "General"    },
+              { "id": "editor.formatting", "label": "Formatting" },
+              { "id": "editor.sorting",    "label": "Sorting"    },
+              { "id": "editor.templates",  "label": "Templates"  }
+            ]
+          },
+          { "id": "indexing",    "label": "Indexing",    "sections": [{ "id": "indexing",    "label": "Indexing"    }] },
+          { "id": "connections", "label": "Connections", "sections": [{ "id": "connections", "label": "Connections" }] },
+          { "id": "query",       "label": "Query",       "sections": [{ "id": "query",       "label": "Query"       }] },
+          { "id": "validation",  "label": "Validation",  "sections": [{ "id": "validation",  "label": "Validation"  }] }
+        ],
         "properties": {
           "mentor.sparql.connections": {
             "x-group": "connections",

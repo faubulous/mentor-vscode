@@ -1,7 +1,7 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SETTINGS_METADATA, SECTION_TITLES, getEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-single-select';
@@ -52,9 +52,9 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 					ref={labelStyleRef}
 					value={String(settings['definitionTree.labelStyle']?.value ?? 'AnnotatedLabels')}
 				>
-					<vscode-option value="AnnotatedLabels">Annotated labels</vscode-option>
-					<vscode-option value="UriLabels">URI labels</vscode-option>
-					<vscode-option value="UriLabelsWithPrefix">URI labels with prefix</vscode-option>
+					{getEnumOptions('definitionTree.labelStyle').map(o => (
+						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
+					))}
 				</vscode-single-select>
 			</SettingRow>
 			<SettingRow
@@ -68,8 +68,9 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 					ref={defaultLayoutRef}
 					value={String(settings['definitionTree.defaultLayout']?.value ?? 'GroupByType')}
 				>
-					<vscode-option value="GroupByType">Group by type</vscode-option>
-					<vscode-option value="GroupBySource">Group by source</vscode-option>
+					{getEnumOptions('definitionTree.defaultLayout').map(o => (
+						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
+					))}
 				</vscode-single-select>
 			</SettingRow>
 			<SettingRow
@@ -96,9 +97,9 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 					ref={decorateMissingRef}
 					value={String(settings['definitionTree.decorateMissingLanguageTags']?.value ?? 'Disabled')}
 				>
-					<vscode-option value="Disabled">Disabled</vscode-option>
-					<vscode-option value="All">All</vscode-option>
-					<vscode-option value="Document">Document only</vscode-option>
+					{getEnumOptions('definitionTree.decorateMissingLanguageTags').map(o => (
+						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
+					))}
 				</vscode-single-select>
 			</SettingRow>
 		</div>

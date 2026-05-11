@@ -1,4 +1,4 @@
-import { NavSection } from './settings-nav';
+import { NavSection } from '../settings-metadata';
 
 export interface CatalogEntry {
 	section: NavSection;

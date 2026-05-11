@@ -2,7 +2,7 @@ import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SETTINGS_METADATA, SECTION_TITLES, getNestedEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-single-select';
@@ -76,8 +76,9 @@ export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope 
 						ref={unmatchedPositionRef}
 						value={opts.unmatchedPosition ?? 'end'}
 					>
-						<vscode-option value="start">Start</vscode-option>
-						<vscode-option value="end">End</vscode-option>
+						{getNestedEnumOptions('sorting.typeSortingOptions', 'unmatchedPosition').map(o => (
+							<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
+						))}
 					</vscode-single-select>
 				</div>
 			</div>
@@ -91,8 +92,9 @@ export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope 
 						ref={unmatchedSortRef}
 						value={opts.unmatchedSort ?? 'alphabetical'}
 					>
-						<vscode-option value="alphabetical">Alphabetical</vscode-option>
-						<vscode-option value="none">None</vscode-option>
+						{getNestedEnumOptions('sorting.typeSortingOptions', 'unmatchedSort').map(o => (
+							<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
+						))}
 					</vscode-single-select>
 				</div>
 			</div>

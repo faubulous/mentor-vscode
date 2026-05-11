@@ -5,7 +5,8 @@ import { SettingsPanelMessages, SettingScope, SettingState, LanguageId, Formatti
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import stylesheet from './settings-panel.css';
 
-import { SettingsNav, NavSection } from './components/settings-nav';
+import { SettingsNav } from './components/settings-nav';
+import { NavSection } from './settings-metadata';
 import { EditorSettings, TestResult } from './components/types';
 import { PanelHeader } from './components/panel-header';
 import { SettingsScopeContext, SettingsMoveContext, EditorSettingsMoveContext } from './components/setting-row';

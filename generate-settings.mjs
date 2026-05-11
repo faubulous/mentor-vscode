@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
  * Generates src/views/webviews/settings/settings-metadata.ts from
- * the contributes.configuration[0].properties block in package.json.
+ * the contributes.configuration[0] block in package.json.
  *
- * Only properties that carry an "x-group" annotation are emitted.
+ * Sources of truth in package.json:
+ *   - x-nav-groups  : navigation hierarchy, group/section labels
+ *   - properties    : all settings with type, enum, enumDescriptions, x-group, etc.
+ *
  * Run: node generate-settings.mjs
  */
 
@@ -14,21 +17,55 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8'));
-const properties = pkg.contributes.configuration[0].properties;
+const config = pkg.contributes.configuration[0];
+const properties = config.properties;
+const navGroups = config['x-nav-groups'];
 
-/** Human-readable titles for each NavSection, used in SECTION_TITLES. */
-const SECTION_TITLES = {
-	'appearance.display': 'Display',
-	'appearance.definitions-tree': 'Definitions Tree',
-	'editor.general': 'General',
-	'editor.formatting': 'Formatting',
-	'editor.sorting': 'Sorting',
-	'editor.templates': 'Templates',
-	'indexing': 'Indexing',
-	'connections': 'Connections',
-	'query': 'Query',
-	'validation': 'Validation',
-};
+if (!navGroups) {
+	console.error('ERROR: x-nav-groups not found in contributes.configuration[0]');
+	process.exit(1);
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+
+/**
+ * Splits a PascalCase or camelCase identifier into a human-readable label.
+ * "AnnotatedLabels" → "Annotated Labels"
+ * "GroupByType"     → "Group By Type"
+ * "unmatchedSort"   → "Unmatched Sort"
+ */
+function splitLabel(str) {
+	return str
+		.replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')   // handle sequences like "HTMLParser" → "HTML Parser"
+		.replace(/([a-z\d])([A-Z])/g, '$1 $2')         // insert space before each capital
+		.replace(/_/g, ' ')                             // underscores → spaces
+		.replace(/^./, c => c.toUpperCase())            // capitalise first char
+		.trim();
+}
+
+/**
+ * Extract enum options as {value, label} pairs from an enum array.
+ */
+function toEnumOptions(enumValues) {
+	return enumValues.map(v => ({ value: String(v), label: splitLabel(String(v)) }));
+}
+
+// ── Collect nav sections flat list ────────────────────────────
+
+const allSections = [];
+for (const group of navGroups) {
+	for (const section of group.sections) {
+		allSections.push(section);
+	}
+}
+
+// Build SECTION_TITLES from x-nav-groups
+const sectionTitles = {};
+for (const section of allSections) {
+	sectionTitles[section.id] = section.label;
+}
+
+// ── Collect settings entries ──────────────────────────────────
 
 const entries = {};
 
@@ -39,29 +76,79 @@ for (const [fullKey, def] of Object.entries(properties)) {
 	// Strip the "mentor." prefix
 	const key = fullKey.replace(/^mentor\./, '');
 
-	entries[key] = {
+	const entry = {
 		title: def.title ?? key,
 		description: def.description ?? '',
 		defaultValue: def.default ?? null,
 		group,
-		...(def.enumDescriptions ? { enumDescriptions: def.enumDescriptions } : {}),
+		experimental: def.experimental === true,
 	};
+
+	if (def.enumDescriptions) {
+		entry.enumDescriptions = def.enumDescriptions;
+	}
+
+	// Top-level enum
+	if (Array.isArray(def.enum)) {
+		entry.enumOptions = toEnumOptions(def.enum);
+	}
+
+	// Nested enums from object property sub-schemas
+	if (def.type === 'object' && def.properties) {
+		const nested = {};
+		for (const [propName, propDef] of Object.entries(def.properties)) {
+			if (Array.isArray(propDef.enum)) {
+				nested[propName] = toEnumOptions(propDef.enum);
+			}
+		}
+		if (Object.keys(nested).length > 0) {
+			entry.nestedEnumOptions = nested;
+		}
+	}
+
+	entries[key] = entry;
 }
 
-// Build the TypeScript source
+// ── Build TypeScript source ───────────────────────────────────
+
+const navSectionType = allSections.map(s => JSON.stringify(s.id)).join('\n\t| ');
+
 const lines = [
 	'// AUTO-GENERATED — do not edit by hand.',
 	'// Re-generate by running: node generate-settings.mjs',
 	'',
-	"import type { NavSection } from './components/settings-nav';",
+	'// ── Types ────────────────────────────────────────────────────',
+	'',
+	`export type NavSection =\n\t| ${navSectionType};`,
+	'',
+	'export interface EnumOption {',
+	'\tvalue: string;',
+	'\tlabel: string;',
+	'}',
 	'',
 	'export interface SettingMetadata {',
 	'\ttitle: string;',
 	'\tdescription: string;',
 	'\tdefaultValue: unknown;',
 	'\tgroup: NavSection;',
+	'\texperimental?: boolean;',
 	'\tenumDescriptions?: string[];',
+	'\tenumOptions?: EnumOption[];',
+	'\tnestedEnumOptions?: Record<string, EnumOption[]>;',
 	'}',
+	'',
+	'export interface NavSectionConfig {',
+	'\tid: NavSection;',
+	'\tlabel: string;',
+	'}',
+	'',
+	'export interface NavGroupConfig {',
+	'\tid: string;',
+	'\tlabel: string;',
+	'\tsections: NavSectionConfig[];',
+	'}',
+	'',
+	'// ── Data ─────────────────────────────────────────────────────',
 	'',
 	'export const SETTINGS_METADATA: Record<string, SettingMetadata> = {',
 ];
@@ -72,19 +159,53 @@ for (const [key, meta] of Object.entries(entries)) {
 	lines.push(`\t\tdescription: ${JSON.stringify(meta.description)},`);
 	lines.push(`\t\tdefaultValue: ${JSON.stringify(meta.defaultValue)},`);
 	lines.push(`\t\tgroup: ${JSON.stringify(meta.group)},`);
+	if (meta.experimental) {
+		lines.push(`\t\texperimental: true,`);
+	}
 	if (meta.enumDescriptions) {
 		lines.push(`\t\tenumDescriptions: ${JSON.stringify(meta.enumDescriptions)},`);
+	}
+	if (meta.enumOptions) {
+		lines.push(`\t\tenumOptions: ${JSON.stringify(meta.enumOptions)},`);
+	}
+	if (meta.nestedEnumOptions) {
+		lines.push(`\t\tnestedEnumOptions: ${JSON.stringify(meta.nestedEnumOptions)},`);
 	}
 	lines.push('\t},');
 }
 
 lines.push('};');
 lines.push('');
+
+// SECTION_TITLES
 lines.push('export const SECTION_TITLES: Record<NavSection, string> = {');
-for (const [group, title] of Object.entries(SECTION_TITLES)) {
-	lines.push(`\t${JSON.stringify(group)}: ${JSON.stringify(title)},`);
+for (const [id, label] of Object.entries(sectionTitles)) {
+	lines.push(`\t${JSON.stringify(id)}: ${JSON.stringify(label)},`);
 }
 lines.push('};');
+lines.push('');
+
+// NAV_GROUPS
+lines.push('export const NAV_GROUPS: NavGroupConfig[] = ');
+lines.push(JSON.stringify(navGroups, null, '\t').replace(/\n/g, '\n') + ';');
+lines.push('');
+
+// getEnumOptions helper
+lines.push('// ── Helpers ──────────────────────────────────────────────────');
+lines.push('');
+lines.push('/** Returns the enum options for a top-level setting key. */');
+lines.push('export function getEnumOptions(key: string): EnumOption[] {');
+lines.push('\treturn SETTINGS_METADATA[key]?.enumOptions ?? [];');
+lines.push('}');
+lines.push('');
+lines.push('/**');
+lines.push(' * Returns the enum options for a nested property of an object setting.');
+lines.push(' * @param key     The setting key (e.g. "sorting.typeSortingOptions")');
+lines.push(' * @param propName The nested property name (e.g. "unmatchedPosition")');
+lines.push(' */');
+lines.push('export function getNestedEnumOptions(key: string, propName: string): EnumOption[] {');
+lines.push('\treturn SETTINGS_METADATA[key]?.nestedEnumOptions?.[propName] ?? [];');
+lines.push('}');
 lines.push('');
 
 const output = lines.join('\n');

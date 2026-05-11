@@ -1,7 +1,7 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SETTINGS_METADATA, SECTION_TITLES, getEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
@@ -74,8 +74,9 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 					ref={prefixDefinitionModeRef}
 					value={String(settings['prefixes.prefixDefinitionMode']?.value ?? 'Append')}
 				>
-					<vscode-option value="Append">Append</vscode-option>
-					<vscode-option value="Sorted">Sorted</vscode-option>
+					{getEnumOptions('prefixes.prefixDefinitionMode').map(o => (
+						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
+					))}
 				</vscode-single-select>
 			</SettingRow>
 			<SettingRow

@@ -1,15 +1,48 @@
 // AUTO-GENERATED — do not edit by hand.
 // Re-generate by running: node generate-settings.mjs
 
-import type { NavSection } from './components/settings-nav';
+// ── Types ────────────────────────────────────────────────────
+
+export type NavSection =
+	| "appearance.display"
+	| "appearance.definitions-tree"
+	| "editor.general"
+	| "editor.formatting"
+	| "editor.sorting"
+	| "editor.templates"
+	| "indexing"
+	| "connections"
+	| "query"
+	| "validation";
+
+export interface EnumOption {
+	value: string;
+	label: string;
+}
 
 export interface SettingMetadata {
 	title: string;
 	description: string;
 	defaultValue: unknown;
 	group: NavSection;
+	experimental?: boolean;
 	enumDescriptions?: string[];
+	enumOptions?: EnumOption[];
+	nestedEnumOptions?: Record<string, EnumOption[]>;
 }
+
+export interface NavSectionConfig {
+	id: NavSection;
+	label: string;
+}
+
+export interface NavGroupConfig {
+	id: string;
+	label: string;
+	sections: NavSectionConfig[];
+}
+
+// ── Data ─────────────────────────────────────────────────────
 
 export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 	"sparql.connections": {
@@ -54,6 +87,7 @@ export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 		defaultValue: "AnnotatedLabels",
 		group: "appearance.definitions-tree",
 		enumDescriptions: ["Render labels from the annotated label predicates.","Render the URI path element or fragment of the URI.","Render the URI path element or fragment with namespace prefix."],
+		enumOptions: [{"value":"AnnotatedLabels","label":"Annotated Labels"},{"value":"UriLabels","label":"Uri Labels"},{"value":"UriLabelsWithPrefix","label":"Uri Labels With Prefix"}],
 	},
 	"definitionTree.defaultLayout": {
 		title: "Default Definitions Tree Layout",
@@ -61,6 +95,7 @@ export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 		defaultValue: "GroupBySource",
 		group: "appearance.definitions-tree",
 		enumDescriptions: ["Group all classes, properties and individuals in the definitions tree under common top level nodes for each type.","Group classes, properties and invdividuals in the definitions tree under seperate nodes for each ontology or concept scheme."],
+		enumOptions: [{"value":"GroupByType","label":"Group By Type"},{"value":"GroupBySource","label":"Group By Source"}],
 	},
 	"definitionTree.defaultLanguageTag": {
 		title: "Default Language",
@@ -74,6 +109,7 @@ export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 		defaultValue: "Document",
 		group: "appearance.definitions-tree",
 		enumDescriptions: ["Disable the decoration of missing language tags.","Grey out missing language tags for definitions in all sources.","Grey out missing language tags only for definitions in the active document."],
+		enumOptions: [{"value":"Disabled","label":"Disabled"},{"value":"All","label":"All"},{"value":"Document","label":"Document"}],
 	},
 	"predicates.label": {
 		title: "Label Predicates",
@@ -141,12 +177,14 @@ export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 		defaultValue: "Sorted",
 		group: "editor.general",
 		enumDescriptions: ["Append new prefixes to the end of the prefix definition list in the document header.","Maintain an alphabetical order of prefixes in the document header."],
+		enumOptions: [{"value":"Append","label":"Append"},{"value":"Sorted","label":"Sorted"}],
 	},
 	"sorting.typeSortingOptions": {
 		title: "Type Sorting Options",
 		description: "Options for the priority-based sort strategy used when sorting documents by type. See the Mentor serializer [documentation](https://github.com/faubulous/mentor-rdf-serializers/blob/main/docs/sorting.md#priority) for reference.",
 		defaultValue: {"typeOrder":["http://www.w3.org/2002/07/owl#Ontology","http://www.w3.org/2002/07/owl#Class","http://www.w3.org/2000/01/rdf-schema#Class","http://www.w3.org/2002/07/owl#ObjectProperty","http://www.w3.org/2002/07/owl#DatatypeProperty","http://www.w3.org/2002/07/owl#AnnotationProperty","http://www.w3.org/1999/02/22-rdf-syntax-ns#Property","http://www.w3.org/2002/07/owl#NamedIndividual","http://www.w3.org/2004/02/skos/core#ConceptScheme","http://www.w3.org/2004/02/skos/core#Collection","http://www.w3.org/2004/02/skos/core#Concept"],"predicateOrder":["http://www.w3.org/1999/02/22-rdf-syntax-ns#type"],"unmatchedPosition":"end","unmatchedSort":"alphabetical"},
 		group: "editor.sorting",
+		nestedEnumOptions: {"unmatchedPosition":[{"value":"start","label":"Start"},{"value":"end","label":"End"}],"unmatchedSort":[{"value":"alphabetical","label":"Alphabetical"},{"value":"none","label":"None"}]},
 	},
 	"shacl.validation": {
 		title: "SHACL Validation Configuration",
@@ -159,6 +197,7 @@ export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 		description: "If enabled, Mentor will show experimental SHACL validation features including the titlebar validate button and SHACL validation code lenses.",
 		defaultValue: false,
 		group: "validation",
+		experimental: true,
 	},
 	"formatting.turtle.maxLineWidth": {
 		title: "Turtle: Max Line Width",
@@ -219,20 +258,25 @@ export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 		description: "If enabled, the extension will provide linting for RDF documents.",
 		defaultValue: false,
 		group: "validation",
+		experimental: true,
 	},
 	"linting.unresolvedReferenceSeverity": {
 		title: "Severity: Unresolved References",
 		description: "The severity level for unresolved references in RDF documents.",
 		defaultValue: "Warning",
 		group: "validation",
+		experimental: true,
 		enumDescriptions: ["Unresolved references will be treated as errors.","Unresolved references will be treated as warnings.","Unresolved references will be treated as information messages.","Unresolved references will be treated as hints.","Unresolved references will not be reported."],
+		enumOptions: [{"value":"Error","label":"Error"},{"value":"Warning","label":"Warning"},{"value":"Information","label":"Information"},{"value":"Hint","label":"Hint"},{"value":"Disabled","label":"Disabled"}],
 	},
 	"linting.unresolvedWorkspaceGraphSeverity": {
 		title: "Severity: Unresolved Workspace Graphs",
 		description: "The severity level for workspace: URI references that do not resolve to a known graph in the store.",
 		defaultValue: "Warning",
 		group: "validation",
+		experimental: true,
 		enumDescriptions: ["Unresolved workspace graphs will be treated as errors.","Unresolved workspace graphs will be treated as warnings.","Unresolved workspace graphs will be treated as information messages.","Unresolved workspace graphs will be treated as hints.","Unresolved workspace graphs will not be reported."],
+		enumOptions: [{"value":"Error","label":"Error"},{"value":"Warning","label":"Warning"},{"value":"Information","label":"Information"},{"value":"Hint","label":"Hint"},{"value":"Disabled","label":"Disabled"}],
 	},
 	"language.sparql.defaultDocumentTemplate": {
 		title: "Default SPARQL Document Template",
@@ -290,3 +334,99 @@ export const SECTION_TITLES: Record<NavSection, string> = {
 	"query": "Query",
 	"validation": "Validation",
 };
+
+export const NAV_GROUPS: NavGroupConfig[] = 
+[
+	{
+		"id": "appearance",
+		"label": "Appearance",
+		"sections": [
+			{
+				"id": "appearance.display",
+				"label": "Display"
+			},
+			{
+				"id": "appearance.definitions-tree",
+				"label": "Definitions Tree"
+			}
+		]
+	},
+	{
+		"id": "editor",
+		"label": "Editor",
+		"sections": [
+			{
+				"id": "editor.general",
+				"label": "General"
+			},
+			{
+				"id": "editor.formatting",
+				"label": "Formatting"
+			},
+			{
+				"id": "editor.sorting",
+				"label": "Sorting"
+			},
+			{
+				"id": "editor.templates",
+				"label": "Templates"
+			}
+		]
+	},
+	{
+		"id": "indexing",
+		"label": "Indexing",
+		"sections": [
+			{
+				"id": "indexing",
+				"label": "Indexing"
+			}
+		]
+	},
+	{
+		"id": "connections",
+		"label": "Connections",
+		"sections": [
+			{
+				"id": "connections",
+				"label": "Connections"
+			}
+		]
+	},
+	{
+		"id": "query",
+		"label": "Query",
+		"sections": [
+			{
+				"id": "query",
+				"label": "Query"
+			}
+		]
+	},
+	{
+		"id": "validation",
+		"label": "Validation",
+		"sections": [
+			{
+				"id": "validation",
+				"label": "Validation"
+			}
+		]
+	}
+];
+
+// ── Helpers ──────────────────────────────────────────────────
+
+/** Returns the enum options for a top-level setting key. */
+export function getEnumOptions(key: string): EnumOption[] {
+	return SETTINGS_METADATA[key]?.enumOptions ?? [];
+}
+
+/**
+ * Returns the enum options for a nested property of an object setting.
+ * @param key     The setting key (e.g. "sorting.typeSortingOptions")
+ * @param propName The nested property name (e.g. "unmatchedPosition")
+ */
+export function getNestedEnumOptions(key: string, propName: string): EnumOption[] {
+	return SETTINGS_METADATA[key]?.nestedEnumOptions?.[propName] ?? [];
+}
