@@ -8,7 +8,7 @@ import stylesheet from './settings-panel.css';
 import { SettingsNav, NavSection } from './components/settings-nav';
 import { EditorSettings, TestResult } from './components/types';
 import { PanelHeader } from './components/panel-header';
-import { SettingsScopeContext } from './components/setting-row';
+import { SettingsScopeContext, SettingsMoveContext, EditorSettingsMoveContext } from './components/setting-row';
 import { SearchResults } from './components/search-results';
 import { DisplaySection } from './sections/display';
 import { DefinitionsTreeSection } from './sections/definitions-tree';
@@ -166,6 +166,30 @@ function SettingsPanel() {
 		}
 	}, [state.settings, handleScopeChange]);
 
+	const handleMoveToScope = useCallback((key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => {
+		messaging?.postMessage({ id: 'UpdateSetting', key, value, scope: toScope });
+		messaging?.postMessage({ id: 'UpdateSetting', key, value: undefined, scope: fromScope });
+		setState(prev => ({
+			...prev,
+			settings: { ...prev.settings, [key]: { ...prev.settings[key], source: toScope } },
+		}));
+	}, [messaging, setState]);
+
+	const handleEditorMoveToScope = useCallback((languageId: LanguageId, key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => {
+		messaging?.postMessage({ id: 'UpdateEditorSetting', languageId, key, value, scope: toScope });
+		messaging?.postMessage({ id: 'UpdateEditorSetting', languageId, key, value: undefined, scope: fromScope });
+		setState(prev => ({
+			...prev,
+			editorSettings: {
+				...prev.editorSettings,
+				[languageId]: {
+					...prev.editorSettings[languageId],
+					[key]: { ...prev.editorSettings[languageId]?.[key], source: toScope },
+				},
+			},
+		}));
+	}, [messaging, setState]);
+
 	const handleNavSelect = useCallback((section: NavSection) => {
 		setState(prev => ({ ...prev, activeSection: section, searchTerm: '' }));
 		if (section === 'editor.formatting') {
@@ -245,23 +269,27 @@ function SettingsPanel() {
 
 	return (
 		<SettingsScopeContext.Provider value={state.activeScope}>
-			<div className="settings-panel">
-				<PanelHeader
-					version={state.version}
-					activeScope={state.activeScope}
-					onScopeTabChange={handleScopeTabChange}
-					searchTerm={state.searchTerm}
-					onSearchChange={handleSearchChange}
-				/>
-				<div className="settings-body">
-					<SettingsNav activeSection={state.activeSection} onSelect={handleNavSelect} />
-					<div className="settings-content">
-						<div className="settings-content-inner">
-							{renderSection()}
+			<SettingsMoveContext.Provider value={handleMoveToScope}>
+				<EditorSettingsMoveContext.Provider value={handleEditorMoveToScope}>
+					<div className="settings-panel">
+						<PanelHeader
+							version={state.version}
+							activeScope={state.activeScope}
+							onScopeTabChange={handleScopeTabChange}
+							searchTerm={state.searchTerm}
+							onSearchChange={handleSearchChange}
+						/>
+						<div className="settings-body">
+							<SettingsNav activeSection={state.activeSection} onSelect={handleNavSelect} />
+							<div className="settings-content">
+								<div className="settings-content-inner">
+									{renderSection()}
+								</div>
+							</div>
 						</div>
 					</div>
-				</div>
-			</div>
+				</EditorSettingsMoveContext.Provider>
+			</SettingsMoveContext.Provider>
 		</SettingsScopeContext.Provider>
 	);
 }

@@ -11,7 +11,26 @@ import { EditorSettings } from './types';
  */
 export const SettingsScopeContext = React.createContext<'user' | 'workspace'>('user');
 
+/**
+ * Provides a callback for moving a setting from one scope to another (copy + clear source).
+ */
+export const SettingsMoveContext = React.createContext<
+	((key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => void) | null
+>(null);
+
+/**
+ * Provides a callback for moving an editor setting from one scope to another (copy + clear source).
+ */
+export const EditorSettingsMoveContext = React.createContext<
+	((languageId: LanguageId, key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => void) | null
+>(null);
+
 // ── MoreVertMenu ───────────────────────────────────────────────
+
+function valuesEqual(a: unknown, b: unknown): boolean {
+	if (a === b) return true;
+	return JSON.stringify(a) === JSON.stringify(b);
+}
 
 export interface MenuItem {
 	label: string;
@@ -128,9 +147,10 @@ export interface SettingRowProps {
 
 export function SettingRow({ label, description, settingKey, settings, onScopeChange, children }: SettingRowProps) {
 	const activeScope = useContext(SettingsScopeContext);
+	const onMoveToScope = useContext(SettingsMoveContext);
 	const state = settings[settingKey];
 	const source = state?.source ?? 'default';
-	const isModified = source === activeScope;
+	const isModified = source === activeScope && !valuesEqual(state?.value, state?.defaultValue);
 	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
 	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
 
@@ -139,13 +159,16 @@ export function SettingRow({ label, description, settingKey, settings, onScopeCh
 			? [{ label: 'Restore defaults', onClick: () => onScopeChange(settingKey, 'default', state?.value) }]
 			: []),
 		{ label: `Copy to ${otherScopeLabel} Scope`, onClick: () => onScopeChange(settingKey, otherScope, state?.value) },
+		...(isModified && onMoveToScope
+			? [{ label: `Move to ${otherScopeLabel} Scope`, onClick: () => onMoveToScope(settingKey, activeScope, otherScope, state?.value) }]
+			: []),
 	];
 
 	return (
 		<div className="setting-row">
 			<div className="setting-row-header">
 				<span className="setting-label">{label}</span>
-				{isModified && <span className="setting-modified-dot" title={`Modified in ${activeScope} settings`} />}
+				{isModified && <span className="setting-modified-tag" title={`Modified in ${activeScope} settings`}>MODIFIED</span>}
 				<span className="setting-leader" aria-hidden="true" />
 				<MoreVertMenu items={menuItems} />
 			</div>
@@ -169,9 +192,10 @@ export interface EditorSettingRowProps {
 
 export function EditorSettingRow({ label, description, settingKey, languageId, editorSettings, onScopeChange, children }: EditorSettingRowProps) {
 	const activeScope = useContext(SettingsScopeContext);
+	const onMoveToScope = useContext(EditorSettingsMoveContext);
 	const state = editorSettings[languageId]?.[settingKey];
 	const source = state?.source ?? 'default';
-	const isModified = source === activeScope;
+	const isModified = source === activeScope && !valuesEqual(state?.value, state?.defaultValue);
 	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
 	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
 
@@ -180,13 +204,16 @@ export function EditorSettingRow({ label, description, settingKey, languageId, e
 			? [{ label: 'Restore default', onClick: () => onScopeChange(languageId, settingKey, 'default', state?.value) }]
 			: []),
 		{ label: `Copy to ${otherScopeLabel} Scope`, onClick: () => onScopeChange(languageId, settingKey, otherScope, state?.value) },
+		...(isModified && onMoveToScope
+			? [{ label: `Move to ${otherScopeLabel} Scope`, onClick: () => onMoveToScope(languageId, settingKey, activeScope, otherScope, state?.value) }]
+			: []),
 	];
 
 	return (
 		<div className="setting-row">
 			<div className="setting-row-header">
 				<span className="setting-label">{label}</span>
-				{isModified && <span className="setting-modified-dot" title={`Modified in ${activeScope} settings`} />}
+				{isModified && <span className="setting-modified-tag" title={`Modified in ${activeScope} settings`}>MODIFIED</span>}
 				<span className="setting-leader" aria-hidden="true" />
 				<MoreVertMenu items={menuItems} />
 			</div>

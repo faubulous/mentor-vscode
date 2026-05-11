@@ -1,6 +1,8 @@
+import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-single-select';
 import '@vscode-elements/elements/dist/vscode-option';
@@ -21,6 +23,21 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 		'definitionTree.decorateMissingLanguageTags',
 	];
 
+	const labelStyleRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => onUpdate('definitionTree.labelStyle', element.value)
+	);
+
+	const defaultLayoutRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => onUpdate('definitionTree.defaultLayout', element.value)
+	);
+
+	const decorateMissingRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => onUpdate('definitionTree.decorateMissingLanguageTags', element.value)
+	);
+
 	return (
 		<div>
 			<SectionHeader title={SECTION_TITLES['appearance.definitions-tree']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
@@ -32,8 +49,8 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 				onScopeChange={onScopeChange}
 			>
 				<vscode-single-select
+					ref={labelStyleRef}
 					value={String(settings['definitionTree.labelStyle']?.value ?? 'AnnotatedLabels')}
-					onChange={(e: any) => onUpdate('definitionTree.labelStyle', (e.target as HTMLSelectElement).value)}
 				>
 					<vscode-option value="AnnotatedLabels">Annotated labels</vscode-option>
 					<vscode-option value="UriLabels">URI labels</vscode-option>
@@ -48,8 +65,8 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 				onScopeChange={onScopeChange}
 			>
 				<vscode-single-select
+					ref={defaultLayoutRef}
 					value={String(settings['definitionTree.defaultLayout']?.value ?? 'GroupByType')}
-					onChange={(e: any) => onUpdate('definitionTree.defaultLayout', (e.target as HTMLSelectElement).value)}
 				>
 					<vscode-option value="GroupByType">Group by type</vscode-option>
 					<vscode-option value="GroupBySource">Group by source</vscode-option>
@@ -76,8 +93,8 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 				onScopeChange={onScopeChange}
 			>
 				<vscode-single-select
+					ref={decorateMissingRef}
 					value={String(settings['definitionTree.decorateMissingLanguageTags']?.value ?? 'Disabled')}
-					onChange={(e: any) => onUpdate('definitionTree.decorateMissingLanguageTags', (e.target as HTMLSelectElement).value)}
 				>
 					<vscode-option value="Disabled">Disabled</vscode-option>
 					<vscode-option value="All">All</vscode-option>

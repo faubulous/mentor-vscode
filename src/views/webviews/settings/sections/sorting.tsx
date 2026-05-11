@@ -1,7 +1,9 @@
+import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
 import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-single-select';
 import '@vscode-elements/elements/dist/vscode-option';
@@ -24,6 +26,16 @@ export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope 
 	const update = (patch: Partial<typeof opts>) => {
 		onUpdate('sorting.typeSortingOptions', { ...opts, ...patch });
 	};
+
+	const unmatchedPositionRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => update({ unmatchedPosition: element.value })
+	);
+
+	const unmatchedSortRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => update({ unmatchedSort: element.value })
+	);
 
 	return (
 		<div>
@@ -61,8 +73,8 @@ export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope 
 				<p className="setting-description">Where to place resources that do not match any type in the type order list.</p>
 				<div className="setting-control">
 					<vscode-single-select
+						ref={unmatchedPositionRef}
 						value={opts.unmatchedPosition ?? 'end'}
-						onChange={(e: any) => update({ unmatchedPosition: (e.target as HTMLSelectElement).value })}
 					>
 						<vscode-option value="start">Start</vscode-option>
 						<vscode-option value="end">End</vscode-option>
@@ -76,8 +88,8 @@ export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope 
 				<p className="setting-description">How to sort resources that do not match any type in the type order list.</p>
 				<div className="setting-control">
 					<vscode-single-select
+						ref={unmatchedSortRef}
 						value={opts.unmatchedSort ?? 'alphabetical'}
-						onChange={(e: any) => update({ unmatchedSort: (e.target as HTMLSelectElement).value })}
 					>
 						<vscode-option value="alphabetical">Alphabetical</vscode-option>
 						<vscode-option value="none">None</vscode-option>

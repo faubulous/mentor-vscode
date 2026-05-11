@@ -1,6 +1,8 @@
+import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-single-select';
@@ -24,6 +26,11 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 	];
 
 	const namespaces = (settings['namespaces']?.value as { uri: string; defaultPrefix: string }[]) ?? [];
+
+	const prefixDefinitionModeRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => onUpdate('prefixes.prefixDefinitionMode', element.value)
+	);
 
 	return (
 		<div>
@@ -64,8 +71,8 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 				onScopeChange={onScopeChange}
 			>
 				<vscode-single-select
+					ref={prefixDefinitionModeRef}
 					value={String(settings['prefixes.prefixDefinitionMode']?.value ?? 'Append')}
-					onChange={(e: any) => onUpdate('prefixes.prefixDefinitionMode', (e.target as HTMLSelectElement).value)}
 				>
 					<vscode-option value="Append">Append</vscode-option>
 					<vscode-option value="Sorted">Sorted</vscode-option>

@@ -181,17 +181,22 @@ vscode-textfield .root {
 	color: var(--vscode-button-foreground);
 }
 
-/* ── Modified dot ───────────────────────────────────────────── */
+/* ── Modified tag ───────────────────────────────────────────── */
 
-.setting-modified-dot {
+.setting-modified-tag {
 	display: inline-block;
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 1px 5px;
+	border-radius: 3px;
 	background: var(--vscode-settings-modifiedItemIndicator, var(--vscode-activityBarBadge-background));
+	color: var(--vscode-activityBarBadge-foreground, #fff);
 	flex-shrink: 0;
 	margin: 0 4px;
 	align-self: center;
+	white-space: nowrap;
 }
 
 .search-field-wrapper {
@@ -732,8 +737,8 @@ vscode-textarea.monospace {
 	letter-spacing: 0.04em;
 	padding: 1px 5px;
 	border-radius: 3px;
-	background: var(--vscode-badge-background);
-	color: var(--vscode-badge-foreground);
+	background: color-mix(in srgb, var(--vscode-charts-purple, #9e3fa5) 70%, #000);
+	color: #fff;
 	vertical-align: middle;
 	margin-left: 6px;
 }

@@ -1,8 +1,10 @@
+import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState, LanguageId, FormattingLanguage } from '../settings-panel-messages';
 import { SectionHeader, SettingRow, EditorSettingRow, MoreVertMenu, SettingsScopeContext } from '../components/setting-row';
 import { EditorSettings } from '../components/types';
 import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
 import { useContext } from 'react';
+import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-textfield';
@@ -52,6 +54,11 @@ export function FormattingSection({
 	const activeScope = useContext(SettingsScopeContext);
 	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
 	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
+
+	const wordWrapRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => onEditorUpdate(lang, 'wordWrap', element.value)
+	);
 
 	return (
 		<div>
@@ -112,8 +119,8 @@ export function FormattingSection({
 				onScopeChange={onEditorScopeChange}
 			>
 				<vscode-single-select
+					ref={wordWrapRef}
 					value={String(editorSettings[lang]?.['wordWrap']?.value ?? 'off')}
-					onChange={(e: any) => onEditorUpdate(lang, 'wordWrap', (e.target as HTMLSelectElement).value)}
 				>
 					<vscode-option value="off">Off</vscode-option>
 					<vscode-option value="on">On</vscode-option>
