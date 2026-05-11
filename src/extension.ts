@@ -34,7 +34,7 @@ export async function activateExtension(context: vscode.ExtensionContext, langua
 	await loadFrameworkOntologies();
 
 	registerLanguages();
-	registerProviders(context);
+	registerProviders();
 	registerCommands(context);
 	registerViews();
 	registerNotebookSerializers();
