@@ -1,6 +1,7 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
+import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-single-select';
 import '@vscode-elements/elements/dist/vscode-option';
@@ -26,10 +27,10 @@ export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope 
 
 	return (
 		<div>
-			<SectionHeader title="Sorting" keys={['sorting.typeSortingOptions']} settings={settings} onBulkScope={onBulkScope} />
+			<SectionHeader title={SECTION_TITLES['editor.sorting']} keys={['sorting.typeSortingOptions']} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label="Type order"
-				description="RDF type IRIs in priority order. Resources of the first listed type appear first when sorting documents by type."
+				label={SETTINGS_METADATA['sorting.typeSortingOptions'].title}
+				description={SETTINGS_METADATA['sorting.typeSortingOptions'].description}
 				settingKey="sorting.typeSortingOptions"
 				settings={settings}
 				onScopeChange={onScopeChange}

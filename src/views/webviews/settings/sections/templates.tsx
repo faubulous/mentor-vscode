@@ -1,5 +1,6 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
+import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-textarea';
 
@@ -11,24 +12,24 @@ export interface TemplatesSectionProps {
 }
 
 export function TemplatesSection({ settings, onUpdate, onScopeChange, onBulkScope }: TemplatesSectionProps) {
-	const languageTemplateKeys: { key: string; label: string }[] = [
-		{ key: 'language.sparql.defaultDocumentTemplate', label: 'SPARQL' },
-		{ key: 'language.sparql.documentQueryTemplate', label: 'SPARQL query (from document)' },
-		{ key: 'language.turtle.defaultDocumentTemplate', label: 'Turtle' },
-		{ key: 'language.trig.defaultDocumentTemplate', label: 'TriG' },
-		{ key: 'language.n3.defaultDocumentTemplate', label: 'N3' },
-		{ key: 'language.ntriples.defaultDocumentTemplate', label: 'N-Triples' },
-		{ key: 'language.nquads.defaultDocumentTemplate', label: 'N-Quads' },
+	const languageTemplateKeys: string[] = [
+		'language.sparql.defaultDocumentTemplate',
+		'language.sparql.documentQueryTemplate',
+		'language.turtle.defaultDocumentTemplate',
+		'language.trig.defaultDocumentTemplate',
+		'language.n3.defaultDocumentTemplate',
+		'language.ntriples.defaultDocumentTemplate',
+		'language.nquads.defaultDocumentTemplate',
 	];
 
 	return (
 		<div>
-			<SectionHeader title="Templates" keys={languageTemplateKeys.map(t => t.key)} settings={settings} onBulkScope={onBulkScope} />
-			{languageTemplateKeys.map(({ key, label }) => (
+			<SectionHeader title={SECTION_TITLES['editor.templates']} keys={languageTemplateKeys} settings={settings} onBulkScope={onBulkScope} />
+			{languageTemplateKeys.map((key) => (
 				<SettingRow
 					key={key}
-					label={`${label} document template`}
-					description={`Default content for new ${label} documents.`}
+					label={SETTINGS_METADATA[key].title}
+					description={SETTINGS_METADATA[key].description}
 					settingKey={key}
 					settings={settings}
 					onScopeChange={onScopeChange}

@@ -54,11 +54,12 @@
   "browser": "./dist/extension.js",
   "scripts": {
     "clean": "rimraf node_modules dist out media/*.woff",
-    "build": "npm run build:font && node ./build.js",
-    "build:watch": "npm run build:font && node ./build.js --watch",
+    "build": "npm run build:settings && npm run build:font && node ./build.js",
+    "build:watch": "npm run build:settings && npm run build:font && node ./build.js --watch",
     "build:font": "node ./build-font.mjs",
-    "compile": "npm run build:font && tsc -p tsconfig.json",
-    "package": "rimraf dist && npm run build:font && node ./build.js --production && vsce package --no-dependencies -o dist/mentor.vsix",
+    "build:settings": "node ./generate-settings.mjs",
+    "compile": "npm run build:settings && npm run build:font && tsc -p tsconfig.json",
+    "package": "rimraf dist && npm run build:settings && npm run build:font && node ./build.js --production && vsce package --no-dependencies -o dist/mentor.vsix",
     "package:install": "npm run package && code --install-extension dist/mentor.vsix --force",
     "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
     "test": "vitest run",
@@ -1324,17 +1325,20 @@
         "order": 1,
         "properties": {
           "mentor.sparql.connections": {
+            "x-group": "connections",
             "type": "array",
             "description": "List of SPARQL endpoint connections.",
             "default": []
           },
           "mentor.sparql.defaultInferenceEnabled": {
+            "x-group": "query",
             "type": "boolean",
             "title": "Default Inference Enabled",
             "description": "Default value for whether inferred triples should be included in SPARQL query results. This applies to connections that support inference toggling (e.g., the workspace store).",
             "default": false
           },
           "mentor.sparql.listGraphsQuery": {
+            "x-group": "query",
             "type": "string",
             "title": "List Graphs Query",
             "description": "SPARQL query used to retrieve all named graphs and the default graph from a SPARQL endpoint.",
@@ -1342,6 +1346,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.sparql.dropGraphQuery": {
+            "x-group": "query",
             "type": "string",
             "title": "Drop Graph Query",
             "description": "SPARQL query used to drop a named graph from a SPARQL endpoint.",
@@ -1349,6 +1354,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.sparql.describeQueryTemplate": {
+            "x-group": "query",
             "type": "string",
             "title": "Describe Query Template",
             "description": "SPARQL query template used by the describe command. Use {{resourceIri}} for the selected resource and {{fromClauses}} for optional FROM clauses generated from graph URIs.",
@@ -1356,6 +1362,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.sparql.queryTimeout": {
+            "x-group": "query",
             "type": "integer",
             "title": "Query Timeout",
             "description": "Timeout in milliseconds for SPARQL query execution. Set to 0 for no timeout.",
@@ -1363,6 +1370,7 @@
             "minimum": 0
           },
           "mentor.definitionTree.labelStyle": {
+            "x-group": "appearance.definitions-tree",
             "type": "string",
             "title": "Default Tree Label Style",
             "description": "Set the standard style for rendering of tree labels.",
@@ -1379,6 +1387,7 @@
             "default": "AnnotatedLabels"
           },
           "mentor.definitionTree.defaultLayout": {
+            "x-group": "appearance.definitions-tree",
             "type": "string",
             "title": "Default Definitions Tree Layout",
             "description": "Set the standard style for rendering the definitions tree hierarchy.",
@@ -1393,12 +1402,14 @@
             "default": "GroupBySource"
           },
           "mentor.definitionTree.defaultLanguageTag": {
+            "x-group": "appearance.definitions-tree",
             "type": "string",
             "title": "Default Language",
             "description": "Set the default language tag to be used for rendering of labels and descriptions in the definitions tree.",
             "default": "en"
           },
           "mentor.definitionTree.decorateMissingLanguageTags": {
+            "x-group": "appearance.definitions-tree",
             "type": "string",
             "title": "Decorate Missing Language Tags",
             "description": "Grey out all terms in the definitions tree that do not have a value which is tagged in the currently selected language.",
@@ -1421,6 +1432,7 @@
             "default": false
           },
           "mentor.predicates.label": {
+            "x-group": "appearance.display",
             "type": "array",
             "title": "Label Predicates",
             "description": "Manage the predicates to be used for labels in the tree view for classes, properties and individuals. The first matching predicate will be used.",
@@ -1436,6 +1448,7 @@
             ]
           },
           "mentor.predicates.description": {
+            "x-group": "appearance.display",
             "type": "array",
             "title": "Description Predicates",
             "description": "Manage the predicates to be used for descriptions in the tree view for classes, properties and individuals. The first matching predicate will be used.",
@@ -1450,6 +1463,7 @@
             ]
           },
           "mentor.namespaces": {
+            "x-group": "namespaces",
             "type": "array",
             "title": "Namespaces",
             "description": "Manage the namespace URIs to be used in vocabularies.",
@@ -1498,12 +1512,14 @@
             ]
           },
           "mentor.index.useGitIgnore": {
+            "x-group": "indexing",
             "type": "boolean",
             "title": "Use .gitignore",
             "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
             "default": true
           },
           "mentor.index.ignoreFolders": {
+            "x-group": "indexing",
             "type": "array",
             "title": "Ignored Folders",
             "description": "Manage the folders that should be skipped when indexing the workspace.",
@@ -1514,36 +1530,42 @@
             ]
           },
           "mentor.index.includeFiles": {
+            "x-group": "indexing",
             "type": "array",
             "title": "Included Files",
             "description": "Allows to manage a list of files as glob patterns that should be included in the workspace index even if they exceed the max file size limit.",
             "default": []
           },
           "mentor.index.maxFileSize": {
+            "x-group": "indexing",
             "type": "number",
             "title": "Max File Size",
             "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors.",
             "default": 1500000
           },
           "mentor.editor.codeLensEnabled": {
+            "x-group": "editor.general",
             "type": "boolean",
             "title": "Enable Code Lenses",
             "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
             "default": true
           },
           "mentor.prefixes.queryParameterName": {
+            "x-group": "editor.general",
             "type": "string",
             "title": "Query Parameter Name",
             "description": "Name of the query parameter that is appended to URIs that already contain a fragment identifier (e.g. vscode-notebook-cell) when generating workspace: URIs.",
             "default": "id"
           },
           "mentor.prefixes.autoDefinePrefixes": {
+            "x-group": "editor.general",
             "type": "boolean",
             "title": "Auto Define Namespaces",
             "description": "If enabled, the extension will automatically declare namespaces in the document header. The namespaces that are defined in workspace documents are used in preference over the ones retrieved from prefix.cc.",
             "default": true
           },
           "mentor.prefixes.prefixDefinitionMode": {
+            "x-group": "editor.general",
             "type": "string",
             "title": "Prefix Definition Mode",
             "description": "Set the way prefixes are automatically defined in the document header.",
@@ -1558,6 +1580,7 @@
             "default": "Sorted"
           },
           "mentor.sorting.typeSortingOptions": {
+            "x-group": "editor.sorting",
             "type": "object",
             "title": "Type Sorting Options",
             "description": "Options for the priority-based sort strategy used when sorting documents by type. See https://github.com/faubulous/mentor-rdf-serializers/blob/main/docs/sorting.md#priority for reference.",
@@ -1615,6 +1638,7 @@
             }
           },
           "mentor.shacl.validation": {
+            "x-group": "validation",
             "type": "object",
             "title": "SHACL Validation Configuration",
             "description": "Explicit SHACL shape configuration. Configure workspace defaults and per-graph include/exclude rules.",
@@ -1667,6 +1691,7 @@
             }
           },
           "mentor.shacl.enabled": {
+            "x-group": "validation",
             "type": "boolean",
             "title": "Enable Experimental SHACL Validation Features",
             "description": "If enabled, Mentor will show experimental SHACL validation features including the titlebar validate button and SHACL validation code lenses.",
@@ -1674,60 +1699,70 @@
             "experimental": true
           },
           "mentor.formatting.turtle.maxLineWidth": {
+            "x-group": "editor.formatting",
             "type": "number",
             "title": "Turtle: Max Line Width",
             "description": "Maximum line width before the Turtle formatter wraps long lines. Set to 0 to disable wrapping.",
             "default": 120
           },
           "mentor.formatting.turtle.spaceBeforePunctuation": {
+            "x-group": "editor.formatting",
             "type": "boolean",
             "title": "Turtle: Space Before Punctuation",
             "description": "Insert a space before statement-ending punctuation characters (. ; ,) in Turtle documents.",
             "default": true
           },
           "mentor.formatting.turtle.blankLinesBetweenSubjects": {
+            "x-group": "editor.formatting",
             "type": "boolean",
             "title": "Turtle: Blank Lines Between Subjects",
             "description": "Insert a blank line between each top-level subject block in Turtle documents.",
             "default": true
           },
           "mentor.formatting.sparql.uppercaseKeywords": {
+            "x-group": "editor.formatting",
             "type": "boolean",
             "title": "SPARQL: Uppercase Keywords",
             "description": "Format SPARQL keywords (SELECT, WHERE, etc.) in uppercase.",
             "default": true
           },
           "mentor.formatting.sparql.alignPatterns": {
+            "x-group": "editor.formatting",
             "type": "boolean",
             "title": "SPARQL: Align Patterns",
             "description": "Align triple patterns in the WHERE clause.",
             "default": true
           },
           "mentor.formatting.sparql.sameBraceLine": {
+            "x-group": "editor.formatting",
             "type": "boolean",
             "title": "SPARQL: Opening Brace on Same Line",
             "description": "Place opening braces on the same line as SPARQL keywords.",
             "default": true
           },
           "mentor.formatting.sparql.separateClauses": {
+            "x-group": "editor.formatting",
             "type": "boolean",
             "title": "SPARQL: Separate Clauses",
             "description": "Insert blank lines between major SPARQL clauses (SELECT, WHERE, etc.).",
             "default": true
           },
           "mentor.formatting.sparql.maxLineWidth": {
+            "x-group": "editor.formatting",
             "type": "number",
             "title": "SPARQL: Max Line Width",
             "description": "Maximum line width before the SPARQL formatter wraps long lines. Set to 0 to disable wrapping.",
             "default": 120
           },
           "mentor.formatting.sparql.spaceBeforePunctuation": {
+            "x-group": "editor.formatting",
             "type": "boolean",
             "title": "SPARQL: Space Before Punctuation",
             "description": "Insert a space before punctuation characters in SPARQL documents.",
             "default": true
           },
           "mentor.linting.enabled": {
+            "x-group": "validation",
             "type": "boolean",
             "title": "Enable Linting",
             "description": "If enabled, the extension will provide linting for RDF documents.",
@@ -1735,6 +1770,7 @@
             "experimental": true
           },
           "mentor.linting.unresolvedReferenceSeverity": {
+            "x-group": "validation",
             "type": "string",
             "title": "Severity: Unresolved References",
             "description": "The severity level for unresolved references in RDF documents.",
@@ -1756,6 +1792,7 @@
             "experimental": true
           },
           "mentor.linting.unresolvedWorkspaceGraphSeverity": {
+            "x-group": "validation",
             "type": "string",
             "title": "Severity: Unresolved Workspace Graphs",
             "description": "The severity level for workspace: URI references that do not resolve to a known graph in the store.",
@@ -1777,6 +1814,7 @@
             "experimental": true
           },
           "mentor.language.sparql.defaultDocumentTemplate": {
+            "x-group": "editor.templates",
             "type": "string",
             "title": "Default SPARQL Document Template",
             "description": "The default SPARQL document template to be used when creating a new SPARQL document.",
@@ -1784,6 +1822,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.language.sparql.documentQueryTemplate": {
+            "x-group": "editor.templates",
             "type": "string",
             "title": "Document Query Template",
             "description": "The SPARQL query template used when creating a query for an RDF document. Use {{documentUri}} as a placeholder for the document URI.",
@@ -1791,6 +1830,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.language.turtle.defaultDocumentTemplate": {
+            "x-group": "editor.templates",
             "type": "string",
             "title": "Default Turtle Document Template",
             "description": "The default Turtle document template to be used when creating a new Turtle document.",
@@ -1798,6 +1838,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.language.trig.defaultDocumentTemplate": {
+            "x-group": "editor.templates",
             "type": "string",
             "title": "Default TriG Document Template",
             "description": "The default TriG document template to be used when creating a new TriG document.",
@@ -1805,6 +1846,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.language.n3.defaultDocumentTemplate": {
+            "x-group": "editor.templates",
             "type": "string",
             "title": "Default N3 Document Template",
             "description": "The default N3 document template to be used when creating a new N3 document.",
@@ -1812,6 +1854,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.language.ntriples.defaultDocumentTemplate": {
+            "x-group": "editor.templates",
             "type": "string",
             "title": "Default N-Triples Document Template",
             "description": "The default N-Triples document template to be used when creating a new N-Triples document.",
@@ -1819,6 +1862,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.language.nquads.defaultDocumentTemplate": {
+            "x-group": "editor.templates",
             "type": "string",
             "title": "Default N-Quads Document Template",
             "description": "The default N-Quads document template to be used when creating a new N-Quads document.",

@@ -1,7 +1,15 @@
 import * as React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { SettingScope, SettingState, LanguageId } from '../settings-panel-messages';
 import { EditorSettings } from './types';
+
+// ── Scope context ──────────────────────────────────────────────
+
+/**
+ * Provides the currently active settings scope tab ('user' | 'workspace')
+ * to all descendant SettingRow and SectionHeader components without prop drilling.
+ */
+export const SettingsScopeContext = React.createContext<'user' | 'workspace'>('user');
 
 // ── MoreVertMenu ───────────────────────────────────────────────
 
@@ -59,15 +67,16 @@ export interface SectionHeaderProps {
 }
 
 export function SectionHeader({ title, keys, settings, onBulkScope }: SectionHeaderProps) {
-	const nonDefault = keys && settings
+	const activeScope = useContext(SettingsScopeContext);
+	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
+	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
+
+	const modifiedKeys = keys && settings
 		? keys.filter(k => settings[k]?.source !== 'default')
 		: [];
 
-	const menuItems: MenuItem[] = nonDefault.length > 0 && onBulkScope
-		? [
-			{ label: 'Copy all to User', onClick: () => onBulkScope(nonDefault, 'user') },
-			{ label: 'Copy all to Workspace', onClick: () => onBulkScope(nonDefault, 'workspace') },
-		]
+	const menuItems: MenuItem[] = modifiedKeys.length > 0 && onBulkScope
+		? [{ label: `Copy all to ${otherScopeLabel}`, onClick: () => onBulkScope(modifiedKeys, otherScope) }]
 		: [];
 
 	return (
@@ -78,7 +87,7 @@ export function SectionHeader({ title, keys, settings, onBulkScope }: SectionHea
 	);
 }
 
-// ── ScopeSelector ──────────────────────────────────────────────
+// ── ScopeSelector (kept for potential future use) ──────────────
 
 export interface ScopeSelectorProps {
 	source: SettingScope;
@@ -118,18 +127,27 @@ export interface SettingRowProps {
 }
 
 export function SettingRow({ label, description, settingKey, settings, onScopeChange, children }: SettingRowProps) {
+	const activeScope = useContext(SettingsScopeContext);
 	const state = settings[settingKey];
 	const source = state?.source ?? 'default';
+	const isModified = source === activeScope;
+	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
+	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
+
+	const menuItems: MenuItem[] = [
+		...(source !== 'default'
+			? [{ label: 'Restore default', onClick: () => onScopeChange(settingKey, 'default', state?.value) }]
+			: []),
+		{ label: `Copy to ${otherScopeLabel}`, onClick: () => onScopeChange(settingKey, otherScope, state?.value) },
+	];
 
 	return (
 		<div className="setting-row">
 			<div className="setting-row-header">
 				<span className="setting-label">{label}</span>
+				{isModified && <span className="setting-modified-dot" title={`Modified in ${activeScope} settings`} />}
 				<span className="setting-leader" aria-hidden="true" />
-				<ScopeSelector
-					source={source}
-					onChange={scope => onScopeChange(settingKey, scope, state?.value)}
-				/>
+				<MoreVertMenu items={menuItems} />
 			</div>
 			{description && <p className="setting-description">{description}</p>}
 			<div className="setting-control">{children}</div>
@@ -150,22 +168,32 @@ export interface EditorSettingRowProps {
 }
 
 export function EditorSettingRow({ label, description, settingKey, languageId, editorSettings, onScopeChange, children }: EditorSettingRowProps) {
+	const activeScope = useContext(SettingsScopeContext);
 	const state = editorSettings[languageId]?.[settingKey];
 	const source = state?.source ?? 'default';
+	const isModified = source === activeScope;
+	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
+	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
+
+	const menuItems: MenuItem[] = [
+		...(source !== 'default'
+			? [{ label: 'Restore default', onClick: () => onScopeChange(languageId, settingKey, 'default', state?.value) }]
+			: []),
+		{ label: `Copy to ${otherScopeLabel}`, onClick: () => onScopeChange(languageId, settingKey, otherScope, state?.value) },
+	];
 
 	return (
 		<div className="setting-row">
 			<div className="setting-row-header">
 				<span className="setting-label">{label}</span>
+				{isModified && <span className="setting-modified-dot" title={`Modified in ${activeScope} settings`} />}
 				<span className="setting-leader" aria-hidden="true" />
-				<ScopeSelector
-					source={source}
-					onChange={scope => onScopeChange(languageId, settingKey, scope, state?.value)}
-				/>
+				<MoreVertMenu items={menuItems} />
 			</div>
 			{description && <p className="setting-description">{description}</p>}
 			<div className="setting-control">{children}</div>
 		</div>
 	);
 }
+
 

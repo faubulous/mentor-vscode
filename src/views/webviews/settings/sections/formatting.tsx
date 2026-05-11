@@ -1,6 +1,8 @@
 import { SettingScope, SettingState, LanguageId, FormattingLanguage } from '../settings-panel-messages';
-import { SectionHeader, SettingRow, EditorSettingRow, MoreVertMenu } from '../components/setting-row';
+import { SectionHeader, SettingRow, EditorSettingRow, MoreVertMenu, SettingsScopeContext } from '../components/setting-row';
 import { EditorSettings } from '../components/types';
+import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { useContext } from 'react';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-textfield';
@@ -47,10 +49,13 @@ export function FormattingSection({
 	const isTurtle = lang === 'turtle';
 	const langKeys = isTurtle ? turtleKeys : sparqlKeys;
 	const nonDefaultLangKeys = langKeys.filter(k => settings[k]?.source !== 'default');
+	const activeScope = useContext(SettingsScopeContext);
+	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
+	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
 
 	return (
 		<div>
-			<SectionHeader title="Formatting" />
+			<SectionHeader title={SECTION_TITLES['editor.formatting']} />
 			<EditorSettingRow
 				label="Format on save"
 				description="Automatically format documents on save."
@@ -134,16 +139,15 @@ export function FormattingSection({
 						</button>
 					</div>
 					<MoreVertMenu items={nonDefaultLangKeys.length > 0 ? [
-						{ label: 'Copy all to User', onClick: () => onBulkScope(nonDefaultLangKeys, 'user') },
-						{ label: 'Copy all to Workspace', onClick: () => onBulkScope(nonDefaultLangKeys, 'workspace') },
+						{ label: `Copy all to ${otherScopeLabel}`, onClick: () => onBulkScope(nonDefaultLangKeys, otherScope) },
 					] : []} />
 				</div>
 
 				{isTurtle ? (
 					<>
 						<SettingRow
-							label="Max line width"
-							description="Maximum line width before the formatter wraps long lines. Set to 0 to disable."
+						label={SETTINGS_METADATA['formatting.turtle.maxLineWidth'].title}
+						description={SETTINGS_METADATA['formatting.turtle.maxLineWidth'].description}
 							settingKey="formatting.turtle.maxLineWidth"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -155,8 +159,8 @@ export function FormattingSection({
 							/>
 						</SettingRow>
 						<SettingRow
-							label="Space before punctuation"
-							description="Insert a space before statement-ending punctuation characters (. ; ,)."
+						label={SETTINGS_METADATA['formatting.turtle.spaceBeforePunctuation'].title}
+						description={SETTINGS_METADATA['formatting.turtle.spaceBeforePunctuation'].description}
 							settingKey="formatting.turtle.spaceBeforePunctuation"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -169,8 +173,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-							label="Blank lines between subjects"
-							description="Insert a blank line between each top-level subject block."
+						label={SETTINGS_METADATA['formatting.turtle.blankLinesBetweenSubjects'].title}
+						description={SETTINGS_METADATA['formatting.turtle.blankLinesBetweenSubjects'].description}
 							settingKey="formatting.turtle.blankLinesBetweenSubjects"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -186,8 +190,8 @@ export function FormattingSection({
 				) : (
 					<>
 						<SettingRow
-							label="Max line width"
-							description="Maximum line width before the formatter wraps long lines. Set to 0 to disable."
+						label={SETTINGS_METADATA['formatting.sparql.maxLineWidth'].title}
+						description={SETTINGS_METADATA['formatting.sparql.maxLineWidth'].description}
 							settingKey="formatting.sparql.maxLineWidth"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -199,8 +203,8 @@ export function FormattingSection({
 							/>
 						</SettingRow>
 						<SettingRow
-							label="Space before punctuation"
-							description="Insert a space before punctuation characters."
+						label={SETTINGS_METADATA['formatting.sparql.spaceBeforePunctuation'].title}
+						description={SETTINGS_METADATA['formatting.sparql.spaceBeforePunctuation'].description}
 							settingKey="formatting.sparql.spaceBeforePunctuation"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -213,8 +217,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-							label="Uppercase keywords"
-							description="Format SPARQL keywords (SELECT, WHERE, etc.) in uppercase."
+						label={SETTINGS_METADATA['formatting.sparql.uppercaseKeywords'].title}
+						description={SETTINGS_METADATA['formatting.sparql.uppercaseKeywords'].description}
 							settingKey="formatting.sparql.uppercaseKeywords"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -227,8 +231,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-							label="Align patterns"
-							description="Align triple patterns in the WHERE clause."
+						label={SETTINGS_METADATA['formatting.sparql.alignPatterns'].title}
+						description={SETTINGS_METADATA['formatting.sparql.alignPatterns'].description}
 							settingKey="formatting.sparql.alignPatterns"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -241,8 +245,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-							label="Opening brace on same line"
-							description="Place opening braces on the same line as SPARQL keywords."
+						label={SETTINGS_METADATA['formatting.sparql.sameBraceLine'].title}
+						description={SETTINGS_METADATA['formatting.sparql.sameBraceLine'].description}
 							settingKey="formatting.sparql.sameBraceLine"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -255,8 +259,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-							label="Separate clauses"
-							description="Insert blank lines between major SPARQL clauses (SELECT, WHERE, etc.)."
+						label={SETTINGS_METADATA['formatting.sparql.separateClauses'].title}
+						description={SETTINGS_METADATA['formatting.sparql.separateClauses'].description}
 							settingKey="formatting.sparql.separateClauses"
 							settings={settings}
 							onScopeChange={onScopeChange}

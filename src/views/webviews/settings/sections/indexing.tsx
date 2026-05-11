@@ -1,6 +1,7 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
+import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-textfield';
@@ -17,10 +18,10 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 
 	return (
 		<div>
-			<SectionHeader title="Indexing" keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<SectionHeader title={SECTION_TITLES['indexing']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label="Max file size"
-				description="Maximum file size in bytes to index. Larger files are skipped."
+				label={SETTINGS_METADATA['index.maxFileSize'].title}
+				description={SETTINGS_METADATA['index.maxFileSize'].description}
 				settingKey="index.maxFileSize"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -32,8 +33,8 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 				/>
 			</SettingRow>
 			<SettingRow
-				label="Use .gitignore"
-				description="Exclude files and folders matched by .gitignore patterns from the workspace index."
+				label={SETTINGS_METADATA['index.useGitIgnore'].title}
+				description={SETTINGS_METADATA['index.useGitIgnore'].description}
 				settingKey="index.useGitIgnore"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -46,8 +47,8 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 				</vscode-checkbox>
 			</SettingRow>
 			<SettingRow
-				label="Ignore folders"
-				description="Glob patterns for folders to exclude from the workspace index."
+				label={SETTINGS_METADATA['index.ignoreFolders'].title}
+				description={SETTINGS_METADATA['index.ignoreFolders'].description}
 				settingKey="index.ignoreFolders"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -59,8 +60,8 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 				/>
 			</SettingRow>
 			<SettingRow
-				label="Include files"
-				description="Glob patterns for files to force-include in the workspace index regardless of other exclusion rules."
+				label={SETTINGS_METADATA['index.includeFiles'].title}
+				description={SETTINGS_METADATA['index.includeFiles'].description}
 				settingKey="index.includeFiles"
 				settings={settings}
 				onScopeChange={onScopeChange}

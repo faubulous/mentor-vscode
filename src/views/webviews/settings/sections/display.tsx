@@ -1,6 +1,7 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
+import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
 
 export interface DisplaySectionProps {
 	settings: Record<string, SettingState>;
@@ -14,10 +15,10 @@ export function DisplaySection({ settings, onUpdate, onScopeChange, onBulkScope 
 
 	return (
 		<div>
-			<SectionHeader title="Display" keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<SectionHeader title={SECTION_TITLES['appearance.display']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label="Label predicates"
-				description="Ordered list of RDF predicate URIs used to display labels for resources. The first predicate with a value wins."
+				label={SETTINGS_METADATA['predicates.label'].title}
+				description={SETTINGS_METADATA['predicates.label'].description}
 				settingKey="predicates.label"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -29,8 +30,8 @@ export function DisplaySection({ settings, onUpdate, onScopeChange, onBulkScope 
 				/>
 			</SettingRow>
 			<SettingRow
-				label="Description predicates"
-				description="Ordered list of RDF predicate URIs used to display descriptions for resources."
+				label={SETTINGS_METADATA['predicates.description'].title}
+				description={SETTINGS_METADATA['predicates.description'].description}
 				settingKey="predicates.description"
 				settings={settings}
 				onScopeChange={onScopeChange}

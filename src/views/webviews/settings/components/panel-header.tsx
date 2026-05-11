@@ -18,27 +18,47 @@ export function MentorIcon() {
 
 export interface PanelHeaderProps {
 	version: string;
+	activeScope: 'user' | 'workspace';
 	searchTerm: string;
+	onScopeTabChange: (scope: 'user' | 'workspace') => void;
 	onSearchChange: (term: string) => void;
 }
 
-export function PanelHeader({ version, searchTerm, onSearchChange }: PanelHeaderProps) {
+export function PanelHeader({ version, activeScope, onScopeTabChange, searchTerm, onSearchChange }: PanelHeaderProps) {
 	return (
 		<div className="panel-header">
-			<MentorIcon />
-			<div className="panel-header-brand">
-				<span className="panel-header-title">Mentor</span>
-				{version && <span className="panel-header-version">v{version}</span>}
-			</div>
-			<div className="panel-header-search">
-				<div className="search-field-wrapper">
-					<vscode-textfield
-						placeholder="Search settings…"
-						value={searchTerm}
-						onInput={(e: React.FormEvent<HTMLElement>) => onSearchChange((e.target as HTMLInputElement).value)}
+			<div className="panel-header-inner">
+				<div className="panel-header-brand">
+					<MentorIcon />
+					<div className="panel-header-title-wrapper">
+						<span className="panel-header-title">Mentor</span>
+						{version && <span className="panel-header-version">v{version}</span>}
+					</div>
+				</div>
+				<div className="panel-header-search">
+					<div className="search-field-wrapper">
+						<vscode-textfield
+							placeholder="Search settings…"
+							value={searchTerm}
+							onInput={(e: React.FormEvent<HTMLElement>) => onSearchChange((e.target as HTMLInputElement).value)}
+						>
+							<vscode-icon slot="content-before" name="search" title="search"></vscode-icon>
+						</vscode-textfield>
+					</div>
+				</div>
+				<div className="scope-tabs">
+					<button
+						className={`scope-tab${activeScope === 'user' ? ' active' : ''}`}
+						onClick={() => onScopeTabChange('user')}
 					>
-						<vscode-icon slot="content-before" name="search" title="search"></vscode-icon>
-					</vscode-textfield>
+						User
+					</button>
+					<button
+						className={`scope-tab${activeScope === 'workspace' ? ' active' : ''}`}
+						onClick={() => onScopeTabChange('workspace')}
+					>
+						Workspace
+					</button>
 				</div>
 			</div>
 		</div>

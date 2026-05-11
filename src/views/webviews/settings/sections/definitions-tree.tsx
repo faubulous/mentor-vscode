@@ -1,5 +1,6 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
+import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-single-select';
 import '@vscode-elements/elements/dist/vscode-option';
@@ -22,10 +23,10 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 
 	return (
 		<div>
-			<SectionHeader title="Definitions Tree" keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<SectionHeader title={SECTION_TITLES['appearance.definitions-tree']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label="Label style"
-				description="Controls how labels are displayed in the definitions tree."
+				label={SETTINGS_METADATA['definitionTree.labelStyle'].title}
+				description={SETTINGS_METADATA['definitionTree.labelStyle'].description}
 				settingKey="definitionTree.labelStyle"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -40,8 +41,8 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 				</vscode-single-select>
 			</SettingRow>
 			<SettingRow
-				label="Default layout"
-				description="How to group resources in the definitions tree."
+				label={SETTINGS_METADATA['definitionTree.defaultLayout'].title}
+				description={SETTINGS_METADATA['definitionTree.defaultLayout'].description}
 				settingKey="definitionTree.defaultLayout"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -55,8 +56,8 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 				</vscode-single-select>
 			</SettingRow>
 			<SettingRow
-				label="Default language tag"
-				description="Filter labels and descriptions by this language tag (e.g. 'en', 'de')."
+				label={SETTINGS_METADATA['definitionTree.defaultLanguageTag'].title}
+				description={SETTINGS_METADATA['definitionTree.defaultLanguageTag'].description}
 				settingKey="definitionTree.defaultLanguageTag"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -68,8 +69,8 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 				/>
 			</SettingRow>
 			<SettingRow
-				label="Decorate missing language tags"
-				description="Highlight resources that are missing a label or description in the default language."
+				label={SETTINGS_METADATA['definitionTree.decorateMissingLanguageTags'].title}
+				description={SETTINGS_METADATA['definitionTree.decorateMissingLanguageTags'].description}
 				settingKey="definitionTree.decorateMissingLanguageTags"
 				settings={settings}
 				onScopeChange={onScopeChange}

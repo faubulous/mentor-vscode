@@ -8,6 +8,7 @@ import stylesheet from './settings-panel.css';
 import { SettingsNav, NavSection } from './components/settings-nav';
 import { EditorSettings, TestResult } from './components/types';
 import { PanelHeader } from './components/panel-header';
+import { SettingsScopeContext } from './components/setting-row';
 import { SearchResults } from './components/search-results';
 import { DisplaySection } from './sections/display';
 import { DefinitionsTreeSection } from './sections/definitions-tree';
@@ -18,7 +19,6 @@ import { TemplatesSection } from './sections/templates';
 import { IndexingSection } from './sections/indexing';
 import { ConnectionsSection } from './sections/connections';
 import { QuerySection } from './sections/query';
-import { NamespacesSection } from './sections/namespaces';
 import { ValidationSection } from './sections/validation';
 
 import '@vscode-elements/elements/dist/vscode-button';
@@ -38,6 +38,7 @@ interface PanelState {
 	connections: SparqlConnection[];
 	testResults: Record<string, TestResult>;
 	activeSection: NavSection;
+	activeScope: 'user' | 'workspace';
 	formattingLanguage: FormattingLanguage;
 	version: string;
 	searchTerm: string;
@@ -53,6 +54,7 @@ const initialState: PanelState = {
 	connections: [],
 	testResults: {},
 	activeSection: 'appearance.display',
+	activeScope: 'user',
 	formattingLanguage: 'turtle',
 	version: '',
 	searchTerm: '',
@@ -110,14 +112,13 @@ function SettingsPanel() {
 	}, []);
 
 	const handleUpdate = useCallback((key: string, value: unknown) => {
-		const currentSource = state.settings[key]?.source ?? 'default';
-		const scope: SettingScope = currentSource === 'default' ? 'user' : currentSource;
+		const scope: SettingScope = state.activeScope;
 		setState(prev => ({
 			...prev,
 			settings: { ...prev.settings, [key]: { ...prev.settings[key], value, source: scope } },
 		}));
 		messaging?.postMessage({ id: 'UpdateSetting', key, value, scope });
-	}, [state.settings, messaging, setState]);
+	}, [state.activeScope, messaging, setState]);
 
 	const handleScopeChange = useCallback((key: string, newScope: SettingScope, currentValue: unknown) => {
 		setState(prev => ({
@@ -128,8 +129,7 @@ function SettingsPanel() {
 	}, [messaging, setState]);
 
 	const handleEditorUpdate = useCallback((languageId: LanguageId, key: string, value: unknown) => {
-		const currentSource = state.editorSettings[languageId]?.[key]?.source ?? 'default';
-		const scope: SettingScope = currentSource === 'default' ? 'user' : currentSource;
+		const scope: SettingScope = state.activeScope;
 		setState(prev => ({
 			...prev,
 			editorSettings: {
@@ -141,7 +141,7 @@ function SettingsPanel() {
 			},
 		}));
 		messaging?.postMessage({ id: 'UpdateEditorSetting', languageId, key, value, scope });
-	}, [state.editorSettings, messaging, setState]);
+	}, [state.activeScope, messaging, setState]);
 
 	const handleEditorScopeChange = useCallback((languageId: LanguageId, key: string, newScope: SettingScope, currentValue: unknown) => {
 		setState(prev => ({
@@ -156,6 +156,10 @@ function SettingsPanel() {
 		}));
 		messaging?.postMessage({ id: 'UpdateEditorSetting', languageId, key, value: newScope === 'default' ? undefined : currentValue, scope: newScope });
 	}, [messaging, setState]);
+
+	const handleScopeTabChange = useCallback((scope: 'user' | 'workspace') => {
+		setState(prev => ({ ...prev, activeScope: scope }));
+	}, [setState]);
 
 	const handleBulkScope = useCallback((keys: string[], scope: 'user' | 'workspace') => {
 		for (const key of keys) {
@@ -181,6 +185,7 @@ function SettingsPanel() {
 
 	const commonProps = {
 		settings: state.settings,
+		activeScope: state.activeScope,
 		onUpdate: handleUpdate,
 		onScopeChange: handleScopeChange,
 		onBulkScope: handleBulkScope,
@@ -234,28 +239,31 @@ function SettingsPanel() {
 					/>
 				);
 			case 'query':                     return <QuerySection {...commonProps} />;
-			case 'namespaces':                return <NamespacesSection {...commonProps} />;
 			case 'validation':                return <ValidationSection {...commonProps} />;
 			default:                          return null;
 		}
 	};
 
 	return (
-		<div className="settings-panel">
-			<PanelHeader
-				version={state.version}
-				searchTerm={state.searchTerm}
-				onSearchChange={handleSearchChange}
-			/>
-			<div className="settings-body">
-				<SettingsNav activeSection={state.activeSection} onSelect={handleNavSelect} />
-				<div className="settings-content">
-					<div className="settings-content-inner">
-						{renderSection()}
+		<SettingsScopeContext.Provider value={state.activeScope}>
+			<div className="settings-panel">
+				<PanelHeader
+					version={state.version}
+					activeScope={state.activeScope}
+					onScopeTabChange={handleScopeTabChange}
+					searchTerm={state.searchTerm}
+					onSearchChange={handleSearchChange}
+				/>
+				<div className="settings-body">
+					<SettingsNav activeSection={state.activeSection} onSelect={handleNavSelect} />
+					<div className="settings-content">
+						<div className="settings-content-inner">
+							{renderSection()}
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
+		</SettingsScopeContext.Provider>
 	);
 }
 

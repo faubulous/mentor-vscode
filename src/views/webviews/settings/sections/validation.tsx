@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
+import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-button';
@@ -68,14 +69,14 @@ export function ValidationSection({ settings, onUpdate, onScopeChange, onBulkSco
 	return (
 		<div>
 			<SectionHeader
-				title={<>Validation <span className="badge-experimental">Experimental</span></>}
+			title={<>{SECTION_TITLES['validation']} <span className="badge-experimental">Experimental</span></>}
 				keys={['shacl.enabled', 'shacl.validation']}
 				settings={settings}
 				onBulkScope={onBulkScope}
 			/>
 			<SettingRow
-				label="Enable SHACL validation"
-				description="Validate RDF documents against SHACL shapes. This feature is experimental."
+				label={SETTINGS_METADATA['shacl.enabled'].title}
+				description={SETTINGS_METADATA['shacl.enabled'].description}
 				settingKey="shacl.enabled"
 				settings={settings}
 				onScopeChange={onScopeChange}

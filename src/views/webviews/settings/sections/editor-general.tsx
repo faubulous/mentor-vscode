@@ -1,10 +1,12 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
+import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-single-select';
 import '@vscode-elements/elements/dist/vscode-option';
 import '@vscode-elements/elements/dist/vscode-textfield';
+import { ObjectListEditor } from '../components/object-list-editor';
 
 export interface EditorGeneralSectionProps {
 	settings: Record<string, SettingState>;
@@ -21,12 +23,14 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 		'prefixes.queryParameterName',
 	];
 
+	const namespaces = (settings['namespaces']?.value as { uri: string; defaultPrefix: string }[]) ?? [];
+
 	return (
 		<div>
-			<SectionHeader title="Editor" keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<SectionHeader title={SECTION_TITLES['editor.general']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label="Enable code lens"
-				description="Show code lens actions above class definitions and property declarations."
+				label={SETTINGS_METADATA['editor.codeLensEnabled'].title}
+				description={SETTINGS_METADATA['editor.codeLensEnabled'].description}
 				settingKey="editor.codeLensEnabled"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -39,8 +43,8 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 				</vscode-checkbox>
 			</SettingRow>
 			<SettingRow
-				label="Auto-define prefixes"
-				description="Automatically declare namespace prefixes in the document header when a URI is used."
+				label={SETTINGS_METADATA['prefixes.autoDefinePrefixes'].title}
+				description={SETTINGS_METADATA['prefixes.autoDefinePrefixes'].description}
 				settingKey="prefixes.autoDefinePrefixes"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -53,8 +57,8 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 				</vscode-checkbox>
 			</SettingRow>
 			<SettingRow
-				label="Prefix definition mode"
-				description="Controls where new prefix declarations are inserted in the document."
+				label={SETTINGS_METADATA['prefixes.prefixDefinitionMode'].title}
+				description={SETTINGS_METADATA['prefixes.prefixDefinitionMode'].description}
 				settingKey="prefixes.prefixDefinitionMode"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -68,8 +72,24 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 				</vscode-single-select>
 			</SettingRow>
 			<SettingRow
-				label="Workspace URI query parameter"
-				description="Name of the query parameter appended to workspace: URIs to identify the workspace."
+				label={SETTINGS_METADATA['namespaces'].title}
+				description={SETTINGS_METADATA['namespaces'].description}
+				settingKey="namespaces"
+				settings={settings}
+				onScopeChange={onScopeChange}
+			>
+				<ObjectListEditor
+					items={namespaces}
+					fields={[
+						{ key: 'defaultPrefix', label: 'Prefix', placeholder: 'ex', className: 'col-prefix' },
+						{ key: 'uri', label: 'URI', placeholder: 'https://example.org/' },
+					]}
+					onChange={v => onUpdate('namespaces', v)}
+				/>
+			</SettingRow>
+			<SettingRow
+				label={SETTINGS_METADATA['prefixes.queryParameterName'].title}
+				description={SETTINGS_METADATA['prefixes.queryParameterName'].description}
 				settingKey="prefixes.queryParameterName"
 				settings={settings}
 				onScopeChange={onScopeChange}
