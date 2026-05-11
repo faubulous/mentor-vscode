@@ -230,7 +230,14 @@ vscode-textfield .root {
 .string-list-item vscode-textfield,
 .object-list-item vscode-textfield {
 	--vscode-font-family: var(--vscode-editor-font-family);
-	min-height: 28px;
+	min-height: 30px;
+}
+
+vscode-textarea.monospace {
+	font-family: var(--vscode-editor-font-family, monospace) !important;
+	font-size: var(--vscode-editor-font-size, 14px);
+	font-weight: var(--vscode-editor-font-weight, normal);
+	background-color: var(--vscode-settings-textInputBackground, #313131);
 }
 
 /* Text buttons */
@@ -729,14 +736,6 @@ vscode-textfield .root {
 	color: var(--vscode-badge-foreground);
 	vertical-align: middle;
 	margin-left: 6px;
-}
-
-/* Textarea width */
-
-.setting-row vscode-textarea textarea {
-	width: 100%;
-	min-height: 120px;
-	padding: 8px;
 }
 
 /* Search results */

@@ -47,7 +47,7 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				onScopeChange={onScopeChange}
 			>
 				<vscode-textarea
-					monospace
+					className='monospace'
 					rows={12}
 					value={String(settings['sparql.listGraphsQuery']?.value ?? '')}
 					onInput={(e: any) => onUpdate('sparql.listGraphsQuery', (e.target as HTMLTextAreaElement).value)}
@@ -61,7 +61,7 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				onScopeChange={onScopeChange}
 			>
 				<vscode-textarea
-					monospace
+					className='monospace'
 					rows={12}
 					value={String(settings['sparql.dropGraphQuery']?.value ?? '')}
 					onInput={(e: any) => onUpdate('sparql.dropGraphQuery', (e.target as HTMLTextAreaElement).value)}
@@ -75,7 +75,7 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				onScopeChange={onScopeChange}
 			>
 				<vscode-textarea
-					monospace
+					className='monospace'
 					rows={12}
 					value={String(settings['sparql.describeQueryTemplate']?.value ?? '')}
 					onInput={(e: any) => onUpdate('sparql.describeQueryTemplate', (e.target as HTMLTextAreaElement).value)}

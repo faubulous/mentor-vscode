@@ -35,7 +35,7 @@ export function TemplatesSection({ settings, onUpdate, onScopeChange, onBulkScop
 					onScopeChange={onScopeChange}
 				>
 					<vscode-textarea
-						monospace
+					className='monospace'
 						rows={12}
 						value={String(settings[key]?.value ?? '')}
 						onInput={(e: any) => onUpdate(key, (e.target as HTMLTextAreaElement).value)}

@@ -136,9 +136,9 @@ export function SettingRow({ label, description, settingKey, settings, onScopeCh
 
 	const menuItems: MenuItem[] = [
 		...(source !== 'default'
-			? [{ label: 'Restore default', onClick: () => onScopeChange(settingKey, 'default', state?.value) }]
+			? [{ label: 'Restore defaults', onClick: () => onScopeChange(settingKey, 'default', state?.value) }]
 			: []),
-		{ label: `Copy to ${otherScopeLabel}`, onClick: () => onScopeChange(settingKey, otherScope, state?.value) },
+		{ label: `Copy to ${otherScopeLabel} Scope`, onClick: () => onScopeChange(settingKey, otherScope, state?.value) },
 	];
 
 	return (
@@ -179,7 +179,7 @@ export function EditorSettingRow({ label, description, settingKey, languageId, e
 		...(source !== 'default'
 			? [{ label: 'Restore default', onClick: () => onScopeChange(languageId, settingKey, 'default', state?.value) }]
 			: []),
-		{ label: `Copy to ${otherScopeLabel}`, onClick: () => onScopeChange(languageId, settingKey, otherScope, state?.value) },
+		{ label: `Copy to ${otherScopeLabel} Scope`, onClick: () => onScopeChange(languageId, settingKey, otherScope, state?.value) },
 	];
 
 	return (

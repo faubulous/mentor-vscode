@@ -935,7 +935,7 @@
           "group": "navigation@2"
         },
         {
-          "command": "mentor.command.manageSparqlConnections",
+          "command": "mentor.command.openSettings",
           "when": "view == mentor.view.workspaceTree",
           "group": "navigation@3"
         },
@@ -1583,7 +1583,7 @@
             "x-group": "editor.sorting",
             "type": "object",
             "title": "Type Sorting Options",
-            "description": "Options for the priority-based sort strategy used when sorting documents by type. See https://github.com/faubulous/mentor-rdf-serializers/blob/main/docs/sorting.md#priority for reference.",
+            "description": "Options for the priority-based sort strategy used when sorting documents by type. See the Mentor serializer [documentation](https://github.com/faubulous/mentor-rdf-serializers/blob/main/docs/sorting.md#priority) for reference.",
             "properties": {
               "typeOrder": {
                 "type": "array",

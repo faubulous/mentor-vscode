@@ -55,11 +55,6 @@ const NAV_GROUPS: NavGroup[] = [
 		items: [{ id: 'query', label: 'Query' }],
 	},
 	{
-		id: 'namespaces',
-		label: 'Namespaces',
-		items: [{ id: 'namespaces', label: 'Namespaces' }],
-	},
-	{
 		id: 'validation',
 		label: 'Validation',
 		items: [{ id: 'validation', label: 'Validation' }],

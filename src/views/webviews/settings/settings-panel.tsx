@@ -24,7 +24,6 @@ import { ValidationSection } from './sections/validation';
 import '@vscode-elements/elements/dist/vscode-button';
 import '@vscode-elements/elements/dist/vscode-icon';
 import '@vscode-elements/elements/dist/vscode-textfield';
-import '@vscode-elements/elements/dist/vscode-textarea';
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-single-select';
 import '@vscode-elements/elements/dist/vscode-option';

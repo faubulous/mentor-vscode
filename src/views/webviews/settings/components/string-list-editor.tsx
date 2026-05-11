@@ -74,7 +74,7 @@ export function StringListEditor({ items, placeholder = 'Enter value', onChange 
 									if (value) onChange([...items, value]);
 								}}
 							>
-								<div slot="content-before" style={{ width: '28px' }} />
+								<div slot="content-before" style={{ width: '20px' }} />
 							</vscode-textfield>
 						</div>
 					);

@@ -27,7 +27,6 @@ const SECTION_TITLES = {
 	'indexing': 'Indexing',
 	'connections': 'Connections',
 	'query': 'Query',
-	'namespaces': 'Namespaces',
 	'validation': 'Validation',
 };
 
