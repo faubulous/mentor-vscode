@@ -20,7 +20,6 @@ import { ConnectionsSection } from './sections/connections';
 import { QuerySection } from './sections/query';
 import { NamespacesSection } from './sections/namespaces';
 import { ValidationSection } from './sections/validation';
-import { InferenceSection } from './sections/inference';
 
 import '@vscode-elements/elements/dist/vscode-button';
 import '@vscode-elements/elements/dist/vscode-icon';
@@ -237,7 +236,6 @@ function SettingsPanel() {
 			case 'query':                     return <QuerySection {...commonProps} />;
 			case 'namespaces':                return <NamespacesSection {...commonProps} />;
 			case 'validation':                return <ValidationSection {...commonProps} />;
-			case 'inference':                 return <InferenceSection {...commonProps} />;
 			default:                          return null;
 		}
 	};
@@ -252,7 +250,9 @@ function SettingsPanel() {
 			<div className="settings-body">
 				<SettingsNav activeSection={state.activeSection} onSelect={handleNavSelect} />
 				<div className="settings-content">
-					{renderSection()}
+					<div className="settings-content-inner">
+						{renderSection()}
+					</div>
 				</div>
 			</div>
 		</div>

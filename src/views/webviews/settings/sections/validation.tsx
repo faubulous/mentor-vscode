@@ -89,7 +89,7 @@ export function ValidationSection({ settings, onUpdate, onScopeChange, onBulkSco
 			</SettingRow>
 
 			<div className="settings-subsection">
-				<div className="settings-group-title">Default shapes</div>
+				<div className="settings-group-title">Default Shapes</div>
 				<p className="setting-description">Shape graph URIs applied by default to all graphs that do not have per-graph settings.</p>
 				<StringListEditor
 					items={validation.defaults}
@@ -99,7 +99,7 @@ export function ValidationSection({ settings, onUpdate, onScopeChange, onBulkSco
 			</div>
 
 			<div className="settings-subsection">
-				<div className="settings-group-title">Per-graph configuration</div>
+				<div className="settings-group-title">Per-Graph Configuration</div>
 				{Object.entries(validation.graphs).map(([uri, entry]) => (
 					<div key={uri} className="shacl-graph-entry">
 						<div className="shacl-graph-header" onClick={() => toggleGraph(uri)}>

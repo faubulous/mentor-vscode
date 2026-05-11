@@ -36,12 +36,12 @@ export function FormattingSection({
 		'formatting.turtle.blankLinesBetweenSubjects',
 	];
 	const sparqlKeys = [
+		'formatting.sparql.maxLineWidth',
+		'formatting.sparql.spaceBeforePunctuation',
 		'formatting.sparql.uppercaseKeywords',
 		'formatting.sparql.alignPatterns',
 		'formatting.sparql.sameBraceLine',
 		'formatting.sparql.separateClauses',
-		'formatting.sparql.maxLineWidth',
-		'formatting.sparql.spaceBeforePunctuation',
 	];
 	const lang = formattingLanguage;
 	const isTurtle = lang === 'turtle';
@@ -51,72 +51,71 @@ export function FormattingSection({
 	return (
 		<div>
 			<SectionHeader title="Formatting" />
+			<EditorSettingRow
+				label="Format on save"
+				description="Automatically format documents on save."
+				settingKey="formatOnSave"
+				languageId={lang}
+				editorSettings={editorSettings}
+				onScopeChange={onEditorScopeChange}
+			>
+				<vscode-checkbox
+					checked={editorSettings[lang]?.['formatOnSave']?.value === true}
+					onChange={(e: any) => onEditorUpdate(lang, 'formatOnSave', (e.target as HTMLInputElement).checked)}
+				>
+					Enabled
+				</vscode-checkbox>
+			</EditorSettingRow>
 
-			<div className="settings-subsection">
-				<div className="settings-subsection-title">VS Code Editor Options</div>
-				<EditorSettingRow
-					label="Format on save"
-					description="Automatically format documents on save."
-					settingKey="formatOnSave"
-					languageId={lang}
-					editorSettings={editorSettings}
-					onScopeChange={onEditorScopeChange}
+			<EditorSettingRow
+				label="Tab size"
+				description="Number of spaces per indent level (used by the Mentor formatter for indentation)."
+				settingKey="tabSize"
+				languageId={lang}
+				editorSettings={editorSettings}
+				onScopeChange={onEditorScopeChange}
+			>
+				<vscode-textfield
+					value={String(editorSettings[lang]?.['tabSize']?.value ?? 2)}
+					type="number"
+					onInput={(e: any) => onEditorUpdate(lang, 'tabSize', Number((e.target as HTMLInputElement).value))}
+				/>
+			</EditorSettingRow>
+
+			<EditorSettingRow
+				label="Insert spaces"
+				description="Use spaces instead of tabs for indentation (used by the Mentor formatter)."
+				settingKey="insertSpaces"
+				languageId={lang}
+				editorSettings={editorSettings}
+				onScopeChange={onEditorScopeChange}
+			>
+				<vscode-checkbox
+					checked={editorSettings[lang]?.['insertSpaces']?.value !== false}
+					onChange={(e: any) => onEditorUpdate(lang, 'insertSpaces', (e.target as HTMLInputElement).checked)}
 				>
-					<vscode-checkbox
-						checked={editorSettings[lang]?.['formatOnSave']?.value === true}
-						onChange={(e: any) => onEditorUpdate(lang, 'formatOnSave', (e.target as HTMLInputElement).checked)}
-					>
-						Enabled
-					</vscode-checkbox>
-				</EditorSettingRow>
-				<EditorSettingRow
-					label="Tab size"
-					description="Number of spaces per indent level (used by the Mentor formatter for indentation)."
-					settingKey="tabSize"
-					languageId={lang}
-					editorSettings={editorSettings}
-					onScopeChange={onEditorScopeChange}
+					Use spaces
+				</vscode-checkbox>
+			</EditorSettingRow>
+			
+			<EditorSettingRow
+				label="Word wrap"
+				description="Controls how lines wrap in the editor."
+				settingKey="wordWrap"
+				languageId={lang}
+				editorSettings={editorSettings}
+				onScopeChange={onEditorScopeChange}
+			>
+				<vscode-single-select
+					value={String(editorSettings[lang]?.['wordWrap']?.value ?? 'off')}
+					onChange={(e: any) => onEditorUpdate(lang, 'wordWrap', (e.target as HTMLSelectElement).value)}
 				>
-					<vscode-textfield
-						value={String(editorSettings[lang]?.['tabSize']?.value ?? 2)}
-						type="number"
-						onInput={(e: any) => onEditorUpdate(lang, 'tabSize', Number((e.target as HTMLInputElement).value))}
-					/>
-				</EditorSettingRow>
-				<EditorSettingRow
-					label="Insert spaces"
-					description="Use spaces instead of tabs for indentation (used by the Mentor formatter)."
-					settingKey="insertSpaces"
-					languageId={lang}
-					editorSettings={editorSettings}
-					onScopeChange={onEditorScopeChange}
-				>
-					<vscode-checkbox
-						checked={editorSettings[lang]?.['insertSpaces']?.value !== false}
-						onChange={(e: any) => onEditorUpdate(lang, 'insertSpaces', (e.target as HTMLInputElement).checked)}
-					>
-						Use spaces
-					</vscode-checkbox>
-				</EditorSettingRow>
-				<EditorSettingRow
-					label="Word wrap"
-					description="Controls how lines wrap in the editor."
-					settingKey="wordWrap"
-					languageId={lang}
-					editorSettings={editorSettings}
-					onScopeChange={onEditorScopeChange}
-				>
-					<vscode-single-select
-						value={String(editorSettings[lang]?.['wordWrap']?.value ?? 'off')}
-						onChange={(e: any) => onEditorUpdate(lang, 'wordWrap', (e.target as HTMLSelectElement).value)}
-					>
-						<vscode-option value="off">Off</vscode-option>
-						<vscode-option value="on">On</vscode-option>
-						<vscode-option value="wordWrapColumn">Word wrap column</vscode-option>
-						<vscode-option value="bounded">Bounded</vscode-option>
-					</vscode-single-select>
-				</EditorSettingRow>
-			</div>
+					<vscode-option value="off">Off</vscode-option>
+					<vscode-option value="on">On</vscode-option>
+					<vscode-option value="wordWrapColumn">Word wrap column</vscode-option>
+					<vscode-option value="bounded">Bounded</vscode-option>
+				</vscode-single-select>
+			</EditorSettingRow>
 
 			<div className="settings-subsection">
 				<div className="lang-tab-bar-row">
@@ -187,6 +186,33 @@ export function FormattingSection({
 				) : (
 					<>
 						<SettingRow
+							label="Max line width"
+							description="Maximum line width before the formatter wraps long lines. Set to 0 to disable."
+							settingKey="formatting.sparql.maxLineWidth"
+							settings={settings}
+							onScopeChange={onScopeChange}
+						>
+							<vscode-textfield
+								value={String(settings['formatting.sparql.maxLineWidth']?.value ?? 120)}
+								type="number"
+								onInput={(e: any) => onUpdate('formatting.sparql.maxLineWidth', Number((e.target as HTMLInputElement).value))}
+							/>
+						</SettingRow>
+						<SettingRow
+							label="Space before punctuation"
+							description="Insert a space before punctuation characters."
+							settingKey="formatting.sparql.spaceBeforePunctuation"
+							settings={settings}
+							onScopeChange={onScopeChange}
+						>
+							<vscode-checkbox
+								checked={settings['formatting.sparql.spaceBeforePunctuation']?.value !== false}
+								onChange={(e: any) => onUpdate('formatting.sparql.spaceBeforePunctuation', (e.target as HTMLInputElement).checked)}
+							>
+								Enabled
+							</vscode-checkbox>
+						</SettingRow>
+						<SettingRow
 							label="Uppercase keywords"
 							description="Format SPARQL keywords (SELECT, WHERE, etc.) in uppercase."
 							settingKey="formatting.sparql.uppercaseKeywords"
@@ -238,33 +264,6 @@ export function FormattingSection({
 							<vscode-checkbox
 								checked={settings['formatting.sparql.separateClauses']?.value !== false}
 								onChange={(e: any) => onUpdate('formatting.sparql.separateClauses', (e.target as HTMLInputElement).checked)}
-							>
-								Enabled
-							</vscode-checkbox>
-						</SettingRow>
-						<SettingRow
-							label="Max line width"
-							description="Maximum line width before the formatter wraps long lines. Set to 0 to disable."
-							settingKey="formatting.sparql.maxLineWidth"
-							settings={settings}
-							onScopeChange={onScopeChange}
-						>
-							<vscode-textfield
-								value={String(settings['formatting.sparql.maxLineWidth']?.value ?? 120)}
-								type="number"
-								onInput={(e: any) => onUpdate('formatting.sparql.maxLineWidth', Number((e.target as HTMLInputElement).value))}
-							/>
-						</SettingRow>
-						<SettingRow
-							label="Space before punctuation"
-							description="Insert a space before punctuation characters."
-							settingKey="formatting.sparql.spaceBeforePunctuation"
-							settings={settings}
-							onScopeChange={onScopeChange}
-						>
-							<vscode-checkbox
-								checked={settings['formatting.sparql.spaceBeforePunctuation']?.value !== false}
-								onChange={(e: any) => onUpdate('formatting.sparql.spaceBeforePunctuation', (e.target as HTMLInputElement).checked)}
 							>
 								Enabled
 							</vscode-checkbox>

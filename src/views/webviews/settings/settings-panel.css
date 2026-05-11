@@ -91,8 +91,11 @@ vscode-textfield .root {
 .settings-content {
 	flex: 1;
 	overflow-y: auto;
-	padding: 24px 32px;
+}
+
+.settings-content-inner {
 	max-width: 760px;
+	padding: 24px 32px;
 }
 
 /* Panel header */
@@ -130,8 +133,32 @@ vscode-textfield .root {
 
 .panel-header-search {
 	flex: 1;
-	max-width: 280px;
+	max-width: 400px;
 	margin-left: 100px;
+}
+
+.search-field-wrapper {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.search-field-wrapper vscode-textfield {
+	width: 100%;
+}
+
+.search-field-icon {
+	position: absolute;
+	left: 8px;
+	z-index: 1;
+	font-size: 13px;
+	opacity: 0.5;
+	pointer-events: none;
+	color: var(--vscode-foreground);
+}
+
+.search-field-wrapper vscode-textfield input {
+	padding-left: 28px !important;
 }
 
 .settings-body {
@@ -143,7 +170,6 @@ vscode-textfield .root {
 /* Editor font for all code-like inputs */
 
 .settings-content vscode-textfield,
-.settings-content vscode-textarea,
 .string-list-item vscode-textfield,
 .object-list-item vscode-textfield {
 	--vscode-font-family: var(--vscode-editor-font-family);
@@ -369,7 +395,7 @@ vscode-textfield .root {
 }
 
 .drag-handle {
-	cursor: grab;
+	cursor: grab !important;
 	opacity: 0.3;
 	flex-shrink: 0;
 	font-size: 14px;
@@ -386,6 +412,16 @@ vscode-textfield .root {
 
 .string-list-add {
 	margin-top: 4px;
+}
+
+.drag-handle-spacer {
+	flex-shrink: 0;
+	width: 18px;
+}
+
+.list-remove-spacer {
+	flex-shrink: 0;
+	width: 22px;
 }
 
 .list-remove-button {

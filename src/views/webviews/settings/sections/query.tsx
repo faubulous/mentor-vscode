@@ -19,6 +19,7 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 		'sparql.listGraphsQuery',
 		'sparql.dropGraphQuery',
 		'sparql.describeQueryTemplate',
+		'inference.enabled',
 	];
 
 	return (
@@ -59,9 +60,9 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				onScopeChange={onScopeChange}
 			>
 				<vscode-textarea
-					className="editor-font-textarea"
+					monospace
+					rows={12}
 					value={String(settings['sparql.listGraphsQuery']?.value ?? '')}
-					rows={4}
 					onInput={(e: any) => onUpdate('sparql.listGraphsQuery', (e.target as HTMLTextAreaElement).value)}
 				/>
 			</SettingRow>
@@ -73,9 +74,9 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				onScopeChange={onScopeChange}
 			>
 				<vscode-textarea
-					className="editor-font-textarea"
+					monospace
+					rows={12}
 					value={String(settings['sparql.dropGraphQuery']?.value ?? '')}
-					rows={4}
 					onInput={(e: any) => onUpdate('sparql.dropGraphQuery', (e.target as HTMLTextAreaElement).value)}
 				/>
 			</SettingRow>
@@ -87,12 +88,31 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				onScopeChange={onScopeChange}
 			>
 				<vscode-textarea
-					className="editor-font-textarea"
+					monospace
+					rows={12}
 					value={String(settings['sparql.describeQueryTemplate']?.value ?? '')}
-					rows={4}
 					onInput={(e: any) => onUpdate('sparql.describeQueryTemplate', (e.target as HTMLTextAreaElement).value)}
 				/>
 			</SettingRow>
+			<div className="settings-subsection">
+				<div className="settings-group-title">
+					Inference <span className="badge-experimental">Experimental</span>
+				</div>
+				<SettingRow
+					label="Enable inference toggle"
+					description="Show the inference toggle button in the SPARQL connection view."
+					settingKey="inference.enabled"
+					settings={settings}
+					onScopeChange={onScopeChange}
+				>
+					<vscode-checkbox
+						checked={settings['inference.enabled']?.value === true}
+						onChange={(e: any) => onUpdate('inference.enabled', (e.target as HTMLInputElement).checked)}
+					>
+						Enabled
+					</vscode-checkbox>
+				</SettingRow>
+			</div>
 		</div>
 	);
 }

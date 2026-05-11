@@ -12,8 +12,7 @@ export type NavSection =
 	| 'connections'
 	| 'query'
 	| 'namespaces'
-	| 'validation'
-	| 'inference';
+	| 'validation';
 
 interface NavGroup {
 	id: string;
@@ -64,11 +63,6 @@ const NAV_GROUPS: NavGroup[] = [
 		id: 'validation',
 		label: 'Validation',
 		items: [{ id: 'validation', label: 'Validation' }],
-	},
-	{
-		id: 'inference',
-		label: 'Inference',
-		items: [{ id: 'inference', label: 'Inference' }],
 	},
 ];
 

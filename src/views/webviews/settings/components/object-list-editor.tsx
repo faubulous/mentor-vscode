@@ -17,6 +17,12 @@ interface ObjectListEditorProps {
 }
 
 export function ObjectListEditor({ items, fields, onChange }: ObjectListEditorProps) {
+	const emptyItem = useCallback((): Record<string, string> => {
+		const empty: Record<string, string> = {};
+		for (const f of fields) empty[f.key] = '';
+		return empty;
+	}, [fields]);
+
 	const handleChange = useCallback((index: number, key: string, value: string) => {
 		const next = items.map((item, i) => i === index ? { ...item, [key]: value } : item);
 		onChange(next);
@@ -26,43 +32,51 @@ export function ObjectListEditor({ items, fields, onChange }: ObjectListEditorPr
 		onChange(items.filter((_, i) => i !== index));
 	}, [items, onChange]);
 
-	const handleAdd = useCallback(() => {
-		const empty: Record<string, string> = {};
-		for (const f of fields) empty[f.key] = '';
-		onChange([...items, empty]);
-	}, [items, fields, onChange]);
+	const allItems = [...items, emptyItem()];
 
 	return (
 		<div className="object-list-editor">
-			{items.length > 0 && (
-				<div className="object-list-header">
-					{fields.map(f => (
-						<span key={f.key} className={`object-list-col-header${f.className ? ` ${f.className}` : ''}`}>
-							{f.label}
-						</span>
-					))}
-					<span className="object-list-remove-spacer" />
-				</div>
-			)}
-			{items.map((item, i) => (
-				<div key={i} className="object-list-item">
-					{fields.map(f => (
-						<vscode-textfield
-							key={f.key}
-							className={f.className}
-							value={item[f.key] ?? ''}
-							placeholder={f.placeholder ?? f.label}
-							onInput={(e: React.FormEvent<HTMLElement>) => handleChange(i, f.key, (e.target as HTMLInputElement).value)}
-						/>
-					))}
-					<button className="list-remove-button" title="Remove" onClick={() => handleRemove(i)}>
-						<i className="codicon codicon-close" />
-					</button>
-				</div>
-			))}
-			<div className="string-list-add">
-				<button className="text-button" onClick={handleAdd}>+ Add</button>
+			<div className="object-list-header">
+				{fields.map(f => (
+					<span key={f.key} className={`object-list-col-header${f.className ? ` ${f.className}` : ''}`}>
+						{f.label}
+					</span>
+				))}
+				<span className="object-list-remove-spacer" />
 			</div>
+			{allItems.map((item, i) => {
+				const isGhost = i === items.length;
+				return (
+					<div key={isGhost ? 'ghost' : i} className="object-list-item">
+						{fields.map(f => (
+							<vscode-textfield
+								key={f.key}
+								className={f.className}
+								value={item[f.key] ?? ''}
+								placeholder={f.placeholder ?? f.label}
+								onInput={(e: React.FormEvent<HTMLElement>) => {
+									const value = (e.target as HTMLInputElement).value;
+									if (isGhost) {
+										const newItem = emptyItem();
+										newItem[f.key] = value;
+										onChange([...items, newItem]);
+									} else {
+										handleChange(i, f.key, value);
+									}
+								}}
+							/>
+						))}
+						{isGhost
+							? <span className="object-list-remove-spacer" />
+							: (
+								<button className="list-remove-button" title="Remove" onClick={() => handleRemove(i)}>
+									<i className="codicon codicon-close" />
+								</button>
+							)
+						}
+					</div>
+				);
+			})}
 		</div>
 	);
 }

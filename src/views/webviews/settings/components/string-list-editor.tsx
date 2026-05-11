@@ -23,10 +23,6 @@ export function StringListEditor({ items, placeholder = 'Enter value', onChange 
 		onChange(items.filter((_, i) => i !== index));
 	}, [items, onChange]);
 
-	const handleAdd = useCallback(() => {
-		onChange([...items, '']);
-	}, [items, onChange]);
-
 	const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
 		setDragIndex(index);
 		e.dataTransfer.effectAllowed = 'move';
@@ -60,38 +56,66 @@ export function StringListEditor({ items, placeholder = 'Enter value', onChange 
 		setDropIndex(null);
 	}, []);
 
+	const allItems = [...items, ''];
+
 	return (
 		<div className="string-list-editor">
-			{items.map((item, i) => (
-				<div
-					key={i}
-					className={[
-						'string-list-item',
-						dragIndex === i ? 'dragging' : '',
-						dropIndex === i && dragIndex !== i ? 'drop-target' : '',
-					].filter(Boolean).join(' ')}
-					onDragOver={e => handleDragOver(e, i)}
-					onDrop={e => handleDrop(e, i)}
-				>
-					<i
-						className="codicon codicon-gripper drag-handle"
-						draggable
-						onDragStart={(e: any) => handleDragStart(e, i)}
-						onDragEnd={handleDragEnd as any}
-					/>
-					<vscode-textfield
-						value={item}
-						placeholder={placeholder}
-						onInput={(e: React.FormEvent<HTMLElement>) => handleChange(i, (e.target as HTMLInputElement).value)}
-					/>
-					<button className="list-remove-button" title="Remove" onClick={() => handleRemove(i)}>
-						<i className="codicon codicon-close" />
-					</button>
-				</div>
-			))}
-			<div className="string-list-add">
-				<button className="text-button" onClick={handleAdd}>+ Add</button>
-			</div>
+			{allItems.map((item, i) => {
+				const isGhost = i === items.length;
+
+				if (isGhost) {
+					return (
+						<div key={i} className="string-list-item">
+							<vscode-textfield
+								value=""
+								placeholder={placeholder}
+								onInput={(e: React.FormEvent<HTMLElement>) => {
+									const value = (e.target as HTMLInputElement).value;
+									if (value) onChange([...items, value]);
+								}}
+							>
+								<div slot="content-before" style={{ width: '28px' }} />
+							</vscode-textfield>
+						</div>
+					);
+				}
+
+				return (
+					<div
+						key={i}
+						className={[
+							'string-list-item',
+							dragIndex === i ? 'dragging' : '',
+							dropIndex === i && dragIndex !== i ? 'drop-target' : '',
+						].filter(Boolean).join(' ')}
+						onDragOver={e => handleDragOver(e, i)}
+						onDrop={e => handleDrop(e, i)}
+					>
+						<vscode-textfield
+							value={item}
+							placeholder={placeholder}
+							onInput={(e: React.FormEvent<HTMLElement>) => handleChange(i, (e.target as HTMLInputElement).value)}
+						>
+							<vscode-icon
+								slot="content-before"
+								name="gripper"
+								title="Drag to reorder"
+								className="drag-handle"
+								draggable
+								onDragStart={(e: any) => handleDragStart(e, i)}
+								onDragEnd={handleDragEnd as any}
+							></vscode-icon>
+							<vscode-icon
+								slot="content-after"
+								name="close"
+								title="Remove"
+								action-icon
+								onClick={() => handleRemove(i)}
+							></vscode-icon>
+						</vscode-textfield>
+					</div>
+				);
+			})}
 		</div>
 	);
 }

@@ -34,9 +34,9 @@ export function TemplatesSection({ settings, onUpdate, onScopeChange, onBulkScop
 					onScopeChange={onScopeChange}
 				>
 					<vscode-textarea
-						className="editor-font-textarea"
+						monospace
+						rows={12}
 						value={String(settings[key]?.value ?? '')}
-						rows={4}
 						onInput={(e: any) => onUpdate(key, (e.target as HTMLTextAreaElement).value)}
 					/>
 				</SettingRow>
