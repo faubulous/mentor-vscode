@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * Generates src/views/webviews/settings/settings-metadata.ts from
- * the contributes.configuration[0] block in package.json.
+ * Generates two files from the contributes.configuration[0] block in package.json:
+ *   - src/views/webviews/settings/settings-metadata.ts  (types, metadata, nav structure)
+ *   - src/views/webviews/settings/settings-catalog.ts   (search catalog for the settings UI)
  *
  * Sources of truth in package.json:
- *   - x-nav-groups  : navigation hierarchy, group/section labels
- *   - properties    : all settings with type, enum, enumDescriptions, x-group, etc.
+ *   - x-nav-groups      : navigation hierarchy, group/section labels
+ *   - x-catalog-extras  : catalog entries for VS Code built-in settings (no x-group)
+ *   - properties        : all settings with type, enum, enumDescriptions, x-group, etc.
  *
  * Run: node generate-settings.mjs
  */
@@ -212,3 +214,53 @@ const output = lines.join('\n');
 const outPath = join(__dirname, 'src/views/webviews/settings/settings-metadata.ts');
 writeFileSync(outPath, output, 'utf8');
 console.log(`Written ${Object.keys(entries).length} settings to ${outPath}`);
+
+// ── Generate settings-catalog.ts ─────────────────────────────
+
+const catalogExtras = config['x-catalog-extras'] ?? [];
+
+/**
+ * Returns only the first sentence of a description string.
+ * Splits at a period followed by whitespace + an uppercase letter, so
+ * abbreviations like "e.g. foo" or ".gitignore" are not split incorrectly.
+ */
+function firstSentence(str) {
+	const m = str.match(/^(.*?\.)(?:\s+[A-Z]|$)/s);
+	return m ? m[1].trim() : str.trim();
+}
+
+const catalogLines = [
+	'// AUTO-GENERATED — do not edit by hand.',
+	'// Re-generate by running: node generate-settings.mjs',
+	'',
+	"import type { NavSection } from './settings-metadata';",
+	'',
+	'export interface CatalogEntry {',
+	'\tsection: NavSection;',
+	'\tsectionLabel: string;',
+	'\tlabel: string;',
+	'\tdescription: string;',
+	'}',
+	'',
+	'export const SETTINGS_CATALOG: CatalogEntry[] = [',
+];
+
+for (const [, meta] of Object.entries(entries)) {
+	const sectionLabel = sectionTitles[meta.group] ?? meta.group;
+	const label = meta.title;
+	const description = firstSentence(meta.description);
+	catalogLines.push(`\t{ section: ${JSON.stringify(meta.group)}, sectionLabel: ${JSON.stringify(sectionLabel)}, label: ${JSON.stringify(label)}, description: ${JSON.stringify(description)} },`);
+}
+
+for (const extra of catalogExtras) {
+	const sectionLabel = sectionTitles[extra.section] ?? extra.section;
+	catalogLines.push(`\t{ section: ${JSON.stringify(extra.section)}, sectionLabel: ${JSON.stringify(sectionLabel)}, label: ${JSON.stringify(extra.label)}, description: ${JSON.stringify(extra.description)} },`);
+}
+
+catalogLines.push('];');
+catalogLines.push('');
+
+const catalogOutput = catalogLines.join('\n');
+const catalogPath = join(__dirname, 'src/views/webviews/settings/settings-catalog.ts');
+writeFileSync(catalogPath, catalogOutput, 'utf8');
+console.log(`Written ${Object.keys(entries).length + catalogExtras.length} catalog entries to ${catalogPath}`);

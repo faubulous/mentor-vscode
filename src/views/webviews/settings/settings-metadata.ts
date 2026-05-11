@@ -46,7 +46,7 @@ export interface NavGroupConfig {
 
 export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 	"sparql.connections": {
-		title: "sparql.connections",
+		title: "SPARQL Connections",
 		description: "List of SPARQL endpoint connections.",
 		defaultValue: [],
 		group: "connections",
