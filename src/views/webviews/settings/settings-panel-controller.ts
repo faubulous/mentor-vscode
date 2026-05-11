@@ -46,7 +46,6 @@ const MENTOR_SETTING_KEYS = [
 	'definitionTree.defaultLanguageTag',
 	'definitionTree.decorateMissingLanguageTags',
 	'shacl.enabled',
-	'shacl.validation',
 	'inference.enabled',
 ];
 
@@ -216,6 +215,12 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 					await connectionService.deleteConnection(message.connection.id);
 					await connectionService.saveConfiguration();
 				}
+				return true;
+			}
+			case 'MoveConnection': {
+				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+				await connectionService.updateConnection({ ...message.connection, configScope: message.toScope });
+				await connectionService.saveConfiguration();
 				return true;
 			}
 			case 'TestConnection': {

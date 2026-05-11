@@ -50,7 +50,7 @@ export const SETTINGS_CATALOG: CatalogEntry[] = [
 	{ section: 'query', sectionLabel: 'Query', label: 'List graphs query', description: 'SPARQL query template used to list named graphs in an endpoint.' },
 	{ section: 'query', sectionLabel: 'Query', label: 'Drop graph query', description: 'SPARQL query template used to drop a named graph from an endpoint.' },
 	{ section: 'query', sectionLabel: 'Query', label: 'Describe query template', description: 'SPARQL DESCRIBE query template. Use {{uri}} as the resource placeholder.' },
-	{ section: 'namespaces', sectionLabel: 'Namespaces', label: 'Namespace prefixes', description: 'Custom namespace URI and prefix pairs for completion and auto-definition.' },
+	{ section: 'editor.general', sectionLabel: 'General', label: 'Namespace prefixes', description: 'Custom namespace URI and prefix pairs for completion and auto-definition.' },
 	{ section: 'validation', sectionLabel: 'Validation', label: 'Enable SHACL validation', description: 'Validate RDF documents against SHACL shapes (experimental).' },
 	{ section: 'validation', sectionLabel: 'Validation', label: 'Default shapes', description: 'Shape graph URIs applied by default to all graphs without per-graph settings.' },
 	{ section: 'validation', sectionLabel: 'Validation', label: 'Per-graph configuration', description: 'SHACL shape configurations for specific named graphs.' }

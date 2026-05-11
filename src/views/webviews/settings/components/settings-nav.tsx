@@ -11,7 +11,6 @@ export type NavSection =
 	| 'indexing'
 	| 'connections'
 	| 'query'
-	| 'namespaces'
 	| 'validation';
 
 interface NavGroup {

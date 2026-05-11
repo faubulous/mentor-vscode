@@ -250,15 +250,10 @@ function SettingsPanel() {
 						onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
 						onEditConnection={conn => messaging?.postMessage({ id: 'EditConnection', connection: conn })}
 						onDeleteConnection={conn => messaging?.postMessage({ id: 'DeleteConnection', connection: conn })}
-						onTestConnection={conn => {
-							setState(prev => ({ ...prev, testResults: { ...prev.testResults, [conn.id]: null } }));
-							messaging?.postMessage({ id: 'TestConnection', connection: conn });
-						}}
-						onListGraphs={conn => {
-							setState(prev => ({ ...prev, testResults: { ...prev.testResults, [conn.id]: null } }));
-							messaging?.postMessage({ id: 'ListGraphs', connection: conn });
-						}}
+						onTestConnection={conn => messaging?.postMessage({ id: 'TestConnection', connection: conn })}
+						onListGraphs={conn => messaging?.postMessage({ id: 'ListGraphs', connection: conn })}
 						onOpenInBrowser={url => messaging?.postMessage({ id: 'OpenInBrowser', url })}
+						onMoveConnection={(conn, toScope) => messaging?.postMessage({ id: 'MoveConnection', connection: conn, toScope })}
 					/>
 				);
 			case 'query':                     return <QuerySection {...commonProps} />;

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useState, useEffect, useRef, useContext } from 'react';
 import { SettingScope, SettingState, LanguageId } from '../settings-panel-messages';
 import { EditorSettings } from './types';
+import { MarkdownText } from './markdown-text';
 
 // ── Scope context ──────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ export function SettingRow({ label, description, settingKey, settings, onScopeCh
 				<span className="setting-leader" aria-hidden="true" />
 				<MoreVertMenu items={menuItems} />
 			</div>
-			{description && <p className="setting-description">{description}</p>}
+			{description && <p className="setting-description"><MarkdownText text={description} /></p>}
 			<div className="setting-control">{children}</div>
 		</div>
 	);
@@ -217,7 +218,7 @@ export function EditorSettingRow({ label, description, settingKey, languageId, e
 				<span className="setting-leader" aria-hidden="true" />
 				<MoreVertMenu items={menuItems} />
 			</div>
-			{description && <p className="setting-description">{description}</p>}
+			{description && <p className="setting-description"><MarkdownText text={description} /></p>}
 			<div className="setting-control">{children}</div>
 		</div>
 	);

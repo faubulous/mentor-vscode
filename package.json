@@ -1463,7 +1463,7 @@
             ]
           },
           "mentor.namespaces": {
-            "x-group": "namespaces",
+            "x-group": "editor.general",
             "type": "array",
             "title": "Namespaces",
             "description": "Manage the namespace URIs to be used in vocabularies.",

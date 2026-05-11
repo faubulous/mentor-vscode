@@ -1,4 +1,5 @@
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { ExecuteCommandMessage } from '@src/views/webviews/webview-messaging';
 
 export type SettingScope = 'default' | 'user' | 'workspace';
@@ -29,6 +30,7 @@ export type SettingsPanelMessages =
 	{ id: 'CreateConnection' } |
 	{ id: 'EditConnection'; connection: SparqlConnection } |
 	{ id: 'DeleteConnection'; connection: SparqlConnection } |
+	{ id: 'MoveConnection'; connection: SparqlConnection; toScope: ConfigurationScope } |
 	{ id: 'TestConnection'; connection: SparqlConnection } |
 	{ id: 'TestConnectionResult'; connectionId: string; success: boolean; error?: string } |
 	{ id: 'ListGraphs'; connection: SparqlConnection } |

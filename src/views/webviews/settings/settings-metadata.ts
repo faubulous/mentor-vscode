@@ -91,7 +91,7 @@ export const SETTINGS_METADATA: Record<string, SettingMetadata> = {
 		title: "Namespaces",
 		description: "Manage the namespace URIs to be used in vocabularies.",
 		defaultValue: [{"uri":"http://www.w3.org/1999/02/22-rdf-syntax-ns#","defaultPrefix":"rdf"},{"uri":"http://www.w3.org/2000/01/rdf-schema#","defaultPrefix":"rdfs"},{"uri":"http://www.w3.org/ns/rdfa#","defaultPrefix":"rdfa"},{"uri":"http://www.w3.org/2002/07/owl#","defaultPrefix":"owl"},{"uri":"http://www.w3.org/2004/02/skos/core#","defaultPrefix":"skos"},{"uri":"http://schema.org/","defaultPrefix":"schema"},{"uri":"https://schema.org/","defaultPrefix":"schema"}],
-		group: "namespaces",
+		group: "editor.general",
 	},
 	"index.useGitIgnore": {
 		title: "Use .gitignore",
