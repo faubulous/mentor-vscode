@@ -11,8 +11,9 @@ export interface SearchResultsProps {
 type SearchEntry = { section: NavSection; key: string; label?: string; description?: string };
 
 const SEARCH_ENTRIES: SearchEntry[] = [
-	...Object.entries(SETTINGS).map(([key, meta]) => ({ section: meta.section, key })),
-	...CATALOG_EXTRAS.map((e: CatalogExtra) => ({ section: e.section as NavSection, key: e.key, label: e.label, description: e.description })),
+        ...Object.entries(SETTINGS)
+                .filter(([_key, meta]) => meta.uiVisible)
+                .map(([key, meta]) => ({ section: meta.section, key })),
 ];
 
 export function SearchResults({ searchTerm, settings, onNavigate }: SearchResultsProps) {
