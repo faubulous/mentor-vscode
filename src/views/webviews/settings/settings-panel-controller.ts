@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
-import { SparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 import { WebviewController } from '@src/views/webviews/webview-controller';
+import { SparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 import { getConfig } from '@src/utilities/vscode/config';
 import { SettingsPanelMessages, SettingScope, SettingState, LanguageId } from './settings-panel-messages';
 import { SETTINGS } from './settings-metadata';
@@ -52,9 +52,15 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		);
 	}
 
+	// Expose postMessage publicly so the SparqlConnectionController shim can post
+	// OpenConnectionForm messages after delegating show() to this controller.
+	override postMessage(message: SettingsPanelMessages) {
+		super.postMessage(message);
+	}
+
 	async show(viewColumn?: vscode.ViewColumn, section?: string): Promise<void> {
 		const panelAlreadyOpen = !!this.panel;
-		
+
 		this._pendingSection = section;
 
 		await super.show(viewColumn);
@@ -150,10 +156,12 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		switch (message.id) {
 			case 'GetSettings': {
 				this.postMessage({ id: 'GetSettingsResult', settings: this._readAllSettings() });
+
 				if (this._pendingSection) {
 					this.postMessage({ id: 'NavigateTo', section: this._pendingSection });
 					this._pendingSection = undefined;
 				}
+
 				return true;
 			}
 			case 'UpdateSetting': {
@@ -174,19 +182,19 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 			}
 			case 'GetConnections': {
 				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+
 				this.postMessage({ id: 'GetConnectionsResult', connections: connectionService.getConnections() });
 				return true;
 			}
 			case 'CreateConnection': {
 				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 				const connection = await connectionService.createConnection();
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				connectionController.edit(connection);
+
+				this.postMessage({ id: 'OpenConnectionForm', connection });
 				return true;
 			}
 			case 'EditConnection': {
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				connectionController.edit(message.connection);
+				this.postMessage({ id: 'OpenConnectionForm', connection: message.connection });
 				return true;
 			}
 			case 'DeleteConnection': {
@@ -206,24 +214,29 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 			}
 			case 'MoveConnection': {
 				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+				
 				await connectionService.updateConnection({ ...message.connection, configScope: message.toScope });
 				await connectionService.saveConfiguration();
+
 				return true;
 			}
 			case 'TestConnection': {
 				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 				const result = await connectionService.testConnection(message.connection);
+
 				this.postMessage({
 					id: 'TestConnectionResult',
 					connectionId: message.connection.id,
 					success: result === null,
 					error: result?.message,
 				});
+
 				return true;
 			}
 			case 'ListGraphs': {
 				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 				const testResult = await connectionService.testConnection(message.connection);
+
 				if (testResult !== null) {
 					this.postMessage({
 						id: 'TestConnectionResult',
@@ -233,7 +246,9 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 					});
 					return true;
 				}
+
 				this.postMessage({ id: 'TestConnectionResult', connectionId: message.connection.id, success: true });
+
 				await vscode.commands.executeCommand('mentor.command.listGraphs', message.connection);
 				return true;
 			}
@@ -242,9 +257,55 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 				return true;
 			}
 			case 'GetVersion': {
-				const ctx = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
-				const version = (ctx.extension?.packageJSON?.version as string) ?? 'unknown';
+				const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+				const version = (context.extension?.packageJSON?.version as string) ?? 'unknown';
+
 				this.postMessage({ id: 'GetVersionResult', version });
+				return true;
+			}
+			case 'GetSparqlConnectionCredential': {
+				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+				const credential = await connectionController.getCredential(message.connectionId);
+
+				this.postMessage({ id: 'GetSparqlConnectionCredentialResult', connectionId: message.connectionId, credential });
+				return true;
+			}
+			case 'SaveSparqlConnection': {
+				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+				await connectionController.saveConnection(message.connection, message.credential);
+				return true;
+			}
+			case 'UpdateSparqlConnection': {
+				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+				await connectionController.updateConnection(message.connection);
+				return true;
+			}
+			case 'TestSparqlConnection': {
+				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+				const result = await connectionController.testConnection(message.connection, message.credential);
+
+				this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
+				return true;
+			}
+			case 'GetInferenceFeatureEnabled': {
+				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+				const value = await connectionController.getInferenceFeatureEnabled();
+
+				this.postMessage({ id: 'GetInferenceFeatureEnabledResult', value });
+				return true;
+			}
+			case 'ToggleSparqlConnectionInference': {
+				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+				const newValue = await connectionController.toggleInference(message.connectionId);
+
+				this.postMessage({ id: 'ToggleSparqlConnectionInferenceResult', connectionId: message.connectionId, inferenceEnabled: newValue });
+				return true;
+			}
+			case 'FetchMicrosoftAuthCredential': {
+				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
+				const credential = await connectionController.fetchMicrosoftCredential(message.connectionId, message.scopes);
+
+				this.postMessage({ id: 'FetchMicrosoftAuthCredentialResult', connectionId: message.connectionId, credential });
 				return true;
 			}
 			default:

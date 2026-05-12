@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { useState, useEffect, useRef, useContext } from 'react';
+import { useContext } from 'react';
 import { SettingScope, SettingState, LanguageId } from '../settings-panel-messages';
 import { EditorSettings } from './types';
 import { MarkdownText } from '../../components/markdown-text';
+import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from './section-header-context-menu';
 
 // ── Scope context ──────────────────────────────────────────────
 
@@ -33,108 +34,6 @@ function valuesEqual(a: unknown, b: unknown): boolean {
 	return JSON.stringify(a) === JSON.stringify(b);
 }
 
-export interface MenuItem {
-	label: string;
-	onClick: () => void;
-}
-
-export function MoreVertMenu({ items }: { items: MenuItem[] }) {
-	const [open, setOpen] = useState(false);
-	const containerRef = useRef<HTMLDivElement>(null);
-
-	useEffect(() => {
-		if (!open) return;
-		const handler = (e: MouseEvent) => {
-			if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-				setOpen(false);
-			}
-		};
-		document.addEventListener('mousedown', handler);
-		return () => document.removeEventListener('mousedown', handler);
-	}, [open]);
-
-	if (items.length === 0) return null;
-
-	return (
-		<div className="more-vert-container" ref={containerRef}>
-			<button className="more-vert-button" onClick={() => setOpen(o => !o)} title="More actions">
-				⋮
-			</button>
-			{open && (
-				<div className="more-vert-menu">
-					{items.map(item => (
-						<button
-							key={item.label}
-							className="more-vert-item"
-							onClick={() => { item.onClick(); setOpen(false); }}
-						>
-							{item.label}
-						</button>
-					))}
-				</div>
-			)}
-		</div>
-	);
-}
-
-// ── SectionHeader ──────────────────────────────────────────────
-
-export interface SectionHeaderProps {
-	title: React.ReactNode;
-	keys?: string[];
-	settings?: Record<string, SettingState>;
-	onBulkScope?: (keys: string[], scope: 'user' | 'workspace') => void;
-}
-
-export function SectionHeader({ title, keys, settings, onBulkScope }: SectionHeaderProps) {
-	const activeScope = useContext(SettingsScopeContext);
-	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
-	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
-
-	const modifiedKeys = keys && settings
-		? keys.filter(k => settings[k]?.source !== 'default')
-		: [];
-
-	const menuItems: MenuItem[] = modifiedKeys.length > 0 && onBulkScope
-		? [{ label: `Copy all to ${otherScopeLabel}`, onClick: () => onBulkScope(modifiedKeys, otherScope) }]
-		: [];
-
-	return (
-		<div className="section-header">
-			<h2 className="settings-section-title">{title}</h2>
-			<MoreVertMenu items={menuItems} />
-		</div>
-	);
-}
-
-// ── ScopeSelector (kept for potential future use) ──────────────
-
-export interface ScopeSelectorProps {
-	source: SettingScope;
-	onChange: (scope: SettingScope) => void;
-}
-
-export function ScopeSelector({ source, onChange }: ScopeSelectorProps) {
-	const displayValue = source === 'default' ? 'user' : source;
-	const title = source === 'default'
-		? 'Using default value — select to save'
-		: source === 'user'
-		? 'Stored in User settings'
-		: 'Stored in Workspace settings';
-
-	return (
-		<select
-			className={`scope-selector source-${source}`}
-			value={displayValue}
-			onChange={e => onChange(e.target.value as SettingScope)}
-			title={title}
-		>
-			<option value="user">User</option>
-			<option value="workspace">Workspace</option>
-		</select>
-	);
-}
-
 // ── SettingRow ─────────────────────────────────────────────────
 
 export interface SettingRowProps {
@@ -155,7 +54,7 @@ export function SettingRow({ label, description, settingKey, settings, onScopeCh
 	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
 	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
 
-	const menuItems: MenuItem[] = [
+	const menuItems: SectionHeaderContextMenuItem[] = [
 		...(source !== 'default'
 			? [{ label: 'Restore defaults', onClick: () => onScopeChange(settingKey, 'default', state?.value) }]
 			: []),
@@ -171,7 +70,7 @@ export function SettingRow({ label, description, settingKey, settings, onScopeCh
 				<span className="setting-label">{label}</span>
 				{isModified && <span className="setting-modified-tag" title={`Modified in ${activeScope} settings`}>MODIFIED</span>}
 				<span className="setting-leader" aria-hidden="true" />
-				<MoreVertMenu items={menuItems} />
+				<SectionHeaderContextMenu items={menuItems} />
 			</div>
 			{description && <p className="setting-description"><MarkdownText text={description} /></p>}
 			<div className="setting-control">{children}</div>
@@ -200,7 +99,7 @@ export function EditorSettingRow({ label, description, settingKey, languageId, e
 	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
 	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
 
-	const menuItems: MenuItem[] = [
+	const menuItems: SectionHeaderContextMenuItem[] = [
 		...(source !== 'default'
 			? [{ label: 'Restore default', onClick: () => onScopeChange(languageId, settingKey, 'default', state?.value) }]
 			: []),
@@ -216,7 +115,7 @@ export function EditorSettingRow({ label, description, settingKey, languageId, e
 				<span className="setting-label">{label}</span>
 				{isModified && <span className="setting-modified-tag" title={`Modified in ${activeScope} settings`}>MODIFIED</span>}
 				<span className="setting-leader" aria-hidden="true" />
-				<MoreVertMenu items={menuItems} />
+				<SectionHeaderContextMenu items={menuItems} />
 			</div>
 			{description && <p className="setting-description"><MarkdownText text={description} /></p>}
 			<div className="setting-control">{children}</div>

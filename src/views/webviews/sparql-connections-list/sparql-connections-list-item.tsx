@@ -58,7 +58,7 @@ export function SparqlConnectionsListItem({
 	return (
 		<div
 			className={itemClass}
-			onClick={() => !isProtected && onEditConnection(connection)}
+			onClick={() => onEditConnection(connection)}
 			title={isWorkspaceStore ? 'Edit workspace store settings' : `Edit ${connection.endpointUrl}`}
 		>
 			{connectionIcon}

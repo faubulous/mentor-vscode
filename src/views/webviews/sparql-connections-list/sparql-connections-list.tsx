@@ -4,7 +4,7 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TestResult } from '../settings/components/types';
 import { SparqlConnectionsListItem } from './sparql-connections-list-item';
 
-export interface ConnectionsListProps {
+export interface SparqlConnectionsListProps {
 	connections: SparqlConnection[];
 	testResults: Record<string, TestResult>;
 	testingConnections: Set<string>;
@@ -28,7 +28,7 @@ export function SparqlConnectionsList({
 	onListGraphs,
 	onOpenInBrowser,
 	onMoveConnection,
-}: ConnectionsListProps) {
+}: SparqlConnectionsListProps) {
 	const isTestingAll = testingConnections.size > 0;
 	const testableCount = connections.length;
 

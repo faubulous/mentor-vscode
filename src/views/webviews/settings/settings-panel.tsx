@@ -1,26 +1,26 @@
 import { useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
-import { SettingsPanelMessages, SettingScope, SettingState, LanguageId, FormattingLanguage } from './settings-panel-messages';
-import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import stylesheet from './settings-panel.css';
-
-import { SettingsNav } from './components/settings-nav';
-import { NavSection } from './settings-metadata';
-import { EditorSettings, TestResult } from './components/types';
-import { PanelHeader } from './components/panel-header';
-import { SettingsScopeContext, SettingsMoveContext, EditorSettingsMoveContext } from './components/setting-row';
-import { SearchResults } from './components/search-results';
-import { DisplaySection } from './sections/display';
-import { DefinitionsTreeSection } from './sections/definitions-tree';
-import { EditorGeneralSection } from './sections/editor-general';
-import { FormattingSection } from './sections/formatting';
-import { SortingSection } from './sections/sorting';
-import { TemplatesSection } from './sections/templates';
-import { IndexingSection } from './sections/indexing';
 import { ConnectionsSection } from './sections/connections';
+import { DefinitionsTreeSection } from './sections/definitions-tree';
+import { DisplaySection } from './sections/display';
+import { EditorGeneralSection } from './sections/editor-general';
+import { EditorSettings, TestResult } from './components/types';
+import { FormattingSection } from './sections/formatting';
+import { IndexingSection } from './sections/indexing';
+import { NavSection } from './settings-metadata';
+import { PanelHeader } from './components/panel-header';
 import { QuerySection } from './sections/query';
+import { SearchResults } from './components/search-results';
+import { SettingsNav } from './components/settings-nav';
+import { SettingsPanelMessages, SettingScope, SettingState, LanguageId, FormattingLanguage } from './settings-panel-messages';
+import { SettingsScopeContext, SettingsMoveContext, EditorSettingsMoveContext } from './components/setting-row';
+import { SortingSection } from './sections/sorting';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { SparqlConnectionEditor } from '../sparql-connection/sparql-connection-editor';
+import { TemplatesSection } from './sections/templates';
+import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
 import { ValidationSection } from './sections/validation';
+import stylesheet from './settings-panel.css';
 
 // ── State ──────────────────────────────────────────────────────
 
@@ -34,6 +34,7 @@ interface PanelState {
 	formattingLanguage: FormattingLanguage;
 	version: string;
 	searchTerm: string;
+	editingConnection?: SparqlConnection;
 }
 
 const initialEditorSettings: EditorSettings = {
@@ -50,6 +51,7 @@ const initialState: PanelState = {
 	formattingLanguage: 'turtle',
 	version: '',
 	searchTerm: '',
+	editingConnection: undefined,
 };
 
 // ── Root ───────────────────────────────────────────────────────
@@ -89,7 +91,10 @@ function SettingsPanel() {
 				setState(prev => ({ ...prev, version: message.version }));
 				return;
 			case 'NavigateTo':
-				setState(prev => ({ ...prev, activeSection: message.section as NavSection }));
+				setState(prev => ({ ...prev, activeSection: message.section as NavSection, editingConnection: undefined }));
+				return;
+			case 'OpenConnectionForm':
+				setState(prev => ({ ...prev, activeSection: 'connections', editingConnection: message.connection }));
 				return;
 		}
 	}, [setState]);
@@ -222,9 +227,9 @@ function SettingsPanel() {
 		}
 
 		switch (state.activeSection) {
-			case 'appearance.display':        return <DisplaySection {...commonProps} />;
+			case 'appearance.display': return <DisplaySection {...commonProps} />;
 			case 'appearance.definitions-tree': return <DefinitionsTreeSection {...commonProps} />;
-			case 'editor.general':            return <EditorGeneralSection {...commonProps} />;
+			case 'editor.general': return <EditorGeneralSection {...commonProps} />;
 			case 'editor.formatting':
 				return (
 					<FormattingSection
@@ -236,16 +241,24 @@ function SettingsPanel() {
 						onEditorScopeChange={handleEditorScopeChange}
 					/>
 				);
-			case 'editor.sorting':            return <SortingSection {...commonProps} />;
-			case 'editor.templates':          return <TemplatesSection {...commonProps} />;
-			case 'indexing':                  return <IndexingSection {...commonProps} />;
+			case 'editor.sorting': return <SortingSection {...commonProps} />;
+			case 'editor.templates': return <TemplatesSection {...commonProps} />;
+			case 'indexing': return <IndexingSection {...commonProps} />;
 			case 'connections':
+				if (state.editingConnection) {
+					return (
+						<SparqlConnectionEditor
+							connection={state.editingConnection}
+							onBack={() => setState(prev => ({ ...prev, editingConnection: undefined }))}
+						/>
+					);
+				}
 				return (
 					<ConnectionsSection
 						connections={state.connections}
 						testResults={state.testResults}
 						onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
-						onEditConnection={conn => messaging?.postMessage({ id: 'EditConnection', connection: conn })}
+						onEditConnection={conn => setState(prev => ({ ...prev, editingConnection: conn }))}
 						onDeleteConnection={conn => messaging?.postMessage({ id: 'DeleteConnection', connection: conn })}
 						onTestConnection={conn => messaging?.postMessage({ id: 'TestConnection', connection: conn })}
 						onListGraphs={conn => messaging?.postMessage({ id: 'ListGraphs', connection: conn })}
@@ -253,9 +266,9 @@ function SettingsPanel() {
 						onMoveConnection={(conn, toScope) => messaging?.postMessage({ id: 'MoveConnection', connection: conn, toScope })}
 					/>
 				);
-			case 'query':                     return <QuerySection {...commonProps} />;
-			case 'validation':                return <ValidationSection {...commonProps} />;
-			default:                          return null;
+			case 'query': return <QuerySection {...commonProps} />;
+			case 'validation': return <ValidationSection {...commonProps} />;
+			default: return null;
 		}
 	};
 

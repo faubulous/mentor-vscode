@@ -1,6 +1,7 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
-import { SectionHeader, SettingRow } from '../components/setting-row';
+import { SectionHeader } from '../components/section-header';
+import { SettingRow } from '../components/setting-row';
 import { SECTION_TITLES, getEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 

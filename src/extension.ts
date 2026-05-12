@@ -105,7 +105,7 @@ function registerViews() {
 	// Create registry and register all webview controllers..
 	const registry = new webviews.WebviewControllerRegistry(ServiceToken.WebviewControllerRegistry);
 	registry.register(ServiceToken.SparqlResultsController, new webviews.SparqlResultsController());
-	registry.register(ServiceToken.SparqlConnectionController, new webviews.SparqlConnectionController());
+	container.registerInstance(ServiceToken.SparqlConnectionController, new webviews.SparqlConnectionController());
 	registry.register(ServiceToken.SparqlConnectionsListController, new webviews.SparqlConnectionsListController());
 	registry.register(ServiceToken.SettingsPanelController, new webviews.SettingsPanelController());
 }

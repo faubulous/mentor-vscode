@@ -1,144 +1,68 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ICredentialStorageService } from '@src/services/core';
-import { MicrosoftAuthCredential } from '@src/services/core/credential';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
-import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { SparqlConnectionMessages } from './sparql-connection-messages';
-import { WebviewController } from '../webview-controller';
+import { ICredentialStorageService } from '@src/services/core';
+import { AuthCredential, MicrosoftAuthCredential } from '@src/services/core/credential';
 import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
 import { getConfig } from '@src/utilities/vscode/config';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { SettingsPanelController } from '@src/views/webviews/settings/settings-panel-controller';
 
-export class SparqlConnectionController extends WebviewController<SparqlConnectionMessages> {
-    private selectedConnection?: SparqlConnection;
+export class SparqlConnectionController {
+	/**
+	 * Opens the settings panel at the connections section and, if a connection is provided,
+	 * opens the inline connection editor for that connection.
+	 */
+	async edit(connection?: SparqlConnection) {
+		const settingsController = container.resolve<SettingsPanelController>(ServiceToken.SettingsPanelController);
+		await settingsController.show(vscode.ViewColumn.Active, 'connections');
 
-    constructor() {
-        super({
-            componentPath: 'sparql-connection-view.js',
-            panelId: 'sparqlConnectionPanel',
-            panelTitle: 'Edit Connection',
-            panelIcon: 'database',
-        });
-    }
+		if (connection) {
+			settingsController.postMessage({ id: 'OpenConnectionForm', connection });
+		}
+	}
 
-    /**
-     * Opens the SPARQL endpoint editor in the editor area and optionally preloads the endpoint.
-     */
-    async edit(connection?: SparqlConnection) {
-        super.show(vscode.ViewColumn.Active);
+	async getCredential(connectionId: string): Promise<AuthCredential | undefined> {
+		const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
+		return credentialService.getCredential(connectionId);
+	}
 
-        this.selectedConnection = connection;
+	async saveConnection(connection: SparqlConnection, credential: AuthCredential | null): Promise<void> {
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		await connectionService.updateConnection(connection);
+		await connectionService.saveConfiguration();
 
-        if (connection) {
-            this.postMessage({
-                id: 'GetSparqlConnectionResult',
-                connection: connection
-            });
-        }
-    }
+		if (credential) {
+			const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
+			await credentialService.deleteCredential(connection.id);
+			await credentialService.saveCredential(connection.id, credential);
+		}
 
-    protected async onDidReceiveMessage(message: SparqlConnectionMessages): Promise<boolean> {
-        switch (message.id) {
-            case 'ExecuteCommand': {
-                await super.onDidReceiveMessage(message);
+		vscode.window.showInformationMessage('SPARQL connection saved.');
+	}
 
-                if (message.command === 'mentor.command.deleteSparqlConnection') {
-                    this.panel?.dispose();
-                }
-                return true;
-            }
-            case 'GetSparqlConnection': {
-                if (this.selectedConnection) {
-                    this.postMessage({
-                        id: 'GetSparqlConnectionResult',
-                        connection: this.selectedConnection
-                    });
-                } else {
-                    const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-                    // Note: This always returns at least one connection (the Mentor Store).
-                    const connection = connectionService.getConnections()[0];
+	async updateConnection(connection: SparqlConnection): Promise<void> {
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		await connectionService.updateConnection(connection);
+	}
 
-                    this.postMessage({
-                        id: 'GetSparqlConnectionResult',
-                        connection: connection
-                    });
-                }
-                return true;
-            }
-            case 'GetSparqlConnectionCredential': {
-                const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
-                const credential = await credentialService.getCredential(message.connectionId);
+	async testConnection(connection: SparqlConnection, credential?: AuthCredential | null): Promise<{ code: number; message: string } | null> {
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		return connectionService.testConnection(connection, credential ?? undefined);
+	}
 
-                this.postMessage({
-                    id: 'GetSparqlConnectionCredentialResult',
-                    connectionId: message.connectionId,
-                    credential
-                });
-                return true;
-            }
-            case 'SaveSparqlConnection': {
-                const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-                const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
+	async getInferenceFeatureEnabled(): Promise<boolean> {
+		return getConfig().get<boolean>('inference.enabled', false);
+	}
 
-                await connectionService.updateConnection(message.connection);
-                await connectionService.saveConfiguration();
+	async toggleInference(connectionId: string): Promise<boolean> {
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		return connectionService.toggleInferenceEnabled(connectionId);
+	}
 
-                if (message.credential) {
-                    await credentialService.deleteCredential(message.connection.id);
-                    await credentialService.saveCredential(message.connection.id, message.credential);
-                }
-
-                vscode.window.showInformationMessage(`SPARQL connection saved.`);
-                return true;
-            }
-            case 'UpdateSparqlConnection': {
-                const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-                await connectionService.updateConnection(message.connection);
-                return true;
-            }
-            case 'TestSparqlConnection': {
-                const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-                const result = await connectionService.testConnection(message.connection, message.credential);
-                this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
-                return true;
-            }
-            case 'GetInferenceFeatureEnabled': {
-                const value = getConfig().get<boolean>('inference.enabled', false);
-                this.postMessage({ id: 'GetInferenceFeatureEnabledResult', value });
-                return true;
-            }
-            case 'ToggleSparqlConnectionInference': {
-                const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-                const newValue = await connectionService.toggleInferenceEnabled(message.connectionId);
-                this.postMessage({
-                    id: 'ToggleSparqlConnectionInferenceResult',
-                    connectionId: message.connectionId,
-                    inferenceEnabled: newValue
-                });
-                return true;
-            }
-            case 'FetchMicrosoftAuthCredential': {
-                const command = loginMicrosoftAuthProvider.id;
-                const credential = await vscode.commands.executeCommand<MicrosoftAuthCredential | null>(command, message.scopes);
-
-                if (credential) {
-                    this.postMessage({
-                        id: 'FetchMicrosoftAuthCredentialResult',
-                        connectionId: message.connectionId,
-                        credential: credential
-                    });
-                } else {
-                    this.postMessage({
-                        id: 'FetchMicrosoftAuthCredentialResult',
-                        connectionId: message.connectionId,
-                        credential: null
-                    });
-                }
-                return true;
-            }
-            default:
-                return super.onDidReceiveMessage(message);
-        }
-    }
+	async fetchMicrosoftCredential(connectionId: string, scopes: string[]): Promise<MicrosoftAuthCredential | null> {
+		const credential = await vscode.commands.executeCommand<MicrosoftAuthCredential | null>(loginMicrosoftAuthProvider.id, scopes);
+		return credential ?? null;
+	}
 }
