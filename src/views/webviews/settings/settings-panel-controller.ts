@@ -6,52 +6,13 @@ import { SparqlConnectionController } from '@src/views/webviews/sparql-connectio
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { getConfig } from '@src/utilities/vscode/config';
 import { SettingsPanelMessages, SettingScope, SettingState, LanguageId } from './settings-panel-messages';
-
-const MENTOR_SETTING_KEYS = [
-	'editor.codeLensEnabled',
-	'prefixes.autoDefinePrefixes',
-	'prefixes.prefixDefinitionMode',
-	'prefixes.queryParameterName',
-	'formatting.turtle.maxLineWidth',
-	'formatting.turtle.spaceBeforePunctuation',
-	'formatting.turtle.blankLinesBetweenSubjects',
-	'formatting.sparql.uppercaseKeywords',
-	'formatting.sparql.alignPatterns',
-	'formatting.sparql.sameBraceLine',
-	'formatting.sparql.separateClauses',
-	'formatting.sparql.maxLineWidth',
-	'formatting.sparql.spaceBeforePunctuation',
-	'sorting.typeSortingOptions',
-	'language.sparql.defaultDocumentTemplate',
-	'language.sparql.documentQueryTemplate',
-	'language.turtle.defaultDocumentTemplate',
-	'language.trig.defaultDocumentTemplate',
-	'language.n3.defaultDocumentTemplate',
-	'language.ntriples.defaultDocumentTemplate',
-	'language.nquads.defaultDocumentTemplate',
-	'index.maxFileSize',
-	'index.useGitIgnore',
-	'index.ignoreFolders',
-	'index.includeFiles',
-	'sparql.defaultInferenceEnabled',
-	'sparql.queryTimeout',
-	'sparql.listGraphsQuery',
-	'sparql.dropGraphQuery',
-	'sparql.describeQueryTemplate',
-	'namespaces',
-	'predicates.label',
-	'predicates.description',
-	'definitionTree.labelStyle',
-	'definitionTree.defaultLayout',
-	'definitionTree.defaultLanguageTag',
-	'definitionTree.decorateMissingLanguageTags',
-	'shacl.enabled',
-	'inference.enabled',
-];
+import { SETTINGS } from './settings-metadata';
 
 const EDITOR_SETTING_KEYS = ['tabSize', 'insertSpaces', 'wordWrap', 'formatOnSave'];
 
 const MENTOR_LANGUAGES: LanguageId[] = ['turtle', 'sparql', 'trig', 'n3', 'ntriples', 'nquads'];
+
+type PackageJsonSchema = { properties: Record<string, { title?: string; description?: string }> };
 
 export class SettingsPanelController extends WebviewController<SettingsPanelMessages> {
 	constructor() {
@@ -97,17 +58,23 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		const config = getConfig();
 		const result: Record<string, SettingState> = {};
 
-		for (const key of MENTOR_SETTING_KEYS) {
+		const schema = (vscode.extensions.getExtension('faubulous.mentor')?.packageJSON
+			?.contributes?.configuration?.[0] as PackageJsonSchema | undefined)?.properties ?? {};
+
+		for (const key of Object.keys(SETTINGS)) {
 			const inspected = config.inspect(key);
 
 			if (inspected) {
 				const hasWorkspace = inspected.workspaceValue !== undefined;
 				const hasUser = inspected.globalValue !== undefined;
+				const def = schema[`mentor.${key}`];
 
 				result[key] = {
 					value: config.get(key),
 					defaultValue: inspected.defaultValue,
 					source: hasWorkspace ? 'workspace' : hasUser ? 'user' : 'default',
+					title: def?.title ?? key,
+					description: def?.description ?? '',
 				};
 			}
 		}
@@ -130,6 +97,8 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 					value: config.get(key),
 					defaultValue: inspected.defaultValue,
 					source: hasLanguageWorkspace ? 'workspace' : hasLanguageUser ? 'user' : 'default',
+					title: key,
+					description: '',
 				};
 			}
 		}

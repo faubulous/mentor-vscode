@@ -1348,10 +1348,10 @@
           { "id": "validation",  "label": "Validation",  "sections": [{ "id": "validation",  "label": "Validation"  }] }
         ],
         "x-catalog-extras": [
-          { "section": "editor.formatting", "label": "Format on save",   "description": "Automatically format documents on save." },
-          { "section": "editor.formatting", "label": "Tab size",          "description": "Number of spaces per indent level used by the Mentor formatter." },
-          { "section": "editor.formatting", "label": "Insert spaces",     "description": "Use spaces instead of tabs for indentation." },
-          { "section": "editor.formatting", "label": "Word wrap",         "description": "Controls how lines wrap in the editor." }
+          { "section": "editor.formatting", "key": "formatOnSave",  "label": "Format on save",   "description": "Automatically format documents on save." },
+          { "section": "editor.formatting", "key": "tabSize",       "label": "Tab size",          "description": "Number of spaces per indent level used by the Mentor formatter." },
+          { "section": "editor.formatting", "key": "insertSpaces",  "label": "Insert spaces",     "description": "Use spaces instead of tabs for indentation." },
+          { "section": "editor.formatting", "key": "wordWrap",      "label": "Word wrap",         "description": "Controls how lines wrap in the editor." }
         ],
         "properties": {
           "mentor.sparql.connections": {

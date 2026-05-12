@@ -8,6 +8,8 @@ export type SettingState = {
 	value: unknown;
 	defaultValue: unknown;
 	source: SettingScope;
+	title: string;
+	description: string;
 };
 
 export type FormattingLanguage = 'turtle' | 'sparql';
@@ -18,6 +20,7 @@ export type SettingsPanelMessages =
 	ExecuteCommandMessage |
 	{ id: 'GetSettings' } |
 	{ id: 'GetSettingsResult'; settings: Record<string, SettingState> } |
+	{ id: 'OnSettingsChanged'; settings: Record<string, SettingState> } |
 	{ id: 'OnSettingsChanged'; settings: Record<string, SettingState> } |
 	{ id: 'UpdateSetting'; key: string; value: unknown; scope: SettingScope } |
 	{ id: 'GetEditorSettings'; languageId: LanguageId } |

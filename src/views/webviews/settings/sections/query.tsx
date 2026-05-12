@@ -1,6 +1,6 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-textfield';
@@ -27,8 +27,8 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 		<div>
 			<SectionHeader title={SECTION_TITLES['query']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label={SETTINGS_METADATA['sparql.queryTimeout'].title}
-				description={SETTINGS_METADATA['sparql.queryTimeout'].description}
+				label={settings['sparql.queryTimeout']?.title ?? ''}
+				description={settings['sparql.queryTimeout']?.description ?? ''}
 				settingKey="sparql.queryTimeout"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -40,8 +40,8 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				/>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['sparql.listGraphsQuery'].title}
-				description={SETTINGS_METADATA['sparql.listGraphsQuery'].description}
+				label={settings['sparql.listGraphsQuery']?.title ?? ''}
+				description={settings['sparql.listGraphsQuery']?.description ?? ''}
 				settingKey="sparql.listGraphsQuery"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -54,8 +54,8 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				/>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['sparql.dropGraphQuery'].title}
-				description={SETTINGS_METADATA['sparql.dropGraphQuery'].description}
+				label={settings['sparql.dropGraphQuery']?.title ?? ''}
+				description={settings['sparql.dropGraphQuery']?.description ?? ''}
 				settingKey="sparql.dropGraphQuery"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -68,8 +68,8 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 				/>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['sparql.describeQueryTemplate'].title}
-				description={SETTINGS_METADATA['sparql.describeQueryTemplate'].description}
+				label={settings['sparql.describeQueryTemplate']?.title ?? ''}
+				description={settings['sparql.describeQueryTemplate']?.description ?? ''}
 				settingKey="sparql.describeQueryTemplate"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -100,8 +100,8 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 					</vscode-checkbox>
 				</SettingRow>
 				<SettingRow
-					label={SETTINGS_METADATA['sparql.defaultInferenceEnabled'].title}
-					description={SETTINGS_METADATA['sparql.defaultInferenceEnabled'].description}
+					label={settings['sparql.defaultInferenceEnabled']?.title ?? ''}
+					description={settings['sparql.defaultInferenceEnabled']?.description ?? ''}
 					settingKey="sparql.defaultInferenceEnabled"
 					settings={settings}
 					onScopeChange={onScopeChange}

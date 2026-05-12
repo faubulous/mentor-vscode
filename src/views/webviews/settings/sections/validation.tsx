@@ -1,6 +1,6 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 
@@ -21,8 +21,8 @@ export function ValidationSection({ settings, onUpdate, onScopeChange, onBulkSco
 				onBulkScope={onBulkScope}
 			/>
 			<SettingRow
-				label={SETTINGS_METADATA['shacl.enabled'].title}
-				description={SETTINGS_METADATA['shacl.enabled'].description}
+				label={settings['shacl.enabled']?.title ?? ''}
+				description={settings['shacl.enabled']?.description ?? ''}
 				settingKey="shacl.enabled"
 				settings={settings}
 				onScopeChange={onScopeChange}

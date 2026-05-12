@@ -1,20 +1,34 @@
-import { NavSection } from '../settings-metadata';
-import { CatalogEntry, SETTINGS_CATALOG } from '../settings-catalog';
-
-export type { CatalogEntry };
+import { NavSection, SETTINGS, SECTION_TITLES, CATALOG_EXTRAS } from '../settings-metadata';
+import { SettingState } from '../settings-panel-messages';
+import type { CatalogExtra } from '../settings-types';
 
 export interface SearchResultsProps {
 	searchTerm: string;
+	settings: Record<string, SettingState>;
 	onNavigate: (section: NavSection) => void;
 }
 
-export function SearchResults({ searchTerm, onNavigate }: SearchResultsProps) {
+type SearchEntry = { section: NavSection; key: string; label?: string; description?: string };
+
+const SEARCH_ENTRIES: SearchEntry[] = [
+	...Object.entries(SETTINGS).map(([key, meta]) => ({ section: meta.section, key })),
+	...CATALOG_EXTRAS.map((e: CatalogExtra) => ({ section: e.section as NavSection, key: e.key, label: e.label, description: e.description })),
+];
+
+export function SearchResults({ searchTerm, settings, onNavigate }: SearchResultsProps) {
 	const term = searchTerm.toLowerCase();
-	const results = SETTINGS_CATALOG.filter(entry =>
-		entry.label.toLowerCase().includes(term) ||
-		entry.description.toLowerCase().includes(term) ||
-		entry.sectionLabel.toLowerCase().includes(term)
-	);
+
+	const getLabel = (entry: SearchEntry) =>
+		settings[entry.key]?.title || entry.label || entry.key;
+	const getDescription = (entry: SearchEntry) =>
+		settings[entry.key]?.description || entry.description || '';
+
+	const results = SEARCH_ENTRIES.filter(entry => {
+		const label = getLabel(entry).toLowerCase();
+		const description = getDescription(entry).toLowerCase();
+		const sectionLabel = (SECTION_TITLES[entry.section] ?? entry.section).toLowerCase();
+		return label.includes(term) || description.includes(term) || sectionLabel.includes(term);
+	});
 
 	if (results.length === 0) {
 		return <div className="search-empty">No settings found for "{searchTerm}".</div>;
@@ -28,9 +42,9 @@ export function SearchResults({ searchTerm, onNavigate }: SearchResultsProps) {
 					className="search-result-item"
 					onClick={() => onNavigate(entry.section)}
 				>
-					<div className="search-result-breadcrumb">{entry.sectionLabel}</div>
-					<div className="search-result-label">{entry.label}</div>
-					<div className="search-result-description">{entry.description}</div>
+					<div className="search-result-breadcrumb">{SECTION_TITLES[entry.section] ?? entry.section}</div>
+					<div className="search-result-label">{getLabel(entry)}</div>
+					<div className="search-result-description">{getDescription(entry)}</div>
 				</div>
 			))}
 		</div>

@@ -1,7 +1,7 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SECTION_TITLES } from '../settings-metadata';
 
 export interface DisplaySectionProps {
 	settings: Record<string, SettingState>;
@@ -17,8 +17,8 @@ export function DisplaySection({ settings, onUpdate, onScopeChange, onBulkScope 
 		<div>
 			<SectionHeader title={SECTION_TITLES['appearance.display']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label={SETTINGS_METADATA['predicates.label'].title}
-				description={SETTINGS_METADATA['predicates.label'].description}
+				label={settings['predicates.label']?.title ?? ''}
+				description={settings['predicates.label']?.description ?? ''}
 				settingKey="predicates.label"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -30,8 +30,8 @@ export function DisplaySection({ settings, onUpdate, onScopeChange, onBulkScope 
 				/>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['predicates.description'].title}
-				description={SETTINGS_METADATA['predicates.description'].description}
+				label={settings['predicates.description']?.title ?? ''}
+				description={settings['predicates.description']?.description ?? ''}
 				settingKey="predicates.description"
 				settings={settings}
 				onScopeChange={onScopeChange}

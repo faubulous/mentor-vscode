@@ -2,7 +2,7 @@ import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState, LanguageId, FormattingLanguage } from '../settings-panel-messages';
 import { SectionHeader, SettingRow, EditorSettingRow, MoreVertMenu, SettingsScopeContext } from '../components/setting-row';
 import { EditorSettings } from '../components/types';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SECTION_TITLES } from '../settings-metadata';
 import { useContext } from 'react';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
@@ -153,8 +153,8 @@ export function FormattingSection({
 				{isTurtle ? (
 					<>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.turtle.maxLineWidth'].title}
-						description={SETTINGS_METADATA['formatting.turtle.maxLineWidth'].description}
+						label={settings['formatting.turtle.maxLineWidth']?.title ?? ''}
+						description={settings['formatting.turtle.maxLineWidth']?.description ?? ''}
 							settingKey="formatting.turtle.maxLineWidth"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -166,8 +166,8 @@ export function FormattingSection({
 							/>
 						</SettingRow>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.turtle.spaceBeforePunctuation'].title}
-						description={SETTINGS_METADATA['formatting.turtle.spaceBeforePunctuation'].description}
+						label={settings['formatting.turtle.spaceBeforePunctuation']?.title ?? ''}
+						description={settings['formatting.turtle.spaceBeforePunctuation']?.description ?? ''}
 							settingKey="formatting.turtle.spaceBeforePunctuation"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -180,8 +180,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.turtle.blankLinesBetweenSubjects'].title}
-						description={SETTINGS_METADATA['formatting.turtle.blankLinesBetweenSubjects'].description}
+						label={settings['formatting.turtle.blankLinesBetweenSubjects']?.title ?? ''}
+						description={settings['formatting.turtle.blankLinesBetweenSubjects']?.description ?? ''}
 							settingKey="formatting.turtle.blankLinesBetweenSubjects"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -197,8 +197,8 @@ export function FormattingSection({
 				) : (
 					<>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.sparql.maxLineWidth'].title}
-						description={SETTINGS_METADATA['formatting.sparql.maxLineWidth'].description}
+						label={settings['formatting.sparql.maxLineWidth']?.title ?? ''}
+						description={settings['formatting.sparql.maxLineWidth']?.description ?? ''}
 							settingKey="formatting.sparql.maxLineWidth"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -210,8 +210,8 @@ export function FormattingSection({
 							/>
 						</SettingRow>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.sparql.spaceBeforePunctuation'].title}
-						description={SETTINGS_METADATA['formatting.sparql.spaceBeforePunctuation'].description}
+						label={settings['formatting.sparql.spaceBeforePunctuation']?.title ?? ''}
+						description={settings['formatting.sparql.spaceBeforePunctuation']?.description ?? ''}
 							settingKey="formatting.sparql.spaceBeforePunctuation"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -224,8 +224,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.sparql.uppercaseKeywords'].title}
-						description={SETTINGS_METADATA['formatting.sparql.uppercaseKeywords'].description}
+						label={settings['formatting.sparql.uppercaseKeywords']?.title ?? ''}
+						description={settings['formatting.sparql.uppercaseKeywords']?.description ?? ''}
 							settingKey="formatting.sparql.uppercaseKeywords"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -238,8 +238,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.sparql.alignPatterns'].title}
-						description={SETTINGS_METADATA['formatting.sparql.alignPatterns'].description}
+						label={settings['formatting.sparql.alignPatterns']?.title ?? ''}
+						description={settings['formatting.sparql.alignPatterns']?.description ?? ''}
 							settingKey="formatting.sparql.alignPatterns"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -252,8 +252,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.sparql.sameBraceLine'].title}
-						description={SETTINGS_METADATA['formatting.sparql.sameBraceLine'].description}
+						label={settings['formatting.sparql.sameBraceLine']?.title ?? ''}
+						description={settings['formatting.sparql.sameBraceLine']?.description ?? ''}
 							settingKey="formatting.sparql.sameBraceLine"
 							settings={settings}
 							onScopeChange={onScopeChange}
@@ -266,8 +266,8 @@ export function FormattingSection({
 							</vscode-checkbox>
 						</SettingRow>
 						<SettingRow
-						label={SETTINGS_METADATA['formatting.sparql.separateClauses'].title}
-						description={SETTINGS_METADATA['formatting.sparql.separateClauses'].description}
+						label={settings['formatting.sparql.separateClauses']?.title ?? ''}
+						description={settings['formatting.sparql.separateClauses']?.description ?? ''}
 							settingKey="formatting.sparql.separateClauses"
 							settings={settings}
 							onScopeChange={onScopeChange}

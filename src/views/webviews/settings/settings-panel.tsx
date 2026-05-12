@@ -220,6 +220,7 @@ function SettingsPanel() {
 			return (
 				<SearchResults
 					searchTerm={state.searchTerm}
+					settings={state.settings}
 					onNavigate={section => setState(prev => ({ ...prev, activeSection: section, searchTerm: '' }))}
 				/>
 			);

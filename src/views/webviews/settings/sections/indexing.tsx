@@ -1,7 +1,7 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
 import '@vscode-elements/elements/dist/vscode-textfield';
@@ -20,8 +20,8 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 		<div>
 			<SectionHeader title={SECTION_TITLES['indexing']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label={SETTINGS_METADATA['index.maxFileSize'].title}
-				description={SETTINGS_METADATA['index.maxFileSize'].description}
+				label={settings['index.maxFileSize']?.title ?? ''}
+				description={settings['index.maxFileSize']?.description ?? ''}
 				settingKey="index.maxFileSize"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -33,8 +33,8 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 				/>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['index.useGitIgnore'].title}
-				description={SETTINGS_METADATA['index.useGitIgnore'].description}
+				label={settings['index.useGitIgnore']?.title ?? ''}
+				description={settings['index.useGitIgnore']?.description ?? ''}
 				settingKey="index.useGitIgnore"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -47,8 +47,8 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 				</vscode-checkbox>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['index.ignoreFolders'].title}
-				description={SETTINGS_METADATA['index.ignoreFolders'].description}
+				label={settings['index.ignoreFolders']?.title ?? ''}
+				description={settings['index.ignoreFolders']?.description ?? ''}
 				settingKey="index.ignoreFolders"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -60,8 +60,8 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 				/>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['index.includeFiles'].title}
-				description={SETTINGS_METADATA['index.includeFiles'].description}
+				label={settings['index.includeFiles']?.title ?? ''}
+				description={settings['index.includeFiles']?.description ?? ''}
 				settingKey="index.includeFiles"
 				settings={settings}
 				onScopeChange={onScopeChange}

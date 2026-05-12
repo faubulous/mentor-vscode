@@ -2,7 +2,7 @@ import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
-import { SETTINGS_METADATA, SECTION_TITLES, getNestedEnumOptions } from '../settings-metadata';
+import { SECTION_TITLES, getNestedEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-single-select';
@@ -41,8 +41,8 @@ export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope 
 		<div>
 			<SectionHeader title={SECTION_TITLES['editor.sorting']} keys={['sorting.typeSortingOptions']} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label={SETTINGS_METADATA['sorting.typeSortingOptions'].title}
-				description={SETTINGS_METADATA['sorting.typeSortingOptions'].description}
+				label={settings['sorting.typeSortingOptions']?.title ?? ''}
+				description={settings['sorting.typeSortingOptions']?.description ?? ''}
 				settingKey="sorting.typeSortingOptions"
 				settings={settings}
 				onScopeChange={onScopeChange}

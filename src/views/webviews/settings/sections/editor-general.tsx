@@ -1,7 +1,7 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
-import { SETTINGS_METADATA, SECTION_TITLES, getEnumOptions } from '../settings-metadata';
+import { SECTION_TITLES, getEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 import '@vscode-elements/elements/dist/vscode-checkbox';
@@ -36,8 +36,8 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 		<div>
 			<SectionHeader title={SECTION_TITLES['editor.general']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			<SettingRow
-				label={SETTINGS_METADATA['editor.codeLensEnabled'].title}
-				description={SETTINGS_METADATA['editor.codeLensEnabled'].description}
+				label={settings['editor.codeLensEnabled']?.title ?? ''}
+				description={settings['editor.codeLensEnabled']?.description ?? ''}
 				settingKey="editor.codeLensEnabled"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -50,8 +50,8 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 				</vscode-checkbox>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['prefixes.autoDefinePrefixes'].title}
-				description={SETTINGS_METADATA['prefixes.autoDefinePrefixes'].description}
+				label={settings['prefixes.autoDefinePrefixes']?.title ?? ''}
+				description={settings['prefixes.autoDefinePrefixes']?.description ?? ''}
 				settingKey="prefixes.autoDefinePrefixes"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -64,8 +64,8 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 				</vscode-checkbox>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['prefixes.prefixDefinitionMode'].title}
-				description={SETTINGS_METADATA['prefixes.prefixDefinitionMode'].description}
+				label={settings['prefixes.prefixDefinitionMode']?.title ?? ''}
+				description={settings['prefixes.prefixDefinitionMode']?.description ?? ''}
 				settingKey="prefixes.prefixDefinitionMode"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -80,8 +80,8 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 				</vscode-single-select>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['namespaces'].title}
-				description={SETTINGS_METADATA['namespaces'].description}
+				label={settings['namespaces']?.title ?? ''}
+				description={settings['namespaces']?.description ?? ''}
 				settingKey="namespaces"
 				settings={settings}
 				onScopeChange={onScopeChange}
@@ -96,8 +96,8 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 				/>
 			</SettingRow>
 			<SettingRow
-				label={SETTINGS_METADATA['prefixes.queryParameterName'].title}
-				description={SETTINGS_METADATA['prefixes.queryParameterName'].description}
+				label={settings['prefixes.queryParameterName']?.title ?? ''}
+				description={settings['prefixes.queryParameterName']?.description ?? ''}
 				settingKey="prefixes.queryParameterName"
 				settings={settings}
 				onScopeChange={onScopeChange}

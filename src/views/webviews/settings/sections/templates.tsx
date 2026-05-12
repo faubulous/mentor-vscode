@@ -1,6 +1,6 @@
 import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
-import { SETTINGS_METADATA, SECTION_TITLES } from '../settings-metadata';
+import { SECTION_TITLES } from '../settings-metadata';
 
 import '@vscode-elements/elements/dist/vscode-textarea';
 
@@ -28,8 +28,8 @@ export function TemplatesSection({ settings, onUpdate, onScopeChange, onBulkScop
 			{languageTemplateKeys.map((key) => (
 				<SettingRow
 					key={key}
-					label={SETTINGS_METADATA[key].title}
-					description={SETTINGS_METADATA[key].description}
+					label={settings[key]?.title ?? ''}
+					description={settings[key]?.description ?? ''}
 					settingKey={key}
 					settings={settings}
 					onScopeChange={onScopeChange}
