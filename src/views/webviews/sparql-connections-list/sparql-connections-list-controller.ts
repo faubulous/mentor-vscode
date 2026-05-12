@@ -9,7 +9,7 @@ import { SparqlConnectionController } from '../sparql-connection/sparql-connecti
 export class SparqlConnectionsListController extends WebviewController<SparqlConnectionsListMessages> {
     constructor() {
         super({
-            componentPath: 'sparql-connections-list-view.js',
+            componentPath: 'sparql-connections-list.js',
             panelId: 'sparqlConnectionsListPanel',
             panelTitle: 'Manage Connections',
             panelIcon: 'database-connection'

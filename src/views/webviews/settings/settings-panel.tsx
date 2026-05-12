@@ -88,6 +88,9 @@ function SettingsPanel() {
 			case 'GetVersionResult':
 				setState(prev => ({ ...prev, version: message.version }));
 				return;
+			case 'NavigateTo':
+				setState(prev => ({ ...prev, activeSection: message.section as NavSection }));
+				return;
 		}
 	}, [setState]);
 

@@ -39,4 +39,5 @@ export type SettingsPanelMessages =
 	{ id: 'ListGraphs'; connection: SparqlConnection } |
 	{ id: 'OpenInBrowser'; url: string } |
 	{ id: 'GetVersion' } |
-	{ id: 'GetVersionResult'; version: string };
+	{ id: 'GetVersionResult'; version: string } |
+	{ id: 'NavigateTo'; section: string };

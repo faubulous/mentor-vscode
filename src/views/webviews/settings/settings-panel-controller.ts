@@ -15,12 +15,14 @@ const MENTOR_LANGUAGES: LanguageId[] = ['turtle', 'sparql', 'trig', 'n3', 'ntrip
 type PackageJsonSchema = { properties: Record<string, { title?: string; description?: string }> };
 
 export class SettingsPanelController extends WebviewController<SettingsPanelMessages> {
+	private _pendingSection?: string;
+
 	constructor() {
 		super({
 			componentPath: 'settings-panel.js',
 			panelId: 'mentorSettingsPanel',
 			panelTitle: 'Mentor Settings',
-			panelIcon: 'settings-gear',
+			panelIcon: 'gear',
 		});
 
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
@@ -50,8 +52,20 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		);
 	}
 
-	async show(viewColumn?: vscode.ViewColumn): Promise<void> {
+	async show(viewColumn?: vscode.ViewColumn, section?: string): Promise<void> {
+		const panelAlreadyOpen = !!this.panel;
+		
+		this._pendingSection = section;
+
 		await super.show(viewColumn);
+
+		// If the panel was already open (just revealed), React won't remount and won't
+		// re-send GetSettings, so post NavigateTo directly now that the panel is visible.
+		if (section && panelAlreadyOpen) {
+			this.postMessage({ id: 'NavigateTo', section });
+			this._pendingSection = undefined;
+		}
+		// Otherwise _pendingSection is flushed in the GetSettings handler once React mounts.
 	}
 
 	private _readAllSettings(): Record<string, SettingState> {
@@ -136,6 +150,10 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		switch (message.id) {
 			case 'GetSettings': {
 				this.postMessage({ id: 'GetSettingsResult', settings: this._readAllSettings() });
+				if (this._pendingSection) {
+					this.postMessage({ id: 'NavigateTo', section: this._pendingSection });
+					this._pendingSection = undefined;
+				}
 				return true;
 			}
 			case 'UpdateSetting': {

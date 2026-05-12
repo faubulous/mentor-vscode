@@ -69,14 +69,6 @@ export function SparqlConnectionsListItem({
 				)}
 			</div>
 			<div className="connection-item-actions" onClick={e => e.stopPropagation()}>
-				{!isProtected && onMoveConnection && (
-					<vscode-toolbar-button
-						title={`Move to ${otherScopeLabel} Scope`}
-						onClick={(e: React.MouseEvent) => { e.stopPropagation(); onMoveConnection(connection, otherScope); }}
-					>
-						<vscode-icon name="arrow-swap" />
-					</vscode-toolbar-button>
-				)}
 				{!isWorkspaceStore && (
 					<vscode-toolbar-button
 						title="Open in browser"
