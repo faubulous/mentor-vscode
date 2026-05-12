@@ -20,6 +20,7 @@ const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8'));
 const config = pkg.contributes.configuration[0];
 const properties = config.properties;
 const navGroups = config['x-nav-groups'];
+const editorLanguages = config['x-editor-languages'] ?? [];
 
 if (!navGroups) {
 	console.error('ERROR: x-nav-groups not found in contributes.configuration[0]');
@@ -57,10 +58,23 @@ const allSections = navGroups.flatMap(g => g.sections);
 // ── Collect settings entries ──────────────────────────────────
 
 const entries = {};
+const validSections = new Set(allSections.map(s => s.id));
 
 for (const [fullKey, def] of Object.entries(properties)) {
-	const section = def['x-group'];
-	if (!section) continue;
+	if (!fullKey.startsWith('mentor.')) continue;
+
+	const section = def['x-settings-group'];
+	if (!section) {
+		console.error(`ERROR: Setting '${fullKey}' is missing required 'x-settings-group' metadata. If this setting should not be in the UI, use an appropriate group and 'x-settings-visible': false.`);
+		process.exit(1);
+	}
+
+	if (!validSections.has(section)) {
+		console.error(`ERROR: Setting '${fullKey}' references unknown 'x-settings-group': '${section}'`);
+		process.exit(1);
+	}
+
+	const uiVisible = def['x-settings-visible'] !== false;
 
 	// Strip the "mentor." prefix
 	const key = fullKey.replace(/^mentor\./, '');
@@ -68,6 +82,7 @@ for (const [fullKey, def] of Object.entries(properties)) {
 	const entry = {
 		section,
 		experimental: def.experimental === true,
+		uiVisible,
 	};
 
 	// Top-level enum
@@ -108,6 +123,7 @@ const lines = [
 	'',
 	'export interface SettingMeta {',
 	'\tsection: NavSection;',
+	'\tuiVisible: boolean;',
 	'\texperimental?: boolean;',
 	'\tenumOptions?: EnumOption[];',
 	'\tnestedEnumOptions?: Record<string, EnumOption[]>;',
@@ -121,6 +137,7 @@ const lines = [
 for (const [key, meta] of Object.entries(entries)) {
 	lines.push(`\t${JSON.stringify(key)}: {`);
 	lines.push(`\t\tsection: ${JSON.stringify(meta.section)},`);
+	lines.push(`\t\tuiVisible: ${meta.uiVisible},`);
 	if (meta.experimental) {
 		lines.push(`\t\texperimental: true,`);
 	}
@@ -153,6 +170,14 @@ for (const extra of catalogExtras) {
 	lines.push(`\t{ section: ${JSON.stringify(extra.section)}, key: ${JSON.stringify(extra.key)}, label: ${JSON.stringify(extra.label)}, description: ${JSON.stringify(extra.description)} },`);
 }
 lines.push('];');
+lines.push('');
+
+// EDITOR_SETTING_KEYS derived from CATALOG_EXTRAS
+lines.push('export const EDITOR_SETTING_KEYS = CATALOG_EXTRAS.map(e => e.key);');
+lines.push('');
+
+// MENTOR_LANGUAGES
+lines.push(`export const MENTOR_LANGUAGES = ${JSON.stringify(editorLanguages, null, '\t')} as const;`);
 lines.push('');
 
 // Helpers

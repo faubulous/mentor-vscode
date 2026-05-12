@@ -6,11 +6,7 @@ import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 import { getConfig } from '@src/utilities/vscode/config';
 import { SettingsPanelMessages, SettingScope, SettingState, LanguageId } from './settings-panel-messages';
-import { SETTINGS } from './settings-metadata';
-
-const EDITOR_SETTING_KEYS = ['tabSize', 'insertSpaces', 'wordWrap', 'formatOnSave'];
-
-const MENTOR_LANGUAGES: LanguageId[] = ['turtle', 'sparql', 'trig', 'n3', 'ntriples', 'nquads'];
+import { SETTINGS, EDITOR_SETTING_KEYS, MENTOR_LANGUAGES } from './settings-metadata';
 
 type PackageJsonSchema = { properties: Record<string, { title?: string; description?: string }> };
 
