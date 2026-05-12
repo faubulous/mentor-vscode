@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { ConnectionsSection } from './sections/connections';
 import { DefinitionsTreeSection } from './sections/definitions-tree';
 import { DisplaySection } from './sections/display';
@@ -20,6 +21,7 @@ import { SparqlConnectionEditor } from '../sparql-connection/sparql-connection-e
 import { TemplatesSection } from './sections/templates';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
 import { ValidationSection } from './sections/validation';
+import { SECTION_REGISTRY } from './settings-registry';
 import stylesheet from './settings-panel.css';
 
 // ── State ──────────────────────────────────────────────────────
@@ -226,50 +228,42 @@ function SettingsPanel() {
 			);
 		}
 
-		switch (state.activeSection) {
-			case 'appearance.display': return <DisplaySection {...commonProps} />;
-			case 'appearance.definitions-tree': return <DefinitionsTreeSection {...commonProps} />;
-			case 'editor.general': return <EditorGeneralSection {...commonProps} />;
-			case 'editor.formatting':
-				return (
-					<FormattingSection
-						{...commonProps}
-						editorSettings={state.editorSettings}
-						formattingLanguage={state.formattingLanguage}
-						onFormattingLanguageChange={handleFormattingLanguageChange}
-						onEditorUpdate={handleEditorUpdate}
-						onEditorScopeChange={handleEditorScopeChange}
-					/>
-				);
-			case 'editor.sorting': return <SortingSection {...commonProps} />;
-			case 'editor.templates': return <TemplatesSection {...commonProps} />;
-			case 'indexing': return <IndexingSection {...commonProps} />;
-			case 'connections':
-				if (state.editingConnection) {
-					return (
-						<SparqlConnectionEditor
-							connection={state.editingConnection}
-							onBack={() => setState(prev => ({ ...prev, editingConnection: undefined }))}
-						/>
-					);
-				}
-				return (
-					<ConnectionsSection
-						connections={state.connections}
-						testResults={state.testResults}
-						onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
-						onEditConnection={conn => setState(prev => ({ ...prev, editingConnection: conn }))}
-						onDeleteConnection={conn => messaging?.postMessage({ id: 'DeleteConnection', connection: conn })}
-						onTestConnection={conn => messaging?.postMessage({ id: 'TestConnection', connection: conn })}
-						onListGraphs={conn => messaging?.postMessage({ id: 'ListGraphs', connection: conn })}
-						onOpenInBrowser={url => messaging?.postMessage({ id: 'OpenInBrowser', url })}
-						onMoveConnection={(conn, toScope) => messaging?.postMessage({ id: 'MoveConnection', connection: conn, toScope })}
-					/>
-				);
-			case 'query': return <QuerySection {...commonProps} />;
-			case 'validation': return <ValidationSection {...commonProps} />;
-			default: return null;
-		}
+const entry = SECTION_REGISTRY[state.activeSection];
+            if (!entry) return null;
+
+            if (state.activeSection === 'connections' && state.editingConnection) {
+                    return (
+                            <SparqlConnectionEditor
+                                    connection={state.editingConnection}
+                                    onBack={() => setState(prev => ({ ...prev, editingConnection: undefined }))}
+                            />
+                    );
+            }
+
+            const SectionComponent = entry.component;
+
+            return (
+                    <SectionComponent
+                            {...commonProps}
+                            keys={entry.keys}
+                            // Props for formatting section
+                            editorSettings={state.editorSettings}
+                            formattingLanguage={state.formattingLanguage}
+                            onFormattingLanguageChange={handleFormattingLanguageChange}
+                            onEditorUpdate={handleEditorUpdate}
+                            onEditorScopeChange={handleEditorScopeChange}
+                            // Props for connections section
+                            connections={state.connections}
+                            testResults={state.testResults}
+                            onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
+                            onEditConnection={(conn: SparqlConnection) => setState(prev => ({ ...prev, editingConnection: conn }))}
+                            onDeleteConnection={(conn: SparqlConnection) => messaging?.postMessage({ id: 'DeleteConnection', connection: conn })}
+                            onTestConnection={(conn: SparqlConnection) => messaging?.postMessage({ id: 'TestConnection', connection: conn })}
+                            onListGraphs={(conn: SparqlConnection) => messaging?.postMessage({ id: 'ListGraphs', connection: conn })}
+                            onOpenInBrowser={(url: string) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
+                            onMoveConnection={(conn: SparqlConnection, toScope: ConfigurationScope) => messaging?.postMessage({ id: 'MoveConnection', connection: conn, toScope })}
+                    />
+            );
 	};
 
 	return (
