@@ -2,8 +2,6 @@ import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { SECTION_TITLES } from '../settings-metadata';
 
-import '@vscode-elements/elements/dist/vscode-checkbox';
-
 export interface ValidationSectionProps {
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;

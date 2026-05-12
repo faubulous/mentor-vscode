@@ -1,7 +1,5 @@
 import * as React from 'react';
 
-import '@vscode-elements/elements/dist/vscode-textfield';
-
 export function MentorIcon() {
 	const url = document.getElementById('root')?.dataset.mentorIconUrl;
 

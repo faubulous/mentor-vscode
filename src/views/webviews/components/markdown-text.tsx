@@ -12,7 +12,7 @@ const LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/g;
  */
 export function MarkdownText({ text }: MarkdownTextProps) {
 	const parts: React.ReactNode[] = [];
-	
+
 	let lastIndex = 0;
 	let match: RegExpExecArray | null;
 

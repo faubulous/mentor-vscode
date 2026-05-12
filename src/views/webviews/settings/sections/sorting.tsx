@@ -5,9 +5,6 @@ import { StringListEditor } from '../components/string-list-editor';
 import { SECTION_TITLES, getNestedEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
-import '@vscode-elements/elements/dist/vscode-single-select';
-import '@vscode-elements/elements/dist/vscode-option';
-
 export interface SortingSectionProps {
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;

@@ -47,18 +47,18 @@ export const SETTINGS: Record<string, SettingMeta> = {
 	},
 	"definitionTree.labelStyle": {
 		section: "appearance.definitions-tree",
-		enumOptions: [{ "value": "AnnotatedLabels", "label": "Annotated Labels" }, { "value": "UriLabels", "label": "Uri Labels" }, { "value": "UriLabelsWithPrefix", "label": "Uri Labels With Prefix" }],
+		enumOptions: [{"value":"AnnotatedLabels","label":"Annotated Labels"},{"value":"UriLabels","label":"Uri Labels"},{"value":"UriLabelsWithPrefix","label":"Uri Labels With Prefix"}],
 	},
 	"definitionTree.defaultLayout": {
 		section: "appearance.definitions-tree",
-		enumOptions: [{ "value": "GroupByType", "label": "Group By Type" }, { "value": "GroupBySource", "label": "Group By Source" }],
+		enumOptions: [{"value":"GroupByType","label":"Group By Type"},{"value":"GroupBySource","label":"Group By Source"}],
 	},
 	"definitionTree.defaultLanguageTag": {
 		section: "appearance.definitions-tree",
 	},
 	"definitionTree.decorateMissingLanguageTags": {
 		section: "appearance.definitions-tree",
-		enumOptions: [{ "value": "Disabled", "label": "Disabled" }, { "value": "All", "label": "All" }, { "value": "Document", "label": "Document" }],
+		enumOptions: [{"value":"Disabled","label":"Disabled"},{"value":"All","label":"All"},{"value":"Document","label":"Document"}],
 	},
 	"predicates.label": {
 		section: "appearance.display",
@@ -92,11 +92,11 @@ export const SETTINGS: Record<string, SettingMeta> = {
 	},
 	"prefixes.prefixDefinitionMode": {
 		section: "editor.general",
-		enumOptions: [{ "value": "Append", "label": "Append" }, { "value": "Sorted", "label": "Sorted" }],
+		enumOptions: [{"value":"Append","label":"Append"},{"value":"Sorted","label":"Sorted"}],
 	},
 	"sorting.typeSortingOptions": {
 		section: "editor.sorting",
-		nestedEnumOptions: { "unmatchedPosition": [{ "value": "start", "label": "Start" }, { "value": "end", "label": "End" }], "unmatchedSort": [{ "value": "alphabetical", "label": "Alphabetical" }, { "value": "none", "label": "None" }] },
+		nestedEnumOptions: {"unmatchedPosition":[{"value":"start","label":"Start"},{"value":"end","label":"End"}],"unmatchedSort":[{"value":"alphabetical","label":"Alphabetical"},{"value":"none","label":"None"}]},
 	},
 	"shacl.validation": {
 		section: "validation",
@@ -139,12 +139,12 @@ export const SETTINGS: Record<string, SettingMeta> = {
 	"linting.unresolvedReferenceSeverity": {
 		section: "validation",
 		experimental: true,
-		enumOptions: [{ "value": "Error", "label": "Error" }, { "value": "Warning", "label": "Warning" }, { "value": "Information", "label": "Information" }, { "value": "Hint", "label": "Hint" }, { "value": "Disabled", "label": "Disabled" }],
+		enumOptions: [{"value":"Error","label":"Error"},{"value":"Warning","label":"Warning"},{"value":"Information","label":"Information"},{"value":"Hint","label":"Hint"},{"value":"Disabled","label":"Disabled"}],
 	},
 	"linting.unresolvedWorkspaceGraphSeverity": {
 		section: "validation",
 		experimental: true,
-		enumOptions: [{ "value": "Error", "label": "Error" }, { "value": "Warning", "label": "Warning" }, { "value": "Information", "label": "Information" }, { "value": "Hint", "label": "Hint" }, { "value": "Disabled", "label": "Disabled" }],
+		enumOptions: [{"value":"Error","label":"Error"},{"value":"Warning","label":"Warning"},{"value":"Information","label":"Information"},{"value":"Hint","label":"Hint"},{"value":"Disabled","label":"Disabled"}],
 	},
 	"language.sparql.defaultDocumentTemplate": {
 		section: "editor.templates",
@@ -169,85 +169,85 @@ export const SETTINGS: Record<string, SettingMeta> = {
 	},
 };
 
-export const NAV_GROUPS: NavGroupConfig[] =
-	[
-		{
-			"id": "appearance",
-			"label": "Appearance",
-			"sections": [
-				{
-					"id": "appearance.display",
-					"label": "Display"
-				},
-				{
-					"id": "appearance.definitions-tree",
-					"label": "Definitions Tree"
-				}
-			]
-		},
-		{
-			"id": "editor",
-			"label": "Editor",
-			"sections": [
-				{
-					"id": "editor.general",
-					"label": "General"
-				},
-				{
-					"id": "editor.formatting",
-					"label": "Formatting"
-				},
-				{
-					"id": "editor.sorting",
-					"label": "Sorting"
-				},
-				{
-					"id": "editor.templates",
-					"label": "Templates"
-				}
-			]
-		},
-		{
-			"id": "indexing",
-			"label": "Indexing",
-			"sections": [
-				{
-					"id": "indexing",
-					"label": "Indexing"
-				}
-			]
-		},
-		{
-			"id": "connections",
-			"label": "Connections",
-			"sections": [
-				{
-					"id": "connections",
-					"label": "Connections"
-				}
-			]
-		},
-		{
-			"id": "query",
-			"label": "Query",
-			"sections": [
-				{
-					"id": "query",
-					"label": "Query"
-				}
-			]
-		},
-		{
-			"id": "validation",
-			"label": "Validation",
-			"sections": [
-				{
-					"id": "validation",
-					"label": "Validation"
-				}
-			]
-		}
-	];
+export const NAV_GROUPS: NavGroupConfig[] = 
+[
+	{
+		"id": "appearance",
+		"label": "Appearance",
+		"sections": [
+			{
+				"id": "appearance.display",
+				"label": "Display"
+			},
+			{
+				"id": "appearance.definitions-tree",
+				"label": "Definitions Tree"
+			}
+		]
+	},
+	{
+		"id": "editor",
+		"label": "Editor",
+		"sections": [
+			{
+				"id": "editor.general",
+				"label": "General"
+			},
+			{
+				"id": "editor.formatting",
+				"label": "Formatting"
+			},
+			{
+				"id": "editor.sorting",
+				"label": "Sorting"
+			},
+			{
+				"id": "editor.templates",
+				"label": "Templates"
+			}
+		]
+	},
+	{
+		"id": "indexing",
+		"label": "Indexing",
+		"sections": [
+			{
+				"id": "indexing",
+				"label": "Indexing"
+			}
+		]
+	},
+	{
+		"id": "connections",
+		"label": "Connections",
+		"sections": [
+			{
+				"id": "connections",
+				"label": "Connections"
+			}
+		]
+	},
+	{
+		"id": "query",
+		"label": "Query",
+		"sections": [
+			{
+				"id": "query",
+				"label": "Query"
+			}
+		]
+	},
+	{
+		"id": "validation",
+		"label": "Validation",
+		"sections": [
+			{
+				"id": "validation",
+				"label": "Validation"
+			}
+		]
+	}
+];
 
 export const SECTION_TITLES = Object.fromEntries(
 	NAV_GROUPS.flatMap(g => g.sections.map((s: NavSectionConfig) => [s.id, s.label]))

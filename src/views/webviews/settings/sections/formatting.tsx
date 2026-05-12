@@ -6,11 +6,6 @@ import { SECTION_TITLES } from '../settings-metadata';
 import { useContext } from 'react';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
-import '@vscode-elements/elements/dist/vscode-checkbox';
-import '@vscode-elements/elements/dist/vscode-textfield';
-import '@vscode-elements/elements/dist/vscode-single-select';
-import '@vscode-elements/elements/dist/vscode-option';
-
 export interface FormattingSectionProps {
 	settings: Record<string, SettingState>;
 	editorSettings: EditorSettings;

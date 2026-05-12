@@ -22,14 +22,6 @@ import { ConnectionsSection } from './sections/connections';
 import { QuerySection } from './sections/query';
 import { ValidationSection } from './sections/validation';
 
-import '@vscode-elements/elements/dist/vscode-button';
-import '@vscode-elements/elements/dist/vscode-icon';
-import '@vscode-elements/elements/dist/vscode-textfield';
-import '@vscode-elements/elements/dist/vscode-checkbox';
-import '@vscode-elements/elements/dist/vscode-single-select';
-import '@vscode-elements/elements/dist/vscode-option';
-import '@vscode-elements/elements/dist/vscode-label';
-
 // ── State ──────────────────────────────────────────────────────
 
 interface PanelState {

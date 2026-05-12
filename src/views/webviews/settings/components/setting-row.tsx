@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState, useEffect, useRef, useContext } from 'react';
 import { SettingScope, SettingState, LanguageId } from '../settings-panel-messages';
 import { EditorSettings } from './types';
-import { MarkdownText } from './markdown-text';
+import { MarkdownText } from '../../components/markdown-text';
 
 // ── Scope context ──────────────────────────────────────────────
 

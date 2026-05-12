@@ -4,10 +4,6 @@ import { SectionHeader, SettingRow } from '../components/setting-row';
 import { SECTION_TITLES, getEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
-import '@vscode-elements/elements/dist/vscode-checkbox';
-import '@vscode-elements/elements/dist/vscode-single-select';
-import '@vscode-elements/elements/dist/vscode-option';
-import '@vscode-elements/elements/dist/vscode-textfield';
 import { ObjectListEditor } from '../components/object-list-editor';
 
 export interface EditorGeneralSectionProps {

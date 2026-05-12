@@ -3,7 +3,7 @@ import { useState, useEffect, useContext } from 'react';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TestResult } from '../components/types';
-import { ConnectionsList } from '../components/connections-list';
+import { SparqlConnectionsList } from '../../sparql-connections-list/sparql-connections-list';
 import { SettingsScopeContext } from '../components/setting-row';
 
 export interface ConnectionsSectionProps {
@@ -62,7 +62,7 @@ export function ConnectionsSection({
 	};
 
 	return (
-		<ConnectionsList
+		<SparqlConnectionsList
 			connections={filtered}
 			testResults={testResults}
 			testingConnections={testingConnections}

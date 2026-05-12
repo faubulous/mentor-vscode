@@ -1,8 +1,6 @@
 import * as React from 'react';
 import { useCallback } from 'react';
 
-import '@vscode-elements/elements/dist/vscode-textfield';
-
 export interface FieldDef {
 	key: string;
 	label: string;
@@ -19,7 +17,11 @@ interface ObjectListEditorProps {
 export function ObjectListEditor({ items, fields, onChange }: ObjectListEditorProps) {
 	const emptyItem = useCallback((): Record<string, string> => {
 		const empty: Record<string, string> = {};
-		for (const f of fields) empty[f.key] = '';
+
+		for (const f of fields) {
+			empty[f.key] = '';
+		}
+
 		return empty;
 	}, [fields]);
 

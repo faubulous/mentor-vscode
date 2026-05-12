@@ -345,7 +345,7 @@ const removeSourceMaps = () => {
       getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
       getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
       getReactViewConfig(args, 'sparql-connection', 'sparql-connection-view'),
-      getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list-view'),
+      getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list'),
       getReactViewConfig(args, 'settings', 'settings-panel'),
     ]
 

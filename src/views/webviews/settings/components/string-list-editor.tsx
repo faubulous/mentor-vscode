@@ -1,8 +1,6 @@
 import * as React from 'react';
 import { useState, useCallback } from 'react';
 
-import '@vscode-elements/elements/dist/vscode-textfield';
-
 interface StringListEditorProps {
 	items: string[];
 	placeholder?: string;

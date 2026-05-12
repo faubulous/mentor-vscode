@@ -2,10 +2,6 @@ import { SettingScope, SettingState } from '../settings-panel-messages';
 import { SectionHeader, SettingRow } from '../components/setting-row';
 import { SECTION_TITLES } from '../settings-metadata';
 
-import '@vscode-elements/elements/dist/vscode-checkbox';
-import '@vscode-elements/elements/dist/vscode-textfield';
-import '@vscode-elements/elements/dist/vscode-textarea';
-
 export interface QuerySectionProps {
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;
