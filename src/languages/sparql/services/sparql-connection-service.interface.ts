@@ -133,6 +133,12 @@ export interface ISparqlConnectionService {
 	toggleInferenceEnabled(connectionId: string): Promise<boolean>;
 
 	/**
+	 * Returns whether the experimental inference feature flag is enabled.
+	 * This gates UI affordances for toggling inference per-connection or per-document.
+	 */
+	getInferenceFeatureEnabled(): Promise<boolean>;
+
+	/**
 	 * Gets the effective inference setting for a document or notebook cell.
 	 * Priority: document/cell setting → connection setting → global default.
 	 * @param documentUri The URI of the document or notebook cell.
@@ -192,6 +198,14 @@ export interface ISparqlConnectionService {
 	 * @param connection The connection to update.
 	 */
 	updateConnection(connection: SparqlConnection): Promise<void>;
+
+	/**
+	 * Persists a connection edit together with its credential, replacing any existing
+	 * credential for the same connection. Surfaces a "saved" notification on success.
+	 * @param connection The connection to update.
+	 * @param credential The credential to store, or `null` to leave existing credentials untouched.
+	 */
+	saveConnectionWithCredential(connection: SparqlConnection, credential: AuthCredential | null): Promise<void>;
 
 	/**
 	 * Deletes a SPARQL connection from the settings.

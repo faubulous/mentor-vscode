@@ -9,6 +9,7 @@ interface StringListEditorProps {
 
 export function StringListEditor({ items, placeholder = 'Enter value', onChange }: StringListEditorProps) {
 	const [dragIndex, setDragIndex] = useState<number | null>(null);
+
 	const [dropIndex, setDropIndex] = useState<number | null>(null);
 
 	const handleChange = useCallback((index: number, value: string) => {
@@ -23,30 +24,42 @@ export function StringListEditor({ items, placeholder = 'Enter value', onChange 
 
 	const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
 		setDragIndex(index);
+
 		e.dataTransfer.effectAllowed = 'move';
 		e.dataTransfer.setData('text/plain', String(index));
+
 		const row = (e.target as HTMLElement).closest('.string-list-item');
-		if (row) e.dataTransfer.setDragImage(row as HTMLElement, 20, 10);
+
+		if (row) {
+			e.dataTransfer.setDragImage(row as HTMLElement, 20, 10);
+		}
 	}, []);
 
 	const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = 'move';
-		if (index !== dragIndex) setDropIndex(index);
+
+		if (index !== dragIndex) {
+			setDropIndex(index);
+		}
 	}, [dragIndex]);
 
 	const handleDrop = useCallback((e: React.DragEvent, index: number) => {
 		e.preventDefault();
+
 		if (dragIndex === null || dragIndex === index) {
 			setDropIndex(null);
-			return;
+		} else {
+			const next = [...items];
+			const [removed] = next.splice(dragIndex, 1);
+
+			next.splice(index, 0, removed);
+
+			onChange(next);
+
+			setDragIndex(null);
+			setDropIndex(null);
 		}
-		const next = [...items];
-		const [removed] = next.splice(dragIndex, 1);
-		next.splice(index, 0, removed);
-		onChange(next);
-		setDragIndex(null);
-		setDropIndex(null);
 	}, [dragIndex, items, onChange]);
 
 	const handleDragEnd = useCallback(() => {

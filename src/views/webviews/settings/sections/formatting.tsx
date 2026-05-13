@@ -1,35 +1,36 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { SettingScope, SettingState, LanguageId, FormattingLanguage } from '../settings-panel-messages';
+import { LanguageId, FormattingLanguage } from '@src/services/document/document-factory';
+import { SettingScope, SettingState } from '../settings-types';
 import { SectionHeader } from '../components/section-header';
 import { SectionHeaderContextMenu } from '../components/section-header-context-menu';
 import { SettingRow } from '../components/setting-row';
-import { EditorSettingRow, SettingsScopeContext } from '../components/setting-row';
-import { EditorSettings } from '../components/types';
+import { VSCodeSettingRow, SettingsScopeContext } from '../components/setting-row';
+import { VSCodeSettings } from '../components/types';
 import { SECTION_TITLES } from '../settings-metadata';
 import { useContext } from 'react';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
 export interface FormattingSectionProps {
 	settings: Record<string, SettingState>;
-	editorSettings: EditorSettings;
+	vscodeSettings: VSCodeSettings;
 	formattingLanguage: FormattingLanguage;
 	onFormattingLanguageChange: (lang: FormattingLanguage) => void;
 	onUpdate: (key: string, value: unknown) => void;
 	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void;
-	onEditorUpdate: (languageId: LanguageId, key: string, value: unknown) => void;
-	onEditorScopeChange: (languageId: LanguageId, key: string, scope: SettingScope, currentValue: unknown) => void;
+	onVSCodeUpdate: (languageId: LanguageId, key: string, value: unknown) => void;
+	onVSCodeScopeChange: (languageId: LanguageId, key: string, scope: SettingScope, currentValue: unknown) => void;
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
 export function FormattingSection({
 	settings,
-	editorSettings,
+	vscodeSettings,
 	formattingLanguage,
 	onFormattingLanguageChange,
 	onUpdate,
 	onScopeChange,
-	onEditorUpdate,
-	onEditorScopeChange,
+	onVSCodeUpdate,
+	onVSCodeScopeChange,
 	onBulkScope,
 }: FormattingSectionProps) {
 	const turtleKeys = [
@@ -55,77 +56,77 @@ export function FormattingSection({
 
 	const wordWrapRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
-		(element) => onEditorUpdate(lang, 'wordWrap', element.value)
+		(element) => onVSCodeUpdate(lang, 'wordWrap', element.value)
 	);
 
 	return (
 		<div>
 			<SectionHeader title={SECTION_TITLES['editor.formatting']} />
-			<EditorSettingRow
+			<VSCodeSettingRow
 				label="Format on save"
 				description="Automatically format documents on save."
 				settingKey="formatOnSave"
 				languageId={lang}
-				editorSettings={editorSettings}
-				onScopeChange={onEditorScopeChange}
+				vscodeSettings={vscodeSettings}
+				onScopeChange={onVSCodeScopeChange}
 			>
 				<vscode-checkbox
-					checked={editorSettings[lang]?.['formatOnSave']?.value === true}
-					onChange={(e: any) => onEditorUpdate(lang, 'formatOnSave', (e.target as HTMLInputElement).checked)}
+					checked={vscodeSettings[lang]?.['formatOnSave']?.value === true}
+					onChange={(e: any) => onVSCodeUpdate(lang, 'formatOnSave', (e.target as HTMLInputElement).checked)}
 				>
 					Enabled
 				</vscode-checkbox>
-			</EditorSettingRow>
+			</VSCodeSettingRow>
 
-			<EditorSettingRow
+			<VSCodeSettingRow
 				label="Tab size"
 				description="Number of spaces per indent level (used by the Mentor formatter for indentation)."
 				settingKey="tabSize"
 				languageId={lang}
-				editorSettings={editorSettings}
-				onScopeChange={onEditorScopeChange}
+				vscodeSettings={vscodeSettings}
+				onScopeChange={onVSCodeScopeChange}
 			>
 				<vscode-textfield
-					value={String(editorSettings[lang]?.['tabSize']?.value ?? 2)}
+					value={String(vscodeSettings[lang]?.['tabSize']?.value ?? 2)}
 					type="number"
-					onInput={(e: any) => onEditorUpdate(lang, 'tabSize', Number((e.target as HTMLInputElement).value))}
+					onInput={(e: any) => onVSCodeUpdate(lang, 'tabSize', Number((e.target as HTMLInputElement).value))}
 				/>
-			</EditorSettingRow>
+			</VSCodeSettingRow>
 
-			<EditorSettingRow
+			<VSCodeSettingRow
 				label="Insert spaces"
 				description="Use spaces instead of tabs for indentation (used by the Mentor formatter)."
 				settingKey="insertSpaces"
 				languageId={lang}
-				editorSettings={editorSettings}
-				onScopeChange={onEditorScopeChange}
+				vscodeSettings={vscodeSettings}
+				onScopeChange={onVSCodeScopeChange}
 			>
 				<vscode-checkbox
-					checked={editorSettings[lang]?.['insertSpaces']?.value !== false}
-					onChange={(e: any) => onEditorUpdate(lang, 'insertSpaces', (e.target as HTMLInputElement).checked)}
+					checked={vscodeSettings[lang]?.['insertSpaces']?.value !== false}
+					onChange={(e: any) => onVSCodeUpdate(lang, 'insertSpaces', (e.target as HTMLInputElement).checked)}
 				>
 					Use spaces
 				</vscode-checkbox>
-			</EditorSettingRow>
+			</VSCodeSettingRow>
 
-			<EditorSettingRow
+			<VSCodeSettingRow
 				label="Word wrap"
 				description="Controls how lines wrap in the editor."
 				settingKey="wordWrap"
 				languageId={lang}
-				editorSettings={editorSettings}
-				onScopeChange={onEditorScopeChange}
+				vscodeSettings={vscodeSettings}
+				onScopeChange={onVSCodeScopeChange}
 			>
 				<vscode-single-select
 					ref={wordWrapRef}
-					value={String(editorSettings[lang]?.['wordWrap']?.value ?? 'off')}
+					value={String(vscodeSettings[lang]?.['wordWrap']?.value ?? 'off')}
 				>
 					<vscode-option value="off">Off</vscode-option>
 					<vscode-option value="on">On</vscode-option>
 					<vscode-option value="wordWrapColumn">Word wrap column</vscode-option>
 					<vscode-option value="bounded">Bounded</vscode-option>
 				</vscode-single-select>
-			</EditorSettingRow>
+			</VSCodeSettingRow>
 
 			<div className="settings-subsection">
 				<div className="lang-tab-bar-row">

@@ -1,39 +1,51 @@
 import * as React from 'react';
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TestResult } from '../components/types';
 import { SparqlConnectionsList } from '../../sparql-connections-list/sparql-connections-list';
+import { SparqlConnectionEditor } from '../../sparql-connection/sparql-connection-editor';
 import { SettingsScopeContext } from '../components/setting-row';
+import { useScopedWebviewMessaging } from '../../webview-hooks';
+import { SparqlConnectionsListMessages } from '../../sparql-connections-list/sparql-connections-list-messages';
+import { SparqlConnectionMessages } from '../../sparql-connection/sparql-connection-messages';
 
-export interface ConnectionsSectionProps {
-	connections: SparqlConnection[];
-	testResults: Record<string, TestResult>;
-	onCreateConnection: () => void;
-	onEditConnection: (connection: SparqlConnection) => void;
-	onDeleteConnection: (connection: SparqlConnection) => void;
-	onTestConnection: (connection: SparqlConnection) => void;
-	onListGraphs: (connection: SparqlConnection) => void;
-	onOpenInBrowser: (url: string) => void;
-	onMoveConnection?: (connection: SparqlConnection, toScope: ConfigurationScope) => void;
-}
+type ConnectionsSectionMessage = SparqlConnectionsListMessages | SparqlConnectionMessages;
 
-export function ConnectionsSection({
-	connections,
-	testResults,
-	onCreateConnection,
-	onEditConnection,
-	onDeleteConnection,
-	onTestConnection,
-	onListGraphs,
-	onOpenInBrowser,
-	onMoveConnection,
-}: ConnectionsSectionProps) {
+export function ConnectionsSection() {
 	const activeScope = useContext(SettingsScopeContext);
-	// Track which connections are currently being tested/listed
+
+	const [connections, setConnections] = useState<SparqlConnection[]>([]);
+	const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+	const [editingConnection, setEditingConnection] = useState<SparqlConnection | undefined>(undefined);
 	const [testingConnections, setTestingConnections] = useState<Set<string>>(new Set());
 
-	// When a test result arrives for a connection that was testing, clear it from the testing set
+	const handleMessage = useCallback((message: ConnectionsSectionMessage) => {
+		switch (message.id) {
+			case 'GetConnectionsResult':
+			case 'ConnectionsChanged':
+				setConnections(message.connections);
+				return;
+			case 'TestConnectionResult':
+				setTestResults(prev => ({
+					...prev,
+					[message.connectionId]: message.success
+						? { success: true }
+						: { success: false, error: message.error },
+				}));
+				return;
+			case 'EditSparqlConnection':
+				setEditingConnection(message.connection);
+				return;
+		}
+	}, []);
+
+	const messaging = useScopedWebviewMessaging<ConnectionsSectionMessage>('connections', handleMessage);
+
+	useEffect(() => {
+		messaging?.postMessage({ id: 'GetConnections' });
+	}, []);
+
 	useEffect(() => {
 		setTestingConnections(prev => {
 			const updated = new Set(prev);
@@ -46,19 +58,28 @@ export function ConnectionsSection({
 		});
 	}, [testResults]);
 
+	if (editingConnection) {
+		return (
+			<SparqlConnectionEditor
+				connection={editingConnection}
+				onBack={() => setEditingConnection(undefined)}
+			/>
+		);
+	}
+
 	const scopeEnum = activeScope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
 	const filtered = connections.filter(c => c.configScope === scopeEnum || c.isProtected === true);
 
 	const handleTestConnection = (connection: SparqlConnection, e: React.MouseEvent) => {
 		e.stopPropagation();
 		setTestingConnections(prev => new Set(prev).add(connection.id));
-		onTestConnection(connection);
+		messaging?.postMessage({ id: 'TestConnection', connection });
 	};
 
 	const handleListGraphs = (connection: SparqlConnection, e: React.MouseEvent) => {
 		e.stopPropagation();
 		setTestingConnections(prev => new Set(prev).add(connection.id));
-		onListGraphs(connection);
+		messaging?.postMessage({ id: 'ListGraphs', connection });
 	};
 
 	return (
@@ -66,13 +87,13 @@ export function ConnectionsSection({
 			connections={filtered}
 			testResults={testResults}
 			testingConnections={testingConnections}
-			onCreateConnection={onCreateConnection}
-			onEditConnection={onEditConnection}
-			onDeleteConnection={onDeleteConnection}
+			onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
+			onEditConnection={(connection) => setEditingConnection(connection)}
+			onDeleteConnection={(connection) => messaging?.postMessage({ id: 'DeleteConnection', connection })}
 			onTestConnection={handleTestConnection}
 			onListGraphs={handleListGraphs}
-			onOpenInBrowser={onOpenInBrowser}
-			onMoveConnection={onMoveConnection}
+			onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
+			onChangeSparqlConnectionScope={(connection, toScope) => messaging?.postMessage({ id: 'ChangeSparqlConnectionScope', connection, toScope })}
 		/>
 	);
 }

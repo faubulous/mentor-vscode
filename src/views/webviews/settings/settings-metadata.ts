@@ -1,11 +1,11 @@
 // AUTO-GENERATED — do not edit by hand.
 // Re-generate by running: node generate-settings.mjs
 
-import type { EnumOption, NavGroupConfig, NavSectionConfig, CatalogExtra } from './settings-types';
+import type { CatalogExtra, EnumOption, SettingMetadata, SettingsNavigationGroupConfig, SettingsNavigationSectionConfig } from './settings-types';
 
 // ── Types ────────────────────────────────────────────────────
 
-export type NavSection =
+export type SettingsNavigationSection =
 	| "appearance.display"
 	| "appearance.definitions-tree"
 	| "editor.general"
@@ -17,17 +17,9 @@ export type NavSection =
 	| "query"
 	| "validation";
 
-export interface SettingMeta {
-	section: NavSection;
-	uiVisible: boolean;
-	experimental?: boolean;
-	enumOptions?: EnumOption[];
-	nestedEnumOptions?: Record<string, EnumOption[]>;
-}
-
 // ── Data ─────────────────────────────────────────────────────
 
-export const SETTINGS: Record<string, SettingMeta> = {
+export const SETTINGS: Record<string, SettingMetadata> = {
 	"sparql.connections": {
 		section: "connections",
 		uiVisible: true,
@@ -217,7 +209,7 @@ export const SETTINGS: Record<string, SettingMeta> = {
 	},
 };
 
-export const NAV_GROUPS: NavGroupConfig[] = 
+export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] = 
 [
 	{
 		"id": "appearance",
@@ -298,8 +290,8 @@ export const NAV_GROUPS: NavGroupConfig[] =
 ];
 
 export const SECTION_TITLES = Object.fromEntries(
-	NAV_GROUPS.flatMap(g => g.sections.map((s: NavSectionConfig) => [s.id, s.label]))
-) as Record<NavSection, string>;
+	SETTINGS_NAVIGATION_GROUPS.flatMap(g => g.sections.map((s: SettingsNavigationSectionConfig) => [s.id, s.label]))
+) as Record<SettingsNavigationSection, string>;
 
 export const CATALOG_EXTRAS: CatalogExtra[] = [
 	{ section: "editor.formatting", key: "formatOnSave", label: "Format on save", description: "Automatically format documents on save." },
@@ -308,16 +300,7 @@ export const CATALOG_EXTRAS: CatalogExtra[] = [
 	{ section: "editor.formatting", key: "wordWrap", label: "Word wrap", description: "Controls how lines wrap in the editor." },
 ];
 
-export const EDITOR_SETTING_KEYS = CATALOG_EXTRAS.map(e => e.key);
-
-export const MENTOR_LANGUAGES = [
-	"turtle",
-	"sparql",
-	"trig",
-	"n3",
-	"ntriples",
-	"nquads"
-] as const;
+export const VSCODE_SETTING_KEYS = CATALOG_EXTRAS.map(e => e.key);
 
 // ── Helpers ──────────────────────────────────────────────────
 

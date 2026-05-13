@@ -242,6 +242,13 @@ describe('SparqlConnectionService', () => {
         });
     });
 
+    describe('getInferenceFeatureEnabled', () => {
+        it('returns false when the inference.enabled flag is not configured', async () => {
+            const svc = makeService();
+            expect(await svc.getInferenceFeatureEnabled()).toBe(false);
+        });
+    });
+
     describe('supportsInference', () => {
         it('returns false for a plain sparql connection', async () => {
             const svc = makeService();
@@ -426,6 +433,40 @@ describe('SparqlConnectionService', () => {
             expect(fired).toBe(true);
             expect(svc.getConnection(conn.id)?.isNew).toBe(false);
             expect(svc.getConnection(conn.id)?.isModified).toBe(false);
+        });
+    });
+
+    describe('saveConnectionWithCredential', () => {
+        it('persists the connection and replaces the credential when one is provided', async () => {
+            const credentialStorage = {
+                getCredential: async () => null,
+                deleteCredential: vi.fn(async () => {}),
+                saveCredential: vi.fn(async () => {}),
+            };
+            const svc = new SparqlConnectionService(makeContext() as any, credentialStorage as any);
+            const conn = await svc.createConnection();
+            const credential: AuthCredential = { type: 'basic', username: 'u', password: 'p' } as any;
+
+            await svc.saveConnectionWithCredential(conn, credential);
+
+            expect(credentialStorage.deleteCredential).toHaveBeenCalledWith(conn.id);
+            expect(credentialStorage.saveCredential).toHaveBeenCalledWith(conn.id, credential);
+            expect(svc.getConnection(conn.id)?.isNew).toBe(false);
+        });
+
+        it('leaves credentials untouched when null is passed', async () => {
+            const credentialStorage = {
+                getCredential: async () => null,
+                deleteCredential: vi.fn(async () => {}),
+                saveCredential: vi.fn(async () => {}),
+            };
+            const svc = new SparqlConnectionService(makeContext() as any, credentialStorage as any);
+            const conn = await svc.createConnection();
+
+            await svc.saveConnectionWithCredential(conn, null);
+
+            expect(credentialStorage.deleteCredential).not.toHaveBeenCalled();
+            expect(credentialStorage.saveCredential).not.toHaveBeenCalled();
         });
     });
 

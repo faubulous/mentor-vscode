@@ -20,7 +20,6 @@ const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8'));
 const config = pkg.contributes.configuration[0];
 const properties = config.properties;
 const navGroups = config['x-nav-groups'];
-const editorLanguages = config['x-editor-languages'] ?? [];
 
 if (!navGroups) {
 	console.error('ERROR: x-nav-groups not found in contributes.configuration[0]');
@@ -115,23 +114,15 @@ const lines = [
 	'// AUTO-GENERATED — do not edit by hand.',
 	'// Re-generate by running: node generate-settings.mjs',
 	'',
-	"import type { EnumOption, NavGroupConfig, NavSectionConfig, CatalogExtra } from './settings-types';",
+	"import type { CatalogExtra, EnumOption, SettingMetadata, SettingsNavigationGroupConfig, SettingsNavigationSectionConfig } from './settings-types';",
 	'',
 	'// ── Types ────────────────────────────────────────────────────',
 	'',
-	`export type NavSection =\n\t| ${navSectionType};`,
-	'',
-	'export interface SettingMeta {',
-	'\tsection: NavSection;',
-	'\tuiVisible: boolean;',
-	'\texperimental?: boolean;',
-	'\tenumOptions?: EnumOption[];',
-	'\tnestedEnumOptions?: Record<string, EnumOption[]>;',
-	'}',
+	`export type SettingsNavigationSection =\n\t| ${navSectionType};`,
 	'',
 	'// ── Data ─────────────────────────────────────────────────────',
 	'',
-	'export const SETTINGS: Record<string, SettingMeta> = {',
+	'export const SETTINGS: Record<string, SettingMetadata> = {',
 ];
 
 for (const [key, meta] of Object.entries(entries)) {
@@ -153,15 +144,15 @@ for (const [key, meta] of Object.entries(entries)) {
 lines.push('};');
 lines.push('');
 
-// NAV_GROUPS first — SECTION_TITLES is derived from it below
-lines.push('export const NAV_GROUPS: NavGroupConfig[] = ');
+// SETTINGS_NAVIGATION_GROUPS first — SECTION_TITLES is derived from it below
+lines.push('export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] = ');
 lines.push(JSON.stringify(navGroups, null, '\t') + ';');
 lines.push('');
 
-// SECTION_TITLES derived from NAV_GROUPS — no separate hardcoded object
+// SECTION_TITLES derived from SETTINGS_NAVIGATION_GROUPS — no separate hardcoded object
 lines.push('export const SECTION_TITLES = Object.fromEntries(');
-lines.push('\tNAV_GROUPS.flatMap(g => g.sections.map((s: NavSectionConfig) => [s.id, s.label]))');
-lines.push(') as Record<NavSection, string>;');
+lines.push('\tSETTINGS_NAVIGATION_GROUPS.flatMap(g => g.sections.map((s: SettingsNavigationSectionConfig) => [s.id, s.label]))');
+lines.push(') as Record<SettingsNavigationSection, string>;');
 lines.push('');
 
 // CATALOG_EXTRAS — only the 4 VS Code built-in extras; all Mentor settings are in SETTINGS
@@ -172,12 +163,8 @@ for (const extra of catalogExtras) {
 lines.push('];');
 lines.push('');
 
-// EDITOR_SETTING_KEYS derived from CATALOG_EXTRAS
-lines.push('export const EDITOR_SETTING_KEYS = CATALOG_EXTRAS.map(e => e.key);');
-lines.push('');
-
-// MENTOR_LANGUAGES
-lines.push(`export const MENTOR_LANGUAGES = ${JSON.stringify(editorLanguages, null, '\t')} as const;`);
+// VSCODE_SETTING_KEYS derived from CATALOG_EXTRAS — keys read from VSCode's built-in editor.* config
+lines.push('export const VSCODE_SETTING_KEYS = CATALOG_EXTRAS.map(e => e.key);');
 lines.push('');
 
 // Helpers

@@ -3,20 +3,30 @@
  * Generated data structures live in settings-metadata.ts (auto-generated).
  */
 
+export type SettingScope = 'default' | 'user' | 'workspace';
+
+export type SettingState = {
+	value: unknown;
+	defaultValue: unknown;
+	source: SettingScope;
+	title: string;
+	description: string;
+};
+
 export interface EnumOption {
 	value: string;
 	label: string;
 }
 
-export interface NavSectionConfig {
+export interface SettingsNavigationSectionConfig {
 	id: string;
 	label: string;
 }
 
-export interface NavGroupConfig {
+export interface SettingsNavigationGroupConfig {
 	id: string;
 	label: string;
-	sections: NavSectionConfig[];
+	sections: SettingsNavigationSectionConfig[];
 }
 
 /**
@@ -29,4 +39,16 @@ export interface CatalogExtra {
 	key: string;
 	label: string;
 	description: string;
+}
+
+/**
+ * Compile-time metadata for a Mentor setting key, attached to entries in the
+ * generated `SETTINGS` record.
+ */
+export interface SettingMetadata {
+	section: import('./settings-metadata').SettingsNavigationSection;
+	uiVisible: boolean;
+	experimental?: boolean;
+	enumOptions?: EnumOption[];
+	nestedEnumOptions?: Record<string, EnumOption[]>;
 }

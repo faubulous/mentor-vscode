@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { useContext } from 'react';
-import { SettingScope, SettingState, LanguageId } from '../settings-panel-messages';
-import { EditorSettings } from './types';
+import { LanguageId } from '@src/services/document/document-factory';
+import { SettingScope, SettingState } from '../settings-types';
+import { VSCodeSettings } from './types';
 import { MarkdownText } from '../../components/markdown-text';
 import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from './section-header-context-menu';
 
@@ -21,9 +22,10 @@ export const SettingsMoveContext = React.createContext<
 >(null);
 
 /**
- * Provides a callback for moving an editor setting from one scope to another (copy + clear source).
+ * Provides a callback for moving a built-in VSCode editor.* setting from one scope to
+ * another (copy + clear source).
  */
-export const EditorSettingsMoveContext = React.createContext<
+export const VSCodeSettingsMoveContext = React.createContext<
 	((languageId: LanguageId, key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => void) | null
 >(null);
 
@@ -78,22 +80,22 @@ export function SettingRow({ label, description, settingKey, settings, onScopeCh
 	);
 }
 
-// ── EditorSettingRow ───────────────────────────────────────────
+// ── VSCodeSettingRow ───────────────────────────────────────────
 
-export interface EditorSettingRowProps {
+export interface VSCodeSettingRowProps {
 	label: React.ReactNode;
 	description?: string;
 	settingKey: string;
 	languageId: LanguageId;
-	editorSettings: EditorSettings;
+	vscodeSettings: VSCodeSettings;
 	onScopeChange: (languageId: LanguageId, key: string, newScope: SettingScope, currentValue: unknown) => void;
 	children: React.ReactNode;
 }
 
-export function EditorSettingRow({ label, description, settingKey, languageId, editorSettings, onScopeChange, children }: EditorSettingRowProps) {
+export function VSCodeSettingRow({ label, description, settingKey, languageId, vscodeSettings, onScopeChange, children }: VSCodeSettingRowProps) {
 	const activeScope = useContext(SettingsScopeContext);
-	const onMoveToScope = useContext(EditorSettingsMoveContext);
-	const state = editorSettings[languageId]?.[settingKey];
+	const onMoveToScope = useContext(VSCodeSettingsMoveContext);
+	const state = vscodeSettings[languageId]?.[settingKey];
 	const source = state?.source ?? 'default';
 	const isModified = source === activeScope && !valuesEqual(state?.value, state?.defaultValue);
 	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';

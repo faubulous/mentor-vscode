@@ -1,17 +1,20 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { WebviewController } from '@src/views/webviews/webview-controller';
-import { SparqlConnectionController } from '@src/views/webviews/sparql-connection/sparql-connection-controller';
 import { getConfig } from '@src/utilities/vscode/config';
-import { SettingsPanelMessages, SettingScope, SettingState, LanguageId } from './settings-panel-messages';
-import { SETTINGS, EDITOR_SETTING_KEYS, MENTOR_LANGUAGES } from './settings-metadata';
+import { LanguageId, MENTOR_LANGUAGE_IDS } from '@src/services/document/document-factory';
+import { SettingsPanelMessages } from './settings-panel-messages';
+import { SettingScope, SettingState } from './settings-types';
+import { SettingsNavigationSection, SETTINGS, VSCODE_SETTING_KEYS } from './settings-metadata';
+import { SettingsSectionController } from './settings-section-controller';
+import { createSectionControllers } from './sections';
 
 type PackageJsonSchema = { properties: Record<string, { title?: string; description?: string }> };
 
 export class SettingsPanelController extends WebviewController<SettingsPanelMessages> {
-	private _pendingSection?: string;
+	private _pendingDeepLink?: { section: SettingsNavigationSection; params?: Record<string, unknown> };
+	private readonly _sectionControllers = new Map<SettingsNavigationSection, SettingsSectionController>();
 
 	constructor() {
 		super({
@@ -21,53 +24,63 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 			panelIcon: 'gear',
 		});
 
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-
 		this.subscribe(
 			vscode.workspace.onDidChangeConfiguration((e) => {
 				if (e.affectsConfiguration('mentor')) {
 					this.postMessage({ id: 'OnSettingsChanged', settings: this._readAllSettings() });
 				}
 
-				for (const languageId of MENTOR_LANGUAGES) {
+				for (const languageId of MENTOR_LANGUAGE_IDS) {
 					if (e.affectsConfiguration(`[${languageId}]`)) {
 						this.postMessage({
-							id: 'OnEditorSettingsChanged',
+							id: 'OnVSCodeSettingsChanged',
 							languageId,
-							settings: this._readEditorSettings(languageId),
+							settings: this._readVSCodeSettings(languageId),
 						});
 					}
 				}
-			}),
-			connectionService.onDidChangeConnections(() => {
-				this.postMessage({
-					id: 'ConnectionsChanged',
-					connections: container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService).getConnections(),
-				});
 			})
 		);
+
+		const post = (message: unknown) => this.postMessage(message as SettingsPanelMessages);
+
+		for (const sectionController of createSectionControllers()) {
+			this._sectionControllers.set(sectionController.id, sectionController);
+			sectionController.initialize(post);
+			this.subscribe(sectionController);
+		}
 	}
 
-	// Expose postMessage publicly so the SparqlConnectionController shim can post
-	// OpenConnectionForm messages after delegating show() to this controller.
-	override postMessage(message: SettingsPanelMessages) {
-		super.postMessage(message);
-	}
-
-	async show(viewColumn?: vscode.ViewColumn, section?: string): Promise<void> {
+	/**
+	 * Opens the settings panel, optionally navigating to a specific section and forwarding
+	 * a `params` blob to the section's controller for interpretation (e.g. opening the
+	 * connection editor for a specific connection).
+	 *
+	 * If the panel is already open, the deep-link is dispatched immediately. Otherwise it
+	 * is stashed and dispatched once the React side has mounted (signaled by `GetSettings`).
+	 */
+	async openSection(section?: SettingsNavigationSection, params?: Record<string, unknown>, viewColumn?: vscode.ViewColumn): Promise<void> {
 		const panelAlreadyOpen = !!this.panel;
 
-		this._pendingSection = section;
+		this._pendingDeepLink = section ? { section, params } : undefined;
 
 		await super.show(viewColumn);
 
-		// If the panel was already open (just revealed), React won't remount and won't
-		// re-send GetSettings, so post NavigateTo directly now that the panel is visible.
-		if (section && panelAlreadyOpen) {
-			this.postMessage({ id: 'NavigateTo', section });
-			this._pendingSection = undefined;
+		if (panelAlreadyOpen) {
+			this._dispatchPendingDeepLink();
 		}
-		// Otherwise _pendingSection is flushed in the GetSettings handler once React mounts.
+	}
+
+	private _dispatchPendingDeepLink(): void {
+		if (!this._pendingDeepLink) {
+			return;
+		}
+		const { section, params } = this._pendingDeepLink;
+		this.postMessage({ id: 'NavigateTo', section });
+		if (params) {
+			this._sectionControllers.get(section)?.onActivate?.(params);
+		}
+		this._pendingDeepLink = undefined;
 	}
 
 	private _readAllSettings(): Record<string, SettingState> {
@@ -98,11 +111,11 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		return result;
 	}
 
-	private _readEditorSettings(languageId: LanguageId): Record<string, SettingState> {
+	private _readVSCodeSettings(languageId: LanguageId): Record<string, SettingState> {
 		const config = vscode.workspace.getConfiguration('editor', { languageId });
 		const result: Record<string, SettingState> = {};
 
-		for (const key of EDITOR_SETTING_KEYS) {
+		for (const key of VSCODE_SETTING_KEYS) {
 			const inspected = config.inspect(key);
 
 			if (inspected) {
@@ -135,7 +148,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		}
 	}
 
-	private async _updateEditorSetting(languageId: LanguageId, key: string, value: unknown, scope: SettingScope): Promise<void> {
+	private async _updateVSCodeSetting(languageId: LanguageId, key: string, value: unknown, scope: SettingScope): Promise<void> {
 		const config = vscode.workspace.getConfiguration('editor', { languageId });
 
 		if (scope === 'default') {
@@ -149,109 +162,15 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	}
 
 	protected async onDidReceiveMessage(message: SettingsPanelMessages): Promise<boolean> {
+		const sectionId = (message as { section?: SettingsNavigationSection }).section;
+		if (sectionId) {
+			const section = this._sectionControllers.get(sectionId);
+			if (section) {
+				return section.handleMessage(message as { section: SettingsNavigationSection; id: string } & Record<string, unknown>);
+			}
+		}
+
 		switch (message.id) {
-			case 'GetSettings': {
-				this.postMessage({ id: 'GetSettingsResult', settings: this._readAllSettings() });
-
-				if (this._pendingSection) {
-					this.postMessage({ id: 'NavigateTo', section: this._pendingSection });
-					this._pendingSection = undefined;
-				}
-
-				return true;
-			}
-			case 'UpdateSetting': {
-				await this._updateSetting(message.key, message.value, message.scope);
-				return true;
-			}
-			case 'GetEditorSettings': {
-				this.postMessage({
-					id: 'GetEditorSettingsResult',
-					languageId: message.languageId,
-					settings: this._readEditorSettings(message.languageId),
-				});
-				return true;
-			}
-			case 'UpdateEditorSetting': {
-				await this._updateEditorSetting(message.languageId, message.key, message.value, message.scope);
-				return true;
-			}
-			case 'GetConnections': {
-				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-
-				this.postMessage({ id: 'GetConnectionsResult', connections: connectionService.getConnections() });
-				return true;
-			}
-			case 'CreateConnection': {
-				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-				const connection = await connectionService.createConnection();
-
-				this.postMessage({ id: 'OpenConnectionForm', connection });
-				return true;
-			}
-			case 'EditConnection': {
-				this.postMessage({ id: 'OpenConnectionForm', connection: message.connection });
-				return true;
-			}
-			case 'DeleteConnection': {
-				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-				const displayName = message.connection.endpointUrl;
-				const answer = await vscode.window.showWarningMessage(
-					`Are you sure you want to delete the connection "${displayName}"?`,
-					{ modal: true },
-					'Delete'
-				);
-
-				if (answer === 'Delete') {
-					await connectionService.deleteConnection(message.connection.id);
-					await connectionService.saveConfiguration();
-				}
-				return true;
-			}
-			case 'MoveConnection': {
-				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-				
-				await connectionService.updateConnection({ ...message.connection, configScope: message.toScope });
-				await connectionService.saveConfiguration();
-
-				return true;
-			}
-			case 'TestConnection': {
-				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-				const result = await connectionService.testConnection(message.connection);
-
-				this.postMessage({
-					id: 'TestConnectionResult',
-					connectionId: message.connection.id,
-					success: result === null,
-					error: result?.message,
-				});
-
-				return true;
-			}
-			case 'ListGraphs': {
-				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-				const testResult = await connectionService.testConnection(message.connection);
-
-				if (testResult !== null) {
-					this.postMessage({
-						id: 'TestConnectionResult',
-						connectionId: message.connection.id,
-						success: false,
-						error: testResult.message,
-					});
-					return true;
-				}
-
-				this.postMessage({ id: 'TestConnectionResult', connectionId: message.connection.id, success: true });
-
-				await vscode.commands.executeCommand('mentor.command.listGraphs', message.connection);
-				return true;
-			}
-			case 'OpenInBrowser': {
-				await vscode.env.openExternal(vscode.Uri.parse(message.url));
-				return true;
-			}
 			case 'GetVersion': {
 				const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 				const version = (context.extension?.packageJSON?.version as string) ?? 'unknown';
@@ -259,49 +178,25 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 				this.postMessage({ id: 'GetVersionResult', version });
 				return true;
 			}
-			case 'GetSparqlConnectionCredential': {
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				const credential = await connectionController.getCredential(message.connectionId);
-
-				this.postMessage({ id: 'GetSparqlConnectionCredentialResult', connectionId: message.connectionId, credential });
+			case 'GetSettings': {
+				this.postMessage({ id: 'GetSettingsResult', settings: this._readAllSettings() });
+				this._dispatchPendingDeepLink();
 				return true;
 			}
-			case 'SaveSparqlConnection': {
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				await connectionController.saveConnection(message.connection, message.credential);
+			case 'UpdateSetting': {
+				await this._updateSetting(message.key, message.value, message.scope);
 				return true;
 			}
-			case 'UpdateSparqlConnection': {
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				await connectionController.updateConnection(message.connection);
+			case 'GetVSCodeSettings': {
+				this.postMessage({
+					id: 'GetVSCodeSettingsResult',
+					languageId: message.languageId,
+					settings: this._readVSCodeSettings(message.languageId),
+				});
 				return true;
 			}
-			case 'TestSparqlConnection': {
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				const result = await connectionController.testConnection(message.connection, message.credential);
-
-				this.postMessage({ id: 'TestSparqlConnectionResult', error: result });
-				return true;
-			}
-			case 'GetInferenceFeatureEnabled': {
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				const value = await connectionController.getInferenceFeatureEnabled();
-
-				this.postMessage({ id: 'GetInferenceFeatureEnabledResult', value });
-				return true;
-			}
-			case 'ToggleSparqlConnectionInference': {
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				const newValue = await connectionController.toggleInference(message.connectionId);
-
-				this.postMessage({ id: 'ToggleSparqlConnectionInferenceResult', connectionId: message.connectionId, inferenceEnabled: newValue });
-				return true;
-			}
-			case 'FetchMicrosoftAuthCredential': {
-				const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-				const credential = await connectionController.fetchMicrosoftCredential(message.connectionId, message.scopes);
-
-				this.postMessage({ id: 'FetchMicrosoftAuthCredentialResult', connectionId: message.connectionId, credential });
+			case 'UpdateVSCodeSetting': {
+				await this._updateVSCodeSetting(message.languageId, message.key, message.value, message.scope);
 				return true;
 			}
 			default:

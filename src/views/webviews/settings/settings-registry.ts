@@ -1,5 +1,5 @@
 import { ComponentType } from 'react';
-import { NavSection, SETTINGS } from './settings-metadata';
+import { SettingsNavigationSection, SETTINGS } from './settings-metadata';
 
 import { ConnectionsSection } from './sections/connections';
 import { DefinitionsTreeSection } from './sections/definitions-tree';
@@ -13,12 +13,12 @@ import { TemplatesSection } from './sections/templates';
 import { ValidationSection } from './sections/validation';
 
 export interface SectionRegistryEntry {
-    id: NavSection;
+    id: SettingsNavigationSection;
     component: ComponentType<any>;
     keys: string[];
 }
 
-export const SECTION_REGISTRY: Record<NavSection, SectionRegistryEntry> = {
+export const SECTION_REGISTRY: Record<SettingsNavigationSection, SectionRegistryEntry> = {
     'appearance.display': { id: 'appearance.display', component: DisplaySection, keys: [] },
     'appearance.definitions-tree': { id: 'appearance.definitions-tree', component: DefinitionsTreeSection, keys: [] },
     'editor.general': { id: 'editor.general', component: EditorGeneralSection, keys: [] },

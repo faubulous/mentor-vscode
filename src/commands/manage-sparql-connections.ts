@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { SettingsPanelController } from '@src/views/webviews/settings/settings-panel-controller';
+import { IViewRouter } from '@src/views/webviews';
 
 export const manageSparqlConnections = {
 	id: 'mentor.command.manageSparqlConnections',
 	handler: async () => {
-		const controller = container.resolve<SettingsPanelController>(ServiceToken.SettingsPanelController);
-		await controller.show(vscode.ViewColumn.Active, 'connections');
+		const router = container.resolve<IViewRouter>(ServiceToken.ViewRouter);
+		await router.open({ kind: 'settings', section: 'connections' }, vscode.ViewColumn.Active);
 	}
 };

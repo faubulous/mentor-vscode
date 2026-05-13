@@ -1,11 +1,11 @@
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { SettingsPanelController } from '@src/views/webviews/settings/settings-panel-controller';
+import { IViewRouter } from '@src/views/webviews';
 
 export const openSettings = {
 	id: 'mentor.command.openSettings',
 	handler: async () => {
-		const controller = container.resolve<SettingsPanelController>(ServiceToken.SettingsPanelController);
-		await controller.show();
+		const router = container.resolve<IViewRouter>(ServiceToken.ViewRouter);
+		await router.open({ kind: 'settings' });
 	}
 };

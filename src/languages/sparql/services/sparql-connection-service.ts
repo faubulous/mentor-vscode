@@ -233,6 +233,13 @@ export class SparqlConnectionService {
 	}
 
 	/**
+	 * Returns whether the experimental inference feature flag is enabled.
+	 */
+	async getInferenceFeatureEnabled(): Promise<boolean> {
+		return getConfig().get<boolean>('inference.enabled', false);
+	}
+
+	/**
 	 * Gets the storage key for storing inference enabled setting for a connection.
 	 */
 	private _getInferenceStorageKey(connectionId: string): string {
@@ -683,6 +690,22 @@ export class SparqlConnectionService {
 		this._onDidChangeConnections.fire();
 
 		return connection;
+	}
+
+	/**
+	 * Persists a connection edit together with its credential, replacing any existing
+	 * credential for the same connection. Surfaces a "saved" notification on success.
+	 */
+	async saveConnectionWithCredential(connection: SparqlConnection, credential: AuthCredential | null): Promise<void> {
+		await this.updateConnection(connection);
+		await this.saveConfiguration();
+
+		if (credential) {
+			await this._credentialStorage.deleteCredential(connection.id);
+			await this._credentialStorage.saveCredential(connection.id, credential);
+		}
+
+		vscode.window.showInformationMessage('SPARQL connection saved.');
 	}
 
 	/**

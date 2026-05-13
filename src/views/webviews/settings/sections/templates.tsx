@@ -1,4 +1,4 @@
-import { SettingScope, SettingState } from '../settings-panel-messages';
+import { SettingScope, SettingState } from '../settings-types';
 import { SectionHeader } from '../components/section-header';
 import { SettingRow } from '../components/setting-row';
 import { SECTION_TITLES } from '../settings-metadata';

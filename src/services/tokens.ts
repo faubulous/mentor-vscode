@@ -42,8 +42,6 @@ export enum ServiceToken {
 	WebviewControllerRegistry = "WebviewControllerRegistry",
 	/** Controller for the SPARQL results webview. */
 	SparqlResultsController = "SparqlResultsController",
-	/** Controller for the SPARQL connection editor webview. */
-	SparqlConnectionController = "SparqlConnectionController",
 	/** Controller for the SPARQL connections list webview. */
 	SparqlConnectionsListController = "SparqlConnectionsListController",
 	/** Service for discovering VS Code workspace files and their identifiers. */
@@ -59,5 +57,7 @@ export enum ServiceToken {
 	/** Service for updating workspace: URI references across all indexed documents on rename. */
 	ReferenceUpdateService = "ReferenceUpdateService",
 	/** Controller for the custom Mentor settings panel. */
-	SettingsPanelController = "SettingsPanelController"
+	SettingsPanelController = "SettingsPanelController",
+	/** Generic navigation router between webview panels. */
+	ViewRouter = "ViewRouter"
 }

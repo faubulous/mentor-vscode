@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockVscode = await import('@src/utilities/mocks/vscode');
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+const { mockRouter } = vi.hoisted(() => ({
+	mockRouter: {
+		open: vi.fn(),
+	},
+}));
+
 vi.mock('tsyringe', () => ({
-	container: { resolve: vi.fn(() => ({})) },
+	container: {
+		resolve: vi.fn((token: string) => {
+			if (token === 'ViewRouter') return mockRouter;
+			return {};
+		}),
+	},
 	injectable: () => (t: any) => t,
 	inject: () => () => {},
 	singleton: () => (t: any) => t,
@@ -12,14 +22,18 @@ vi.mock('tsyringe', () => ({
 
 import { openSettings } from '@src/commands/open-settings';
 
+beforeEach(() => {
+	vi.clearAllMocks();
+	mockRouter.open.mockResolvedValue(undefined);
+});
+
 describe('openSettings command', () => {
 	it('should have the correct id', () => {
 		expect(openSettings.id).toBe('mentor.command.openSettings');
 	});
 
-	it('should call vscode.commands.executeCommand with workbench.action.openSettings', async () => {
-		const executeSpy = vi.spyOn((mockVscode as any).commands, 'executeCommand');
+	it('should route to the settings panel via ViewRouter', async () => {
 		await openSettings.handler();
-		expect(executeSpy).toHaveBeenCalledWith('workbench.action.openSettings', '@ext:faubulous.mentor');
+		expect(mockRouter.open).toHaveBeenCalledWith({ kind: 'settings' });
 	});
 });

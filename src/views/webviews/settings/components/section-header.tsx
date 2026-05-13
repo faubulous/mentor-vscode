@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { SettingState } from "../settings-panel-messages";
+import { SettingState } from "../settings-types";
 import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from "./section-header-context-menu";
 import { SettingsScopeContext } from "./setting-row";
 

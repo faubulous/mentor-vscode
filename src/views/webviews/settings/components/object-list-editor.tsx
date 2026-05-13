@@ -1,16 +1,21 @@
 import * as React from 'react';
 import { useCallback } from 'react';
 
-export interface FieldDef {
+export interface ObjectListEditorFieldDef {
 	key: string;
+
 	label: string;
+
 	placeholder?: string;
+
 	className?: string;
 }
 
 interface ObjectListEditorProps {
 	items: Record<string, string>[];
-	fields: FieldDef[];
+
+	fields: ObjectListEditorFieldDef[];
+
 	onChange: (items: Record<string, string>[]) => void;
 }
 

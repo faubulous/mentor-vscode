@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
  */
 export interface SectionHeaderContextMenuItem {
 	label: string;
+
 	onClick: () => void;
 }
 
@@ -21,13 +22,18 @@ export function SectionHeaderContextMenu({ items }: { items: SectionHeaderContex
 	const containerRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		if (!open) return;
+		if (!open) {
+			return;
+		}
+
 		const handler = (e: MouseEvent) => {
 			if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
 				setOpen(false);
 			}
 		};
+
 		document.addEventListener('mousedown', handler);
+
 		return () => document.removeEventListener('mousedown', handler);
 	}, [open]);
 
@@ -38,7 +44,7 @@ export function SectionHeaderContextMenu({ items }: { items: SectionHeaderContex
 	return (
 		<div className="more-vert-container" ref={containerRef}>
 			<button className="more-vert-button" onClick={() => setOpen(o => !o)} title="More actions">
-				⋮
+				<vscode-icon name="kebab-vertical"></vscode-icon>
 			</button>
 			{open && (
 				<div className="more-vert-menu">

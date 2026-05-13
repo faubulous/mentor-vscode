@@ -14,7 +14,7 @@ export interface SparqlConnectionsListProps {
 	onTestConnection: (connection: SparqlConnection, e: React.MouseEvent) => void;
 	onListGraphs: (connection: SparqlConnection, e: React.MouseEvent) => void;
 	onOpenInBrowser: (url: string) => void;
-	onMoveConnection?: (connection: SparqlConnection, toScope: ConfigurationScope) => void;
+	onChangeSparqlConnectionScope?: (connection: SparqlConnection, toScope: ConfigurationScope) => void;
 }
 
 export function SparqlConnectionsList({
@@ -27,7 +27,7 @@ export function SparqlConnectionsList({
 	onTestConnection,
 	onListGraphs,
 	onOpenInBrowser,
-	onMoveConnection,
+	onChangeSparqlConnectionScope,
 }: SparqlConnectionsListProps) {
 	const isTestingAll = testingConnections.size > 0;
 	const testableCount = connections.length;
@@ -81,7 +81,6 @@ export function SparqlConnectionsList({
 							onTestConnection={onTestConnection}
 							onListGraphs={onListGraphs}
 							onOpenInBrowser={onOpenInBrowser}
-							onMoveConnection={onMoveConnection}
 						/>
 					))}
 				</div>

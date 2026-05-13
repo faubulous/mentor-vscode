@@ -2,7 +2,7 @@ import { SparqlConnection } from "@src/languages/sparql/services/sparql-connecti
 import { useCallback, useEffect, useState } from "react";
 import { SparqlConnectionView } from "./sparql-connection-view";
 import { AuthCredential, MicrosoftAuthCredential } from "@src/services/core/credential";
-import { useWebviewMessaging } from "../webview-hooks";
+import { useScopedWebviewMessaging } from "../webview-hooks";
 import { SparqlConnectionMessages } from "./sparql-connection-messages";
 
 export interface SparqlConnectionEditorProps {
@@ -50,7 +50,7 @@ export function SparqlConnectionEditor({ connection, onBack }: SparqlConnectionE
 		}
 	}, [connection, reset]);
 
-	const messaging = useWebviewMessaging<SparqlConnectionMessages>(handleMessage);
+	const messaging = useScopedWebviewMessaging<SparqlConnectionMessages>('connections', handleMessage);
 
 	useEffect(() => {
 		reset();

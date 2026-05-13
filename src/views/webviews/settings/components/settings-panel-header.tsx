@@ -14,7 +14,7 @@ export function MentorIcon() {
 	);
 }
 
-export interface PanelHeaderProps {
+export interface SettingsPanelHeaderProps {
 	version: string;
 	activeScope: 'user' | 'workspace';
 	searchTerm: string;
@@ -22,7 +22,7 @@ export interface PanelHeaderProps {
 	onSearchChange: (term: string) => void;
 }
 
-export function PanelHeader({ version, activeScope, onScopeTabChange, searchTerm, onSearchChange }: PanelHeaderProps) {
+export function SettingsPanelHeader({ version, activeScope, onScopeTabChange, searchTerm, onSearchChange }: SettingsPanelHeaderProps) {
 	return (
 		<div className="panel-header">
 			<div className="panel-header-inner">

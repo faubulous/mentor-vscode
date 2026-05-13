@@ -2,16 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockConnController } = vi.hoisted(() => ({
-	mockConnController: {
-		edit: vi.fn(),
+const { mockRouter } = vi.hoisted(() => ({
+	mockRouter: {
+		open: vi.fn(),
 	},
 }));
 
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionController') return mockConnController;
+			if (token === 'ViewRouter') return mockRouter;
 			return {};
 		}),
 	},
@@ -20,10 +20,12 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
+import * as vscode from 'vscode';
 import { editSparqlConnection } from '@src/commands/edit-sparql-connection';
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	mockRouter.open.mockResolvedValue(undefined);
 });
 
 describe('editSparqlConnection', () => {
@@ -31,10 +33,13 @@ describe('editSparqlConnection', () => {
 		expect(editSparqlConnection.id).toBe('mentor.command.editSparqlConnection');
 	});
 
-	it('should call controller.edit with the given connection', async () => {
+	it('should route to the connections section with the given connection', async () => {
 		const connection = { id: 'conn1', endpointUrl: 'http://endpoint' } as any;
 		await editSparqlConnection.handler(connection);
 
-		expect(mockConnController.edit).toHaveBeenCalledWith(connection);
+		expect(mockRouter.open).toHaveBeenCalledWith(
+			{ kind: 'settings', section: 'connections', params: { connection } },
+			vscode.ViewColumn.Active
+		);
 	});
 });

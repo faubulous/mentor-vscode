@@ -2,9 +2,10 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { createSparqlConnection } from '@src/commands/create-sparql-connection';
+import { editSparqlConnection } from '@src/commands/edit-sparql-connection';
 import { WebviewController } from '../webview-controller';
 import { SparqlConnectionsListMessages } from './sparql-connections-list-messages';
-import { SparqlConnectionController } from '../sparql-connection/sparql-connection-controller';
 
 export class SparqlConnectionsListController extends WebviewController<SparqlConnectionsListMessages> {
     constructor() {
@@ -59,14 +60,11 @@ export class SparqlConnectionsListController extends WebviewController<SparqlCon
                 return true;
             }
             case 'CreateConnection': {
-                const connection = await connectionService.createConnection();
-                const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-                connectionController.edit(connection);
+                    await vscode.commands.executeCommand(createSparqlConnection.id);
                 return true;
             }
             case 'EditConnection': {
-                const connectionController = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-                connectionController.edit(message.connection);
+                    await vscode.commands.executeCommand(editSparqlConnection.id, message.connection);
                 return true;
             }
             case 'DeleteConnection': {

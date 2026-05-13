@@ -1,12 +1,13 @@
 import { container } from 'tsyringe';
+import * as vscode from 'vscode';
 import { ServiceToken } from '@src/services/tokens';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { SparqlConnectionController } from '@src/views/webviews';
+import { IViewRouter } from '@src/views/webviews';
 
 export const editSparqlConnection = {
 	id: 'mentor.command.editSparqlConnection',
-	handler: async (endpoint: SparqlConnection) => {
-		const controller = container.resolve<SparqlConnectionController>(ServiceToken.SparqlConnectionController);
-		controller.edit(endpoint);
+	handler: async (connection: SparqlConnection) => {
+		const router = container.resolve<IViewRouter>(ServiceToken.ViewRouter);
+		await router.open({ kind: 'settings', section: 'connections', params: { connection } }, vscode.ViewColumn.Active);
 	}
 };

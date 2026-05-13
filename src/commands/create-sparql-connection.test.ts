@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockConnService, mockConnController } = vi.hoisted(() => ({
+const { mockConnService, mockRouter } = vi.hoisted(() => ({
 	mockConnService: {
 		createConnection: vi.fn(),
 		saveConfiguration: vi.fn(),
 	},
-	mockConnController: {
-		edit: vi.fn(),
+	mockRouter: {
+		open: vi.fn(),
 	},
 }));
 
@@ -16,7 +16,7 @@ vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
 			if (token === 'SparqlConnectionService') return mockConnService;
-			if (token === 'SparqlConnectionController') return mockConnController;
+			if (token === 'ViewRouter') return mockRouter;
 			return {};
 		}),
 	},
@@ -25,12 +25,14 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
+import * as vscode from 'vscode';
 import { createSparqlConnection } from '@src/commands/create-sparql-connection';
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockConnService.createConnection.mockResolvedValue({ id: 'new-conn', endpointUrl: 'http://endpoint' });
 	mockConnService.saveConfiguration.mockResolvedValue(undefined);
+	mockRouter.open.mockResolvedValue(undefined);
 });
 
 describe('createSparqlConnection', () => {
@@ -38,10 +40,13 @@ describe('createSparqlConnection', () => {
 		expect(createSparqlConnection.id).toBe('mentor.command.createSparqlConnection');
 	});
 
-	it('should call createConnection and then edit the new connection', async () => {
+	it('should call createConnection and route to the connections section with the new connection', async () => {
 		await createSparqlConnection.handler();
 
 		expect(mockConnService.createConnection).toHaveBeenCalled();
-		expect(mockConnController.edit).toHaveBeenCalledWith({ id: 'new-conn', endpointUrl: 'http://endpoint' });
+		expect(mockRouter.open).toHaveBeenCalledWith(
+			{ kind: 'settings', section: 'connections', params: { connection: { id: 'new-conn', endpointUrl: 'http://endpoint' } } },
+			vscode.ViewColumn.Active
+		);
 	});
 });

@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockConnListController } = vi.hoisted(() => ({
-	mockConnListController: {
+const { mockRouter } = vi.hoisted(() => ({
+	mockRouter: {
 		open: vi.fn(),
 	},
 }));
@@ -11,7 +11,7 @@ const { mockConnListController } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionsListController') return mockConnListController;
+			if (token === 'ViewRouter') return mockRouter;
 			return {};
 		}),
 	},
@@ -20,11 +20,12 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
+import * as vscode from 'vscode';
 import { manageSparqlConnections } from '@src/commands/manage-sparql-connections';
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockConnListController.open.mockResolvedValue(undefined);
+	mockRouter.open.mockResolvedValue(undefined);
 });
 
 describe('manageSparqlConnections', () => {
@@ -32,9 +33,12 @@ describe('manageSparqlConnections', () => {
 		expect(manageSparqlConnections.id).toBe('mentor.command.manageSparqlConnections');
 	});
 
-	it('should call controller.open', async () => {
+	it('should route to the settings panel on the connections section', async () => {
 		await manageSparqlConnections.handler();
 
-		expect(mockConnListController.open).toHaveBeenCalled();
+		expect(mockRouter.open).toHaveBeenCalledWith(
+			{ kind: 'settings', section: 'connections' },
+			vscode.ViewColumn.Active
+		);
 	});
 });

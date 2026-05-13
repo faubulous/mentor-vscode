@@ -12,7 +12,6 @@ export interface ConnectionsListItemProps {
 	onTestConnection: (connection: SparqlConnection, e: React.MouseEvent) => void;
 	onListGraphs: (connection: SparqlConnection, e: React.MouseEvent) => void;
 	onOpenInBrowser: (url: string) => void;
-	onMoveConnection?: (connection: SparqlConnection, toScope: ConfigurationScope) => void;
 }
 
 export function SparqlConnectionsListItem({
@@ -23,8 +22,7 @@ export function SparqlConnectionsListItem({
 	onDeleteConnection,
 	onTestConnection,
 	onListGraphs,
-	onOpenInBrowser,
-	onMoveConnection,
+	onOpenInBrowser
 }: ConnectionsListItemProps) {
 	const isProtected = connection.isProtected === true;
 	const isWorkspaceStore = connection.id === 'workspace';

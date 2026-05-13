@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { AuthCredential } from './credential';
+import { AuthCredential, MicrosoftAuthCredential } from './credential';
 import { ServiceToken } from '@src/services/tokens';
+import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
 
 /**
  * Service for managing credentials using the SecretStorage of Visual Studio Code.
@@ -50,5 +51,13 @@ export class CredentialStorageService {
      */
     async updateCredential(uri: string, credential: AuthCredential): Promise<void> {
         await this.saveCredential(uri, credential);
+    }
+
+    /**
+     * Acquires a Microsoft access token via the Mentor Microsoft auth provider command.
+     */
+    async fetchMicrosoftCredential(scopes: string[]): Promise<MicrosoftAuthCredential | null> {
+        const credential = await vscode.commands.executeCommand<MicrosoftAuthCredential | null>(loginMicrosoftAuthProvider.id, scopes);
+        return credential ?? null;
     }
 }

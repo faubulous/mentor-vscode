@@ -14,8 +14,6 @@ import { CredentialFactory } from '@src/services/core/credential-factory';
 import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 import stylesheet from './sparql-connection-view.css';
 
-// ─── Shared form component ────────────────────────────────────────────────────
-
 enum AuthTypeIndex {
 	None = 0,
 	Basic = 1,

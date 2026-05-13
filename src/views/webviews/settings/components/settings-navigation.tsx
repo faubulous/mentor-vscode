@@ -1,14 +1,14 @@
-import * as React from 'react';
 import { useState } from 'react';
-import { NavSection, NAV_GROUPS } from '../settings-metadata';
+import { SettingsNavigationSection, SETTINGS_NAVIGATION_GROUPS } from '../settings-metadata';
 
-interface SettingsNavProps {
-	activeSection: NavSection;
-	onSelect: (section: NavSection) => void;
+interface SettingsNavigationProps {
+	activeSection: SettingsNavigationSection;
+	onSelect: (section: SettingsNavigationSection) => void;
 }
 
-export function SettingsNav({ activeSection, onSelect }: SettingsNavProps) {
+export function SettingsNavigation({ activeSection, onSelect }: SettingsNavigationProps) {
 	const initialCollapsed: Record<string, boolean> = {};
+
 	const [collapsed, setCollapsed] = useState<Record<string, boolean>>(initialCollapsed);
 
 	const toggleGroup = (id: string) => {
@@ -17,18 +17,19 @@ export function SettingsNav({ activeSection, onSelect }: SettingsNavProps) {
 
 	return (
 		<nav className="settings-nav">
-			{NAV_GROUPS.map(group => {
+			{SETTINGS_NAVIGATION_GROUPS.map(group => {
 				const isSingleItem = group.sections.length === 1 && group.sections[0].id === group.id as string;
 				const isCollapsed = collapsed[group.id] ?? false;
 
 				if (isSingleItem) {
 					const item = group.sections[0];
+
 					return (
 						<div key={group.id} className="settings-nav-group">
 							<div
 								className={`settings-nav-group-header${activeSection === item.id ? ' active' : ''}`}
 								style={{ paddingLeft: '12px' }}
-								onClick={() => onSelect(item.id as NavSection)}
+								onClick={() => onSelect(item.id as SettingsNavigationSection)}
 							>
 								{group.label}
 							</div>
@@ -51,7 +52,7 @@ export function SettingsNav({ activeSection, onSelect }: SettingsNavProps) {
 									<div
 										key={item.id}
 										className={`settings-nav-item${activeSection === item.id ? ' active' : ''}`}
-										onClick={() => onSelect(item.id as NavSection)}
+										onClick={() => onSelect(item.id as SettingsNavigationSection)}
 									>
 										{item.label}
 									</div>

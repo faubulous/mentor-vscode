@@ -1,4 +1,5 @@
-import { LanguageId, SettingState } from '../settings-panel-messages';
+import { LanguageId } from '@src/services/document/document-factory';
+import { SettingState } from '../settings-types';
 
-export type EditorSettings = Record<LanguageId, Record<string, SettingState>>;
+export type VSCodeSettings = Record<LanguageId, Record<string, SettingState>>;
 export type TestResult = { success: boolean; error?: string } | null;
