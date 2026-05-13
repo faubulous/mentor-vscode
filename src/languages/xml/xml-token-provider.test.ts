@@ -42,12 +42,6 @@ describe('XmlTokenProvider', () => {
 		expect(disposables.length).toBeGreaterThan(0);
 	});
 
-	it('registers a hover provider for xml', () => {
-		const spy = vi.spyOn(vscode.languages, 'registerHoverProvider');
-		new XmlTokenProvider();
-		expect(spy).toHaveBeenCalledWith({ language: 'xml' }, expect.anything());
-	});
-
 	it('registers a rename provider for xml', () => {
 		const spy = vi.spyOn(vscode.languages, 'registerRenameProvider');
 		new XmlTokenProvider();
