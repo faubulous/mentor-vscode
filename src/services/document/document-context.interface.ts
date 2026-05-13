@@ -50,6 +50,13 @@ export interface IDocumentContext {
 	references: { [key: string]: Range[] };
 
 	/**
+	 * A human-readable slug used as the URI fragment for the document's graph IRI.
+	 * For notebook cells this replaces the opaque VS Code-assigned fragment.
+	 * When undefined the raw URI fragment is used as-is.
+	 */
+	slug: string | undefined;
+
+	/**
 	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion.
 	 */
 	typeAssertions: { [key: string]: Range[] };

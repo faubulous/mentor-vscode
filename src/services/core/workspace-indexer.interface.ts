@@ -8,7 +8,7 @@ export interface IWorkspaceIndexerService {
 	/**
 	 * Indicates if all workspace files have been indexed.
 	 */
-	readonly indexed: boolean;
+	readonly indexingFinished: boolean;
 
 	/**
 	 * An event that is fired when all workspace files have been indexed.
@@ -26,4 +26,9 @@ export interface IWorkspaceIndexerService {
 	 * @returns A promise that resolves when all workspace files were indexed.
 	 */
 	waitForIndexed(): Promise<void>;
+
+	/**
+	 * Open the debug console and show detailed log messages from the indexing process.
+	 */
+	showIndexStatus(): void;
 }

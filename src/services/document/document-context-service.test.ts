@@ -365,7 +365,7 @@ describe('DocumentContextService', () => {
 			expect(existingCtx.infer).toHaveBeenCalled();
 		});
 
-		it('force-reloads and replaces an already loaded context', async () => {
+		it('force-reloads an already loaded context without replacing it', async () => {
 			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
@@ -378,19 +378,13 @@ describe('DocumentContextService', () => {
 			// Pre-populate context as already loaded
 			const existingCtx = createMockContext({ uri: doc.uri, isLoaded: true });
 			service.contexts[uri] = existingCtx;
+			existingCtx.hasTokens = true;
 
-			const newCtx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
-			(mockDocumentFactory.create as any).mockReturnValue(newCtx);
+			const result = await service.loadDocument(doc, true);
 
-			const loadPromise = service.loadDocument(doc, true);
-
-			// Deliver tokens for force-reload
-			service.resolveTokens(uri, []);
-
-			const result = await loadPromise;
-
-			expect(result).toBe(newCtx);
-			expect(mockDocumentFactory.create).toHaveBeenCalled();
+			expect(result).toBe(existingCtx);
+			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
+			expect(existingCtx.loadTriples).toHaveBeenCalled();
 		});
 
 		it('does not block when context already has tokens', async () => {
@@ -412,6 +406,95 @@ describe('DocumentContextService', () => {
 
 			expect(result).toBe(ctxWithTokens);
 			expect(ctxWithTokens.loadTriples).toHaveBeenCalled();
+		});
+
+		it('sets ctx.slug before calling loadTriples when a slug is provided', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///nb.mnb#cell1';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'vscode-notebook-cell',
+				getText: () => '',
+			} as any;
+
+			let slugAtLoadTime: string | undefined;
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			(ctx.loadTriples as any).mockImplementation(async () => {
+				slugAtLoadTime = (ctx as any).slug;
+			});
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			await service.loadDocument(doc, false, 'my-data');
+
+			expect(slugAtLoadTime).toBe('my-data');
+			expect((ctx as any).slug).toBe('my-data');
+		});
+
+		it('does not set ctx.slug when no slug argument is provided', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'file',
+				getText: () => '',
+			} as any;
+
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			await service.loadDocument(doc);
+
+			expect((ctx as any).slug).toBeUndefined();
+		});
+
+		it('updates ctx.slug and triggers reload when context is already loaded with a different slug', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///nb.mnb#cell1';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'vscode-notebook-cell',
+				getText: () => '',
+			} as any;
+
+			// Pre-populate a context that is already loaded but has NO slug (race condition:
+			// handleActiveEditorChanged loaded it first without slug).
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: true, hasTokens: true });
+			service.contexts[uri] = ctx;
+
+			// Provide the document in textDocuments so _reloadContextTriples can find it.
+			(vscode.workspace as any).textDocuments = [doc];
+
+			await service.loadDocument(doc, false, 'my-data');
+
+			expect((ctx as any).slug).toBe('my-data');
+			// loadTriples should have been called by the async _reloadContextTriples.
+			expect(ctx.loadTriples).toHaveBeenCalled();
+
+			// Restore
+			(vscode.workspace as any).textDocuments = [];
+		});
+
+		it('does not reload when already-loaded context has the same slug', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const uri = 'file:///nb.mnb#cell1';
+			const doc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse(uri),
+				scheme: 'vscode-notebook-cell',
+				getText: () => '',
+			} as any;
+
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: true, hasTokens: true });
+			(ctx as any).slug = 'my-data';
+			service.contexts[uri] = ctx;
+
+			await service.loadDocument(doc, false, 'my-data');
+
+			// loadTriples should NOT be called because slug hasn't changed.
+			expect(ctx.loadTriples).not.toHaveBeenCalled();
 		});
 
 		it('returns context (partial load) on token timeout', async () => {
@@ -610,6 +693,33 @@ describe('DocumentContextService', () => {
 			// context-changed should NOT fire because uri === activeContext.uri
 			expect(fired).toHaveLength(0);
 		});
+
+		it('passes slug from notebookDocuments to loadDocument for notebook-cell URIs', async () => {
+			const { service, mockDocumentFactory } = createService();
+			const cellUri = vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#abc123');
+			const cellDoc = {
+				languageId: 'turtle',
+				uri: cellUri,
+				getText: () => '',
+			};
+			(vscode.window as any).activeTextEditor = { document: cellDoc };
+
+			// Set up a matching notebook with the cell and its slug metadata.
+			const cell = { document: cellDoc, metadata: { slug: 'my-data' } };
+			(vscode.workspace as any).notebookDocuments = [{
+				getCells: () => [cell],
+			}];
+
+			const ctx = createMockContext({ uri: cellUri, isLoaded: false, hasTokens: true });
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			await service.handleActiveEditorChanged();
+
+			expect((ctx as any).slug).toBe('my-data');
+
+			// Restore
+			(vscode.workspace as any).notebookDocuments = [];
+		});
 	});
 
 	describe('handleActiveNotebookEditorChanged', () => {
@@ -653,6 +763,105 @@ describe('DocumentContextService', () => {
 			await service.handleActiveNotebookEditorChanged(editor);
 
 			expect(mockDocumentFactory.create).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('handleNotebookDocumentChanged', () => {
+		it('assigns auto slugs to newly added RDF notebook cells and loads their contexts', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
+			(mockDocumentFactory.create as any).mockReturnValue(
+				createMockContext({
+					uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell2'),
+					isLoaded: false,
+					hasTokens: true,
+				})
+			);
+
+			const applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValue(true as any);
+
+			const existingCell = {
+				index: 0,
+				document: { uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell1') },
+				metadata: { slug: 'cell-1', slugIsAuto: true },
+			};
+
+			const addedCellDoc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell2'),
+				getText: () => '',
+			};
+
+			const addedCell = {
+				index: 1,
+				document: addedCellDoc,
+				metadata: {},
+			};
+
+			const notebook = {
+				uri: vscode.Uri.parse('file:///nb.mnb'),
+				getCells: () => [existingCell, addedCell],
+			};
+
+			await service.handleNotebookDocumentChanged({
+				notebook,
+				contentChanges: [{
+					addedCells: [addedCell],
+					removedCells: [],
+					start: 1,
+					deletedCount: 0,
+				}],
+			} as any);
+
+			expect(applyEditSpy).toHaveBeenCalled();
+			expect(mockDocumentFactory.create).toHaveBeenCalledWith(addedCellDoc.uri, 'turtle');
+
+			applyEditSpy.mockRestore();
+		});
+
+		it('keeps an existing slug for newly added RDF notebook cells', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
+			(mockDocumentFactory.create as any).mockReturnValue(
+				createMockContext({
+					uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell7'),
+					isLoaded: false,
+					hasTokens: true,
+				})
+			);
+
+			const applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValue(true as any);
+
+			const addedCellDoc = {
+				languageId: 'turtle',
+				uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell7'),
+				getText: () => '',
+			};
+
+			const addedCell = {
+				index: 0,
+				document: addedCellDoc,
+				metadata: { slug: 'custom-slug', slugIsAuto: false },
+			};
+
+			const notebook = {
+				uri: vscode.Uri.parse('file:///nb.mnb'),
+				getCells: () => [addedCell],
+			};
+
+			await service.handleNotebookDocumentChanged({
+				notebook,
+				contentChanges: [{
+					addedCells: [addedCell],
+					removedCells: [],
+					start: 0,
+					deletedCount: 0,
+				}],
+			} as any);
+
+			expect(applyEditSpy).not.toHaveBeenCalled();
+
+			applyEditSpy.mockRestore();
 		});
 	});
 
@@ -1007,7 +1216,7 @@ describe('DocumentContextService', () => {
 	});
 
 	describe('loadDocument (vscode-notebook-cell scheme)', () => {
-		it('logs the document URI when loading a notebook cell', async () => {
+		it('does not log the document URI when loading a notebook cell', async () => {
 			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///nb.mnb#cell0';
 			const doc = {
@@ -1022,7 +1231,7 @@ describe('DocumentContextService', () => {
 
 			await service.loadDocument(doc);
 
-			expect(logSpy).toHaveBeenCalledWith(doc.uri);
+			expect(logSpy).not.toHaveBeenCalledWith(doc.uri);
 			logSpy.mockRestore();
 		});
 	});
@@ -1067,6 +1276,16 @@ describe('DocumentContextService', () => {
 			});
 			createService();
 			await capturedHandler?.({ languageId: 'plaintext', uri: vscode.Uri.parse('file:///x.txt') });
+		});
+
+		it('invokes handleNotebookDocumentChanged via the registered onDidChangeNotebookDocument callback', async () => {
+			let capturedHandler: Function | undefined;
+			vi.spyOn(vscode.workspace, 'onDidChangeNotebookDocument').mockImplementationOnce((handler: any) => {
+				capturedHandler = handler;
+				return { dispose: () => {} };
+			});
+			createService();
+			await capturedHandler?.({ notebook: { getCells: () => [] }, contentChanges: [] });
 		});
 	});
 

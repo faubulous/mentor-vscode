@@ -134,13 +134,26 @@ export class TurtleDocument extends DocumentContext {
 	public override async loadTriples(data: string): Promise<void> {
 		try {
 			const store = container.resolve<Store>(ServiceToken.Store);
-			// Initialize the graphs *before* trying to load the document so 
-			// that they are initialized even when loading the document fails.
 			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 			const g = store.dataFactory.namedNode(graphUri);
 
+			// Capture old graph URIs before resetting (needed to clean up slug changes).
+			const oldGraphs = [...this.graphs];
+
+			// Initialize the graphs *before* trying to load the document so 
+			// that they are initialized even when loading the document fails.
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
+
+			// Delete old graphs (handles slug changes and stale triples removed from the
+			// document). Done after resetting this.graphs so the invariant holds on error.
+			store.deleteGraphs([...oldGraphs, graphUri]);
+
+			// Reset inference flag so that infer() re-runs after each reload.
+			// This is essential when a slug update triggers a reload: the old inference
+			// graph (based on the opaque cell ID) has already been deleted above, and
+			// a fresh inference pass is needed to populate the slug-based graph.
+			this._inferenceExecuted = false;
 
 			// Only updates the existing graphs if the document was parsed successfully.
 			// Uses existing tokens that were set by the language server.
@@ -343,7 +356,7 @@ export class TurtleDocument extends DocumentContext {
 					iri = Uri.getNormalizedUri(iri);
 
 					if (previousToken) {
-						this._registerSubject(t, iri, previousToken);
+						this._registerSubject(tokens, i, t, iri, previousToken);
 					}
 
 					this._handleTypeAssertion(tokens, t, iri, i);
@@ -355,7 +368,7 @@ export class TurtleDocument extends DocumentContext {
 					const iri = getIriFromIriReference(t.image);
 
 					if (t.startColumn === 1 && previousToken) {
-						this._registerSubject(t, iri, previousToken);
+						this._registerSubject(tokens, i, t, iri, previousToken);
 					}
 
 					this._handleTypeAssertion(tokens, t, iri, i);
@@ -381,7 +394,7 @@ export class TurtleDocument extends DocumentContext {
 					const id = t.image;
 
 					if (t.startColumn === 1 && previousToken) {
-						this._registerSubject(t, id, previousToken);
+						this._registerSubject(tokens, i, t, id, previousToken);
 					}
 
 					this._handleResourceReference(tokens, t, id);
@@ -397,10 +410,25 @@ export class TurtleDocument extends DocumentContext {
 		});
 	}
 
-	private _registerSubject(token: IToken, iriOrBlankId: string, previousToken: IToken) {
+	private _registerSubject(tokens: IToken[], tokenIndex: number, token: IToken, iriOrBlankId: string, previousToken: IToken) {
 		const previousType = previousToken.tokenType.name;
 
+		let isSubject = false;
+
 		if (previousType === RdfToken.PERIOD.name) {
+			isSubject = true;
+		} else if (previousType === RdfToken.IRIREF.name) {
+			// SPARQL-style PREFIX declarations end with an IRIREF (no period).
+			// If the token two places back is a PNAME_NS, the IRIREF was a namespace URI,
+			// meaning the current token opens the first triple after those PREFIX declarations.
+			const tokenBeforePrevious = tokens[tokenIndex - 2];
+			
+			if (tokenBeforePrevious?.tokenType.name === RdfToken.PNAME_NS.name) {
+				isSubject = true;
+			}
+		}
+
+		if (isSubject) {
 			const range = this.getRangeFromToken(token);
 
 			if (!this.subjects[iriOrBlankId]) {

@@ -63,16 +63,31 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		const edit = new vscode.WorkspaceEdit();
 
 		// Collect prefix lines with their line numbers.
+		// Guard against stale tokens (e.g. after removeUnusedPrefixes runs before the language
+		// server delivers fresh tokens): skip duplicate line numbers and lines whose text no
+		// longer looks like a PREFIX declaration.
 		const prefixLines: { line: number; text: string }[] = [];
+		const seenLines = new Set<number>();
 
 		for (const token of context.tokens) {
 			if (this._prefixTokenTypes.has(token.tokenType.name)) {
 				const line = (token.startLine ?? 1) - 1;
-				prefixLines.push({ line, text: document.lineAt(line).text });
+
+				if (seenLines.has(line)) continue;
+
+				seenLines.add(line);
+
+				const text = document.lineAt(line).text;
+
+				if (/(?:@?prefix\s+)\S*:/i.test(text)) {
+					prefixLines.push({ line, text });
+				}
 			}
 		}
 
-		if (prefixLines.length === 0) return edit;
+		if (prefixLines.length === 0) {
+			return edit;
+		}
 
 		// Sort lines by extracted prefix name.
 		prefixLines.sort((a, b) => {

@@ -103,13 +103,20 @@ export class WorkspaceUri {
 	 * Converts an absolute file system URI (file://..) to a workspace-relative Mentor VFS URI that
 	 * can be resolved by the Mentor document link provider and the Mentor virtual file system provider.
 	 * @param documentIri The absolute file system URI to convert.
+	 * @param fragmentOverride When provided, overrides the URI fragment (e.g. a notebook cell slug).
 	 * @returns The corresponding Mentor VFS URI.
 	 */
-	static toWorkspaceUri(documentIri: vscode.Uri): CanonicalWorkspaceUri | undefined {
+	static toWorkspaceUri(documentIri: vscode.Uri, fragmentOverride?: string): CanonicalWorkspaceUri | undefined {
 		if (documentIri.scheme === this.uriScheme) {
-			return documentIri instanceof CanonicalWorkspaceUri
+			const result = documentIri instanceof CanonicalWorkspaceUri
 				? documentIri
 				: new CanonicalWorkspaceUri(documentIri);
+
+			if (fragmentOverride !== undefined) {
+				return new CanonicalWorkspaceUri(result.with({ fragment: fragmentOverride }));
+			}
+
+			return result;
 		}
 
 		const root = this.getEffectiveRootUri();
@@ -127,7 +134,7 @@ export class WorkspaceUri {
 			return new CanonicalWorkspaceUri(vscode.Uri.from({
 				scheme: this.uriScheme,
 				path: relativePath,
-				fragment: documentIri.fragment || undefined
+				fragment: fragmentOverride ?? (documentIri.fragment || undefined)
 			}));
 		}
 
@@ -144,7 +151,7 @@ export class WorkspaceUri {
 						return new CanonicalWorkspaceUri(vscode.Uri.from({
 							scheme: this.uriScheme,
 							path: relativePath,
-							fragment: documentIri.fragment || undefined
+							fragment: fragmentOverride ?? (documentIri.fragment || undefined)
 						}));
 					}
 				}

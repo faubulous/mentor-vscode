@@ -42,11 +42,19 @@ export abstract class DocumentContext implements IDocumentContext {
 	readonly graphs: string[] = [];
 
 	/**
+	 * A human-readable slug used as the URI fragment for the document's graph IRI.
+	 * For notebook cells this overrides the opaque VS Code-assigned fragment so that
+	 * the graph IRI is stable and readable (e.g. `workspace:///notebook.mnb#my-data`).
+	 * When undefined the raw URI fragment is used as-is.
+	 */
+	slug: string | undefined;
+
+	/**
 	 * Get the URI of the document graph in the triple store.
 	 * @note This is a workspace-relative URI so that queries which are persisted in a repository are portable.
 	 */
 	get graphIri(): vscode.Uri {
-		return WorkspaceUri.toWorkspaceUri(this.uri) || this.uri;
+		return WorkspaceUri.toWorkspaceUri(this.uri, this.slug) || this.uri;
 	}
 
 	/**
@@ -74,6 +82,7 @@ export abstract class DocumentContext implements IDocumentContext {
 	 */
 	references: { [key: string]: Range[] } = {};
 
+	// TODO: Remove all type definitions from this map and query the combination of typeAssertion and typeDefinitions instead.
 	// TODO: Remove all type definitions from this map and query the combination of typeAssertion and typeDefinitions instead.
 	/**
 	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion. This includes

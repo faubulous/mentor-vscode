@@ -70,7 +70,9 @@ describe('NotebookSerializer', () => {
 				],
 			};
 			const result = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
-			expect(result.cells[0].metadata).toEqual({ connection: 'local' });
+			// The serializer adds slug fields; the original metadata properties must be preserved.
+			expect(result.cells[0].metadata).toMatchObject({ connection: 'local' });
+			expect(result.cells[0].metadata?.slug).toBeDefined();
 		});
 
 		it('should deserialize multiple cells maintaining order', async () => {
@@ -147,4 +149,127 @@ describe('NotebookSerializer', () => {
 			expect(deserialized.cells[1].languageId).toBe('markdown');
 		});
 	});
+
+	describe('slug assignment', () => {
+		it('assigns an auto-slug to a cell that has no slug', async () => {
+			const raw = {
+				cells: [
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '' },
+				],
+			};
+			const result = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			expect(result.cells[0].metadata?.slug).toBe('cell-1');
+			expect(result.cells[0].metadata?.slugIsAuto).toBe(true);
+		});
+
+		it('assigns sequential auto-slugs to multiple cells without slugs', async () => {
+			const raw = {
+				cells: [
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '' },
+					{ kind: vscode.NotebookCellKind.Code, language: 'sparql', value: '' },
+					{ kind: vscode.NotebookCellKind.Markup, language: 'markdown', value: '' },
+				],
+			};
+			const result = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			expect(result.cells[0].metadata?.slug).toBe('cell-1');
+			expect(result.cells[1].metadata?.slug).toBe('cell-2');
+			expect(result.cells[2].metadata?.slug).toBe('cell-3');
+			expect(result.cells.every(c => c.metadata?.slugIsAuto)).toBe(true);
+		});
+
+		it('preserves a valid explicit slug', async () => {
+			const raw = {
+				cells: [
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '', metadata: { slug: 'my-ontology', slugIsAuto: false } },
+				],
+			};
+			const result = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			expect(result.cells[0].metadata?.slug).toBe('my-ontology');
+			expect(result.cells[0].metadata?.slugIsAuto).toBeFalsy();
+		});
+
+		it('auto-slugs a cell with an invalid slug format', async () => {
+			const raw = {
+				cells: [
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '', metadata: { slug: 'Invalid Slug!', slugIsAuto: false } },
+				],
+			};
+			const result = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			expect(result.cells[0].metadata?.slug).toBe('cell-1');
+			expect(result.cells[0].metadata?.slugIsAuto).toBe(true);
+		});
+
+		it('auto-slugs a cell whose explicit slug conflicts with another explicit slug', async () => {
+			const raw = {
+				cells: [
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '', metadata: { slug: 'same-slug', slugIsAuto: false } },
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '', metadata: { slug: 'same-slug', slugIsAuto: false } },
+				],
+			};
+			const result = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			// Both should get auto-slugs since neither was unique
+			expect(result.cells[0].metadata?.slugIsAuto).toBe(true);
+			expect(result.cells[1].metadata?.slugIsAuto).toBe(true);
+			expect(result.cells[0].metadata?.slug).not.toBe(result.cells[1].metadata?.slug);
+		});
+
+		it('continues the cell counter from the stored notebook metadata', async () => {
+			const raw = {
+				metadata: { cellCounter: 7 },
+				cells: [
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '' },
+				],
+			};
+			const result = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			expect(result.cells[0].metadata?.slug).toBe('cell-8');
+		});
+
+		it('persists cellCounter in notebook metadata when serializing', async () => {
+			const raw = {
+				cells: [
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '' },
+					{ kind: vscode.NotebookCellKind.Code, language: 'sparql', value: '' },
+				],
+			};
+			// Deserialize to assign slugs (counter becomes 2)
+			const deserialized = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			// Serialize back
+			const serialized = await serializer.serializeNotebook(deserialized, cancelToken);
+			const parsed = JSON.parse(decode(serialized));
+			expect(parsed.metadata?.cellCounter).toBe(2);
+		});
+
+		it('does not reuse a counter value after a round-trip (monotonic guarantee)', async () => {
+			const raw = {
+				cells: [
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '' },
+					{ kind: vscode.NotebookCellKind.Code, language: 'sparql', value: '' },
+				],
+			};
+			// First round-trip: assigns cell-1 and cell-2, counter=2
+			const first = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			const firstSerialized = await serializer.serializeNotebook(first, cancelToken);
+
+			// Simulate adding a new cell (no slug) and round-tripping again
+			const parsed = JSON.parse(decode(firstSerialized));
+			parsed.cells.push({ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '' });
+
+			const second = await serializer.deserializeNotebook(encode(JSON.stringify(parsed)), cancelToken);
+			expect(second.cells[2].metadata?.slug).toBe('cell-3');
+		});
+
+		it('auto-slug does not collide with an existing explicit slug', async () => {
+			const raw = {
+				cells: [
+					// Explicit slug 'cell-1' — the auto-slug generator must skip this
+					{ kind: vscode.NotebookCellKind.Code, language: 'turtle', value: '', metadata: { slug: 'cell-1', slugIsAuto: false } },
+					{ kind: vscode.NotebookCellKind.Code, language: 'sparql', value: '' },
+				],
+			};
+			const result = await serializer.deserializeNotebook(encode(JSON.stringify(raw)), cancelToken);
+			expect(result.cells[0].metadata?.slug).toBe('cell-1');
+			expect(result.cells[1].metadata?.slug).not.toBe('cell-1');
+		});
+	});
 });
+

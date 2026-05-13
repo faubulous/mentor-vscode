@@ -59,6 +59,12 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			}
 		});
 
+		this._validationService.onDidValidate(() => {
+			if (this._enabled) {
+				this._onDidChangeCodeLenses.fire();
+			}
+		});
+
 		this._initialized = true;
 		this._initializing = false;
 	}
@@ -95,11 +101,11 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			let title = "";
 
 			if (shapeCount > 1) {
-				title += `$(file)\u00A0${shapeCount} shape files active`;
+				title += `$(file)\u00A0Validation: ${shapeCount} files enabled`;
 			} else if (shapeCount === 1) {
-				title += `$(file)\u00A0${shapeCount} shape file active`;
+				title += `$(file)\u00A0Validation: ${shapeCount} file enabled`;
 			} else {
-				title += `$(file)\u00A0No shape files active`;
+				title += `$(file)\u00A0Validation: not configured`;
 			}
 
 			result.push(new vscode.CodeLens(range, {

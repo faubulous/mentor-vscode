@@ -4,7 +4,8 @@ import { ServiceToken } from '@src/services/tokens';
 import {
 	ResourceReferenceProvider,
 	ResourceDefinitionProvider,
-	ResourceTooltipProvider
+	WorkspaceGraphDefinitionProvider,
+	NotebookCellSlugCodeLensProvider
 } from '@src/providers';
 import {
 	TurtleAutoDefinePrefixProvider,
@@ -21,7 +22,8 @@ const codeActionsProvider = new TurtleCodeActionsProvider();
 const codelensProvider = new TurtleUsageCodeLensProvider();
 const completionProvider = new TurtleCompletionItemProvider();
 const definitionProvider = new ResourceDefinitionProvider();
-const hoverProvider = new ResourceTooltipProvider();
+const notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider();
+const workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider();
 const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`);
 const referenceProvider = new ResourceReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
@@ -55,12 +57,13 @@ export class TurtleTokenProvider {
 			vscode.languages.registerCodeLensProvider({ language }, codelensProvider),
 			vscode.languages.registerCompletionItemProvider({ language }, completionProvider, ':'),
 			vscode.languages.registerDefinitionProvider({ language }, definitionProvider),
-			vscode.languages.registerHoverProvider({ language }, hoverProvider),
+			vscode.languages.registerDefinitionProvider({ language }, workspaceGraphDefinitionProvider),
 			vscode.languages.registerDocumentFormattingEditProvider({ language }, formattingProvider),
 			vscode.languages.registerInlineCompletionItemProvider({ language }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language }, referenceProvider),
 			vscode.languages.registerRenameProvider({ language }, renameProvider),
 			vscode.languages.registerCodeLensProvider({ language }, validationCodelensProvider),
+			vscode.languages.registerCodeLensProvider({ language }, notebookSlugCodelensProvider),
 		]
 	}
 }

@@ -9,6 +9,7 @@ vi.mock('vscode-languageserver/browser', async () => {
 		onDidClose = vi.fn();
 		onDidChangeContent = vi.fn();
 		all = vi.fn(() => []);
+		get = vi.fn(() => undefined);
 	}
 	return { ...actual, TextDocuments };
 });
@@ -21,6 +22,7 @@ function makeConnection() {
 		onInitialize: vi.fn(),
 		onInitialized: vi.fn(),
 		onDidChangeConfiguration: vi.fn(),
+		onRequest: vi.fn(),
 		console: { log: vi.fn() },
 		sendDiagnostics: vi.fn(),
 		sendNotification: vi.fn(),

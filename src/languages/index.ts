@@ -1,4 +1,5 @@
 export * from './language-client';
+export * from './language-client-registry';
 export * from './datalog/datalog-token-provider';
 export * from './xml/xml-document';
 export * from './xml/xml-language-client';

@@ -10,6 +10,7 @@ vi.mock('vscode-languageserver/browser', async () => {
 		onDidClose = vi.fn();
 		onDidChangeContent = vi.fn();
 		all = vi.fn(() => []);
+		get = vi.fn(() => undefined);
 	}
 	return { ...actual, TextDocuments };
 });
@@ -24,6 +25,7 @@ function makeConnection() {
 		onInitialize: vi.fn(),
 		onInitialized: vi.fn(),
 		onDidChangeConfiguration: vi.fn(),
+		onRequest: vi.fn(),
 		console: { log: vi.fn() },
 		sendDiagnostics: vi.fn(),
 		sendNotification: vi.fn(),
@@ -65,6 +67,38 @@ describe('LanguageServerBase', () => {
 
 	beforeEach(() => {
 		server = new TestServer();
+	});
+
+	describe('refresh context request', () => {
+		it('registers a refresh context request handler', () => {
+			const connection = makeConnection();
+			new TestServer(connection);
+
+			expect(connection.onRequest).toHaveBeenCalledWith('mentor.request.refreshDocument', expect.any(Function));
+		});
+
+		it('validates a tracked document when requested', async () => {
+			const connection = makeConnection();
+			const requestServer = new TestServer(connection);
+			const requestCall = connection.onRequest.mock.calls.find((call: any[]) => call[0] === 'mentor.request.refreshDocument');
+			const requestHandler = requestCall?.[1] as (params: { uri?: string }) => Promise<boolean>;
+			const document = makeDoc('test');
+
+			vi.spyOn((requestServer as any).documents, 'get').mockReturnValue(document);
+			const validateSpy = vi.spyOn(requestServer as any, 'validateTextDocument').mockResolvedValue(undefined);
+
+			await expect(requestHandler({ uri: document.uri })).resolves.toBe(true);
+			expect(validateSpy).toHaveBeenCalledWith(document);
+		});
+
+		it('returns false when requested uri is not tracked', async () => {
+			const connection = makeConnection();
+			new TestServer(connection);
+			const requestCall = connection.onRequest.mock.calls.find((call: any[]) => call[0] === 'mentor.request.refreshDocument');
+			const requestHandler = requestCall?.[1] as (params: { uri?: string }) => Promise<boolean>;
+
+			await expect(requestHandler({ uri: 'file:///missing.ttl' })).resolves.toBe(false);
+		});
 	});
 
 	describe('getLexDiagnostics', () => {

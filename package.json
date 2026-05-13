@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -45,7 +45,7 @@
     "url": "https://github.com/faubulous/mentor-vscode"
   },
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.105.0"
   },
   "categories": [
     "Programming Languages"
@@ -72,9 +72,10 @@
     "@rdfjs/types": "^2.0.1",
     "@types/n3": "^1.26.1",
     "@types/node": "^25.6.0",
+    "@types/picomatch": "^4.0.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/vscode": "^1.110.0",
+    "@types/vscode": "^1.105.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@typescript-eslint/eslint-plugin": "^8.59.1",
     "@typescript-eslint/parser": "^8.59.1",
@@ -99,6 +100,7 @@
     "@faubulous/mentor-rdf-parsers": "^1.9.0",
     "@faubulous/mentor-rdf-serializers": "^1.6.2",
     "@vscode/codicons": "^0.0.45",
+    "picomatch": "^4.0.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "reflect-metadata": "^0.2.2",
@@ -109,6 +111,7 @@
     "vscode-languageserver-textdocument": "^1.0.12"
   },
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:xml",
     "onNotebook:mentor-notebook"
   ],
@@ -610,9 +613,9 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.command.analyzeWorkspace",
-        "title": "Find Problems",
-        "icon": "$(debug-alt)",
+        "command": "mentor.command.reindexWorkspace",
+        "title": "Reindex Workspace...",
+        "icon": "$(app-mentor)",
         "category": "Mentor"
       },
       {
@@ -866,6 +869,24 @@
         "title": "Show Shape References",
         "icon": "$(list-selection)",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.editNotebookCellSlug",
+        "title": "Edit Cell Slug",
+        "icon": "$(tag)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.renumberNotebookCells",
+        "title": "Renumber Cells",
+        "icon": "$(list-ordered)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.showIndexStatus",
+        "title": "Show Index Status",
+        "icon": "$(list-ordered)",
+        "category": "Mentor"
       }
     ],
     "submenus": [
@@ -903,9 +924,9 @@
       ],
       "view/title": [
         {
-          "command": "mentor.command.analyzeWorkspace",
+          "command": "mentor.command.reindexWorkspace",
           "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
-          "group": "navigation@1"
+          "group": "2_workspace"
         },
         {
           "command": "mentor.command.createDocument",
@@ -1068,6 +1089,10 @@
       ],
       "commandPalette": [
         {
+          "command": "mentor.command.editNotebookCellSlug",
+          "when": "false"
+        },
+        {
           "command": "mentor.command.convertFileFormatToNTriplesSubmenu",
           "when": "false"
         },
@@ -1105,6 +1130,11 @@
         {
           "command": "mentor.command.setNotebookInference",
           "when": "notebookType == 'mentor-notebook' && config.mentor.inference.enabled",
+          "group": "navigation"
+        },
+        {
+          "command": "mentor.command.renumberNotebookCells",
+          "when": "notebookType == 'mentor-notebook'",
           "group": "navigation"
         }
       ]
@@ -1475,7 +1505,7 @@
           },
           "mentor.index.ignoreFolders": {
             "type": "array",
-            "title": "Excluded Folders",
+            "title": "Ignored Folders",
             "description": "Manage the folders that should be skipped when indexing the workspace.",
             "default": [
               ".vscode",
@@ -1483,10 +1513,16 @@
               "node_modules"
             ]
           },
+          "mentor.index.includeFiles": {
+            "type": "array",
+            "title": "Included Files",
+            "description": "Allows to manage a list of files as glob patterns that should be included in the workspace index even if they exceed the max file size limit.",
+            "default": []
+          },
           "mentor.index.maxFileSize": {
             "type": "number",
             "title": "Max File Size",
-            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors. Opening a larger file in an editor or running the 'Analyze Workspace' command will index files above this limit.",
+            "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors.",
             "default": 1500000
           },
           "mentor.editor.codeLensEnabled": {
@@ -1661,6 +1697,27 @@
               "Unresolved references will be treated as information messages.",
               "Unresolved references will be treated as hints.",
               "Unresolved references will not be reported."
+            ],
+            "default": "Warning",
+            "experimental": true
+          },
+          "mentor.linting.unresolvedWorkspaceGraphSeverity": {
+            "type": "string",
+            "title": "Severity: Unresolved Workspace Graphs",
+            "description": "The severity level for workspace: URI references that do not resolve to a known graph in the store.",
+            "enum": [
+              "Error",
+              "Warning",
+              "Information",
+              "Hint",
+              "Disabled"
+            ],
+            "enumDescriptions": [
+              "Unresolved workspace graphs will be treated as errors.",
+              "Unresolved workspace graphs will be treated as warnings.",
+              "Unresolved workspace graphs will be treated as information messages.",
+              "Unresolved workspace graphs will be treated as hints.",
+              "Unresolved workspace graphs will not be reported."
             ],
             "default": "Warning",
             "experimental": true
