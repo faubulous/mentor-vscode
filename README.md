@@ -30,6 +30,7 @@ The developer friendly IDE for RDF knowledge graphs.
 ## News
 
 ### Version 0.5.9: Service Release
+- Switched API compatibility to VS Code 1.105 to support Amazon Kiro
 - Enabled resource tooltip for all languages
 - Added option to copy Cell URI in notebook code lens
 - Added reference update service to update references to URIs accross documents
