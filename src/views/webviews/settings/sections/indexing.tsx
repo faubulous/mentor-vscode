@@ -5,18 +5,18 @@ import { StringListEditor } from '../components/string-list-editor';
 import { SECTION_TITLES } from '../settings-metadata';
 
 export interface IndexingSectionProps {
+	keys: string[];
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;
 	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void;
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
-export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope }: IndexingSectionProps) {
-	const keys = ['index.maxFileSize', 'index.useGitIgnore', 'index.ignoreFolders', 'index.includeFiles'];
-
+export function IndexingSection({ keys, settings, onUpdate, onScopeChange, onBulkScope }: IndexingSectionProps) {
 	return (
 		<div>
 			<SectionHeader title={SECTION_TITLES['indexing']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			
 			<SettingRow
 				label={settings['index.maxFileSize']?.title ?? ''}
 				description={settings['index.maxFileSize']?.description ?? ''}
@@ -30,6 +30,7 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 					onInput={(e: any) => onUpdate('index.maxFileSize', Number((e.target as HTMLInputElement).value))}
 				/>
 			</SettingRow>
+
 			<SettingRow
 				label={settings['index.useGitIgnore']?.title ?? ''}
 				description={settings['index.useGitIgnore']?.description ?? ''}
@@ -44,6 +45,7 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 					Enabled
 				</vscode-checkbox>
 			</SettingRow>
+
 			<SettingRow
 				label={settings['index.ignoreFolders']?.title ?? ''}
 				description={settings['index.ignoreFolders']?.description ?? ''}
@@ -57,6 +59,7 @@ export function IndexingSection({ settings, onUpdate, onScopeChange, onBulkScope
 					onChange={v => onUpdate('index.ignoreFolders', v)}
 				/>
 			</SettingRow>
+
 			<SettingRow
 				label={settings['index.includeFiles']?.title ?? ''}
 				description={settings['index.includeFiles']?.description ?? ''}
