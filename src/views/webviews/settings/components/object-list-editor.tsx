@@ -1,6 +1,10 @@
 import * as React from 'react';
 import { useCallback } from 'react';
 
+/**
+ * Definition for a single field in the ObjectListEditor. Each field 
+ * corresponds to a text input in each row of the editor.
+ */
 export interface ObjectListEditorFieldDef {
 	key: string;
 
@@ -53,6 +57,7 @@ export function ObjectListEditor({ items, fields, onChange }: ObjectListEditorPr
 			</div>
 			{allItems.map((item, i) => {
 				const isGhost = i === items.length;
+				
 				return (
 					<div key={isGhost ? 'ghost' : i} className="object-list-item">
 						{fields.map(f => (

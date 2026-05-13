@@ -1,6 +1,7 @@
 import { SettingScope, SettingState } from '../settings-types';
 import { SectionHeader } from '../components/section-header';
 import { SettingRow } from '../components/setting-row';
+import { useSettingRowProps } from '../components/use-setting-row-props';
 import { SECTION_TITLES } from '../settings-metadata';
 
 export interface TemplatesSectionProps {
@@ -12,18 +13,12 @@ export interface TemplatesSectionProps {
 }
 
 export function TemplatesSection({ keys, settings, onUpdate, onScopeChange, onBulkScope }: TemplatesSectionProps) {
+	const rowProps = useSettingRowProps(settings, onScopeChange);
 	return (
 		<div>
 			<SectionHeader title={SECTION_TITLES['editor.templates']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			{keys.map((key) => (
-				<SettingRow
-					key={key}
-					label={settings[key]?.title ?? ''}
-					description={settings[key]?.description ?? ''}
-					settingKey={key}
-					settings={settings}
-					onScopeChange={onScopeChange}
-				>
+				<SettingRow key={key} {...rowProps(key)}>
 					<vscode-textarea
 						className='monospace'
 						rows={12}

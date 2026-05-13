@@ -2,6 +2,7 @@ import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-types';
 import { SectionHeader } from '../components/section-header';
 import { SettingRow } from '../components/setting-row';
+import { useSettingRowProps } from '../components/use-setting-row-props';
 import { SECTION_TITLES, getEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
@@ -23,6 +24,7 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 	];
 
 	const namespaces = (settings['namespaces']?.value as { uri: string; defaultPrefix: string }[]) ?? [];
+	const rowProps = useSettingRowProps(settings, onScopeChange);
 
 	const prefixDefinitionModeRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
@@ -32,13 +34,7 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 	return (
 		<div>
 			<SectionHeader title={SECTION_TITLES['editor.general']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
-			<SettingRow
-				label={settings['editor.codeLensEnabled']?.title ?? ''}
-				description={settings['editor.codeLensEnabled']?.description ?? ''}
-				settingKey="editor.codeLensEnabled"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('editor.codeLensEnabled')}>
 				<vscode-checkbox
 					checked={settings['editor.codeLensEnabled']?.value === true}
 					onChange={(e: any) => onUpdate('editor.codeLensEnabled', (e.target as HTMLInputElement).checked)}
@@ -46,13 +42,7 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 					Enabled
 				</vscode-checkbox>
 			</SettingRow>
-			<SettingRow
-				label={settings['prefixes.autoDefinePrefixes']?.title ?? ''}
-				description={settings['prefixes.autoDefinePrefixes']?.description ?? ''}
-				settingKey="prefixes.autoDefinePrefixes"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('prefixes.autoDefinePrefixes')}>
 				<vscode-checkbox
 					checked={settings['prefixes.autoDefinePrefixes']?.value === true}
 					onChange={(e: any) => onUpdate('prefixes.autoDefinePrefixes', (e.target as HTMLInputElement).checked)}
@@ -60,13 +50,7 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 					Enabled
 				</vscode-checkbox>
 			</SettingRow>
-			<SettingRow
-				label={settings['prefixes.prefixDefinitionMode']?.title ?? ''}
-				description={settings['prefixes.prefixDefinitionMode']?.description ?? ''}
-				settingKey="prefixes.prefixDefinitionMode"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('prefixes.prefixDefinitionMode')}>
 				<vscode-single-select
 					ref={prefixDefinitionModeRef}
 					value={String(settings['prefixes.prefixDefinitionMode']?.value ?? 'Append')}
@@ -76,13 +60,7 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 					))}
 				</vscode-single-select>
 			</SettingRow>
-			<SettingRow
-				label={settings['namespaces']?.title ?? ''}
-				description={settings['namespaces']?.description ?? ''}
-				settingKey="namespaces"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('namespaces')}>
 				<ObjectListEditor
 					items={namespaces}
 					fields={[
@@ -92,13 +70,7 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 					onChange={v => onUpdate('namespaces', v)}
 				/>
 			</SettingRow>
-			<SettingRow
-				label={settings['prefixes.queryParameterName']?.title ?? ''}
-				description={settings['prefixes.queryParameterName']?.description ?? ''}
-				settingKey="prefixes.queryParameterName"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('prefixes.queryParameterName')}>
 				<vscode-textfield
 					value={String(settings['prefixes.queryParameterName']?.value ?? '')}
 					placeholder="workspace"

@@ -59,5 +59,5 @@ export enum ServiceToken {
 	/** Controller for the custom Mentor settings panel. */
 	SettingsPanelController = "SettingsPanelController",
 	/** Generic navigation router between webview panels. */
-	ViewRouter = "ViewRouter"
+	WebviewRouter = "WebviewRouter"
 }

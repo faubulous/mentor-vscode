@@ -2,6 +2,7 @@ import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-types';
 import { SectionHeader } from '../components/section-header';
 import { SettingRow } from '../components/setting-row';
+import { useSettingRowProps } from '../components/use-setting-row-props';
 import { StringListEditor } from '../components/string-list-editor';
 import { SECTION_TITLES, getNestedEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
@@ -14,6 +15,7 @@ export interface SortingSectionProps {
 }
 
 export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope }: SortingSectionProps) {
+	const rowProps = useSettingRowProps(settings, onScopeChange);
 	const opts = (settings['sorting.typeSortingOptions']?.value ?? {}) as {
 		typeOrder?: string[];
 		predicateOrder?: string[];
@@ -38,13 +40,7 @@ export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope 
 	return (
 		<div>
 			<SectionHeader title={SECTION_TITLES['editor.sorting']} keys={['sorting.typeSortingOptions']} settings={settings} onBulkScope={onBulkScope} />
-			<SettingRow
-				label={settings['sorting.typeSortingOptions']?.title ?? ''}
-				description={settings['sorting.typeSortingOptions']?.description ?? ''}
-				settingKey="sorting.typeSortingOptions"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('sorting.typeSortingOptions')}>
 				<StringListEditor
 					items={opts.typeOrder ?? []}
 					placeholder="https://..."

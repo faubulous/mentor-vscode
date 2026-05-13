@@ -1,6 +1,12 @@
 import * as React from 'react';
 
+/**
+ * Props for MarkdownText component.
+ */
 interface MarkdownTextProps {
+	/**
+	 * The text to render, which may contain Markdown inline links in the format `[link text](url)`.
+	 */
 	text: string;
 }
 

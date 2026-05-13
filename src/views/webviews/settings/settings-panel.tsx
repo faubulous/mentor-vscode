@@ -8,7 +8,7 @@ import { SettingsNavigation } from './components/settings-navigation';
 import { LanguageId, FormattingLanguage } from '@src/services/document/document-factory';
 import { SettingScope, SettingState } from './settings-types';
 import { SettingsPanelMessages } from './settings-panel-messages';
-import { SettingsScopeContext, SettingsMoveContext, VSCodeSettingsMoveContext } from './components/setting-row';
+import { SettingsScopeContext, SettingsMoveContext, VSCodeSettingsMoveContext } from './components/setting-context';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
 import { SECTION_REGISTRY } from './settings-registry';
 import stylesheet from './settings-panel.css';

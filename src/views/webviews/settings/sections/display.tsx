@@ -1,6 +1,7 @@
 import { SettingScope, SettingState } from '../settings-types';
 import { SectionHeader } from '../components/section-header';
 import { SettingRow } from '../components/setting-row';
+import { useSettingRowProps } from '../components/use-setting-row-props';
 import { StringListEditor } from '../components/string-list-editor';
 import { SECTION_TITLES } from '../settings-metadata';
 
@@ -13,18 +14,12 @@ export interface DisplaySectionProps {
 }
 
 export function DisplaySection({ keys, settings, onUpdate, onScopeChange, onBulkScope }: DisplaySectionProps) {
+	const rowProps = useSettingRowProps(settings, onScopeChange);
 	return (
 		<div>
 			<SectionHeader title={SECTION_TITLES['appearance.display']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
 			{keys.map((key) => (
-				<SettingRow
-					key={key}
-					label={settings[key]?.title ?? ''}
-					description={settings[key]?.description ?? ''}
-					settingKey={key}
-					settings={settings}
-					onScopeChange={onScopeChange}
-				>
+				<SettingRow key={key} {...rowProps(key)}>
 					<StringListEditor
 						items={(settings[key]?.value as string[]) ?? []}
 						placeholder="https://..."

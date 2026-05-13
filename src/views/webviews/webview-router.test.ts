@@ -22,7 +22,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { ViewRouter } from './view-router';
+import { WebviewRouter } from './webview-router';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -30,9 +30,9 @@ beforeEach(() => {
 	mockConnectionsListController.open.mockResolvedValue(undefined);
 });
 
-describe('ViewRouter', () => {
+describe('WebviewRouter', () => {
 	it('routes a settings target to SettingsPanelController.openSection with section and view column', async () => {
-		const router = new ViewRouter();
+		const router = new WebviewRouter();
 
 		await router.open({ kind: 'settings', section: 'connections' }, vscode.ViewColumn.Active);
 
@@ -40,7 +40,7 @@ describe('ViewRouter', () => {
 	});
 
 	it('forwards a connection param to SettingsPanelController.openSection', async () => {
-		const router = new ViewRouter();
+		const router = new WebviewRouter();
 		const connection = { id: 'conn-1', endpointUrl: 'http://example.org' } as any;
 
 		await router.open({ kind: 'settings', section: 'connections', params: { connection } });
@@ -49,7 +49,7 @@ describe('ViewRouter', () => {
 	});
 
 	it('routes a connectionsList target to SparqlConnectionsListController.open', async () => {
-		const router = new ViewRouter();
+		const router = new WebviewRouter();
 
 		await router.open({ kind: 'connectionsList' });
 

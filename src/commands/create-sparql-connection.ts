@@ -10,7 +10,7 @@ export const createSparqlConnection = {
 		const service = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const connection = await service.createConnection();
 
-		const router = container.resolve<IViewRouter>(ServiceToken.ViewRouter);
+		const router = container.resolve<IViewRouter>(ServiceToken.WebviewRouter);
 		await router.open({ kind: 'settings', section: 'connections', params: { connection } }, vscode.ViewColumn.Active);
 	}
 };

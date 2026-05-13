@@ -1,6 +1,7 @@
 import { SettingScope, SettingState } from '../settings-types';
 import { SectionHeader } from '../components/section-header';
 import { SettingRow } from '../components/setting-row';
+import { useSettingRowProps } from '../components/use-setting-row-props';
 import { SECTION_TITLES } from '../settings-metadata';
 
 export interface ValidationSectionProps {
@@ -11,6 +12,7 @@ export interface ValidationSectionProps {
 }
 
 export function ValidationSection({ settings, onUpdate, onScopeChange, onBulkScope }: ValidationSectionProps) {
+	const rowProps = useSettingRowProps(settings, onScopeChange);
 	return (
 		<div>
 			<SectionHeader
@@ -19,13 +21,7 @@ export function ValidationSection({ settings, onUpdate, onScopeChange, onBulkSco
 				settings={settings}
 				onBulkScope={onBulkScope}
 			/>
-			<SettingRow
-				label={settings['shacl.enabled']?.title ?? ''}
-				description={settings['shacl.enabled']?.description ?? ''}
-				settingKey="shacl.enabled"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('shacl.enabled')}>
 				<vscode-checkbox
 					checked={settings['shacl.enabled']?.value === true}
 					onChange={(e: any) => onUpdate('shacl.enabled', (e.target as HTMLInputElement).checked)}

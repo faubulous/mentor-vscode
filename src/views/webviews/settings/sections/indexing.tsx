@@ -1,6 +1,7 @@
 import { SettingScope, SettingState } from '../settings-types';
 import { SectionHeader } from '../components/section-header';
 import { SettingRow } from '../components/setting-row';
+import { useSettingRowProps } from '../components/use-setting-row-props';
 import { StringListEditor } from '../components/string-list-editor';
 import { SECTION_TITLES } from '../settings-metadata';
 
@@ -13,17 +14,12 @@ export interface IndexingSectionProps {
 }
 
 export function IndexingSection({ keys, settings, onUpdate, onScopeChange, onBulkScope }: IndexingSectionProps) {
+	const rowProps = useSettingRowProps(settings, onScopeChange);
 	return (
 		<div>
 			<SectionHeader title={SECTION_TITLES['indexing']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
-			
-			<SettingRow
-				label={settings['index.maxFileSize']?.title ?? ''}
-				description={settings['index.maxFileSize']?.description ?? ''}
-				settingKey="index.maxFileSize"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+
+			<SettingRow {...rowProps('index.maxFileSize')}>
 				<vscode-textfield
 					value={String(settings['index.maxFileSize']?.value ?? 1048576)}
 					type="number"
@@ -31,13 +27,7 @@ export function IndexingSection({ keys, settings, onUpdate, onScopeChange, onBul
 				/>
 			</SettingRow>
 
-			<SettingRow
-				label={settings['index.useGitIgnore']?.title ?? ''}
-				description={settings['index.useGitIgnore']?.description ?? ''}
-				settingKey="index.useGitIgnore"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('index.useGitIgnore')}>
 				<vscode-checkbox
 					checked={settings['index.useGitIgnore']?.value === true}
 					onChange={(e: any) => onUpdate('index.useGitIgnore', (e.target as HTMLInputElement).checked)}
@@ -46,13 +36,7 @@ export function IndexingSection({ keys, settings, onUpdate, onScopeChange, onBul
 				</vscode-checkbox>
 			</SettingRow>
 
-			<SettingRow
-				label={settings['index.ignoreFolders']?.title ?? ''}
-				description={settings['index.ignoreFolders']?.description ?? ''}
-				settingKey="index.ignoreFolders"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('index.ignoreFolders')}>
 				<StringListEditor
 					items={(settings['index.ignoreFolders']?.value as string[]) ?? []}
 					placeholder="**/node_modules"
@@ -60,13 +44,7 @@ export function IndexingSection({ keys, settings, onUpdate, onScopeChange, onBul
 				/>
 			</SettingRow>
 
-			<SettingRow
-				label={settings['index.includeFiles']?.title ?? ''}
-				description={settings['index.includeFiles']?.description ?? ''}
-				settingKey="index.includeFiles"
-				settings={settings}
-				onScopeChange={onScopeChange}
-			>
+			<SettingRow {...rowProps('index.includeFiles')}>
 				<StringListEditor
 					items={(settings['index.includeFiles']?.value as string[]) ?? []}
 					placeholder="**/*.ttl"

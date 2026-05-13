@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { SettingState } from "../settings-types";
 import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from "./section-header-context-menu";
-import { SettingsScopeContext } from "./setting-row";
+import { SettingsScopeContext } from "./setting-context";
 
 export interface SectionHeaderProps {
 	title: React.ReactNode;

@@ -108,7 +108,7 @@ function registerViews() {
 	registry.register(ServiceToken.SparqlConnectionsListController, new webviews.SparqlConnectionsListController());
 	registry.register(ServiceToken.SettingsPanelController, new webviews.SettingsPanelController());
 
-	container.registerInstance(ServiceToken.ViewRouter, new webviews.ViewRouter());
+	container.registerInstance(ServiceToken.WebviewRouter, new webviews.ViewRouter());
 }
 
 /**

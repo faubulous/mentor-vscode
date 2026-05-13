@@ -5,7 +5,7 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TestResult } from '../components/types';
 import { SparqlConnectionsList } from '../../sparql-connections-list/sparql-connections-list';
 import { SparqlConnectionEditor } from '../../sparql-connection/sparql-connection-editor';
-import { SettingsScopeContext } from '../components/setting-row';
+import { SettingsScopeContext } from '../components/setting-context';
 import { useScopedWebviewMessaging } from '../../webview-hooks';
 import { SparqlConnectionsListMessages } from '../../sparql-connections-list/sparql-connections-list-messages';
 import { SparqlConnectionMessages } from '../../sparql-connection/sparql-connection-messages';
