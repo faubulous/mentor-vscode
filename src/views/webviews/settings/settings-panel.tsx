@@ -86,15 +86,15 @@ function SettingsPanel() {
 		const scope: SettingScope = state.activeScope;
 		setState(prev => ({
 			...prev,
-			settings: { ...prev.settings, [key]: { ...prev.settings[key], value, source: scope } },
+			settings: { ...prev.settings, [key]: { ...prev.settings[key], value, scope: scope } },
 		}));
 		messaging?.postMessage({ id: 'UpdateSetting', key, value, scope });
 	}, [state.activeScope, messaging, setState]);
 
-	const handleScopeChange = useCallback((key: string, newScope: SettingScope, currentValue: unknown) => {
+	const handleSetScope = useCallback((key: string, newScope: SettingScope, currentValue: unknown) => {
 		setState(prev => ({
 			...prev,
-			settings: { ...prev.settings, [key]: { ...prev.settings[key], source: newScope } },
+			settings: { ...prev.settings, [key]: { ...prev.settings[key], scope: newScope } },
 		}));
 		messaging?.postMessage({ id: 'UpdateSetting', key, value: newScope === 'default' ? undefined : currentValue, scope: newScope });
 	}, [messaging, setState]);
@@ -134,16 +134,16 @@ function SettingsPanel() {
 
 	const handleBulkScope = useCallback((keys: string[], scope: 'user' | 'workspace') => {
 		for (const key of keys) {
-			handleScopeChange(key, scope, state.settings[key]?.value);
+			handleSetScope(key, scope, state.settings[key]?.value);
 		}
-	}, [state.settings, handleScopeChange]);
+	}, [state.settings, handleSetScope]);
 
 	const handleMoveToScope = useCallback((key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => {
 		messaging?.postMessage({ id: 'UpdateSetting', key, value, scope: toScope });
 		messaging?.postMessage({ id: 'UpdateSetting', key, value: undefined, scope: fromScope });
 		setState(prev => ({
 			...prev,
-			settings: { ...prev.settings, [key]: { ...prev.settings[key], source: toScope } },
+			settings: { ...prev.settings, [key]: { ...prev.settings[key], scope: toScope } },
 		}));
 	}, [messaging, setState]);
 
@@ -182,7 +182,7 @@ function SettingsPanel() {
 		settings: state.settings,
 		activeScope: state.activeScope,
 		onUpdate: handleUpdate,
-		onScopeChange: handleScopeChange,
+		setScope: handleSetScope,
 		onBulkScope: handleBulkScope,
 	};
 

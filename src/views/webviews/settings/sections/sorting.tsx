@@ -10,12 +10,12 @@ import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 export interface SortingSectionProps {
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;
-	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void;
+	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
-export function SortingSection({ settings, onUpdate, onScopeChange, onBulkScope }: SortingSectionProps) {
-	const rowProps = useSettingRowProps(settings, onScopeChange);
+export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: SortingSectionProps) {
+	const rowProps = useSettingRowProps(settings, setScope);
 	const opts = (settings['sorting.typeSortingOptions']?.value ?? {}) as {
 		typeOrder?: string[];
 		predicateOrder?: string[];

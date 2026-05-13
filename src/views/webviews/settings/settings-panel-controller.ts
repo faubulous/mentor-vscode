@@ -101,7 +101,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 				result[key] = {
 					value: config.get(key),
 					defaultValue: inspected.defaultValue,
-					source: hasWorkspace ? 'workspace' : hasUser ? 'user' : 'default',
+					scope: hasWorkspace ? 'workspace' : hasUser ? 'user' : 'default',
 					title: def?.title ?? key,
 					description: def?.description ?? '',
 				};
@@ -125,7 +125,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 				result[key] = {
 					value: config.get(key),
 					defaultValue: inspected.defaultValue,
-					source: hasLanguageWorkspace ? 'workspace' : hasLanguageUser ? 'user' : 'default',
+					scope: hasLanguageWorkspace ? 'workspace' : hasLanguageUser ? 'user' : 'default',
 					title: key,
 					description: '',
 				};

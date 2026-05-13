@@ -6,8 +6,14 @@ import { useState, useEffect, useRef } from 'react';
  * @property onClick The function to call when the menu item is clicked.
  */
 export interface SectionHeaderContextMenuItem {
+	/**
+	 * The text to display for the menu item.
+	 */
 	label: string;
 
+	/**
+	 * Handler function to call when the menu item is clicked.
+	 */
 	onClick: () => void;
 }
 

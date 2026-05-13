@@ -11,11 +11,11 @@ import { ObjectListEditor } from '../components/object-list-editor';
 export interface EditorGeneralSectionProps {
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;
-	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void;
+	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
-export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulkScope }: EditorGeneralSectionProps) {
+export function EditorGeneralSection({ settings, onUpdate, setScope, onBulkScope }: EditorGeneralSectionProps) {
 	const keys = [
 		'editor.codeLensEnabled',
 		'prefixes.autoDefinePrefixes',
@@ -24,7 +24,7 @@ export function EditorGeneralSection({ settings, onUpdate, onScopeChange, onBulk
 	];
 
 	const namespaces = (settings['namespaces']?.value as { uri: string; defaultPrefix: string }[]) ?? [];
-	const rowProps = useSettingRowProps(settings, onScopeChange);
+	const rowProps = useSettingRowProps(settings, setScope);
 
 	const prefixDefinitionModeRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',

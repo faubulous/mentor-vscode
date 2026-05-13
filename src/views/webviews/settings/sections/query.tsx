@@ -7,11 +7,11 @@ import { SECTION_TITLES } from '../settings-metadata';
 export interface QuerySectionProps {
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;
-	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void;
+	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
-export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }: QuerySectionProps) {
+export function QuerySection({ settings, onUpdate, setScope, onBulkScope }: QuerySectionProps) {
 	const keys = [
 		'sparql.defaultInferenceEnabled',
 		'sparql.queryTimeout',
@@ -21,7 +21,7 @@ export function QuerySection({ settings, onUpdate, onScopeChange, onBulkScope }:
 		'inference.enabled',
 	];
 
-	const rowProps = useSettingRowProps(settings, onScopeChange);
+	const rowProps = useSettingRowProps(settings, setScope);
 
 	return (
 		<div>

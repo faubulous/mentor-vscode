@@ -9,11 +9,11 @@ import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 export interface DefinitionsTreeSectionProps {
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;
-	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void;
+	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
-export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBulkScope }: DefinitionsTreeSectionProps) {
+export function DefinitionsTreeSection({ settings, onUpdate, setScope, onBulkScope }: DefinitionsTreeSectionProps) {
 	const keys = [
 		'definitionTree.labelStyle',
 		'definitionTree.defaultLayout',
@@ -21,7 +21,7 @@ export function DefinitionsTreeSection({ settings, onUpdate, onScopeChange, onBu
 		'definitionTree.decorateMissingLanguageTags',
 	];
 
-	const rowProps = useSettingRowProps(settings, onScopeChange);
+	const rowProps = useSettingRowProps(settings, setScope);
 
 	const labelStyleRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',

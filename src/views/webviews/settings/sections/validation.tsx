@@ -7,12 +7,12 @@ import { SECTION_TITLES } from '../settings-metadata';
 export interface ValidationSectionProps {
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;
-	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void;
+	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
-export function ValidationSection({ settings, onUpdate, onScopeChange, onBulkScope }: ValidationSectionProps) {
-	const rowProps = useSettingRowProps(settings, onScopeChange);
+export function ValidationSection({ settings, onUpdate, setScope, onBulkScope }: ValidationSectionProps) {
+	const rowProps = useSettingRowProps(settings, setScope);
 	return (
 		<div>
 			<SectionHeader

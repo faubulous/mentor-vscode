@@ -23,7 +23,7 @@ export function SectionHeader({ title, keys, settings, onBulkScope }: SectionHea
 	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
 
 	const modifiedKeys = keys && settings
-		? keys.filter(k => settings[k]?.source !== 'default')
+		? keys.filter(k => settings[k]?.scope !== 'default')
 		: [];
 
 	const menuItems: SectionHeaderContextMenuItem[] = modifiedKeys.length > 0 && onBulkScope

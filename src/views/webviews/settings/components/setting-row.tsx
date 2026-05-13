@@ -3,7 +3,7 @@ import { useContext } from 'react';
 import { SettingScope, SettingState } from '../settings-types';
 import { MarkdownText } from './markdown-text';
 import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from './section-header-context-menu';
-import { SettingsScopeContext } from './setting-context';
+import { SettingsMoveContext, SettingsScopeContext } from './setting-context';
 
 /**
  * Props for the SettingRow component, representing a single setting in the 
@@ -42,22 +42,14 @@ export interface SettingRowProps {
 	children: React.ReactNode;
 
 	/**
-	 * Callback function that is called when the user chooses to change the scope of 
-	 * the setting (e.g., from user to workspace or vice versa) or to restore defaults. 
-	 * The function receives the new scope ('user', 'workspace', or 'default') and the 
-	 * current value of the setting, allowing the parent component to handle the logic 
-	 * for updating the setting's value in the appropriate scope or restoring it to its 
-	 * default value.
-	 * @param newScope The new scope for the setting ('user', 'workspace', or 'default').
+	 * Writes the setting's value at the given scope. When `deleteScope` is provided
+	 * the value is also cleared from that scope (move semantics); otherwise only the
+	 * target scope is written (copy / restore semantics).
 	 * @param currentValue The current value of the setting.
+	 * @param newScope The scope to write the value to ('user', 'workspace', or 'default').
+	 * @param deleteScope The scope to clear after writing (move only).
 	 */
-	onScopeChange: (newScope: SettingScope, currentValue: unknown) => void;
-
-	onMoveToScope?: (
-		fromScope: 'user' | 'workspace',
-		toScope: 'user' | 'workspace',
-		currentValue: unknown,
-	) => void;
+	setScope: (currentValue: unknown, newScope: SettingScope, deleteScope?: 'user' | 'workspace') => void;
 }
 
 /**
@@ -65,20 +57,21 @@ export interface SettingRowProps {
  * @param props The props for the setting row.
  * @returns A JSX element representing the setting row.
  */
-export function SettingRow({ label, description, state, onScopeChange, onMoveToScope, children }: SettingRowProps) {
-	const activeScope = useContext(SettingsScopeContext);
-	const source = state?.source ?? 'default';
-	const isModified = source === activeScope && !valuesEqual(state?.value, state?.defaultValue);
-	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
-	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
+export function SettingRow({ label, description, state, setScope, children }: SettingRowProps) {
+	const panelScope = useContext(SettingsScopeContext);
+	const settingScope = state?.scope ?? 'default';
+	const otherScope: 'user' | 'workspace' = panelScope === 'user' ? 'workspace' : 'user';
+	const otherScopeLabel = panelScope === 'user' ? 'Workspace' : 'User';
+	const canMove = useContext(SettingsMoveContext) !== null;
+	const isModified = settingScope === panelScope && !valuesEqual(state?.value, state?.defaultValue);
 
 	const menuItems: SectionHeaderContextMenuItem[] = [
-		...(source !== 'default'
-			? [{ label: 'Restore defaults', onClick: () => onScopeChange('default', state?.value) }]
+		...(settingScope !== 'default'
+			? [{ label: 'Restore defaults', onClick: () => setScope(state?.value, 'default') }]
 			: []),
-		{ label: `Copy to ${otherScopeLabel} Scope`, onClick: () => onScopeChange(otherScope, state?.value) },
-		...(isModified && onMoveToScope
-			? [{ label: `Move to ${otherScopeLabel} Scope`, onClick: () => onMoveToScope(activeScope, otherScope, state?.value) }]
+		{ label: `Copy to ${otherScopeLabel} Scope`, onClick: () => setScope(state?.value, otherScope) },
+		...(isModified && canMove
+			? [{ label: `Move to ${otherScopeLabel} Scope`, onClick: () => setScope(state?.value, otherScope, panelScope) }]
 			: []),
 	];
 
@@ -86,7 +79,7 @@ export function SettingRow({ label, description, state, onScopeChange, onMoveToS
 		<div className="setting-row">
 			<div className="setting-row-header">
 				<span className="setting-label">{label}</span>
-				{isModified && <span className="setting-modified-tag" title={`Modified in ${activeScope} settings`}>MODIFIED</span>}
+				{isModified && <span className="setting-modified-tag" title={`Modified in ${panelScope} settings`}>MODIFIED</span>}
 				<span className="setting-leader" aria-hidden="true" />
 				<SectionHeaderContextMenu items={menuItems} />
 			</div>

@@ -8,7 +8,7 @@ export type SettingScope = 'default' | 'user' | 'workspace';
 export type SettingState = {
 	value: unknown;
 	defaultValue: unknown;
-	source: SettingScope;
+	scope: SettingScope;
 	title: string;
 	description: string;
 };

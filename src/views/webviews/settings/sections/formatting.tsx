@@ -17,7 +17,7 @@ export interface FormattingSectionProps {
 	formattingLanguage: FormattingLanguage;
 	onFormattingLanguageChange: (lang: FormattingLanguage) => void;
 	onUpdate: (key: string, value: unknown) => void;
-	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void;
+	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
 	onVSCodeUpdate: (languageId: LanguageId, key: string, value: unknown) => void;
 	onVSCodeScopeChange: (languageId: LanguageId, key: string, scope: SettingScope, currentValue: unknown) => void;
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
@@ -29,7 +29,7 @@ export function FormattingSection({
 	formattingLanguage,
 	onFormattingLanguageChange,
 	onUpdate,
-	onScopeChange,
+	setScope,
 	onVSCodeUpdate,
 	onVSCodeScopeChange,
 	onBulkScope,
@@ -50,12 +50,12 @@ export function FormattingSection({
 	const lang = formattingLanguage;
 	const isTurtle = lang === 'turtle';
 	const langKeys = isTurtle ? turtleKeys : sparqlKeys;
-	const nonDefaultLangKeys = langKeys.filter(k => settings[k]?.source !== 'default');
+	const nonDefaultLangKeys = langKeys.filter(k => settings[k]?.scope !== 'default');
 	const activeScope = useContext(SettingsScopeContext);
 	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
 	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
 
-	const rowProps = useSettingRowProps(settings, onScopeChange);
+	const rowProps = useSettingRowProps(settings, setScope);
 	const vscodeRowProps = useVSCodeSettingRowProps(vscodeSettings, lang, onVSCodeScopeChange);
 
 	const wordWrapRef = useVscodeElementRef<VscodeSingleSelect>(
