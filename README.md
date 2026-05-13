@@ -29,16 +29,12 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.5.8: Service Release
-- Fixed broken 'Execute' buttons in SPARQL queries
-- Fixed issues with whitespaces in file paths and folder names
-  - Wrong display in the workspace tree
-  - Missing escape characters in the generated workspace: URIs
-  - Folders with whitespaces do not show content when expanded in the workspace tree
-- Fixed escaping of '_' characters in local names (e.g. `ex:foo_bar` -> `ex:foo\_bar`)
-- Fixed issue where aggregate functions on blank nodes won't return results [#70](https://github.com/faubulous/mentor-vscode/issues/70)
-
-[Full Release History](https://mentor-vscode.dev/about/release-history)
+### Version 0.5.9: Service Release
+- Enabled resource tooltip for all languages
+- Added option to copy Cell URI in notebook code lens
+- Added reference update service to update references to URIs accross documents
+- Fixed missing usage code lens on first line after prefix
+- Fixed slugs not updated after renumbering command execution
 
 ## Installation
 
