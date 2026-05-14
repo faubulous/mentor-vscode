@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -45,7 +45,7 @@
     "url": "https://github.com/faubulous/mentor-vscode"
   },
   "engines": {
-    "vscode": "^1.110.0"
+    "vscode": "^1.105.0"
   },
   "categories": [
     "Programming Languages"
@@ -76,7 +76,7 @@
     "@types/picomatch": "^4.0.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/vscode": "^1.110.0",
+    "@types/vscode": "^1.105.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@typescript-eslint/eslint-plugin": "^8.59.1",
     "@typescript-eslint/parser": "^8.59.1",
