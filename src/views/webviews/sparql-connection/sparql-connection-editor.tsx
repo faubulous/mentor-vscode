@@ -8,9 +8,11 @@ import { SparqlConnectionMessages } from "./sparql-connection-messages";
 export interface SparqlConnectionEditorProps {
 	connection: SparqlConnection;
 	onBack: () => void;
+	/** When true, renders an inline scope (User/Workspace) dropdown in the form. */
+	showScopeSelector?: boolean;
 }
 
-export function SparqlConnectionEditor({ connection, onBack }: SparqlConnectionEditorProps) {
+export function SparqlConnectionEditor({ connection, onBack, showScopeSelector }: SparqlConnectionEditorProps) {
 	const [initialCredential, setInitialCredential] = useState<AuthCredential | null | undefined>(undefined);
 	const [testResult, setTestResult] = useState<{ code: number; message: string } | null | undefined>(undefined);
 	const [isTesting, setIsTesting] = useState(false);
@@ -59,6 +61,7 @@ export function SparqlConnectionEditor({ connection, onBack }: SparqlConnectionE
 	return (
 		<SparqlConnectionView
 			connection={connection}
+			showScopeSelector={showScopeSelector}
 			initialCredential={initialCredential}
 			testResult={testResult}
 			isTesting={isTesting}

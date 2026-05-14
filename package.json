@@ -1347,6 +1347,10 @@
                 "label": "General"
               },
               {
+                "id": "editor.templates",
+                "label": "Templates"
+              },
+              {
                 "id": "editor.formatting",
                 "label": "Formatting"
               },
@@ -1355,8 +1359,8 @@
                 "label": "Sorting"
               },
               {
-                "id": "editor.templates",
-                "label": "Templates"
+                "id": "editor.validation",
+                "label": "Validation"
               }
             ]
           },
@@ -1387,16 +1391,6 @@
               {
                 "id": "query",
                 "label": "Query"
-              }
-            ]
-          },
-          {
-            "id": "validation",
-            "label": "Validation",
-            "sections": [
-              {
-                "id": "validation",
-                "label": "Validation"
               }
             ]
           }
@@ -1753,7 +1747,7 @@
             }
           },
           "mentor.shacl.validation": {
-            "x-settings-group": "validation",
+            "x-settings-group": "editor.validation",
             "type": "object",
             "title": "SHACL Validation Configuration",
             "description": "Explicit SHACL shape configuration. Configure workspace defaults and per-graph include/exclude rules.",
@@ -1806,7 +1800,7 @@
             }
           },
           "mentor.shacl.enabled": {
-            "x-settings-group": "validation",
+            "x-settings-group": "editor.validation",
             "type": "boolean",
             "title": "Enable Experimental SHACL Validation Features",
             "description": "If enabled, Mentor will show experimental SHACL validation features including the titlebar validate button and SHACL validation code lenses.",
@@ -1877,7 +1871,7 @@
             "default": true
           },
           "mentor.linting.enabled": {
-            "x-settings-group": "validation",
+            "x-settings-group": "editor.validation",
             "type": "boolean",
             "title": "Enable Linting",
             "description": "If enabled, the extension will provide linting for RDF documents.",
@@ -1885,7 +1879,7 @@
             "experimental": true
           },
           "mentor.linting.unresolvedReferenceSeverity": {
-            "x-settings-group": "validation",
+            "x-settings-group": "editor.validation",
             "type": "string",
             "title": "Severity: Unresolved References",
             "description": "The severity level for unresolved references in RDF documents.",
@@ -1907,7 +1901,7 @@
             "experimental": true
           },
           "mentor.linting.unresolvedWorkspaceGraphSeverity": {
-            "x-settings-group": "validation",
+            "x-settings-group": "editor.validation",
             "type": "string",
             "title": "Severity: Unresolved Workspace Graphs",
             "description": "The severity level for workspace: URI references that do not resolve to a known graph in the store.",

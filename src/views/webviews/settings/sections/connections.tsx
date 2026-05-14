@@ -58,6 +58,13 @@ export function ConnectionsSection() {
 		});
 	}, [testResults]);
 
+	useEffect(() => {
+		if (!editingConnection) return;
+		const newScope = activeScope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
+		if (editingConnection.configScope === newScope) return;
+		setEditingConnection(prev => prev ? { ...prev, configScope: newScope } : prev);
+	}, [activeScope]);
+
 	if (editingConnection) {
 		return (
 			<SparqlConnectionEditor

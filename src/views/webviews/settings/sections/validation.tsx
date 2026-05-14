@@ -16,7 +16,7 @@ export function ValidationSection({ settings, onUpdate, setScope, onBulkScope }:
 	return (
 		<div>
 			<SectionHeader
-				title={<>{SECTION_TITLES['validation']} <span className="badge-experimental">Experimental</span></>}
+				title={<>{SECTION_TITLES['editor.validation']} <span className="badge-experimental">Experimental</span></>}
 				keys={['shacl.enabled']}
 				settings={settings}
 				onBulkScope={onBulkScope}

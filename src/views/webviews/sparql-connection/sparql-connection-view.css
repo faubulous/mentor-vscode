@@ -11,10 +11,8 @@
 }
 
 .sparql-connection-view-container {
-	max-width: 560px;
 	display: flex;
 	flex-direction: column;
-	padding: 16px;
 	gap: 16px;
 }
 
@@ -29,7 +27,6 @@
 	padding-bottom: 8px;
 	border-bottom: 1px solid var(--vscode-panel-border);
 	align-items: center;
-	justify-content: space-between;
 }
 
 .sparql-connection-view-container .form-header h2 {
@@ -70,6 +67,7 @@
 	gap: 1em;
 	align-items: center;
 	min-height: 28px;
+	margin-left: auto;
 }
 
 .sparql-connection-view-container .form-actions.readonly {

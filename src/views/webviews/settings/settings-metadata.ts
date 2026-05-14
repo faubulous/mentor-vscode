@@ -9,13 +9,13 @@ export type SettingsNavigationSection =
 	| "appearance.display"
 	| "appearance.definitions-tree"
 	| "editor.general"
+	| "editor.templates"
 	| "editor.formatting"
 	| "editor.sorting"
-	| "editor.templates"
+	| "editor.validation"
 	| "indexing"
 	| "connections"
-	| "query"
-	| "validation";
+	| "query";
 
 // ── Data ─────────────────────────────────────────────────────
 
@@ -118,11 +118,11 @@ export const SETTINGS: Record<string, SettingMetadata> = {
 		nestedEnumOptions: {"unmatchedPosition":[{"value":"start","label":"Start"},{"value":"end","label":"End"}],"unmatchedSort":[{"value":"alphabetical","label":"Alphabetical"},{"value":"none","label":"None"}]},
 	},
 	"shacl.validation": {
-		section: "validation",
+		section: "editor.validation",
 		uiVisible: true,
 	},
 	"shacl.enabled": {
-		section: "validation",
+		section: "editor.validation",
 		uiVisible: true,
 		experimental: true,
 	},
@@ -163,18 +163,18 @@ export const SETTINGS: Record<string, SettingMetadata> = {
 		uiVisible: true,
 	},
 	"linting.enabled": {
-		section: "validation",
+		section: "editor.validation",
 		uiVisible: true,
 		experimental: true,
 	},
 	"linting.unresolvedReferenceSeverity": {
-		section: "validation",
+		section: "editor.validation",
 		uiVisible: true,
 		experimental: true,
 		enumOptions: [{"value":"Error","label":"Error"},{"value":"Warning","label":"Warning"},{"value":"Information","label":"Information"},{"value":"Hint","label":"Hint"},{"value":"Disabled","label":"Disabled"}],
 	},
 	"linting.unresolvedWorkspaceGraphSeverity": {
-		section: "validation",
+		section: "editor.validation",
 		uiVisible: true,
 		experimental: true,
 		enumOptions: [{"value":"Error","label":"Error"},{"value":"Warning","label":"Warning"},{"value":"Information","label":"Information"},{"value":"Hint","label":"Hint"},{"value":"Disabled","label":"Disabled"}],
@@ -234,6 +234,10 @@ export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] =
 				"label": "General"
 			},
 			{
+				"id": "editor.templates",
+				"label": "Templates"
+			},
+			{
 				"id": "editor.formatting",
 				"label": "Formatting"
 			},
@@ -242,8 +246,8 @@ export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] =
 				"label": "Sorting"
 			},
 			{
-				"id": "editor.templates",
-				"label": "Templates"
+				"id": "editor.validation",
+				"label": "Validation"
 			}
 		]
 	},
@@ -274,16 +278,6 @@ export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] =
 			{
 				"id": "query",
 				"label": "Query"
-			}
-		]
-	},
-	{
-		"id": "validation",
-		"label": "Validation",
-		"sections": [
-			{
-				"id": "validation",
-				"label": "Validation"
 			}
 		]
 	}

@@ -56,6 +56,8 @@ export interface SparqlConnectionViewProps {
 	inferenceEnabled: boolean;
 	/** A freshly fetched Microsoft token; when non-null, replaces the Microsoft credential fields. */
 	fetchedMicrosoftCredential?: MicrosoftAuthCredential | null;
+	/** When true, renders an inline scope (User/Workspace) dropdown in the form. */
+	showScopeSelector?: boolean;
 	/** Optional back button, used when embedded inside a larger view. */
 	onBack?: () => void;
 	/** Called after a successful save, e.g. to navigate back. Only used in embedded contexts. */
@@ -73,6 +75,7 @@ export interface SparqlConnectionViewProps {
 export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	const {
 		connection, initialCredential, testResult, isTesting, inferenceEnabled, fetchedMicrosoftCredential,
+		showScopeSelector,
 		onBack, onSaved, onSave, onUpdate, onDelete, onRequestTest,
 		onRequestCredential, onRequestInferenceEnabled, onToggleInference, onFetchMicrosoftCredential,
 	} = props;
@@ -115,6 +118,16 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 			hasUnsavedChanges: true,
 		}));
 	}, [fetchedMicrosoftCredential]);
+
+	// Sync local endpoint scope when the incoming connection.configScope changes (e.g. scope tab switch).
+	useEffect(() => {
+		setState(prev => {
+			if (prev.endpoint.configScope === connection.configScope) return prev;
+			const endpoint = { ...prev.endpoint, configScope: connection.configScope };
+			onUpdate(endpoint);
+			return { ...prev, endpoint, hasUnsavedChanges: true };
+		});
+	}, [connection.configScope]);
 
 	const configScopeSelectRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => {
 		const newConfigScope = parseInt(element.value, 10);
@@ -342,28 +355,18 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 			<form onSubmit={handleSave}>
 				<section>
 					<div className="form-header">
-						<div className={`form-title${onBack ? ' form-back' : ''}`}>
-							{onBack && (
-								<vscode-toolbar-button title="Back to connections" onClick={(e: React.MouseEvent) => { e.preventDefault(); onBack(); }}>
-									<vscode-icon name="arrow-left" />
-								</vscode-toolbar-button>
-							)}
-							<h2>Edit Connection</h2>
-						</div>
+						{onBack && (
+							<vscode-toolbar-button title="Back to connections" onClick={(e: React.MouseEvent) => { e.preventDefault(); onBack(); }}>
+								<vscode-icon name="arrow-left" />
+							</vscode-toolbar-button>
+						)}
+						<h2 className="settings-section-title">Edit Connection</h2>
 						<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
 							{isFormReadOnly() && <vscode-icon name="lock" />}
 							{!isFormReadOnly() && <>
 								<vscode-toolbar-button onClick={handleDelete}>
 									<vscode-icon name="trash" title="Delete" />
 								</vscode-toolbar-button>
-								<vscode-single-select
-									ref={configScopeSelectRef}
-									value={endpoint.configScope.toString()}
-									disabled={isFormReadOnly()}
-									className="connection-scope-select">
-									<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.User)} value="1">User</vscode-option>
-									<vscode-option title={getConfigurationScopeDescription(ConfigurationScope.Workspace)} value="2">Workspace</vscode-option>
-								</vscode-single-select>
 								<vscode-button type="submit" disabled={!isFormValid() || !state.hasUnsavedChanges}>
 									Save
 								</vscode-button>
@@ -407,6 +410,24 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 							/>
 						</div>
 					</section>
+					{showScopeSelector && (
+						<section>
+							<div>
+								<span className='section-label'>Scope</span>
+								<vscode-form-helper>
+									{getConfigurationScopeDescription(endpoint.configScope)}
+								</vscode-form-helper>
+							</div>
+							<vscode-single-select
+								className="wide"
+								ref={configScopeSelectRef}
+								value={endpoint.configScope.toString()}
+								disabled={isFormReadOnly()}>
+								<vscode-option value="1">User</vscode-option>
+								<vscode-option value="2">Workspace</vscode-option>
+							</vscode-single-select>
+						</section>
+					)}
 					<section>
 						<div>
 							<span className='section-label'>Authentication</span>
