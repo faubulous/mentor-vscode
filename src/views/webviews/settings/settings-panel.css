@@ -115,7 +115,7 @@ vscode-textfield .root {
 	gap: 12px;
 	max-width: 1000px;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 	padding: 6px 16px;
 	flex-shrink: 0;
 }
@@ -126,7 +126,7 @@ vscode-textfield .root {
 	align-items: center;
 	align-content: center;
 	gap: 8px;
-	width: 196px;
+	width: 198px;
 }
 
 .panel-header-title-wrapper {
@@ -153,34 +153,8 @@ vscode-textfield .root {
 
 /* ── Scope tabs ─────────────────────────────────────────────── */
 
-.scope-tabs {
-	display: flex;
-	gap: 2px;
-	background: var(--vscode-editor-background);
-	border: 1px solid var(--vscode-panel-border);
-	border-radius: 4px;
-	padding: 2px;
-}
-
-.scope-tab {
-	padding: 3px 14px;
-	border: none;
-	background: transparent;
-	color: var(--vscode-foreground);
-	cursor: pointer;
-	border-radius: 3px;
-	font-size: 0.9em;
-	font-family: inherit;
-	transition: background 0.1s;
-}
-
-.scope-tab:hover {
-	background: var(--vscode-list-hoverBackground);
-}
-
-.scope-tab.active {
-	background: var(--vscode-button-background);
-	color: var(--vscode-button-foreground);
+.panel-header-context {
+	margin-left: auto;
 }
 
 /* ── Modified tag ───────────────────────────────────────────── */
@@ -358,7 +332,7 @@ vscode-textarea.monospace {
 /* Setting rows */
 
 .setting-row {
-	padding: 1.5em 0;
+	padding: 1em 0;
 }
 
 .setting-row-header {
@@ -672,12 +646,12 @@ vscode-textarea.monospace {
 }
 
 .connection-item-lock {
-    font-size: 14px;
-    color: var(--vscode-descriptionForeground);
-    margin: 0 5px 0 9px;
-    line-height: 22px;
-    margin-top: 4px;
-    flex-shrink: 0;
+	font-size: 14px;
+	color: var(--vscode-descriptionForeground);
+	margin: 0 5px 0 9px;
+	line-height: 22px;
+	margin-top: 4px;
+	flex-shrink: 0;
 }
 
 .connection-item-actions {
@@ -694,8 +668,15 @@ vscode-textarea.monospace {
 }
 
 @keyframes pulse {
-	0%, 100% { opacity: 1; }
-	50% { opacity: 0.4; }
+
+	0%,
+	100% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.4;
+	}
 }
 
 .empty-state {

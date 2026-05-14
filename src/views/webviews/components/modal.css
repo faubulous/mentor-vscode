@@ -1,0 +1,96 @@
+.mentor-modal-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: color-mix(in srgb, var(--vscode-editor-background) 80%, transparent);
+}
+
+.mentor-modal-dialog {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: min(90vw, 720px);
+	max-height: 90vh;
+	background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, var(--vscode-panel-border)));
+	border-radius: 4px;
+	box-shadow: 0 8px 24px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.4));
+	outline: none;
+}
+
+.mentor-modal-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 1em;
+	padding: 10px 16px;
+	border-bottom: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+}
+
+.mentor-modal-title {
+	flex: 1;
+	margin: 0;
+	font-size: 1.1em;
+	font-weight: 500;
+	color: var(--vscode-foreground);
+}
+
+.mentor-modal-header-actions {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.mentor-modal-header-actions:empty {
+	display: none;
+}
+
+.mentor-modal-close {
+	flex: 0 0 auto;
+}
+
+.mentor-modal-body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 16px;
+}
+
+.mentor-modal-confirm-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: rgba(0, 0, 0, 0.35);
+	border-radius: 4px;
+}
+
+.mentor-modal-confirm-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 1em;
+	max-width: 80%;
+	padding: 16px;
+	background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+	border-radius: 4px;
+	box-shadow: 0 4px 12px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.4));
+}
+
+.mentor-modal-confirm-message {
+	margin: 0;
+}
+
+.mentor-modal-confirm-actions {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+	gap: 0.5em;
+}

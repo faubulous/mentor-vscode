@@ -5,6 +5,7 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TestResult } from '../components/types';
 import { SparqlConnectionsList } from '../../sparql-connections-list/sparql-connections-list';
 import { SparqlConnectionEditor } from '../../sparql-connection/sparql-connection-editor';
+import { Modal } from '../../components/modal';
 import { SettingsScopeContext } from '../components/setting-context';
 import { useScopedWebviewMessaging } from '../../webview-hooks';
 import { SparqlConnectionsListMessages } from '../../sparql-connections-list/sparql-connections-list-messages';
@@ -18,6 +19,7 @@ export function ConnectionsSection() {
 	const [connections, setConnections] = useState<SparqlConnection[]>([]);
 	const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
 	const [editingConnection, setEditingConnection] = useState<SparqlConnection | undefined>(undefined);
+	const [editorDirty, setEditorDirty] = useState(false);
 	const [testingConnections, setTestingConnections] = useState<Set<string>>(new Set());
 
 	const handleMessage = useCallback((message: ConnectionsSectionMessage) => {
@@ -65,15 +67,6 @@ export function ConnectionsSection() {
 		setEditingConnection(prev => prev ? { ...prev, configScope: newScope } : prev);
 	}, [activeScope]);
 
-	if (editingConnection) {
-		return (
-			<SparqlConnectionEditor
-				connection={editingConnection}
-				onBack={() => setEditingConnection(undefined)}
-			/>
-		);
-	}
-
 	const scopeEnum = activeScope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
 	const filtered = connections.filter(c => c.configScope === scopeEnum || c.isProtected === true);
 
@@ -89,18 +82,48 @@ export function ConnectionsSection() {
 		messaging?.postMessage({ id: 'ListGraphs', connection });
 	};
 
+	const closeEditor = (wasSaved: boolean = false) => {
+		if (!wasSaved && editingConnection?.isNew) {
+			messaging?.postMessage({ id: 'DiscardSparqlConnection', connectionId: editingConnection.id });
+		}
+		setEditorDirty(false);
+		setEditingConnection(undefined);
+	};
+
 	return (
-		<SparqlConnectionsList
-			connections={filtered}
-			testResults={testResults}
-			testingConnections={testingConnections}
-			onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
-			onEditConnection={(connection) => setEditingConnection(connection)}
-			onDeleteConnection={(connection) => messaging?.postMessage({ id: 'DeleteConnection', connection })}
-			onTestConnection={handleTestConnection}
-			onListGraphs={handleListGraphs}
-			onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
-			onChangeSparqlConnectionScope={(connection, toScope) => messaging?.postMessage({ id: 'ChangeSparqlConnectionScope', connection, toScope })}
-		/>
+		<>
+			<SparqlConnectionsList
+				connections={filtered}
+				testResults={testResults}
+				testingConnections={testingConnections}
+				onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
+				onEditConnection={(connection) => setEditingConnection(connection)}
+				onDeleteConnection={(connection) => messaging?.postMessage({ id: 'DeleteConnection', connection })}
+				onTestConnection={handleTestConnection}
+				onListGraphs={handleListGraphs}
+				onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
+				onChangeSparqlConnectionScope={(connection, toScope) => messaging?.postMessage({ id: 'ChangeSparqlConnectionScope', connection, toScope })}
+			/>
+			<Modal
+				open={!!editingConnection}
+				title="Edit Connection"
+				onClose={() => closeEditor(false)}
+				requireCloseConfirmation={editorDirty}
+				closeConfirmationMessage="You have unsaved changes. Discard them?"
+				closeConfirmLabel="Discard"
+				hideCloseButton
+			>
+				{editingConnection && (
+					<SparqlConnectionEditor
+						connection={editingConnection}
+						hideHeader
+						showScopeSelector
+						onDirtyChange={setEditorDirty}
+						onBack={() => closeEditor(false)}
+						onSaved={() => closeEditor(true)}
+					/>
+				)}
+			</Modal>
+		</>
 	);
 }

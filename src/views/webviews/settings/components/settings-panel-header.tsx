@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ScopeTabs } from '../../components/scope-tabs';
 
 export function MentorIcon() {
 	const url = document.getElementById('root')?.dataset.mentorIconUrl;
@@ -44,19 +45,8 @@ export function SettingsPanelHeader({ version, activeScope, onScopeTabChange, se
 						</vscode-textfield>
 					</div>
 				</div>
-				<div className="scope-tabs">
-					<button
-						className={`scope-tab${activeScope === 'user' ? ' active' : ''}`}
-						onClick={() => onScopeTabChange('user')}
-					>
-						User
-					</button>
-					<button
-						className={`scope-tab${activeScope === 'workspace' ? ' active' : ''}`}
-						onClick={() => onScopeTabChange('workspace')}
-					>
-						Workspace
-					</button>
+				<div className="panel-header-context">
+					<ScopeTabs activeScope={activeScope} onScopeChange={onScopeTabChange} />
 				</div>
 			</div>
 		</div>

@@ -13,9 +13,9 @@ export type SettingsNavigationSection =
 	| "editor.formatting"
 	| "editor.sorting"
 	| "editor.validation"
-	| "indexing"
+	| "query.general"
 	| "connections"
-	| "query";
+	| "indexing";
 
 // ── Data ─────────────────────────────────────────────────────
 
@@ -25,23 +25,23 @@ export const SETTINGS: Record<string, SettingMetadata> = {
 		uiVisible: true,
 	},
 	"sparql.defaultInferenceEnabled": {
-		section: "query",
+		section: "query.general",
 		uiVisible: true,
 	},
 	"sparql.listGraphsQuery": {
-		section: "query",
+		section: "query.general",
 		uiVisible: true,
 	},
 	"sparql.dropGraphQuery": {
-		section: "query",
+		section: "query.general",
 		uiVisible: true,
 	},
 	"sparql.describeQueryTemplate": {
-		section: "query",
+		section: "query.general",
 		uiVisible: true,
 	},
 	"sparql.queryTimeout": {
-		section: "query",
+		section: "query.general",
 		uiVisible: true,
 	},
 	"definitionTree.labelStyle": {
@@ -64,7 +64,7 @@ export const SETTINGS: Record<string, SettingMetadata> = {
 		enumOptions: [{"value":"Disabled","label":"Disabled"},{"value":"All","label":"All"},{"value":"Document","label":"Document"}],
 	},
 	"inference.enabled": {
-		section: "query",
+		section: "query.general",
 		uiVisible: false,
 	},
 	"predicates.label": {
@@ -252,19 +252,13 @@ export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] =
 		]
 	},
 	{
-		"id": "indexing",
-		"label": "Indexing",
+		"id": "query",
+		"label": "Query",
 		"sections": [
 			{
-				"id": "indexing",
-				"label": "Indexing"
-			}
-		]
-	},
-	{
-		"id": "connections",
-		"label": "Connections",
-		"sections": [
+				"id": "query.general",
+				"label": "General"
+			},
 			{
 				"id": "connections",
 				"label": "Connections"
@@ -272,12 +266,12 @@ export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] =
 		]
 	},
 	{
-		"id": "query",
-		"label": "Query",
+		"id": "indexing",
+		"label": "Indexing",
 		"sections": [
 			{
-				"id": "query",
-				"label": "Query"
+				"id": "indexing",
+				"label": "Indexing"
 			}
 		]
 	}

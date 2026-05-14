@@ -1,6 +1,10 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useContext, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { VscodeSingleSelect } from '@vscode-elements/elements';
+import { ModalHeaderActionsContext } from '@src/views/webviews/components/modal';
+import { ScopeTabs } from '@src/views/webviews/components/scope-tabs';
+import { SettingsScopeSetContext } from '@src/views/webviews/settings/components/setting-context';
 import { useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import {
@@ -58,10 +62,18 @@ export interface SparqlConnectionViewProps {
 	fetchedMicrosoftCredential?: MicrosoftAuthCredential | null;
 	/** When true, renders an inline scope (User/Workspace) dropdown in the form. */
 	showScopeSelector?: boolean;
+	/**
+	 * When true, suppresses the internal form header (back button + title) and renders the
+	 * action buttons in a toolbar row above the form body instead. Use when hosting the
+	 * view in a chrome that already provides a title and close affordance (e.g. a modal).
+	 */
+	hideHeader?: boolean;
 	/** Optional back button, used when embedded inside a larger view. */
 	onBack?: () => void;
 	/** Called after a successful save, e.g. to navigate back. Only used in embedded contexts. */
 	onSaved?: () => void;
+	/** Notifies the host whenever the form's unsaved-changes state changes. */
+	onDirtyChange?: (dirty: boolean) => void;
 	onSave(connection: SparqlConnection, credential: AuthCredential | null): void;
 	onUpdate(connection: SparqlConnection): void;
 	onDelete(connection: SparqlConnection): void;
@@ -75,12 +87,14 @@ export interface SparqlConnectionViewProps {
 export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	const {
 		connection, initialCredential, testResult, isTesting, inferenceEnabled, fetchedMicrosoftCredential,
-		showScopeSelector,
+		showScopeSelector, hideHeader,
 		onBack, onSaved, onSave, onUpdate, onDelete, onRequestTest,
 		onRequestCredential, onRequestInferenceEnabled, onToggleInference, onFetchMicrosoftCredential,
+		onDirtyChange,
 	} = props;
 
 	const [state, setState] = useState<FormState>(() => makeInitialFormState(connection));
+	const headerActionsSlot = useContext(ModalHeaderActionsContext);
 
 	useStylesheet('sparql-connection-view-styles', stylesheet);
 
@@ -119,6 +133,10 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 		}));
 	}, [fetchedMicrosoftCredential]);
 
+	useEffect(() => {
+		onDirtyChange?.(state.hasUnsavedChanges);
+	}, [state.hasUnsavedChanges, onDirtyChange]);
+
 	// Sync local endpoint scope when the incoming connection.configScope changes (e.g. scope tab switch).
 	useEffect(() => {
 		setState(prev => {
@@ -129,14 +147,20 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 		});
 	}, [connection.configScope]);
 
-	const configScopeSelectRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => {
-		const newConfigScope = parseInt(element.value, 10);
+	const settingsScopeSetter = useContext(SettingsScopeSetContext);
+
+	const handleScopeChange = (scope: 'user' | 'workspace') => {
+		const newConfigScope = scope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
+		if (settingsScopeSetter) {
+			settingsScopeSetter(scope);
+			return;
+		}
 		setState(prev => {
 			const endpoint = { ...prev.endpoint, configScope: newConfigScope };
 			onUpdate(endpoint);
 			return { ...prev, endpoint, hasUnsavedChanges: true };
 		});
-	});
+	};
 
 	const authTypeSelectRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => {
 		setState(prev => ({ ...prev, selectedAuthTypeIndex: parseInt(element.value, 10), hasUnsavedChanges: true }));
@@ -185,11 +209,20 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 		});
 	};
 
-	const handleSave = (e: React.FormEvent) => {
-		e.preventDefault();
+	const submitSave = () => {
 		onSave(state.endpoint, getSelectedCredential());
 		setState(prev => ({ ...prev, hasUnsavedChanges: false }));
 		onSaved?.();
+	};
+
+	const handleFormSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		submitSave();
+	};
+
+	const handleSaveClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		submitSave();
 	};
 
 	const handleTest = (e: React.MouseEvent) => {
@@ -204,6 +237,20 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	};
 
 	const endpoint = state.endpoint;
+
+	const renderFormActions = () => (
+		<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
+			{isFormReadOnly() && <vscode-icon name="lock" />}
+			{!isFormReadOnly() && <>
+				<vscode-toolbar-button onClick={handleDelete}>
+					<vscode-icon name="trash" title="Delete" />
+				</vscode-toolbar-button>
+				<vscode-button onClick={handleSaveClick} disabled={!isFormValid() || !state.hasUnsavedChanges}>
+					Save
+				</vscode-button>
+			</>}
+		</div>
+	);
 
 	const renderBasicAuthFields = () => {
 		const credential = state.basicCredential;
@@ -352,28 +399,26 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	return (
 		<div className="sparql-connection-view-container">
 			{isTesting && <vscode-progress-bar />}
-			<form onSubmit={handleSave}>
-				<section>
-					<div className="form-header">
-						{onBack && (
-							<vscode-toolbar-button title="Back to connections" onClick={(e: React.MouseEvent) => { e.preventDefault(); onBack(); }}>
-								<vscode-icon name="arrow-left" />
-							</vscode-toolbar-button>
-						)}
-						<h2 className="settings-section-title">Edit Connection</h2>
-						<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
-							{isFormReadOnly() && <vscode-icon name="lock" />}
-							{!isFormReadOnly() && <>
-								<vscode-toolbar-button onClick={handleDelete}>
-									<vscode-icon name="trash" title="Delete" />
+			<form onSubmit={handleFormSubmit}>
+				{hideHeader && headerActionsSlot ? (
+					createPortal(renderFormActions(), headerActionsSlot)
+				) : hideHeader ? (
+					<vscode-toolbar-container className="form-toolbar">
+						{renderFormActions()}
+					</vscode-toolbar-container>
+				) : (
+					<section>
+						<div className="form-header">
+							{onBack && (
+								<vscode-toolbar-button title="Back to connections" onClick={(e: React.MouseEvent) => { e.preventDefault(); onBack(); }}>
+									<vscode-icon name="arrow-left" />
 								</vscode-toolbar-button>
-								<vscode-button type="submit" disabled={!isFormValid() || !state.hasUnsavedChanges}>
-									Save
-								</vscode-button>
-							</>}
+							)}
+							<h2 className="settings-section-title">Edit Connection</h2>
+							{renderFormActions()}
 						</div>
-					</div>
-				</section>
+					</section>
+				)}
 				<div className="form-body">
 					<section>
 						<div>
@@ -418,14 +463,11 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 									{getConfigurationScopeDescription(endpoint.configScope)}
 								</vscode-form-helper>
 							</div>
-							<vscode-single-select
-								className="wide"
-								ref={configScopeSelectRef}
-								value={endpoint.configScope.toString()}
-								disabled={isFormReadOnly()}>
-								<vscode-option value="1">User</vscode-option>
-								<vscode-option value="2">Workspace</vscode-option>
-							</vscode-single-select>
+							<ScopeTabs
+								activeScope={endpoint.configScope === ConfigurationScope.User ? 'user' : 'workspace'}
+								onScopeChange={handleScopeChange}
+								disabled={isFormReadOnly()}
+							/>
 						</section>
 					)}
 					<section>

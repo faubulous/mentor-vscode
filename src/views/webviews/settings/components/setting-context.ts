@@ -8,6 +8,14 @@ import React from "react";
 export const SettingsScopeContext = React.createContext<'user' | 'workspace'>('user');
 
 /**
+ * Provides a setter for the active settings scope. When non-null, descendants
+ * may invoke it to switch the settings panel's User/Workspace tab from inside
+ * embedded views (e.g. the SPARQL connection editor modal), keeping both
+ * selectors in sync.
+ */
+export const SettingsScopeSetContext = React.createContext<((scope: 'user' | 'workspace') => void) | null>(null);
+
+/**
  * Provides a callback for moving a setting from one scope to another (copy + clear source).
  */
 export const SettingsMoveContext = React.createContext<

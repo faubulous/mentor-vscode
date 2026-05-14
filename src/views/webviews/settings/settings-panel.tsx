@@ -8,7 +8,7 @@ import { SettingsNavigation } from './components/settings-navigation';
 import { LanguageId, FormattingLanguage } from '@src/services/document/document-factory';
 import { SettingScope, SettingState } from './settings-types';
 import { SettingsPanelMessages } from './settings-panel-messages';
-import { SettingsScopeContext, SettingsMoveContext, VSCodeSettingsMoveContext } from './components/setting-context';
+import { SettingsScopeContext, SettingsScopeSetContext, SettingsMoveContext, VSCodeSettingsMoveContext } from './components/setting-context';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
 import { SECTION_REGISTRY } from './settings-registry';
 import stylesheet from './settings-panel.css';
@@ -217,6 +217,7 @@ function SettingsPanel() {
 
 	return (
 		<SettingsScopeContext.Provider value={state.activeScope}>
+			<SettingsScopeSetContext.Provider value={handleScopeTabChange}>
 			<SettingsMoveContext.Provider value={handleMoveToScope}>
 				<VSCodeSettingsMoveContext.Provider value={handleVSCodeMoveToScope}>
 					<div className="settings-panel">
@@ -238,6 +239,7 @@ function SettingsPanel() {
 					</div>
 				</VSCodeSettingsMoveContext.Provider>
 			</SettingsMoveContext.Provider>
+			</SettingsScopeSetContext.Provider>
 		</SettingsScopeContext.Provider>
 	);
 }

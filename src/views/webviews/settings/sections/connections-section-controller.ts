@@ -148,6 +148,14 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				);
 				return true;
 			}
+			case 'DiscardSparqlConnection': {
+				const connectionId = message.connectionId as string;
+				const connection = connectionService.getConnection(connectionId);
+				if (connection?.isNew) {
+					await connectionService.deleteConnection(connectionId);
+				}
+				return true;
+			}
 			case 'UpdateSparqlConnection': {
 				await connectionService.updateConnection(message.connection as SparqlConnection);
 				return true;

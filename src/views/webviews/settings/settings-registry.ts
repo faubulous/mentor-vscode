@@ -28,7 +28,7 @@ export const SECTION_REGISTRY: Record<SettingsNavigationSection, SectionRegistry
     'editor.validation': { id: 'editor.validation', component: ValidationSection, keys: [] },
     'indexing': { id: 'indexing', component: IndexingSection, keys: [] },
     'connections': { id: 'connections', component: ConnectionsSection, keys: [] },
-    'query': { id: 'query', component: QuerySection, keys: [] },
+    'query.general': { id: 'query.general', component: QuerySection, keys: [] },
 };
 
 // Populate the keys dynamically from SETTINGS metadata to avoid hand-maintaining arrays

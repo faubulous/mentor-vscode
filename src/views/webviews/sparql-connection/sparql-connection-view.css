@@ -61,13 +61,22 @@
 	gap: 1em;
 }
 
-.sparql-connection-view-container .form-actions {
+.form-actions {
 	display: flex;
 	flex-direction: row;
 	gap: 1em;
 	align-items: center;
 	min-height: 28px;
 	margin-left: auto;
+}
+
+.sparql-connection-view-container .form-toolbar {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .sparql-connection-view-container .form-actions.readonly {

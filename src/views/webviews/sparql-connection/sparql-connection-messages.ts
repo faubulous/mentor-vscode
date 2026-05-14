@@ -7,6 +7,7 @@ export type SparqlConnectionMessages =
     ExecuteCommandMessage |
     { id: 'ChangeSparqlConnectionScope'; connection: SparqlConnection; toScope: ConfigurationScope } |
     { id: 'DeleteSparqlConnection', connectionId: string } |
+    { id: 'DiscardSparqlConnection', connectionId: string } |
     { id: 'EditSparqlConnection'; connection: SparqlConnection } |
     { id: 'FetchMicrosoftAuthCredential', connectionId: string, scopes: string[] } |
     { id: 'FetchMicrosoftAuthCredentialResult', connectionId: string, credential: MicrosoftAuthCredential | null } |

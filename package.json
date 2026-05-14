@@ -1365,19 +1365,13 @@
             ]
           },
           {
-            "id": "indexing",
-            "label": "Indexing",
+            "id": "query",
+            "label": "Query",
             "sections": [
               {
-                "id": "indexing",
-                "label": "Indexing"
-              }
-            ]
-          },
-          {
-            "id": "connections",
-            "label": "Connections",
-            "sections": [
+                "id": "query.general",
+                "label": "General"
+              },
               {
                 "id": "connections",
                 "label": "Connections"
@@ -1385,12 +1379,12 @@
             ]
           },
           {
-            "id": "query",
-            "label": "Query",
+            "id": "indexing",
+            "label": "Indexing",
             "sections": [
               {
-                "id": "query",
-                "label": "Query"
+                "id": "indexing",
+                "label": "Indexing"
               }
             ]
           }
@@ -1438,14 +1432,14 @@
             "default": []
           },
           "mentor.sparql.defaultInferenceEnabled": {
-            "x-settings-group": "query",
+            "x-settings-group": "query.general",
             "type": "boolean",
             "title": "Default Inference Enabled",
             "description": "Default value for whether inferred triples should be included in SPARQL query results. This applies to connections that support inference toggling (e.g., the workspace store).",
             "default": false
           },
           "mentor.sparql.listGraphsQuery": {
-            "x-settings-group": "query",
+            "x-settings-group": "query.general",
             "type": "string",
             "title": "List Graphs Query",
             "description": "SPARQL query used to retrieve all named graphs and the default graph from a SPARQL endpoint.",
@@ -1453,7 +1447,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.sparql.dropGraphQuery": {
-            "x-settings-group": "query",
+            "x-settings-group": "query.general",
             "type": "string",
             "title": "Drop Graph Query",
             "description": "SPARQL query used to drop a named graph from a SPARQL endpoint.",
@@ -1461,7 +1455,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.sparql.describeQueryTemplate": {
-            "x-settings-group": "query",
+            "x-settings-group": "query.general",
             "type": "string",
             "title": "Describe Query Template",
             "description": "SPARQL query template used by the describe command. Use {{resourceIri}} for the selected resource and {{fromClauses}} for optional FROM clauses generated from graph URIs.",
@@ -1469,7 +1463,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.sparql.queryTimeout": {
-            "x-settings-group": "query",
+            "x-settings-group": "query.general",
             "type": "integer",
             "title": "Query Timeout",
             "description": "Timeout in milliseconds for SPARQL query execution. Set to 0 for no timeout.",
@@ -1533,7 +1527,7 @@
             "default": "Document"
           },
           "mentor.inference.enabled": {
-            "x-settings-group": "query",
+            "x-settings-group": "query.general",
             "x-settings-visible": false,
             "type": "boolean",
             "title": "Enable Inferencing Toggle",
