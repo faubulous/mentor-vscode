@@ -21,9 +21,10 @@ export interface SettingsPanelHeaderProps {
 	searchTerm: string;
 	onScopeTabChange: (scope: 'user' | 'workspace') => void;
 	onSearchChange: (term: string) => void;
+	onOpenHomepage: () => void;
 }
 
-export function SettingsPanelHeader({ version, activeScope, onScopeTabChange, searchTerm, onSearchChange }: SettingsPanelHeaderProps) {
+export function SettingsPanelHeader({ version, activeScope, onScopeTabChange, searchTerm, onSearchChange, onOpenHomepage }: SettingsPanelHeaderProps) {
 	return (
 		<div className="panel-header">
 			<div className="panel-header-inner">
@@ -33,6 +34,9 @@ export function SettingsPanelHeader({ version, activeScope, onScopeTabChange, se
 						<span className="panel-header-title">Mentor</span>
 						{version && <span className="panel-header-version">v{version}</span>}
 					</div>
+				</div>
+				<div className="panel-header-scope">
+					<ScopeTabs activeScope={activeScope} onScopeChange={onScopeTabChange} />
 				</div>
 				<div className="panel-header-search">
 					<div className="search-field-wrapper">
@@ -45,8 +49,13 @@ export function SettingsPanelHeader({ version, activeScope, onScopeTabChange, se
 						</vscode-textfield>
 					</div>
 				</div>
-				<div className="panel-header-context">
-					<ScopeTabs activeScope={activeScope} onScopeChange={onScopeTabChange} />
+				<div className="panel-header-help">
+					<vscode-toolbar-button
+						title="Open Mentor homepage"
+						onClick={onOpenHomepage}
+					>
+						<vscode-icon name="question" />
+					</vscode-toolbar-button>
 				</div>
 			</div>
 		</div>

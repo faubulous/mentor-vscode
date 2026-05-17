@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useContext } from 'react';
 import { SettingScope, SettingState } from '../settings-types';
 import { MarkdownText } from './markdown-text';
-import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from './section-header-context-menu';
+import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from '@src/views/webviews/components/section-header-context-menu';
 import { SettingsMoveContext, SettingsScopeContext } from './setting-context';
 
 /**
@@ -76,7 +76,7 @@ export function SettingRow({ label, description, state, setScope, children }: Se
 	];
 
 	return (
-		<div className="setting-row">
+		<div className={`setting-row${isModified ? ' setting-row-modified' : ''}`}>
 			<div className="setting-row-header">
 				<span className="setting-label">{label}</span>
 				{isModified && <span className="setting-modified-tag" title={`Modified in ${panelScope} settings`}>MODIFIED</span>}

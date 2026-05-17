@@ -92,10 +92,13 @@ function SettingsPanel() {
 	}, [state.activeScope, messaging, setState]);
 
 	const handleSetScope = useCallback((key: string, newScope: SettingScope, currentValue: unknown) => {
-		setState(prev => ({
-			...prev,
-			settings: { ...prev.settings, [key]: { ...prev.settings[key], scope: newScope } },
-		}));
+		if (newScope === 'default') {
+			setState(prev => ({
+				...prev,
+				settings: { ...prev.settings, [key]: { ...prev.settings[key], scope: newScope } },
+			}));
+		}
+		// For copy-to-other-scope, local state is unchanged (current setting stays modified).
 		messaging?.postMessage({ id: 'UpdateSetting', key, value: newScope === 'default' ? undefined : currentValue, scope: newScope });
 	}, [messaging, setState]);
 
@@ -115,16 +118,19 @@ function SettingsPanel() {
 	}, [state.activeScope, messaging, setState]);
 
 	const handleVSCodeScopeChange = useCallback((languageId: LanguageId, key: string, newScope: SettingScope, currentValue: unknown) => {
-		setState(prev => ({
-			...prev,
-			vscodeSettings: {
-				...prev.vscodeSettings,
-				[languageId]: {
-					...prev.vscodeSettings[languageId],
-					[key]: { ...prev.vscodeSettings[languageId]?.[key], source: newScope },
+		if (newScope === 'default') {
+			setState(prev => ({
+				...prev,
+				vscodeSettings: {
+					...prev.vscodeSettings,
+					[languageId]: {
+						...prev.vscodeSettings[languageId],
+						[key]: { ...prev.vscodeSettings[languageId]?.[key], scope: newScope },
+					},
 				},
-			},
-		}));
+			}));
+		}
+		// For copy-to-other-scope, local state is unchanged (current setting stays modified).
 		messaging?.postMessage({ id: 'UpdateVSCodeSetting', languageId, key, value: newScope === 'default' ? undefined : currentValue, scope: newScope });
 	}, [messaging, setState]);
 
@@ -143,7 +149,14 @@ function SettingsPanel() {
 		messaging?.postMessage({ id: 'UpdateSetting', key, value: undefined, scope: fromScope });
 		setState(prev => ({
 			...prev,
-			settings: { ...prev.settings, [key]: { ...prev.settings[key], scope: toScope } },
+			settings: {
+				...prev.settings,
+				[key]: {
+					...prev.settings[key],
+					scope: 'default',
+					value: prev.settings[key]?.defaultValue,
+				},
+			},
 		}));
 	}, [messaging, setState]);
 
@@ -156,7 +169,11 @@ function SettingsPanel() {
 				...prev.vscodeSettings,
 				[languageId]: {
 					...prev.vscodeSettings[languageId],
-					[key]: { ...prev.vscodeSettings[languageId]?.[key], source: toScope },
+					[key]: {
+						...prev.vscodeSettings[languageId]?.[key],
+						scope: 'default',
+						value: prev.vscodeSettings[languageId]?.[key]?.defaultValue,
+					},
 				},
 			},
 		}));
@@ -227,6 +244,7 @@ function SettingsPanel() {
 							onScopeTabChange={handleScopeTabChange}
 							searchTerm={state.searchTerm}
 							onSearchChange={handleSearchChange}
+							onOpenHomepage={() => messaging?.postMessage({ id: 'ExecuteCommand', command: 'mentor.command.openMentorHomepage' })}
 						/>
 						<div className="settings-body">
 							<SettingsNavigation activeSection={state.activeSection} onSelect={handleNavSelect} />

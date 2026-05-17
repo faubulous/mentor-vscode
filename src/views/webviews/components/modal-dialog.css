@@ -1,4 +1,4 @@
-.mentor-modal-overlay {
+.modal-dialog-overlay {
 	position: fixed;
 	inset: 0;
 	z-index: 1000;
@@ -8,7 +8,7 @@
 	background-color: color-mix(in srgb, var(--vscode-editor-background) 80%, transparent);
 }
 
-.mentor-modal-dialog {
+.modal-dialog {
 	position: relative;
 	display: flex;
 	flex-direction: column;
@@ -22,45 +22,52 @@
 	outline: none;
 }
 
-.mentor-modal-header {
+.modal-dialog-header {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 1em;
+	gap: 2em;
 	padding: 10px 16px;
 	border-bottom: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
 }
 
-.mentor-modal-title {
-	flex: 1;
+.modal-dialog-title {
 	margin: 0;
 	font-size: 1.1em;
 	font-weight: 500;
 	color: var(--vscode-foreground);
 }
 
-.mentor-modal-header-actions {
+.modal-dialog-title-accessories {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+	flex: 1;
+}
+
+.modal-dialog-header-actions {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	gap: 0.5em;
 }
 
-.mentor-modal-header-actions:empty {
+.modal-dialog-header-actions:empty {
 	display: none;
 }
 
-.mentor-modal-close {
+.modal-dialog-close {
 	flex: 0 0 auto;
 }
 
-.mentor-modal-body {
+.modal-dialog-body {
 	flex: 1 1 auto;
 	overflow-y: auto;
 	padding: 16px;
 }
 
-.mentor-modal-confirm-overlay {
+.modal-dialog-confirm-overlay {
 	position: absolute;
 	inset: 0;
 	z-index: 1;
@@ -71,7 +78,7 @@
 	border-radius: 4px;
 }
 
-.mentor-modal-confirm-panel {
+.modal-dialog-confirm-panel {
 	display: flex;
 	flex-direction: column;
 	gap: 1em;
@@ -84,11 +91,11 @@
 	box-shadow: 0 4px 12px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.4));
 }
 
-.mentor-modal-confirm-message {
+.modal-dialog-confirm-message {
 	margin: 0;
 }
 
-.mentor-modal-confirm-actions {
+.modal-dialog-confirm-actions {
 	display: flex;
 	flex-direction: row;
 	justify-content: flex-end;

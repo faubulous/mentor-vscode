@@ -7,14 +7,27 @@ import { SparqlConnectionMessages } from "./sparql-connection-messages";
 
 export interface SparqlConnectionEditorProps {
 	connection: SparqlConnection;
+
 	onBack: () => void;
-	/** Optional notification fired after a successful save. Falls back to onBack. */
+
+	/**
+	 * Optional notification fired after a successful save. Falls back to onBack.
+	 */
 	onSaved?: () => void;
-	/** When true, renders an inline scope (User/Workspace) dropdown in the form. */
+
+	/**
+	 * When true, renders an inline scope (User/Workspace) dropdown in the form.
+	 */
 	showScopeSelector?: boolean;
-	/** When true, suppresses the internal header and uses a toolbar row for actions. */
+
+	/**
+	 * When true, suppresses the internal header and uses a toolbar row for actions.
+	 */
 	hideHeader?: boolean;
-	/** Notifies the host whenever the form's unsaved-changes state changes. */
+
+	/**
+	 * Notifies the host whenever the form's unsaved-changes state changes.
+	 */
 	onDirtyChange?: (dirty: boolean) => void;
 }
 

@@ -1,7 +1,8 @@
 import { SettingScope, SettingState } from '../settings-types';
-import { SectionHeader } from '../components/section-header';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { SettingRow } from '../components/setting-row';
 import { useSettingRowProps } from '../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
 import { SECTION_TITLES } from '../settings-metadata';
 
 export interface TemplatesSectionProps {
@@ -14,9 +15,10 @@ export interface TemplatesSectionProps {
 
 export function TemplatesSection({ keys, settings, onUpdate, setScope, onBulkScope }: TemplatesSectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
+	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
 	return (
 		<div>
-			<SectionHeader title={SECTION_TITLES['editor.templates']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<FormSectionHeader title={SECTION_TITLES['editor.templates']} menuItems={menuItems} large />
 			{keys.map((key) => (
 				<SettingRow key={key} {...rowProps(key)}>
 					<vscode-textarea

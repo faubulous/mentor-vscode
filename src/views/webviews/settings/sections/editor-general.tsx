@@ -1,8 +1,9 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-types';
-import { SectionHeader } from '../components/section-header';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { SettingRow } from '../components/setting-row';
 import { useSettingRowProps } from '../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
 import { SECTION_TITLES, getEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
@@ -25,6 +26,7 @@ export function EditorGeneralSection({ settings, onUpdate, setScope, onBulkScope
 
 	const namespaces = (settings['namespaces']?.value as { uri: string; defaultPrefix: string }[]) ?? [];
 	const rowProps = useSettingRowProps(settings, setScope);
+	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
 
 	const prefixDefinitionModeRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
@@ -33,7 +35,7 @@ export function EditorGeneralSection({ settings, onUpdate, setScope, onBulkScope
 
 	return (
 		<div>
-			<SectionHeader title={SECTION_TITLES['editor.general']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<FormSectionHeader title={SECTION_TITLES['editor.general']} menuItems={menuItems} large />
 			<SettingRow {...rowProps('editor.codeLensEnabled')}>
 				<vscode-checkbox
 					checked={settings['editor.codeLensEnabled']?.value === true}

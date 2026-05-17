@@ -2,8 +2,9 @@ import * as React from 'react';
 import { useContext, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { ModalHeaderActionsContext } from '@src/views/webviews/components/modal';
+import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } from '@src/views/webviews/components/modal-dialog';
 import { ScopeTabs } from '@src/views/webviews/components/scope-tabs';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { SettingsScopeSetContext } from '@src/views/webviews/settings/components/setting-context';
 import { useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
@@ -52,35 +53,53 @@ function makeInitialFormState(connection: SparqlConnection): FormState {
 
 export interface SparqlConnectionViewProps {
 	connection: SparqlConnection;
+
 	/** Loaded credential from storage. undefined = loading, null = no credential. */
 	initialCredential?: AuthCredential | null;
+
 	/** Test result. undefined = not tested, null = success, error object = failure. */
 	testResult?: { code: number; message: string } | null;
+
 	isTesting: boolean;
+
 	inferenceEnabled: boolean;
+
 	/** A freshly fetched Microsoft token; when non-null, replaces the Microsoft credential fields. */
 	fetchedMicrosoftCredential?: MicrosoftAuthCredential | null;
+
 	/** When true, renders an inline scope (User/Workspace) dropdown in the form. */
 	showScopeSelector?: boolean;
+
 	/**
 	 * When true, suppresses the internal form header (back button + title) and renders the
 	 * action buttons in a toolbar row above the form body instead. Use when hosting the
 	 * view in a chrome that already provides a title and close affordance (e.g. a modal).
 	 */
 	hideHeader?: boolean;
+
 	/** Optional back button, used when embedded inside a larger view. */
 	onBack?: () => void;
+
 	/** Called after a successful save, e.g. to navigate back. Only used in embedded contexts. */
 	onSaved?: () => void;
+
 	/** Notifies the host whenever the form's unsaved-changes state changes. */
 	onDirtyChange?: (dirty: boolean) => void;
+
 	onSave(connection: SparqlConnection, credential: AuthCredential | null): void;
+
 	onUpdate(connection: SparqlConnection): void;
+
 	onDelete(connection: SparqlConnection): void;
+
 	onRequestTest(connection: SparqlConnection, credential: AuthCredential | null): void;
+
 	onRequestCredential(connectionId: string): void;
+
 	onRequestInferenceEnabled(): void;
+
 	onToggleInference(connectionId: string): void;
+
 	onFetchMicrosoftCredential(connectionId: string, scopes: string[]): void;
 }
 
@@ -94,7 +113,8 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	} = props;
 
 	const [state, setState] = useState<FormState>(() => makeInitialFormState(connection));
-	const headerActionsSlot = useContext(ModalHeaderActionsContext);
+	const headerActionsSlot = useContext(ModalDialogHeaderActionsContext);
+	const titleAccessoriesSlot = useContext(ModalDialogTitleAccessoriesContext);
 
 	useStylesheet('sparql-connection-view-styles', stylesheet);
 
@@ -124,13 +144,14 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 
 	// Update microsoft credential fields when a freshly fetched token arrives.
 	useEffect(() => {
-		if (!fetchedMicrosoftCredential) return;
-		setState(prev => ({
-			...prev,
-			selectedAuthTypeIndex: AuthTypeIndex.Microsoft,
-			microsoftCredential: fetchedMicrosoftCredential,
-			hasUnsavedChanges: true,
-		}));
+		if (fetchedMicrosoftCredential) {
+			setState(prev => ({
+				...prev,
+				selectedAuthTypeIndex: AuthTypeIndex.Microsoft,
+				microsoftCredential: fetchedMicrosoftCredential,
+				hasUnsavedChanges: true,
+			}));
+		}
 	}, [fetchedMicrosoftCredential]);
 
 	useEffect(() => {
@@ -140,10 +161,22 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	// Sync local endpoint scope when the incoming connection.configScope changes (e.g. scope tab switch).
 	useEffect(() => {
 		setState(prev => {
-			if (prev.endpoint.configScope === connection.configScope) return prev;
-			const endpoint = { ...prev.endpoint, configScope: connection.configScope };
+			if (prev.endpoint.configScope === connection.configScope) {
+				return prev;
+			}
+
+			const endpoint = {
+				...prev.endpoint,
+				configScope: connection.configScope
+			};
+
 			onUpdate(endpoint);
-			return { ...prev, endpoint, hasUnsavedChanges: true };
+
+			return {
+				...prev,
+				endpoint,
+				hasUnsavedChanges: true
+			};
 		});
 	}, [connection.configScope]);
 
@@ -151,14 +184,25 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 
 	const handleScopeChange = (scope: 'user' | 'workspace') => {
 		const newConfigScope = scope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
+
 		if (settingsScopeSetter) {
 			settingsScopeSetter(scope);
 			return;
 		}
+
 		setState(prev => {
-			const endpoint = { ...prev.endpoint, configScope: newConfigScope };
+			const endpoint = {
+				...prev.endpoint,
+				configScope: newConfigScope
+			};
+
 			onUpdate(endpoint);
-			return { ...prev, endpoint, hasUnsavedChanges: true };
+
+			return {
+				...prev,
+				endpoint,
+				hasUnsavedChanges: true
+			};
 		});
 	};
 
@@ -167,6 +211,8 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	});
 
 	const isFormReadOnly = () => state.endpoint.isProtected === true;
+	const isWorkspaceStore = state.endpoint.id === 'workspace';
+	const showScopeTabs = showScopeSelector && !isWorkspaceStore;
 	const isFormValid = () => state.endpoint.endpointUrl.trim().length > 0;
 	const isConnectionSuccessful = () => testResult === null;
 	const hasConnectionError = () => testResult !== null && testResult !== undefined;
@@ -183,29 +229,61 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	};
 
 	const getEndpointSectionClassName = () => {
-		const cls = ['section-endpoint-url', 'row'];
-		if (isFormReadOnly()) cls.push('readonly');
-		if (isTesting) cls.push('status-testing');
-		if (testResult) cls.push('status-error');
-		else if (testResult === null) cls.push('status-success');
-		return cls.join(' ');
+		const className = ['section-endpoint-url', 'row'];
+
+		if (isFormReadOnly()) {
+
+			className.push('readonly');
+		}
+		if (isTesting) {
+			className.push('status-testing');
+		}
+
+		if (testResult) {
+			className.push('status-error');
+		} else if (testResult === null) {
+			className.push('status-success');
+		}
+
+		return className.join(' ');
 	};
 
 	const handleDescriptionChange = (e: React.FormEvent<HTMLElement>) => {
 		const value = (e.target as HTMLInputElement).value;
+
 		setState(prev => {
-			const endpoint = { ...prev.endpoint, description: value || undefined };
+			const endpoint = {
+				...prev.endpoint,
+				description: value || undefined
+			};
+
 			onUpdate(endpoint);
-			return { ...prev, endpoint, hasUnsavedChanges: true };
+
+			return {
+				...prev,
+				endpoint,
+				hasUnsavedChanges: true
+			};
 		});
 	};
 
 	const handleEndpointUrlChange = (e: React.FormEvent<HTMLElement>) => {
 		const value = (e.target as HTMLInputElement).value;
+
 		setState(prev => {
-			const endpoint = { ...prev.endpoint, isModified: true, endpointUrl: value };
+			const endpoint = {
+				...prev.endpoint,
+				isModified: true,
+				endpointUrl: value
+			};
+
 			onUpdate(endpoint);
-			return { ...prev, endpoint, hasUnsavedChanges: true };
+
+			return {
+				...prev,
+				endpoint,
+				hasUnsavedChanges: true
+			};
 		});
 	};
 
@@ -240,12 +318,12 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 
 	const renderFormActions = () => (
 		<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
-			{isFormReadOnly() && <vscode-icon name="lock" />}
+			{isFormReadOnly() && <vscode-icon name="lock" title="Built-in connection" />}
 			{!isFormReadOnly() && <>
-				<vscode-toolbar-button onClick={handleDelete}>
-					<vscode-icon name="trash" title="Delete" />
+				<vscode-toolbar-button title="Delete connection" onClick={handleDelete}>
+					<vscode-icon name="trash" />
 				</vscode-toolbar-button>
-				<vscode-button onClick={handleSaveClick} disabled={!isFormValid() || !state.hasUnsavedChanges}>
+				<vscode-button title="Save connection" onClick={handleSaveClick} disabled={!isFormValid() || !state.hasUnsavedChanges}>
 					Save
 				</vscode-button>
 			</>}
@@ -254,6 +332,7 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 
 	const renderBasicAuthFields = () => {
 		const credential = state.basicCredential;
+
 		return (
 			<vscode-form-group variant='vertical'>
 				<vscode-label>Username</vscode-label>
@@ -290,6 +369,7 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 
 	const renderBearerAuthFields = () => {
 		const credential = state.bearerCredential;
+
 		return (
 			<vscode-form-group variant='vertical'>
 				<vscode-label>Token Prefix</vscode-label>
@@ -318,6 +398,7 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 
 	const renderMicrosoftAuthFields = () => {
 		const credential = state.microsoftCredential;
+
 		return (
 			<vscode-form-group variant='vertical'>
 				<vscode-label>Scopes</vscode-label>
@@ -331,15 +412,18 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 						setState(prev => ({ ...prev, microsoftCredential: { ...credential!, scopes: (e.target as HTMLInputElement).value.split('\n') }, hasUnsavedChanges: true }));
 					}}
 				/>
-				<vscode-button onClick={() => onFetchMicrosoftCredential(endpoint.id, state.microsoftCredential?.scopes ?? [])}>
-					Get Token
-				</vscode-button>
+				<p>
+					<vscode-button title="Fetch a new Microsoft authentication token" onClick={() => onFetchMicrosoftCredential(endpoint.id, state.microsoftCredential?.scopes ?? [])}>
+						Get Token
+					</vscode-button>
+				</p>
 			</vscode-form-group>
 		);
 	};
 
 	const renderEntraClientCredentialsFields = () => {
 		const credential = state.entraClientCredential;
+
 		return (
 			<vscode-form-group variant='vertical'>
 				<vscode-label>Tenant ID</vscode-label>
@@ -455,14 +539,20 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 							/>
 						</div>
 					</section>
-					{showScopeSelector && (
+					{showScopeTabs && titleAccessoriesSlot && createPortal(
+						<ScopeTabs
+							activeScope={endpoint.configScope === ConfigurationScope.User ? 'user' : 'workspace'}
+							onScopeChange={handleScopeChange}
+							disabled={isFormReadOnly()}
+						/>,
+						titleAccessoriesSlot
+					)}
+					{showScopeTabs && !titleAccessoriesSlot && (
 						<section>
-							<div>
-								<span className='section-label'>Scope</span>
-								<vscode-form-helper>
-									{getConfigurationScopeDescription(endpoint.configScope)}
-								</vscode-form-helper>
-							</div>
+							<FormSectionHeader title="Scope" />
+							<vscode-form-helper>
+								{getConfigurationScopeDescription(endpoint.configScope)}
+							</vscode-form-helper>
 							<ScopeTabs
 								activeScope={endpoint.configScope === ConfigurationScope.User ? 'user' : 'workspace'}
 								onScopeChange={handleScopeChange}
@@ -470,13 +560,26 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 							/>
 						</section>
 					)}
+					{inferenceEnabled && endpoint.inferenceSupported && (
+						<section>
+							<div className="inference-toggle-container">
+								<vscode-checkbox
+									checked={endpoint.inferenceEnabled ?? false}
+									disabled={isFormReadOnly()}
+									onChange={() => {
+										setState(prev => ({ ...prev, endpoint: { ...prev.endpoint, inferenceEnabled: !prev.endpoint.inferenceEnabled } }));
+										onToggleInference(endpoint.id);
+									}}>
+									Include inferred triples in query results
+								</vscode-checkbox>
+							</div>
+						</section>
+					)}
 					<section>
-						<div>
-							<span className='section-label'>Authentication</span>
-							<vscode-form-helper>
-								Select the authentication method to use when connecting to the SPARQL endpoint:
-							</vscode-form-helper>
-						</div>
+						<FormSectionHeader title="Authentication" />
+						<vscode-form-helper>
+							Select the authentication method to use when connecting to the SPARQL endpoint:
+						</vscode-form-helper>
 						<div className="section-authentication-container">
 							<div className="column-1">
 								<vscode-label>Type</vscode-label>
@@ -502,26 +605,6 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 							)}
 						</div>
 					</section>
-					{inferenceEnabled && endpoint.inferenceSupported && (
-						<section>
-							<div>
-								<span className='section-label'>Inference</span>
-								<vscode-form-helper>
-									When enabled, inferred triples are included in query results.
-								</vscode-form-helper>
-							</div>
-							<div className="inference-toggle-container">
-								<vscode-checkbox
-									checked={endpoint.inferenceEnabled ?? false}
-									onChange={() => {
-										setState(prev => ({ ...prev, endpoint: { ...prev.endpoint, inferenceEnabled: !prev.endpoint.inferenceEnabled } }));
-										onToggleInference(endpoint.id);
-									}}>
-									Include inferred triples in query results
-								</vscode-checkbox>
-							</div>
-						</section>
-					)}
 				</div>
 			</form>
 		</div>

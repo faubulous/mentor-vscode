@@ -146,33 +146,61 @@ vscode-textfield .root {
 	color: var(--vscode-descriptionForeground);
 }
 
+.panel-header-scope {
+	flex-shrink: 0;
+}
+
 .panel-header-search {
 	flex: 1;
 	max-width: 400px;
+	margin-left: auto;
 }
 
-/* ── Scope tabs ─────────────────────────────────────────────── */
-
-.panel-header-context {
-	margin-left: auto;
+.panel-header-help {
+	flex-shrink: 0;
 }
 
 /* ── Modified tag ───────────────────────────────────────────── */
 
 .setting-modified-tag {
 	display: inline-block;
-	font-size: 9px;
-	font-weight: 700;
+	font-size: 10px;
+	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	padding: 1px 5px;
 	border-radius: 3px;
-	background: var(--vscode-button-background);
-	color: #fff;
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	opacity: 0.75;
 	flex-shrink: 0;
 	margin: 0 4px;
 	align-self: center;
 	white-space: nowrap;
+}
+
+.setting-reset-button {
+	background: none;
+	border: none;
+	padding: 0;
+	margin: 0 4px;
+	font: inherit;
+	color: var(--vscode-textLink-foreground);
+	cursor: pointer;
+	align-self: center;
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+.setting-reset-button:hover {
+	color: var(--vscode-textLink-activeForeground);
+	text-decoration: underline;
+}
+
+.setting-reset-button:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 2px;
+	border-radius: 2px;
 }
 
 .search-field-wrapper {
@@ -256,62 +284,6 @@ vscode-textarea.monospace {
 	margin: 0;
 }
 
-/* More-vert menu */
-
-.more-vert-container {
-	position: relative;
-	flex-shrink: 0;
-}
-
-.more-vert-button {
-	background: transparent;
-	border: none;
-	color: var(--vscode-foreground);
-	cursor: pointer;
-	padding: 2px 6px;
-	border-radius: 3px;
-	font-size: 16px;
-	line-height: 1;
-	opacity: 0.5;
-}
-
-.more-vert-button:hover {
-	background: var(--vscode-list-hoverBackground);
-	opacity: 1;
-}
-
-.more-vert-menu {
-	position: absolute;
-	right: 0;
-	top: calc(100% + 2px);
-	z-index: 100;
-	background: var(--vscode-menu-background, var(--vscode-dropdown-background));
-	border: 1px solid var(--vscode-menu-border, var(--vscode-dropdown-border));
-	border-radius: 4px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-	min-width: 180px;
-	overflow: hidden;
-}
-
-.more-vert-item {
-	display: block;
-	width: 100%;
-	text-align: left;
-	background: transparent;
-	border: none;
-	color: var(--vscode-menu-foreground, var(--vscode-foreground));
-	font-family: var(--vscode-font-family);
-	font-size: var(--vscode-font-size);
-	padding: 6px 12px;
-	cursor: pointer;
-	white-space: nowrap;
-}
-
-.more-vert-item:hover {
-	background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
-	color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
-}
-
 .settings-subsection {
 	margin-top: 24px;
 }
@@ -332,7 +304,14 @@ vscode-textarea.monospace {
 /* Setting rows */
 
 .setting-row {
-	padding: 1em 0;
+	padding: 0.5em 0 0.5em 12px;
+	border-left: 2px solid transparent;
+	margin-bottom: 1em;
+	margin-left: -1em;
+}
+
+.setting-row-modified {
+	border-left-color: rgba(204, 167, 0, 0.55);
 }
 
 .setting-row-header {
@@ -423,6 +402,7 @@ vscode-textarea.monospace {
 }
 
 .string-list-item {
+	position: relative;
 	display: flex;
 	align-items: center;
 	gap: 4px;
@@ -433,17 +413,46 @@ vscode-textarea.monospace {
 	opacity: 0.35;
 }
 
-.string-list-item.drop-target {
-	outline: 1px solid var(--vscode-focusBorder);
-	background: var(--vscode-list-hoverBackground);
+/* Drop indicators on items — shift items apart and show a prominent line */
+.string-list-item.drop-before {
+	margin-top: 20px;
+}
+
+.string-list-item.drop-after {
+	margin-bottom: 20px;
+}
+
+.string-list-item.drop-before::before,
+.string-list-item.drop-after::after {
+	content: '';
+	position: absolute;
+	left: 10px;
+	right: 0;
+	height: 3px;
+	background: var(--vscode-focusBorder);
+	border-radius: 1.5px;
+	pointer-events: none;
+}
+
+.string-list-item.drop-before::before {
+	top: -12px;
+}
+
+.string-list-item.drop-after::after {
+	bottom: -12px;
 }
 
 .drag-handle {
-	cursor: grab !important;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: grab;
 	opacity: 0.3;
 	flex-shrink: 0;
 	font-size: 14px;
 	padding: 2px;
+	user-select: none;
+	-webkit-user-select: none;
 }
 
 .string-list-item:hover .drag-handle {

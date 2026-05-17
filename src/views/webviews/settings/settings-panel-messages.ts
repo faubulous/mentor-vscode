@@ -1,7 +1,9 @@
 import { LanguageId } from '@src/services/document/document-factory';
 import { SettingScope, SettingState } from './settings-types';
+import { ExecuteCommandMessage } from '../webview-messaging';
 
 export type SettingsPanelMessages =
+	ExecuteCommandMessage |
 	{ id: 'GetSettings' } |
 	{ id: 'GetSettingsResult'; settings: Record<string, SettingState> } |
 	{ id: 'OnSettingsChanged'; settings: Record<string, SettingState> } |

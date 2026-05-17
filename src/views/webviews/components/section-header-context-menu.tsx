@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { useStylesheet } from '../webview-hooks';
+import stylesheet from './section-header-context-menu.css';
 
 /**
  * Menu item in the context menu for a section header.
@@ -18,12 +20,14 @@ export interface SectionHeaderContextMenuItem {
 }
 
 /**
- * A simple "more options" menu (three vertical dots) for section headers and setting rows, 
+ * A simple "more options" menu (three vertical dots) for section headers and setting rows,
  * which can contain additional actions applied to the section or setting.
  * @param param0 Items to show in the menu, each with a label and onClick handler.
  * @returns A JSX element representing the context menu.
  */
 export function SectionHeaderContextMenu({ items }: { items: SectionHeaderContextMenuItem[] }) {
+	useStylesheet('mentor-section-header-context-menu-styles', stylesheet);
+
 	const [open, setOpen] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 

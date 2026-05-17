@@ -1,0 +1,53 @@
+.more-vert-container {
+	position: relative;
+	flex-shrink: 0;
+}
+
+.more-vert-button {
+	background: transparent;
+	border: none;
+	color: var(--vscode-foreground);
+	cursor: pointer;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 16px;
+	line-height: 1;
+	opacity: 0.5;
+}
+
+.more-vert-button:hover {
+	background: var(--vscode-list-hoverBackground);
+	opacity: 1;
+}
+
+.more-vert-menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 2px);
+	z-index: 100;
+	background: var(--vscode-menu-background, var(--vscode-dropdown-background));
+	border: 1px solid var(--vscode-menu-border, var(--vscode-dropdown-border));
+	border-radius: 4px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	min-width: 180px;
+	overflow: hidden;
+}
+
+.more-vert-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: transparent;
+	border: none;
+	color: var(--vscode-menu-foreground, var(--vscode-foreground));
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	padding: 6px 12px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.more-vert-item:hover {
+	background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+	color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
+}

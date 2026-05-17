@@ -1,7 +1,8 @@
 import { SettingScope, SettingState } from '../settings-types';
-import { SectionHeader } from '../components/section-header';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { SettingRow } from '../components/setting-row';
 import { useSettingRowProps } from '../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
 import { StringListEditor } from '../components/string-list-editor';
 import { SECTION_TITLES } from '../settings-metadata';
 
@@ -15,9 +16,10 @@ export interface DisplaySectionProps {
 
 export function DisplaySection({ keys, settings, onUpdate, setScope, onBulkScope }: DisplaySectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
+	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
 	return (
 		<div>
-			<SectionHeader title={SECTION_TITLES['appearance.display']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<FormSectionHeader title={SECTION_TITLES['appearance.display']} menuItems={menuItems} large />
 			{keys.map((key) => (
 				<SettingRow key={key} {...rowProps(key)}>
 					<StringListEditor

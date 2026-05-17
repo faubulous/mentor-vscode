@@ -54,11 +54,11 @@
 }
 
 .sparql-connection-view-container .form-body {
-	gap: 2.5em;
+	gap: 2em;
 }
 
 .sparql-connection-view-container section {
-	gap: 1em;
+	gap: 8px;
 }
 
 .form-actions {
@@ -198,6 +198,7 @@
 	display: flex;
 	flex-direction: row;
 	gap: 1.5em;
+	margin: 1em 0;
 }
 
 .sparql-connection-view-container .section-authentication-container div:first-child {

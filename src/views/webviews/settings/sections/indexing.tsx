@@ -1,8 +1,9 @@
 import { SettingScope, SettingState } from '../settings-types';
-import { SectionHeader } from '../components/section-header';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { SettingRow } from '../components/setting-row';
 import { StringListEditor } from '../components/string-list-editor';
 import { useSettingRowProps } from '../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
 import { SECTION_TITLES } from '../settings-metadata';
 
 export interface IndexingSectionProps {
@@ -15,9 +16,10 @@ export interface IndexingSectionProps {
 
 export function IndexingSection({ keys, settings, onUpdate, setScope, onBulkScope }: IndexingSectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
+	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
 	return (
 		<div>
-			<SectionHeader title={SECTION_TITLES['indexing']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<FormSectionHeader title={SECTION_TITLES['indexing']} menuItems={menuItems} large />
 			<SettingRow {...rowProps('index.maxFileSize')}>
 				<vscode-textfield
 					value={String(settings['index.maxFileSize']?.value ?? 1048576)}

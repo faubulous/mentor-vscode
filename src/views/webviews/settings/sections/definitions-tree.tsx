@@ -1,8 +1,9 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SettingScope, SettingState } from '../settings-types';
-import { SectionHeader } from '../components/section-header';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { SettingRow } from '../components/setting-row';
 import { useSettingRowProps } from '../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
 import { SECTION_TITLES, getEnumOptions } from '../settings-metadata';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 
@@ -22,6 +23,7 @@ export function DefinitionsTreeSection({ settings, onUpdate, setScope, onBulkSco
 	];
 
 	const rowProps = useSettingRowProps(settings, setScope);
+	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
 
 	const labelStyleRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
@@ -40,7 +42,7 @@ export function DefinitionsTreeSection({ settings, onUpdate, setScope, onBulkSco
 
 	return (
 		<div>
-			<SectionHeader title={SECTION_TITLES['appearance.definitions-tree']} keys={keys} settings={settings} onBulkScope={onBulkScope} />
+			<FormSectionHeader title={SECTION_TITLES['appearance.definitions-tree']} menuItems={menuItems} large />
 			<SettingRow {...rowProps('definitionTree.labelStyle')}>
 				<vscode-single-select
 					ref={labelStyleRef}

@@ -1,7 +1,8 @@
 import { SettingScope, SettingState } from '../settings-types';
-import { SectionHeader } from '../components/section-header';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { SettingRow } from '../components/setting-row';
 import { useSettingRowProps } from '../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
 import { SECTION_TITLES } from '../settings-metadata';
 
 export interface ValidationSectionProps {
@@ -13,13 +14,13 @@ export interface ValidationSectionProps {
 
 export function ValidationSection({ settings, onUpdate, setScope, onBulkScope }: ValidationSectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
+	const menuItems = useBulkScopeMenuItems(['shacl.enabled'], settings, onBulkScope);
 	return (
 		<div>
-			<SectionHeader
+			<FormSectionHeader
 				title={<>{SECTION_TITLES['editor.validation']} <span className="badge-experimental">Experimental</span></>}
-				keys={['shacl.enabled']}
-				settings={settings}
-				onBulkScope={onBulkScope}
+				menuItems={menuItems}
+				large
 			/>
 			<SettingRow {...rowProps('shacl.enabled')}>
 				<vscode-checkbox

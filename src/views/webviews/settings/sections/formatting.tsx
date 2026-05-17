@@ -1,8 +1,8 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { LanguageId, FormattingLanguage } from '@src/services/document/document-factory';
 import { SettingScope, SettingState } from '../settings-types';
-import { SectionHeader } from '../components/section-header';
-import { SectionHeaderContextMenu } from '../components/section-header-context-menu';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { SectionHeaderContextMenu } from '@src/views/webviews/components/section-header-context-menu';
 import { SettingRow } from '../components/setting-row';
 import { SettingsScopeContext } from '../components/setting-context';
 import { useSettingRowProps, useVSCodeSettingRowProps } from '../components/use-setting-row-props';
@@ -65,7 +65,7 @@ export function FormattingSection({
 
 	return (
 		<div>
-			<SectionHeader title={SECTION_TITLES['editor.formatting']} />
+			<FormSectionHeader title={SECTION_TITLES['editor.formatting']} large />
 			<SettingRow
 				{...vscodeRowProps('formatOnSave')}
 				label="Format on save"

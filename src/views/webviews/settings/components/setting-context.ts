@@ -3,7 +3,7 @@ import React from "react";
 
 /**
  * Provides the currently active settings scope tab ('user' | 'workspace')
- * to all descendant SettingRow and SectionHeader components without prop drilling.
+ * to descendants (e.g. SettingRow, bulk-scope menu computation) without prop drilling.
  */
 export const SettingsScopeContext = React.createContext<'user' | 'workspace'>('user');
 

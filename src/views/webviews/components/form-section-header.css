@@ -1,0 +1,23 @@
+.form-section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.form-section-header.size-large {
+	margin: 0 0 16px;
+	padding-bottom: 10px;
+}
+
+.form-section-header-title {
+	margin: 0;
+	font-size: 1.1em;
+	font-weight: 600;
+	color: var(--vscode-foreground);
+}
+
+.form-section-header.size-large .form-section-header-title {
+	font-size: 2em;
+}

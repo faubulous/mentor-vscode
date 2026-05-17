@@ -5,7 +5,7 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TestResult } from '../components/types';
 import { SparqlConnectionsList } from '../../sparql-connections-list/sparql-connections-list';
 import { SparqlConnectionEditor } from '../../sparql-connection/sparql-connection-editor';
-import { Modal } from '../../components/modal';
+import { ModalDialog } from '../../components/modal-dialog';
 import { SettingsScopeContext } from '../components/setting-context';
 import { useScopedWebviewMessaging } from '../../webview-hooks';
 import { SparqlConnectionsListMessages } from '../../sparql-connections-list/sparql-connections-list-messages';
@@ -104,7 +104,7 @@ export function ConnectionsSection() {
 				onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
 				onChangeSparqlConnectionScope={(connection, toScope) => messaging?.postMessage({ id: 'ChangeSparqlConnectionScope', connection, toScope })}
 			/>
-			<Modal
+			<ModalDialog
 				open={!!editingConnection}
 				title="Edit Connection"
 				onClose={() => closeEditor(false)}
@@ -123,7 +123,7 @@ export function ConnectionsSection() {
 						onSaved={() => closeEditor(true)}
 					/>
 				)}
-			</Modal>
+			</ModalDialog>
 		</>
 	);
 }
