@@ -1373,14 +1373,18 @@
                 "label": "General"
               },
               {
+                "id": "query.templates",
+                "label": "Templates"
+              },
+              {
                 "id": "connections",
                 "label": "Connections"
               }
             ]
           },
           {
-            "id": "indexing",
-            "label": "Indexing",
+            "id": "workspace",
+            "label": "Workspace",
             "sections": [
               {
                 "id": "indexing",
@@ -1439,7 +1443,7 @@
             "default": false
           },
           "mentor.sparql.listGraphsQuery": {
-            "x-settings-group": "query.general",
+            "x-settings-group": "query.templates",
             "type": "string",
             "title": "List Graphs Query",
             "description": "SPARQL query used to retrieve all named graphs and the default graph from a SPARQL endpoint.",
@@ -1447,7 +1451,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.sparql.dropGraphQuery": {
-            "x-settings-group": "query.general",
+            "x-settings-group": "query.templates",
             "type": "string",
             "title": "Drop Graph Query",
             "description": "SPARQL query used to drop a named graph from a SPARQL endpoint.",
@@ -1455,7 +1459,7 @@
             "editPresentation": "multilineText"
           },
           "mentor.sparql.describeQueryTemplate": {
-            "x-settings-group": "query.general",
+            "x-settings-group": "query.templates",
             "type": "string",
             "title": "Describe Query Template",
             "description": "SPARQL query template used by the describe command. Use {{resourceIri}} for the selected resource and {{fromClauses}} for optional FROM clauses generated from graph URIs.",

@@ -20,7 +20,8 @@ type SectionMessage = { section: SettingsNavigationSection; id: string } & Recor
 export class ConnectionsSectionController implements SettingsSectionController {
 	readonly id: SettingsNavigationSection = SECTION_ID;
 
-	private _post: (message: unknown) => void = () => {};
+	private _post: (message: unknown) => void = () => { };
+
 	private _disposables: vscode.Disposable[] = [];
 
 	initialize(post: (message: unknown) => void): void {
@@ -58,11 +59,13 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					id: 'GetConnectionsResult',
 					connections: connectionService.getConnections(),
 				});
+
 				return true;
 			}
 			case 'CreateConnection': {
 				const connection = await connectionService.createConnection();
 				this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection });
+
 				return true;
 			}
 			case 'EditConnection': {
@@ -71,6 +74,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					id: 'EditSparqlConnection',
 					connection: message.connection,
 				});
+
 				return true;
 			}
 			case 'DeleteConnection': {
@@ -80,21 +84,26 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					{ modal: true },
 					'Delete'
 				);
+
 				if (answer === 'Delete') {
 					await connectionService.deleteConnection(connection.id);
 					await connectionService.saveConfiguration();
 				}
+
 				return true;
 			}
 			case 'ChangeSparqlConnectionScope': {
 				const connection = message.connection as SparqlConnection;
+
 				await connectionService.updateConnection({ ...connection, configScope: message.toScope as SparqlConnection['configScope'] });
 				await connectionService.saveConfiguration();
+
 				return true;
 			}
 			case 'TestConnection': {
 				const connection = message.connection as SparqlConnection;
 				const result = await connectionService.testConnection(connection);
+
 				this._post({
 					section: SECTION_ID,
 					id: 'TestConnectionResult',
@@ -102,11 +111,13 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					success: result === null,
 					error: result?.message,
 				});
+
 				return true;
 			}
 			case 'ListGraphs': {
 				const connection = message.connection as SparqlConnection;
 				const testResult = await connectionService.testConnection(connection);
+
 				if (testResult !== null) {
 					this._post({
 						section: SECTION_ID,
@@ -115,30 +126,37 @@ export class ConnectionsSectionController implements SettingsSectionController {
 						success: false,
 						error: testResult.message,
 					});
+
 					return true;
 				}
+
 				this._post({
 					section: SECTION_ID,
 					id: 'TestConnectionResult',
 					connectionId: connection.id,
 					success: true,
 				});
+
 				await vscode.commands.executeCommand('mentor.command.listGraphs', connection);
+
 				return true;
 			}
 			case 'OpenInBrowser': {
 				await vscode.env.openExternal(vscode.Uri.parse(message.url as string));
+
 				return true;
 			}
 			case 'GetSparqlConnectionCredential': {
 				const connectionId = message.connectionId as string;
 				const credential = await credentialService.getCredential(connectionId);
+
 				this._post({
 					section: SECTION_ID,
 					id: 'GetSparqlConnectionCredentialResult',
 					connectionId,
 					credential,
 				});
+
 				return true;
 			}
 			case 'SaveSparqlConnection': {
@@ -146,18 +164,22 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					message.connection as SparqlConnection,
 					message.credential as Parameters<ISparqlConnectionService['saveConnectionWithCredential']>[1]
 				);
+
 				return true;
 			}
 			case 'DiscardSparqlConnection': {
 				const connectionId = message.connectionId as string;
 				const connection = connectionService.getConnection(connectionId);
+
 				if (connection?.isNew) {
 					await connectionService.deleteConnection(connectionId);
 				}
+
 				return true;
 			}
 			case 'UpdateSparqlConnection': {
 				await connectionService.updateConnection(message.connection as SparqlConnection);
+
 				return true;
 			}
 			case 'TestSparqlConnection': {
@@ -165,38 +187,46 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					message.connection as SparqlConnection,
 					message.credential as Parameters<ISparqlConnectionService['testConnection']>[1]
 				);
+
 				this._post({ section: SECTION_ID, id: 'TestSparqlConnectionResult', error: result });
+
 				return true;
 			}
 			case 'GetInferenceFeatureEnabled': {
 				const value = await connectionService.getInferenceFeatureEnabled();
 				this._post({ section: SECTION_ID, id: 'GetInferenceFeatureEnabledResult', value });
+
 				return true;
 			}
 			case 'ToggleSparqlConnectionInference': {
 				const connectionId = message.connectionId as string;
 				const inferenceEnabled = await connectionService.toggleInferenceEnabled(connectionId);
+
 				this._post({
 					section: SECTION_ID,
 					id: 'ToggleSparqlConnectionInferenceResult',
 					connectionId,
 					inferenceEnabled,
 				});
+
 				return true;
 			}
 			case 'FetchMicrosoftAuthCredential': {
 				const connectionId = message.connectionId as string;
 				const credential = await credentialService.fetchMicrosoftCredential(message.scopes as string[]);
+
 				this._post({
 					section: SECTION_ID,
 					id: 'FetchMicrosoftAuthCredentialResult',
 					connectionId,
 					credential,
 				});
+
 				return true;
 			}
-			default:
+			default: {
 				return false;
+			}
 		}
 	}
 
@@ -204,6 +234,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 		for (const d of this._disposables) {
 			d.dispose();
 		}
+		
 		this._disposables = [];
 	}
 }

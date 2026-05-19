@@ -14,6 +14,7 @@ export type SettingsNavigationSection =
 	| "editor.sorting"
 	| "editor.validation"
 	| "query.general"
+	| "query.templates"
 	| "connections"
 	| "indexing";
 
@@ -29,15 +30,15 @@ export const SETTINGS: Record<string, SettingMetadata> = {
 		uiVisible: true,
 	},
 	"sparql.listGraphsQuery": {
-		section: "query.general",
+		section: "query.templates",
 		uiVisible: true,
 	},
 	"sparql.dropGraphQuery": {
-		section: "query.general",
+		section: "query.templates",
 		uiVisible: true,
 	},
 	"sparql.describeQueryTemplate": {
-		section: "query.general",
+		section: "query.templates",
 		uiVisible: true,
 	},
 	"sparql.queryTimeout": {
@@ -260,14 +261,18 @@ export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] =
 				"label": "General"
 			},
 			{
+				"id": "query.templates",
+				"label": "Templates"
+			},
+			{
 				"id": "connections",
 				"label": "Connections"
 			}
 		]
 	},
 	{
-		"id": "indexing",
-		"label": "Indexing",
+		"id": "workspace",
+		"label": "Workspace",
 		"sections": [
 			{
 				"id": "indexing",

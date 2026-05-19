@@ -8,6 +8,7 @@ import { EditorGeneralSection } from './sections/editor-general';
 import { FormattingSection } from './sections/formatting';
 import { IndexingSection } from './sections/indexing';
 import { QuerySection } from './sections/query';
+import { QueryTemplatesSection } from './sections/query-templates';
 import { SortingSection } from './sections/sorting';
 import { TemplatesSection } from './sections/templates';
 import { ValidationSection } from './sections/validation';
@@ -29,6 +30,7 @@ export const SECTION_REGISTRY: Record<SettingsNavigationSection, SectionRegistry
     'indexing': { id: 'indexing', component: IndexingSection, keys: [] },
     'connections': { id: 'connections', component: ConnectionsSection, keys: [] },
     'query.general': { id: 'query.general', component: QuerySection, keys: [] },
+    'query.templates': { id: 'query.templates', component: QueryTemplatesSection, keys: [] },
 };
 
 // Populate the keys dynamically from SETTINGS metadata to avoid hand-maintaining arrays

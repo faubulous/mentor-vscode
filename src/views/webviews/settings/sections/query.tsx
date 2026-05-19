@@ -16,9 +16,6 @@ export function QuerySection({ settings, onUpdate, setScope, onBulkScope }: Quer
 	const keys = [
 		'sparql.defaultInferenceEnabled',
 		'sparql.queryTimeout',
-		'sparql.listGraphsQuery',
-		'sparql.dropGraphQuery',
-		'sparql.describeQueryTemplate',
 		'inference.enabled',
 	];
 
@@ -34,30 +31,6 @@ export function QuerySection({ settings, onUpdate, setScope, onBulkScope }: Quer
 						value={String(settings['sparql.queryTimeout']?.value ?? 30000)}
 						type="number"
 						onInput={(e: any) => onUpdate('sparql.queryTimeout', Number((e.target as HTMLInputElement).value))}
-					/>
-				</SettingRow>
-				<SettingRow {...rowProps('sparql.listGraphsQuery')}>
-					<vscode-textarea
-						className='monospace'
-						rows={12}
-						value={String(settings['sparql.listGraphsQuery']?.value ?? '')}
-						onInput={(e: any) => onUpdate('sparql.listGraphsQuery', (e.target as HTMLTextAreaElement).value)}
-					/>
-				</SettingRow>
-				<SettingRow {...rowProps('sparql.dropGraphQuery')}>
-					<vscode-textarea
-						className='monospace'
-						rows={12}
-						value={String(settings['sparql.dropGraphQuery']?.value ?? '')}
-						onInput={(e: any) => onUpdate('sparql.dropGraphQuery', (e.target as HTMLTextAreaElement).value)}
-					/>
-				</SettingRow>
-				<SettingRow {...rowProps('sparql.describeQueryTemplate')}>
-					<vscode-textarea
-						className='monospace'
-						rows={12}
-						value={String(settings['sparql.describeQueryTemplate']?.value ?? '')}
-						onInput={(e: any) => onUpdate('sparql.describeQueryTemplate', (e.target as HTMLTextAreaElement).value)}
 					/>
 				</SettingRow>
 			</div>

@@ -51,19 +51,28 @@ export function ConnectionsSection() {
 	useEffect(() => {
 		setTestingConnections(prev => {
 			const updated = new Set(prev);
+
 			for (const id of prev) {
 				if (testResults[id] !== null && testResults[id] !== undefined) {
 					updated.delete(id);
 				}
 			}
+			
 			return updated.size === prev.size ? prev : updated;
 		});
 	}, [testResults]);
 
 	useEffect(() => {
-		if (!editingConnection) return;
+		if (!editingConnection) {
+			return;
+		}
+
 		const newScope = activeScope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
-		if (editingConnection.configScope === newScope) return;
+
+		if (editingConnection.configScope === newScope) {
+			return;
+		}
+
 		setEditingConnection(prev => prev ? { ...prev, configScope: newScope } : prev);
 	}, [activeScope]);
 

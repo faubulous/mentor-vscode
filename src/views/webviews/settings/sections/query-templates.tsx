@@ -3,10 +3,9 @@ import { FormSectionHeader } from '@src/views/webviews/components/form-section-h
 import { SettingRow } from '../components/setting-row';
 import { useSettingRowProps } from '../components/use-setting-row-props';
 import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
-import { StringListEditor } from '../components/string-list-editor';
 import { SECTION_TITLES } from '../settings-metadata';
 
-export interface DisplaySectionProps {
+export interface QueryTemplatesSectionProps {
 	keys: string[];
 	settings: Record<string, SettingState>;
 	onUpdate: (key: string, value: unknown) => void;
@@ -14,19 +13,19 @@ export interface DisplaySectionProps {
 	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
-export function DisplaySection({ keys, settings, onUpdate, setScope, onBulkScope }: DisplaySectionProps) {
+export function QueryTemplatesSection({ keys, settings, onUpdate, setScope, onBulkScope }: QueryTemplatesSectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
 	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
-	
 	return (
 		<div>
-			<FormSectionHeader title={SECTION_TITLES['appearance.display']} menuItems={menuItems} large />
+			<FormSectionHeader title={SECTION_TITLES['query.templates']} menuItems={menuItems} large />
 			{keys.map((key) => (
 				<SettingRow key={key} {...rowProps(key)}>
-					<StringListEditor
-						items={(settings[key]?.value as string[]) ?? []}
-						placeholder="https://..."
-						onChange={v => onUpdate(key, v)}
+					<vscode-textarea
+						className='monospace'
+						rows={12}
+						value={String(settings[key]?.value ?? '')}
+						onInput={(e: any) => onUpdate(key, (e.target as HTMLTextAreaElement).value)}
 					/>
 				</SettingRow>
 			))}

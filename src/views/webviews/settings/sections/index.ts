@@ -1,5 +1,5 @@
 import { SettingsSectionController } from '../settings-section-controller';
-import { ConnectionsSectionController } from './connections-section-controller';
+import { ConnectionsSectionController } from './connections-controller';
 
 /**
  * Host-side registry of section controllers. Sections without a controller entry rely
