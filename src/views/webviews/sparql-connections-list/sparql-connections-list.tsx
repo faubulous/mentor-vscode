@@ -3,6 +3,7 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TestResult } from '../settings/components/types';
 import { SparqlConnectionsListItem } from './sparql-connections-list-item';
+import { FormSectionHeader } from '../components/form-section-header';
 
 export interface SparqlConnectionsListProps {
 	connections: SparqlConnection[];
@@ -32,59 +33,78 @@ export function SparqlConnectionsList({
 	const isTestingAll = testingConnections.size > 0;
 	const testableCount = connections.length;
 
+	const protectedConnections = connections.filter(c => c.isProtected === true);
+	const userDefinedConnections = connections.filter(c => c.isProtected !== true);
+
+	const renderItem = (connection: SparqlConnection) => (
+		<SparqlConnectionsListItem
+			key={connection.id}
+			connection={connection}
+			testResult={testResults[connection.id]}
+			isTesting={testingConnections.has(connection.id)}
+			onEditConnection={onEditConnection}
+			onDeleteConnection={onDeleteConnection}
+			onTestConnection={onTestConnection}
+			onListGraphs={onListGraphs}
+			onOpenInBrowser={onOpenInBrowser}
+		/>
+	);
+
 	return (
 		<div className="connections-list-container">
-			<div className="connections-list-header">
-				<h2 className="settings-section-title">Connections</h2>
-				<div className="connections-list-header-actions">
-					{testableCount > 0 && (
-						<vscode-toolbar-button
-							className="test-all-button"
-							title="Test all connections"
-							onClick={() => {
-								connections.forEach((c, i) => setTimeout(
-									() => onTestConnection(c, { stopPropagation: () => {} } as React.MouseEvent),
-									i * 300
-								));
-							}}
-							disabled={isTestingAll}
-						>
-							<vscode-icon name="debug-disconnect" />
-						</vscode-toolbar-button>
-					)}
-					<vscode-button title="Create a new connection" onClick={onCreateConnection}>
-						<vscode-icon name="add" slot="start" />
-						Add Connection
-					</vscode-button>
-				</div>
-			</div>
+			<FormSectionHeader
+				title="Connections"
+				large
+				actions={
+					<>
+						{testableCount > 0 && (
+							<vscode-toolbar-button
+								className="test-all-button"
+								title="Test all connections"
+								onClick={() => {
+									connections.forEach((c, i) => setTimeout(
+										() => onTestConnection(c, { stopPropagation: () => {} } as React.MouseEvent),
+										i * 300
+									));
+								}}
+								disabled={isTestingAll}
+							>
+								<vscode-icon name="debug-disconnect" />
+							</vscode-toolbar-button>
+						)}
+						<button className="connection-add-link" title="Create a new connection" onClick={onCreateConnection}>
+							<vscode-icon name="add" />
+							Add Connection
+						</button>
+					</>
+				}
+			/>
 
-			{connections.length === 0 ? (
-				<div className="empty-state">
-					<vscode-icon name="database" />
-					<p>No SPARQL connections configured yet.</p>
-					<button className="connection-add-link" onClick={onCreateConnection}>
-						<vscode-icon name="add" />
-						Create your first connection
-					</button>
-				</div>
-			) : (
-				<div className="connections-list">
-					{connections.map(connection => (
-						<SparqlConnectionsListItem
-							key={connection.id}
-							connection={connection}
-							testResult={testResults[connection.id]}
-							isTesting={testingConnections.has(connection.id)}
-							onEditConnection={onEditConnection}
-							onDeleteConnection={onDeleteConnection}
-							onTestConnection={onTestConnection}
-							onListGraphs={onListGraphs}
-							onOpenInBrowser={onOpenInBrowser}
-						/>
-					))}
-				</div>
+			{protectedConnections.length > 0 && (
+				<section className="connections-subsection">
+					<FormSectionHeader
+						title="Protected"
+						description="Mentor built-in connections that cannot be removed."
+					/>
+					<div className="connections-list">
+						{protectedConnections.map(renderItem)}
+					</div>
+				</section>
 			)}
+
+			<section className="connections-subsection">
+				<FormSectionHeader
+					title="User Defined"
+					description="SPARQL endpoints you have configured for this scope."
+				/>
+				{userDefinedConnections.length === 0 ? (
+					<p className="connections-empty-message">No user-defined connections in this scope. Use <strong>Add Connection</strong> above to create one.</p>
+				) : (
+					<div className="connections-list">
+						{userDefinedConnections.map(renderItem)}
+					</div>
+				)}
+			</section>
 		</div>
 	);
 }

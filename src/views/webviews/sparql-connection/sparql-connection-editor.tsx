@@ -92,7 +92,7 @@ export function SparqlConnectionEditor({ connection, onBack, onSaved, showScopeS
 			onSaved={onSaved ?? onBack}
 			onSave={(conn, cred) => messaging?.postMessage({ id: 'SaveSparqlConnection', connection: conn, credential: cred })}
 			onUpdate={(conn) => messaging?.postMessage({ id: 'UpdateSparqlConnection', connection: conn })}
-			onDelete={(conn) => messaging?.postMessage({ id: 'ExecuteCommand', command: 'mentor.command.deleteSparqlConnection', args: [conn] })}
+			onDelete={(conn) => messaging?.postMessage({ id: 'DeleteConnection', connection: conn })}
 			onRequestTest={(conn, cred) => {
 				setIsTesting(true);
 				setTestResult(undefined);

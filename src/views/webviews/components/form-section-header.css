@@ -1,9 +1,7 @@
 .form-section-header {
 	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding-bottom: 8px;
-	border-bottom: 1px solid var(--vscode-panel-border);
+	flex-direction: column;
+	justify-content: center;
 }
 
 .form-section-header.size-large {
@@ -11,13 +9,45 @@
 	padding-bottom: 10px;
 }
 
+.form-section-header-title-wrapper {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	min-width: 0;
+}
+
 .form-section-header-title {
 	margin: 0;
-	font-size: 1.1em;
-	font-weight: 600;
+	flex: 0 0 auto;
+	font-weight: 500;
+	font-size: 1.2em;
 	color: var(--vscode-foreground);
 }
 
 .form-section-header.size-large .form-section-header-title {
 	font-size: 2em;
+}
+
+.form-section-header-description {
+	font-size: 1em;
+	color: var(--vscode-descriptionForeground);
+	margin: 0.5em 0 1em 0;
+	line-height: 1.4em;
+}
+
+.form-section-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.form-section-leader {
+	flex: 1;
+	min-width: 16px;
+	height: 0;
+	border-bottom: 1px dotted currentColor;
+	opacity: 0.2;
+	margin: 0 8px;
+	align-self: center;
 }

@@ -269,30 +269,8 @@ vscode-textarea.monospace {
 
 /* Section header */
 
-.section-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin: 0 0 16px;
-	padding-bottom: 10px;
-	border-bottom: 1px solid var(--vscode-panel-border);
-}
-
-.settings-section-title {
-	font-size: 2em;
-	font-weight: 600;
-	margin: 0;
-}
-
 .settings-subsection {
 	margin-top: 24px;
-}
-
-.settings-subsection-title {
-	font-size: 0.9em;
-	font-weight: 600;
-	color: var(--vscode-descriptionForeground);
-	margin: 0 0 12px;
 }
 
 .settings-group-title {
@@ -303,10 +281,15 @@ vscode-textarea.monospace {
 
 /* Setting rows */
 
+.connections-subsection,
+.setting-row {
+	margin-bottom: 1em;
+}
+
+.connections-subsection,
 .setting-row {
 	padding: 0.5em 0 0.5em 12px;
 	border-left: 2px solid transparent;
-	margin-bottom: 1em;
 	margin-left: -1em;
 }
 
@@ -332,7 +315,7 @@ vscode-textarea.monospace {
 	flex: 1;
 	min-width: 16px;
 	height: 0;
-	border-bottom: 1.5px dotted currentColor;
+	border-bottom: 1px dotted currentColor;
 	opacity: 0.2;
 	margin: 0 8px;
 	align-self: center;
@@ -553,25 +536,27 @@ vscode-textarea.monospace {
 .connections-list-container {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: 6.5px;
 }
 
-.connections-list-header {
+.connections-subsection {
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding-bottom: 8px;
-	border-bottom: 1px solid var(--vscode-panel-border);
-}
-
-.connections-list-header .settings-section-title {
-	margin: 0;
-}
-
-.connections-list-header-actions {
-	display: flex;
-	align-items: center;
+	flex-direction: column;
 	gap: 8px;
+	margin-bottom: 1em;
+}
+
+.connections-empty-message {
+	margin: 0;
+	padding: 4px 0;
+	font-size: 0.9em;
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+}
+
+.connections-empty-message strong {
+	font-style: normal;
+	font-weight: 600;
 }
 
 .connections-list {
@@ -688,16 +673,6 @@ vscode-textarea.monospace {
 	}
 }
 
-.empty-state {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 32px;
-	text-align: center;
-	color: var(--vscode-descriptionForeground);
-}
-
 .connection-add-link {
 	display: inline-flex;
 	align-items: center;
@@ -715,16 +690,6 @@ vscode-textarea.monospace {
 .connection-add-link:hover {
 	color: var(--vscode-textLink-activeForeground);
 	text-decoration: underline;
-}
-
-.empty-state vscode-icon {
-	font-size: 48px;
-	margin-bottom: 16px;
-	opacity: 0.5;
-}
-
-.empty-state p {
-	margin: 0 0 16px 0;
 }
 
 /* Language tab bar */

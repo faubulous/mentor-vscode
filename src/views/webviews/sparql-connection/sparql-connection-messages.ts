@@ -6,6 +6,7 @@ import { ExecuteCommandMessage } from '../webview-messaging';
 export type SparqlConnectionMessages =
     ExecuteCommandMessage |
     { id: 'ChangeSparqlConnectionScope'; connection: SparqlConnection; toScope: ConfigurationScope } |
+    { id: 'DeleteConnection', connection: SparqlConnection } |
     { id: 'DeleteSparqlConnection', connectionId: string } |
     { id: 'DiscardSparqlConnection', connectionId: string } |
     { id: 'EditSparqlConnection'; connection: SparqlConnection } |

@@ -320,8 +320,10 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 		<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
 			{isFormReadOnly() && <vscode-icon name="lock" title="Built-in connection" />}
 			{!isFormReadOnly() && <>
-				<vscode-toolbar-button title="Delete connection" onClick={handleDelete}>
-					<vscode-icon name="trash" />
+				<vscode-toolbar-button title="Test connection"
+					onClick={handleTest}
+					disabled={!isFormValid() || isFormReadOnly() || isTesting}				>
+					<vscode-icon name="debug-disconnect" />
 				</vscode-toolbar-button>
 				<vscode-button title="Save connection" onClick={handleSaveClick} disabled={!isFormValid() || !state.hasUnsavedChanges}>
 					Save
@@ -498,7 +500,7 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 									<vscode-icon name="arrow-left" />
 								</vscode-toolbar-button>
 							)}
-							<h2 className="settings-section-title">Edit Connection</h2>
+							<h2>Edit Connection</h2>
 							{renderFormActions()}
 						</div>
 					</section>
@@ -521,13 +523,13 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 									{hasConnectionError() && <vscode-icon slot="content-before" name="error" className="icon-error" />}
 									{isConnectionSuccessful() && <vscode-icon slot="content-before" name="pass" className="icon-success" />}
 								</vscode-textfield>
-								<vscode-button
+								{/* <vscode-button
 									type="button"
 									icon="debug-disconnect"
 									title="Test Connection"
 									disabled={!isFormValid() || isFormReadOnly() || isTesting}
 									onClick={handleTest}
-								/>
+								/> */}
 							</div>
 						</div>
 						<div className="section-endpoint-description">
