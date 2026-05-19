@@ -1,7 +1,35 @@
+import { LanguageId } from '@src/services/document/document-factory';
+
 /**
  * Scope of a settings that correspond to the different levels of settings in VS Code.
  */
 export type SettingScope = 'default' | 'user' | 'workspace';
+
+/**
+ * Identifies which "bucket" of VS Code configuration a setting lives in.
+ *
+ * - `mentor`: top-level `mentor.*` keys, read/written with the 3-arg
+ *   `config.update(key, value, target)` form.
+ * - `languageEditor`: `editor.*` keys nested inside a per-language override
+ *   block (`[turtle]`, `[sparql]`, …), read/written with the 4-arg
+ *   `config.update(key, value, target, overrideInLanguage=true)` form.
+ */
+export type SettingsSource =
+	| { kind: 'mentor' }
+	| { kind: 'languageEditor'; languageId: LanguageId };
+
+/**
+ * Stable string form of a `SettingsSource`, suitable for use as a map/object key.
+ */
+export function settingsSourceKey(source: SettingsSource): string {
+	return source.kind === 'mentor' ? 'mentor' : `languageEditor:${source.languageId}`;
+}
+
+/**
+ * Shared singleton for the `mentor` source — every section that only touches
+ * `mentor.*` keys imports this rather than constructing the literal inline.
+ */
+export const MENTOR_SOURCE: SettingsSource = { kind: 'mentor' };
 
 /**
  * The state of a setting, including its current value, default value, scope and additional metadata.

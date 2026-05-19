@@ -12,6 +12,13 @@ import { TestResult } from '../../components/types';
 import { useScopedWebviewMessaging } from '../../../webview-hooks';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
+export const queryConnectionsSection = {
+	id: 'connections',
+	label: 'Connections',
+	component: QueryConnectionsSection,
+	keys: ['sparql.connections'],
+} as const satisfies SettingsSectionDescriptor;
+
 type QueryConnectionsSectionMessage = SparqlConnectionsListMessages | SparqlConnectionMessages;
 
 export function QueryConnectionsSection() {
@@ -137,11 +144,3 @@ export function QueryConnectionsSection() {
 		</>
 	);
 }
-
-export const queryConnectionsDescriptor = {
-	id: 'connections',
-	group: 'query',
-	label: 'Connections',
-	component: QueryConnectionsSection,
-	keys: ['sparql.connections'],
-} as const satisfies SettingsSectionDescriptor;

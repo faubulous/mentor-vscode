@@ -5,30 +5,43 @@ import { useSettingRowProps } from '../../components/use-setting-row-props';
 import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SettingsSectionProps } from '../../settings-section-props';
+import { MENTOR_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
+export const appearanceDefinitionsTreeSection = {
+	id: 'appearance.definitions-tree',
+	label: 'Definitions Tree',
+	component: DefinitionsTreeSection,
+	keys: [
+		'definitionTree.labelStyle',
+		'definitionTree.defaultLayout',
+		'definitionTree.defaultLanguageTag',
+		'definitionTree.decorateMissingLanguageTags',
+	],
+} as const satisfies SettingsSectionDescriptor;
+
 export function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
-	const rowProps = useSettingRowProps(settings, setScope);
-	const menuItems = useBulkScopeMenuItems([...keys], settings, onBulkScope);
+	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
+	const menuItems = useBulkScopeMenuItems(MENTOR_SOURCE, [...keys], settings, onBulkScope);
 
 	const labelStyleRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
-		(element) => onUpdate('definitionTree.labelStyle', element.value)
+		(element) => onUpdate(MENTOR_SOURCE, 'definitionTree.labelStyle', element.value)
 	);
 
 	const defaultLayoutRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
-		(element) => onUpdate('definitionTree.defaultLayout', element.value)
+		(element) => onUpdate(MENTOR_SOURCE, 'definitionTree.defaultLayout', element.value)
 	);
 
 	const decorateMissingRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
-		(element) => onUpdate('definitionTree.decorateMissingLanguageTags', element.value)
+		(element) => onUpdate(MENTOR_SOURCE, 'definitionTree.decorateMissingLanguageTags', element.value)
 	);
 
 	return (
 		<div>
-			<FormSectionHeader title={definitionsTreeDescriptor.label} menuItems={menuItems} large />
+			<FormSectionHeader title={appearanceDefinitionsTreeSection.label} menuItems={menuItems} large />
 			<SettingRow {...rowProps('definitionTree.labelStyle')}>
 				<vscode-single-select
 					ref={labelStyleRef}
@@ -53,7 +66,7 @@ export function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onB
 				<vscode-textfield
 					value={String(settings['definitionTree.defaultLanguageTag']?.value ?? '')}
 					placeholder="en"
-					onInput={(e: any) => onUpdate('definitionTree.defaultLanguageTag', (e.target as HTMLInputElement).value)}
+					onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'definitionTree.defaultLanguageTag', (e.target as HTMLInputElement).value)}
 				/>
 			</SettingRow>
 			<SettingRow {...rowProps('definitionTree.decorateMissingLanguageTags')}>
@@ -69,16 +82,3 @@ export function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onB
 		</div>
 	);
 }
-
-export const definitionsTreeDescriptor = {
-	id: 'appearance.definitions-tree',
-	group: 'appearance',
-	label: 'Definitions Tree',
-	component: DefinitionsTreeSection,
-	keys: [
-		'definitionTree.labelStyle',
-		'definitionTree.defaultLayout',
-		'definitionTree.defaultLanguageTag',
-		'definitionTree.decorateMissingLanguageTags',
-	],
-} as const satisfies SettingsSectionDescriptor;

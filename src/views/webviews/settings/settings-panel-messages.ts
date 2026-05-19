@@ -1,20 +1,19 @@
-import { LanguageId } from '@src/services/document/document-factory';
-import { SettingScope, SettingState } from './settings-types';
+import { SettingScope, SettingState, SettingsSource } from './settings-types';
 import { ExecuteCommandMessage } from '../webview-messaging';
 
 /**
- * Messages sent from the settings panel webview to the extension.
+ * Messages exchanged between the settings panel webview and the extension.
+ *
+ * All settings traffic is parameterized by a `SettingsSource` discriminator so
+ * mentor (`mentor.*`) and language-scoped editor (`[turtle].editor.*`, …)
+ * buckets share a single wire format.
  */
 export type SettingsPanelMessages =
 	ExecuteCommandMessage |
-	{ id: 'GetSettings' } |
-	{ id: 'GetSettingsResult'; settings: Record<string, SettingState> } |
-	{ id: 'OnSettingsChanged'; settings: Record<string, SettingState> } |
-	{ id: 'UpdateSetting'; key: string; value: unknown; scope: SettingScope } |
-	{ id: 'GetVSCodeSettings'; languageId: LanguageId } |
-	{ id: 'GetVSCodeSettingsResult'; languageId: LanguageId; settings: Record<string, SettingState> } |
-	{ id: 'OnVSCodeSettingsChanged'; languageId: LanguageId; settings: Record<string, SettingState> } |
-	{ id: 'UpdateVSCodeSetting'; languageId: LanguageId; key: string; value: unknown; scope: SettingScope } |
+	{ id: 'GetSettings'; source: SettingsSource } |
+	{ id: 'GetSettingsResult'; source: SettingsSource; settings: Record<string, SettingState> } |
+	{ id: 'OnSettingsChanged'; source: SettingsSource; settings: Record<string, SettingState> } |
+	{ id: 'UpdateSetting'; source: SettingsSource; key: string; value: unknown; scope: SettingScope } |
 	{ id: 'GetVersion' } |
 	{ id: 'GetVersionResult'; version: string } |
 	{ id: 'NavigateTo'; section: string };

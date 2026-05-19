@@ -3,31 +3,11 @@ import { SettingRow } from '../../components/setting-row';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
 import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { SettingsSectionProps } from '../../settings-section-props';
+import { MENTOR_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-export function QueryTemplatesSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
-	const rowProps = useSettingRowProps(settings, setScope);
-	const menuItems = useBulkScopeMenuItems([...keys], settings, onBulkScope);
-	return (
-		<div>
-			<FormSectionHeader title={queryTemplatesDescriptor.label} menuItems={menuItems} large />
-			{keys.map((key) => (
-				<SettingRow key={key} {...rowProps(key)}>
-					<vscode-textarea
-						className='monospace'
-						rows={12}
-						value={String(settings[key]?.value ?? '')}
-						onInput={(e: any) => onUpdate(key, (e.target as HTMLTextAreaElement).value)}
-					/>
-				</SettingRow>
-			))}
-		</div>
-	);
-}
-
-export const queryTemplatesDescriptor = {
+export const queryTemplatesSection = {
 	id: 'query.templates',
-	group: 'query',
 	label: 'Templates',
 	component: QueryTemplatesSection,
 	keys: [
@@ -36,3 +16,23 @@ export const queryTemplatesDescriptor = {
 		'sparql.describeQueryTemplate',
 	],
 } as const satisfies SettingsSectionDescriptor;
+
+export function QueryTemplatesSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
+	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
+	const menuItems = useBulkScopeMenuItems(MENTOR_SOURCE, [...keys], settings, onBulkScope);
+	return (
+		<div>
+			<FormSectionHeader title={queryTemplatesSection.label} menuItems={menuItems} large />
+			{keys.map((key) => (
+				<SettingRow key={key} {...rowProps(key)}>
+					<vscode-textarea
+						className='monospace'
+						rows={12}
+						value={String(settings[key]?.value ?? '')}
+						onInput={(e: any) => onUpdate(MENTOR_SOURCE, key, (e.target as HTMLTextAreaElement).value)}
+					/>
+				</SettingRow>
+			))}
+		</div>
+	);
+}

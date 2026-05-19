@@ -1,19 +1,21 @@
 import { useCallback, useContext } from 'react';
-import { LanguageId } from '@src/services/document/document-factory';
-import { SettingScope, SettingState } from '../settings-types';
-import { SettingsMoveContext, VSCodeSettingsMoveContext } from './setting-context';
-import { VSCodeSettings } from './types';
+import { SettingScope, SettingState, SettingsSource } from '../settings-types';
+import { SettingsMoveContext } from './setting-context';
 
 /**
- * A custom hook that generates props for a SettingRow component based on the current 
- * settings and a callback for changing the setting's scope.
- * @param settings The current settings state.
- * @param onScopeChange A callback function to change the scope of a setting.
- * @returns A function that generates props for a SettingRow component.
+ * Generates props for a SettingRow component for the given source's slice of
+ * settings. The `source` is bound into both the scope-change callback and the
+ * move-between-scopes context so individual rows don't need to know which
+ * bucket they belong to.
+ *
+ * @param source        Which configuration bucket these settings live in.
+ * @param settings      The slice of settings for this source, indexed by key.
+ * @param onScopeChange Callback invoked when a row's scope chip is changed.
  */
 export function useSettingRowProps(
+	source: SettingsSource,
 	settings: Record<string, SettingState>,
-	onScopeChange: (key: string, scope: SettingScope, currentValue: unknown) => void,
+	onScopeChange: (source: SettingsSource, key: string, scope: SettingScope, currentValue: unknown) => void,
 ) {
 	const onMove = useContext(SettingsMoveContext);
 
@@ -23,51 +25,24 @@ export function useSettingRowProps(
 			label: state?.title ?? '',
 			description: state?.description ?? '',
 			state,
-			setScope: makeSetScope(key, onScopeChange, onMove),
+			setScope: makeSetScope(source, key, onScopeChange, onMove),
 		};
-	}, [settings, onScopeChange, onMove]);
+	}, [source, settings, onScopeChange, onMove]);
 }
 
 /**
- * A custom hook that generates props for a SettingRow component for VSCode settings, based 
- * on the current settings state and a callback for changing the setting's scope.
- * @param settings The current VSCode settings state.
- * @param languageId The language ID for which the settings are being generated.
- * @param onScopeChange A callback function to change the scope of a setting.
- * @returns A function that generates props for a SettingRow component.
- */
-export function useVSCodeSettingRowProps(
-	settings: VSCodeSettings,
-	languageId: LanguageId,
-	onScopeChange: (lang: LanguageId, key: string, scope: SettingScope, currentValue: unknown) => void,
-) {
-	const onMove = useContext(VSCodeSettingsMoveContext);
-
-	return useCallback((key: string) => ({
-		state: settings[languageId]?.[key],
-		setScope: makeSetScope(
-			key,
-			(k, scope, value) => onScopeChange(languageId, k, scope, value),
-			onMove ? (k, from, to, value) => onMove(languageId, k, from, to, value) : null,
-		),
-	}), [settings, languageId, onScopeChange, onMove]);
-}
-
-/**
- * Create a setScope function for a specific setting key, using the provided callbacks 
- * for changing scope and moving settings.
- * @param key The key of the setting.
- * @param onScopeChange Callback for changing the scope of the setting.
- * @param onMove Callback for moving the setting between scopes.
- * @returns A function that can be used to set the scope of the setting.
+ * Build the `setScope` callback wired into a single SettingRow. When the row
+ * requests a move (`deleteScope` set), routes through the move context;
+ * otherwise routes through the simple scope-change callback.
  */
 function makeSetScope(
+	source: SettingsSource,
 	key: string,
-	onScopeChange: (key: string, scope: SettingScope, value: unknown) => void,
-	onMove: ((key: string, from: 'user' | 'workspace', to: 'user' | 'workspace', value: unknown) => void) | null,
+	onScopeChange: (source: SettingsSource, key: string, scope: SettingScope, value: unknown) => void,
+	onMove: ((source: SettingsSource, key: string, from: 'user' | 'workspace', to: 'user' | 'workspace', value: unknown) => void) | null,
 ) {
 	return (value: unknown, scope: SettingScope, deleteScope?: 'user' | 'workspace') =>
 		deleteScope !== undefined
-			? onMove?.(key, deleteScope, scope as 'user' | 'workspace', value)
-			: onScopeChange(key, scope, value);
+			? onMove?.(source, key, deleteScope, scope as 'user' | 'workspace', value)
+			: onScopeChange(source, key, scope, value);
 }

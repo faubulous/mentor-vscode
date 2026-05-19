@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { SettingState } from "../settings-types";
+import { SettingState, SettingsSource } from "../settings-types";
 import { SectionHeaderContextMenuItem } from "@src/views/webviews/components/section-header-context-menu";
 import { SettingsScopeContext } from "./setting-context";
 
@@ -8,9 +8,10 @@ import { SettingsScopeContext } from "./setting-context";
  * Returns an empty list when there is nothing to copy or no handler was provided.
  */
 export function useBulkScopeMenuItems(
+	source: SettingsSource,
 	keys: string[] | undefined,
 	settings: Record<string, SettingState> | undefined,
-	onBulkScope: ((keys: string[], scope: 'user' | 'workspace') => void) | undefined,
+	onBulkScope: ((source: SettingsSource, keys: string[], scope: 'user' | 'workspace') => void) | undefined,
 ): SectionHeaderContextMenuItem[] {
 	const activeScope = useContext(SettingsScopeContext);
 	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
@@ -24,5 +25,5 @@ export function useBulkScopeMenuItems(
 		return [];
 	}
 
-	return [{ label: `Copy all to ${otherScopeLabel}`, onClick: () => onBulkScope(modifiedKeys, otherScope) }];
+	return [{ label: `Copy all to ${otherScopeLabel}`, onClick: () => onBulkScope(source, modifiedKeys, otherScope) }];
 }

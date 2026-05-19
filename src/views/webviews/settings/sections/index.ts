@@ -1,95 +1,64 @@
-import type { SettingsSectionDescriptor } from '../settings-section-descriptor';
-import type { SettingsNavigationGroupConfig, SettingsNavigationSectionConfig } from '../settings-types';
+import { SettingsNavigationGroupConfig } from '../settings-types';
 
-import { displayDescriptor } from './appearance/display';
-import { definitionsTreeDescriptor } from './appearance/definitions-tree';
-import { editorGeneralDescriptor } from './editor/general';
-import { templatesDescriptor } from './editor/templates';
-import { editorFormattingDescriptor } from './editor/formatting';
-import { editorSortingDescriptor } from './editor/sorting';
-import { validationDescriptor } from './editor/validation';
-import { queryGeneralDescriptor } from './query/general';
-import { queryTemplatesDescriptor } from './query/templates';
-import { queryConnectionsDescriptor } from './query/connections';
-import { workspaceIndexingDescriptor } from './workspace/indexing';
-
-/**
- * Ordered list of top-level navigation groups in the settings panel.
- * Each group can host zero or more sections; sections are attached by setting
- * their descriptor's `group` field to one of these ids.
- */
-export const GROUPS = [
-	{ id: 'appearance', label: 'Appearance' },
-	{ id: 'editor', label: 'Editor' },
-	{ id: 'query', label: 'Query' },
-	{ id: 'workspace', label: 'Workspace' },
-] as const satisfies readonly SettingsNavigationSectionConfig[];
+import { appearanceDisplaySection } from './appearance/display';
+import { appearanceDefinitionsTreeSection } from './appearance/definitions-tree';
+import { editorGeneralSection } from './editor/general';
+import { editorTemplatesSection } from './editor/templates';
+import { editorFormattingSection } from './editor/formatting';
+import { editorSortingSection } from './editor/sorting';
+import { editorValidationSection } from './editor/validation';
+import { queryGeneralSection } from './query/general';
+import { queryTemplatesSection } from './query/templates';
+import { queryConnectionsSection } from './query/connections';
+import { workspaceIndexingSection } from './workspace/indexing';
 
 /**
- * Ordered tuple of every settings section. The tuple type preserves each
- * descriptor's literal `id`, from which the `SettingsSectionId` union below is derived.
+ * Single source of truth for the settings panel: each entry is a navigation
+ * group containing its sections in display order. Consumers derive whatever
+ * shape they need (flat list, id→descriptor map, search index, …) locally.
  *
- * Adding a new section: import its descriptor and append it here. Everything else
- * (navigation tree, registry, key list, search index) is derived automatically.
+ * Adding a new section: import its descriptor and append it to the appropriate
+ * group's `sections` array.
  */
-export const SETTINGS_SECTIONS = [
-	displayDescriptor,
-	definitionsTreeDescriptor,
-	editorGeneralDescriptor,
-	templatesDescriptor,
-	editorFormattingDescriptor,
-	editorSortingDescriptor,
-	validationDescriptor,
-	queryGeneralDescriptor,
-	queryTemplatesDescriptor,
-	queryConnectionsDescriptor,
-	workspaceIndexingDescriptor,
-] as const satisfies readonly SettingsSectionDescriptor[];
-
-/** Literal union of every section id, derived from `SETTINGS_SECTIONS`. */
-export type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number]['id'];
-
-// Widened view for iteration — exposes optional fields (order, hiddenKeys, vscodeKeys)
-// that the literal-typed `SETTINGS_SECTIONS` hides on descriptors that don't declare them.
-const sections: readonly SettingsSectionDescriptor[] = SETTINGS_SECTIONS;
-
-export const SETTINGS_SECTIONS_BY_ID = sections.reduce((acc, s) => {
-	acc[s.id as SettingsSectionId] = s;
-	return acc;
-}, {} as Record<SettingsSectionId, SettingsSectionDescriptor>);
-
-export const SETTINGS_SECTION_TITLES = sections.reduce((acc, s) => {
-	acc[s.id as SettingsSectionId] = s.label;
-	return acc;
-}, {} as Record<SettingsSectionId, string>);
+export const SETTINGS_GROUPS = [
+	{
+		id: 'appearance',
+		label: 'Appearance',
+		sections: [
+			appearanceDisplaySection,
+			appearanceDefinitionsTreeSection,
+		],
+	},
+	{
+		id: 'editor',
+		label: 'Editor',
+		sections: [
+			editorGeneralSection,
+			editorTemplatesSection,
+			editorFormattingSection,
+			editorSortingSection,
+			editorValidationSection,
+		],
+	},
+	{
+		id: 'query',
+		label: 'Query',
+		sections: [
+			queryGeneralSection,
+			queryTemplatesSection,
+			queryConnectionsSection,
+		],
+	},
+	{
+		id: 'workspace',
+		label: 'Workspace',
+		sections: [
+			workspaceIndexingSection,
+		],
+	},
+] as const satisfies readonly SettingsNavigationGroupConfig[];
 
 /**
- * Navigation groups with their sections, used to render the sidebar and drive deep-linking.
+ * Literal union of every section id, derived from `SETTINGS_GROUPS`.
  */
-export const SETTINGS_NAVIGATION_GROUPS: SettingsNavigationGroupConfig[] = GROUPS.map(g => ({
-	id: g.id,
-	label: g.label,
-	sections: sections
-		.filter(s => s.group === g.id)
-		.slice()
-		.sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-		.map(s => ({ id: s.id, label: s.label })),
-}));
-
-/**
- * Entries that populate the search index. Hidden keys are excluded.
- */
-export const SETTINGS_SEARCH_ENTRIES: { section: SettingsSectionId; key: string }[] =
-	sections.flatMap(s => s.keys.map(key => ({ section: s.id as SettingsSectionId, key })));
-
-/**
- * VS Code built-in keys surfaced by any section, used by the host to read editor settings.
- */
-export const VSCODE_SETTING_KEYS: string[] =
-	sections.flatMap(s => s.vscodeKeys?.map(k => k.key) ?? []);
-
-/**
- * Every `mentor.*` key (without the prefix) claimed by some section, hidden or rendered.
- */
-export const MENTOR_SETTINGS_KEYS: string[] =
-	sections.flatMap(s => [...s.keys, ...(s.hiddenKeys ?? [])]);
+export type SettingsSectionId = (typeof SETTINGS_GROUPS)[number]['sections'][number]['id'];

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SETTINGS_NAVIGATION_GROUPS, SettingsSectionId } from '../sections';
+import { SETTINGS_GROUPS, SettingsSectionId } from '../sections';
 
 interface SettingsNavigationProps {
 	activeSection: SettingsSectionId;
@@ -17,7 +17,7 @@ export function SettingsNavigation({ activeSection, onSelect }: SettingsNavigati
 
 	return (
 		<nav className="settings-nav">
-			{SETTINGS_NAVIGATION_GROUPS.map(group => {
+			{SETTINGS_GROUPS.map(group => {
 				const isSingleItem = group.sections.length === 1 && group.sections[0].id === group.id as string;
 				const isCollapsed = collapsed[group.id] ?? false;
 

@@ -1,5 +1,5 @@
-import { LanguageId } from "@src/services/document/document-factory";
 import React from "react";
+import { SettingsSource } from "../settings-types";
 
 /**
  * Provides the currently active settings scope tab ('user' | 'workspace')
@@ -17,23 +17,12 @@ export const SettingsScopeSetContext = React.createContext<((scope: 'user' | 'wo
 
 /**
  * Provides a callback for moving a setting from one scope to another (copy + clear source).
+ * The `source` discriminates between top-level `mentor.*` keys and per-language
+ * `editor.*` overrides.
  */
 export const SettingsMoveContext = React.createContext<
 	((
-		key: string,
-		fromScope: 'user' | 'workspace',
-		toScope: 'user' | 'workspace',
-		value: unknown) => void
-	) | null
->(null);
-
-/**
- * Provides a callback for moving a built-in VSCode editor.* setting from one scope to
- * another (copy + clear source).
- */
-export const VSCodeSettingsMoveContext = React.createContext<
-	((
-		languageId: LanguageId,
+		source: SettingsSource,
 		key: string,
 		fromScope: 'user' | 'workspace',
 		toScope: 'user' | 'workspace',

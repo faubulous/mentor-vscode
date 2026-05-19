@@ -6,25 +6,39 @@ import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-item
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { ObjectListEditor } from '../../components/object-list-editor';
 import { SettingsSectionProps } from '../../settings-section-props';
+import { MENTOR_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
+
+export const editorGeneralSection = {
+	id: 'editor.general',
+	label: 'General',
+	component: EditorGeneralSection,
+	keys: [
+		'editor.codeLensEnabled',
+		'prefixes.autoDefinePrefixes',
+		'prefixes.prefixDefinitionMode',
+		'namespaces',
+		'prefixes.queryParameterName',
+	],
+} as const satisfies SettingsSectionDescriptor;
 
 export function EditorGeneralSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const namespaces = (settings['namespaces']?.value as { uri: string; defaultPrefix: string }[]) ?? [];
-	const rowProps = useSettingRowProps(settings, setScope);
-	const menuItems = useBulkScopeMenuItems([...keys], settings, onBulkScope);
+	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
+	const menuItems = useBulkScopeMenuItems(MENTOR_SOURCE, [...keys], settings, onBulkScope);
 
 	const prefixDefinitionModeRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
-		(element) => onUpdate('prefixes.prefixDefinitionMode', element.value)
+		(element) => onUpdate(MENTOR_SOURCE, 'prefixes.prefixDefinitionMode', element.value)
 	);
 
 	return (
 		<div>
-			<FormSectionHeader title={editorGeneralDescriptor.label} menuItems={menuItems} large />
+			<FormSectionHeader title={editorGeneralSection.label} menuItems={menuItems} large />
 			<SettingRow {...rowProps('editor.codeLensEnabled')}>
 				<vscode-checkbox
 					checked={settings['editor.codeLensEnabled']?.value === true}
-					onChange={(e: any) => onUpdate('editor.codeLensEnabled', (e.target as HTMLInputElement).checked)}
+					onChange={(e: any) => onUpdate(MENTOR_SOURCE, 'editor.codeLensEnabled', (e.target as HTMLInputElement).checked)}
 				>
 					Enabled
 				</vscode-checkbox>
@@ -32,7 +46,7 @@ export function EditorGeneralSection({ keys, settings, onUpdate, setScope, onBul
 			<SettingRow {...rowProps('prefixes.autoDefinePrefixes')}>
 				<vscode-checkbox
 					checked={settings['prefixes.autoDefinePrefixes']?.value === true}
-					onChange={(e: any) => onUpdate('prefixes.autoDefinePrefixes', (e.target as HTMLInputElement).checked)}
+					onChange={(e: any) => onUpdate(MENTOR_SOURCE, 'prefixes.autoDefinePrefixes', (e.target as HTMLInputElement).checked)}
 				>
 					Enabled
 				</vscode-checkbox>
@@ -54,30 +68,16 @@ export function EditorGeneralSection({ keys, settings, onUpdate, setScope, onBul
 						{ key: 'defaultPrefix', label: 'Prefix', placeholder: 'ex', className: 'col-prefix' },
 						{ key: 'uri', label: 'URI', placeholder: 'https://example.org/' },
 					]}
-					onChange={v => onUpdate('namespaces', v)}
+					onChange={v => onUpdate(MENTOR_SOURCE, 'namespaces', v)}
 				/>
 			</SettingRow>
 			<SettingRow {...rowProps('prefixes.queryParameterName')}>
 				<vscode-textfield
 					value={String(settings['prefixes.queryParameterName']?.value ?? '')}
 					placeholder="workspace"
-					onInput={(e: any) => onUpdate('prefixes.queryParameterName', (e.target as HTMLInputElement).value)}
+					onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'prefixes.queryParameterName', (e.target as HTMLInputElement).value)}
 				/>
 			</SettingRow>
 		</div>
 	);
 }
-
-export const editorGeneralDescriptor = {
-	id: 'editor.general',
-	group: 'editor',
-	label: 'General',
-	component: EditorGeneralSection,
-	keys: [
-		'editor.codeLensEnabled',
-		'prefixes.autoDefinePrefixes',
-		'prefixes.prefixDefinitionMode',
-		'namespaces',
-		'prefixes.queryParameterName',
-	],
-} as const satisfies SettingsSectionDescriptor;

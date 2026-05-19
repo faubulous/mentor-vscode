@@ -1,29 +1,34 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { VSCodeSettings } from './components/types';
-import { SettingsSectionId, SETTINGS_SECTIONS_BY_ID } from './sections';
+import { SettingsSectionId, SETTINGS_GROUPS } from './sections';
+import { SettingsSectionDescriptor } from './settings-section-descriptor';
 import { SettingsPanelHeader } from './components/settings-panel-header';
 import { SearchResults } from './components/settings-search-results';
 import { SettingsNavigation } from './components/settings-navigation';
-import { LanguageId, FormattingLanguage } from '@src/services/document/document-factory';
-import { SettingScope, SettingState } from './settings-types';
+import { MENTOR_LANGUAGE_IDS, FormattingLanguage } from '@src/services/document/document-factory';
+import { MENTOR_SOURCE, SettingScope, SettingState, SettingsSource, settingsSourceKey } from './settings-types';
 import { SettingsPanelMessages } from './settings-panel-messages';
-import { SettingsScopeContext, SettingsScopeSetContext, SettingsMoveContext, VSCodeSettingsMoveContext } from './components/setting-context';
+import { SettingsScopeContext, SettingsScopeSetContext, SettingsMoveContext } from './components/setting-context';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
 import stylesheet from './settings-panel.css';
 
-const initialVSCodeSettings: VSCodeSettings = {
-	turtle: {},
-	sparql: {},
-	trig: {},
-	n3: {},
-	ntriples: {},
-	nquads: {},
-};
+const SECTIONS_BY_ID = Object.fromEntries(
+	SETTINGS_GROUPS.flatMap(g => g.sections.map(s => [s.id, s as SettingsSectionDescriptor])),
+) as Record<SettingsSectionId, SettingsSectionDescriptor>;
+
+/**
+ * Every settings bucket the panel knows about, kept in sync with the host
+ * controller's `SETTINGS_SOURCES`. Mentor settings + one language-editor
+ * source per Mentor language.
+ */
+const SETTINGS_SOURCES: SettingsSource[] = [
+	MENTOR_SOURCE,
+	...MENTOR_LANGUAGE_IDS.map(languageId => ({ kind: 'languageEditor', languageId } as const)),
+];
 
 interface SettingsPanelState {
-	settings: Record<string, SettingState>;
-	vscodeSettings: VSCodeSettings;
+	settingsBySource: Record<string, Record<string, SettingState>>;
 	activeSection: SettingsSectionId;
 	activeScope: 'user' | 'workspace';
 	formattingLanguage: FormattingLanguage;
@@ -32,8 +37,7 @@ interface SettingsPanelState {
 }
 
 const initialState: SettingsPanelState = {
-	settings: {},
-	vscodeSettings: initialVSCodeSettings,
+	settingsBySource: {},
 	activeSection: 'appearance.display',
 	activeScope: 'user',
 	formattingLanguage: 'turtle',
@@ -48,13 +52,12 @@ function SettingsPanel() {
 		switch (message.id) {
 			case 'GetSettingsResult':
 			case 'OnSettingsChanged':
-				setState(prev => ({ ...prev, settings: message.settings }));
-				return;
-			case 'GetVSCodeSettingsResult':
-			case 'OnVSCodeSettingsChanged':
 				setState(prev => ({
 					...prev,
-					vscodeSettings: { ...prev.vscodeSettings, [message.languageId]: message.settings },
+					settingsBySource: {
+						...prev.settingsBySource,
+						[settingsSourceKey(message.source)]: message.settings,
+					},
 				}));
 				return;
 			case 'GetVersionResult':
@@ -71,121 +74,100 @@ function SettingsPanel() {
 	useStylesheet('settings-panel-styles', stylesheet);
 
 	useEffect(() => {
-		messaging?.postMessage({ id: 'GetSettings' });
-		messaging?.postMessage({ id: 'GetVSCodeSettings', languageId: 'turtle' });
-		messaging?.postMessage({ id: 'GetVSCodeSettings', languageId: 'sparql' });
+		for (const source of SETTINGS_SOURCES) {
+			messaging?.postMessage({ id: 'GetSettings', source });
+		}
 		messaging?.postMessage({ id: 'GetVersion' });
 	}, []);
 
-	const handleUpdate = useCallback((key: string, value: unknown) => {
-		const scope: SettingScope = state.activeScope;
-		setState(prev => ({
-			...prev,
-			settings: { ...prev.settings, [key]: { ...prev.settings[key], value, scope: scope } },
-		}));
-		messaging?.postMessage({ id: 'UpdateSetting', key, value, scope });
-	}, [state.activeScope, messaging, setState]);
+	const mentorSettings = state.settingsBySource[settingsSourceKey(MENTOR_SOURCE)] ?? {};
 
-	const handleSetScope = useCallback((key: string, newScope: SettingScope, currentValue: unknown) => {
-		if (newScope === 'default') {
-			setState(prev => ({
+	const vscodeSettings: VSCodeSettings = useMemo(
+		() => MENTOR_LANGUAGE_IDS.reduce((acc, languageId) => {
+			acc[languageId] = state.settingsBySource[settingsSourceKey({ kind: 'languageEditor', languageId })] ?? {};
+			return acc;
+		}, {} as VSCodeSettings),
+		[state.settingsBySource],
+	);
+
+	/**
+	 * Optimistic local-state patch for an inflight update. Mirrors the previous
+	 * `handleUpdate` / `handleVSCodeUpdate` writes against the unified slice.
+	 */
+	const patchSetting = useCallback((source: SettingsSource, key: string, mut: (prev: SettingState | undefined) => SettingState | undefined) => {
+		const sk = settingsSourceKey(source);
+		setState(prev => {
+			const slice = prev.settingsBySource[sk] ?? {};
+			const next = mut(slice[key]);
+			if (next === undefined) {
+				const { [key]: _, ...rest } = slice;
+				return { ...prev, settingsBySource: { ...prev.settingsBySource, [sk]: rest } };
+			}
+			return {
 				...prev,
-				settings: { ...prev.settings, [key]: { ...prev.settings[key], scope: newScope } },
-			}));
+				settingsBySource: { ...prev.settingsBySource, [sk]: { ...slice, [key]: next } },
+			};
+		});
+	}, [setState]);
+
+	const handleUpdate = useCallback((source: SettingsSource, key: string, value: unknown) => {
+		const scope: SettingScope = state.activeScope;
+		patchSetting(source, key, prev => prev && ({ ...prev, value, scope }));
+		messaging?.postMessage({ id: 'UpdateSetting', source, key, value, scope });
+	}, [state.activeScope, messaging, patchSetting]);
+
+	const handleSetScope = useCallback((source: SettingsSource, key: string, newScope: SettingScope, currentValue: unknown) => {
+		if (newScope === 'default') {
+			patchSetting(source, key, prev => prev && ({ ...prev, scope: newScope }));
 		}
 		// For copy-to-other-scope, local state is unchanged (current setting stays modified).
-		messaging?.postMessage({ id: 'UpdateSetting', key, value: newScope === 'default' ? undefined : currentValue, scope: newScope });
-	}, [messaging, setState]);
-
-	const handleVSCodeUpdate = useCallback((languageId: LanguageId, key: string, value: unknown) => {
-		const scope: SettingScope = state.activeScope;
-
-		setState(prev => ({
-			...prev,
-			vscodeSettings: {
-				...prev.vscodeSettings,
-				[languageId]: {
-					...prev.vscodeSettings[languageId],
-					[key]: { ...prev.vscodeSettings[languageId]?.[key], value, source: scope },
-				},
-			},
-		}));
-		
-		messaging?.postMessage({ id: 'UpdateVSCodeSetting', languageId, key, value, scope });
-	}, [state.activeScope, messaging, setState]);
-
-	const handleVSCodeScopeChange = useCallback((languageId: LanguageId, key: string, newScope: SettingScope, currentValue: unknown) => {
-		if (newScope === 'default') {
-			setState(prev => ({
-				...prev,
-				vscodeSettings: {
-					...prev.vscodeSettings,
-					[languageId]: {
-						...prev.vscodeSettings[languageId],
-						[key]: { ...prev.vscodeSettings[languageId]?.[key], scope: newScope },
-					},
-				},
-			}));
-		}
-		// For copy-to-other-scope, local state is unchanged (current setting stays modified).
-		messaging?.postMessage({ id: 'UpdateVSCodeSetting', languageId, key, value: newScope === 'default' ? undefined : currentValue, scope: newScope });
-	}, [messaging, setState]);
+		messaging?.postMessage({
+			id: 'UpdateSetting',
+			source,
+			key,
+			value: newScope === 'default' ? undefined : currentValue,
+			scope: newScope,
+		});
+	}, [messaging, patchSetting]);
 
 	const handleScopeTabChange = useCallback((scope: 'user' | 'workspace') => {
 		setState(prev => ({ ...prev, activeScope: scope }));
 	}, [setState]);
 
-	const handleBulkScope = useCallback((keys: string[], scope: 'user' | 'workspace') => {
+	const handleBulkScope = useCallback((source: SettingsSource, keys: string[], scope: 'user' | 'workspace') => {
+		const sk = settingsSourceKey(source);
+		const slice = state.settingsBySource[sk] ?? {};
 		for (const key of keys) {
-			handleSetScope(key, scope, state.settings[key]?.value);
+			handleSetScope(source, key, scope, slice[key]?.value);
 		}
-	}, [state.settings, handleSetScope]);
+	}, [state.settingsBySource, handleSetScope]);
 
-	const handleMoveToScope = useCallback((key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => {
-		messaging?.postMessage({ id: 'UpdateSetting', key, value, scope: toScope });
-		messaging?.postMessage({ id: 'UpdateSetting', key, value: undefined, scope: fromScope });
-		setState(prev => ({
+	const handleMoveToScope = useCallback((source: SettingsSource, key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => {
+		messaging?.postMessage({ id: 'UpdateSetting', source, key, value, scope: toScope });
+		messaging?.postMessage({ id: 'UpdateSetting', source, key, value: undefined, scope: fromScope });
+		patchSetting(source, key, prev => prev && ({
 			...prev,
-			settings: {
-				...prev.settings,
-				[key]: {
-					...prev.settings[key],
-					scope: 'default',
-					value: prev.settings[key]?.defaultValue,
-				},
-			},
+			scope: 'default',
+			value: prev.defaultValue,
 		}));
-	}, [messaging, setState]);
-
-	const handleVSCodeMoveToScope = useCallback((languageId: LanguageId, key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => {
-		messaging?.postMessage({ id: 'UpdateVSCodeSetting', languageId, key, value, scope: toScope });
-		messaging?.postMessage({ id: 'UpdateVSCodeSetting', languageId, key, value: undefined, scope: fromScope });
-		setState(prev => ({
-			...prev,
-			vscodeSettings: {
-				...prev.vscodeSettings,
-				[languageId]: {
-					...prev.vscodeSettings[languageId],
-					[key]: {
-						...prev.vscodeSettings[languageId]?.[key],
-						scope: 'default',
-						value: prev.vscodeSettings[languageId]?.[key]?.defaultValue,
-					},
-				},
-			},
-		}));
-	}, [messaging, setState]);
+	}, [messaging, patchSetting]);
 
 	const handleNavSelect = useCallback((section: SettingsSectionId) => {
 		setState(prev => ({ ...prev, activeSection: section, searchTerm: '' }));
 		if (section === 'editor.formatting') {
-			messaging?.postMessage({ id: 'GetVSCodeSettings', languageId: state.formattingLanguage });
+			messaging?.postMessage({
+				id: 'GetSettings',
+				source: { kind: 'languageEditor', languageId: state.formattingLanguage },
+			});
 		}
 	}, [state.formattingLanguage, messaging, setState]);
 
 	const handleFormattingLanguageChange = useCallback((lang: FormattingLanguage) => {
 		setState(prev => ({ ...prev, formattingLanguage: lang }));
-		messaging?.postMessage({ id: 'GetVSCodeSettings', languageId: lang });
+		messaging?.postMessage({
+			id: 'GetSettings',
+			source: { kind: 'languageEditor', languageId: lang },
+		});
 	}, [messaging, setState]);
 
 	const handleSearchChange = useCallback((term: string) => {
@@ -193,7 +175,7 @@ function SettingsPanel() {
 	}, [setState]);
 
 	const commonProps = {
-		settings: state.settings,
+		settings: mentorSettings,
 		activeScope: state.activeScope,
 		onUpdate: handleUpdate,
 		setScope: handleSetScope,
@@ -205,13 +187,13 @@ function SettingsPanel() {
 			return (
 				<SearchResults
 					searchTerm={state.searchTerm}
-					settings={state.settings}
+					settings={mentorSettings}
 					onNavigate={section => setState(prev => ({ ...prev, activeSection: section, searchTerm: '' }))}
 				/>
 			);
 		}
 
-		const descriptor = SETTINGS_SECTIONS_BY_ID[state.activeSection];
+		const descriptor = SECTIONS_BY_ID[state.activeSection];
 
 		if (!descriptor) {
 			return null;
@@ -223,11 +205,9 @@ function SettingsPanel() {
 			<SectionComponent
 				{...commonProps}
 				keys={descriptor.keys}
-				vscodeSettings={state.vscodeSettings}
+				vscodeSettings={vscodeSettings}
 				formattingLanguage={state.formattingLanguage}
 				onFormattingLanguageChange={handleFormattingLanguageChange}
-				onVSCodeUpdate={handleVSCodeUpdate}
-				onVSCodeScopeChange={handleVSCodeScopeChange}
 			/>
 		);
 	};
@@ -236,26 +216,24 @@ function SettingsPanel() {
 		<SettingsScopeContext.Provider value={state.activeScope}>
 			<SettingsScopeSetContext.Provider value={handleScopeTabChange}>
 			<SettingsMoveContext.Provider value={handleMoveToScope}>
-				<VSCodeSettingsMoveContext.Provider value={handleVSCodeMoveToScope}>
-					<div className="settings-panel">
-						<SettingsPanelHeader
-							version={state.version}
-							activeScope={state.activeScope}
-							onScopeTabChange={handleScopeTabChange}
-							searchTerm={state.searchTerm}
-							onSearchChange={handleSearchChange}
-							onOpenHomepage={() => messaging?.postMessage({ id: 'ExecuteCommand', command: 'mentor.command.openMentorHomepage' })}
-						/>
-						<div className="settings-body">
-							<SettingsNavigation activeSection={state.activeSection} onSelect={handleNavSelect} />
-							<div className="settings-content">
-								<div className="settings-content-inner">
-									{renderSection()}
-								</div>
+				<div className="settings-panel">
+					<SettingsPanelHeader
+						version={state.version}
+						activeScope={state.activeScope}
+						onScopeTabChange={handleScopeTabChange}
+						searchTerm={state.searchTerm}
+						onSearchChange={handleSearchChange}
+						onOpenHomepage={() => messaging?.postMessage({ id: 'ExecuteCommand', command: 'mentor.command.openMentorHomepage' })}
+					/>
+					<div className="settings-body">
+						<SettingsNavigation activeSection={state.activeSection} onSelect={handleNavSelect} />
+						<div className="settings-content">
+							<div className="settings-content-inner">
+								{renderSection()}
 							</div>
 						</div>
 					</div>
-				</VSCodeSettingsMoveContext.Provider>
+				</div>
 			</SettingsMoveContext.Provider>
 			</SettingsScopeSetContext.Provider>
 		</SettingsScopeContext.Provider>

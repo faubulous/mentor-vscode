@@ -36,25 +36,15 @@ export interface VSCodeBuiltinKey {
  * registration plumbing that used to live in the generated metadata module.
  */
 export interface SettingsSectionDescriptor {
-	/** 
+	/**
 	 * Stable id used in messages, deep links, and nav state, e.g. `"appearance.display"`.
 	 */
 	readonly id: string;
 
 	/**
-	 * Parent group id, e.g. `"appearance"`. Must exist in `GROUPS`.
-	 */
-	readonly group: string;
-
-	/**
 	 * Label rendered in the sidebar, e.g. `"Display"`.
 	 */
 	readonly label: string;
-
-	/**
-	 * Optional ordering hint within the group (lower = first). Defaults to source order.
-	 */
-	readonly order?: number;
 
 	/**
 	 * React component rendered when this section is active.
