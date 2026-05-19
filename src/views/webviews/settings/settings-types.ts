@@ -1,54 +1,94 @@
 /**
- * Static type definitions for the settings webview.
- * Generated data structures live in settings-metadata.ts (auto-generated).
+ * Scope of a settings that correspond to the different levels of settings in VS Code.
  */
-
 export type SettingScope = 'default' | 'user' | 'workspace';
 
+/**
+ * The state of a setting, including its current value, default value, scope and additional metadata.
+ */
 export type SettingState = {
+	/**
+	 * The current value of the setting in the specified scope.
+	 */
 	value: unknown;
+
+	/**
+	 * The default value of the setting.
+	 */
 	defaultValue: unknown;
+
+	/**
+	 * The scope of the setting (e.g., user, workspace).
+	 */
 	scope: SettingScope;
+
+	/**
+	 * The display name of the setting in the settings panel.
+	 */
 	title: string;
+
+	/**
+	 * A description of the setting, which can be displayed in the UI to provide more information to the user about what the setting does and how it should be used.
+	 */
 	description: string;
+
+	/**
+	 * Enum options for top-level enum settings, populated by the host from package.json.
+	 */
+	enumOptions?: EnumOption[];
+	
+	/**
+	 * Per-property enum options for object settings (e.g. `sorting.typeSortingOptions`).
+	 */
+	nestedEnumOptions?: Record<string, EnumOption[]>;
 };
 
+/**
+ * An option for an enum setting, with a value and a human-readable label.
+ */
 export interface EnumOption {
+	/**
+	 * The actual value which is stored for the setting when this option is selected.
+	 */
 	value: string;
+
+	/**
+	 * A human-readable label for the option, which can be displayed in the UI (e.g., in a dropdown menu) to represent this option to the user.
+	 */
 	label: string;
 }
 
+/**
+ * A leaf section in the settings UI which groups related settings together under a common label.
+ */
 export interface SettingsNavigationSectionConfig {
+	/**
+	 * A unique identifier for the section.
+	 */
 	id: string;
+
+	/**
+	 * The label that is displayed for the section in the UI.
+	 */
 	label: string;
 }
 
+/**
+ * Groups related sections as a folder in the settings navigation tree.
+ */
 export interface SettingsNavigationGroupConfig {
+	/**
+	 * A unique identifier for the group.
+	 */
 	id: string;
+
+	/**
+	 * The label that is displayed for the group in the UI.
+	 */
 	label: string;
+
+	/**
+	 * The sections that belong to this group, which are displayed as child items under the group in the navigation tree.
+	 */
 	sections: SettingsNavigationSectionConfig[];
-}
-
-/**
- * A catalog entry for a VS Code built-in setting that has no counterpart in
- * SETTINGS (e.g. tabSize, formatOnSave). All fields are required because these
- * entries have no runtime SettingState title/description to fall back on.
- */
-export interface CatalogExtra {
-	section: string;
-	key: string;
-	label: string;
-	description: string;
-}
-
-/**
- * Compile-time metadata for a Mentor setting key, attached to entries in the
- * generated `SETTINGS` record.
- */
-export interface SettingMetadata {
-	section: import('./settings-metadata').SettingsNavigationSection;
-	uiVisible: boolean;
-	experimental?: boolean;
-	enumOptions?: EnumOption[];
-	nestedEnumOptions?: Record<string, EnumOption[]>;
 }

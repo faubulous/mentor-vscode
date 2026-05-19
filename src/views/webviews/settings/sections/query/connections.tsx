@@ -1,19 +1,20 @@
 import * as React from 'react';
 import { useState, useEffect, useCallback, useContext } from 'react';
-import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { TestResult } from '../components/types';
-import { SparqlConnectionsList } from '../../sparql-connections-list/sparql-connections-list';
-import { SparqlConnectionEditor } from '../../sparql-connection/sparql-connection-editor';
-import { ModalDialog } from '../../components/modal-dialog';
-import { SettingsScopeContext } from '../components/setting-context';
-import { useScopedWebviewMessaging } from '../../webview-hooks';
-import { SparqlConnectionsListMessages } from '../../sparql-connections-list/sparql-connections-list-messages';
-import { SparqlConnectionMessages } from '../../sparql-connection/sparql-connection-messages';
+import { ModalDialog } from '../../../components/modal-dialog';
+import { SettingsScopeContext } from '../../components/setting-context';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { SparqlConnectionEditor } from '../../../sparql-connection/sparql-connection-editor';
+import { SparqlConnectionMessages } from '../../../sparql-connection/sparql-connection-messages';
+import { SparqlConnectionsList } from '../../../sparql-connections-list/sparql-connections-list';
+import { SparqlConnectionsListMessages } from '../../../sparql-connections-list/sparql-connections-list-messages';
+import { TestResult } from '../../components/types';
+import { useScopedWebviewMessaging } from '../../../webview-hooks';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-type ConnectionsSectionMessage = SparqlConnectionsListMessages | SparqlConnectionMessages;
+type QueryConnectionsSectionMessage = SparqlConnectionsListMessages | SparqlConnectionMessages;
 
-export function ConnectionsSection() {
+export function QueryConnectionsSection() {
 	const activeScope = useContext(SettingsScopeContext);
 
 	const [connections, setConnections] = useState<SparqlConnection[]>([]);
@@ -22,7 +23,7 @@ export function ConnectionsSection() {
 	const [editorDirty, setEditorDirty] = useState(false);
 	const [testingConnections, setTestingConnections] = useState<Set<string>>(new Set());
 
-	const handleMessage = useCallback((message: ConnectionsSectionMessage) => {
+	const handleMessage = useCallback((message: QueryConnectionsSectionMessage) => {
 		switch (message.id) {
 			case 'GetConnectionsResult':
 			case 'ConnectionsChanged':
@@ -42,7 +43,7 @@ export function ConnectionsSection() {
 		}
 	}, []);
 
-	const messaging = useScopedWebviewMessaging<ConnectionsSectionMessage>('connections', handleMessage);
+	const messaging = useScopedWebviewMessaging<QueryConnectionsSectionMessage>('connections', handleMessage);
 
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetConnections' });
@@ -57,7 +58,7 @@ export function ConnectionsSection() {
 					updated.delete(id);
 				}
 			}
-			
+
 			return updated.size === prev.size ? prev : updated;
 		});
 	}, [testResults]);
@@ -136,3 +137,11 @@ export function ConnectionsSection() {
 		</>
 	);
 }
+
+export const queryConnectionsDescriptor = {
+	id: 'connections',
+	group: 'query',
+	label: 'Connections',
+	component: QueryConnectionsSection,
+	keys: ['sparql.connections'],
+} as const satisfies SettingsSectionDescriptor;

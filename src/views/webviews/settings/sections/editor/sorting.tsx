@@ -1,24 +1,18 @@
-import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { SettingScope, SettingState } from '../settings-types';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
-import { SettingRow } from '../components/setting-row';
-import { useSettingRowProps } from '../components/use-setting-row-props';
-import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
-import { StringListEditor } from '../components/string-list-editor';
-import { SECTION_TITLES, getNestedEnumOptions } from '../settings-metadata';
+import { SettingRow } from '../../components/setting-row';
+import { SettingsSectionProps } from '../../settings-section-props';
+import { StringListEditor } from '../../components/string-list-editor';
+import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
+import { useSettingRowProps } from '../../components/use-setting-row-props';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { VscodeSingleSelect } from '@vscode-elements/elements';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-export interface SortingSectionProps {
-	settings: Record<string, SettingState>;
-	onUpdate: (key: string, value: unknown) => void;
-	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
-	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
-}
-
-export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: SortingSectionProps) {
+export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
 	const menuItems = useBulkScopeMenuItems(['sorting.typeSortingOptions'], settings, onBulkScope);
-	const opts = (settings['sorting.typeSortingOptions']?.value ?? {}) as {
+	const state = settings['sorting.typeSortingOptions'];
+	const opts = (state?.value ?? {}) as {
 		typeOrder?: string[];
 		predicateOrder?: string[];
 		unmatchedPosition?: string;
@@ -39,9 +33,12 @@ export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: So
 		(element) => update({ unmatchedSort: element.value })
 	);
 
+	const unmatchedPositionOptions = state?.nestedEnumOptions?.unmatchedPosition ?? [];
+	const unmatchedSortOptions = state?.nestedEnumOptions?.unmatchedSort ?? [];
+
 	return (
 		<div>
-			<FormSectionHeader title={SECTION_TITLES['editor.sorting']} menuItems={menuItems} large />
+			<FormSectionHeader title={editorSortingDescriptor.label} menuItems={menuItems} large />
 			<SettingRow {...rowProps('sorting.typeSortingOptions')}>
 				<StringListEditor
 					items={opts.typeOrder ?? []}
@@ -61,7 +58,7 @@ export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: So
 					ref={unmatchedPositionRef}
 					value={opts.unmatchedPosition ?? 'end'}
 				>
-					{getNestedEnumOptions('sorting.typeSortingOptions', 'unmatchedPosition').map(o => (
+					{unmatchedPositionOptions.map(o => (
 						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
 					))}
 				</vscode-single-select>
@@ -71,7 +68,7 @@ export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: So
 					ref={unmatchedSortRef}
 					value={opts.unmatchedSort ?? 'alphabetical'}
 				>
-					{getNestedEnumOptions('sorting.typeSortingOptions', 'unmatchedSort').map(o => (
+					{unmatchedSortOptions.map(o => (
 						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
 					))}
 				</vscode-single-select>
@@ -79,3 +76,11 @@ export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: So
 		</div>
 	);
 }
+
+export const editorSortingDescriptor = {
+	id: 'editor.sorting',
+	group: 'editor',
+	label: 'Sorting',
+	component: SortingSection,
+	keys: ['sorting.typeSortingOptions'],
+} as const satisfies SettingsSectionDescriptor;

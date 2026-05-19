@@ -1,29 +1,15 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { SettingScope, SettingState } from '../settings-types';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
-import { SettingRow } from '../components/setting-row';
-import { useSettingRowProps } from '../components/use-setting-row-props';
-import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
-import { SECTION_TITLES, getEnumOptions } from '../settings-metadata';
+import { SettingRow } from '../../components/setting-row';
+import { useSettingRowProps } from '../../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { SettingsSectionProps } from '../../settings-section-props';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-export interface DefinitionsTreeSectionProps {
-	settings: Record<string, SettingState>;
-	onUpdate: (key: string, value: unknown) => void;
-	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
-	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
-}
-
-export function DefinitionsTreeSection({ settings, onUpdate, setScope, onBulkScope }: DefinitionsTreeSectionProps) {
-	const keys = [
-		'definitionTree.labelStyle',
-		'definitionTree.defaultLayout',
-		'definitionTree.defaultLanguageTag',
-		'definitionTree.decorateMissingLanguageTags',
-	];
-
+export function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
-	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
+	const menuItems = useBulkScopeMenuItems([...keys], settings, onBulkScope);
 
 	const labelStyleRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
@@ -42,13 +28,13 @@ export function DefinitionsTreeSection({ settings, onUpdate, setScope, onBulkSco
 
 	return (
 		<div>
-			<FormSectionHeader title={SECTION_TITLES['appearance.definitions-tree']} menuItems={menuItems} large />
+			<FormSectionHeader title={definitionsTreeDescriptor.label} menuItems={menuItems} large />
 			<SettingRow {...rowProps('definitionTree.labelStyle')}>
 				<vscode-single-select
 					ref={labelStyleRef}
 					value={String(settings['definitionTree.labelStyle']?.value ?? 'AnnotatedLabels')}
 				>
-					{getEnumOptions('definitionTree.labelStyle').map(o => (
+					{(settings['definitionTree.labelStyle']?.enumOptions ?? []).map(o => (
 						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
 					))}
 				</vscode-single-select>
@@ -58,7 +44,7 @@ export function DefinitionsTreeSection({ settings, onUpdate, setScope, onBulkSco
 					ref={defaultLayoutRef}
 					value={String(settings['definitionTree.defaultLayout']?.value ?? 'GroupByType')}
 				>
-					{getEnumOptions('definitionTree.defaultLayout').map(o => (
+					{(settings['definitionTree.defaultLayout']?.enumOptions ?? []).map(o => (
 						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
 					))}
 				</vscode-single-select>
@@ -75,7 +61,7 @@ export function DefinitionsTreeSection({ settings, onUpdate, setScope, onBulkSco
 					ref={decorateMissingRef}
 					value={String(settings['definitionTree.decorateMissingLanguageTags']?.value ?? 'Disabled')}
 				>
-					{getEnumOptions('definitionTree.decorateMissingLanguageTags').map(o => (
+					{(settings['definitionTree.decorateMissingLanguageTags']?.enumOptions ?? []).map(o => (
 						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
 					))}
 				</vscode-single-select>
@@ -83,3 +69,16 @@ export function DefinitionsTreeSection({ settings, onUpdate, setScope, onBulkSco
 		</div>
 	);
 }
+
+export const definitionsTreeDescriptor = {
+	id: 'appearance.definitions-tree',
+	group: 'appearance',
+	label: 'Definitions Tree',
+	component: DefinitionsTreeSection,
+	keys: [
+		'definitionTree.labelStyle',
+		'definitionTree.defaultLayout',
+		'definitionTree.defaultLanguageTag',
+		'definitionTree.decorateMissingLanguageTags',
+	],
+} as const satisfies SettingsSectionDescriptor;

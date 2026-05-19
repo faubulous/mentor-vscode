@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SettingsNavigationSection } from './settings-metadata';
+import { SettingsSectionId } from './sections';
 
 /**
  * A {@link SettingsSectionController} owns the host-side message handling and lifecycle
@@ -12,7 +12,7 @@ import { SettingsNavigationSection } from './settings-metadata';
  */
 export interface SettingsSectionController extends vscode.Disposable {
 	/** The section identifier this controller is registered for. */
-	readonly id: SettingsNavigationSection;
+	readonly id: SettingsSectionId;
 
 	/**
 	 * Called once after the panel is shown. The section receives a `post` callback for
@@ -25,7 +25,7 @@ export interface SettingsSectionController extends vscode.Disposable {
 	 * Handle an incoming message targeted at this section (matched by the `section` field).
 	 * @returns `true` if the message was handled, `false` otherwise.
 	 */
-	handleMessage(message: { section: SettingsNavigationSection; id: string } & Record<string, unknown>): Promise<boolean>;
+	handleMessage(message: { section: SettingsSectionId; id: string } & Record<string, unknown>): Promise<boolean>;
 
 	/**
 	 * Called when the panel is activated with a deep-link targeting this section.

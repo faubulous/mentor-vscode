@@ -25,7 +25,9 @@
     "sourceMap": true, // Do we need this when using esbuild?
     "strict": true,
     "noEmit": true, // Do not emit output files, just check for errors.
-    "skipLibCheck": true, // Don't fail on errors in imported libraries. 
+    "skipLibCheck": true, // Don't fail on errors in imported libraries.
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx",

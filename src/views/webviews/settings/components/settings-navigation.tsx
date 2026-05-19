@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { SettingsNavigationSection, SETTINGS_NAVIGATION_GROUPS } from '../settings-metadata';
+import { SETTINGS_NAVIGATION_GROUPS, SettingsSectionId } from '../sections';
 
 interface SettingsNavigationProps {
-	activeSection: SettingsNavigationSection;
-	onSelect: (section: SettingsNavigationSection) => void;
+	activeSection: SettingsSectionId;
+	onSelect: (section: SettingsSectionId) => void;
 }
 
 export function SettingsNavigation({ activeSection, onSelect }: SettingsNavigationProps) {
@@ -29,7 +29,7 @@ export function SettingsNavigation({ activeSection, onSelect }: SettingsNavigati
 							<div
 								className={`settings-nav-group-header${activeSection === item.id ? ' active' : ''}`}
 								style={{ paddingLeft: '12px' }}
-								onClick={() => onSelect(item.id as SettingsNavigationSection)}
+								onClick={() => onSelect(item.id as SettingsSectionId)}
 							>
 								{group.label}
 							</div>
@@ -52,7 +52,7 @@ export function SettingsNavigation({ activeSection, onSelect }: SettingsNavigati
 									<div
 										key={item.id}
 										className={`settings-nav-item${activeSection === item.id ? ' active' : ''}`}
-										onClick={() => onSelect(item.id as SettingsNavigationSection)}
+										onClick={() => onSelect(item.id as SettingsSectionId)}
 									>
 										{item.label}
 									</div>

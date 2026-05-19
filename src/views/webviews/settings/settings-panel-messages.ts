@@ -2,6 +2,9 @@ import { LanguageId } from '@src/services/document/document-factory';
 import { SettingScope, SettingState } from './settings-types';
 import { ExecuteCommandMessage } from '../webview-messaging';
 
+/**
+ * Messages sent from the settings panel webview to the extension.
+ */
 export type SettingsPanelMessages =
 	ExecuteCommandMessage |
 	{ id: 'GetSettings' } |

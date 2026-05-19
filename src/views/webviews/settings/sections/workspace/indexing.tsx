@@ -1,25 +1,18 @@
-import { SettingScope, SettingState } from '../settings-types';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
-import { SettingRow } from '../components/setting-row';
-import { StringListEditor } from '../components/string-list-editor';
-import { useSettingRowProps } from '../components/use-setting-row-props';
-import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
-import { SECTION_TITLES } from '../settings-metadata';
+import { SettingRow } from '../../components/setting-row';
+import { StringListEditor } from '../../components/string-list-editor';
+import { useSettingRowProps } from '../../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
+import { SettingsSectionProps } from '../../settings-section-props';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-export interface IndexingSectionProps {
-	keys: string[];
-	settings: Record<string, SettingState>;
-	onUpdate: (key: string, value: unknown) => void;
-	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
-	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
-}
-
-export function IndexingSection({ keys, settings, onUpdate, setScope, onBulkScope }: IndexingSectionProps) {
+export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
-	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
+	const menuItems = useBulkScopeMenuItems([...keys], settings, onBulkScope);
+
 	return (
 		<div>
-			<FormSectionHeader title={SECTION_TITLES['indexing']} menuItems={menuItems} large />
+			<FormSectionHeader title={workspaceIndexingDescriptor.label} menuItems={menuItems} large />
 			<SettingRow {...rowProps('index.maxFileSize')}>
 				<vscode-textfield
 					value={String(settings['index.maxFileSize']?.value ?? 1048576)}
@@ -52,3 +45,16 @@ export function IndexingSection({ keys, settings, onUpdate, setScope, onBulkScop
 		</div>
 	);
 }
+
+export const workspaceIndexingDescriptor = {
+	id: 'indexing',
+	group: 'workspace',
+	label: 'Indexing',
+	component: WorkspaceIndexingSection,
+	keys: [
+		'index.useGitIgnore',
+		'index.ignoreFolders',
+		'index.includeFiles',
+		'index.maxFileSize',
+	],
+} as const satisfies SettingsSectionDescriptor;

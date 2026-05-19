@@ -1,30 +1,18 @@
-import { SettingScope, SettingState } from '../settings-types';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
-import { SettingRow } from '../components/setting-row';
-import { useSettingRowProps } from '../components/use-setting-row-props';
-import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
-import { SECTION_TITLES } from '../settings-metadata';
+import { SettingRow } from '../../components/setting-row';
+import { SettingsSectionProps } from '../../settings-section-props';
+import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
+import { useSettingRowProps } from '../../components/use-setting-row-props';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-export interface QuerySectionProps {
-	settings: Record<string, SettingState>;
-	onUpdate: (key: string, value: unknown) => void;
-	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
-	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
-}
-
-export function QuerySection({ settings, onUpdate, setScope, onBulkScope }: QuerySectionProps) {
-	const keys = [
-		'sparql.defaultInferenceEnabled',
-		'sparql.queryTimeout',
-		'inference.enabled',
-	];
-
+export function QuerySection({ settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(settings, setScope);
-	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
+	const allKeys = [...queryGeneralDescriptor.keys, ...(queryGeneralDescriptor.hiddenKeys ?? [])];
+	const menuItems = useBulkScopeMenuItems(allKeys, settings, onBulkScope);
 
 	return (
 		<div>
-			<FormSectionHeader title={SECTION_TITLES['query.general']} menuItems={menuItems} large />
+			<FormSectionHeader title={queryGeneralDescriptor.label} menuItems={menuItems} large />
 			<div className="settings-subsection">
 				<SettingRow {...rowProps('sparql.queryTimeout')}>
 					<vscode-textfield
@@ -62,3 +50,15 @@ export function QuerySection({ settings, onUpdate, setScope, onBulkScope }: Quer
 		</div>
 	);
 }
+
+export const queryGeneralDescriptor = {
+	id: 'query.general',
+	group: 'query',
+	label: 'General',
+	component: QuerySection,
+	keys: [
+		'sparql.defaultInferenceEnabled',
+		'sparql.queryTimeout',
+	],
+	hiddenKeys: ['inference.enabled'],
+} as const satisfies SettingsSectionDescriptor;

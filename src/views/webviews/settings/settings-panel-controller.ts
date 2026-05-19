@@ -5,16 +5,46 @@ import { WebviewController } from '@src/views/webviews/webview-controller';
 import { getConfig } from '@src/utilities/vscode/config';
 import { LanguageId, MENTOR_LANGUAGE_IDS } from '@src/services/document/document-factory';
 import { SettingsPanelMessages } from './settings-panel-messages';
-import { SettingScope, SettingState } from './settings-types';
-import { SettingsNavigationSection, SETTINGS, VSCODE_SETTING_KEYS } from './settings-metadata';
+import { EnumOption, SettingScope, SettingState } from './settings-types';
 import { SettingsSectionController } from './settings-section-controller';
-import { createSectionControllers } from './sections';
+import { MENTOR_SETTINGS_KEYS, SettingsSectionId, SETTINGS_SECTIONS, VSCODE_SETTING_KEYS } from './sections';
+import { createSectionControllers } from './sections/host-controllers';
+import { validateSectionDescriptors } from './settings-section-descriptor';
 
-type PackageJsonSchema = { properties: Record<string, { title?: string; description?: string }> };
+interface PackageJsonProperty {
+	title?: string;
+	description?: string;
+	enum?: (string | number | boolean)[];
+	properties?: Record<string, { enum?: (string | number | boolean)[] }>;
+}
+
+type PackageJsonSchema = { properties: Record<string, PackageJsonProperty> };
+
+function splitLabel(value: string): string {
+	// Mirror the previous generator's label split for enum values, e.g. "AnnotatedLabels" -> "Annotated Labels".
+	return value
+		.replace(/([a-z])([A-Z])/g, '$1 $2')
+		.replace(/^./, c => c.toUpperCase());
+}
+
+function toEnumOptions(values: (string | number | boolean)[] | undefined): EnumOption[] | undefined {
+	if (!values?.length) return undefined;
+	return values.map(v => ({ value: String(v), label: splitLabel(String(v)) }));
+}
+
+function readNestedEnumOptions(prop: PackageJsonProperty | undefined): Record<string, EnumOption[]> | undefined {
+	if (!prop?.properties) return undefined;
+	const result: Record<string, EnumOption[]> = {};
+	for (const [name, nested] of Object.entries(prop.properties)) {
+		const opts = toEnumOptions(nested.enum);
+		if (opts) result[name] = opts;
+	}
+	return Object.keys(result).length ? result : undefined;
+}
 
 export class SettingsPanelController extends WebviewController<SettingsPanelMessages> {
-	private _pendingDeepLink?: { section: SettingsNavigationSection; params?: Record<string, unknown> };
-	private readonly _sectionControllers = new Map<SettingsNavigationSection, SettingsSectionController>();
+	private _pendingDeepLink?: { section: SettingsSectionId; params?: Record<string, unknown> };
+	private readonly _sectionControllers = new Map<SettingsSectionId, SettingsSectionController>();
 
 	constructor() {
 		super({
@@ -23,6 +53,18 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 			panelTitle: 'Mentor Settings',
 			panelIcon: 'gear',
 		});
+
+		if (process.env.NODE_ENV !== 'production') {
+			const properties = (vscode.extensions.getExtension('faubulous.mentor')?.packageJSON
+				?.contributes?.configuration?.[0] as PackageJsonSchema | undefined)?.properties;
+
+			if (properties) {
+				const errors = validateSectionDescriptors(SETTINGS_SECTIONS, properties);
+				if (errors.length) {
+					console.error('[mentor settings] descriptor validation failed:\n' + errors.join('\n'));
+				}
+			}
+		}
 
 		this.subscribe(
 			vscode.workspace.onDidChangeConfiguration((e) => {
@@ -59,7 +101,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	 * If the panel is already open, the deep-link is dispatched immediately. Otherwise it
 	 * is stashed and dispatched once the React side has mounted (signaled by `GetSettings`).
 	 */
-	async openSection(section?: SettingsNavigationSection, params?: Record<string, unknown>, viewColumn?: vscode.ViewColumn): Promise<void> {
+	async openSection(section?: SettingsSectionId, params?: Record<string, unknown>, viewColumn?: vscode.ViewColumn): Promise<void> {
 		const panelAlreadyOpen = !!this.panel;
 
 		this._pendingDeepLink = section ? { section, params } : undefined;
@@ -83,14 +125,17 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		this._pendingDeepLink = undefined;
 	}
 
+	private _getPackageProperties(): Record<string, PackageJsonProperty> {
+		return (vscode.extensions.getExtension('faubulous.mentor')?.packageJSON
+			?.contributes?.configuration?.[0] as PackageJsonSchema | undefined)?.properties ?? {};
+	}
+
 	private _readAllSettings(): Record<string, SettingState> {
 		const config = getConfig();
 		const result: Record<string, SettingState> = {};
+		const schema = this._getPackageProperties();
 
-		const schema = (vscode.extensions.getExtension('faubulous.mentor')?.packageJSON
-			?.contributes?.configuration?.[0] as PackageJsonSchema | undefined)?.properties ?? {};
-
-		for (const key of Object.keys(SETTINGS)) {
+		for (const key of MENTOR_SETTINGS_KEYS) {
 			const inspected = config.inspect(key);
 
 			if (inspected) {
@@ -104,6 +149,8 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 					scope: hasWorkspace ? 'workspace' : hasUser ? 'user' : 'default',
 					title: def?.title ?? key,
 					description: def?.description ?? '',
+					enumOptions: toEnumOptions(def?.enum),
+					nestedEnumOptions: readNestedEnumOptions(def),
 				};
 			}
 		}
@@ -162,11 +209,11 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	}
 
 	protected async onDidReceiveMessage(message: SettingsPanelMessages): Promise<boolean> {
-		const sectionId = (message as { section?: SettingsNavigationSection }).section;
+		const sectionId = (message as { section?: SettingsSectionId }).section;
 		if (sectionId) {
 			const section = this._sectionControllers.get(sectionId);
 			if (section) {
-				return section.handleMessage(message as { section: SettingsNavigationSection; id: string } & Record<string, unknown>);
+				return section.handleMessage(message as { section: SettingsSectionId; id: string } & Record<string, unknown>);
 			}
 		}
 

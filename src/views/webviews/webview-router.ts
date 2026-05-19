@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { SettingsNavigationSection } from './settings/settings-metadata';
+import { SettingsSectionId } from './settings/sections';
 import { SettingsPanelController } from './settings/settings-panel-controller';
 import { SparqlConnectionsListController } from './sparql-connections-list/sparql-connections-list-controller';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
@@ -11,7 +11,7 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
  * Adding a new view type means extending this union and handling it in {@link WebviewRouter}.
  */
 export type WebviewTarget =
-	| { kind: 'settings'; section?: SettingsNavigationSection; params?: { connection?: SparqlConnection } }
+	| { kind: 'settings'; section?: SettingsSectionId; params?: { connection?: SparqlConnection } }
 	| { kind: 'connectionsList' };
 
 /**

@@ -4,12 +4,12 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { ICredentialStorageService } from '@src/services/core';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { SettingsNavigationSection } from '../settings-metadata';
-import { SettingsSectionController } from '../settings-section-controller';
+import { SettingsSectionId } from '..';
+import { SettingsSectionController } from '../../settings-section-controller';
 
-const SECTION_ID: SettingsNavigationSection = 'connections';
+const SECTION_ID: SettingsSectionId = 'connections';
 
-type SectionMessage = { section: SettingsNavigationSection; id: string } & Record<string, unknown>;
+type SectionMessage = { section: SettingsSectionId; id: string } & Record<string, unknown>;
 
 /**
  * Section controller for the Connections settings section. Owns the full message
@@ -18,7 +18,7 @@ type SectionMessage = { section: SettingsNavigationSection; id: string } & Recor
  * `onDidChangeConnections` event subscription that broadcasts updates to the webview.
  */
 export class ConnectionsSectionController implements SettingsSectionController {
-	readonly id: SettingsNavigationSection = SECTION_ID;
+	readonly id: SettingsSectionId = SECTION_ID;
 
 	private _post: (message: unknown) => void = () => { };
 

@@ -1,29 +1,26 @@
-import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { LanguageId, FormattingLanguage } from '@src/services/document/document-factory';
-import { SettingScope, SettingState } from '../settings-types';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { LanguageId, FormattingLanguage } from '@src/services/document/document-factory';
 import { SectionHeaderContextMenu } from '@src/views/webviews/components/section-header-context-menu';
-import { SettingRow } from '../components/setting-row';
-import { SettingsScopeContext } from '../components/setting-context';
-import { useSettingRowProps, useVSCodeSettingRowProps } from '../components/use-setting-row-props';
-import { VSCodeSettings } from '../components/types';
-import { SECTION_TITLES } from '../settings-metadata';
+import { SettingRow } from '../../components/setting-row';
+import { SettingScope } from '../../settings-types';
+import { SettingsScopeContext } from '../../components/setting-context';
+import { SettingsSectionProps } from '../../settings-section-props';
 import { useContext } from 'react';
+import { useSettingRowProps, useVSCodeSettingRowProps } from '../../components/use-setting-row-props';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { VSCodeSettings } from '../../components/types';
+import { VscodeSingleSelect } from '@vscode-elements/elements';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-export interface FormattingSectionProps {
-	settings: Record<string, SettingState>;
+export interface EditorFormattingSectionProps extends SettingsSectionProps {
 	vscodeSettings: VSCodeSettings;
 	formattingLanguage: FormattingLanguage;
 	onFormattingLanguageChange: (lang: FormattingLanguage) => void;
-	onUpdate: (key: string, value: unknown) => void;
-	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
 	onVSCodeUpdate: (languageId: LanguageId, key: string, value: unknown) => void;
 	onVSCodeScopeChange: (languageId: LanguageId, key: string, scope: SettingScope, currentValue: unknown) => void;
-	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
 }
 
-export function FormattingSection({
+export function EditorFormattingSection({
 	settings,
 	vscodeSettings,
 	formattingLanguage,
@@ -33,7 +30,7 @@ export function FormattingSection({
 	onVSCodeUpdate,
 	onVSCodeScopeChange,
 	onBulkScope,
-}: FormattingSectionProps) {
+}: EditorFormattingSectionProps) {
 	const turtleKeys = [
 		'formatting.turtle.maxLineWidth',
 		'formatting.turtle.spaceBeforePunctuation',
@@ -65,7 +62,7 @@ export function FormattingSection({
 
 	return (
 		<div>
-			<FormSectionHeader title={SECTION_TITLES['editor.formatting']} large />
+			<FormSectionHeader title={editorFormattingDescriptor.label} large />
 			<SettingRow
 				{...vscodeRowProps('formatOnSave')}
 				label="Format on save"
@@ -222,3 +219,27 @@ export function FormattingSection({
 		</div>
 	);
 }
+
+export const editorFormattingDescriptor = {
+	id: 'editor.formatting',
+	group: 'editor',
+	label: 'Formatting',
+	component: EditorFormattingSection,
+	keys: [
+		'formatting.turtle.maxLineWidth',
+		'formatting.turtle.spaceBeforePunctuation',
+		'formatting.turtle.blankLinesBetweenSubjects',
+		'formatting.sparql.uppercaseKeywords',
+		'formatting.sparql.alignPatterns',
+		'formatting.sparql.sameBraceLine',
+		'formatting.sparql.separateClauses',
+		'formatting.sparql.maxLineWidth',
+		'formatting.sparql.spaceBeforePunctuation',
+	],
+	vscodeKeys: [
+		{ key: 'formatOnSave', label: 'Format on save', description: 'Automatically format documents on save.' },
+		{ key: 'tabSize', label: 'Tab size', description: 'Number of spaces per indent level used by the Mentor formatter.' },
+		{ key: 'insertSpaces', label: 'Insert spaces', description: 'Use spaces instead of tabs for indentation.' },
+		{ key: 'wordWrap', label: 'Word wrap', description: 'Controls how lines wrap in the editor.' },
+	],
+} as const satisfies SettingsSectionDescriptor;

@@ -1,32 +1,17 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { SettingScope, SettingState } from '../settings-types';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
-import { SettingRow } from '../components/setting-row';
-import { useSettingRowProps } from '../components/use-setting-row-props';
-import { useBulkScopeMenuItems } from '../components/use-bulk-scope-menu-items';
-import { SECTION_TITLES, getEnumOptions } from '../settings-metadata';
+import { SettingRow } from '../../components/setting-row';
+import { useSettingRowProps } from '../../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { ObjectListEditor } from '../../components/object-list-editor';
+import { SettingsSectionProps } from '../../settings-section-props';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-import { ObjectListEditor } from '../components/object-list-editor';
-
-export interface EditorGeneralSectionProps {
-	settings: Record<string, SettingState>;
-	onUpdate: (key: string, value: unknown) => void;
-	setScope: (key: string, scope: SettingScope, currentValue: unknown) => void;
-	onBulkScope: (keys: string[], scope: 'user' | 'workspace') => void;
-}
-
-export function EditorGeneralSection({ settings, onUpdate, setScope, onBulkScope }: EditorGeneralSectionProps) {
-	const keys = [
-		'editor.codeLensEnabled',
-		'prefixes.autoDefinePrefixes',
-		'prefixes.prefixDefinitionMode',
-		'prefixes.queryParameterName',
-	];
-
+export function EditorGeneralSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const namespaces = (settings['namespaces']?.value as { uri: string; defaultPrefix: string }[]) ?? [];
 	const rowProps = useSettingRowProps(settings, setScope);
-	const menuItems = useBulkScopeMenuItems(keys, settings, onBulkScope);
+	const menuItems = useBulkScopeMenuItems([...keys], settings, onBulkScope);
 
 	const prefixDefinitionModeRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
@@ -35,7 +20,7 @@ export function EditorGeneralSection({ settings, onUpdate, setScope, onBulkScope
 
 	return (
 		<div>
-			<FormSectionHeader title={SECTION_TITLES['editor.general']} menuItems={menuItems} large />
+			<FormSectionHeader title={editorGeneralDescriptor.label} menuItems={menuItems} large />
 			<SettingRow {...rowProps('editor.codeLensEnabled')}>
 				<vscode-checkbox
 					checked={settings['editor.codeLensEnabled']?.value === true}
@@ -57,7 +42,7 @@ export function EditorGeneralSection({ settings, onUpdate, setScope, onBulkScope
 					ref={prefixDefinitionModeRef}
 					value={String(settings['prefixes.prefixDefinitionMode']?.value ?? 'Append')}
 				>
-					{getEnumOptions('prefixes.prefixDefinitionMode').map(o => (
+					{(settings['prefixes.prefixDefinitionMode']?.enumOptions ?? []).map(o => (
 						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
 					))}
 				</vscode-single-select>
@@ -82,3 +67,17 @@ export function EditorGeneralSection({ settings, onUpdate, setScope, onBulkScope
 		</div>
 	);
 }
+
+export const editorGeneralDescriptor = {
+	id: 'editor.general',
+	group: 'editor',
+	label: 'General',
+	component: EditorGeneralSection,
+	keys: [
+		'editor.codeLensEnabled',
+		'prefixes.autoDefinePrefixes',
+		'prefixes.prefixDefinitionMode',
+		'namespaces',
+		'prefixes.queryParameterName',
+	],
+} as const satisfies SettingsSectionDescriptor;

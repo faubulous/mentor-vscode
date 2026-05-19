@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { VSCodeSettings } from './components/types';
-import { SettingsNavigationSection } from './settings-metadata';
+import { SettingsSectionId, SETTINGS_SECTIONS_BY_ID } from './sections';
 import { SettingsPanelHeader } from './components/settings-panel-header';
 import { SearchResults } from './components/settings-search-results';
 import { SettingsNavigation } from './components/settings-navigation';
@@ -10,10 +10,7 @@ import { SettingScope, SettingState } from './settings-types';
 import { SettingsPanelMessages } from './settings-panel-messages';
 import { SettingsScopeContext, SettingsScopeSetContext, SettingsMoveContext, VSCodeSettingsMoveContext } from './components/setting-context';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
-import { SECTION_REGISTRY } from './settings-registry';
 import stylesheet from './settings-panel.css';
-
-// ── State ──────────────────────────────────────────────────────
 
 const initialVSCodeSettings: VSCodeSettings = {
 	turtle: {},
@@ -27,7 +24,7 @@ const initialVSCodeSettings: VSCodeSettings = {
 interface SettingsPanelState {
 	settings: Record<string, SettingState>;
 	vscodeSettings: VSCodeSettings;
-	activeSection: SettingsNavigationSection;
+	activeSection: SettingsSectionId;
 	activeScope: 'user' | 'workspace';
 	formattingLanguage: FormattingLanguage;
 	version: string;
@@ -43,8 +40,6 @@ const initialState: SettingsPanelState = {
 	version: '',
 	searchTerm: '',
 };
-
-// ── Root ───────────────────────────────────────────────────────
 
 function SettingsPanel() {
 	const [state, setState] = useWebviewState<SettingsPanelState>(initialState);
@@ -66,7 +61,7 @@ function SettingsPanel() {
 				setState(prev => ({ ...prev, version: message.version }));
 				return;
 			case 'NavigateTo':
-				setState(prev => ({ ...prev, activeSection: message.section as SettingsNavigationSection }));
+				setState(prev => ({ ...prev, activeSection: message.section as SettingsSectionId }));
 				return;
 		}
 	}, [setState]);
@@ -104,6 +99,7 @@ function SettingsPanel() {
 
 	const handleVSCodeUpdate = useCallback((languageId: LanguageId, key: string, value: unknown) => {
 		const scope: SettingScope = state.activeScope;
+
 		setState(prev => ({
 			...prev,
 			vscodeSettings: {
@@ -114,6 +110,7 @@ function SettingsPanel() {
 				},
 			},
 		}));
+		
 		messaging?.postMessage({ id: 'UpdateVSCodeSetting', languageId, key, value, scope });
 	}, [state.activeScope, messaging, setState]);
 
@@ -179,7 +176,7 @@ function SettingsPanel() {
 		}));
 	}, [messaging, setState]);
 
-	const handleNavSelect = useCallback((section: SettingsNavigationSection) => {
+	const handleNavSelect = useCallback((section: SettingsSectionId) => {
 		setState(prev => ({ ...prev, activeSection: section, searchTerm: '' }));
 		if (section === 'editor.formatting') {
 			messaging?.postMessage({ id: 'GetVSCodeSettings', languageId: state.formattingLanguage });
@@ -214,15 +211,18 @@ function SettingsPanel() {
 			);
 		}
 
-		const entry = SECTION_REGISTRY[state.activeSection];
-		if (!entry) return null;
+		const descriptor = SETTINGS_SECTIONS_BY_ID[state.activeSection];
 
-		const SectionComponent = entry.component;
+		if (!descriptor) {
+			return null;
+		}
+
+		const SectionComponent = descriptor.component;
 
 		return (
 			<SectionComponent
 				{...commonProps}
-				keys={entry.keys}
+				keys={descriptor.keys}
 				vscodeSettings={state.vscodeSettings}
 				formattingLanguage={state.formattingLanguage}
 				onFormattingLanguageChange={handleFormattingLanguageChange}
