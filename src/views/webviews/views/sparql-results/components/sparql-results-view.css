@@ -1,0 +1,160 @@
+.sparql-results-container pre {
+	margin: 0;
+}
+
+.sparql-results-container a {
+	text-decoration: none;
+}
+
+.sparql-results-container .label {
+	color: var(--vscode-semanticToken-class-foreground, var(--vscode-editor-foreground));
+}
+
+.sparql-results-container {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	width: 100%;
+	min-width: 0;
+}
+
+.sparql-results-content-container {
+	padding: 15px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	box-sizing: border-box;
+}
+
+.sparql-results-container.error .sparql-results-content-container {
+	flex: 1 1 0;
+	min-height: 0;
+	min-width: 0;
+	width: 100%;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+.sparql-results-container.error .sparql-results-content-container pre {
+	white-space: pre;
+	width: fit-content;
+	min-width: 100%;
+}
+
+.sparql-results-content-container .header {
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	align-content: center;
+	align-items: center;
+	justify-content: flex-start;
+	font-weight: 500;
+}
+
+.sparql-results-content-container.codicon-xl {
+	box-sizing: border-box;
+	padding: 1em 2em;
+	gap: 1em;
+	margin: 5px;
+}
+
+.sparql-results-content-container.codicon-xl .codicon {
+	font-size: 1.5em;
+	font-weight: 300;
+}
+
+.sparql-results-content-container.codicon-xl .result {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	align-items: center;
+	gap: 7px;
+	font-size: 1em;
+	font-weight: 300;
+	font-family: var(--vscode-editor-font-family);
+	text-transform: uppercase;
+	color: var(--vscode-badge-foreground);
+}
+
+.sparql-results-content-container.codicon-xl.true {
+	background: var(--mentor-status-success-background);
+}
+
+.sparql-results-content-container.codicon-xl.true .result {
+	color: var(--mentor-status-success-foreground);
+}
+
+.sparql-results-content-container.codicon-xl.true .codicon {
+	color: var(--mentor-status-success-foreground);
+}
+
+.sparql-results-content-container.codicon-xl.false {
+	background: var(--mentor-status-error-background);
+}
+
+.sparql-results-content-container.codicon-xl.false .result {
+	color: var(--mentor-status-error-foreground);
+}
+
+.sparql-results-content-container.codicon-xl.false .codicon {
+	color: var(--mentor-status-error-foreground);
+}
+
+.sparql-results-cancelled-message {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	align-items: center;
+	gap: 10px;
+}
+
+.text-muted {
+	color: var(--vscode-breadcrumb-foreground);
+}
+
+.mentor-panel .sparql-results-container {
+	height: 100%;
+	max-height: 100%;
+}
+
+.mentor-panel .sparql-results-container.error {
+	overflow: hidden;
+}
+
+.mentor-panel .sparql-results-container.error .sparql-results-content-container {
+	overflow-x: auto;
+	overflow-y: auto;
+}
+
+.mentor-notebook-output {
+	border: 1px solid var(--vscode-editorGroup-border) !important;
+	border-radius: 7px;
+	padding: 0 !important;
+	margin-top: 5px !important;
+}
+
+.mentor-notebook-output .sparql-results-container.error .sparql-results-content-container {
+	min-height: 150px;
+}
+
+.mentor-notebook-output vscode-table {
+	/* Add a margin to the bottom to avoid cutting off the table border in notebooks. */
+	margin-bottom: 5px;
+}
+
+.mentor-panel vscode-table {
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.mentor-notebook-output vscode-table-header-cell,
+.mentor-panel vscode-table-header-cell {
+	line-height: auto;
+	padding-top: 2px;
+	padding-bottom: 2px;
+}
+
+.mentor-notebook-output vscode-table-cell,
+.mentor-panel vscode-table-cell {
+	border-bottom: none;
+}

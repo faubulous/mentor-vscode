@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { SettingsSectionId } from './settings/sections';
-import { SettingsPanelController } from './settings/settings-panel-controller';
-import { SparqlConnectionsListController } from './sparql-connections-list/sparql-connections-list-controller';
+import { SettingsSectionId } from './views/settings/sections';
+import { SettingsPanelController } from './views/settings/settings-panel-controller';
+import { SparqlConnectionsListController } from './views/sparql-connections-list/sparql-connections-list-controller';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
 /**

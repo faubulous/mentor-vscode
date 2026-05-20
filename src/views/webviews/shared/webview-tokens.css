@@ -1,0 +1,24 @@
+:root {
+	/* Spacing scale */
+	--mentor-space-1: 2px;
+	--mentor-space-2: 4px;
+	--mentor-space-3: 6px;
+	--mentor-space-4: 8px;
+	--mentor-space-5: 12px;
+	--mentor-space-6: 16px;
+	--mentor-space-7: 24px;
+
+	/* Radius scale */
+	--mentor-radius-sm: 2px;
+	--mentor-radius-md: 3px;
+	--mentor-radius-lg: 4px;
+
+	/* Semantic status colors */
+	--mentor-status-success-foreground: var(--vscode-notebookStatusSuccessIcon-foreground);
+	--mentor-status-success-background: rgba(from var(--mentor-status-success-foreground) r g b / 0.1);
+	--mentor-status-error-foreground: var(--vscode-notebookStatusErrorIcon-foreground);
+	--mentor-status-error-background: rgba(from var(--mentor-status-error-foreground) r g b / 0.1);
+
+	/* Common border */
+	--mentor-border-panel: 1px solid var(--vscode-panel-border);
+}

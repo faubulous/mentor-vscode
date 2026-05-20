@@ -1,6 +1,6 @@
-export * from './sparql-connections-list/sparql-connections-list-controller';
-export * from './sparql-results/sparql-results-controller';
-export * from './settings/settings-panel-controller';
+export * from './views/sparql-connections-list/sparql-connections-list-controller';
+export * from './views/sparql-results/sparql-results-controller';
+export * from './views/settings/settings-panel-controller';
 export { WebviewRouter as ViewRouter, IWebviewRouter as IViewRouter, WebviewTarget as ViewTarget } from './webview-router';
 export { WebviewController } from './webview-controller';
 export { WebviewControllerRegistry } from './webview-controller-registry';

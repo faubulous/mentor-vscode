@@ -4,29 +4,15 @@ import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { TurtleDocument, SparqlDocument, XmlDocument } from '@src/languages';
 import { IDocumentContext } from './document-context.interface';
 import { ILanguageInfo } from './document-factory.interface';
+import {
+	MENTOR_LANGUAGE_IDS,
+	LanguageId,
+	FORMATTING_LANGUAGE_IDS,
+	FormattingLanguage,
+} from './document-languages';
 
-/**
- * The RDF document language ids Mentor supports as first-class authoring/formatting
- * targets. Single source of truth for everything that needs to enumerate or constrain
- * to these languages (settings webview, formatter, etc.).
- */
-export const MENTOR_LANGUAGE_IDS = ['turtle', 'sparql', 'trig', 'n3', 'ntriples', 'nquads'] as const;
-
-/**
- * Union of {@link MENTOR_LANGUAGE_IDS}.
- */
-export type LanguageId = typeof MENTOR_LANGUAGE_IDS[number];
-
-/**
- * The subset of {@link MENTOR_LANGUAGE_IDS} for which Mentor provides its own
- * formatter and exposes formatting settings in the Settings webview.
- */
-export const FORMATTING_LANGUAGE_IDS = ['turtle', 'sparql'] as const;
-
-/**
- * Union of {@link FORMATTING_LANGUAGE_IDS}.
- */
-export type FormattingLanguage = typeof FORMATTING_LANGUAGE_IDS[number];
+export { MENTOR_LANGUAGE_IDS, FORMATTING_LANGUAGE_IDS };
+export type { LanguageId, FormattingLanguage };
 
 /**
  * Metadata about a supported file extension.

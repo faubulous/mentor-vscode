@@ -64,7 +64,10 @@ export function useScopedWebviewMessaging<M extends WebviewMessage>(
 	onMessage?: (message: M) => void
 ): { postMessage: (message: M) => void } | undefined {
 	const handlerRef = useRef(onMessage);
-	useEffect(() => { handlerRef.current = onMessage; }, [onMessage]);
+
+	useEffect(() => { 
+		handlerRef.current = onMessage;
+	}, [onMessage]);
 
 	const filtered = useCallback((msg: M & { section?: string }) => {
 		if (msg.section === section && handlerRef.current) {
@@ -113,7 +116,9 @@ export function useWebviewState<T>(initialState: T): [T, (newState: T | ((prev: 
 			const next = typeof newState === 'function'
 				? (newState as (prev: T) => T)(prev)
 				: newState;
+
 			WebviewHost.setState(next);
+
 			return next;
 		});
 	}, []);
@@ -209,6 +214,7 @@ export function useStylesheet(id: string, content: string, cleanup = false): voi
 			const style = document.createElement('style');
 			style.id = id;
 			style.textContent = content;
+			
 			document.head.appendChild(style);
 		}
 

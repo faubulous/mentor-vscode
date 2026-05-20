@@ -126,7 +126,7 @@ const getReactViewConfig = (args, folder, file) => {
   return {
     ...getBaseConfig(args),
     format: "esm", // Ensure ES module format for the VS Code notebook renderer
-    entryPoints: [`./src/views/webviews/${folder}/${file}.tsx`],
+    entryPoints: [`./src/views/webviews/views/${folder}/${file}.tsx`],
     outfile: `./dist/${file}.js`
   }
 }
