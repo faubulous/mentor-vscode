@@ -35,6 +35,7 @@ interface SettingsPanelState {
 	formattingLanguage: FormattingLanguage;
 	version: string;
 	searchTerm: string;
+	hasWorkspace: boolean;
 }
 
 const initialState: SettingsPanelState = {
@@ -44,6 +45,7 @@ const initialState: SettingsPanelState = {
 	formattingLanguage: 'turtle',
 	version: '',
 	searchTerm: '',
+	hasWorkspace: true,
 };
 
 function SettingsPanel() {
@@ -64,6 +66,9 @@ function SettingsPanel() {
 			case 'GetVersionResult':
 				setState(prev => ({ ...prev, version: message.version }));
 				return;
+			case 'WorkspaceStateChanged':
+				setState(prev => ({ ...prev, hasWorkspace: message.hasWorkspace }));
+				return;
 			case 'NavigateTo':
 				setState(prev => ({ ...prev, activeSection: message.section as SettingsSectionId }));
 				return;
@@ -80,6 +85,7 @@ function SettingsPanel() {
 			messaging?.postMessage({ id: 'GetSettings', source });
 		}
 		messaging?.postMessage({ id: 'GetVersion' });
+		messaging?.postMessage({ id: 'GetWorkspaceState' });
 	}, []);
 
 	const mentorSettings = state.settingsBySource[settingsSourceKey(MENTOR_SOURCE)] ?? {};
@@ -227,6 +233,14 @@ function SettingsPanel() {
 						onSearchChange={handleSearchChange}
 						onOpenHomepage={() => messaging?.postMessage({ id: 'ExecuteCommand', command: 'mentor.command.openMentorHomepage' })}
 					/>
+					{!state.hasWorkspace && (
+						<div className="panel-status-banner" role="status">
+							<vscode-icon name="warning" />
+							<span>
+								No workspace is open. Workspace-scoped settings cannot be saved until a workspace folder is opened.
+							</span>
+						</div>
+					)}
 					<div className="settings-body">
 						<SettingsNavigation activeSection={state.activeSection} onSelect={handleNavSelect} />
 						<div className="settings-content">

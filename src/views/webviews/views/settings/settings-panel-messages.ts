@@ -16,4 +16,6 @@ export type SettingsPanelMessages =
 	{ id: 'UpdateSetting'; source: SettingsSource; key: string; value: unknown; scope: SettingScope } |
 	{ id: 'GetVersion' } |
 	{ id: 'GetVersionResult'; version: string } |
+	{ id: 'GetWorkspaceState' } |
+	{ id: 'WorkspaceStateChanged'; hasWorkspace: boolean } |
 	{ id: 'NavigateTo'; section: string };

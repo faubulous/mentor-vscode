@@ -160,6 +160,21 @@ vscode-textfield .root {
 	flex-shrink: 0;
 }
 
+.panel-status-banner {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-3);
+	padding: var(--mentor-space-3) var(--mentor-space-6);
+	background-color: var(--vscode-statusBarItem-warningBackground);
+	color: var(--vscode-statusBarItem-warningForeground);
+	border-bottom: var(--mentor-border-panel);
+	font-size: 0.9em;
+}
+
+.panel-status-banner vscode-icon {
+	flex-shrink: 0;
+}
+
 /* ── Modified tag ───────────────────────────────────────────── */
 
 .setting-modified-tag {

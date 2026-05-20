@@ -75,6 +75,15 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 			})
 		);
 
+		this.subscribe(
+			vscode.workspace.onDidChangeWorkspaceFolders(() => {
+				this.postMessage({
+					id: 'WorkspaceStateChanged',
+					hasWorkspace: this._hasWorkspace(),
+				});
+			})
+		);
+
 		const post = (message: unknown) => this.postMessage(message as SettingsPanelMessages);
 
 		for (const sectionController of createSectionControllers()) {
@@ -241,6 +250,14 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 
 				return true;
 			}
+			case 'GetWorkspaceState': {
+				this.postMessage({
+					id: 'WorkspaceStateChanged',
+					hasWorkspace: this._hasWorkspace(),
+				});
+
+				return true;
+			}
 			case 'GetSettings': {
 				this.postMessage({
 					id: 'GetSettingsResult',
@@ -261,6 +278,14 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 				return super.onDidReceiveMessage(message);
 			}
 		}
+	}
+
+	/**
+	 * Returns `true` when at least one workspace folder is currently open.
+	 * Workspace-scoped settings cannot be written when this is `false`.
+	 */
+	private _hasWorkspace(): boolean {
+		return (vscode.workspace.workspaceFolders?.length ?? 0) > 0;
 	}
 
 	/**
