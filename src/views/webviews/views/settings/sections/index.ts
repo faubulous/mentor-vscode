@@ -1,4 +1,6 @@
 import { SettingsNavigationGroupConfig } from '../settings-types';
+import { SettingsSectionController } from '../settings-section-controller';
+import { ConnectionsSectionController } from './query/connections-controller';
 
 import { appearanceDisplaySection } from './appearance/display';
 import { appearanceDefinitionsTreeSection } from './appearance/definitions-tree';
@@ -62,3 +64,14 @@ export const SETTINGS_GROUPS = [
  * Literal union of every section id, derived from `SETTINGS_GROUPS`.
  */
 export type SettingsSectionId = (typeof SETTINGS_GROUPS)[number]['sections'][number]['id'];
+
+/**
+ * Create instances of all section controllers.
+ * @note The controllers for sections that require more complex logic 
+ * or state management must be instantiated here.
+ */
+export function createSectionControllers(): SettingsSectionController[] {
+	return [
+		new ConnectionsSectionController(),
+	];
+}

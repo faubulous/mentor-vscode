@@ -1,15 +1,14 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
-import { WebviewController } from '@src/views/webviews/webview-controller';
+import { EnumOption, SettingScope, SettingState, SettingsSource } from './settings-types';
 import { getConfig } from '@src/utilities/vscode/config';
 import { MENTOR_LANGUAGE_IDS } from '@src/services/document/document-factory';
+import { ServiceToken } from '@src/services/tokens';
+import { SETTINGS_GROUPS, SettingsSectionId, createSectionControllers } from './sections';
 import { SettingsPanelMessages } from './settings-panel-messages';
-import { EnumOption, SettingScope, SettingState, SettingsSource } from './settings-types';
 import { SettingsSectionController } from './settings-section-controller';
-import { SETTINGS_GROUPS, SettingsSectionId } from './sections';
-import { createSectionControllers } from './sections/host-controllers';
 import { SettingsSectionDescriptor, validateSectionDescriptors } from './settings-section-descriptor';
+import { WebviewController } from '@src/views/webviews/webview-controller';
 
 const ALL_SECTIONS: readonly SettingsSectionDescriptor[] = SETTINGS_GROUPS.flatMap(g => [...g.sections]);
 
