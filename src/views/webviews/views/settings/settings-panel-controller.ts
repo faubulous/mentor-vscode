@@ -4,27 +4,12 @@ import { EnumOption, SettingScope, SettingState, SettingsSource } from './settin
 import { getConfig } from '@src/utilities/vscode/config';
 import { MENTOR_LANGUAGE_IDS } from '@src/services/document/document-factory';
 import { ServiceToken } from '@src/services/tokens';
-import { SETTINGS_GROUPS, SettingsSectionId, createSectionControllers } from './sections';
+import { SETTINGS_GROUPS, SettingsSectionId } from './sections';
+import { createSectionControllers } from './sections/controllers';
 import { SettingsPanelMessages } from './settings-panel-messages';
 import { SettingsSectionController } from './settings-section-controller';
 import { SettingsSectionDescriptor, validateSectionDescriptors } from './settings-section-descriptor';
 import { WebviewController } from '@src/views/webviews/webview-controller';
-
-const ALL_SECTIONS: readonly SettingsSectionDescriptor[] = SETTINGS_GROUPS.flatMap(g => [...g.sections]);
-
-const MENTOR_SETTINGS_KEYS = ALL_SECTIONS.flatMap(s => [...s.keys, ...(s.hiddenKeys ?? [])]);
-
-const VSCODE_SETTING_KEYS = ALL_SECTIONS.flatMap(s => s.vscodeKeys?.map(k => k.key) ?? []);
-
-/**
- * Every configuration bucket the settings panel knows how to read and write.
- * The host iterates this list for both initial reads and `onDidChangeConfiguration`
- * fan-out so new buckets can be added without touching the messaging layer.
- */
-const SETTINGS_SOURCES: readonly SettingsSource[] = [
-	{ kind: 'mentor' },
-	...MENTOR_LANGUAGE_IDS.map(languageId => ({ kind: 'languageEditor', languageId } as const)),
-];
 
 interface PackageJsonProperty {
 	title?: string;
@@ -36,9 +21,30 @@ interface PackageJsonProperty {
 type PackageJsonSchema = { properties: Record<string, PackageJsonProperty> };
 
 export class SettingsPanelController extends WebviewController<SettingsPanelMessages> {
+	/**
+	 * Controllers for each section, responsible for handling messages and 
+	 * managing state related to their section. Stored in a map for easy lookup 
+	 * by section ID when messages are received.
+	 */
 	private readonly _sectionControllers = new Map<SettingsSectionId, SettingsSectionController>();
 
-	private _pendingDeepLink?: { section: SettingsSectionId; params?: Record<string, unknown> };
+	/**
+	 * The link to a specific section that should be navigated to once the panel 
+	 * is open and the React side has mounted.
+	 */
+	private _pendingSectionLink?: { section: SettingsSectionId; params?: Record<string, unknown> };
+
+	/**
+	 * Every configuration bucket the settings panel knows how to read and write.
+	 * The host iterates this list for both initial reads and `onDidChangeConfiguration`
+	 * fan-out so new buckets can be added without touching the messaging layer.
+	 */
+	readonly _sources: readonly SettingsSource[] = [
+		{ kind: 'mentor' },
+		...MENTOR_LANGUAGE_IDS.map(languageId => ({ kind: 'languageEditor', languageId } as const)),
+	];
+
+	private readonly _sections: SettingsSectionDescriptor[] = SETTINGS_GROUPS.flatMap(g => [...g.sections]);
 
 	constructor() {
 		super({
@@ -53,7 +59,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 				?.contributes?.configuration?.[0] as PackageJsonSchema | undefined)?.properties;
 
 			if (properties) {
-				const errors = validateSectionDescriptors(ALL_SECTIONS, properties);
+				const errors = validateSectionDescriptors(this._sections, properties);
 				if (errors.length) {
 					console.error('[mentor settings] descriptor validation failed:\n' + errors.join('\n'));
 				}
@@ -62,7 +68,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 
 		this.subscribe(
 			vscode.workspace.onDidChangeConfiguration((e) => {
-				for (const source of SETTINGS_SOURCES) {
+				for (const source of this._sources) {
 					if (e.affectsConfiguration(this._affectsScope(source))) {
 						this.postMessage({
 							id: 'OnSettingsChanged',
@@ -105,7 +111,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	async openSection(section?: SettingsSectionId, params?: Record<string, unknown>, viewColumn?: vscode.ViewColumn): Promise<void> {
 		const panelAlreadyOpen = !!this.panel;
 
-		this._pendingDeepLink = section ? { section, params } : undefined;
+		this._pendingSectionLink = section ? { section, params } : undefined;
 
 		await super.show(viewColumn);
 
@@ -115,8 +121,8 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	}
 
 	private _dispatchPendingDeepLink(): void {
-		if (this._pendingDeepLink) {
-			const { section, params } = this._pendingDeepLink;
+		if (this._pendingSectionLink) {
+			const { section, params } = this._pendingSectionLink;
 
 			this.postMessage({ id: 'NavigateTo', section });
 
@@ -124,7 +130,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 				this._sectionControllers.get(section)?.onActivate?.(params);
 			}
 
-			this._pendingDeepLink = undefined;
+			this._pendingSectionLink = undefined;
 		}
 	}
 
@@ -143,18 +149,19 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	 */
 	private _readSettings(source: SettingsSource): Record<string, SettingState> {
 		if (source.kind === 'mentor') {
-			const config = getConfig();
-			const schema = this._getPackageProperties();
 			const result: Record<string, SettingState> = {};
+			const config = getConfig();
+			const keys = this._sections.flatMap(s => [...s.keys, ...(s.hiddenKeys ?? [])]);
+			const settings = this._getPackageProperties();
 
-			for (const key of MENTOR_SETTINGS_KEYS) {
+			for (const key of keys) {
 				const inspected = config.inspect(key);
 
 				if (!inspected) {
 					continue;
 				}
 
-				const def = schema[`mentor.${key}`];
+				const setting = settings[`mentor.${key}`];
 
 				result[key] = {
 					value: config.get(key),
@@ -162,19 +169,20 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 					scope: inspected.workspaceValue !== undefined ? 'workspace'
 						: inspected.globalValue !== undefined ? 'user'
 							: 'default',
-					title: def?.title ?? key,
-					description: def?.description ?? '',
-					enumOptions: this._toEnumOptions(def?.enum),
-					nestedEnumOptions: this._readNestedEnumOptions(def),
+					title: setting?.title ?? key,
+					description: setting?.description ?? '',
+					enumOptions: this._toEnumOptions(setting?.enum),
+					nestedEnumOptions: this._readNestedEnumOptions(setting),
 				};
 			}
 
 			return result;
 		} else {
-			const config = vscode.workspace.getConfiguration('editor', { languageId: source.languageId });
 			const result: Record<string, SettingState> = {};
+			const config = vscode.workspace.getConfiguration('editor', { languageId: source.languageId });
+			const keys = this._sections.flatMap(s => s.vscodeKeys?.map(k => k.key) ?? []);
 
-			for (const key of VSCODE_SETTING_KEYS) {
+			for (const key of keys) {
 				const inspected = config.inspect(key);
 
 				if (!inspected) {

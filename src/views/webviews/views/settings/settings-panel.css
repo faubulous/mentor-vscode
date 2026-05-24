@@ -440,6 +440,10 @@ vscode-textarea.monospace {
 	bottom: -12px;
 }
 
+.string-list-item:not([draggable="true"]) {
+	padding-left: 2px;
+}
+
 .drag-handle {
 	display: flex;
 	align-items: center;
