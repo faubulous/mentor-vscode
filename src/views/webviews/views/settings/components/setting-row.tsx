@@ -82,6 +82,7 @@ export function SettingRow({ label, description, state, setScope, children }: Se
 		<div className={`setting-row${isModified ? ' setting-row-modified' : ''}`}>
 			<div className="setting-row-header">
 				<span className="setting-label">{label}</span>
+				{state?.experimental && <span className="badge-experimental">Experimental</span>}
 				{isModified && <span className="setting-modified-tag" title={`Modified in ${panelScope} settings`}>MODIFIED</span>}
 				<span className="setting-leader" aria-hidden="true" />
 				<SectionHeaderContextMenu items={menuItems} />

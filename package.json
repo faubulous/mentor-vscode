@@ -1331,9 +1331,10 @@
           },
           "mentor.sparql.defaultInferenceEnabled": {
             "type": "boolean",
-            "title": "Default Inference Enabled",
+            "title": "Inference Enabled by Default",
             "description": "Default value for whether inferred triples should be included in SPARQL query results. This applies to connections that support inference toggling (e.g., the workspace store).",
-            "default": false
+            "default": false,
+            "experimental": true
           },
           "mentor.sparql.listGraphsQuery": {
             "type": "string",
@@ -1417,9 +1418,10 @@
           },
           "mentor.inference.enabled": {
             "type": "boolean",
-            "title": "Enable Inferencing Toggle",
+            "title": "Enable SPARQL Inference",
             "description": "If enabled, you will be able to toggle inferencing on and off for SPARQL connections that support this feature.",
-            "default": false
+            "default": false,
+            "experimental": true
           },
           "mentor.predicates.label": {
             "type": "array",
@@ -1669,7 +1671,7 @@
           },
           "mentor.shacl.enabled": {
             "type": "boolean",
-            "title": "Enable Experimental SHACL Validation Features",
+            "title": "Enable SHACL Validation",
             "description": "If enabled, Mentor will show experimental SHACL validation features including the titlebar validate button and SHACL validation code lenses.",
             "default": false,
             "experimental": true

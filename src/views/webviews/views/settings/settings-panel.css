@@ -83,7 +83,7 @@ vscode-textfield .root {
 }
 
 .settings-nav-item.active {
-	background: var(--vscode-list-activeSelectionBackground);
+	background: var(--vscode-button-background);
 	color: var(--vscode-list-activeSelectionForeground);
 	font-weight: 600;
 }

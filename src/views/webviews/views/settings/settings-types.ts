@@ -61,6 +61,11 @@ export type SettingState = {
 	description: string;
 
 	/**
+	 * Whether this setting is flagged experimental in package.json.
+	 */
+	experimental?: boolean;
+
+	/**
 	 * Enum options for top-level enum settings, populated by the host from package.json.
 	 */
 	enumOptions?: EnumOption[];

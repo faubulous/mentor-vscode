@@ -14,6 +14,7 @@ import { WebviewController } from '@src/views/webviews/webview-controller';
 interface PackageJsonProperty {
 	title?: string;
 	description?: string;
+	experimental?: boolean;
 	enum?: (string | number | boolean)[];
 	properties?: Record<string, { enum?: (string | number | boolean)[] }>;
 }
@@ -171,6 +172,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 							: 'default',
 					title: setting?.title ?? key,
 					description: setting?.description ?? '',
+					experimental: setting?.experimental === true,
 					enumOptions: this._toEnumOptions(setting?.enum),
 					nestedEnumOptions: this._readNestedEnumOptions(setting),
 				};

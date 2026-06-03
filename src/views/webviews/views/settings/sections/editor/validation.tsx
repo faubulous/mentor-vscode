@@ -24,11 +24,7 @@ export function ValidationSection({ settings, onUpdate, setScope, onBulkScope }:
 	const menuItems = useBulkScopeMenuItems(MENTOR_SOURCE, ['shacl.enabled'], settings, onBulkScope);
 	return (
 		<div>
-			<FormSectionHeader
-				title={<>{editorValidationSection.label} <span className="badge-experimental">Experimental</span></>}
-				menuItems={menuItems}
-				large
-			/>
+			<FormSectionHeader title={editorValidationSection.label} menuItems={menuItems} large />
 			<SettingRow {...rowProps('shacl.enabled')}>
 				<vscode-checkbox
 					checked={settings['shacl.enabled']?.value === true}
