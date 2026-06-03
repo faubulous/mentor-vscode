@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { useStylesheet } from '../webview-hooks';
+import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
 import stylesheet from './scope-tabs.css';
 
 export interface ScopeTabsProps {
@@ -22,6 +22,7 @@ export function ScopeTabs({ activeScope, onScopeChange, disabled }: ScopeTabsPro
 				type="button"
 				className={`scope-tab${activeScope === 'user' ? ' active' : ''}`}
 				disabled={disabled}
+				title={getConfigurationScopeDescription(ConfigurationScope.User)}
 				onClick={() => onScopeChange('user')}
 			>
 				User
@@ -30,6 +31,7 @@ export function ScopeTabs({ activeScope, onScopeChange, disabled }: ScopeTabsPro
 				type="button"
 				className={`scope-tab${activeScope === 'workspace' ? ' active' : ''}`}
 				disabled={disabled}
+				title={getConfigurationScopeDescription(ConfigurationScope.Workspace)}
 				onClick={() => onScopeChange('workspace')}
 			>
 				Workspace

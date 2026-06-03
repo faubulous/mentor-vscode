@@ -7,6 +7,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
+	min-height: 250px;
 }
 
 .sparql-connection-view-container .form-header,
@@ -51,7 +52,7 @@
 }
 
 .sparql-connection-view-container section {
-	gap: 8px;
+	gap: 1em;
 }
 
 .form-actions {
@@ -101,6 +102,12 @@
 
 .sparql-connection-view-container vscode-tab-panel {
 	padding: 1em 0;
+}
+
+.sparql-connection-view-container vscode-tab-panel:not([hidden]) {
+	display: flex;
+	flex-direction: column;
+	gap: 2em;
 }
 
 .sparql-connection-view-container vscode-form-group {
@@ -187,30 +194,29 @@
 	padding: 0 0.75em;
 }
 
-.sparql-connection-view-container .section-authentication-container {
+.sparql-connection-view-container section.auth {
 	display: flex;
 	flex-direction: row;
 	gap: 1.5em;
-	margin: 1em 0;
 }
 
-.sparql-connection-view-container .section-authentication-container div:first-child {
+.sparql-connection-view-container section.auth div:first-child {
 	max-width: 200px;
 }
 
-.sparql-connection-view-container .section-authentication-container div.vertical-separator {
+.sparql-connection-view-container section.auth .vertical-separator {
 	border-left: 1px solid var(--vscode-editorWidget-border);
 	padding-left: 1.5em;
 }
 
-.sparql-connection-view-container .section-authentication-container div>vscode-form-group {
+.sparql-connection-view-container section.auth div>vscode-form-group {
 	margin: 0;
 }
 
-.sparql-connection-view-container .section-authentication-container div vscode-label {
-	margin-top: 1.5em;
+.sparql-connection-view-container section.auth div vscode-label {
+	margin-top: 1em;
 }
 
-.sparql-connection-view-container .section-authentication-container div vscode-label:first-child {
+.sparql-connection-view-container section.auth div vscode-label:first-child {
 	margin-top: -5px;
 }

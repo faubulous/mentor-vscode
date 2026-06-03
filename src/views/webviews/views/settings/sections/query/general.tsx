@@ -38,9 +38,6 @@ export function QuerySection({ settings, onUpdate, setScope, onBulkScope }: Sett
 				</SettingRow>
 			</div>
 			<div className="settings-subsection">
-				<div className="settings-group-title">
-					Inference <span className="badge-experimental">Experimental</span>
-				</div>
 				<SettingRow
 					{...rowProps('inference.enabled')}
 					label="Enable inference toggle"
