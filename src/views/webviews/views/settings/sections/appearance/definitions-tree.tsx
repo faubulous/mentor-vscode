@@ -65,6 +65,7 @@ export function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onB
 			</SettingRow>
 			<SettingRow {...rowProps('definitionTree.defaultLanguageTag')}>
 				<vscode-textfield
+					className="setting-input-sm"
 					value={String(settings['definitionTree.defaultLanguageTag']?.value ?? '')}
 					placeholder="en"
 					onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'definitionTree.defaultLanguageTag', (e.target as HTMLInputElement).value)}

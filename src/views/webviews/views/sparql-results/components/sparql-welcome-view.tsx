@@ -95,15 +95,15 @@ export function SparqlWelcomeView() {
 						<h3>Start</h3>
 					</div>
 					<div className="body button-list button-list-xl">
-						<vscode-toolbar-button onClick={handleSelectSparqlQueryFile}>
+						<vscode-toolbar-button className="primary" onClick={handleSelectSparqlQueryFile}>
 							<span className="codicon codicon-folder-opened"></span>
 							<span className="label">Open Query...</span>
 						</vscode-toolbar-button>
-						<vscode-toolbar-button onClick={handleCreateSparqlQueryFile}>
+						<vscode-toolbar-button className="primary" onClick={handleCreateSparqlQueryFile}>
 							<span className="codicon codicon-new-file"></span>
 							<span className="label">New Query...</span>
 						</vscode-toolbar-button>
-						<vscode-toolbar-button onClick={handleManageConnections}>
+						<vscode-toolbar-button className="primary" onClick={handleManageConnections}>
 							<span className="mentor-icon database-connection"></span>
 							<span className="label">Manage Connections...</span>
 						</vscode-toolbar-button>

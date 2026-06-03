@@ -67,7 +67,10 @@ export function SettingRow({ label, description, state, setScope, children }: Se
 
 	const menuItems: SectionHeaderContextMenuItem[] = [
 		...(settingScope !== 'default'
-			? [{ label: 'Restore defaults', onClick: () => setScope(state?.value, 'default') }]
+			? [
+				{ label: 'Restore defaults', onClick: () => setScope(state?.value, 'default') },
+				{ separator: true } as const
+			]
 			: []),
 		{ label: `Copy to ${otherScopeLabel} Scope`, onClick: () => setScope(state?.value, otherScope) },
 		...(isModified && canMove

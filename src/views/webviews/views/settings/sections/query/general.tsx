@@ -28,10 +28,13 @@ export function QuerySection({ settings, onUpdate, setScope, onBulkScope }: Sett
 			<div className="settings-subsection">
 				<SettingRow {...rowProps('sparql.queryTimeout')}>
 					<vscode-textfield
+						className="setting-input-md"
 						value={String(settings['sparql.queryTimeout']?.value ?? 30000)}
 						type="number"
 						onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'sparql.queryTimeout', Number((e.target as HTMLInputElement).value))}
-					/>
+					>
+						<span slot="content-after" className="setting-input-suffix">ms</span>
+					</vscode-textfield>
 				</SettingRow>
 			</div>
 			<div className="settings-subsection">

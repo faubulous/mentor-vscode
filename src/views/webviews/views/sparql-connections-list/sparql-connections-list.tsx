@@ -28,7 +28,6 @@ export function SparqlConnectionsList({
 	onTestConnection,
 	onListGraphs,
 	onOpenInBrowser,
-	onChangeSparqlConnectionScope,
 }: SparqlConnectionsListProps) {
 	const isTestingAll = testingConnections.size > 0;
 	const testableCount = connections.length;
@@ -50,6 +49,13 @@ export function SparqlConnectionsList({
 		/>
 	);
 
+	const testAllConnections = () => {
+		connections.forEach((c, i) => setTimeout(
+			() => onTestConnection(c, { stopPropagation: () => { } } as React.MouseEvent),
+			i * 300
+		));
+	};
+
 	return (
 		<div className="connections-list-container">
 			<FormSectionHeader
@@ -58,24 +64,11 @@ export function SparqlConnectionsList({
 				actions={
 					<>
 						{testableCount > 0 && (
-							<vscode-toolbar-button
-								className="test-all-button"
-								title="Test all connections"
-								onClick={() => {
-									connections.forEach((c, i) => setTimeout(
-										() => onTestConnection(c, { stopPropagation: () => {} } as React.MouseEvent),
-										i * 300
-									));
-								}}
-								disabled={isTestingAll}
-							>
-								<vscode-icon name="debug-disconnect" />
+							<vscode-toolbar-button className="primary" title="Test all connections" onClick={testAllConnections}>
+								<span className="codicon codicon-debug-disconnect" />
+								<span className="label">Test Connections</span>
 							</vscode-toolbar-button>
 						)}
-						<button className="connection-add-link" title="Create a new connection" onClick={onCreateConnection}>
-							<vscode-icon name="add" />
-							Add Connection
-						</button>
 					</>
 				}
 			/>
@@ -95,10 +88,16 @@ export function SparqlConnectionsList({
 			<section className="connections-subsection">
 				<FormSectionHeader
 					title="User Defined"
-					description="SPARQL endpoints you have configured for this scope."
-				/>
+					description="SPARQL endpoints you have configured for this scope." actions={
+						<>
+							<vscode-toolbar-button className="primary" title="Create a new connection" onClick={onCreateConnection}>
+								<span className="codicon codicon-add" />
+								<span className="label">Add Connection</span>
+							</vscode-toolbar-button>
+						</>
+					} />
 				{userDefinedConnections.length === 0 ? (
-					<p className="connections-empty-message">No user-defined connections in this scope. Use <strong>Add Connection</strong> above to create one.</p>
+					<p className="connections-empty-message">No user-defined connections in this scope.</p>
 				) : (
 					<div className="connections-list">
 						{userDefinedConnections.map(renderItem)}

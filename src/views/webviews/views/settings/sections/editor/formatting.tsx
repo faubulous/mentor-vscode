@@ -105,6 +105,7 @@ export function EditorFormattingSection({
 				description="Number of spaces per indent level (used by the Mentor formatter for indentation)."
 			>
 				<vscode-textfield
+					className="setting-input-sm"
 					value={String(vscodeSlice['tabSize']?.value ?? 2)}
 					type="number"
 					onInput={(e: any) => onUpdate(vscodeSource, 'tabSize', Number((e.target as HTMLInputElement).value))}
@@ -161,10 +162,13 @@ export function EditorFormattingSection({
 					<>
 						<SettingRow {...rowProps('formatting.turtle.maxLineWidth')}>
 							<vscode-textfield
+								className="setting-input-md"
 								value={String(settings['formatting.turtle.maxLineWidth']?.value ?? 120)}
 								type="number"
 								onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'formatting.turtle.maxLineWidth', Number((e.target as HTMLInputElement).value))}
-							/>
+							>
+								<span slot="content-after" className="setting-input-suffix">chars</span>
+							</vscode-textfield>
 						</SettingRow>
 						<SettingRow {...rowProps('formatting.turtle.spaceBeforePunctuation')}>
 							<vscode-checkbox
@@ -187,10 +191,13 @@ export function EditorFormattingSection({
 					<>
 						<SettingRow {...rowProps('formatting.sparql.maxLineWidth')}>
 							<vscode-textfield
+								className="setting-input-md"
 								value={String(settings['formatting.sparql.maxLineWidth']?.value ?? 120)}
 								type="number"
 								onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'formatting.sparql.maxLineWidth', Number((e.target as HTMLInputElement).value))}
-							/>
+							>
+								<span slot="content-after" className="setting-input-suffix">chars</span>
+							</vscode-textfield>
 						</SettingRow>
 						<SettingRow {...rowProps('formatting.sparql.spaceBeforePunctuation')}>
 							<vscode-checkbox

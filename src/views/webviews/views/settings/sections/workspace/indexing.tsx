@@ -28,10 +28,13 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 			<FormSectionHeader title={workspaceIndexingSection.label} menuItems={menuItems} large />
 			<SettingRow {...rowProps('index.maxFileSize')}>
 				<vscode-textfield
+					className="setting-input-md"
 					value={String(settings['index.maxFileSize']?.value ?? 1048576)}
 					type="number"
 					onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'index.maxFileSize', Number((e.target as HTMLInputElement).value))}
-				/>
+				>
+					<span slot="content-after" className="setting-input-suffix">bytes</span>
+				</vscode-textfield>
 			</SettingRow>
 			<SettingRow {...rowProps('index.useGitIgnore')}>
 				<vscode-checkbox

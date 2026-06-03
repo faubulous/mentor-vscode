@@ -28,3 +28,20 @@
 .mentor-border-top {
 	border-top: var(--mentor-border-panel);
 }
+
+vscode-toolbar-button {
+	justify-content: center;
+	display: flex;
+	flex-direction: row;
+	gap: 0.5em;
+}
+
+vscode-toolbar-button .label {
+	margin-left: 0.5em;
+}
+
+vscode-toolbar-button.primary .mentor-icon,
+vscode-toolbar-button.primary .codicon,
+vscode-toolbar-button.primary .label {
+	color: var(--vscode-textLink-foreground);
+}

@@ -3,11 +3,24 @@ import { useStylesheet } from '../webview-hooks';
 import stylesheet from './section-header-context-menu.css';
 
 /**
- * Menu item in the context menu for a section header.
+ * Represents a separator item in the context menu, which is 
+ * used to visually divide groups of menu items.
+ */
+export interface SectionHeaderContextMenuSeparator  {
+	/**
+	 * Indicates that this item is a separator, which should 
+	 * be rendered as a horizontal line dividing groups of menu 
+	 * items.
+	 */
+	separator: true;
+}
+
+/**
+ * Command in the context menu for a section header.
  * @property label The text to display for the menu item.
  * @property onClick The function to call when the menu item is clicked.
  */
-export interface SectionHeaderContextMenuItem {
+export interface SectionHeaderContextMenuCommand {
 	/**
 	 * The text to display for the menu item.
 	 */
@@ -17,6 +30,20 @@ export interface SectionHeaderContextMenuItem {
 	 * Handler function to call when the menu item is clicked.
 	 */
 	onClick: () => void;
+}
+
+/**
+ * Menu item in the context menu for a section header.
+ */
+export type SectionHeaderContextMenuItem = SectionHeaderContextMenuCommand | SectionHeaderContextMenuSeparator;
+
+/**
+ * Type guard that returns `true` if the given menu item is a separator.
+ * @param item The menu item to check.
+ * @returns `true` if the item is a separator, `false` if it is a command.
+ */
+function isSeparator(item: SectionHeaderContextMenuItem): item is SectionHeaderContextMenuSeparator {
+	return (item as SectionHeaderContextMenuSeparator).separator === true;
 }
 
 /**
@@ -47,7 +74,21 @@ export function SectionHeaderContextMenu({ items }: { items: SectionHeaderContex
 		return () => document.removeEventListener('mousedown', handler);
 	}, [open]);
 
-	if (items.length === 0) {
+	// Drop leading/trailing separators and collapse consecutive ones, so that
+	// callers can compose item lists without worrying about dangling dividers.
+	const normalizedItems = items.filter((item, index) => {
+		if (!isSeparator(item)) {
+			return true;
+		}
+
+		const hasCommandBefore = items.slice(0, index).some(i => !isSeparator(i));
+		const hasCommandAfter = items.slice(index + 1).some(i => !isSeparator(i));
+		const previousIsSeparator = index > 0 && isSeparator(items[index - 1]);
+
+		return hasCommandBefore && hasCommandAfter && !previousIsSeparator;
+	});
+
+	if (normalizedItems.every(isSeparator)) {
 		return null;
 	}
 
@@ -58,15 +99,19 @@ export function SectionHeaderContextMenu({ items }: { items: SectionHeaderContex
 			</button>
 			{open && (
 				<div className="more-vert-menu">
-					{items.map(item => (
-						<button
-							key={item.label}
-							className="more-vert-item"
-							onClick={() => { item.onClick(); setOpen(false); }}
-						>
-							{item.label}
-						</button>
-					))}
+					{normalizedItems.map((item, index) =>
+						isSeparator(item) ? (
+							<div key={`separator-${index}`} className="more-vert-separator" role="separator" />
+						) : (
+							<button
+								key={`${item.label}-${index}`}
+								className="more-vert-item"
+								onClick={() => { item.onClick(); setOpen(false); }}
+							>
+								{item.label}
+							</button>
+						)
+					)}
 				</div>
 			)}
 		</div>

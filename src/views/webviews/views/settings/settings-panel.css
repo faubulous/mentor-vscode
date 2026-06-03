@@ -96,7 +96,7 @@ vscode-textfield .root {
 }
 
 .settings-content-inner {
-	max-width: 760px;
+	max-width: 660px;
 	padding: var(--mentor-space-7) 32px;
 }
 
@@ -113,7 +113,7 @@ vscode-textfield .root {
 .panel-header-inner {
 	display: flex;
 	gap: var(--mentor-space-5);
-	max-width: 1000px;
+	max-width: 900px;
 	align-items: center;
 	justify-content: flex-start;
 	padding: var(--mentor-space-3) var(--mentor-space-6);
@@ -152,7 +152,7 @@ vscode-textfield .root {
 
 .panel-header-search {
 	flex: 1;
-	max-width: 400px;
+	max-width: 300px;
 	margin-left: auto;
 }
 
@@ -253,7 +253,7 @@ vscode-textfield .root {
 .settings-content vscode-textfield,
 .string-list-item vscode-textfield,
 .object-list-item vscode-textfield {
-	--vscode-font-family: var(--vscode-editor-font-family);
+	/* --vscode-font-family: var(--vscode-editor-font-family); */
 	min-height: 30px;
 }
 
@@ -321,7 +321,7 @@ vscode-textarea.monospace {
 
 .setting-label {
 	font-weight: 500;
-	font-size: 1.2em;
+	font-size: 1.1em;
 	line-height: 1.4em;
 	flex: 0 0 auto;
 }
@@ -339,7 +339,7 @@ vscode-textarea.monospace {
 .setting-description {
 	font-size: 1em;
 	color: var(--vscode-descriptionForeground);
-	margin: 0.5em 0 1em 0;
+	margin: 0 2.5em 1em 0;
 	line-height: 1.4em;
 }
 
@@ -352,6 +352,27 @@ vscode-textarea.monospace {
 .setting-control vscode-textfield,
 .setting-control vscode-textarea {
 	flex: 1;
+}
+
+/* Width presets for short / numeric inputs, overriding the full-width default. */
+
+.setting-control vscode-textfield.setting-input-sm {
+	flex: 0 0 auto;
+	width: 90px;
+}
+
+.setting-control vscode-textfield.setting-input-md {
+	flex: 0 0 auto;
+	width: 160px;
+}
+
+/* Unit suffix rendered inside the input box via the `content-after` slot. */
+
+.setting-input-suffix {
+	color: var(--vscode-descriptionForeground);
+	padding-right: 6px;
+	font-size: 12px;
+	pointer-events: none;
 }
 
 /* Scope selector */

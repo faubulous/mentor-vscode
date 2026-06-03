@@ -51,3 +51,9 @@
 	background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
 	color: var(--vscode-menu-selectionForeground, var(--vscode-foreground));
 }
+
+.more-vert-separator {
+	height: 0;
+	margin: 4px 0;
+	border-top: 1px solid var(--vscode-menu-separatorBackground, var(--vscode-menu-border, var(--vscode-dropdown-border)));
+}
