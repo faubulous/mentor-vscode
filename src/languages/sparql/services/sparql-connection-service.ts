@@ -9,18 +9,10 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential, EntraClientAuthCredential } from '@src/services/core/credential';
 import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
 import { SparqlConnection } from './sparql-connection';
-import { ComunicaEndpoint } from './sparql-endpoint';
-import { SparqlEndpointFactory } from './sparql-endpoint-factory';
-import {
-	DefaultSparqlEndpointProvider,
-	GraphDbEndpointProvider,
-	WorkspaceEndpointProvider,
-} from '@src/languages/sparql/services/endpoints';
-
-const CONNECTIONS_CONFIG_KEY = 'sparql.connections';
-const DEFAULT_INFERENCE_ENABLED_CONFIG_KEY = 'sparql.defaultInferenceEnabled';
-const INFERENCE_ENABLED_STORAGE_KEY_PREFIX = 'mentor.inference.enabled:';
-const DOCUMENT_INFERENCE_STORAGE_KEY_PREFIX = 'mentor.inference.document:';
+import { ComunicaEndpoint, SparqlEndpoint } from './sparql-endpoint';
+import { SparqlStoreConfig, SparqlQueryKind } from './sparql-store-config';
+import { ISparqlQueryService } from './sparql-query-service.interface';
+import { WorkspaceEndpointProvider } from '@src/languages/sparql/services/endpoints';
 
 /**
  * The non-removable workspace triple store.
@@ -39,38 +31,62 @@ export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
  */
 export class SparqlConnectionService {
 
+	/** VS Code settings key under which SPARQL connections are persisted. */
+	private readonly _connectionsConfigKey = 'sparql.connections';
+
+	/** VS Code settings key under which user-defined store configs are persisted. */
+	private readonly _storesConfigKey = 'sparql.storeTypes';
+
+	/** VS Code settings key for the global default inference-enabled flag. */
+	private readonly _defaultInferenceEnabledConfigKey = 'sparql.defaultInferenceEnabled';
+
+	/** Workspace-state key prefix for per-connection inference settings (`<prefix><connectionId>`). */
+	private readonly _inferenceEnabledStorageKeyPrefix = 'mentor.inference.enabled:';
+
+	/** Workspace-state key prefix for per-document inference settings (`<prefix><documentUri>`). */
+	private readonly _documentInferenceStorageKeyPrefix = 'mentor.inference.document:';
+
+	/** The id of the internal, code-only in-memory workspace store. */
+	private readonly _workspaceStoreType = 'workspace';
+
+	/** The store type assumed for connections that do not specify one. */
+	private readonly _defaultStoreType = 'sparql';
+
+	/** Maps each query kind to the global `mentor.sparql.*` setting used as the final fallback. */
+	private readonly _globalQueryConfigKeys: Record<SparqlQueryKind, string> = {
+		listGraphs: 'sparql.listGraphsQuery',
+		dropGraph: 'sparql.dropGraphQuery',
+		describe: 'sparql.describeQueryTemplate',
+	};
+
+	/** The current in-memory connection list, including the workspace store at index 0. */
 	private _connections: SparqlConnection[] = [];
 
 	private _onDidChangeConnections = new vscode.EventEmitter<void>();
 
+	/** Fired whenever the connection list or a connection's inference state changes. */
 	public readonly onDidChangeConnections = this._onDidChangeConnections.event;
 
 	private _onDidChangeConnectionForDocument = new vscode.EventEmitter<vscode.Uri>();
 
+	/** Fired when the active connection or inference setting for a document changes. */
 	public readonly onDidChangeConnectionForDocument = this._onDidChangeConnectionForDocument.event;
 
 	private _onDidConnectionTestStart = new vscode.EventEmitter<SparqlConnection>();
 
+	/** Fired immediately before a connection test begins. */
 	public readonly onDidConnectionTestStart = this._onDidConnectionTestStart.event;
 
 	private _onDidConnectionTestEnd = new vscode.EventEmitter<{ connection: SparqlConnection; error: { code: number; message: string } | null }>();
 
+	/**
+	 * Fired when a connection test completes.
+	 * `error` is `null` on success, or contains the error code and message on failure.
+	 */
 	public readonly onDidConnectionTestEnd = this._onDidConnectionTestEnd.event;
 
-	/**
-	 * Notifies listeners that the connection or inference settings for a document have changed.
-	 * Use this after bulk updates to cell metadata.
-	 * @param documentUri The URI of the document that changed.
-	 */
-	public notifyDocumentConnectionChanged(documentUri: vscode.Uri): void {
-		this._onDidChangeConnectionForDocument.fire(documentUri);
-	}
-
-	private _defaultEndpointUrl = 'https://';
-
-	private _defaultConfigScope: ConfigurationScope = ConfigurationScope.User;
-
-	private _querySourceFactory: SparqlEndpointFactory;
+	/** The in-memory provider for the workspace store (the only code-backed store). */
+	private readonly _workspaceStore: WorkspaceEndpointProvider;
 
 	private get store(): Store {
 		return container.resolve<Store>(ServiceToken.Store);
@@ -80,37 +96,29 @@ export class SparqlConnectionService {
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _credentialStorage: ICredentialStorageService
 	) {
-		// Initialize the query source factory with all providers
-		this._querySourceFactory = new SparqlEndpointFactory();
-		this._querySourceFactory.registerProvider(new WorkspaceEndpointProvider(() => this.store));
-		this._querySourceFactory.registerProvider(new GraphDbEndpointProvider());
-		this._querySourceFactory.registerProvider(new DefaultSparqlEndpointProvider());
+		this._workspaceStore = new WorkspaceEndpointProvider(() => this.store);
 
-		// Initialize workspace store with saved inference setting
 		const workspaceStore = this._createWorkspaceStoreConnection();
 		this._connections = [workspaceStore];
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Workspace));
 
-		// Listen for notebook changes to inherit settings when new cells are created
-		vscode.workspace.onDidChangeNotebookDocument(e => this._onNotebookDocumentChanged(e));
+		vscode.workspace.onDidChangeNotebookDocument(async e => {
+			for (const change of e.contentChanges) {
+				if (change.addedCells.length > 0) {
+					await this._inheritSettingsForNewCells(e.notebook, change.addedCells);
+				}
+			}
+		});
 
 		this._onDidChangeConnections.fire();
 	}
 
 	/**
-	 * Handles notebook document changes to inherit settings for newly added cells.
-	 */
-	private async _onNotebookDocumentChanged(e: vscode.NotebookDocumentChangeEvent): Promise<void> {
-		for (const change of e.contentChanges) {
-			if (change.addedCells.length > 0) {
-				await this._inheritSettingsForNewCells(e.notebook, change.addedCells);
-			}
-		}
-	}
-
-	/**
-	 * Inherits connection and inference settings for newly added cells from the previous cell.
+	 * Inherits connection and inference settings for newly added notebook cells from the
+	 * immediately preceding cell, so new cells start with the same context as their neighbour.
+	 * @param notebook The notebook document that changed.
+	 * @param addedCells The cells that were added.
 	 */
 	private async _inheritSettingsForNewCells(
 		notebook: vscode.NotebookDocument,
@@ -120,16 +128,13 @@ export class SparqlConnectionService {
 		const edits: vscode.NotebookEdit[] = [];
 
 		for (const addedCell of addedCells) {
-			// Skip if cell already has settings
 			if (addedCell.metadata?.connectionId !== undefined || addedCell.metadata?.inferenceEnabled !== undefined) {
 				continue;
 			}
 
-			// Find the previous cell to inherit from
-			const cellIndex = addedCell.index;
 			let previousCell: vscode.NotebookCell | undefined;
 
-			for (let i = cellIndex - 1; i >= 0; i--) {
+			for (let i = addedCell.index - 1; i >= 0; i--) {
 				previousCell = cells[i];
 				break;
 			}
@@ -138,13 +143,11 @@ export class SparqlConnectionService {
 				const inheritedMetadata: Record<string, unknown> = { ...addedCell.metadata };
 				let hasInheritedSettings = false;
 
-				// Inherit connection ID
 				if (typeof previousCell.metadata?.connectionId === 'string') {
 					inheritedMetadata.connectionId = previousCell.metadata.connectionId;
 					hasInheritedSettings = true;
 				}
 
-				// Inherit inference setting
 				if (typeof previousCell.metadata?.inferenceEnabled === 'boolean') {
 					inheritedMetadata.inferenceEnabled = previousCell.metadata.inferenceEnabled;
 					hasInheritedSettings = true;
@@ -164,28 +167,30 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Creates the workspace store connection with the saved inference setting.
+	 * Creates the workspace store connection with the persisted inference setting.
+	 * @returns The workspace store as a SparqlConnection with inference capability set.
 	 */
 	private _createWorkspaceStoreConnection(): SparqlConnection {
-		const inferenceEnabled = this._getInferenceEnabledForConnection(MENTOR_WORKSPACE_STORE.id);
+		const storageKey = `${this._inferenceEnabledStorageKeyPrefix}${MENTOR_WORKSPACE_STORE.id}`;
+		const inferenceEnabled = this._extensionContext.workspaceState.get<boolean>(storageKey, this.getDefaultInferenceEnabled());
 
 		return {
 			...MENTOR_WORKSPACE_STORE,
-			inferenceSupported: this._querySourceFactory.supportsInference(MENTOR_WORKSPACE_STORE.storeType ?? 'workspace'),
+			inferenceSupported: true,
 			inferenceEnabled
 		};
 	}
 
 	/**
-	 * Gets the default inference enabled setting from VS Code configuration.
-	 * @returns The default value for inference enabled.
+	 * Gets the default inference-enabled setting from VS Code configuration.
+	 * @returns `true` if inference should be enabled by default, `false` otherwise.
 	 */
 	getDefaultInferenceEnabled(): boolean {
-		return getConfig().get<boolean>(DEFAULT_INFERENCE_ENABLED_CONFIG_KEY, false);
+		return getConfig().get<boolean>(this._defaultInferenceEnabledConfigKey, false);
 	}
 
 	/**
-	 * Gets whether inference is enabled for a specific connection.
+	 * Gets whether inference is currently enabled for a specific connection.
 	 * @param connectionId The ID of the connection.
 	 * @returns `true` if inference is enabled, `false` otherwise.
 	 */
@@ -195,9 +200,10 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Sets whether inference should be enabled for a specific connection.
+	 * Sets whether inference should be enabled for a specific connection and persists the change.
 	 * @param connectionId The ID of the connection.
 	 * @param inferenceEnabled `true` to enable inference, `false` to disable it.
+	 * @throws If the connection is not found or does not support inference toggling.
 	 */
 	async setInferenceEnabled(connectionId: string, inferenceEnabled: boolean): Promise<void> {
 		const connection = this._connections.find(c => c.id === connectionId);
@@ -210,58 +216,32 @@ export class SparqlConnectionService {
 			throw new Error(`Connection does not support inference toggling: ${connectionId}`);
 		}
 
-		// Store the inference setting
-		const storageKey = this._getInferenceStorageKey(connectionId);
+		const storageKey = `${this._inferenceEnabledStorageKeyPrefix}${connectionId}`;
 		await this._extensionContext.workspaceState.update(storageKey, inferenceEnabled);
 
-		// Update the in-memory connection
 		connection.inferenceEnabled = inferenceEnabled;
 
 		this._onDidChangeConnections.fire();
 	}
 
 	/**
-	 * Toggles the inference enabled state for a specific connection.
+	 * Toggles the inference-enabled state for a specific connection.
 	 * @param connectionId The ID of the connection.
-	 * @returns The new inference enabled state.
+	 * @returns The new inference-enabled state.
 	 */
 	async toggleInferenceEnabled(connectionId: string): Promise<boolean> {
-		const currentValue = this.getInferenceEnabled(connectionId);
-		const newValue = !currentValue;
+		const newValue = !this.getInferenceEnabled(connectionId);
 		await this.setInferenceEnabled(connectionId, newValue);
 		return newValue;
 	}
 
 	/**
 	 * Returns whether the experimental inference feature flag is enabled.
+	 * This gates UI affordances for toggling inference per-connection or per-document.
+	 * @returns `true` if the inference feature is enabled, `false` otherwise.
 	 */
 	async getInferenceFeatureEnabled(): Promise<boolean> {
 		return getConfig().get<boolean>('inference.enabled', false);
-	}
-
-	/**
-	 * Gets the storage key for storing inference enabled setting for a connection.
-	 */
-	private _getInferenceStorageKey(connectionId: string): string {
-		return `${INFERENCE_ENABLED_STORAGE_KEY_PREFIX}${connectionId}`;
-	}
-
-	/**
-	 * Gets the stored inference enabled setting for a connection.
-	 */
-	private _getInferenceEnabledForConnection(connectionId: string): boolean {
-		const storageKey = this._getInferenceStorageKey(connectionId);
-		return this._extensionContext.workspaceState.get<boolean>(
-			storageKey,
-			this.getDefaultInferenceEnabled()
-		);
-	}
-
-	/**
-	 * Gets the storage key for document-level inference setting.
-	 */
-	private _getDocumentInferenceStorageKey(documentUri: vscode.Uri): string {
-		return `${DOCUMENT_INFERENCE_STORAGE_KEY_PREFIX}${documentUri.toString()}`;
 	}
 
 	/**
@@ -271,36 +251,22 @@ export class SparqlConnectionService {
 	 * @returns `true` if inference is enabled, `false` otherwise.
 	 */
 	getInferenceEnabledForDocument(documentUri: vscode.Uri): boolean {
-		const documentSetting = this._getDocumentInferenceSetting(documentUri);
+		const documentSetting = documentUri.scheme === 'vscode-notebook-cell'
+			? this._getInferenceEnabledForCell(documentUri)
+			: this._extensionContext.workspaceState.get<boolean | undefined>(`${this._documentInferenceStorageKeyPrefix}${documentUri.toString()}`, undefined);
 
 		if (documentSetting !== undefined) {
 			return documentSetting;
 		}
 
-		// Fall back to connection setting
 		const connection = this.getConnectionForDocument(documentUri);
 		return connection.inferenceEnabled ?? this.getDefaultInferenceEnabled();
 	}
 
 	/**
-	 * Gets the document-level inference setting (without fallback).
-	 * @param documentUri The URI of the document or notebook cell.
-	 * @returns The document setting, or `undefined` if not set.
-	 */
-	private _getDocumentInferenceSetting(documentUri: vscode.Uri): boolean | undefined {
-		if (documentUri.scheme === 'vscode-notebook-cell') {
-			return this._getInferenceEnabledForCell(documentUri);
-		} else {
-			const key = this._getDocumentInferenceStorageKey(documentUri);
-			return this._extensionContext.workspaceState.get<boolean | undefined>(key, undefined);
-		}
-	}
-
-	/**
-	 * Gets the inference setting from notebook cell metadata.
-	 * Each cell is independent - no inheritance from previous cells.
+	 * Reads the inference setting from a notebook cell's metadata.
 	 * @param cellUri The URI of the notebook cell.
-	 * @returns The inference setting, or `undefined` if not set.
+	 * @returns The cell-level inference setting, or `undefined` if not set.
 	 */
 	private _getInferenceEnabledForCell(cellUri: vscode.Uri): boolean | undefined {
 		const notebook = this._getNotebookFromCellUri(cellUri);
@@ -329,7 +295,7 @@ export class SparqlConnectionService {
 		if (documentUri.scheme === 'vscode-notebook-cell') {
 			await this._setInferenceEnabledForCell(documentUri, inferenceEnabled);
 		} else {
-			const key = this._getDocumentInferenceStorageKey(documentUri);
+			const key = `${this._documentInferenceStorageKeyPrefix}${documentUri.toString()}`;
 			await this._extensionContext.workspaceState.update(key, inferenceEnabled);
 		}
 
@@ -337,9 +303,10 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Sets the inference setting for a notebook cell in its metadata.
+	 * Sets the inference setting on a notebook cell's metadata.
 	 * @param cellUri The URI of the notebook cell.
-	 * @param inferenceEnabled The inference setting, or `undefined` to clear.
+	 * @param inferenceEnabled The new inference setting, or `undefined` to clear.
+	 * @throws If the notebook or the cell cannot be found.
 	 */
 	private async _setInferenceEnabledForCell(cellUri: vscode.Uri, inferenceEnabled: boolean | undefined): Promise<void> {
 		const notebook = this._getNotebookFromCellUri(cellUri);
@@ -362,9 +329,8 @@ export class SparqlConnectionService {
 			metadata.inferenceEnabled = inferenceEnabled;
 		}
 
-		const notebookEdit = vscode.NotebookEdit.updateCellMetadata(cell.index, metadata);
 		const workspaceEdit = new vscode.WorkspaceEdit();
-		workspaceEdit.set(notebook.uri, [notebookEdit]);
+		workspaceEdit.set(notebook.uri, [vscode.NotebookEdit.updateCellMetadata(cell.index, metadata)]);
 
 		await vscode.workspace.applyEdit(workspaceEdit);
 	}
@@ -372,85 +338,79 @@ export class SparqlConnectionService {
 	/**
 	 * Toggles the inference setting for a document or notebook cell.
 	 * @param documentUri The URI of the document or notebook cell.
-	 * @returns The new inference enabled state.
+	 * @returns The new inference-enabled state.
 	 */
 	async toggleInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<boolean> {
-		const currentValue = this.getInferenceEnabledForDocument(documentUri);
-		const newValue = !currentValue;
+		const newValue = !this.getInferenceEnabledForDocument(documentUri);
+
 		await this.setInferenceEnabledForDocument(documentUri, newValue);
+
 		return newValue;
 	}
 
 	/**
-	 * Clears the document-level inference setting, reverting to connection default.
-	 * @param documentUri The URI of the document or notebook cell.
+	 * Notifies listeners that the connection or inference settings for a document have changed.
+	 * Use this after bulk updates to cell metadata.
+	 * @param documentUri The URI of the document that changed.
 	 */
-	async clearInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<void> {
-		await this.setInferenceEnabledForDocument(documentUri, undefined);
+	public notifyDocumentConnectionChanged(documentUri: vscode.Uri): void {
+		this._onDidChangeConnectionForDocument.fire(documentUri);
 	}
 
 	/**
-	 * Gets the configuration scope from a Visual Studio configuration target.
-	 * @param configTarget A Visual Studio configuration target.
-	 * @returns The corresponding configuration scope.
-	 */
-	private _getConfigurationScopeFromTarget(configTarget: vscode.ConfigurationTarget): ConfigurationScope {
-		if (configTarget === vscode.ConfigurationTarget.Workspace) {
-			return ConfigurationScope.Workspace;
-		} else {
-			return ConfigurationScope.User;
-		}
-	}
-
-	/**
-	 * Helper method to read connections from a specific configuration scope.
-	 * @param configTarget The configuration target to read from.
-	 * @returns An array of SPARQL connections.
+	 * Reads connections from a configuration scope and resolves their inferred store type and
+	 * inference support based on the registered store configs.
+	 * @param configTarget The configuration target (Global or Workspace) to read from.
+	 * @returns The connections found in the given scope, with `configScope` and `inferenceSupported` set.
 	 */
 	private _loadConnectionsFromConfiguration(configTarget: vscode.ConfigurationTarget): SparqlConnection[] {
-		const inspect = getConfig().inspect<SparqlConnection[]>(CONNECTIONS_CONFIG_KEY);
+		const inspect = getConfig().inspect<SparqlConnection[]>(this._connectionsConfigKey);
 
-		if (inspect) {
-			const connections = [];
-
-			if (configTarget === vscode.ConfigurationTarget.Global && inspect.globalValue) {
-				connections.push(...inspect.globalValue);
-			}
-
-			if (configTarget === vscode.ConfigurationTarget.Workspace && inspect.workspaceValue) {
-				connections.push(...inspect.workspaceValue);
-			}
-
-			return connections.map(c => ({
-				...c,
-				configScope: this._getConfigurationScopeFromTarget(configTarget),
-				inferenceSupported: this._querySourceFactory.supportsInference(c.storeType ?? 'sparql'),
-			}));
-		} else {
+		if (!inspect) {
 			return [];
 		}
+
+		const raw = configTarget === vscode.ConfigurationTarget.Global ? inspect.globalValue : inspect.workspaceValue;
+
+		if (!raw) {
+			return [];
+		}
+
+		const configScope = configTarget === vscode.ConfigurationTarget.Workspace
+			? ConfigurationScope.Workspace
+			: ConfigurationScope.User;
+
+		return raw.map(c => {
+			const storeType = c.storeType ?? this._defaultStoreType;
+			const connection = { ...c, storeType };
+			return { ...connection, configScope, inferenceSupported: this.supportsInference(connection) };
+		});
 	}
 
+	/**
+	 * Returns the serializable form of all connections in a given scope, suitable for writing back
+	 * to VS Code settings (excludes runtime-only fields and the workspace pseudo-connection).
+	 * @param configScope The scope to collect connections for.
+	 */
 	private _getEndpointDataForConfigScope(configScope: ConfigurationScope) {
 		return this._connections
 			.filter(c => c.configScope === configScope && c.id !== MENTOR_WORKSPACE_STORE.id)
 			.map(c => ({
 				id: c.id,
 				...(c.description ? { description: c.description } : {}),
-				endpointUrl: c.endpointUrl
+				endpointUrl: c.endpointUrl,
+				storeType: c.storeType ?? this._defaultStoreType,
 			}));
 	}
 
 	/**
-	 * Persists the in-memory connections to configuration.
+	 * Persists all in-memory connections to VS Code settings and clears their dirty flags.
 	 */
 	async saveConfiguration(): Promise<void> {
-		const globalConnections = this._getEndpointDataForConfigScope(ConfigurationScope.User);
-		const workspaceConnections = this._getEndpointDataForConfigScope(ConfigurationScope.Workspace);
-
 		const config = getConfig();
-		await config.update(CONNECTIONS_CONFIG_KEY, globalConnections, vscode.ConfigurationTarget.Global);
-		await config.update(CONNECTIONS_CONFIG_KEY, workspaceConnections, vscode.ConfigurationTarget.Workspace);
+
+		await config.update(this._connectionsConfigKey, this._getEndpointDataForConfigScope(ConfigurationScope.User), vscode.ConfigurationTarget.Global);
+		await config.update(this._connectionsConfigKey, this._getEndpointDataForConfigScope(ConfigurationScope.Workspace), vscode.ConfigurationTarget.Workspace);
 
 		for (const connection of this._connections) {
 			connection.isNew = false;
@@ -461,21 +421,8 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Get the configuration targets supported for storing SPARQL connections.
-	 * @remarks The Workspace Folder target is not supported because it would require
-	 *          to select a specific workspace folder when creating a new connection.
-	 * @returns An array of supported configuration scopes.
-	 */
-	getSupportedConfigurationScopes(): ConfigurationScope[] {
-		return [
-			ConfigurationScope.User,
-			ConfigurationScope.Workspace
-		];
-	}
-
-	/**
-	 * Retrieves all available SPARQL endpoints, including the internal store.
-	 * @returns A promise that resolves to an array of all connections.
+	 * Retrieves all available SPARQL connections, including the workspace store.
+	 * @returns An array of all connections.
 	 */
 	getConnections(): SparqlConnection[] {
 		return this._connections;
@@ -484,7 +431,7 @@ export class SparqlConnectionService {
 	/**
 	 * Retrieves all SPARQL connections for a specific configuration scope.
 	 * @param configScope The configuration scope to filter connections by.
-	 * @returns An array of SPARQL connections for the specified configuration scope.
+	 * @returns An array of connections in the given scope.
 	 */
 	getConnectionsForConfigurationScope(configScope: ConfigurationScope): SparqlConnection[] {
 		return this._connections.filter(c => c.configScope === configScope);
@@ -493,36 +440,29 @@ export class SparqlConnectionService {
 	/**
 	 * Retrieves a SPARQL connection by its ID.
 	 * @param connectionId The ID of the connection to retrieve.
-	 * @returns The SPARQL connection or `undefined` if not found.
+	 * @returns The SPARQL connection, or `undefined` if not found.
 	 */
 	getConnection(connectionId: string): SparqlConnection | undefined {
 		return this._connections.find(c => c.id === connectionId);
 	}
 
 	/**
-	 * Get the configured SPARQL connection for a specific document (TextDocument or NotebookCell).
+	 * Gets the configured SPARQL connection for a document or notebook cell.
 	 * @param documentIri The URI of the document or notebook cell.
-	 * @returns The SPARQL connection or the Mentor Workspace triple store if no connection is found.
+	 * @returns The associated connection, or the workspace store if none is set.
 	 */
 	getConnectionForDocument(documentIri: vscode.Uri | string): SparqlConnection {
-		const uri = typeof (documentIri) === 'string' ? vscode.Uri.parse(documentIri) : documentIri;
+		const uri = typeof documentIri === 'string' ? vscode.Uri.parse(documentIri) : documentIri;
 
-		let connectionId;
+		const connectionId = uri.scheme === 'vscode-notebook-cell'
+			? this._getConnectionIdForCell(uri)
+			: this._extensionContext.workspaceState.get<string>(`sparql.connection:${uri.toString()}`);
 
-		if (uri.scheme === 'vscode-notebook-cell') {
-			connectionId = this._getConnectionIdForCell(uri);
-		} else {
-			connectionId = this._getConnectionIdForDocument(uri);
-		}
-
-		const connection = this.getConnection(connectionId ?? '');
-
-		return connection ?? MENTOR_WORKSPACE_STORE;
+		return this.getConnection(connectionId ?? '') ?? MENTOR_WORKSPACE_STORE;
 	}
 
 	/**
-	 * Get a connection ID for a notebook cell from its metadata.
-	 * Each cell is independent - no inheritance from previous cells.
+	 * Reads the connection ID from a notebook cell's metadata.
 	 * @param cellUri The URI of the notebook cell.
 	 * @returns The connection ID, or `undefined` if none is set.
 	 */
@@ -543,27 +483,7 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Get the storage key in the workspace or global storage for a specific document.
-	 * @param documentUri The URI of the document.
-	 * @returns The storage key.
-	 */
-	private _getConnectionStorageKeyForDocument(documentUri: vscode.Uri): string {
-		return `sparql.connection:${documentUri.toString()}`;
-	}
-
-	/**
-	 * Get a connection ID for a text document.
-	 * @param documentUri The URI of the document.
-	 * @returns The connection ID, or `undefined` if none is set.
-	 */
-	private _getConnectionIdForDocument(documentUri: vscode.Uri): string | undefined {
-		const key = this._getConnectionStorageKeyForDocument(documentUri);
-
-		return this._extensionContext.workspaceState.get(key, undefined);
-	}
-
-	/**
-	 * Sets the SPARQL connection for a specific document (TextDocument or NotebookCell).
+	 * Associates a SPARQL connection with a document or notebook cell.
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @param connectionId The ID of the connection to set.
 	 */
@@ -571,71 +491,223 @@ export class SparqlConnectionService {
 		if (documentUri.scheme === 'vscode-notebook-cell') {
 			await this.setConnectionForCell(documentUri, connectionId);
 		} else {
-			const key = this._getConnectionStorageKeyForDocument(documentUri);
-
-			this._extensionContext.workspaceState.update(key, connectionId);
+			this._extensionContext.workspaceState.update(`sparql.connection:${documentUri.toString()}`, connectionId);
 		}
 
 		this._onDidChangeConnectionForDocument.fire(documentUri);
 	}
 
 	/**
-	 * Retrieves the SPARQL connection for a specific endpoint URL.
-	 * @param endpointUrl The URL of the SPARQL endpoint.
-	 * @returns The SPARQL connection or `undefined` if not found.
-	 */
-	getConnectionForEndpoint(endpointUrl: string): SparqlConnection | undefined {
-		return this._connections.find(c => c.endpointUrl === endpointUrl);
-	}
-
-	/**
-	 * Gets the Comunica-compatible query source for a given document (TextDocument or NotebookCell).
-	 * Uses document-level inference setting if set, otherwise falls back to connection setting.
+	 * Gets a Comunica-compatible query source for a document or notebook cell. Uses the
+	 * document-level inference setting if set, otherwise falls back to the connection setting.
 	 * @param documentUri The URI of the document or notebook cell.
-	 * @returns A promise that resolves to a ComunicaSource configuration.
+	 * @returns A promise that resolves to a Comunica source configuration.
 	 */
 	async getQuerySourceForDocument(documentUri: vscode.Uri): Promise<ComunicaEndpoint> {
 		const connection = this.getConnectionForDocument(documentUri);
 		const inferenceEnabled = this.getInferenceEnabledForDocument(documentUri);
-		return this._querySourceFactory.createQuerySource(connection, inferenceEnabled);
+		return this._createQuerySource(connection, inferenceEnabled);
 	}
 
 	/**
-	 * Gets a Comunica query source for a specific connection.
+	 * Gets a Comunica-compatible query source for a specific connection.
 	 * @param connection The SPARQL connection.
-	 * @returns A promise that resolves to a ComunicaSource configuration.
+	 * @returns A promise that resolves to a Comunica source configuration.
 	 */
 	async getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaEndpoint> {
 		const inferenceEnabled = connection.inferenceEnabled ?? this.getDefaultInferenceEnabled();
-		return this._querySourceFactory.createQuerySource(connection, inferenceEnabled);
+		return this._createQuerySource(connection, inferenceEnabled);
 	}
 
 	/**
-	 * Retrieves the list of named graphs available for a document.
-	 * Takes into account the document's connection and inference settings.
+	 * Builds a Comunica-compatible source for a connection. The workspace store yields an in-memory
+	 * RDF/JS source; every other store type becomes an HTTP SPARQL endpoint whose URL receives
+	 * the store config's URL-parameter reasoning control (if any).
+	 * @param connection The SPARQL connection.
+	 * @param inferenceEnabled Whether inference should be enabled.
+	 * @returns The resolved Comunica source configuration.
+	 */
+	private _createQuerySource(connection: SparqlConnection, inferenceEnabled: boolean): ComunicaEndpoint {
+		if (this._isWorkspace(connection)) {
+			return this._workspaceStore.createEndpoint(inferenceEnabled);
+		}
+
+		const store = this.getStoreConfig(connection.storeType);
+		let value = connection.endpointUrl;
+
+		if (store?.inference?.supported && store.inference.urlParameters) {
+			try {
+				const url = new URL(connection.endpointUrl);
+				this._applyUrlInference(url, store, inferenceEnabled);
+				value = url.toString();
+			} catch {
+				// endpointUrl is not a valid absolute URL (e.g. mid-edit) — use it verbatim.
+			}
+		}
+
+		const source: SparqlEndpoint = { type: 'sparql', value, connection, inferenceEnabled };
+
+		return source;
+	}
+
+	/**
+	 * Appends the store config's URL-parameter reasoning fragment to an endpoint URL, in place.
+	 * No-op unless the store supports reasoning via `urlParameters` and the fragment is non-empty.
+	 * @param url The endpoint URL to mutate.
+	 * @param store The resolved store config.
+	 * @param inferenceEnabled Whether inference is currently enabled.
+	 */
+	private _applyUrlInference(url: URL, store: SparqlStoreConfig | undefined, inferenceEnabled: boolean): void {
+		const inference = store?.inference;
+
+		if (!inference?.supported || !inference.urlParameters) {
+			return;
+		}
+
+		const fragment = (inferenceEnabled ? inference.urlParameters.enabled : inference.urlParameters.disabled)?.trim().replace(/^[?&]+/, '');
+
+		if (!fragment) {
+			return;
+		}
+
+		// Append verbatim, preserving the user's exact fragment (no re-encoding/reordering).
+		const existing = url.search.replace(/^\?/, '');
+		url.search = existing ? `${existing}&${fragment}` : fragment;
+	}
+
+	/**
+	 * Prepends the store config's query-pragma reasoning text to a query, if applicable.
+	 * No-op unless the store supports reasoning via `queryPragma` and the pragma is non-empty.
+	 * @param query The SPARQL query text.
+	 * @param store The resolved store config.
+	 * @param inferenceEnabled Whether inference is currently enabled.
+	 * @returns The (possibly rewritten) query string.
+	 */
+	private _applyQueryInference(query: string, store: SparqlStoreConfig | undefined, inferenceEnabled: boolean): string {
+		const inference = store?.inference;
+
+		if (!inference?.supported || !inference.queryPragma) {
+			return query;
+		}
+
+		const pragma = (inferenceEnabled ? inference.queryPragma.enabled : inference.queryPragma.disabled)?.trim();
+
+		return pragma ? `${pragma}\n${query}` : query;
+	}
+
+	/**
+	 * Returns whether the connection targets the internal in-memory workspace store.
+	 * @param connection The SPARQL connection to test.
+	 * @returns `true` if the connection is the workspace store.
+	 */
+	private _isWorkspace(connection: SparqlConnection): boolean {
+		return connection.id === MENTOR_WORKSPACE_STORE.id
+			|| (connection.storeType ?? this._defaultStoreType) === this._workspaceStoreType;
+	}
+
+	/**
+	 * Retrieves the list of named graphs available for a document's connection.
+	 * The workspace store enumerates graphs in-process; all other stores execute a
+	 * `listGraphs` query against the endpoint.
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @returns A promise that resolves to an array of graph IRIs.
 	 */
 	async getGraphsForDocument(documentUri: vscode.Uri): Promise<string[]> {
 		const connection = this.getConnectionForDocument(documentUri);
 		const inferenceEnabled = this.getInferenceEnabledForDocument(documentUri);
-		return this._querySourceFactory.getGraphs(connection, inferenceEnabled);
+
+		if (this._isWorkspace(connection)) {
+			return this._workspaceStore.getGraphs(inferenceEnabled);
+		}
+
+		const query = this.getQueryTemplate(connection, 'listGraphs');
+
+		if (!query) {
+			return [];
+		}
+
+		const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+		const result = await queryService.executeQueryOnConnection(query, { ...connection, inferenceEnabled });
+
+		if (!result || result.type !== 'bindings') {
+			return [];
+		}
+
+		const graphs: string[] = [];
+
+		for (const binding of result.bindings) {
+			const term = [...binding][0]?.[1];
+
+			if (term?.value) {
+				graphs.push(term.value);
+			}
+		}
+
+		return graphs;
+	}
+
+	/**
+	 * Returns the user-defined store configs from the `mentor.sparql.storeTypes` setting.
+	 * VS Code provides the package.json default when the setting is unset at runtime.
+	 * @returns An array of store configs in display order.
+	 */
+	getStoreConfigs(): SparqlStoreConfig[] {
+		return getConfig().get<SparqlStoreConfig[]>(this._storesConfigKey) ?? [];
+	}
+
+	/**
+	 * Resolves a store config by its id (store type).
+	 * @param storeType The store-type id. Defaults to the generic SPARQL endpoint when `undefined`.
+	 * @returns The matching store config, or `undefined` if no config has that id.
+	 */
+	getStoreConfig(storeType: string | undefined): SparqlStoreConfig | undefined {
+		return this.getStoreConfigs().find(s => s.id === (storeType ?? this._defaultStoreType));
+	}
+
+	/**
+	 * Resolves the effective SPARQL query template of the given kind for a connection.
+	 * Resolution order: the store config's own query → global `mentor.sparql.*` fallback.
+	 * @param connection The SPARQL connection.
+	 * @param kind The kind of query template to resolve.
+	 * @returns The resolved template, or `undefined` if none is configured at any level.
+	 */
+	getQueryTemplate(connection: SparqlConnection, kind: SparqlQueryKind): string | undefined {
+		return this.getStoreConfig(connection.storeType)?.queries?.[kind]
+			|| getConfig().get<string>(this._globalQueryConfigKeys[kind]);
+	}
+
+	/**
+	 * Applies store-specific query-text rewriting for inference, if the connection's store
+	 * config uses the query-pragma mechanism. Returns the query unchanged otherwise.
+	 * @param connection The SPARQL connection.
+	 * @param query The SPARQL query string.
+	 * @param inferenceEnabled Whether inference should be enabled.
+	 * @returns The (possibly rewritten) query string.
+	 */
+	rewriteQueryForInference(connection: SparqlConnection, query: string, inferenceEnabled: boolean): string {
+		return this._applyQueryInference(query, this.getStoreConfig(connection.storeType), inferenceEnabled);
 	}
 
 	/**
 	 * Checks if the given connection supports inference toggling.
+	 * The workspace store always supports inference. For all other connections, support
+	 * is determined by the store config's `inference.supported` flag.
 	 * @param connection The SPARQL connection to check.
 	 * @returns `true` if the connection supports inference, `false` otherwise.
 	 */
 	supportsInference(connection: SparqlConnection): boolean {
-		const storeType = connection.storeType ?? 'sparql';
-		return this._querySourceFactory.supportsInference(storeType);
+		if (this._isWorkspace(connection)) {
+			return true;
+		}
+
+		return this.getStoreConfig(connection.storeType)?.inference?.supported ?? false;
 	}
 
 	/**
 	 * Sets the connection for a specific notebook cell by editing its metadata.
 	 * @param cellUri The URI of the notebook cell.
 	 * @param connectionId The ID of the connection to set.
+	 * @throws If the notebook or the cell cannot be found.
 	 */
 	async setConnectionForCell(cellUri: vscode.Uri, connectionId: string): Promise<void> {
 		const notebook = this._getNotebookFromCellUri(cellUri);
@@ -650,17 +722,16 @@ export class SparqlConnectionService {
 			throw new Error('Cell not found in the notebook for the given cell URI: ' + cellUri.toString());
 		}
 
-		const metadata = { ...cell.metadata, connectionId: connectionId };
-		const notebookEdit = vscode.NotebookEdit.updateCellMetadata(cell.index, metadata);
-
 		const workspaceEdit = new vscode.WorkspaceEdit();
-		workspaceEdit.set(notebook.uri, [notebookEdit]);
+		workspaceEdit.set(notebook.uri, [vscode.NotebookEdit.updateCellMetadata(cell.index, { ...cell.metadata, connectionId })]);
 
 		await vscode.workspace.applyEdit(workspaceEdit);
 	}
 
 	/**
-	 * Finds the containing NotebookDocument for a given cell URI.
+	 * Finds the containing NotebookDocument for a given cell URI by matching paths.
+	 * @param cellUri The URI of the notebook cell.
+	 * @returns The containing notebook, or `undefined` if not found.
 	 */
 	private _getNotebookFromCellUri(cellUri: vscode.Uri): vscode.NotebookDocument | undefined {
 		for (const notebook of vscode.workspace.notebookDocuments) {
@@ -671,19 +742,16 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Adds a new SPARQL connection and stores it in the specified settings scope.
-	 * @param label A user-friendly name for the connection.
-	 * @param endpointUrl The URL of the SPARQL endpoint.
-	 * @param scope Where to save the connection ('project' or 'user').
-	 * @param credentials Optional credentials for the connection.
+	 * Creates a new, unsaved SPARQL connection with a generated ID and default settings.
+	 * @returns A promise that resolves to the new connection.
 	 */
 	async createConnection(): Promise<SparqlConnection> {
 		const connection: SparqlConnection = {
 			id: uuidv4(),
 			isNew: true,
 			isModified: false,
-			endpointUrl: this._defaultEndpointUrl,
-			configScope: this._defaultConfigScope
+			endpointUrl: 'https://',
+			configScope: ConfigurationScope.User
 		};
 
 		this._connections.push(connection);
@@ -695,6 +763,8 @@ export class SparqlConnectionService {
 	/**
 	 * Persists a connection edit together with its credential, replacing any existing
 	 * credential for the same connection. Surfaces a "saved" notification on success.
+	 * @param connection The connection to save.
+	 * @param credential The credential to store, or `null` to leave any existing credential untouched.
 	 */
 	async saveConnectionWithCredential(connection: SparqlConnection, credential: AuthCredential | null): Promise<void> {
 		await this.updateConnection(connection);
@@ -709,8 +779,9 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Updates an existing SPARQL connection.
-	 * @param connection The connection to update.
+	 * Updates an existing connection in memory, or inserts it if it does not yet exist.
+	 * The workspace store cannot be modified.
+	 * @param connection The connection data to apply.
 	 */
 	async updateConnection(connection: SparqlConnection): Promise<void> {
 		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
@@ -730,7 +801,7 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Deletes a SPARQL connection from the settings.
+	 * Removes a connection from memory. The workspace store cannot be removed.
 	 * @param connectionId The ID of the connection to delete.
 	 */
 	async deleteConnection(connectionId: string): Promise<void> {
@@ -745,13 +816,13 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Tests if a connection with a SPARQL endpoint can be established using a direct HTTP POST.
+	 * Tests whether a SPARQL endpoint can be reached by sending an ASK query via HTTP POST.
+	 * The workspace store is always considered reachable without testing.
 	 * @param connection The SPARQL endpoint connection to test.
-	 * @param credential If provided, uses these credentials instead of fetching stored ones.
-	 * @returns `null` if the connection is successful, or an error object { code, message } otherwise.
+	 * @param credential If provided, uses these credentials instead of loading stored ones.
+	 * @returns `null` on success, or an error object `{ code, message }` on failure.
 	 */
 	async testConnection(connection: SparqlConnection, credential?: AuthCredential | null): Promise<null | { code: number; message: string }> {
-		// Workspace store is always available - no need to test
 		if (connection.id === 'workspace') {
 			return null;
 		}
@@ -768,11 +839,7 @@ export class SparqlConnectionService {
 				credential = await this._credentialStorage.getCredential(connection.id);
 			}
 
-			const authHeaders = await this.getAuthHeaders(credential as AuthCredential);
-
-			if (authHeaders) {
-				Object.assign(headers, authHeaders);
-			}
+			Object.assign(headers, await this.getAuthHeaders(credential as AuthCredential));
 
 			const response = await fetch(connection.endpointUrl, {
 				method: 'POST',
@@ -783,66 +850,47 @@ export class SparqlConnectionService {
 			if (response.ok) {
 				this._onDidConnectionTestEnd.fire({ connection, error: null });
 				return null;
-			} else {
-				const error = {
-					code: response.status,
-					message: await response.text() || response.statusText
-				};
-
-				this._showErrorMessage(connection.endpointUrl, error);
-				this._onDidConnectionTestEnd.fire({ connection, error });
-
-				return error;
 			}
+
+			const error = {
+				code: response.status,
+				message: await response.text() || response.statusText
+			};
+
+			vscode.window.showErrorMessage(`Connection failed: Error ${error.code} - ${error.message}`);
+			this._onDidConnectionTestEnd.fire({ connection, error });
+
+			return error;
 		} catch (e: any) {
 			const error = {
 				code: e.status || e.code || 0,
 				message: e.message || String(e)
 			};
 
-			this._showErrorMessage(connection.endpointUrl, error);
+			vscode.window.showErrorMessage(`Connection failed: ${connection.endpointUrl}\n Possible causes: Incorrect endpoint URL, the endpoint is unavailable, failing CORS preflight request or a firewall/network policy blocking the request.`);
 			this._onDidConnectionTestEnd.fire({ connection, error });
 
 			return error;
 		}
 	}
 
-	private _showErrorMessage(endpointUrl: string, error: { code: number; message: string }): void {
-		let errorMessage = '';
-
-		if (error.code === 0) {
-			errorMessage = `Connection failed: ${endpointUrl}\n Possible causes: Incorrect endpoint URL, the endpoint is unavailable, failing CORS preflight request or a firewall/network policy blocking the request.`;
-		} else {
-			errorMessage = `Connection failed: Error ${error.code} - ${error.message}`;
-		}
-
-		vscode.window.showErrorMessage(errorMessage);
-	}
-
 	/**
-	 * Returns HTTP Authorization headers for the given URI.
+	 * Builds HTTP Authorization headers for the given credential.
+	 * Returns an empty object when no credential is provided.
+	 * @param credential The authentication credential.
+	 * @returns A record containing the `Authorization` header, or an empty record.
 	 */
 	async getAuthHeaders(credential?: AuthCredential): Promise<Record<string, string>> {
 		const headers: Record<string, string> = {};
 
 		if (credential?.type === 'basic') {
-			const encoded = btoa(`${credential.username}:${credential.password}`);
-
-			headers.Authorization = `Basic ${encoded}`;
-		}
-
-		if (credential?.type === 'bearer') {
+			headers.Authorization = `Basic ${btoa(`${credential.username}:${credential.password}`)}`;
+		} else if (credential?.type === 'bearer') {
 			headers.Authorization = `Bearer ${credential.token}`;
-		}
-
-		if (credential?.type === 'microsoft') {
+		} else if (credential?.type === 'microsoft') {
 			headers.Authorization = `Bearer ${credential.accessToken}`;
-		}
-
-		if (credential?.type === 'entra-client-credentials') {
-			const tokenService = new EntraClientCredentialService();
-			const accessToken = await tokenService.acquireToken(credential as EntraClientAuthCredential);
-
+		} else if (credential?.type === 'entra-client-credentials') {
+			const accessToken = await new EntraClientCredentialService().acquireToken(credential as EntraClientAuthCredential);
 			headers.Authorization = `Bearer ${accessToken}`;
 		}
 
@@ -850,22 +898,22 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Updates all document-scoped workspace state keys (SPARQL connection and inference
-	 * settings) when files or folders are renamed in the workspace.
+	 * Updates all document-scoped workspace state keys (SPARQL connection and inference settings)
+	 * when files or folders are renamed in the workspace.
 	 *
-	 * Both prefixes use the full absolute `file://` URI as the key suffix. For folder
-	 * renames the match is done by URI prefix (with a trailing `/` guard to avoid
-	 * accidentally matching sibling folders that share a common name prefix).
+	 * Both prefixes use the full absolute `file://` URI as the key suffix. For folder renames the
+	 * match is done by URI prefix (with a trailing `/` guard to avoid accidentally matching sibling
+	 * folders that share a common name prefix).
 	 *
-	 * Notebook cell settings are stored in cell metadata and travel with the notebook
-	 * automatically — they do not need to be migrated here.
+	 * Notebook cell settings are stored in cell metadata and travel with the notebook automatically —
+	 * they do not need to be migrated here.
 	 *
 	 * @param files The list of file rename events from `vscode.workspace.onDidRenameFiles`.
 	 */
 	async handleFileRenames(files: ReadonlyArray<{ oldUri: vscode.Uri; newUri: vscode.Uri }>): Promise<void> {
 		const prefixes = [
 			'sparql.connection:',
-			DOCUMENT_INFERENCE_STORAGE_KEY_PREFIX,
+			this._documentInferenceStorageKeyPrefix,
 		];
 
 		for (const { oldUri, newUri } of files) {
@@ -880,8 +928,6 @@ export class SparqlConnectionService {
 
 					const uriPart = key.slice(prefix.length);
 
-					// Match exact file rename or any path under a renamed folder
-					// (the trailing '/' guard prevents 'models' from matching 'models-extra').
 					const isMatch =
 						uriPart === oldUriStr ||
 						uriPart.startsWith(oldUriStr + '/');

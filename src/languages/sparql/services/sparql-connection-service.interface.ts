@@ -3,6 +3,7 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '@src/services/core/credential';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ComunicaEndpoint } from '@src/languages/sparql/services/sparql-endpoint';
+import { SparqlQueryKind, SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
 
 /**
  * Interface for the SparqlConnectionService.
@@ -37,12 +38,6 @@ export interface ISparqlConnectionService {
 	saveConfiguration(): Promise<void>;
 
 	/**
-	 * Get the configuration scopes supported for storing SPARQL connections.
-	 * @returns An array of supported configuration scopes.
-	 */
-	getSupportedConfigurationScopes(): ConfigurationScope[];
-
-	/**
 	 * Retrieves all available SPARQL endpoints, including the internal store.
 	 * @returns An array of all connections.
 	 */
@@ -75,13 +70,6 @@ export interface ISparqlConnectionService {
 	 * @param connectionId The ID of the connection to set.
 	 */
 	setQuerySourceForDocument(documentUri: vscode.Uri, connectionId: string): Promise<void>;
-
-	/**
-	 * Retrieves the SPARQL connection for a specific endpoint URL.
-	 * @param endpointUrl The URL of the SPARQL endpoint.
-	 * @returns The SPARQL connection or `undefined` if not found.
-	 */
-	getConnectionForEndpoint(endpointUrl: string): SparqlConnection | undefined;
 
 	/**
 	 * Gets the Comunica-compatible query source for a given document.
@@ -161,17 +149,42 @@ export interface ISparqlConnectionService {
 	toggleInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<boolean>;
 
 	/**
-	 * Clears the document-level inference setting, reverting to connection default.
-	 * @param documentUri The URI of the document or notebook cell.
-	 */
-	clearInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<void>;
-
-	/**
 	 * Checks if the given connection supports inference toggling.
 	 * @param connection The SPARQL connection to check.
 	 * @returns `true` if the connection supports inference, `false` otherwise.
 	 */
 	supportsInference(connection: SparqlConnection): boolean;
+
+	/**
+	 * Returns the user-defined store configs (from `mentor.sparql.storeTypes`, or built-in defaults).
+	 * @returns An array of store configs, in display order.
+	 */
+	getStoreConfigs(): SparqlStoreConfig[];
+
+	/**
+	 * Resolves a store config by its id (store type).
+	 * @param storeType The store-type id.
+	 * @returns The matching store config, or `undefined`.
+	 */
+	getStoreConfig(storeType: string | undefined): SparqlStoreConfig | undefined;
+
+	/**
+	 * Resolves the effective SPARQL query template of the given kind for a connection.
+	 * Resolution order: the store profile's own query → global setting fallback.
+	 * @param connection The SPARQL connection.
+	 * @param kind The kind of query template to resolve.
+	 * @returns The resolved template, or `undefined` if none is configured at any level.
+	 */
+	getQueryTemplate(connection: SparqlConnection, kind: SparqlQueryKind): string | undefined;
+
+	/**
+	 * Applies store-specific query-text rewriting for inference, if supported by the store type.
+	 * @param connection The SPARQL connection.
+	 * @param query The SPARQL query string.
+	 * @param inferenceEnabled Whether inference should be enabled.
+	 * @returns The (possibly rewritten) query string.
+	 */
+	rewriteQueryForInference(connection: SparqlConnection, query: string, inferenceEnabled: boolean): string;
 
 	/**
 	 * Sets the connection for a specific notebook cell by editing its metadata.

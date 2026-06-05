@@ -16,7 +16,9 @@ import { Uri } from '@src/utilities/mocks/vscode';
 import { SparqlConnectionService, MENTOR_WORKSPACE_STORE } from '@src/languages/sparql/services/sparql-connection-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import type { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
 import type { AuthCredential } from '@src/services/core/credential';
+import packageJson from '../../../../package.json';
 
 /**
  * Builds a minimal ExtensionContext stub with an in-memory workspaceState.
@@ -42,6 +44,41 @@ function makeService() {
         makeContext() as any,
         makeCredentialStorage() as any,
     );
+}
+
+/**
+ * The built-in store configs, read from the package.json default — the single source of truth.
+ * Used by tests that need the real defaults without mocking the full config.
+ */
+const builtInStoreConfigs: SparqlStoreConfig[] = (packageJson as any).contributes.configuration
+    .flatMap((b: any) => Object.entries(b.properties ?? {}))
+    .find(([key]: [string]) => key === 'mentor.sparql.storeTypes')?.[1]?.default ?? [];
+
+/**
+ * Runs the test callback with the built-in store configs available via the config mock.
+ * The mock remains active for the duration of the callback so calls to getStoreConfigs()
+ * inside the callback return the real defaults.
+ */
+function withStoreConfigs(configs: any[], run: (svc: SparqlConnectionService) => void | Promise<void>) {
+    return (async () => {
+        const vscode = await import('vscode');
+        const original = vscode.workspace.getConfiguration;
+        (vscode.workspace as any).getConfiguration = () => ({
+            get: (key: string, def: any) => key === 'sparql.storeTypes' ? configs : def,
+            has: () => false,
+            inspect: () => undefined,
+            update: async () => {},
+        });
+        try {
+            await run(new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any));
+        } finally {
+            (vscode.workspace as any).getConfiguration = original;
+        }
+    })();
+}
+
+function withBuiltInStoreConfigs(run: (svc: SparqlConnectionService) => void | Promise<void>) {
+    return withStoreConfigs(builtInStoreConfigs, run);
 }
 
 /**
@@ -117,23 +154,6 @@ describe('SparqlConnectionService', () => {
             // No user connections loaded from default getConfig().inspect() which returns undefined
             const result = svc.getConnectionsForConfigurationScope(ConfigurationScope.User);
             expect(result).toHaveLength(0);
-        });
-    });
-
-    describe('getSupportedConfigurationScopes', () => {
-        it('contains User scope', () => {
-            const svc = makeService();
-            expect(svc.getSupportedConfigurationScopes()).toContain(ConfigurationScope.User);
-        });
-
-        it('contains Workspace scope', () => {
-            const svc = makeService();
-            expect(svc.getSupportedConfigurationScopes()).toContain(ConfigurationScope.Workspace);
-        });
-
-        it('returns exactly two scopes', () => {
-            const svc = makeService();
-            expect(svc.getSupportedConfigurationScopes()).toHaveLength(2);
         });
     });
 
@@ -407,17 +427,6 @@ describe('SparqlConnectionService', () => {
         });
     });
 
-    describe('clearInferenceEnabledForDocument', () => {
-        it('clears the document-level setting (reverts to default)', async () => {
-            const svc = makeService();
-            const uri = Uri.parse('file:///doc3.sparql');
-            await svc.setInferenceEnabledForDocument(uri as any, true);
-            await svc.clearInferenceEnabledForDocument(uri as any);
-            // After clearing, falls back to connection default (false)
-            expect(svc.getInferenceEnabledForDocument(uri as any)).toBe(false);
-        });
-    });
-
     describe('saveConfiguration', () => {
         it('fires onDidChangeConnections and marks connections as not new/modified', async () => {
             const svc = makeService();
@@ -467,22 +476,6 @@ describe('SparqlConnectionService', () => {
 
             expect(credentialStorage.deleteCredential).not.toHaveBeenCalled();
             expect(credentialStorage.saveCredential).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('getConnectionForEndpoint', () => {
-        it('returns the connection with the matching endpoint URL', async () => {
-            const svc = makeService();
-            const conn = await svc.createConnection();
-            conn.endpointUrl = 'https://example.org/sparql';
-            await svc.updateConnection(conn);
-            const found = svc.getConnectionForEndpoint('https://example.org/sparql');
-            expect(found?.id).toBe(conn.id);
-        });
-
-        it('returns undefined when no connection matches the endpoint URL', () => {
-            const svc = makeService();
-            expect(svc.getConnectionForEndpoint('https://not-found.org/sparql')).toBeUndefined();
         });
     });
 
@@ -994,6 +987,141 @@ describe('SparqlConnectionService', () => {
 
             expect(store.has('sparql.connection:file:///workspace/other.ttl')).toBe(true);
             expect(store.has('mentor.inference.enabled:some-connection-id')).toBe(true);
+        });
+    });
+
+    describe('getStoreConfigs', () => {
+        it('lists the built-in store configs (and not the internal workspace store)', () =>
+            withBuiltInStoreConfigs(svc => {
+                const ids = svc.getStoreConfigs().map(s => s.id);
+                expect(ids).toEqual(['sparql', 'jena', 'rdf4j', 'qlever']);
+                expect(ids).not.toContain('workspace');
+            })
+        );
+
+        it('exposes reasoning support via inference.supported', () =>
+            withBuiltInStoreConfigs(svc => {
+                const byId = Object.fromEntries(svc.getStoreConfigs().map(s => [s.id, s]));
+                expect(byId['rdf4j']?.inference?.supported).toBe(true);
+                expect(byId['sparql']?.inference).toBeUndefined();
+                expect(byId['qlever']?.inference).toBeUndefined();
+            })
+        );
+
+        it('exposes the jena store-specific empty-pattern listGraphs query', () =>
+            withBuiltInStoreConfigs(svc => {
+                const jena = svc.getStoreConfigs().find(s => s.id === 'jena');
+                expect(jena?.queries?.listGraphs).toContain('GRAPH ?graph {}');
+            })
+        );
+    });
+
+    describe('getStoreConfig', () => {
+        it('resolves a store config by id (defaulting to sparql)', () =>
+            withBuiltInStoreConfigs(svc => {
+                expect(svc.getStoreConfig('rdf4j')?.label).toBe('RDF4J');
+                expect(svc.getStoreConfig(undefined)?.id).toBe('sparql');
+            })
+        );
+    });
+
+    describe('getQueryTemplate', () => {
+        it('uses the store profile query when present', () =>
+            withBuiltInStoreConfigs(svc => {
+                const conn: SparqlConnection = {
+                    id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'jena',
+                };
+                // Jena's built-in profile ships an empty-pattern listGraphs query.
+                expect(svc.getQueryTemplate(conn, 'listGraphs')).toContain('GRAPH ?graph {}');
+            })
+        );
+
+        it('falls back to the global setting when the profile has no query', () => {
+            const svc = makeService();
+            const conn: SparqlConnection = {
+                id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'sparql',
+            };
+            // No store configs mocked → no profile queries → falls back to global setting
+            // (undefined here, since the mock config returns no value for it).
+            expect(svc.getQueryTemplate(conn, 'listGraphs')).toBeUndefined();
+        });
+    });
+
+    describe('store inference application', () => {
+        it('appends the url-parameter fragment to the query source for a reasoning store', () =>
+            withBuiltInStoreConfigs(async svc => {
+                const conn: SparqlConnection = {
+                    id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'rdf4j', inferenceEnabled: true,
+                };
+                // The built-in RDF4J store config defines infer=true / infer=false url parameters.
+                expect(((await svc.getQuerySourceForConnection(conn)) as any).value).toContain('infer=true');
+                expect(((await svc.getQuerySourceForConnection({ ...conn, inferenceEnabled: false })) as any).value).toContain('infer=false');
+            })
+        );
+
+        it('does not rewrite the query text for a url-parameter store', () => {
+            const svc = makeService();
+            const conn: SparqlConnection = {
+                id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'rdf4j',
+            };
+            expect(svc.rewriteQueryForInference(conn, 'ASK {}', true)).toBe('ASK {}');
+        });
+
+        it('prepends the query pragma for a query-pragma store', async () => {
+            await withStoreConfigs(
+                [{ id: 'stardog', label: 'Stardog', inference: { supported: true, queryPragma: { enabled: '#pragma reasoning on', disabled: '#pragma reasoning off' } } }],
+                svc => {
+                    const conn: SparqlConnection = {
+                        id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'stardog',
+                    };
+                    expect(svc.rewriteQueryForInference(conn, 'ASK {}', true)).toBe('#pragma reasoning on\nASK {}');
+                    expect(svc.rewriteQueryForInference(conn, 'ASK {}', false)).toBe('#pragma reasoning off\nASK {}');
+                }
+            );
+        });
+
+        it('is the identity for a plain sparql connection (no reasoning)', () => {
+            const svc = makeService();
+            const conn: SparqlConnection = {
+                id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'sparql',
+            };
+            expect(svc.rewriteQueryForInference(conn, 'ASK {}', true)).toBe('ASK {}');
+        });
+    });
+
+    describe('storeType persistence', () => {
+        it('serializes storeType and restores it on reload', async () => {
+            const vscode = await import('vscode');
+            const original = vscode.workspace.getConfiguration;
+            let savedGlobal: any[] = [];
+
+            (vscode.workspace as any).getConfiguration = () => ({
+                get: (_k: string, def: any) => def,
+                has: () => false,
+                inspect: () => ({ globalValue: savedGlobal, workspaceValue: undefined }),
+                update: async (key: string, value: any, target: any) => {
+                    if (key === 'sparql.connections' && target === vscode.ConfigurationTarget.Global) {
+                        savedGlobal = value;
+                    }
+                },
+            });
+
+            try {
+                const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+                const conn = await svc.createConnection();
+                conn.storeType = 'jena';
+                await svc.updateConnection(conn);
+                await svc.saveConfiguration();
+
+                const serialized = savedGlobal.find(c => c.id === conn.id);
+                expect(serialized.storeType).toBe('jena');
+
+                // A fresh service loads from the captured global value.
+                const svc2 = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+                expect(svc2.getConnection(conn.id)?.storeType).toBe('jena');
+            } finally {
+                (vscode.workspace as any).getConfiguration = original;
+            }
         });
     });
 });

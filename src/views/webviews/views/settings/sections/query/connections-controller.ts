@@ -202,7 +202,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				this._post({
 					section: SECTION_ID,
 					id: 'GetStoreTypesResult',
-					storeTypes: connectionService.getStoreTypes(),
+					storeConfigs: connectionService.getStoreConfigs(),
 				});
 
 				return true;

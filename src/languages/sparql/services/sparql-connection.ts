@@ -1,12 +1,6 @@
 import { ConfigurationScope } from '@src/utilities/config-scope';
 
 /**
- * The type of SPARQL store. Determines how inference and other
- * store-specific features are handled.
- */
-export type SparqlStoreType = 'workspace' | 'sparql' | 'graphdb';
-
-/**
  * Connection information for a SPARQL endpoint.
  */
 export interface SparqlConnection {
@@ -35,7 +29,7 @@ export interface SparqlConnection {
      * store-specific features are handled.
      * @default 'sparql'
      */
-    storeType?: SparqlStoreType;
+    storeType?: string;
 
     /**
      * Indicates if this connection is newly created and not yet saved.
