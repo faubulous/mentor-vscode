@@ -1357,6 +1357,109 @@
             "default": "CONSTRUCT { <{{resourceIri}}> ?p ?o }{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }",
             "editPresentation": "multilineText"
           },
+          "mentor.sparql.storeTypes": {
+            "type": "array",
+            "title": "SPARQL Stores",
+            "description": "User-defined SPARQL store profiles. Each profile describes a store type: how it controls reasoning (a URL parameter or an inline query pragma) and its default queries. Manage these from the Query > Stores settings section. The built-in in-memory Workspace store is not configurable here.",
+            "default": [
+              {
+                "id": "sparql",
+                "label": "SPARQL Endpoint"
+              },
+              {
+                "id": "jena",
+                "label": "Apache Jena Fuseki",
+                "queries": {
+                  "listGraphs": "SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph {}\n}\nORDER BY ?graph"
+                }
+              },
+              {
+                "id": "rdf4j",
+                "label": "RDF4J",
+                "inference": {
+                  "supported": true,
+                  "urlParameters": {
+                    "enabled": "infer=true",
+                    "disabled": "infer=false"
+                  }
+                }
+              },
+              {
+                "id": "qlever",
+                "label": "QLever"
+              }
+            ],
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "label"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Stable identifier referenced by connections."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Human-readable name shown in pickers."
+                },
+                "inference": {
+                  "type": "object",
+                  "description": "Reasoning control. Present sub-structures determine how reasoning is toggled; both may be set.",
+                  "properties": {
+                    "supported": {
+                      "type": "boolean",
+                      "description": "Whether the store supports toggling reasoning."
+                    },
+                    "urlParameters": {
+                      "type": "object",
+                      "description": "Query-string fragment appended to the endpoint URL.",
+                      "properties": {
+                        "enabled": {
+                          "type": "string",
+                          "description": "Appended when reasoning is on (e.g. infer=true&reasoning=rdfs)."
+                        },
+                        "disabled": {
+                          "type": "string",
+                          "description": "Appended when reasoning is off (e.g. infer=false)."
+                        }
+                      }
+                    },
+                    "queryPragma": {
+                      "type": "object",
+                      "description": "Text prepended to the query.",
+                      "properties": {
+                        "enabled": {
+                          "type": "string",
+                          "description": "Prepended when reasoning is on (e.g. #pragma reasoning on)."
+                        },
+                        "disabled": {
+                          "type": "string",
+                          "description": "Prepended when reasoning is off (e.g. #pragma reasoning off)."
+                        }
+                      }
+                    }
+                  }
+                },
+                "queries": {
+                  "type": "object",
+                  "description": "Store-specific default query templates; a blank field falls back to the global template.",
+                  "properties": {
+                    "listGraphs": {
+                      "type": "string"
+                    },
+                    "dropGraph": {
+                      "type": "string"
+                    },
+                    "describe": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
           "mentor.sparql.queryTimeout": {
             "type": "integer",
             "title": "Query Timeout",

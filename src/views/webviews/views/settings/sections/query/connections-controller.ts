@@ -198,6 +198,15 @@ export class ConnectionsSectionController implements SettingsSectionController {
 
 				return true;
 			}
+			case 'GetStoreTypes': {
+				this._post({
+					section: SECTION_ID,
+					id: 'GetStoreTypesResult',
+					storeTypes: connectionService.getStoreTypes(),
+				});
+
+				return true;
+			}
 			case 'ToggleSparqlConnectionInference': {
 				const connectionId = message.connectionId as string;
 				const inferenceEnabled = await connectionService.toggleInferenceEnabled(connectionId);

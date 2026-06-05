@@ -248,6 +248,13 @@ vscode-textfield .root {
 	overflow: hidden;
 }
 
+.setting-row.layout-row {
+	display: flex;
+	flex-direction: row;
+	gap: 1em;
+	align-items: baseline;
+}
+
 /* Editor font for all code-like inputs */
 
 .settings-content vscode-textfield,

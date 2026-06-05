@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { SparqlResultsController } from '@src/views/webviews';
-import { getConfig } from '@src/utilities/vscode/config';
 
 export const executeDescribeQuery = {
 	id: 'mentor.command.executeDescribeQuery',
@@ -14,10 +14,12 @@ export const executeDescribeQuery = {
 			return;
 		}
 
-		const template = getConfig().get<string>('sparql.describeQueryTemplate');
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connection = connectionService.getConnectionForDocument(document.uri);
+		const template = connectionService.getQueryTemplate(connection, 'describe');
 
 		if(!template) {
-			vscode.window.showErrorMessage('Describe query template is not defined in the configuration: mentor.sparql.describeQueryTemplate');
+			vscode.window.showErrorMessage('Could not resolve a "describe" query template for this connection.');
 			return;
 		}
 

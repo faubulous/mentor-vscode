@@ -8,7 +8,7 @@ import { editorFormattingSection } from './editor/formatting';
 import { editorSortingSection } from './editor/sorting';
 import { editorValidationSection } from './editor/validation';
 import { queryGeneralSection } from './query/general';
-import { queryTemplatesSection } from './query/templates';
+import { queryStoresSection } from './query/stores';
 import { queryConnectionsSection } from './query/connections';
 import { workspaceIndexingSection } from './workspace/indexing';
 
@@ -45,8 +45,8 @@ export const SETTINGS_GROUPS = [
 		label: 'Query',
 		sections: [
 			queryGeneralSection,
-			queryTemplatesSection,
 			queryConnectionsSection,
+			queryStoresSection,
 		],
 	},
 	{

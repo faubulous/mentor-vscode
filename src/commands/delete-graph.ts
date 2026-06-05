@@ -4,7 +4,6 @@ import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { SparqlResultsController } from '@src/views/webviews';
-import { getConfig } from '@src/utilities/vscode/config';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 export const deleteGraph = {
@@ -32,10 +31,10 @@ export const deleteGraph = {
 		if (connection.id === 'workspace') {
 			container.resolve<Store>(ServiceToken.Store).deleteGraphs([WorkspaceUri.toCanonicalString(graphIri)]);
 		} else {
-			const query = getConfig().get<string>('sparql.dropGraphQuery');
+			const query = connectionService.getQueryTemplate(connection, 'dropGraph');
 
 			if (!query) {
-				vscode.window.showErrorMessage('Could not retrieve query from configuration: mentor.sparql.dropGraphQuery');
+				vscode.window.showErrorMessage('Could not resolve a "drop graph" query for this connection.');
 				return;
 			}
 
