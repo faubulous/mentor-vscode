@@ -3,7 +3,7 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '@src/services/core/credential';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ComunicaEndpoint } from '@src/languages/sparql/services/sparql-endpoint';
-import { SparqlQueryKind, SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
+import { SparqlQueryKind } from '@src/languages/sparql/services/sparql-store-config';
 
 /**
  * Interface for the SparqlConnectionService.
@@ -149,26 +149,6 @@ export interface ISparqlConnectionService {
 	toggleInferenceEnabledForDocument(documentUri: vscode.Uri): Promise<boolean>;
 
 	/**
-	 * Checks if the given connection supports inference toggling.
-	 * @param connection The SPARQL connection to check.
-	 * @returns `true` if the connection supports inference, `false` otherwise.
-	 */
-	supportsInference(connection: SparqlConnection): boolean;
-
-	/**
-	 * Returns the user-defined store configs (from `mentor.sparql.storeTypes`, or built-in defaults).
-	 * @returns An array of store configs, in display order.
-	 */
-	getStoreConfigs(): SparqlStoreConfig[];
-
-	/**
-	 * Resolves a store config by its id (store type).
-	 * @param storeType The store-type id.
-	 * @returns The matching store config, or `undefined`.
-	 */
-	getStoreConfig(storeType: string | undefined): SparqlStoreConfig | undefined;
-
-	/**
 	 * Resolves the effective SPARQL query template of the given kind for a connection.
 	 * Resolution order: the store profile's own query → global setting fallback.
 	 * @param connection The SPARQL connection.
@@ -176,15 +156,6 @@ export interface ISparqlConnectionService {
 	 * @returns The resolved template, or `undefined` if none is configured at any level.
 	 */
 	getQueryTemplate(connection: SparqlConnection, kind: SparqlQueryKind): string | undefined;
-
-	/**
-	 * Applies store-specific query-text rewriting for inference, if supported by the store type.
-	 * @param connection The SPARQL connection.
-	 * @param query The SPARQL query string.
-	 * @param inferenceEnabled Whether inference should be enabled.
-	 * @returns The (possibly rewritten) query string.
-	 */
-	rewriteQueryForInference(connection: SparqlConnection, query: string, inferenceEnabled: boolean): string;
 
 	/**
 	 * Sets the connection for a specific notebook cell by editing its metadata.

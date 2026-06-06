@@ -6,10 +6,10 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 let mockGetConnectionForDocument: Mock;
 let mockDeleteGraphs: Mock;
 
-const { mockSetQuerySourceForDocument, mockExecuteQueryFromTextDocument, mockGetConfig } = vi.hoisted(() => ({
+const { mockSetQuerySourceForDocument, mockExecuteQueryFromTextDocument, mockGetQueryTemplate } = vi.hoisted(() => ({
 	mockSetQuerySourceForDocument: vi.fn(async () => {}),
 	mockExecuteQueryFromTextDocument: vi.fn(async () => {}),
-	mockGetConfig: vi.fn(() => ({ get: (_k: string, d?: any) => d })),
+	mockGetQueryTemplate: vi.fn((_conn: any, _kind: string) => undefined as string | undefined),
 }));
 
 vi.mock('tsyringe', () => ({
@@ -19,6 +19,7 @@ vi.mock('tsyringe', () => ({
 				return {
 					getConnectionForDocument: (...args: any[]) => mockGetConnectionForDocument(...args),
 					setQuerySourceForDocument: mockSetQuerySourceForDocument,
+					getQueryTemplate: mockGetQueryTemplate,
 					getConnections: vi.fn(() => []),
 				};
 			}
@@ -36,17 +37,13 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: mockGetConfig,
-}));
-
 import * as vscode from 'vscode';
 import { deleteGraph } from '@src/commands/delete-graph';
 
 beforeEach(() => {
 	mockGetConnectionForDocument = vi.fn(() => undefined);
 	mockDeleteGraphs = vi.fn();
-	mockGetConfig.mockImplementation(() => ({ get: (_k: string, d?: any) => d }));
+	mockGetQueryTemplate.mockReturnValue(undefined);
 	(vscode.window as any).showWarningMessage = vi.fn(async () => undefined);
 	(vscode.window as any).showErrorMessage = vi.fn(async () => undefined);
 	(vscode.window as any).showTextDocument = vi.fn(async () => undefined);
@@ -79,21 +76,19 @@ describe('deleteGraph command', () => {
 		expect(mockDeleteGraphs).toHaveBeenCalledWith([graphIri.toString(true)]);
 	});
 
-	it('should show error when no drop graph query is configured for remote connection', async () => {
+	it('should show error when no drop graph query can be resolved for remote connection', async () => {
 		(vscode.window as any).showWarningMessage = vi.fn(async () => 'Delete');
 		mockGetConnectionForDocument.mockReturnValue({ id: 'remote', endpointUrl: 'http://sparql.example.org' });
 		await deleteGraph.handler('http://example.org/doc', 'http://example.org/graph');
 		expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-			expect.stringContaining('mentor.sparql.dropGraphQuery')
+			expect.stringContaining('drop graph')
 		);
 	});
 
 	it('should open document and execute drop graph query for remote connection', async () => {
 		(vscode.window as any).showWarningMessage = vi.fn(async () => 'Delete');
 		mockGetConnectionForDocument.mockReturnValue({ id: 'remote', endpointUrl: 'http://sparql.example.org' });
-		mockGetConfig.mockImplementation(() => ({
-			get: (k: string, d?: any) => k === 'sparql.dropGraphQuery' ? 'DROP GRAPH <@graphIri>' : d,
-		}));
+		mockGetQueryTemplate.mockReturnValue('DROP GRAPH <@graphIri>');
 		await deleteGraph.handler('http://example.org/doc', 'http://example.org/graph');
 		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
 			expect.objectContaining({ content: 'DROP GRAPH <http://example.org/graph>', language: 'sparql' })

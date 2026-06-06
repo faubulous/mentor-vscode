@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { ICredentialStorageService } from '@src/services/core';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { SettingsSectionId } from '..';
@@ -199,10 +200,11 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				return true;
 			}
 			case 'GetStoreTypes': {
+				const storeConfigService = container.resolve<ISparqlStoreConfigService>(ServiceToken.SparqlStoreConfigService);
 				this._post({
 					section: SECTION_ID,
 					id: 'GetStoreTypesResult',
-					storeConfigs: connectionService.getStoreConfigs(),
+					storeConfigs: storeConfigService.getStoreConfigs(),
 				});
 
 				return true;

@@ -7,7 +7,9 @@ let mockContexts: Record<string, any>;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn(() => ({
+			subscriptions: [],
 			get contexts() { return mockContexts; },
+			matchAll: () => [],
 		})),
 	},
 	injectable: () => (t: any) => t,
@@ -43,6 +45,7 @@ function makeDocument(uri = 'file:///test.ttl') {
 	return {
 		uri: { toString: () => uri, scheme: 'file' } as any,
 		getText: () => '',
+		lineAt: () => ({ text: '' }),
 	} as any;
 }
 

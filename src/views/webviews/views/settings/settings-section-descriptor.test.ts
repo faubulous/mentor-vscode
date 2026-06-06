@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { validateSectionDescriptors } from './settings-section-descriptor';
 import { SETTINGS_GROUPS } from './sections/index';
-import * as packageJson from '../../../../package.json';
+import * as packageJson from '../../../../../package.json';
 
 describe('section descriptors', () => {
 	it('claim every mentor.* key in package.json exactly once', () => {

@@ -11,6 +11,7 @@ import { EntraClientCredentialService } from '@src/services/core/entra-client-cr
 import { SparqlConnection } from './sparql-connection';
 import { ComunicaEndpoint, SparqlEndpoint } from './sparql-endpoint';
 import { SparqlStoreConfig, SparqlQueryKind } from './sparql-store-config';
+import { ISparqlStoreConfigService } from './sparql-store-config-service';
 import { ISparqlQueryService } from './sparql-query-service.interface';
 import { WorkspaceEndpointProvider } from '@src/languages/sparql/services/endpoints';
 
@@ -34,9 +35,6 @@ export class SparqlConnectionService {
 	/** VS Code settings key under which SPARQL connections are persisted. */
 	private readonly _connectionsConfigKey = 'sparql.connections';
 
-	/** VS Code settings key under which user-defined store configs are persisted. */
-	private readonly _storesConfigKey = 'sparql.storeTypes';
-
 	/** VS Code settings key for the global default inference-enabled flag. */
 	private readonly _defaultInferenceEnabledConfigKey = 'sparql.defaultInferenceEnabled';
 
@@ -45,12 +43,6 @@ export class SparqlConnectionService {
 
 	/** Workspace-state key prefix for per-document inference settings (`<prefix><documentUri>`). */
 	private readonly _documentInferenceStorageKeyPrefix = 'mentor.inference.document:';
-
-	/** The id of the internal, code-only in-memory workspace store. */
-	private readonly _workspaceStoreType = 'workspace';
-
-	/** The store type assumed for connections that do not specify one. */
-	private readonly _defaultStoreType = 'sparql';
 
 	/** Maps each query kind to the global `mentor.sparql.*` setting used as the final fallback. */
 	private readonly _globalQueryConfigKeys: Record<SparqlQueryKind, string> = {
@@ -94,7 +86,8 @@ export class SparqlConnectionService {
 
 	constructor(
 		private readonly _extensionContext: vscode.ExtensionContext,
-		private readonly _credentialStorage: ICredentialStorageService
+		private readonly _credentialStorage: ICredentialStorageService,
+		private readonly _storeConfigService: ISparqlStoreConfigService
 	) {
 		this._workspaceStore = new WorkspaceEndpointProvider(() => this.store);
 
@@ -212,7 +205,7 @@ export class SparqlConnectionService {
 			throw new Error(`Connection not found: ${connectionId}`);
 		}
 
-		if (!this.supportsInference(connection)) {
+		if (!this._storeConfigService.supportsInference(connection)) {
 			throw new Error(`Connection does not support inference toggling: ${connectionId}`);
 		}
 
@@ -381,9 +374,9 @@ export class SparqlConnectionService {
 			: ConfigurationScope.User;
 
 		return raw.map(c => {
-			const storeType = c.storeType ?? this._defaultStoreType;
+			const storeType = c.storeType ?? this._storeConfigService.defaultStoreType;
 			const connection = { ...c, storeType };
-			return { ...connection, configScope, inferenceSupported: this.supportsInference(connection) };
+			return { ...connection, configScope, inferenceSupported: this._storeConfigService.supportsInference(connection) };
 		});
 	}
 
@@ -399,7 +392,7 @@ export class SparqlConnectionService {
 				id: c.id,
 				...(c.description ? { description: c.description } : {}),
 				endpointUrl: c.endpointUrl,
-				storeType: c.storeType ?? this._defaultStoreType,
+				storeType: c.storeType ?? this._storeConfigService.defaultStoreType,
 			}));
 	}
 
@@ -528,11 +521,11 @@ export class SparqlConnectionService {
 	 * @returns The resolved Comunica source configuration.
 	 */
 	private _createQuerySource(connection: SparqlConnection, inferenceEnabled: boolean): ComunicaEndpoint {
-		if (this._isWorkspace(connection)) {
+		if (this._storeConfigService.isWorkspaceConnection(connection)) {
 			return this._workspaceStore.createEndpoint(inferenceEnabled);
 		}
 
-		const store = this.getStoreConfig(connection.storeType);
+		const store = this._storeConfigService.getStoreConfig(connection.storeType);
 		let value = connection.endpointUrl;
 
 		if (store?.inference?.supported && store.inference.urlParameters) {
@@ -575,35 +568,6 @@ export class SparqlConnectionService {
 		url.search = existing ? `${existing}&${fragment}` : fragment;
 	}
 
-	/**
-	 * Prepends the store config's query-pragma reasoning text to a query, if applicable.
-	 * No-op unless the store supports reasoning via `queryPragma` and the pragma is non-empty.
-	 * @param query The SPARQL query text.
-	 * @param store The resolved store config.
-	 * @param inferenceEnabled Whether inference is currently enabled.
-	 * @returns The (possibly rewritten) query string.
-	 */
-	private _applyQueryInference(query: string, store: SparqlStoreConfig | undefined, inferenceEnabled: boolean): string {
-		const inference = store?.inference;
-
-		if (!inference?.supported || !inference.queryPragma) {
-			return query;
-		}
-
-		const pragma = (inferenceEnabled ? inference.queryPragma.enabled : inference.queryPragma.disabled)?.trim();
-
-		return pragma ? `${pragma}\n${query}` : query;
-	}
-
-	/**
-	 * Returns whether the connection targets the internal in-memory workspace store.
-	 * @param connection The SPARQL connection to test.
-	 * @returns `true` if the connection is the workspace store.
-	 */
-	private _isWorkspace(connection: SparqlConnection): boolean {
-		return connection.id === MENTOR_WORKSPACE_STORE.id
-			|| (connection.storeType ?? this._defaultStoreType) === this._workspaceStoreType;
-	}
 
 	/**
 	 * Retrieves the list of named graphs available for a document's connection.
@@ -616,7 +580,7 @@ export class SparqlConnectionService {
 		const connection = this.getConnectionForDocument(documentUri);
 		const inferenceEnabled = this.getInferenceEnabledForDocument(documentUri);
 
-		if (this._isWorkspace(connection)) {
+		if (this._storeConfigService.isWorkspaceConnection(connection)) {
 			return this._workspaceStore.getGraphs(inferenceEnabled);
 		}
 
@@ -647,24 +611,6 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Returns the user-defined store configs from the `mentor.sparql.storeTypes` setting.
-	 * VS Code provides the package.json default when the setting is unset at runtime.
-	 * @returns An array of store configs in display order.
-	 */
-	getStoreConfigs(): SparqlStoreConfig[] {
-		return getConfig().get<SparqlStoreConfig[]>(this._storesConfigKey) ?? [];
-	}
-
-	/**
-	 * Resolves a store config by its id (store type).
-	 * @param storeType The store-type id. Defaults to the generic SPARQL endpoint when `undefined`.
-	 * @returns The matching store config, or `undefined` if no config has that id.
-	 */
-	getStoreConfig(storeType: string | undefined): SparqlStoreConfig | undefined {
-		return this.getStoreConfigs().find(s => s.id === (storeType ?? this._defaultStoreType));
-	}
-
-	/**
 	 * Resolves the effective SPARQL query template of the given kind for a connection.
 	 * Resolution order: the store config's own query → global `mentor.sparql.*` fallback.
 	 * @param connection The SPARQL connection.
@@ -672,35 +618,8 @@ export class SparqlConnectionService {
 	 * @returns The resolved template, or `undefined` if none is configured at any level.
 	 */
 	getQueryTemplate(connection: SparqlConnection, kind: SparqlQueryKind): string | undefined {
-		return this.getStoreConfig(connection.storeType)?.queries?.[kind]
+		return this._storeConfigService.getStoreConfig(connection.storeType)?.queries?.[kind]
 			|| getConfig().get<string>(this._globalQueryConfigKeys[kind]);
-	}
-
-	/**
-	 * Applies store-specific query-text rewriting for inference, if the connection's store
-	 * config uses the query-pragma mechanism. Returns the query unchanged otherwise.
-	 * @param connection The SPARQL connection.
-	 * @param query The SPARQL query string.
-	 * @param inferenceEnabled Whether inference should be enabled.
-	 * @returns The (possibly rewritten) query string.
-	 */
-	rewriteQueryForInference(connection: SparqlConnection, query: string, inferenceEnabled: boolean): string {
-		return this._applyQueryInference(query, this.getStoreConfig(connection.storeType), inferenceEnabled);
-	}
-
-	/**
-	 * Checks if the given connection supports inference toggling.
-	 * The workspace store always supports inference. For all other connections, support
-	 * is determined by the store config's `inference.supported` flag.
-	 * @param connection The SPARQL connection to check.
-	 * @returns `true` if the connection supports inference, `false` otherwise.
-	 */
-	supportsInference(connection: SparqlConnection): boolean {
-		if (this._isWorkspace(connection)) {
-			return true;
-		}
-
-		return this.getStoreConfig(connection.storeType)?.inference?.supported ?? false;
 	}
 
 	/**
@@ -839,7 +758,7 @@ export class SparqlConnectionService {
 				credential = await this._credentialStorage.getCredential(connection.id);
 			}
 
-			Object.assign(headers, await this.getAuthHeaders(credential as AuthCredential));
+			Object.assign(headers, await this._getAuthHeaders(credential as AuthCredential));
 
 			const response = await fetch(connection.endpointUrl, {
 				method: 'POST',
@@ -880,7 +799,7 @@ export class SparqlConnectionService {
 	 * @param credential The authentication credential.
 	 * @returns A record containing the `Authorization` header, or an empty record.
 	 */
-	async getAuthHeaders(credential?: AuthCredential): Promise<Record<string, string>> {
+	private async _getAuthHeaders(credential?: AuthCredential): Promise<Record<string, string>> {
 		const headers: Record<string, string> = {};
 
 		if (credential?.type === 'basic') {

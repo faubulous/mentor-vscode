@@ -17,6 +17,8 @@ vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
 			if (token === 'DocumentContextService') return mockContextService;
+			if (token === 'ExtensionContext') return { subscriptions: [] };
+			if (token === 'Store') return { matchAll: () => [] };
 			return {};
 		}),
 	},
@@ -38,7 +40,7 @@ describe('ResourceTooltipProvider', () => {
 	});
 
 	it('returns null when no context for document', () => {
-		const doc = { uri: vscode.Uri.parse('file:///test.ttl') } as any;
+		const doc = { uri: vscode.Uri.parse('file:///test.ttl'), lineAt: () => ({ text: '' }) } as any;
 		expect(provider.provideHover(doc, mockPosition)).toBeNull();
 	});
 

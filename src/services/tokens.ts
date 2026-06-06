@@ -26,6 +26,8 @@ export enum ServiceToken {
 	CredentialStorageService = "CredentialStorageService",
 	/** Service for managing SPARQL connections. */
 	SparqlConnectionService = "SparqlConnectionService",
+	/** Service for reading and resolving SPARQL store configurations. */
+	SparqlStoreConfigService = "SparqlStoreConfigService",
 	/** Serializer for SPARQL query results. */
 	SparqlQueryResultSerializer = "SparqlQueryResultSerializer",
 	/** Service for executing SPARQL queries. */

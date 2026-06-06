@@ -18,6 +18,7 @@ import { LanguageClientRegistry } from '@src/languages/language-client-registry'
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
+import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
@@ -80,7 +81,10 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
-	const sparqlConnectionService = new SparqlConnectionService(context, credentialStorageService);
+	const sparqlStoreConfigService = new SparqlStoreConfigService();
+	container.registerInstance(ServiceToken.SparqlStoreConfigService, sparqlStoreConfigService);
+
+	const sparqlConnectionService = new SparqlConnectionService(context, credentialStorageService, sparqlStoreConfigService);
 	container.registerInstance(ServiceToken.SparqlConnectionService, sparqlConnectionService);
 
 	const prefixDownloaderService = new PrefixDownloaderService();
@@ -92,7 +96,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const sparqlQueryResultSerializer = new SparqlResultSerializer(prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
 
-	const sparqlQueryService = new SparqlQueryService(context, credentialStorageService, sparqlConnectionService, sparqlQueryResultSerializer);
+	const sparqlQueryService = new SparqlQueryService(context, credentialStorageService, sparqlConnectionService, sparqlQueryResultSerializer, sparqlStoreConfigService);
 	container.registerInstance(ServiceToken.SparqlQueryService, sparqlQueryService);
 
 	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(documentContextService, prefixLookupService);

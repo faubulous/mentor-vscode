@@ -14,6 +14,7 @@ vi.mock('uuid', () => ({ v4: () => 'test-uuid-1234' }));
 
 import { Uri } from '@src/utilities/mocks/vscode';
 import { SparqlConnectionService, MENTOR_WORKSPACE_STORE } from '@src/languages/sparql/services/sparql-connection-service';
+import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import type { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
@@ -39,10 +40,15 @@ function makeCredentialStorage() {
     return { getCredential: async () => null };
 }
 
+function makeStoreConfigService() {
+    return new SparqlStoreConfigService();
+}
+
 function makeService() {
     return new SparqlConnectionService(
         makeContext() as any,
         makeCredentialStorage() as any,
+        makeStoreConfigService(),
     );
 }
 
@@ -70,7 +76,7 @@ function withStoreConfigs(configs: any[], run: (svc: SparqlConnectionService) =>
             update: async () => {},
         });
         try {
-            await run(new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any));
+            await run(new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any, makeStoreConfigService()));
         } finally {
             (vscode.workspace as any).getConfiguration = original;
         }
@@ -401,7 +407,7 @@ describe('SparqlConnectionService', () => {
 
         it('returns the stored document-level setting when one is set', async () => {
             const ctx = makeContext();
-            const svc = new SparqlConnectionService(ctx as any, makeCredentialStorage() as any);
+            const svc = new SparqlConnectionService(ctx as any, makeCredentialStorage() as any, makeStoreConfigService());
             const uri = Uri.parse('file:///doc.sparql');
             await svc.setInferenceEnabledForDocument(uri as any, true);
             expect(svc.getInferenceEnabledForDocument(uri as any)).toBe(true);
@@ -452,7 +458,7 @@ describe('SparqlConnectionService', () => {
                 deleteCredential: vi.fn(async () => {}),
                 saveCredential: vi.fn(async () => {}),
             };
-            const svc = new SparqlConnectionService(makeContext() as any, credentialStorage as any);
+            const svc = new SparqlConnectionService(makeContext() as any, credentialStorage as any, makeStoreConfigService());
             const conn = await svc.createConnection();
             const credential: AuthCredential = { type: 'basic', username: 'u', password: 'p' } as any;
 
@@ -469,7 +475,7 @@ describe('SparqlConnectionService', () => {
                 deleteCredential: vi.fn(async () => {}),
                 saveCredential: vi.fn(async () => {}),
             };
-            const svc = new SparqlConnectionService(makeContext() as any, credentialStorage as any);
+            const svc = new SparqlConnectionService(makeContext() as any, credentialStorage as any, makeStoreConfigService());
             const conn = await svc.createConnection();
 
             await svc.saveConnectionWithCredential(conn, null);
@@ -610,7 +616,7 @@ describe('SparqlConnectionService', () => {
                 inspect: () => ({ globalValue: [mockConn], workspaceValue: undefined }),
                 update: async () => {},
             });
-            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any, makeStoreConfigService());
             (vscode.workspace as any).getConfiguration = originalGetConfig;
 
             const connections = svc.getConnectionsForConfigurationScope(ConfigurationScope.User);
@@ -627,7 +633,7 @@ describe('SparqlConnectionService', () => {
                 inspect: () => ({ globalValue: undefined, workspaceValue: [mockConn] }),
                 update: async () => {},
             });
-            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any, makeStoreConfigService());
             (vscode.workspace as any).getConfiguration = originalGetConfig;
 
             const connections = svc.getConnectionsForConfigurationScope(ConfigurationScope.Workspace);
@@ -791,7 +797,7 @@ describe('SparqlConnectionService', () => {
                 return { dispose: () => {} };
             };
 
-            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any, makeStoreConfigService());
 
             // Set up a mock notebook with a previous cell having metadata
             const nbUri = Uri.parse('file:///nb9.sparql-book');
@@ -834,7 +840,7 @@ describe('SparqlConnectionService', () => {
                 return { dispose: () => {} };
             };
 
-            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+            const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any, makeStoreConfigService());
 
             const nbUri = Uri.parse('file:///nb10.sparql-book');
             const newCellUri = _buildCellUri('file:///nb10.sparql-book');
@@ -888,7 +894,7 @@ describe('SparqlConnectionService', () => {
                 },
                 subscriptions: [],
             };
-            const svc = new SparqlConnectionService(ctx as any, { getCredential: async () => null } as any);
+            const svc = new SparqlConnectionService(ctx as any, { getCredential: async () => null } as any, makeStoreConfigService());
             return { svc, store };
         }
 
@@ -1047,7 +1053,7 @@ describe('SparqlConnectionService', () => {
         });
     });
 
-    describe('store inference application', () => {
+    describe('store inference application (URL-parameter only — pragma rewriting moved to SparqlQueryService)', () => {
         it('appends the url-parameter fragment to the query source for a reasoning store', () =>
             withBuiltInStoreConfigs(async svc => {
                 const conn: SparqlConnection = {
@@ -1058,35 +1064,6 @@ describe('SparqlConnectionService', () => {
                 expect(((await svc.getQuerySourceForConnection({ ...conn, inferenceEnabled: false })) as any).value).toContain('infer=false');
             })
         );
-
-        it('does not rewrite the query text for a url-parameter store', () => {
-            const svc = makeService();
-            const conn: SparqlConnection = {
-                id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'rdf4j',
-            };
-            expect(svc.rewriteQueryForInference(conn, 'ASK {}', true)).toBe('ASK {}');
-        });
-
-        it('prepends the query pragma for a query-pragma store', async () => {
-            await withStoreConfigs(
-                [{ id: 'stardog', label: 'Stardog', inference: { supported: true, queryPragma: { enabled: '#pragma reasoning on', disabled: '#pragma reasoning off' } } }],
-                svc => {
-                    const conn: SparqlConnection = {
-                        id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'stardog',
-                    };
-                    expect(svc.rewriteQueryForInference(conn, 'ASK {}', true)).toBe('#pragma reasoning on\nASK {}');
-                    expect(svc.rewriteQueryForInference(conn, 'ASK {}', false)).toBe('#pragma reasoning off\nASK {}');
-                }
-            );
-        });
-
-        it('is the identity for a plain sparql connection (no reasoning)', () => {
-            const svc = makeService();
-            const conn: SparqlConnection = {
-                id: 'c', endpointUrl: 'https://e/sparql', configScope: ConfigurationScope.User, storeType: 'sparql',
-            };
-            expect(svc.rewriteQueryForInference(conn, 'ASK {}', true)).toBe('ASK {}');
-        });
     });
 
     describe('storeType persistence', () => {
@@ -1107,7 +1084,7 @@ describe('SparqlConnectionService', () => {
             });
 
             try {
-                const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+                const svc = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any, makeStoreConfigService());
                 const conn = await svc.createConnection();
                 conn.storeType = 'jena';
                 await svc.updateConnection(conn);
@@ -1117,7 +1094,7 @@ describe('SparqlConnectionService', () => {
                 expect(serialized.storeType).toBe('jena');
 
                 // A fresh service loads from the captured global value.
-                const svc2 = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any);
+                const svc2 = new SparqlConnectionService(makeContext() as any, makeCredentialStorage() as any, makeStoreConfigService());
                 expect(svc2.getConnection(conn.id)?.storeType).toBe('jena');
             } finally {
                 (vscode.workspace as any).getConfiguration = original;

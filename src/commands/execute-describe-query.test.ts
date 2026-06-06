@@ -10,6 +10,7 @@ const { mockSparqlResultsController, mockConnectionService } = vi.hoisted(() => 
 	mockConnectionService: {
 		getConnectionForDocument: vi.fn(() => ({ id: 'workspace' })),
 		setQuerySourceForDocument: vi.fn(async () => undefined),
+		getQueryTemplate: vi.fn((_conn: any, _kind: string) => undefined as string | undefined),
 	},
 }));
 
@@ -32,12 +33,7 @@ import { executeDescribeQuery } from '@src/commands/execute-describe-query';
 const DESCRIBE_TEMPLATE = 'CONSTRUCT { <{{resourceIri}}> ?p ?o }\n{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }';
 
 function mockDescribeTemplate(template: string = DESCRIBE_TEMPLATE) {
-	vi.spyOn(vscode.workspace, 'getConfiguration').mockReturnValue({
-		get: (key: string, defaultValue?: any) => key === 'sparql.describeQueryTemplate' ? template : defaultValue,
-		has: () => true,
-		inspect: () => undefined,
-		update: async () => {}
-	} as any);
+	mockConnectionService.getQueryTemplate.mockReturnValue(template);
 }
 
 beforeEach(() => {

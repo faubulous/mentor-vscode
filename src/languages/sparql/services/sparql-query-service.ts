@@ -7,6 +7,7 @@ import { AuthCredential, EntraClientAuthCredential } from '@src/services/core/cr
 import { ICredentialStorageService } from '@src/services/core';
 import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
 import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/languages/sparql/services';
+import { ISparqlStoreConfigService } from './sparql-store-config-service';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
 import { getConfig } from '@src/utilities/vscode/config';
@@ -60,7 +61,8 @@ export class SparqlQueryService {
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _credentialStorage: ICredentialStorageService,
 		private readonly _connectionService: ISparqlConnectionService,
-		private readonly _resultSerializer: ISparqlResultSerializer
+		private readonly _resultSerializer: ISparqlResultSerializer,
+		private readonly _storeConfigService: ISparqlStoreConfigService
 	) {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);
@@ -374,11 +376,25 @@ export class SparqlQueryService {
 			const connection = source.connection;
 			const credential = await this._credentialStorage.getCredential(connection.id);
 			options.fetch = this._getFetchHandler(credential);
+
+			// Apply store-specific query-text rewriting for inference (e.g. reasoning pragmas).
+			const inferenceEnabled = source.inferenceEnabled
+				?? this._connectionService.getInferenceEnabled(connection.id);
+
+			const queryPragma = this._storeConfigService.getStoreConfig(connection.storeType)?.inference?.queryPragma;
+
+			if (queryPragma) {
+				const pragma = (inferenceEnabled ? queryPragma.enabled : queryPragma.disabled)?.trim();
+
+				if (pragma) {
+					query = `${pragma}\n${query}`;
+				}
+			}
 		}
 
 		// Apply query timeout from configuration (0 means no timeout)
 		const timeout = getConfig('sparql').get<number>('queryTimeout', 30000);
-		
+
 		if (timeout > 0) {
 			options.timeout = timeout;
 		}

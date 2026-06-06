@@ -16,7 +16,7 @@ vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
 			if (token === 'SparqlConnectionService') return mockConnService;
-			if (token === 'ViewRouter') return mockRouter;
+			if (token === 'WebviewRouter') return mockRouter;
 			return {};
 		}),
 	},

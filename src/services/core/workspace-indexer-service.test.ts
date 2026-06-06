@@ -449,7 +449,7 @@ describe('WorkspaceIndexerService', () => {
 			await indexPromise;
 			const textAfterSettlement = (service as any)._statusBarItem.text;
 
-			expect(textAfterSettlement).toMatch(/Indexed/);
+			expect(textAfterSettlement).toMatch(/Loaded/);
 		});
 	});
 });

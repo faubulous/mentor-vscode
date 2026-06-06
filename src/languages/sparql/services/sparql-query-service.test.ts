@@ -56,6 +56,7 @@ function makeService(context = makeContext()) {
         {} as any,    // credentialStorage (not used in history tests)
         {} as any,    // connectionService (not used in history tests)
         {} as any,    // resultSerializer (not used in history tests)
+        { getStoreConfig: () => undefined } as any,    // storeConfigService
     );
 }
 
@@ -63,6 +64,7 @@ function makeFullService() {
     const connectionService = {
         getQuerySourceForDocument: vi.fn().mockResolvedValue({ type: 'sparql', connection: { id: 'test' } }),
         getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'file', file: 'test.nt' }),
+        getInferenceEnabled: vi.fn().mockReturnValue(false),
     };
     const credentialStorage = {
         getCredential: vi.fn().mockResolvedValue(null),
@@ -77,6 +79,7 @@ function makeFullService() {
         credentialStorage as any,
         connectionService as any,
         resultSerializer as any,
+        { getStoreConfig: () => undefined } as any,
     );
 }
 
@@ -100,6 +103,7 @@ function makeConnectionService() {
         credentialStorage as any,
         connectionService as any,
         resultSerializer as any,
+        { getStoreConfig: () => undefined } as any,
     );
 }
 
@@ -932,6 +936,7 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
             getConnection: vi.fn().mockReturnValue(connection),
             getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'sparql', connection }),
             getQuerySourceForDocument: vi.fn(),
+            getInferenceEnabled: vi.fn().mockReturnValue(false),
         };
         const credentialStorage = { getCredential: vi.fn().mockResolvedValue(null) };
         const resultSerializer = {
@@ -942,6 +947,7 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
             credentialStorage as any,
             connectionService as any,
             resultSerializer as any,
+            { getStoreConfig: () => undefined } as any,
         );
 
         const ctx: any = {
@@ -974,6 +980,7 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
             {} as any,
             connectionService as any,
             {} as any,
+            { getStoreConfig: () => undefined } as any,
         );
 
         const ctx: any = {

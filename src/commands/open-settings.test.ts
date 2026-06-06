@@ -11,7 +11,7 @@ const { mockRouter } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ViewRouter') return mockRouter;
+			if (token === 'WebviewRouter') return mockRouter;
 			return {};
 		}),
 	},
