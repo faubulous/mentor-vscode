@@ -2,13 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockConnectionService } = vi.hoisted(() => ({
+const { mockConnectionService, mockStoreConfigService } = vi.hoisted(() => ({
 	mockConnectionService: {
 		getConnection: vi.fn(),
 		getConnectionForDocument: vi.fn(),
-		supportsInference: vi.fn(),
 		toggleInferenceEnabled: vi.fn(),
 		toggleInferenceEnabledForDocument: vi.fn(),
+	},
+	mockStoreConfigService: {
+		supportsInference: vi.fn(),
 	}
 }));
 
@@ -16,6 +18,7 @@ vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
 			if (token === 'SparqlConnectionService') return mockConnectionService;
+			if (token === 'SparqlStoreConfigService') return mockStoreConfigService;
 			return {};
 		}),
 	},
@@ -30,7 +33,7 @@ import { toggleDocumentInference } from '@src/commands/toggle-document-inference
 beforeEach(() => {
 	vi.clearAllMocks();
 	(vscode.window as any).activeTextEditor = undefined;
-	mockConnectionService.supportsInference.mockReturnValue(true);
+	mockStoreConfigService.supportsInference.mockReturnValue(true);
 	mockConnectionService.getConnectionForDocument.mockReturnValue(undefined);
 	mockConnectionService.toggleInferenceEnabledForDocument.mockResolvedValue(true);
 });
@@ -53,7 +56,7 @@ describe('toggleDocumentInference', () => {
 	it('should show error when connection does not support inference', async () => {
 		const docUri = vscode.Uri.parse('file:///doc.ttl');
 		mockConnectionService.getConnectionForDocument.mockReturnValue({ endpointUrl: 'http://endpoint' });
-		mockConnectionService.supportsInference.mockReturnValue(false);
+		mockStoreConfigService.supportsInference.mockReturnValue(false);
 		const showError = vi.spyOn(vscode.window, 'showErrorMessage');
 
 		await toggleDocumentInference.handler(docUri as any);
@@ -64,7 +67,7 @@ describe('toggleDocumentInference', () => {
 	it('should toggle inference and show status message when connection supports it', async () => {
 		const docUri = vscode.Uri.parse('file:///doc.ttl');
 		mockConnectionService.getConnectionForDocument.mockReturnValue({ endpointUrl: 'http://endpoint' });
-		mockConnectionService.supportsInference.mockReturnValue(true);
+		mockStoreConfigService.supportsInference.mockReturnValue(true);
 		mockConnectionService.toggleInferenceEnabledForDocument.mockResolvedValue(true);
 		const setStatus = vi.spyOn(vscode.window, 'setStatusBarMessage');
 
@@ -78,7 +81,7 @@ describe('toggleDocumentInference', () => {
 		const docUri = vscode.Uri.parse('file:///editor.ttl');
 		(vscode.window as any).activeTextEditor = { document: { uri: docUri } };
 		mockConnectionService.getConnectionForDocument.mockReturnValue({ endpointUrl: 'http://endpoint' });
-		mockConnectionService.supportsInference.mockReturnValue(true);
+		mockStoreConfigService.supportsInference.mockReturnValue(true);
 		mockConnectionService.toggleInferenceEnabledForDocument.mockResolvedValue(false);
 		const setStatus = vi.spyOn(vscode.window, 'setStatusBarMessage');
 

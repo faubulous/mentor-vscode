@@ -758,7 +758,7 @@ export class SparqlConnectionService {
 				credential = await this._credentialStorage.getCredential(connection.id);
 			}
 
-			Object.assign(headers, await this._getAuthHeaders(credential as AuthCredential));
+			Object.assign(headers, await this.getAuthHeaders(credential as AuthCredential));
 
 			const response = await fetch(connection.endpointUrl, {
 				method: 'POST',
@@ -799,7 +799,7 @@ export class SparqlConnectionService {
 	 * @param credential The authentication credential.
 	 * @returns A record containing the `Authorization` header, or an empty record.
 	 */
-	private async _getAuthHeaders(credential?: AuthCredential): Promise<Record<string, string>> {
+	async getAuthHeaders(credential?: AuthCredential): Promise<Record<string, string>> {
 		const headers: Record<string, string> = {};
 
 		if (credential?.type === 'basic') {

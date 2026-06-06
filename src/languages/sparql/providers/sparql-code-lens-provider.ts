@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
+import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { getConfig } from '@src/utilities/vscode/config';
 import { MENTOR_WORKSPACE_STORE } from '../services/sparql-connection-service';
 import { SparqlConnection } from '../services/sparql-connection';
@@ -13,12 +14,14 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
 	private _connectionService: ISparqlConnectionService;
+	private _storeConfigService: ISparqlStoreConfigService;
 	private _queryService: ISparqlQueryService;
 
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
 		this._connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		this._storeConfigService = container.resolve<ISparqlStoreConfigService>(ServiceToken.SparqlStoreConfigService);
 		this._queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 
 		this._connectionService.onDidChangeConnectionForDocument(() => {
@@ -59,7 +62,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		const config = getConfig();
 
 		// Inference status CodeLens (only for connections that support inference)
-		if (config.get('inference.enabled') && this._connectionService.supportsInference(connection)) {
+		if (config.get('inference.enabled') && this._storeConfigService.supportsInference(connection)) {
 			const inferenceEnabled = this._connectionService.getInferenceEnabledForDocument(document.uri);
 			const inferenceIcon = inferenceEnabled ? '$(lightbulb-sparkle)' : '$(lightbulb-sparkle)';
 			const inferenceText = inferenceEnabled ? 'on' : 'off';

@@ -281,7 +281,7 @@ describe('SparqlConnectionService', () => {
             const conn = await svc.createConnection();
             conn.storeType = 'sparql';
             // Default SparqlEndpointFactory does not support inference for plain sparql
-            expect(svc.supportsInference(conn)).toBe(false);
+            expect(makeStoreConfigService().supportsInference(conn)).toBe(false);
         });
     });
 
@@ -998,16 +998,16 @@ describe('SparqlConnectionService', () => {
 
     describe('getStoreConfigs', () => {
         it('lists the built-in store configs (and not the internal workspace store)', () =>
-            withBuiltInStoreConfigs(svc => {
-                const ids = svc.getStoreConfigs().map(s => s.id);
+            withBuiltInStoreConfigs(() => {
+                const ids = makeStoreConfigService().getStoreConfigs().map((s: SparqlStoreConfig) => s.id);
                 expect(ids).toEqual(['sparql', 'jena', 'rdf4j', 'qlever']);
                 expect(ids).not.toContain('workspace');
             })
         );
 
         it('exposes reasoning support via inference.supported', () =>
-            withBuiltInStoreConfigs(svc => {
-                const byId = Object.fromEntries(svc.getStoreConfigs().map(s => [s.id, s]));
+            withBuiltInStoreConfigs(() => {
+                const byId = Object.fromEntries(makeStoreConfigService().getStoreConfigs().map((s: SparqlStoreConfig) => [s.id, s]));
                 expect(byId['rdf4j']?.inference?.supported).toBe(true);
                 expect(byId['sparql']?.inference).toBeUndefined();
                 expect(byId['qlever']?.inference).toBeUndefined();
@@ -1015,8 +1015,8 @@ describe('SparqlConnectionService', () => {
         );
 
         it('exposes the jena store-specific empty-pattern listGraphs query', () =>
-            withBuiltInStoreConfigs(svc => {
-                const jena = svc.getStoreConfigs().find(s => s.id === 'jena');
+            withBuiltInStoreConfigs(() => {
+                const jena = makeStoreConfigService().getStoreConfigs().find((s: SparqlStoreConfig) => s.id === 'jena');
                 expect(jena?.queries?.listGraphs).toContain('GRAPH ?graph {}');
             })
         );
@@ -1024,9 +1024,9 @@ describe('SparqlConnectionService', () => {
 
     describe('getStoreConfig', () => {
         it('resolves a store config by id (defaulting to sparql)', () =>
-            withBuiltInStoreConfigs(svc => {
-                expect(svc.getStoreConfig('rdf4j')?.label).toBe('RDF4J');
-                expect(svc.getStoreConfig(undefined)?.id).toBe('sparql');
+            withBuiltInStoreConfigs(() => {
+                expect(makeStoreConfigService().getStoreConfig('rdf4j')?.label).toBe('RDF4J');
+                expect(makeStoreConfigService().getStoreConfig(undefined)?.id).toBe('sparql');
             })
         );
     });

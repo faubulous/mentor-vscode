@@ -2,13 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockConnectionService } = vi.hoisted(() => ({
+const { mockConnectionService, mockStoreConfigService } = vi.hoisted(() => ({
 	mockConnectionService: {
 		getConnection: vi.fn(),
 		getConnectionForDocument: vi.fn(),
-		supportsInference: vi.fn(),
 		toggleInferenceEnabled: vi.fn(),
 		toggleInferenceEnabledForDocument: vi.fn(),
+	},
+	mockStoreConfigService: {
+		supportsInference: vi.fn(),
 	}
 }));
 
@@ -16,6 +18,7 @@ vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
 			if (token === 'SparqlConnectionService') return mockConnectionService;
+			if (token === 'SparqlStoreConfigService') return mockStoreConfigService;
 			return {};
 		}),
 	},
@@ -30,7 +33,7 @@ import { toggleSparqlConnectionInference } from '@src/commands/toggle-sparql-con
 beforeEach(() => {
 	vi.clearAllMocks();
 	(vscode.window as any).activeTextEditor = undefined;
-	mockConnectionService.supportsInference.mockReturnValue(true);
+	mockStoreConfigService.supportsInference.mockReturnValue(true);
 	mockConnectionService.getConnection.mockReturnValue(undefined);
 	mockConnectionService.toggleInferenceEnabled.mockResolvedValue(true);
 });
@@ -56,7 +59,7 @@ describe('toggleSparqlConnectionInference', () => {
 	it('should show error when connection does not support inference', async () => {
 		const connection = { id: 'conn1', endpointUrl: 'http://endpoint' };
 		mockConnectionService.getConnection.mockReturnValue(connection);
-		mockConnectionService.supportsInference.mockReturnValue(false);
+		mockStoreConfigService.supportsInference.mockReturnValue(false);
 		const showError = vi.spyOn(vscode.window, 'showErrorMessage');
 
 		await toggleSparqlConnectionInference.handler(undefined);
@@ -67,7 +70,7 @@ describe('toggleSparqlConnectionInference', () => {
 	it('should toggle inference and show status message when successful', async () => {
 		const connection = { id: 'conn1', endpointUrl: 'http://endpoint' };
 		mockConnectionService.getConnection.mockReturnValue(connection);
-		mockConnectionService.supportsInference.mockReturnValue(true);
+		mockStoreConfigService.supportsInference.mockReturnValue(true);
 		mockConnectionService.toggleInferenceEnabled.mockResolvedValue(true);
 		const setStatus = vi.spyOn(vscode.window, 'setStatusBarMessage');
 
@@ -80,7 +83,7 @@ describe('toggleSparqlConnectionInference', () => {
 	it('should use the connection id when a SparqlConnection is passed', async () => {
 		const connection = { id: 'my-conn', endpointUrl: 'http://my-endpoint' };
 		mockConnectionService.getConnection.mockReturnValue(connection);
-		mockConnectionService.supportsInference.mockReturnValue(true);
+		mockStoreConfigService.supportsInference.mockReturnValue(true);
 		mockConnectionService.toggleInferenceEnabled.mockResolvedValue(false);
 		const setStatus = vi.spyOn(vscode.window, 'setStatusBarMessage');
 
