@@ -94,12 +94,6 @@ export interface ISparqlConnectionService {
 	getGraphsForDocument(documentUri: vscode.Uri): Promise<string[]>;
 
 	/**
-	 * Gets the default inference enabled setting from VS Code configuration.
-	 * @returns The default value for inference enabled.
-	 */
-	getDefaultInferenceEnabled(): boolean;
-
-	/**
 	 * Gets whether inference is enabled for a specific connection.
 	 * @param connectionId The ID of the connection.
 	 * @returns `true` if inference is enabled, `false` otherwise.
@@ -119,12 +113,6 @@ export interface ISparqlConnectionService {
 	 * @returns The new inference enabled state.
 	 */
 	toggleInferenceEnabled(connectionId: string): Promise<boolean>;
-
-	/**
-	 * Returns whether the experimental inference feature flag is enabled.
-	 * This gates UI affordances for toggling inference per-connection or per-document.
-	 */
-	getInferenceFeatureEnabled(): Promise<boolean>;
 
 	/**
 	 * Gets the effective inference setting for a document or notebook cell.

@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { useContext } from 'react';
 import { SettingScope, SettingState } from '../settings-types';
 import { MarkdownText } from './markdown-text';
 import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from '@src/views/webviews/components/section-header-context-menu';
-import { SettingsMoveContext, SettingsScopeContext } from './setting-context';
+import { ScopeSelect } from '@src/views/webviews/components/scope-select';
 
 /**
  * Props for the SettingRow component, representing a single setting in the 
@@ -42,14 +41,30 @@ export interface SettingRowProps {
 	children: React.ReactNode;
 
 	/**
-	 * Writes the setting's value at the given scope. When `deleteScope` is provided
-	 * the value is also cleared from that scope (move semantics); otherwise only the
-	 * target scope is written (copy / restore semantics).
+	 * Writes the setting's value at the given scope. Used here only to restore the
+	 * setting to its default (`newScope === 'default'`); moving between User/Workspace
+	 * is handled by the scope dropdown.
 	 * @param currentValue The current value of the setting.
 	 * @param newScope The scope to write the value to ('user', 'workspace', or 'default').
-	 * @param deleteScope The scope to clear after writing (move only).
 	 */
-	setScope: (currentValue: unknown, newScope: SettingScope, deleteScope?: 'user' | 'workspace') => void;
+	setScope: (currentValue: unknown, newScope: SettingScope) => void;
+
+	/**
+	 * The scope this setting currently targets ('user' | 'workspace'), shown in the dropdown.
+	 * Omitted for sub-field rows that are not independent settings (no scope dropdown shown).
+	 */
+	scope?: 'user' | 'workspace';
+
+	/**
+	 * Invoked when the user picks a different scope from the dropdown. Omitted together with
+	 * `scope` for sub-field rows.
+	 */
+	onScopeSelect?: (scope: 'user' | 'workspace') => void;
+
+	/**
+	 * Whether a workspace folder is open; disables the Workspace option when false.
+	 */
+	hasWorkspace?: boolean;
 }
 
 /**
@@ -57,25 +72,14 @@ export interface SettingRowProps {
  * @param props The props for the setting row.
  * @returns A JSX element representing the setting row.
  */
-export function SettingRow({ label, description, state, setScope, children }: SettingRowProps) {
-	const panelScope = useContext(SettingsScopeContext);
+export function SettingRow({ label, description, state, setScope, scope, onScopeSelect, hasWorkspace, children }: SettingRowProps) {
 	const settingScope = state?.scope ?? 'default';
-	const otherScope: 'user' | 'workspace' = panelScope === 'user' ? 'workspace' : 'user';
-	const otherScopeLabel = panelScope === 'user' ? 'Workspace' : 'User';
-	const canMove = useContext(SettingsMoveContext) !== null;
-	const isModified = settingScope === panelScope && !valuesEqual(state?.value, state?.defaultValue);
+	const isModified = settingScope !== 'default' && !valuesEqual(state?.value, state?.defaultValue);
 
+	// Always render the menu (disabled when there's nothing to restore) so the row header
+	// keeps a consistent layout whether or not the setting has been modified.
 	const menuItems: SectionHeaderContextMenuItem[] = [
-		...(settingScope !== 'default'
-			? [
-				{ label: 'Restore defaults', onClick: () => setScope(state?.value, 'default') },
-				{ separator: true } as const
-			]
-			: []),
-		{ label: `Copy to ${otherScopeLabel} Scope`, onClick: () => setScope(state?.value, otherScope) },
-		...(isModified && canMove
-			? [{ label: `Move to ${otherScopeLabel} Scope`, onClick: () => setScope(state?.value, otherScope, panelScope) }]
-			: []),
+		{ label: 'Restore defaults', onClick: () => setScope(state?.value, 'default'), disabled: settingScope === 'default' },
 	];
 
 	return (
@@ -83,8 +87,9 @@ export function SettingRow({ label, description, state, setScope, children }: Se
 			<div className="setting-row-header">
 				<span className="setting-label">{label}</span>
 				{state?.experimental && <span className="badge-experimental">Experimental</span>}
-				{isModified && <span className="setting-modified-tag" title={`Modified in ${panelScope} settings`}>MODIFIED</span>}
+				{isModified && <span className="setting-modified-tag" title={`Modified in ${settingScope} settings`}>MODIFIED</span>}
 				<span className="setting-leader" aria-hidden="true" />
+				{scope && onScopeSelect && <ScopeSelect value={scope} onChange={onScopeSelect} hasWorkspace={hasWorkspace} />}
 				<SectionHeaderContextMenu items={menuItems} />
 			</div>
 			{description && <p className="setting-description"><MarkdownText text={description} /></p>}

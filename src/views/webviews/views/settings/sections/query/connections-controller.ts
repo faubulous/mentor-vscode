@@ -193,12 +193,6 @@ export class ConnectionsSectionController implements SettingsSectionController {
 
 				return true;
 			}
-			case 'GetInferenceFeatureEnabled': {
-				const value = await connectionService.getInferenceFeatureEnabled();
-				this._post({ section: SECTION_ID, id: 'GetInferenceFeatureEnabledResult', value });
-
-				return true;
-			}
 			case 'GetStoreTypes': {
 				const storeConfigService = container.resolve<ISparqlStoreConfigService>(ServiceToken.SparqlStoreConfigService);
 				this._post({

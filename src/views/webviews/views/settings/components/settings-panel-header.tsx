@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { ScopeTabs } from '../../../components/scope-tabs';
 
 export function MentorIcon() {
 	const url = document.getElementById('root')?.dataset.mentorIconUrl;
@@ -17,14 +16,12 @@ export function MentorIcon() {
 
 export interface SettingsPanelHeaderProps {
 	version: string;
-	activeScope: 'user' | 'workspace';
 	searchTerm: string;
-	onScopeTabChange: (scope: 'user' | 'workspace') => void;
 	onSearchChange: (term: string) => void;
 	onOpenHomepage: () => void;
 }
 
-export function SettingsPanelHeader({ version, activeScope, onScopeTabChange, searchTerm, onSearchChange, onOpenHomepage }: SettingsPanelHeaderProps) {
+export function SettingsPanelHeader({ version, searchTerm, onSearchChange, onOpenHomepage }: SettingsPanelHeaderProps) {
 	return (
 		<div className="panel-header">
 			<div className="panel-header-inner">
@@ -34,9 +31,6 @@ export function SettingsPanelHeader({ version, activeScope, onScopeTabChange, se
 						<span className="panel-header-title">Mentor</span>
 						{version && <span className="panel-header-version">v{version}</span>}
 					</div>
-				</div>
-				<div className="panel-header-scope">
-					<ScopeTabs activeScope={activeScope} onScopeChange={onScopeTabChange} />
 				</div>
 				<div className="panel-header-search">
 					<div className="search-field-wrapper">

@@ -1,31 +1,34 @@
 import React from "react";
-import { SettingsSource } from "../settings-types";
+import { SettingState, SettingsSource } from "../settings-types";
 
 /**
- * Provides the currently active settings scope tab ('user' | 'workspace')
- * to descendants (e.g. SettingRow, bulk-scope menu computation) without prop drilling.
+ * Provides whether a workspace folder is currently open. Scope pickers use this to
+ * disable the Workspace option, since workspace-scoped values cannot be written
+ * without an open workspace.
  */
-export const SettingsScopeContext = React.createContext<'user' | 'workspace'>('user');
+export const SettingsWorkspaceContext = React.createContext<boolean>(true);
 
 /**
- * Provides a setter for the active settings scope. When non-null, descendants
- * may invoke it to switch the settings panel's User/Workspace tab from inside
- * embedded views (e.g. the SPARQL connection editor modal), keeping both
- * selectors in sync.
+ * Per-key scope selection API. Replaces the former global User/Workspace tab: each
+ * setting row now picks its own target scope.
  */
-export const SettingsScopeSetContext = React.createContext<((scope: 'user' | 'workspace') => void) | null>(null);
+export interface ScopeTargetApi {
+	/**
+	 * Returns the current target scope for a key — the scope the setting lives in if set,
+	 * otherwise the scope a future edit would be written to (defaults to `'user'`).
+	 */
+	get(source: SettingsSource, key: string, state: SettingState | undefined): 'user' | 'workspace';
+
+	/**
+	 * Selects a new target scope for a key. When the setting already holds a non-default
+	 * value in a different scope, this moves it (writes the new scope, clears the old);
+	 * otherwise it only retargets where the next edit lands.
+	 */
+	select(source: SettingsSource, key: string, newScope: 'user' | 'workspace', state: SettingState | undefined): void;
+}
 
 /**
- * Provides a callback for moving a setting from one scope to another (copy + clear source).
- * The `source` discriminates between top-level `mentor.*` keys and per-language
- * `editor.*` overrides.
+ * Provides the per-key scope selection API to setting rows without prop drilling.
+ * `null` when rendered outside the settings panel.
  */
-export const SettingsMoveContext = React.createContext<
-	((
-		source: SettingsSource,
-		key: string,
-		fromScope: 'user' | 'workspace',
-		toScope: 'user' | 'workspace',
-		value: unknown) => void
-	) | null
->(null);
+export const SettingsScopeTargetContext = React.createContext<ScopeTargetApi | null>(null);

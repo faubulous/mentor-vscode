@@ -35,9 +35,6 @@ export class SparqlConnectionService {
 	/** VS Code settings key under which SPARQL connections are persisted. */
 	private readonly _connectionsConfigKey = 'sparql.connections';
 
-	/** VS Code settings key for the global default inference-enabled flag. */
-	private readonly _defaultInferenceEnabledConfigKey = 'sparql.defaultInferenceEnabled';
-
 	/** Workspace-state key prefix for per-connection inference settings (`<prefix><connectionId>`). */
 	private readonly _inferenceEnabledStorageKeyPrefix = 'mentor.inference.enabled:';
 
@@ -165,7 +162,7 @@ export class SparqlConnectionService {
 	 */
 	private _createWorkspaceStoreConnection(): SparqlConnection {
 		const storageKey = `${this._inferenceEnabledStorageKeyPrefix}${MENTOR_WORKSPACE_STORE.id}`;
-		const inferenceEnabled = this._extensionContext.workspaceState.get<boolean>(storageKey, this.getDefaultInferenceEnabled());
+		const inferenceEnabled = this._extensionContext.workspaceState.get<boolean>(storageKey, false);
 
 		return {
 			...MENTOR_WORKSPACE_STORE,
@@ -175,21 +172,14 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Gets the default inference-enabled setting from VS Code configuration.
-	 * @returns `true` if inference should be enabled by default, `false` otherwise.
-	 */
-	getDefaultInferenceEnabled(): boolean {
-		return getConfig().get<boolean>(this._defaultInferenceEnabledConfigKey, false);
-	}
-
-	/**
-	 * Gets whether inference is currently enabled for a specific connection.
+	 * Gets whether inference is currently enabled for a specific connection. Inference is opt-in
+	 * per connection (off unless the connection explicitly enables it).
 	 * @param connectionId The ID of the connection.
 	 * @returns `true` if inference is enabled, `false` otherwise.
 	 */
 	getInferenceEnabled(connectionId: string): boolean {
 		const connection = this._connections.find(c => c.id === connectionId);
-		return connection?.inferenceEnabled ?? this.getDefaultInferenceEnabled();
+		return connection ? (connection.inferenceEnabled ?? false) : false;
 	}
 
 	/**
@@ -229,15 +219,6 @@ export class SparqlConnectionService {
 	}
 
 	/**
-	 * Returns whether the experimental inference feature flag is enabled.
-	 * This gates UI affordances for toggling inference per-connection or per-document.
-	 * @returns `true` if the inference feature is enabled, `false` otherwise.
-	 */
-	async getInferenceFeatureEnabled(): Promise<boolean> {
-		return getConfig().get<boolean>('inference.enabled', false);
-	}
-
-	/**
 	 * Gets the effective inference setting for a document or notebook cell.
 	 * Priority: document/cell setting → connection setting → global default.
 	 * @param documentUri The URI of the document or notebook cell.
@@ -253,7 +234,7 @@ export class SparqlConnectionService {
 		}
 
 		const connection = this.getConnectionForDocument(documentUri);
-		return connection.inferenceEnabled ?? this.getDefaultInferenceEnabled();
+		return connection.inferenceEnabled ?? false;
 	}
 
 	/**
@@ -508,7 +489,7 @@ export class SparqlConnectionService {
 	 * @returns A promise that resolves to a Comunica source configuration.
 	 */
 	async getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaEndpoint> {
-		const inferenceEnabled = connection.inferenceEnabled ?? this.getDefaultInferenceEnabled();
+		const inferenceEnabled = connection.inferenceEnabled ?? false;
 		return this._createQuerySource(connection, inferenceEnabled);
 	}
 

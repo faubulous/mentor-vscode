@@ -1,0 +1,158 @@
+/*
+ * Shared form styling for modal-dialog editors (SPARQL connection editor, store editor, …).
+ * Apply the `modal-form` class to the editor's root element and import this stylesheet. The
+ * `.form-actions` rules are intentionally global because the action buttons are portalled into
+ * the modal header, outside the `.modal-form` container.
+ */
+
+.modal-form {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin: -16px;
+	margin-top: -8px;
+	min-height: 250px;
+}
+
+.modal-form .form-header,
+.modal-form .row {
+	display: flex;
+	flex-direction: row;
+	gap: 1em;
+}
+
+.modal-form .form-header {
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--vscode-panel-border);
+	align-items: center;
+}
+
+.modal-form .form-header h2 {
+	margin: 0;
+	font-size: 1.4em;
+	font-weight: 500;
+}
+
+.modal-form .column {
+	display: flex;
+	flex-direction: column;
+	gap: 1em;
+}
+
+.modal-form form {
+	display: flex;
+	flex-direction: column;
+	gap: 1em;
+}
+
+.modal-form .form-body,
+.modal-form section {
+	display: flex;
+	flex-direction: column;
+}
+
+.modal-form .form-body {
+	gap: 2em;
+}
+
+.modal-form section {
+	gap: 1em;
+}
+
+.form-actions {
+	display: flex;
+	flex-direction: row;
+	gap: 1em;
+	align-items: center;
+	min-height: 28px;
+	margin-left: auto;
+}
+
+.form-actions.readonly {
+	align-items: center;
+}
+
+.form-actions.readonly vscode-icon {
+	width: 20px;
+}
+
+.modal-form .form-toolbar {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.modal-form vscode-label {
+	margin-bottom: 0.25em;
+}
+
+.modal-form vscode-tab-panel {
+	padding: 1em 0;
+}
+
+.modal-form vscode-tab-panel:not([hidden]) {
+	display: flex;
+	flex-direction: column;
+	gap: 2em;
+}
+
+.modal-form vscode-tab-header {
+	padding: 0 0.75em;
+}
+
+.modal-form vscode-tab-panel {
+	/* A little more breathing room above the first label / section header in each tab. */
+	padding: 1em 1.5em;
+	max-height: 300px;
+	min-height: 300px;
+	overflow: auto;
+}
+
+.modal-form vscode-form-group {
+	margin: 12px 0;
+}
+
+.modal-form vscode-form-helper {
+	margin-top: 0;
+	color: var(--vscode-descriptionForeground);
+}
+
+.modal-form vscode-context-menu {
+	position: absolute;
+	z-index: 10;
+}
+
+.modal-form .label-optional {
+	font-weight: 400;
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+	text-transform: none;
+	letter-spacing: 0;
+}
+
+.modal-form .section-label {
+	color: var(--vscode-foreground);
+	font-size: 1em;
+	letter-spacing: 0.5px;
+	font-weight: 600;
+	line-height: 2em;
+}
+
+.modal-form .section-description {
+	margin: 0 0 0.5em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.text-muted {
+	padding: 1em;
+	color: var(--vscode-tab-inactiveForeground);
+}
+
+.layout-row {
+	display: flex;
+	flex-direction: row;
+	gap: 1em;
+}

@@ -1,14 +1,15 @@
 import * as React from 'react';
-import { useState, useEffect, useCallback, useContext } from 'react';
-import { ConfigurationScope } from '@src/utilities/config-scope';
+import { useState, useEffect, useCallback } from 'react';
 import { ModalDialog } from '../../../../components/modal-dialog';
-import { SettingsScopeContext } from '../../components/setting-context';
+import { SettingRow } from '../../components/setting-row';
+import { useSettingRowProps } from '../../components/use-setting-row-props';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { SparqlConnectionEditor } from '../../../sparql-connection/sparql-connection-editor';
 import { SparqlConnectionMessages } from '../../../sparql-connection/sparql-connection-messages';
 import { SparqlConnectionsList } from '../../../sparql-connections-list/sparql-connections-list';
 import { SparqlConnectionsListMessages } from '../../../sparql-connections-list/sparql-connections-list-messages';
-import { TestResult } from '../../settings-types';
+import { MENTOR_SOURCE, TestResult } from '../../settings-types';
+import { SettingsSectionProps } from '../../settings-section-props';
 import { useScopedWebviewMessaging } from '../../../../webview-hooks';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
@@ -16,13 +17,13 @@ export const queryConnectionsSection = {
 	id: 'connections',
 	label: 'Connections',
 	component: QueryConnectionsSection,
-	keys: ['sparql.connections'],
+	keys: ['sparql.connections', 'sparql.queryTimeout'],
 } as const satisfies SettingsSectionDescriptor;
 
 type QueryConnectionsSectionMessage = SparqlConnectionsListMessages | SparqlConnectionMessages;
 
-export function QueryConnectionsSection() {
-	const activeScope = useContext(SettingsScopeContext);
+export function QueryConnectionsSection({ settings, onUpdate, setScope }: SettingsSectionProps) {
+	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
 
 	const [connections, setConnections] = useState<SparqlConnection[]>([]);
 	const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
@@ -70,23 +71,6 @@ export function QueryConnectionsSection() {
 		});
 	}, [testResults]);
 
-	useEffect(() => {
-		if (!editingConnection) {
-			return;
-		}
-
-		const newScope = activeScope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
-
-		if (editingConnection.configScope === newScope) {
-			return;
-		}
-
-		setEditingConnection(prev => prev ? { ...prev, configScope: newScope } : prev);
-	}, [activeScope]);
-
-	const scopeEnum = activeScope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
-	const filtered = connections.filter(c => c.configScope === scopeEnum || c.isProtected === true);
-
 	const handleTestConnection = (connection: SparqlConnection, e: React.MouseEvent) => {
 		e.stopPropagation();
 		setTestingConnections(prev => new Set(prev).add(connection.id));
@@ -110,7 +94,7 @@ export function QueryConnectionsSection() {
 	return (
 		<>
 			<SparqlConnectionsList
-				connections={filtered}
+				connections={connections}
 				testResults={testResults}
 				testingConnections={testingConnections}
 				onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
@@ -121,6 +105,18 @@ export function QueryConnectionsSection() {
 				onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
 				onChangeSparqlConnectionScope={(connection, toScope) => messaging?.postMessage({ id: 'ChangeSparqlConnectionScope', connection, toScope })}
 			/>
+			<div className="settings-subsection">
+				<SettingRow {...rowProps('sparql.queryTimeout')}>
+					<vscode-textfield
+						className="setting-input-md"
+						value={String(settings['sparql.queryTimeout']?.value ?? 30000)}
+						type="number"
+						onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'sparql.queryTimeout', Number((e.target as HTMLInputElement).value))}
+					>
+						<span slot="content-after" className="setting-input-suffix">ms</span>
+					</vscode-textfield>
+				</SettingRow>
+			</div>
 			<ModalDialog
 				open={!!editingConnection}
 				title="Edit Connection"

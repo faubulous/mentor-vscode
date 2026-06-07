@@ -732,7 +732,8 @@
         "command": "mentor.command.setNotebookInference",
         "title": "Inference",
         "icon": "$(lightbulb-sparkle)",
-        "category": "Mentor"
+        "category": "Mentor",
+        "enablement": "mentor.activeNotebookSupportsInference"
       },
       {
         "command": "mentor.command.deletePrefixes",
@@ -1129,7 +1130,7 @@
         },
         {
           "command": "mentor.command.setNotebookInference",
-          "when": "notebookType == 'mentor-notebook' && config.mentor.inference.enabled",
+          "when": "notebookType == 'mentor-notebook'",
           "group": "navigation"
         },
         {
@@ -1329,13 +1330,6 @@
             "description": "List of SPARQL endpoint connections.",
             "default": []
           },
-          "mentor.sparql.defaultInferenceEnabled": {
-            "type": "boolean",
-            "title": "Inference Enabled by Default",
-            "description": "Default value for whether inferred triples should be included in SPARQL query results. This applies to connections that support inference toggling (e.g., the workspace store).",
-            "default": false,
-            "experimental": true
-          },
           "mentor.sparql.listGraphsQuery": {
             "type": "string",
             "title": "List Graphs Query",
@@ -1404,6 +1398,10 @@
                   "type": "string",
                   "description": "Human-readable name shown in pickers."
                 },
+                "description": {
+                  "type": "string",
+                  "description": "Optional free-text description of the store type."
+                },
                 "inference": {
                   "type": "object",
                   "description": "Reasoning control. Present sub-structures determine how reasoning is toggled; both may be set.",
@@ -1411,6 +1409,10 @@
                     "supported": {
                       "type": "boolean",
                       "description": "Whether the store supports toggling reasoning."
+                    },
+                    "enabledByDefault": {
+                      "type": "boolean",
+                      "description": "Whether inferred triples are included by default for connections using this store."
                     },
                     "urlParameters": {
                       "type": "object",
@@ -1518,13 +1520,6 @@
               "Grey out missing language tags only for definitions in the active document."
             ],
             "default": "Document"
-          },
-          "mentor.inference.enabled": {
-            "type": "boolean",
-            "title": "Enable SPARQL Inference",
-            "description": "If enabled, you will be able to toggle inferencing on and off for SPARQL connections that support this feature.",
-            "default": false,
-            "experimental": true
           },
           "mentor.predicates.label": {
             "type": "array",

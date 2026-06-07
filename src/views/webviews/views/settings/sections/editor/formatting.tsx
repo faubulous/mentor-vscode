@@ -1,9 +1,8 @@
-import { useContext, useMemo } from 'react';
+import { useMemo } from 'react';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { FormattingLanguage } from '@src/services/document/document-languages';
 import { SectionHeaderContextMenu } from '@src/views/webviews/components/section-header-context-menu';
 import { SettingRow } from '../../components/setting-row';
-import { SettingsScopeContext } from '../../components/setting-context';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { MENTOR_SOURCE, SettingsSource } from '../../settings-types';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
@@ -70,9 +69,6 @@ export function EditorFormattingSection({
 	const isTurtle = lang === 'turtle';
 	const langKeys = isTurtle ? turtleKeys : sparqlKeys;
 	const nonDefaultLangKeys = langKeys.filter(k => settings[k]?.scope !== 'default');
-	const activeScope = useContext(SettingsScopeContext);
-	const otherScope: 'user' | 'workspace' = activeScope === 'user' ? 'workspace' : 'user';
-	const otherScopeLabel = activeScope === 'user' ? 'Workspace' : 'User';
 	const vscodeSource = useMemo<SettingsSource>(() => ({ kind: 'languageEditor', languageId: lang }), [lang]);
 	const vscodeSlice = vscodeSettings[lang] ?? {};
 
@@ -155,7 +151,8 @@ export function EditorFormattingSection({
 						</button>
 					</div>
 					<SectionHeaderContextMenu items={nonDefaultLangKeys.length > 0 ? [
-						{ label: `Copy all to ${otherScopeLabel}`, onClick: () => onBulkScope(MENTOR_SOURCE, nonDefaultLangKeys, otherScope) },
+						{ label: 'Copy all to User', onClick: () => onBulkScope(MENTOR_SOURCE, nonDefaultLangKeys, 'user') },
+						{ label: 'Copy all to Workspace', onClick: () => onBulkScope(MENTOR_SOURCE, nonDefaultLangKeys, 'workspace') },
 					] : []} />
 				</div>
 				{isTurtle ? (

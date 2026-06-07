@@ -1,8 +1,9 @@
+import { ConfigurationScope } from '@src/utilities/config-scope';
+
 /**
  * A user-definable SPARQL store type. Store configs are stored in the `mentor.sparql.storeTypes`
  * setting and let users create, rename, and remove store types, and define the same store with
- * different settings more than once. The built-in workspace store is the only exception — it is a
- * code-only in-memory store and is not represented as a store config.
+ * different settings more than once.
  */
 export interface SparqlStoreConfig {
     /**
@@ -11,9 +12,28 @@ export interface SparqlStoreConfig {
     id: string;
 
     /**
+     * Transient, UI-only marker for which configuration scope this store is persisted in
+     * (User vs Workspace). Never serialized into the `sparql.storeTypes` setting — it is
+     * stripped before writing and re-derived on read.
+     */
+    configScope?: ConfigurationScope;
+
+    /**
      * Human-readable name shown in pickers (renamable).
      */
     label: string;
+
+    /**
+     * Optional free-text description of the store type. Set on built-in stores (e.g. the
+     * workspace store) for informational display; user-defined stores use {@link website} instead.
+     */
+    description?: string;
+
+    /**
+     * Optional website/documentation URL for the store type. When set, the store list shows it as
+     * the subline and offers an "open in browser" action.
+     */
+    website?: string;
 
     /**
      * Reasoning control configuration; absent means the store does not support reasoning.

@@ -30,6 +30,12 @@ export interface SectionHeaderContextMenuCommand {
 	 * Handler function to call when the menu item is clicked.
 	 */
 	onClick: () => void;
+
+	/**
+	 * When true, the item is shown greyed out and is not clickable. Useful for keeping a
+	 * menu's layout stable while an action is temporarily unavailable.
+	 */
+	disabled?: boolean;
 }
 
 /**
@@ -106,6 +112,7 @@ export function SectionHeaderContextMenu({ items }: { items: SectionHeaderContex
 							<button
 								key={`${item.label}-${index}`}
 								className="more-vert-item"
+								disabled={item.disabled}
 								onClick={() => { item.onClick(); setOpen(false); }}
 							>
 								{item.label}

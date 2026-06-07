@@ -1,0 +1,10 @@
+/* Store-editor-specific tweaks layered on top of the shared modal-form styles. */
+
+.modal-form.store-editor-content vscode-textfield,
+.modal-form.store-editor-content vscode-textarea {
+	width: 100%;
+}
+
+.reasoning-parameter-row vscode-label {
+	min-width: 5em;
+}

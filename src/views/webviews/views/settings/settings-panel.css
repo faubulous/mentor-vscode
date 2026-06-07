@@ -146,14 +146,10 @@ vscode-textfield .root {
 	color: var(--vscode-descriptionForeground);
 }
 
-.panel-header-scope {
-	flex-shrink: 0;
-}
-
 .panel-header-search {
 	flex: 1;
 	max-width: 300px;
-	margin-left: auto;
+	margin-right: auto;
 }
 
 .panel-header-help {
@@ -615,8 +611,8 @@ vscode-textarea.monospace {
 
 .connection-item {
 	display: flex;
-	align-items: stretch;
-	padding: var(--mentor-space-2) var(--mentor-space-4);
+	align-items: flex-start;
+	padding: var(--mentor-space-1) var(--mentor-space-4);
 	background: var(--vscode-settings-textInputBackground);
 	border-radius: var(--mentor-radius-sm);
 	border-left: 3px solid transparent;
@@ -642,7 +638,7 @@ vscode-textarea.monospace {
 
 .connection-item-icon {
 	margin-right: var(--mentor-space-4);
-	margin-top: var(--mentor-space-2);
+	margin-top: 6px;
 	flex-shrink: 0;
 }
 
@@ -659,39 +655,55 @@ vscode-textarea.monospace {
 	color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
-.connection-item-content {
+.connection-item-body {
 	flex: 1;
 	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 1px;
+	padding: 3px 0;
+}
+
+.connection-item-titlerow {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var(--mentor-space-3);
+	min-width: 0;
+}
+
+.connection-item-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	line-height: 1.4;
+}
+
+.connection-item-subline {
 	display: flex;
 	flex-direction: row;
 	align-items: baseline;
 	gap: var(--mentor-space-3);
-	padding: 3px 0;
-}
-
-.connection-item-name {
-	white-space: nowrap;
-	line-height: 1.4;
-	flex-shrink: 0;
+	min-width: 0;
 }
 
 .connection-item-description {
+	flex: 1;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	font-size: 0.85em;
 	color: var(--vscode-descriptionForeground);
-	line-height: 1.4;
-	flex: 1;
+	line-height: 1.5em;
 	min-width: 0;
 }
 
 .connection-item-lock {
 	font-size: 14px;
 	color: var(--vscode-descriptionForeground);
-	margin: 0 5px 0 9px;
-	line-height: 22px;
-	margin-top: var(--mentor-space-2);
 	flex-shrink: 0;
 }
 
@@ -700,7 +712,7 @@ vscode-textarea.monospace {
 	gap: var(--mentor-space-2);
 	opacity: 0;
 	transition: opacity 0.1s ease;
-	align-items: stretch;
+	align-items: center;
 	flex-shrink: 0;
 }
 

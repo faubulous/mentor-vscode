@@ -136,12 +136,12 @@ describe('SparqlCodeLensProvider', () => {
             expect(lenses[0].command?.command).toBe('mentor.command.selectSparqlConnection');
         });
 
-        it('only has connection and execute lenses when inference is not enabled in config', async () => {
+        it('only has connection and execute lenses when the store does not support inference', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            // inference.enabled returns false, so only connection and execute lenses
+            // supportsInference returns false, so only connection and execute lenses
             expect(lenses.length).toBe(2);
         });
 
@@ -155,11 +155,10 @@ describe('SparqlCodeLensProvider', () => {
     });
 
     describe('provideCodeLenses with inference', () => {
-        it('returns three lenses when inference is enabled and connection supports it', async () => {
+        it('returns three lenses when the connection supports inference', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = true;
             getInferenceEnabledResult = false;
-            mockGetConfig.mockReturnValue({ get: (key: string, def?: any) => key === 'inference.enabled' ? true : def });
 
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };
@@ -172,7 +171,6 @@ describe('SparqlCodeLensProvider', () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = true;
             getInferenceEnabledResult = false;
-            mockGetConfig.mockReturnValue({ get: (key: string, def?: any) => key === 'inference.enabled' ? true : def });
 
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };
@@ -184,7 +182,6 @@ describe('SparqlCodeLensProvider', () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = true;
             getInferenceEnabledResult = true;
-            mockGetConfig.mockReturnValue({ get: (key: string, def?: any) => key === 'inference.enabled' ? true : def });
 
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };
@@ -192,21 +189,9 @@ describe('SparqlCodeLensProvider', () => {
             expect(lenses[1].command?.title).toContain('on');
         });
 
-        it('does not add inference lens when inference.enabled config is false', async () => {
-            getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
-            supportsInferenceResult = true;
-            // mockGetConfig returns default (falsy) value
-
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
-            const lenses = await provider.provideCodeLenses(doc as any);
-            expect(lenses.length).toBe(2);
-        });
-
         it('does not add inference lens when connection does not support inference', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = false;
-            mockGetConfig.mockReturnValue({ get: (key: string, def?: any) => key === 'inference.enabled' ? true : def });
 
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql' };

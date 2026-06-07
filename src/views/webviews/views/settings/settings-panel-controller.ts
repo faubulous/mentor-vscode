@@ -170,6 +170,8 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 					scope: inspected.workspaceValue !== undefined ? 'workspace'
 						: inspected.globalValue !== undefined ? 'user'
 							: 'default',
+					userValue: inspected.globalValue,
+					workspaceValue: inspected.workspaceValue,
 					title: setting?.title ?? key,
 					description: setting?.description ?? '',
 					experimental: setting?.experimental === true,

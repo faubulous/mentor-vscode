@@ -260,20 +260,6 @@ describe('SparqlConnectionService', () => {
         });
     });
 
-    describe('getDefaultInferenceEnabled', () => {
-        it('returns false when config returns the default', () => {
-            const svc = makeService();
-            // getConfig().get() returns the provided default value
-            expect(svc.getDefaultInferenceEnabled()).toBe(false);
-        });
-    });
-
-    describe('getInferenceFeatureEnabled', () => {
-        it('returns false when the inference.enabled flag is not configured', async () => {
-            const svc = makeService();
-            expect(await svc.getInferenceFeatureEnabled()).toBe(false);
-        });
-    });
 
     describe('supportsInference', () => {
         it('returns false for a plain sparql connection', async () => {
