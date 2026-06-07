@@ -88,7 +88,7 @@ export function SparqlConnectionsList({
 			<section className="connections-subsection">
 				<FormSectionHeader
 					title="User Defined"
-					description="SPARQL endpoints you have configured for this scope." actions={
+					description="SPARQL endpoints you have configured." actions={
 						<>
 							<vscode-toolbar-button className="primary" title="Create a new connection" onClick={onCreateConnection}>
 								<span className="codicon codicon-add" />
@@ -97,7 +97,7 @@ export function SparqlConnectionsList({
 						</>
 					} />
 				{userDefinedConnections.length === 0 ? (
-					<p className="connections-empty-message">No user-defined connections in this scope.</p>
+					<p className="connections-empty-message">No user-defined connections yet.</p>
 				) : (
 					<div className="connections-list">
 						{userDefinedConnections.map(renderItem)}

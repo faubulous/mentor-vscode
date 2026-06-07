@@ -51,6 +51,18 @@ export type SettingState = {
 	scope: SettingScope;
 
 	/**
+	 * The value explicitly set at the User (global) scope, or `undefined` when unset.
+	 * Exposed so per-item UIs can split a single key across scopes (e.g. store configs).
+	 */
+	userValue?: unknown;
+
+	/**
+	 * The value explicitly set at the Workspace scope, or `undefined` when unset.
+	 * Exposed so per-item UIs can split a single key across scopes (e.g. store configs).
+	 */
+	workspaceValue?: unknown;
+
+	/**
 	 * The display name of the setting in the settings panel.
 	 */
 	title: string;

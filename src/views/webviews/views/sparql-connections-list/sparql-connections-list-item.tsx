@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { ConfigurationScope } from '@src/utilities/config-scope';
+import { ScopeBadge } from '@src/views/webviews/components/scope-badge';
 import { TestResult } from '../settings/settings-types';
 
 export interface ConnectionsListItemProps {
@@ -48,11 +48,6 @@ export function SparqlConnectionsListItem({
 	else if (testResult?.success === true) itemClass += ' test-success';
 	else if (testResult?.success === false) itemClass += ' test-error';
 
-	const otherScope = connection.configScope === ConfigurationScope.User
-		? ConfigurationScope.Workspace
-		: ConfigurationScope.User;
-	const otherScopeLabel = connection.configScope === ConfigurationScope.User ? 'Workspace' : 'User';
-
 	return (
 		<div
 			className={itemClass}
@@ -60,46 +55,51 @@ export function SparqlConnectionsListItem({
 			title={isWorkspaceStore ? 'Edit workspace store settings' : `Edit ${connection.endpointUrl}`}
 		>
 			{connectionIcon}
-			<div className="connection-item-content">
-				<span className="connection-item-name">{connection.endpointUrl}</span>
-				{connection.description && (
-					<span className="connection-item-description">{connection.description}</span>
+			<div className="connection-item-body">
+				<div className="connection-item-titlerow">
+					<span className="connection-item-name">{connection.endpointUrl}</span>
+					<div className="connection-item-actions" onClick={e => e.stopPropagation()}>
+						{!isWorkspaceStore && (
+							<vscode-toolbar-button
+								title="Open in browser"
+								onClick={(e: React.MouseEvent) => { e.stopPropagation(); onOpenInBrowser(connection.endpointUrl); }}
+							>
+								<vscode-icon name="link-external" />
+							</vscode-toolbar-button>
+						)}
+						<vscode-toolbar-button
+							title="List graphs"
+							onClick={(e: React.MouseEvent) => onListGraphs(connection, e)}
+						>
+							<vscode-icon name="list-unordered" />
+						</vscode-toolbar-button>
+						<vscode-toolbar-button
+							title={testTitle}
+							onClick={(e: React.MouseEvent) => onTestConnection(connection, e)}
+							disabled={isTesting}
+						>
+							<vscode-icon name="debug-disconnect" />
+						</vscode-toolbar-button>
+						{!isProtected && (
+							<vscode-toolbar-button
+								title="Delete connection"
+								onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDeleteConnection(connection); }}
+							>
+								<vscode-icon name="trash" />
+							</vscode-toolbar-button>
+						)}
+					</div>
+					{isProtected && (
+						<vscode-icon name="lock" className="connection-item-lock" title="Built-in connection" />
+					)}
+				</div>
+				{(connection.description || !isProtected) && (
+					<div className="connection-item-subline">
+						<span className="connection-item-description">{connection.description}</span>
+						{!isProtected && <ScopeBadge scope={connection.configScope} />}
+					</div>
 				)}
 			</div>
-			<div className="connection-item-actions" onClick={e => e.stopPropagation()}>
-				{!isWorkspaceStore && (
-					<vscode-toolbar-button
-						title="Open in browser"
-						onClick={(e: React.MouseEvent) => { e.stopPropagation(); onOpenInBrowser(connection.endpointUrl); }}
-					>
-						<vscode-icon name="link-external" />
-					</vscode-toolbar-button>
-				)}
-				<vscode-toolbar-button
-					title="List graphs"
-					onClick={(e: React.MouseEvent) => onListGraphs(connection, e)}
-				>
-					<vscode-icon name="list-unordered" />
-				</vscode-toolbar-button>
-				<vscode-toolbar-button
-					title={testTitle}
-					onClick={(e: React.MouseEvent) => onTestConnection(connection, e)}
-					disabled={isTesting}
-				>
-					<vscode-icon name="debug-disconnect" />
-				</vscode-toolbar-button>
-				{!isProtected && (
-					<vscode-toolbar-button
-						title="Delete connection"
-						onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDeleteConnection(connection); }}
-					>
-						<vscode-icon name="trash" />
-					</vscode-toolbar-button>
-				)}
-			</div>
-			{isProtected && (
-				<vscode-icon name="lock" className="connection-item-lock" title="Built-in connection" />
-			)}
 		</div>
 	);
 }

@@ -3,12 +3,11 @@ import { useContext, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } from '@src/views/webviews/components/modal-dialog';
-import { ScopeTabs } from '@src/views/webviews/components/scope-tabs';
-import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
-import { SettingsScopeSetContext } from '@src/views/webviews/views/settings/components/setting-context';
+import { ScopeSelect } from '@src/views/webviews/components/scope-select';
 import { useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
 import {
 	AuthCredential,
 	BasicAuthCredential,
@@ -17,7 +16,8 @@ import {
 	MicrosoftAuthCredential
 } from '@src/services/core/credential';
 import { CredentialFactory } from '@src/services/core/credential-factory';
-import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
+import { ConfigurationScope } from '@src/utilities/config-scope';
+import modalFormStylesheet from '@src/views/webviews/components/modal-form.css';
 import stylesheet from './sparql-connection-view.css';
 
 enum AuthTypeIndex {
@@ -57,6 +57,9 @@ function makeInitialFormState(connection: SparqlConnection): FormState {
 export interface SparqlConnectionViewProps {
 	connection: SparqlConnection;
 
+	/** Descriptors for the available store types, used to populate the store-type dropdown. */
+	storeConfigs: SparqlStoreConfig[];
+
 	/** Loaded credential from storage. undefined = loading, null = no credential. */
 	initialCredential?: AuthCredential | null;
 
@@ -64,8 +67,6 @@ export interface SparqlConnectionViewProps {
 	testResult?: { code: number; message: string } | null;
 
 	isTesting: boolean;
-
-	inferenceEnabled: boolean;
 
 	/** A freshly fetched Microsoft token; when non-null, replaces the Microsoft credential fields. */
 	fetchedMicrosoftCredential?: MicrosoftAuthCredential | null;
@@ -99,8 +100,6 @@ export interface SparqlConnectionViewProps {
 
 	onRequestCredential(connectionId: string): void;
 
-	onRequestInferenceEnabled(): void;
-
 	onToggleInference(connectionId: string): void;
 
 	onFetchMicrosoftCredential(connectionId: string, scopes: string[]): void;
@@ -108,10 +107,10 @@ export interface SparqlConnectionViewProps {
 
 export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	const {
-		connection, initialCredential, testResult, isTesting, inferenceEnabled, fetchedMicrosoftCredential,
+		connection, storeConfigs, initialCredential, testResult, isTesting, fetchedMicrosoftCredential,
 		showScopeSelector, hideHeader,
-		onBack, onSaved, onSave, onUpdate, onDelete, onRequestTest,
-		onRequestCredential, onRequestInferenceEnabled, onToggleInference, onFetchMicrosoftCredential,
+		onBack, onSaved, onSave, onUpdate, onRequestTest,
+		onRequestCredential, onToggleInference, onFetchMicrosoftCredential,
 		onDirtyChange,
 	} = props;
 
@@ -120,13 +119,13 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	const titleAccessoriesSlot = useContext(ModalDialogTitleAccessoriesContext);
 
 	useSharedStylesheets();
+	useStylesheet('modal-form-styles', modalFormStylesheet);
 	useStylesheet('sparql-connection-view-styles', stylesheet);
 
 	// Reset form and reload data when a different connection is shown.
 	useEffect(() => {
 		setState(makeInitialFormState(connection));
 		onRequestCredential(connection.id);
-		onRequestInferenceEnabled();
 	}, [connection.id]);
 
 	// Populate credential fields when the stored credential arrives.
@@ -184,15 +183,8 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 		});
 	}, [connection.configScope]);
 
-	const settingsScopeSetter = useContext(SettingsScopeSetContext);
-
 	const handleScopeChange = (scope: 'user' | 'workspace') => {
 		const newConfigScope = scope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
-
-		if (settingsScopeSetter) {
-			settingsScopeSetter(scope);
-			return;
-		}
 
 		setState(prev => {
 			const endpoint = {
@@ -212,6 +204,22 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 
 	const authTypeSelectRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => {
 		setState(prev => ({ ...prev, selectedAuthTypeIndex: parseInt(element.value, 10), hasUnsavedChanges: true }));
+	});
+
+	const storeTypeSelectRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => {
+		const storeType = element.value;
+
+		setState(prev => {
+			if (prev.endpoint.storeType === storeType) {
+				return prev;
+			}
+
+			const endpoint = { ...prev.endpoint, storeType, isModified: true };
+
+			onUpdate(endpoint);
+
+			return { ...prev, endpoint, hasUnsavedChanges: true };
+		});
 	});
 
 	const tabsRef = useVscodeElementRef<HTMLElement & { selectedIndex: number }, { selectedIndex: number }>(
@@ -320,6 +328,11 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	};
 
 	const endpoint = state.endpoint;
+
+	const selectedStoreType = endpoint.storeType ?? 'sparql';
+	const selectedStoreConfig = storeConfigs.find(s => s.id === selectedStoreType);
+	// Derive inference capability from the selected store type so the toggle updates live on change.
+	const inferenceSupported = selectedStoreConfig?.inference?.supported ?? endpoint.inferenceSupported ?? false;
 
 	const renderFormActions = () => (
 		<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
@@ -488,7 +501,7 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 	};
 
 	return (
-		<div className="sparql-connection-view-container">
+		<div className="modal-form sparql-connection-view-container">
 			{isTesting && <vscode-progress-bar />}
 			<form onSubmit={handleFormSubmit}>
 				{hideHeader && headerActionsSlot ? (
@@ -541,13 +554,27 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 										onInput={handleDescriptionChange}
 									/>
 								</div>
+								{!isWorkspaceStore && storeConfigs.length > 0 && (
+									<div className="section-store-type">
+										<vscode-label>Store Type</vscode-label>
+										<vscode-single-select
+											className="wide"
+											ref={storeTypeSelectRef}
+											value={selectedStoreType}
+											disabled={isFormReadOnly()}>
+											{storeConfigs.map(s => (
+												<vscode-option key={s.id} value={s.id}>{s.label}</vscode-option>
+											))}
+										</vscode-single-select>
+									</div>
+								)}
 							</section>
-							{inferenceEnabled && endpoint.inferenceSupported && (
+							{inferenceSupported && (
 								<section>
 									<div className="inference-toggle-container">
+										<vscode-label>Reasoning</vscode-label>
 										<vscode-checkbox
 											checked={endpoint.inferenceEnabled ?? false}
-											disabled={isFormReadOnly()}
 											onChange={() => {
 												setState(prev => ({ ...prev, endpoint: { ...prev.endpoint, inferenceEnabled: !prev.endpoint.inferenceEnabled } }));
 												onToggleInference(endpoint.id);
@@ -562,7 +589,7 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 						<vscode-tab-panel>
 							<section className="auth">
 								<div className="column-1">
-									<vscode-label>Type</vscode-label>
+									<vscode-label>Authentication Type</vscode-label>
 									<vscode-single-select
 										className="wide"
 										ref={authTypeSelectRef}
@@ -587,9 +614,9 @@ export function SparqlConnectionView(props: SparqlConnectionViewProps) {
 						</vscode-tab-panel>
 					</vscode-tabs>
 					{showScopeTabs && titleAccessoriesSlot && createPortal(
-						<ScopeTabs
-							activeScope={endpoint.configScope === ConfigurationScope.User ? 'user' : 'workspace'}
-							onScopeChange={handleScopeChange}
+						<ScopeSelect
+							value={endpoint.configScope === ConfigurationScope.User ? 'user' : 'workspace'}
+							onChange={handleScopeChange}
 							disabled={isFormReadOnly()}
 						/>,
 						titleAccessoriesSlot
