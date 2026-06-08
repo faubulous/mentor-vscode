@@ -93,14 +93,6 @@ export class ConnectionsSectionController implements SettingsSectionController {
 
 				return true;
 			}
-			case 'ChangeSparqlConnectionScope': {
-				const connection = message.connection as SparqlConnection;
-
-				await connectionService.updateConnection({ ...connection, configScope: message.toScope as SparqlConnection['configScope'] });
-				await connectionService.saveConfiguration();
-
-				return true;
-			}
 			case 'TestConnection': {
 				const connection = message.connection as SparqlConnection;
 				const result = await connectionService.testConnection(connection);
@@ -175,11 +167,6 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				if (connection?.isNew) {
 					await connectionService.deleteConnection(connectionId);
 				}
-
-				return true;
-			}
-			case 'UpdateSparqlConnection': {
-				await connectionService.updateConnection(message.connection as SparqlConnection);
 
 				return true;
 			}

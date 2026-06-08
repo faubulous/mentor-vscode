@@ -4,23 +4,24 @@ import { ModalDialog } from '../../../../components/modal-dialog';
 import { SettingRow } from '../../components/setting-row';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { SparqlConnectionEditor } from '../../../sparql-connection/sparql-connection-editor';
-import { SparqlConnectionMessages } from '../../../sparql-connection/sparql-connection-messages';
-import { SparqlConnectionsList } from '../../../sparql-connections-list/sparql-connections-list';
-import { SparqlConnectionsListMessages } from '../../../sparql-connections-list/sparql-connections-list-messages';
+import { ConnectionEditor } from './connection-editor';
+import { ConnectionEditorMessages } from './connection-editor-messages';
+import { ConnectionsList } from './connections-list';
+import { ConnectionsListMessages } from './connections-list-messages';
 import { MENTOR_SOURCE, TestResult } from '../../settings-types';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { useScopedWebviewMessaging } from '../../../../webview-hooks';
+import { patchRecord } from '@src/views/webviews/webview-utils';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
 export const queryConnectionsSection = {
-	id: 'connections',
+	id: 'query.connections',
 	label: 'Connections',
 	component: QueryConnectionsSection,
 	keys: ['sparql.connections', 'sparql.queryTimeout'],
 } as const satisfies SettingsSectionDescriptor;
 
-type QueryConnectionsSectionMessage = SparqlConnectionsListMessages | SparqlConnectionMessages;
+type QueryConnectionsSectionMessage = ConnectionsListMessages | ConnectionEditorMessages;
 
 export function QueryConnectionsSection({ settings, onUpdate, setScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
@@ -38,12 +39,11 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 				setConnections(message.connections);
 				return;
 			case 'TestConnectionResult':
-				setTestResults(prev => ({
-					...prev,
-					[message.connectionId]: message.success
+				setTestResults(prev => patchRecord(prev, message.connectionId, () =>
+					message.success
 						? { success: true }
 						: { success: false, error: message.error },
-				}));
+				));
 				return;
 			case 'EditSparqlConnection':
 				setEditingConnection(message.connection);
@@ -93,7 +93,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 
 	return (
 		<>
-			<SparqlConnectionsList
+			<ConnectionsList
 				connections={connections}
 				testResults={testResults}
 				testingConnections={testingConnections}
@@ -103,7 +103,6 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 				onTestConnection={handleTestConnection}
 				onListGraphs={handleListGraphs}
 				onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
-				onChangeSparqlConnectionScope={(connection, toScope) => messaging?.postMessage({ id: 'ChangeSparqlConnectionScope', connection, toScope })}
 			/>
 			<div className="settings-subsection">
 				<SettingRow {...rowProps('sparql.queryTimeout')}>
@@ -127,12 +126,9 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 				hideCloseButton
 			>
 				{editingConnection && (
-					<SparqlConnectionEditor
+					<ConnectionEditor
 						connection={editingConnection}
-						hideHeader
-						showScopeSelector
 						onDirtyChange={setEditorDirty}
-						onBack={() => closeEditor(false)}
 						onSaved={() => closeEditor(true)}
 					/>
 				)}

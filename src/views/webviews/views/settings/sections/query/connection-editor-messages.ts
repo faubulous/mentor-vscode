@@ -1,12 +1,10 @@
 import { SparqlConnection } from "@src/languages/sparql/services/sparql-connection";
 import { SparqlStoreConfig } from "@src/languages/sparql/services/sparql-store-config";
 import { AuthCredential, MicrosoftAuthCredential } from '@src/services/core/credential';
-import { ConfigurationScope } from "@src/utilities/config-scope";
-import { ExecuteCommandMessage } from '../../webview-messaging';
+import { ExecuteCommandMessage } from '../../../../webview-messaging';
 
-export type SparqlConnectionMessages =
+export type ConnectionEditorMessages =
     ExecuteCommandMessage |
-    { id: 'ChangeSparqlConnectionScope'; connection: SparqlConnection; toScope: ConfigurationScope } |
     { id: 'DeleteConnection', connection: SparqlConnection } |
     { id: 'DeleteSparqlConnection', connectionId: string } |
     { id: 'DiscardSparqlConnection', connectionId: string } |
@@ -23,5 +21,4 @@ export type SparqlConnectionMessages =
     { id: 'TestSparqlConnection', connection: SparqlConnection, credential: AuthCredential | null } |
     { id: 'TestSparqlConnectionResult', error: { code: number, message: string } | null } |
     { id: 'ToggleSparqlConnectionInference', connectionId: string } |
-    { id: 'ToggleSparqlConnectionInferenceResult', connectionId: string, inferenceEnabled: boolean } |
-    { id: 'UpdateSparqlConnection', connection: SparqlConnection };
+    { id: 'ToggleSparqlConnectionInferenceResult', connectionId: string, inferenceEnabled: boolean };

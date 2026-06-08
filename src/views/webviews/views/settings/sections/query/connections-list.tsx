@@ -1,11 +1,10 @@
 import * as React from 'react';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { ConfigurationScope } from '@src/utilities/config-scope';
-import { TestResult } from '../settings/settings-types';
-import { SparqlConnectionsListItem } from './sparql-connections-list-item';
-import { FormSectionHeader } from '../../components/form-section-header';
+import { ConnectionsListItem } from './connections-list-item';
+import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { TestResult } from '../../settings-types';
 
-export interface SparqlConnectionsListProps {
+export interface ConnectionsListProps {
 	connections: SparqlConnection[];
 	testResults: Record<string, TestResult>;
 	testingConnections: Set<string>;
@@ -15,10 +14,9 @@ export interface SparqlConnectionsListProps {
 	onTestConnection: (connection: SparqlConnection, e: React.MouseEvent) => void;
 	onListGraphs: (connection: SparqlConnection, e: React.MouseEvent) => void;
 	onOpenInBrowser: (url: string) => void;
-	onChangeSparqlConnectionScope?: (connection: SparqlConnection, toScope: ConfigurationScope) => void;
 }
 
-export function SparqlConnectionsList({
+export function ConnectionsList({
 	connections,
 	testResults,
 	testingConnections,
@@ -28,15 +26,14 @@ export function SparqlConnectionsList({
 	onTestConnection,
 	onListGraphs,
 	onOpenInBrowser,
-}: SparqlConnectionsListProps) {
-	const isTestingAll = testingConnections.size > 0;
+}: ConnectionsListProps) {
 	const testableCount = connections.length;
 
 	const protectedConnections = connections.filter(c => c.isProtected === true);
 	const userDefinedConnections = connections.filter(c => c.isProtected !== true);
 
 	const renderItem = (connection: SparqlConnection) => (
-		<SparqlConnectionsListItem
+		<ConnectionsListItem
 			key={connection.id}
 			connection={connection}
 			testResult={testResults[connection.id]}

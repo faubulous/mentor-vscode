@@ -1,4 +1,3 @@
-export * from './views/sparql-connections-list/sparql-connections-list-controller';
 export * from './views/sparql-results/sparql-results-controller';
 export * from './views/settings/settings-panel-controller';
 export { WebviewRouter as ViewRouter, IWebviewRouter as IViewRouter, WebviewTarget as ViewTarget } from './webview-router';

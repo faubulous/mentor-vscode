@@ -1,0 +1,97 @@
+/*
+ * Connection-specific styling. Generic modal-form layout (container, sections, labels, tabs,
+ * form-actions, section-label, label-optional, …) lives in the shared `modal-form.css`; the
+ * connection editor's root carries both the `modal-form` and `connection-editor-container`
+ * classes so these rules layer on top of the shared ones.
+ */
+
+.connection-editor-container vscode-single-select {
+	width: 100px;
+}
+
+.connection-editor-container vscode-single-select.wide {
+	width: 175px;
+}
+
+.connection-editor-container vscode-progress-bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+}
+
+.connection-editor-container .section-endpoint-url {
+	align-items: center;
+	gap: 0.5em;
+}
+
+.connection-editor-container .section-endpoint-url vscode-textfield {
+	flex: 1;
+}
+
+.connection-editor-container .section-endpoint-url vscode-icon {
+	margin: 0 .2em 0 0.5em;
+}
+
+.connection-editor-container .section-endpoint-url vscode-icon.icon-testing {
+	color: var(--vscode-textLink-activeForeground);
+}
+
+.connection-editor-container .section-endpoint-url vscode-icon.icon-success {
+	color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.connection-editor-container .section-endpoint-url vscode-icon.icon-error {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.connection-editor-container .section-endpoint-description vscode-textfield {
+	width: 100%;
+}
+
+.connection-editor-container .section-endpoint-status {
+	margin-top: 0.5em;
+	border-radius: 3px;
+}
+
+.connection-editor-container .section-endpoint-status.status-error {
+	padding: 0.5em 0.7em;
+	color: var(--mentor-status-error-foreground);
+	background-color: var(--mentor-status-error-background);
+}
+
+.connection-editor-container .section-endpoint-status.status-error h4 {
+	margin-top: 0;
+	margin-bottom: 0.5em;
+}
+
+.connection-editor-container .section-endpoint-status.status-error p {
+	margin: 0;
+}
+
+.connection-editor-container section.auth {
+	display: flex;
+	flex-direction: row;
+	gap: 1.5em;
+}
+
+.connection-editor-container section.auth div:first-child {
+	max-width: 200px;
+}
+
+.connection-editor-container section.auth .vertical-separator {
+	border-left: 1px solid var(--vscode-editorWidget-border);
+	padding-left: 1.5em;
+}
+
+.connection-editor-container section.auth div>vscode-form-group {
+	margin: 0;
+}
+
+.connection-editor-container section.auth div vscode-label {
+	margin-top: 1em;
+}
+
+.connection-editor-container section.auth div vscode-label:first-child {
+	margin-top: -5px;
+}

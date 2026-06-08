@@ -1,7 +1,7 @@
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { ExecuteCommandMessage } from '../../webview-messaging';
+import { ExecuteCommandMessage } from '../../../../webview-messaging';
 
-export type SparqlConnectionsListMessages =
+export type ConnectionsListMessages =
     ExecuteCommandMessage |
     { id: 'GetConnections' } |
     { id: 'GetConnectionsResult', connections: SparqlConnection[] } |

@@ -8,7 +8,7 @@ import { MENTOR_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
 export const workspaceIndexingSection = {
-	id: 'indexing',
+	id: 'workspace.indexing',
 	label: 'Indexing',
 	component: WorkspaceIndexingSection,
 	keys: [

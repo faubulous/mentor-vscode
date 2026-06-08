@@ -3,7 +3,6 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { SettingsSectionId } from './views/settings/sections';
 import { SettingsPanelController } from './views/settings/settings-panel-controller';
-import { SparqlConnectionsListController } from './views/sparql-connections-list/sparql-connections-list-controller';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
 /**
@@ -11,8 +10,7 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
  * Adding a new view type means extending this union and handling it in {@link WebviewRouter}.
  */
 export type WebviewTarget =
-	| { kind: 'settings'; section?: SettingsSectionId; params?: { connection?: SparqlConnection } }
-	| { kind: 'connectionsList' };
+	| { kind: 'settings'; section?: SettingsSectionId; params?: { connection?: SparqlConnection } };
 
 /**
  * Generic navigation API between webview panels. Commands and other code should depend on
@@ -39,12 +37,6 @@ export class WebviewRouter implements IWebviewRouter {
 				const params = target.params?.connection ? { connection: target.params.connection } : undefined;
 
 				await controller.openSection(target.section, params, viewColumn);
-				return;
-			}
-			case 'connectionsList': {
-				const controller = container.resolve<SparqlConnectionsListController>(ServiceToken.SparqlConnectionsListController);
-				
-				await controller.open();
 				return;
 			}
 		}

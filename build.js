@@ -344,7 +344,6 @@ const removeSourceMaps = () => {
       // They are bundled into extension.js via the languages/index.ts barrel export.
       getReactViewConfig(args, 'sparql-results', 'sparql-results-notebook-renderer'),
       getReactViewConfig(args, 'sparql-results', 'sparql-results-panel'),
-      getReactViewConfig(args, 'sparql-connections-list', 'sparql-connections-list'),
       getReactViewConfig(args, 'settings', 'settings-panel'),
     ]
 

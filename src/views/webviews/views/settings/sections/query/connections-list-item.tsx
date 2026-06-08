@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ScopeBadge } from '@src/views/webviews/components/scope-badge';
-import { TestResult } from '../settings/settings-types';
+import { TestResult } from '../../settings-types';
 
 export interface ConnectionsListItemProps {
 	connection: SparqlConnection;
@@ -14,7 +14,7 @@ export interface ConnectionsListItemProps {
 	onOpenInBrowser: (url: string) => void;
 }
 
-export function SparqlConnectionsListItem({
+export function ConnectionsListItem({
 	connection,
 	testResult,
 	isTesting,

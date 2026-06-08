@@ -12,7 +12,7 @@ export const SettingsWorkspaceContext = React.createContext<boolean>(true);
  * Per-key scope selection API. Replaces the former global User/Workspace tab: each
  * setting row now picks its own target scope.
  */
-export interface ScopeTargetApi {
+export interface SettingsScopeTargetApi {
 	/**
 	 * Returns the current target scope for a key — the scope the setting lives in if set,
 	 * otherwise the scope a future edit would be written to (defaults to `'user'`).
@@ -31,4 +31,4 @@ export interface ScopeTargetApi {
  * Provides the per-key scope selection API to setting rows without prop drilling.
  * `null` when rendered outside the settings panel.
  */
-export const SettingsScopeTargetContext = React.createContext<ScopeTargetApi | null>(null);
+export const SettingsScopeTargetContext = React.createContext<SettingsScopeTargetApi | null>(null);
