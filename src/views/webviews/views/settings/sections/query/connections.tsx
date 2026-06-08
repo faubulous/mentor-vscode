@@ -51,7 +51,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 		}
 	}, []);
 
-	const messaging = useScopedWebviewMessaging<QueryConnectionsSectionMessage>('connections', handleMessage);
+	const messaging = useScopedWebviewMessaging<QueryConnectionsSectionMessage>('query.connections', handleMessage);
 
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetConnections' });

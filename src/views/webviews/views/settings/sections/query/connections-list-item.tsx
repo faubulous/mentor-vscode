@@ -67,19 +67,23 @@ export function ConnectionsListItem({
 								<vscode-icon name="link-external" />
 							</vscode-toolbar-button>
 						)}
-						<vscode-toolbar-button
-							title="List graphs"
-							onClick={(e: React.MouseEvent) => onListGraphs(connection, e)}
-						>
-							<vscode-icon name="list-unordered" />
-						</vscode-toolbar-button>
-						<vscode-toolbar-button
-							title={testTitle}
-							onClick={(e: React.MouseEvent) => onTestConnection(connection, e)}
-							disabled={isTesting}
-						>
-							<vscode-icon name="debug-disconnect" />
-						</vscode-toolbar-button>
+						{!isWorkspaceStore && (
+							<vscode-toolbar-button
+								title="List graphs"
+								onClick={(e: React.MouseEvent) => onListGraphs(connection, e)}
+							>
+								<vscode-icon name="list-unordered" />
+							</vscode-toolbar-button>
+						)}
+						{!isWorkspaceStore && (
+							<vscode-toolbar-button
+								title={testTitle}
+								onClick={(e: React.MouseEvent) => onTestConnection(connection, e)}
+								disabled={isTesting}
+							>
+								<vscode-icon name="debug-disconnect" />
+							</vscode-toolbar-button>
+						)}
 						{!isProtected && (
 							<vscode-toolbar-button
 								title="Delete connection"

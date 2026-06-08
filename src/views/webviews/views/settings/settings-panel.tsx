@@ -9,8 +9,9 @@ import { SettingsNavigation } from './components/settings-navigation';
 import { MENTOR_LANGUAGE_IDS, FormattingLanguage } from '@src/services/document/document-languages';
 import { MENTOR_SOURCE, SettingScope, SettingState, SettingsSource, settingsSourceKey } from './settings-types';
 import { SettingsPanelMessages } from './settings-panel-messages';
-import { SettingsScopeContext, SettingsScopeSetContext, SettingsMoveContext } from './components/setting-context';
+import { SettingsScopeTargetApi, SettingsScopeTargetContext, SettingsWorkspaceContext } from './components/setting-context';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
+import { patchNestedRecord } from '@src/views/webviews/webview-utils';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
 import stylesheet from './settings-panel.css';
 
@@ -31,7 +32,12 @@ const SETTINGS_SOURCES: SettingsSource[] = [
 interface SettingsPanelState {
 	settingsBySource: Record<string, Record<string, SettingState>>;
 	activeSection: SettingsSectionId;
-	activeScope: 'user' | 'workspace';
+	/**
+	 * Per-key target scope, keyed by `${settingsSourceKey(source)}::${key}`. Holds an explicit
+	 * override of where a setting's next write should land; when absent the target falls back to
+	 * the setting's current scope (or `'user'` when unset).
+	 */
+	scopeByKey: Record<string, 'user' | 'workspace'>;
 	formattingLanguage: FormattingLanguage;
 	version: string;
 	searchTerm: string;
@@ -41,12 +47,17 @@ interface SettingsPanelState {
 const initialState: SettingsPanelState = {
 	settingsBySource: {},
 	activeSection: 'appearance.display',
-	activeScope: 'user',
+	scopeByKey: {},
 	formattingLanguage: 'turtle',
 	version: '',
 	searchTerm: '',
 	hasWorkspace: true,
 };
+
+/** Stable map key combining a settings source and a setting key. */
+function scopeKeyOf(source: SettingsSource, key: string): string {
+	return `${settingsSourceKey(source)}::${key}`;
+}
 
 function SettingsPanel() {
 	const [state, setState] = useWebviewState<SettingsPanelState>(initialState);
@@ -98,36 +109,27 @@ function SettingsPanel() {
 		[state.settingsBySource],
 	);
 
-	/**
-	 * Optimistic local-state patch for an inflight update. Mirrors the previous
-	 * `handleUpdate` / `handleVSCodeUpdate` writes against the unified slice.
-	 */
-	const patchSetting = useCallback((source: SettingsSource, key: string, mut: (prev: SettingState | undefined) => SettingState | undefined) => {
-		const sk = settingsSourceKey(source);
-		setState(prev => {
-			const slice = prev.settingsBySource[sk] ?? {};
-			const next = mut(slice[key]);
-			if (next === undefined) {
-				const { [key]: _, ...rest } = slice;
-				return { ...prev, settingsBySource: { ...prev.settingsBySource, [sk]: rest } };
-			}
-			return {
-				...prev,
-				settingsBySource: { ...prev.settingsBySource, [sk]: { ...slice, [key]: next } },
-			};
-		});
-	}, [setState]);
-
 	const handleUpdate = useCallback((source: SettingsSource, key: string, value: unknown) => {
-		const scope: SettingScope = state.activeScope;
-		patchSetting(source, key, prev => prev && ({ ...prev, value, scope }));
+		const existing = state.settingsBySource[settingsSourceKey(source)]?.[key];
+		const fallback: 'user' | 'workspace' = existing?.scope === 'workspace' ? 'workspace' : 'user';
+		const scope: SettingScope = state.scopeByKey[scopeKeyOf(source, key)] ?? fallback;
+
+		setState(prev => ({
+			...prev,
+			settingsBySource: patchNestedRecord(prev.settingsBySource, settingsSourceKey(source), key, prev2 => prev2 && ({ ...prev2, value, scope })),
+		}));
+
 		messaging?.postMessage({ id: 'UpdateSetting', source, key, value, scope });
-	}, [state.activeScope, messaging, patchSetting]);
+	}, [state.scopeByKey, state.settingsBySource, messaging, setState]);
 
 	const handleSetScope = useCallback((source: SettingsSource, key: string, newScope: SettingScope, currentValue: unknown) => {
 		if (newScope === 'default') {
-			patchSetting(source, key, prev => prev && ({ ...prev, scope: newScope }));
+			setState(prev => ({
+				...prev,
+				settingsBySource: patchNestedRecord(prev.settingsBySource, settingsSourceKey(source), key, prev2 => prev2 && ({ ...prev2, scope: 'default', value: prev2.defaultValue })),
+			}));
 		}
+
 		// For copy-to-other-scope, local state is unchanged (current setting stays modified).
 		messaging?.postMessage({
 			id: 'UpdateSetting',
@@ -136,29 +138,41 @@ function SettingsPanel() {
 			value: newScope === 'default' ? undefined : currentValue,
 			scope: newScope,
 		});
-	}, [messaging, patchSetting]);
-
-	const handleScopeTabChange = useCallback((scope: 'user' | 'workspace') => {
-		setState(prev => ({ ...prev, activeScope: scope }));
-	}, [setState]);
+	}, [messaging, setState]);
 
 	const handleBulkScope = useCallback((source: SettingsSource, keys: string[], scope: 'user' | 'workspace') => {
-		const sk = settingsSourceKey(source);
-		const slice = state.settingsBySource[sk] ?? {};
+		const sourceKey = settingsSourceKey(source);
+		const slice = state.settingsBySource[sourceKey] ?? {};
+
 		for (const key of keys) {
 			handleSetScope(source, key, scope, slice[key]?.value);
 		}
 	}, [state.settingsBySource, handleSetScope]);
 
-	const handleMoveToScope = useCallback((source: SettingsSource, key: string, fromScope: 'user' | 'workspace', toScope: 'user' | 'workspace', value: unknown) => {
-		messaging?.postMessage({ id: 'UpdateSetting', source, key, value, scope: toScope });
-		messaging?.postMessage({ id: 'UpdateSetting', source, key, value: undefined, scope: fromScope });
-		patchSetting(source, key, prev => prev && ({
-			...prev,
-			scope: 'default',
-			value: prev.defaultValue,
-		}));
-	}, [messaging, patchSetting]);
+	/**
+	 * Picks a new target scope for a single setting. Records the choice in `scopeByKey`,
+	 * and when the setting already holds a non-default value in a different scope, moves it
+	 * (write the new scope, clear the old) so it lands in its new home.
+	 */
+	const handleSelectScope = useCallback((source: SettingsSource, key: string, newScope: 'user' | 'workspace', st: SettingState | undefined) => {
+		setState(prev => ({ ...prev, scopeByKey: { ...prev.scopeByKey, [scopeKeyOf(source, key)]: newScope } }));
+
+		const settingScope = st?.scope ?? 'default';
+
+		if (settingScope !== 'default' && settingScope !== newScope) {
+			messaging?.postMessage({ id: 'UpdateSetting', source, key, value: st?.value, scope: newScope });
+			messaging?.postMessage({ id: 'UpdateSetting', source, key, value: undefined, scope: settingScope });
+			setState(prev => ({
+				...prev,
+				settingsBySource: patchNestedRecord(prev.settingsBySource, settingsSourceKey(source), key, prev2 => prev2 && ({ ...prev2, scope: newScope })),
+			}));
+		}
+	}, [messaging, setState]);
+
+	const scopeTarget = useMemo<SettingsScopeTargetApi>(() => ({
+		get: (source, key, st) => state.scopeByKey[scopeKeyOf(source, key)] ?? (st?.scope === 'workspace' ? 'workspace' : 'user'),
+		select: handleSelectScope,
+	}), [state.scopeByKey, handleSelectScope]);
 
 	const handleNavSelect = useCallback((section: SettingsSectionId) => {
 		setState(prev => ({ ...prev, activeSection: section, searchTerm: '' }));
@@ -184,7 +198,6 @@ function SettingsPanel() {
 
 	const commonProps = {
 		settings: mentorSettings,
-		activeScope: state.activeScope,
 		onUpdate: handleUpdate,
 		setScope: handleSetScope,
 		onBulkScope: handleBulkScope,
@@ -221,18 +234,16 @@ function SettingsPanel() {
 	};
 
 	return (
-		<SettingsScopeContext.Provider value={state.activeScope}>
-			<SettingsScopeSetContext.Provider value={handleScopeTabChange}>
-			<SettingsMoveContext.Provider value={handleMoveToScope}>
+		<SettingsWorkspaceContext.Provider value={state.hasWorkspace}>
+			<SettingsScopeTargetContext.Provider value={scopeTarget}>
 				<div className="settings-panel">
 					<SettingsPanelHeader
 						version={state.version}
-						activeScope={state.activeScope}
-						onScopeTabChange={handleScopeTabChange}
 						searchTerm={state.searchTerm}
 						onSearchChange={handleSearchChange}
 						onOpenHomepage={() => messaging?.postMessage({ id: 'ExecuteCommand', command: 'mentor.command.openMentorHomepage' })}
 					/>
+
 					{!state.hasWorkspace && (
 						<div className="panel-status-banner" role="status">
 							<vscode-icon name="warning" />
@@ -241,6 +252,7 @@ function SettingsPanel() {
 							</span>
 						</div>
 					)}
+					
 					<div className="settings-body">
 						<SettingsNavigation activeSection={state.activeSection} onSelect={handleNavSelect} />
 						<div className="settings-content">
@@ -250,9 +262,8 @@ function SettingsPanel() {
 						</div>
 					</div>
 				</div>
-			</SettingsMoveContext.Provider>
-			</SettingsScopeSetContext.Provider>
-		</SettingsScopeContext.Provider>
+			</SettingsScopeTargetContext.Provider>
+		</SettingsWorkspaceContext.Provider>
 	);
 }
 

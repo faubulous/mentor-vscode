@@ -29,17 +29,17 @@ describe('WebviewRouter', () => {
 	it('routes a settings target to SettingsPanelController.openSection with section and view column', async () => {
 		const router = new WebviewRouter();
 
-		await router.open({ kind: 'settings', section: 'connections' }, vscode.ViewColumn.Active);
+		await router.open({ kind: 'settings', section: 'query.connections' }, vscode.ViewColumn.Active);
 
-		expect(mockSettingsController.openSection).toHaveBeenCalledWith('connections', undefined, vscode.ViewColumn.Active);
+		expect(mockSettingsController.openSection).toHaveBeenCalledWith('query.connections', undefined, vscode.ViewColumn.Active);
 	});
 
 	it('forwards a connection param to SettingsPanelController.openSection', async () => {
 		const router = new WebviewRouter();
 		const connection = { id: 'conn-1', endpointUrl: 'http://example.org' } as any;
 
-		await router.open({ kind: 'settings', section: 'connections', params: { connection } });
+		await router.open({ kind: 'settings', section: 'query.connections', params: { connection } });
 
-		expect(mockSettingsController.openSection).toHaveBeenCalledWith('connections', { connection }, undefined);
+		expect(mockSettingsController.openSection).toHaveBeenCalledWith('query.connections', { connection }, undefined);
 	});
 });

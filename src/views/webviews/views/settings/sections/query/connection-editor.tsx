@@ -137,7 +137,7 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 		}
 	}, [connection.id]);
 
-	const messaging = useScopedWebviewMessaging<ConnectionEditorMessages>('connections', handleMessage);
+	const messaging = useScopedWebviewMessaging<ConnectionEditorMessages>('query.connections', handleMessage);
 
 	// Reseed the form whenever a different connection is opened.
 	useEffect(() => {
@@ -479,35 +479,40 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 									/>
 								</div>
 								{!isWorkspaceStore && storeConfigs.length > 0 && (
-									<div className="section-store-type">
-										<vscode-label>Store Type</vscode-label>
-										<vscode-single-select
-											className="wide"
-											ref={storeTypeSelectRef}
-											value={selectedStoreType}
-											disabled={isFormReadOnly()}>
-											{storeConfigs.map(s => (
-												<vscode-option key={s.id} value={s.id}>{s.label}</vscode-option>
-											))}
-										</vscode-single-select>
+									<div className="section-store-type-row">
+										<div className="section-store-type">
+											<vscode-label>Store Type</vscode-label>
+											<vscode-single-select
+												className="wide"
+												ref={storeTypeSelectRef}
+												value={selectedStoreType}
+												disabled={isFormReadOnly()}>
+												{storeConfigs.map(s => (
+													<vscode-option key={s.id} value={s.id}>{s.label}</vscode-option>
+												))}
+											</vscode-single-select>
+										</div>
+										{!inferenceSupported && (
+											<vscode-checkbox
+												className="section-reasoning-checkbox"
+												disabled={true}>
+												Per query reasoning control not supported
+											</vscode-checkbox>
+										)}
+										{inferenceSupported && (
+											<vscode-checkbox
+												className="section-reasoning-checkbox"
+												checked={endpoint.inferenceEnabled ?? false}
+												onChange={() => {
+													setDraft(prev => ({ ...prev, endpoint: { ...prev.endpoint, inferenceEnabled: !prev.endpoint.inferenceEnabled } }));
+													messaging?.postMessage({ id: 'ToggleSparqlConnectionInference', connectionId: endpoint.id });
+												}}>
+												Enable query reasoning by default
+											</vscode-checkbox>
+										)}
 									</div>
 								)}
 							</section>
-							{inferenceSupported && (
-								<section>
-									<div className="inference-toggle-container">
-										<vscode-label>Reasoning</vscode-label>
-										<vscode-checkbox
-											checked={endpoint.inferenceEnabled ?? false}
-											onChange={() => {
-												setDraft(prev => ({ ...prev, endpoint: { ...prev.endpoint, inferenceEnabled: !prev.endpoint.inferenceEnabled } }));
-												messaging?.postMessage({ id: 'ToggleSparqlConnectionInference', connectionId: endpoint.id });
-											}}>
-											Include inferred triples in query results
-										</vscode-checkbox>
-									</div>
-								</section>
-							)}
 						</vscode-tab-panel>
 						<vscode-tab-header slot="header">Authentication</vscode-tab-header>
 						<vscode-tab-panel>

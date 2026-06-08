@@ -69,6 +69,13 @@
 	margin: 0;
 }
 
+.connection-editor-container .section-store-type-row {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	gap: 1.5em;
+}
+
 .connection-editor-container section.auth {
 	display: flex;
 	flex-direction: row;

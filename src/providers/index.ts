@@ -1,4 +1,4 @@
-export * from './inference-uri-handler';
+export * from './mentor-uri-handler';
 export * from './inference-uri-link-provider';
 export * from './inference-uri';
 export * from './notebook-cell-slug-codelens-provider';

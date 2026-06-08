@@ -147,7 +147,6 @@
 }
 
 .text-muted {
-	padding: 1em;
 	color: var(--vscode-tab-inactiveForeground);
 }
 

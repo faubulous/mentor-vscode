@@ -11,6 +11,6 @@ export const createSparqlConnection = {
 		const connection = await service.createConnection();
 
 		const router = container.resolve<IViewRouter>(ServiceToken.WebviewRouter);
-		await router.open({ kind: 'settings', section: 'connections', params: { connection } }, vscode.ViewColumn.Active);
+		await router.open({ kind: 'settings', section: 'query.connections', params: { connection } }, vscode.ViewColumn.Active);
 	}
 };

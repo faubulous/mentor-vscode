@@ -45,7 +45,7 @@ describe('createSparqlConnection', () => {
 
 		expect(mockConnService.createConnection).toHaveBeenCalled();
 		expect(mockRouter.open).toHaveBeenCalledWith(
-			{ kind: 'settings', section: 'connections', params: { connection: { id: 'new-conn', endpointUrl: 'http://endpoint' } } },
+			{ kind: 'settings', section: 'query.connections', params: { connection: { id: 'new-conn', endpointUrl: 'http://endpoint' } } },
 			vscode.ViewColumn.Active
 		);
 	});

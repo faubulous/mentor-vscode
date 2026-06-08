@@ -8,7 +8,7 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
 
-const SECTION_ID: SettingsSectionId = 'connections';
+const SECTION_ID: SettingsSectionId = 'query.connections';
 
 type SectionMessage = { section: SettingsSectionId; id: string } & Record<string, unknown>;
 

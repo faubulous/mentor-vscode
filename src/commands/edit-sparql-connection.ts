@@ -8,6 +8,6 @@ export const editSparqlConnection = {
 	id: 'mentor.command.editSparqlConnection',
 	handler: async (connection: SparqlConnection) => {
 		const router = container.resolve<IViewRouter>(ServiceToken.WebviewRouter);
-		await router.open({ kind: 'settings', section: 'connections', params: { connection } }, vscode.ViewColumn.Active);
+		await router.open({ kind: 'settings', section: 'query.connections', params: { connection } }, vscode.ViewColumn.Active);
 	}
 };

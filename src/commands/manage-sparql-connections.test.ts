@@ -37,7 +37,7 @@ describe('manageSparqlConnections', () => {
 		await manageSparqlConnections.handler();
 
 		expect(mockRouter.open).toHaveBeenCalledWith(
-			{ kind: 'settings', section: 'connections' },
+			{ kind: 'settings', section: 'query.connections' },
 			vscode.ViewColumn.Active
 		);
 	});

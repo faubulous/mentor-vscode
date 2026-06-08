@@ -16,9 +16,8 @@ export interface StoresListItemProps {
  */
 export function StoresListItem({ store, onEdit, onDelete, onOpenInBrowser }: StoresListItemProps) {
 	const isProtected = !!store.isProtected;
-	const subtitle = store.website
-		?? store.description
-		?? (store.inference?.supported === true ? 'Reasoning supported' : undefined);
+	const subtitle = store.website ?? store.description;
+	const supportsReasoning = store.inference?.supported === true;
 
 	return (
 		<div
@@ -54,7 +53,12 @@ export function StoresListItem({ store, onEdit, onDelete, onOpenInBrowser }: Sto
 				</div>
 				{(subtitle || (!isProtected && store.configScope !== undefined)) && (
 					<div className="connection-item-subline">
-						<span className="connection-item-description">{subtitle}</span>
+						<div className="connection-item-description">
+							<span>{subtitle}</span>
+							{supportsReasoning && (
+								<vscode-icon name="lightbulb-sparkle" className="connection-item-badge" title="Reasoning supported" />
+							)}
+						</div>
 						{!isProtected && store.configScope !== undefined && <ScopeBadge scope={store.configScope} />}
 					</div>
 				)}

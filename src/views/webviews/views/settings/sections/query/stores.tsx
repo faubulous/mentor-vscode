@@ -82,7 +82,7 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 	// The built-in workspace store is synthetic and shown read-only; any stray persisted entry
 	// (id 'workspace') is filtered out of the editable list. Inference is controlled per connection.
 	const editableStores = allConfigStores.filter(p => !p.isProtected);
-	const allStores = [WORKSPACE_STORE, ...editableStores];
+	const allStores = [WORKSPACE_STORE, ...[...editableStores].sort((a, b) => a.label.localeCompare(b.label))];
 
 	const isReadOnly = !!editing && !!editing.isProtected;
 	// A store is "new" until it has been saved into the settings array (protected stores are never new).

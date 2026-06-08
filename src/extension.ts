@@ -93,7 +93,7 @@ function registerProviders() {
 	new providers.WorkspaceFileSystemProvider();
 	new providers.XsdAnyUriCodeActionProvider();
 	new providers.InferenceUriLinkProvider();
-	new providers.InferenceUriHandler();
+	new providers.MentorUriHandler();
 	new providers.ResourceTooltipProvider();
 }
 

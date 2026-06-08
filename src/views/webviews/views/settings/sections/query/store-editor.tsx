@@ -205,7 +205,7 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 						<div className="inference-toggle-container">
 							<vscode-label>Reasoning</vscode-label>
 							<vscode-checkbox checked={draft.inference?.supported ?? false} disabled={readOnly} onChange={toggleReasoning}>
-								This store supports toggling inference per query
+								Supports reasoning control per query
 							</vscode-checkbox>
 						</div>
 					</section>

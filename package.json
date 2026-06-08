@@ -113,7 +113,8 @@
   "activationEvents": [
     "onStartupFinished",
     "onLanguage:xml",
-    "onNotebook:mentor-notebook"
+    "onNotebook:mentor-notebook",
+    "onUri"
   ],
   "contributes": {
     "viewsContainers": {

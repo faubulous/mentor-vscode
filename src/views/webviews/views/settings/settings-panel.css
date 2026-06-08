@@ -701,7 +701,17 @@ vscode-textarea.monospace {
 	min-width: 0;
 }
 
+.connection-item-description vscode-icon {
+	margin-left: 0.5em;
+}
+
 .connection-item-lock {
+	font-size: 14px;
+	color: var(--vscode-descriptionForeground);
+	flex-shrink: 0;
+}
+
+.connection-item-badge {
 	font-size: 14px;
 	color: var(--vscode-descriptionForeground);
 	flex-shrink: 0;
