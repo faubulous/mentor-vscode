@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
 import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
-import { MENTOR_WORKSPACE_STORE } from '../services/sparql-connection-service';
+import { WORKSPACE_CONNECTION } from '../services/sparql-connection-service';
 import { SparqlConnection } from '../services/sparql-connection';
 
 /**
@@ -94,7 +94,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	}
 
 	private _getConnectionLabel(connection: SparqlConnection): string {
-		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
+		if (connection.id === WORKSPACE_CONNECTION.id) {
 			return connection.id;
 		} else {
 			return connection.endpointUrl;

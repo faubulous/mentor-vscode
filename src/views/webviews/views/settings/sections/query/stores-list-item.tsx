@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
 import { ScopeBadge } from '@src/views/webviews/components/scope-badge';
-import { isProtectedStore } from './workspace-store';
 
 export interface StoresListItemProps {
 	store: SparqlStoreConfig;
@@ -16,7 +15,7 @@ export interface StoresListItemProps {
  * Protected (built-in) stores show a lock badge and cannot be deleted.
  */
 export function StoresListItem({ store, onEdit, onDelete, onOpenInBrowser }: StoresListItemProps) {
-	const isProtected = isProtectedStore(store);
+	const isProtected = !!store.isProtected;
 	const subtitle = store.website
 		?? store.description
 		?? (store.inference?.supported === true ? 'Reasoning supported' : undefined);

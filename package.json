@@ -1351,7 +1351,7 @@
             "default": "CONSTRUCT { <{{resourceIri}}> ?p ?o }{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }",
             "editPresentation": "multilineText"
           },
-          "mentor.sparql.storeTypes": {
+          "mentor.sparql.stores": {
             "type": "array",
             "title": "SPARQL Stores",
             "description": "User-defined SPARQL store profiles. Each profile describes a store type: how it controls reasoning (a URL parameter or an inline query pragma) and its default queries. Manage these from the Query > Stores settings section. The built-in in-memory Workspace store is not configurable here.",
@@ -1401,6 +1401,10 @@
                 "description": {
                   "type": "string",
                   "description": "Optional free-text description of the store type."
+                },
+                "isProtected": {
+                  "type": "boolean",
+                  "description": "When true, the store cannot be edited or deleted from the settings UI."
                 },
                 "inference": {
                   "type": "object",

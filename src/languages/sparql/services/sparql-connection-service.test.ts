@@ -58,7 +58,7 @@ function makeService() {
  */
 const builtInStoreConfigs: SparqlStoreConfig[] = (packageJson as any).contributes.configuration
     .flatMap((b: any) => Object.entries(b.properties ?? {}))
-    .find(([key]: [string]) => key === 'mentor.sparql.storeTypes')?.[1]?.default ?? [];
+    .find(([key]: [string]) => key === 'mentor.sparql.stores')?.[1]?.default ?? [];
 
 /**
  * Runs the test callback with the built-in store configs available via the config mock.
@@ -70,7 +70,7 @@ function withStoreConfigs(configs: any[], run: (svc: SparqlConnectionService) =>
         const vscode = await import('vscode');
         const original = vscode.workspace.getConfiguration;
         (vscode.workspace as any).getConfiguration = () => ({
-            get: (key: string, def: any) => key === 'sparql.storeTypes' ? configs : def,
+            get: (key: string, def: any) => key === 'sparql.stores' ? configs : def,
             has: () => false,
             inspect: () => undefined,
             update: async () => {},

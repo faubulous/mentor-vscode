@@ -30,7 +30,7 @@ function withStoreConfigs(configs: SparqlStoreConfig[], run: (svc: SparqlStoreCo
         const original = vscode.workspace.getConfiguration;
 
         (vscode.workspace as any).getConfiguration = () => ({
-            get: (key: string, def: any) => key === 'sparql.storeTypes' ? configs : def,
+            get: (key: string, def: any) => key === 'sparql.stores' ? configs : def,
             has: () => false,
             inspect: () => undefined,
             update: async () => {},
@@ -55,7 +55,7 @@ function withInspectedStoreConfigs(
         (vscode.workspace as any).getConfiguration = () => ({
             get: (_key: string, def: any) => def,
             has: () => false,
-            inspect: (key: string) => key === 'sparql.storeTypes' ? inspected : undefined,
+            inspect: (key: string) => key === 'sparql.stores' ? inspected : undefined,
             update: async () => {},
         });
 

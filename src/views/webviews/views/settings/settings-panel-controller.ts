@@ -61,6 +61,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 
 			if (properties) {
 				const errors = validateSectionDescriptors(this._sections, properties);
+				
 				if (errors.length) {
 					console.error('[mentor settings] descriptor validation failed:\n' + errors.join('\n'));
 				}

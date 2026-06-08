@@ -2,7 +2,6 @@ import * as React from 'react';
 import { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { StoresListItem } from './stores-list-item';
-import { isProtectedStore } from './workspace-store';
 
 export interface StoresListProps {
 	stores: SparqlStoreConfig[];
@@ -19,8 +18,8 @@ export interface StoresListProps {
  * opened from a row.
  */
 export function StoresList({ stores, onCreate, onEdit, onDelete, onOpenInBrowser }: StoresListProps) {
-	const protectedStores = stores.filter(isProtectedStore);
-	const userDefinedStores = stores.filter(s => !isProtectedStore(s));
+	const protectedStores = stores.filter(s => s.isProtected);
+	const userDefinedStores = stores.filter(s => !s.isProtected);
 
 	const renderItem = (store: SparqlStoreConfig) => (
 		<StoresListItem

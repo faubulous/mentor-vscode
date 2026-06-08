@@ -10,22 +10,12 @@ import { AuthCredential, EntraClientAuthCredential } from '@src/services/core/cr
 import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
 import { SparqlConnection } from './sparql-connection';
 import { ComunicaEndpoint, SparqlEndpoint } from './sparql-endpoint';
-import { SparqlStoreConfig, SparqlQueryKind } from './sparql-store-config';
+import { SparqlStoreConfig, SparqlQueryKind, SPARQL_QUERY_KINDS } from './sparql-store-config';
 import { ISparqlStoreConfigService } from './sparql-store-config-service';
 import { ISparqlQueryService } from './sparql-query-service.interface';
 import { WorkspaceEndpointProvider } from '@src/languages/sparql/services/endpoints';
-
-/**
- * The non-removable workspace triple store.
- */
-export const MENTOR_WORKSPACE_STORE: SparqlConnection = {
-	id: 'workspace',
-	endpointUrl: 'workspace:',
-	description: 'In-memory triple store of the workspace.',
-	configScope: ConfigurationScope.Workspace,
-	isProtected: true,
-	storeType: 'workspace'
-};
+import { WORKSPACE_CONNECTION, WORKSPACE_STORE } from './workspace-store';
+export { WORKSPACE_CONNECTION, WORKSPACE_STORE };
 
 /**
  * Service for managing connections to SPARQL endpoints.
@@ -40,13 +30,6 @@ export class SparqlConnectionService {
 
 	/** Workspace-state key prefix for per-document inference settings (`<prefix><documentUri>`). */
 	private readonly _documentInferenceStorageKeyPrefix = 'mentor.inference.document:';
-
-	/** Maps each query kind to the global `mentor.sparql.*` setting used as the final fallback. */
-	private readonly _globalQueryConfigKeys: Record<SparqlQueryKind, string> = {
-		listGraphs: 'sparql.listGraphsQuery',
-		dropGraph: 'sparql.dropGraphQuery',
-		describe: 'sparql.describeQueryTemplate',
-	};
 
 	/** The current in-memory connection list, including the workspace store at index 0. */
 	private _connections: SparqlConnection[] = [];
@@ -161,11 +144,11 @@ export class SparqlConnectionService {
 	 * @returns The workspace store as a SparqlConnection with inference capability set.
 	 */
 	private _createWorkspaceStoreConnection(): SparqlConnection {
-		const storageKey = `${this._inferenceEnabledStorageKeyPrefix}${MENTOR_WORKSPACE_STORE.id}`;
+		const storageKey = `${this._inferenceEnabledStorageKeyPrefix}${WORKSPACE_CONNECTION.id}`;
 		const inferenceEnabled = this._extensionContext.workspaceState.get<boolean>(storageKey, false);
 
 		return {
-			...MENTOR_WORKSPACE_STORE,
+			...WORKSPACE_CONNECTION,
 			inferenceSupported: true,
 			inferenceEnabled
 		};
@@ -368,7 +351,7 @@ export class SparqlConnectionService {
 	 */
 	private _getEndpointDataForConfigScope(configScope: ConfigurationScope) {
 		return this._connections
-			.filter(c => c.configScope === configScope && c.id !== MENTOR_WORKSPACE_STORE.id)
+			.filter(c => c.configScope === configScope && c.id !== WORKSPACE_CONNECTION.id)
 			.map(c => ({
 				id: c.id,
 				...(c.description ? { description: c.description } : {}),
@@ -432,7 +415,7 @@ export class SparqlConnectionService {
 			? this._getConnectionIdForCell(uri)
 			: this._extensionContext.workspaceState.get<string>(`sparql.connection:${uri.toString()}`);
 
-		return this.getConnection(connectionId ?? '') ?? MENTOR_WORKSPACE_STORE;
+		return this.getConnection(connectionId ?? '') ?? WORKSPACE_CONNECTION;
 	}
 
 	/**
@@ -600,7 +583,7 @@ export class SparqlConnectionService {
 	 */
 	getQueryTemplate(connection: SparqlConnection, kind: SparqlQueryKind): string | undefined {
 		return this._storeConfigService.getStoreConfig(connection.storeType)?.queries?.[kind]
-			|| getConfig().get<string>(this._globalQueryConfigKeys[kind]);
+			|| getConfig().get<string>(SPARQL_QUERY_KINDS[kind].globalSettingKey);
 	}
 
 	/**
@@ -684,7 +667,7 @@ export class SparqlConnectionService {
 	 * @param connection The connection data to apply.
 	 */
 	async updateConnection(connection: SparqlConnection): Promise<void> {
-		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
+		if (connection.id === WORKSPACE_CONNECTION.id) {
 			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be modified.');
 			return;
 		}
@@ -705,7 +688,7 @@ export class SparqlConnectionService {
 	 * @param connectionId The ID of the connection to delete.
 	 */
 	async deleteConnection(connectionId: string): Promise<void> {
-		if (connectionId === MENTOR_WORKSPACE_STORE.id) {
+		if (connectionId === WORKSPACE_CONNECTION.id) {
 			vscode.window.showErrorMessage('The Mentor Workspace Store cannot be removed.');
 			return;
 		}

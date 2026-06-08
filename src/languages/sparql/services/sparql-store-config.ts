@@ -1,7 +1,7 @@
 import { ConfigurationScope } from '@src/utilities/config-scope';
 
 /**
- * A user-definable SPARQL store type. Store configs are stored in the `mentor.sparql.storeTypes`
+ * A user-definable SPARQL store type. Store configs are stored in the `mentor.sparql.stores`
  * setting and let users create, rename, and remove store types, and define the same store with
  * different settings more than once.
  */
@@ -13,7 +13,7 @@ export interface SparqlStoreConfig {
 
     /**
      * Transient, UI-only marker for which configuration scope this store is persisted in
-     * (User vs Workspace). Never serialized into the `sparql.storeTypes` setting — it is
+     * (User vs Workspace). Never serialized into the `sparql.stores` setting — it is
      * stripped before writing and re-derived on read.
      */
     configScope?: ConfigurationScope;
@@ -39,6 +39,12 @@ export interface SparqlStoreConfig {
      * Reasoning control configuration; absent means the store does not support reasoning.
      */
     inference?: SparqlStoreInferenceConfig;
+
+    /**
+     * When `true`, the store cannot be edited or deleted from the settings UI.
+     * The built-in workspace store sets this; users may also set it on their own stores.
+     */
+    isProtected?: boolean;
 
     /**
      * Store-specific default query templates; a blank field falls back to the global setting.
@@ -82,23 +88,33 @@ export interface SparqlStoreInferenceConfigParameters {
 }
 
 /**
- * The kinds of store-specific SPARQL query templates that can be resolved for a connection.
- * - `listGraphs`: retrieves the named graphs available from the store.
- * - `dropGraph`: drops a named graph from the store.
- * - `describe`: describes a resource (used by the describe command).
- */
-export type SparqlQueryKind = 'listGraphs' | 'dropGraph' | 'describe';
-
-/**
- * Store-specific default SPARQL query templates.
+ * Registry of all supported SPARQL query template kinds. Each entry provides the display
+ * label and description for the settings UI and the global VS Code setting key used as the
+ * fallback when no per-store override is defined.
  *
- * Each store type may provide its own defaults to account for differences in supported
- * SPARQL features (e.g. some stores accept an empty `GRAPH ?g {}` pattern while others
- * require `GRAPH ?g { ?s ?p ?o }`). Any template left undefined falls back to the global
- * `mentor.sparql.*` setting.
+ * Adding a new kind here automatically widens {@link SparqlQueryKind} and
+ * {@link SparqlStoreQueryTemplates} — no other type definitions need updating.
  */
-export interface SparqlStoreQueryTemplates {
-    listGraphs?: string;
-    dropGraph?: string;
-    describe?: string;
-}
+export const SPARQL_QUERY_KINDS = {
+    listGraphs: {
+        label: 'List Graphs Query',
+        description: 'Retrieves the named graphs available from the store. Leave blank to use the global default.',
+        globalSettingKey: 'sparql.listGraphsQuery',
+    },
+    dropGraph: {
+        label: 'Drop Graph Query',
+        description: 'Deletes a named graph from the store. Leave blank to use the global default.',
+        globalSettingKey: 'sparql.dropGraphQuery',
+    },
+    describe: {
+        label: 'Describe Query',
+        description: 'Describes a resource, used by the Describe command. Leave blank to use the global default.',
+        globalSettingKey: 'sparql.describeQueryTemplate',
+    },
+} as const;
+
+/** Derived from {@link SPARQL_QUERY_KINDS} — adding an entry there automatically widens this type. */
+export type SparqlQueryKind = keyof typeof SPARQL_QUERY_KINDS;
+
+/** Derived from {@link SparqlQueryKind} — always in sync with the registry. */
+export type SparqlStoreQueryTemplates = Partial<Record<SparqlQueryKind, string>>;

@@ -10,6 +10,11 @@ export interface SparqlConnection {
     id: string;
 
     /**
+     * Optional human-readable display name for the connection.
+     */
+    label?: string;
+
+    /**
      * An optional description providing context for the connection.
      */
     description?: string;

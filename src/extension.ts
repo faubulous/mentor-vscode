@@ -8,7 +8,8 @@ import { ServiceToken } from './services/tokens';
 import { IWorkspaceFileService, IWorkspaceService } from './services/core';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { WorkspaceUri } from './providers/workspace-uri';
-import { SparqlConnectionService } from './languages/sparql/services/sparql-connection-service';
+import { SparqlConnectionService, WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connection-service';
+import { ISparqlStoreConfigService } from './languages/sparql/services/sparql-store-config-service';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
@@ -39,6 +40,7 @@ export async function activateExtension(context: vscode.ExtensionContext, langua
 	registerViews();
 	registerNotebookSerializers();
 	registerRenameHandlers(context);
+	registerNotebookInferenceContext(context);
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
@@ -145,6 +147,40 @@ function registerRenameHandlers(context: vscode.ExtensionContext) {
 }
 
 
+
+/**
+ * Keeps the `mentor.activeNotebookSupportsInference` context key in sync with the active notebook's
+ * connection(s), so the notebook toolbar "Inference" button is disabled when the active notebook's
+ * store does not support inference.
+ */
+function registerNotebookInferenceContext(context: vscode.ExtensionContext) {
+	const update = () => {
+		const editor = vscode.window.activeNotebookEditor;
+		let supported = false;
+
+		if (editor && editor.notebook.notebookType === 'mentor-notebook') {
+			const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+			const storeConfigService = container.resolve<ISparqlStoreConfigService>(ServiceToken.SparqlStoreConfigService);
+			const cells = editor.notebook.getCells();
+
+			// Empty notebooks default to the workspace store, which supports inference.
+			supported = cells.length === 0
+				? storeConfigService.supportsInference(WORKSPACE_CONNECTION)
+				: cells.some(cell => storeConfigService.supportsInference(connectionService.getConnectionForDocument(cell.document.uri)));
+		}
+
+		vscode.commands.executeCommand('setContext', 'mentor.activeNotebookSupportsInference', supported);
+	};
+
+	const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+
+	context.subscriptions.push(
+		vscode.window.onDidChangeActiveNotebookEditor(() => update()),
+		connectionService.onDidChangeConnectionForDocument(() => update()),
+	);
+
+	update();
+}
 
 /**
  * Loads the RDF framework ontologies into the store, which are required for providing completions and hovers for built-in concepts.
