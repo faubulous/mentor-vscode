@@ -25,7 +25,7 @@ export function StoresListItem({ store, onEdit, onDelete, onOpenInBrowser }: Sto
 			onClick={() => onEdit(store)}
 			title={isProtected ? 'View workspace store settings' : `Edit ${store.label}`}
 		>
-			<vscode-icon name="database" className="connection-item-icon" />
+			<vscode-icon name={supportsReasoning ? 'sparql-store-inference' : 'sparql-store'} className="connection-item-icon" />
 			<div className="connection-item-body">
 				<div className="connection-item-titlerow">
 					<span className="connection-item-name">{store.label}</span>
@@ -53,12 +53,7 @@ export function StoresListItem({ store, onEdit, onDelete, onOpenInBrowser }: Sto
 				</div>
 				{(subtitle || (!isProtected && store.configScope !== undefined)) && (
 					<div className="connection-item-subline">
-						<div className="connection-item-description">
-							<span>{subtitle}</span>
-							{supportsReasoning && (
-								<vscode-icon name="lightbulb-sparkle" className="connection-item-badge" title="Reasoning supported" />
-							)}
-						</div>
+						<span className="connection-item-description">{subtitle}</span>
 						{!isProtected && store.configScope !== undefined && <ScopeBadge scope={store.configScope} />}
 					</div>
 				)}

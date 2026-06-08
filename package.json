@@ -1316,6 +1316,34 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e018"
         }
+      },
+      "sparql-connection": {
+        "description": "SPARQL Connection",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e019"
+        }
+      },
+      "sparql-connection-inference": {
+        "description": "SPARQL Connection with Inference",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e01a"
+        }
+      },
+      "sparql-store": {
+        "description": "SPARQL Store",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e01b"
+        }
+      },
+      "sparql-store-inference": {
+        "description": "SPARQL Store with Inference",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e01c"
+        }
       }
     },
     "configuration": [

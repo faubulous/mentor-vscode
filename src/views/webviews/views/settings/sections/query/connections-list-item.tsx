@@ -27,13 +27,17 @@ export function ConnectionsListItem({
 	const isProtected = connection.isProtected === true;
 	const isWorkspaceStore = connection.id === 'workspace';
 
+	const baseIconName = connection.inferenceSupported && connection.inferenceEnabled
+		? 'sparql-connection-inference'
+		: 'sparql-connection';
+
 	const connectionIcon = isTesting
 		? <vscode-icon name="ellipsis" className="connection-item-icon icon-testing" />
 		: testResult?.success === true
 		? <vscode-icon name="pass" className="connection-item-icon icon-success" />
 		: testResult?.success === false
 		? <vscode-icon name="error" className="connection-item-icon icon-error" title={testResult.error} />
-		: <vscode-icon name="database" className="connection-item-icon" />;
+		: <vscode-icon name={baseIconName} className="connection-item-icon" />;
 
 	const testTitle = isTesting
 		? 'Testing connection...'

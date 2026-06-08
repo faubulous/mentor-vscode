@@ -13,11 +13,36 @@
 	width: 175px;
 }
 
-.connection-editor-container vscode-progress-bar {
+.connection-editor-container vscode-progress-bar,
+.connection-editor-container .connection-status-bar {
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
+	height: 3px;
+	border-radius: 4px 4px 0 0;
+	overflow: hidden;
+}
+
+.connection-editor-container .connection-status-bar.status-success {
+	background-color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.connection-editor-container .connection-status-bar.status-error {
+	background-color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.form-actions .form-status-text {
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.form-actions .form-status-icon.icon-success {
+	color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.form-actions .form-status-icon.icon-error {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
 .connection-editor-container .section-endpoint-url {
@@ -27,22 +52,6 @@
 
 .connection-editor-container .section-endpoint-url vscode-textfield {
 	flex: 1;
-}
-
-.connection-editor-container .section-endpoint-url vscode-icon {
-	margin: 0 .2em 0 0.5em;
-}
-
-.connection-editor-container .section-endpoint-url vscode-icon.icon-testing {
-	color: var(--vscode-textLink-activeForeground);
-}
-
-.connection-editor-container .section-endpoint-url vscode-icon.icon-success {
-	color: var(--vscode-notebookStatusSuccessIcon-foreground);
-}
-
-.connection-editor-container .section-endpoint-url vscode-icon.icon-error {
-	color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
 .connection-editor-container .section-endpoint-description vscode-textfield {

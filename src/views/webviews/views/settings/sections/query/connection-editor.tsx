@@ -209,20 +209,10 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 
 	const getEndpointSectionClassName = () => {
 		const className = ['section-endpoint-url', 'row'];
-
+		
 		if (isFormReadOnly()) {
 			className.push('readonly');
 		}
-		if (isTesting) {
-			className.push('status-testing');
-		}
-
-		if (testResult) {
-			className.push('status-error');
-		} else if (testResult === null) {
-			className.push('status-success');
-		}
-
 		return className.join(' ');
 	};
 
@@ -280,9 +270,18 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 		<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
 			{isFormReadOnly() && <vscode-icon name="lock" title="Built-in connection" />}
 			{!isFormReadOnly() && <>
+				{isTesting && (
+					<span className="form-status-text">Testing…</span>
+				)}
+				{!isTesting && isConnectionSuccessful() && (
+					<vscode-icon name="pass" className="form-status-icon icon-success" title="Connection successful" />
+				)}
+				{!isTesting && hasConnectionError() && (
+					<vscode-icon name="error" className="form-status-icon icon-error" title={testResult!.message} />
+				)}
 				<vscode-toolbar-button title="Test connection"
 					onClick={handleTest}
-					disabled={!isFormValid() || isFormReadOnly() || isTesting}				>
+					disabled={!isFormValid() || isFormReadOnly() || isTesting}>
 					<vscode-icon name="debug-disconnect" />
 				</vscode-toolbar-button>
 				<vscode-button title="Save connection" onClick={handleSaveClick} disabled={!isFormValid() || !draft.hasUnsavedChanges}>
@@ -445,6 +444,8 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 	return (
 		<div className="modal-form connection-editor-container">
 			{isTesting && <vscode-progress-bar />}
+			{!isTesting && isConnectionSuccessful() && <div className="connection-status-bar status-success" />}
+			{!isTesting && hasConnectionError() && <div className="connection-status-bar status-error" />}
 			{headerActionsSlot && createPortal(renderFormActions(), headerActionsSlot)}
 			<form onSubmit={handleFormSubmit}>
 				<div className="form-body">
@@ -463,10 +464,7 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 											disabled={isFormReadOnly()}
 											onInput={handleEndpointUrlChange}
 										>
-											{!wasConnectionTested() && <vscode-icon slot="content-before" name="database" />}
-											{isTesting && <vscode-icon slot="content-before" name="ellipsis" className="icon-testing" />}
-											{hasConnectionError() && <vscode-icon slot="content-before" name="error" className="icon-error" />}
-											{isConnectionSuccessful() && <vscode-icon slot="content-before" name="pass" className="icon-success" />}
+											<vscode-icon slot="content-before" name="database" />
 										</vscode-textfield>
 									</div>
 								</div>

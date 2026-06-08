@@ -50,7 +50,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		// Connection CodeLens
 		const connectionUrl = this._getConnectionLabel(connection);
 		const connectionCodeLens = new vscode.CodeLens(range, {
-			title: `$(database)\u00A0Connection: ${connectionUrl}`,
+			title: `$(sparql-connection)\u00A0Connection: ${connectionUrl}`,
 			tooltip: 'Click to change the SPARQL endpoint for this file',
 			command: 'mentor.command.selectSparqlConnection',
 			arguments: [document],
@@ -61,7 +61,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		// Inference status CodeLens (only for connections that support inference)
 		if (this._storeConfigService.supportsInference(connection)) {
 			const inferenceEnabled = this._connectionService.getInferenceEnabledForDocument(document.uri);
-			const inferenceIcon = inferenceEnabled ? '$(lightbulb-sparkle)' : '$(lightbulb-sparkle)';
+			const inferenceIcon = inferenceEnabled ? '$(sparql-connection-inference)' : '$(sparql-connection)';
 			const inferenceText = inferenceEnabled ? 'on' : 'off';
 			const inferenceTooltip = inferenceEnabled
 				? 'Inferred triples are included. Click to exclude them.'

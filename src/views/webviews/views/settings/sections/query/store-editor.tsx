@@ -262,7 +262,7 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 							</section>
 						</>
 					) : (
-						<p className="text-muted">Enable "This store supports reasoning" on the General tab to configure how reasoning is toggled.</p>
+						<p className="text-muted">Enable per query reasoning on the General tab to configure details.</p>
 					)}
 				</vscode-tab-panel>
 			</vscode-tabs>
