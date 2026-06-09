@@ -149,7 +149,7 @@ export class SparqlConnectionService {
 
 		return {
 			...WORKSPACE_CONNECTION,
-			inferenceSupported: true,
+			canToggleInference: true,
 			inferenceEnabled
 		};
 	}
@@ -318,7 +318,7 @@ export class SparqlConnectionService {
 	 * Reads connections from a configuration scope and resolves their inferred store type and
 	 * inference support based on the registered store configs.
 	 * @param configTarget The configuration target (Global or Workspace) to read from.
-	 * @returns The connections found in the given scope, with `configScope` and `inferenceSupported` set.
+	 * @returns The connections found in the given scope, with `configScope` and `canToggleInference` set.
 	 */
 	private _loadConnectionsFromConfiguration(configTarget: vscode.ConfigurationTarget): SparqlConnection[] {
 		const inspect = getConfig().inspect<SparqlConnection[]>(this._connectionsConfigKey);
@@ -340,7 +340,7 @@ export class SparqlConnectionService {
 		return raw.map(c => {
 			const storeType = c.storeType ?? this._storeConfigService.defaultStoreType;
 			const connection = { ...c, storeType };
-			return { ...connection, configScope, inferenceSupported: this._storeConfigService.supportsInference(connection) };
+			return { ...connection, configScope, canToggleInference: this._storeConfigService.supportsInference(connection) };
 		});
 	}
 

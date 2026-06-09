@@ -300,7 +300,7 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 	const selectedStoreType = endpoint.storeType ?? 'sparql';
 	const selectedStoreConfig = storeConfigs.find(s => s.id === selectedStoreType);
 	// Derive inference capability from the selected store type so the toggle updates live on change.
-	const inferenceSupported = selectedStoreConfig?.inference?.supported ?? endpoint.inferenceSupported ?? false;
+	const canToggleInference = selectedStoreConfig?.inference?.supported ?? endpoint.canToggleInference ?? false;
 
 	const renderFormActions = () => (
 		<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
@@ -530,14 +530,14 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 												</vscode-single-select>
 											</div>
 										)}
-										{!inferenceSupported && (
+										{!canToggleInference && (
 											<vscode-checkbox
 												className="section-reasoning-checkbox"
 												disabled={true}>
 												Per query reasoning control not supported
 											</vscode-checkbox>
 										)}
-										{inferenceSupported && (
+										{canToggleInference && (
 											<vscode-checkbox
 												className="section-reasoning-checkbox"
 												checked={endpoint.inferenceEnabled ?? false}

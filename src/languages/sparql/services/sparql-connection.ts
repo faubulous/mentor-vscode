@@ -60,10 +60,10 @@ export interface SparqlConnection {
     inferenceEnabled?: boolean;
 
     /**
-     * Whether this connection supports inference toggling.
+     * Whether inference can be toggled for this connection.
      * Set by the connection service based on provider capability.
      */
-    inferenceSupported?: boolean;
+    canToggleInference?: boolean;
 
     /**
      * When `true`, named graphs are loaded from the endpoint on extension startup

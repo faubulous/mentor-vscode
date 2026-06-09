@@ -12,7 +12,8 @@ export const WORKSPACE_CONNECTION: SparqlConnection = {
 	description: 'In-memory triple store of the workspace.',
 	configScope: ConfigurationScope.Workspace,
 	isProtected: true,
-	storeType: 'workspace'
+	storeType: 'workspace',
+	canToggleInference: true
 };
 
 /**
@@ -23,4 +24,7 @@ export const WORKSPACE_STORE: SparqlStoreConfig = {
 	label: WORKSPACE_CONNECTION.label!,
 	description: WORKSPACE_CONNECTION.description,
 	isProtected: WORKSPACE_CONNECTION.isProtected,
+	inference: {
+		supported: true
+	}
 };

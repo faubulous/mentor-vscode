@@ -60,7 +60,7 @@ export function ConnectionsListItem({
 			<span key="description" className="connection-item-meta-item connection-item-meta-description">{connection.description}</span>
 		);
 	}
-	if (connection.inferenceSupported) {
+	if (connection.canToggleInference) {
 		metaItems.push(
 			<span key="inference" className="connection-item-meta-item">
 				<span className="codicon codicon-lightbulb-sparkle" style={{ marginLeft: '-4px' }} />
