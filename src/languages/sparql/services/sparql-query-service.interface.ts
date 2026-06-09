@@ -89,6 +89,14 @@ export interface ISparqlQueryService {
 	executeQueryOnConnection(query: string, connection: SparqlConnection): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null>;
 
 	/**
+	 * Registers an already-completed query state in the history and notifies listeners,
+	 * without executing anything. Used to surface pre-computed results (e.g. named graphs
+	 * already cached by the graph service) in the results panel.
+	 * @param state The completed query execution state, including its `result`.
+	 */
+	registerCompletedQuery(state: SparqlQueryExecutionState): void;
+
+	/**
 	 * Gets recent queries across all documents, ordered by execution time in descending order.
 	 * @returns An array of recent query entries.
 	 */

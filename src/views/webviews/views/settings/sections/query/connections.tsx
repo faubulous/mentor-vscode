@@ -7,7 +7,7 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
 import { ConnectionEditor } from './connection-editor';
 import { ConnectionEditorMessages } from './connection-editor-messages';
 import { ConnectionsList } from './connections-list';
-import { ConnectionsListMessages } from './connections-list-messages';
+import { ConnectionsListMessages, GraphStatus } from './connections-list-messages';
 import { MENTOR_SOURCE, TestResult } from '../../settings-types';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { useScopedWebviewMessaging } from '../../../../webview-hooks';
@@ -28,6 +28,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 
 	const [connections, setConnections] = useState<SparqlConnection[]>([]);
 	const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+	const [graphStatuses, setGraphStatuses] = useState<Record<string, GraphStatus>>({});
 	const [editingConnection, setEditingConnection] = useState<SparqlConnection | undefined>(undefined);
 	const [editorDirty, setEditorDirty] = useState(false);
 	const [testingConnections, setTestingConnections] = useState<Set<string>>(new Set());
@@ -45,6 +46,12 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 						: { success: false, error: message.error },
 				));
 				return;
+			case 'GetGraphStatusesResult':
+				setGraphStatuses(message.statuses);
+				return;
+			case 'GraphStatusChanged':
+				setGraphStatuses(prev => ({ ...prev, [message.connectionId]: message.status }));
+				return;
 			case 'EditSparqlConnection':
 				setEditingConnection(message.connection);
 				return;
@@ -55,6 +62,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetConnections' });
+		messaging?.postMessage({ id: 'GetGraphStatuses' });
 	}, []);
 
 	useEffect(() => {
@@ -96,6 +104,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 			<ConnectionsList
 				connections={connections}
 				testResults={testResults}
+				graphStatuses={graphStatuses}
 				testingConnections={testingConnections}
 				onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
 				onEditConnection={(connection) => setEditingConnection(connection)}

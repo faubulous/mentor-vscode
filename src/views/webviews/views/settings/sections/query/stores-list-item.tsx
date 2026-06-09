@@ -17,7 +17,6 @@ export interface StoresListItemProps {
 export function StoresListItem({ store, onEdit, onDelete, onOpenInBrowser }: StoresListItemProps) {
 	const isProtected = !!store.isProtected;
 	const subtitle = store.website ?? store.description;
-	const supportsReasoning = store.inference?.supported === true;
 
 	return (
 		<div
@@ -25,7 +24,7 @@ export function StoresListItem({ store, onEdit, onDelete, onOpenInBrowser }: Sto
 			onClick={() => onEdit(store)}
 			title={isProtected ? 'View workspace store settings' : `Edit ${store.label}`}
 		>
-			<vscode-icon name={supportsReasoning ? 'sparql-store-inference' : 'sparql-store'} className="connection-item-icon" />
+			<vscode-icon name="database" className="connection-item-icon" />
 			<div className="connection-item-body">
 				<div className="connection-item-titlerow">
 					<span className="connection-item-name">{store.label}</span>

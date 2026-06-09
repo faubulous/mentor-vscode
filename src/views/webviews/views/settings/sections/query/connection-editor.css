@@ -13,8 +13,7 @@
 	width: 175px;
 }
 
-.connection-editor-container vscode-progress-bar,
-.connection-editor-container .connection-status-bar {
+.connection-editor-container vscode-progress-bar {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -24,12 +23,17 @@
 	overflow: hidden;
 }
 
-.connection-editor-container .connection-status-bar.status-success {
-	background-color: var(--vscode-notebookStatusSuccessIcon-foreground);
+/*
+ * Reflect the connection test result on the surrounding modal window border
+ * rather than a separate status bar. The modal already draws a 1px solid border
+ * (see modal-dialog.css), so we only recolor it based on the editor's status class.
+ */
+.modal-dialog:has(.connection-editor-container.status-success) {
+	border-color: var(--vscode-notebookStatusSuccessIcon-foreground);
 }
 
-.connection-editor-container .connection-status-bar.status-error {
-	background-color: var(--vscode-notebookStatusErrorIcon-foreground);
+.modal-dialog:has(.connection-editor-container.status-error) {
+	border-color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
 .form-actions .form-status-text {
@@ -83,6 +87,23 @@
 	flex-direction: row;
 	align-items: flex-end;
 	gap: 1.5em;
+}
+
+.connection-editor-container .section-graph-loading {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5em;
+}
+
+.connection-editor-container .section-graph-loading-interval {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.connection-editor-container .section-graph-loading-interval vscode-textfield {
+	width: 60px;
 }
 
 .connection-editor-container section.auth {

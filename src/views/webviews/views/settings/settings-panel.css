@@ -701,6 +701,46 @@ vscode-textarea.monospace {
 	min-width: 0;
 }
 
+.connection-item-meta {
+	display: flex;
+	flex-direction: row;
+	gap: var(--mentor-space-6);
+	min-width: 0;
+	flex: 1;
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+	line-height: 1.5em;
+}
+
+.connection-item-meta-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3em;
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+.connection-item-meta-description {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
+}
+
+.connection-item-meta-item.graph-status-error {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.connection-item-meta-dot {
+	flex-shrink: 0;
+	opacity: 0.6;
+}
+
+.connection-item-meta-icon {
+	font-size: 1em;
+}
+
 .connection-item-lock {
 	font-size: 14px;
 	color: var(--vscode-descriptionForeground);

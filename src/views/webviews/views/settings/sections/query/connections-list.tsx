@@ -3,10 +3,12 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
 import { ConnectionsListItem } from './connections-list-item';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { TestResult } from '../../settings-types';
+import { GraphStatus } from './connections-list-messages';
 
 export interface ConnectionsListProps {
 	connections: SparqlConnection[];
 	testResults: Record<string, TestResult>;
+	graphStatuses: Record<string, GraphStatus>;
 	testingConnections: Set<string>;
 	onCreateConnection: () => void;
 	onEditConnection: (connection: SparqlConnection) => void;
@@ -19,6 +21,7 @@ export interface ConnectionsListProps {
 export function ConnectionsList({
 	connections,
 	testResults,
+	graphStatuses,
 	testingConnections,
 	onCreateConnection,
 	onEditConnection,
@@ -37,6 +40,7 @@ export function ConnectionsList({
 			key={connection.id}
 			connection={connection}
 			testResult={testResults[connection.id]}
+			graphStatus={graphStatuses[connection.id]}
 			isTesting={testingConnections.has(connection.id)}
 			onEditConnection={onEditConnection}
 			onDeleteConnection={onDeleteConnection}

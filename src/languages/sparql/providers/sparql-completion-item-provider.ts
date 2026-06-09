@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { container } from 'tsyringe';
 import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlGraphService } from '@src/languages/sparql/services';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
@@ -28,6 +28,10 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 
 	private get connectionService() {
 		return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+	}
+
+	private get graphService() {
+		return container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
 	}
 
 	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | null> {
@@ -171,9 +175,21 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	/**
 	 * Merges remote endpoint graph IRIs and workspace document/cell IRIs into a
 	 * single deduplicated list. Endpoint graphs come first.
+	 *
+	 * When the document's connection has `autoLoadGraphs` enabled and the graph
+	 * service has a cached result, the cache is used (no network round-trip).
+	 * Otherwise the existing on-demand query path is used.
 	 */
 	private async _mergeGraphUris(documentUri: vscode.Uri): Promise<string[]> {
-		const endpointGraphs = await this.connectionService.getGraphsForDocument(documentUri);
+		const connection = this.connectionService.getConnectionForDocument(documentUri);
+		let endpointGraphs: string[];
+
+		if (connection.autoLoadGraphs && this.graphService.isGraphsLoaded(connection.id)) {
+			endpointGraphs = this.graphService.getGraphsForConnection(connection.id);
+		} else {
+			endpointGraphs = await this.connectionService.getGraphsForDocument(documentUri);
+		}
+
 		const workspaceGraphs = this.getWorkspaceGraphUris(documentUri);
 
 		const seen = new Set<string>();

@@ -152,9 +152,9 @@ const copyFile = (fileName, sourceFolder, targetFolder, targetName = undefined) 
 }
 
 /**
- * Copies the VSCode Codicon CSS and font files to the media directory.
- * The CSS is modified to reference the font file using a relative URL,
- * similar to how mentor-icons.css works.
+ * Copies the VSCode Codicon CSS and font files to the media directory, rewriting
+ * the font URL to a relative path, and folds in the custom Mentor icon glyphs
+ * (see appendMentorIcons) so codicon.css is the single webview icon stylesheet.
  */
 const copyVSCodeCodiconCSS = () => {
   console.log(`Copying VSCode Codicon CSS and font files..`);
@@ -194,21 +194,31 @@ const copyVSCodeCodiconCSS = () => {
   css = css.replace(/\s+/g, ' '); // Collapse whitespace
   css = css.trim();
 
-  // Write the modified CSS to the media directory (alongside the font)
-  const cssTarget = path.join(mediaFolder, 'codicon.css');
-
-  fs.writeFileSync(cssTarget, css);
-
-  console.log(` codicon.css → media/codicon.css`);
-
-  // Also create a version with inline base64 font for notebook renderers
-  // (notebook renderers run in isolated iframes and can't reference external font files)
+  // Build the inline (base64 font) variant for notebook renderers, which run in
+  // isolated iframes and can't reference external font files.
   const fontData = fs.readFileSync(fontSource);
   const fontBase64 = fontData.toString('base64');
-  const inlineCss = css.replace(
+  let inlineCss = css.replace(
     /src:\s*url\([^)]+\)\s*format\(["']truetype["']\);?/,
     `src: url('data:font/truetype;charset=utf-8;base64,${fontBase64}') format('truetype');`
   );
+
+  // Fold the custom Mentor icon glyphs into the codicon stylesheet, so they are
+  // usable via <vscode-icon name="mentor-..."> and `.codicon-mentor-*` classes.
+  // This makes codicon.css the single icon stylesheet for webviews. The glyphs
+  // are namespaced with a `mentor-` prefix to avoid clashing with real codicons.
+  const mentorRules = appendMentorIcons(css, mediaFolder);
+  
+  if (mentorRules) {
+    css += ` ${mentorRules.external}`;
+    inlineCss += ` ${mentorRules.inline}`;
+  }
+
+  // Write the external CSS to the media directory (alongside the font)
+  const cssTarget = path.join(mediaFolder, 'codicon.css');
+  fs.writeFileSync(cssTarget, css);
+
+  console.log(` codicon.css → media/codicon.css`);
 
   const inlineCssTarget = path.join(mediaFolder, 'codicon-inline.css');
   fs.writeFileSync(inlineCssTarget, inlineCss);
@@ -217,35 +227,45 @@ const copyVSCodeCodiconCSS = () => {
 }
 
 /**
- * Creates an inline version of mentor-icons.css with the font embedded as base64.
- * This is required for notebook renderers which run in isolated iframes.
+ * Builds the CSS fragments that map the Mentor icon font into the codicon
+ * `.codicon-mentor-*` namespace. Returns `external` (relative font URL) and
+ * `inline` (base64-embedded font) variants, or null if the glyph map is absent.
+ *
+ * @param {string} codiconCss The codicon CSS, used to detect class collisions.
+ * @param {string} mediaFolder The media directory holding the font and map.
  */
-const createMentorIconsInlineCSS = () => {
-  console.log(`Creating inline mentor-icons CSS with embedded font..`);
+const appendMentorIcons = (codiconCss, mediaFolder) => {
+  const mapPath = path.join(mediaFolder, 'mentor-icons.json');
+  const woffPath = path.join(mediaFolder, 'mentor-icons.woff');
 
-  const mediaFolder = path.resolve(__dirname, 'media');
-  const cssSource = path.join(mediaFolder, 'mentor-icons.css');
-  const fontSource = path.join(mediaFolder, 'mentor-icons.woff');
-
-  if (!fs.existsSync(cssSource) || !fs.existsSync(fontSource)) {
-    console.log(` Skipping mentor-icons-inline.css (source files not found)`);
-    return;
+  if (!fs.existsSync(mapPath) || !fs.existsSync(woffPath)) {
+    console.log(` Skipping Mentor icon merge (mentor-icons.json / .woff not found)`);
+    return null;
   }
 
-  let css = fs.readFileSync(cssSource, 'utf8');
-  const fontData = fs.readFileSync(fontSource);
-  const fontBase64 = fontData.toString('base64');
+  const glyphMap = JSON.parse(fs.readFileSync(mapPath, 'utf8'));
 
-  // Replace the font URL with inline base64 data
-  css = css.replace(
-    /src:\s*url\([^)]+\)\s*format\(["']woff["']\);?/,
-    `src: url('data:font/woff;charset=utf-8;base64,${fontBase64}') format('woff');`
-  );
+  // Collision guard: a prefixed mentor class must never clash with a real
+  // codicon. With the `mentor-` prefix this should be impossible, but fail the
+  // build loudly if a future codicon ever ships a `mentor-*` name.
+  const collisions = Object.keys(glyphMap)
+    .map(name => `codicon-mentor-${name}`)
+    .filter(cls => new RegExp(`\\.${cls}\\b`).test(codiconCss));
 
-  const inlineCssTarget = path.join(mediaFolder, 'mentor-icons-inline.css');
-  fs.writeFileSync(inlineCssTarget, css);
+  if (collisions.length) {
+    throw new Error(`Mentor icon classes collide with existing codicons: ${collisions.join(', ')}`);
+  }
 
-  console.log(` mentor-icons-inline.css → media/mentor-icons-inline.css (with embedded font)`);
+  const rules = Object.entries(glyphMap)
+    .map(([name, cp]) => `.codicon-mentor-${name}:before { font-family: 'mentor-icons'; content: "\\${cp}"; }`)
+    .join(' ');
+
+  const woffBase64 = fs.readFileSync(woffPath).toString('base64');
+
+  return {
+    external: `@font-face { font-family: "mentor-icons"; src: url('mentor-icons.woff') format('woff'); } ${rules}`,
+    inline: `@font-face { font-family: "mentor-icons"; src: url('data:font/woff;charset=utf-8;base64,${woffBase64}') format('woff'); } ${rules}`,
+  };
 }
 
 /**
@@ -307,7 +327,6 @@ const removeSourceMaps = () => {
     // copyFontGlyphs();
 
     copyVSCodeCodiconCSS();
-    createMentorIconsInlineCSS();
     copyVSCodeElementsBundle();
 
     // Copy the language config files to the dist directory.

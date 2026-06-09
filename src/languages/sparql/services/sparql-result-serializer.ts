@@ -102,6 +102,52 @@ export class SparqlResultSerializer {
 	}
 
 	/**
+	 * Builds a bindings result from a list of IRIs for a single column, without
+	 * executing a query. Used to render already-cached data (e.g. auto-loaded
+	 * named graphs) in the standard results table.
+	 * @param query The SPARQL query the IRIs correspond to; used to derive the column name.
+	 * @param iris The IRIs to render, one per row.
+	 * @param documentIri The IRI of the document used for prefix resolution.
+	 * @returns A BindingsResult mirroring the shape produced by {@link serializeBindings}.
+	 */
+	serializeIriList(query: string, iris: string[], documentIri: string = ''): BindingsResult {
+		let column = 'graph';
+
+		try {
+			const lexResult = new SparqlLexer().tokenize(query);
+			const cst = new SparqlParser().parse(lexResult.tokens);
+			const variables = new SparqlVariableParser().getSelectedVariables(cst);
+
+			if (variables.length > 0) {
+				column = variables[0];
+			}
+		} catch {
+			// Keep the default column name if the query cannot be parsed.
+		}
+
+		const namespaceMap: NamespaceMap = {};
+		const rows: Record<string, any>[] = [];
+
+		for (const iri of iris) {
+			const namespace = Uri.getNamespaceIri(iri);
+			const prefix = this.prefixLookupService.getPrefixForIri(documentIri, namespace, '\0');
+
+			if (prefix !== '\0') {
+				namespaceMap[namespace] = prefix;
+			}
+
+			rows.push({ [column]: { termType: 'NamedNode', value: iri } });
+		}
+
+		return {
+			type: 'bindings',
+			columns: [column],
+			rows,
+			namespaceMap
+		};
+	}
+
+	/**
 	 * Serializes a stream of quads into Turtle format.
 	 * @param context The query execution context.
 	 * @param quadStream The SPARQL query results as a QuadStream.

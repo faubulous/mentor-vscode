@@ -2,10 +2,12 @@ import * as React from 'react';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ScopeBadge } from '@src/views/webviews/components/scope-badge';
 import { TestResult } from '../../settings-types';
+import { GraphStatus } from './connections-list-messages';
 
 export interface ConnectionsListItemProps {
 	connection: SparqlConnection;
 	testResult?: TestResult;
+	graphStatus?: GraphStatus;
 	isTesting: boolean;
 	onEditConnection: (connection: SparqlConnection) => void;
 	onDeleteConnection: (connection: SparqlConnection) => void;
@@ -17,6 +19,7 @@ export interface ConnectionsListItemProps {
 export function ConnectionsListItem({
 	connection,
 	testResult,
+	graphStatus,
 	isTesting,
 	onEditConnection,
 	onDeleteConnection,
@@ -27,30 +30,53 @@ export function ConnectionsListItem({
 	const isProtected = connection.isProtected === true;
 	const isWorkspaceStore = connection.id === 'workspace';
 
-	const baseIconName = connection.inferenceSupported && connection.inferenceEnabled
-		? 'sparql-connection-inference'
-		: 'sparql-connection';
-
 	const connectionIcon = isTesting
 		? <vscode-icon name="ellipsis" className="connection-item-icon icon-testing" />
 		: testResult?.success === true
-		? <vscode-icon name="pass" className="connection-item-icon icon-success" />
-		: testResult?.success === false
-		? <vscode-icon name="error" className="connection-item-icon icon-error" title={testResult.error} />
-		: <vscode-icon name={baseIconName} className="connection-item-icon" />;
+			? <vscode-icon name="pass" className="connection-item-icon icon-success" />
+			: testResult?.success === false
+				? <vscode-icon name="error" className="connection-item-icon icon-error" title={testResult.error} />
+				: <vscode-icon name="arrow-swap" className="connection-item-icon" />;
 
 	const testTitle = isTesting
 		? 'Testing connection...'
 		: testResult?.success === true
-		? 'Connection successful'
-		: testResult?.success === false
-		? `Connection failed: ${testResult.error}`
-		: 'Test connection';
+			? 'Connection successful'
+			: testResult?.success === false
+				? `Connection failed: ${testResult.error}`
+				: 'Test connection';
 
 	let itemClass = 'connection-item';
 	if (isTesting) itemClass += ' testing';
 	else if (testResult?.success === true) itemClass += ' test-success';
 	else if (testResult?.success === false) itemClass += ' test-error';
+
+	const showGraphCount = graphStatus?.count !== undefined && connection.autoLoadGraphs;
+
+	const metaItems: React.ReactNode[] = [];
+
+	if (connection.description) {
+		metaItems.push(
+			<span key="description" className="connection-item-meta-item connection-item-meta-description">{connection.description}</span>
+		);
+	}
+	if (connection.inferenceSupported) {
+		metaItems.push(
+			<span key="inference" className="connection-item-meta-item">
+				<span className="codicon codicon-lightbulb-sparkle" style={{ marginLeft: '-4px' }} />
+				Inference
+			</span>
+		);
+	}
+	if (graphStatus?.error) {
+		metaItems.push(
+			<span key="graphs" className="connection-item-meta-item graph-status-error" title={graphStatus.error}>Error loading graphs</span>
+		);
+	} else if (showGraphCount) {
+		metaItems.push(
+			<span key="graphs" className="connection-item-meta-item">{graphStatus!.count} {graphStatus!.count === 1 ? 'graph' : 'graphs'}</span>
+		);
+	}
 
 	return (
 		<div
@@ -101,9 +127,15 @@ export function ConnectionsListItem({
 						<vscode-icon name="lock" className="connection-item-lock" title="Built-in connection" />
 					)}
 				</div>
-				{(connection.description || !isProtected) && (
+				{(metaItems.length > 0 || !isProtected) && (
 					<div className="connection-item-subline">
-						<span className="connection-item-description">{connection.description}</span>
+						<div className="connection-item-meta">
+							{metaItems.map((item, index) => (
+								<React.Fragment key={index}>
+									{item}
+								</React.Fragment>
+							))}
+						</div>
 						{!isProtected && <ScopeBadge scope={connection.configScope} />}
 					</div>
 				)}

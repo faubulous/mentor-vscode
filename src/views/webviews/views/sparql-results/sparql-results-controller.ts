@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlQueryService, ISparqlResultSerializer } from '@src/languages/sparql/services';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
@@ -135,16 +135,43 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
      * @param label A human-readable label for the query (e.g. 'List Graphs').
      */
     async executeBackgroundQuery(connection: SparqlConnection, query: string, label: string) {
+        await this._ensurePanelVisible();
+
+        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const queryState = queryService.createBackgroundQuery(connection, query, label);
+
+        await this._executeQuery(queryState);
+    }
+
+    /**
+     * Displays an already-resolved list of named graphs in the results panel using the
+     * standard bindings table, without executing the query. Used to surface graphs that
+     * were already cached by the graph service.
+     * @param connection The SPARQL connection the graphs belong to.
+     * @param query The `listGraphs` query (kept on the tab so its Edit action still works).
+     * @param graphs The cached named-graph IRIs to display.
+     */
+    async displayGraphList(connection: SparqlConnection, query: string, graphs: string[]) {
+        await this._ensurePanelVisible();
+
+        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const serializer = container.resolve<ISparqlResultSerializer>(ServiceToken.SparqlQueryResultSerializer);
+
+        const queryState = queryService.createBackgroundQuery(connection, query, 'List Graphs');
+        queryState.result = serializer.serializeIriList(query, graphs);
+
+        queryService.registerCompletedQuery(queryState);
+    }
+
+    /**
+     * Ensures the results panel is visible, opening or revealing it as needed.
+     */
+    private async _ensurePanelVisible() {
         if (!this.view) {
             await vscode.commands.executeCommand('workbench.action.togglePanel');
             await vscode.commands.executeCommand(`${this.viewType}.focus`);
         } else {
             this.view.show();
         }
-
-        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
-        const queryState = queryService.createBackgroundQuery(connection, query, label);
-
-        await this._executeQuery(queryState);
     }
 }

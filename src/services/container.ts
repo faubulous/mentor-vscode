@@ -20,6 +20,7 @@ import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-st
 import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
 import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
+import { SparqlGraphService } from '@src/languages/sparql/services/sparql-graph-service';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
@@ -109,10 +110,17 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const shaclValidationService = new ShaclValidationService();
 	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
+	// Register the graph service before the status bar so the status bar can subscribe to load events.
+	const sparqlGraphService = new SparqlGraphService();
+	container.registerInstance(ServiceToken.SparqlGraphService, sparqlGraphService);
+
+	context.subscriptions.push(sparqlGraphService);
+
 	// Register the SPARQL status bar service and push it to subscriptions so it is
 	// disposed when the extension deactivates.
-	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlConnectionService);
+	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlConnectionService, sparqlGraphService);
 	container.registerInstance(ServiceToken.SparqlStatusBarService, sparqlStatusBarService);
+	
 	context.subscriptions.push(sparqlStatusBarService);
 
 	// Register the reference update service for cross-workspace URI rename support.

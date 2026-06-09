@@ -357,6 +357,8 @@ export class SparqlConnectionService {
 				...(c.description ? { description: c.description } : {}),
 				endpointUrl: c.endpointUrl,
 				storeType: c.storeType ?? this._storeConfigService.defaultStoreType,
+				...(c.autoLoadGraphs !== undefined ? { autoLoadGraphs: c.autoLoadGraphs } : {}),
+				...(c.graphReloadIntervalSeconds !== undefined ? { graphReloadIntervalSeconds: c.graphReloadIntervalSeconds } : {}),
 			}));
 	}
 

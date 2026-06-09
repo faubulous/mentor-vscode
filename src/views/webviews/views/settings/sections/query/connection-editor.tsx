@@ -29,6 +29,20 @@ enum AuthTypeIndex {
 	EntraClientCredentials = 4
 }
 
+type ReloadIntervalUnit = 'minutes' | 'hours';
+
+function secondsToDisplayInterval(seconds: number): { value: number; unit: ReloadIntervalUnit } {
+	if (seconds > 0 && seconds % 3600 === 0) {
+		return { value: seconds / 3600, unit: 'hours' };
+	} else {
+		return { value: Math.max(1, Math.round(seconds / 60)), unit: 'minutes' };
+	}
+}
+
+function displayIntervalToSeconds(value: number, unit: ReloadIntervalUnit): number {
+	return value * (unit === 'hours' ? 3600 : 60);
+}
+
 interface FormState {
 	endpoint: SparqlConnection;
 	selectedAuthTypeIndex: AuthTypeIndex;
@@ -39,9 +53,15 @@ interface FormState {
 	passwordVisible: boolean;
 	hasUnsavedChanges: boolean;
 	activeTabIndex: number;
+	reloadIntervalValue: number;
+	reloadIntervalUnit: ReloadIntervalUnit;
 }
 
 function makeInitialFormState(connection: SparqlConnection): FormState {
+	const { value: reloadIntervalValue, unit: reloadIntervalUnit } = connection.graphReloadIntervalSeconds
+		? secondsToDisplayInterval(connection.graphReloadIntervalSeconds)
+		: { value: 24, unit: 'hours' as ReloadIntervalUnit };
+
 	return {
 		endpoint: connection,
 		selectedAuthTypeIndex: AuthTypeIndex.None,
@@ -52,6 +72,8 @@ function makeInitialFormState(connection: SparqlConnection): FormState {
 		passwordVisible: false,
 		hasUnsavedChanges: false,
 		activeTabIndex: 0,
+		reloadIntervalValue,
+		reloadIntervalUnit,
 	};
 }
 
@@ -182,6 +204,20 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 		});
 	});
 
+	const reloadUnitSelectRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => {
+		const unit = element.value as ReloadIntervalUnit;
+
+		setDraft(prev => {
+			const graphReloadIntervalSeconds = displayIntervalToSeconds(prev.reloadIntervalValue, unit);
+			return {
+				...prev,
+				reloadIntervalUnit: unit,
+				endpoint: { ...prev.endpoint, graphReloadIntervalSeconds },
+				hasUnsavedChanges: true,
+			};
+		});
+	});
+
 	const tabsRef = useVscodeElementRef<HTMLElement & { selectedIndex: number }, { selectedIndex: number }>(
 		'vsc-tabs-select',
 		(element) => {
@@ -209,7 +245,7 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 
 	const getEndpointSectionClassName = () => {
 		const className = ['section-endpoint-url', 'row'];
-		
+
 		if (isFormReadOnly()) {
 			className.push('readonly');
 		}
@@ -441,11 +477,15 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 		);
 	};
 
+	const statusClass = !isTesting && isConnectionSuccessful()
+		? ' status-success'
+		: !isTesting && hasConnectionError()
+			? ' status-error'
+			: '';
+
 	return (
-		<div className="modal-form connection-editor-container">
+		<div className={`modal-form connection-editor-container${statusClass}`}>
 			{isTesting && <vscode-progress-bar />}
-			{!isTesting && isConnectionSuccessful() && <div className="connection-status-bar status-success" />}
-			{!isTesting && hasConnectionError() && <div className="connection-status-bar status-error" />}
 			{headerActionsSlot && createPortal(renderFormActions(), headerActionsSlot)}
 			<form onSubmit={handleFormSubmit}>
 				<div className="form-body">
@@ -463,9 +503,7 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 											placeholder="https://example.org/sparql"
 											disabled={isFormReadOnly()}
 											onInput={handleEndpointUrlChange}
-										>
-											<vscode-icon slot="content-before" name="database" />
-										</vscode-textfield>
+										/>
 									</div>
 								</div>
 								<div className="section-endpoint-description">
@@ -476,20 +514,22 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 										onInput={handleDescriptionChange}
 									/>
 								</div>
-								{!isWorkspaceStore && storeConfigs.length > 0 && (
+								{(isWorkspaceStore || storeConfigs.length > 0) && (
 									<div className="section-store-type-row">
-										<div className="section-store-type">
-											<vscode-label>Store Type</vscode-label>
-											<vscode-single-select
-												className="wide"
-												ref={storeTypeSelectRef}
-												value={selectedStoreType}
-												disabled={isFormReadOnly()}>
-												{storeConfigs.map(s => (
-													<vscode-option key={s.id} value={s.id}>{s.label}</vscode-option>
-												))}
-											</vscode-single-select>
-										</div>
+										{!isWorkspaceStore && (
+											<div className="section-store-type">
+												<vscode-label>Store Type</vscode-label>
+												<vscode-single-select
+													className="wide"
+													ref={storeTypeSelectRef}
+													value={selectedStoreType}
+													disabled={isFormReadOnly()}>
+													{storeConfigs.map(s => (
+														<vscode-option key={s.id} value={s.id}>{s.label}</vscode-option>
+													))}
+												</vscode-single-select>
+											</div>
+										)}
 										{!inferenceSupported && (
 											<vscode-checkbox
 												className="section-reasoning-checkbox"
@@ -507,6 +547,49 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 												}}>
 												Enable query reasoning by default
 											</vscode-checkbox>
+										)}
+									</div>
+								)}
+								{!isWorkspaceStore && (
+									<div className="section-graph-loading">
+										<vscode-checkbox
+											checked={endpoint.autoLoadGraphs ?? false}
+											disabled={isFormReadOnly()}
+											onChange={() => {
+												setDraft(prev => ({
+													...prev,
+													endpoint: { ...prev.endpoint, autoLoadGraphs: !prev.endpoint.autoLoadGraphs },
+													hasUnsavedChanges: true,
+												}));
+											}}>
+											Load graphs automatically
+										</vscode-checkbox>
+										{endpoint.autoLoadGraphs && (
+											<div className="section-graph-loading-interval">
+												<vscode-label>Reload every</vscode-label>
+												<vscode-textfield
+													value={draft.reloadIntervalValue.toString()}
+													disabled={isFormReadOnly()}
+													onInput={(e: React.FormEvent<HTMLElement>) => {
+														const raw = parseInt((e.target as HTMLInputElement).value, 10);
+														const value = Number.isFinite(raw) && raw > 0 ? raw : 1;
+														const graphReloadIntervalSeconds = displayIntervalToSeconds(value, draft.reloadIntervalUnit);
+														setDraft(prev => ({
+															...prev,
+															reloadIntervalValue: value,
+															endpoint: { ...prev.endpoint, graphReloadIntervalSeconds },
+															hasUnsavedChanges: true,
+														}));
+													}}
+												/>
+												<vscode-single-select
+													ref={reloadUnitSelectRef}
+													value={draft.reloadIntervalUnit}
+													disabled={isFormReadOnly()}>
+													<vscode-option value="minutes">minutes</vscode-option>
+													<vscode-option value="hours">hours</vscode-option>
+												</vscode-single-select>
+											</div>
 										)}
 									</div>
 								)}

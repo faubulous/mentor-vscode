@@ -6,9 +6,9 @@ import { WebviewMessaging } from "@src/views/webviews/webview-messaging";
 import { SparqlResultsView } from './components/sparql-results-view';
 import { SparqlResultsWebviewMessages } from "./sparql-results-messages";
 
-// Import CSS with embedded fonts for notebook renderer (iframes can't reference external fonts)
+// Import CSS with embedded fonts for notebook renderer (iframes can't reference external fonts).
+// codicon-inline.css also carries the Mentor icon glyphs (.codicon-mentor-* rules).
 import codiconStyles from '@media/codicon-inline.css';
-import mentorIconStyles from '@media/mentor-icons-inline.css';
 
 // Associates created React roots with HTML elements.
 const elementRoots = new WeakMap<HTMLElement, ReturnType<typeof createRoot>>();
@@ -28,7 +28,6 @@ function injectStylesheet(id: string, content: string): void {
 export const activate: ActivationFunction = (context: RendererContext<NotebookRendererMessaging>) => {
     // Inject icon fonts CSS at activation time (before any rendering)
     injectStylesheet('vscode-codicon-styles', codiconStyles);
-    injectStylesheet('mentor-icon-styles', mentorIconStyles);
 
     if (!context.postMessage || !context.onDidReceiveMessage) {
         throw new Error("This renderer requires a messaging context.");

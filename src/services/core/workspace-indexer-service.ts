@@ -222,7 +222,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
 
-		const parts = [`$(app-mentor) Loaded ${successfulFiles} files`];
+		const parts = [`$(app-mentor) ${successfulFiles} files`];
 
 		if (summary.errorCount > 0) {
 			parts.push(`${summary.errorCount} error${summary.errorCount > 1 ? 's' : ''}`);

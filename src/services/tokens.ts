@@ -59,5 +59,7 @@ export enum ServiceToken {
 	/** Controller for the custom Mentor settings panel. */
 	SettingsPanelController = "SettingsPanelController",
 	/** Generic navigation router between webview panels. */
-	WebviewRouter = "WebviewRouter"
+	WebviewRouter = "WebviewRouter",
+	/** Service for caching named graphs loaded from SPARQL endpoints. */
+	SparqlGraphService = "SparqlGraphService"
 }

@@ -311,6 +311,20 @@ export class SparqlQueryService {
 	}
 
 	/**
+	 * Registers an already-completed query state in the history and notifies listeners,
+	 * without executing anything. Used to surface pre-computed results (e.g. named graphs
+	 * already cached by the graph service) in the results panel.
+	 * @param state The completed query execution state, including its `result`.
+	 */
+	registerCompletedQuery(state: SparqlQueryExecutionState): void {
+		state.endTime = state.endTime ?? Date.now();
+
+		this._logQueryExecution(state);
+
+		this._onDidQueryExecutionEnd.fire(state);
+	}
+
+	/**
 	 * Executes a SPARQL query directly against a connection without requiring a document.
 	 * This method does not log the query in history and is intended for internal/programmatic use.
 	 * @param query The SPARQL query string to execute.

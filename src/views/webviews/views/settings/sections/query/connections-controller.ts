@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlGraphService } from '@src/languages/sparql/services';
 import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { ICredentialStorageService } from '@src/services/core';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
@@ -29,6 +29,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 		this._post = post;
 
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
 
 		this._disposables.push(
 			connectionService.onDidChangeConnections(() => {
@@ -36,6 +37,19 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					section: SECTION_ID,
 					id: 'ConnectionsChanged',
 					connections: connectionService.getConnections(),
+				});
+			}),
+			graphService.onDidChangeGraphs(connectionId => {
+				this._post({
+					section: SECTION_ID,
+					id: 'GraphStatusChanged',
+					connectionId,
+					status: {
+						count: graphService.getGraphsForConnection(connectionId).length,
+						...(graphService.getGraphLoadError(connectionId) !== undefined
+							? { error: graphService.getGraphLoadError(connectionId) }
+							: {}),
+					},
 				});
 			})
 		);
@@ -52,6 +66,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 	async handleMessage(message: SectionMessage): Promise<boolean> {
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
+		const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
 
 		switch (message.id) {
 			case 'GetConnections': {
@@ -60,6 +75,25 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					id: 'GetConnectionsResult',
 					connections: connectionService.getConnections(),
 				});
+
+				return true;
+			}
+			case 'GetGraphStatuses': {
+				const statuses: Record<string, { count: number; error?: string }> = {};
+
+				for (const connection of connectionService.getConnections()) {
+					const hasData = graphService.isGraphsLoaded(connection.id);
+					const error = graphService.getGraphLoadError(connection.id);
+
+					if (hasData || error !== undefined) {
+						statuses[connection.id] = {
+							count: graphService.getGraphsForConnection(connection.id).length,
+							...(error !== undefined ? { error } : {}),
+						};
+					}
+				}
+
+				this._post({ section: SECTION_ID, id: 'GetGraphStatusesResult', statuses });
 
 				return true;
 			}
@@ -153,10 +187,18 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				return true;
 			}
 			case 'SaveSparqlConnection': {
+				const connection = message.connection as SparqlConnection;
+
 				await connectionService.saveConnectionWithCredential(
-					message.connection as SparqlConnection,
+					connection,
 					message.credential as Parameters<ISparqlConnectionService['saveConnectionWithCredential']>[1]
 				);
+
+				// If the connection now has auto-loading enabled, kick off a load immediately
+				// so the user sees the result without restarting VS Code.
+				if (connection.autoLoadGraphs) {
+					graphService.loadGraphsForConnection(connection);
+				}
 
 				return true;
 			}

@@ -67,10 +67,6 @@ export class WebviewComponentFactory {
 			vscode.Uri.joinPath(this._context.extensionUri, 'media', 'codicon.css')
 		);
 
-		const mentorIconsUrl = webview.asWebviewUri(
-			vscode.Uri.joinPath(this._context.extensionUri, 'media', 'mentor-icons.css')
-		);
-
 		const elementsUrl = webview.asWebviewUri(
 			vscode.Uri.joinPath(this._context.extensionUri, 'dist', 'vscode-elements.js')
 		);
@@ -90,7 +86,6 @@ export class WebviewComponentFactory {
 					<meta name="viewport" content="width=device-width, initial-scale=1.0">
 					<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} data:;">
 					<link href="${codeiconUrl}" rel="stylesheet" id="vscode-codicon-stylesheet">
-					<link href="${mentorIconsUrl}" rel="stylesheet" id="mentor-icons-stylesheet">
 					<script src="${elementsUrl}" type="module"></script>
 					<script src="${componentUrl}" type="module"></script>
 					<!-- Note: Do not add any styles here, as they will not be applied in notebook renderers. -->

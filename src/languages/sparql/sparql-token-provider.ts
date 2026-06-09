@@ -16,7 +16,8 @@ import {
 import {
 	SparqlCodeLensProvider,
 	SparqlCompletionItemProvider,
-	SparqlCodeFormattingProvider
+	SparqlCodeFormattingProvider,
+	SparqlGraphDiagnosticProvider
 } from '@src/languages/sparql/providers';
 
 export class SparqlTokenProvider {
@@ -32,11 +33,13 @@ export class SparqlTokenProvider {
 		const referenceProvider = new ResourceReferenceProvider();
 		const renameProvider = new TurtleRenameProvider();
 		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(['sparql']);
+		const graphDiagnosticProvider = new SparqlGraphDiagnosticProvider();
 
 		// Self-register with the extension context for automatic disposal
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(
 			autoDefinePrefixProvider,
+			graphDiagnosticProvider,
 			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider),
 			vscode.languages.registerCodeLensProvider({ language: 'sparql' }, codeLensProvider),
 			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ...completionProvider.triggerCharacters),

@@ -22,7 +22,7 @@ export const selectSparqlConnection = {
 		}
 
 		const items: any[] = connections.map(connection => ({
-			label: `$(database) ${connection.endpointUrl}`,
+			label: `$(arrow-swap) ${connection.endpointUrl}`,
 			description: connection.description,
 			connection: connection,
 			buttons: [{
@@ -34,7 +34,7 @@ export const selectSparqlConnection = {
 		}));
 
 		items.push({
-			label: '$(database-connection) Manage Connections...',
+			label: '$(settings-gear) Manage Connections...',
 			command: 'mentor.command.manageSparqlConnections'
 		});
 

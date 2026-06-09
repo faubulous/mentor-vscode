@@ -40,4 +40,15 @@ export interface ISparqlResultSerializer {
 	 * @returns A string containing the serialized Turtle document.
 	 */
 	serializeQuadsToString(quads: Quad[], namespaces?: Record<string, string>): Promise<string>;
+
+	/**
+	 * Builds a bindings result from a list of IRIs for a single column, without
+	 * executing a query. Used to render already-cached data (e.g. auto-loaded
+	 * named graphs) in the standard results table.
+	 * @param query The SPARQL query the IRIs correspond to; used to derive the column name.
+	 * @param iris The IRIs to render, one per row.
+	 * @param documentIri The IRI of the document used for prefix resolution.
+	 * @returns A BindingsResult mirroring the shape produced by `serializeBindings`.
+	 */
+	serializeIriList(query: string, iris: string[], documentIri?: string): BindingsResult;
 }

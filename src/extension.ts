@@ -10,6 +10,7 @@ import { WorkspaceIndexerService } from './services/core/workspace-indexer-servi
 import { WorkspaceUri } from './providers/workspace-uri';
 import { SparqlConnectionService, WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connection-service';
 import { ISparqlStoreConfigService } from './languages/sparql/services/sparql-store-config-service';
+import { ISparqlGraphService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
@@ -44,10 +45,14 @@ export async function activateExtension(context: vscode.ExtensionContext, langua
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
-	// Do not await this, to allow the extension to finish activating while indexing 
-	// is still in progress. This may cause some language features to not be available 
+	// Do not await this, to allow the extension to finish activating while indexing
+	// is still in progress. This may cause some language features to not be available
 	// until indexing is complete, but provides a better user experience overall.
 	indexWorkspace();
+
+	// Load named graphs for connections with auto-loading enabled. Runs in parallel
+	// with indexing so the status bar can show both activities simultaneously.
+	loadConnectionGraphs();
 }
 
 export async function deactivate() {
@@ -187,6 +192,15 @@ function registerNotebookInferenceContext(context: vscode.ExtensionContext) {
 async function loadFrameworkOntologies() {
 	const store = container.resolve<Store>(ServiceToken.Store);
 	await store.loadFrameworkOntologies();
+}
+
+/**
+ * Loads named graphs for all SPARQL connections that have auto-loading enabled.
+ * Runs non-blocking in parallel with workspace indexing.
+ */
+async function loadConnectionGraphs() {
+	const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+	await graphService.loadAllAutoLoadConnections();
 }
 
 /**

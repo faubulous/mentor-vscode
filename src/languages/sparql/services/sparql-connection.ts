@@ -64,4 +64,17 @@ export interface SparqlConnection {
      * Set by the connection service based on provider capability.
      */
     inferenceSupported?: boolean;
+
+    /**
+     * When `true`, named graphs are loaded from the endpoint on extension startup
+     * and refreshed on the interval defined by `graphReloadIntervalSeconds`.
+     */
+    autoLoadGraphs?: boolean;
+
+    /**
+     * How often to reload the graph list, in seconds. Only meaningful when
+     * `autoLoadGraphs` is `true`. The UI presents this in minutes or hours
+     * and converts to seconds before saving.
+     */
+    graphReloadIntervalSeconds?: number;
 }

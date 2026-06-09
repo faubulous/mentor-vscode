@@ -24,7 +24,7 @@ export const setNotebookConnection = {
 		}
 
 		const items = connections.map(connection => ({
-			label: `$(database) ${connection.endpointUrl}`,
+			label: `$(arrow-swap) ${connection.endpointUrl}`,
 			description: connection.description,
 			connection
 		}));
