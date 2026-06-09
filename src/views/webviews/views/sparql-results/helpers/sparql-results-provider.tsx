@@ -1,10 +1,11 @@
-import { useContext, ReactNode } from 'react';
+import { useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { useBindingsTablePaging } from '../components/bindings-table-paging-hook';
 import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import { SparqlResultsContext, SparqlResultsContextType } from './sparql-results-context';
+import { filterBindings } from './bindings-filter';
 
 /**
  * Props for the SparqlResultsProvider component.
@@ -42,17 +43,33 @@ export function SparqlResultsProvider({ children, queryContext, messaging, defau
 		? queryContext.result as BindingsResult
 		: undefined;
 
+	const [searchTerm, setSearchTerm] = useState('');
+
+	// Reset the filter whenever a new result loads (e.g. switching tabs or reloading).
+	useEffect(() => {
+		setSearchTerm('');
+	}, [result]);
+
+	// Equals `result` (same identity) when the search is empty, so paging is not reset needlessly.
+	const filteredResult = useMemo(
+		() => (result ? filterBindings(result, searchTerm) : undefined),
+		[result, searchTerm]
+	);
+
 	const {
 		paging,
 		updatePage,
 		updatePageSize,
 		nextPage,
 		previousPage
-	} = useBindingsTablePaging(result, defaultPageSize);
+	} = useBindingsTablePaging(filteredResult, defaultPageSize);
 
 	const contextValue: SparqlResultsContextType = {
 		queryContext,
 		messaging,
+		filteredResult,
+		searchTerm,
+		setSearchTerm,
 		paging,
 		updatePage,
 		updatePageSize,

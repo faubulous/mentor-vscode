@@ -79,3 +79,8 @@
 	text-align: center;
 	font-variant-numeric: tabular-nums;
 }
+
+.sparql-results-toolbar .sparql-results-search {
+	width: 200px;
+	min-width: 120px;
+}

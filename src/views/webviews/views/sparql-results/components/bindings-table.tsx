@@ -19,7 +19,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 
 	useStylesheet('bindings-table-styles', stylesheet);
 
-	const { queryContext, paging, messaging } = sparqlResults;
+	const { queryContext, paging, messaging, filteredResult, searchTerm } = sparqlResults;
 
 	// Increment render key on each render
 	renderKeyRef.current++;
@@ -28,8 +28,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 		return <div>Loading...</div>;
 	}
 
-	const result = queryContext.result?.type === 'bindings' ?
-		queryContext.result as BindingsResult : null;
+	const result = filteredResult ?? null;
 
 	// Determine which binding variables are named graphs
 	const graphHeaders = new Set<string>();
@@ -102,7 +101,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 			<div className="cell-actions">
 				<vscode-toolbar-button
 					title="Copy Column Values"
-					onClick={() => handleCopyColumnClick(column, queryContext.result as BindingsResult)}>
+					onClick={() => handleCopyColumnClick(column, result!)}>
 					<span className="codicon codicon-copy"></span>
 				</vscode-toolbar-button>
 			</div>
@@ -279,7 +278,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 					{result.rows.length === 0 && (
 						<vscode-table-row>
 							<vscode-table-cell>
-								No results
+								{searchTerm ? 'No results match the search.' : 'No results'}
 							</vscode-table-cell>
 						</vscode-table-row>
 					)}

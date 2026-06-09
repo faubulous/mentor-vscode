@@ -13,8 +13,8 @@ import toolbarStyle from "./sparql-results-toolbar.css";
 function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) {
 	useStylesheet('mentor-sparql-toolbar-styles', toolbarStyle);
 
-	const { queryContext, paging, messaging, previousPage, nextPage, updatePageSize } = sparqlResults;
-	const bindings = queryContext.result?.type === 'bindings' ? queryContext.result as BindingsResult : null;
+	const { queryContext, paging, messaging, previousPage, nextPage, updatePageSize, filteredResult, searchTerm, setSearchTerm } = sparqlResults;
+	const bindings = filteredResult ?? null;
 
 	const getResultsRangeText = (bindings: BindingsResult, paging: BindingsTablePagingState): string => {
 		const totalRows = bindings.rows.length;
@@ -74,10 +74,11 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 	};
 
 	const saveResults = () => {
+		// Export the filtered rows so CSV reflects the active search filter.
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.saveSparqlQueryResults',
-			args: [queryContext, 'csv']
+			args: [{ ...queryContext, result: filteredResult ?? queryContext.result }, 'csv']
 		});
 	};
 
@@ -179,6 +180,25 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 			)}
 
 			<span className="spacer"></span>
+
+			{!queryContext.error && bindings && (
+				<vscode-textfield
+					className="sparql-results-search"
+					placeholder="Filter results…"
+					value={searchTerm}
+					onInput={(e: React.FormEvent<HTMLElement>) => setSearchTerm((e.target as HTMLInputElement).value)}>
+					<vscode-icon slot="content-before" name="search"></vscode-icon>
+					{searchTerm && (
+						<vscode-icon
+							slot="content-after"
+							name="close"
+							title="Clear filter"
+							action-icon
+							onClick={() => setSearchTerm('')}>
+						</vscode-icon>
+					)}
+				</vscode-textfield>
+			)}
 
 			<vscode-toolbar-button title="Edit query" onClick={() => editQuery()} className="not-notebook">
 				<span className="codicon codicon-edit"></span>

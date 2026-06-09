@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
-import { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
+import { SparqlQueryExecutionState, BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import { useBindingsTablePaging } from '../components/bindings-table-paging-hook';
 
@@ -27,6 +27,23 @@ export interface SparqlResultsContextType {
 	 * May be undefined in notebook renderer contexts where messaging is handled differently.
 	 */
 	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
+
+	/**
+	 * The bindings result after the active search filter has been applied, or `undefined`
+	 * when the result is not a bindings result. Equals the unfiltered result when the
+	 * search term is empty.
+	 */
+	filteredResult?: BindingsResult;
+
+	/**
+	 * The current search term used to filter the bindings table.
+	 */
+	searchTerm: string;
+
+	/**
+	 * Updates the search term used to filter the bindings table.
+	 */
+	setSearchTerm: (term: string) => void;
 
 	/**
 	 * Paging controls for the bindings table.
