@@ -91,14 +91,13 @@
 
 .connection-editor-container .section-graph-loading {
 	display: flex;
-	flex-direction: column;
-	gap: 0.5em;
+	flex-direction: row;
+	gap: 1.5em;
 }
 
 .connection-editor-container .section-graph-loading-interval {
 	display: flex;
 	flex-direction: row;
-	align-items: center;
 	gap: 0.5em;
 }
 

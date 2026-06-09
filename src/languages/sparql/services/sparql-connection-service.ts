@@ -577,6 +577,15 @@ export class SparqlConnectionService {
 	}
 
 	/**
+	 * Returns the named graphs currently loaded in the in-memory workspace store,
+	 * excluding inference graphs.
+	 * @returns An array of graph IRIs.
+	 */
+	getWorkspaceGraphs(): string[] {
+		return this._workspaceStore.getGraphs(false);
+	}
+
+	/**
 	 * Resolves the effective SPARQL query template of the given kind for a connection.
 	 * Resolution order: the store config's own query → global `mentor.sparql.*` fallback.
 	 * @param connection The SPARQL connection.

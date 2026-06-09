@@ -83,7 +83,7 @@ vscode-textfield .root {
 }
 
 .settings-nav-item.active {
-	background: var(--vscode-button-background);
+	background: var(--vscode-list-activeSelectionBackground);
 	color: var(--vscode-list-activeSelectionForeground);
 	font-weight: 600;
 }
@@ -621,7 +621,17 @@ vscode-textarea.monospace {
 }
 
 .connection-item:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.connection-item.selected {
 	background: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+}
+
+.connection-item:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
 }
 
 .connection-item.testing {
@@ -752,13 +762,26 @@ vscode-textarea.monospace {
 	display: flex;
 	gap: var(--mentor-space-2);
 	opacity: 0;
-	transition: opacity 0.1s ease;
+	/* Hidden actions stay out of the tab order so Tab lands on the row itself,
+	   not on a button inside a non-active (roving tabindex -1) row. */
+	visibility: hidden;
+	transition: opacity 0.1s ease, visibility 0.1s ease;
 	align-items: center;
 	flex-shrink: 0;
 }
 
-.connection-item:hover .connection-item-actions {
+.connection-item:hover .connection-item-actions,
+.connection-item:focus-within .connection-item-actions,
+.connection-item.selected .connection-item-actions {
 	opacity: 1;
+	visibility: visible;
+}
+
+/* Reserves a button's worth of space without ever becoming visible or interactive,
+   so action-less rows match the height of rows that have buttons. */
+.connection-item-action-placeholder {
+	visibility: hidden;
+	pointer-events: none;
 }
 
 @keyframes pulse {

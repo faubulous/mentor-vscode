@@ -518,7 +518,7 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 									<div className="section-store-type-row">
 										{!isWorkspaceStore && (
 											<div className="section-store-type">
-												<vscode-label>Store Type</vscode-label>
+												<vscode-label>Store</vscode-label>
 												<vscode-single-select
 													className="wide"
 													ref={storeTypeSelectRef}
@@ -530,25 +530,25 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 												</vscode-single-select>
 											</div>
 										)}
-										{!canToggleInference && (
-											<vscode-checkbox
-												className="section-reasoning-checkbox"
-												disabled={true}>
-												Per query reasoning control not supported
-											</vscode-checkbox>
-										)}
-										{canToggleInference && (
-											<vscode-checkbox
-												className="section-reasoning-checkbox"
-												checked={endpoint.inferenceEnabled ?? false}
-												onChange={() => {
-													setDraft(prev => ({ ...prev, endpoint: { ...prev.endpoint, inferenceEnabled: !prev.endpoint.inferenceEnabled } }));
-													messaging?.postMessage({ id: 'ToggleSparqlConnectionInference', connectionId: endpoint.id });
-												}}>
-												Enable query reasoning by default
-											</vscode-checkbox>
-										)}
 									</div>
+								)}
+								{!canToggleInference && (
+									<vscode-checkbox
+										className="section-reasoning-checkbox"
+										disabled={true}>
+										Per query reasoning control not supported
+									</vscode-checkbox>
+								)}
+								{canToggleInference && (
+									<vscode-checkbox
+										className="section-reasoning-checkbox"
+										checked={endpoint.inferenceEnabled ?? false}
+										onChange={() => {
+											setDraft(prev => ({ ...prev, endpoint: { ...prev.endpoint, inferenceEnabled: !prev.endpoint.inferenceEnabled } }));
+											messaging?.postMessage({ id: 'ToggleSparqlConnectionInference', connectionId: endpoint.id });
+										}}>
+										Enable query reasoning by default
+									</vscode-checkbox>
 								)}
 								{!isWorkspaceStore && (
 									<div className="section-graph-loading">
@@ -562,35 +562,32 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 													hasUnsavedChanges: true,
 												}));
 											}}>
-											Load graphs automatically
+											Load graphs automatically every
 										</vscode-checkbox>
-										{endpoint.autoLoadGraphs && (
-											<div className="section-graph-loading-interval">
-												<vscode-label>Reload every</vscode-label>
-												<vscode-textfield
-													value={draft.reloadIntervalValue.toString()}
-													disabled={isFormReadOnly()}
-													onInput={(e: React.FormEvent<HTMLElement>) => {
-														const raw = parseInt((e.target as HTMLInputElement).value, 10);
-														const value = Number.isFinite(raw) && raw > 0 ? raw : 1;
-														const graphReloadIntervalSeconds = displayIntervalToSeconds(value, draft.reloadIntervalUnit);
-														setDraft(prev => ({
-															...prev,
-															reloadIntervalValue: value,
-															endpoint: { ...prev.endpoint, graphReloadIntervalSeconds },
-															hasUnsavedChanges: true,
-														}));
-													}}
-												/>
-												<vscode-single-select
-													ref={reloadUnitSelectRef}
-													value={draft.reloadIntervalUnit}
-													disabled={isFormReadOnly()}>
-													<vscode-option value="minutes">minutes</vscode-option>
-													<vscode-option value="hours">hours</vscode-option>
-												</vscode-single-select>
-											</div>
-										)}
+										<div className="section-graph-loading-interval">
+											<vscode-textfield
+												value={draft.reloadIntervalValue.toString()}
+												disabled={isFormReadOnly() || !endpoint.autoLoadGraphs}
+												onInput={(e: React.FormEvent<HTMLElement>) => {
+													const raw = parseInt((e.target as HTMLInputElement).value, 10);
+													const value = Number.isFinite(raw) && raw > 0 ? raw : 1;
+													const graphReloadIntervalSeconds = displayIntervalToSeconds(value, draft.reloadIntervalUnit);
+													setDraft(prev => ({
+														...prev,
+														reloadIntervalValue: value,
+														endpoint: { ...prev.endpoint, graphReloadIntervalSeconds },
+														hasUnsavedChanges: true,
+													}));
+												}}
+											/>
+											<vscode-single-select
+												ref={reloadUnitSelectRef}
+												value={draft.reloadIntervalUnit}
+												disabled={isFormReadOnly() || !endpoint.autoLoadGraphs}>
+												<vscode-option value="minutes">minutes</vscode-option>
+												<vscode-option value="hours">hours</vscode-option>
+											</vscode-single-select>
+										</div>
 									</div>
 								)}
 							</section>

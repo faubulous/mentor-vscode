@@ -3,6 +3,8 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService, ISparqlGraphService } from '@src/languages/sparql/services';
 import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
+import { IDocumentContextService } from '@src/services/document';
 import { ICredentialStorageService } from '@src/services/core';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { SettingsSectionId } from '..';
@@ -30,6 +32,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+		const documentContextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 
 		this._disposables.push(
 			connectionService.onDidChangeConnections(() => {
@@ -50,6 +53,15 @@ export class ConnectionsSectionController implements SettingsSectionController {
 							? { error: graphService.getGraphLoadError(connectionId) }
 							: {}),
 					},
+				});
+			}),
+			// The workspace store's graphs change as documents are loaded; keep its count live.
+			documentContextService.onDidChangeDocumentContext(() => {
+				this._post({
+					section: SECTION_ID,
+					id: 'GraphStatusChanged',
+					connectionId: WORKSPACE_CONNECTION.id,
+					status: { count: connectionService.getWorkspaceGraphs().length },
 				});
 			})
 		);
@@ -92,6 +104,9 @@ export class ConnectionsSectionController implements SettingsSectionController {
 						};
 					}
 				}
+
+				// The workspace store enumerates its graphs in-process rather than via the graph service.
+				statuses[WORKSPACE_CONNECTION.id] = { count: connectionService.getWorkspaceGraphs().length };
 
 				this._post({ section: SECTION_ID, id: 'GetGraphStatusesResult', statuses });
 

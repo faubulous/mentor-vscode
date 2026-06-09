@@ -4,6 +4,7 @@ import { ConnectionsListItem } from './connections-list-item';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { TestResult } from '../../settings-types';
 import { GraphStatus } from './connections-list-messages';
+import { useListKeyboardNavigation } from '../../components/use-list-keyboard-navigation';
 
 export interface ConnectionsListProps {
 	connections: SparqlConnection[];
@@ -35,6 +36,13 @@ export function ConnectionsList({
 	const protectedConnections = connections.filter(c => c.isProtected === true);
 	const userDefinedConnections = connections.filter(c => c.isProtected !== true);
 
+	// Navigation spans both subsections in visual (top-to-bottom) order.
+	const orderedConnections = [...protectedConnections, ...userDefinedConnections];
+	const { getItemProps } = useListKeyboardNavigation(
+		orderedConnections.map(c => c.id),
+		{ onActivate: id => { const found = connections.find(c => c.id === id); if (found) { onEditConnection(found); } } }
+	);
+
 	const renderItem = (connection: SparqlConnection) => (
 		<ConnectionsListItem
 			key={connection.id}
@@ -42,6 +50,7 @@ export function ConnectionsList({
 			testResult={testResults[connection.id]}
 			graphStatus={graphStatuses[connection.id]}
 			isTesting={testingConnections.has(connection.id)}
+			navProps={getItemProps(connection.id)}
 			onEditConnection={onEditConnection}
 			onDeleteConnection={onDeleteConnection}
 			onTestConnection={onTestConnection}

@@ -94,6 +94,13 @@ export interface ISparqlConnectionService {
 	getGraphsForDocument(documentUri: vscode.Uri): Promise<string[]>;
 
 	/**
+	 * Returns the named graphs currently loaded in the in-memory workspace store,
+	 * excluding inference graphs.
+	 * @returns An array of graph IRIs.
+	 */
+	getWorkspaceGraphs(): string[];
+
+	/**
 	 * Gets whether inference is enabled for a specific connection.
 	 * @param connectionId The ID of the connection.
 	 * @returns `true` if inference is enabled, `false` otherwise.

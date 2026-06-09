@@ -3,12 +3,14 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
 import { ScopeBadge } from '@src/views/webviews/components/scope-badge';
 import { TestResult } from '../../settings-types';
 import { GraphStatus } from './connections-list-messages';
+import { ListItemNavProps } from '../../components/use-list-keyboard-navigation';
 
 export interface ConnectionsListItemProps {
 	connection: SparqlConnection;
 	testResult?: TestResult;
 	graphStatus?: GraphStatus;
 	isTesting: boolean;
+	navProps?: ListItemNavProps;
 	onEditConnection: (connection: SparqlConnection) => void;
 	onDeleteConnection: (connection: SparqlConnection) => void;
 	onTestConnection: (connection: SparqlConnection, e: React.MouseEvent) => void;
@@ -21,6 +23,7 @@ export function ConnectionsListItem({
 	testResult,
 	graphStatus,
 	isTesting,
+	navProps,
 	onEditConnection,
 	onDeleteConnection,
 	onTestConnection,
@@ -50,8 +53,9 @@ export function ConnectionsListItem({
 	if (isTesting) itemClass += ' testing';
 	else if (testResult?.success === true) itemClass += ' test-success';
 	else if (testResult?.success === false) itemClass += ' test-error';
+	if (navProps?.selected) itemClass += ' selected';
 
-	const showGraphCount = graphStatus?.count !== undefined && connection.autoLoadGraphs;
+	const showGraphCount = graphStatus?.count !== undefined && (connection.autoLoadGraphs || isWorkspaceStore);
 
 	const metaItems: React.ReactNode[] = [];
 
@@ -81,6 +85,11 @@ export function ConnectionsListItem({
 	return (
 		<div
 			className={itemClass}
+			role="button"
+			tabIndex={navProps?.tabIndex ?? 0}
+			ref={navProps?.ref}
+			onKeyDown={navProps?.onKeyDown}
+			onFocus={navProps?.onFocus}
 			onClick={() => onEditConnection(connection)}
 			title={isWorkspaceStore ? 'Edit workspace store settings' : `Edit ${connection.endpointUrl}`}
 		>
@@ -97,14 +106,12 @@ export function ConnectionsListItem({
 								<vscode-icon name="link-external" />
 							</vscode-toolbar-button>
 						)}
-						{!isWorkspaceStore && (
-							<vscode-toolbar-button
-								title="List graphs"
-								onClick={(e: React.MouseEvent) => onListGraphs(connection, e)}
-							>
-								<vscode-icon name="list-unordered" />
-							</vscode-toolbar-button>
-						)}
+						<vscode-toolbar-button
+							title="List graphs"
+							onClick={(e: React.MouseEvent) => onListGraphs(connection, e)}
+						>
+							<vscode-icon name="list-unordered" />
+						</vscode-toolbar-button>
 						{!isWorkspaceStore && (
 							<vscode-toolbar-button
 								title={testTitle}

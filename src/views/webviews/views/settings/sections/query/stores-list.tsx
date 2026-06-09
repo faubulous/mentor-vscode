@@ -2,6 +2,7 @@ import * as React from 'react';
 import { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
 import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
 import { StoresListItem } from './stores-list-item';
+import { useListKeyboardNavigation } from '../../components/use-list-keyboard-navigation';
 
 export interface StoresListProps {
 	stores: SparqlStoreConfig[];
@@ -21,10 +22,18 @@ export function StoresList({ stores, onCreate, onEdit, onDelete, onOpenInBrowser
 	const protectedStores = stores.filter(s => s.isProtected);
 	const userDefinedStores = stores.filter(s => !s.isProtected);
 
+	// Navigation spans both subsections in visual (top-to-bottom) order.
+	const orderedStores = [...protectedStores, ...userDefinedStores];
+	const { getItemProps } = useListKeyboardNavigation(
+		orderedStores.map(s => s.id),
+		{ onActivate: id => { const found = stores.find(s => s.id === id); if (found) { onEdit(found); } } }
+	);
+
 	const renderItem = (store: SparqlStoreConfig) => (
 		<StoresListItem
 			key={store.id}
 			store={store}
+			navProps={getItemProps(store.id)}
 			onEdit={onEdit}
 			onDelete={onDelete}
 			onOpenInBrowser={onOpenInBrowser}
