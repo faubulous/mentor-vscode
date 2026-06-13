@@ -1,6 +1,7 @@
 import { SettingsSectionController } from '../settings-section-controller';
 import { ConnectionsSectionController } from './query/connections-controller';
 import { StoresSectionController } from './query/stores-controller';
+import { IndexingSectionController } from './workspace/indexing-controller';
 
 /**
  * Create instances of all section controllers.
@@ -11,5 +12,6 @@ export function createSectionControllers(): SettingsSectionController[] {
 	return [
 		new ConnectionsSectionController(),
 		new StoresSectionController(),
+		new IndexingSectionController(),
 	];
 }

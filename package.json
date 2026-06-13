@@ -105,6 +105,7 @@
     "react-dom": "^19.2.5",
     "reflect-metadata": "^0.2.2",
     "shacl-engine": "^1.1.0",
+    "triplate": "^0.3.0",
     "tsyringe": "^4.10.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
@@ -167,6 +168,11 @@
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "key": "meta+enter",
         "when": "editorLangId == 'sparql' && !notebookCellType"
+      },
+      {
+        "command": "mentor.command.renameWorkspaceItem",
+        "key": "f2",
+        "when": "focusedView == mentor.view.workspaceTree"
       }
     ],
     "notebooks": [
@@ -545,6 +551,18 @@
         "command": "mentor.command.refreshWorkspaceTree",
         "title": "Refresh",
         "icon": "$(refresh)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.renameWorkspaceItem",
+        "title": "Rename...",
+        "icon": "$(edit)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.excludeFromIndex",
+        "title": "Exclude From Index",
+        "icon": "$(exclude)",
         "category": "Mentor"
       },
       {
@@ -1003,6 +1021,16 @@
       ],
       "view/item/context": [
         {
+          "command": "mentor.command.renameWorkspaceItem",
+          "when": "view == mentor.view.workspaceTree",
+          "group": "7_modification"
+        },
+        {
+          "command": "mentor.command.excludeFromIndex",
+          "when": "view == mentor.view.workspaceTree",
+          "group": "z_commands"
+        },
+        {
           "command": "mentor.command.findReferences",
           "when": "viewItem =~ /resource/",
           "group": "4_search"
@@ -1090,6 +1118,14 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "mentor.command.renameWorkspaceItem",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.excludeFromIndex",
+          "when": "false"
+        },
         {
           "command": "mentor.command.editNotebookCellSlug",
           "when": "false"
@@ -1637,14 +1673,14 @@
             "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
             "default": true
           },
-          "mentor.index.ignoreFolders": {
+          "mentor.index.excludeFiles": {
             "type": "array",
-            "title": "Ignored Folders",
-            "description": "Manage the folders that should be skipped when indexing the workspace.",
+            "title": "Excluded Files",
+            "description": "Manage a list of glob patterns for files and folders to exclude from the workspace index, e.g. `**/node_modules/**`.",
             "default": [
-              ".vscode",
-              ".git",
-              "node_modules"
+              "**/.vscode/**",
+              "**/.git/**",
+              "**/node_modules/**"
             ]
           },
           "mentor.index.includeFiles": {

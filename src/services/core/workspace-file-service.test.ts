@@ -360,11 +360,11 @@ describe('WorkspaceFileService', () => {
 	});
 
 	describe('getExcludePatterns', () => {
-		test('includes patterns from ignoreFolders config', async () => {
+		test('includes patterns from excludeFiles config', async () => {
 			const { getConfig } = await import('@src/utilities/vscode/config');
 			(getConfig as any).mockReturnValue({
 				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
-					if (key === 'index.ignoreFolders') return ['node_modules', 'dist'];
+					if (key === 'index.excludeFiles') return ['node_modules', 'dist'];
 					return defaultValue;
 				})
 			});
@@ -380,7 +380,7 @@ describe('WorkspaceFileService', () => {
 			const { getConfig } = await import('@src/utilities/vscode/config');
 			(getConfig as any).mockReturnValue({
 				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
-					if (key === 'index.ignoreFolders') return [];
+					if (key === 'index.excludeFiles') return [];
 					if (key === 'index.useGitIgnore') return true;
 					return defaultValue;
 				})
@@ -404,7 +404,7 @@ describe('WorkspaceFileService', () => {
 			const { getConfig } = await import('@src/utilities/vscode/config');
 			(getConfig as any).mockReturnValue({
 				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
-					if (key === 'index.ignoreFolders') return ['vendor'];
+					if (key === 'index.excludeFiles') return ['vendor'];
 					if (key === 'index.useGitIgnore') return true;
 					return defaultValue;
 				})
@@ -416,7 +416,7 @@ describe('WorkspaceFileService', () => {
 			service = new WorkspaceFileService(mockDocumentFactory);
 			const result = await (service as any).getExcludePatterns(URI.parse('file:///w'));
 
-			// Still gets ignoreFolders but no gitignore content
+			// Still gets excludeFiles but no gitignore content
 			expect(result).toContain('vendor');
 		});
 	});

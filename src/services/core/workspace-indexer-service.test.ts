@@ -99,6 +99,23 @@ describe('WorkspaceIndexerService', () => {
 			expect(service.indexingFinished).toBe(true);
 		});
 
+		it('coalesces concurrent calls into a single trailing pass instead of overlapping runs', async () => {
+			mockWorkspaceFileService.files = [vscode.Uri.parse('file:///w/a.ttl')];
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+
+			// Four concurrent requests must not run four overlapping passes: the
+			// first runs immediately and the rest collapse into one trailing pass.
+			await Promise.all([
+				service.indexWorkspace(),
+				service.indexWorkspace(),
+				service.indexWorkspace(),
+				service.indexWorkspace(),
+			]);
+
+			expect(mockLoadDocument).toHaveBeenCalledTimes(2);
+		});
+
 		it('should request a context refresh during reindex', async () => {
 			const uri = vscode.Uri.parse('file:///w/test.ttl');
 			mockWorkspaceFileService.files = [uri];
@@ -427,7 +444,7 @@ describe('WorkspaceIndexerService', () => {
 			expect((service as any)._statusBarItem.text).toMatch(/1 error/);
 		});
 
-		it('should only show the custom status bar summary after completion', async () => {
+		it('shows indexing progress on the status bar item while pending and the summary after completion', async () => {
 			const uri = vscode.Uri.parse('file:///w/test.ttl');
 			mockWorkspaceFileService.files = [uri];
 
@@ -441,15 +458,17 @@ describe('WorkspaceIndexerService', () => {
 			}
 			expect(resolveLoad).toBeTypeOf('function');
 
+			// While indexing, the live progress is shown on the indexer's own item.
 			const textWhilePending = (service as any)._statusBarItem.text;
-			expect(textWhilePending).toBe('');
+			expect(textWhilePending).toContain('Indexing');
 
 			// Unblock background task and wait for settlement
 			resolveLoad();
 			await indexPromise;
 			const textAfterSettlement = (service as any)._statusBarItem.text;
 
-			expect(textAfterSettlement).toMatch(/Loaded/);
+			// The same item then shows the completion summary.
+			expect(textAfterSettlement).toMatch(/files/);
 		});
 	});
 });

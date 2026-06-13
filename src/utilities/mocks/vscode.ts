@@ -24,6 +24,10 @@ export const workspace = {
     inspect: (key: string) => undefined,
     update: async (key: string, value: any) => {},
   }),
+  asRelativePath: (pathOrUri: any, _includeWorkspaceFolder?: boolean) => {
+    const path = typeof pathOrUri === 'string' ? pathOrUri : pathOrUri?.path ?? '';
+    return path.replace(/^\/+/, '');
+  },
   onDidOpenTextDocument: (_handler: any) => ({ dispose: () => {} }),
   onDidChangeTextDocument: (_handler: any) => ({ dispose: () => {} }),
   onDidCloseTextDocument: (_handler: any) => ({ dispose: () => {} }),
@@ -375,6 +379,10 @@ export class WorkspaceEdit {
 
   delete(uri: any, range: Range): void {
     this._edits.push({ uri, type: 'delete', range });
+  }
+
+  renameFile(oldUri: any, newUri: any, _options?: any): void {
+    this._edits.push({ uri: oldUri, type: 'renameFile', newText: newUri?.toString() });
   }
 
   get size(): number {

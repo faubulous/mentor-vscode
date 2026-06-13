@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import picomatch from 'picomatch';
 import { IWorkspaceFileService } from './workspace-file-service.interface';
-import { IWorkspaceIndexerService } from './workspace-indexer.interface';
+import { IWorkspaceIndexerService, IndexingStatistics } from './workspace-indexer.interface';
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { getConfig } from '@src/utilities/vscode/config';
@@ -17,6 +17,27 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	 * Indicates if all workspace files have been indexed.
 	 */
 	private _indexingFinished = false;
+
+	/**
+	 * Summary statistics of the most recent indexing run.
+	 */
+	private _statistics?: IndexingStatistics;
+
+	/**
+	 * The promise of the indexing pass currently in flight, or `undefined` when idle.
+	 * Used to serialize concurrent {@link indexWorkspace} calls.
+	 */
+	private _activeRun?: Promise<void>;
+
+	/**
+	 * Indicates that another indexing pass was requested while one was in flight.
+	 */
+	private _rerunRequested = false;
+
+	/**
+	 * Whether the coalesced trailing pass should force re-indexing.
+	 */
+	private _rerunReindex = false;
 
 	/**
 	 * A promise that resolves when all background indexing tasks have 
@@ -37,6 +58,10 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	/**
 	 * A status bar item to show indexing related status messages.
 	 */
+	// Priorities -10000/-10001/-10002 keep the indexer, graph and SPARQL items in a
+	// single contiguous group (indexer → graph → SPARQL, left-to-right). The low
+	// values place the group at the far right of the left-aligned status bar — after
+	// built-in items like "Auto Attach" (priority 0) — so they are the last items.
 	private readonly _statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, -10000);
 
 	constructor(
@@ -47,8 +72,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 
-		this._statusBarItem.command = 'mentor.command.showIndexStatus';
-		this._statusBarItem.tooltip = 'Show Indexer Status Log';
+		this._statusBarItem.command = {
+			command: 'mentor.command.openSettings',
+			title: 'Open Indexing Settings',
+			arguments: ['workspace.indexing']
+		};
+		this._statusBarItem.tooltip = 'Open Indexing Settings';
 		this._statusLog.clear();
 	}
 
@@ -60,51 +89,87 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	}
 
 	/**
+	 * Summary statistics of the most recent indexing run, or `undefined` if none completed yet.
+	 */
+	get statistics(): IndexingStatistics | undefined {
+		return this._statistics;
+	}
+
+	/**
 	 * Builds an index of all RDF resources in the current workspace.
 	 * Uses files discovered by WorkspaceFileService instead of scanning again.
+	 *
+	 * Concurrent calls are serialized: while a pass is in flight, additional
+	 * requests are coalesced into a single trailing pass instead of running
+	 * overlapping indexing runs (which would corrupt progress reporting and the
+	 * shared store). If any pending request asks for a reindex, the trailing
+	 * pass forces a reindex.
+	 * @param reindex Whether to force re-indexing of already indexed files.
 	 */
 	async indexWorkspace(reindex: boolean = false): Promise<void> {
-		return vscode.window.withProgress({
-			location: vscode.ProgressLocation.Window,
-			title: "Indexing workspace",
-			cancellable: false
-		}, async (progress) => {
-			const run = this._startIndexingRun(reindex, progress);
+		this._rerunRequested = true;
+		this._rerunReindex = this._rerunReindex || reindex;
 
-			if (run.fileUris.length === 0) {
-				this._finishIndexing();
-				this._reportProgress(progress, 0, 0);
-			} else {
+		if (this._activeRun) {
+			return this._activeRun;
+		}
 
-				const startTime = performance.now();
-				const scanResult = await this._scanIndexFiles(run);
+		this._activeRun = (async () => {
+			try {
+				while (this._rerunRequested) {
+					this._rerunRequested = false;
 
-				this._reportProgress(progress, 0, scanResult.targetFileUris.length);
-				
-				const summary = await this._runIndexingTasks(scanResult.targetFileUris, run);
+					const passReindex = this._rerunReindex;
+					this._rerunReindex = false;
 
-				this._finalizeIndexingRun(run.fileUris.length, scanResult.skippedFiles, summary, startTime);
-				this._reportProgress(progress, summary.completed, scanResult.targetFileUris.length);
+					await this._runIndexingPass(passReindex);
+				}
+			} finally {
+				this._activeRun = undefined;
 			}
-		});
+		})();
+
+		return this._activeRun;
+	}
+
+	/**
+	 * Executes a single indexing pass over the discovered workspace files.
+	 * @param reindex Whether to force re-indexing of already indexed files.
+	 */
+	private async _runIndexingPass(reindex: boolean): Promise<void> {
+		const run = this._startIndexingRun(reindex);
+		const startTime = performance.now();
+
+		if (run.fileUris.length === 0) {
+			// No files to index — still finalize so the status bar shows the
+			// summary instead of remaining stuck on the indexing spinner.
+			this._finalizeIndexingRun(0, [], { completed: 0, errorCount: 0 }, startTime);
+		} else {
+			const scanResult = await this._scanIndexFiles(run);
+
+			this._reportProgress(0, scanResult.targetFileUris.length);
+
+			const summary = await this._runIndexingTasks(scanResult.targetFileUris, run);
+
+			this._finalizeIndexingRun(run.fileUris.length, scanResult.skippedFiles, summary, startTime);
+		}
 	}
 
 	/**
 	 * Initializes a workspace indexing run and returns the immutable inputs shared
 	 * across the remaining indexing phases.
 	 * @param reindex Whether to force re-indexing of already indexed files.
-	 * @param progress The progress reporter for the current run.
 	 * @returns The shared indexing run state.
 	 */
-	private _startIndexingRun(
-		reindex: boolean,
-		progress: vscode.Progress<{ message?: string, increment?: number }>
-	): IndexingRun {
+	private _startIndexingRun(reindex: boolean): IndexingRun {
 		this._indexingFinished = false;
 
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', true);
 
-		this._statusBarItem.hide();
+		// Show indexing progress on the indexer's own status bar item so the live
+		// status and the final summary share the same location.
+		this._statusBarItem.text = '$(sync~spin) Indexing workspace...';
+		this._statusBarItem.show();
 		this._statusLog.info(`Started workspace indexing${reindex ? ' (reindex)' : ''}...`);
 
 		// The default value is set to Number.MAX_SAFE_INTEGER to disable the
@@ -114,11 +179,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		this._statusLog.info(`Using max file size of ${maxSize} bytes`);
 
 		return {
-			fileUris: this.workspaceFileService.files,
+			// Snapshot the discovered files so file-watcher mutations during the
+			// run cannot change the pass total mid-flight.
+			fileUris: [...this.workspaceFileService.files],
 			includeMatchers: this._loadIncludePatterns(),
 			maxSize,
 			reindex,
-			progress,
 		};
 	}
 
@@ -185,7 +251,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 			completed++;
 
-			this._reportIndexingProgress(run.progress, completed, indexedUris.length);
+			this._reportIndexingProgress(completed, indexedUris.length);
 		}
 
 		return { completed, errorCount };
@@ -220,6 +286,13 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		const duration = Math.round(performance.now() - startTime);
 		const successfulFiles = indexedFiles - summary.errorCount;
 
+		this._statistics = {
+			indexedFiles: successfulFiles,
+			errorCount: summary.errorCount,
+			skippedFiles: skippedFiles.length,
+			durationMs: duration,
+		};
+
 		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
 
 		const parts = [`$(app-mentor) ${successfulFiles} files`];
@@ -240,20 +313,15 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 	/**
 	 * Reports per-file indexing progress using completed and total file counts.
-	 * @param progress The progress reporter for the current run.
 	 * @param completed The number of completed indexing tasks.
 	 * @param total The total number of scheduled indexing tasks.
 	 */
-	private _reportIndexingProgress(
-		progress: vscode.Progress<{ message?: string, increment?: number }>,
-		completed: number,
-		total: number
-	): void {
+	private _reportIndexingProgress(completed: number, total: number): void {
 		if (total === 0) {
 			return;
 		}
 
-		this._reportProgress(progress, completed, total);
+		this._reportProgress(completed, total);
 	}
 
 	/**
@@ -430,17 +498,13 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	}
 
 	/**
-	 * Reports progress to the user.
-	 * @param progress The progress to report.
+	 * Reports indexing progress on the status bar item.
 	 * @param completed The number of files indexed so far.
 	 * @param total The total number of files to index.
 	 */
-	private _reportProgress(
-		progress: vscode.Progress<{ message?: string, increment?: number }>,
-		completed: number,
-		total: number
-	): void {
-		progress.report({ message: `${completed} of ${total} files...` });
+	private _reportProgress(completed: number, total: number): void {
+		this._statusBarItem.text = `$(sync~spin) Indexing: ${completed} of ${total} files...`;
+		this._statusBarItem.show();
 	}
 
 	/**
@@ -491,11 +555,6 @@ type IndexingRun = {
 	 * Indicates whether already indexed files should be indexed again.
 	 */
 	reindex: boolean;
-
-	/**
-	 * The VS Code progress reporter for the active indexing run.
-	 */
-	progress: vscode.Progress<{ message?: string, increment?: number }>;
 };
 
 /**
