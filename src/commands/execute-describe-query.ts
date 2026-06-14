@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { render } from 'triplate';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
@@ -6,7 +7,7 @@ import { SparqlResultsController } from '@src/views/webviews';
 
 export const executeDescribeQuery = {
 	id: 'mentor.command.executeDescribeQuery',
-	handler: async (documentUri: vscode.Uri | string, resourceIri: string, graphUris?: string[]) => {
+	handler: async (documentUri: vscode.Uri | string, resourceIri: string, graphIris?: string[]) => {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (!document) {
@@ -23,21 +24,9 @@ export const executeDescribeQuery = {
 			return;
 		}
 
-		const fromClauses = getFromClauses(graphUris);
-
-		const query = template
-			.replace(/\{\{resourceIri\}\}/g, resourceIri)
-			.replace(/\{\{fromClauses\}\}/g, fromClauses);
+		const query = render(template, { resourceIri, graphIris: graphIris ?? [] });
 
 		const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
 		await controller.executeQuery(document, query);
 	}
 };
-
-function getFromClauses(graphUris?: string[]): string {
-	if (!graphUris || graphUris.length === 0) {
-		return '';
-	} else {
-		return graphUris.map(uri => `\nFROM <${uri}>`).join('');
-	}
-}

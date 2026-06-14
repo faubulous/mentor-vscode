@@ -32,6 +32,7 @@ export const workspace = {
   onDidChangeTextDocument: (_handler: any) => ({ dispose: () => {} }),
   onDidCloseTextDocument: (_handler: any) => ({ dispose: () => {} }),
   onDidChangeConfiguration: (_handler: any) => ({ dispose: () => {} }),
+  onDidRenameFiles: (_handler: any) => ({ dispose: () => {} }),
   onDidOpenNotebookDocument: (_handler: any) => ({ dispose: () => {} }),
   onDidChangeNotebookDocument: (_handler: any) => ({ dispose: () => {} }),
   onDidCloseNotebookDocument: (_handler: any) => ({ dispose: () => {} }),

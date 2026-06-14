@@ -26,6 +26,8 @@ export { executeNotebookCell } from './execute-notebook-cell';
 export { executeSparqlQuery } from './execute-sparql-query';
 export { executeSparqlQueryFromActiveEditor } from './execute-sparql-query-from-active-editor';
 export { executeSparqlQueryFromDocument } from './execute-sparql-query-from-document';
+export { executeTriplateTemplate } from './execute-triplate-template';
+export { executeTriplateExample } from './execute-triplate-example';
 export { viewShaclReport } from './export-shacl-report';
 export { excludeFromIndex } from './exclude-from-index';
 export { findReferences } from './find-references';

@@ -27,6 +27,11 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 	private readonly _watcher: vscode.FileSystemWatcher;
 
 	/**
+	 * Subscription to workspace rename events.
+	 */
+	private readonly _renameSubscription: vscode.Disposable;
+
+	/**
 	 * Indicates if file discovery has completed.
 	 */
 	private _initialized = false;
@@ -94,6 +99,61 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 				uri: Utils.dirname(uri)
 			});
 		});
+
+		// Programmatic renames (e.g. via `applyEdit`) and folder renames are not
+		// reliably surfaced as individual create/delete watcher events, so the
+		// rename event is handled explicitly to keep the file list and tree in sync.
+		this._renameSubscription = vscode.workspace.onDidRenameFiles((e) => {
+			this.handleRenames(e.files);
+		});
+	}
+
+	/**
+	 * Updates the discovered file list in response to file or folder renames and
+	 * notifies listeners so the workspace tree reflects the new names.
+	 * @param renames The rename events from `vscode.workspace.onDidRenameFiles`.
+	 */
+	handleRenames(renames: ReadonlyArray<{ readonly oldUri: vscode.Uri; readonly newUri: vscode.Uri }>): void {
+		const changedFolders = new Set<string>();
+
+		for (const { oldUri, newUri } of renames) {
+			const oldPrefix = oldUri.path + '/';
+
+			this._files = this._files.flatMap((file) => {
+				if (file.path === oldUri.path) {
+					// The renamed item is a tracked file.
+					if (this.documentFactory.isSupportedFile(newUri)) {
+						return [newUri];
+					}
+
+					// Renamed to an unsupported extension; drop it from the list.
+					return [];
+				}
+
+				if (file.path.startsWith(oldPrefix)) {
+					// The file lives inside a renamed folder; rewrite its path prefix.
+					return [file.with({ path: newUri.path + file.path.substring(oldUri.path.length) })];
+				}
+
+				return [file];
+			});
+
+			// A file renamed from an unsupported extension is not yet tracked, so add it.
+			if (this.documentFactory.isSupportedFile(newUri) && !this._files.some(f => f.path === newUri.path)) {
+				this._files.push(newUri);
+			}
+
+			// Refresh the folders that gained or lost the renamed item.
+			changedFolders.add(Utils.dirname(oldUri).toString());
+			changedFolders.add(Utils.dirname(newUri).toString());
+		}
+
+		for (const folder of changedFolders) {
+			this._onDidChangeFiles.fire({
+				type: vscode.FileChangeType.Changed,
+				uri: vscode.Uri.parse(folder)
+			});
+		}
 	}
 
 	/**
@@ -329,6 +389,7 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 	 */
 	dispose(): void {
 		this._watcher.dispose();
+		this._renameSubscription.dispose();
 		this._onDidFinishDiscovery.dispose();
 		this._onDidChangeFiles.dispose();
 	}

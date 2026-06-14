@@ -5,12 +5,22 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
 let mockExecuteQueryOnConnection: Mock;
 
-const { MENTOR_WORKSPACE_STORE } = vi.hoisted(() => ({
+const { MENTOR_WORKSPACE_STORE, mockGetQueryTemplate } = vi.hoisted(() => ({
 	MENTOR_WORKSPACE_STORE: { id: 'workspace', endpointUrl: 'workspace' },
+	mockGetQueryTemplate: vi.fn((_conn: any, kind: string) => {
+		if (kind === 'exportGraph') {
+			return '---\nparams {\n  graphIri: iri\n}\n---\nCONSTRUCT {\n    ?s ?p ?o .\n} WHERE {\n    GRAPH ${graphIri} {\n        ?s ?p ?o .\n    }\n}';
+		}
+		if (kind === 'countGraph') {
+			return '---\nparams {\n  graphIri: iri\n  limit:    int optional\n}\n---\nSELECT (COUNT(?s) as ?count)\nWHERE {\n    SELECT ?s\n    WHERE {\n        GRAPH ${graphIri} {\n            ?s ?p ?o .\n        }\n    }\n    {% if limit %}LIMIT ${limit}{% endif %}\n}';
+		}
+		return undefined;
+	}),
 }));
 
 vi.mock('@src/languages/sparql/services/sparql-connection-service', () => ({
 	MENTOR_WORKSPACE_STORE,
+	WORKSPACE_CONNECTION: MENTOR_WORKSPACE_STORE,
 }));
 
 vi.mock('tsyringe', () => ({
@@ -20,6 +30,9 @@ vi.mock('tsyringe', () => ({
 				return {
 					executeQueryOnConnection: (...args: any[]) => mockExecuteQueryOnConnection(...args),
 				};
+			}
+			if (token === 'SparqlConnectionService') {
+				return { getQueryTemplate: mockGetQueryTemplate };
 			}
 			return {};
 		}),

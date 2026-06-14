@@ -15,3 +15,5 @@ export * from './n3/n3-language-client';
 export * from './turtle/turtle-document';
 export * from './turtle/turtle-language-client';
 export * from './turtle/turtle-token-provider';
+export * from './triplate/triplate-hover-provider';
+export * from './triplate/triplate-code-lens-provider';

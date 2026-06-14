@@ -222,4 +222,44 @@ describe('WorkspaceNodeProvider', () => {
 			expect(() => provider.refresh()).not.toThrow();
 		});
 	});
+
+	describe('onDidChangeFiles handling', () => {
+		it('fires a targeted change for a nested folder', () => {
+			const provider = new WorkspaceNodeProvider();
+			const changeCallback = mockOnDidChangeFiles.mock.calls[0][0];
+
+			const fired: (string | undefined)[] = [];
+			provider.onDidChangeTreeData((e) => fired.push(e));
+
+			changeCallback({ type: vscode.FileChangeType.Changed, uri: vscode.Uri.parse('file:///workspace/sub') });
+
+			expect(fired).toEqual(['file:///workspace/sub']);
+		});
+
+		it('fires a full refresh when the workspace root changes in a single-folder workspace', () => {
+			const provider = new WorkspaceNodeProvider();
+			const changeCallback = mockOnDidChangeFiles.mock.calls[0][0];
+
+			const fired: (string | undefined)[] = [];
+			provider.onDidChangeTreeData((e) => fired.push(e));
+
+			changeCallback({ type: vscode.FileChangeType.Changed, uri: vscode.Uri.parse('file:///workspace') });
+
+			expect(fired).toEqual([undefined]);
+		});
+
+		it('fires a targeted change for a workspace folder root in a multi-folder workspace', () => {
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///workspace/work.code-workspace');
+
+			const provider = new WorkspaceNodeProvider();
+			const changeCallback = mockOnDidChangeFiles.mock.calls[0][0];
+
+			const fired: (string | undefined)[] = [];
+			provider.onDidChangeTreeData((e) => fired.push(e));
+
+			changeCallback({ type: vscode.FileChangeType.Changed, uri: vscode.Uri.parse('file:///workspace') });
+
+			expect(fired).toEqual(['file:///workspace']);
+		});
+	});
 });

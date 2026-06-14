@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { render } from 'triplate';
 import { getConfig } from '@src/utilities/vscode/config';
 import { WorkspaceUri } from '@src/providers';
 
@@ -16,7 +17,7 @@ export const createSparqlQueryFromDocument = {
 		const template = getConfig().get<string>('language.sparql.documentQueryTemplate');
 
 		if (template && documentUri) {
-			const content = template.replace(/\{\{documentUri\}\}/g, documentUri.toString());
+			const content = render(template, { documentIri: documentUri.toString() });
 			const document = await vscode.workspace.openTextDocument({ content, language: 'sparql' });
 
 			await vscode.window.showTextDocument(document);

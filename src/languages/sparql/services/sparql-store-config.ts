@@ -111,6 +111,16 @@ export const SPARQL_QUERY_KINDS = {
         description: 'Describes a resource, used by the Describe command. Leave blank to use the global default.',
         globalSettingKey: 'sparql.describeQueryTemplate',
     },
+    exportGraph: {
+        label: 'Export Graph Query',
+        description: 'CONSTRUCT query used to export a named graph as Turtle. Leave blank to use the global default.',
+        globalSettingKey: 'sparql.exportGraphQuery',
+    },
+    countGraph: {
+        label: 'Count Graph Query',
+        description: 'Query used to check graph size before export. Leave blank to use the global default.',
+        globalSettingKey: 'sparql.countGraphQuery',
+    },
 } as const;
 
 /** Derived from {@link SPARQL_QUERY_KINDS} — adding an entry there automatically widens this type. */

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { render } from 'triplate';
 import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
@@ -40,7 +41,7 @@ export const deleteGraph = {
 
 			// Create an untitled SPARQL document with the drop graph query
 			const document = await vscode.workspace.openTextDocument({
-				content: query.replace('@graphIri', WorkspaceUri.toCanonicalString(graphIri)),
+				content: render(query, { graphIri: WorkspaceUri.toCanonicalString(graphIri) }),
 				language: 'sparql'
 			});
 

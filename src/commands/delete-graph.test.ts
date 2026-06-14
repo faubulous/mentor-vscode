@@ -88,7 +88,7 @@ describe('deleteGraph command', () => {
 	it('should open document and execute drop graph query for remote connection', async () => {
 		(vscode.window as any).showWarningMessage = vi.fn(async () => 'Delete');
 		mockGetConnectionForDocument.mockReturnValue({ id: 'remote', endpointUrl: 'http://sparql.example.org' });
-		mockGetQueryTemplate.mockReturnValue('DROP GRAPH <@graphIri>');
+		mockGetQueryTemplate.mockReturnValue('---\nparams {\n  graphIri: iri\n}\n---\nDROP GRAPH ${graphIri}');
 		await deleteGraph.handler('http://example.org/doc', 'http://example.org/graph');
 		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
 			expect.objectContaining({ content: 'DROP GRAPH <http://example.org/graph>', language: 'sparql' })

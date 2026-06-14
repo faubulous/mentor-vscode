@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
+import { render } from 'triplate';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlQueryService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
@@ -11,33 +12,18 @@ const LARGE_GRAPH_THRESHOLD = 10000;
 export const openGraph = {
 	id: 'mentor.command.openGraph',
 	handler: async (graphIri: vscode.Uri | string, connection?: SparqlConnection) => {
-		const targetConnection = connection ?? WORKSPACE_CONNECTION;
 		const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
-		// Hoisted so the catch block can offer it in the error notification.
-		const constructQuery = `CONSTRUCT {
-	?s ?p ?o .
-} WHERE {
-	GRAPH <${WorkspaceUri.toCanonicalString(graphIri)}> {
-		?s ?p ?o .
-	}
-}`;
+		const targetConnection = connection ?? WORKSPACE_CONNECTION;
+		const workspaceUri = WorkspaceUri.toCanonicalString(graphIri);
+
+		const exportTemplate = connectionService.getQueryTemplate(targetConnection, 'exportGraph')!;
+		const constructQuery = render(exportTemplate, { graphIri: workspaceUri });
 
 		try {
-			// Check if the graph contains more than the threshold number of triples.
-			const countQuery = `
-				SELECT (COUNT(?s) as ?count)
-				WHERE {
-					SELECT ?s
-					WHERE {
-						GRAPH <${WorkspaceUri.toCanonicalString(graphIri)}> {
-							?s ?p ?o .
-						}
-					}
-					LIMIT ${LARGE_GRAPH_THRESHOLD}
-				}
-			`;
-
+			const countTemplate = connectionService.getQueryTemplate(targetConnection, 'countGraph')!;
+			const countQuery = render(countTemplate, { graphIri: workspaceUri, limit: LARGE_GRAPH_THRESHOLD });
 			const countResult = await queryService.executeQueryOnConnection(countQuery, targetConnection);
 
 			if (countResult?.type === 'bindings' && countResult.bindings.length > 0) {

@@ -235,6 +235,18 @@
         "language": "datalog",
         "scopeName": "source.datalog",
         "path": "./dist/datalog.tmLanguage.json"
+      },
+      {
+        "scopeName": "triplate.injection",
+        "path": "./dist/triplate.injection.tmLanguage.json",
+        "injectTo": [
+          "source.sparql",
+          "source.ntriples",
+          "source.nquads",
+          "source.turtle",
+          "source.trig",
+          "source.n3"
+        ]
       }
     ],
     "languages": [
@@ -626,6 +638,18 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.executeTriplateTemplate",
+        "title": "Execute Template",
+        "icon": "$(run-query)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.executeTriplateExample",
+        "title": "Execute Template Example",
+        "icon": "$(play)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.saveSparqlQueryResults",
         "title": "Save SPARQL Query Results",
         "icon": "$(save-as)",
@@ -928,7 +952,12 @@
         },
         {
           "command": "mentor.command.executeSparqlQueryFromActiveEditor",
-          "when": "editorLangId == 'sparql'",
+          "when": "editorLangId == 'sparql' && !mentor.editor.isTriplateTemplate",
+          "group": "navigation@-2"
+        },
+        {
+          "command": "mentor.command.executeTriplateTemplate",
+          "when": "mentor.editor.isTriplateTemplate",
           "group": "navigation@-2"
         },
         {
@@ -1118,6 +1147,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "mentor.command.executeTriplateExample",
+          "when": "false"
+        },
         {
           "command": "mentor.command.renameWorkspaceItem",
           "when": "false"
@@ -1398,22 +1431,36 @@
           "mentor.sparql.listGraphsQuery": {
             "type": "string",
             "title": "List Graphs Query",
-            "description": "SPARQL query used to retrieve all named graphs and the default graph from a SPARQL endpoint.",
+            "description": "SPARQL query used to retrieve all named graphs and the default graph from a store.",
             "default": "SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph { ?s ?p ?o }\n}\nORDER BY ?graph",
             "editPresentation": "multilineText"
           },
           "mentor.sparql.dropGraphQuery": {
             "type": "string",
             "title": "Drop Graph Query",
-            "description": "SPARQL query used to drop a named graph from a SPARQL endpoint.",
-            "default": "DROP GRAPH <@graphIri>",
+            "description": "SPARQL query template used to remove a named graph from a store.",
+            "default": "---\nparams {\n  graphIri: iri\n}\n---\nDROP GRAPH ${graphIri}",
             "editPresentation": "multilineText"
           },
           "mentor.sparql.describeQueryTemplate": {
             "type": "string",
             "title": "Describe Query Template",
-            "description": "SPARQL query template used by the describe command. Use {{resourceIri}} for the selected resource and {{fromClauses}} for optional FROM clauses generated from graph URIs.",
-            "default": "CONSTRUCT { <{{resourceIri}}> ?p ?o }{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }",
+            "description": "SPARQL query template used to describe resources command.",
+            "default": "---\nparams {\n  resourceIri: iri\n  graphIris:   iri[] optional\n}\n---\nCONSTRUCT { ${resourceIri} ?p ?o }\n{% for g in graphIris %}\nFROM ${g}\n{% endfor %}\nWHERE { ${resourceIri} ?p ?o }",
+            "editPresentation": "multilineText"
+          },
+          "mentor.sparql.exportGraphQuery": {
+            "type": "string",
+            "title": "Export Graph Query",
+            "description": "SPARQL query template used to export a named graph as Turtle.",
+            "default": "---\nparams {\n  graphIri: iri\n}\n---\nCONSTRUCT {\n    ?s ?p ?o .\n} WHERE {\n    GRAPH ${graphIri} {\n        ?s ?p ?o .\n    }\n}",
+            "editPresentation": "multilineText"
+          },
+          "mentor.sparql.countGraphQuery": {
+            "type": "string",
+            "title": "Count Graph Query",
+            "description": "SPARQL query template used to check graph size before export.",
+            "default": "---\nparams {\n  graphIri: iri\n  limit:    int optional\n}\n---\nSELECT (COUNT(?s) as ?count)\nWHERE {\n    SELECT ?s\n    WHERE {\n        GRAPH ${graphIri} {\n            ?s ?p ?o .\n        }\n    }\n    {% if limit %}LIMIT ${limit}{% endif %}\n}",
             "editPresentation": "multilineText"
           },
           "mentor.sparql.stores": {
@@ -1956,8 +2003,8 @@
           "mentor.language.sparql.documentQueryTemplate": {
             "type": "string",
             "title": "Document Query Template",
-            "description": "The SPARQL query template used when creating a query for an RDF document. Use {{documentUri}} as a placeholder for the document URI.",
-            "default": "SELECT ?s ?p ?o\nFROM <{{documentUri}}>\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
+            "description": "SPARQL query template used when creating a query for an RDF document.",
+            "default": "---\nparams {\n  documentIri: iri\n}\n---\nSELECT ?s ?p ?o\nFROM ${documentIri}\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
             "editPresentation": "multilineText"
           },
           "mentor.language.turtle.defaultDocumentTemplate": {

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { TreeView } from '@src/views/trees/tree-view';
+import { renameWorkspaceItem } from '@src/commands/rename-workspace-item';
 import { WorkspaceNodeProvider } from './workspace-node-provider';
 
 export class WorkspaceTree implements TreeView {
@@ -32,6 +33,15 @@ export class WorkspaceTree implements TreeView {
 			this.treeView,
 			vscode.commands.registerCommand('mentor.command.refreshWorkspaceTree', async () => {
 				this.treeDataProvider.refresh();
+			}),
+			vscode.commands.registerCommand(renameWorkspaceItem.id, async (clicked?: string) => {
+				// Context menu invocations pass the clicked node; the F2 keybinding
+				// passes nothing, so fall back to the current tree selection.
+				const target = clicked ?? this.treeView.selection[0];
+
+				if (target) {
+					await renameWorkspaceItem.handler(target);
+				}
 			})
 		];
 

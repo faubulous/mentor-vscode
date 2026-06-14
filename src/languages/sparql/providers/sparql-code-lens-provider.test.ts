@@ -122,7 +122,7 @@ describe('SparqlCodeLensProvider', () => {
     describe('provideCodeLenses', () => {
         it('returns empty array when no connection is configured for the document', async () => {
             const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses).toEqual([]);
         });
@@ -130,7 +130,7 @@ describe('SparqlCodeLensProvider', () => {
         it('returns connection CodeLens when connection is configured', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses.length).toBeGreaterThanOrEqual(1);
             expect(lenses[0].command?.command).toBe('mentor.command.selectSparqlConnection');
@@ -139,16 +139,26 @@ describe('SparqlCodeLensProvider', () => {
         it('only has connection and execute lenses when the store does not support inference', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             // supportsInference returns false, so only connection and execute lenses
             expect(lenses.length).toBe(2);
         });
 
+        it('suppresses the execute lens for triplate templates', async () => {
+            getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
+            const provider = new SparqlCodeLensProvider();
+            const doc = { uri: 'file:///test.sparql', getText: () => '---\nparams { type: iri }\n---\nSELECT * WHERE { ?s a ${type} }' };
+            const lenses = await provider.provideCodeLenses(doc as any);
+            // Only the connection lens remains; the execute lens is supplied by the triplate provider.
+            expect(lenses.length).toBe(1);
+            expect(lenses.some(l => l.command?.command === 'mentor.command.executeSparqlQuery')).toBe(false);
+        });
+
         it('connection lens title contains the endpoint URL', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://my.endpoint/sparql' };
             const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses[0].command?.title).toContain('http://my.endpoint/sparql');
         });
@@ -161,7 +171,7 @@ describe('SparqlCodeLensProvider', () => {
             getInferenceEnabledResult = false;
 
             const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses.length).toBe(3);
             expect(lenses[1].command?.command).toBe('mentor.command.toggleDocumentInference');
@@ -173,7 +183,7 @@ describe('SparqlCodeLensProvider', () => {
             getInferenceEnabledResult = false;
 
             const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses[1].command?.title).toContain('off');
         });
@@ -184,7 +194,7 @@ describe('SparqlCodeLensProvider', () => {
             getInferenceEnabledResult = true;
 
             const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses[1].command?.title).toContain('on');
         });
@@ -194,7 +204,7 @@ describe('SparqlCodeLensProvider', () => {
             supportsInferenceResult = false;
 
             const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses.length).toBe(2);
         });

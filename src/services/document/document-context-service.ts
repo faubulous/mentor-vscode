@@ -5,6 +5,7 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
+import { isTriplateTemplate } from '@src/languages/triplate/triplate-api';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -482,6 +483,7 @@ export class DocumentContextService {
 
 		if (!editor) {
 			await this._setConvertFileFormatContexts();
+			await this._setTriplateTemplateContext();
 			return;
 		}
 
@@ -489,10 +491,12 @@ export class DocumentContextService {
 
 		if (!uri) {
 			await this._setConvertFileFormatContexts();
+			await this._setTriplateTemplateContext();
 			return;
 		}
 
 		await this._setConvertFileFormatContexts(editor.document.languageId, uri.toString());
+		await this._setTriplateTemplateContext(editor.document);
 
 		if (uri === this.activeContext?.uri) return;
 
@@ -525,6 +529,17 @@ export class DocumentContextService {
 		if (editor.document.languageId === 'xml') {
 			await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', context?.isLoaded === true);
 		}
+	}
+
+	/**
+	 * Sets the `mentor.editor.isTriplateTemplate` context key used to toggle the
+	 * template execute button in the editor title bar.
+	 * @param document The active document, or `undefined` when there is no active editor.
+	 */
+	private async _setTriplateTemplateContext(document?: vscode.TextDocument): Promise<void> {
+		const isTemplate = document ? isTriplateTemplate(document.getText()) : false;
+
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.isTriplateTemplate', isTemplate);
 	}
 
 	/**

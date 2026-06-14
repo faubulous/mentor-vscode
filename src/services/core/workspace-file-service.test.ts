@@ -242,6 +242,82 @@ describe('WorkspaceFileService', () => {
 		});
 	});
 
+	describe('handleRenames', () => {
+		test('updates a renamed file in the list', async () => {
+			findFilesSpy.mockResolvedValue([URI.parse('file:///w/data/old.ttl') as any]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			service.handleRenames([{
+				oldUri: URI.parse('file:///w/data/old.ttl'),
+				newUri: URI.parse('file:///w/data/new.ttl'),
+			}]);
+
+			expect(service.files.map(f => f.toString())).toEqual(['file:///w/data/new.ttl']);
+		});
+
+		test('rewrites paths of files inside a renamed folder', async () => {
+			findFilesSpy.mockResolvedValue([
+				URI.parse('file:///w/data/a.ttl'),
+				URI.parse('file:///w/data/sub/b.ttl'),
+			] as any);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			service.handleRenames([{
+				oldUri: URI.parse('file:///w/data'),
+				newUri: URI.parse('file:///w/sources'),
+			}]);
+
+			const paths = service.files.map(f => f.toString()).sort();
+			expect(paths).toEqual(['file:///w/sources/a.ttl', 'file:///w/sources/sub/b.ttl']);
+		});
+
+		test('drops a file renamed to an unsupported extension', async () => {
+			findFilesSpy.mockResolvedValue([URI.parse('file:///w/data.ttl') as any]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			service.handleRenames([{
+				oldUri: URI.parse('file:///w/data.ttl'),
+				newUri: URI.parse('file:///w/data.md'),
+			}]);
+
+			expect(service.files.length).toBe(0);
+		});
+
+		test('adds a file renamed from an unsupported extension', async () => {
+			findFilesSpy.mockResolvedValue([]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			service.handleRenames([{
+				oldUri: URI.parse('file:///w/notes.md'),
+				newUri: URI.parse('file:///w/notes.ttl'),
+			}]);
+
+			expect(service.files.map(f => f.toString())).toEqual(['file:///w/notes.ttl']);
+		});
+
+		test('fires onDidChangeFiles for the affected parent folders', async () => {
+			findFilesSpy.mockResolvedValue([URI.parse('file:///w/data/old.ttl') as any]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const eventSpy = vi.fn();
+			service.onDidChangeFiles(eventSpy);
+
+			service.handleRenames([{
+				oldUri: URI.parse('file:///w/data/old.ttl'),
+				newUri: URI.parse('file:///w/other/new.ttl'),
+			}]);
+
+			const firedUris = eventSpy.mock.calls.map(c => c[0].uri.toString());
+			expect(firedUris).toContain('file:///w/data');
+			expect(firedUris).toContain('file:///w/other');
+		});
+	});
+
 	describe('getFilesByLanguageId', () => {
 		test('yields files matching the given language extensions', async () => {
 			// Set up extensions mock with turtle language supporting .ttl and .rdf

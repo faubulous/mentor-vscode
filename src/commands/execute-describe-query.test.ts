@@ -30,7 +30,17 @@ vi.mock('tsyringe', () => ({
 import * as vscode from 'vscode';
 import { executeDescribeQuery } from '@src/commands/execute-describe-query';
 
-const DESCRIBE_TEMPLATE = 'CONSTRUCT { <{{resourceIri}}> ?p ?o }\n{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }';
+const DESCRIBE_TEMPLATE = `---
+params {
+  resourceIri: iri
+  graphIris:   iri[] optional
+}
+---
+CONSTRUCT { \${resourceIri} ?p ?o }
+{% for g in graphIris %}
+FROM \${g}
+{% endfor %}
+WHERE { \${resourceIri} ?p ?o }`;
 
 function mockDescribeTemplate(template: string = DESCRIBE_TEMPLATE) {
 	mockConnectionService.getQueryTemplate.mockReturnValue(template);
@@ -97,7 +107,7 @@ describe('executeDescribeQuery', () => {
 		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalled();
 	});
 
-	it('should build query from template without FROM clauses when graph URIs are not provided', async () => {
+	it('should build query from template without FROM clauses when graph IRIs are not provided', async () => {
 		mockDescribeTemplate();
 
 		const uriStr = 'file:///test.sparql';
@@ -108,11 +118,11 @@ describe('executeDescribeQuery', () => {
 
 		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
 			fakeDoc,
-			'CONSTRUCT { <urn:ex#res> ?p ?o }\n\nWHERE { <urn:ex#res> ?p ?o }'
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\nWHERE { <urn:ex#res> ?p ?o }'
 		);
 	});
 
-	it('should add one FROM clause when one graph URI is provided', async () => {
+	it('should add one FROM clause when one graph IRI is provided', async () => {
 		mockDescribeTemplate();
 
 		const uriStr = 'file:///test.sparql';
@@ -123,11 +133,11 @@ describe('executeDescribeQuery', () => {
 
 		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
 			fakeDoc,
-			'CONSTRUCT { <urn:ex#res> ?p ?o }\n\nFROM <https://example.org/graph>\nWHERE { <urn:ex#res> ?p ?o }'
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\nFROM <https://example.org/graph>\nWHERE { <urn:ex#res> ?p ?o }'
 		);
 	});
 
-	it('should add multiple FROM clauses for multiple graph URIs', async () => {
+	it('should add multiple FROM clauses for multiple graph IRIs', async () => {
 		mockDescribeTemplate();
 
 		const uriStr = 'file:///test.sparql';
@@ -141,7 +151,7 @@ describe('executeDescribeQuery', () => {
 
 		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
 			fakeDoc,
-			'CONSTRUCT { <urn:ex#res> ?p ?o }\n\nFROM <https://example.org/graph-a>\nFROM <https://example.org/graph-b>\nWHERE { <urn:ex#res> ?p ?o }'
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\nFROM <https://example.org/graph-a>\nFROM <https://example.org/graph-b>\nWHERE { <urn:ex#res> ?p ?o }'
 		);
 	});
 });

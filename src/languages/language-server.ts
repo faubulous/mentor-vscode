@@ -1,4 +1,5 @@
 import { IParser, ILexer, IToken, IRecognitionException, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
+import { preprocessTriplateContent } from './triplate-preprocessor';
 import {
 	Connection,
 	Diagnostic,
@@ -291,7 +292,7 @@ export class LanguageServerBase {
 		let diagnostics: Diagnostic[] = [];
 		let tokens: IToken[] = [];
 
-		const content = document.getText();
+		const content = preprocessTriplateContent(document.getText());
 
 		if (content.length) {
 			try {
