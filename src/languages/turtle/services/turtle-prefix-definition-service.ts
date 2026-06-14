@@ -8,6 +8,7 @@ import { getIriFromIriReference } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getConfig } from '@src/utilities/vscode/config';
+import { getContentStartOffset } from '@src/languages/triplate/triplate-api';
 
 /**
  * Specifies a how a namespace prefix should be defined in a document.
@@ -206,6 +207,19 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	}
 
 	/**
+	 * Returns the first line index at which the document body begins, i.e. the line
+	 * after a triplate `---` frontmatter header, or `0` when there is none. Prefix
+	 * declarations must be inserted at or below this line so the header is preserved.
+	 * @param document The text document.
+	 * @returns The line index at which the document body begins.
+	 */
+	private _getContentStartLine(document: vscode.TextDocument): number {
+		const offset = getContentStartOffset(document.getText());
+
+		return offset > 0 ? document.positionAt(offset).line : 0;
+	}
+
+	/**
 	 * Delete empty lines after a token in a document.
 	 * @param edit The workspace edit.
 	 * @param document The text document.
@@ -283,7 +297,10 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		const tokenType = this._getPrefixTokenType(document, context);
 		const upperCase = isUpperCaseToken(lastPrefix ?? context.tokens[0]);
 
-		let insertPosition = new vscode.Position(lastPrefix ? (lastPrefix.endLine ?? 0) : 0, 0);
+		// When there is no existing prefix, anchor below the triplate frontmatter (if any)
+		// so the header is not pushed down or overwritten.
+		const insertLine = lastPrefix ? (lastPrefix.endLine ?? 0) : this._getContentStartLine(document);
+		let insertPosition = new vscode.Position(insertLine, 0);
 
 		// 1. Append the new prefixes to the end of the prefix definition list.
 		prefixes.sort()
@@ -316,8 +333,11 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param tokenType The token type of the prefix token.
 	 */
 	private async _implementPrefixesSorted(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, prefixes: PrefixDefinition[]) {
+		// Anchor below the triplate frontmatter (if any) so the header is preserved.
+		const contentStartLine = this._getContentStartLine(document);
+
 		// 1. Delete the existing prefix definitions.
-		let currentLine = 0;
+		let currentLine = contentStartLine;
 
 		// Iterate over all tokens in the document...
 		for (let token of context.tokens) {
@@ -361,10 +381,10 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 			const namespaceIri = namespaceMap[prefix];
 			const definition = this._getPrefixDefinition(tokenType, upperCase, prefix, namespaceIri);
 
-			edit.insert(context.uri, new vscode.Position(0, 0), definition + '\n');
+			edit.insert(context.uri, new vscode.Position(contentStartLine, 0), definition + '\n');
 		}
 
-		edit.insert(context.uri, new vscode.Position(0, 0), '\n');
+		edit.insert(context.uri, new vscode.Position(contentStartLine, 0), '\n');
 	}
 
 	/**

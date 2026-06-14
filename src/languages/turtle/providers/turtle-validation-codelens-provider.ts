@@ -108,12 +108,8 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 				title += `$(file)\u00A0Validation: not configured`;
 			}
 
-			result.push(new vscode.CodeLens(range, {
-				title: title,
-				command: 'mentor.command.manageShaclShapes',
-				tooltip: shapeFilesTooltip
-			}));
-
+			// When a shape source is configured, the Validate action leads the group;
+			// the shape-configuration lens follows it.
 			if (shapeCount > 0) {
 				result.push(new vscode.CodeLens(range, {
 					title: '$(run-coverage)\u00A0Validate',
@@ -121,6 +117,12 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 					tooltip: 'Validate this document against configured SHACL shape files'
 				}));
 			}
+
+			result.push(new vscode.CodeLens(range, {
+				title: title,
+				command: 'mentor.command.manageShaclShapes',
+				tooltip: shapeFilesTooltip
+			}));
 
 			// Show status from last validation, if available
 			const lastResult = this._validationService.getLastResult(document.uri);

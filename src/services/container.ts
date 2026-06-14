@@ -24,6 +24,8 @@ import { SparqlGraphService } from '@src/languages/sparql/services/sparql-graph-
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
+import { SettingsMigrationService } from './core/settings-migration-service';
+import * as migrations from './core/migrations/';
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
@@ -120,10 +122,14 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	// disposed when the extension deactivates.
 	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlConnectionService, sparqlGraphService);
 	container.registerInstance(ServiceToken.SparqlStatusBarService, sparqlStatusBarService);
-	
+
 	context.subscriptions.push(sparqlStatusBarService);
 
 	// Register the reference update service for cross-workspace URI rename support.
 	const referenceUpdateService = new ReferenceUpdateService(documentContextService);
 	container.registerInstance(ServiceToken.ReferenceUpdateService, referenceUpdateService);
+
+	// Register the settings migration service. New migrations are added to this list only.
+	const settingsMigrationService = new SettingsMigrationService(Object.values(migrations).map(m => new m()));
+	container.registerInstance(ServiceToken.SettingsMigrationService, settingsMigrationService);
 }

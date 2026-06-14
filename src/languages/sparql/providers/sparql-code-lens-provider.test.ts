@@ -21,6 +21,7 @@ const mockConnectionService = {
     supportsInference: () => supportsInferenceResult,
     getInferenceEnabledForDocument: () => getInferenceEnabledResult,
     getGraphsForDocument: async () => [],
+    getQueryTemplate: () => undefined,
 };
 
 const mockQueryService = {
@@ -145,12 +146,12 @@ describe('SparqlCodeLensProvider', () => {
             expect(lenses.length).toBe(2);
         });
 
-        it('suppresses the execute lens for triplate templates', async () => {
+        it('suppresses its own execute lens for triplate templates', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             const provider = new SparqlCodeLensProvider();
             const doc = { uri: 'file:///test.sparql', getText: () => '---\nparams { type: iri }\n---\nSELECT * WHERE { ?s a ${type} }' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            // Only the connection lens remains; the execute lens is supplied by the triplate provider.
+            // Only the connection lens; the Execute lens is supplied by the TriplateCodeLensProvider.
             expect(lenses.length).toBe(1);
             expect(lenses.some(l => l.command?.command === 'mentor.command.executeSparqlQuery')).toBe(false);
         });

@@ -92,7 +92,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		// Notebook cells have a native run button that outputs results inline;
 		// triggering executeSparqlQuery from a cell document would route to the
 		// SPARQL results panel instead. Triplate templates are not valid SPARQL on
-		// their own; the TriplateCodeLensProvider supplies their Execute lens.
+		// their own; the TriplateCodeLensProvider supplies their Execute lens (first).
 		if (document.uri.scheme !== 'vscode-notebook-cell' && !isTriplateTemplate(document.getText())) {
 			codeLenses.push(new vscode.CodeLens(range, {
 				title: '$(play)\u00A0Execute',

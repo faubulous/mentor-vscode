@@ -112,6 +112,11 @@ function createMockDocument(
 		languageId,
 		lineCount: lines.length,
 		getText: () => text,
+		positionAt: (offset: number) => {
+			const before = text.slice(0, offset);
+			const split = before.split('\n');
+			return new vscode.Position(split.length - 1, split[split.length - 1].length);
+		},
 		lineAt: (lineOrPos: number | vscode.Position) => {
 			const lineNum = typeof lineOrPos === 'number' ? lineOrPos : (lineOrPos as vscode.Position).line;
 			const lineText = lines[lineNum] ?? '';
@@ -973,6 +978,82 @@ describe('TurtlePrefixDefinitionService', () => {
 			expect(() => {
 				(service as any)._getPrefixDefinition(unknownTokenType, false, 'ex', 'http://example.org/');
 			}).toThrow('Unsupported token type for prefix definition');
+		});
+	});
+
+	// ─── triplate frontmatter preservation ─────────────────────────────────────
+
+	describe('triplate frontmatter preservation', () => {
+		let service: TurtlePrefixDefinitionService;
+		let mockContextService: any;
+		let mockPrefixLookupService: any;
+
+		beforeEach(async () => {
+			const { getFirstTokenOfType, getLastTokenOfType, isUpperCaseToken } = await import('@faubulous/mentor-rdf-parsers');
+
+			(getFirstTokenOfType as any).mockReturnValue(undefined);
+			(getLastTokenOfType as any).mockReturnValue(undefined);
+			(isUpperCaseToken as any).mockReturnValue(false);
+
+			mockContextService = createMockDocumentContextService();
+			mockPrefixLookupService = createMockPrefixLookupService();
+			mockPrefixLookupService.getUriForPrefix.mockReturnValue('http://example.org/');
+
+			service = new TurtlePrefixDefinitionService(mockContextService, mockPrefixLookupService);
+		});
+
+		// A SPARQL template with a `---` triplate header on lines 0–2; content starts at line 3.
+		const TEMPLATE_LINES = [
+			'---',
+			'params { type: iri }',
+			'---',
+			'SELECT * WHERE { ?s a ${type} }',
+		];
+
+		it('appends a new prefix below the frontmatter, not above it (appended mode)', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue(undefined) });
+
+			const context = createMockContext('file:///q.sparql', {}, []);
+			mockContextService.getDocumentContext.mockReturnValue(context);
+
+			const doc = createMockDocument('file:///q.sparql', 'sparql', TEMPLATE_LINES);
+			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: undefined }]);
+
+			const inserts = edit.entries.filter(e => e.type === 'insert');
+			expect(inserts.length).toBeGreaterThan(0);
+			// All inserts land on or below the content start line (3), never inside the header.
+			expect(inserts.every(e => (e.position?.line ?? 0) >= 3)).toBe(true);
+			// The frontmatter lines (0–2) are never deleted.
+			expect(edit.entries.filter(e => e.type === 'delete').every(e => (e.range?.start.line ?? 99) >= 3)).toBe(true);
+		});
+
+		it('keeps the frontmatter intact and anchors sorted prefixes below it (sorted mode)', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue('Sorted') });
+
+			// An existing prefix sits on line 3 (right below the header); content follows.
+			const prefixToken = makeToken('PREFIX', 'PREFIX', 4); // 1-based line 4 → index 3
+			const nsToken = makeToken('PNAME_NS', 'owl:', 4, 8);
+			const context = createMockContext('file:///q.sparql', { owl: 'http://owl/' }, [prefixToken, nsToken]);
+			mockContextService.getDocumentContext.mockReturnValue(context);
+
+			const lines = [
+				'---',
+				'params { type: iri }',
+				'---',
+				'PREFIX owl: <http://owl/>',
+				'SELECT * WHERE { ?s a owl:Thing }',
+			];
+			const doc = createMockDocument('file:///q.sparql', 'sparql', lines);
+			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
+
+			// Inserts are anchored at the content start line (3), below the header.
+			const inserts = edit.entries.filter(e => e.type === 'insert');
+			expect(inserts.length).toBeGreaterThan(0);
+			expect(inserts.every(e => (e.position?.line ?? 0) >= 3)).toBe(true);
+			// The frontmatter lines (0–2) are never deleted.
+			expect(edit.entries.filter(e => e.type === 'delete').every(e => (e.range?.start.line ?? 99) >= 3)).toBe(true);
 		});
 	});
 });
