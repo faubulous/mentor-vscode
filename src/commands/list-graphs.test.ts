@@ -17,6 +17,9 @@ vi.mock('tsyringe', () => ({
 			if (token === 'SparqlConnectionService') {
 				return { getQueryTemplate: mockGetQueryTemplate };
 			}
+			if (token === 'SparqlGraphLoadingService') {
+				return { isGraphsLoaded: () => false, getGraphsForConnection: () => [] };
+			}
 			return {};
 		}),
 	},

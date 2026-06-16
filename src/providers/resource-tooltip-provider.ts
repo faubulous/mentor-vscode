@@ -36,7 +36,18 @@ export class ResourceTooltipProvider implements vscode.HoverProvider {
 			return null;
 		}
 
-		// Generic fallback: detect HTTP/HTTPS URIs in any file type.
+		return this._getGenericUriHover(document, position);
+	}
+
+	/**
+	 * Resolves a full HTTP/HTTPS URI at the given position and returns a tooltip for it
+	 * if it is a known resource in the workspace store. Used both as a generic fallback
+	 * and for URIs inside triplate frontmatter (which the document context does not tokenize).
+	 * @param document The document to check for a URI at the given position.
+	 * @param position The position to check for a URI.
+	 * @returns A hover with resource information if the URI is known, or null otherwise.
+	 */
+	private _getGenericUriHover(document: vscode.TextDocument, position: vscode.Position): vscode.Hover | null {
 		const iri = this._getUriAtTextPosition(document, position);
 
 		if (!iri) {

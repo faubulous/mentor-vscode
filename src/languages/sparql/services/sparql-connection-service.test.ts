@@ -13,7 +13,7 @@ vi.mock('tsyringe', () => ({
 vi.mock('uuid', () => ({ v4: () => 'test-uuid-1234' }));
 
 import { Uri } from '@src/utilities/mocks/vscode';
-import { SparqlConnectionService, MENTOR_WORKSPACE_STORE } from '@src/languages/sparql/services/sparql-connection-service';
+import { SparqlConnectionService, WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
 import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
@@ -102,21 +102,21 @@ function _buildCellUri(notebookPath: string) {
 }
 
 describe('SparqlConnectionService', () => {
-    describe('MENTOR_WORKSPACE_STORE constant', () => {
+    describe('WORKSPACE_CONNECTION constant', () => {
         it('has the expected id', () => {
-            expect(MENTOR_WORKSPACE_STORE.id).toBe('workspace');
+            expect(WORKSPACE_CONNECTION.id).toBe('workspace');
         });
 
         it('has the workspace endpoint URL', () => {
-            expect(MENTOR_WORKSPACE_STORE.endpointUrl).toBe('workspace:');
+            expect(WORKSPACE_CONNECTION.endpointUrl).toBe('workspace:');
         });
 
         it('is marked as protected', () => {
-            expect(MENTOR_WORKSPACE_STORE.isProtected).toBe(true);
+            expect(WORKSPACE_CONNECTION.isProtected).toBe(true);
         });
 
         it('has storeType workspace', () => {
-            expect(MENTOR_WORKSPACE_STORE.storeType).toBe('workspace');
+            expect(WORKSPACE_CONNECTION.storeType).toBe('workspace');
         });
     });
 
@@ -124,7 +124,7 @@ describe('SparqlConnectionService', () => {
         it('includes the workspace store on startup', () => {
             const svc = makeService();
             const connections = svc.getConnections();
-            expect(connections.some(c => c.id === MENTOR_WORKSPACE_STORE.id)).toBe(true);
+            expect(connections.some(c => c.id === WORKSPACE_CONNECTION.id)).toBe(true);
         });
 
         it('returns at least one connection', () => {
@@ -136,7 +136,7 @@ describe('SparqlConnectionService', () => {
     describe('getConnection', () => {
         it('returns the workspace store by id', () => {
             const svc = makeService();
-            const conn = svc.getConnection(MENTOR_WORKSPACE_STORE.id);
+            const conn = svc.getConnection(WORKSPACE_CONNECTION.id);
             expect(conn).toBeDefined();
             expect(conn?.endpointUrl).toBe('workspace:');
         });
@@ -201,8 +201,8 @@ describe('SparqlConnectionService', () => {
 
         it('does not remove the workspace store', async () => {
             const svc = makeService();
-            await svc.deleteConnection(MENTOR_WORKSPACE_STORE.id);
-            expect(svc.getConnection(MENTOR_WORKSPACE_STORE.id)).toBeDefined();
+            await svc.deleteConnection(WORKSPACE_CONNECTION.id);
+            expect(svc.getConnection(WORKSPACE_CONNECTION.id)).toBeDefined();
         });
 
         it('silently succeeds for an unknown id', async () => {
@@ -238,9 +238,9 @@ describe('SparqlConnectionService', () => {
         it('does not modify the workspace store connection', async () => {
             const svc = makeService();
             const before = svc.getConnections().length;
-            await svc.updateConnection({ ...MENTOR_WORKSPACE_STORE, endpointUrl: 'https://changed.org' });
+            await svc.updateConnection({ ...WORKSPACE_CONNECTION, endpointUrl: 'https://changed.org' });
             // Workspace store should not be modified
-            expect(svc.getConnection(MENTOR_WORKSPACE_STORE.id)?.endpointUrl).toBe('workspace:');
+            expect(svc.getConnection(WORKSPACE_CONNECTION.id)?.endpointUrl).toBe('workspace:');
             expect(svc.getConnections().length).toBe(before);
         });
     });
@@ -250,13 +250,13 @@ describe('SparqlConnectionService', () => {
             const svc = makeService();
             const uri = Uri.parse('file:///test.sparql');
             const conn = svc.getConnectionForDocument(uri as any);
-            expect(conn.id).toBe(MENTOR_WORKSPACE_STORE.id);
+            expect(conn.id).toBe(WORKSPACE_CONNECTION.id);
         });
 
         it('accepts a string URI and falls back to workspace store', () => {
             const svc = makeService();
             const conn = svc.getConnectionForDocument('file:///other.sparql');
-            expect(conn.id).toBe(MENTOR_WORKSPACE_STORE.id);
+            expect(conn.id).toBe(WORKSPACE_CONNECTION.id);
         });
     });
 
@@ -378,8 +378,8 @@ describe('SparqlConnectionService', () => {
         it('flips false to true for workspace store (which supports inference)', async () => {
             const svc = makeService();
             // workspace store starts with inferenceEnabled = false (default)
-            const before = svc.getInferenceEnabled(MENTOR_WORKSPACE_STORE.id);
-            const result = await svc.toggleInferenceEnabled(MENTOR_WORKSPACE_STORE.id);
+            const before = svc.getInferenceEnabled(WORKSPACE_CONNECTION.id);
+            const result = await svc.toggleInferenceEnabled(WORKSPACE_CONNECTION.id);
             expect(result).toBe(!before);
         });
     });
@@ -483,7 +483,7 @@ describe('SparqlConnectionService', () => {
     describe('getQuerySourceForConnection', () => {
         it('returns a ComunicaEndpoint for the workspace store', async () => {
             const svc = makeService();
-            const conn = svc.getConnection(MENTOR_WORKSPACE_STORE.id)!;
+            const conn = svc.getConnection(WORKSPACE_CONNECTION.id)!;
             const source = await svc.getQuerySourceForConnection(conn);
             expect(source).toBeDefined();
         });
@@ -537,7 +537,7 @@ describe('SparqlConnectionService', () => {
     describe('testConnection', () => {
         it('returns null immediately for the workspace store', async () => {
             const svc = makeService();
-            const conn = svc.getConnection(MENTOR_WORKSPACE_STORE.id)!;
+            const conn = svc.getConnection(WORKSPACE_CONNECTION.id)!;
             const result = await svc.testConnection(conn);
             expect(result).toBeNull();
         });
@@ -638,7 +638,7 @@ describe('SparqlConnectionService', () => {
 
             const svc = makeService();
             const conn = svc.getConnectionForDocument(cellUri as any);
-            expect(conn.id).toBe(MENTOR_WORKSPACE_STORE.id);
+            expect(conn.id).toBe(WORKSPACE_CONNECTION.id);
 
             (vscode.workspace as any).notebookDocuments = [];
         });

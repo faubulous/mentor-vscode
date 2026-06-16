@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlGraphService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
 
 /**
  * Matches the IRI value inside `FROM <…>`, `FROM NAMED <…>`, and `GRAPH <…>` clauses.
@@ -27,8 +27,8 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
         return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
     }
 
-    private get _graphService(): ISparqlGraphService {
-        return container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+    private get _graphService(): ISparqlGraphLoadingService {
+        return container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
     }
 
     constructor() {
@@ -42,7 +42,8 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
         );
 
         // Re-validate open SPARQL documents whenever the graph cache changes.
-        const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+        const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
+        
         this._subscriptions.push(
             graphService.onDidChangeGraphs(connectionId => this._revalidateForConnection(connectionId))
         );

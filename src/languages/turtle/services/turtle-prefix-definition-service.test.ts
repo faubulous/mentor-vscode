@@ -30,7 +30,11 @@ vi.mock('@src/services/document/prefix-lookup-service', () => ({
 }));
 
 vi.mock('@src/utilities', () => ({
-	getIriFromIriReference: vi.fn()
+	getIriFromIriReference: vi.fn(),
+	getContentStartOffset: (text: string) => {
+		const m = text.match(/^(---[ \t]*\r?\n)([\s\S]*?)\r?\n---[ \t]*(\r?\n|$)/);
+		return m ? m[0].length : 0;
+	},
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
@@ -1054,6 +1058,41 @@ describe('TurtlePrefixDefinitionService', () => {
 			expect(inserts.every(e => (e.position?.line ?? 0) >= 3)).toBe(true);
 			// The frontmatter lines (0–2) are never deleted.
 			expect(edit.entries.filter(e => e.type === 'delete').every(e => (e.range?.start.line ?? 99) >= 3)).toBe(true);
+		});
+
+		it('deletes the existing body prefix when a frontmatter block token leads the stream (sorted mode)', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			(getConfig as any).mockReturnValue({ get: vi.fn().mockReturnValue('Sorted') });
+
+			// The overlay surfaces the frontmatter as one opaque block token spanning lines 0–2,
+			// which must not end the prefix-deletion scan before reaching the body PREFIX on line 3.
+			const fmToken = {
+				tokenType: { name: 'TRIPLATE_FRONTMATTER' },
+				image: '---\nparams { type: iri }\n---',
+				startLine: 1, endLine: 3, startColumn: 1, endColumn: 3, startOffset: 0, endOffset: 27,
+			};
+			const prefixToken = makeToken('PREFIX', 'PREFIX', 4);
+			const nsToken = makeToken('PNAME_NS', 'ex:', 4, 8);
+			const selectToken = makeToken('SELECT', 'SELECT', 5);
+			const context = createMockContext('file:///q.sparql', { ex: 'http://example.org/' }, [fmToken, prefixToken, nsToken, selectToken]);
+			mockContextService.getDocumentContext.mockReturnValue(context);
+
+			const lines = [
+				'---',
+				'params { type: iri }',
+				'---',
+				'PREFIX ex: <http://example.org/>',
+				'SELECT * WHERE { ?s rdfs: ?o }',
+			];
+			const doc = createMockDocument('file:///q.sparql', 'sparql', lines);
+			const edit = await service.implementPrefixes(doc, [{ prefix: 'rdfs', namespaceIri: 'http://www.w3.org/2000/01/rdf-schema#' }]);
+
+			// The existing body PREFIX (line 3) must be deleted, otherwise the regenerated
+			// prologue is prepended and the prologue is duplicated.
+			const deletes = edit.entries.filter(e => e.type === 'delete');
+			expect(deletes.some(e => e.range?.start.line === 3)).toBe(true);
+			// And the frontmatter (lines 0–2) is still never touched.
+			expect(deletes.every(e => (e.range?.start.line ?? 99) >= 3)).toBe(true);
 		});
 	});
 });

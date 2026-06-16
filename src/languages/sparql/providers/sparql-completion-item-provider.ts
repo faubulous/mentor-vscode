@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { container } from 'tsyringe';
 import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlGraphService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
@@ -31,7 +31,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	}
 
 	private get graphService() {
-		return container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+		return container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
 	}
 
 	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | null> {

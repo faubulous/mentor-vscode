@@ -93,7 +93,7 @@ describe('TurtleAutoDefinePrefixProvider', () => {
             const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
 
             (provider as any)._onDidChangeTextDocument({
-                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' } },
+                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
                 contentChanges: [{ text: 'ex:', range: { start: { line: 0, character: 3 } } }],
             });
 
@@ -107,7 +107,7 @@ describe('TurtleAutoDefinePrefixProvider', () => {
             const position = { line: 5, character: 10 };
 
             (provider as any)._onDidChangeTextDocument({
-                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' } },
+                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
                 contentChanges: [{ text: 'ex:', range: { start: position } }],
             });
 
@@ -119,7 +119,7 @@ describe('TurtleAutoDefinePrefixProvider', () => {
             const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
 
             (provider as any)._onDidChangeTextDocument({
-                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' } },
+                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
                 contentChanges: [{ text: 'ex', range: { start: { line: 0, character: 0 } } }],
             });
 
@@ -131,7 +131,7 @@ describe('TurtleAutoDefinePrefixProvider', () => {
             const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
 
             (provider as any)._onDidChangeTextDocument({
-                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' } },
+                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
                 contentChanges: [{ text: 'ex:', range: { start: { line: 0, character: 0 } } }],
             });
 
@@ -143,8 +143,97 @@ describe('TurtleAutoDefinePrefixProvider', () => {
             const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
 
             (provider as any)._onDidChangeTextDocument({
-                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' } },
+                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
                 contentChanges: [],
+            });
+
+            expect((provider as any)._pendingPrefix).toBeUndefined();
+        });
+    });
+
+    describe('triplate frontmatter prefixes', () => {
+        // SPARQL template: line 3 holds an example pname value `  type: schema:`.
+        const TEXT = '---\nparams { type: iri }\nexample x {\n  type: schema:\n}\n---\nSELECT 1';
+
+        function makeTemplateDoc(): any {
+            const lines = TEXT.split('\n');
+            return {
+                languageId: 'sparql',
+                uri: { toString: () => 'file:///q.sparql' },
+                getText: () => TEXT,
+                offsetAt: (pos: any) => {
+                    let off = 0;
+                    for (let i = 0; i < pos.line; i++) off += lines[i].length + 1;
+                    return off + pos.character;
+                },
+                lineAt: (line: number) => ({ text: lines[line] ?? '' }),
+            };
+        }
+
+        it('auto-defines a prefix for a pname example value and reports it as handled', async () => {
+            mockGetContext.mockReturnValue({ namespaces: {} });
+            mockImplementPrefixes.mockResolvedValue({ size: 1 });
+
+            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const doc = makeTemplateDoc();
+
+            // The second colon on line 3 (`  type: schema:`) is at character 14.
+            const handled = (provider as any)._tryAutoDefineFrontmatterPrefix(doc, { line: 3, character: 14 });
+
+            expect(handled).toBe(true);
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(mockImplementPrefixes).toHaveBeenCalledWith(doc, [{ prefix: 'schema', namespaceIri: undefined }]);
+        });
+
+        it('does not define a prefix for the binding colon', async () => {
+            mockGetContext.mockReturnValue({ namespaces: {} });
+
+            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const doc = makeTemplateDoc();
+
+            // The first colon on line 3 (`  type:`) is at character 6 — the binding, not a pname.
+            const handled = (provider as any)._tryAutoDefineFrontmatterPrefix(doc, { line: 3, character: 6 });
+
+            expect(handled).toBe(true);
+            await Promise.resolve();
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('does not define an already-declared prefix', async () => {
+            mockGetContext.mockReturnValue({ namespaces: { schema: 'http://schema.org/' } });
+
+            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const doc = makeTemplateDoc();
+
+            (provider as any)._tryAutoDefineFrontmatterPrefix(doc, { line: 3, character: 14 });
+
+            await Promise.resolve();
+            await Promise.resolve();
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('is not handled when the colon is outside the frontmatter', () => {
+            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const doc = makeTemplateDoc();
+
+            // Line 6 is `SELECT 1`, in the body.
+            const handled = (provider as any)._tryAutoDefineFrontmatterPrefix(doc, { line: 6, character: 0 });
+
+            expect(handled).toBe(false);
+        });
+
+        it('does not set a pending (token-based) prefix for frontmatter pnames', () => {
+            mockGetConfig.mockReturnValue({ get: (k: string, d?: any) => k === 'prefixes.autoDefinePrefixes' ? true : d });
+            mockGetContext.mockReturnValue({ namespaces: {} });
+            mockImplementPrefixes.mockResolvedValue({ size: 1 });
+
+            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const doc = makeTemplateDoc();
+
+            (provider as any)._onDidChangeTextDocument({
+                document: doc,
+                contentChanges: [{ text: ':', range: { start: { line: 3, character: 14 } } }],
             });
 
             expect((provider as any)._pendingPrefix).toBeUndefined();

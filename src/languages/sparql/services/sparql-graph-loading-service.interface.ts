@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { SparqlConnection } from './sparql-connection';
 
 /**
- * Interface for the SparqlGraphService.
+ * Interface for the SparqlGraphLoadingService.
  */
-export interface ISparqlGraphService extends vscode.Disposable {
+export interface ISparqlGraphLoadingService extends vscode.Disposable {
     /**
      * Fired with the connection ID whenever the graph list for a connection is updated.
      */

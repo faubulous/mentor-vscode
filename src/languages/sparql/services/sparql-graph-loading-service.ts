@@ -4,7 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { SparqlConnection } from './sparql-connection';
 import { ISparqlConnectionService } from './sparql-connection-service.interface';
 import { ISparqlQueryService } from './sparql-query-service.interface';
-import { ISparqlGraphService } from './sparql-graph-service.interface';
+import { ISparqlGraphLoadingService } from './sparql-graph-loading-service.interface';
 
 interface GraphCacheEntry {
     graphs: string[];
@@ -20,7 +20,7 @@ interface GraphCacheEntry {
  * - schedules periodic reloads according to `graphReloadIntervalSeconds`, and
  * - fires `onDidChangeGraphs` whenever the cached list changes.
  */
-export class SparqlGraphService implements ISparqlGraphService {
+export class SparqlGraphLoadingService implements ISparqlGraphLoadingService {
 
     private readonly _graphCache = new Map<string, GraphCacheEntry>();
 

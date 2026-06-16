@@ -5,12 +5,12 @@ import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { configureServiceContainer } from './services/container';
 import { ServiceToken } from './services/tokens';
-import { IWorkspaceFileService, IWorkspaceService } from './services/core';
+import { ISettingsMigrationService, IWorkspaceFileService, IWorkspaceService } from './services/core';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { WorkspaceUri } from './providers/workspace-uri';
 import { SparqlConnectionService, WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connection-service';
 import { ISparqlStoreConfigService } from './languages/sparql/services/sparql-store-config-service';
-import { ISparqlGraphService } from './languages/sparql/services';
+import { ISparqlGraphLoadingService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
@@ -33,10 +33,14 @@ export async function activateExtension(context: vscode.ExtensionContext, langua
 
 	configureServiceContainer(context, languageClientFactory);
 
+	// Run pending settings migrations before any service reads the configuration.
+	const migrationService = container.resolve<ISettingsMigrationService>(ServiceToken.SettingsMigrationService);
+	await migrationService.runMigrations();
+
 	await loadFrameworkOntologies();
 
 	registerLanguages();
-	registerProviders();
+	registerProviders(context);
 	registerCommands(context);
 	registerViews();
 	registerNotebookSerializers();
@@ -78,6 +82,7 @@ function registerLanguages() {
 	new languages.TurtleTokenProvider();
 	new languages.XmlLanguageClient();
 	new languages.XmlTokenProvider();
+	new languages.TriplateTokenProvider();
 }
 
 /**
@@ -91,7 +96,7 @@ function registerNotebookSerializers() {
 /**
  * Registers various providers for language features, file system access and URI handling.
  */
-function registerProviders() {
+function registerProviders(context: vscode.ExtensionContext) {
 	new DocumentLintingService();
 	new providers.WorkspaceUriLinkProvider();
 	new providers.WorkspaceUriCodeActionProvider();
@@ -199,7 +204,7 @@ async function loadFrameworkOntologies() {
  * Runs non-blocking in parallel with workspace indexing.
  */
 async function loadConnectionGraphs() {
-	const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+	const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
 	await graphService.loadAllAutoLoadConnections();
 }
 

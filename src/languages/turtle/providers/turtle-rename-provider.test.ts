@@ -258,4 +258,64 @@ describe('TurtleRenameProvider', () => {
             expect((edits as any).size).toBe(0);
         });
     });
+
+    describe('Triplate template-parameter rename', () => {
+        const template = [
+            '---',
+            'params { numbers: int[] }',
+            'example demo { numbers: [1, 2] }',
+            '---',
+            'SELECT * WHERE { VALUES ?n { ${...numbers} } }',
+            '',
+        ].join('\n');
+
+        // A document mock with real text/offset/position mapping (the param path needs getText).
+        function makeTemplateDoc(text: string) {
+            const lines = text.split('\n');
+            return {
+                uri: Uri.parse('file:///t.sparql'),
+                getText: () => text,
+                offsetAt: (pos: any) => {
+                    let offset = 0;
+                    for (let i = 0; i < pos.line; i++) offset += lines[i].length + 1;
+                    return offset + pos.character;
+                },
+                positionAt: (offset: number) => {
+                    const before = text.slice(0, offset);
+                    const split = before.split('\n');
+                    return new Position(split.length - 1, split[split.length - 1].length);
+                },
+            } as any;
+        }
+
+        it('prepareRename returns a range when the cursor is on a declared parameter', async () => {
+            const provider = makeProvider(makeDoc());
+            const doc = makeTemplateDoc(template);
+            const offset = template.indexOf('${...numbers}') + '${...'.length; // inside the ref name
+            const range = await provider.prepareRename(doc, doc.positionAt(offset));
+
+            expect(range).not.toBeNull();
+        });
+
+        it('renames a parameter across its declaration, example binding key and ${ref}', () => {
+            const provider = makeProvider(makeDoc());
+            const doc = makeTemplateDoc(template);
+            const offset = template.indexOf('${...numbers}') + '${...'.length;
+            const edits = provider.provideRenameEdits(doc, doc.positionAt(offset), 'values') as any;
+
+            // paramDecl + bindingKey + paramRef = three sites.
+            expect(edits.size).toBe(3);
+        });
+
+        it('falls through to RDF rename for a non-parameter position', async () => {
+            // A plain (non-template) document must not be treated as a parameter rename.
+            const provider = makeProvider(makeDoc());
+            const doc = makeTemplateDoc('PREFIX ex: <http://example.org/>\nex:s ex:p ex:o .');
+            const offset = 0;
+            const range = await provider.prepareRename(doc, doc.positionAt(offset)).catch(() => 'threw');
+
+            // Not a template → param check returns null → RDF token path runs (no token here → throws).
+            expect(range).toBe('threw');
+        });
+    });
 });

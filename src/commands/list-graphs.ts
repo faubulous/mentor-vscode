@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlGraphService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { SparqlResultsController } from '@src/views/webviews';
 
@@ -17,7 +17,7 @@ export const listGraphs = {
     }
 
     const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
-    const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+    const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
 
     // Prefer the graphs already cached by the auto-load service to avoid a round-trip;
     // otherwise issue the query against the connection.

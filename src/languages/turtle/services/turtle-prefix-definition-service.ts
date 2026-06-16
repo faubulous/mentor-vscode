@@ -4,11 +4,10 @@ import { IToken, RdfToken, TokenType } from '@faubulous/mentor-rdf-parsers';
 import { isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { PrefixLookupService } from '@src/services/document/prefix-lookup-service';
-import { getIriFromIriReference } from '@src/utilities';
+import { getIriFromIriReference, getContentStartOffset } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getConfig } from '@src/utilities/vscode/config';
-import { getContentStartOffset } from '@src/languages/triplate/triplate-api';
 
 /**
  * Specifies a how a namespace prefix should be defined in a document.
@@ -341,6 +340,12 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 
 		// Iterate over all tokens in the document...
 		for (let token of context.tokens) {
+			// Skip anything above the body start (e.g. a triplate frontmatter block token),
+			// which is not part of the prologue and must not end the scan prematurely.
+			if (((token.startLine ?? 1) - 1) < contentStartLine) {
+				continue;
+			}
+
 			if (this._prefixTokenTypes.has(token.tokenType.name)) {
 				// If we see a prefix token, delete the line and all preceding empty lines.
 				const line = (token.startLine ?? 1) - 1;

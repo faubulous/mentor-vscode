@@ -157,6 +157,7 @@ describe('SparqlCompletionItemProvider', () => {
             const p = new SparqlCompletionItemProvider();
 
             vi.spyOn(p as any, 'connectionService', 'get').mockReturnValue({
+                getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
                 getGraphsForDocument: async () => available,
             });
 
@@ -525,8 +526,11 @@ describe('SparqlCompletionItemProvider', () => {
         });
 
         it('connectionService getter calls container.resolve', async () => {
-            const mockConnection = { getGraphsForDocument: async () => ['http://example.org/g'] };
-            mockResolve.mockReturnValueOnce(mockConnection);
+            const mockConnection = {
+                getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
+                getGraphsForDocument: async () => ['http://example.org/g'],
+            };
+            mockResolve.mockReturnValue(mockConnection);
             const p = new SparqlCompletionItemProvider();
             // Call the getter without a spy so line 30 executes
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]) as any;

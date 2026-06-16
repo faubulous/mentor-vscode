@@ -20,7 +20,7 @@ import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-st
 import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
 import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
-import { SparqlGraphService } from '@src/languages/sparql/services/sparql-graph-service';
+import { SparqlGraphLoadingService } from '@src/languages/sparql/services/sparql-graph-loading-service';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
@@ -113,8 +113,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
 	// Register the graph service before the status bar so the status bar can subscribe to load events.
-	const sparqlGraphService = new SparqlGraphService();
-	container.registerInstance(ServiceToken.SparqlGraphService, sparqlGraphService);
+	const sparqlGraphService = new SparqlGraphLoadingService();
+	container.registerInstance(ServiceToken.SparqlGraphLoadingService, sparqlGraphService);
 
 	context.subscriptions.push(sparqlGraphService);
 

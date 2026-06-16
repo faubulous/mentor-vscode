@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlGraphService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
 import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
 import { IDocumentContextService } from '@src/services/document';
@@ -31,7 +31,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 		this._post = post;
 
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+		const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
 		const documentContextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 
 		this._disposables.push(
@@ -78,7 +78,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 	async handleMessage(message: SectionMessage): Promise<boolean> {
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
-		const graphService = container.resolve<ISparqlGraphService>(ServiceToken.SparqlGraphService);
+		const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
 
 		switch (message.id) {
 			case 'GetConnections': {

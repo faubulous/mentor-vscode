@@ -1,5 +1,4 @@
-import { IParser, ILexer, IToken, IRecognitionException, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
-import { preprocessTriplateContent } from './triplate-preprocessor';
+import { IParser, ILexer, IToken, IRecognitionException, createFileBlankNodeIdGenerator, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
 import {
 	Connection,
 	Diagnostic,
@@ -266,12 +265,17 @@ export class LanguageServerBase {
 			this.lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(uri);
 		}
 
-		const lexResult = this.lexer.tokenize(content);
+		// Triplate-aware tokenization: the parser consumes placeholder `parseTokens`
+		// (so its CST/error recovery stay correct) while `tokens` is the faithful
+		// stream — real interpolation tokens plus an opaque frontmatter block — that
+		// the client and all token-based features consume. Non-template documents are
+		// tokenized exactly as the host lexer would.
+		const { tokens, parseTokens } = tokenizeWithTriplate(this.lexer, content);
 
-		this.parser.parse(lexResult.tokens, false);
+		this.parser.parse(parseTokens, false);
 
 		return {
-			tokens: lexResult.tokens,
+			tokens,
 			errors: [
 				...this.parser.errors,
 				...this.parser.semanticErrors
@@ -292,7 +296,9 @@ export class LanguageServerBase {
 		let diagnostics: Diagnostic[] = [];
 		let tokens: IToken[] = [];
 
-		const content = preprocessTriplateContent(document.getText());
+		// The original document text; Triplate constructs are handled inside the
+		// parsers' overlay during tokenization (see `parse`).
+		const content = document.getText();
 
 		if (content.length) {
 			try {

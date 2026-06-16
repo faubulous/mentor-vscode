@@ -5,7 +5,7 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
-import { isTriplateTemplate } from '@src/languages/triplate/triplate-api';
+import { isTemplate } from 'triplate';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -537,9 +537,9 @@ export class DocumentContextService {
 	 * @param document The active document, or `undefined` when there is no active editor.
 	 */
 	private async _setTriplateTemplateContext(document?: vscode.TextDocument): Promise<void> {
-		const isTemplate = document ? isTriplateTemplate(document.getText()) : false;
+		const isTriplateTemplate = document ? isTemplate(document.getText()) : false;
 
-		await vscode.commands.executeCommand('setContext', 'mentor.editor.isTriplateTemplate', isTemplate);
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.isTriplateTemplate', isTriplateTemplate);
 	}
 
 	/**

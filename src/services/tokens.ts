@@ -61,7 +61,7 @@ export enum ServiceToken {
 	/** Generic navigation router between webview panels. */
 	WebviewRouter = "WebviewRouter",
 	/** Service for caching named graphs loaded from SPARQL endpoints. */
-	SparqlGraphService = "SparqlGraphService",
+	SparqlGraphLoadingService = "SparqlGraphLoadingService",
 	/** Service that runs registered settings migrations on activation. */
 	SettingsMigrationService = "SettingsMigrationService"
 }

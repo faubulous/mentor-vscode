@@ -5,7 +5,7 @@ import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sp
 import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { WORKSPACE_CONNECTION } from '../services/sparql-connection-service';
 import { SparqlConnection } from '../services/sparql-connection';
-import { isTriplateTemplate } from '@src/languages/triplate/triplate-api';
+import { isTemplate } from 'triplate';
 
 /**
  * Provides a CodeLens to display and change the current SPARQL endpoint.
@@ -93,7 +93,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		// triggering executeSparqlQuery from a cell document would route to the
 		// SPARQL results panel instead. Triplate templates are not valid SPARQL on
 		// their own; the TriplateCodeLensProvider supplies their Execute lens (first).
-		if (document.uri.scheme !== 'vscode-notebook-cell' && !isTriplateTemplate(document.getText())) {
+		if (document.uri.scheme !== 'vscode-notebook-cell' && !isTemplate(document.getText())) {
 			codeLenses.push(new vscode.CodeLens(range, {
 				title: '$(play)\u00A0Execute',
 				command: 'mentor.command.executeSparqlQuery',

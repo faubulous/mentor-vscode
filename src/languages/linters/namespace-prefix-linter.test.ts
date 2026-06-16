@@ -214,6 +214,33 @@ describe('NamespacePrefixLinter', () => {
 			const hint = diags.find(d => d.code === UNUSED_NAMESPACE_PREFIX_CODE)!;
 			expect(hint.range.start.line).toBe(2); // 0-based line 2 = startLine 3
 		});
+
+		it('does not flag a prefix used only in the triplate frontmatter', () => {
+			// The overlay makes the frontmatter non-opaque: `schema:Person` in an example value
+			// is a real PNAME_LN token, so the linter counts it as a use like any other.
+			const raw = '---\nparams { type: iri }\nexample x { type: schema:Person }\n---\nPREFIX schema: <http://schema.org/>\nSELECT * WHERE { ?s a ${type} }';
+			const tokens = [
+				makeToken('PNAME_LN', 'schema:Person', 35, 3), // frontmatter example value
+				...makePrefixTokens('PREFIX', 'schema:', '<http://schema.org/>', 60, 5),
+			];
+
+			const diags = runProvider(rule, { document: makeDoc(raw), content: '', tokens, prefixes: {} });
+			const hints = diags.filter(d => d.code === UNUSED_NAMESPACE_PREFIX_CODE);
+			expect(hints).toHaveLength(0);
+		});
+
+		it('still flags a prefix that is unused even in the frontmatter', () => {
+			const raw = '---\nparams { type: iri }\nexample x { type: schema:Person }\n---\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\nSELECT * WHERE {}';
+			const tokens = [
+				makeToken('PNAME_LN', 'schema:Person', 35, 3), // frontmatter value uses schema, not foaf
+				...makePrefixTokens('PREFIX', 'foaf:', '<http://xmlns.com/foaf/0.1/>', 60, 5),
+			];
+
+			const diags = runProvider(rule, { document: makeDoc(raw), content: '', tokens, prefixes: {} });
+			const hints = diags.filter(d => d.code === UNUSED_NAMESPACE_PREFIX_CODE);
+			expect(hints).toHaveLength(1);
+			expect(hints[0].message).toContain("'foaf'");
+		});
 	});
 
 	describe('edge cases', () => {
