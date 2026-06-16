@@ -9,6 +9,14 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     environment: 'node',
     globals: true,
+    // The serializer's published dist uses directory imports (e.g. `./sorting`) that
+    // node's ESM resolver rejects; inlining lets Vite/esbuild resolve them so the real
+    // formatter can be imported in tests (mocked tests still use vi.mock).
+    server: {
+      deps: {
+        inline: [/@faubulous\/mentor-rdf-serializers/],
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'json-summary', 'html'],

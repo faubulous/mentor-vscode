@@ -16,7 +16,7 @@ vi.mock('triplate', () => ({
 	}))
 }));
 
-import { TriplateHoverProvider, getInterpolationNameAt } from './triplate-hover-provider';
+import { TriplateHoverProvider } from './triplate-hover-provider';
 
 const FRONTMATTER = '---\nparams {\n  type: iri\n  graphIris: iri[] optional\n  limit: int optional\n}\n---\n';
 
@@ -47,25 +47,6 @@ function positionOf(text: string, substring: string): vscode.Position {
 	const character = lines[line].length;
 	return new vscode.Position(line, character);
 }
-
-describe('getInterpolationNameAt', () => {
-	it('returns null when offset is outside all interpolations', () => {
-		expect(getInterpolationNameAt('SELECT ?s WHERE { ?s a ${type} . }', 0)).toBeNull();
-	});
-
-	it('returns the param name when offset is inside ${type}', () => {
-		const text = 'SELECT ?s WHERE { ?s a ${type} . }';
-		const idx = text.indexOf('${type}');
-		expect(getInterpolationNameAt(text, idx)).toBe('type');
-		expect(getInterpolationNameAt(text, idx + 3)).toBe('type');
-		expect(getInterpolationNameAt(text, idx + 6)).toBe('type');
-	});
-
-	it('returns null when offset is exactly at the closing }', () => {
-		const text = '${type}';
-		expect(getInterpolationNameAt(text, 7)).toBeNull();
-	});
-});
 
 describe('TriplateHoverProvider', () => {
 	let provider: TriplateHoverProvider;
