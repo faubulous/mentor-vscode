@@ -33,7 +33,7 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 	/**
 	 * The output channel.
 	 */
-	readonly channel: vscode.OutputChannel;
+	readonly channel: vscode.LogOutputChannel;
 
 	/**
 	 * The VS Code language client.
@@ -47,7 +47,7 @@ export abstract class LanguageClientBase implements vscode.Disposable {
 		this.languageId = languageId;
 		this.channelName = `Mentor Language (${languageName})`;
 		this.channelId = `mentor.language.${languageId}`;
-		this.channel = vscode.window.createOutputChannel(this.channelName, this.channelId);
+		this.channel = vscode.window.createOutputChannel(this.channelName, { log: true });
 		this.serverPath = `dist/${languageId}-language-server.js`;
 		this._languageClientRegistry = container.resolve<Partial<ILanguageClientRegistry>>(ServiceToken.LanguageClientRegistry);
 

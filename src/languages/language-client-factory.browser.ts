@@ -22,7 +22,7 @@ export const createBrowserLanguageClient: LanguageClientFactory = (
 	return new LanguageClient(
 		options.channelId,
 		`${options.languageName} Language Client`,
-		clientOptions,
-		worker
+		worker,
+		clientOptions
 	);
 };

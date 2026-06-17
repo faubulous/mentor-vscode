@@ -43,7 +43,12 @@ export default defineConfig({
     alias: {
       '@src': path.resolve(__dirname, 'src'),
       // Map vscode module to local stub for tests so the test explorer can resolve it
-      'vscode': path.resolve(__dirname, 'src/utilities/mocks/vscode.ts')
+      'vscode': path.resolve(__dirname, 'src/utilities/mocks/vscode.ts'),
+      // The `./browser` subpath of vscode-languageclient only resolves under the
+      // `browser` export condition, which the Node.js test env does not set. Browser
+      // factory tests fully mock this module via vi.mock, so its contents are never
+      // used — alias it to the package's common entry purely so resolution succeeds.
+      'vscode-languageclient/browser': 'vscode-languageclient'
     }
   }
 });

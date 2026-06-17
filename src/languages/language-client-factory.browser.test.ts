@@ -83,8 +83,8 @@ describe('createBrowserLanguageClient', () => {
 		expect(MockLanguageClient).toHaveBeenCalledWith(
 			'my-channel',
 			expect.any(String),
-			expect.objectContaining({ diagnosticCollectionName: 'my-channel' }),
 			expect.any(Object),
+			expect.objectContaining({ diagnosticCollectionName: 'my-channel' }),
 		);
 	});
 
@@ -101,7 +101,7 @@ describe('createBrowserLanguageClient', () => {
 		createBrowserLanguageClient(makeContext(), makeOptions({ languageId: 'sparql' }));
 
 		const call = MockLanguageClient.mock.calls[0] as any;
-		const options = call[2] as { documentSelector: { language: string }[] };
+		const options = call[3] as { documentSelector: { language: string }[] };
 
 		expect(options.documentSelector).toEqual([{ language: 'sparql' }]);
 	});
@@ -117,7 +117,7 @@ describe('createBrowserLanguageClient', () => {
 		createBrowserLanguageClient(makeContext(), makeOptions({ outputChannel }));
 
 		const call = MockLanguageClient.mock.calls[0] as any;
-		const options = call[2] as { outputChannel: typeof outputChannel };
+		const options = call[3] as { outputChannel: typeof outputChannel };
 
 		expect(options.outputChannel).toBe(outputChannel);
 	});

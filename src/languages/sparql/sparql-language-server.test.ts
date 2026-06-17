@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-vi.mock('vscode-languageserver/browser', async () => {
-	const actual = await vi.importActual<any>('vscode-languageserver/browser');
+vi.mock('vscode-languageserver', async () => {
+	const actual = await vi.importActual<any>('vscode-languageserver');
 	class TextDocuments {
 		listen = vi.fn();
 		onDidClose = vi.fn();
@@ -15,7 +15,7 @@ vi.mock('vscode-languageserver/browser', async () => {
 });
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { DiagnosticSeverity } from 'vscode-languageserver/browser';
+import { DiagnosticSeverity } from 'vscode-languageserver';
 import { SparqlLanguageServer } from '@src/languages/sparql/sparql-language-server';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 

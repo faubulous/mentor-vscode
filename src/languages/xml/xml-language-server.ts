@@ -3,7 +3,7 @@ import {
 	Diagnostic,
 	DiagnosticSeverity,
 	Range,
-} from 'vscode-languageserver/browser';
+} from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { LanguageServerBase } from '@src/languages/language-server';
 import { XmlParseResult } from './xml-types';

@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-vi.mock('vscode-languageserver/browser', async () => {
-	const actual = await vi.importActual<any>('vscode-languageserver/browser');
+vi.mock('vscode-languageserver', async () => {
+	const actual = await vi.importActual<any>('vscode-languageserver');
 	class TextDocuments {
 		listen = vi.fn();
 		onDidClose = vi.fn();

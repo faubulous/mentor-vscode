@@ -1,6 +1,6 @@
 import { XSD } from '@faubulous/mentor-rdf';
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver/browser';
+import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
 import { LintDiagnosticsContext } from '../linter-context';
 import { Linter } from '../linter';
 import { getIriFromToken, getUnquotedLiteralValue } from '@src/utilities';

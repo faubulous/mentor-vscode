@@ -1,4 +1,4 @@
-import { Range } from 'vscode-languageserver/browser';
+import { Range } from 'vscode-languageserver';
 
 
 /**

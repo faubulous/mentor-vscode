@@ -13,7 +13,7 @@ import {
 	TextDocumentChangeEvent,
 	TextDocuments,
 	TextDocumentSyncKind
-} from 'vscode-languageserver/browser';
+} from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { LintDiagnosticsContext } from './linter-context';
 import { Linter } from './linter';

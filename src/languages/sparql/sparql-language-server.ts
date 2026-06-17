@@ -1,4 +1,4 @@
-import { Connection, Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver/browser';
+import { Connection, Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver';
 import { SparqlLexer, SparqlParser, IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { LanguageServerBase } from '@src/languages/language-server';
 import { TextDocument } from 'vscode-languageserver-textdocument';

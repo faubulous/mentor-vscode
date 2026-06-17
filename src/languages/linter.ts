@@ -1,5 +1,5 @@
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { Diagnostic } from 'vscode-languageserver/browser';
+import { Diagnostic } from 'vscode-languageserver';
 import { LintDiagnosticsContext } from './linter-context';
 
 /**

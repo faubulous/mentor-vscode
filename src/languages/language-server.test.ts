@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-// Mock vscode-languageserver/browser's TextDocuments to avoid IPC setup
-vi.mock('vscode-languageserver/browser', async () => {
-	const actual = await vi.importActual<any>('vscode-languageserver/browser');
+// Mock vscode-languageserver's TextDocuments to avoid IPC setup
+vi.mock('vscode-languageserver', async () => {
+	const actual = await vi.importActual<any>('vscode-languageserver');
 	class TextDocuments {
 		listen = vi.fn();
 		onDidClose = vi.fn();
@@ -17,7 +17,7 @@ vi.mock('vscode-languageserver/browser', async () => {
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { LanguageServerBase } from '@src/languages/language-server';
-import { DiagnosticSeverity } from 'vscode-languageserver/browser';
+import { DiagnosticSeverity } from 'vscode-languageserver';
 
 /** Minimal mock for the LSP Connection */
 function makeConnection() {

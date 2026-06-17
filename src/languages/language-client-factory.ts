@@ -27,7 +27,7 @@ export interface LanguageClientFactoryOptions {
 	/**
 	 * The output channel for logging.
 	 */
-	outputChannel: vscode.OutputChannel;
+	outputChannel: vscode.LogOutputChannel;
 }
 
 /**
