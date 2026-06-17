@@ -247,7 +247,7 @@
                 },
                 {
                     "name": "entity.name.function.sparql",
-                    "match": "@[a-zA-Z-]+"
+                    "match": "@[a-zA-Z0-9-]+"
                 },
                 {
                     "begin": "(\\^\\^)",

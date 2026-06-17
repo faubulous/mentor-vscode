@@ -88,6 +88,46 @@ export interface SparqlQueryExecutionState {
 	 * The results of the query execution, if any.
 	 */
 	result?: BindingsResult | BooleanResult | QuadsResult;
+
+	/**
+	 * The raw, unparsed HTTP response captured from the SPARQL endpoint, if the request
+	 * reached the server. Available for remote (HTTP) connections only; the in-memory
+	 * workspace store makes no HTTP request and therefore has no raw response. Present for
+	 * both successful queries and HTTP error responses (e.g. a `400` with an error body),
+	 * but `undefined` when the request never completed (e.g. `TypeError: fetch failed`).
+	 */
+	rawResponse?: SparqlRawResponse;
+}
+
+/**
+ * The raw, unparsed HTTP response captured from a SPARQL endpoint, for inspection.
+ */
+export interface SparqlRawResponse {
+	/**
+	 * The URL the response was received from.
+	 */
+	url: string;
+
+	/**
+	 * The HTTP status code of the response.
+	 */
+	status: number;
+
+	/**
+	 * The HTTP status text of the response.
+	 */
+	statusText: string;
+
+	/**
+	 * The value of the `Content-Type` response header, if any. Used to pick a syntax
+	 * highlighting language when the raw response is opened in an editor.
+	 */
+	contentType?: string;
+
+	/**
+	 * The raw, unparsed response body. May be truncated if it exceeds the capture limit.
+	 */
+	body: string;
 }
 
 /**

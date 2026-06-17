@@ -12,7 +12,7 @@ vi.mock('tsyringe', () => ({
 // uuid produces real IDs — a simple mock is fine for our purposes
 vi.mock('uuid', () => ({ v4: () => 'test-uuid-1234' }));
 
-import { Uri } from '@src/utilities/mocks/vscode';
+import { Uri, workspace } from '@src/utilities/mocks/vscode';
 import { SparqlConnectionService, WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
 import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';
@@ -979,6 +979,84 @@ describe('SparqlConnectionService', () => {
 
             expect(store.has('sparql.connection:file:///workspace/other.ttl')).toBe(true);
             expect(store.has('mentor.inference.enabled:some-connection-id')).toBe(true);
+        });
+    });
+
+    describe('untitled SPARQL save migration', () => {
+        function makeServiceWithCapturedSaveHandlers(initial: Record<string, any> = {}) {
+            const store = new Map<string, any>(Object.entries(initial));
+            const ctx = {
+                workspaceState: {
+                    get: (key: string, defaultValue?: any) => store.has(key) ? store.get(key) : defaultValue,
+                    update: async (key: string, value: any) => {
+                        if (value === undefined) {
+                            store.delete(key);
+                        } else {
+                            store.set(key, value);
+                        }
+                    },
+                    keys: () => [...store.keys()],
+                },
+                subscriptions: [],
+            };
+
+            let willSaveHandler: ((e: any) => void) | undefined;
+            let didSaveHandler: ((document: any) => Promise<void>) | undefined;
+
+            (workspace as any).onWillSaveTextDocument = (handler: any) => {
+                willSaveHandler = handler;
+                return { dispose: () => {} };
+            };
+            (workspace as any).onDidSaveTextDocument = (handler: any) => {
+                didSaveHandler = handler;
+                return { dispose: () => {} };
+            };
+
+            const svc = new SparqlConnectionService(ctx as any, { getCredential: async () => null } as any, makeStoreConfigService());
+
+            // Restore the no-op mocks so other tests aren't affected by these captured handlers.
+            (workspace as any).onWillSaveTextDocument = (_handler: any) => ({ dispose: () => {} });
+            (workspace as any).onDidSaveTextDocument = (_handler: any) => ({ dispose: () => {} });
+
+            return { svc, store, willSaveHandler: willSaveHandler!, didSaveHandler: didSaveHandler! };
+        }
+
+        it('migrates the connection key from the untitled URI to the saved file URI', async () => {
+            const { store, willSaveHandler, didSaveHandler } = makeServiceWithCapturedSaveHandlers({
+                'sparql.connection:untitled:Untitled-1': 'conn-1',
+            });
+
+            const content = 'SELECT * WHERE { ?s ?p ?o }';
+
+            willSaveHandler({ document: { isUntitled: true, languageId: 'sparql', uri: Uri.parse('untitled:Untitled-1'), getText: () => content } });
+            await didSaveHandler({ isUntitled: false, languageId: 'sparql', uri: Uri.parse('file:///workspace/new.sparql'), getText: () => content });
+
+            expect(store.has('sparql.connection:file:///workspace/new.sparql')).toBe(true);
+            expect(store.get('sparql.connection:file:///workspace/new.sparql')).toBe('conn-1');
+            expect(store.has('sparql.connection:untitled:Untitled-1')).toBe(false);
+        });
+
+        it('does not migrate when the saved content does not match a pending untitled save', async () => {
+            const { store, willSaveHandler, didSaveHandler } = makeServiceWithCapturedSaveHandlers({
+                'sparql.connection:untitled:Untitled-1': 'conn-1',
+            });
+
+            willSaveHandler({ document: { isUntitled: true, languageId: 'sparql', uri: Uri.parse('untitled:Untitled-1'), getText: () => 'SELECT * WHERE { ?s ?p ?o }' } });
+            await didSaveHandler({ isUntitled: false, languageId: 'sparql', uri: Uri.parse('file:///workspace/new.sparql'), getText: () => 'a different query' });
+
+            expect(store.has('sparql.connection:untitled:Untitled-1')).toBe(true);
+            expect(store.has('sparql.connection:file:///workspace/new.sparql')).toBe(false);
+        });
+
+        it('ignores saves of non-SPARQL or already-titled documents', async () => {
+            const { store, didSaveHandler } = makeServiceWithCapturedSaveHandlers({
+                'sparql.connection:untitled:Untitled-1': 'conn-1',
+            });
+
+            await didSaveHandler({ isUntitled: false, languageId: 'turtle', uri: Uri.parse('file:///workspace/new.ttl'), getText: () => 'SELECT * WHERE { ?s ?p ?o }' });
+            await didSaveHandler({ isUntitled: true, languageId: 'sparql', uri: Uri.parse('untitled:Untitled-1'), getText: () => 'SELECT * WHERE { ?s ?p ?o }' });
+
+            expect(store.has('sparql.connection:untitled:Untitled-1')).toBe(true);
         });
     });
 

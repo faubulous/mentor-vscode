@@ -35,10 +35,23 @@
 	overflow-y: hidden;
 }
 
+/* Let a wide bindings table (many columns, each with a minimum width) scroll
+   horizontally instead of being clipped by the container's default overflow:hidden. */
+.sparql-results-container.success {
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
 .sparql-results-container.error .sparql-results-content-container pre {
 	white-space: pre;
 	width: fit-content;
 	min-width: 100%;
+}
+
+.sparql-results-error-cause {
+	margin-bottom: 1em;
+	font-weight: 600;
+	color: var(--vscode-errorForeground);
 }
 
 .sparql-results-content-container .header {

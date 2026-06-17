@@ -11,7 +11,7 @@ import { ISparqlStoreConfigService } from './sparql-store-config-service';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
 import { getConfig } from '@src/utilities/vscode/config';
-import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
+import { SparqlQueryExecutionState, SparqlQueryType, SparqlRawResponse } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';
 
 /**
@@ -23,6 +23,12 @@ const HISTORY_STORAGE_KEY = 'mentor.sparql.queryHistory';
  * The maximum number of entries to keep in the query history.
  */
 const HISTORY_MAX_ENTRIES = 10;
+
+/**
+ * The maximum number of characters of a raw response body to retain. Larger bodies are
+ * truncated to keep them out of memory and the webview message channel.
+ */
+const MAX_RAW_RESPONSE_LENGTH = 5_000_000;
 
 /**
  * A service for executing SPARQL queries against an RDF endpoint. The service
@@ -251,6 +257,10 @@ export class SparqlQueryService {
 	 * @returns A promise that resolves to the results of the query.
 	 */
 	async executeQuery(context: SparqlQueryExecutionState, tokenSource: vscode.CancellationTokenSource = new vscode.CancellationTokenSource()): Promise<SparqlQueryExecutionState> {
+		// Resolves to the last raw HTTP response received from the endpoint (if any), so it
+		// can be inspected via the results panel regardless of whether the query succeeded.
+		let rawResponsePromise: Promise<SparqlRawResponse | undefined> = Promise.resolve(undefined);
+
 		try {
 			const query = this._getQueryText(context);
 
@@ -277,7 +287,9 @@ export class SparqlQueryService {
 				source = await this._connectionService.getQuerySourceForDocument(documentIri);
 			}
 
-			const result = await this._executeQueryOnSource(query, source, tokenSource.token);
+			const result = await this._executeQueryOnSource(query, source, tokenSource.token, (raw) => {
+				rawResponsePromise = raw;
+			});
 
 			if (result.type === 'bindings') {
 				context.result = await this._resultSerializer.serializeBindings(context, result.bindings, tokenSource.token);
@@ -293,14 +305,22 @@ export class SparqlQueryService {
 				context.result = undefined;
 			}
 		} catch (error: any) {
+			// `fetch` (undici) reports low-level network failures as the opaque message
+			// 'fetch failed' and nests the real reason (ECONNREFUSED, ENOTFOUND, TLS errors,
+			// CORS, …) in `error.cause`. Surface it so the panel can show why it failed.
+			const cause = error?.cause;
+
 			context.error = {
 				type: error.name || 'QueryError',
 				message: error.message || 'Unknown error occurred while executing the query.',
+				cause: cause ? { code: cause.code, message: cause.message ?? String(cause) } : undefined,
 				stack: error.stack || '',
 				statusCode: error.statusCode || 500,
 				cancelled: error instanceof CancellationError
 			}
 		}
+
+		context.rawResponse = await rawResponsePromise;
 
 		context.endTime = Date.now();
 
@@ -374,7 +394,8 @@ export class SparqlQueryService {
 	private async _executeQueryOnSource(
 		query: string,
 		source: any,
-		token?: vscode.CancellationToken
+		token?: vscode.CancellationToken,
+		onRawResponse?: (raw: Promise<SparqlRawResponse | undefined>) => void
 	): Promise<
 		| { type: 'boolean'; value: boolean }
 		| { type: 'quads'; quads: AsyncIterator<Quad> }
@@ -389,7 +410,7 @@ export class SparqlQueryService {
 		if (source.type === 'sparql') {
 			const connection = source.connection;
 			const credential = await this._credentialStorage.getCredential(connection.id);
-			options.fetch = this._getFetchHandler(credential);
+			options.fetch = this._getFetchHandler(credential, onRawResponse);
 
 			// Apply store-specific query-text rewriting for inference (e.g. reasoning pragmas).
 			const inferenceEnabled = source.inferenceEnabled
@@ -434,30 +455,58 @@ export class SparqlQueryService {
 		return { type: 'none' };
 	}
 
-	_getFetchHandler(credential?: AuthCredential) {
+	_getFetchHandler(
+		credential?: AuthCredential,
+		onRawResponse?: (raw: Promise<SparqlRawResponse | undefined>) => void
+	) {
+		const getAuthHeader = this._getAuthHeaderProvider(credential);
+
+		// Without an authorization header to inject and without a need to capture the raw
+		// response, there is nothing to add over Comunica's default fetch.
+		if (!getAuthHeader && !onRawResponse) {
+			return undefined;
+		}
+
+		return async (input: RequestInfo | URL, init?: RequestInit) => {
+			const headers = new Headers(init?.headers || {});
+
+			if (getAuthHeader) {
+				const authHeader = await getAuthHeader();
+
+				if (authHeader) {
+					headers.set("Authorization", authHeader);
+				}
+			}
+
+			const response = await fetch(input, { ...init, headers });
+
+			if (onRawResponse) {
+				// Tee the body via `clone()` so the raw, unparsed response can be inspected
+				// without disturbing the stream Comunica consumes. Best-effort capture.
+				onRawResponse(this._readRawResponse(response.clone()));
+			}
+
+			return response;
+		};
+	}
+
+	/**
+	 * Builds a provider that resolves the `Authorization` header value for the given credential.
+	 * Returns `undefined` when no usable credential is available (no credential, unknown type, or
+	 * a Microsoft credential without an access token), in which case no header should be sent.
+	 * @param credential The authentication credential, if any.
+	 * @returns A function resolving the header value, or `undefined` if there is no usable credential.
+	 */
+	private _getAuthHeaderProvider(credential?: AuthCredential): (() => Promise<string | undefined>) | undefined {
 		if (credential?.type === 'basic') {
-			const username = credential.username;
-			const password = credential.password;
-			const encoded = btoa(`${username}:${password}`);
-
-			return (input: RequestInfo | URL, init?: RequestInit) => {
-				const headers = new Headers(init?.headers || {});
-				headers.set("Authorization", `Basic ${encoded}`);
-
-				return fetch(input, { ...init, headers });
-			};
+			const encoded = btoa(`${credential.username}:${credential.password}`);
+			return async () => `Basic ${encoded}`;
 		}
 
 		if (credential?.type === 'bearer') {
 			const prefix = credential.prefix || 'Bearer';
 			const token = credential.token;
-
-			return (input: RequestInfo | URL, init?: RequestInit) => {
-				const headers = new Headers(init?.headers || {});
-				headers.set("Authorization", `${prefix} ${token}`);
-
-				return fetch(input, { ...init, headers });
-			};
+			return async () => `${prefix} ${token}`;
 		}
 
 		if (credential?.type === 'microsoft') {
@@ -467,28 +516,42 @@ export class SparqlQueryService {
 				return undefined;
 			}
 
-			return (input: RequestInfo | URL, init?: RequestInit) => {
-				const headers = new Headers(init?.headers || {});
-				headers.set("Authorization", `Bearer ${accessToken}`);
-
-				return fetch(input, { ...init, headers });
-			};
+			return async () => `Bearer ${accessToken}`;
 		}
 
 		if (credential?.type === 'entra-client-credentials') {
 			const entraCredential = credential as EntraClientAuthCredential;
 			const tokenService = new EntraClientCredentialService();
-
-			return async (input: RequestInfo | URL, init?: RequestInit) => {
-				const accessToken = await tokenService.acquireToken(entraCredential);
-				const headers = new Headers(init?.headers || {});
-				headers.set("Authorization", `Bearer ${accessToken}`);
-
-				return fetch(input, { ...init, headers });
-			};
+			return async () => `Bearer ${await tokenService.acquireToken(entraCredential)}`;
 		}
 
 		return undefined;
+	}
+
+	/**
+	 * Reads a (cloned) HTTP response into a serializable raw-response record, truncating the
+	 * body to {@link MAX_RAW_RESPONSE_LENGTH}. Best-effort: resolves to `undefined` on failure.
+	 * @param response A cloned response whose body has not yet been consumed.
+	 * @returns The captured raw response, or `undefined` if it could not be read.
+	 */
+	private async _readRawResponse(response: Response): Promise<SparqlRawResponse | undefined> {
+		try {
+			const text = await response.text();
+			const truncated = text.length > MAX_RAW_RESPONSE_LENGTH;
+			const body = truncated
+				? text.slice(0, MAX_RAW_RESPONSE_LENGTH) + '\n\n… response truncated …'
+				: text;
+
+			return {
+				url: response.url,
+				status: response.status,
+				statusText: response.statusText,
+				contentType: response.headers.get('content-type') ?? undefined,
+				body
+			};
+		} catch {
+			return undefined;
+		}
 	}
 
 	_getQueryType(query: string): SparqlQueryType | undefined {

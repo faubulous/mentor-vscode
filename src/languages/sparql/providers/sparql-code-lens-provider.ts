@@ -48,6 +48,31 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
 		const codeLenses: vscode.CodeLens[] = [];
 
+		// Run CodeLens, pushed first so it always leads the document-wide lens group. VS Code
+		// does not merge same-range CodeLenses from multiple providers in provider-registration
+		// order, so for `.sparql`-language Triplate templates this provider supplies the Run
+		// lens itself (delegating to the template command) instead of relying on
+		// TriplateCodeLensProvider's lens landing first, which empirically it doesn't.
+		// Notebook cells have a native run button that outputs results inline; triggering a
+		// run command from a cell document would route to the SPARQL results panel instead.
+		if (document.uri.scheme !== 'vscode-notebook-cell') {
+			if (isTemplate(document.getText())) {
+				codeLenses.push(new vscode.CodeLens(range, {
+					title: '$(play)\u00A0Run',
+					tooltip: 'Render this template with parameter values',
+					command: 'mentor.command.executeTriplateTemplate',
+					arguments: [document.uri.toString()],
+				}));
+			} else {
+				codeLenses.push(new vscode.CodeLens(range, {
+					title: '$(play)\u00A0Run',
+					command: 'mentor.command.executeSparqlQuery',
+					tooltip: 'Execute this SPARQL query',
+					arguments: [this._queryService.createQueryFromDocument(document)],
+				}));
+			}
+		}
+
 		// Connection CodeLens
 		const connectionUrl = this._getConnectionLabel(connection);
 		const connectionCodeLens = new vscode.CodeLens(range, {
@@ -85,20 +110,6 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 				tooltip: 'List the named graphs available on this connection',
 				command: 'mentor.command.listGraphs',
 				arguments: [connection],
-			}));
-		}
-
-		// Only show the Execute code lens for regular SPARQL documents.
-		// Notebook cells have a native run button that outputs results inline;
-		// triggering executeSparqlQuery from a cell document would route to the
-		// SPARQL results panel instead. Triplate templates are not valid SPARQL on
-		// their own; the TriplateCodeLensProvider supplies their Execute lens (first).
-		if (document.uri.scheme !== 'vscode-notebook-cell' && !isTemplate(document.getText())) {
-			codeLenses.push(new vscode.CodeLens(range, {
-				title: '$(play)\u00A0Execute',
-				command: 'mentor.command.executeSparqlQuery',
-				tooltip: 'Execute this SPARQL query',
-				arguments: [this._queryService.createQueryFromDocument(document)],
 			}));
 		}
 

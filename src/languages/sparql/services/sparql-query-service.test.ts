@@ -440,6 +440,38 @@ describe('SparqlQueryService – _getFetchHandler', () => {
         vi.unstubAllGlobals();
         acquireTokenMock.mockRestore();
     });
+
+    it('returns a function when only a raw-response sink is provided (no credential)', () => {
+        const handler = (service as any)._getFetchHandler(undefined, () => { });
+        expect(typeof handler).toBe('function');
+    });
+
+    it('captures the raw response body and metadata via the sink', async () => {
+        const body = '{"head":{"vars":[]},"results":{"bindings":[]}}';
+        const mockResponse = {
+            clone() { return this; },
+            text: vi.fn().mockResolvedValue(body),
+            url: 'https://example.org/sparql',
+            status: 200,
+            statusText: 'OK',
+            headers: new Headers({ 'content-type': 'application/sparql-results+json' }),
+        };
+        const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+        vi.stubGlobal('fetch', mockFetch);
+
+        let captured: Promise<any> | undefined;
+        const handler = (service as any)._getFetchHandler(undefined, (raw: Promise<any>) => { captured = raw; });
+        await handler('https://example.org/sparql', {});
+
+        expect(await captured).toEqual({
+            url: 'https://example.org/sparql',
+            status: 200,
+            statusText: 'OK',
+            contentType: 'application/sparql-results+json',
+            body,
+        });
+        vi.unstubAllGlobals();
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -723,6 +755,23 @@ describe('SparqlQueryService – executeQuery', () => {
         expect(result.error).toBeDefined();
         expect(result.error?.message).toBe('Query failed');
         expect(result.error?.statusCode).toBe(400);
+    });
+
+    it('captures error.cause for "fetch failed" network errors', async () => {
+        const cause = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:7200'), { code: 'ECONNREFUSED' });
+        queryMock.mockRejectedValue(Object.assign(new TypeError('fetch failed'), { cause }));
+        const service = makeFullService();
+        const ctx: any = {
+            id: 'test-id',
+            documentIri: 'file:///test.sparql',
+            query: 'SELECT * WHERE { ?s ?p ?o }',
+            startTime: Date.now(),
+            queryType: 'bindings',
+            status: 'pending',
+        };
+        const result = await service.executeQuery(ctx);
+        expect(result.error?.message).toBe('fetch failed');
+        expect(result.error?.cause).toEqual({ code: 'ECONNREFUSED', message: 'connect ECONNREFUSED 127.0.0.1:7200' });
     });
 });
 

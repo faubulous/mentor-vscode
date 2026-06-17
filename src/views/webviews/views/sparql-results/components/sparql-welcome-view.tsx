@@ -120,7 +120,7 @@ export function SparqlWelcomeView() {
 						{history.length === 0 && <span className="muted">No recent queries in this workspace.</span>}
 						{history.length > 0 && history.map((queryState, index) => (
 							<div key={`${queryState.documentIri}-${index}`} className="history-item">
-								<a className='execute-button codicon codicon-play' role="button" title="Execute"
+								<a className='execute-button codicon codicon-play' role="button" title="Run"
 									onClick={() => handleExecuteQuery(queryState)}>
 								</a>
 								<a className="file-link" onClick={() => handleOpenDocument(queryState)}>

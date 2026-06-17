@@ -41,6 +41,10 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
                 await this._handleEditBackgroundQuery(message.queryId);
                 return true;
             }
+            case 'OpenRawResponse': {
+                await this._handleOpenRawResponse(message.queryId);
+                return true;
+            }
             default:
                 return super.onDidReceiveMessage(message);
         }
@@ -69,6 +73,52 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         });
 
         await vscode.window.showTextDocument(document);
+    }
+
+    /**
+     * Opens the raw, unparsed HTTP response captured for a query in a new editor tab,
+     * picking a syntax highlighting language from the response's content type.
+     * @param queryId The ID of the query execution whose raw response should be shown.
+     */
+    private async _handleOpenRawResponse(queryId: string) {
+        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const queryState = queryService.getQueryHistory().find(q => q.id === queryId);
+        const rawResponse = queryState?.rawResponse;
+
+        if (!rawResponse) {
+            vscode.window.showInformationMessage('No raw response is available for this query.');
+            return;
+        }
+
+        const document = await vscode.workspace.openTextDocument({
+            content: rawResponse.body,
+            language: this._getLanguageForContentType(rawResponse.contentType)
+        });
+
+        await vscode.window.showTextDocument(document);
+    }
+
+    /**
+     * Maps an HTTP `Content-Type` to a VS Code language identifier for syntax highlighting.
+     * @param contentType The value of the response `Content-Type` header, if any.
+     * @returns A VS Code language identifier, defaulting to `plaintext`.
+     */
+    private _getLanguageForContentType(contentType?: string): string {
+        const type = (contentType ?? '').toLowerCase();
+
+        if (type.includes('json')) {
+            return 'json';
+        } else if (type.includes('xml')) {
+            return 'xml';
+        } else if (type.includes('turtle')) {
+            return 'turtle';
+        } else if (type.includes('html')) {
+            return 'html';
+        } else if (type.includes('csv')) {
+            return 'csv';
+        } else {
+            return 'plaintext';
+        }
     }
 
     private async _prepareQueryExecution(queryContext: vscode.TextDocument | vscode.NotebookCell) {

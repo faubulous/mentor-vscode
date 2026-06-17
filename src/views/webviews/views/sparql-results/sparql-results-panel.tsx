@@ -106,7 +106,8 @@ function SparqlResultsPanel() {
 				...q,
 				// Avoid storing large result sets in state..
 				result: undefined,
-				error: undefined
+				error: undefined,
+				rawResponse: undefined
 			}))
 		};
 

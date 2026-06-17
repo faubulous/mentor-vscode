@@ -93,13 +93,14 @@ describe('TriplateCodeLensProvider', () => {
 		expect(lenses[2].range.start.line).toBe(5);
 	});
 
-	it('emits the top Execute lens first for SPARQL templates too', () => {
+	it('omits its own top-of-file Run lens for SPARQL templates (SparqlCodeLensProvider supplies it)', () => {
 		const doc = makeDoc(FRONTMATTER, 'sparql');
 		const lenses = provider.provideCodeLenses(doc);
 
-		// Top Execute + two example lenses; the SPARQL provider suppresses its own Execute.
-		expect(lenses).toHaveLength(3);
-		expect(lenses[0].command?.command).toBe('mentor.command.executeTriplateTemplate');
+		// Only the two per-example lenses; SparqlCodeLensProvider supplies the top-of-file
+		// Run lens for `.sparql`-language documents so it reliably ends up first on screen.
+		expect(lenses).toHaveLength(2);
+		expect(lenses.every(l => l.command?.command === 'mentor.command.executeTriplateExample')).toBe(true);
 	});
 
 	it('emits only the top Execute lens when compile throws', async () => {

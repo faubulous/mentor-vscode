@@ -60,6 +60,13 @@ export class SparqlConnectionService {
 	/** The in-memory provider for the workspace store (the only code-backed store). */
 	private readonly _workspaceStore: WorkspaceEndpointProvider;
 
+	/**
+	 * Untitled SPARQL documents that are in the process of being saved, captured by
+	 * `onWillSaveTextDocument` so their per-document settings can be migrated to the new
+	 * file URI once the save completes (see `onDidSaveTextDocument` in the constructor).
+	 */
+	private readonly _pendingUntitledSaves: { uri: vscode.Uri; content: string }[] = [];
+
 	private get store(): Store {
 		return container.resolve<Store>(ServiceToken.Store);
 	}
@@ -84,7 +91,41 @@ export class SparqlConnectionService {
 			}
 		});
 
+		vscode.workspace.onWillSaveTextDocument(e => {
+			if (e.document.isUntitled && e.document.languageId === 'sparql') {
+				this._pendingUntitledSaves.push({ uri: e.document.uri, content: e.document.getText() });
+			}
+		});
+
+		vscode.workspace.onDidSaveTextDocument(async document => {
+			await this._migrateUntitledSave(document);
+		});
+
 		this._onDidChangeConnections.fire();
+	}
+
+	/**
+	 * Migrates a just-saved document's per-document settings (connection, inference) from its
+	 * previous untitled URI to its new on-disk URI, if it matches a pending untitled save.
+	 * Untitled documents have no `onDidRenameFiles` equivalent when saved to disk for the first
+	 * time, so the match is made by comparing text content against documents captured in
+	 * `onWillSaveTextDocument` while they were still untitled.
+	 * @param document The document that was just saved.
+	 */
+	private async _migrateUntitledSave(document: vscode.TextDocument): Promise<void> {
+		if (document.isUntitled || document.languageId !== 'sparql') {
+			return;
+		}
+
+		const index = this._pendingUntitledSaves.findIndex(p => p.content === document.getText());
+
+		if (index === -1) {
+			return;
+		}
+
+		const [pending] = this._pendingUntitledSaves.splice(index, 1);
+
+		await this.handleFileRenames([{ oldUri: pending.uri, newUri: document.uri }]);
 	}
 
 	/**

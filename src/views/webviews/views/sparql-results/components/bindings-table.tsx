@@ -11,6 +11,12 @@ import stylesheet from './bindings-table.css';
 
 const ntriplesSerializer = new NTriplesSerializer();
 
+/** Width, in pixels, of the leading row-number column. */
+const ROW_NUMBER_COLUMN_WIDTH = 50;
+
+/** Minimum width, in pixels, given to each binding column before the table scrolls horizontally. */
+const MIN_COLUMN_WIDTH = 150;
+
 /**
  * Component to display SPARQL bindings results in a table with pagination.
  */
@@ -136,14 +142,14 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 				const tooltip = isGraph ? 'Serialize Graph' : 'Describe Resource';
 
 				return (
-					<a href="#" title={tooltip} onClick={() => clickHandler(binding)}>
+					<a href="#" title={tooltip} onClick={(e) => { e.preventDefault(); clickHandler(binding); }}>
 						{getNamedNodeLabel(binding, namespaceMap)}
 					</a>
 				);
 			}
 			case 'BlankNode':
 				return (
-					<a href="#" title="Describe Resource" onClick={() => handleDescribeNamedNode(binding)}>
+					<a href="#" title="Describe Resource" onClick={(e) => { e.preventDefault(); handleDescribeNamedNode(binding); }}>
 						{getBlankNodeLabel(binding)}
 					</a>
 				);
@@ -247,9 +253,12 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 	};
 
 	if (result) {
+		const minWidth = ROW_NUMBER_COLUMN_WIDTH + result.columns.length * MIN_COLUMN_WIDTH;
+
 		return (
 			<vscode-table className="bindings-table" zebra bordered-rows resizable
 				columns={["50px"]} key={renderKeyRef.current}
+				style={{ minWidth: `${minWidth}px` }}
 				onClick={handleRightClick}>
 				{result.rows.length > 0 &&
 					<vscode-table-header>
