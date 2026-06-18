@@ -329,12 +329,29 @@ describe('SparqlQueryService – _getFetchHandler', () => {
         service = makeService();
     });
 
-    it('returns undefined when no credential is provided', () => {
-        expect((service as any)._getFetchHandler(undefined)).toBeUndefined();
+    it('returns a function even when no credential is provided (to strip Content-Length)', () => {
+        expect(typeof (service as any)._getFetchHandler(undefined)).toBe('function');
     });
 
-    it('returns undefined when credential type is unknown', () => {
-        expect((service as any)._getFetchHandler({ type: 'unknown' })).toBeUndefined();
+    it('returns a function when credential type is unknown (to strip Content-Length)', () => {
+        expect(typeof (service as any)._getFetchHandler({ type: 'unknown' })).toBe('function');
+    });
+
+    it('strips the Content-Length header that fetch-sparql-endpoint sets on POST requests', async () => {
+        const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+        vi.stubGlobal('fetch', mockFetch);
+        const handler = (service as any)._getFetchHandler(undefined);
+        await handler('https://example.org/sparql', {
+            method: 'POST',
+            headers: new Headers({ 'Content-Length': '123', 'Content-Type': 'application/sparql-query' }),
+            body: 'SELECT * WHERE { ?s ?p ?o }'
+        });
+        expect(mockFetch).toHaveBeenCalledOnce();
+        const [, init] = mockFetch.mock.calls[0];
+        expect(init.headers.has('content-length')).toBe(false);
+        // Other headers must be preserved.
+        expect(init.headers.get('content-type')).toBe('application/sparql-query');
+        vi.unstubAllGlobals();
     });
 
     it('returns a function for basic credential type', () => {
@@ -403,12 +420,18 @@ describe('SparqlQueryService – _getFetchHandler', () => {
         vi.unstubAllGlobals();
     });
 
-    it('returns undefined for microsoft credential without accessToken', () => {
+    it('returns a function (no Authorization) for microsoft credential without accessToken', async () => {
+        const mockFetch = vi.fn().mockResolvedValue({ ok: true });
+        vi.stubGlobal('fetch', mockFetch);
         const handler = (service as any)._getFetchHandler({
             type: 'microsoft',
             accessToken: undefined
         });
-        expect(handler).toBeUndefined();
+        expect(typeof handler).toBe('function');
+        await handler('https://example.org/sparql', {});
+        const [, init] = mockFetch.mock.calls[0];
+        expect(init.headers.has('Authorization')).toBe(false);
+        vi.unstubAllGlobals();
     });
 
     it('returns a function for entra-client-credentials credential type', () => {

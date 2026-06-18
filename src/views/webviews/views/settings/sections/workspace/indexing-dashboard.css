@@ -45,6 +45,7 @@
 .indexing-actions {
 	display: flex;
 	flex-direction: row;
+	justify-content: center;
 	gap: var(--mentor-space-3);
 	margin-bottom: var(--mentor-space-6);
 }

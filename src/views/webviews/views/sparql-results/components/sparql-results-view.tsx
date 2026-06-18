@@ -55,9 +55,17 @@ export function SparqlResultsView({ queryContext, defaultPageSize, messaging: pr
       <SparqlResultsToolbar />
       <div className="sparql-results-content-container">
         {!queryContext.error?.cancelled &&
-          <pre>
-            {queryContext.error?.stack || 'No stack trace available.'}
-          </pre>
+          <>
+            <pre>
+              {queryContext.error?.stack || 'No stack trace available.'}
+            </pre>
+            {queryContext.error?.cause &&
+              <pre>
+                {queryContext.error.cause.code ? `${queryContext.error.cause.code}: ` : ''}
+                {queryContext.error.cause.message}
+              </pre>
+            }
+          </>
         }
         {queryContext.error?.cancelled &&
           <div className="sparql-results-cancelled-message text-muted">
@@ -90,7 +98,9 @@ export function SparqlResultsView({ queryContext, defaultPageSize, messaging: pr
   const renderBindingsResult = () => (
     <div className="sparql-results-container success">
       <SparqlResultsToolbar />
-      <SparqlResultsBindingsTable />
+      <div className="sparql-results-table-container">
+        <SparqlResultsBindingsTable />
+      </div>
     </div>
   );
 

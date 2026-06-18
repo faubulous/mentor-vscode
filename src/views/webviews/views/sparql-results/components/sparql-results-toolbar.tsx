@@ -82,6 +82,13 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 		});
 	};
 
+	const viewRawResponse = () => {
+		messaging?.postMessage({
+			id: 'OpenRawResponse',
+			queryId: queryContext.id
+		});
+	};
+
 	const editQuery = () => {
 		if (queryContext.documentIri) {
 			messaging?.postMessage({
@@ -170,38 +177,51 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 				</Fragment>
 			)}
 
-			{!queryContext.error && queryContext.result && (
+
+			{!queryContext.error && bindings && (
 				<Fragment>
 					<span className="divider divider-vertical"></span>
+					<vscode-textfield
+						className="sparql-results-search"
+						placeholder="Filter results…"
+						value={searchTerm}
+						onInput={(e: React.FormEvent<HTMLElement>) => setSearchTerm((e.target as HTMLInputElement).value)}>
+						<vscode-icon slot="content-before" name="search"></vscode-icon>
+						{searchTerm && (
+							<vscode-icon
+								slot="content-after"
+								name="close"
+								title="Clear filter"
+								action-icon
+								onClick={() => setSearchTerm('')}>
+							</vscode-icon>
+						)}
+					</vscode-textfield>
+				</Fragment>
+			)}
+
+			<span className="divider divider-vertical"></span>
+
+			{!queryContext.error && queryContext.result && (
+				<Fragment>
 					<vscode-toolbar-button title="Save" onClick={() => saveResults()}>
 						CSV
 					</vscode-toolbar-button>
 				</Fragment>
 			)}
 
-			<span className="spacer"></span>
-
-			{!queryContext.error && bindings && (
-				<vscode-textfield
-					className="sparql-results-search"
-					placeholder="Filter results…"
-					value={searchTerm}
-					onInput={(e: React.FormEvent<HTMLElement>) => setSearchTerm((e.target as HTMLInputElement).value)}>
-					<vscode-icon slot="content-before" name="search"></vscode-icon>
-					{searchTerm && (
-						<vscode-icon
-							slot="content-after"
-							name="close"
-							title="Clear filter"
-							action-icon
-							onClick={() => setSearchTerm('')}>
-						</vscode-icon>
-					)}
-				</vscode-textfield>
+			{queryContext && (
+				<Fragment>
+					<vscode-toolbar-button disabled={!queryContext.rawResponse} title="View raw response" onClick={() => viewRawResponse()}>
+						JSON
+					</vscode-toolbar-button>
+				</Fragment>
 			)}
 
+			<span className="divider divider-vertical"></span>
+
 			<vscode-toolbar-button title="Edit query" onClick={() => editQuery()} className="not-notebook">
-				<span className="codicon codicon-edit"></span>
+				<span className="codicon codicon-file-code"></span>
 			</vscode-toolbar-button>
 		</vscode-toolbar-container>
 	);
