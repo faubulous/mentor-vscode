@@ -30,21 +30,22 @@ export class XmlDocument extends DocumentContext {
 	 */
 	private _textLiterals: vscode.Range[] = [];
 
-	constructor(uri: vscode.Uri) {
-		super(uri);
-
-		this.syntax = RdfSyntax.RdfXml;
-	}
-
 	get isLoaded(): boolean {
 		return this._hasContent && this.graphs.length > 0;
 	}
 
-	/**
-	 * Indicates whether parsed content has been received from the language server.
-	 */
-	get hasTokens(): boolean {
+	get isParsed(): boolean {
 		return this._hasContent;
+	}
+
+	get providesTokens(): boolean {
+		return false;
+	}
+
+	constructor(uri: vscode.Uri) {
+		super(uri);
+
+		this.syntax = RdfSyntax.RdfXml;
 	}
 
 	/**

@@ -6,6 +6,7 @@ import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubul
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
+import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
 	countLeadingWhitespace,
@@ -20,7 +21,7 @@ import {
 /**
  * A document context for Turtle and TriG documents.
  */
-export class TurtleDocument extends DocumentContext {
+export class TurtleDocument extends DocumentContext implements ITokenizedDocumentContext {
 	readonly syntax: RdfSyntax;
 
 	private _inferenceExecuted = false;
@@ -37,11 +38,12 @@ export class TurtleDocument extends DocumentContext {
 		return this._tokens.length > 0 && this.graphs.length > 0;
 	}
 
-	/**
-	 * Indicates whether tokens have been set for this document.
-	 */
-	get hasTokens(): boolean {
+	get isParsed(): boolean {
 		return this._tokens.length > 0;
+	}
+
+	get providesTokens(): boolean {
+		return true;
 	}
 
 	/**

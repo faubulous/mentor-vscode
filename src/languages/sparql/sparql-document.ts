@@ -15,7 +15,7 @@ export class SparqlDocument extends TurtleDocument {
 	 * Unlike RDF documents, SPARQL queries don't produce graphs.
 	 */
 	override get isLoaded(): boolean {
-		return this.hasTokens;
+		return this.isParsed;
 	}
 
 	public override async infer(): Promise<void> {

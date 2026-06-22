@@ -106,6 +106,12 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 
 	return (
 		<vscode-toolbar-container className="sparql-results-toolbar">
+			<vscode-toolbar-button title="Edit query" onClick={() => editQuery()} className="not-notebook">
+				<span className="codicon codicon-file-code"></span>
+			</vscode-toolbar-button>
+
+			<span className="divider divider-vertical"></span>
+
 			<Stopwatch />
 
 			<span className="divider divider-vertical"></span>
@@ -200,29 +206,18 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 				</Fragment>
 			)}
 
-			<span className="divider divider-vertical"></span>
-
 			{!queryContext.error && queryContext.result && (
 				<Fragment>
+					<span className="divider divider-vertical"></span>
+
 					<vscode-toolbar-button title="Save" onClick={() => saveResults()}>
 						CSV
 					</vscode-toolbar-button>
-				</Fragment>
-			)}
-
-			{queryContext && (
-				<Fragment>
 					<vscode-toolbar-button disabled={!queryContext.rawResponse} title="View raw response" onClick={() => viewRawResponse()}>
 						JSON
 					</vscode-toolbar-button>
 				</Fragment>
 			)}
-
-			<span className="divider divider-vertical"></span>
-
-			<vscode-toolbar-button title="Edit query" onClick={() => editQuery()} className="not-notebook">
-				<span className="codicon codicon-file-code"></span>
-			</vscode-toolbar-button>
 		</vscode-toolbar-container>
 	);
 }

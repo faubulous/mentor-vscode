@@ -271,7 +271,7 @@ export class DocumentContextService {
 		// Reload the triples to bring the context up to date.
 		const context = this.contexts[uri];
 
-		if (context?.hasTokens) {
+		if (context?.isParsed) {
 			this._reloadContextTriples(uri).catch(e => {
 				console.warn('Mentor: Failed to reload context after token delivery:', e);
 			});
@@ -286,7 +286,7 @@ export class DocumentContextService {
 	private async _reloadContextTriples(uri: string): Promise<void> {
 		const context = this.contexts[uri];
 
-		if (!context?.hasTokens) return;
+		if (!context?.isParsed) return;
 
 		const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
 
@@ -375,6 +375,7 @@ export class DocumentContextService {
 
 			// Compute the inference graph on the document, if it does not exist.
 			context.infer();
+			
 			return context;
 		}
 
@@ -404,9 +405,9 @@ export class DocumentContextService {
 
 		const content = document.getText();
 
-		// Check if the context already has tokens (from language server notification that arrived early).
-		// If not, wait for tokens from the language server.
-		if (!context.hasTokens) {
+		// Check if the context already has parser output (from a language server notification
+		// that arrived early). If not, wait for tokens from the language server.
+		if (!context.isParsed) {
 			try {
 				// Wait for tokens from the language server.
 				await this.waitForTokens(uri);

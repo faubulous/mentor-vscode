@@ -8,6 +8,7 @@ import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { getConfig } from '@src/utilities/vscode/config';
 import { getContentStartOffset } from '@src/utilities';
 import { isTemplate } from 'triplate';
+import { ITokenizedDocumentContext, isTokenizedDocumentContext } from '@src/services/document/document-context.interface';
 
 /**
  * Describes a pending prefix that should be auto-defined once fresh tokens arrive.
@@ -50,8 +51,8 @@ export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
 
 		this._disposables.push(
 			contextService.onDidChangeDocumentContext(context => {
-				if (context) {
-					this._onDidChangeDocumentContext(context.uri.toString());
+				if (context && isTokenizedDocumentContext(context)) {
+					this._onDidChangeDocumentContext(context);
 				}
 			})
 		);
@@ -138,22 +139,14 @@ export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
 	/**
 	 * Processes the pending prefix when fresh tokens arrive from the language server.
 	 */
-	private async _onDidChangeDocumentContext(uri: string): Promise<void> {
+	private async _onDidChangeDocumentContext(context: ITokenizedDocumentContext): Promise<void> {
 		const pending = this._pendingPrefix;
 
-		if (!pending || pending.documentUri !== uri) return;
+		if (!context || !pending || pending.documentUri !== context.uri.toString()) return;
 
-		// Clear the pending prefix immediately to avoid processing it twice.
-		this._pendingPrefix = undefined;
-
-		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-		const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+		const document = context.getTextDocument();
 
 		if (!document) return;
-
-		const context = contextService.getContext(document, TurtleDocument);
-
-		if (!context) return;
 
 		const n = context.getTokenIndexAtPosition(pending.position);
 

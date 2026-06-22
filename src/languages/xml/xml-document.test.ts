@@ -52,16 +52,16 @@ function makeDoc(uri = 'file:///test.xml'): XmlDocument {
 }
 
 describe('XmlDocument', () => {
-    describe('hasTokens', () => {
+    describe('isParsed', () => {
         it('is false before setParsedData is called', () => {
             const doc = makeDoc();
-            expect(doc.hasTokens).toBe(false);
+            expect(doc.isParsed).toBe(false);
         });
 
         it('is true after setParsedData is called', () => {
             const doc = makeDoc();
             doc.setParsedData(makeParseResult());
-            expect(doc.hasTokens).toBe(true);
+            expect(doc.isParsed).toBe(true);
         });
     });
 

@@ -33,7 +33,7 @@ vi.mock('@src/languages/turtle/turtle-document', () => ({
     TurtleDocument: class {
         constructor(public uri: any, public syntax: any) {}
         get tokens() { return []; }
-        get hasTokens() { return false; }
+        get isParsed() { return false; }
     }
 }));
 

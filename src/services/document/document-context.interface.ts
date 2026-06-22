@@ -57,6 +57,12 @@ export interface IDocumentContext {
 	slug: string | undefined;
 
 	/**
+	 * Indicates if the document type is parsed using a tokenizing parser.
+	 * @note XML documents are not tokenized.
+	 */
+	providesTokens: boolean;
+
+	/**
 	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion.
 	 */
 	typeAssertions: { [key: string]: Range[] };
@@ -83,6 +89,7 @@ export interface IDocumentContext {
 
 	/**
 	 * The language portion of the active ISO 639-3 language tag without the regional part.
+	 * e.g. 'en' for the language tags 'en' or 'en-gb'.
 	 */
 	readonly activeLanguage: string | undefined;
 
@@ -95,14 +102,15 @@ export interface IDocumentContext {
 	};
 
 	/**
+	 * Indicates whether parser output has been delivered by the language server,
+	 * so that triples can be (re)loaded. See {@link isLoaded} for store state.
+	 */
+	readonly isParsed: boolean;
+
+	/**
 	 * Indicates whether the document is fully loaded.
 	 */
 	readonly isLoaded: boolean;
-
-	/**
-	 * Indicates whether tokens have been set for this document.
-	 */
-	readonly hasTokens: boolean;
 
 	/**
 	 * Indicates whether the document is temporary and not persisted.
@@ -199,9 +207,25 @@ export interface IDocumentContext {
 /**
  * Interface for document contexts that have been tokenized and thus provide access to the tokens of the document.
  */
-export interface ITokenDocumentContext extends IDocumentContext {
+export interface ITokenizedDocumentContext extends IDocumentContext {
 	/**
 	 * The tokens of the document, if the document has been tokenized.
 	 */
 	tokens: IToken[];
+
+	/**
+	 * Gets the index of the token at a given position.
+	 * @param position A position in the document.
+	 * @returns The index of the token at the given position, or -1 if no token is found.
+	 */
+	getTokenIndexAtPosition(position: vscode.Position): number;
+}
+
+/**
+ * Indicates whether a document context is tokenized and thus provides access to its tokens.
+ * @param context A document context.
+ * @returns `true` if the context exposes a token stream, narrowing it to {@link ITokenizedDocumentContext}.
+ */
+export function isTokenizedDocumentContext(context: IDocumentContext): context is ITokenizedDocumentContext {
+	return context.providesTokens;
 }
