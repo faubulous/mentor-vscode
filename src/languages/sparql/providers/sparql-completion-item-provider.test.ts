@@ -153,16 +153,12 @@ describe('SparqlCompletionItemProvider', () => {
             'http://other.org/graph3',
         ];
 
-        function makeProviderWithGraphs(available: string[], workspaceContexts?: Record<string, any>): SparqlCompletionItemProvider {
+        function makeProviderWithGraphs(available: string[]): SparqlCompletionItemProvider {
             const p = new SparqlCompletionItemProvider();
 
             vi.spyOn(p as any, 'connectionService', 'get').mockReturnValue({
                 getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
                 getGraphsForDocument: async () => available,
-            });
-
-            vi.spyOn(p as any, 'contextService', 'get').mockReturnValue({
-                contexts: workspaceContexts ?? {},
             });
 
             return p;
@@ -184,7 +180,7 @@ describe('SparqlCompletionItemProvider', () => {
             const items = await p.getGraphIriCompletionItems(makeDoc('file:///test.sparql', '<http://example') as any, context as any, 0);
 
             expect(items.length).toBe(2);
-            expect(items.every(i => (i.label as string).startsWith('.org'))).toBe(true);
+            expect(items.every(i => (i.label as string).startsWith('http://example.org'))).toBe(true);
         });
 
         it('uses the full graph IRI as the label when no prefix is typed', async () => {
@@ -222,26 +218,22 @@ describe('SparqlCompletionItemProvider', () => {
             expect(items).toHaveLength(0);
         });
 
-        it('strips a leading ":" from label to avoid namespace-prefix duplication', async () => {
-            // value typed = 'workspace', graph = 'workspace:g1' → suffix = ':g1' → label stripped to 'g1'
-            // but insertText must still be ':g1>' (full suffix) so the inserted text is correct.
+        it('shows the full IRI as the label while inserting only the untyped suffix', async () => {
+            // value typed = 'workspace', graph = 'workspace:g1' → label is the full IRI,
+            // but insertText is the untyped suffix ':g1>' so the typed prefix is not duplicated.
             const p = makeProviderWithGraphs(['workspace:g1']);
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<workspace')]);
             const items = await p.getGraphIriCompletionItems(makeDoc('file:///test.sparql', '<workspace') as any, context as any, 0);
             expect(items.length).toBe(1);
-            expect(items[0].label).toBe('g1');
+            expect(items[0].label).toBe('workspace:g1');
             expect((items[0].insertText as any).value).toBe(':g1>');
         });
 
-        it('does not strip a leading "/" from label so workspace URI paths are preserved', async () => {
+        it('inserts the untyped suffix preserving all path slashes', async () => {
             // At the ':' trigger, value = 'workspace:', suffix = '///data.ttl'.
-            // The first '/' must NOT be stripped — stripping it would produce 'workspace://data.ttl'
-            // instead of 'workspace:///data.ttl'.
-            const wsCtx = {
-                uri: { toString: () => 'file:///w/data.ttl' },
-                graphIri: { toString: () => 'workspace:///data.ttl' },
-            };
-            const p = makeProviderWithGraphs([], { 'file:///w/data.ttl': wsCtx });
+            // The inserted suffix must keep all three slashes so the result is
+            // 'workspace:///data.ttl', not 'workspace://data.ttl'.
+            const p = makeProviderWithGraphs(['workspace:///data.ttl']);
             const iriToken = makeToken(RdfToken.IRIREF.name, '<workspace:');
             const context = makeContext([iriToken]);
             const items = await p.getGraphIriCompletionItems(
@@ -250,55 +242,30 @@ describe('SparqlCompletionItemProvider', () => {
                 0,
             );
             expect(items).toHaveLength(1);
-            // label and insertText must both preserve all three slashes
-            expect(items[0].label).toBe('///data.ttl');
+            // Label shows the full IRI; insertText is the untyped suffix with all slashes.
+            expect(items[0].label).toBe('workspace:///data.ttl');
             expect((items[0].insertText as any).value).toBe('///data.ttl>');
         });
 
-        it('includes workspace document IRIs in completion candidates', async () => {
-            // One workspace context whose graphIri is a workspace: URI
-            const wsCtx = {
-                uri: { toString: () => 'file:///w/data.ttl' },
-                graphIri: { toString: () => 'workspace:///data.ttl' },
-            };
-            const p = makeProviderWithGraphs([], { 'file:///w/data.ttl': wsCtx });
+        it('includes workspace graphs provided by the connection', async () => {
+            const p = makeProviderWithGraphs(['workspace:///data.ttl']);
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]);
             const items = await p.getGraphIriCompletionItems(makeDoc('file:///w/query.sparql') as any, context as any, 0);
             const labels = items.map(i => i.label as string);
             expect(labels).toContain('workspace:///data.ttl');
         });
 
-        it('excludes the current document from workspace completions', async () => {
-            const selfUri = 'file:///w/query.sparql';
-            const wsCtx = {
-                uri: { toString: () => selfUri },
-                graphIri: { toString: () => 'workspace:///query.sparql' },
-            };
-            const p = makeProviderWithGraphs([], { [selfUri]: wsCtx });
-            const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]);
-            const items = await p.getGraphIriCompletionItems(makeDoc(selfUri) as any, context as any, 0);
-            expect(items).toHaveLength(0);
-        });
-
-        it('deduplicates IRIs that appear in both endpoint and workspace sources', async () => {
+        it('deduplicates repeated graph IRIs', async () => {
             const sharedIri = 'workspace:///shared.ttl';
-            const wsCtx = {
-                uri: { toString: () => 'file:///w/shared.ttl' },
-                graphIri: { toString: () => sharedIri },
-            };
-            const p = makeProviderWithGraphs([sharedIri], { 'file:///w/shared.ttl': wsCtx });
+            const p = makeProviderWithGraphs([sharedIri, sharedIri]);
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]);
             const items = await p.getGraphIriCompletionItems(makeDoc('file:///w/query.sparql') as any, context as any, 0);
             expect(items).toHaveLength(1);
             expect(items[0].label).toBe(sharedIri);
         });
 
-        it('merges endpoint graphs and workspace URIs', async () => {
-            const wsCtx = {
-                uri: { toString: () => 'file:///w/data.ttl' },
-                graphIri: { toString: () => 'workspace:///data.ttl' },
-            };
-            const p = makeProviderWithGraphs(['http://example.org/remote'], { 'file:///w/data.ttl': wsCtx });
+        it('returns both remote and workspace graphs from the connection', async () => {
+            const p = makeProviderWithGraphs(['http://example.org/remote', 'workspace:///data.ttl']);
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]);
             const items = await p.getGraphIriCompletionItems(makeDoc('file:///w/query.sparql') as any, context as any, 0);
             const labels = items.map(i => i.label as string);
@@ -307,13 +274,7 @@ describe('SparqlCompletionItemProvider', () => {
         });
 
         it('includes notebook cell workspace URIs in completion candidates', async () => {
-            const cellCtx = {
-                uri: { toString: () => 'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1' },
-                graphIri: { toString: () => 'workspace:///notebook.mnb#my-data' },
-            };
-            const p = makeProviderWithGraphs([], {
-                'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1': cellCtx,
-            });
+            const p = makeProviderWithGraphs(['workspace:///notebook.mnb#my-data']);
             const context = makeContext([makeToken(RdfToken.IRIREF.name, '<')]);
             const items = await p.getGraphIriCompletionItems(makeDoc('vscode-notebook-cell:///w/notebook.mnb#opaqueCell2') as any, context as any, 0);
             const labels = items.map(i => i.label as string);
@@ -324,13 +285,7 @@ describe('SparqlCompletionItemProvider', () => {
             // User types `workspace:///my-data` — the IRI starts with `workspace:///notebook.mnb`,
             // so prefix matching fails. Substring matching on the part after `workspace:///` must
             // find it.
-            const cellCtx = {
-                uri: { toString: () => 'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1' },
-                graphIri: { toString: () => 'workspace:///notebook.mnb#my-data' },
-            };
-            const p = makeProviderWithGraphs([], {
-                'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1': cellCtx,
-            });
+            const p = makeProviderWithGraphs(['workspace:///notebook.mnb#my-data']);
             const iriToken = makeToken(RdfToken.IRIREF.name, '<workspace:///my-data');
             const context = makeContext([iriToken]);
             const items = await p.getGraphIriCompletionItems(
@@ -363,13 +318,7 @@ describe('SparqlCompletionItemProvider', () => {
         it('uses prefix match (not substring) when the typed value already prefixes the IRI', async () => {
             // `workspace:///notebook` is a prefix of `workspace:///notebook.mnb#cell-1`,
             // so it takes the prefix-match path and the label is the suffix only.
-            const cellCtx = {
-                uri: { toString: () => 'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1' },
-                graphIri: { toString: () => 'workspace:///notebook.mnb#cell-1' },
-            };
-            const p = makeProviderWithGraphs([], {
-                'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1': cellCtx,
-            });
+            const p = makeProviderWithGraphs(['workspace:///notebook.mnb#cell-1']);
             const iriToken = makeToken(RdfToken.IRIREF.name, '<workspace:///notebook');
             const context = makeContext([iriToken]);
             const items = await p.getGraphIriCompletionItems(
@@ -378,28 +327,21 @@ describe('SparqlCompletionItemProvider', () => {
                 0,
             );
             expect(items).toHaveLength(1);
-            // Prefix match: label is the suffix after the typed text, range is NOT set
-            expect(items[0].label).toBe('.mnb#cell-1');
+            // Prefix match: label is the full IRI, range is NOT set, only the suffix is inserted.
+            expect(items[0].label).toBe('workspace:///notebook.mnb#cell-1');
+            expect((items[0].insertText as any).value).toBe('.mnb#cell-1>');
             expect(items[0].range).toBeUndefined();
         });
 
-        it('sets filterText to path+fragment with # replaced by space for workspace IRIs', async () => {
-            // At the `workspace:` trigger point every workspace IRI is a prefix match.
-            // VS Code then fuzzy-filters using filterText as the user continues typing.
-            // Without filterText VS Code does not treat '#' as a word boundary, so
-            // 'cell' in 'notebook.mnb#cell-1' would not be found as a word start.
-            const cellCtx = {
-                uri: { toString: () => 'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1' },
-                graphIri: { toString: () => 'workspace:///notebook.mnb#cell-1' },
-            };
-            const fileCtx = {
-                uri: { toString: () => 'file:///w/classes.ttl' },
-                graphIri: { toString: () => 'workspace:///classes.ttl' },
-            };
-            const p = makeProviderWithGraphs([], {
-                'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1': cellCtx,
-                'file:///w/classes.ttl': fileCtx,
-            });
+        it('sets filterText to the full IRI with # replaced by space for workspace IRIs', async () => {
+            // The full 'workspace:///' scheme is kept so typing it matches at position 0
+            // (and ranks first). VS Code then fuzzy-filters using filterText as the user
+            // continues typing. '#' is replaced with a space so VS Code treats slug names
+            // after the fragment (e.g. 'cell-1') as word starts.
+            const p = makeProviderWithGraphs([
+                'workspace:///notebook.mnb#cell-1',
+                'workspace:///classes.ttl',
+            ]);
             // Simulate the state at the `workspace:` trigger — value is 'workspace:'
             const iriToken = makeToken(RdfToken.IRIREF.name, '<workspace:');
             const context = makeContext([iriToken]);
@@ -414,19 +356,13 @@ describe('SparqlCompletionItemProvider', () => {
             const fileItem = items.find(i => (i.label as string).includes('classes'))!;
 
             // Cell: '#' is replaced with space so 'cell-1' is a separate word start.
-            expect(cellItem.filterText).toBe('notebook.mnb cell-1');
-            // File: no fragment, filterText is just the filename.
-            expect(fileItem.filterText).toBe('classes.ttl');
+            expect(cellItem.filterText).toBe('workspace:///notebook.mnb cell-1');
+            // File: no fragment, filterText is the full IRI.
+            expect(fileItem.filterText).toBe('workspace:///classes.ttl');
         });
 
         it('sets filterText for workspace IRIs matched by substring', async () => {
-            const cellCtx = {
-                uri: { toString: () => 'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1' },
-                graphIri: { toString: () => 'workspace:///notebook.mnb#my-data' },
-            };
-            const p = makeProviderWithGraphs([], {
-                'vscode-notebook-cell:///w/notebook.mnb#opaqueCell1': cellCtx,
-            });
+            const p = makeProviderWithGraphs(['workspace:///notebook.mnb#my-data']);
             const iriToken = makeToken(RdfToken.IRIREF.name, '<workspace:///my-data');
             const context = makeContext([iriToken]);
             const items = await p.getGraphIriCompletionItems(
@@ -435,7 +371,7 @@ describe('SparqlCompletionItemProvider', () => {
                 0,
             );
             expect(items).toHaveLength(1);
-            expect(items[0].filterText).toBe('notebook.mnb my-data');
+            expect(items[0].filterText).toBe('workspace:///notebook.mnb my-data');
         });
     });
 

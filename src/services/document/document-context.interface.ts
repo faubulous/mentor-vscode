@@ -214,11 +214,12 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	tokens: IToken[];
 
 	/**
-	 * Gets the index of the token at a given position.
-	 * @param position A position in the document.
-	 * @returns The index of the token at the given position, or -1 if no token is found.
+	 * Tokenizes the given text synchronously using the document's own syntax,
+	 * without requiring the language server.
+	 * @param text The text to tokenize.
+	 * @returns The tokens of the text.
 	 */
-	getTokenIndexAtPosition(position: vscode.Position): number;
+	tokenize(text: string): IToken[];
 }
 
 /**

@@ -3,9 +3,15 @@ import * as vscode from 'vscode';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockGetDocumentContext, mockGetUriForPrefix } = vi.hoisted(() => ({
+const { mockGetDocumentContext, mockGetUriForPrefix, mockGetTokenIndexAtPosition } = vi.hoisted(() => ({
     mockGetDocumentContext: vi.fn(),
     mockGetUriForPrefix: vi.fn(),
+    mockGetTokenIndexAtPosition: vi.fn(),
+}));
+
+vi.mock('@src/utilities', async (importOriginal) => ({
+    ...await importOriginal<typeof import('@src/utilities')>(),
+    getTokenIndexAtPosition: mockGetTokenIndexAtPosition,
 }));
 
 vi.mock('tsyringe', () => ({
@@ -41,6 +47,7 @@ const mockPosition = new vscode.Position(0, 0);
 beforeEach(() => {
     mockGetDocumentContext.mockReset();
     mockGetUriForPrefix.mockReset();
+    mockGetTokenIndexAtPosition.mockReset();
 });
 
 describe('TurtlePrefixCompletionProvider', () => {
@@ -89,8 +96,8 @@ describe('TurtlePrefixCompletionProvider', () => {
         });
 
         it('returns null when token index is less than 1', () => {
+            mockGetTokenIndexAtPosition.mockReturnValue(0);
             mockGetDocumentContext.mockReturnValue({
-                getTokenIndexAtPosition: vi.fn(() => 0),
                 tokens: [{ tokenType: { name: 'SomeToken' }, image: 'ex:' }],
             });
             const provider = new TurtlePrefixCompletionProvider(() => '');
@@ -99,8 +106,8 @@ describe('TurtlePrefixCompletionProvider', () => {
         });
 
         it('returns undefined when current token type is not PNAME_NS', () => {
+            mockGetTokenIndexAtPosition.mockReturnValue(1);
             mockGetDocumentContext.mockReturnValue({
-                getTokenIndexAtPosition: vi.fn(() => 1),
                 tokens: [
                     { tokenType: { name: RdfToken.PREFIX.name }, image: '@prefix' },
                     { tokenType: { name: 'SomeOtherToken' }, image: 'foo' },
@@ -112,8 +119,8 @@ describe('TurtlePrefixCompletionProvider', () => {
         });
 
         it('returns null when previous token is undefined', () => {
+            mockGetTokenIndexAtPosition.mockReturnValue(1);
             mockGetDocumentContext.mockReturnValue({
-                getTokenIndexAtPosition: vi.fn(() => 1),
                 tokens: [
                     undefined,
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
@@ -125,8 +132,8 @@ describe('TurtlePrefixCompletionProvider', () => {
         });
 
         it('returns null when previous token type is not a prefix keyword', () => {
+            mockGetTokenIndexAtPosition.mockReturnValue(1);
             mockGetDocumentContext.mockReturnValue({
-                getTokenIndexAtPosition: vi.fn(() => 1),
                 tokens: [
                     { tokenType: { name: 'DOT' }, image: '.' },
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
@@ -138,8 +145,8 @@ describe('TurtlePrefixCompletionProvider', () => {
         });
 
         it('returns completion item when prefix is found in lookup', () => {
+            mockGetTokenIndexAtPosition.mockReturnValue(1);
             mockGetDocumentContext.mockReturnValue({
-                getTokenIndexAtPosition: vi.fn(() => 1),
                 tokens: [
                     { tokenType: { name: RdfToken.PREFIX.name }, image: '@prefix' },
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
@@ -154,8 +161,8 @@ describe('TurtlePrefixCompletionProvider', () => {
         });
 
         it('returns empty array when prefix is not in lookup', () => {
+            mockGetTokenIndexAtPosition.mockReturnValue(1);
             mockGetDocumentContext.mockReturnValue({
-                getTokenIndexAtPosition: vi.fn(() => 1),
                 tokens: [
                     { tokenType: { name: RdfToken.TTL_PREFIX.name }, image: '@prefix' },
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'unknown:' },

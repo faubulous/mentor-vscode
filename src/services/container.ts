@@ -22,6 +22,7 @@ import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 import { SparqlGraphLoadingService } from '@src/languages/sparql/services/sparql-graph-loading-service';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
+import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sparql-prefix-definition-service';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
@@ -104,6 +105,9 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 
 	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.TurtlePrefixDefinitionService, turtlePrefixDefinitionService);
+
+	const sparqlPrefixDefinitionService = new SparqlPrefixDefinitionService(documentContextService, prefixLookupService);
+	container.registerInstance(ServiceToken.SparqlPrefixDefinitionService, sparqlPrefixDefinitionService);
 
 	// Register the platform-specific language client factory.
 	container.registerInstance(ServiceToken.LanguageClientFactory, languageClientFactory);

@@ -3,16 +3,15 @@ import * as vscode from 'vscode';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockGetConfig, mockGetContext, mockImplementPrefixes, mockContextService } = vi.hoisted(() => {
-    const mockGetContext = vi.fn(() => null as any);
+const { mockGetConfig, mockGetContextFromUri, mockImplementPrefixes, mockContextService } = vi.hoisted(() => {
+    const mockGetContextFromUri = vi.fn(() => null as any);
     const mockImplementPrefixes = vi.fn(async () => ({ size: 0 }));
     const mockContextService = {
-        onDidChangeDocumentContext: vi.fn((_handler?: any) => ({ dispose: vi.fn() })),
-        getContext: mockGetContext,
+        getContextFromUri: mockGetContextFromUri,
         contexts: {},
     };
     const mockGetConfig = vi.fn(() => ({ get: (_k: string, d?: any) => d }));
-    return { mockGetConfig, mockGetContext, mockImplementPrefixes, mockContextService };
+    return { mockGetConfig, mockGetContextFromUri, mockImplementPrefixes, mockContextService };
 });
 
 vi.mock('@src/utilities/vscode/config', () => ({
@@ -23,7 +22,6 @@ vi.mock('tsyringe', () => ({
     container: {
         resolve: vi.fn((token: string) => {
             if (token === 'DocumentContextService') return mockContextService;
-            if (token === 'TurtlePrefixDefinitionService') return { implementPrefixes: mockImplementPrefixes };
             return {};
         }),
     },
@@ -34,120 +32,197 @@ vi.mock('tsyringe', () => ({
 
 import { TurtleAutoDefinePrefixProvider } from '@src/languages/turtle/providers/turtle-auto-define-prefix-provider';
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetConfig.mockReturnValue({ get: (_k: string, d?: any) => d });
-    mockGetContext.mockReturnValue(null);
-    mockImplementPrefixes.mockResolvedValue({ size: 0 });
-    mockContextService.onDidChangeDocumentContext.mockReturnValue({ dispose: vi.fn() });
-});
+const PNAME_NS = 'PNAME_NS';
 
-afterEach(() => {
-    // Reset the shared textDocuments array between tests
-    (vscode.workspace.textDocuments as any[]).length = 0;
-});
+// The injected prefix-definition service is mocked down to the one method the provider uses.
+const prefixService = { implementPrefixes: mockImplementPrefixes } as any;
 
-// Helper: create a mock document with a given URI string
-function makeDoc(uri: string): any {
-    return { uri: { toString: () => uri }, languageId: 'turtle' };
+function makeProvider(languages: string[] = ['turtle']) {
+    return new TurtleAutoDefinePrefixProvider(languages, prefixService);
 }
 
-// Helper: create a mock context that returns the given token index and token list
-function makeContext(tokenIndex: number, tokens: any[], namespaces: Record<string, string> = {}): any {
+/**
+ * Creates a single-line token with correct 1-based chevrotain positions so the real
+ * `getTokenIndexAtPosition` utility resolves it from a 0-based editor position.
+ */
+function tok(name: string, image: string, startColumn: number) {
+    return { tokenType: { name }, image, startLine: 1, endLine: 1, startColumn, endColumn: startColumn + image.length - 1 };
+}
+
+/**
+ * Creates a tokenized context whose `tokenize` returns the given tokens.
+ */
+function makeContext(tokens: any[], namespaces: Record<string, string> = {}, providesTokens = true): any {
     return {
-        getTokenIndexAtPosition: vi.fn(() => tokenIndex),
-        tokens,
+        providesTokens,
         namespaces,
+        tokenize: vi.fn(() => tokens),
     };
 }
 
-const PNAME_NS = 'PNAME_NS';
+beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetConfig.mockReturnValue({ get: (_k: string, d?: any) => d });
+    mockGetContextFromUri.mockReturnValue(null);
+    mockImplementPrefixes.mockResolvedValue({ size: 0 });
+});
+
+afterEach(() => {
+    (vscode.workspace.textDocuments as any[]).length = 0;
+});
 
 describe('TurtleAutoDefinePrefixProvider', () => {
     it('constructs without throwing', () => {
-        expect(() => new TurtleAutoDefinePrefixProvider(['turtle'])).not.toThrow();
+        expect(() => makeProvider(['turtle'])).not.toThrow();
     });
 
     it('accepts an empty language list', () => {
-        expect(() => new TurtleAutoDefinePrefixProvider([])).not.toThrow();
-    });
-
-    it('accepts multiple languages', () => {
-        expect(() => new TurtleAutoDefinePrefixProvider(['turtle', 'trig', 'n3'])).not.toThrow();
-    });
-
-    it('dispose() does not throw', () => {
-        const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-        expect(() => provider.dispose()).not.toThrow();
+        expect(() => makeProvider([])).not.toThrow();
     });
 
     it('dispose() can be called multiple times without throwing', () => {
-        const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
+        const provider = makeProvider(['turtle']);
         provider.dispose();
         expect(() => provider.dispose()).not.toThrow();
     });
 
-    describe('_onDidChangeTextDocument', () => {
-        it('sets pending prefix when a colon is typed and autoDefinePrefixes is on', () => {
-            mockGetConfig.mockReturnValue({ get: (k: string, d?: any) => k === 'prefixes.autoDefinePrefixes' ? true : d });
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-
-            (provider as any)._onDidChangeTextDocument({
+    describe('_onDidChangeTextDocument gating', () => {
+        function fire(provider: any, text: string) {
+            provider._onDidChangeTextDocument({
                 document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
-                contentChanges: [{ text: 'ex:', range: { start: { line: 0, character: 3 } } }],
+                contentChanges: [{ text, range: { start: { line: 0, character: 0 } } }],
             });
+        }
 
-            expect((provider as any)._pendingPrefix).toBeDefined();
-            expect((provider as any)._pendingPrefix.documentUri).toBe('file:///test.ttl');
+        it('ignores changes that do not end with a colon', () => {
+            mockGetConfig.mockReturnValue({ get: (k: string, d?: any) => k === 'prefixes.autoDefinePrefixes' ? true : d });
+            fire(makeProvider(), 'ex');
+            expect(mockGetContextFromUri).not.toHaveBeenCalled();
         });
 
-        it('stores the correct cursor position', () => {
-            mockGetConfig.mockReturnValue({ get: (k: string, d?: any) => k === 'prefixes.autoDefinePrefixes' ? true : d });
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            const position = { line: 5, character: 10 };
-
-            (provider as any)._onDidChangeTextDocument({
-                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
-                contentChanges: [{ text: 'ex:', range: { start: position } }],
-            });
-
-            expect((provider as any)._pendingPrefix?.position).toEqual(position);
-        });
-
-        it('does not set pending prefix when change text does not end with colon', () => {
-            mockGetConfig.mockReturnValue({ get: (k: string, d?: any) => k === 'prefixes.autoDefinePrefixes' ? true : d });
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-
-            (provider as any)._onDidChangeTextDocument({
-                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
-                contentChanges: [{ text: 'ex', range: { start: { line: 0, character: 0 } } }],
-            });
-
-            expect((provider as any)._pendingPrefix).toBeUndefined();
-        });
-
-        it('does not set pending prefix when autoDefinePrefixes config is disabled', () => {
+        it('does nothing when autoDefinePrefixes is disabled', () => {
             mockGetConfig.mockReturnValue({ get: (_k: string, d?: any) => d });
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-
-            (provider as any)._onDidChangeTextDocument({
-                document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
-                contentChanges: [{ text: 'ex:', range: { start: { line: 0, character: 0 } } }],
-            });
-
-            expect((provider as any)._pendingPrefix).toBeUndefined();
+            fire(makeProvider(), 'ex:');
+            expect(mockGetContextFromUri).not.toHaveBeenCalled();
         });
 
-        it('does not set pending prefix when there are no content changes', () => {
+        it('does nothing when there are no content changes', () => {
             mockGetConfig.mockReturnValue({ get: (k: string, d?: any) => k === 'prefixes.autoDefinePrefixes' ? true : d });
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-
-            (provider as any)._onDidChangeTextDocument({
+            (makeProvider() as any)._onDidChangeTextDocument({
                 document: { languageId: 'turtle', uri: { toString: () => 'file:///test.ttl' }, getText: () => 'x' },
                 contentChanges: [],
             });
+            expect(mockGetContextFromUri).not.toHaveBeenCalled();
+        });
+    });
 
-            expect((provider as any)._pendingPrefix).toBeUndefined();
+    describe('_tryAutoDefineBodyPrefix', () => {
+        const doc: any = { uri: { toString: () => 'file:///test.ttl' }, languageId: 'turtle', getText: () => '. ex:' };
+        const colon = { line: 0, character: 4 };
+
+        it('returns when there is no context', async () => {
+            mockGetContextFromUri.mockReturnValue(null);
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, colon);
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('returns when the context is not tokenized', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([], {}, false));
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, colon);
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('returns when no token is found at the position', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([]));
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, colon);
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('implements a prefix when the PNAME_NS is the first token in the document', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([
+                tok(PNAME_NS, 'ex:', 1),
+            ], {}));
+            mockImplementPrefixes.mockResolvedValue({ size: 1 });
+
+            // The colon of `ex:` is at 1-based column 3 → 0-based character 2.
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, { line: 0, character: 2 });
+
+            expect(mockImplementPrefixes).toHaveBeenCalledWith(doc, [{ prefix: 'ex', namespaceIri: undefined }]);
+        });
+
+        it('returns when the previous token is @prefix', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([
+                tok('TTL_PREFIX', '@prefix', 1),
+                tok(PNAME_NS, 'ex:', 9),
+            ]));
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, { line: 0, character: 10 });
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('returns when the previous token is PREFIX (SPARQL-style)', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([
+                tok('PREFIX', 'PREFIX', 1),
+                tok(PNAME_NS, 'ex:', 8),
+            ]));
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, { line: 0, character: 9 });
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('returns when the previous token is < (URI scheme typed)', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([
+                tok('IRIREF', '<', 1),
+                tok(PNAME_NS, 'https:', 2),
+            ]));
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, { line: 0, character: 6 });
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('returns when the prefix is already defined', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([
+                tok('PERIOD', '.', 1),
+                tok(PNAME_NS, 'ex:', 3),
+            ], { ex: 'http://example.org/' }));
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, colon);
+            expect(mockImplementPrefixes).not.toHaveBeenCalled();
+        });
+
+        it('implements an undefined PNAME_NS prefix', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([
+                tok('PERIOD', '.', 1),
+                tok(PNAME_NS, 'owl:', 3),
+            ], {}));
+            mockImplementPrefixes.mockResolvedValue({ size: 1 });
+
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, { line: 0, character: 5 });
+
+            expect(mockImplementPrefixes).toHaveBeenCalledWith(doc, [{ prefix: 'owl', namespaceIri: undefined }]);
+        });
+
+        it('does not applyEdit when the edit is empty', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([
+                tok('PERIOD', '.', 1),
+                tok(PNAME_NS, 'owl:', 3),
+            ], {}));
+            mockImplementPrefixes.mockResolvedValue({ size: 0 });
+            const applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit');
+
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, { line: 0, character: 5 });
+
+            expect(applyEditSpy).not.toHaveBeenCalled();
+        });
+
+        it('applies the edit when the edit is non-empty', async () => {
+            mockGetContextFromUri.mockReturnValue(makeContext([
+                tok('PERIOD', '.', 1),
+                tok(PNAME_NS, 'owl:', 3),
+            ], {}));
+            const fakeEdit = { size: 1 };
+            mockImplementPrefixes.mockResolvedValue(fakeEdit);
+            const applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit');
+
+            await (makeProvider() as any)._tryAutoDefineBodyPrefix(doc, { line: 0, character: 5 });
+
+            expect(applyEditSpy).toHaveBeenCalledWith(fakeEdit);
         });
     });
 
@@ -171,10 +246,10 @@ describe('TurtleAutoDefinePrefixProvider', () => {
         }
 
         it('auto-defines a prefix for a pname example value and reports it as handled', async () => {
-            mockGetContext.mockReturnValue({ namespaces: {} });
+            mockGetContextFromUri.mockReturnValue({ namespaces: {} });
             mockImplementPrefixes.mockResolvedValue({ size: 1 });
 
-            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const provider = makeProvider(['sparql']);
             const doc = makeTemplateDoc();
 
             // The second colon on line 3 (`  type: schema:`) is at character 14.
@@ -187,9 +262,9 @@ describe('TurtleAutoDefinePrefixProvider', () => {
         });
 
         it('does not define a prefix for the binding colon', async () => {
-            mockGetContext.mockReturnValue({ namespaces: {} });
+            mockGetContextFromUri.mockReturnValue({ namespaces: {} });
 
-            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const provider = makeProvider(['sparql']);
             const doc = makeTemplateDoc();
 
             // The first colon on line 3 (`  type:`) is at character 6 — the binding, not a pname.
@@ -201,9 +276,9 @@ describe('TurtleAutoDefinePrefixProvider', () => {
         });
 
         it('does not define an already-declared prefix', async () => {
-            mockGetContext.mockReturnValue({ namespaces: { schema: 'http://schema.org/' } });
+            mockGetContextFromUri.mockReturnValue({ namespaces: { schema: 'http://schema.org/' } });
 
-            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const provider = makeProvider(['sparql']);
             const doc = makeTemplateDoc();
 
             (provider as any)._tryAutoDefineFrontmatterPrefix(doc, { line: 3, character: 14 });
@@ -214,193 +289,13 @@ describe('TurtleAutoDefinePrefixProvider', () => {
         });
 
         it('is not handled when the colon is outside the frontmatter', () => {
-            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
+            const provider = makeProvider(['sparql']);
             const doc = makeTemplateDoc();
 
             // Line 6 is `SELECT 1`, in the body.
             const handled = (provider as any)._tryAutoDefineFrontmatterPrefix(doc, { line: 6, character: 0 });
 
             expect(handled).toBe(false);
-        });
-
-        it('does not set a pending (token-based) prefix for frontmatter pnames', () => {
-            mockGetConfig.mockReturnValue({ get: (k: string, d?: any) => k === 'prefixes.autoDefinePrefixes' ? true : d });
-            mockGetContext.mockReturnValue({ namespaces: {} });
-            mockImplementPrefixes.mockResolvedValue({ size: 1 });
-
-            const provider = new TurtleAutoDefinePrefixProvider(['sparql']);
-            const doc = makeTemplateDoc();
-
-            (provider as any)._onDidChangeTextDocument({
-                document: doc,
-                contentChanges: [{ text: ':', range: { start: { line: 3, character: 14 } } }],
-            });
-
-            expect((provider as any)._pendingPrefix).toBeUndefined();
-        });
-    });
-
-    describe('_onDidChangeDocumentContext', () => {
-        it('does nothing when there is no pending prefix', async () => {
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect(mockGetContext).not.toHaveBeenCalled();
-        });
-
-        it('does nothing when pending URI does not match incoming URI', async () => {
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///other.ttl', position: { line: 0, character: 0 } };
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect(mockGetContext).not.toHaveBeenCalled();
-            // Pending prefix must remain intact (guard bailed early)
-            expect((provider as any)._pendingPrefix).toBeDefined();
-        });
-
-        it('clears pending prefix and returns when document is not in workspace', async () => {
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 0 } };
-            // textDocuments is empty
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect((provider as any)._pendingPrefix).toBeUndefined();
-            expect(mockGetContext).not.toHaveBeenCalled();
-        });
-
-        it('returns when context is null', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(null);
-
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 0 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect(mockImplementPrefixes).not.toHaveBeenCalled();
-        });
-
-        it('returns when token index is less than 1', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(makeContext(0, []));
-
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 0 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect(mockImplementPrefixes).not.toHaveBeenCalled();
-        });
-
-        it('returns when previous token image is @prefix', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(makeContext(1, [
-                { tokenType: { name: 'TTL_PREFIX' }, image: '@prefix' },
-                { tokenType: { name: PNAME_NS }, image: 'ex:' },
-            ]));
-
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 8 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect(mockImplementPrefixes).not.toHaveBeenCalled();
-        });
-
-        it('returns when previous token image is PREFIX (SPARQL-style)', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(makeContext(1, [
-                { tokenType: { name: 'PREFIX' }, image: 'PREFIX' },
-                { tokenType: { name: PNAME_NS }, image: 'ex:' },
-            ]));
-
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 7 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect(mockImplementPrefixes).not.toHaveBeenCalled();
-        });
-
-        it('returns when previous token image is < (URI scheme typed)', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(makeContext(1, [
-                { tokenType: { name: 'IRIREF' }, image: '<' },
-                { tokenType: { name: PNAME_NS }, image: 'https:' },
-            ]));
-
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 2 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect(mockImplementPrefixes).not.toHaveBeenCalled();
-        });
-
-        it('returns when the prefix is already defined in the document context', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(makeContext(1, [
-                { tokenType: { name: 'PERIOD' }, image: '.' },
-                { tokenType: { name: PNAME_NS }, image: 'ex:' },
-            ], { ex: 'http://example.org/' }));
-
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 2 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-            expect(mockImplementPrefixes).not.toHaveBeenCalled();
-        });
-
-        it('calls implementPrefixes for an undefined PNAME_NS token', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(makeContext(1, [
-                { tokenType: { name: 'PERIOD' }, image: '.' },
-                { tokenType: { name: PNAME_NS }, image: 'owl:' },
-            ], {}));
-            mockImplementPrefixes.mockResolvedValue({ size: 1 });
-
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 1 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-
-            expect(mockImplementPrefixes).toHaveBeenCalledWith(doc, [{ prefix: 'owl', namespaceIri: undefined }]);
-        });
-
-        it('does not call applyEdit when implementPrefixes returns size 0', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(makeContext(1, [
-                { tokenType: { name: 'PERIOD' }, image: '.' },
-                { tokenType: { name: PNAME_NS }, image: 'owl:' },
-            ], {}));
-            mockImplementPrefixes.mockResolvedValue({ size: 0 });
-
-            const applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit');
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 1 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-
-            expect(applyEditSpy).not.toHaveBeenCalled();
-        });
-
-        it('calls applyEdit when implementPrefixes returns size > 0', async () => {
-            const doc = makeDoc('file:///test.ttl');
-            (vscode.workspace.textDocuments as any[]).push(doc);
-            mockGetContext.mockReturnValue(makeContext(1, [
-                { tokenType: { name: 'PERIOD' }, image: '.' },
-                { tokenType: { name: PNAME_NS }, image: 'owl:' },
-            ], {}));
-            const fakeEdit = { size: 1 };
-            mockImplementPrefixes.mockResolvedValue(fakeEdit);
-
-            const applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit');
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            (provider as any)._pendingPrefix = { documentUri: 'file:///test.ttl', position: { line: 0, character: 1 } };
-
-            await (provider as any)._onDidChangeDocumentContext('file:///test.ttl');
-
-            expect(applyEditSpy).toHaveBeenCalledWith(fakeEdit);
         });
     });
 
@@ -412,11 +307,10 @@ describe('TurtleAutoDefinePrefixProvider', () => {
                 return { dispose: vi.fn() } as any;
             });
 
+            const provider = makeProvider(['turtle']);
             const onChangeSpy = vi.fn();
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
             vi.spyOn(provider as any, '_onDidChangeTextDocument').mockImplementation(onChangeSpy);
 
-            // Fire with a non-turtle language — filter doesn't match → early return
             capturedHandler!({ document: { languageId: 'sparql' } });
             expect(onChangeSpy).not.toHaveBeenCalled();
         });
@@ -428,46 +322,13 @@ describe('TurtleAutoDefinePrefixProvider', () => {
                 return { dispose: vi.fn() } as any;
             });
 
+            const provider = makeProvider(['turtle']);
             const onChangeSpy = vi.fn();
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
             vi.spyOn(provider as any, '_onDidChangeTextDocument').mockImplementation(onChangeSpy);
 
             const event = { document: { languageId: 'turtle' } };
             capturedHandler!(event);
             expect(onChangeSpy).toHaveBeenCalledWith(event);
-        });
-    });
-
-    describe('onDidChangeDocumentContext constructor callback', () => {
-        it('calls _onDidChangeDocumentContext when context is truthy', async () => {
-            let capturedCtxHandler: ((ctx: any) => void) | undefined;
-            mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
-                capturedCtxHandler = handler;
-                return { dispose: vi.fn() };
-            });
-
-            const onCtxChangeSpy = vi.fn();
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            vi.spyOn(provider as any, '_onDidChangeDocumentContext').mockImplementation(onCtxChangeSpy);
-
-            const ctx = { uri: { toString: () => 'file:///test.ttl' } };
-            capturedCtxHandler!(ctx);
-            expect(onCtxChangeSpy).toHaveBeenCalledWith('file:///test.ttl');
-        });
-
-        it('does not call _onDidChangeDocumentContext when context is null', () => {
-            let capturedCtxHandler: ((ctx: any) => void) | undefined;
-            mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
-                capturedCtxHandler = handler;
-                return { dispose: vi.fn() };
-            });
-
-            const onCtxChangeSpy = vi.fn();
-            const provider = new TurtleAutoDefinePrefixProvider(['turtle']);
-            vi.spyOn(provider as any, '_onDidChangeDocumentContext').mockImplementation(onCtxChangeSpy);
-
-            capturedCtxHandler!(null);
-            expect(onCtxChangeSpy).not.toHaveBeenCalled();
         });
     });
 });

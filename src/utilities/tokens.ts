@@ -4,6 +4,15 @@
  */
 import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { Range } from "vscode-languageserver-types";
+import { countLeadingWhitespace, countTrailingWhitespace } from "./string";
+
+/**
+ * A zero-based position in a document (compatible with `vscode.Position` and LSP `Position`).
+ */
+export interface TokenPosition {
+	line: number;
+	character: number;
+}
 
 /**
  * Maps namespace IRIs to prefixes.
@@ -41,6 +50,146 @@ export function getTokenPosition(token: IToken): Range {
 		end: {
 			line: token.endLine ? token.endLine - 1 : 0,
 			character: token.endColumn ? token.endColumn : 0
+		}
+	};
+}
+
+/**
+ * Gets the index of the token at a given position.
+ * @param tokens The document tokens.
+ * @param position A zero-based position in the document (e.g. a vscode.Position or LSP Position).
+ * @returns The index of the token at the given position, or -1 if no token is found.
+ */
+export function getTokenIndexAtPosition(tokens: IToken[], position: { line: number; character: number }): number {
+	// The tokens are 1-based, but the position is 0-based.
+	const l = position.line + 1;
+	const n = position.character;
+
+	for (let i = 0; i < tokens.length; i++) {
+		const token = tokens[i];
+
+		if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
+			continue;
+		}
+
+		if (token.startLine > l) {
+			break;
+		}
+
+		// If the token starts and ends on the same line and column, then the position must be inside the token.
+		if (token.startLine == l && token.endLine == l && token.startColumn <= n && n <= token.endColumn) {
+			return i;
+		}
+
+		// If we have a multi-line token and the position is between start and end, then we have a match.
+		if (token.startLine < l && token.endLine > l) {
+			return i;
+		}
+
+		// If the token ends on the same line and the position is before the end column, then we have a match.
+		if (token.endLine == l && token.endColumn >= n) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+/**
+ * Gets the first token at a given position.
+ * @param tokens The document tokens.
+ * @param position A zero-based position in the document.
+ * @returns The token at the given position, if it exists, undefined otherwise.
+ */
+export function getTokenAtPosition(tokens: IToken[], position: TokenPosition): IToken | undefined {
+	const index = getTokenIndexAtPosition(tokens, position);
+
+	return index >= 0 ? tokens[index] : undefined;
+}
+
+/**
+ * Gets the token that precedes the given position.
+ * @param tokens The document tokens.
+ * @param position A zero-based position in the document.
+ * @returns The token before the given position, if it exists, undefined otherwise.
+ */
+export function getTokenBeforePosition(tokens: IToken[], position: TokenPosition): IToken | undefined {
+	const index = getTokenIndexAtPosition(tokens, position);
+
+	if (index > 0) {
+		// Found token at position, return previous one
+		return tokens[index - 1];
+	} else if (index === 0) {
+		// At first token, no previous token
+		return undefined;
+	} else {
+		// No token at position (index === -1), find last token before this position
+		const l = position.line + 1;
+		const n = position.character;
+
+		for (let i = tokens.length - 1; i >= 0; i--) {
+			const token = tokens[i];
+
+			if (!token.endLine || !token.endColumn) continue;
+
+			// If token ends before the cursor position, it's the one we want
+			if (token.endLine < l || (token.endLine === l && token.endColumn <= n)) {
+				return token;
+			}
+		}
+	}
+
+	return undefined;
+}
+
+/**
+ * Indicates whether the token at the given position is a namespace prefix.
+ * @param token A token.
+ * @param position The position in the document.
+ * @returns `true` if the cursor is on the prefix of the token, `false` otherwise.
+ */
+export function isPrefixTokenAtPosition(token: IToken, position: TokenPosition): boolean {
+	const { start } = getTokenPosition(token);
+
+	switch (token.tokenType.name) {
+		case RdfToken.PNAME_NS.name:
+		case RdfToken.PNAME_LN.name: {
+			const i = token.image.indexOf(":");
+			const n = position.character - start.character;
+
+			return n <= i;
+		}
+		default: {
+			return false;
+		}
+	}
+}
+
+/**
+ * Gets the whitespace-adjusted range of a token as an LSP `Range`.
+ *
+ * The millan parser incorrectly parses some tokens with leading and trailing whitespace;
+ * the start and end positions are adjusted to account for this.
+ * @param token A token.
+ * @returns The range covering the token's non-whitespace content.
+ */
+export function getTokenRange(token: IToken): Range {
+	const startLine = token.startLine ? token.startLine - 1 : 0;
+	const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
+	const startWhitespace = countLeadingWhitespace(token.image);
+
+	const endLine = token.endLine ? token.endLine - 1 : 0;
+	const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
+	const endWhitespace = countTrailingWhitespace(token.image);
+
+	return {
+		start: {
+			line: startLine,
+			character: startCharacter + startWhitespace
+		},
+		end: {
+			line: endLine,
+			character: endCharacter - endWhitespace + 1
 		}
 	};
 }

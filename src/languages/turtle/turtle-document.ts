@@ -1,22 +1,22 @@
 import * as vscode from 'vscode';
-import { Position } from 'vscode-languageserver-types';
 import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
+import { createLexerForSyntax } from '@src/languages/lexer-factory';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
-	countLeadingWhitespace,
-	countTrailingWhitespace,
 	getIriFromIriReference,
 	getIriFromPrefixedName,
 	getIriFromToken,
 	getNamespaceDefinition,
-	getTokenPosition
+	getTokenAtPosition,
+	isPrefixTokenAtPosition
 } from '@src/utilities';
+import { getRangeFromToken } from '@src/utilities/vscode/tokens';
 
 /**
  * A document context for Turtle and TriG documents.
@@ -53,13 +53,17 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		return this._tokens;
 	}
 
+	tokenize(text: string): IToken[] {
+		return tokenizeWithTriplate(createLexerForSyntax(this.syntax), text).tokens;
+	}
+
 	public override getIriAtPosition(position: vscode.Position): string | undefined {
-		const token = this.getTokenAtPosition(position);
+		const token = getTokenAtPosition(this.tokens, position);
 
 		if (token) {
 			let iri;
 
-			if (this.isPrefixTokenAtPosition(token, position)) {
+			if (isPrefixTokenAtPosition(token, position)) {
 				const prefix = token.image.split(":")[0];
 
 				iri = this.namespaces[prefix];
@@ -72,7 +76,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	public override getLiteralAtPosition(position: vscode.Position): string | undefined {
-		const token = this.getTokenAtPosition(position);
+		const token = getTokenAtPosition(this.tokens, position);
 
 		if (!token || !token.tokenType) {
 			return undefined;
@@ -90,29 +94,6 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			}
 			default: {
 				return undefined;
-			}
-		}
-	}
-
-	/**
-	 * Indicates whether the token at the given position is a namespace prefix.
-	 * @param token A token.
-	 * @param position The position in the document.
-	 * @returns `true` if the cursor is on the prefix of the token, `false` otherwise.
-	 */
-	isPrefixTokenAtPosition(token: IToken, position: vscode.Position) {
-		const { start } = getTokenPosition(token);
-
-		switch (token.tokenType.name) {
-			case RdfToken.PNAME_NS.name:
-			case RdfToken.PNAME_LN.name: {
-				const i = token.image.indexOf(":");
-				const n = position.character - start.character;
-
-				return n <= i;
-			}
-			default: {
-				return false;
 			}
 		}
 	}
@@ -181,114 +162,6 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	/**
-	 * Get the location of a token in a document.
-	 * @param documentUri The URI of the document.
-	 * @param token A token.
-	 */
-	getRangeFromToken(token: IToken): vscode.Range {
-		// The token positions are 1-based, whereas the editor positions / locations are 0-based.
-		const startLine = token.startLine ? token.startLine - 1 : 0;
-		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
-		const startWhitespace = countLeadingWhitespace(token.image);
-
-		const endLine = token.endLine ? token.endLine - 1 : 0;
-		const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
-		const endWhitespace = countTrailingWhitespace(token.image);
-
-		// Note: The millan parser incorrectly parses some tokens with leading and trailing whitespace.
-		// We account for this by adjusting the start and end positions.
-		const start = new vscode.Position(startLine, startCharacter + startWhitespace);
-		const end = new vscode.Position(endLine, endCharacter - endWhitespace).translate(0, 1);
-
-		return new vscode.Range(start, end);
-	}
-
-	/**
-	 * Gets the index of the token at a given position.
-	 * @param position A position in the document.
-	 * @returns The index of the token at the given position, or -1 if no token is found.
-	 */
-	getTokenIndexAtPosition(position: Position): number {
-		// The tokens are 1-based, but the position is 0-based.
-		const l = position.line + 1;
-		const n = position.character;
-
-		for (let i = 0; i < this.tokens.length; i++) {
-			const token = this.tokens[i];
-
-			if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
-				continue;
-			}
-
-			if (token.startLine > l) {
-				break;
-			}
-
-			// If the token starts and ends on the same line and column, then the position must be inside the token.
-			if (token.startLine == l && token.endLine == l && token.startColumn <= n && n <= token.endColumn) {
-				return i;
-			}
-
-			// If we have a multi-line token and the position is between start and end, then we have a match.
-			if (token.startLine < l && token.endLine > l) {
-				return i;
-			}
-
-			// If the token ends on the same line and the position is before the end column, then we have a match.
-			if (token.endLine == l && token.endColumn >= n) {
-				return i;
-			}
-		}
-
-		return -1;
-	}
-
-	/**
-	 * Gets the first token at a given position.
-	 * @param position A position in the document.
-	 * @returns The token at the given position, if it exists, undefined otherwise.
-	 */
-	getTokenAtPosition(position: Position): IToken | undefined {
-		const index = this.getTokenIndexAtPosition(position);
-
-		return index >= 0 ? this.tokens[index] : undefined;
-	}
-
-	/**
-	 * Gets the token that precedes the given position.
-	 * @param position A position in the document.
-	 * @returns The token before the given position, if it exists, undefined otherwise.
-	 */
-	getTokenBeforePosition(position: Position): IToken | undefined {
-		const index = this.getTokenIndexAtPosition(position);
-
-		if (index > 0) {
-			// Found token at position, return previous one
-			return this.tokens[index - 1];
-		} else if (index === 0) {
-			// At first token, no previous token
-			return undefined;
-		} else {
-			// No token at position (index === -1), find last token before this position
-			const l = position.line + 1;
-			const n = position.character;
-
-			for (let i = this.tokens.length - 1; i >= 0; i--) {
-				const token = this.tokens[i];
-
-				if (!token.endLine || !token.endColumn) continue;
-
-				// If token ends before the cursor position, it's the one we want
-				if (token.endLine < l || (token.endLine === l && token.endColumn <= n)) {
-					return token;
-				}
-			}
-		}
-
-		return undefined;
-	}
-
-	/**
 	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
 	 * @param tokens An array of tokens.
 	 * @note The registration is executed on a token level so that document types are supported that do not produce triples.
@@ -313,7 +186,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 					// Only set the namespace if it is preceeded by a prefix keyword.
 					if (ns) {
-						const r = this.getRangeFromToken(t);
+						const r = getRangeFromToken(t);
 
 						this.namespaces[ns.prefix] = ns.uri;
 						this.namespaceDefinitions[ns.uri] = [r];
@@ -412,7 +285,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		}
 
 		if (isSubject) {
-			const range = this.getRangeFromToken(token);
+			const range = getRangeFromToken(token);
 
 			if (!this.subjects[iriOrBlankId]) {
 				this.subjects[iriOrBlankId] = [];
@@ -427,7 +300,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			this.references[iriOrBlankId] = [];
 		}
 
-		const range = this.getRangeFromToken(token);
+		const range = getRangeFromToken(token);
 
 		this.references[iriOrBlankId].push(range);
 	}
@@ -442,7 +315,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 			if (!subjectUri) return;
 
-			const range = this.getRangeFromToken(subjectToken);
+			const range = getRangeFromToken(subjectToken);
 
 			this.typeAssertions[subjectUri] = [range];
 		}
@@ -476,7 +349,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				case _SKOS:
 				case _SKOS_XL:
 				case _SH: {
-					const range = this.getRangeFromToken(subjectToken);
+					const range = getRangeFromToken(subjectToken);
 
 					this.typeDefinitions[subjectUri] = [range];
 				}

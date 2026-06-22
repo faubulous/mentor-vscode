@@ -4,7 +4,7 @@ import { isTemplate, symbols as templateSymbols, type TemplateSymbol } from 'tri
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { RdfToken, isVariableToken } from '@faubulous/mentor-rdf-parsers';
-import { getIriFromToken } from '@src/utilities';
+import { getIriFromToken, getTokenAtPosition, isPrefixTokenAtPosition } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
@@ -41,13 +41,13 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			return new vscode.Range(document.positionAt(paramSymbol.start), document.positionAt(paramSymbol.end));
 		}
 
-		const token = context.getTokenAtPosition(position);
+		const token = getTokenAtPosition(context.tokens, position);
 
 		if (!token) {
 			throw new Error('No token found at the given position.');
 		}
 
-		if (context.isPrefixTokenAtPosition(token, position)) {
+		if (isPrefixTokenAtPosition(token, position)) {
 			return this.getPrefixEditRange(token);
 		} else {
 			return this.getLabelEditRange(token);
@@ -68,13 +68,13 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			return edits;
 		}
 
-		const token = context.getTokenAtPosition(position);
+		const token = getTokenAtPosition(context.tokens, position);
 
 		if (!token) {
 			return edits;
 		}
 
-		if (context.isPrefixTokenAtPosition(token, position)) {
+		if (isPrefixTokenAtPosition(token, position)) {
 			const i = token.image.indexOf(":");
 			const prefix = token.image.substring(0, i);
 
@@ -120,7 +120,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			if (!references) return edits;
 
 			for (let range of references) {
-				const token = context.getTokenAtPosition(range.start);
+				const token = getTokenAtPosition(context.tokens, range.start);
 
 				if (!token) continue;
 

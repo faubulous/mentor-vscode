@@ -43,6 +43,17 @@ vi.mock('@src/utilities/vscode/config', () => ({
 	}))
 }));
 
+vi.mock('@src/utilities/vscode/tokens', async () => {
+	const vscodeMock = await import('vscode');
+
+	return {
+		getRangeFromToken: (token: any) => new vscodeMock.Range(
+			new vscodeMock.Position((token.startLine ?? 1) - 1, (token.startColumn ?? 1) - 1),
+			new vscodeMock.Position((token.endLine ?? 1) - 1, token.endColumn ?? 1)
+		),
+	};
+});
+
 vi.mock('@faubulous/mentor-rdf', () => ({
 	Uri: {
 		getNamespaceIri: vi.fn((iri: string) => iri)
@@ -67,7 +78,6 @@ interface MockContext {
 	uri: vscode.Uri;
 	namespaces: Record<string, string>;
 	tokens?: any[];
-	getRangeFromToken?: (token: any) => vscode.Range;
 }
 
 /**
@@ -79,10 +89,6 @@ function createMockContext(documentUri: string, namespaces: Record<string, strin
 		uri: vscode.Uri.parse(documentUri),
 		namespaces: { ...namespaces },
 		tokens,
-		getRangeFromToken: (token: any) => new vscode.Range(
-			new vscode.Position((token.startLine ?? 1) - 1, (token.startColumn ?? 1) - 1),
-			new vscode.Position((token.endLine ?? 1) - 1, token.endColumn ?? 1)
-		),
 	};
 }
 
@@ -963,24 +969,11 @@ describe('TurtlePrefixDefinitionService', () => {
 			expect(insertText).toContain('@prefix ex: <http://example.org/> .');
 		});
 
-		it('generates XML xmlns declaration for xml language documents', async () => {
-			mockPrefixLookupService.getUriForPrefix.mockReturnValue('http://example.org/');
-
-			const context = createMockContext('file:///test.rdf', {}, []);
-			mockContextService.getDocumentContext.mockReturnValue(context);
-			const doc = createMockDocument('file:///test.rdf', 'xml', []);
-
-			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: undefined }]);
-			const insertText = edit.entries.filter(e => e.type === 'insert').map(e => e.text).join('');
-
-			expect(insertText).toContain('xmlns:ex="http://example.org/"');
-		});
-
 		it('throws for unsupported token type', () => {
-			// Cover line 252: the throw in _getPrefixDefinition for unknown token type
+			// Cover the throw in getPrefixDefinition for an unknown token type.
 			const unknownTokenType = { name: 'UNKNOWN_TYPE' };
 			expect(() => {
-				(service as any)._getPrefixDefinition(unknownTokenType, false, 'ex', 'http://example.org/');
+				(service as any).getPrefixDefinition(unknownTokenType, false, 'ex', 'http://example.org/');
 			}).toThrow('Unsupported token type for prefix definition');
 		});
 	});

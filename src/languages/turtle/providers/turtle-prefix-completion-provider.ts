@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { getTokenIndexAtPosition } from '@src/utilities';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
@@ -25,7 +26,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 			return null;
 		}
 
-		const n = context.getTokenIndexAtPosition(position);
+		const n = getTokenIndexAtPosition(context.tokens, position);
 
 		// We also need the previous token to determine if this is a prefix definition.
 		if (n < 1) {

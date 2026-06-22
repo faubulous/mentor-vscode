@@ -17,6 +17,9 @@ import {
 	TurtleCodeFormattingProvider,
 	TurtleValidationCodeLensProvider
 } from '@src/languages/turtle/providers';
+import { 
+	TurtlePrefixDefinitionService 
+} from '@src/languages/turtle/services/turtle-prefix-definition-service';
 
 const codeActionsProvider = new TurtleCodeActionsProvider();
 const codelensProvider = new TurtleUsageCodeLensProvider();
@@ -35,7 +38,8 @@ export class TurtleTokenProvider {
 		// Self-register with the extension context for automatic disposal
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 
-		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(this.getLanguages());
+		const prefixDefinitionService = container.resolve<TurtlePrefixDefinitionService>(ServiceToken.TurtlePrefixDefinitionService);
+		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(this.getLanguages(), prefixDefinitionService);
 		context.subscriptions.push(autoDefinePrefixProvider);
 
 		for (const language of this.getLanguages()) {

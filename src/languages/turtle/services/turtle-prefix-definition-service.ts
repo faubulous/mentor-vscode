@@ -8,6 +8,7 @@ import { getIriFromIriReference, getContentStartOffset } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getConfig } from '@src/utilities/vscode/config';
+import { getRangeFromToken } from '@src/utilities/vscode/tokens';
 
 /**
  * Specifies a how a namespace prefix should be defined in a document.
@@ -246,18 +247,14 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param context The RDF document context.
 	 * @returns The token type for prefix definitions in the document.
 	 */
-	private _getPrefixTokenType(document: vscode.TextDocument, context: TurtleDocument): TokenType {
-		if (document.languageId === 'xml') {
-			return { name: 'XML_PREFIX' };
-		} else {
-			const hasDefaultPrefix = getFirstTokenOfType(context.tokens, this._defaultPrefixTokenType.name) !== undefined;
-			const hasTurtlePrefixes = getFirstTokenOfType(context.tokens, RdfToken.TTL_PREFIX.name) !== undefined;
+	protected getPrefixTokenType(document: vscode.TextDocument, context: TurtleDocument): TokenType {
+		const hasDefaultPrefix = getFirstTokenOfType(context.tokens, this._defaultPrefixTokenType.name) !== undefined;
+		const hasTurtlePrefixes = getFirstTokenOfType(context.tokens, RdfToken.TTL_PREFIX.name) !== undefined;
 
-			if (hasTurtlePrefixes && !hasDefaultPrefix) {
-				return RdfToken.TTL_PREFIX;
-			} else {
-				return this._defaultPrefixTokenType;
-			}
+		if (hasTurtlePrefixes && !hasDefaultPrefix) {
+			return RdfToken.TTL_PREFIX;
+		} else {
+			return this._defaultPrefixTokenType;
 		}
 	}
 
@@ -269,13 +266,11 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param namespaceIri The namespace IRI for which to implement a prefix.
 	 * @returns The prefix definition string.
 	 */
-	private _getPrefixDefinition(tokenType: TokenType, upperCase: boolean, prefix: string, namespaceIri: string): string {
+	protected getPrefixDefinition(tokenType: TokenType, upperCase: boolean, prefix: string, namespaceIri: string): string {
 		if (tokenType.name === RdfToken.PREFIX.name) {
 			return `${upperCase ? 'PREFIX' : 'prefix'} ${prefix}: <${namespaceIri}>`;
 		} else if (tokenType.name === RdfToken.TTL_PREFIX.name) {
 			return `@prefix ${prefix}: <${namespaceIri}> .`;
-		} else if (tokenType.name === 'XML_PREFIX') {
-			return `xmlns:${prefix}="${namespaceIri}"`;
 		} else {
 			throw new Error(`Unsupported token type for prefix definition: ${tokenType}`);
 		}
@@ -293,7 +288,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		const lastPrefix = getLastTokenOfType(context.tokens, this._prefixTokenTypes);
 
 		// Determine the token type for prefix definitions in the document and if they should be uppercase.
-		const tokenType = this._getPrefixTokenType(document, context);
+		const tokenType = this.getPrefixTokenType(document, context);
 		const upperCase = isUpperCaseToken(lastPrefix ?? context.tokens[0]);
 
 		// When there is no existing prefix, anchor below the triplate frontmatter (if any)
@@ -306,7 +301,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 			.filter(x => !context.namespaces[x.prefix] && !x.namespaceIri)
 			.forEach(x => {
 				const iri = x.namespaceIri ?? this.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
-				const definition = this._getPrefixDefinition(tokenType, upperCase, x.prefix, iri);
+				const definition = this.getPrefixDefinition(tokenType, upperCase, x.prefix, iri);
 
 				edit.insert(context.uri, insertPosition, definition + '\n');
 
@@ -379,12 +374,12 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		}
 
 		// Determine the token type for prefix definitions in the document and if they should be uppercase.
-		const tokenType = this._getPrefixTokenType(document, context);
+		const tokenType = this.getPrefixTokenType(document, context);
 		const upperCase = isUpperCaseToken(lastPrefix ?? context.tokens[0]);
 
 		for (const prefix of Object.keys(namespaceMap).sort()) {
 			const namespaceIri = namespaceMap[prefix];
-			const definition = this._getPrefixDefinition(tokenType, upperCase, prefix, namespaceIri);
+			const definition = this.getPrefixDefinition(tokenType, upperCase, prefix, namespaceIri);
 
 			edit.insert(context.uri, new vscode.Position(contentStartLine, 0), definition + '\n');
 		}
@@ -512,7 +507,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 				continue;
 			}
 
-			const range = context.getRangeFromToken(token);
+			const range = getRangeFromToken(token);
 
 			// Delete the entire IRI token.
 			edit.replace(document.uri, range, `${prefix}:${localName}`);

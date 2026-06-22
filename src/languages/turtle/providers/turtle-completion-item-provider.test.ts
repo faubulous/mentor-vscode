@@ -55,7 +55,6 @@ function makeMockContext(tokens: any[], namespaces: Record<string, string> = {},
         tokens,
         namespaces,
         subjects,
-        getTokenIndexAtPosition: vi.fn(() => tokens.length - 1),
         getResourceDescription: vi.fn(() => undefined),
     };
 }
@@ -88,8 +87,8 @@ describe('TurtleCompletionItemProvider', () => {
 
         it('returns null when token index is less than 1', () => {
             const provider = makeProvider();
+            // Position (0,0) sits at the first/only token → index 0 → provider returns null.
             const mockCtx = makeMockContext([makeToken(RdfToken.PNAME_LN.name, 'ex:F')]);
-            mockCtx.getTokenIndexAtPosition.mockReturnValue(0);
 
             vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
                 getDocumentContext: () => mockCtx,
@@ -104,12 +103,12 @@ describe('TurtleCompletionItemProvider', () => {
 
         it('returns completion items array when token index >= 1', () => {
             const provider = makeProvider();
+            // Position (0,3) sits inside the second token → index 1 → provider proceeds.
             const tokens = [
-                makeToken(RdfToken.PERIOD.name, '.'),
-                makeToken(RdfToken.PNAME_LN.name, 'ex:F'),
+                makeToken(RdfToken.PERIOD.name, '.', { startColumn: 1, endColumn: 1 }),
+                makeToken(RdfToken.PNAME_LN.name, 'ex:F', { startColumn: 2, endColumn: 5 }),
             ];
             const mockCtx = makeMockContext(tokens, {});
-            mockCtx.getTokenIndexAtPosition.mockReturnValue(1);
 
             vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
                 getDocumentContext: () => mockCtx,

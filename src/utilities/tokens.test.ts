@@ -27,6 +27,11 @@ import {
 	getNamespaceDefinition,
 	getTripleComponentType,
 	getUnquotedLiteralValue,
+	getTokenIndexAtPosition,
+	getTokenAtPosition,
+	getTokenBeforePosition,
+	isPrefixTokenAtPosition,
+	getTokenRange,
 } from '@src/utilities/tokens';
 
 function makeToken(typeName: string, image: string, startLine = 1, startColumn = 1, endLine = 1, endColumn = 10, payload?: any): any {
@@ -270,5 +275,146 @@ describe('getUnquotedLiteralValue', () => {
 
 	it('returns raw image for non-literal tokens', () => {
 		expect(getUnquotedLiteralValue(makeToken('INTEGER', '42'))).toBe('42');
+	});
+});
+
+describe('getTokenIndexAtPosition', () => {
+	// Tokens are 1-based (chevrotain); positions are 0-based (editor).
+	function tok(name: string, image: string, startLine: number, startColumn: number) {
+		return { tokenType: { name }, image, startLine, endLine: startLine, startColumn, endColumn: startColumn + image.length - 1 };
+	}
+
+	it('returns the index of a single-line token containing the position', () => {
+		const tokens = [tok('PERIOD', '.', 1, 1), tok('PNAME_NS', 'ex:', 1, 3)];
+
+		// The colon of `ex:` is at 1-based column 5 → 0-based character 4.
+		expect(getTokenIndexAtPosition(tokens, { line: 0, character: 4 })).toBe(1);
+	});
+
+	it('returns -1 when there are no tokens', () => {
+		expect(getTokenIndexAtPosition([], { line: 0, character: 0 })).toBe(-1);
+	});
+
+	it('returns -1 when the position is past the last token', () => {
+		const tokens = [tok('PNAME_NS', 'ex:', 1, 1)];
+
+		expect(getTokenIndexAtPosition(tokens, { line: 5, character: 0 })).toBe(-1);
+	});
+
+	it('matches a token on a later line', () => {
+		const tokens = [tok('PERIOD', '.', 1, 1), tok('PNAME_NS', 'foo:', 2, 1)];
+
+		// `foo:` is on line index 1; the colon is at 0-based character 3.
+		expect(getTokenIndexAtPosition(tokens, { line: 1, character: 3 })).toBe(1);
+	});
+
+	it('skips tokens with missing positions', () => {
+		const tokens = [
+			{ tokenType: { name: 'X' }, image: 'x' },
+			tok('PNAME_NS', 'ex:', 1, 1),
+		];
+
+		expect(getTokenIndexAtPosition(tokens as any, { line: 0, character: 2 })).toBe(1);
+	});
+});
+
+describe('getTokenAtPosition', () => {
+	it('returns undefined when no token covers the position', () => {
+		const tokens = [makeToken('PNAME_LN', 'ex:A', 1, 1, 1, 4)];
+
+		expect(getTokenAtPosition(tokens, { line: 9, character: 0 })).toBeUndefined();
+	});
+
+	it('returns the correct token at a given position', () => {
+		const tokens = [
+			makeToken('PNAME_LN', 'ex:A', 1, 1, 1, 4),
+			makeToken('PERIOD', '.', 1, 6, 1, 6),
+		];
+
+		expect(getTokenAtPosition(tokens, { line: 0, character: 2 })?.image).toBe('ex:A');
+	});
+});
+
+describe('getTokenBeforePosition', () => {
+	it('returns the previous token when a token is found at the position (index > 0)', () => {
+		const tokens = [
+			makeToken('TTL_PREFIX', '@prefix', 1, 1, 1, 7),
+			makeToken('PNAME_NS', 'ex:', 1, 9, 1, 11),
+		];
+
+		expect(getTokenBeforePosition(tokens, { line: 0, character: 9 })?.image).toBe('@prefix');
+	});
+
+	it('returns undefined when the position is at the first token (index === 0)', () => {
+		const tokens = [makeToken('TTL_PREFIX', '@prefix', 1, 1, 1, 7)];
+
+		expect(getTokenBeforePosition(tokens, { line: 0, character: 3 })).toBeUndefined();
+	});
+
+	it('returns the last token before the position when none is at it (backward scan, later line)', () => {
+		const tokens = [makeToken('PNAME_LN', 'ex:A', 1, 1, 1, 4)];
+
+		expect(getTokenBeforePosition(tokens, { line: 1, character: 0 })?.image).toBe('ex:A');
+	});
+
+	it('returns the last token before the position on the same line (endColumn <= character)', () => {
+		const tokens = [makeToken('PNAME_LN', 'ex:A', 1, 1, 1, 4)];
+
+		expect(getTokenBeforePosition(tokens, { line: 0, character: 6 })?.image).toBe('ex:A');
+	});
+
+	it('returns undefined when no token precedes the position in the backward scan', () => {
+		const tokens = [makeToken('PNAME_LN', 'ex:A', 3, 1, 3, 4)];
+
+		expect(getTokenBeforePosition(tokens, { line: 0, character: 0 })).toBeUndefined();
+	});
+});
+
+describe('isPrefixTokenAtPosition', () => {
+	it('returns true when the cursor is on the prefix part of a prefixed name', () => {
+		const token = makeToken('PNAME_LN', 'ex:Thing', 1, 1, 1, 8);
+
+		expect(isPrefixTokenAtPosition(token, { line: 0, character: 1 })).toBe(true);
+	});
+
+	it('returns false when the cursor is on the local-name part', () => {
+		const token = makeToken('PNAME_LN', 'ex:Thing', 1, 1, 1, 8);
+
+		expect(isPrefixTokenAtPosition(token, { line: 0, character: 5 })).toBe(false);
+	});
+
+	it('returns false for a non-prefixed token type', () => {
+		const token = makeToken('IRIREF', '<http://example.org/>', 1, 1, 1, 21);
+
+		expect(isPrefixTokenAtPosition(token, { line: 0, character: 5 })).toBe(false);
+	});
+});
+
+describe('getTokenRange', () => {
+	it('converts 1-based token positions to a 0-based range', () => {
+		const token = makeToken('PNAME_LN', 'ex:A', 2, 5, 2, 8);
+		const range = getTokenRange(token);
+
+		expect(range.start.line).toBe(1);
+		expect(range.start.character).toBe(4);
+	});
+
+	it('applies +1 to the end character', () => {
+		const token = makeToken('PERIOD', '.', 1, 10, 1, 10);
+		const range = getTokenRange(token);
+
+		// endColumn 10 → 9 (0-based), then +1 = 10.
+		expect(range.end.character).toBe(10);
+	});
+
+	it('trims leading and trailing whitespace from the token image', () => {
+		// A token image with surrounding whitespace (millan quirk).
+		const token = makeToken('PNAME_LN', '  ex:A ', 1, 1, 1, 7);
+		const range = getTokenRange(token);
+
+		// startCharacter 0 + 2 leading spaces = 2.
+		expect(range.start.character).toBe(2);
+		// endCharacter 6 - 1 trailing space + 1 = 6.
+		expect(range.end.character).toBe(6);
 	});
 });

@@ -89,6 +89,16 @@ describe('WorkspaceIndexerService', () => {
 			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
 			expect(service.onDidFinishIndexing).toBeDefined();
 		});
+
+		it('shows the Mentor icon in the status bar immediately so it is visible with 0 files', () => {
+			const statusBarItem = { text: '', tooltip: '', command: undefined as any, show: vi.fn(), hide: vi.fn(), dispose: vi.fn() };
+			(vscode.window as any).createStatusBarItem = vi.fn(() => statusBarItem);
+
+			new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+
+			expect(statusBarItem.text).toContain('$(app-mentor)');
+			expect(statusBarItem.show).toHaveBeenCalled();
+		});
 	});
 
 	describe('indexWorkspace', () => {
@@ -114,6 +124,16 @@ describe('WorkspaceIndexerService', () => {
 			]);
 
 			expect(mockLoadDocument).toHaveBeenCalledTimes(2);
+		});
+
+		it('keeps the Mentor icon in the status bar after indexing an empty workspace', async () => {
+			mockWorkspaceFileService.files = [];
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			await service.indexWorkspace();
+			await service.waitForIndexed();
+
+			expect((service as any)._statusBarItem.text).toContain('$(app-mentor)');
 		});
 
 		it('should request a context refresh during reindex', async () => {

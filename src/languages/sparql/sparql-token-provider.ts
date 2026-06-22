@@ -19,6 +19,7 @@ import {
 	SparqlCodeFormattingProvider,
 	SparqlGraphDiagnosticProvider
 } from '@src/languages/sparql/providers';
+import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sparql-prefix-definition-service';
 
 export class SparqlTokenProvider {
 	constructor() {
@@ -32,7 +33,8 @@ export class SparqlTokenProvider {
 		const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
 		const referenceProvider = new ResourceReferenceProvider();
 		const renameProvider = new TurtleRenameProvider();
-		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(['sparql']);
+		const prefixDefinitionService = container.resolve<SparqlPrefixDefinitionService>(ServiceToken.SparqlPrefixDefinitionService);
+		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(['sparql'], prefixDefinitionService);
 		const graphDiagnosticProvider = new SparqlGraphDiagnosticProvider();
 
 		// Self-register with the extension context for automatic disposal

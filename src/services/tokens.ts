@@ -38,6 +38,8 @@ export enum ServiceToken {
 	PrefixDownloaderService = "PrefixDownloaderService",
 	/** Service for Turtle prefix definitions. */
 	TurtlePrefixDefinitionService = "TurtlePrefixDefinitionService",
+	/** Service for SPARQL prefix definitions. */
+	SparqlPrefixDefinitionService = "SparqlPrefixDefinitionService",
 	/** Dynamic settings that can be changed during runtime without persisting. */
 	SettingsService = "SettingsService",
 	/** Registry for all webview controllers. */

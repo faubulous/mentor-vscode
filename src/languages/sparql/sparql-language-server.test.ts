@@ -197,6 +197,38 @@ describe('SparqlLanguageServer', () => {
 			expect(() => server.getLint(makeDoc(), '', tokens)).not.toThrow();
 		});
 
+		it('does not flag subquery-projected variables used in the outer query', () => {
+			// SELECT ?name WHERE { { SELECT ?name ?age WHERE { ?p <name> ?name . ?p <age> ?age } } FILTER(?age > 18) }
+			// ?name and ?age are projected by the subquery, so the outer scope must treat them as used.
+			const v = (image: string, offset: number): any => ({
+				tokenType: { name: RdfToken.VAR1.name },
+				image,
+				startOffset: offset,
+				endOffset: offset + image.length - 1,
+			});
+			let o = 0;
+			const tokens = [
+				makeToken(RdfToken.SELECT.name, 'SELECT', o), v('?name', o += 7),  // outer SELECT ?name
+				makeToken(RdfToken.WHERE.name, 'WHERE', o += 6),
+				makeToken(RdfToken.LCURLY.name, '{', o += 6),                       // depth 1
+				makeToken(RdfToken.LCURLY.name, '{', o += 2),                       // depth 2
+				makeToken(RdfToken.SELECT.name, 'SELECT', o += 2),                  // inner SELECT (subquery)
+				v('?name', o += 7), v('?age', o += 6),                             // projected variables
+				makeToken(RdfToken.WHERE.name, 'WHERE', o += 5),
+				makeToken(RdfToken.LCURLY.name, '{', o += 6),                       // depth 3
+				v('?p', o += 2), v('?name', o += 3),                               // ?p <name> ?name
+				v('?p', o += 6), v('?age', o += 3),                               // ?p <age> ?age
+				makeToken(RdfToken.RCURLY.name, '}', o += 5),                       // depth 2
+				makeToken(RdfToken.RCURLY.name, '}', o += 2),                       // depth 1 → closes subquery
+				v('?age', o += 2),                                                 // FILTER(?age > 18) — outer use
+				makeToken(RdfToken.RCURLY.name, '}', o += 5),                       // depth 0 → closes outer
+			];
+			const diags = server.getLint(makeDoc(), '', tokens);
+			const hints = diags.filter(d => d.message.includes('used only once'));
+			expect(hints.some(d => d.message.includes("'?age'"))).toBe(false);
+			expect(hints.some(d => d.message.includes("'?name'"))).toBe(false);
+		});
+
 		it('adds projection variable when AS precedes variable in SELECT clause (line 126)', () => {
 			// SELECT (expr AS ?s) WHERE { }
 			const tokens = [

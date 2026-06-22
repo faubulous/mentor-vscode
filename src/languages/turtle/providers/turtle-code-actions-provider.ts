@@ -6,7 +6,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
-import { getIriFromIriReference, getIriFromPrefixedName, getNamespaceDefinition, getTokenPosition } from '@src/utilities';
+import { getIriFromIriReference, getIriFromPrefixedName, getNamespaceDefinition, getTokenAtPosition, getTokenPosition } from '@src/utilities';
 import { getPrefixesWithErrorCode } from '@src/utilities/vscode/diagnostic';
 import { INLINE_SINGLE_USE_BLANK_NODE_CODE } from '@src/languages/linters';
 
@@ -89,7 +89,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		}
 
 		// Token-based refactorings for the current position.
-		const token = context.getTokenAtPosition(range.start);
+		const token = getTokenAtPosition(context.tokens, range.start);
 
 		if (!token) {
 			return result;

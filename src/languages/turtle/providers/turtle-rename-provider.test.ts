@@ -225,25 +225,26 @@ describe('TurtleRenameProvider', () => {
             expect((edits as any).size).toBe(0);
         });
 
-        it('skips reference when getTokenAtPosition returns null', () => {
-            // Cover line 100: `if (!token) continue` in the IRI reference branch
+        it('skips reference when no token is found at the reference position', () => {
+            // Cover the `if (!token) continue` path in the IRI reference branch:
+            // the cursor resolves to the IRI token, but the registered reference points
+            // at a position with no token.
             const context = makeDoc();
             const iriToken = makeToken(RdfToken.IRIREF.name, '<http://example.org/Thing>', {
                 startLine: 1, startColumn: 1, endColumn: 25
             });
             context.setTokens([iriToken] as any);
+            // Point the reference at a line with no token so getTokenAtPosition returns undefined.
+            (context as any).references = { 'http://example.org/Thing': [new Range(99, 0, 99, 5)] };
 
             const provider = makeProvider(context);
-            // First call (cursor lookup) returns the IRI token; subsequent calls (reference loop) return null
-            vi.spyOn(context, 'getTokenAtPosition')
-                .mockReturnValueOnce(iriToken as any)
-                .mockReturnValue(null as any);
             const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
             expect((edits as any).size).toBe(0);
         });
 
         it('skips reference when getLabelEditRange returns null for reference token', () => {
-            // Cover line 104: `if (!editRange) continue`
+            // Cover the `if (!editRange) continue` path: a reference token is found,
+            // but getLabelEditRange returns null.
             const context = makeDoc();
             const iriToken = makeToken(RdfToken.IRIREF.name, '<http://example.org/Thing>', {
                 startLine: 1, startColumn: 1, endColumn: 25
@@ -251,8 +252,6 @@ describe('TurtleRenameProvider', () => {
             context.setTokens([iriToken] as any);
 
             const provider = makeProvider(context);
-            // getTokenAtPosition returns a token, but getLabelEditRange returns null
-            vi.spyOn(context, 'getTokenAtPosition').mockReturnValue(iriToken as any);
             vi.spyOn(provider as any, 'getLabelEditRange').mockReturnValue(null);
             const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
             expect((edits as any).size).toBe(0);

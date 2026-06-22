@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
-import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
+import { resolvePrefixDefinitionService } from '@src/languages/resolve-prefix-definition-service';
 
 export const sortPrefixes = {
 	id: 'mentor.command.sortPrefixes',
@@ -9,7 +7,7 @@ export const sortPrefixes = {
 		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
 
 		if (document) {
-			const service = container.resolve<TurtlePrefixDefinitionService>(ServiceToken.TurtlePrefixDefinitionService);
+			const service = resolvePrefixDefinitionService(document);
 			const edit = await service.sortPrefixes(document);
 
 			if (edit.size > 0) {

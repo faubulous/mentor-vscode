@@ -23,9 +23,16 @@ interface QueryScope {
 	variables: Map<string, IToken[]>;
 
 	/**
-	 * Variables that are projection targets in the SELECT clause (AS ?x).
+	 * Variables that are projection targets in the SELECT clause (AS ?x), plus
+	 * variables projected into this scope by a closed subquery.
 	 */
 	projectionVariables: Set<string>;
+
+	/**
+	 * Variables listed in this scope's SELECT clause. These are projected to the
+	 * parent scope when this scope is a subquery, so the parent must treat them as used.
+	 */
+	selectedVariables: Set<string>;
 }
 
 export class SparqlLanguageServer extends LanguageServerBase {
@@ -73,7 +80,8 @@ export class SparqlLanguageServer extends LanguageServerBase {
 						isStarSelect: false,
 						depth: currentDepth,
 						variables: new Map(),
-						projectionVariables: new Set()
+						projectionVariables: new Set(),
+						selectedVariables: new Set()
 					};
 
 					scopeStack.push(newScope);
@@ -108,6 +116,7 @@ export class SparqlLanguageServer extends LanguageServerBase {
 					while (scopeStack.length > 0 && scopeStack[scopeStack.length - 1].depth > currentDepth) {
 						const closedScope = scopeStack.pop()!;
 						diagnostics.push(...this._checkScopeForUnusedVariables(document, closedScope));
+						this._propagateProjectedVariables(closedScope, scopeStack);
 					}
 					break;
 				}
@@ -118,11 +127,13 @@ export class SparqlLanguageServer extends LanguageServerBase {
 						const currentScope = scopeStack[scopeStack.length - 1];
 						const varName = token.image;
 
-						// Check if this variable is a projection target (preceded by AS in SELECT clause)
-						if (inSelectClause && i > 0) {
-							const prevToken = tokens[i - 1];
+						if (inSelectClause) {
+							// Variables in the SELECT clause are projected to the parent scope
+							// when this scope is a subquery.
+							currentScope.selectedVariables.add(varName);
 
-							if (prevToken?.tokenType?.name === RdfToken.AS_KW.name) {
+							// Check if this variable is a projection target (preceded by AS).
+							if (i > 0 && tokens[i - 1]?.tokenType?.name === RdfToken.AS_KW.name) {
 								currentScope.projectionVariables.add(varName);
 							}
 						}
@@ -151,9 +162,27 @@ export class SparqlLanguageServer extends LanguageServerBase {
 			const closedScope = scopeStack.pop()!;
 
 			diagnostics.push(...this._checkScopeForUnusedVariables(document, closedScope));
+			this._propagateProjectedVariables(closedScope, scopeStack);
 		}
 
 		return diagnostics;
+	}
+
+	/**
+	 * Propagates the variables a closed subquery scope projects to its parent scope so
+	 * that the parent treats them as used (a subquery's SELECT list is available to the
+	 * outer query). Has no effect when the closed scope is the top-level query.
+	 */
+	private _propagateProjectedVariables(closedScope: QueryScope, scopeStack: QueryScope[]): void {
+		if (scopeStack.length === 0) {
+			return;
+		}
+
+		const parentScope = scopeStack[scopeStack.length - 1];
+
+		for (const varName of closedScope.selectedVariables) {
+			parentScope.projectionVariables.add(varName);
+		}
 	}
 
 	/**

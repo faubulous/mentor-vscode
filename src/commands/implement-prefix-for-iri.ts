@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { ServiceToken } from '@src/services/tokens';
-import { TurtlePrefixDefinitionService } from '../languages/turtle/services/turtle-prefix-definition-service';
+import { resolvePrefixDefinitionService } from '@src/languages/resolve-prefix-definition-service';
 import { getTokenPosition } from '@src/utilities';
 import { calculateLineOffset } from '@src/utilities/vscode/edit';
 
@@ -13,7 +11,7 @@ export const implementPrefixForIri = {
 
 		if (document) {
 			const editor = vscode.window.activeTextEditor;
-			const service = container.resolve<TurtlePrefixDefinitionService>(ServiceToken.TurtlePrefixDefinitionService);
+			const service = resolvePrefixDefinitionService(document);
 			const edit = await service.implementPrefixForIri(document, namespaceIri);
 
 			if (editor && edit.size > 0) {

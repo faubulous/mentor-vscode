@@ -4,7 +4,7 @@ import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
 import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { getNamespaceIriFromPrefixedName, getTripleComponentType, TripleComonentType } from "@src/utilities";
+import { getNamespaceIriFromPrefixedName, getTokenIndexAtPosition, getTripleComponentType, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
@@ -67,7 +67,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			return null;
 		}
 
-		const n = context.getTokenIndexAtPosition(position);
+		const n = getTokenIndexAtPosition(context.tokens, position);
 
 		if (n < 1) {
 			return null;
