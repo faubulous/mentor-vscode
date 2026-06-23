@@ -3,9 +3,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-const { mockCreateQueryFromDocument, mockExecuteQuery } = vi.hoisted(() => ({
+const {
+	mockCreateQueryFromDocument,
+	mockExecuteQuery,
+	mockLoadDocument,
+	mockGetEffectiveShapeGraphs,
+	mockValidateDocument,
+	mockGetReportAsText,
+} = vi.hoisted(() => ({
 	mockCreateQueryFromDocument: vi.fn(() => ({ queryType: 'bindings' })),
 	mockExecuteQuery: vi.fn(async (state: any) => state),
+	mockLoadDocument: vi.fn(async () => ({})),
+	mockGetEffectiveShapeGraphs: vi.fn(() => ['shapes:graph']),
+	mockValidateDocument: vi.fn(async () => ({ conforms: true, results: [] })),
+	mockGetReportAsText: vi.fn(() => 'SHACL Validation Report'),
 }));
 
 vi.mock('tsyringe', () => ({
@@ -18,6 +29,19 @@ vi.mock('tsyringe', () => ({
 				return {
 					createQueryFromDocument: mockCreateQueryFromDocument,
 					executeQuery: mockExecuteQuery,
+				};
+			}
+			if (token === 'DocumentContextService') {
+				return {
+					contexts: {},
+					loadDocument: mockLoadDocument,
+				};
+			}
+			if (token === 'ShaclValidationService') {
+				return {
+					getEffectiveShapeGraphs: mockGetEffectiveShapeGraphs,
+					validateDocument: mockValidateDocument,
+					getReportAsText: mockGetReportAsText,
 				};
 			}
 			return {};
@@ -38,12 +62,13 @@ function makeExecution() {
 		start: vi.fn(),
 		end: vi.fn(),
 		replaceOutput: vi.fn(async () => {}),
+		clearOutput: vi.fn(async () => {}),
 	};
 }
 
-function makeCell(): vscode.NotebookCell {
+function makeCell(languageId: string = 'sparql'): vscode.NotebookCell {
 	return {
-		document: { uri: vscode.Uri.parse('untitled:query'), getText: () => 'SELECT * WHERE { ?s ?p ?o }' },
+		document: { uri: vscode.Uri.parse('untitled:query'), languageId, getText: () => 'SELECT * WHERE { ?s ?p ?o }' },
 	} as any;
 }
 
@@ -71,6 +96,10 @@ beforeEach(() => {
 	vi.clearAllMocks();
 	mockCreateQueryFromDocument.mockReturnValue({ queryType: 'bindings' });
 	mockExecuteQuery.mockImplementation(async (state: any) => state);
+	mockLoadDocument.mockResolvedValue({});
+	mockGetEffectiveShapeGraphs.mockReturnValue(['shapes:graph']);
+	mockValidateDocument.mockResolvedValue({ conforms: true, results: [] });
+	mockGetReportAsText.mockReturnValue('SHACL Validation Report');
 });
 
 describe('NotebookController', () => {
@@ -144,6 +173,70 @@ describe('NotebookController', () => {
 			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
 			expect(outputs[0].items[0].mime).toBe('application/vnd.code.notebook.error');
 			expect(mockExecution.end).toHaveBeenCalledWith(false, expect.any(Number));
+		});
+	});
+
+	describe('_validateCell', () => {
+		it('should validate (not run a query) for a turtle cell', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell('turtle');
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			expect(mockExecuteQuery).not.toHaveBeenCalled();
+			expect(mockValidateDocument).toHaveBeenCalledWith(cell.document.uri);
+		});
+
+		it('should output a conforms summary as text/plain when valid', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell('turtle');
+
+			mockValidateDocument.mockResolvedValue({ conforms: true, results: [] });
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			expect(mockExecution.replaceOutput).toHaveBeenCalledOnce();
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			expect(outputs[0].items[0].mime).toBe('text/plain');
+			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
+		});
+
+		it('should output the text report and end(false) when issues are found', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell('turtle');
+
+			mockValidateDocument.mockResolvedValue({ conforms: false, results: [{ messages: ['bad'] }] });
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			expect(mockGetReportAsText).toHaveBeenCalledWith(cell.document.uri);
+			expect(mockExecution.replaceOutput).toHaveBeenCalledOnce();
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			expect(outputs[0].items[0].mime).toBe('text/plain');
+			expect(mockExecution.end).toHaveBeenCalledWith(false, expect.any(Number));
+		});
+
+		it('should open shape configuration and produce no output when no shapes are configured', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell('turtle');
+
+			mockGetEffectiveShapeGraphs.mockReturnValue([]);
+			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			expect(executeCommand).toHaveBeenCalledWith('mentor.command.manageShaclShapes');
+			expect(mockValidateDocument).not.toHaveBeenCalled();
+			expect(mockExecution.replaceOutput).not.toHaveBeenCalled();
+			expect(mockExecution.clearOutput).toHaveBeenCalled();
 		});
 	});
 });

@@ -5,6 +5,44 @@
 	width: 100%;
 }
 
+.modal-form {
+	min-height: 300px;
+}
+
 .reasoning-parameter-row vscode-label {
 	min-width: 5em;
+}
+
+/* The Queries tab uses a kind dropdown + a single editor that fills the available height,
+   so it drops the fixed scroll box used by the other tabs. */
+.modal-form.store-editor-content vscode-tab-panel.queries-tab-panel {
+	max-height: none;
+	overflow: hidden;
+}
+
+.queries-section {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	gap: 0.5em;
+	min-height: 0;
+}
+
+.queries-header-row {
+	align-items: center;
+	gap: 0.5em;
+}
+
+.queries-leader {
+	flex: 1 1 auto;
+}
+
+/* In the modal the preview has a fixed height (relative to the viewport) so the dialog stays a
+   stable size regardless of which query is selected or how long it is — long queries scroll inside
+   the preview instead of stretching the dialog. */
+.queries-section .template-preview {
+	flex: none;
+	height: 22vh;
+	min-height: 180px;
+	overflow: auto;
 }

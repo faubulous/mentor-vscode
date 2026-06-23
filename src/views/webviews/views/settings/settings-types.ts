@@ -86,6 +86,13 @@ export type SettingState = {
 	 * Per-property enum options for object settings (e.g. `sorting.typeSortingOptions`).
 	 */
 	nestedEnumOptions?: Record<string, EnumOption[]>;
+
+	/**
+	 * Set when this setting is marked as a store-overridable SPARQL query template in package.json
+	 * (the `storeQueryKind` value). Lets the store editor discover the editable queries from the
+	 * settings payload instead of a hardcoded list.
+	 */
+	storeQueryKind?: string;
 };
 
 /**

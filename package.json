@@ -1431,6 +1431,7 @@
           "mentor.sparql.listGraphsQuery": {
             "type": "string",
             "title": "List Graphs Query",
+            "storeQueryKind": "listGraphs",
             "description": "SPARQL query used to retrieve all named graphs and the default graph from a store.",
             "default": "SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph { ?s ?p ?o }\n}\nORDER BY ?graph",
             "editPresentation": "multilineText"
@@ -1438,13 +1439,15 @@
           "mentor.sparql.dropGraphQuery": {
             "type": "string",
             "title": "Drop Graph Query",
+            "storeQueryKind": "dropGraph",
             "description": "SPARQL query template used to remove a named graph from a store.",
             "default": "---\nparams {\n  graphIri: iri\n}\n---\nDROP GRAPH ${graphIri}",
             "editPresentation": "multilineText"
           },
           "mentor.sparql.describeQueryTemplate": {
             "type": "string",
-            "title": "Describe Query Template",
+            "title": "Describe Resource Query",
+            "storeQueryKind": "describe",
             "description": "SPARQL query template used to describe resources command.",
             "default": "---\nparams {\n  resourceIri: iri\n  graphIris:   iri[] optional\n}\n---\nCONSTRUCT { ${resourceIri} ?p ?o }\n{% for g in graphIris %}\nFROM ${g}\n{% endfor %}\nWHERE { ${resourceIri} ?p ?o }",
             "editPresentation": "multilineText"
@@ -1452,13 +1455,15 @@
           "mentor.sparql.exportGraphQuery": {
             "type": "string",
             "title": "Export Graph Query",
+            "storeQueryKind": "exportGraph",
             "description": "SPARQL query template used to export a named graph as Turtle.",
             "default": "---\nparams {\n  graphIri: iri\n}\n---\nCONSTRUCT {\n    ?s ?p ?o .\n} WHERE {\n    GRAPH ${graphIri} {\n        ?s ?p ?o .\n    }\n}",
             "editPresentation": "multilineText"
           },
           "mentor.sparql.countGraphQuery": {
             "type": "string",
-            "title": "Count Graph Query",
+            "title": "Count Graphs Query",
+            "storeQueryKind": "countGraph",
             "description": "SPARQL query template used to check graph size before export.",
             "default": "---\nparams {\n  graphIri: iri\n  limit:    int optional\n}\n---\nSELECT (COUNT(?s) as ?count)\nWHERE {\n    SELECT ?s\n    WHERE {\n        GRAPH ${graphIri} {\n            ?s ?p ?o .\n        }\n    }\n    {% if limit %}LIMIT ${limit}{% endif %}\n}",
             "editPresentation": "multilineText"

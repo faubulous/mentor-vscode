@@ -175,6 +175,13 @@ export const FileChangeType = {
   Deleted: 3,
 };
 
+export const FileType = {
+  Unknown: 0,
+  File: 1,
+  Directory: 2,
+  SymbolicLink: 64,
+};
+
 export const ProgressLocation = {
   SourceControl: 1,
   Window: 10,

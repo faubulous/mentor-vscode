@@ -10,11 +10,12 @@ import { AuthCredential, EntraClientAuthCredential } from '@src/services/core/cr
 import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
 import { SparqlConnection } from './sparql-connection';
 import { ComunicaEndpoint, SparqlEndpoint } from './sparql-endpoint';
-import { SparqlStoreConfig, SparqlQueryKind, SPARQL_QUERY_KINDS } from './sparql-store-config';
+import { SparqlStoreConfig, SparqlQueryKind, STORE_QUERY_KIND_PROPERTY } from './sparql-store-config';
 import { ISparqlStoreConfigService } from './sparql-store-config-service';
 import { ISparqlQueryService } from './sparql-query-service.interface';
 import { WorkspaceEndpointProvider } from '@src/languages/sparql/services/endpoints';
 import { WORKSPACE_CONNECTION, WORKSPACE_STORE } from './workspace-store';
+
 export { WORKSPACE_CONNECTION, WORKSPACE_STORE };
 
 /**
@@ -61,11 +62,19 @@ export class SparqlConnectionService {
 	private readonly _workspaceStore: WorkspaceEndpointProvider;
 
 	/**
-	 * Untitled SPARQL documents that are in the process of being saved, captured by
-	 * `onWillSaveTextDocument` so their per-document settings can be migrated to the new
-	 * file URI once the save completes (see `onDidSaveTextDocument` in the constructor).
+	 * Latest known text content of open (or recently open) untitled SPARQL documents, keyed by
+	 * their untitled URI string. Maintained from `onDidOpenTextDocument` / `onDidChangeTextDocument`
+	 * and seeded when a connection is set, because `onWillSaveTextDocument` does **not** fire for
+	 * untitled documents being saved to disk for the first time. Used by `_migrateUntitledSave` to
+	 * match a just-saved file back to the untitled document it came from so its per-document settings
+	 * (connection, inference) can be migrated to the new file URI.
 	 */
-	private readonly _pendingUntitledSaves: { uri: vscode.Uri; content: string }[] = [];
+	private readonly _untitledSparqlSnapshots = new Map<string, string>();
+
+	/** 
+	 * Cached `kind → mentor config key` map, built from package.json on first use.
+	 */
+	private _storeQueryConfigKeys: Map<string, string> | undefined;
 
 	private get store(): Store {
 		return container.resolve<Store>(ServiceToken.Store);
@@ -91,10 +100,12 @@ export class SparqlConnectionService {
 			}
 		});
 
-		vscode.workspace.onWillSaveTextDocument(e => {
-			if (e.document.isUntitled && e.document.languageId === 'sparql') {
-				this._pendingUntitledSaves.push({ uri: e.document.uri, content: e.document.getText() });
-			}
+		vscode.workspace.onDidOpenTextDocument(document => {
+			this._snapshotUntitledSparqlDocument(document);
+		});
+
+		vscode.workspace.onDidChangeTextDocument(e => {
+			this._snapshotUntitledSparqlDocument(e.document);
 		});
 
 		vscode.workspace.onDidSaveTextDocument(async document => {
@@ -105,11 +116,50 @@ export class SparqlConnectionService {
 	}
 
 	/**
+	 * Maps each {@link SparqlQueryKind} to the `mentor.*` config key (without the `mentor.` prefix) of
+	 * the setting it overrides, by scanning the extension's package.json for properties carrying the
+	 * {@link STORE_QUERY_KIND_PROPERTY} marker. Result is cached for the session.
+	 */
+	private _getStoreQueryConfigKeys(): Map<string, string> {
+		if (this._storeQueryConfigKeys) {
+			return this._storeQueryConfigKeys;
+		}
+
+		const properties = (vscode.extensions.getExtension('faubulous.mentor')?.packageJSON
+			?.contributes?.configuration?.[0]?.properties ?? {}) as Record<string, Record<string, unknown>>;
+
+		const map = new Map<string, string>();
+
+		for (const [fullKey, prop] of Object.entries(properties)) {
+			const kind = prop[STORE_QUERY_KIND_PROPERTY];
+
+			if (typeof kind === 'string') {
+				map.set(kind, fullKey.replace(/^mentor\./, ''));
+			}
+		}
+
+		this._storeQueryConfigKeys = map;
+
+		return map;
+	}
+
+	/**
+	 * Records the current text content of an untitled SPARQL document so it can later be matched
+	 * to the on-disk file it is saved as. No-op for titled documents and non-SPARQL documents.
+	 * @param document The document to snapshot.
+	 */
+	private _snapshotUntitledSparqlDocument(document: vscode.TextDocument): void {
+		if (document.isUntitled && document.languageId === 'sparql') {
+			this._untitledSparqlSnapshots.set(document.uri.toString(), document.getText());
+		}
+	}
+
+	/**
 	 * Migrates a just-saved document's per-document settings (connection, inference) from its
-	 * previous untitled URI to its new on-disk URI, if it matches a pending untitled save.
+	 * previous untitled URI to its new on-disk URI, if it matches a tracked untitled document.
 	 * Untitled documents have no `onDidRenameFiles` equivalent when saved to disk for the first
-	 * time, so the match is made by comparing text content against documents captured in
-	 * `onWillSaveTextDocument` while they were still untitled.
+	 * time, and `onWillSaveTextDocument` does not fire for them, so the match is made by comparing
+	 * the saved text content against snapshots captured while the document was still untitled.
 	 * @param document The document that was just saved.
 	 */
 	private async _migrateUntitledSave(document: vscode.TextDocument): Promise<void> {
@@ -117,15 +167,17 @@ export class SparqlConnectionService {
 			return;
 		}
 
-		const index = this._pendingUntitledSaves.findIndex(p => p.content === document.getText());
+		const content = document.getText();
+		const match = [...this._untitledSparqlSnapshots].find(([, snapshot]) => snapshot === content);
 
-		if (index === -1) {
+		if (!match) {
 			return;
 		}
 
-		const [pending] = this._pendingUntitledSaves.splice(index, 1);
+		const [oldUriStr] = match;
+		this._untitledSparqlSnapshots.delete(oldUriStr);
 
-		await this.handleFileRenames([{ oldUri: pending.uri, newUri: document.uri }]);
+		await this.handleFileRenames([{ oldUri: vscode.Uri.parse(oldUriStr), newUri: document.uri }]);
 	}
 
 	/**
@@ -492,6 +544,14 @@ export class SparqlConnectionService {
 			await this.setConnectionForCell(documentUri, connectionId);
 		} else {
 			this._extensionContext.workspaceState.update(`sparql.connection:${documentUri.toString()}`, connectionId);
+
+			if (documentUri.scheme === 'untitled') {
+				const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === documentUri.toString());
+
+				if (document) {
+					this._snapshotUntitledSparqlDocument(document);
+				}
+			}
 		}
 
 		this._onDidChangeConnectionForDocument.fire(documentUri);
@@ -634,8 +694,17 @@ export class SparqlConnectionService {
 	 * @returns The resolved template, or `undefined` if none is configured at any level.
 	 */
 	getQueryTemplate(connection: SparqlConnection, kind: SparqlQueryKind): string | undefined {
-		return this._storeConfigService.getStoreConfig(connection.storeType)?.queries?.[kind]
-			|| getConfig().get<string>(SPARQL_QUERY_KINDS[kind].globalSettingKey);
+		const override = this._storeConfigService.getStoreConfig(connection.storeType)?.queries?.[kind];
+
+		if (override) {
+			return override;
+		}
+
+		// The global fallback key is discovered from the setting marked with this kind in package.json,
+		// so package.json stays the single source of truth for which queries are store-overridable.
+		const key = this._getStoreQueryConfigKeys().get(kind);
+
+		return key ? getConfig().get<string>(key) : undefined;
 	}
 
 	/**

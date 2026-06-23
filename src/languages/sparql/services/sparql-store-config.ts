@@ -88,43 +88,20 @@ export interface SparqlStoreInferenceConfigParameters {
 }
 
 /**
- * Registry of all supported SPARQL query template kinds. Each entry provides the display
- * label and description for the settings UI and the global VS Code setting key used as the
- * fallback when no per-store override is defined.
- *
- * Adding a new kind here automatically widens {@link SparqlQueryKind} and
- * {@link SparqlStoreQueryTemplates} — no other type definitions need updating.
+ * The package.json property that marks a `mentor.*` setting as a store-overridable SPARQL query
+ * template. Its value is the stable {@link SparqlQueryKind} slug used as the key in
+ * {@link SparqlStoreQueryTemplates} and looked up by the connection service. package.json is the
+ * single source of truth for which queries are editable per-store and for their title/description/
+ * default; this module only keeps the slug names below for compile-time safety.
  */
-export const SPARQL_QUERY_KINDS = {
-    listGraphs: {
-        label: 'List Graphs Query',
-        description: 'Retrieves the named graphs available from the store. Leave blank to use the global default.',
-        globalSettingKey: 'sparql.listGraphsQuery',
-    },
-    dropGraph: {
-        label: 'Drop Graph Query',
-        description: 'Deletes a named graph from the store. Leave blank to use the global default.',
-        globalSettingKey: 'sparql.dropGraphQuery',
-    },
-    describe: {
-        label: 'Describe Query',
-        description: 'Describes a resource, used by the Describe command. Leave blank to use the global default.',
-        globalSettingKey: 'sparql.describeQueryTemplate',
-    },
-    exportGraph: {
-        label: 'Export Graph Query',
-        description: 'CONSTRUCT query used to export a named graph as Turtle. Leave blank to use the global default.',
-        globalSettingKey: 'sparql.exportGraphQuery',
-    },
-    countGraph: {
-        label: 'Count Graph Query',
-        description: 'Query used to check graph size before export. Leave blank to use the global default.',
-        globalSettingKey: 'sparql.countGraphQuery',
-    },
-} as const;
+export const STORE_QUERY_KIND_PROPERTY = 'storeQueryKind';
 
-/** Derived from {@link SPARQL_QUERY_KINDS} — adding an entry there automatically widens this type. */
-export type SparqlQueryKind = keyof typeof SPARQL_QUERY_KINDS;
+/**
+ * The known SPARQL query template kinds. These slugs must match the `storeQueryKind` values in
+ * package.json; the union exists purely so the internal call sites that request a specific query
+ * (e.g. `getQueryTemplate(connection, 'describe')`) stay type-checked.
+ */
+export type SparqlQueryKind = 'listGraphs' | 'dropGraph' | 'describe' | 'exportGraph' | 'countGraph';
 
-/** Derived from {@link SparqlQueryKind} — always in sync with the registry. */
+/** Per-store query template overrides, keyed by {@link SparqlQueryKind}. */
 export type SparqlStoreQueryTemplates = Partial<Record<SparqlQueryKind, string>>;

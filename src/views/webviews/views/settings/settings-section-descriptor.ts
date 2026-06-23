@@ -110,7 +110,11 @@ export function validateSectionDescriptors(
 
 		const k = fullKey.slice('mentor.'.length);
 
-		if (!claimed.has(k)) {
+		// Settings marked as store-overridable query templates are discovered and rendered
+		// dynamically by the store editor, so they need no explicit section claim.
+		const isStoreQuery = !!(packageProperties[fullKey] as { storeQueryKind?: unknown })?.storeQueryKind;
+
+		if (!claimed.has(k) && !isStoreQuery) {
 			errors.push(`Setting '${fullKey}' is not owned by any section`);
 		}
 	}

@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ModalDialog } from '@src/views/webviews/components/modal-dialog';
 import { useScopedWebviewMessaging } from '@src/views/webviews/webview-hooks';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { SparqlStoreConfig, SPARQL_QUERY_KINDS } from '@src/languages/sparql/services/sparql-store-config';
+import { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { MENTOR_SOURCE } from '../../settings-types';
 import { SettingsWorkspaceContext } from '../../components/setting-context';
@@ -20,10 +20,7 @@ export const queryStoresSection = {
 	component: QueryStoresSection,
 	keys: [
 		STORES_KEY
-	],
-	// The global query templates are the fallback default for each store's query fields; they
-	// remain settings but are edited through those fields (claimed here so dev-validation passes).
-	hiddenKeys: Object.values(SPARQL_QUERY_KINDS).map(q => q.globalSettingKey),
+	]
 } as const satisfies SettingsSectionDescriptor;
 
 type StoresSectionMessage =

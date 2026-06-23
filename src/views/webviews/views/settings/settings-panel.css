@@ -342,7 +342,7 @@ vscode-textarea.monospace {
 .setting-description {
 	font-size: 1em;
 	color: var(--vscode-descriptionForeground);
-	margin: 0 2.5em 1em 0;
+	margin: 0 1.5em 1em 0;
 	line-height: 1.4em;
 }
 
@@ -352,9 +352,90 @@ vscode-textarea.monospace {
 	gap: var(--mentor-space-4);
 }
 
+/* Template rows stack a right-aligned "Edit" action above a clickable editor-styled preview. */
+.template-control {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	gap: 4px;
+}
+
+.template-editor-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+/* A read-only preview that mimics the code editor and opens the real editor on click. */
+.template-preview {
+	box-sizing: border-box;
+	width: 100%;
+	max-height: 280px;
+	overflow: hidden;
+	padding: 8px 10px;
+	border: 1px solid var(--vscode-settings-textInputBorder, var(--vscode-input-border, transparent));
+	border-radius: var(--mentor-radius-md);
+	background-color: var(--vscode-settings-textInputBackground, #313131);
+	color: var(--vscode-foreground);
+	cursor: pointer;
+	font-family: var(--vscode-editor-font-family, monospace);
+	font-size: var(--vscode-editor-font-size, 14px);
+	font-weight: var(--vscode-editor-font-weight, normal);
+	line-height: 1.5;
+}
+
+.template-preview:hover {
+	border-color: var(--vscode-focusBorder);
+}
+
+.template-preview[aria-disabled="true"] {
+	cursor: default;
+}
+
+.template-preview[aria-disabled="true"]:hover {
+	border-color: var(--vscode-settings-textInputBorder, var(--vscode-input-border, transparent));
+}
+
+.template-preview:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 1px;
+}
+
+.template-preview-code {
+	margin: 0;
+	white-space: pre;
+	font: inherit;
+	min-height: 12em;
+}
+
+.template-preview-placeholder {
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+}
+
+/* Muted: the shown text is an inherited fallback (e.g. the global default), not an explicit value. */
+.template-preview-muted .template-preview-code {
+	color: var(--vscode-descriptionForeground);
+}
+
+/* The language selector doubles as the row heading, so it sits inline with the label text. */
+.template-language-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.75em;
+}
+
+.template-language-label vscode-single-select {
+	font-weight: normal;
+	font-size: 0.95rem;
+}
+
 .setting-control vscode-textfield,
 .setting-control vscode-textarea {
 	flex: 1;
+}
+
+.setting-control .full-width {
+	width: 100%;
 }
 
 /* Width presets for short / numeric inputs, overriding the full-width default. */

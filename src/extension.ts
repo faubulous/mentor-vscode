@@ -101,6 +101,7 @@ function registerProviders(context: vscode.ExtensionContext) {
 	new providers.WorkspaceUriLinkProvider();
 	new providers.WorkspaceUriCodeActionProvider();
 	new providers.WorkspaceFileSystemProvider();
+	new providers.TemplateFileSystemProvider();
 	new providers.XsdAnyUriCodeActionProvider();
 	new providers.InferenceUriLinkProvider();
 	new providers.MentorUriHandler();

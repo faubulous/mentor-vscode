@@ -3,6 +3,8 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlQueryService } from '@src/languages/sparql/services';
 import { QuadsResult } from '@src/languages/sparql/services/sparql-query-state';
+import { IDocumentContextService } from '@src/services/document';
+import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
 
@@ -58,7 +60,67 @@ export class NotebookController implements vscode.Disposable {
 	}
 
 	private async _doExecution(cell: vscode.NotebookCell): Promise<void> {
-		this._executeSparqlQuery(cell);
+		// SPARQL cells run their query; all other RDF-data cells (turtle, trig,
+		// ntriples, nquads, xml) validate against their configured SHACL shapes.
+		if (cell.document.languageId === 'sparql') {
+			await this._executeSparqlQuery(cell);
+		} else {
+			await this._validateCell(cell);
+		}
+	}
+
+	private async _validateCell(cell: vscode.NotebookCell) {
+		const execution = this._controller.createNotebookCellExecution(cell);
+
+		execution.executionOrder = ++this._executionOrder;
+		execution.start(Date.now());
+
+		try {
+			const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+			const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+
+			// The validation service operates on the document context by URI, so make
+			// sure the cell has been loaded before validating.
+			if (!contextService.contexts[cell.document.uri.toString()]) {
+				await contextService.loadDocument(cell.document);
+			}
+
+			// Mirror the validateDocument command: when no shapes are configured, open
+			// the shape-configuration flow instead of validating.
+			const shapeGraphs = validationService.getEffectiveShapeGraphs(cell.document.uri);
+
+			if (shapeGraphs.length === 0) {
+				await vscode.commands.executeCommand('mentor.command.manageShaclShapes');
+				await execution.clearOutput();
+				execution.end(undefined, Date.now());
+				return;
+			}
+
+			const result = await validationService.validateDocument(cell.document.uri);
+
+			if (!result) {
+				await execution.clearOutput();
+				execution.end(undefined, Date.now());
+				return;
+			}
+
+			const summary = result.conforms
+				? 'SHACL validation: Conforms — no issues found.'
+				: validationService.getReportAsText(cell.document.uri)
+					?? `SHACL validation: ${result.results.length} issue(s) found.`;
+
+			await execution.replaceOutput([new vscode.NotebookCellOutput([
+				vscode.NotebookCellOutputItem.text(summary, 'text/plain')
+			])]);
+
+			execution.end(result.conforms, Date.now());
+		} catch (error: any) {
+			await execution.replaceOutput([new vscode.NotebookCellOutput([
+				vscode.NotebookCellOutputItem.error(error as Error)
+			])]);
+
+			execution.end(false, Date.now());
+		}
 	}
 
 	private async _executeSparqlQuery(cell: vscode.NotebookCell) {

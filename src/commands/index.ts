@@ -19,6 +19,7 @@ export { deleteGraph } from './delete-graph';
 export { deletePrefixes } from './delete-prefixes';
 export { deleteSparqlConnection } from './delete-sparql-connection';
 export { editSparqlConnection } from './edit-sparql-connection';
+export { editTemplate } from './edit-template';
 export { editNotebookCellSlug } from './edit-notebook-cell-slug';
 export { triggerNotebookCellSlugAction } from './trigger-notebook-cell-slug-action';
 export { executeDescribeQuery } from './execute-describe-query';

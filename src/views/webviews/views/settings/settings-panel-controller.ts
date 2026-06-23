@@ -17,6 +17,7 @@ interface PackageJsonProperty {
 	experimental?: boolean;
 	enum?: (string | number | boolean)[];
 	properties?: Record<string, { enum?: (string | number | boolean)[] }>;
+	storeQueryKind?: string;
 }
 
 type PackageJsonSchema = { properties: Record<string, PackageJsonProperty> };
@@ -153,8 +154,15 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		if (source.kind === 'mentor') {
 			const result: Record<string, SettingState> = {};
 			const config = getConfig();
-			const keys = this._sections.flatMap(s => [...s.keys, ...(s.hiddenKeys ?? [])]);
 			const settings = this._getPackageProperties();
+
+			// Section keys/hiddenKeys plus any package.json setting marked as a store-overridable query
+			// template — the latter are auto-claimed so adding one needs no descriptor change.
+			const sectionKeys = this._sections.flatMap(s => [...s.keys, ...(s.hiddenKeys ?? [])]);
+			const markedKeys = Object.entries(settings)
+				.filter(([, prop]) => typeof prop.storeQueryKind === 'string')
+				.map(([fullKey]) => fullKey.replace(/^mentor\./, ''));
+			const keys = [...new Set([...sectionKeys, ...markedKeys])];
 
 			for (const key of keys) {
 				const inspected = config.inspect(key);
@@ -178,6 +186,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 					experimental: setting?.experimental === true,
 					enumOptions: this._toEnumOptions(setting?.enum),
 					nestedEnumOptions: this._readNestedEnumOptions(setting),
+					storeQueryKind: setting?.storeQueryKind,
 				};
 			}
 

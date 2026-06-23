@@ -55,6 +55,10 @@ export class WebviewComponentFactory {
 	private _getWebviewOptions(): vscode.WebviewPanelOptions & vscode.WebviewOptions {
 		return {
 			enableScripts: true,
+			// Keep the webview's DOM/JS state alive while it is hidden so transient UI state (e.g. an
+			// open store-editor modal) survives switching to another editor tab and back; without this
+			// the webview is torn down on hide and reloaded — and re-mounted React state is lost.
+			retainContextWhenHidden: true,
 			localResourceRoots: [
 				vscode.Uri.joinPath(this._context.extensionUri, 'dist'),
 				vscode.Uri.joinPath(this._context.extensionUri, 'media')

@@ -89,6 +89,15 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 				return resolve([]);
 			}
 
+			// Notebook cells carry their cell-id slug CodeLens on line 0 and run validation
+			// via the native cell play button (see NotebookController). VS Code clips
+			// overflowing CodeLenses (and renders this last-registered slug provider
+			// rightmost), so in cells we keep only the shape-source/configuration lens and
+			// drop the Validate execute button (the play button covers it) and the status
+			// lens (the result shows as the cell's execution output) to leave room for the
+			// slug.
+			const isCell = document.uri.scheme === 'vscode-notebook-cell';
+
 			const range = new vscode.Range(0, 0, 0, 0);
 			const result: vscode.CodeLens[] = [];
 
@@ -109,8 +118,8 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			}
 
 			// When a shape source is configured, the Validate action leads the group;
-			// the shape-configuration lens follows it.
-			if (shapeCount > 0) {
+			// the shape-configuration lens follows it. Suppressed in notebook cells (play button).
+			if (shapeCount > 0 && !isCell) {
 				result.push(new vscode.CodeLens(range, {
 					title: '$(run-coverage)\u00A0Validate',
 					command: 'mentor.command.validateDocument',
@@ -124,8 +133,9 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 				tooltip: shapeFilesTooltip
 			}));
 
-			// Show status from last validation, if available
-			const lastResult = this._validationService.getLastResult(document.uri);
+			// Show status from last validation, if available. Suppressed in notebook cells —
+			// the result is shown as the cell's execution output instead.
+			const lastResult = isCell ? undefined : this._validationService.getLastResult(document.uri);
 
 			if (lastResult) {
 				const statusTitle = lastResult.conforms

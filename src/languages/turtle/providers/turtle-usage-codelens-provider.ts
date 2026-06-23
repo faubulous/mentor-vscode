@@ -91,6 +91,14 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 				return [];
 			}
 
+			// Suppress usage lenses inside notebook cells: a subject on line 0 would place
+			// a usage lens on the same line as the cell-id slug, and VS Code clips
+			// overflowing CodeLenses, hiding the slug. Usage counts are not meaningful for a
+			// transient cell anyway.
+			if (document.uri.scheme === 'vscode-notebook-cell') {
+				return resolve([]);
+			}
+
 			const context = this._contextService.contexts[document.uri.toString()];
 
 			if (!context) {
