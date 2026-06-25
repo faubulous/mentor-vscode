@@ -65,5 +65,7 @@ export enum ServiceToken {
 	/** Service for caching named graphs loaded from SPARQL endpoints. */
 	SparqlGraphLoadingService = "SparqlGraphLoadingService",
 	/** Service that runs registered settings migrations on activation. */
-	SettingsMigrationService = "SettingsMigrationService"
+	SettingsMigrationService = "SettingsMigrationService",
+	/** Controller for the Mentor Notebook kernel. */
+	NotebookController = "NotebookController"
 }

@@ -15,7 +15,8 @@ import {
 	TurtlePrefixCompletionProvider,
 	TurtleRenameProvider,
 	TurtleCodeFormattingProvider,
-	TurtleValidationCodeLensProvider
+	TurtleValidationCodeLensProvider,
+	TurtleConnectionCodeLensProvider
 } from '@src/languages/turtle/providers';
 import { 
 	TurtlePrefixDefinitionService 
@@ -32,6 +33,7 @@ const referenceProvider = new ResourceReferenceProvider();
 const renameProvider = new TurtleRenameProvider();
 const formattingProvider = new TurtleCodeFormattingProvider();
 const validationCodelensProvider = new TurtleValidationCodeLensProvider();
+const connectionCodelensProvider = new TurtleConnectionCodeLensProvider();
 
 export class TurtleTokenProvider {
 	constructor() {
@@ -66,6 +68,7 @@ export class TurtleTokenProvider {
 			vscode.languages.registerInlineCompletionItemProvider({ language }, prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language }, referenceProvider),
 			vscode.languages.registerRenameProvider({ language }, renameProvider),
+			vscode.languages.registerCodeLensProvider({ language }, connectionCodelensProvider),
 			vscode.languages.registerCodeLensProvider({ language }, validationCodelensProvider),
 			vscode.languages.registerCodeLensProvider({ language }, notebookSlugCodelensProvider),
 		]

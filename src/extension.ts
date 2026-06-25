@@ -89,7 +89,7 @@ function registerLanguages() {
  * Registers the notebook serializer and controller for the Mentor Notebook.
  */
 function registerNotebookSerializers() {
-	new NotebookController();
+	container.registerInstance(ServiceToken.NotebookController, new NotebookController());
 	new NotebookSerializer();
 }
 

@@ -18,6 +18,8 @@ export { createSparqlConnection } from './create-sparql-connection';
 export { deleteGraph } from './delete-graph';
 export { deletePrefixes } from './delete-prefixes';
 export { deleteSparqlConnection } from './delete-sparql-connection';
+export { describeResource } from './describe-resource';
+export { describeResourceFromPosition } from './describe-resource-from-position';
 export { editSparqlConnection } from './edit-sparql-connection';
 export { editTemplate } from './edit-template';
 export { editNotebookCellSlug } from './edit-notebook-cell-slug';
@@ -29,7 +31,7 @@ export { executeSparqlQueryFromActiveEditor } from './execute-sparql-query-from-
 export { executeSparqlQueryFromDocument } from './execute-sparql-query-from-document';
 export { executeTriplateTemplate } from './execute-triplate-template';
 export { executeTriplateExample } from './execute-triplate-example';
-export { openRenderedTriplate } from './open-rendered-triplate';
+export { executeSparqlQueryFromString } from './execute-sparql-query-from-string';
 export { viewShaclReport } from './export-shacl-report';
 export { excludeFromIndex } from './exclude-from-index';
 export { findReferences } from './find-references';

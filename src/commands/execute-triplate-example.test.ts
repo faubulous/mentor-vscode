@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+vi.mock('tsyringe', () => ({
+	container: { resolve: vi.fn(() => ({})) },
+	injectable: () => (t: any) => t,
+	inject: () => () => {},
+	singleton: () => (t: any) => t,
+}));
+
 let mockPreviewExample: Mock;
 let examples: any[];
 
@@ -41,7 +48,7 @@ describe('executeTriplateExample command', () => {
 
 		expect(mockPreviewExample).toHaveBeenCalledWith('people');
 		expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-			'mentor.command.openRenderedTriplate', 'file:///q.sparql', 'SELECT * WHERE {}'
+			'mentor.command.executeSparqlQueryFromString', 'SELECT * WHERE {}', 'file:///q.sparql'
 		);
 	});
 

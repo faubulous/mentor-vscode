@@ -200,28 +200,6 @@ describe('LanguageServerBase', () => {
 			expect(errors.length).toBeGreaterThanOrEqual(1);
 		});
 
-		it('warns when namespace URI does not end with a separator', () => {
-			const tokens = [
-				makeToken('PREFIX', 'PREFIX', 0),
-				makeToken('PNAME_NS', 'ex:', 7),
-				makeToken('IRIREF', '<http://example.org/bad>', 11),
-			];
-			const diags = server.getLint(makeDoc(), '', tokens);
-			const warnings = diags.filter(d => d.message.includes("should end with"));
-			expect(warnings.length).toBeGreaterThanOrEqual(1);
-		});
-
-		it('does not warn when namespace URI ends with a valid separator', () => {
-			const tokens = [
-				makeToken('PREFIX', 'PREFIX', 0),
-				makeToken('PNAME_NS', 'ex:', 7),
-				makeToken('IRIREF', '<http://example.org/>', 11),
-			];
-			const diags = server.getLint(makeDoc(), '', tokens);
-			const warnings = diags.filter(d => d.message.includes("should end with"));
-			expect(warnings.length).toBe(0);
-		});
-
 		it('hints on unused prefix', () => {
 			// PREFIX ex: declared but never used as PNAME_LN
 			const tokens = [

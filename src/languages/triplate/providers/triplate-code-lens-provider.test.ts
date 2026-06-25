@@ -16,12 +16,12 @@ vi.mock('triplate', () => ({
 
 import { TriplateCodeLensProvider } from './triplate-code-lens-provider';
 
-function makeDoc(text: string, languageId = 'turtle', version = 1) {
+function makeDoc(text: string, languageId = 'turtle', version = 1, uri = 'file:///test.ttl') {
 	const lines = text.split('\n');
 
 	return {
 		getText: () => text,
-		uri: vscode.Uri.parse('file:///test.ttl'),
+		uri: vscode.Uri.parse(uri),
 		languageId,
 		version,
 		positionAt: (offset: number) => {
@@ -99,6 +99,15 @@ describe('TriplateCodeLensProvider', () => {
 
 		// Only the two per-example lenses; SparqlCodeLensProvider supplies the top-of-file
 		// Run lens for `.sparql`-language documents so it reliably ends up first on screen.
+		expect(lenses).toHaveLength(2);
+		expect(lenses.every(l => l.command?.command === 'mentor.command.executeTriplateExample')).toBe(true);
+	});
+
+	it('omits the top-of-file Run lens in notebook cells (the cell play button covers it)', () => {
+		const doc = makeDoc(FRONTMATTER, 'turtle', 1, 'vscode-notebook-cell:///nb.ttl#c1');
+		const lenses = provider.provideCodeLenses(doc);
+
+		// Only the two per-example lenses remain; the redundant top Run lens is dropped.
 		expect(lenses).toHaveLength(2);
 		expect(lenses.every(l => l.command?.command === 'mentor.command.executeTriplateExample')).toBe(true);
 	});

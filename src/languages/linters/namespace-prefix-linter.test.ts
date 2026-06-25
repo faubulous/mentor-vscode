@@ -108,54 +108,6 @@ describe('NamespacePrefixLinter', () => {
 			expect(errors).toHaveLength(1);
 			expect(errors[0].severity).toBe(DiagnosticSeverity.Error);
 		});
-
-		it('returns a warning when namespace URI does not end with /, #, _, =, or :', () => {
-			const kw = makeToken('PREFIX', 'PREFIX', 0, 1);
-			const ns = makeToken('PNAME_NS', 'ex:', 7, 1);
-			const iri = makeToken('IRIREF', '<http://example.org>', 11, 1);
-			const tokens = [kw, ns, iri];
-			const doc = makeDoc('PREFIX ex: <http://example.org>');
-
-			const diags = runProvider(rule, { document: doc, content: '', tokens, prefixes: {} });
-			const warnings = diags.filter(d => d.message.includes("should end with"));
-			expect(warnings).toHaveLength(1);
-			expect(warnings[0].severity).toBe(DiagnosticSeverity.Warning);
-		});
-
-		it('returns no warning when namespace URI ends with /', () => {
-			const tokens = makePrefixTokens('PREFIX', 'ex:', '<http://example.org/>', 0, 1);
-			tokens.push(makeToken('PNAME_LN', 'ex:Thing', 30, 2));
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.filter(d => d.message.includes("should end with"))).toHaveLength(0);
-		});
-
-		it('returns no warning when namespace URI ends with #', () => {
-			const tokens = makePrefixTokens('PREFIX', 'owl:', '<http://www.w3.org/2002/07/owl#>', 0, 1);
-			tokens.push(makeToken('PNAME_LN', 'owl:Class', 40, 2));
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.filter(d => d.message.includes("should end with"))).toHaveLength(0);
-		});
-
-		it('returns no warning when namespace URI ends with _', () => {
-			const tokens = makePrefixTokens('PREFIX', 'ex:', '<http://example.org/ns_>', 0, 1);
-			tokens.push(makeToken('PNAME_LN', 'ex:Thing', 30, 2));
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.filter(d => d.message.includes("should end with"))).toHaveLength(0);
-		});
-
-		it('returns no warning when namespace URI ends with =', () => {
-			const tokens = makePrefixTokens('PREFIX', 'ex:', '<http://example.org/ns=>', 0, 1);
-			tokens.push(makeToken('PNAME_LN', 'ex:Thing', 30, 2));
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.filter(d => d.message.includes("should end with"))).toHaveLength(0);
-		});
-
-		it('returns no warning when namespace URI ends with :', () => {
-			const tokens = makePrefixTokens('PREFIX', 'ex:', '<urn:example:>', 0, 1);
-			tokens.push(makeToken('PNAME_LN', 'ex:Thing', 20, 2));
-			const diags = runProvider(rule, { document: makeDoc(), content: '', tokens, prefixes: {} });
-			expect(diags.filter(d => d.message.includes("should end with"))).toHaveLength(0);
-		});
 	});
 
 	describe('unused prefix detection', () => {

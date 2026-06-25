@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
+import { compile, isTemplate } from 'triplate';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlQueryService } from '@src/languages/sparql/services';
 import { QuadsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { IDocumentContextService } from '@src/services/document';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
+import { renderTemplateInteractively } from '@src/languages/triplate/triplate-prompt';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
 
@@ -60,12 +62,52 @@ export class NotebookController implements vscode.Disposable {
 	}
 
 	private async _doExecution(cell: vscode.NotebookCell): Promise<void> {
+		const text = cell.document.getText();
+
+		// Triplate template cells are rendered first, then executed (SPARQL) or validated
+		// (RDF) so their output lands in the cell like an ordinary query/validation cell.
+		if (isTemplate(text)) {
+			await this._executeTemplate(cell, text);
+			return;
+		}
+
 		// SPARQL cells run their query; all other RDF-data cells (turtle, trig,
 		// ntriples, nquads, xml) validate against their configured SHACL shapes.
 		if (cell.document.languageId === 'sparql') {
-			await this._executeSparqlQuery(cell);
+			await this.executeQueryInCell(cell);
 		} else {
 			await this._validateCell(cell);
+		}
+	}
+
+	/**
+	 * Compiles and renders a triplate template cell, prompting for parameter values,
+	 * then runs the cell's primary action on the rendered output: SPARQL templates are
+	 * executed and RDF templates are SHACL-validated, matching the native play button's
+	 * behaviour for non-template cells. (Code-lens Run/Run-example render a Turtle preview
+	 * instead — see routeRenderedTriplate.)
+	 */
+	private async _executeTemplate(cell: vscode.NotebookCell, text: string): Promise<void> {
+		let compiled: ReturnType<typeof compile>;
+
+		try {
+			compiled = compile(text);
+		} catch (error) {
+			vscode.window.showErrorMessage(`Failed to compile template: ${(error as Error).message}`);
+			return;
+		}
+
+		const rendered = await renderTemplateInteractively(compiled);
+
+		if (rendered === undefined) {
+			// The user cancelled, or rendering failed (already reported).
+			return;
+		}
+
+		if (cell.document.languageId === 'sparql') {
+			await this.executeQueryInCell(cell, rendered);
+		} else {
+			await this.validateContentInCell(cell, rendered);
 		}
 	}
 
@@ -104,10 +146,7 @@ export class NotebookController implements vscode.Disposable {
 				return;
 			}
 
-			const summary = result.conforms
-				? 'SHACL validation: Conforms — no issues found.'
-				: validationService.getReportAsText(cell.document.uri)
-					?? `SHACL validation: ${result.results.length} issue(s) found.`;
+			const summary = this._getValidationSummary(validationService, cell.document.uri, result);
 
 			await execution.replaceOutput([new vscode.NotebookCellOutput([
 				vscode.NotebookCellOutputItem.text(summary, 'text/plain')
@@ -123,7 +162,108 @@ export class NotebookController implements vscode.Disposable {
 		}
 	}
 
-	private async _executeSparqlQuery(cell: vscode.NotebookCell) {
+	/**
+	 * Writes a rendered RDF template result to the cell output as `text/turtle`, the same
+	 * way CONSTRUCT/DESCRIBE query results are shown. No SHACL validation is performed.
+	 * @param cell The notebook cell whose output is replaced.
+	 * @param content The rendered RDF content to display.
+	 */
+	async renderContentInCell(cell: vscode.NotebookCell, content: string): Promise<void> {
+		const execution = this._controller.createNotebookCellExecution(cell);
+
+		execution.executionOrder = ++this._executionOrder;
+		execution.start(Date.now());
+
+		try {
+			// Mirror how CONSTRUCT/DESCRIBE query results are surfaced: the rendered RDF is
+			// the end result and is shown as the cell output.
+			await execution.replaceOutput([new vscode.NotebookCellOutput([
+				vscode.NotebookCellOutputItem.text(content, 'text/turtle')
+			])]);
+
+			execution.end(true, Date.now());
+		} catch (error: any) {
+			await execution.replaceOutput([new vscode.NotebookCellOutput([
+				vscode.NotebookCellOutputItem.error(error as Error)
+			])]);
+
+			execution.end(false, Date.now());
+		}
+	}
+
+	/**
+	 * SHACL-validates a rendered RDF template result against the cell's configured shapes and
+	 * writes the report to the cell output. The rendered content is loaded into a hidden
+	 * temporary document (never shown) so the template cell's own text is left untouched.
+	 * Used by the native play button for RDF template cells; the code-lens path uses
+	 * {@link renderContentInCell} instead.
+	 * @param cell The notebook cell whose shape configuration and output are used.
+	 * @param content The rendered RDF content to validate.
+	 */
+	async validateContentInCell(cell: vscode.NotebookCell, content: string): Promise<void> {
+		const execution = this._controller.createNotebookCellExecution(cell);
+
+		execution.executionOrder = ++this._executionOrder;
+		execution.start(Date.now());
+
+		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+		const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+
+		// Shape configuration lives on the cell, not on the temporary rendered document.
+		const shapeGraphs = validationService.getEffectiveShapeGraphs(cell.document.uri);
+
+		if (shapeGraphs.length === 0) {
+			await vscode.commands.executeCommand('mentor.command.manageShaclShapes');
+			await execution.clearOutput();
+			execution.end(undefined, Date.now());
+			return;
+		}
+
+		const document = await vscode.workspace.openTextDocument({ content, language: cell.document.languageId });
+
+		try {
+			await contextService.loadDocument(document, true);
+
+			const result = await validationService.validateDocument(document.uri, shapeGraphs);
+
+			if (!result) {
+				await execution.clearOutput();
+				execution.end(undefined, Date.now());
+				return;
+			}
+
+			const summary = this._getValidationSummary(validationService, document.uri, result);
+
+			await execution.replaceOutput([new vscode.NotebookCellOutput([
+				vscode.NotebookCellOutputItem.text(summary, 'text/plain')
+			])]);
+
+			execution.end(result.conforms, Date.now());
+		} catch (error: any) {
+			await execution.replaceOutput([new vscode.NotebookCellOutput([
+				vscode.NotebookCellOutputItem.error(error as Error)
+			])]);
+
+			execution.end(false, Date.now());
+		} finally {
+			// Drop the temporary document's context and store graphs to free memory.
+			contextService.handleDocumentClosed(document);
+		}
+	}
+
+	private _getValidationSummary(validationService: ShaclValidationService, documentUri: vscode.Uri, result: { conforms: boolean; results: unknown[] }): string {
+		return result.conforms
+			? 'SHACL validation: Conforms — no issues found.'
+			: validationService.getReportAsText(documentUri)
+				?? `SHACL validation: ${result.results.length} issue(s) found.`;
+	}
+
+	/**
+	 * Executes a SPARQL query in a notebook cell and renders the result in the cell output.
+	 * @param cell The notebook cell whose connection and output are used.
+	 * @param query The SPARQL query string. Defaults to the cell's own text.
+	 */
+	async executeQueryInCell(cell: vscode.NotebookCell, query: string = cell.document.getText()): Promise<void> {
 		const execution = this._controller.createNotebookCellExecution(cell);
 
 		execution.executionOrder = ++this._executionOrder;
@@ -140,7 +280,7 @@ export class NotebookController implements vscode.Disposable {
 
 		try {
 			const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
-			let queryState = queryService.createQueryFromDocument(cell);
+			let queryState = queryService.createQuery(cell, query);
 
 			queryState = await queryService.executeQuery(queryState, tokenSource);
 

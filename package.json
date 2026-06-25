@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.5.9",
+  "version": "0.6.0",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -173,6 +173,11 @@
         "command": "mentor.command.renameWorkspaceItem",
         "key": "f2",
         "when": "focusedView == mentor.view.workspaceTree"
+      },
+      {
+        "command": "mentor.command.describeResourceFromPosition",
+        "key": "alt+f12",
+        "when": "editorTextFocus && mentor.editor.cursorOnResource && (editorLangId == 'turtle' || editorLangId == 'sparql' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads')"
       }
     ],
     "notebooks": [
@@ -686,6 +691,18 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.describeResource",
+        "title": "Describe Resource",
+        "icon": "$(search)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.describeResourceFromPosition",
+        "title": "Describe Resource",
+        "icon": "$(search)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.openMentorHomepage",
         "title": "Help",
         "icon": "$(help)",
@@ -1060,6 +1077,11 @@
           "group": "z_commands"
         },
         {
+          "command": "mentor.command.describeResource",
+          "when": "viewItem =~ /resource/",
+          "group": "navigation@0"
+        },
+        {
           "command": "mentor.command.findReferences",
           "when": "viewItem =~ /resource/",
           "group": "4_search"
@@ -1091,6 +1113,11 @@
         }
       ],
       "editor/context": [
+        {
+          "command": "mentor.command.describeResourceFromPosition",
+          "group": "navigation@0",
+          "when": "editorTextFocus && mentor.editor.cursorOnResource && (editorLangId == 'turtle' || editorLangId == 'sparql' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads')"
+        },
         {
           "submenu": "mentor.submenu.convertDocument",
           "group": "1_modification@98",
@@ -1149,6 +1176,14 @@
       "commandPalette": [
         {
           "command": "mentor.command.executeTriplateExample",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.describeResource",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.describeResourceFromPosition",
           "when": "false"
         },
         {

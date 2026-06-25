@@ -61,6 +61,7 @@ export const window = {
   activeTextEditor: undefined as any,
   activeNotebookEditor: undefined as any,
   onDidChangeActiveTextEditor: (_handler: any) => ({ dispose: () => {} }),
+  onDidChangeTextEditorSelection: (_handler: any) => ({ dispose: () => {} }),
   onDidChangeActiveNotebookEditor: (_handler: any) => ({ dispose: () => {} }),
   setStatusBarMessage: (_text: string, _timeout?: number) => ({ dispose: () => {} }),
   createTreeView: (_id: string, _options: any) => ({ title: '', onDidChangeVisibility: () => ({ dispose: () => {} }), onDidExpandElement: () => ({ dispose: () => {} }), onDidCollapseElement: () => ({ dispose: () => {} }), reveal: async () => {}, dispose: () => {} }),

@@ -82,6 +82,8 @@ export class DocumentContextService {
 		// Register event handlers for editor and document changes.
 		this._extensionContext.subscriptions.push(...[
 			vscode.window.onDidChangeActiveTextEditor(() => this.handleActiveEditorChanged()),
+			vscode.window.onDidChangeTextEditorSelection((e) => this._setCursorOnResourceContext(e.textEditor)),
+			this.onDidChangeDocumentContext(() => this._setCursorOnResourceContext(vscode.window.activeTextEditor)),
 			vscode.window.onDidChangeActiveNotebookEditor((e) => this.handleActiveNotebookEditorChanged(e)),
 			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
 			vscode.workspace.onDidChangeNotebookDocument((e) => this.handleNotebookDocumentChanged(e)),
@@ -482,6 +484,8 @@ export class DocumentContextService {
 	async handleActiveEditorChanged(): Promise<void> {
 		const editor = vscode.window.activeTextEditor;
 
+		await this._setCursorOnResourceContext(editor);
+
 		if (!editor) {
 			await this._setConvertFileFormatContexts();
 			await this._setTriplateTemplateContext();
@@ -530,6 +534,20 @@ export class DocumentContextService {
 		if (editor.document.languageId === 'xml') {
 			await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', context?.isLoaded === true);
 		}
+	}
+
+	/**
+	 * Sets the `mentor.editor.cursorOnResource` context key used to toggle visibility of the
+	 * "Describe Resource" editor context-menu item. Updated synchronously on every selection
+	 * change so the key is current when a right-click opens the menu.
+	 * @param editor The editor whose caret position should be evaluated, or `undefined`.
+	 */
+	private async _setCursorOnResourceContext(editor?: vscode.TextEditor): Promise<void> {
+		const uri = editor?.document?.uri?.toString();
+		const position = editor?.selection?.active;
+		const iri = uri && position ? this.contexts[uri]?.getIriAtPosition(position) : undefined;
+
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.cursorOnResource', !!iri);
 	}
 
 	/**

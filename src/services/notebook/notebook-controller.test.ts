@@ -4,19 +4,36 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
 const {
-	mockCreateQueryFromDocument,
+	mockCreateQuery,
 	mockExecuteQuery,
 	mockLoadDocument,
+	mockHandleDocumentClosed,
 	mockGetEffectiveShapeGraphs,
 	mockValidateDocument,
 	mockGetReportAsText,
+	mockRender,
 } = vi.hoisted(() => ({
-	mockCreateQueryFromDocument: vi.fn(() => ({ queryType: 'bindings' })),
+	mockCreateQuery: vi.fn((_cell: any, query: string) => ({ queryType: 'bindings', query })),
 	mockExecuteQuery: vi.fn(async (state: any) => state),
 	mockLoadDocument: vi.fn(async () => ({})),
+	mockHandleDocumentClosed: vi.fn(() => {}),
 	mockGetEffectiveShapeGraphs: vi.fn(() => ['shapes:graph']),
 	mockValidateDocument: vi.fn(async () => ({ conforms: true, results: [] })),
 	mockGetReportAsText: vi.fn(() => 'SHACL Validation Report'),
+	mockRender: vi.fn(() => 'SELECT * WHERE { ?s ?p ?o }'),
+}));
+
+// Treat any text with a leading frontmatter fence as a template; compile yields a
+// schema with no params so prompting is skipped and render is fully controlled.
+vi.mock('triplate', () => ({
+	isTemplate: (text: string) => text.trimStart().startsWith('---'),
+	compile: vi.fn(() => ({
+		schema: { params: [] },
+		examples: [],
+		previewExample: () => mockRender(),
+		contextFromStrings: () => ({}),
+		render: () => mockRender(),
+	})),
 }));
 
 vi.mock('tsyringe', () => ({
@@ -27,7 +44,7 @@ vi.mock('tsyringe', () => ({
 			}
 			if (token === 'SparqlQueryService') {
 				return {
-					createQueryFromDocument: mockCreateQueryFromDocument,
+					createQuery: mockCreateQuery,
 					executeQuery: mockExecuteQuery,
 				};
 			}
@@ -35,6 +52,7 @@ vi.mock('tsyringe', () => ({
 				return {
 					contexts: {},
 					loadDocument: mockLoadDocument,
+					handleDocumentClosed: mockHandleDocumentClosed,
 				};
 			}
 			if (token === 'ShaclValidationService') {
@@ -94,12 +112,13 @@ function createControllerWithExecution(mockExecution: ReturnType<typeof makeExec
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockCreateQueryFromDocument.mockReturnValue({ queryType: 'bindings' });
+	mockCreateQuery.mockImplementation((_cell: any, query: string) => ({ queryType: 'bindings', query }));
 	mockExecuteQuery.mockImplementation(async (state: any) => state);
 	mockLoadDocument.mockResolvedValue({});
 	mockGetEffectiveShapeGraphs.mockReturnValue(['shapes:graph']);
 	mockValidateDocument.mockResolvedValue({ conforms: true, results: [] });
 	mockGetReportAsText.mockReturnValue('SHACL Validation Report');
+	mockRender.mockReturnValue('SELECT * WHERE { ?s ?p ?o }');
 });
 
 describe('NotebookController', () => {
@@ -109,7 +128,7 @@ describe('NotebookController', () => {
 			const { executeHandler } = createControllerWithExecution(mockExecution);
 			const cell = makeCell();
 
-			mockCreateQueryFromDocument.mockReturnValue({ queryType: 'bindings' });
+			mockCreateQuery.mockReturnValue({ queryType: 'bindings' });
 			mockExecuteQuery.mockResolvedValue({ queryType: 'bindings', results: [] });
 
 			await executeHandler()!([cell], {}, {});
@@ -126,7 +145,7 @@ describe('NotebookController', () => {
 			const { executeHandler } = createControllerWithExecution(mockExecution);
 			const cell = makeCell();
 
-			mockCreateQueryFromDocument.mockReturnValue({ queryType: 'boolean' });
+			mockCreateQuery.mockReturnValue({ queryType: 'boolean' });
 			mockExecuteQuery.mockResolvedValue({ queryType: 'boolean', result: { type: 'boolean', value: true } });
 
 			await executeHandler()!([cell], {}, {});
@@ -143,7 +162,7 @@ describe('NotebookController', () => {
 			const { executeHandler } = createControllerWithExecution(mockExecution);
 			const cell = makeCell();
 
-			mockCreateQueryFromDocument.mockReturnValue({ queryType: 'quads' });
+			mockCreateQuery.mockReturnValue({ queryType: 'quads' });
 			mockExecuteQuery.mockResolvedValue({
 				queryType: 'quads',
 				result: { type: 'quads', document: '@prefix ex: <http://example.org/> .', mimeType: 'text/turtle' },
@@ -163,7 +182,7 @@ describe('NotebookController', () => {
 			const { executeHandler } = createControllerWithExecution(mockExecution);
 			const cell = makeCell();
 
-			mockCreateQueryFromDocument.mockReturnValue({ queryType: 'bindings' });
+			mockCreateQuery.mockReturnValue({ queryType: 'bindings' });
 			mockExecuteQuery.mockRejectedValue(new Error('query failed'));
 
 			await executeHandler()!([cell], {}, {});
@@ -237,6 +256,73 @@ describe('NotebookController', () => {
 			expect(mockValidateDocument).not.toHaveBeenCalled();
 			expect(mockExecution.replaceOutput).not.toHaveBeenCalled();
 			expect(mockExecution.clearOutput).toHaveBeenCalled();
+		});
+	});
+
+	describe('template cells', () => {
+		function makeTemplateCell(languageId: string) {
+			return {
+				document: {
+					uri: vscode.Uri.parse('untitled:template'),
+					languageId,
+					getText: () => '---\nparams {}\n---\nSELECT * WHERE { ?s ?p ?o }',
+				},
+			} as any as vscode.NotebookCell;
+		}
+
+		it('renders a SPARQL template and executes the rendered query in the cell', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+
+			mockRender.mockReturnValue('SELECT ?x WHERE { ?x a ?t }');
+			mockExecuteQuery.mockResolvedValue({ queryType: 'bindings', results: [] });
+
+			await executeHandler()!([makeTemplateCell('sparql')], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			// The rendered query (not the raw template text) is what gets executed.
+			expect(mockCreateQuery).toHaveBeenCalledWith(expect.anything(), 'SELECT ?x WHERE { ?x a ?t }');
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			expect(outputs[0].items[0].mime).toBe('application/sparql-results+json');
+			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
+		});
+
+		it('renders an RDF template and SHACL-validates the result via the play button', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+
+			mockRender.mockReturnValue('<urn:s> a <urn:o> .');
+			(vscode.workspace as any).openTextDocument = vi.fn(async (opts: any) => ({
+				uri: vscode.Uri.parse('untitled:rendered'),
+				languageId: opts.language,
+			}));
+
+			await executeHandler()!([makeTemplateCell('turtle')], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			// The native play button validates the rendered content against the cell's shapes.
+			expect(mockValidateDocument).toHaveBeenCalledWith(expect.anything(), ['shapes:graph']);
+			expect(mockExecuteQuery).not.toHaveBeenCalled();
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			expect(outputs[0].items[0].mime).toBe('text/plain');
+			// The temporary rendered document context is cleaned up afterwards.
+			expect(mockHandleDocumentClosed).toHaveBeenCalled();
+		});
+	});
+
+	describe('renderContentInCell', () => {
+		it('shows the rendered RDF as text/turtle without validating (code-lens path)', async () => {
+			const mockExecution = makeExecution();
+			const { controller } = createControllerWithExecution(mockExecution);
+			const cell = makeCell('turtle');
+
+			await controller.renderContentInCell(cell, '<urn:s> a <urn:o> .');
+
+			expect(mockValidateDocument).not.toHaveBeenCalled();
+			expect(mockExecuteQuery).not.toHaveBeenCalled();
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			expect(outputs[0].items[0].mime).toBe('text/turtle');
+			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
 	});
 });
