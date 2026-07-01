@@ -21,7 +21,7 @@ export const listGraphs = {
 
     // Prefer the graphs already cached by the auto-load service to avoid a round-trip;
     // otherwise issue the query against the connection.
-    if (graphService.isGraphsLoaded(connection.id)) {
+    if (graphService.hasGraphsForConnection(connection.id)) {
       await controller.displayGraphList(connection, query, graphService.getGraphsForConnection(connection.id));
     } else {
       await controller.executeBackgroundQuery(connection, query, 'List Graphs');

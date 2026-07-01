@@ -118,12 +118,11 @@ async function selectConfiguredTargetLanguage(sourceLanguageId: string, targetLa
 	const documentFactory = container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
 	const targetLanguageIds = new Set(documentFactory.getConvertibleTargetLanguageIds(sourceLanguageId));
 
-	if (!targetLanguageIds.has(targetLanguageId)) {
+	if (targetLanguageIds.has(targetLanguageId)) {
+		return documentFactory.getSupportedLanguageInfoFromId(targetLanguageId);
+	} else {
 		vscode.window.showErrorMessage('The selected target format is not supported for this document.');
-		return undefined;
 	}
-
-	return documentFactory.getLanguageInfo(targetLanguageId);
 }
 
 /**

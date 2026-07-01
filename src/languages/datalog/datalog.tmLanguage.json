@@ -26,6 +26,10 @@
                     "match": "%.*$"
                 },
                 {
+                    "name": "comment.line.number-sign.datalog",
+                    "match": "#.*$"
+                },
+                {
                     "name": "comment.block.datalog",
                     "begin": "/\\*",
                     "end": "\\*/"

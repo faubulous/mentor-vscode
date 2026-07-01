@@ -131,7 +131,7 @@ export class SparqlQueryService {
 			label,
 			connectionId: connection.id,
 			connectionName: connection.endpointUrl,
-			background: true,
+			isBackground: true,
 			query,
 			queryType,
 			startTime: Date.now()
@@ -187,7 +187,7 @@ export class SparqlQueryService {
 	private async _persistQueryHistory(): Promise<void> {
 		// Filter the query history to exclude execution states that would not be valid after a restart.
 		const filteredHistory = this._history
-			.filter(q => q && !q.background && q.documentIri && !q.documentIri.startsWith('untitled'))
+			.filter(q => q && !q.isBackground && q.documentIri && !q.documentIri.startsWith('untitled'))
 			.slice(0, HISTORY_MAX_ENTRIES);
 
 		await this._extensionContext.workspaceState.update(HISTORY_STORAGE_KEY, filteredHistory);

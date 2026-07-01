@@ -13,13 +13,14 @@ import { resolveQueryContext, isNotebookCell } from '@src/utilities/query-contex
  * results are rendered in the cell output (like an ordinary query cell); otherwise
  * they are shown in the SPARQL results panel, inheriting the context document's
  * connection. The query string is never opened as a document.
- *
- * Internal command: invoked by the triplate execute commands and reusable wherever a
- * rendered/generated SPARQL string needs to run in a given editor or notebook context.
+ * 
+ * @param query The SPARQL query string to execute.
+ * @param contextUri An optional URI of a document or notebook cell to use as the context for the query.
+ * @param isGenerated An optional flag indicating whether the query is generated from a template (default: false).
  */
 export const executeSparqlQueryFromString = {
 	id: 'mentor.command.executeSparqlQueryFromString',
-	handler: async (query: string, contextUri?: vscode.Uri | string): Promise<void> => {
+	handler: async (query: string, contextUri?: vscode.Uri | string, isGenerated?: boolean): Promise<void> => {
 		const context = resolveQueryContext(contextUri);
 
 		if (!context) {
@@ -32,7 +33,7 @@ export const executeSparqlQueryFromString = {
 			await controller.executeQueryInCell(context, query);
 		} else {
 			const controller = container.resolve<SparqlResultsController>(ServiceToken.SparqlResultsController);
-			await controller.executeQuery(context, query);
+			await controller.executeQuery(context, query, { isGenerated });
 		}
 	}
 };

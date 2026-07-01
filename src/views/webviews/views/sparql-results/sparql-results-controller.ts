@@ -2,10 +2,12 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService, ISparqlQueryService, ISparqlResultSerializer } from '@src/languages/sparql/services';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
+import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 
 /**
  * A controller for the SPARQL results webview. It handles the registration of the webview, 
@@ -19,6 +21,7 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         });
 
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+
         this.subscribe(queryService.onDidHistoryChange(this._postQueryHistory, this));
     }
 
@@ -50,11 +53,18 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         }
     }
 
+    /**
+     * Opens the query text of a background or generated query in a new editor, inheriting the
+     * query's connection so it stays runnable. Background queries supply the connection via
+     * `connectionId`; generated queries (e.g. rendered triplate templates) inherit it from the
+     * source `documentIri` instead.
+     * @param queryId The ID of the query execution whose query text should be opened.
+     */
     private async _handleEditBackgroundQuery(queryId: string) {
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
         const queryState = queryService.getQueryHistory().find(q => q.id === queryId);
 
-        if (!queryState?.query || !queryState.connectionId) {
+        if (!queryState?.query) {
             return;
         }
 
@@ -64,7 +74,22 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         });
 
         const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-        await connectionService.setQuerySourceForDocument(document.uri, queryState.connectionId);
+
+        // Resolve the connection from the explicit connectionId (background queries) or, for
+        // generated queries, from the source document the query was rendered against.
+        let connection: SparqlConnection | undefined;
+
+        if (queryState.connectionId) {
+            connection = connectionService.getConnection(queryState.connectionId);
+        } else if (queryState.documentIri) {
+            const documentUri = vscode.Uri.parse(queryState.documentIri);
+
+            connection = connectionService.getConnectionForDocument(documentUri);
+        }
+
+        if (connection && connection.id !== WORKSPACE_CONNECTION.id) {
+            await connectionService.setQuerySourceForDocument(document.uri, connection.id);
+        }
 
         this.postMessage({
             id: 'UpdateQueryDocumentIri',
@@ -90,35 +115,20 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
             return;
         }
 
+        let language: string = "plaintext";
+
+        if (rawResponse.contentType) {
+            const documentFactory = container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
+            
+            language = await documentFactory.getLanguageIdFromMimeType(rawResponse.contentType);
+        }
+
         const document = await vscode.workspace.openTextDocument({
             content: rawResponse.body,
-            language: this._getLanguageForContentType(rawResponse.contentType)
+            language: language
         });
 
         await vscode.window.showTextDocument(document);
-    }
-
-    /**
-     * Maps an HTTP `Content-Type` to a VS Code language identifier for syntax highlighting.
-     * @param contentType The value of the response `Content-Type` header, if any.
-     * @returns A VS Code language identifier, defaulting to `plaintext`.
-     */
-    private _getLanguageForContentType(contentType?: string): string {
-        const type = (contentType ?? '').toLowerCase();
-
-        if (type.includes('json')) {
-            return 'json';
-        } else if (type.includes('xml')) {
-            return 'xml';
-        } else if (type.includes('turtle')) {
-            return 'turtle';
-        } else if (type.includes('html')) {
-            return 'html';
-        } else if (type.includes('csv')) {
-            return 'csv';
-        } else {
-            return 'plaintext';
-        }
     }
 
     private async _prepareQueryExecution(queryContext: vscode.TextDocument | vscode.NotebookCell) {
@@ -153,12 +163,15 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
      * Executes a SPARQL query from a query string and a context document or notebook cell.
      * @param queryContext A text document or notebook cell from which to load the SPARQL endpoint.
      * @param query The SPARQL query string.
+     * @param options Set `generated: true` when `query` was generated (e.g. rendered from a triplate
+     * template) and differs from the context document's content, so "Edit query" reveals the query.
      */
-    async executeQuery(queryContext: vscode.TextDocument | vscode.NotebookCell, query: string) {
+    async executeQuery(queryContext: vscode.TextDocument | vscode.NotebookCell, query: string, options?: { isGenerated?: boolean }) {
         await this._prepareQueryExecution(queryContext);
 
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
         const queryState = queryService.createQuery(queryContext, query);
+        queryState.isGenerated = options?.isGenerated;
 
         await this._executeQuery(queryState);
     }

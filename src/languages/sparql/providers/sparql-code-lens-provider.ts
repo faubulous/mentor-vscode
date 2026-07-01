@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
-import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
+import { ISparqlStoreConfigService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '../services/sparql-connection-service';
 import { SparqlConnection } from '../services/sparql-connection';
 import { isTemplate } from 'triplate';

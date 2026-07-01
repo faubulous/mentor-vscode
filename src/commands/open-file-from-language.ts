@@ -23,7 +23,7 @@ export const openFileFromLanguage = {
 			files.push(file);
 		}
 
-		const language = await documentFactory.getLanguageInfo(languageId);
+		const language = await documentFactory.getSupportedLanguageInfoFromId(languageId);
 		const languageName = language ? language.name : languageId;
 		const languageIcon = language ? language.icon : 'file';
 

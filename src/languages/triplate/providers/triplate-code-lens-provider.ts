@@ -8,10 +8,19 @@ import { TriplateCompileCache } from '../triplate-compile-cache';
  * that renders using the example's declared values.
  */
 export class TriplateCodeLensProvider implements vscode.CodeLensProvider {
+	/**
+	 * The cache of compiled templates, used to determine the locations of `example` blocks.
+	 */
 	private readonly _cache = new TriplateCompileCache();
 	
+	/**
+	 * Event emitter that signals when the CodeLenses should be refreshed.
+	 */
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
+	/**
+	 * Fires when the CodeLenses should be refreshed, e.g., when the compiled template cache changes.
+	 */
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
@@ -51,7 +60,7 @@ export class TriplateCodeLensProvider implements vscode.CodeLensProvider {
 				const range = new vscode.Range(position, position);
 
 				codeLenses.push(new vscode.CodeLens(range, {
-					title: `$(play)\u00A0Run: ${example.id}`,
+					title: `$(play)\u00A0Run`,
 					tooltip: example.description ?? `Render the "${example.id}" example`,
 					command: 'mentor.command.executeTriplateExample',
 					arguments: [document.uri.toString(), example.id],

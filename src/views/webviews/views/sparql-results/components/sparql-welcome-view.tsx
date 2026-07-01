@@ -15,7 +15,7 @@ export function SparqlWelcomeView() {
 	// Message handler
 	const handleMessage = useCallback((message: SparqlResultsWebviewMessages) => {
 		if (message.id === 'PostSparqlQueryHistory') {
-			setHistory(message.history.filter(q => !q.background));
+			setHistory(message.history.filter(q => !q.isBackground));
 		}
 	}, []);
 

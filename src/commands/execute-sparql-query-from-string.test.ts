@@ -43,9 +43,10 @@ describe('executeSparqlQueryFromString command', () => {
 		const document = { uri: vscode.Uri.parse('file:///q.sparql'), languageId: 'sparql', getText: () => '' };
 		(vscode.workspace as any).textDocuments = [document];
 
-		await executeSparqlQueryFromString.handler('SELECT * WHERE {}', 'file:///q.sparql');
+		await executeSparqlQueryFromString.handler('SELECT * WHERE {}', 'file:///q.sparql', true);
 
-		expect(mockPanelExecuteQuery).toHaveBeenCalledWith(document, 'SELECT * WHERE {}');
+		// Marked generated so the panel's "Edit query" reveals this query, not the source document.
+		expect(mockPanelExecuteQuery).toHaveBeenCalledWith(document, 'SELECT * WHERE {}', { isGenerated: true });
 		expect(mockCellExecuteQuery).not.toHaveBeenCalled();
 	});
 

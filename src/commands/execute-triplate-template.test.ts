@@ -80,7 +80,7 @@ describe('executeTriplateTemplate command', () => {
 
 		expect(mockRender).toHaveBeenCalledWith({ type: 'http://example.org/Person', limit: 10 });
 		expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-			'mentor.command.executeSparqlQueryFromString', 'SELECT * WHERE {}', 'file:///q.sparql'
+			'mentor.command.executeSparqlQueryFromString', 'SELECT * WHERE {}', 'file:///q.sparql', true
 		);
 	});
 
@@ -107,7 +107,7 @@ describe('executeTriplateTemplate command', () => {
 		expect(mockPreviewExample).toHaveBeenCalledWith('people');
 		expect(mockRender).not.toHaveBeenCalled();
 		expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-			'mentor.command.executeSparqlQueryFromString', 'SELECT example WHERE {}', 'file:///q.sparql'
+			'mentor.command.executeSparqlQueryFromString', 'SELECT example WHERE {}', 'file:///q.sparql', true
 		);
 	});
 
@@ -125,7 +125,7 @@ describe('executeTriplateTemplate command', () => {
 		expect(mockPreviewExample).not.toHaveBeenCalled();
 		expect(mockRender).toHaveBeenCalledWith({ type: 'http://example.org/Person', limit: 10 });
 		expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-			'mentor.command.executeSparqlQueryFromString', 'SELECT * WHERE {}', 'file:///q.sparql'
+			'mentor.command.executeSparqlQueryFromString', 'SELECT * WHERE {}', 'file:///q.sparql', true
 		);
 	});
 

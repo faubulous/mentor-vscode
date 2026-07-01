@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
-import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
+import { ISparqlStoreConfigService } from '@src/languages/sparql/services';
 
 export const toggleDocumentInference = {
 	id: 'mentor.command.toggleDocumentInference',
@@ -26,8 +26,8 @@ export const toggleDocumentInference = {
 		}
 
 		const newValue = await connectionService.toggleInferenceEnabledForDocument(targetUri);
-
 		const statusText = newValue ? 'enabled' : 'disabled';
+		
 		vscode.window.setStatusBarMessage(`Inference ${statusText} for this document`, 3000);
 	}
 };

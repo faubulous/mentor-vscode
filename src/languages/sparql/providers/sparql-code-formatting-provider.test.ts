@@ -113,4 +113,15 @@ describe('SparqlCodeFormattingProvider', () => {
             token as any
         )).not.toThrow();
     });
+
+    it('passes the common blankLinesBetweenSubjects option to the formatter', () => {
+        const spy = vi.spyOn((provider as any)._formatter, 'formatFromText');
+        const doc = makeDocument('SELECT * WHERE { ?s ?p ?o }') as any;
+        provider.provideDocumentFormattingEdits(doc, defaultOptions as any, token as any);
+
+        expect(spy).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({ blankLinesBetweenSubjects: true })
+        );
+    });
 });

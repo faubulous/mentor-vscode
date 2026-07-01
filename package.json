@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.6.0",
+  "version": "0.5.97",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -105,7 +105,7 @@
     "react-dom": "^19.2.7",
     "reflect-metadata": "^0.2.2",
     "shacl-engine": "^1.1.0",
-    "triplate": "^0.5.2",
+    "triplate": "^0.6.0",
     "tsyringe": "^4.10.0",
     "vscode-languageclient": "^10.0.0",
     "vscode-languageserver": "^10.0.0",
@@ -1510,29 +1510,8 @@
             "default": [
               {
                 "id": "sparql",
-                "label": "SPARQL Endpoint"
-              },
-              {
-                "id": "jena",
-                "label": "Apache Jena Fuseki",
-                "queries": {
-                  "listGraphs": "SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph {}\n}\nORDER BY ?graph"
-                }
-              },
-              {
-                "id": "rdf4j",
-                "label": "RDF4J",
-                "inference": {
-                  "supported": true,
-                  "urlParameters": {
-                    "enabled": "infer=true",
-                    "disabled": "infer=false"
-                  }
-                }
-              },
-              {
-                "id": "qlever",
-                "label": "QLever"
+                "label": "SPARQL Endpoint",
+                "website": "https://www.w3.org/TR/sparql11-query/"
               }
             ],
             "items": {
@@ -1553,6 +1532,10 @@
                 "description": {
                   "type": "string",
                   "description": "Optional free-text description of the store type."
+                },
+                "website": {
+                  "type": "string",
+                  "description": "Optional website or documentation URL shown as an 'open in browser' link in the store list."
                 },
                 "isProtected": {
                   "type": "boolean",
@@ -1930,58 +1913,76 @@
             "default": false,
             "experimental": true
           },
+          "mentor.formatting.common.maxLineWidth": {
+            "type": "number",
+            "title": "Max Line Width",
+            "description": "Maximum line width before the formatter wraps long lines in RDF and SPARQL documents. Set to 0 to disable wrapping.",
+            "default": 120
+          },
+          "mentor.formatting.common.spaceBeforePunctuation": {
+            "type": "boolean",
+            "title": "Space Before Punctuation",
+            "description": "Insert a space before statement-ending punctuation characters (. ; ,) in RDF and SPARQL documents.",
+            "default": true
+          },
+          "mentor.formatting.common.blankLinesBetweenSubjects": {
+            "type": "boolean",
+            "title": "Blank Lines Between Subjects",
+            "description": "Insert a blank line between each top-level subject block in RDF and SPARQL documents.",
+            "default": true
+          },
           "mentor.formatting.turtle.maxLineWidth": {
             "type": "number",
             "title": "Turtle: Max Line Width",
-            "description": "Maximum line width before the Turtle formatter wraps long lines. Set to 0 to disable wrapping.",
-            "default": 120
+            "description": "Overrides Formatting: Max Line Width for Turtle, TriG and N3 documents. When unset, the common value is used."
           },
           "mentor.formatting.turtle.spaceBeforePunctuation": {
             "type": "boolean",
             "title": "Turtle: Space Before Punctuation",
-            "description": "Insert a space before statement-ending punctuation characters (. ; ,) in Turtle documents.",
-            "default": true
+            "description": "Overrides Formatting: Space Before Punctuation for Turtle, TriG and N3 documents. When unset, the common value is used."
           },
           "mentor.formatting.turtle.blankLinesBetweenSubjects": {
             "type": "boolean",
             "title": "Turtle: Blank Lines Between Subjects",
-            "description": "Insert a blank line between each top-level subject block in Turtle documents.",
-            "default": true
+            "description": "Overrides Formatting: Blank Lines Between Subjects for Turtle, TriG and N3 documents. When unset, the common value is used."
+          },
+          "mentor.formatting.sparql.maxLineWidth": {
+            "type": "number",
+            "title": "SPARQL: Max Line Width",
+            "description": "Overrides Formatting: Max Line Width for SPARQL documents. When unset, the common value is used."
+          },
+          "mentor.formatting.sparql.spaceBeforePunctuation": {
+            "type": "boolean",
+            "title": "SPARQL: Space Before Punctuation",
+            "description": "Overrides Formatting: Space Before Punctuation for SPARQL documents. When unset, the common value is used."
+          },
+          "mentor.formatting.sparql.blankLinesBetweenSubjects": {
+            "type": "boolean",
+            "title": "SPARQL: Blank Lines Between Subjects",
+            "description": "Overrides Formatting: Blank Lines Between Subjects for SPARQL documents. When unset, the common value is used."
           },
           "mentor.formatting.sparql.uppercaseKeywords": {
             "type": "boolean",
-            "title": "SPARQL: Uppercase Keywords",
-            "description": "Format SPARQL keywords (SELECT, WHERE, etc.) in uppercase.",
-            "default": true
+            "title": "Uppercase Keywords",
+            "description": "Format SPARQL keywords (SELECT, WHERE, etc.) in uppercase. When disabled, the original casing is preserved.",
+            "default": false
           },
           "mentor.formatting.sparql.alignPatterns": {
             "type": "boolean",
-            "title": "SPARQL: Align Patterns",
+            "title": "Align Patterns",
             "description": "Align triple patterns in the WHERE clause.",
             "default": true
           },
           "mentor.formatting.sparql.sameBraceLine": {
             "type": "boolean",
-            "title": "SPARQL: Opening Brace on Same Line",
+            "title": "Opening Brace on Same Line",
             "description": "Place opening braces on the same line as SPARQL keywords.",
             "default": true
           },
           "mentor.formatting.sparql.separateClauses": {
             "type": "boolean",
-            "title": "SPARQL: Separate Clauses",
+            "title": "Separate Clauses",
             "description": "Insert blank lines between major SPARQL clauses (SELECT, WHERE, etc.).",
-            "default": true
-          },
-          "mentor.formatting.sparql.maxLineWidth": {
-            "type": "number",
-            "title": "SPARQL: Max Line Width",
-            "description": "Maximum line width before the SPARQL formatter wraps long lines. Set to 0 to disable wrapping.",
-            "default": 120
-          },
-          "mentor.formatting.sparql.spaceBeforePunctuation": {
-            "type": "boolean",
-            "title": "SPARQL: Space Before Punctuation",
-            "description": "Insert a space before punctuation characters in SPARQL documents.",
             "default": true
           },
           "mentor.linting.enabled": {

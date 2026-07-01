@@ -43,7 +43,7 @@ function SparqlResultsPanel() {
 				...previousState,
 				activeTabIndex: 0,
 				activeQueries: activeQueries.filter(q =>
-					!q.background &&
+					!q.isBackground &&
 					q.documentIri &&
 					!q.documentIri.startsWith('untitled:')
 				)
@@ -64,10 +64,12 @@ function SparqlResultsPanel() {
 		if (message.id === 'PostSparqlQueryHistory') {
 			onDidChangeQueryHistory(message.history);
 		} else if (message.id === 'UpdateQueryDocumentIri') {
+			// The documentIri now points to the opened query document whose content is the query
+			// itself, so it is no longer "generated" — clear the flag so repeat clicks are stable.
 			setState(prev => ({
 				...prev,
 				activeQueries: prev.activeQueries.map(q =>
-					q.id === message.queryId ? { ...q, documentIri: message.documentIri } : q
+					q.id === message.queryId ? { ...q, documentIri: message.documentIri, isGenerated: false } : q
 				)
 			}));
 		}
@@ -141,7 +143,7 @@ function SparqlResultsPanel() {
 			// For background queries also match tabs that carry label+connectionId but
 			// lost the background flag because they were replaced by a doc execution
 			// (i.e., the user clicked Edit → ran from the untitled doc).
-			const n = query.background
+			const n = query.isBackground
 				? prevState.activeQueries.findIndex(q => q.label === query.label && q.connectionId === query.connectionId)
 				: prevState.activeQueries.findIndex(q => q.documentIri === query.documentIri);
 
@@ -164,7 +166,7 @@ function SparqlResultsPanel() {
 				const existingHasBgMetadata = !!(existingTab.label && existingTab.connectionId);
 
 				const mergedQuery =
-					!query.background && existingHasBgMetadata
+					!query.isBackground && existingHasBgMetadata
 						? {
 								...query,
 								id: existingTab.id,

@@ -13,9 +13,7 @@ import { NamespaceMap } from '@src/utilities';
  * Handler for serializing SPARQL query results.
  */
 export class SparqlResultSerializer {
-	constructor(
-		private readonly prefixLookupService: IPrefixLookupService
-	) {}
+	constructor(private readonly _prefixLookupService: IPrefixLookupService) { }
 
 	/**
 	 * Serializes SPARQL query results into a format suitable for the webview.
@@ -24,11 +22,7 @@ export class SparqlResultSerializer {
 	 * @param limit The maximum number of results to serialize.
 	 * @returns An object containing the serialized results.
 	 */
-	async serializeBindings(
-		context: SparqlQueryExecutionState,
-		bindingStream: AsyncIterator<Bindings>,
-		token: vscode.CancellationToken
-	): Promise<BindingsResult> {
+	async serializeBindings(context: SparqlQueryExecutionState, bindingStream: AsyncIterator<Bindings>, token: vscode.CancellationToken): Promise<BindingsResult> {
 		// Note: This evaluates the query results and collects the bindings.
 		const bindings = await toArrayWithCancellation(bindingStream, token);
 		const parsedColumns: string[] = [];
@@ -84,7 +78,7 @@ export class SparqlResultSerializer {
 		const namespaceMap: NamespaceMap = {};
 
 		for (const iri of namespaces) {
-			const prefix = this.prefixLookupService.getPrefixForIri(documentIri, iri, '\0');
+			const prefix = this._prefixLookupService.getPrefixForIri(documentIri, iri, '\0');
 
 			if (prefix !== '\0') {
 				namespaceMap[iri] = prefix;
@@ -130,7 +124,7 @@ export class SparqlResultSerializer {
 
 		for (const iri of iris) {
 			const namespace = Uri.getNamespaceIri(iri);
-			const prefix = this.prefixLookupService.getPrefixForIri(documentIri, namespace, '\0');
+			const prefix = this._prefixLookupService.getPrefixForIri(documentIri, namespace, '\0');
 
 			if (prefix !== '\0') {
 				namespaceMap[namespace] = prefix;
@@ -154,11 +148,7 @@ export class SparqlResultSerializer {
 	 * @param token The cancellation token.
 	 * @returns A string containing the serialized Turtle document.
 	 */
-	async serializeQuads(
-		context: SparqlQueryExecutionState,
-		quadStream: AsyncIterator<Quad>,
-		token: vscode.CancellationToken
-	): Promise<string> {
+	async serializeQuads(context: SparqlQueryExecutionState, quadStream: AsyncIterator<Quad>, token: vscode.CancellationToken): Promise<string> {
 		try {
 			const quads = await toArrayWithCancellation(quadStream, token);
 
@@ -195,7 +185,7 @@ export class SparqlResultSerializer {
 
 			// Build prefix map
 			for (const iri of namespaces) {
-				const prefix = this.prefixLookupService.getPrefixForIri(documentIri, iri, '');
+				const prefix = this._prefixLookupService.getPrefixForIri(documentIri, iri, '');
 
 				if (prefix !== '') {
 					prefixMap[prefix] = iri;
@@ -265,8 +255,8 @@ export class SparqlResultSerializer {
 				}
 
 				// Build prefix map using inference prefixes and default prefixes
-				const inferencePrefixes = this.prefixLookupService.getInferencePrefixes();
-				const defaultPrefixes = this.prefixLookupService.getDefaultPrefixes();
+				const inferencePrefixes = this._prefixLookupService.getInferencePrefixes();
+				const defaultPrefixes = this._prefixLookupService.getDefaultPrefixes();
 				const allPrefixes = { ...inferencePrefixes, ...defaultPrefixes };
 
 				for (const iri of namespaceIris) {

@@ -90,7 +90,9 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 	};
 
 	const editQuery = () => {
-		if (queryContext.documentIri) {
+		// Generated queries (e.g. rendered triplate templates) carry the template's documentIri but
+		// their query text differs from it, so reveal the query text instead of the source document.
+		if (queryContext.documentIri && !queryContext.isGenerated) {
 			messaging?.postMessage({
 				id: 'ExecuteCommand',
 				command: 'mentor.command.openDocument',
@@ -110,7 +112,7 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 				<span className="codicon codicon-file-code"></span>
 			</vscode-toolbar-button>
 
-			<span className="divider divider-vertical"></span>
+			<span className="divider divider-vertical not-notebook"></span>
 
 			<Stopwatch />
 

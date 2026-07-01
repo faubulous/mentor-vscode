@@ -42,7 +42,14 @@ export interface SparqlQueryExecutionState {
 	 * When `true`, the query was executed as a background query without an open editor document.
 	 * Background queries are excluded from the Recent Queries history list.
 	 */
-	background?: boolean;
+	isBackground?: boolean;
+
+	/**
+	 * When `true`, the `query` text was generated (e.g. rendered from a triplate template) and
+	 * differs from the content of the `documentIri` document. In that case the panel's
+	 * "Edit query" action reveals the generated query text rather than the source document.
+	 */
+	isGenerated?: boolean;
 
 	/**
 	 * The workspace relative URI of the `documentIri`.
@@ -140,8 +147,9 @@ const MAX_CONNECTION_NAME_LENGTH = 20;
  * For background queries, returns the truncated connection name.
  */
 export function getDisplayName(queryState: SparqlQueryExecutionState): string {
-	if (queryState.background && queryState.connectionName) {
+	if (queryState.isBackground && queryState.connectionName) {
 		const name = queryState.connectionName;
+		
 		return name.length > MAX_CONNECTION_NAME_LENGTH
 			? name.slice(0, MAX_CONNECTION_NAME_LENGTH - 1) + '…'
 			: name;

@@ -48,7 +48,7 @@ describe('executeTriplateExample command', () => {
 
 		expect(mockPreviewExample).toHaveBeenCalledWith('people');
 		expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
-			'mentor.command.executeSparqlQueryFromString', 'SELECT * WHERE {}', 'file:///q.sparql'
+			'mentor.command.executeSparqlQueryFromString', 'SELECT * WHERE {}', 'file:///q.sparql', true
 		);
 	});
 

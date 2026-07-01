@@ -1,19 +1,23 @@
 import * as React from 'react';
-import { useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } from '@src/views/webviews/components/modal-dialog';
 import { ScopeSelect } from '@src/views/webviews/components/scope-select';
+import { TemplatePreview } from '@src/views/webviews/components/template-preview';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { useScopedWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import {
 	SparqlStoreConfig,
 	SparqlStoreInferenceConfig,
 	SparqlQueryKind,
-	SPARQL_QUERY_KINDS,
 } from '@src/languages/sparql/services/sparql-store-config';
 import { SettingState } from '../../settings-types';
 import modalFormStylesheet from '@src/views/webviews/components/modal-form.css';
 import stylesheet from './store-editor.css';
+
+/** Builds the scratch token identifying an open per-store query-template editor. */
+const templateToken = (storeId: string, kind: SparqlQueryKind) => `${kind}~${storeId}`;
 
 
 export interface StoreEditorProps {
@@ -64,11 +68,26 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 
 	const [draft, setDraft] = useState<SparqlStoreConfig>(store);
 	const [activeTab, setActiveTab] = useState(0);
+	const [queryKind, setQueryKind] = useState<string>('');
+
+	// The store-overridable query templates are discovered from the settings payload: every
+	// `mentor.*` setting marked with `storeQueryKind` in package.json. package.json is the single
+	// source for which queries are editable and for their title/description/default.
+	const queryKinds = useMemo(
+		() => Object.entries(settings)
+			.filter(([, s]) => typeof s.storeQueryKind === 'string')
+			.map(([key, s]) => ({ kind: s.storeQueryKind as SparqlQueryKind, key, title: s.title, description: s.description })),
+		[settings],
+	);
+
+	// The selected kind, clamped to a still-valid entry (defaults to the first discovered query).
+	const activeQuery = queryKinds.find(q => q.kind === queryKind) ?? queryKinds[0];
 
 	// Reseed the draft whenever a different store is opened.
 	useEffect(() => {
 		setDraft(store);
 		setActiveTab(0);
+		setQueryKind('');
 	}, [store]);
 
 	const hasChanges = JSON.stringify(draft) !== JSON.stringify(store);
@@ -109,12 +128,14 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 		});
 	};
 
-	// Query-template fields: a value equal to the (global) default clears the per-store override.
+	// Query-template fields: a value equal to the (global) default — or left blank — clears the
+	// per-store override so the store falls back to the global default (matching how the connection
+	// service resolves templates at runtime).
 	const updateQuery = (kind: SparqlQueryKind, value: string, defaultValue: string) => {
 		setDraft(d => {
 			const queries = { ...d.queries };
 
-			if (value === defaultValue) {
+			if (!value.trim() || value === defaultValue) {
 				delete queries[kind];
 			} else {
 				queries[kind] = value;
@@ -123,6 +144,29 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 			return { ...d, queries: Object.keys(queries).length > 0 ? queries : undefined };
 		});
 	};
+
+	const queryKindRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => setQueryKind(element.value));
+
+	// Fold edits made in an external template editor back into the draft. The save event is
+	// relayed by the stores section controller on the shared 'query.stores' channel; we only act
+	// on tokens that target the store currently open in this editor.
+	const handleSavedTemplate = useCallback((message: { id: string; token?: string; content?: string }) => {
+		if (message.id !== 'StoreQueryTemplateSaved' || typeof message.token !== 'string') {
+			return;
+		}
+
+		const [kind, storeId] = message.token.split('~') as [SparqlQueryKind, string];
+		const entry = queryKinds.find(q => q.kind === kind);
+
+		if (storeId !== draft.id || !entry) {
+			return;
+		}
+
+		const defaultValue = String(settings[entry.key]?.value ?? '');
+		updateQuery(kind, message.content ?? '', defaultValue);
+	}, [draft.id, settings, queryKinds]);
+
+	useScopedWebviewMessaging<{ id: string; token?: string; content?: string }>('query.stores', handleSavedTemplate);
 
 	const tabsRef = useVscodeElementRef<HTMLElement & { selectedIndex: number }>('vsc-tabs-select', (element) => {
 		setActiveTab(element.selectedIndex);
@@ -212,28 +256,38 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 				</vscode-tab-panel>
 
 				<vscode-tab-header slot="header">Queries</vscode-tab-header>
-				<vscode-tab-panel>
-					<section>
-						{(Object.keys(SPARQL_QUERY_KINDS) as SparqlQueryKind[]).map(kind => {
-							const { label, description, globalSettingKey } = SPARQL_QUERY_KINDS[kind];
-							const defaultValue = String(settings[globalSettingKey]?.value ?? '');
-							const override = draft.queries?.[kind];
+				<vscode-tab-panel className="queries-tab-panel">
+					{activeQuery && (() => {
+						const { kind, key, description } = activeQuery;
+						const defaultValue = String(settings[key]?.value ?? '');
+						const override = draft.queries?.[kind];
+						// A blank/absent override falls back to the global default, mirroring runtime resolution;
+						// editing therefore starts from the currently used default.
+						const usesDefault = !override?.trim();
+						const value = usesDefault ? defaultValue : override!;
 
-							return (
-								<div key={kind}>
-									<vscode-label>{label}</vscode-label>
-									<p className="section-description">{description}</p>
-									<vscode-textarea
-										className='monospace'
-										rows={10}
-										value={override ?? defaultValue}
-										disabled={readOnly}
-										onInput={(e: any) => updateQuery(kind, (e.target as HTMLTextAreaElement).value, defaultValue)}
-									/>
+						return (
+							<section className="queries-section">
+								<div className="layout-row queries-header-row">
+									<vscode-single-select ref={queryKindRef} value={kind}>
+										{queryKinds.map(q => (
+											<vscode-option key={q.kind} value={q.kind}>{q.title}</vscode-option>
+										))}
+									</vscode-single-select>
+									<span className="queries-leader" aria-hidden="true" />
 								</div>
-							);
-						})}
-					</section>
+								<p className="section-description">{description}</p>
+								<TemplatePreview
+									language="sparql"
+									disabled={readOnly}
+									muted={usesDefault}
+									target={{ kind: 'scratch', token: templateToken(draft.id, kind), content: value }}
+									value={value}
+								/>
+								<vscode-form-helper>Leave blank to use the global default.</vscode-form-helper>
+							</section>
+						);
+					})()}
 				</vscode-tab-panel>
 
 				<vscode-tab-header slot="header">Reasoning</vscode-tab-header>

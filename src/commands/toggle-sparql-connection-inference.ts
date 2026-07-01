@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
-import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
+import { ISparqlStoreConfigService } from '@src/languages/sparql/services';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
 export const toggleSparqlConnectionInference = {
@@ -26,8 +26,8 @@ export const toggleSparqlConnectionInference = {
 		}
 
 		const newValue = await connectionService.toggleInferenceEnabled(connectionId);
-
 		const statusText = newValue ? 'enabled' : 'disabled';
+		
 		vscode.window.setStatusBarMessage(`Inference ${statusText} for ${targetConnection.endpointUrl}`, 5000);
 	}
 };

@@ -67,10 +67,11 @@ describe('TriplateCodeLensProvider', () => {
 		expect(lenses[0].command?.arguments).toEqual(['file:///test.ttl']);
 	});
 
-	it('returns the top lens plus one lens per example block', () => {
+	it('returns the top lens plus one Run lens per example block', () => {
 		const doc = makeDoc(FRONTMATTER);
 		const lenses = provider.provideCodeLenses(doc);
 
+		// 1 top-of-file Run lens + a Run lens for each of the two examples.
 		expect(lenses).toHaveLength(3);
 
 		const exampleLenses = lenses.slice(1);
@@ -97,8 +98,8 @@ describe('TriplateCodeLensProvider', () => {
 		const doc = makeDoc(FRONTMATTER, 'sparql');
 		const lenses = provider.provideCodeLenses(doc);
 
-		// Only the two per-example lenses; SparqlCodeLensProvider supplies the top-of-file
-		// Run lens for `.sparql`-language documents so it reliably ends up first on screen.
+		// Only the per-example Run lenses; SparqlCodeLensProvider supplies the top-of-file
+		// Run lens for `.sparql`-language documents so it reliably ends up first.
 		expect(lenses).toHaveLength(2);
 		expect(lenses.every(l => l.command?.command === 'mentor.command.executeTriplateExample')).toBe(true);
 	});
@@ -107,7 +108,7 @@ describe('TriplateCodeLensProvider', () => {
 		const doc = makeDoc(FRONTMATTER, 'turtle', 1, 'vscode-notebook-cell:///nb.ttl#c1');
 		const lenses = provider.provideCodeLenses(doc);
 
-		// Only the two per-example lenses remain; the redundant top Run lens is dropped.
+		// Only the per-example Run lenses remain; the redundant top Run lens is dropped.
 		expect(lenses).toHaveLength(2);
 		expect(lenses.every(l => l.command?.command === 'mentor.command.executeTriplateExample')).toBe(true);
 	});
