@@ -11,7 +11,6 @@ export type ConnectionsListMessages =
     { id: 'GetConnections' } |
     { id: 'GetConnectionsResult', connections: SparqlConnectionView[] } |
     { id: 'ConnectionsChanged', connections: SparqlConnectionView[] } |
-    { id: 'EditConnection', connection: SparqlConnection } |
     { id: 'DeleteConnection', connection: SparqlConnection } |
     { id: 'CreateConnection' } |
     { id: 'ListGraphs', connection: SparqlConnection } |

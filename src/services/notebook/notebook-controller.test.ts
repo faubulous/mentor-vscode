@@ -11,6 +11,7 @@ const {
 	mockGetEffectiveShapeGraphs,
 	mockValidateDocument,
 	mockGetReportAsText,
+	mockClearDiagnostics,
 	mockRender,
 } = vi.hoisted(() => ({
 	mockCreateQuery: vi.fn((_cell: any, query: string) => ({ queryType: 'bindings', query })),
@@ -20,6 +21,7 @@ const {
 	mockGetEffectiveShapeGraphs: vi.fn(() => ['shapes:graph']),
 	mockValidateDocument: vi.fn(async () => ({ conforms: true, results: [] })),
 	mockGetReportAsText: vi.fn(() => 'SHACL Validation Report'),
+	mockClearDiagnostics: vi.fn(() => {}),
 	mockRender: vi.fn(() => 'SELECT * WHERE { ?s ?p ?o }'),
 }));
 
@@ -60,6 +62,7 @@ vi.mock('tsyringe', () => ({
 					getEffectiveShapeGraphs: mockGetEffectiveShapeGraphs,
 					validateDocument: mockValidateDocument,
 					getReportAsText: mockGetReportAsText,
+					clearDiagnostics: mockClearDiagnostics,
 				};
 			}
 			return {};
@@ -287,11 +290,13 @@ describe('NotebookController', () => {
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
 
-		it('renders an RDF template and SHACL-validates the result via the play button', async () => {
+		it('shows the rendered Turtle in the cell and reports SHACL conformance via a snackbar', async () => {
 			const mockExecution = makeExecution();
 			const { executeHandler } = createControllerWithExecution(mockExecution);
 
 			mockRender.mockReturnValue('<urn:s> a <urn:o> .');
+			(vscode.window as any).showInformationMessage = vi.fn(async () => undefined);
+			(vscode.window as any).showWarningMessage = vi.fn(async () => undefined);
 			(vscode.workspace as any).openTextDocument = vi.fn(async (opts: any) => ({
 				uri: vscode.Uri.parse('untitled:rendered'),
 				languageId: opts.language,
@@ -300,13 +305,100 @@ describe('NotebookController', () => {
 			await executeHandler()!([makeTemplateCell('turtle')], {}, {});
 			await new Promise(resolve => setTimeout(resolve, 0));
 
-			// The native play button validates the rendered content against the cell's shapes.
-			expect(mockValidateDocument).toHaveBeenCalledWith(expect.anything(), ['shapes:graph']);
-			expect(mockExecuteQuery).not.toHaveBeenCalled();
+			// The cell output is the rendered Turtle, not the SHACL summary text.
 			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
-			expect(outputs[0].items[0].mime).toBe('text/plain');
-			// The temporary rendered document context is cleaned up afterwards.
+			expect(outputs[0].items[0].mime).toBe('text/turtle');
+			// Validation still runs against the cell's shapes; conformance is shown as an info snackbar.
+			expect(mockValidateDocument).toHaveBeenCalledWith(expect.anything(), ['shapes:graph']);
+			expect(vscode.window.showInformationMessage).toHaveBeenCalledWith('SHACL validation: No issues found.');
+			expect(mockExecuteQuery).not.toHaveBeenCalled();
+			// The temporary rendered document's diagnostics and context are cleaned up afterwards.
+			expect(mockClearDiagnostics).toHaveBeenCalled();
 			expect(mockHandleDocumentClosed).toHaveBeenCalled();
+			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
+		});
+
+		it('warns via snackbar when the rendered Turtle does not conform', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+
+			mockRender.mockReturnValue('<urn:s> a <urn:o> .');
+			mockValidateDocument.mockResolvedValue({ conforms: false, results: [{}, {}] });
+			(vscode.window as any).showInformationMessage = vi.fn(async () => undefined);
+			(vscode.window as any).showWarningMessage = vi.fn(async () => undefined);
+			(vscode.workspace as any).openTextDocument = vi.fn(async (opts: any) => ({
+				uri: vscode.Uri.parse('untitled:rendered'),
+				languageId: opts.language,
+			}));
+
+			await executeHandler()!([makeTemplateCell('turtle')], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			expect(outputs[0].items[0].mime).toBe('text/turtle');
+			expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('SHACL validation: 2 issue(s) found.');
+			expect(mockExecution.end).toHaveBeenCalledWith(false, expect.any(Number));
+		});
+
+		it('shows the rendered Turtle without validating when no shapes are configured', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+
+			mockRender.mockReturnValue('<urn:s> a <urn:o> .');
+			mockGetEffectiveShapeGraphs.mockReturnValue([]);
+			(vscode.workspace as any).openTextDocument = vi.fn();
+
+			await executeHandler()!([makeTemplateCell('turtle')], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			expect(outputs[0].items[0].mime).toBe('text/turtle');
+			expect(mockValidateDocument).not.toHaveBeenCalled();
+			expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
+			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
+		});
+	});
+
+	describe('_onDidReceiveMessage', () => {
+		function createControllerWithMessaging() {
+			let capturedHandler: ((e: { message: unknown }) => void) | undefined;
+
+			vi.spyOn(vscode.notebooks, 'createRendererMessaging').mockReturnValue({
+				onDidReceiveMessage: vi.fn((handler: any, thisArg: any) => {
+					capturedHandler = handler.bind(thisArg);
+					return { dispose: () => { } };
+				}),
+			} as any);
+
+			createControllerWithExecution(makeExecution());
+
+			return { messageHandler: capturedHandler! };
+		}
+
+		it('executes the command without throwing when args is missing', () => {
+			const { messageHandler } = createControllerWithMessaging();
+			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+
+			expect(() => messageHandler({ message: { id: 'ExecuteCommand', command: 'mentor.test' } })).not.toThrow();
+			expect(executeCommand).toHaveBeenCalledWith('mentor.test');
+		});
+
+		it('spreads args into the command when provided', () => {
+			const { messageHandler } = createControllerWithMessaging();
+			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+
+			messageHandler({ message: { id: 'ExecuteCommand', command: 'mentor.test', args: ['a', 1] } });
+
+			expect(executeCommand).toHaveBeenCalledWith('mentor.test', 'a', 1);
+		});
+
+		it('ignores messages with other ids', () => {
+			const { messageHandler } = createControllerWithMessaging();
+			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+
+			messageHandler({ message: { id: 'SomethingElse' } });
+
+			expect(executeCommand).not.toHaveBeenCalled();
 		});
 	});
 

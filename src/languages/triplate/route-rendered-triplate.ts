@@ -21,7 +21,8 @@ export async function routeRenderedTriplate(source: vscode.TextDocument | vscode
 	const document = getContextDocument(source);
 
 	if (document.languageId === 'sparql') {
-		await vscode.commands.executeCommand('mentor.command.executeSparqlQueryFromString', rendered, document.uri.toString());
+		const documentUri = document.uri.toString();
+		await vscode.commands.executeCommand('mentor.command.executeSparqlQueryFromString', rendered, documentUri, true);
 		return;
 	}
 
@@ -31,7 +32,10 @@ export async function routeRenderedTriplate(source: vscode.TextDocument | vscode
 		return;
 	}
 
-	const renderedDocument = await vscode.workspace.openTextDocument({ content: rendered, language: document.languageId });
+	const renderedDocument = await vscode.workspace.openTextDocument({ 
+		content: rendered,
+		language: document.languageId
+	});
 
 	await vscode.window.showTextDocument(renderedDocument);
 }

@@ -35,11 +35,7 @@ export function useWebviewMessaging<M extends WebviewMessage>(
 
 	useEffect(() => {
 		if (onMessage && messagingRef.current) {
-			const cleanup = messagingRef.current.onMessage(onMessage);
-			// If onMessage returns a cleanup function, use it
-			if (typeof cleanup === 'function') {
-				return cleanup;
-			}
+			return messagingRef.current.onMessage(onMessage);
 		}
 	}, [onMessage]);
 

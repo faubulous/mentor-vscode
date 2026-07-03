@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { SettingsSectionId, SETTINGS_GROUPS, ALL_SECTIONS } from './sections';
+import { SettingsSectionId, SETTINGS_GROUPS, defaultScopeForKey } from './sections';
 import { SettingsSectionDescriptor } from './settings-section-descriptor';
 import { SettingsPanelHeader } from './components/settings-panel-header';
 import { SearchResults } from './components/settings-search-results';
@@ -64,6 +64,12 @@ interface SettingsPanelState {
 	version: string;
 
 	/**
+	 * Human-readable language display names, keyed by language id. Sourced from
+	 * package.json's `contributes.languages` aliases via the host.
+	 */
+	languageLabels: Record<string, string>;
+
+	/**
 	 * Current search query; when non-empty the panel shows search results instead of a section.
 	 */
 	searchTerm: string;
@@ -79,6 +85,7 @@ const initialState: SettingsPanelState = {
 	activeSection: 'appearance.display',
 	scopeByKey: {},
 	version: '',
+	languageLabels: {},
 	searchTerm: '',
 	hasWorkspace: true,
 };
@@ -103,6 +110,9 @@ function SettingsPanel() {
 			case 'GetVersionResult':
 				setState(prev => ({ ...prev, version: message.version }));
 				return;
+			case 'GetLanguageLabelsResult':
+				setState(prev => ({ ...prev, languageLabels: message.labels }));
+				return;
 			case 'WorkspaceStateChanged':
 				setState(prev => ({ ...prev, hasWorkspace: message.hasWorkspace }));
 				return;
@@ -123,6 +133,7 @@ function SettingsPanel() {
 			messaging?.postMessage({ id: 'GetSettings', source });
 		}
 		messaging?.postMessage({ id: 'GetVersion' });
+		messaging?.postMessage({ id: 'GetLanguageLabels' });
 		messaging?.postMessage({ id: 'GetWorkspaceState' });
 	}, []);
 
@@ -145,29 +156,6 @@ function SettingsPanel() {
 	 */
 	const scopeKeyOf = (source: SettingsSource, key: string): string => {
 		return `${settingsSourceKey(source)}::${key}`;
-	};
-
-	/**
-	 * The scope a key defaults to when it is still unset and the user edits it, per the
-	 * owning section's configuration: `keyScopeOverrides[key]`, then `defaultScope`,
-	 * falling back to `'user'` when the key has no owning section or none is declared.
-	 *
-	 * @param source The bucket the key lives in — `mentor` keys are matched against a
-	 *   section's `keys`/`hiddenKeys`, `languageEditor` keys against its `vscodeKeys`.
-	 * @param key The bare setting key (without the `mentor.`/`editor.` prefix).
-	 */
-	const defaultScopeForKey = (source: SettingsSource, key: string): 'user' | 'workspace' => {
-		const ownsKey = (section: typeof ALL_SECTIONS[number]): boolean => {
-			if (source.kind === 'mentor') {
-				return section.keys.includes(key) || (section.hiddenKeys?.includes(key) ?? false);
-			} else {
-			return section.vscodeKeys?.some(k => k.key === key) ?? false;
-			}
-		};
-
-		const owner = ALL_SECTIONS.find(ownsKey);
-
-		return owner?.keyScopeOverrides?.[key] ?? owner?.defaultScope ?? 'user';
 	};
 
 	/**
@@ -321,6 +309,7 @@ function SettingsPanel() {
 				onBulkScope={handleBulkScope}
 				keys={descriptor.keys}
 				vscodeSettings={vscodeSettings}
+				languageLabels={state.languageLabels}
 			/>
 		);
 	};

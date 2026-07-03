@@ -3,32 +3,17 @@ import { SparqlLexer, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { AuthCredential, EntraClientAuthCredential } from '@src/services/core/credential';
-import { ICredentialStorageService } from '@src/services/core';
+import { EntraClientAuthCredential, AuthCredential } from '@src/services/core/credential';
 import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
-import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/languages/sparql/services';
-import { ISparqlStoreConfigService } from './sparql-store-config-service';
+import { ICredentialStorageService } from '@src/services/core';
+import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlResultSerializer } from '@src/languages/sparql/services';
+import { ITripleStoreConfigService } from './triple-store-config-service.interface';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
 import { getConfig } from '@src/utilities/vscode/config';
 import { SparqlQueryExecutionState, SparqlQueryType, SparqlRawResponse } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';
-
-/**
- * The key for storing query history in local storage.
- */
-const HISTORY_STORAGE_KEY = 'mentor.sparql.queryHistory';
-
-/**
- * The maximum number of entries to keep in the query history.
- */
-const HISTORY_MAX_ENTRIES = 10;
-
-/**
- * The maximum number of characters of a raw response body to retain. Larger bodies are
- * truncated to keep them out of memory and the webview message channel.
- */
-const MAX_RAW_RESPONSE_LENGTH = 5_000_000;
 
 /**
  * A service for executing SPARQL queries against an RDF endpoint. The service
@@ -38,8 +23,30 @@ const MAX_RAW_RESPONSE_LENGTH = 5_000_000;
  * service is instantiated.
  */
 export class SparqlQueryService {
+	/**
+	 * The in-memory history of executed SPARQL queries, ordered from most recent to least recent.
+	 */
 	private readonly _history: SparqlQueryExecutionState[] = [];
 
+	/**
+	 * The key for storing query history in local storage.
+	 */
+	private readonly _historyStorageKey = 'mentor.sparql.queryHistory';
+
+	/**
+	 * The maximum number of entries to keep in the query history.
+	 */
+	private readonly _historyMaxEntries = 10;
+
+	/**
+	 * The maximum number of characters of a raw response body to retain. Larger bodies are
+	 * truncated to keep them out of memory and the webview message channel.
+	 */
+	private readonly _maxRawResponseLength = 5_000_000;
+
+	/**
+	 * A map of cancellation tokens for currently running queries, keyed by query state ID.
+	 */
 	private readonly _cancellationTokens = new Map<string, vscode.CancellationTokenSource>();
 
 	private readonly _onDidHistoryChange = new vscode.EventEmitter<void>();
@@ -68,7 +75,7 @@ export class SparqlQueryService {
 		private readonly _credentialStorage: ICredentialStorageService,
 		private readonly _connectionService: ISparqlConnectionService,
 		private readonly _resultSerializer: ISparqlResultSerializer,
-		private readonly _storeConfigService: ISparqlStoreConfigService
+		private readonly _storeConfigService: ITripleStoreConfigService
 	) {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);
@@ -171,12 +178,14 @@ export class SparqlQueryService {
 				cellIndex: cell.index
 			};
 		} else {
-			return { document: querySource as vscode.TextDocument };
+			return { 
+				document: querySource as vscode.TextDocument
+			};
 		}
 	}
 
 	private _loadQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
-		const history = this._extensionContext.workspaceState.get<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
+		const history = this._extensionContext.workspaceState.get<SparqlQueryExecutionState[]>(this._historyStorageKey, []);
 
 		return history
 			.filter(q => q)
@@ -188,9 +197,9 @@ export class SparqlQueryService {
 		// Filter the query history to exclude execution states that would not be valid after a restart.
 		const filteredHistory = this._history
 			.filter(q => q && !q.isBackground && q.documentIri && !q.documentIri.startsWith('untitled'))
-			.slice(0, HISTORY_MAX_ENTRIES);
+			.slice(0, this._historyMaxEntries);
 
-		await this._extensionContext.workspaceState.update(HISTORY_STORAGE_KEY, filteredHistory);
+		await this._extensionContext.workspaceState.update(this._historyStorageKey, filteredHistory);
 	}
 
 	/**
@@ -294,7 +303,10 @@ export class SparqlQueryService {
 			if (result.type === 'bindings') {
 				context.result = await this._resultSerializer.serializeBindings(context, result.bindings, tokenSource.token);
 			} else if (result.type === 'boolean') {
-				context.result = { type: 'boolean', value: result.value };
+				context.result = {
+					type: 'boolean',
+					value: result.value
+				};
 			} else if (result.type === 'quads') {
 				context.result = {
 					type: 'quads',
@@ -321,7 +333,6 @@ export class SparqlQueryService {
 		}
 
 		context.rawResponse = await rawResponsePromise;
-
 		context.endTime = Date.now();
 
 		this._logQueryExecutionEnd(context);
@@ -351,9 +362,9 @@ export class SparqlQueryService {
 	 * @param connection The SPARQL connection to execute against.
 	 * @returns The query result based on the query type.
 	 */
-	async executeQueryOnConnection(query: string, connection: SparqlConnection): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null> {
+	async executeQueryOnConnection(query: string, connection: SparqlConnection, inferenceEnabled?: boolean): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null> {
 		try {
-			const source = await this._connectionService.getQuerySourceForConnection(connection);
+			const source = await this._connectionService.getQuerySourceForConnection(connection, inferenceEnabled);
 			const result = await this._executeQueryOnSource(query, source);
 
 			if (result.type === 'boolean') {
@@ -537,9 +548,9 @@ export class SparqlQueryService {
 	private async _readRawResponse(response: Response): Promise<SparqlRawResponse | undefined> {
 		try {
 			const text = await response.text();
-			const truncated = text.length > MAX_RAW_RESPONSE_LENGTH;
+			const truncated = text.length > this._maxRawResponseLength;
 			const body = truncated
-				? text.slice(0, MAX_RAW_RESPONSE_LENGTH) + '\n\n… response truncated …'
+				? text.slice(0, this._maxRawResponseLength) + '\n\n… response truncated …'
 				: text;
 
 			return {

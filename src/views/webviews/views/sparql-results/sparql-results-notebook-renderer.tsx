@@ -43,9 +43,13 @@ export const activate: ActivationFunction = (context: RendererContext<NotebookRe
         },
         onMessage: (handler: (message: SparqlResultsWebviewMessages) => void) => {
             if (context.onDidReceiveMessage) {
-                context.onDidReceiveMessage(handler);
+                const subscription = context.onDidReceiveMessage(handler);
+
+                return () => subscription.dispose();
             } else {
                 console.warn('No onDidReceiveMessage function available in context.');
+
+                return () => { };
             }
         },
     };

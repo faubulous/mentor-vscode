@@ -946,7 +946,7 @@ describe('SparqlQueryService – createBackgroundQuery', () => {
 
         const state = service.createBackgroundQuery(connection, query, 'List Graphs');
 
-        expect(state.background).toBe(true);
+        expect(state.isBackground).toBe(true);
         expect(state.label).toBe('List Graphs');
         expect(state.connectionId).toBe('conn-1');
         expect(state.connectionName).toBe('http://localhost:7200/sparql');
@@ -1001,7 +1001,7 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
 
         const ctx: any = {
             id: 'bg-test-id',
-            background: true,
+            isBackground: true,
             label: 'List Graphs',
             connectionId: 'conn-bg',
             connectionName: 'http://example.org/sparql',
@@ -1034,7 +1034,7 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
 
         const ctx: any = {
             id: 'bg-missing',
-            background: true,
+            isBackground: true,
             connectionId: 'unknown-conn',
             query: 'SELECT * {}',
             queryType: 'bindings',

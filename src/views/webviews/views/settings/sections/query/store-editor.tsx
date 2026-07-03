@@ -13,6 +13,7 @@ import {
 	SparqlQueryKind,
 } from '@src/languages/sparql/services/triple-store-config';
 import { SettingState } from '../../settings-types';
+import { StoresSectionMessages } from './stores-messages';
 import modalFormStylesheet from '@src/views/webviews/components/modal-form.css';
 import stylesheet from './store-editor.css';
 
@@ -150,8 +151,8 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 	// Fold edits made in an external template editor back into the draft. The save event is
 	// relayed by the stores section controller on the shared 'query.stores' channel; we only act
 	// on tokens that target the store currently open in this editor.
-	const handleSavedTemplate = useCallback((message: { id: string; token?: string; content?: string }) => {
-		if (message.id !== 'StoreQueryTemplateSaved' || typeof message.token !== 'string') {
+	const handleSavedTemplate = useCallback((message: StoresSectionMessages) => {
+		if (message.id !== 'StoreQueryTemplateSaved') {
 			return;
 		}
 
@@ -163,10 +164,10 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 		}
 
 		const defaultValue = String(settings[entry.key]?.value ?? '');
-		updateQuery(kind, message.content ?? '', defaultValue);
+		updateQuery(kind, message.content, defaultValue);
 	}, [draft.id, settings, queryKinds]);
 
-	useScopedWebviewMessaging<{ id: string; token?: string; content?: string }>('query.stores', handleSavedTemplate);
+	useScopedWebviewMessaging<StoresSectionMessages>('query.stores', handleSavedTemplate);
 
 	const tabsRef = useVscodeElementRef<HTMLElement & { selectedIndex: number }>('vsc-tabs-select', (element) => {
 		setActiveTab(element.selectedIndex);

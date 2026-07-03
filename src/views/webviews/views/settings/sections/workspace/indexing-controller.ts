@@ -5,11 +5,10 @@ import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
+import { SettingsSectionMessages } from '../../settings-panel-messages';
 import { IndexingStatsView } from './indexing-messages';
 
-const SECTION_ID: SettingsSectionId = 'workspace.indexing';
-
-type SectionMessage = { section: SettingsSectionId; id: string } & Record<string, unknown>;
+const SECTION_ID = 'workspace.indexing' satisfies SettingsSectionId;
 
 /**
  * Section controller for the Indexing settings section. Surfaces the workspace
@@ -20,11 +19,11 @@ type SectionMessage = { section: SettingsSectionId; id: string } & Record<string
 export class IndexingSectionController implements SettingsSectionController {
 	readonly id: SettingsSectionId = SECTION_ID;
 
-	private _post: (message: unknown) => void = () => { };
+	private _post: (message: SettingsSectionMessages) => void = () => { };
 
 	private _disposables: vscode.Disposable[] = [];
 
-	initialize(post: (message: unknown) => void): void {
+	initialize(post: (message: SettingsSectionMessages) => void): void {
 		this._post = post;
 
 		const indexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
@@ -36,7 +35,7 @@ export class IndexingSectionController implements SettingsSectionController {
 		);
 	}
 
-	async handleMessage(message: SectionMessage): Promise<boolean> {
+	async handleMessage(message: SettingsSectionMessages): Promise<boolean> {
 		switch (message.id) {
 			case 'GetIndexingStats': {
 				this._post({ section: SECTION_ID, id: 'IndexingStatsResult', stats: this._composeStats() });

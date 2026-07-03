@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { validateSectionDescriptors } from './settings-section-descriptor';
 import { SETTINGS_GROUPS, defaultScopeForKey } from './sections/index';
-import { MENTOR_SOURCE, SettingsSource } from './settings-types';
+import { MENTOR_SETTINGS_SOURCE as MENTOR_SOURCE, SettingsSource } from './settings-types';
 import * as packageJson from '../../../../../package.json';
 
 describe('section descriptors', () => {

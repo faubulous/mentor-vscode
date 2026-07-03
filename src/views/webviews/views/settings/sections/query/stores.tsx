@@ -8,6 +8,7 @@ import { SettingsSectionProps } from '../../settings-section-props';
 import { SettingsWorkspaceContext } from '../../components/setting-context';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 import { StoresList } from './stores-list';
+import { StoresSectionMessages } from './stores-messages';
 import { StoreEditor } from './store-editor';
 import { WORKSPACE_STORE } from '@src/languages/sparql/services/workspace-store';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
@@ -22,11 +23,6 @@ export const queryStoresSection = {
 		STORES_KEY
 	]
 } as const satisfies SettingsSectionDescriptor;
-
-type StoresSectionMessage =
-	| { id: 'DeleteStoreProfile'; profileId: string; label: string }
-	| { id: 'StoreProfileDeleted'; profileId: string }
-	| { id: 'OpenInBrowser'; url: string };
 
 export function QueryStoresSection({ settings, setScope }: SettingsSectionProps) {
 	const hasWorkspace = useContext(SettingsWorkspaceContext);
@@ -67,7 +63,7 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 	const writeRef = useRef(writeScopeStores);
 	writeRef.current = writeScopeStores;
 
-	const handleMessage = useCallback((message: StoresSectionMessage) => {
+	const handleMessage = useCallback((message: StoresSectionMessages) => {
 		if (message.id === 'StoreProfileDeleted') {
 			const inUser = userStoresRef.current.some(s => s.id === message.profileId);
 			const scope = inUser ? 'user' : 'workspace';
@@ -81,7 +77,7 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 		}
 	}, []);
 
-	const messaging = useScopedWebviewMessaging<StoresSectionMessage>('query.stores', handleMessage);
+	const messaging = useScopedWebviewMessaging<StoresSectionMessages>('query.stores', handleMessage);
 
 	// The built-in workspace store is synthetic and shown read-only; any stray persisted entry
 	// (id 'workspace') is filtered out of the editable list. Inference is controlled per connection.

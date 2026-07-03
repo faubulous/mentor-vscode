@@ -1,4 +1,4 @@
-import { SettingsNavigationGroupConfig } from '../settings-types';
+import { SettingsNavigationGroupConfig, SettingsSource } from '../settings-types';
 import type { SettingsSectionDescriptor } from '../settings-section-descriptor';
 
 import { appearanceDisplaySection } from './appearance/display';
@@ -66,3 +66,26 @@ export type SettingsSectionId = (typeof SETTINGS_GROUPS)[number]['sections'][num
  * Flat list of every section descriptor, in display order.
  */
 export const ALL_SECTIONS: readonly SettingsSectionDescriptor[] = SETTINGS_GROUPS.flatMap(g => [...g.sections]);
+
+/**
+ * The scope a key defaults to when it is still unset and the user edits it, per the
+ * owning section's configuration: `keyScopeOverrides[key]`, then `defaultScope`,
+ * falling back to `'user'` when the key has no owning section or none is declared.
+ *
+ * @param source The bucket the key lives in — `mentor` keys are matched against a
+ *   section's `keys`/`hiddenKeys`, `languageEditor` keys against its `vscodeKeys`.
+ * @param key The bare setting key (without the `mentor.`/`editor.` prefix).
+ */
+export function defaultScopeForKey(source: SettingsSource, key: string): 'user' | 'workspace' {
+	const ownsKey = (section: SettingsSectionDescriptor): boolean => {
+		if (source.kind === 'mentor') {
+			return section.keys.includes(key) || (section.hiddenKeys?.includes(key) ?? false);
+		}
+
+		return section.vscodeKeys?.some(k => k.key === key) ?? false;
+	};
+
+	const owner = ALL_SECTIONS.find(ownsKey);
+
+	return owner?.keyScopeOverrides?.[key] ?? owner?.defaultScope ?? 'user';
+}

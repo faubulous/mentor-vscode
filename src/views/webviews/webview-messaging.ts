@@ -12,8 +12,9 @@ export interface WebviewMessaging<T extends WebviewMessage> {
 	/**
 	 * Registers a handler for messages received from the webview.
 	 * @param handler The function to call when a message is received.
+	 * @returns A function that unregisters the handler when called.
 	 */
-	onMessage(handler: (message: T) => void): void;
+	onMessage(handler: (message: T) => void): () => void;
 }
 
 /**

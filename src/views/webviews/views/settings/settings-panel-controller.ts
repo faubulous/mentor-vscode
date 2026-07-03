@@ -6,7 +6,7 @@ import { MENTOR_LANGUAGE_IDS } from '@src/services/document/document-factory';
 import { ServiceToken } from '@src/services/tokens';
 import { SETTINGS_GROUPS, SettingsSectionId } from './sections';
 import { createSectionControllers } from './sections/controllers';
-import { SettingsPanelMessages } from './settings-panel-messages';
+import { SettingsPanelMessages, SettingsSectionMessages } from './settings-panel-messages';
 import { SettingsSectionController } from './settings-section-controller';
 import { SettingsSectionDescriptor, validateSectionDescriptors } from './settings-section-descriptor';
 import { WebviewController } from '@src/views/webviews/webview-controller';
@@ -92,7 +92,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 			})
 		);
 
-		const post = (message: unknown) => this.postMessage(message as SettingsPanelMessages);
+		const post = (message: SettingsSectionMessages) => this.postMessage(message);
 
 		for (const sectionController of createSectionControllers()) {
 			this._sectionControllers.set(sectionController.id, sectionController);
@@ -140,6 +140,21 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	private _getPackageProperties(): Record<string, PackageJsonProperty> {
 		return (vscode.extensions.getExtension('faubulous.mentor')?.packageJSON
 			?.contributes?.configuration?.[0] as PackageJsonSchema | undefined)?.properties ?? {};
+	}
+
+	/**
+	 * Human-readable display names for the Mentor languages, sourced from the
+	 * `contributes.languages` aliases in package.json — the single source of truth
+	 * VS Code itself reads language display names from. Scoped to {@link MENTOR_LANGUAGE_IDS},
+	 * with the language id as a fallback when an alias is missing.
+	 */
+	private _getLanguageLabels(): Record<string, string> {
+		const languages = (vscode.extensions.getExtension('faubulous.mentor')?.packageJSON
+			?.contributes?.languages ?? []) as { id: string; aliases?: string[] }[];
+
+		const byId = new Map(languages.map(l => [l.id, l.aliases?.[0] ?? l.id]));
+
+		return Object.fromEntries(MENTOR_LANGUAGE_IDS.map(id => [id, byId.get(id) ?? id]));
 	}
 
 	/**
@@ -252,13 +267,13 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	}
 
 	protected async onDidReceiveMessage(message: SettingsPanelMessages): Promise<boolean> {
-		const sectionId = (message as { section?: SettingsSectionId }).section;
-
-		if (sectionId) {
-			const section = this._sectionControllers.get(sectionId);
+		// Section-tagged messages are routed to their controller without inspecting the
+		// payload. `NavigateTo` also carries a `section` but is a shell-level message.
+		if ('section' in message && message.id !== 'NavigateTo') {
+			const section = this._sectionControllers.get(message.section);
 
 			if (section) {
-				return section.handleMessage(message as { section: SettingsSectionId; id: string } & Record<string, unknown>);
+				return section.handleMessage(message);
 			}
 		}
 
@@ -268,6 +283,11 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 				const version = (context.extension?.packageJSON?.version as string) ?? 'unknown';
 
 				this.postMessage({ id: 'GetVersionResult', version });
+
+				return true;
+			}
+			case 'GetLanguageLabels': {
+				this.postMessage({ id: 'GetLanguageLabelsResult', labels: this._getLanguageLabels() });
 
 				return true;
 			}

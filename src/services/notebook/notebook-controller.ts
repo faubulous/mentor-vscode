@@ -7,6 +7,7 @@ import { QuadsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { IDocumentContextService } from '@src/services/document';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { renderTemplateInteractively } from '@src/languages/triplate/triplate-prompt';
+import { ExecuteCommandMessage } from '@src/views/webviews/webview-messaging';
 
 export const NOTEBOOK_TYPE = 'mentor-notebook';
 
@@ -47,11 +48,13 @@ export class NotebookController implements vscode.Disposable {
 		}
 	}
 
-	private _onDidReceiveMessage(e: any) {
+	private _onDidReceiveMessage(e: { message: ExecuteCommandMessage | { id: string } }) {
 		const message = e.message;
 
 		if (message.id === 'ExecuteCommand') {
-			vscode.commands.executeCommand(message.command, ...message.args);
+			const { command, args } = message as ExecuteCommandMessage;
+
+			vscode.commands.executeCommand(command, ...(args ?? []));
 		}
 	}
 
@@ -192,13 +195,15 @@ export class NotebookController implements vscode.Disposable {
 	}
 
 	/**
-	 * SHACL-validates a rendered RDF template result against the cell's configured shapes and
-	 * writes the report to the cell output. The rendered content is loaded into a hidden
-	 * temporary document (never shown) so the template cell's own text is left untouched.
+	 * Shows a rendered RDF template result as the cell output and SHACL-validates it against the
+	 * cell's configured shapes. The rendered Turtle is the cell output; conformance is surfaced via
+	 * snackbars (mirroring the Validate Document command) and the cell's pass/fail run status rather
+	 * than as redundant in-cell text. Validation runs against a hidden temporary document (never
+	 * shown) so the template cell's own text is left untouched.
 	 * Used by the native play button for RDF template cells; the code-lens path uses
 	 * {@link renderContentInCell} instead.
 	 * @param cell The notebook cell whose shape configuration and output are used.
-	 * @param content The rendered RDF content to validate.
+	 * @param content The rendered RDF content to show and validate.
 	 */
 	async validateContentInCell(cell: vscode.NotebookCell, content: string): Promise<void> {
 		const execution = this._controller.createNotebookCellExecution(cell);
@@ -206,19 +211,23 @@ export class NotebookController implements vscode.Disposable {
 		execution.executionOrder = ++this._executionOrder;
 		execution.start(Date.now());
 
-		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+		// The rendered RDF is the cell output; SHACL conformance is reported via snackbars below.
+		await execution.replaceOutput([new vscode.NotebookCellOutput([
+			vscode.NotebookCellOutputItem.text(content, 'text/turtle')
+		])]);
+
 		const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 
 		// Shape configuration lives on the cell, not on the temporary rendered document.
 		const shapeGraphs = validationService.getEffectiveShapeGraphs(cell.document.uri);
 
 		if (shapeGraphs.length === 0) {
-			await vscode.commands.executeCommand('mentor.command.manageShaclShapes');
-			await execution.clearOutput();
-			execution.end(undefined, Date.now());
+			// No shapes configured — the rendered output is the result; nothing to validate.
+			execution.end(true, Date.now());
 			return;
 		}
 
+		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 		const document = await vscode.workspace.openTextDocument({ content, language: cell.document.languageId });
 
 		try {
@@ -226,27 +235,21 @@ export class NotebookController implements vscode.Disposable {
 
 			const result = await validationService.validateDocument(document.uri, shapeGraphs);
 
-			if (!result) {
-				await execution.clearOutput();
-				execution.end(undefined, Date.now());
-				return;
+			if (result && !result.conforms) {
+				vscode.window.showWarningMessage(`SHACL validation: ${result.results.length} issue(s) found.`);
+			} else if (result) {
+				vscode.window.showInformationMessage('SHACL validation: No issues found.');
 			}
 
-			const summary = this._getValidationSummary(validationService, document.uri, result);
-
-			await execution.replaceOutput([new vscode.NotebookCellOutput([
-				vscode.NotebookCellOutputItem.text(summary, 'text/plain')
-			])]);
-
-			execution.end(result.conforms, Date.now());
+			execution.end(result?.conforms ?? true, Date.now());
 		} catch (error: any) {
-			await execution.replaceOutput([new vscode.NotebookCellOutput([
-				vscode.NotebookCellOutputItem.error(error as Error)
-			])]);
-
+			vscode.window.showErrorMessage(`SHACL validation failed: ${(error as Error).message}`);
 			execution.end(false, Date.now());
 		} finally {
-			// Drop the temporary document's context and store graphs to free memory.
+			// Validation ran against a hidden temporary document — clear its diagnostics so they
+			// don't linger in the Problems panel as a phantom untitled file, then drop its
+			// context and store graphs.
+			validationService.clearDiagnostics(document.uri);
 			contextService.handleDocumentClosed(document);
 		}
 	}

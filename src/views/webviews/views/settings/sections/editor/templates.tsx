@@ -5,7 +5,7 @@ import { TemplatePreview } from '@src/views/webviews/components/template-preview
 import { SettingRow } from '../../components/setting-row';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
-import { MENTOR_LANGUAGE_IDS, MENTOR_LANGUAGE_LABELS, LanguageId } from '@src/services/document/document-languages';
+import { MENTOR_LANGUAGE_IDS, LanguageId } from '@src/services/document/document-languages';
 import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
@@ -31,7 +31,15 @@ export const editorTemplatesSection = {
 	],
 } as const satisfies SettingsSectionDescriptor;
 
-function TemplatesSection({ keys, settings, setScope, onBulkScope }: SettingsSectionProps) {
+interface TemplatesSectionProps extends SettingsSectionProps {
+	/**
+	 * Human-readable language display names, keyed by language id. Sourced from
+	 * package.json's `contributes.languages` aliases via the host.
+	 */
+	languageLabels: Record<string, string>;
+}
+
+function TemplatesSection({ keys, settings, setScope, onBulkScope, languageLabels }: TemplatesSectionProps) {
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, [...keys], settings, onBulkScope);
 
@@ -62,7 +70,7 @@ function TemplatesSection({ keys, settings, setScope, onBulkScope }: SettingsSec
 		<span className="template-language-label">
 			<vscode-single-select ref={languageRef} value={language}>
 				{MENTOR_LANGUAGE_IDS.map((id) => (
-					<vscode-option key={id} value={id}>{MENTOR_LANGUAGE_LABELS[id]}</vscode-option>
+					<vscode-option key={id} value={id}>{languageLabels[id] ?? id}</vscode-option>
 				))}
 			</vscode-single-select>
 		</span>

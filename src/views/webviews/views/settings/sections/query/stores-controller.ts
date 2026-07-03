@@ -5,11 +5,10 @@ import { TemplateFileSystemProvider } from '@src/providers/template-file-system-
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { SettingsSectionController } from '../../settings-section-controller';
+import { SettingsSectionMessages } from '../../settings-panel-messages';
 import { SettingsSectionId } from '..';
 
-const SECTION_ID: SettingsSectionId = 'query.stores';
-
-type SectionMessage = { section: SettingsSectionId; id: string } & Record<string, unknown>;
+const SECTION_ID = 'query.stores' satisfies SettingsSectionId;
 
 /**
  * Section controller for the Query > Stores settings section.
@@ -24,11 +23,11 @@ type SectionMessage = { section: SettingsSectionId; id: string } & Record<string
 export class StoresSectionController implements SettingsSectionController {
 	readonly id: SettingsSectionId = SECTION_ID;
 
-	private _post: (message: unknown) => void = () => { };
+	private _post: (message: SettingsSectionMessages) => void = () => { };
 
 	private _scratchSaveSubscription?: vscode.Disposable;
 
-	initialize(post: (message: unknown) => void): void {
+	initialize(post: (message: SettingsSectionMessages) => void): void {
 		this._post = post;
 
 		// Store query-template overrides live only in the webview draft; forward scratch saves so
@@ -38,11 +37,11 @@ export class StoresSectionController implements SettingsSectionController {
 		});
 	}
 
-	async handleMessage(message: SectionMessage): Promise<boolean> {
+	async handleMessage(message: SettingsSectionMessages): Promise<boolean> {
 		switch (message.id) {
 			case 'DeleteStoreProfile': {
-				const profileId = message.profileId as string;
-				const label = message.label as string;
+				const profileId = message.profileId;
+				const label = message.label;
 
 				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 
@@ -103,7 +102,7 @@ export class StoresSectionController implements SettingsSectionController {
 				}
 			}
 			case 'OpenInBrowser': {
-				await vscode.env.openExternal(vscode.Uri.parse(message.url as string));
+				await vscode.env.openExternal(vscode.Uri.parse(message.url));
 
 				return true;
 			}
