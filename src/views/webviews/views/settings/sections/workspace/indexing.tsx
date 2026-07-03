@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { useScopedWebviewMessaging } from '@src/views/webviews/webview-hooks';
 import { SettingRow } from '../../components/setting-row';
 import { StringListEditor } from '../../components/string-list-editor';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
 import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { SettingsSectionProps } from '../../settings-section-props';
-import { MENTOR_SOURCE } from '../../settings-types';
+import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 import { IndexingDashboard } from './indexing-dashboard';
 import { IndexingMessages, IndexingStatsView } from './indexing-messages';
@@ -15,6 +15,7 @@ export const workspaceIndexingSection = {
 	id: 'workspace.indexing',
 	label: 'Indexing',
 	component: WorkspaceIndexingSection,
+	defaultScope: 'workspace',
 	keys: [
 		'index.useGitIgnore',
 		'index.excludeFiles',
@@ -24,8 +25,8 @@ export const workspaceIndexingSection = {
 } as const satisfies SettingsSectionDescriptor;
 
 export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
-	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
-	const menuItems = useBulkScopeMenuItems(MENTOR_SOURCE, [...keys], settings, onBulkScope);
+	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
+	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, [...keys], settings, onBulkScope);
 
 	const [stats, setStats] = useState<IndexingStatsView>();
 	const [reindexing, setReindexing] = useState(false);
@@ -57,7 +58,7 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 
 	return (
 		<div>
-			<FormSectionHeader title={workspaceIndexingSection.label} menuItems={menuItems} large />
+			<SectionHeader title={workspaceIndexingSection.label} menuItems={menuItems} variant="title" />
 			<IndexingDashboard stats={stats} />
 			<div className="indexing-actions">
 				<vscode-toolbar-button className="primary" onClick={handleShowLog}>
@@ -74,7 +75,7 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 					className="setting-input-md"
 					value={String(settings['index.maxFileSize']?.value ?? 1048576)}
 					type="number"
-					onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'index.maxFileSize', Number((e.target as HTMLInputElement).value))}
+					onInput={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'index.maxFileSize', Number((e.target as HTMLInputElement).value))}
 				>
 					<span slot="content-after" className="setting-input-suffix">bytes</span>
 				</vscode-textfield>
@@ -82,7 +83,7 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 			<SettingRow {...rowProps('index.useGitIgnore')}>
 				<vscode-checkbox
 					checked={settings['index.useGitIgnore']?.value === true}
-					onChange={(e: any) => onUpdate(MENTOR_SOURCE, 'index.useGitIgnore', (e.target as HTMLInputElement).checked)}
+					onChange={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'index.useGitIgnore', (e.target as HTMLInputElement).checked)}
 				>
 					Enabled
 				</vscode-checkbox>
@@ -91,14 +92,14 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 				<StringListEditor
 					items={(settings['index.excludeFiles']?.value as string[]) ?? []}
 					placeholder="**/node_modules/**"
-					onChange={v => onUpdate(MENTOR_SOURCE, 'index.excludeFiles', v)}
+					onChange={v => onUpdate(MENTOR_SETTINGS_SOURCE, 'index.excludeFiles', v)}
 				/>
 			</SettingRow>
 			<SettingRow {...rowProps('index.includeFiles')}>
 				<StringListEditor
 					items={(settings['index.includeFiles']?.value as string[]) ?? []}
 					placeholder="**/*.ttl"
-					onChange={v => onUpdate(MENTOR_SOURCE, 'index.includeFiles', v)}
+					onChange={v => onUpdate(MENTOR_SETTINGS_SOURCE, 'index.includeFiles', v)}
 				/>
 			</SettingRow>
 		</div>

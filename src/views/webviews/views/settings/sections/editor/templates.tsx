@@ -1,10 +1,20 @@
-import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { useState } from 'react';
+import { VscodeSingleSelect } from '@vscode-elements/elements';
+import { SectionHeader } from '@src/views/webviews/components/section-header';
+import { TemplatePreview } from '@src/views/webviews/components/template-preview';
 import { SettingRow } from '../../components/setting-row';
 import { SettingsSectionProps } from '../../settings-section-props';
-import { MENTOR_SOURCE } from '../../settings-types';
+import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
+import { MENTOR_LANGUAGE_IDS, MENTOR_LANGUAGE_LABELS, LanguageId } from '@src/services/document/document-languages';
 import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
+import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
+
+/**
+ * The SPARQL document-query template is pinned at the top, separate from the per-language defaults.
+ */
+const QUERY_TEMPLATE_KEY = 'language.sparql.documentQueryTemplate';
 
 export const editorTemplatesSection = {
 	id: 'editor.templates',
@@ -21,22 +31,56 @@ export const editorTemplatesSection = {
 	],
 } as const satisfies SettingsSectionDescriptor;
 
-export function TemplatesSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
-	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
-	const menuItems = useBulkScopeMenuItems(MENTOR_SOURCE, [...keys], settings, onBulkScope);
+function TemplatesSection({ keys, settings, setScope, onBulkScope }: SettingsSectionProps) {
+	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
+	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, [...keys], settings, onBulkScope);
+
+	// Which language's default-document template is shown below; the values are all already loaded
+	// (mentor source), so this is purely a local view selection — no refetch needed.
+	const [language, setLanguage] = useState<LanguageId>('turtle');
+	const languageRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => setLanguage(element.value as LanguageId));
+
+	/**
+	 * Builds the per-language default-document template key for a Mentor language.
+	 */
+	const defaultTemplateKey = (language: LanguageId) => `language.${language}.defaultDocumentTemplate`;
+	const defaultKey = defaultTemplateKey(language);
+
+	const renderTemplate = (key: string, editorLanguage: string) => {
+		const target = { kind: 'global', key } as const;
+
+		return (
+			<div className="template-control">
+				<TemplatePreview language={editorLanguage} target={target} value={String(settings[key]?.value ?? '')} />
+			</div>
+		);
+	};
+
+	// The language dropdown lives in the row header (replacing a static "<Language> Default Document
+	// Template" label), so the selector is both the heading and the control — visible and not redundant.
+	const defaultTemplateLabel = (
+		<span className="template-language-label">
+			<vscode-single-select ref={languageRef} value={language}>
+				{MENTOR_LANGUAGE_IDS.map((id) => (
+					<vscode-option key={id} value={id}>{MENTOR_LANGUAGE_LABELS[id]}</vscode-option>
+				))}
+			</vscode-single-select>
+		</span>
+	);
+
 	return (
 		<div>
-			<FormSectionHeader title={editorTemplatesSection.label} menuItems={menuItems} large />
-			{keys.map((key) => (
-				<SettingRow key={key} {...rowProps(key)}>
-					<vscode-textarea
-						className='monospace'
-						rows={12}
-						value={String(settings[key]?.value ?? '')}
-						onInput={(e: any) => onUpdate(MENTOR_SOURCE, key, (e.target as HTMLTextAreaElement).value)}
-					/>
-				</SettingRow>
-			))}
+			<SectionHeader title={editorTemplatesSection.label} menuItems={menuItems} variant="title" />
+
+			<SettingRow {...rowProps(QUERY_TEMPLATE_KEY)}>
+				{renderTemplate(QUERY_TEMPLATE_KEY, 'sparql')}
+			</SettingRow>
+
+			<h3>Default Document Templates</h3>
+
+			<SettingRow {...rowProps(defaultKey)} label={defaultTemplateLabel}>
+				{renderTemplate(defaultKey, language)}
+			</SettingRow>
 		</div>
 	);
 }

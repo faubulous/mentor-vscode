@@ -1,11 +1,11 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { SettingRow } from '../../components/setting-row';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
 import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SettingsSectionProps } from '../../settings-section-props';
-import { MENTOR_SOURCE } from '../../settings-types';
+import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
 export const appearanceDefinitionsTreeSection = {
@@ -21,28 +21,28 @@ export const appearanceDefinitionsTreeSection = {
 } as const satisfies SettingsSectionDescriptor;
 
 export function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
-	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
+	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 	
-	const menuItems = useBulkScopeMenuItems(MENTOR_SOURCE, [...keys], settings, onBulkScope);
+	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, [...keys], settings, onBulkScope);
 
 	const labelStyleRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
-		(element) => onUpdate(MENTOR_SOURCE, 'definitionTree.labelStyle', element.value)
+		(element) => onUpdate(MENTOR_SETTINGS_SOURCE, 'definitionTree.labelStyle', element.value)
 	);
 
 	const defaultLayoutRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
-		(element) => onUpdate(MENTOR_SOURCE, 'definitionTree.defaultLayout', element.value)
+		(element) => onUpdate(MENTOR_SETTINGS_SOURCE, 'definitionTree.defaultLayout', element.value)
 	);
 
 	const decorateMissingRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
-		(element) => onUpdate(MENTOR_SOURCE, 'definitionTree.decorateMissingLanguageTags', element.value)
+		(element) => onUpdate(MENTOR_SETTINGS_SOURCE, 'definitionTree.decorateMissingLanguageTags', element.value)
 	);
 
 	return (
 		<div>
-			<FormSectionHeader title={appearanceDefinitionsTreeSection.label} menuItems={menuItems} large />
+			<SectionHeader title={appearanceDefinitionsTreeSection.label} menuItems={menuItems} variant="title" />
 			<SettingRow {...rowProps('definitionTree.labelStyle')}>
 				<vscode-single-select
 					ref={labelStyleRef}
@@ -68,7 +68,7 @@ export function DefinitionsTreeSection({ keys, settings, onUpdate, setScope, onB
 					className="setting-input-sm"
 					value={String(settings['definitionTree.defaultLanguageTag']?.value ?? '')}
 					placeholder="en"
-					onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'definitionTree.defaultLanguageTag', (e.target as HTMLInputElement).value)}
+					onInput={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'definitionTree.defaultLanguageTag', (e.target as HTMLInputElement).value)}
 				/>
 			</SettingRow>
 			<SettingRow {...rowProps('definitionTree.decorateMissingLanguageTags')}>

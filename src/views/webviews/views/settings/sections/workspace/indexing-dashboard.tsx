@@ -1,10 +1,11 @@
-import * as React from 'react';
 import { useStylesheet } from '@src/views/webviews/webview-hooks';
 import { IndexingStatsView } from './indexing-messages';
 import stylesheet from './indexing-dashboard.css';
 
 export interface IndexingDashboardProps {
-	/** The current indexing statistics, or `undefined` while they are loading. */
+	/**
+	 * The current indexing statistics, or `undefined` while they are loading.
+	 */
 	stats?: IndexingStatsView;
 }
 
@@ -40,6 +41,10 @@ export function IndexingDashboard({ stats }: IndexingDashboardProps) {
 	return (
 		<div className="indexing-dashboard">
 			<div className="indexing-dashboard-metric">
+				<span className="indexing-dashboard-value">{num(stats?.tripleCount)}</span>
+				<span className="indexing-dashboard-label">Triples</span>
+			</div>
+			<div className="indexing-dashboard-metric">
 				<span className="indexing-dashboard-value">{num(stats?.indexedFiles)}</span>
 				<span className="indexing-dashboard-label">Indexed files</span>
 			</div>
@@ -50,10 +55,6 @@ export function IndexingDashboard({ stats }: IndexingDashboardProps) {
 			<div className="indexing-dashboard-metric">
 				<span className="indexing-dashboard-value">{num(stats?.skippedFiles)}</span>
 				<span className="indexing-dashboard-label">Skipped</span>
-			</div>
-			<div className="indexing-dashboard-metric">
-				<span className="indexing-dashboard-value">{num(stats?.tripleCount)}</span>
-				<span className="indexing-dashboard-label">Triples</span>
 			</div>
 			<div className="indexing-dashboard-metric">
 				<span className="indexing-dashboard-value">{stats ? formatDuration(stats.durationMs) : PLACEHOLDER}</span>

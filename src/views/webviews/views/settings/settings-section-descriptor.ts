@@ -3,8 +3,6 @@ import type { ComponentType } from 'react';
 /**
  * A VS Code built-in setting that a Mentor settings section surfaces in its UI
  * (e.g. `editor.formatOnSave` shown alongside the Turtle/SPARQL formatting options).
- *
- * Replaces the former `x-catalog-extras` block in `package.json`.
  */
 export interface VSCodeBuiltinKey {
 	/**
@@ -65,6 +63,24 @@ export interface SettingsSectionDescriptor {
 	 * VS Code built-in keys this section surfaces (replaces `x-catalog-extras`).
 	 */
 	readonly vscodeKeys?: readonly VSCodeBuiltinKey[];
+
+	/**
+	 * Storage scope a setting in this section is written to when it is still at its
+	 * default (unset) value and the user edits it through the panel. Defaults to
+	 * `'user'` when omitted. Use `'workspace'` for project-shareable sections (e.g.
+	 * Formatting) so a team gets consistent behavior via `.vscode/settings.json`.
+	 *
+	 * Only the initial target is affected: a value already set in a specific scope
+	 * keeps targeting that scope, and the user can always re-target per row.
+	 */
+	readonly defaultScope?: 'user' | 'workspace';
+
+	/**
+	 * Per-key exceptions to {@link defaultScope}, for sections that mix
+	 * project-shareable and personal keys. Keys are the bare `mentor.*` keys (or
+	 * VS Code builtin keys) this section owns. Empty/omitted for uniform sections.
+	 */
+	readonly keyScopeOverrides?: Record<string, 'user' | 'workspace'>;
 }
 
 /**

@@ -1,5 +1,5 @@
-import { SparqlConnection } from "@src/languages/sparql/services/sparql-connection";
-import { SparqlStoreConfig } from "@src/languages/sparql/services/sparql-store-config";
+import { SparqlConnection, SparqlConnectionView } from "@src/languages/sparql/services/sparql-connection";
+import { TripleStoreConfig } from "@src/languages/sparql/services/triple-store-config";
 import { AuthCredential, MicrosoftAuthCredential } from '@src/services/core/credential';
 import { ExecuteCommandMessage } from '../../../../webview-messaging';
 
@@ -8,12 +8,12 @@ export type ConnectionEditorMessages =
     { id: 'DeleteConnection', connection: SparqlConnection } |
     { id: 'DeleteSparqlConnection', connectionId: string } |
     { id: 'DiscardSparqlConnection', connectionId: string } |
-    { id: 'EditSparqlConnection'; connection: SparqlConnection } |
+    { id: 'EditSparqlConnection'; connection: SparqlConnectionView } |
     { id: 'FetchMicrosoftAuthCredential', connectionId: string, scopes: string[] } |
     { id: 'FetchMicrosoftAuthCredentialResult', connectionId: string, credential: MicrosoftAuthCredential | null } |
     { id: 'GetSparqlConnection' } |
     { id: 'GetStoreTypes' } |
-    { id: 'GetStoreTypesResult', storeConfigs: SparqlStoreConfig[] } |
+    { id: 'GetStoreTypesResult', storeConfigs: TripleStoreConfig[] } |
     { id: 'GetSparqlConnectionCredential', connectionId: string } |
     { id: 'GetSparqlConnectionCredentialResult', connectionId: string, credential: AuthCredential | undefined } |
     { id: 'GetSparqlConnectionResult', connection: SparqlConnection } |

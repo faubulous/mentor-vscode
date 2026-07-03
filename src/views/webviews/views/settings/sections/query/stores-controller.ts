@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
-import { SettingsSectionId } from '..';
-import { SettingsSectionController } from '../../settings-section-controller';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
 import { TemplateFileSystemProvider } from '@src/providers/template-file-system-provider';
+import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ITripleStoreConfigService } from '@src/languages/sparql/services';
+import { SettingsSectionController } from '../../settings-section-controller';
+import { SettingsSectionId } from '..';
 
 const SECTION_ID: SettingsSectionId = 'query.stores';
 
@@ -37,17 +41,66 @@ export class StoresSectionController implements SettingsSectionController {
 	async handleMessage(message: SectionMessage): Promise<boolean> {
 		switch (message.id) {
 			case 'DeleteStoreProfile': {
-				const answer = await vscode.window.showWarningMessage(
-					`Are you sure you want to delete the store "${message.label}"?`,
-					{ modal: true },
-					'Delete'
-				);
+				const profileId = message.profileId as string;
+				const label = message.label as string;
 
-				if (answer === 'Delete') {
-					this._post({ section: SECTION_ID, id: 'StoreProfileDeleted', profileId: message.profileId });
+				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+
+				// Connections that reference this store type would otherwise be silently orphaned.
+				const affected = connectionService.getConnections().filter(c => c.storeType === profileId);
+
+				if (affected.length === 0) {
+					const answer = await vscode.window.showWarningMessage(
+						`Are you sure you want to delete the store "${label}"?`,
+						{ modal: true },
+						'Delete'
+					);
+
+					if (answer === 'Delete') {
+						this._post({ section: SECTION_ID, id: 'StoreProfileDeleted', profileId });
+					}
+
+					return true;
+				} else {
+
+					const count = affected.length;
+					const noun = count === 1 ? 'connection' : 'connections';
+
+					const choice = await vscode.window.showWarningMessage(
+						`The store "${label}" is used by ${count} ${noun}.`,
+						{
+							modal: true,
+							detail: `If you proceed the following ${noun} will use the standard SPARQL endpoint:\n\n`
+								+ affected.map(c => `• ${c.endpointUrl}`).join('\n'),
+						},
+						'OK',
+						'Delete Connections'
+					);
+
+					if (choice === 'OK') {
+						const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
+						const defaultStoreType = storeConfigService.defaultStoreType;
+
+						for (const connection of affected) {
+							await connectionService.updateConnection({ ...connection, storeType: defaultStoreType, isModified: true });
+						}
+
+						await connectionService.saveConfiguration();
+					} else if (choice === 'Delete Connections') {
+						for (const connection of affected) {
+							await connectionService.deleteConnection(connection.id);
+						}
+
+						await connectionService.saveConfiguration();
+					} else {
+						// Cancelled — leave both the store and its connections untouched.
+						return true;
+					}
+
+					this._post({ section: SECTION_ID, id: 'StoreProfileDeleted', profileId });
+
+					return true;
 				}
-
-				return true;
 			}
 			case 'OpenInBrowser': {
 				await vscode.env.openExternal(vscode.Uri.parse(message.url as string));

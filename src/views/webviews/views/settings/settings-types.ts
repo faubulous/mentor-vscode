@@ -19,17 +19,17 @@ export type SettingsSource =
 	| { kind: 'languageEditor'; languageId: LanguageId };
 
 /**
+ * Shared singleton for the `mentor` source — every section that only touches
+ * `mentor.*` keys imports this rather than constructing the literal inline.
+ */
+export const MENTOR_SETTINGS_SOURCE: SettingsSource = { kind: 'mentor' };
+
+/**
  * Stable string form of a `SettingsSource`, suitable for use as a map/object key.
  */
 export function settingsSourceKey(source: SettingsSource): string {
 	return source.kind === 'mentor' ? 'mentor' : `languageEditor:${source.languageId}`;
 }
-
-/**
- * Shared singleton for the `mentor` source — every section that only touches
- * `mentor.*` keys imports this rather than constructing the literal inline.
- */
-export const MENTOR_SOURCE: SettingsSource = { kind: 'mentor' };
 
 /**
  * The state of a setting, including its current value, default value, scope and additional metadata.
@@ -81,7 +81,7 @@ export type SettingState = {
 	 * Enum options for top-level enum settings, populated by the host from package.json.
 	 */
 	enumOptions?: EnumOption[];
-	
+
 	/**
 	 * Per-property enum options for object settings (e.g. `sorting.typeSortingOptions`).
 	 */

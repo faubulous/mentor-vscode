@@ -1,13 +1,13 @@
 import * as React from 'react';
-import { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
+import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
 import { ScopeBadge } from '@src/views/webviews/components/scope-badge';
 import { ListItemNavProps } from '../../components/use-list-keyboard-navigation';
 
 export interface StoresListItemProps {
-	store: SparqlStoreConfig;
+	store: TripleStoreConfig;
 	navProps?: ListItemNavProps;
-	onEdit: (store: SparqlStoreConfig) => void;
-	onDelete: (store: SparqlStoreConfig) => void;
+	onEdit: (store: TripleStoreConfig) => void;
+	onDelete: (store: TripleStoreConfig) => void;
 	onOpenInBrowser: (url: string) => void;
 }
 
@@ -29,7 +29,7 @@ export function StoresListItem({ store, navProps, onEdit, onDelete, onOpenInBrow
 			onKeyDown={navProps?.onKeyDown}
 			onFocus={navProps?.onFocus}
 			onClick={() => onEdit(store)}
-			title={isProtected ? 'View workspace store settings' : `Edit ${store.label}`}
+			title={isProtected ? `View ${store.label} settings` : `Edit ${store.label}`}
 		>
 			<vscode-icon name="database" className="connection-item-icon" />
 			<div className="connection-item-body">

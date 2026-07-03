@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
-import { ISparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
+import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { IGraphManagementService } from '@src/languages/sparql/services';
+import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
 import { IDocumentContextService } from '@src/services/document';
 import { ICredentialStorageService } from '@src/services/core';
-import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
 
@@ -27,11 +28,21 @@ export class ConnectionsSectionController implements SettingsSectionController {
 
 	private _disposables: vscode.Disposable[] = [];
 
+	/**
+	 * Projects a connection for the webview, attaching its resolved per-connection inference
+	 * default. Inference is not stored on the domain object, so it is resolved here at send time.
+	 */
+	private _toConnectionView(connection: SparqlConnection): SparqlConnectionView {
+		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+
+		return { ...connection, inferenceEnabled: connectionService.getInferenceEnabled(connection.id) };
+	}
+
 	initialize(post: (message: unknown) => void): void {
 		this._post = post;
 
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
+		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 		const documentContextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 
 		this._disposables.push(
@@ -39,7 +50,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				this._post({
 					section: SECTION_ID,
 					id: 'ConnectionsChanged',
-					connections: connectionService.getConnections(),
+					connections: connectionService.getConnections().map(c => this._toConnectionView(c)),
 				});
 			}),
 			graphService.onDidChangeGraphs(connectionId => {
@@ -48,7 +59,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					id: 'GraphStatusChanged',
 					connectionId,
 					status: {
-						count: graphService.getGraphsForConnection(connectionId).length,
+						count: graphService.getGraphsForConnection(connectionId, false).length,
 						...(graphService.getGraphLoadError(connectionId) !== undefined
 							? { error: graphService.getGraphLoadError(connectionId) }
 							: {}),
@@ -61,7 +72,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					section: SECTION_ID,
 					id: 'GraphStatusChanged',
 					connectionId: WORKSPACE_CONNECTION.id,
-					status: { count: connectionService.getWorkspaceGraphs().length },
+					status: { count: graphService.getWorkspaceGraphs(false).length },
 				});
 			})
 		);
@@ -71,21 +82,21 @@ export class ConnectionsSectionController implements SettingsSectionController {
 		const connection = params?.connection as SparqlConnection | undefined;
 
 		if (connection) {
-			this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection });
+			this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection: this._toConnectionView(connection) });
 		}
 	}
 
 	async handleMessage(message: SectionMessage): Promise<boolean> {
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
 		const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
-		const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
+		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 
 		switch (message.id) {
 			case 'GetConnections': {
 				this._post({
 					section: SECTION_ID,
 					id: 'GetConnectionsResult',
-					connections: connectionService.getConnections(),
+					connections: connectionService.getConnections().map(c => this._toConnectionView(c)),
 				});
 
 				return true;
@@ -94,19 +105,21 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				const statuses: Record<string, { count: number; error?: string }> = {};
 
 				for (const connection of connectionService.getConnections()) {
-					const hasData = graphService.isGraphsLoaded(connection.id);
+					const hasGraphs = graphService.hasGraphsForConnection(connection.id);
 					const error = graphService.getGraphLoadError(connection.id);
 
-					if (hasData || error !== undefined) {
+					if (hasGraphs || error !== undefined) {
 						statuses[connection.id] = {
-							count: graphService.getGraphsForConnection(connection.id).length,
+							count: graphService.getGraphsForConnection(connection.id, false).length,
 							...(error !== undefined ? { error } : {}),
 						};
 					}
 				}
 
 				// The workspace store enumerates its graphs in-process rather than via the graph service.
-				statuses[WORKSPACE_CONNECTION.id] = { count: connectionService.getWorkspaceGraphs().length };
+				statuses[WORKSPACE_CONNECTION.id] = { 
+					count: graphService.getWorkspaceGraphs(false).length
+				};
 
 				this._post({ section: SECTION_ID, id: 'GetGraphStatusesResult', statuses });
 
@@ -114,7 +127,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 			}
 			case 'CreateConnection': {
 				const connection = await connectionService.createConnection();
-				this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection });
+				this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection: this._toConnectionView(connection) });
 
 				return true;
 			}
@@ -122,7 +135,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				this._post({
 					section: SECTION_ID,
 					id: 'EditSparqlConnection',
-					connection: message.connection,
+					connection: this._toConnectionView(message.connection as SparqlConnection),
 				});
 
 				return true;
@@ -183,6 +196,16 @@ export class ConnectionsSectionController implements SettingsSectionController {
 
 				return true;
 			}
+			case 'ReloadGraphs': {
+				// Refresh the cached graph list for every configurable connection. The workspace store
+				// (protected) enumerates its graphs in-process and is excluded. Each completion fires
+				// onDidChangeGraphs, which posts a GraphStatusChanged update to the webview.
+				const connections = connectionService.getConnections().filter(c => !c.isProtected);
+
+				await Promise.all(connections.map(c => graphService.loadGraphsForConnection(c)));
+
+				return true;
+			}
 			case 'OpenInBrowser': {
 				await vscode.env.openExternal(vscode.Uri.parse(message.url as string));
 
@@ -238,7 +261,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				return true;
 			}
 			case 'GetStoreTypes': {
-				const storeConfigService = container.resolve<ISparqlStoreConfigService>(ServiceToken.SparqlStoreConfigService);
+				const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 				this._post({
 					section: SECTION_ID,
 					id: 'GetStoreTypesResult',

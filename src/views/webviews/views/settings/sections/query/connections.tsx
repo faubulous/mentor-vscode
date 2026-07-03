@@ -3,12 +3,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { ModalDialog } from '../../../../components/modal-dialog';
 import { SettingRow } from '../../components/setting-row';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
-import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
 import { ConnectionEditor } from './connection-editor';
 import { ConnectionEditorMessages } from './connection-editor-messages';
 import { ConnectionsList } from './connections-list';
 import { ConnectionsListMessages, GraphStatus } from './connections-list-messages';
-import { MENTOR_SOURCE, TestResult } from '../../settings-types';
+import { MENTOR_SETTINGS_SOURCE, TestResult } from '../../settings-types';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { useScopedWebviewMessaging } from '../../../../webview-hooks';
 import { patchRecord } from '@src/views/webviews/webview-utils';
@@ -24,12 +24,12 @@ export const queryConnectionsSection = {
 type QueryConnectionsSectionMessage = ConnectionsListMessages | ConnectionEditorMessages;
 
 export function QueryConnectionsSection({ settings, onUpdate, setScope }: SettingsSectionProps) {
-	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
+	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 
-	const [connections, setConnections] = useState<SparqlConnection[]>([]);
+	const [connections, setConnections] = useState<SparqlConnectionView[]>([]);
 	const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
 	const [graphStatuses, setGraphStatuses] = useState<Record<string, GraphStatus>>({});
-	const [editingConnection, setEditingConnection] = useState<SparqlConnection | undefined>(undefined);
+	const [editingConnection, setEditingConnection] = useState<SparqlConnectionView | undefined>(undefined);
 	const [editorDirty, setEditorDirty] = useState(false);
 	const [testingConnections, setTestingConnections] = useState<Set<string>>(new Set());
 
@@ -91,6 +91,10 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 		messaging?.postMessage({ id: 'ListGraphs', connection });
 	};
 
+	const handleReloadGraphs = () => {
+		messaging?.postMessage({ id: 'ReloadGraphs' });
+	};
+
 	const closeEditor = (wasSaved: boolean = false) => {
 		if (!wasSaved && editingConnection?.isNew) {
 			messaging?.postMessage({ id: 'DiscardSparqlConnection', connectionId: editingConnection.id });
@@ -111,6 +115,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 				onDeleteConnection={(connection) => messaging?.postMessage({ id: 'DeleteConnection', connection })}
 				onTestConnection={handleTestConnection}
 				onListGraphs={handleListGraphs}
+				onReloadGraphs={handleReloadGraphs}
 				onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
 			/>
 			<div className="settings-subsection">
@@ -119,7 +124,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 						className="setting-input-md"
 						value={String(settings['sparql.queryTimeout']?.value ?? 30000)}
 						type="number"
-						onInput={(e: any) => onUpdate(MENTOR_SOURCE, 'sparql.queryTimeout', Number((e.target as HTMLInputElement).value))}
+						onInput={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'sparql.queryTimeout', Number((e.target as HTMLInputElement).value))}
 					>
 						<span slot="content-after" className="setting-input-suffix">ms</span>
 					</vscode-textfield>

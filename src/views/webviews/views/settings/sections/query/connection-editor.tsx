@@ -6,8 +6,8 @@ import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } f
 import { ScopeSelect } from '@src/views/webviews/components/scope-select';
 import { useStylesheet, useVscodeElementRef, useScopedWebviewMessaging } from '@src/views/webviews/webview-hooks';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
-import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
+import { SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
+import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
 import {
 	AuthCredential,
 	BasicAuthCredential,
@@ -44,7 +44,7 @@ function displayIntervalToSeconds(value: number, unit: ReloadIntervalUnit): numb
 }
 
 interface FormState {
-	endpoint: SparqlConnection;
+	endpoint: SparqlConnectionView;
 	selectedAuthTypeIndex: AuthTypeIndex;
 	basicCredential: BasicAuthCredential;
 	bearerCredential: BearerAuthCredential;
@@ -57,7 +57,7 @@ interface FormState {
 	reloadIntervalUnit: ReloadIntervalUnit;
 }
 
-function makeInitialFormState(connection: SparqlConnection): FormState {
+function makeInitialFormState(connection: SparqlConnectionView): FormState {
 	const { value: reloadIntervalValue, unit: reloadIntervalUnit } = connection.graphReloadIntervalSeconds
 		? secondsToDisplayInterval(connection.graphReloadIntervalSeconds)
 		: { value: 24, unit: 'hours' as ReloadIntervalUnit };
@@ -79,7 +79,7 @@ function makeInitialFormState(connection: SparqlConnection): FormState {
 
 export interface ConnectionEditorProps {
 	/** The connection being edited. For a new connection this is a freshly created, unsaved record. */
-	connection: SparqlConnection;
+	connection: SparqlConnectionView;
 
 	/** Called after a successful save, e.g. to close the modal. */
 	onSaved: () => void;
@@ -100,7 +100,7 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 	const [draft, setDraft] = useState<FormState>(() => makeInitialFormState(connection));
 	const [testResult, setTestResult] = useState<{ code: number; message: string } | null | undefined>(undefined);
 	const [isTesting, setIsTesting] = useState(false);
-	const [storeConfigs, setStoreConfigs] = useState<SparqlStoreConfig[]>([]);
+	const [storeConfigs, setStoreConfigs] = useState<TripleStoreConfig[]>([]);
 
 	const headerActionsSlot = useContext(ModalDialogHeaderActionsContext);
 	const titleAccessoriesSlot = useContext(ModalDialogTitleAccessoriesContext);
@@ -231,7 +231,6 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 	const isFormValid = () => draft.endpoint.endpointUrl.trim().length > 0;
 	const isConnectionSuccessful = () => testResult === null;
 	const hasConnectionError = () => testResult !== null && testResult !== undefined;
-	const wasConnectionTested = () => isTesting || isConnectionSuccessful() || hasConnectionError();
 
 	const getSelectedCredential = (): AuthCredential | null => {
 		switch (draft.selectedAuthTypeIndex) {

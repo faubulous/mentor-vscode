@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ConnectionsListItem } from './connections-list-item';
-import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { TestResult } from '../../settings-types';
 import { GraphStatus } from './connections-list-messages';
 import { useListKeyboardNavigation } from '../../components/use-list-keyboard-navigation';
@@ -16,6 +16,7 @@ export interface ConnectionsListProps {
 	onDeleteConnection: (connection: SparqlConnection) => void;
 	onTestConnection: (connection: SparqlConnection, e: React.MouseEvent) => void;
 	onListGraphs: (connection: SparqlConnection, e: React.MouseEvent) => void;
+	onReloadGraphs: () => void;
 	onOpenInBrowser: (url: string) => void;
 }
 
@@ -29,6 +30,7 @@ export function ConnectionsList({
 	onDeleteConnection,
 	onTestConnection,
 	onListGraphs,
+	onReloadGraphs,
 	onOpenInBrowser,
 }: ConnectionsListProps) {
 	const testableCount = connections.length;
@@ -68,16 +70,22 @@ export function ConnectionsList({
 
 	return (
 		<div className="connections-list-container">
-			<FormSectionHeader
+			<SectionHeader
 				title="Connections"
-				large
+				variant="title"
 				actions={
 					<>
 						{testableCount > 0 && (
-							<vscode-toolbar-button className="primary" title="Test all connections" onClick={testAllConnections}>
-								<span className="codicon codicon-debug-disconnect" />
-								<span className="label">Test Connections</span>
-							</vscode-toolbar-button>
+							<>
+								<vscode-toolbar-button className="primary" title="Reload graphs for all connections" onClick={onReloadGraphs}>
+									<span className="codicon codicon-refresh" />
+									<span className="label">Reload Graphs</span>
+								</vscode-toolbar-button>
+								<vscode-toolbar-button className="primary" title="Test all connections" onClick={testAllConnections}>
+									<span className="codicon codicon-debug-disconnect" />
+									<span className="label">Test Connections</span>
+								</vscode-toolbar-button>
+							</>
 						)}
 					</>
 				}
@@ -85,7 +93,7 @@ export function ConnectionsList({
 
 			{protectedConnections.length > 0 && (
 				<section className="connections-subsection">
-					<FormSectionHeader
+					<SectionHeader
 						title="Protected"
 						description="Mentor built-in connections that cannot be removed."
 					/>
@@ -96,7 +104,7 @@ export function ConnectionsList({
 			)}
 
 			<section className="connections-subsection">
-				<FormSectionHeader
+				<SectionHeader
 					title="User Defined"
 					description="SPARQL endpoints you have configured." actions={
 						<>

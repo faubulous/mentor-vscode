@@ -6,13 +6,13 @@ import { IDocumentContext } from './document-context.interface';
 import { ILanguageInfo } from './document-factory.interface';
 import {
 	MENTOR_LANGUAGE_IDS,
+	FORMATTABLE_LANGUAGE_IDS,
 	LanguageId,
-	FORMATTING_LANGUAGE_IDS,
-	FormattingLanguage,
+	FormattableLanguageId,
 } from './document-languages';
 
-export { MENTOR_LANGUAGE_IDS, FORMATTING_LANGUAGE_IDS };
-export type { LanguageId, FormattingLanguage };
+export { MENTOR_LANGUAGE_IDS, FORMATTABLE_LANGUAGE_IDS as FORMATTING_LANGUAGE_IDS };
+export type { LanguageId, FormattableLanguageId };
 
 /**
  * Metadata about a supported file extension.

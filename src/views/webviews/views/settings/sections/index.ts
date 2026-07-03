@@ -1,4 +1,5 @@
 import { SettingsNavigationGroupConfig } from '../settings-types';
+import type { SettingsSectionDescriptor } from '../settings-section-descriptor';
 
 import { appearanceDisplaySection } from './appearance/display';
 import { appearanceDefinitionsTreeSection } from './appearance/definitions-tree';
@@ -60,3 +61,8 @@ export const SETTINGS_GROUPS = [
  * Literal union of every section id, derived from `SETTINGS_GROUPS`.
  */
 export type SettingsSectionId = (typeof SETTINGS_GROUPS)[number]['sections'][number]['id'];
+
+/**
+ * Flat list of every section descriptor, in display order.
+ */
+export const ALL_SECTIONS: readonly SettingsSectionDescriptor[] = SETTINGS_GROUPS.flatMap(g => [...g.sections]);

@@ -14,12 +14,12 @@ export type LanguageId = typeof MENTOR_LANGUAGE_IDS[number];
  * The subset of {@link MENTOR_LANGUAGE_IDS} for which Mentor provides its own
  * formatter and exposes formatting settings in the Settings webview.
  */
-export const FORMATTING_LANGUAGE_IDS = ['turtle', 'sparql'] as const;
+export const FORMATTABLE_LANGUAGE_IDS = ['turtle', 'sparql'] as const;
 
 /**
- * Union of {@link FORMATTING_LANGUAGE_IDS}.
+ * Union of {@link FORMATTABLE_LANGUAGE_IDS}.
  */
-export type FormattingLanguage = typeof FORMATTING_LANGUAGE_IDS[number];
+export type FormattableLanguageId = typeof FORMATTABLE_LANGUAGE_IDS[number];
 
 /**
  * The language IDs whose documents may contain triplate templates — every RDF

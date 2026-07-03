@@ -1,14 +1,13 @@
-import * as React from 'react';
-import { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
-import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
+import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { StoresListItem } from './stores-list-item';
 import { useListKeyboardNavigation } from '../../components/use-list-keyboard-navigation';
 
 export interface StoresListProps {
-	stores: SparqlStoreConfig[];
+	stores: TripleStoreConfig[];
 	onCreate: () => void;
-	onEdit: (store: SparqlStoreConfig) => void;
-	onDelete: (store: SparqlStoreConfig) => void;
+	onEdit: (store: TripleStoreConfig) => void;
+	onDelete: (store: TripleStoreConfig) => void;
 	onOpenInBrowser: (url: string) => void;
 }
 
@@ -29,7 +28,7 @@ export function StoresList({ stores, onCreate, onEdit, onDelete, onOpenInBrowser
 		{ onActivate: id => { const found = stores.find(s => s.id === id); if (found) { onEdit(found); } } }
 	);
 
-	const renderItem = (store: SparqlStoreConfig) => (
+	const renderItem = (store: TripleStoreConfig) => (
 		<StoresListItem
 			key={store.id}
 			store={store}
@@ -42,11 +41,11 @@ export function StoresList({ stores, onCreate, onEdit, onDelete, onOpenInBrowser
 
 	return (
 		<div className="connections-list-container">
-			<FormSectionHeader title="Stores" large />
+			<SectionHeader title="Stores" variant="title" />
 
 			{protectedStores.length > 0 && (
 				<section className="connections-subsection">
-					<FormSectionHeader
+					<SectionHeader
 						title="Protected"
 						description="Mentor built-in stores that cannot be removed."
 					/>
@@ -57,7 +56,7 @@ export function StoresList({ stores, onCreate, onEdit, onDelete, onOpenInBrowser
 			)}
 
 			<section className="connections-subsection">
-				<FormSectionHeader
+				<SectionHeader
 					title="User Defined"
 					description="Store types you have configured."
 					actions={

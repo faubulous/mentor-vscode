@@ -8,10 +8,10 @@ import { TemplatePreview } from '@src/views/webviews/components/template-preview
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { useScopedWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import {
-	SparqlStoreConfig,
-	SparqlStoreInferenceConfig,
+	TripleStoreConfig,
+	TripleStoreInferenceConfig,
 	SparqlQueryKind,
-} from '@src/languages/sparql/services/sparql-store-config';
+} from '@src/languages/sparql/services/triple-store-config';
 import { SettingState } from '../../settings-types';
 import modalFormStylesheet from '@src/views/webviews/components/modal-form.css';
 import stylesheet from './store-editor.css';
@@ -24,7 +24,7 @@ export interface StoreEditorProps {
 	/**
 	 * The store being edited. For a new store this is a blank profile not yet in settings.
 	 */
-	store: SparqlStoreConfig;
+	store: TripleStoreConfig;
 
 	/**
 	 * Whether this is a brand-new (unsaved) store — hides the Delete action.
@@ -46,9 +46,9 @@ export interface StoreEditorProps {
 	 */
 	settings: Record<string, SettingState>;
 
-	onSave: (store: SparqlStoreConfig) => void;
+	onSave: (store: TripleStoreConfig) => void;
 
-	onDelete: (store: SparqlStoreConfig) => void;
+	onDelete: (store: TripleStoreConfig) => void;
 
 	onDirtyChange: (dirty: boolean) => void;
 }
@@ -66,7 +66,7 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 	const headerActionsSlot = useContext(ModalDialogHeaderActionsContext);
 	const titleAccessoriesSlot = useContext(ModalDialogTitleAccessoriesContext);
 
-	const [draft, setDraft] = useState<SparqlStoreConfig>(store);
+	const [draft, setDraft] = useState<TripleStoreConfig>(store);
 	const [activeTab, setActiveTab] = useState(0);
 	const [queryKind, setQueryKind] = useState<string>('');
 
@@ -97,9 +97,9 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 		onDirtyChange(hasChanges);
 	}, [hasChanges]);
 
-	const updateInference = (patch: Partial<SparqlStoreInferenceConfig>) => {
+	const updateInference = (patch: Partial<TripleStoreInferenceConfig>) => {
 		setDraft(d => {
-			const inference: SparqlStoreInferenceConfig = {
+			const inference: TripleStoreInferenceConfig = {
 				supported: d.inference?.supported ?? false,
 				...d.inference,
 				...patch,
@@ -119,7 +119,7 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 				delete toggle[state];
 			}
 
-			const inference: SparqlStoreInferenceConfig = {
+			const inference: TripleStoreInferenceConfig = {
 				supported: d.inference?.supported ?? false,
 				...d.inference,
 				[channel]: Object.keys(toggle).length > 0 ? toggle : undefined,
@@ -181,17 +181,20 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 	};
 
 	// Reasoning parameter/pragma fields: optional, start empty.
-	const renderInferenceField = (label: string, placeholder: string, value: string, onInput: (value: string) => void) => (
+	const renderInferenceField = (label: string, placeholder: string, value: string, disabled: boolean, onInput: (value: string) => void) => (
 		<div className="layout-row reasoning-parameter-row">
 			<vscode-label>{label}</vscode-label>
 			<vscode-textfield
 				value={value}
 				placeholder={placeholder}
-				disabled={readOnly}
+				disabled={disabled}
 				onInput={(e: any) => onInput((e.target as HTMLInputElement).value)}
 			/>
 		</div>
 	);
+
+	const reasoningSupported = draft.inference?.supported ?? false;
+	const reasoningFieldsDisabled = readOnly || !reasoningSupported;
 
 	const renderActions = () => (
 		<div className={`form-actions ${readOnly ? 'readonly' : ''}`}>
@@ -246,12 +249,6 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 								onInput={(e: any) => setDraft(d => ({ ...d, website: (e.target as HTMLInputElement).value || undefined }))}
 							/>
 						</div>
-						<div className="inference-toggle-container">
-							<vscode-label>Reasoning</vscode-label>
-							<vscode-checkbox checked={draft.inference?.supported ?? false} disabled={readOnly} onChange={toggleReasoning}>
-								Supports reasoning control per query
-							</vscode-checkbox>
-						</div>
 					</section>
 				</vscode-tab-panel>
 
@@ -279,12 +276,12 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 								<p className="section-description">{description}</p>
 								<TemplatePreview
 									language="sparql"
-									disabled={readOnly}
+									readOnly={readOnly}
 									muted={usesDefault}
 									target={{ kind: 'scratch', token: templateToken(draft.id, kind), content: value }}
 									value={value}
+									onReset={usesDefault ? undefined : () => updateQuery(kind, '', defaultValue)}
 								/>
-								<vscode-form-helper>Leave blank to use the global default.</vscode-form-helper>
 							</section>
 						);
 					})()}
@@ -292,32 +289,31 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 
 				<vscode-tab-header slot="header">Reasoning</vscode-tab-header>
 				<vscode-tab-panel>
-					{draft.inference?.supported ? (
-						<>
-							<section>
-								<div>
-									<span className="section-label">URL Parameters</span>
-									<p className="section-description">Query-string fragment appended to the endpoint URL.</p>
-								</div>
-								<div>
-									{renderInferenceField('Enabled', 'infer=true&reasoning=rdfs', draft.inference?.urlParameters?.enabled ?? '', v => updateInferenceToggle('urlParameters', 'enabled', v))}
-									{renderInferenceField('Disabled', 'infer=false', draft.inference?.urlParameters?.disabled ?? '', v => updateInferenceToggle('urlParameters', 'disabled', v))}
-								</div>
-							</section>
-							<section>
-								<div>
-									<span className="section-label">Query Pragma</span>
-									<p className="section-description">Text prepended to the query.</p>
-								</div>
-								<div>
-									{renderInferenceField('Enabled', '#pragma reasoning on', draft.inference?.queryPragma?.enabled ?? '', v => updateInferenceToggle('queryPragma', 'enabled', v))}
-									{renderInferenceField('Disabled', '#pragma reasoning off', draft.inference?.queryPragma?.disabled ?? '', v => updateInferenceToggle('queryPragma', 'disabled', v))}
-								</div>
-							</section>
-						</>
-					) : (
-						<p className="text-muted">Enable per query reasoning on the General tab to configure details.</p>
-					)}
+					<div className="inference-toggle-container">
+						<vscode-checkbox checked={draft.inference?.supported ?? false} disabled={readOnly} onChange={toggleReasoning}>
+							Supports reasoning control per query
+						</vscode-checkbox>
+					</div>
+					<section>
+						<div>
+							<span className="section-label">URL Parameters</span>
+							<p className="section-description">Query-string fragment appended to the endpoint URL.</p>
+						</div>
+						<div>
+							{renderInferenceField('Enabled', 'infer=true&reasoning=rdfs', draft.inference?.urlParameters?.enabled ?? '', reasoningFieldsDisabled, v => updateInferenceToggle('urlParameters', 'enabled', v))}
+							{renderInferenceField('Disabled', 'infer=false', draft.inference?.urlParameters?.disabled ?? '', reasoningFieldsDisabled, v => updateInferenceToggle('urlParameters', 'disabled', v))}
+						</div>
+					</section>
+					<section>
+						<div>
+							<span className="section-label">Query Pragma</span>
+							<p className="section-description">Text prepended to the query.</p>
+						</div>
+						<div>
+							{renderInferenceField('Enabled', '#pragma reasoning on', draft.inference?.queryPragma?.enabled ?? '', reasoningFieldsDisabled, v => updateInferenceToggle('queryPragma', 'enabled', v))}
+							{renderInferenceField('Disabled', '#pragma reasoning off', draft.inference?.queryPragma?.disabled ?? '', reasoningFieldsDisabled, v => updateInferenceToggle('queryPragma', 'disabled', v))}
+						</div>
+					</section>
 				</vscode-tab-panel>
 			</vscode-tabs>
 		</div>

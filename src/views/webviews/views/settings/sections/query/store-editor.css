@@ -43,6 +43,6 @@
 .queries-section .template-preview {
 	flex: none;
 	height: 22vh;
-	min-height: 180px;
+	min-height: 240px;
 	overflow: auto;
 }

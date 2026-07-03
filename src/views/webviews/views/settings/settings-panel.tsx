@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { VSCodeSettings } from './settings-types';
-import { SettingsSectionId, SETTINGS_GROUPS } from './sections';
+import { SettingsSectionId, SETTINGS_GROUPS, ALL_SECTIONS } from './sections';
 import { SettingsSectionDescriptor } from './settings-section-descriptor';
 import { SettingsPanelHeader } from './components/settings-panel-header';
 import { SearchResults } from './components/settings-search-results';
 import { SettingsNavigation } from './components/settings-navigation';
-import { MENTOR_LANGUAGE_IDS, FormattingLanguage } from '@src/services/document/document-languages';
-import { MENTOR_SOURCE, SettingScope, SettingState, SettingsSource, settingsSourceKey } from './settings-types';
+import { MENTOR_LANGUAGE_IDS } from '@src/services/document/document-languages';
+import {
+	MENTOR_SETTINGS_SOURCE,
+	SettingScope,
+	SettingState,
+	SettingsSource,
+	VSCodeSettings,
+	settingsSourceKey,
+} from './settings-types';
 import { SettingsPanelMessages } from './settings-panel-messages';
 import { SettingsScopeTargetApi, SettingsScopeTargetContext, SettingsWorkspaceContext } from './components/setting-context';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
@@ -15,32 +21,56 @@ import { patchNestedRecord } from '@src/views/webviews/webview-utils';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
 import stylesheet from './settings-panel.css';
 
+/**
+ * Section descriptors indexed by id, for `O(1)` lookup of the active section.
+ */
 const SECTIONS_BY_ID = Object.fromEntries(
 	SETTINGS_GROUPS.flatMap(g => g.sections.map(s => [s.id, s as SettingsSectionDescriptor])),
 ) as Record<SettingsSectionId, SettingsSectionDescriptor>;
 
 /**
- * Every settings bucket the panel knows about, kept in sync with the host
- * controller's `SETTINGS_SOURCES`. Mentor settings + one language-editor
- * source per Mentor language.
+ * Every settings bucket the panel loads, kept in sync with the host controller's
+ * `SETTINGS_SOURCES`: the Mentor settings plus one language-editor source per Mentor language.
  */
 const SETTINGS_SOURCES: SettingsSource[] = [
-	MENTOR_SOURCE,
+	MENTOR_SETTINGS_SOURCE,
 	...MENTOR_LANGUAGE_IDS.map(languageId => ({ kind: 'languageEditor', languageId } as const)),
 ];
 
+/**
+ * Persisted UI state of the settings panel.
+ */
 interface SettingsPanelState {
-	settingsBySource: Record<string, Record<string, SettingState>>;
-	activeSection: SettingsSectionId;
 	/**
-	 * Per-key target scope, keyed by `${settingsSourceKey(source)}::${key}`. Holds an explicit
-	 * override of where a setting's next write should land; when absent the target falls back to
-	 * the setting's current scope (or `'user'` when unset).
+	 * Loaded setting values, keyed by `settingsSourceKey(source)` then by setting key.
+	 */
+	settingsBySource: Record<string, Record<string, SettingState>>;
+
+	/**
+	 * The section currently shown in the content area.
+	 */
+	activeSection: SettingsSectionId;
+
+	/**
+	 * Explicit per-key overrides of where a setting's next write should land, keyed by
+	 * {@link scopeKeyOf}. When a key is absent the target falls back to the setting's
+	 * current scope (or `'user'` when unset).
 	 */
 	scopeByKey: Record<string, 'user' | 'workspace'>;
-	formattingLanguage: FormattingLanguage;
+
+	/**
+	 * Extension version, shown in the header.
+	 */
 	version: string;
+
+	/**
+	 * Current search query; when non-empty the panel shows search results instead of a section.
+	 */
 	searchTerm: string;
+
+	/**
+	 * Whether a workspace folder is open. When `false`, Workspace-scoped writes are disabled.
+	 */
 	hasWorkspace: boolean;
 }
 
@@ -48,19 +78,15 @@ const initialState: SettingsPanelState = {
 	settingsBySource: {},
 	activeSection: 'appearance.display',
 	scopeByKey: {},
-	formattingLanguage: 'turtle',
 	version: '',
 	searchTerm: '',
 	hasWorkspace: true,
 };
 
-/** Stable map key combining a settings source and a setting key. */
-function scopeKeyOf(source: SettingsSource, key: string): string {
-	return `${settingsSourceKey(source)}::${key}`;
-}
-
 function SettingsPanel() {
 	const [state, setState] = useWebviewState<SettingsPanelState>(initialState);
+
+	// --- MESSAGING
 
 	const handleMessage = useCallback((message: SettingsPanelMessages) => {
 		switch (message.id) {
@@ -91,6 +117,7 @@ function SettingsPanel() {
 	useSharedStylesheets();
 	useStylesheet('settings-panel-styles', stylesheet);
 
+	// Request every bucket of settings, plus version and workspace state, on mount.
 	useEffect(() => {
 		for (const source of SETTINGS_SOURCES) {
 			messaging?.postMessage({ id: 'GetSettings', source });
@@ -99,7 +126,9 @@ function SettingsPanel() {
 		messaging?.postMessage({ id: 'GetWorkspaceState' });
 	}, []);
 
-	const mentorSettings = state.settingsBySource[settingsSourceKey(MENTOR_SOURCE)] ?? {};
+	// --- SETTINGS STATE
+
+	const mentorSettings = state.settingsBySource[settingsSourceKey(MENTOR_SETTINGS_SOURCE)] ?? {};
 
 	const vscodeSettings: VSCodeSettings = useMemo(
 		() => MENTOR_LANGUAGE_IDS.reduce((acc, languageId) => {
@@ -109,28 +138,99 @@ function SettingsPanel() {
 		[state.settingsBySource],
 	);
 
-	const handleUpdate = useCallback((source: SettingsSource, key: string, value: unknown) => {
-		const existing = state.settingsBySource[settingsSourceKey(source)]?.[key];
-		const fallback: 'user' | 'workspace' = existing?.scope === 'workspace' ? 'workspace' : 'user';
-		const scope: SettingScope = state.scopeByKey[scopeKeyOf(source, key)] ?? fallback;
+	// --- SETTINGS SCOPE RESOLUTION
 
-		setState(prev => ({
-			...prev,
-			settingsBySource: patchNestedRecord(prev.settingsBySource, settingsSourceKey(source), key, prev2 => prev2 && ({ ...prev2, value, scope })),
-		}));
+	/**
+	 * Stable map key combining a settings source and a setting key.
+	 */
+	const scopeKeyOf = (source: SettingsSource, key: string): string => {
+		return `${settingsSourceKey(source)}::${key}`;
+	};
 
-		messaging?.postMessage({ id: 'UpdateSetting', source, key, value, scope });
-	}, [state.scopeByKey, state.settingsBySource, messaging, setState]);
+	/**
+	 * The scope a key defaults to when it is still unset and the user edits it, per the
+	 * owning section's configuration: `keyScopeOverrides[key]`, then `defaultScope`,
+	 * falling back to `'user'` when the key has no owning section or none is declared.
+	 *
+	 * @param source The bucket the key lives in — `mentor` keys are matched against a
+	 *   section's `keys`/`hiddenKeys`, `languageEditor` keys against its `vscodeKeys`.
+	 * @param key The bare setting key (without the `mentor.`/`editor.` prefix).
+	 */
+	const defaultScopeForKey = (source: SettingsSource, key: string): 'user' | 'workspace' => {
+		const ownsKey = (section: typeof ALL_SECTIONS[number]): boolean => {
+			if (source.kind === 'mentor') {
+				return section.keys.includes(key) || (section.hiddenKeys?.includes(key) ?? false);
+			} else {
+			return section.vscodeKeys?.some(k => k.key === key) ?? false;
+			}
+		};
 
-	const handleSetScope = useCallback((source: SettingsSource, key: string, newScope: SettingScope, currentValue: unknown) => {
-		if (newScope === 'default') {
-			setState(prev => ({
-				...prev,
-				settingsBySource: patchNestedRecord(prev.settingsBySource, settingsSourceKey(source), key, prev2 => prev2 && ({ ...prev2, scope: 'default', value: prev2.defaultValue })),
-			}));
+		const owner = ALL_SECTIONS.find(ownsKey);
+
+		return owner?.keyScopeOverrides?.[key] ?? owner?.defaultScope ?? 'user';
+	};
+
+	/**
+	 * {@link defaultScopeForKey}, downgraded to `'user'` when no workspace folder is open
+	 * (a Workspace write would otherwise be invalid).
+	 */
+	const resolveDefaultScope = useCallback((source: SettingsSource, key: string): 'user' | 'workspace' => {
+		const scope = defaultScopeForKey(source, key);
+		return scope === 'workspace' && !state.hasWorkspace ? 'user' : scope;
+	}, [state.hasWorkspace]);
+
+	/**
+	 * The scope a setting's next write targets: an explicit {@link scopeByKey} choice if
+	 * present, otherwise the scope it currently lives in, otherwise its default scope.
+	 */
+	const resolveTargetScope = useCallback((source: SettingsSource, key: string, st: SettingState | undefined): 'user' | 'workspace' => {
+		const explicitChoice = state.scopeByKey[scopeKeyOf(source, key)];
+
+		if (explicitChoice) {
+			return explicitChoice;
 		}
 
-		// For copy-to-other-scope, local state is unchanged (current setting stays modified).
+		if (st?.scope === 'user' || st?.scope === 'workspace') {
+			return st.scope;
+		}
+
+		return resolveDefaultScope(source, key);
+	}, [state.scopeByKey, resolveDefaultScope]);
+
+	// --- SETTINGS MODIFICATION
+
+	/**
+	 * Applies `patch` to a single setting's local state, leaving the rest untouched.
+	 */
+	const patchSetting = useCallback((source: SettingsSource, key: string, patch: (st: SettingState) => SettingState) => {
+		setState(prev => ({
+			...prev,
+			settingsBySource: patchNestedRecord(prev.settingsBySource, settingsSourceKey(source), key, st => st && patch(st)),
+		}));
+	}, [setState]);
+
+	/**
+	 * Writes a new value for a setting, targeting the scope resolved by {@link resolveTargetScope}.
+	 */
+	const handleUpdate = useCallback((source: SettingsSource, key: string, value: unknown) => {
+		const existing = state.settingsBySource[settingsSourceKey(source)]?.[key];
+		const scope: SettingScope = resolveTargetScope(source, key, existing);
+
+		patchSetting(source, key, st => ({ ...st, value, scope }));
+
+		messaging?.postMessage({ id: 'UpdateSetting', source, key, value, scope });
+	}, [state.settingsBySource, resolveTargetScope, patchSetting, messaging]);
+
+	/**
+	 * Resets a setting to its default (`newScope === 'default'`), or copies its current value
+	 * into another scope. Reset also clears the local value; a copy leaves local state as-is
+	 * because the currently-edited scope stays modified.
+	 */
+	const handleSetScope = useCallback((source: SettingsSource, key: string, newScope: SettingScope, currentValue: unknown) => {
+		if (newScope === 'default') {
+			patchSetting(source, key, st => ({ ...st, scope: 'default', value: st.defaultValue }));
+		}
+
 		messaging?.postMessage({
 			id: 'UpdateSetting',
 			source,
@@ -138,11 +238,13 @@ function SettingsPanel() {
 			value: newScope === 'default' ? undefined : currentValue,
 			scope: newScope,
 		});
-	}, [messaging, setState]);
+	}, [messaging, patchSetting]);
 
+	/**
+	 * Applies {@link handleSetScope} to many keys of one source at once.
+	 */
 	const handleBulkScope = useCallback((source: SettingsSource, keys: string[], scope: 'user' | 'workspace') => {
-		const sourceKey = settingsSourceKey(source);
-		const slice = state.settingsBySource[sourceKey] ?? {};
+		const slice = state.settingsBySource[settingsSourceKey(source)] ?? {};
 
 		for (const key of keys) {
 			handleSetScope(source, key, scope, slice[key]?.value);
@@ -150,66 +252,55 @@ function SettingsPanel() {
 	}, [state.settingsBySource, handleSetScope]);
 
 	/**
-	 * Picks a new target scope for a single setting. Records the choice in `scopeByKey`,
-	 * and when the setting already holds a non-default value in a different scope, moves it
-	 * (write the new scope, clear the old) so it lands in its new home.
+	 * Picks a new target scope for a single setting. Records the choice in `scopeByKey`, and
+	 * when the setting already holds a non-default value in a different scope, moves it there
+	 * (writes the new scope, clears the old) so it lands in its new home.
 	 */
 	const handleSelectScope = useCallback((source: SettingsSource, key: string, newScope: 'user' | 'workspace', st: SettingState | undefined) => {
 		setState(prev => ({ ...prev, scopeByKey: { ...prev.scopeByKey, [scopeKeyOf(source, key)]: newScope } }));
 
 		const settingScope = st?.scope ?? 'default';
+		const movesScope = settingScope !== 'default' && settingScope !== newScope;
 
-		if (settingScope !== 'default' && settingScope !== newScope) {
+		if (movesScope) {
 			messaging?.postMessage({ id: 'UpdateSetting', source, key, value: st?.value, scope: newScope });
 			messaging?.postMessage({ id: 'UpdateSetting', source, key, value: undefined, scope: settingScope });
-			setState(prev => ({
-				...prev,
-				settingsBySource: patchNestedRecord(prev.settingsBySource, settingsSourceKey(source), key, prev2 => prev2 && ({ ...prev2, scope: newScope })),
-			}));
+
+			patchSetting(source, key, prev => ({ ...prev, scope: newScope }));
 		}
-	}, [messaging, setState]);
+	}, [messaging, setState, patchSetting]);
 
 	const scopeTarget = useMemo<SettingsScopeTargetApi>(() => ({
-		get: (source, key, st) => state.scopeByKey[scopeKeyOf(source, key)] ?? (st?.scope === 'workspace' ? 'workspace' : 'user'),
+		get: resolveTargetScope,
 		select: handleSelectScope,
-	}), [state.scopeByKey, handleSelectScope]);
+	}), [resolveTargetScope, handleSelectScope]);
 
+	// --- EVENT HANDLERS
+
+	/**
+	 * Jumps to a section and clears any active search query.
+	 */
 	const handleNavSelect = useCallback((section: SettingsSectionId) => {
 		setState(prev => ({ ...prev, activeSection: section, searchTerm: '' }));
-		if (section === 'editor.formatting') {
-			messaging?.postMessage({
-				id: 'GetSettings',
-				source: { kind: 'languageEditor', languageId: state.formattingLanguage },
-			});
-		}
-	}, [state.formattingLanguage, messaging, setState]);
+	}, [setState]);
 
-	const handleFormattingLanguageChange = useCallback((lang: FormattingLanguage) => {
-		setState(prev => ({ ...prev, formattingLanguage: lang }));
-		messaging?.postMessage({
-			id: 'GetSettings',
-			source: { kind: 'languageEditor', languageId: lang },
-		});
-	}, [messaging, setState]);
-
+	/**
+	 * Updates the search query, which triggers a re-render to show search results instead of a section.
+	 */
 	const handleSearchChange = useCallback((term: string) => {
 		setState(prev => ({ ...prev, searchTerm: term }));
 	}, [setState]);
 
-	const commonProps = {
-		settings: mentorSettings,
-		onUpdate: handleUpdate,
-		setScope: handleSetScope,
-		onBulkScope: handleBulkScope,
-	};
+	// --- RENDERING
 
-	const renderSection = () => {
+	/** Shows search results while a query is active, otherwise the active section's component. */
+	const renderContent = () => {
 		if (state.searchTerm.trim()) {
 			return (
 				<SearchResults
 					searchTerm={state.searchTerm}
 					settings={mentorSettings}
-					onNavigate={section => setState(prev => ({ ...prev, activeSection: section, searchTerm: '' }))}
+					onNavigate={handleNavSelect}
 				/>
 			);
 		}
@@ -224,11 +315,12 @@ function SettingsPanel() {
 
 		return (
 			<SectionComponent
-				{...commonProps}
+				settings={mentorSettings}
+				onUpdate={handleUpdate}
+				setScope={handleSetScope}
+				onBulkScope={handleBulkScope}
 				keys={descriptor.keys}
 				vscodeSettings={vscodeSettings}
-				formattingLanguage={state.formattingLanguage}
-				onFormattingLanguageChange={handleFormattingLanguageChange}
 			/>
 		);
 	};
@@ -252,12 +344,12 @@ function SettingsPanel() {
 							</span>
 						</div>
 					)}
-					
+
 					<div className="settings-body">
 						<SettingsNavigation activeSection={state.activeSection} onSelect={handleNavSelect} />
 						<div className="settings-content">
 							<div className="settings-content-inner">
-								{renderSection()}
+								{renderContent()}
 							</div>
 						</div>
 					</div>

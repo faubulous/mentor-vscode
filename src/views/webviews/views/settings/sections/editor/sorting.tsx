@@ -1,7 +1,7 @@
-import { FormSectionHeader } from '@src/views/webviews/components/form-section-header';
+import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { SettingRow } from '../../components/setting-row';
 import { SettingsSectionProps } from '../../settings-section-props';
-import { MENTOR_SOURCE } from '../../settings-types';
+import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import { StringListEditor } from '../../components/string-list-editor';
 import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
 import { useSettingRowProps } from '../../components/use-setting-row-props';
@@ -13,12 +13,13 @@ export const editorSortingSection = {
 	id: 'editor.sorting',
 	label: 'Sorting',
 	component: SortingSection,
+	defaultScope: 'workspace',
 	keys: ['sorting.typeSortingOptions'],
 } as const satisfies SettingsSectionDescriptor;
 
 export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
-	const rowProps = useSettingRowProps(MENTOR_SOURCE, settings, setScope);
-	const menuItems = useBulkScopeMenuItems(MENTOR_SOURCE, ['sorting.typeSortingOptions'], settings, onBulkScope);
+	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
+	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, ['sorting.typeSortingOptions'], settings, onBulkScope);
 	const state = settings['sorting.typeSortingOptions'];
 	const opts = (state?.value ?? {}) as {
 		typeOrder?: string[];
@@ -28,7 +29,7 @@ export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: Se
 	};
 
 	const update = (patch: Partial<typeof opts>) => {
-		onUpdate(MENTOR_SOURCE, 'sorting.typeSortingOptions', { ...opts, ...patch });
+		onUpdate(MENTOR_SETTINGS_SOURCE, 'sorting.typeSortingOptions', { ...opts, ...patch });
 	};
 
 	const unmatchedPositionRef = useVscodeElementRef<VscodeSingleSelect>(
@@ -46,7 +47,7 @@ export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: Se
 
 	return (
 		<div>
-			<FormSectionHeader title={editorSortingSection.label} menuItems={menuItems} large />
+			<SectionHeader title={editorSortingSection.label} menuItems={menuItems} variant="title" />
 			<SettingRow {...rowProps('sorting.typeSortingOptions')}>
 				<StringListEditor
 					items={opts.typeOrder ?? []}
