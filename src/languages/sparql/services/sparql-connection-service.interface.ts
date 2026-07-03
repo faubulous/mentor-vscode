@@ -3,7 +3,7 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '@src/services/core/credential';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ComunicaEndpoint } from '@src/languages/sparql/services/sparql-endpoint';
-import { SparqlQueryKind } from '@src/languages/sparql/services/sparql-store-config';
+import { SparqlQueryKind } from '@src/languages/sparql/services/triple-store-config';
 
 /**
  * Interface for the SparqlConnectionService.
@@ -81,24 +81,10 @@ export interface ISparqlConnectionService {
 	/**
 	 * Gets a Comunica query source for a specific connection.
 	 * @param connection The SPARQL connection.
+	 * @param inferenceEnabled Optional inference override; defaults to the connection's persisted setting.
 	 * @returns A promise that resolves to a ComunicaSource configuration.
 	 */
-	getQuerySourceForConnection(connection: SparqlConnection): Promise<ComunicaEndpoint>;
-
-	/**
-	 * Retrieves the list of named graphs available for a document.
-	 * Takes into account the document's connection and inference settings.
-	 * @param documentUri The URI of the document or notebook cell.
-	 * @returns A promise that resolves to an array of graph IRIs.
-	 */
-	getGraphsForDocument(documentUri: vscode.Uri): Promise<string[]>;
-
-	/**
-	 * Returns the named graphs currently loaded in the in-memory workspace store,
-	 * excluding inference graphs.
-	 * @returns An array of graph IRIs.
-	 */
-	getWorkspaceGraphs(): string[];
+	getQuerySourceForConnection(connection: SparqlConnection, inferenceEnabled?: boolean): Promise<ComunicaEndpoint>;
 
 	/**
 	 * Gets whether inference is enabled for a specific connection.

@@ -256,7 +256,7 @@ export class DocumentFactory {
 	 * @param languageId The language identifier.
 	 * @returns A `LanguageInfo` object if the language is supported by this factory, `undefined` otherwise.
 	 */
-	async getLanguageInfo(languageId: string): Promise<ILanguageInfo | undefined> {
+	async getSupportedLanguageInfoFromId(languageId: string): Promise<ILanguageInfo | undefined> {
 		return (await this.getSupportedLanguagesInfo()).find(l => l.id === languageId);
 	}
 
@@ -265,8 +265,27 @@ export class DocumentFactory {
 	 * @param mimetype The MIME type to look up.
 	 * @returns The corresponding `LanguageInfo` object, or `undefined` if not found.
 	 */
-	async getLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined> {
+	async getSupportedLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined> {
 		return (await this.getSupportedLanguagesInfo()).find(l => l.mimetypes.includes(mimetype));
+	}
+
+	/**
+	 * Retrieves the language ID from a MIME type, defaulting to 'plaintext' if not found.
+	 * @param mimetype The MIME type to look up.
+	 * @returns The corresponding language ID, or 'plaintext' if not found.
+	 */
+	async getLanguageIdFromMimeType(mimetype: string): Promise<string> {
+		const languageInfo = await this.getSupportedLanguageInfoFromMimeType(mimetype);
+
+		if (languageInfo) {
+			return languageInfo.id;
+		} else if (mimetype.includes('html')) {
+			return 'html';
+		} else if (mimetype.includes('csv')) {
+			return 'csv';
+		} else {
+			return 'plaintext';
+		}
 	}
 
 	/**

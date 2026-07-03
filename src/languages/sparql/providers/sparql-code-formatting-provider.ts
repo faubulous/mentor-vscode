@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlFormatter } from '@faubulous/mentor-rdf-serializers';
-import { getConfig, resolveFormatting } from '@src/utilities/vscode/config';
+import { getConfig, resolveFormattingConfig } from '@src/utilities/vscode/config';
 
 /**
  * Provides formatting edits for SPARQL documents in VS Code.
@@ -22,9 +22,9 @@ export class SparqlCodeFormattingProvider implements vscode.DocumentFormattingEd
             alignPatterns: config.get('alignPatterns', true),
             sameBraceLine: config.get('sameBraceLine', true),
             separateClauses: config.get('separateClauses', true),
-            maxLineWidth: resolveFormatting('sparql', 'maxLineWidth', 120),
-            spaceBeforePunctuation: resolveFormatting('sparql', 'spaceBeforePunctuation', true),
-            blankLinesBetweenSubjects: resolveFormatting('sparql', 'blankLinesBetweenSubjects', true),
+            maxLineWidth: resolveFormattingConfig('sparql', 'maxLineWidth', 120),
+            spaceBeforePunctuation: resolveFormattingConfig('sparql', 'spaceBeforePunctuation', true),
+            blankLinesBetweenSubjects: resolveFormattingConfig('sparql', 'blankLinesBetweenSubjects', true),
         });
 
         const fullRange = new vscode.Range(

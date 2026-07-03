@@ -291,25 +291,25 @@ describe('DocumentFactory', () => {
 		});
 	});
 
-	describe('getLanguageInfo', () => {
+	describe('getSupportedLanguageInfoFromId', () => {
 		it('returns info for turtle', async () => {
-			const result = await factory.getLanguageInfo('turtle');
+			const result = await factory.getSupportedLanguageInfoFromId('turtle');
 
 			expect(result).toBeDefined();
 			expect(result?.id).toBe('turtle');
 		});
 
 		it('returns undefined for unknown language', async () => {
-			const result = await factory.getLanguageInfo('unknown');
+			const result = await factory.getSupportedLanguageInfoFromId('unknown');
 
 			expect(result).toBeUndefined();
 		});
 	});
 
-	describe('getLanguageInfoFromMimeType', () => {
+	describe('getSupportedLanguageInfoFromMimeType', () => {
 		it('returns undefined when mimetypes are not populated from package.json', async () => {
 			// Without package.json (mocked FS throws), mimetypes are empty
-			const result = await factory.getLanguageInfoFromMimeType('text/turtle');
+			const result = await factory.getSupportedLanguageInfoFromMimeType('text/turtle');
 
 			expect(result).toBeUndefined();
 		});
@@ -327,7 +327,7 @@ describe('DocumentFactory', () => {
 				})) as any
 			);
 
-			const result = await factory.getLanguageInfoFromMimeType('text/turtle');
+			const result = await factory.getSupportedLanguageInfoFromMimeType('text/turtle');
 
 			expect(result).toBeDefined();
 			expect(result?.id).toBe('turtle');
@@ -437,7 +437,7 @@ describe('DocumentFactory', () => {
 		});
 	});
 
-	describe('getLanguageInfo (with package.json)', () => {
+	describe('getSupportedLanguageInfoFromId (with package.json)', () => {
 		beforeEach(() => {
 			(vscode.extensions as any).getExtension = vi.fn(() => ({ extensionPath: '/fake/ext' }));
 		});
@@ -458,7 +458,7 @@ describe('DocumentFactory', () => {
 				})) as any
 			);
 
-			const result = await factory.getLanguageInfo('turtle');
+			const result = await factory.getSupportedLanguageInfoFromId('turtle');
 
 			expect(result?.name).toBe('Turtle');
 			expect(result?.mimetypes).toContain('text/turtle');

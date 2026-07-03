@@ -84,14 +84,21 @@ export interface IDocumentFactory {
 	 * @param languageId The language identifier.
 	 * @returns A `ILanguageInfo` object if the language is supported by this factory, `undefined` otherwise.
 	 */
-	getLanguageInfo(languageId: string): Promise<ILanguageInfo | undefined>;
+	getSupportedLanguageInfoFromId(languageId: string): Promise<ILanguageInfo | undefined>;
 
 	/**
-	 * Retrieves language information from a MIME type.
+	 * Retrieves language information from a MIME type defined in package.json.
 	 * @param mimetype The MIME type to look up.
 	 * @returns The corresponding `ILanguageInfo` object, or `undefined` if not found.
 	 */
-	getLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined>;
+	getSupportedLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined>;
+
+	/**
+	 * Retrieves the language ID from a MIME type, defaulting to 'plaintext' if not found.
+	 * @param mimetype The MIME type to look up.
+	 * @returns The corresponding language ID, or 'plaintext' if not found.
+	 */
+	getLanguageIdFromMimeType(mimetype: string): Promise<string>;
 }
 
 /**

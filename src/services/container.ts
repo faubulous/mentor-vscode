@@ -18,9 +18,9 @@ import { LanguageClientRegistry } from '@src/languages/language-client-registry'
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
-import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
+import { TripleStoreConfigService } from '@src/languages/sparql/services/triple-store-config-service';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
-import { SparqlGraphLoadingService } from '@src/languages/sparql/services/sparql-graph-loading-service';
+import { GraphManagementService } from '@src/languages/sparql/services/graph-management-service';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sparql-prefix-definition-service';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
@@ -85,8 +85,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
-	const sparqlStoreConfigService = new SparqlStoreConfigService();
-	container.registerInstance(ServiceToken.SparqlStoreConfigService, sparqlStoreConfigService);
+	const sparqlStoreConfigService = new TripleStoreConfigService();
+	container.registerInstance(ServiceToken.StoreConfigService, sparqlStoreConfigService);
 
 	const sparqlConnectionService = new SparqlConnectionService(context, credentialStorageService, sparqlStoreConfigService);
 	container.registerInstance(ServiceToken.SparqlConnectionService, sparqlConnectionService);
@@ -117,14 +117,14 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
 	// Register the graph service before the status bar so the status bar can subscribe to load events.
-	const sparqlGraphService = new SparqlGraphLoadingService();
-	container.registerInstance(ServiceToken.SparqlGraphLoadingService, sparqlGraphService);
+	const graphService = new GraphManagementService();
+	container.registerInstance(ServiceToken.GraphManagementService, graphService);
 
-	context.subscriptions.push(sparqlGraphService);
+	context.subscriptions.push(graphService);
 
 	// Register the SPARQL status bar service and push it to subscriptions so it is
 	// disposed when the extension deactivates.
-	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlConnectionService, sparqlGraphService);
+	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlConnectionService, graphService);
 	container.registerInstance(ServiceToken.SparqlStatusBarService, sparqlStatusBarService);
 
 	context.subscriptions.push(sparqlStatusBarService);

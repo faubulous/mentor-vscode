@@ -2,13 +2,13 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService } from '@src/languages/sparql/services';
-import { ISparqlStoreConfigService } from '@src/languages/sparql/services';
+import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 
 export const toggleDocumentInference = {
 	id: 'mentor.command.toggleDocumentInference',
 	handler: async (documentUri?: vscode.Uri) => {
 		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		const storeConfigService = container.resolve<ISparqlStoreConfigService>(ServiceToken.SparqlStoreConfigService);
+		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 
 		// If no document URI provided, use the active editor
 		const targetUri = documentUri ?? vscode.window.activeTextEditor?.document.uri;

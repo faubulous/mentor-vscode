@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { getTokenIndexAtPosition } from '@src/utilities';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
@@ -32,7 +32,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	}
 
 	private get graphService() {
-		return container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
+		return container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 	}
 
 	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | null> {
@@ -163,25 +163,25 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 */
 	private async _mergeGraphUris(documentUri: vscode.Uri): Promise<string[]> {
 		const connection = this.connectionService.getConnectionForDocument(documentUri);
-		let endpointGraphs: string[];
 
-		if (connection.autoLoadGraphs && this.graphService.isGraphsLoaded(connection.id)) {
-			endpointGraphs = this.graphService.getGraphsForConnection(connection.id);
-		} else {
-			endpointGraphs = await this.connectionService.getGraphsForDocument(documentUri);
-		}
+		if (this.graphService.hasGraphsForConnection(connection.id)) {
+			const inferenceEnabled = this.connectionService.getInferenceEnabled(connection.id);
+			const graphs = this.graphService.getGraphsForConnection(connection.id, inferenceEnabled);
+			
+			const seen = new Set<string>();
+			const result: string[] = [];
 
-		const seen = new Set<string>();
-		const result: string[] = [];
-
-		for (const iri of endpointGraphs) {
-			if (!seen.has(iri)) {
-				seen.add(iri);
-				result.push(iri);
+			for (const iri of graphs) {
+				if (!seen.has(iri)) {
+					seen.add(iri);
+					result.push(iri);
+				}
 			}
-		}
 
-		return result;
+			return result;
+		} else {
+			return [];
+		}
 	}
 
 	/**

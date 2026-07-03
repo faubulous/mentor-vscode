@@ -28,7 +28,7 @@ const mockWorkspaceFileService = {
 };
 
 const mockDocumentFactory = {
-	getLanguageInfo: vi.fn(async (langId: string) => langId === 'turtle' ? {
+	getSupportedLanguageInfoFromId: vi.fn(async (langId: string) => langId === 'turtle' ? {
 		id: 'turtle',
 		name: 'Turtle',
 		typeName: 'Turtle File',
@@ -67,7 +67,7 @@ describe('openFileFromLanguage', () => {
 			yield vscode.Uri.parse('file:///w/ontology.ttl');
 			yield vscode.Uri.parse('file:///w/schema.ttl');
 		});
-		mockDocumentFactory.getLanguageInfo = vi.fn(async (langId: string) => langId === 'turtle' ? {
+		mockDocumentFactory.getSupportedLanguageInfoFromId = vi.fn(async (langId: string) => langId === 'turtle' ? {
 			id: 'turtle',
 			name: 'Turtle',
 			typeName: 'Turtle File',
@@ -108,7 +108,7 @@ describe('openFileFromLanguage', () => {
 
 	it('shows no files found message for unknown language', async () => {
 		mockWorkspaceFileService.getFilesByLanguageId = vi.fn(async function* () {});
-		mockDocumentFactory.getLanguageInfo.mockResolvedValue({
+		mockDocumentFactory.getSupportedLanguageInfoFromId.mockResolvedValue({
 			id: 'unknown',
 			name: 'Unknown',
 			typeName: 'Unknown File',

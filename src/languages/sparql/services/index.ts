@@ -1,5 +1,6 @@
 export { ISparqlConnectionService } from './sparql-connection-service.interface';
 export { ISparqlQueryService } from './sparql-query-service.interface';
 export { ISparqlResultSerializer } from './sparql-result-serializer.interface';
-export { ISparqlGraphLoadingService } from './sparql-graph-loading-service.interface';
+export { IGraphManagementService } from './graph-management-service.interface';
+export { ITripleStoreConfigService } from './triple-store-config-service.interface';
 export { createFilteredSource } from './sparql-inference-filter';

@@ -9,8 +9,8 @@ import { ISettingsMigrationService, IWorkspaceFileService, IWorkspaceService } f
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { WorkspaceUri } from './providers/workspace-uri';
 import { SparqlConnectionService, WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connection-service';
-import { ISparqlStoreConfigService } from './languages/sparql/services/sparql-store-config-service';
-import { ISparqlGraphLoadingService } from './languages/sparql/services';
+import { ITripleStoreConfigService } from './languages/sparql/services';
+import { IGraphManagementService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
@@ -170,7 +170,7 @@ function registerNotebookInferenceContext(context: vscode.ExtensionContext) {
 
 		if (editor && editor.notebook.notebookType === 'mentor-notebook') {
 			const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
-			const storeConfigService = container.resolve<ISparqlStoreConfigService>(ServiceToken.SparqlStoreConfigService);
+			const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 			const cells = editor.notebook.getCells();
 
 			// Empty notebooks default to the workspace store, which supports inference.
@@ -205,8 +205,8 @@ async function loadFrameworkOntologies() {
  * Runs non-blocking in parallel with workspace indexing.
  */
 async function loadConnectionGraphs() {
-	const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
-	await graphService.loadAllAutoLoadConnections();
+	const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+	await graphService.autoLoadConnections();
 }
 
 /**

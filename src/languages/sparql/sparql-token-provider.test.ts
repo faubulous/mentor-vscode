@@ -54,7 +54,7 @@ vi.mock('tsyringe', () => ({
 				onDidChangeConnectionForDocument: vi.fn(),
 				onDidChangeConnections: vi.fn(),
 			};
-			if (token === 'SparqlGraphLoadingService') return {
+			if (token === 'GraphManagementService') return {
 				onDidChangeGraphs: vi.fn(() => ({ dispose: vi.fn() })),
 				isGraphsLoaded: vi.fn(() => false),
 			};

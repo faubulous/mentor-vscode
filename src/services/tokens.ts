@@ -27,7 +27,7 @@ export enum ServiceToken {
 	/** Service for managing SPARQL connections. */
 	SparqlConnectionService = "SparqlConnectionService",
 	/** Service for reading and resolving SPARQL store configurations. */
-	SparqlStoreConfigService = "SparqlStoreConfigService",
+	StoreConfigService = "StoreConfigService",
 	/** Serializer for SPARQL query results. */
 	SparqlQueryResultSerializer = "SparqlQueryResultSerializer",
 	/** Service for executing SPARQL queries. */
@@ -62,8 +62,8 @@ export enum ServiceToken {
 	SettingsPanelController = "SettingsPanelController",
 	/** Generic navigation router between webview panels. */
 	WebviewRouter = "WebviewRouter",
-	/** Service for caching named graphs loaded from SPARQL endpoints. */
-	SparqlGraphLoadingService = "SparqlGraphLoadingService",
+	/** Service that loads, caches, and retrieves named graphs for SPARQL connections. */
+	GraphManagementService = "GraphManagementService",
 	/** Service that runs registered settings migrations on activation. */
 	SettingsMigrationService = "SettingsMigrationService",
 	/** Controller for the Mentor Notebook kernel. */

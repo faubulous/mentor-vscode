@@ -317,4 +317,82 @@ describe('TurtleRenameProvider', () => {
             expect(range).toBe('threw');
         });
     });
+
+    describe('Triplate template loop-variable rename', () => {
+        function makeTemplateDoc(text: string) {
+            const lines = text.split('\n');
+            return {
+                uri: Uri.parse('file:///t.sparql'),
+                getText: () => text,
+                offsetAt: (pos: any) => {
+                    let offset = 0;
+                    for (let i = 0; i < pos.line; i++) offset += lines[i].length + 1;
+                    return offset + pos.character;
+                },
+                positionAt: (offset: number) => {
+                    const before = text.slice(0, offset);
+                    const split = before.split('\n');
+                    return new Position(split.length - 1, split[split.length - 1].length);
+                },
+            } as any;
+        }
+
+        const template = [
+            '---',
+            'params { graphIris: iri[] }',
+            '---',
+            'CONSTRUCT { ?s ?p ?o }',
+            '{% for g in graphIris %}',
+            'FROM ${g}',
+            '{% endfor %}',
+            '',
+        ].join('\n');
+
+        it('prepareRename returns a range when the cursor is on a loop declaration', async () => {
+            const provider = makeProvider(makeDoc());
+            const doc = makeTemplateDoc(template);
+            const offset = template.indexOf('{% for g') + '{% for '.length; // the `g` after `for`
+            const range = await provider.prepareRename(doc, doc.positionAt(offset));
+
+            expect(range).not.toBeNull();
+        });
+
+        it('renames a loop variable across its declaration and in-scope reference', () => {
+            const provider = makeProvider(makeDoc());
+            const doc = makeTemplateDoc(template);
+            const offset = template.indexOf('FROM ${g}') + 'FROM ${'.length; // the `g` reference
+            const edits = provider.provideRenameEdits(doc, doc.positionAt(offset), 'graph') as any;
+
+            // loopDecl + loopRef = two sites (the `graphIris` source stays a paramRef, untouched).
+            expect(edits.size).toBe(2);
+        });
+
+        it('keeps same-named loops independent (scope, not name)', () => {
+            const shadowed = [
+                '---',
+                'params { a: iri[], b: iri[] }',
+                '---',
+                '{% for g in a %}${g}{% endfor %}',
+                '{% for g in b %}${g} ${g}{% endfor %}',
+                '',
+            ].join('\n');
+            const provider = makeProvider(makeDoc());
+            const doc = makeTemplateDoc(shadowed);
+            const offset = shadowed.indexOf('{% for g in b %}') + '{% for '.length; // second loop's `g`
+            const edits = provider.provideRenameEdits(doc, doc.positionAt(offset), 'h') as any;
+
+            // Only the second loop: its loopDecl + two loopRefs = three sites (first loop untouched).
+            expect(edits.size).toBe(3);
+        });
+
+        it('renames the loop source via the parameter path, not the loop path', () => {
+            const provider = makeProvider(makeDoc());
+            const doc = makeTemplateDoc(template);
+            const offset = template.indexOf('in graphIris') + 'in '.length; // the `graphIris` source
+            const edits = provider.provideRenameEdits(doc, doc.positionAt(offset), 'graphs') as any;
+
+            // paramDecl + the `for` source paramRef = two sites; the loop variable is untouched.
+            expect(edits.size).toBe(2);
+        });
+    });
 });

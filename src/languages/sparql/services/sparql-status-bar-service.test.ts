@@ -37,7 +37,7 @@ vi.mock('vscode', async () => {
     };
 });
 
-import type { ISparqlConnectionService, ISparqlQueryService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
+import type { ISparqlConnectionService, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { EventEmitter } from '@src/utilities/mocks/vscode';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
@@ -68,7 +68,7 @@ function makeServices() {
     const graphService = {
         onDidGraphLoadStart: graphLoadStartEmitter.event,
         onDidGraphLoadEnd: graphLoadEndEmitter.event,
-    } as unknown as ISparqlGraphLoadingService;
+    } as unknown as IGraphManagementService;
 
     return {
         queryService,

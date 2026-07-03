@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
-import { ISparqlStoreConfigService } from '@src/languages/sparql/services';
+import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '../services/sparql-connection-service';
 import { SparqlConnection } from '../services/sparql-connection';
 import { isTemplate } from 'triplate';
@@ -14,14 +14,16 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
 	private _connectionService: ISparqlConnectionService;
-	private _storeConfigService: ISparqlStoreConfigService;
+
+	private _storeConfigService: ITripleStoreConfigService;
+	
 	private _queryService: ISparqlQueryService;
 
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
 		this._connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		this._storeConfigService = container.resolve<ISparqlStoreConfigService>(ServiceToken.SparqlStoreConfigService);
+		this._storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 		this._queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 
 		this._connectionService.onDidChangeConnectionForDocument(() => {

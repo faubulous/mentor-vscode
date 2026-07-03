@@ -1,6 +1,6 @@
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { SparqlConnection } from './sparql-connection';
-import { SparqlStoreConfig } from './sparql-store-config';
+import { TripleStoreConfig } from './triple-store-config';
 
 /**
  * The non-removable workspace triple store connection.
@@ -19,7 +19,7 @@ export const WORKSPACE_CONNECTION: SparqlConnection = {
 /**
  * The non-removable workspace triple store config, derived from {@link WORKSPACE_CONNECTION}.
  */
-export const WORKSPACE_STORE: SparqlStoreConfig = {
+export const WORKSPACE_STORE: TripleStoreConfig = {
 	id: WORKSPACE_CONNECTION.id,
 	label: WORKSPACE_CONNECTION.label!,
 	description: WORKSPACE_CONNECTION.description,

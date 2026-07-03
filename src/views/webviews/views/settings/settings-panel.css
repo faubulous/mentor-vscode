@@ -367,6 +367,7 @@ vscode-textarea.monospace {
 
 /* A read-only preview that mimics the code editor and opens the real editor on click. */
 .template-preview {
+	position: relative;
 	box-sizing: border-box;
 	width: 100%;
 	max-height: 280px;
@@ -405,6 +406,62 @@ vscode-textarea.monospace {
 	white-space: pre;
 	font: inherit;
 	min-height: 12em;
+}
+
+/* Hint chip revealed on hover/focus to clarify the click-to-edit behaviour. */
+.template-preview-hint {
+	position: absolute;
+	bottom: 6px;
+	right: 8px;
+	max-width: calc(100% - 16px);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 2px 8px;
+	border-radius: var(--mentor-radius-sm, 4px);
+	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, transparent));
+	background-color: var(--vscode-editorWidget-background, var(--vscode-editorHoverWidget-background, #252526));
+	color: var(--vscode-editorWidget-foreground, var(--vscode-descriptionForeground));
+	font-family: var(--vscode-font-family);
+	font-size: 11px;
+	line-height: 1.4;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 80ms ease-in-out;
+}
+
+.template-preview:hover .template-preview-hint,
+.template-preview:focus-within .template-preview-hint {
+	opacity: 1;
+}
+
+.template-preview-hint-text {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Link-style reset action inside the hint chip; clickable even though the chip itself is not. */
+.template-preview-hint-reset {
+	flex: none;
+	pointer-events: auto;
+	cursor: pointer;
+	padding: 0;
+	border: none;
+	background: none;
+	font: inherit;
+	white-space: nowrap;
+	color: var(--vscode-textLink-foreground);
+}
+
+.template-preview-hint-reset:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+	text-decoration: underline;
+}
+
+.template-preview-hint-reset:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 1px;
 }
 
 .template-preview-placeholder {

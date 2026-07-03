@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
 
 /**
  * Matches the IRI value inside `FROM <…>`, `FROM NAMED <…>`, and `GRAPH <…>` clauses.
@@ -27,8 +27,8 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
         return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
     }
 
-    private get _graphService(): ISparqlGraphLoadingService {
-        return container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
+    private get _graphService(): IGraphManagementService {
+        return container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
     }
 
     constructor() {
@@ -42,8 +42,8 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
         );
 
         // Re-validate open SPARQL documents whenever the graph cache changes.
-        const graphService = container.resolve<ISparqlGraphLoadingService>(ServiceToken.SparqlGraphLoadingService);
-        
+        const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+
         this._subscriptions.push(
             graphService.onDidChangeGraphs(connectionId => this._revalidateForConnection(connectionId))
         );
@@ -77,40 +77,39 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
     private _validateDocument(document: vscode.TextDocument): void {
         const connection = this._connectionService.getConnectionForDocument(document.uri);
 
-        if (!connection.autoLoadGraphs || !this._graphService.isGraphsLoaded(connection.id)) {
+        if (!connection.autoLoadGraphs || !this._graphService.hasGraphsForConnection(connection.id)) {
             this._collection.delete(document.uri);
-            return;
-        }
+        } else {
+            const knownGraphs = new Set(this._graphService.getGraphsForConnection(connection.id, this._connectionService.getInferenceEnabledForDocument(document.uri)));
+            const text = document.getText();
+            const diagnostics: vscode.Diagnostic[] = [];
 
-        const knownGraphs = new Set(this._graphService.getGraphsForConnection(connection.id));
-        const text = document.getText();
-        const diagnostics: vscode.Diagnostic[] = [];
+            let match: RegExpExecArray | null;
+            GRAPH_IRI_RE.lastIndex = 0;
 
-        let match: RegExpExecArray | null;
-        GRAPH_IRI_RE.lastIndex = 0;
+            while ((match = GRAPH_IRI_RE.exec(text)) !== null) {
+                const iri = match[1];
 
-        while ((match = GRAPH_IRI_RE.exec(text)) !== null) {
-            const iri = match[1];
+                if (knownGraphs.has(iri)) {
+                    continue;
+                }
 
-            if (knownGraphs.has(iri)) {
-                continue;
+                const matchStart = match.index + match[0].indexOf('<') + 1;
+                const startPos = document.positionAt(matchStart);
+                const endPos = document.positionAt(matchStart + iri.length);
+                const range = new vscode.Range(startPos, endPos);
+
+                const diagnostic = new vscode.Diagnostic(
+                    range,
+                    `Graph <${iri}> not found in the connected store`,
+                    vscode.DiagnosticSeverity.Warning
+                );
+                diagnostic.source = 'mentor';
+                diagnostics.push(diagnostic);
             }
 
-            const matchStart = match.index + match[0].indexOf('<') + 1;
-            const startPos = document.positionAt(matchStart);
-            const endPos = document.positionAt(matchStart + iri.length);
-            const range = new vscode.Range(startPos, endPos);
-
-            const diagnostic = new vscode.Diagnostic(
-                range,
-                `Graph <${iri}> not found in the connected store`,
-                vscode.DiagnosticSeverity.Warning
-            );
-            diagnostic.source = 'mentor';
-            diagnostics.push(diagnostic);
+            this._collection.set(document.uri, diagnostics);
         }
-
-        this._collection.set(document.uri, diagnostics);
     }
 
     dispose(): void {

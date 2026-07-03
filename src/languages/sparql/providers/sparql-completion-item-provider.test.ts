@@ -158,7 +158,12 @@ describe('SparqlCompletionItemProvider', () => {
 
             vi.spyOn(p as any, 'connectionService', 'get').mockReturnValue({
                 getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
-                getGraphsForDocument: async () => available,
+                getInferenceEnabled: () => false,
+            });
+
+            vi.spyOn(p as any, 'graphService', 'get').mockReturnValue({
+                hasGraphsForConnection: () => true,
+                getGraphsForConnection: () => available,
             });
 
             return p;
@@ -464,7 +469,9 @@ describe('SparqlCompletionItemProvider', () => {
         it('connectionService getter calls container.resolve', async () => {
             const mockConnection = {
                 getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
-                getGraphsForDocument: async () => ['http://example.org/g'],
+                getInferenceEnabled: () => false,
+                hasGraphsForConnection: () => true,
+                getGraphsForConnection: () => ['http://example.org/g'],
             };
             mockResolve.mockReturnValue(mockConnection);
             const p = new SparqlCompletionItemProvider();

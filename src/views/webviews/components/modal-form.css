@@ -52,7 +52,7 @@
 }
 
 .modal-form .form-body {
-	gap: 2em;
+	gap: 1.5em;
 }
 
 .modal-form section {
@@ -96,7 +96,7 @@
 .modal-form vscode-tab-panel:not([hidden]) {
 	display: flex;
 	flex-direction: column;
-	gap: 2em;
+	gap: 1.5em;
 }
 
 .modal-form vscode-tab-header {
@@ -106,8 +106,8 @@
 .modal-form vscode-tab-panel {
 	/* A little more breathing room above the first label / section header in each tab. */
 	padding: 1em 1.5em;
-	max-height: 300px;
-	min-height: 300px;
+	max-height: 30px;
+	min-height: 320px;
 	overflow: auto;
 }
 

@@ -27,7 +27,7 @@ const mockDocumentFactory = {
 		{ id: 'ntriples', name: 'N-Triples', typeName: 'N-Triples File', extensions: ['.nt'], icon: 'mentor-ntriples', mimetypes: ['application/n-triples'] },
 	]),
 	getConvertibleTargetLanguageIds: vi.fn((_langId: string) => ['ntriples', 'nquads', 'turtle', 'xml']),
-	getLanguageInfo: vi.fn(async (langId: string) => ({
+	getSupportedLanguageInfoFromId: vi.fn(async (langId: string) => ({
 		id: langId,
 		name: langId,
 		typeName: `${langId} File`,
@@ -159,13 +159,13 @@ describe('convertFileFormat', () => {
 			'file:///test.ttl': { graphIri: vscode.Uri.parse('file:///test.ttl'), namespaces: {} }
 		};
 		mockDocumentFactory.getConvertibleTargetLanguageIds.mockReturnValue(['ntriples', 'turtle']);
-		mockDocumentFactory.getLanguageInfo.mockResolvedValue({
+		mockDocumentFactory.getSupportedLanguageInfoFromId.mockResolvedValue({
 			id: 'ntriples',
 			name: 'N-Triples',
 			mimetypes: ['application/n-triples'],
 		} as any);
 		await convertFileFormatToNTriplesSubmenu.handler();
-		expect(mockDocumentFactory.getLanguageInfo).toHaveBeenCalledWith('ntriples');
+		expect(mockDocumentFactory.getSupportedLanguageInfoFromId).toHaveBeenCalledWith('ntriples');
 	});
 
 	it('shows error message when conversion throws', async () => {

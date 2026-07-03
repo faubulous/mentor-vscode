@@ -1,18 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
+vi.mock('vscode', () => import('../../../utilities/mocks/vscode'));
 
-import { SparqlStoreConfigService } from '@src/languages/sparql/services/sparql-store-config-service';
-import type { SparqlStoreConfig } from '@src/languages/sparql/services/sparql-store-config';
-import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { ConfigurationScope } from '@src/utilities/config-scope';
+import { TripleStoreConfigService } from './triple-store-config-service';
+import type { TripleStoreConfig } from './triple-store-config';
+import type { SparqlConnection } from './sparql-connection';
+import { ConfigurationScope } from '../../../utilities/config-scope';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function makeService() {
-    return new SparqlStoreConfigService();
+    return new TripleStoreConfigService();
 }
 
 function makeConnection(overrides: Partial<SparqlConnection> = {}): SparqlConnection {
@@ -24,7 +24,7 @@ function makeConnection(overrides: Partial<SparqlConnection> = {}): SparqlConnec
     };
 }
 
-function withStoreConfigs(configs: SparqlStoreConfig[], run: (svc: SparqlStoreConfigService) => void) {
+function withStoreConfigs(configs: TripleStoreConfig[], run: (svc: TripleStoreConfigService) => void) {
     return (async () => {
         const vscode = await import('vscode');
         const original = vscode.workspace.getConfiguration;
@@ -33,11 +33,11 @@ function withStoreConfigs(configs: SparqlStoreConfig[], run: (svc: SparqlStoreCo
             get: (key: string, def: any) => key === 'sparql.stores' ? configs : def,
             has: () => false,
             inspect: () => undefined,
-            update: async () => {},
+            update: async () => { },
         });
 
         try {
-            run(new SparqlStoreConfigService());
+            run(new TripleStoreConfigService());
         } finally {
             (vscode.workspace as any).getConfiguration = original;
         }
@@ -45,8 +45,8 @@ function withStoreConfigs(configs: SparqlStoreConfig[], run: (svc: SparqlStoreCo
 }
 
 function withInspectedStoreConfigs(
-    inspected: { defaultValue?: SparqlStoreConfig[]; globalValue?: SparqlStoreConfig[]; workspaceValue?: SparqlStoreConfig[] },
-    run: (svc: SparqlStoreConfigService) => void,
+    inspected: { defaultValue?: TripleStoreConfig[]; globalValue?: TripleStoreConfig[]; workspaceValue?: TripleStoreConfig[] },
+    run: (svc: TripleStoreConfigService) => void,
 ) {
     return (async () => {
         const vscode = await import('vscode');
@@ -56,31 +56,31 @@ function withInspectedStoreConfigs(
             get: (_key: string, def: any) => def,
             has: () => false,
             inspect: (key: string) => key === 'sparql.stores' ? inspected : undefined,
-            update: async () => {},
+            update: async () => { },
         });
 
         try {
-            run(new SparqlStoreConfigService());
+            run(new TripleStoreConfigService());
         } finally {
             (vscode.workspace as any).getConfiguration = original;
         }
     })();
 }
 
-const rdf4jConfig: SparqlStoreConfig = {
+const rdf4jConfig: TripleStoreConfig = {
     id: 'rdf4j',
     label: 'RDF4J',
     inference: { supported: true, urlParameters: { enabled: 'infer=true', disabled: 'infer=false' } },
 };
 
-const sparqlConfig: SparqlStoreConfig = { id: 'sparql', label: 'SPARQL Endpoint' };
-const qleverConfig: SparqlStoreConfig = { id: 'qlever', label: 'QLever' };
+const sparqlConfig: TripleStoreConfig = { id: 'sparql', label: 'SPARQL Endpoint' };
+const qleverConfig: TripleStoreConfig = { id: 'qlever', label: 'QLever' };
 
 // ---------------------------------------------------------------------------
 // defaultStoreType
 // ---------------------------------------------------------------------------
 
-describe('SparqlStoreConfigService – defaultStoreType', () => {
+describe('TripleStoreConfigService – defaultStoreType', () => {
     it('is "sparql"', () => {
         expect(makeService().defaultStoreType).toBe('sparql');
     });
@@ -90,7 +90,7 @@ describe('SparqlStoreConfigService – defaultStoreType', () => {
 // getStoreConfigs
 // ---------------------------------------------------------------------------
 
-describe('SparqlStoreConfigService – getStoreConfigs', () => {
+describe('TripleStoreConfigService – getStoreConfigs', () => {
     it('returns configs from the setting when set', () =>
         withStoreConfigs([rdf4jConfig, sparqlConfig], svc => {
             expect(svc.getStoreConfigs()).toHaveLength(2);
@@ -135,7 +135,7 @@ describe('SparqlStoreConfigService – getStoreConfigs', () => {
 // getStoreConfig
 // ---------------------------------------------------------------------------
 
-describe('SparqlStoreConfigService – getStoreConfig', () => {
+describe('TripleStoreConfigService – getStoreConfig', () => {
     it('returns the matching config by id', () =>
         withStoreConfigs([rdf4jConfig, sparqlConfig], svc => {
             expect(svc.getStoreConfig('rdf4j')?.label).toBe('RDF4J');
@@ -165,7 +165,7 @@ describe('SparqlStoreConfigService – getStoreConfig', () => {
 // supportsInference
 // ---------------------------------------------------------------------------
 
-describe('SparqlStoreConfigService – supportsInference', () => {
+describe('TripleStoreConfigService – supportsInference', () => {
     it('returns true for the workspace connection (matched by id)', () => {
         const svc = makeService();
         expect(svc.supportsInference(makeConnection({ id: 'workspace' }))).toBe(true);
@@ -198,21 +198,21 @@ describe('SparqlStoreConfigService – supportsInference', () => {
 // isWorkspaceConnection
 // ---------------------------------------------------------------------------
 
-describe('SparqlStoreConfigService – isWorkspaceConnection', () => {
+describe('TripleStoreConfigService – isWorkspaceConnection', () => {
     it('returns true for a connection with id = workspace', () => {
-        expect(makeService().isWorkspaceConnection(makeConnection({ id: 'workspace' }))).toBe(true);
+        expect(makeService().isWorkspaceConnectionId('workspace')).toBe(true);
     });
 
     it('returns true for a connection with storeType = workspace', () => {
-        expect(makeService().isWorkspaceConnection(makeConnection({ storeType: 'workspace' }))).toBe(true);
+        expect(makeService().isWorkspaceConnectionId('workspace')).toBe(true);
     });
 
     it('returns false for a regular SPARQL connection', () => {
-        expect(makeService().isWorkspaceConnection(makeConnection({ id: 'conn-1', storeType: 'rdf4j' }))).toBe(false);
+        expect(makeService().isWorkspaceConnectionId('conn-1')).toBe(false);
     });
 
     it('returns false when storeType is undefined and id is not workspace', () => {
         // storeType defaults to 'sparql', which is not 'workspace'
-        expect(makeService().isWorkspaceConnection(makeConnection({ id: 'conn-2' }))).toBe(false);
+        expect(makeService().isWorkspaceConnectionId('conn-2')).toBe(false);
     });
 });

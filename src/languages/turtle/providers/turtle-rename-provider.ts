@@ -3,13 +3,14 @@ import { container } from 'tsyringe';
 import { isTemplate, symbols as templateSymbols, type TemplateSymbol } from 'triplate';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { RdfToken, isVariableToken } from '@faubulous/mentor-rdf-parsers';
+import { RdfToken, isVariableToken, type IToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken, getTokenAtPosition, isPrefixTokenAtPosition } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 
 /**
- * A `paramDecl` / `paramRef` / `bindingKey` symbol — the name-bearing kinds.
+ * Any name-bearing Triplate symbol (`paramDecl` / `paramRef` / `bindingKey` and the
+ * loop `loopDecl` / `loopRef`).
  */
 type NamedSymbol = Extract<TemplateSymbol, { name: string }>;
 
@@ -33,12 +34,19 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			return null;
 		}
 
-		// Triplate template-parameter rename (declaration ↔ ${ref} ↔ example binding key)
-		// takes precedence: these sites are not RDF tokens, so the token logic below can't see them.
-		const paramSymbol = this._templateParameterSymbolAt(document, position);
+		// Triplate template rename (a parameter across its declaration ↔ ${ref} ↔ example
+		// binding key, or a loop variable across its {% for %} declaration and in-scope
+		// references) takes precedence: these sites are not RDF tokens, so the token logic
+		// below can't see them.
+		const symbols = this._templateSymbols(document);
 
-		if (paramSymbol) {
-			return new vscode.Range(document.positionAt(paramSymbol.start), document.positionAt(paramSymbol.end));
+		if (symbols) {
+			const offset = document.offsetAt(position);
+			const hit = this._templateRenameGroupAt(symbols, offset).find(s => offset >= s.start && offset <= s.end);
+
+			if (hit) {
+				return new vscode.Range(document.positionAt(hit.start), document.positionAt(hit.end));
+			}
 		}
 
 		const token = getTokenAtPosition(context.tokens, position);
@@ -62,10 +70,24 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			return edits;
 		}
 
-		// Triplate template-parameter rename: rewrite every declaration, reference and
-		// example binding key that names the same parameter, then stop (not an RDF symbol).
-		if (this._applyTemplateParameterRename(edits, document, position, newName)) {
-			return edits;
+		// Triplate template rename: rewrite every site that renames together with the
+		// symbol under the cursor (a parameter group by name, or a loop variable by
+		// scope), then stop — these are not RDF symbols.
+		const templateSymbolsAtUri = this._templateSymbols(document);
+
+		if (templateSymbolsAtUri) {
+			const offset = document.offsetAt(position);
+			const group = this._templateRenameGroupAt(templateSymbolsAtUri, offset);
+
+			if (group.length > 0) {
+				for (const symbol of group) {
+					const range = new vscode.Range(document.positionAt(symbol.start), document.positionAt(symbol.end));
+
+					edits.replace(document.uri, range, newName);
+				}
+
+				return edits;
+			}
 		}
 
 		const token = getTokenAtPosition(context.tokens, position);
@@ -103,13 +125,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 				context.updateNamespacePrefix(prefix, newName);
 			}
 		} else if (isVariableToken(token)) {
-			for (const t of context.tokens.filter(t => t.image === token.image)) {
-				const r = this.getLabelEditRange(t);
-
-				if (!r) continue;
-
-				edits.replace(document.uri, r, newName);
-			}
+			this._applyVariableRename(edits, document, context, token, position, newName);
 		} else {
 			const u = getIriFromToken(context.namespaces, token);
 
@@ -136,60 +152,65 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 	}
 
 	/**
-	 * Returns the Triplate template-parameter symbol at `position`, or `null` if the
-	 * position is not on a declared parameter. Gated to names that have a `paramDecl`
-	 * so loop-local variables (which have references but no declaration) are excluded.
+	 * Renames the variable `token` across the document. The base behaviour is purely
+	 * textual: every token with the same image is rewritten. SPARQL overrides this with
+	 * scope-aware resolution (see `SparqlRenameProvider`).
 	 */
-	private _templateParameterSymbolAt(document: vscode.TextDocument, position: vscode.Position): NamedSymbol | null {
+	protected _applyVariableRename(edits: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, token: IToken, _position: vscode.Position, newName: string): void {
+		for (const t of context.tokens.filter(t => t.image === token.image)) {
+			const range = this.getLabelEditRange(t);
+
+			if (!range) continue;
+
+			edits.replace(document.uri, range, newName);
+		}
+	}
+
+	/**
+	 * Returns the positioned Triplate symbols for `document`, or `null` if it is not a
+	 * template or cannot be read. Uses the tolerant reader so rename keeps working while
+	 * the template is mid-edit.
+	 */
+	private _templateSymbols(document: vscode.TextDocument): TemplateSymbol[] | null {
 		const text = typeof document.getText === 'function' ? document.getText() : '';
 
 		if (!isTemplate(text)) {
 			return null;
 		}
 
-		let symbols: TemplateSymbol[];
-
 		try {
-			// Tolerant reader so rename works while the template is mid-edit.
-			symbols = templateSymbols(text);
+			return templateSymbols(text);
 		} catch {
 			return null;
 		}
-
-		const declared = new Set(symbols.filter(s => s.kind === 'paramDecl').map(s => s.name));
-		const offset = document.offsetAt(position);
-
-		for (const symbol of symbols) {
-			if (this._parameterSymbols.has(symbol.kind)
-				&& declared.has((symbol as NamedSymbol).name)
-				&& offset >= symbol.start && offset <= symbol.end) {
-				return symbol as NamedSymbol;
-			}
-		}
-
-		return null;
 	}
 
 	/**
-	 * If `position` is on a declared template parameter, replaces every declaration,
-	 * reference and example binding key with `newName` and returns `true`. Otherwise
-	 * returns `false` so the caller falls through to RDF-token rename.
+	 * Returns every symbol that should be renamed together with the one at `offset`, or
+	 * an empty array if `offset` is not on a renameable template symbol.
+	 *
+	 * Parameters group by `name`, gated to names that have a `paramDecl` so a stray
+	 * reference without a declaration falls through to RDF rename. Loop variables group
+	 * by `scope` id, which keeps shadowed and same-named loops independent.
 	 */
-	private _applyTemplateParameterRename(edits: vscode.WorkspaceEdit, document: vscode.TextDocument, position: vscode.Position, newName: string): boolean {
-		const target = this._templateParameterSymbolAt(document, position);
+	private _templateRenameGroupAt(symbols: TemplateSymbol[], offset: number): TemplateSymbol[] {
+		const hit = symbols.find(s => offset >= s.start && offset <= s.end
+			&& (this._parameterSymbols.has(s.kind) || s.kind === 'loopDecl' || s.kind === 'loopRef'));
 
-		if (!target) {
-			return false;
+		if (!hit) {
+			return [];
 		}
 
-		for (const symbol of templateSymbols(document.getText())) {
-			if (this._parameterSymbols.has(symbol.kind) && (symbol as NamedSymbol).name === target.name) {
-				const range = new vscode.Range(document.positionAt(symbol.start), document.positionAt(symbol.end));
-
-				edits.replace(document.uri, range, newName);
-			}
+		if (hit.kind === 'loopDecl' || hit.kind === 'loopRef') {
+			return symbols.filter(s => (s.kind === 'loopDecl' || s.kind === 'loopRef') && s.scope === hit.scope);
 		}
 
-		return true;
+		const name = (hit as NamedSymbol).name;
+
+		if (!symbols.some(s => s.kind === 'paramDecl' && s.name === name)) {
+			return [];
+		}
+
+		return symbols.filter(s => this._parameterSymbols.has(s.kind) && (s as NamedSymbol).name === name);
 	}
 }

@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockGetConfig } = vi.hoisted(() => ({
-	mockGetConfig: vi.fn(() => ({ get: (_k: string, d?: any) => d })),
+const { mockResolveFormatting } = vi.hoisted(() => ({
+	mockResolveFormatting: vi.fn((_lang: string, _key: string, fallback: any) => fallback),
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: mockGetConfig,
+	getConfig: vi.fn(() => ({ get: (_k: string, d?: any) => d })),
+	resolveFormattingConfig: mockResolveFormatting,
 }));
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({
@@ -35,7 +36,7 @@ describe('TurtleCodeFormattingProvider', () => {
 	let provider: TurtleCodeFormattingProvider;
 
 	beforeEach(() => {
-		mockGetConfig.mockImplementation(() => ({ get: (_k: string, d?: any) => d }));
+		mockResolveFormatting.mockImplementation((_lang: string, _key: string, fallback: any) => fallback);
 		provider = new TurtleCodeFormattingProvider();
 	});
 
@@ -74,15 +75,14 @@ describe('TurtleCodeFormattingProvider', () => {
 		);
 	});
 
-	it('reads maxLineWidth from config', () => {
-		mockGetConfig.mockImplementation(() => ({
-			get: (k: string, d?: any) => k === 'maxLineWidth' ? 80 : d,
-		}));
+	it('resolves maxLineWidth via the cascading formatting config', () => {
+		mockResolveFormatting.mockImplementation((_lang: string, key: string, fallback: any) => key === 'maxLineWidth' ? 80 : fallback);
 
 		const freshProvider = new TurtleCodeFormattingProvider();
 		const spy = vi.spyOn((freshProvider as any)._formatter, 'formatFromText');
 		freshProvider.provideDocumentFormattingEdits(makeDocument('text'), makeOptions(), {} as any);
 
+		expect(mockResolveFormatting).toHaveBeenCalledWith('turtle', 'maxLineWidth', 120);
 		expect(spy).toHaveBeenCalledWith(
 			'text',
 			expect.objectContaining({ maxLineWidth: 80 })

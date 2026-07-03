@@ -52,14 +52,6 @@ export interface SparqlConnection {
     isProtected?: boolean;
 
     /**
-     * Indicates if inference is currently enabled for this connection.
-     * When `false`, queries will only return asserted triples from the store.
-     * When `true`, inferred triples are included in query results.
-     * This setting is only applicable for store types that support inference.
-     */
-    inferenceEnabled?: boolean;
-
-    /**
      * Whether inference can be toggled for this connection.
      * Set by the connection service based on provider capability.
      */
@@ -78,3 +70,16 @@ export interface SparqlConnection {
      */
     graphReloadIntervalSeconds?: number;
 }
+
+/**
+ * A connection projected for the settings webview. Inference state is not part of the
+ * domain `SparqlConnection` (it lives in workspace state and is resolved via the connection
+ * service); this view attaches the resolved per-connection default so the editor can render
+ * and toggle it. Only used at the host↔webview boundary.
+ */
+export type SparqlConnectionView = SparqlConnection & {
+    /**
+     * The connection's persisted default inference setting, resolved at send time.
+     */
+    inferenceEnabled?: boolean;
+};

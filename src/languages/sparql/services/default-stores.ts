@@ -1,4 +1,4 @@
-import { SparqlStoreConfig } from './sparql-store-config';
+import { TripleStoreConfig } from './triple-store-config';
 
 /**
  * The built-in store types seeded into the user's `mentor.sparql.stores` setting on first run
@@ -7,7 +7,7 @@ import { SparqlStoreConfig } from './sparql-store-config';
  * ordinary, editable user stores so their query templates can be tested/adjusted and reasoning
  * support configured per deployment.
  */
-export const DEFAULT_SEED_STORES: SparqlStoreConfig[] = [
+export const DEFAULT_SEED_STORES: TripleStoreConfig[] = [
 	{
 		id: 'jena',
 		label: 'Apache Jena Fuseki',

@@ -4,11 +4,28 @@ import { ServiceToken } from '@src/services/tokens';
 import { SparqlConnection } from './sparql-connection';
 import { ISparqlConnectionService } from './sparql-connection-service.interface';
 import { ISparqlQueryService } from './sparql-query-service.interface';
-import { ISparqlGraphLoadingService } from './sparql-graph-loading-service.interface';
+import { IGraphManagementService } from './graph-management-service.interface';
+import { ITripleStoreConfigService } from './triple-store-config-service.interface';
+import { Store } from '@faubulous/mentor-rdf';
+import { InferenceUri } from '@src/providers/inference-uri';
 
+/**
+ * An entry in the graph cache.
+ */
 interface GraphCacheEntry {
+    /**
+     * The list of named graphs fetched from the SPARQL endpoint.
+     */
     graphs: string[];
+
+    /**
+     * The timestamp (in milliseconds since the epoch) when the graphs were last loaded.
+     */
     loadedAt: number;
+
+    /**
+     * An error message if the graph loading failed, or `undefined` if the graphs were loaded successfully.
+     */
     error?: string;
 }
 
@@ -20,19 +37,46 @@ interface GraphCacheEntry {
  * - schedules periodic reloads according to `graphReloadIntervalSeconds`, and
  * - fires `onDidChangeGraphs` whenever the cached list changes.
  */
-export class SparqlGraphLoadingService implements ISparqlGraphLoadingService {
+export class GraphManagementService implements IGraphManagementService {
 
+    /**
+     * A map from connection IDs to their cached graph lists and load timestamps.
+     */
     private readonly _graphCache = new Map<string, GraphCacheEntry>();
 
+    /**
+     * A map from connection IDs to their scheduled reload timers (if any).
+     */
     private readonly _timers = new Map<string, ReturnType<typeof setInterval>>();
 
+    /**
+     * An event emitter that fires when the list of graphs for a connection changes.
+     */
     private readonly _onDidChangeGraphs = new vscode.EventEmitter<string>();
+
+    /**
+     * Fires when the list of graphs for a connection changes. The event argument is the connection ID.
+     */
     public readonly onDidChangeGraphs = this._onDidChangeGraphs.event;
 
+    /**
+     * An event emitter that fires when the graph loading process starts for a connection.
+     */
     private readonly _onDidGraphLoadStart = new vscode.EventEmitter<SparqlConnection>();
+
+    /**
+     * Fires when the graph loading process starts for a connection. The event argument is the connection object.
+     */
     public readonly onDidGraphLoadStart = this._onDidGraphLoadStart.event;
 
+    /**
+     * An event emitter that fires when the graph loading process ends for a connection.
+     */
     private readonly _onDidGraphLoadEnd = new vscode.EventEmitter<SparqlConnection>();
+
+    /**
+     * Fires when the graph loading process ends for a connection. The event argument is the connection object.
+     */
     public readonly onDidGraphLoadEnd = this._onDidGraphLoadEnd.event;
 
     private get _connectionService(): ISparqlConnectionService {
@@ -43,17 +87,41 @@ export class SparqlGraphLoadingService implements ISparqlGraphLoadingService {
         return container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
     }
 
-    getGraphsForConnection(connectionId: string): string[] {
-        return this._graphCache.get(connectionId)?.graphs ?? [];
+    private get _storeConfigService(): ITripleStoreConfigService {
+        return container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
     }
 
-    isGraphsLoaded(connectionId: string): boolean {
-        const entry = this._graphCache.get(connectionId);
-        return entry !== undefined && entry.error === undefined;
+    private get _workspaceStore(): Store {
+        return container.resolve<Store>(ServiceToken.Store);
+    }
+
+    getGraphsForConnection(connectionId: string, inferenceEnabled: boolean): string[] {
+        if (this._storeConfigService.isWorkspaceConnectionId(connectionId)) {
+            const graphs = this._workspaceStore.getGraphs();
+
+            return inferenceEnabled ? graphs : graphs.filter(g => !InferenceUri.isInferenceUri(g));
+        } else {
+            return this._graphCache.get(connectionId)?.graphs ?? [];
+        }
+    }
+
+    getWorkspaceGraphs(inferenceEnabled: boolean): string[] {
+        return this._workspaceStore.getGraphs()
+            .filter(g => inferenceEnabled || !InferenceUri.isInferenceUri(g));
     }
 
     getGraphLoadError(connectionId: string): string | undefined {
         return this._graphCache.get(connectionId)?.error;
+    }
+
+    hasGraphsForConnection(connectionId: string): boolean {
+        if (this._storeConfigService.isWorkspaceConnectionId(connectionId)) {
+            return true;
+        } else {
+            const entry = this._graphCache.get(connectionId);
+
+            return entry !== undefined && entry.error === undefined;
+        }
     }
 
     async loadGraphsForConnection(connection: SparqlConnection): Promise<void> {
@@ -94,7 +162,7 @@ export class SparqlGraphLoadingService implements ISparqlGraphLoadingService {
         }
     }
 
-    async loadAllAutoLoadConnections(): Promise<void> {
+    async autoLoadConnections(): Promise<void> {
         const connections = this._connectionService
             .getConnections()
             .filter(c => c.autoLoadGraphs && !c.isProtected);

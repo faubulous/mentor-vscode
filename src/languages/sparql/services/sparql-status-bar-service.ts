@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ISparqlConnectionService, ISparqlQueryService, ISparqlGraphLoadingService } from '@src/languages/sparql/services';
+import { ISparqlConnectionService, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
 import { getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
 
 /**
@@ -57,7 +57,7 @@ export class SparqlStatusBarService implements vscode.Disposable {
 	constructor(
 		queryService: ISparqlQueryService,
 		connectionService: ISparqlConnectionService,
-		graphService: ISparqlGraphLoadingService
+		graphService: IGraphManagementService
 	) {
 		this._statusBarItem = vscode.window.createStatusBarItem(
 			vscode.StatusBarAlignment.Left,

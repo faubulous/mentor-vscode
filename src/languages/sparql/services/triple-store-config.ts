@@ -5,7 +5,7 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
  * setting and let users create, rename, and remove store types, and define the same store with
  * different settings more than once.
  */
-export interface SparqlStoreConfig {
+export interface TripleStoreConfig {
     /**
      * Stable identifier referenced by `SparqlConnection.storeType`.
      */
@@ -38,7 +38,7 @@ export interface SparqlStoreConfig {
     /**
      * Reasoning control configuration; absent means the store does not support reasoning.
      */
-    inference?: SparqlStoreInferenceConfig;
+    inference?: TripleStoreInferenceConfig;
 
     /**
      * When `true`, the store cannot be edited or deleted from the settings UI.
@@ -49,13 +49,13 @@ export interface SparqlStoreConfig {
     /**
      * Store-specific default query templates; a blank field falls back to the global setting.
      */
-    queries?: SparqlStoreQueryTemplates;
+    queries?: TripleStoreQueryTemplates;
 }
 
 /**
  * Interface for the reasoning configuration of a triple store instances.
  */
-export interface SparqlStoreInferenceConfig {
+export interface TripleStoreInferenceConfig {
     /**
      * Whether the store supports toggling reasoning at all.
      */
@@ -64,18 +64,18 @@ export interface SparqlStoreInferenceConfig {
     /**
      * Query-string fragment appended to the endpoint URL (e.g. `infer=true&reasoning=rdfs`).
      */
-    urlParameters?: SparqlStoreInferenceConfigParameters;
+    urlParameters?: TripleStoreInferenceConfigParameters;
 
     /**
      * Text prepended to the query (e.g. `#pragma reasoning on`).
      */
-    queryPragma?: SparqlStoreInferenceConfigParameters;
+    queryPragma?: TripleStoreInferenceConfigParameters;
 }
 
 /**
  * Provides generic string parameter values for enablding or disabling inference on SPARQL queries.
  */
-export interface SparqlStoreInferenceConfigParameters {
+export interface TripleStoreInferenceConfigParameters {
     /**
      * Parameter value to be used when inference is on.
      */
@@ -90,11 +90,11 @@ export interface SparqlStoreInferenceConfigParameters {
 /**
  * The package.json property that marks a `mentor.*` setting as a store-overridable SPARQL query
  * template. Its value is the stable {@link SparqlQueryKind} slug used as the key in
- * {@link SparqlStoreQueryTemplates} and looked up by the connection service. package.json is the
+ * {@link TripleStoreQueryTemplates} and looked up by the connection service. package.json is the
  * single source of truth for which queries are editable per-store and for their title/description/
  * default; this module only keeps the slug names below for compile-time safety.
  */
-export const STORE_QUERY_KIND_PROPERTY = 'storeQueryKind';
+export const TRIPLE_STORE_QUERY_KIND_PROPERTY = 'storeQueryKind';
 
 /**
  * The known SPARQL query template kinds. These slugs must match the `storeQueryKind` values in
@@ -103,5 +103,7 @@ export const STORE_QUERY_KIND_PROPERTY = 'storeQueryKind';
  */
 export type SparqlQueryKind = 'listGraphs' | 'dropGraph' | 'describe' | 'exportGraph' | 'countGraph';
 
-/** Per-store query template overrides, keyed by {@link SparqlQueryKind}. */
-export type SparqlStoreQueryTemplates = Partial<Record<SparqlQueryKind, string>>;
+/**
+ * Per-store query template overrides, keyed by {@link SparqlQueryKind}.
+ */
+export type TripleStoreQueryTemplates = Partial<Record<SparqlQueryKind, string>>;

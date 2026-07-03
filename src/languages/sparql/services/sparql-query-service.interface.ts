@@ -84,9 +84,10 @@ export interface ISparqlQueryService {
 	 * Executes a SPARQL query directly against a connection without requiring a document.
 	 * @param query The SPARQL query string to execute.
 	 * @param connection The SPARQL connection to execute against.
+	 * @param inferenceEnabled Optional inference override; defaults to the connection's persisted setting.
 	 * @returns The query result based on the query type.
 	 */
-	executeQueryOnConnection(query: string, connection: SparqlConnection): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null>;
+	executeQueryOnConnection(query: string, connection: SparqlConnection, inferenceEnabled?: boolean): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null>;
 
 	/**
 	 * Registers an already-completed query state in the history and notifies listeners,

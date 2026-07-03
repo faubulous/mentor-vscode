@@ -1,8 +1,14 @@
 import * as vscode from 'vscode';
 import { TurtleFormatter } from '@faubulous/mentor-rdf-serializers';
-import { getConfig } from '@src/utilities/vscode/config';
+import { resolveFormattingConfig } from '@src/utilities/vscode/config';
 
+/**
+ * Provides formatting edits for Turtle documents using the TurtleFormatter.
+ */
 export class TurtleCodeFormattingProvider implements vscode.DocumentFormattingEditProvider {
+    /**
+     * The TurtleFormatter instance used to format Turtle documents.
+     */
     private _formatter = new TurtleFormatter();
 
     provideDocumentFormattingEdits(
@@ -10,15 +16,13 @@ export class TurtleCodeFormattingProvider implements vscode.DocumentFormattingEd
         options: vscode.FormattingOptions,
         token: vscode.CancellationToken
     ): vscode.TextEdit[] {
-        const config = getConfig('formatting.turtle');
-
         const text = document.getText();
         const result = this._formatter.formatFromText(text, {
             indent: options.insertSpaces ? ' '.repeat(options.tabSize) : '\t',
             prettyPrint: true,
-            maxLineWidth: config.get('maxLineWidth', 120),
-            spaceBeforePunctuation: config.get('spaceBeforePunctuation', true),
-            blankLinesBetweenSubjects: config.get('blankLinesBetweenSubjects', true),
+            maxLineWidth: resolveFormattingConfig('turtle', 'maxLineWidth', 120),
+            spaceBeforePunctuation: resolveFormattingConfig('turtle', 'spaceBeforePunctuation', true),
+            blankLinesBetweenSubjects: resolveFormattingConfig('turtle', 'blankLinesBetweenSubjects', true),
         });
 
         const fullRange = new vscode.Range(
