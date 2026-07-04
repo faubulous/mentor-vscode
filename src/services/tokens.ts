@@ -25,7 +25,13 @@ export enum ServiceToken {
 	/** Service for secure credential storage. */
 	CredentialStorageService = "CredentialStorageService",
 	/** Service for managing SPARQL connections. */
-	SparqlConnectionService = "SparqlConnectionService",
+	SparqlConnectionRegistry = "SparqlConnectionRegistry",
+	/** Service for testing the reachability of SPARQL endpoint connections. */
+	SparqlEndpointTester = "SparqlEndpointTester",
+	/** Service for per-document and notebook-cell SPARQL connection and inference settings. */
+	DocumentConnectionService = "DocumentConnectionService",
+	/** Factory for Comunica-compatible SPARQL query sources. */
+	SparqlQuerySourceFactory = "SparqlQuerySourceFactory",
 	/** Service for reading and resolving SPARQL store configurations. */
 	StoreConfigService = "StoreConfigService",
 	/** Serializer for SPARQL query results. */

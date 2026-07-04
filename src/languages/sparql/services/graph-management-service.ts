@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { SparqlConnection } from './sparql-connection';
-import { ISparqlConnectionService } from './sparql-connection-service.interface';
+import { ISparqlConnectionRegistry } from './sparql-connection-registry.interface';
 import { ISparqlQueryService } from './sparql-query-service.interface';
 import { IGraphManagementService } from './graph-management-service.interface';
 import { ITripleStoreConfigService } from './triple-store-config-service.interface';
@@ -79,8 +79,8 @@ export class GraphManagementService implements IGraphManagementService {
      */
     public readonly onDidGraphLoadEnd = this._onDidGraphLoadEnd.event;
 
-    private get _connectionService(): ISparqlConnectionService {
-        return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+    private get _connectionRegistry(): ISparqlConnectionRegistry {
+        return container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
     }
 
     private get _queryService(): ISparqlQueryService {
@@ -128,7 +128,7 @@ export class GraphManagementService implements IGraphManagementService {
         this._onDidGraphLoadStart.fire(connection);
 
         try {
-            const query = this._connectionService.getQueryTemplate(connection, 'listGraphs');
+            const query = this._storeConfigService.getQueryTemplate(connection, 'listGraphs');
 
             if (!query) {
                 this._graphCache.set(connection.id, { graphs: [], loadedAt: Date.now(), error: 'No listGraphs query configured for this store type' });
@@ -163,7 +163,7 @@ export class GraphManagementService implements IGraphManagementService {
     }
 
     async autoLoadConnections(): Promise<void> {
-        const connections = this._connectionService
+        const connections = this._connectionRegistry
             .getConnections()
             .filter(c => c.autoLoadGraphs && !c.isProtected);
 

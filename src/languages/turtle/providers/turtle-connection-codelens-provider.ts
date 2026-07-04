@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
-import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
+import { ISparqlConnectionRegistry, IDocumentConnectionService } from '@src/languages/sparql/services';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
 /**
@@ -17,8 +17,12 @@ export class TurtleConnectionCodeLensProvider implements vscode.CodeLensProvider
 
 	private _subscribed = false;
 
-	private get _connectionService() {
-		return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+	private get _connectionRegistry() {
+		return container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+	}
+
+	private get _documentConnectionService() {
+		return container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 	}
 
 	/**
@@ -33,8 +37,8 @@ export class TurtleConnectionCodeLensProvider implements vscode.CodeLensProvider
 		this._subscribed = true;
 
 		// Refresh the lens whenever the document's connection or the list of connections changes.
-		this._connectionService.onDidChangeConnectionForDocument(() => this.refresh());
-		this._connectionService.onDidChangeConnections(() => this.refresh());
+		this._documentConnectionService.onDidChangeConnectionForDocument(() => this.refresh());
+		this._connectionRegistry.onDidChangeConnections(() => this.refresh());
 	}
 
 	public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
@@ -45,7 +49,7 @@ export class TurtleConnectionCodeLensProvider implements vscode.CodeLensProvider
 			return [];
 		}
 
-		const connection = this._connectionService.getConnectionForDocument(document.uri);
+		const connection = this._documentConnectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {
 			return [];

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlQueryService, ISparqlResultSerializer } from '@src/languages/sparql/services';
-import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
+import { ISparqlConnectionRegistry, ISparqlQueryService, ISparqlResultSerializer, IDocumentConnectionService } from '@src/languages/sparql/services';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
@@ -73,22 +73,23 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
             language: 'sparql'
         });
 
-        const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+        const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+        const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 
         // Resolve the connection from the explicit connectionId (background queries) or, for
         // generated queries, from the source document the query was rendered against.
         let connection: SparqlConnection | undefined;
 
         if (queryState.connectionId) {
-            connection = connectionService.getConnection(queryState.connectionId);
+            connection = connectionRegistry.getConnection(queryState.connectionId);
         } else if (queryState.documentIri) {
             const documentUri = vscode.Uri.parse(queryState.documentIri);
 
-            connection = connectionService.getConnectionForDocument(documentUri);
+            connection = documentConnectionService.getConnectionForDocument(documentUri);
         }
 
         if (connection && connection.id !== WORKSPACE_CONNECTION.id) {
-            await connectionService.setQuerySourceForDocument(document.uri, connection.id);
+            await documentConnectionService.setQuerySourceForDocument(document.uri, connection.id);
         }
 
         this.postMessage({

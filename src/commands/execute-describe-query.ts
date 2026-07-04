@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { render } from 'triplate';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { IDocumentConnectionService, ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { SparqlResultsController } from '@src/views/webviews';
 
 export const executeDescribeQuery = {
@@ -15,9 +15,10 @@ export const executeDescribeQuery = {
 			return;
 		}
 
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		const connection = connectionService.getConnectionForDocument(document.uri);
-		const template = connectionService.getQueryTemplate(connection, 'describe');
+		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
+		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
+		const connection = documentConnectionService.getConnectionForDocument(document.uri);
+		const template = storeConfigService.getQueryTemplate(connection, 'describe');
 
 		if(!template) {
 			vscode.window.showErrorMessage('Could not resolve a "describe" query template for this connection.');

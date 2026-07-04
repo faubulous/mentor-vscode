@@ -14,7 +14,7 @@ vi.mock('tsyringe', () => ({
 			if (token === 'SparqlResultsController') {
 				return { executeBackgroundQuery: mockExecuteBackgroundQuery };
 			}
-			if (token === 'SparqlConnectionService') {
+			if (token === 'SparqlConnectionRegistry' || token === 'StoreConfigService') {
 				return { getQueryTemplate: mockGetQueryTemplate };
 			}
 			if (token === 'GraphManagementService') {

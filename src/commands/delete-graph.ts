@@ -3,7 +3,7 @@ import { render } from 'triplate';
 import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { IDocumentConnectionService, ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { SparqlResultsController } from '@src/views/webviews';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 
@@ -21,8 +21,9 @@ export const deleteGraph = {
 			return;
 		}
 
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		const connection = connectionService.getConnectionForDocument(documentIri);
+		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
+		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
+		const connection = documentConnectionService.getConnectionForDocument(documentIri);
 
 		if (!connection) {
 			vscode.window.showErrorMessage(`Unable to retrieve SPARQL connection for document: ${documentIri}`);
@@ -32,7 +33,7 @@ export const deleteGraph = {
 		if (connection.id === 'workspace') {
 			container.resolve<Store>(ServiceToken.Store).deleteGraphs([WorkspaceUri.toCanonicalString(graphIri)]);
 		} else {
-			const query = connectionService.getQueryTemplate(connection, 'dropGraph');
+			const query = storeConfigService.getQueryTemplate(connection, 'dropGraph');
 
 			if (!query) {
 				vscode.window.showErrorMessage('Could not resolve a "drop graph" query for this connection.');
@@ -46,7 +47,7 @@ export const deleteGraph = {
 			});
 
 			// Set the connection for this document
-			await connectionService.setQuerySourceForDocument(document.uri, connection.id);
+			await documentConnectionService.setQuerySourceForDocument(document.uri, connection.id);
 
 			// Show the document and execute the query
 			await vscode.window.showTextDocument(document);

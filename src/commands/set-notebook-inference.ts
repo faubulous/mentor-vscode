@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { IDocumentConnectionService } from '@src/languages/sparql/services';
 import { resolveNotebookFromContext } from '../utilities/vscode/notebook';
 
 export const setNotebookInference = {
 	id: 'mentor.command.setNotebookInference',
 	handler: async (context?: any) => {
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 		const notebook = resolveNotebookFromContext(context);
 
 		if (!notebook) {
@@ -53,7 +53,7 @@ export const setNotebookInference = {
 			await vscode.workspace.applyEdit(workspaceEdit);
 
 			// Notify listeners to refresh code lenses
-			connectionService.notifyDocumentConnectionChanged(notebook.uri);
+			documentConnectionService.notifyDocumentConnectionChanged(notebook.uri);
 		}
 
 		const statusText = selected.value === undefined

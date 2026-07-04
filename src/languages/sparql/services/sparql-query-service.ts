@@ -3,10 +3,10 @@ import { SparqlLexer, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { EntraClientAuthCredential, AuthCredential } from '@src/services/core/credential';
-import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
+import { AuthCredential } from '@src/services/core/credential';
 import { ICredentialStorageService } from '@src/services/core';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { getAuthorizationHeaderProvider } from './sparql-auth';
+import { ISparqlConnectionRegistry, ISparqlQuerySourceFactory } from '@src/languages/sparql/services';
 import { ISparqlResultSerializer } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from './triple-store-config-service.interface';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
@@ -73,9 +73,10 @@ export class SparqlQueryService {
 	constructor(
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _credentialStorage: ICredentialStorageService,
-		private readonly _connectionService: ISparqlConnectionService,
+		private readonly _connectionRegistry: ISparqlConnectionRegistry,
 		private readonly _resultSerializer: ISparqlResultSerializer,
-		private readonly _storeConfigService: ITripleStoreConfigService
+		private readonly _storeConfigService: ITripleStoreConfigService,
+		private readonly _querySourceFactory: ISparqlQuerySourceFactory
 	) {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);
@@ -284,16 +285,16 @@ export class SparqlQueryService {
 			let source: any;
 
 			if (context.connectionId && !context.documentIri) {
-				const connection = this._connectionService.getConnection(context.connectionId);
+				const connection = this._connectionRegistry.getConnection(context.connectionId);
 
 				if (!connection) {
 					throw new Error('Could not find connection with ID: ' + context.connectionId);
 				}
 
-				source = await this._connectionService.getQuerySourceForConnection(connection);
+				source = await this._querySourceFactory.getQuerySourceForConnection(connection);
 			} else {
 				const documentIri = vscode.Uri.parse(context.documentIri!);
-				source = await this._connectionService.getQuerySourceForDocument(documentIri);
+				source = await this._querySourceFactory.getQuerySourceForDocument(documentIri);
 			}
 
 			const result = await this._executeQueryOnSource(query, source, tokenSource.token, (raw) => {
@@ -364,7 +365,7 @@ export class SparqlQueryService {
 	 */
 	async executeQueryOnConnection(query: string, connection: SparqlConnection, inferenceEnabled?: boolean): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null> {
 		try {
-			const source = await this._connectionService.getQuerySourceForConnection(connection, inferenceEnabled);
+			const source = await this._querySourceFactory.getQuerySourceForConnection(connection, inferenceEnabled);
 			const result = await this._executeQueryOnSource(query, source);
 
 			if (result.type === 'boolean') {
@@ -425,7 +426,7 @@ export class SparqlQueryService {
 
 			// Apply store-specific query-text rewriting for inference (e.g. reasoning pragmas).
 			const inferenceEnabled = source.inferenceEnabled
-				?? this._connectionService.getInferenceEnabled(connection.id);
+				?? this._connectionRegistry.getInferenceEnabled(connection.id);
 
 			const queryPragma = this._storeConfigService.getStoreConfig(connection.storeType)?.inference?.queryPragma;
 
@@ -470,7 +471,7 @@ export class SparqlQueryService {
 		credential?: AuthCredential,
 		onRawResponse?: (raw: Promise<SparqlRawResponse | undefined>) => void
 	) {
-		const getAuthHeader = this._getAuthHeaderProvider(credential);
+		const getAuthHeader = getAuthorizationHeaderProvider(credential);
 
 		// Without an authorization header to inject and without a need to capture the raw
 		// response, there is nothing to add over Comunica's default fetch.
@@ -499,44 +500,6 @@ export class SparqlQueryService {
 
 			return response;
 		};
-	}
-
-	/**
-	 * Builds a provider that resolves the `Authorization` header value for the given credential.
-	 * Returns `undefined` when no usable credential is available (no credential, unknown type, or
-	 * a Microsoft credential without an access token), in which case no header should be sent.
-	 * @param credential The authentication credential, if any.
-	 * @returns A function resolving the header value, or `undefined` if there is no usable credential.
-	 */
-	private _getAuthHeaderProvider(credential?: AuthCredential): (() => Promise<string | undefined>) | undefined {
-		if (credential?.type === 'basic') {
-			const encoded = btoa(`${credential.username}:${credential.password}`);
-			return async () => `Basic ${encoded}`;
-		}
-
-		if (credential?.type === 'bearer') {
-			const prefix = credential.prefix || 'Bearer';
-			const token = credential.token;
-			return async () => `${prefix} ${token}`;
-		}
-
-		if (credential?.type === 'microsoft') {
-			const accessToken = credential.accessToken;
-
-			if (!accessToken) {
-				return undefined;
-			}
-
-			return async () => `Bearer ${accessToken}`;
-		}
-
-		if (credential?.type === 'entra-client-credentials') {
-			const entraCredential = credential as EntraClientAuthCredential;
-			const tokenService = new EntraClientCredentialService();
-			return async () => `Bearer ${await tokenService.acquireToken(entraCredential)}`;
-		}
-
-		return undefined;
 	}
 
 	/**

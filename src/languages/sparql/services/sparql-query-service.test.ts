@@ -54,14 +54,15 @@ function makeService(context = makeContext()) {
     return new SparqlQueryService(
         context,
         {} as any,    // credentialStorage (not used in history tests)
-        {} as any,    // connectionService (not used in history tests)
+        {} as any,    // connectionRegistry (not used in history tests)
         {} as any,    // resultSerializer (not used in history tests)
         { getStoreConfig: () => undefined } as any,    // storeConfigService
+        {} as any,    // querySourceFactory (not used in history tests)
     );
 }
 
 function makeFullService() {
-    const connectionService = {
+    const connectionRegistry = {
         getQuerySourceForDocument: vi.fn().mockResolvedValue({ type: 'sparql', connection: { id: 'test' } }),
         getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'file', file: 'test.nt' }),
         getInferenceEnabled: vi.fn().mockReturnValue(false),
@@ -77,14 +78,15 @@ function makeFullService() {
     return new SparqlQueryService(
         makeContext(),
         credentialStorage as any,
-        connectionService as any,
+        connectionRegistry as any,
         resultSerializer as any,
         { getStoreConfig: () => undefined } as any,
+        connectionRegistry as any,    // query-source mocks live on the same object
     );
 }
 
 function makeConnectionService() {
-    const connectionService = {
+    const connectionRegistry = {
         getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'file', file: 'test.nt' }),
     };
 
@@ -101,9 +103,10 @@ function makeConnectionService() {
     return new SparqlQueryService(
         makeContext(),
         credentialStorage as any,
-        connectionService as any,
+        connectionRegistry as any,
         resultSerializer as any,
         { getStoreConfig: () => undefined } as any,
+        connectionRegistry as any,    // query-source mocks live on the same object
     );
 }
 
@@ -845,11 +848,14 @@ describe('SparqlQueryService – executeQueryOnConnection', () => {
 
     it('rethrows errors from query execution', async () => {
         queryMock.mockRejectedValue(new Error('Engine error'));
+        const sourceMock = { getQuerySourceForConnection: vi.fn().mockResolvedValue({}) };
         const service = new SparqlQueryService(
             makeContext(),
             { getCredential: vi.fn().mockResolvedValue(null) } as any,
-            { getQuerySourceForConnection: vi.fn().mockResolvedValue({}) } as any,
+            sourceMock as any,
             {} as any,
+            {} as any,
+            sourceMock as any,
         );
         await expect(service.executeQueryOnConnection('FAIL', mockConn)).rejects.toThrow('Query execution failed: Engine error');
     });
@@ -981,7 +987,7 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
         });
 
         const connection = { id: 'conn-bg', endpointUrl: 'http://example.org/sparql' } as any;
-        const connectionService = {
+        const connectionRegistry = {
             getConnection: vi.fn().mockReturnValue(connection),
             getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'sparql', connection }),
             getQuerySourceForDocument: vi.fn(),
@@ -994,9 +1000,10 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
         const service = new SparqlQueryService(
             makeContext(),
             credentialStorage as any,
-            connectionService as any,
+            connectionRegistry as any,
             resultSerializer as any,
             { getStoreConfig: () => undefined } as any,
+            connectionRegistry as any,    // query-source mocks live on the same object
         );
 
         const ctx: any = {
@@ -1012,14 +1019,14 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
 
         const result = await service.executeQuery(ctx);
 
-        expect(connectionService.getConnection).toHaveBeenCalledWith('conn-bg');
-        expect(connectionService.getQuerySourceForConnection).toHaveBeenCalledWith(connection);
-        expect(connectionService.getQuerySourceForDocument).not.toHaveBeenCalled();
+        expect(connectionRegistry.getConnection).toHaveBeenCalledWith('conn-bg');
+        expect(connectionRegistry.getQuerySourceForConnection).toHaveBeenCalledWith(connection);
+        expect(connectionRegistry.getQuerySourceForDocument).not.toHaveBeenCalled();
         expect(result.error).toBeUndefined();
     });
 
     it('sets an error when connectionId refers to an unknown connection', async () => {
-        const connectionService = {
+        const connectionRegistry = {
             getConnection: vi.fn().mockReturnValue(undefined),
             getQuerySourceForConnection: vi.fn(),
             getQuerySourceForDocument: vi.fn(),
@@ -1027,7 +1034,7 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
         const service = new SparqlQueryService(
             makeContext(),
             {} as any,
-            connectionService as any,
+            connectionRegistry as any,
             {} as any,
             { getStoreConfig: () => undefined } as any,
         );

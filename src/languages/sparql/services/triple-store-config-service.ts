@@ -1,13 +1,13 @@
+import * as vscode from 'vscode';
 import { getConfig } from '@src/utilities/vscode/config';
 import { SparqlConnection } from './sparql-connection';
-import { TripleStoreConfig } from './triple-store-config';
+import { TripleStoreConfig, SparqlQueryKind, TRIPLE_STORE_QUERY_KIND_PROPERTY } from './triple-store-config';
 import { ITripleStoreConfigService } from './triple-store-config-service.interface';
 
 /**
  * Service responsible for store-type configuration: reading store configs from settings,
- * resolving a config by id, and answering capability questions (inference support,
- * workspace identity). Query-template resolution and inference rewriting are handled
- * separately by `SparqlConnectionService`.
+ * resolving a config by id, answering capability questions (inference support,
+ * workspace identity), and resolving effective query templates.
  */
 export class TripleStoreConfigService implements ITripleStoreConfigService {
 
@@ -87,5 +87,61 @@ export class TripleStoreConfigService implements ITripleStoreConfigService {
 	 */
 	isWorkspaceConnectionId(connectionId: string): boolean {
 		return connectionId === this._workspaceStoreType;
+	}
+
+	/**
+	 * Cached `kind → mentor config key` map, built from package.json on first use.
+	 */
+	private _storeQueryConfigKeys: Map<string, string> | undefined;
+
+	/**
+	 * Maps each {@link SparqlQueryKind} to the `mentor.*` config key (without the `mentor.` prefix) of
+	 * the setting it overrides, by scanning the extension's package.json for properties carrying the
+	 * {@link TRIPLE_STORE_QUERY_KIND_PROPERTY} marker. Result is cached for the session.
+	 */
+	private _getStoreQueryConfigKeys(): Map<string, string> {
+		if (this._storeQueryConfigKeys) {
+			return this._storeQueryConfigKeys;
+		} else {
+			const packageJSON = vscode.extensions.getExtension('faubulous.mentor')?.packageJSON;
+
+			const configuration = packageJSON?.contributes?.configuration?.[0];
+			const properties = (configuration?.properties ?? {}) as Record<string, Record<string, unknown>>;
+
+			const map = new Map<string, string>();
+
+			for (const [fullKey, prop] of Object.entries(properties)) {
+				const kind = prop[TRIPLE_STORE_QUERY_KIND_PROPERTY];
+
+				if (typeof kind === 'string') {
+					map.set(kind, fullKey.replace(/^mentor\./, ''));
+				}
+			}
+
+			this._storeQueryConfigKeys = map;
+
+			return map;
+		}
+	}
+
+	/**
+	 * Resolves the effective SPARQL query template of the given kind for a connection.
+	 * Resolution order: the store config's own query → global `mentor.sparql.*` fallback.
+	 * @param connection The SPARQL connection.
+	 * @param kind The kind of query template to resolve.
+	 * @returns The resolved template, or `undefined` if none is configured at any level.
+	 */
+	getQueryTemplate(connection: SparqlConnection, kind: SparqlQueryKind): string | undefined {
+		const override = this.getStoreConfig(connection.storeType)?.queries?.[kind];
+
+		if (override) {
+			return override;
+		}
+
+		// The global fallback key is discovered from the setting marked with this kind in package.json,
+		// so package.json stays the single source of truth for which queries are store-overridable.
+		const key = this._getStoreQueryConfigKeys().get(kind);
+
+		return key ? getConfig().get<string>(key) : undefined;
 	}
 }

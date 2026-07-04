@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry, ISparqlQueryService, IDocumentConnectionService } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
-import { WORKSPACE_CONNECTION } from '../services/sparql-connection-service';
+import { WORKSPACE_CONNECTION } from '../services/sparql-connection-registry';
 import { SparqlConnection } from '../services/sparql-connection';
 import { isTemplate } from 'triplate';
 
@@ -13,7 +13,9 @@ import { isTemplate } from 'triplate';
 export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
-	private _connectionService: ISparqlConnectionService;
+	private _connectionRegistry: ISparqlConnectionRegistry;
+
+	private _documentConnectionService: IDocumentConnectionService;
 
 	private _storeConfigService: ITripleStoreConfigService;
 	
@@ -22,15 +24,16 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
 	constructor() {
-		this._connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		this._connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		this._documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 		this._storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 		this._queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 
-		this._connectionService.onDidChangeConnectionForDocument(() => {
+		this._documentConnectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();
 		});
 
-		this._connectionService.onDidChangeConnections(() => {
+		this._connectionRegistry.onDidChangeConnections(() => {
 			this.refresh();
 		});
 	}
@@ -41,7 +44,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	 * @returns A promise that resolves to an array of CodeLenses.
 	 */
 	public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-		const connection = this._connectionService.getConnectionForDocument(document.uri);
+		const connection = this._documentConnectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {
 			return [];
@@ -88,7 +91,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 
 		// Inference status CodeLens (only for connections that support inference)
 		if (this._storeConfigService.supportsInference(connection)) {
-			const inferenceEnabled = this._connectionService.getInferenceEnabledForDocument(document.uri);
+			const inferenceEnabled = this._documentConnectionService.getInferenceEnabledForDocument(document.uri);
 			const inferenceIcon = inferenceEnabled ? '$(lightbulb-sparkle)' : '$(lightbulb)';
 			const inferenceText = inferenceEnabled ? 'on' : 'off';
 			const inferenceTooltip = inferenceEnabled
@@ -106,7 +109,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		}
 
 		// List Graphs CodeLens (only when a listGraphs query is configured for the connection)
-		if (this._connectionService.getQueryTemplate(connection, 'listGraphs')) {
+		if (this._storeConfigService.getQueryTemplate(connection, 'listGraphs')) {
 			codeLenses.push(new vscode.CodeLens(range, {
 				title: '$(list-flat) List Graphs',
 				tooltip: 'List the named graphs available on this connection',

@@ -15,7 +15,7 @@ const { mockSetQuerySourceForDocument, mockExecuteQueryFromTextDocument, mockGet
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionService') {
+			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService' || token === 'StoreConfigService') {
 				return {
 					getConnectionForDocument: (...args: any[]) => mockGetConnectionForDocument(...args),
 					setQuerySourceForDocument: mockSetQuerySourceForDocument,

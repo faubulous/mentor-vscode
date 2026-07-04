@@ -17,7 +17,7 @@ const { mockConnectionService, mockStoreConfigService } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionService') return mockConnectionService;
+			if (token === 'SparqlConnectionRegistry') return mockConnectionService;
 			if (token === 'StoreConfigService') return mockStoreConfigService;
 			return {};
 		}),

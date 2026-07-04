@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { getTokenIndexAtPosition } from '@src/utilities';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry, IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
@@ -27,8 +27,12 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 */
 	private readonly _tokenSyncTimeout = 2000;
 
-	private get connectionService() {
-		return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+	private get connectionRegistry() {
+		return container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+	}
+
+	private get documentConnectionService() {
+		return container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 	}
 
 	private get graphService() {
@@ -162,10 +166,10 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 * Otherwise the existing on-demand query path is used.
 	 */
 	private async _mergeGraphUris(documentUri: vscode.Uri): Promise<string[]> {
-		const connection = this.connectionService.getConnectionForDocument(documentUri);
+		const connection = this.documentConnectionService.getConnectionForDocument(documentUri);
 
 		if (this.graphService.hasGraphsForConnection(connection.id)) {
-			const inferenceEnabled = this.connectionService.getInferenceEnabled(connection.id);
+			const inferenceEnabled = this.connectionRegistry.getInferenceEnabled(connection.id);
 			const graphs = this.graphService.getGraphsForConnection(connection.id, inferenceEnabled);
 			
 			const seen = new Set<string>();

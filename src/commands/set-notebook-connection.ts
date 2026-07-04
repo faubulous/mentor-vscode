@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
+import { IDocumentConnectionService } from '@src/languages/sparql/services';
 import { resolveNotebookFromContext } from '../utilities/vscode/notebook';
 
 export const setNotebookConnection = {
 	id: 'mentor.command.setNotebookConnection',
 	handler: async (context?: any) => {
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 		const notebook = resolveNotebookFromContext(context);
 
 		if (!notebook) {
@@ -16,7 +18,7 @@ export const setNotebookConnection = {
 		}
 
 		// Show quick pick to select connection
-		const connections = connectionService.getConnections();
+		const connections = connectionRegistry.getConnections();
 
 		if (connections.length === 0) {
 			vscode.window.showWarningMessage('No SPARQL connections configured.');
@@ -52,7 +54,7 @@ export const setNotebookConnection = {
 			await vscode.workspace.applyEdit(workspaceEdit);
 
 			// Notify listeners to refresh code lenses
-			connectionService.notifyDocumentConnectionChanged(notebook.uri);
+			documentConnectionService.notifyDocumentConnectionChanged(notebook.uri);
 		}
 
 		vscode.window.setStatusBarMessage(

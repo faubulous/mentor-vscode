@@ -18,7 +18,7 @@ const { MENTOR_WORKSPACE_STORE, mockGetQueryTemplate } = vi.hoisted(() => ({
 	}),
 }));
 
-vi.mock('@src/languages/sparql/services/sparql-connection-service', () => ({
+vi.mock('@src/languages/sparql/services/sparql-connection-registry', () => ({
 	MENTOR_WORKSPACE_STORE,
 	WORKSPACE_CONNECTION: MENTOR_WORKSPACE_STORE,
 }));
@@ -31,7 +31,7 @@ vi.mock('tsyringe', () => ({
 					executeQueryOnConnection: (...args: any[]) => mockExecuteQueryOnConnection(...args),
 				};
 			}
-			if (token === 'SparqlConnectionService') {
+			if (token === 'SparqlConnectionRegistry' || token === 'StoreConfigService') {
 				return { getQueryTemplate: mockGetQueryTemplate };
 			}
 			return {};

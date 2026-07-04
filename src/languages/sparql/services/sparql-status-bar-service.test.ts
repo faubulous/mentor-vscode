@@ -37,7 +37,7 @@ vi.mock('vscode', async () => {
     };
 });
 
-import type { ISparqlConnectionService, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
+import type { ISparqlConnectionRegistry, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { EventEmitter } from '@src/utilities/mocks/vscode';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
@@ -60,10 +60,10 @@ function makeServices() {
         onDidQueryExecutionEnd: queryExecutionEndEmitter.event,
     } as unknown as ISparqlQueryService;
 
-    const connectionService = {
+    const connectionRegistry = {
         onDidConnectionTestStart: connectionTestStartEmitter.event,
         onDidConnectionTestEnd: connectionTestEndEmitter.event,
-    } as unknown as ISparqlConnectionService;
+    } as unknown as ISparqlConnectionRegistry;
 
     const graphService = {
         onDidGraphLoadStart: graphLoadStartEmitter.event,
@@ -72,7 +72,7 @@ function makeServices() {
 
     return {
         queryService,
-        connectionService,
+        connectionRegistry,
         graphService,
         fireQueryStart: (s: SparqlQueryExecutionState) => queryExecutionStartEmitter.fire(s),
         fireQueryEnd: (s: SparqlQueryExecutionState) => queryExecutionEndEmitter.fire(s),
@@ -98,8 +98,8 @@ describe('SparqlStatusBarService', () => {
 
     describe('default state', () => {
         it('is permanently visible with the SPARQL label and opens the panel on click', () => {
-            const { queryService, connectionService, graphService } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             expect(sparqlItem().show).toHaveBeenCalled();
             expect(sparqlItem().text).toBe('$(sparql-file) SPARQL');
@@ -107,8 +107,8 @@ describe('SparqlStatusBarService', () => {
         });
 
         it('creates a single status bar item', () => {
-            const { queryService, connectionService, graphService } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             expect(statusBar.createdItems).toHaveLength(1);
         });
@@ -116,8 +116,8 @@ describe('SparqlStatusBarService', () => {
 
     describe('query execution', () => {
         it('shows status bar with query name when execution starts', () => {
-            const { queryService, connectionService, graphService, fireQueryStart } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService, fireQueryStart } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             const state = {
                 id: crypto.randomUUID(),
@@ -132,8 +132,8 @@ describe('SparqlStatusBarService', () => {
         });
 
         it('reverts to the SPARQL label when execution ends', () => {
-            const { queryService, connectionService, graphService, fireQueryStart, fireQueryEnd } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService, fireQueryStart, fireQueryEnd } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             const state = {
                 id: crypto.randomUUID(),
@@ -151,8 +151,8 @@ describe('SparqlStatusBarService', () => {
 
     describe('connection testing', () => {
         it('shows status bar with endpoint URL when test starts', () => {
-            const { queryService, connectionService, graphService, fireTestStart } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService, fireTestStart } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             const connection = {
                 id: 'test-connection',
@@ -167,8 +167,8 @@ describe('SparqlStatusBarService', () => {
         });
 
         it('reverts to the SPARQL label when connection test ends successfully', () => {
-            const { queryService, connectionService, graphService, fireTestStart, fireTestEnd } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService, fireTestStart, fireTestEnd } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             const connection = {
                 id: 'test-connection',
@@ -184,8 +184,8 @@ describe('SparqlStatusBarService', () => {
         });
 
         it('reverts to the SPARQL label when connection test ends with an error', () => {
-            const { queryService, connectionService, graphService, fireTestStart, fireTestEnd } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService, fireTestStart, fireTestEnd } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             const connection = {
                 id: 'test-connection',
@@ -203,8 +203,8 @@ describe('SparqlStatusBarService', () => {
 
     describe('graph loading', () => {
         it('shows graph-loading progress on the single item and reverts when done', () => {
-            const { queryService, connectionService, graphService, fireGraphLoadStart, fireGraphLoadEnd } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService, fireGraphLoadStart, fireGraphLoadEnd } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             fireGraphLoadStart();
 
@@ -217,8 +217,8 @@ describe('SparqlStatusBarService', () => {
         });
 
         it('composes query execution and graph loading into one label at the same time', () => {
-            const { queryService, connectionService, graphService, fireQueryStart, fireGraphLoadStart } = makeServices();
-            new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService, fireQueryStart, fireGraphLoadStart } = makeServices();
+            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             const state = {
                 id: crypto.randomUUID(),
@@ -237,8 +237,8 @@ describe('SparqlStatusBarService', () => {
 
     describe('dispose', () => {
         it('disposes the status bar item and unsubscribes all event handlers', () => {
-            const { queryService, connectionService, graphService, fireQueryStart, fireTestStart } = makeServices();
-            const service = new SparqlStatusBarService(queryService, connectionService, graphService);
+            const { queryService, connectionRegistry, graphService, fireQueryStart, fireTestStart } = makeServices();
+            const service = new SparqlStatusBarService(queryService, connectionRegistry, graphService);
 
             const main = sparqlItem();
 

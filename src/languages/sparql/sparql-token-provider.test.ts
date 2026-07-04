@@ -50,7 +50,7 @@ vi.mock('tsyringe', () => ({
 		resolve: vi.fn((token: string) => {
 			if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
 			if (token === 'DocumentContextService') return { onDidChangeDocumentContext: vi.fn() };
-			if (token === 'SparqlConnectionService') return {
+			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') return {
 				onDidChangeConnectionForDocument: vi.fn(),
 				onDidChangeConnections: vi.fn(),
 			};

@@ -156,9 +156,12 @@ describe('SparqlCompletionItemProvider', () => {
         function makeProviderWithGraphs(available: string[]): SparqlCompletionItemProvider {
             const p = new SparqlCompletionItemProvider();
 
-            vi.spyOn(p as any, 'connectionService', 'get').mockReturnValue({
-                getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
+            vi.spyOn(p as any, 'connectionRegistry', 'get').mockReturnValue({
                 getInferenceEnabled: () => false,
+            });
+
+            vi.spyOn(p as any, 'documentConnectionService', 'get').mockReturnValue({
+                getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
             });
 
             vi.spyOn(p as any, 'graphService', 'get').mockReturnValue({
@@ -466,7 +469,7 @@ describe('SparqlCompletionItemProvider', () => {
             expect(result).toBeNull();
         });
 
-        it('connectionService getter calls container.resolve', async () => {
+        it('connectionRegistry getter calls container.resolve', async () => {
             const mockConnection = {
                 getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
                 getInferenceEnabled: () => false,

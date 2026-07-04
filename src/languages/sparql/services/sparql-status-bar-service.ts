@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ISparqlConnectionService, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
+import { ISparqlEndpointTester, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
 import { getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
 
 /**
@@ -56,7 +56,7 @@ export class SparqlStatusBarService implements vscode.Disposable {
 
 	constructor(
 		queryService: ISparqlQueryService,
-		connectionService: ISparqlConnectionService,
+		endpointTester: ISparqlEndpointTester,
 		graphService: IGraphManagementService
 	) {
 		this._statusBarItem = vscode.window.createStatusBarItem(
@@ -77,11 +77,11 @@ export class SparqlStatusBarService implements vscode.Disposable {
 				this._activitySegment = undefined;
 				this._render();
 			}),
-			connectionService.onDidConnectionTestStart(connection => {
+			endpointTester.onDidConnectionTestStart(connection => {
 				this._activitySegment = `$(sync~spin) Testing: ${connection.endpointUrl}`;
 				this._render();
 			}),
-			connectionService.onDidConnectionTestEnd(() => {
+			endpointTester.onDidConnectionTestEnd(() => {
 				this._activitySegment = undefined;
 				this._render();
 			}),

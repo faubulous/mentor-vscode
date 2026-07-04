@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { IDocumentConnectionService } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 
 export const toggleDocumentInference = {
 	id: 'mentor.command.toggleDocumentInference',
 	handler: async (documentUri?: vscode.Uri) => {
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 
 		// If no document URI provided, use the active editor
@@ -18,14 +18,14 @@ export const toggleDocumentInference = {
 			return;
 		}
 
-		const connection = connectionService.getConnectionForDocument(targetUri);
+		const connection = documentConnectionService.getConnectionForDocument(targetUri);
 
 		if (!storeConfigService.supportsInference(connection)) {
 			vscode.window.showErrorMessage('The current connection does not support inference toggling.');
 			return;
 		}
 
-		const newValue = await connectionService.toggleInferenceEnabledForDocument(targetUri);
+		const newValue = await documentConnectionService.toggleInferenceEnabledForDocument(targetUri);
 		const statusText = newValue ? 'enabled' : 'disabled';
 		
 		vscode.window.setStatusBarMessage(`Inference ${statusText} for this document`, 3000);

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { TemplateFileSystemProvider } from '@src/providers/template-file-system-provider';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { SettingsSectionController } from '../../settings-section-controller';
 import { SettingsSectionMessages } from '../../settings-panel-messages';
@@ -43,10 +43,11 @@ export class StoresSectionController implements SettingsSectionController {
 				const profileId = message.profileId;
 				const label = message.label;
 
-				const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+				const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 
 				// Connections that reference this store type would otherwise be silently orphaned.
-				const affected = connectionService.getConnections().filter(c => c.storeType === profileId);
+				// Protected connections (the workspace store) cannot be updated or deleted.
+				const affected = connectionRegistry.getConnections().filter(c => c.storeType === profileId && !c.isProtected);
 
 				if (affected.length === 0) {
 					const answer = await vscode.window.showWarningMessage(
@@ -81,16 +82,16 @@ export class StoresSectionController implements SettingsSectionController {
 						const defaultStoreType = storeConfigService.defaultStoreType;
 
 						for (const connection of affected) {
-							await connectionService.updateConnection({ ...connection, storeType: defaultStoreType, isModified: true });
+							await connectionRegistry.updateConnection({ ...connection, storeType: defaultStoreType, isModified: true });
 						}
 
-						await connectionService.saveConfiguration();
+						await connectionRegistry.saveConfiguration();
 					} else if (choice === 'Delete Connections') {
 						for (const connection of affected) {
-							await connectionService.deleteConnection(connection.id);
+							await connectionRegistry.deleteConnection(connection.id);
 						}
 
-						await connectionService.saveConfiguration();
+						await connectionRegistry.saveConfiguration();
 					} else {
 						// Cancelled — leave both the store and its connections untouched.
 						return true;

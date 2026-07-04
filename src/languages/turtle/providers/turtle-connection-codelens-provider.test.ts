@@ -13,7 +13,7 @@ const { mockConnectionService } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionService') return mockConnectionService;
+			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') return mockConnectionService;
 			return {};
 		}),
 	},
@@ -22,7 +22,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-vi.mock('@src/languages/sparql/services/sparql-connection-service', () => ({
+vi.mock('@src/languages/sparql/services/sparql-connection-registry', () => ({
 	WORKSPACE_CONNECTION: { id: 'workspace', label: 'Workspace', endpointUrl: 'workspace:' },
 }));
 

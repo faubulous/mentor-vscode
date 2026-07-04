@@ -8,7 +8,7 @@ let mockNotifyDocumentConnectionChanged: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionService') {
+			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') {
 				return {
 					notifyDocumentConnectionChanged: (...args: any[]) => mockNotifyDocumentConnectionChanged(...args),
 				};

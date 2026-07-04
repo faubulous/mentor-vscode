@@ -17,7 +17,10 @@ import { LanguageClientFactory } from '@src/languages/language-client-factory';
 import { LanguageClientRegistry } from '@src/languages/language-client-registry';
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
-import { SparqlConnectionService } from '@src/languages/sparql/services/sparql-connection-service';
+import { SparqlConnectionRegistry } from '@src/languages/sparql/services/sparql-connection-registry';
+import { SparqlEndpointTester } from '@src/languages/sparql/services/sparql-endpoint-tester';
+import { DocumentConnectionService } from '@src/languages/sparql/services/document-connection-service';
+import { SparqlQuerySourceFactory } from '@src/languages/sparql/services/sparql-query-source-factory';
 import { TripleStoreConfigService } from '@src/languages/sparql/services/triple-store-config-service';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 import { GraphManagementService } from '@src/languages/sparql/services/graph-management-service';
@@ -88,8 +91,17 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const sparqlStoreConfigService = new TripleStoreConfigService();
 	container.registerInstance(ServiceToken.StoreConfigService, sparqlStoreConfigService);
 
-	const sparqlConnectionService = new SparqlConnectionService(context, credentialStorageService, sparqlStoreConfigService);
-	container.registerInstance(ServiceToken.SparqlConnectionService, sparqlConnectionService);
+	const connectionRegistry = new SparqlConnectionRegistry(context, credentialStorageService, sparqlStoreConfigService);
+	container.registerInstance(ServiceToken.SparqlConnectionRegistry, connectionRegistry);
+
+	const sparqlEndpointTester = new SparqlEndpointTester(credentialStorageService);
+	container.registerInstance(ServiceToken.SparqlEndpointTester, sparqlEndpointTester);
+
+	const documentConnectionService = new DocumentConnectionService(context, connectionRegistry);
+	container.registerInstance(ServiceToken.DocumentConnectionService, documentConnectionService);
+
+	const sparqlQuerySourceFactory = new SparqlQuerySourceFactory(store, sparqlStoreConfigService, connectionRegistry, documentConnectionService);
+	container.registerInstance(ServiceToken.SparqlQuerySourceFactory, sparqlQuerySourceFactory);
 
 	const prefixDownloaderService = new PrefixDownloaderService();
 	container.registerInstance(ServiceToken.PrefixDownloaderService, prefixDownloaderService);
@@ -100,7 +112,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const sparqlQueryResultSerializer = new SparqlResultSerializer(prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
 
-	const sparqlQueryService = new SparqlQueryService(context, credentialStorageService, sparqlConnectionService, sparqlQueryResultSerializer, sparqlStoreConfigService);
+	const sparqlQueryService = new SparqlQueryService(context, credentialStorageService, connectionRegistry, sparqlQueryResultSerializer, sparqlStoreConfigService, sparqlQuerySourceFactory);
 	container.registerInstance(ServiceToken.SparqlQueryService, sparqlQueryService);
 
 	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(documentContextService, prefixLookupService);
@@ -124,7 +136,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 
 	// Register the SPARQL status bar service and push it to subscriptions so it is
 	// disposed when the extension deactivates.
-	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlConnectionService, graphService);
+	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlEndpointTester, graphService);
 	container.registerInstance(ServiceToken.SparqlStatusBarService, sparqlStatusBarService);
 
 	context.subscriptions.push(sparqlStatusBarService);

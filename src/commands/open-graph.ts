@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { render } from 'triplate';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
+import { ISparqlQueryService, ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 const LARGE_GRAPH_THRESHOLD = 10000;
@@ -13,16 +13,16 @@ export const openGraph = {
 	id: 'mentor.command.openGraph',
 	handler: async (graphIri: vscode.Uri | string, connection?: SparqlConnection) => {
 		const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 
 		const targetConnection = connection ?? WORKSPACE_CONNECTION;
 		const workspaceUri = WorkspaceUri.toCanonicalString(graphIri);
 
-		const exportTemplate = connectionService.getQueryTemplate(targetConnection, 'exportGraph')!;
+		const exportTemplate = storeConfigService.getQueryTemplate(targetConnection, 'exportGraph')!;
 		const constructQuery = render(exportTemplate, { graphIri: workspaceUri });
 
 		try {
-			const countTemplate = connectionService.getQueryTemplate(targetConnection, 'countGraph')!;
+			const countTemplate = storeConfigService.getQueryTemplate(targetConnection, 'countGraph')!;
 			const countQuery = render(countTemplate, { graphIri: workspaceUri, limit: LARGE_GRAPH_THRESHOLD });
 			const countResult = await queryService.executeQueryOnConnection(countQuery, targetConnection);
 

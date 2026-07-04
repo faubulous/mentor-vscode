@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry, ISparqlEndpointTester } from '@src/languages/sparql/services';
 import { IGraphManagementService } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
-import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-service';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { IDocumentContextService } from '@src/services/document';
 import { ICredentialStorageService } from '@src/services/core';
 import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
@@ -32,24 +32,24 @@ export class ConnectionsSectionController implements SettingsSectionController {
 	 * default. Inference is not stored on the domain object, so it is resolved here at send time.
 	 */
 	private _toConnectionView(connection: SparqlConnection): SparqlConnectionView {
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 
-		return { ...connection, inferenceEnabled: connectionService.getInferenceEnabled(connection.id) };
+		return { ...connection, inferenceEnabled: connectionRegistry.getInferenceEnabled(connection.id) };
 	}
 
 	initialize(post: (message: SettingsSectionMessages) => void): void {
 		this._post = post;
 
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 		const documentContextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 
 		this._disposables.push(
-			connectionService.onDidChangeConnections(() => {
+			connectionRegistry.onDidChangeConnections(() => {
 				this._post({
 					section: SECTION_ID,
 					id: 'ConnectionsChanged',
-					connections: connectionService.getConnections().map(c => this._toConnectionView(c)),
+					connections: connectionRegistry.getConnections().map(c => this._toConnectionView(c)),
 				});
 			}),
 			graphService.onDidChangeGraphs(connectionId => {
@@ -86,7 +86,8 @@ export class ConnectionsSectionController implements SettingsSectionController {
 	}
 
 	async handleMessage(message: SettingsSectionMessages): Promise<boolean> {
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const endpointTester = container.resolve<ISparqlEndpointTester>(ServiceToken.SparqlEndpointTester);
 		const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
 		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 
@@ -95,7 +96,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				this._post({
 					section: SECTION_ID,
 					id: 'GetConnectionsResult',
-					connections: connectionService.getConnections().map(c => this._toConnectionView(c)),
+					connections: connectionRegistry.getConnections().map(c => this._toConnectionView(c)),
 				});
 
 				return true;
@@ -103,7 +104,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 			case 'GetGraphStatuses': {
 				const statuses: Record<string, { count: number; error?: string }> = {};
 
-				for (const connection of connectionService.getConnections()) {
+				for (const connection of connectionRegistry.getConnections()) {
 					const hasGraphs = graphService.hasGraphsForConnection(connection.id);
 					const error = graphService.getGraphLoadError(connection.id);
 
@@ -125,7 +126,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				return true;
 			}
 			case 'CreateConnection': {
-				const connection = await connectionService.createConnection();
+				const connection = await connectionRegistry.createConnection();
 				this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection: this._toConnectionView(connection) });
 
 				return true;
@@ -139,15 +140,21 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				);
 
 				if (answer === 'Delete') {
-					await connectionService.deleteConnection(connection.id);
-					await connectionService.saveConfiguration();
+					try {
+						await connectionRegistry.deleteConnection(connection.id);
+					} catch (e) {
+						vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
+						return true;
+					}
+
+					await connectionRegistry.saveConfiguration();
 				}
 
 				return true;
 			}
 			case 'TestConnection': {
 				const connection = message.connection;
-				const result = await connectionService.testConnection(connection);
+				const result = await endpointTester.testConnection(connection);
 
 				this._post({
 					section: SECTION_ID,
@@ -161,7 +168,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 			}
 			case 'ListGraphs': {
 				const connection = message.connection;
-				const testResult = await connectionService.testConnection(connection);
+				const testResult = await endpointTester.testConnection(connection);
 
 				if (testResult !== null) {
 					this._post({
@@ -190,7 +197,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				// Refresh the cached graph list for every configurable connection. The workspace store
 				// (protected) enumerates its graphs in-process and is excluded. Each completion fires
 				// onDidChangeGraphs, which posts a GraphStatusChanged update to the webview.
-				const connections = connectionService.getConnections().filter(c => !c.isProtected);
+				const connections = connectionRegistry.getConnections().filter(c => !c.isProtected);
 
 				await Promise.all(connections.map(c => graphService.loadGraphsForConnection(c)));
 
@@ -217,7 +224,14 @@ export class ConnectionsSectionController implements SettingsSectionController {
 			case 'SaveSparqlConnection': {
 				const connection = message.connection;
 
-				await connectionService.saveConnectionWithCredential(connection, message.credential);
+				try {
+					await connectionRegistry.saveConnectionWithCredential(connection, message.credential);
+				} catch (e) {
+					vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
+					return true;
+				}
+
+				vscode.window.showInformationMessage('SPARQL connection saved.');
 
 				// If the connection now has auto-loading enabled, kick off a load immediately
 				// so the user sees the result without restarting VS Code.
@@ -229,16 +243,16 @@ export class ConnectionsSectionController implements SettingsSectionController {
 			}
 			case 'DiscardSparqlConnection': {
 				const connectionId = message.connectionId;
-				const connection = connectionService.getConnection(connectionId);
+				const connection = connectionRegistry.getConnection(connectionId);
 
 				if (connection?.isNew) {
-					await connectionService.deleteConnection(connectionId);
+					await connectionRegistry.deleteConnection(connectionId);
 				}
 
 				return true;
 			}
 			case 'TestSparqlConnection': {
-				const result = await connectionService.testConnection(message.connection, message.credential);
+				const result = await endpointTester.testConnection(message.connection, message.credential);
 
 				this._post({ section: SECTION_ID, id: 'TestSparqlConnectionResult', error: result });
 
@@ -256,7 +270,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 			}
 			case 'ToggleSparqlConnectionInference': {
 				const connectionId = message.connectionId;
-				const inferenceEnabled = await connectionService.toggleInferenceEnabled(connectionId);
+				const inferenceEnabled = await connectionRegistry.toggleInferenceEnabled(connectionId);
 
 				this._post({
 					section: SECTION_ID,

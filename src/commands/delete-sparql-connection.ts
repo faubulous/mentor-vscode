@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ICredentialStorageService } from '@src/services/core';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
 export const deleteSparqlConnection = {
@@ -18,11 +18,17 @@ export const deleteSparqlConnection = {
 			return;
 		}
 
-		const connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 		const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
 
-		await connectionService.deleteConnection(connection.id);
-		await connectionService.saveConfiguration();
+		try {
+			await connectionRegistry.deleteConnection(connection.id);
+		} catch (e) {
+			vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
+			return;
+		}
+
+		await connectionRegistry.saveConfiguration();
 
 		await credentialService.deleteCredential(connection.id);
 

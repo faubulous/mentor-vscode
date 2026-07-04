@@ -8,8 +8,8 @@ import { ServiceToken } from './services/tokens';
 import { ISettingsMigrationService, IWorkspaceFileService, IWorkspaceService } from './services/core';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { WorkspaceUri } from './providers/workspace-uri';
-import { SparqlConnectionService, WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connection-service';
-import { ITripleStoreConfigService } from './languages/sparql/services';
+import { WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connection-registry';
+import { ITripleStoreConfigService, IDocumentConnectionService } from './languages/sparql/services';
 import { IGraphManagementService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
@@ -141,8 +141,8 @@ function registerRenameHandlers(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.workspace.onDidRenameFiles(async (e) => {
 			// Migrate SPARQL workspaceState keys (document connection + inference settings).
-			const sparqlService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
-			await sparqlService.handleFileRenames(e.files);
+			const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
+			await documentConnectionService.handleFileRenames(e.files);
 
 			// Migrate SHACL global settings (graphs keys and defaults entries).
 			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
@@ -169,24 +169,24 @@ function registerNotebookInferenceContext(context: vscode.ExtensionContext) {
 		let supported = false;
 
 		if (editor && editor.notebook.notebookType === 'mentor-notebook') {
-			const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+			const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 			const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 			const cells = editor.notebook.getCells();
 
 			// Empty notebooks default to the workspace store, which supports inference.
 			supported = cells.length === 0
 				? storeConfigService.supportsInference(WORKSPACE_CONNECTION)
-				: cells.some(cell => storeConfigService.supportsInference(connectionService.getConnectionForDocument(cell.document.uri)));
+				: cells.some(cell => storeConfigService.supportsInference(documentConnectionService.getConnectionForDocument(cell.document.uri)));
 		}
 
 		vscode.commands.executeCommand('setContext', 'mentor.activeNotebookSupportsInference', supported);
 	};
 
-	const connectionService = container.resolve<SparqlConnectionService>(ServiceToken.SparqlConnectionService);
+	const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 
 	context.subscriptions.push(
 		vscode.window.onDidChangeActiveNotebookEditor(() => update()),
-		connectionService.onDidChangeConnectionForDocument(() => update()),
+		documentConnectionService.onDidChangeConnectionForDocument(() => update()),
 	);
 
 	update();

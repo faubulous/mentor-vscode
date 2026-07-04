@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-vi.mock('@src/languages/sparql/services/sparql-connection-service', () => ({
+vi.mock('@src/languages/sparql/services/sparql-connection-registry', () => ({
 	WORKSPACE_CONNECTION: { id: 'workspace' },
 }));
 
@@ -23,7 +23,7 @@ vi.mock('tsyringe', () => ({
 					getQueryHistory: () => history,
 				};
 			}
-			if (token === 'SparqlConnectionService') {
+			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') {
 				return {
 					getConnection: (...args: any[]) => mockGetConnection(...args),
 					getConnectionForDocument: (...args: any[]) => mockGetConnectionForDocument(...args),

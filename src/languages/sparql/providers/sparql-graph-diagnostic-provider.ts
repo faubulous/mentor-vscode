@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
+import { IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
 
 /**
  * Matches the IRI value inside `FROM <…>`, `FROM NAMED <…>`, and `GRAPH <…>` clauses.
@@ -23,8 +23,8 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
 
     private readonly _subscriptions: vscode.Disposable[] = [];
 
-    private get _connectionService(): ISparqlConnectionService {
-        return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+    private get _documentConnectionService(): IDocumentConnectionService {
+        return container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
     }
 
     private get _graphService(): IGraphManagementService {
@@ -66,7 +66,7 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
                 continue;
             }
 
-            const connection = this._connectionService.getConnectionForDocument(doc.uri);
+            const connection = this._documentConnectionService.getConnectionForDocument(doc.uri);
 
             if (connection.id === connectionId) {
                 this._validateDocument(doc);
@@ -75,12 +75,12 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
     }
 
     private _validateDocument(document: vscode.TextDocument): void {
-        const connection = this._connectionService.getConnectionForDocument(document.uri);
+        const connection = this._documentConnectionService.getConnectionForDocument(document.uri);
 
         if (!connection.autoLoadGraphs || !this._graphService.hasGraphsForConnection(connection.id)) {
             this._collection.delete(document.uri);
         } else {
-            const knownGraphs = new Set(this._graphService.getGraphsForConnection(connection.id, this._connectionService.getInferenceEnabledForDocument(document.uri)));
+            const knownGraphs = new Set(this._graphService.getGraphsForConnection(connection.id, this._documentConnectionService.getInferenceEnabledForDocument(document.uri)));
             const text = document.getText();
             const diagnostics: vscode.Diagnostic[] = [];
 

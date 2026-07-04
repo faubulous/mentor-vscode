@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
+import { IDocumentConnectionService } from '@src/languages/sparql/services';
 
 export const selectSparqlConnection = {
 	id: 'mentor.command.selectSparqlConnection',
@@ -11,10 +12,11 @@ export const selectSparqlConnection = {
 			return;
 		}
 
-		const service = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 
 		// Show a quick pick to select from existing SPARQL connections
-		const connections = await service.getConnections();
+		const connections = await connectionRegistry.getConnections();
 
 		if (connections.length === 0) {
 			vscode.window.showWarningMessage('No SPARQL endpoints configured. Please add one first.');
@@ -56,7 +58,7 @@ export const selectSparqlConnection = {
 			if (selected?.command) {
 				await vscode.commands.executeCommand(selected.command);
 			} else if (selected?.connection) {
-				await service.setQuerySourceForDocument(document.uri, selected.connection.id);
+				await documentConnectionService.setQuerySourceForDocument(document.uri, selected.connection.id);
 			}
 
 			quickPick.hide();

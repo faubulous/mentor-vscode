@@ -1,5 +1,5 @@
 import { SparqlConnection } from './sparql-connection';
-import { TripleStoreConfig } from './triple-store-config';
+import { TripleStoreConfig, SparqlQueryKind } from './triple-store-config';
 
 /**
  * Interface for the TripleStoreConfigService.
@@ -39,4 +39,13 @@ export interface ITripleStoreConfigService {
 	 * @returns `true` if the connection is the workspace connection.
 	 */
 	isWorkspaceConnectionId(connectionId: string): boolean;
+
+	/**
+	 * Resolves the effective SPARQL query template of the given kind for a connection.
+	 * Resolution order: the store config's own query → global `mentor.sparql.*` fallback.
+	 * @param connection The SPARQL connection.
+	 * @param kind The kind of query template to resolve.
+	 * @returns The resolved template, or `undefined` if none is configured at any level.
+	 */
+	getQueryTemplate(connection: SparqlConnection, kind: SparqlQueryKind): string | undefined;
 }

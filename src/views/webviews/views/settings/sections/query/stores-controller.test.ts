@@ -18,17 +18,17 @@ function makeConnectionService(connections: any[]) {
 }
 
 function setup(connections: any[]) {
-	const connectionService = makeConnectionService(connections);
+	const connectionRegistry = makeConnectionService(connections);
 	const storeConfigService = { defaultStoreType: 'sparql' };
 
 	(container.resolve as any).mockImplementation((token: any) =>
-		token === ServiceToken.SparqlConnectionService ? connectionService : storeConfigService);
+		token === ServiceToken.SparqlConnectionRegistry ? connectionRegistry : storeConfigService);
 
 	const controller = new StoresSectionController();
 	const post = vi.fn();
 	(controller as any)._post = post;
 
-	return { controller, post, connectionService };
+	return { controller, post, connectionRegistry };
 }
 
 const deleteMessage = { section: 'query.stores', id: 'DeleteStoreProfile', profileId: 'qlever', label: 'QLever' } as any;
@@ -62,16 +62,16 @@ describe('StoresSectionController – DeleteStoreProfile', () => {
 			{ id: 'c2', endpointUrl: 'http://e2', storeType: 'qlever' },
 			{ id: 'c3', endpointUrl: 'http://e3', storeType: 'jena' },
 		];
-		const { controller, post, connectionService } = setup(conns);
+		const { controller, post, connectionRegistry } = setup(conns);
 		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue('OK' as any);
 
 		await controller.handleMessage(deleteMessage);
 
-		expect(connectionService.updateConnection).toHaveBeenCalledTimes(2);
-		expect(connectionService.updateConnection).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1', storeType: 'sparql' }));
-		expect(connectionService.updateConnection).toHaveBeenCalledWith(expect.objectContaining({ id: 'c2', storeType: 'sparql' }));
-		expect(connectionService.deleteConnection).not.toHaveBeenCalled();
-		expect(connectionService.saveConfiguration).toHaveBeenCalledOnce();
+		expect(connectionRegistry.updateConnection).toHaveBeenCalledTimes(2);
+		expect(connectionRegistry.updateConnection).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1', storeType: 'sparql' }));
+		expect(connectionRegistry.updateConnection).toHaveBeenCalledWith(expect.objectContaining({ id: 'c2', storeType: 'sparql' }));
+		expect(connectionRegistry.deleteConnection).not.toHaveBeenCalled();
+		expect(connectionRegistry.saveConfiguration).toHaveBeenCalledOnce();
 		expect(post).toHaveBeenCalledWith(expect.objectContaining({ id: 'StoreProfileDeleted', profileId: 'qlever' }));
 	});
 
@@ -80,28 +80,28 @@ describe('StoresSectionController – DeleteStoreProfile', () => {
 			{ id: 'c1', endpointUrl: 'http://e1', storeType: 'qlever' },
 			{ id: 'c2', endpointUrl: 'http://e2', storeType: 'jena' },
 		];
-		const { controller, post, connectionService } = setup(conns);
+		const { controller, post, connectionRegistry } = setup(conns);
 		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue('Delete Connections' as any);
 
 		await controller.handleMessage(deleteMessage);
 
-		expect(connectionService.deleteConnection).toHaveBeenCalledTimes(1);
-		expect(connectionService.deleteConnection).toHaveBeenCalledWith('c1');
-		expect(connectionService.updateConnection).not.toHaveBeenCalled();
-		expect(connectionService.saveConfiguration).toHaveBeenCalledOnce();
+		expect(connectionRegistry.deleteConnection).toHaveBeenCalledTimes(1);
+		expect(connectionRegistry.deleteConnection).toHaveBeenCalledWith('c1');
+		expect(connectionRegistry.updateConnection).not.toHaveBeenCalled();
+		expect(connectionRegistry.saveConfiguration).toHaveBeenCalledOnce();
 		expect(post).toHaveBeenCalledWith(expect.objectContaining({ id: 'StoreProfileDeleted', profileId: 'qlever' }));
 	});
 
 	it('leaves the store and connections untouched when the choice dialog is cancelled', async () => {
 		const conns = [{ id: 'c1', endpointUrl: 'http://e1', storeType: 'qlever' }];
-		const { controller, post, connectionService } = setup(conns);
+		const { controller, post, connectionRegistry } = setup(conns);
 		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
 
 		await controller.handleMessage(deleteMessage);
 
-		expect(connectionService.updateConnection).not.toHaveBeenCalled();
-		expect(connectionService.deleteConnection).not.toHaveBeenCalled();
-		expect(connectionService.saveConfiguration).not.toHaveBeenCalled();
+		expect(connectionRegistry.updateConnection).not.toHaveBeenCalled();
+		expect(connectionRegistry.deleteConnection).not.toHaveBeenCalled();
+		expect(connectionRegistry.saveConfiguration).not.toHaveBeenCalled();
 		expect(post).not.toHaveBeenCalled();
 	});
 });
