@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { container } from 'tsyringe';
-import { RdfToken } from "@faubulous/mentor-rdf-parsers";
+import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { getTokenIndexAtPosition } from '@src/utilities';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionRegistry, IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
@@ -21,12 +21,6 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 */
 	public readonly triggerCharacters = new Set([':', '<', '/']);
 
-	/**
-	 * Timeout in milliseconds to wait for fresh tokens from the language server
-	 * when the stored tokens are stale at the moment a trigger-character completion fires.
-	 */
-	private readonly _tokenSyncTimeout = 2000;
-
 	private get connectionRegistry() {
 		return container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 	}
@@ -39,39 +33,33 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		return container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 	}
 
-	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | null> {
+	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | vscode.CompletionList | null> {
 		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
 		}
 
-		let n = getTokenIndexAtPosition(context.tokens, position);
+		// Tokenize the current document text synchronously so that completions
+		// are always based on the up-to-date buffer content. This avoids waiting
+		// for token delivery from the language server and also makes completions
+		// work for documents that are not eagerly indexed (e.g. untitled documents).
+		const tokens = context.tokenize(document.getText());
+
+		const n = getTokenIndexAtPosition(tokens, position);
 
 		if (n < 1) {
-			// Tokens are stale — the language server hasn't delivered an update yet.
-			// Wait for the next token delivery before retrying.
-			try {
-				await this.contextService.onNextTokenDelivery(document.uri.toString(), this._tokenSyncTimeout);
-			} catch {
-				return null;
-			}
-
-			n = getTokenIndexAtPosition(context.tokens, position);
-
-			if (n < 1) {
-				return null;
-			}
+			return null;
 		}
 
-		return this.getCompletionItems(document, context, n) as Promise<vscode.CompletionItem[] | null>;
+		return this.getCompletionItems(document, context, tokens, n) as Promise<vscode.CompletionItem[] | vscode.CompletionList | null>;
 	}
 
-	override getCompletionItems(document: vscode.TextDocument, context: any, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
-		if (this.isGraphDefinitionContext(context, tokenIndex)) {
-			return this.getGraphIriCompletionItems(document, context, tokenIndex);
+	override getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokens: IToken[], tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
+		if (this.isGraphDefinitionContext(tokens, tokenIndex)) {
+			return this.getGraphIriCompletionItems(document, tokens, tokenIndex);
 		} else {
-			return super.getCompletionItems(document, context, tokenIndex);
+			return super.getCompletionItems(document, context, tokens, tokenIndex);
 		}
 	}
 
@@ -81,8 +69,8 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 * when the current token already starts with `<` (single-token IRI or
 	 * auto-closed IRI such as `<htt>`). Returns -1 when no opening `<` is found.
 	 */
-	private findIriOpenIndex(context: TurtleDocument, tokenIndex: number): number {
-		if (context.tokens[tokenIndex].image.startsWith('<')) {
+	private findIriOpenIndex(tokens: IToken[], tokenIndex: number): number {
+		if (tokens[tokenIndex].image.startsWith('<')) {
 			return tokenIndex;
 		}
 
@@ -93,7 +81,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		const stopImages = new Set([';', '{', '}', '(', ')', '>']);
 
 		for (let i = tokenIndex - 1; i >= 0; i--) {
-			const image = context.tokens[i].image;
+			const image = tokens[i].image;
 
 			if (image === '<') {
 				return i;
@@ -106,14 +94,14 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		return -1;
 	}
 
-	isGraphDefinitionContext(context: TurtleDocument, tokenIndex: number) {
-		const n = this.findIriOpenIndex(context, tokenIndex);
+	isGraphDefinitionContext(tokens: IToken[], tokenIndex: number) {
+		const n = this.findIriOpenIndex(tokens, tokenIndex);
 
 		if (n < 0) {
 			return false;
 		}
 
-		const previousToken = context.tokens[n - 1];
+		const previousToken = tokens[n - 1];
 
 		switch (previousToken?.tokenType.name) {
 			case RdfToken.GRAPH.name:
@@ -132,10 +120,10 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 * @returns The typed IRI value (without `<`/`>`), the closing state, the opening
 	 *   token, and the end position — all needed to build replacement ranges.
 	 */
-	private _readTypedIri(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number) {
-		const iriOpenIndex = this.findIriOpenIndex(context, tokenIndex);
-		const iriOpenToken = context.tokens[iriOpenIndex];
-		const currentToken = context.tokens[tokenIndex];
+	private _readTypedIri(document: vscode.TextDocument, tokens: IToken[], tokenIndex: number) {
+		const iriOpenIndex = this.findIriOpenIndex(tokens, tokenIndex);
+		const iriOpenToken = tokens[iriOpenIndex];
+		const currentToken = tokens[tokenIndex];
 
 		// Chevrotain positions are 1-based; VS Code positions are 0-based.
 		// endColumn is the last char (1-based), so endColumn (without -1) is the exclusive end in 0-based terms.
@@ -261,8 +249,8 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		return item;
 	}
 
-	async getGraphIriCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): Promise<vscode.CompletionItem[]> {
-		const { value, alreadyClosed, iriOpenToken, iriEnd } = this._readTypedIri(document, context, tokenIndex);
+	async getGraphIriCompletionItems(document: vscode.TextDocument, tokens: IToken[], tokenIndex: number): Promise<vscode.CompletionItem[]> {
+		const { value, alreadyClosed, iriOpenToken, iriEnd } = this._readTypedIri(document, tokens, tokenIndex);
 		const graphs = await this._mergeGraphUris(document.uri);
 		const result: vscode.CompletionItem[] = [];
 

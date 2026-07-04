@@ -2,6 +2,7 @@
  * Note: Do not add import from 'vscode' here. This file is used in the 
  * language server where vscode is not available.
  */
+import { RDF } from "@faubulous/mentor-rdf";
 import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { Range } from "vscode-languageserver-types";
 import { countLeadingWhitespace, countTrailingWhitespace } from "./string";
@@ -328,6 +329,10 @@ export function getTripleComponentType(tokens: IToken[], tokenIndex: number): Tr
 			// A dot is always followed by a subject.
 			return "subject";
 		}
+		case RdfToken.LCURLY.name: {
+			// The start of a SPARQL group graph pattern is followed by a subject.
+			return "subject";
+		}
 		case RdfToken.SEMICOLON.name: {
 			// A semicolon is always followed by a predicate.
 			return "predicate";
@@ -335,6 +340,30 @@ export function getTripleComponentType(tokens: IToken[], tokenIndex: number): Tr
 		case RdfToken.A.name: {
 			// A type assertion is always followed by an object.
 			return "object";
+		}
+		case RdfToken.VAR1.name:
+		case RdfToken.VAR2.name: {
+			// A SPARQL variable can be a subject or a predicate; disambiguate by
+			// looking at the token before it.
+			const q = tokens[tokenIndex - 2];
+
+			switch (q?.tokenType.name) {
+				case undefined:
+				case RdfToken.PERIOD.name:
+				case RdfToken.LCURLY.name: {
+					// The variable opened a triple pattern → it was the subject.
+					return "predicate";
+				}
+				case RdfToken.VAR1.name:
+				case RdfToken.VAR2.name:
+				case RdfToken.PNAME_LN.name:
+				case RdfToken.IRIREF.name:
+				case RdfToken.SEMICOLON.name: {
+					// The variable followed a subject or a semicolon → it was the predicate.
+					return "object";
+				}
+			}
+			break;
 		}
 		case RdfToken.PNAME_LN.name:
 		case RdfToken.IRIREF.name: {
@@ -345,13 +374,47 @@ export function getTripleComponentType(tokens: IToken[], tokenIndex: number): Tr
 				case RdfToken.SEMICOLON.name:
 				case RdfToken.LBRACKET.name:
 				case RdfToken.PNAME_LN.name:
-				case RdfToken.IRIREF.name: {
+				case RdfToken.IRIREF.name:
+				case RdfToken.VAR1.name:
+				case RdfToken.VAR2.name: {
 					return "object";
 				}
 				case RdfToken.PERIOD.name: {
 					return "predicate";
 				}
 			}
+		}
+	}
+}
+
+/**
+ * Indicates whether the token at the given index is the object of a type
+ * assertion, i.e. whether the preceding predicate is the `a` keyword or
+ * an IRI / prefixed name that resolves to `rdf:type`.
+ * @param tokens The document tokens.
+ * @param tokenIndex The index of the (object) token to check.
+ * @param prefixes The namespace prefixes defined in the document, used to expand prefixed names.
+ * @returns `true` if the preceding predicate asserts an rdf:type relation.
+ */
+export function isTypeAssertionObject(tokens: IToken[], tokenIndex: number, prefixes: PrefixMap): boolean {
+	const p = tokens[tokenIndex - 1];
+
+	if (!p) {
+		return false;
+	}
+
+	switch (p.tokenType.name) {
+		case RdfToken.A.name: {
+			return true;
+		}
+		case RdfToken.PNAME_LN.name: {
+			return getIriFromPrefixedName(prefixes, p.image) === RDF.type;
+		}
+		case RdfToken.IRIREF.name: {
+			return getIriFromIriReference(p.image) === RDF.type;
+		}
+		default: {
+			return false;
 		}
 	}
 }

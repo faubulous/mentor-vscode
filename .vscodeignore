@@ -1,7 +1,27 @@
-.vscode
-build*.
+# Source and build tooling (extension ships pre-bundled dist/)
 src/**
+build.js
+build-font.mjs
+tsconfig.json
+tsconfig.spec.json
+vitest.config.ts
+
+# Tests and coverage
 coverage/**
+**/*.test.ts
+**/*.spec.ts
+
+# Dev tooling / editor / CI config
+.*
+.github/**
+.claude/**
+.vscode/**
+.vscode-test-web/**
 node_modules/**
+renovate.json
+
+# Sibling workspace packages
 ../**
+
+# Screenshots and other non-shipping media
 **/media/screenshot*.png

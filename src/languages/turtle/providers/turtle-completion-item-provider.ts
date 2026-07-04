@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 import { container } from "tsyringe";
 import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
-import { RdfToken } from "@faubulous/mentor-rdf-parsers";
+import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { getNamespaceIriFromPrefixedName, getTokenIndexAtPosition, getTripleComponentType, TripleComonentType } from "@src/utilities";
+import { getNamespaceIriFromPrefixedName, getPropertyTypeFromRange, getTokenIndexAtPosition, getTripleComponentType, isTypeAssertionObject, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
@@ -60,64 +60,176 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		return item;
 	}
 
-	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[]> {
+	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
 		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
 		}
 
-		const n = getTokenIndexAtPosition(context.tokens, position);
+		// Tokenize the current document text synchronously so that completions
+		// are always based on the up-to-date buffer content. This avoids waiting
+		// for token delivery from the language server and also makes completions
+		// work for documents that are not eagerly indexed (e.g. untitled documents).
+		const tokens = context.tokenize(document.getText());
+
+		const n = getTokenIndexAtPosition(tokens, position);
 
 		if (n < 1) {
 			return null;
 		}
 
-		return this.getCompletionItems(document, context, n);
+		return this.getCompletionItems(document, context, tokens, n);
 	}
 
-	protected getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
-		const result = [];
+	protected getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokens: IToken[], tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
+		let result: IriCompletionItem[] = [];
+		let queryGraphs: string[] | undefined;
+		let componentType: TripleComonentType;
+		let isTypeAssertion = false;
 
-		if (this._isLocalPartDefinitionContext(context, tokenIndex)) {
-			const documentIri = WorkspaceUri.toWorkspaceUri(document.uri);
-			const componentType = getTripleComponentType(context.tokens, tokenIndex);
+		if (this._isLocalPartDefinitionContext(tokens, tokenIndex)) {
+			// Note: The context's graph IRI falls back to the document URI for documents
+			// that cannot be mapped into the workspace (e.g. untitled documents). It is
+			// the graph where the document's triples are stored.
+			const documentIri = WorkspaceUri.toCanonicalString(context.graphIri);
 
-			const currentToken = context.tokens[tokenIndex];
+			componentType = getTripleComponentType(tokens, tokenIndex);
+			isTypeAssertion = componentType === 'object' && isTypeAssertionObject(tokens, tokenIndex, context.namespaces);
+
+			const currentToken = tokens[tokenIndex];
 			const namespaceIri = getNamespaceIriFromPrefixedName(context.namespaces, currentToken.image);
 			const localPart = currentToken.image.split(":")[1];
 
-			if (documentIri && namespaceIri) {
+			if (namespaceIri) {
 				const iri = (namespaceIri + localPart).toLowerCase();
 
-				const graphs = [documentIri.toString()];
-				graphs.push(namespaceIri);
+				queryGraphs = [documentIri, namespaceIri];
 
 				// Primarily query the context graph for retrieving completion items.
-				for (let item of this._getLocalPartCompletionItems(context, componentType, iri, graphs)) {
-					result.push(item);
-				}
+				result = this._getLocalPartCompletionItems(componentType, iri, queryGraphs);
 
 				// If none are found, query the background graph for retrieving additional items from other ontologies.
 				if (result.length == 0) {
-					for (let item of this._getLocalPartCompletionItems(context, componentType, iri, undefined)) {
-						result.push(item);
-					}
+					queryGraphs = undefined;
+					result = this._getLocalPartCompletionItems(componentType, iri, undefined);
 				}
 			}
 		}
 
-		return result;
+		let items: IriCompletionItem[] = [];
+
+		if (result.length > 0) {
+			// The completion widget can only render the built-in symbol icons via the
+			// item kind, so map the resource categories from the definition tree to
+			// the closest matching kinds: classes → Class, data properties → Property,
+			// object properties (relations) → Reference, individuals → Value.
+			const classes = new Set(this.vocabulary.getClasses(queryGraphs));
+			const properties = new Set(this.vocabulary.getProperties(queryGraphs));
+
+			// Rank the candidates by their relevance for the position in the triple
+			// BEFORE truncation so that preferred categories survive the cut-off:
+			// classes for type assertion objects, classes and individuals for subjects
+			// and other objects. The candidates are already sorted by label, and
+			// Array.sort is stable, so sorting by priority yields (priority, label) order.
+			const priorities = new Map<string, number>();
+
+			for (const item of result) {
+				priorities.set(item.iri, this._getCompletionItemPriority(item.iri, componentType, isTypeAssertion, classes, properties));
+			}
+
+			result.sort((a, b) => priorities.get(a.iri)! - priorities.get(b.iri)!);
+
+			items = result.slice(0, this.maxCompletionItems);
+
+			for (const item of items) {
+				// Encode the priority in the sort text so that the displayed order also
+				// respects the position preference when VS Code's fuzzy scores tie.
+				item.sortText = `${priorities.get(item.iri)}_${item.label}`;
+				item.kind = this._getCompletionItemKind(item.iri, queryGraphs, classes, properties);
+				item.detail = context.getResourceDescription(item.iri)?.value;
+			}
+		}
+
+		// When the result is truncated, mark the list as incomplete so that VS Code
+		// re-invokes the provider on further keystrokes. Otherwise VS Code only
+		// filters the initially returned items client-side and matching items beyond
+		// the cut-off would never appear as the user narrows the search by typing.
+		const isIncomplete = result.length > this.maxCompletionItems;
+
+		return new vscode.CompletionList(items, isIncomplete);
 	}
 
-	private _isLocalPartDefinitionContext(context: TurtleDocument, tokenIndex: number): boolean {
-		const currentToken = context.tokens[tokenIndex];
+	/**
+	 * Ranks a completion candidate by its relevance for the position in the triple.
+	 * Lower values rank higher.
+	 *
+	 * - Type assertion objects (`a` / `rdf:type`): classes (0) before individuals (1) before properties (2).
+	 * - Subjects and other objects: classes and individuals (0) before properties (1).
+	 * - Predicates: uniform priority; the candidates are properties only.
+	 *
+	 * @param iri The IRI of the completion candidate.
+	 * @param componentType The position of the completion in the triple.
+	 * @param isTypeAssertion Whether the completion is the object of a type assertion.
+	 * @param classes The set of class IRIs defined in the queried graphs.
+	 * @param properties The set of property IRIs defined in the queried graphs.
+	 */
+	private _getCompletionItemPriority(iri: string, componentType: TripleComonentType, isTypeAssertion: boolean, classes: Set<string>, properties: Set<string>): number {
+		if (componentType === 'predicate') {
+			return 0;
+		}
+
+		if (isTypeAssertion) {
+			if (classes.has(iri)) {
+				return 0;
+			}
+
+			return properties.has(iri) ? 2 : 1;
+		}
+
+		// Subjects and non-type-assertion objects: prefer named individuals and
+		// classes over properties.
+		return properties.has(iri) ? 1 : 0;
+	}
+
+	/**
+	 * Determines the completion item kind for a resource IRI using the same
+	 * classification as the definition tree icons.
+	 * @param iri The IRI of the completion candidate.
+	 * @param graphs The graphs that were queried for the completion candidates.
+	 * @param classes The set of class IRIs defined in the queried graphs.
+	 * @param properties The set of property IRIs defined in the queried graphs.
+	 */
+	private _getCompletionItemKind(iri: string, graphs: string[] | undefined, classes: Set<string>, properties: Set<string>): vscode.CompletionItemKind {
+		if (properties.has(iri)) {
+			// Distinguish literal-valued data properties from object properties
+			// (relations) based on the property range, as the definition tree does.
+			const range = this.vocabulary.getRange(graphs, iri) ?? this.vocabulary.getDatatype(graphs, iri);
+
+			return getPropertyTypeFromRange(range) === 'dataProperty'
+				? vscode.CompletionItemKind.Field
+				: vscode.CompletionItemKind.Interface;
+		}
+
+		if (classes.has(iri)) {
+			return vscode.CompletionItemKind.Class;
+		} else {
+			return vscode.CompletionItemKind.Value;
+		}
+	}
+
+	private _isLocalPartDefinitionContext(tokens: IToken[], tokenIndex: number): boolean {
+		const currentToken = tokens[tokenIndex];
 		const currentType = currentToken?.tokenType.name;
 
 		return currentType === RdfToken.PNAME_LN.name || currentType === RdfToken.PNAME_NS.name;
 	}
 
-	private _getLocalPartCompletionItems(context: TurtleDocument, componentType: TripleComonentType, uri: string, graphs: string[] | undefined): vscode.CompletionItem[] {
+	/**
+	 * Collects all completion items whose IRI starts with the given search prefix.
+	 * @returns All matching items sorted by label; the caller is responsible for truncation.
+	 */
+	private _getLocalPartCompletionItems(componentType: TripleComonentType, uri: string, graphs: string[] | undefined): IriCompletionItem[] {
 		let items: Record<string, IriCompletionItem> = {};
 
 		if (componentType === 'predicate') {
@@ -148,13 +260,10 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			}
 		}
 
-		const result = Object.values(items).sort().slice(0, this.maxCompletionItems);
-
-		for (let item of result) {
-			item.detail = context.getResourceDescription(item.iri)?.value;
-		}
-
-		return result;
+		// Sort by label so that truncation by the caller is deterministic. Note that
+		// sorting the items without a comparator would compare their object identity
+		// which is meaningless.
+		return Object.values(items).sort((a, b) => (a.label as string).localeCompare(b.label as string));
 	}
 
 	private _addLocalPartCompletionItem(result: Record<string, IriCompletionItem>, namespaceIri: string, subjectIri: string) {

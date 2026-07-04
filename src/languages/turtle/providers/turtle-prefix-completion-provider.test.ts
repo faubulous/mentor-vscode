@@ -44,6 +44,11 @@ const mockDocument = {
 
 const mockPosition = new vscode.Position(0, 0);
 
+// The provider tokenizes the document text on demand via context.tokenize().
+function makeContext(tokens: any[]) {
+    return { tokens, tokenize: () => tokens };
+}
+
 beforeEach(() => {
     mockGetDocumentContext.mockReset();
     mockGetUriForPrefix.mockReset();
@@ -97,9 +102,7 @@ describe('TurtlePrefixCompletionProvider', () => {
 
         it('returns null when token index is less than 1', () => {
             mockGetTokenIndexAtPosition.mockReturnValue(0);
-            mockGetDocumentContext.mockReturnValue({
-                tokens: [{ tokenType: { name: 'SomeToken' }, image: 'ex:' }],
-            });
+            mockGetDocumentContext.mockReturnValue(makeContext([{ tokenType: { name: 'SomeToken' }, image: 'ex:' }]));
             const provider = new TurtlePrefixCompletionProvider(() => '');
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeNull();
@@ -107,12 +110,10 @@ describe('TurtlePrefixCompletionProvider', () => {
 
         it('returns undefined when current token type is not PNAME_NS', () => {
             mockGetTokenIndexAtPosition.mockReturnValue(1);
-            mockGetDocumentContext.mockReturnValue({
-                tokens: [
+            mockGetDocumentContext.mockReturnValue(makeContext([
                     { tokenType: { name: RdfToken.PREFIX.name }, image: '@prefix' },
                     { tokenType: { name: 'SomeOtherToken' }, image: 'foo' },
-                ],
-            });
+                ]));
             const provider = new TurtlePrefixCompletionProvider(() => '');
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeUndefined();
@@ -120,12 +121,10 @@ describe('TurtlePrefixCompletionProvider', () => {
 
         it('returns null when previous token is undefined', () => {
             mockGetTokenIndexAtPosition.mockReturnValue(1);
-            mockGetDocumentContext.mockReturnValue({
-                tokens: [
+            mockGetDocumentContext.mockReturnValue(makeContext([
                     undefined,
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
-                ],
-            });
+                ]));
             const provider = new TurtlePrefixCompletionProvider(() => '');
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeNull();
@@ -133,12 +132,10 @@ describe('TurtlePrefixCompletionProvider', () => {
 
         it('returns null when previous token type is not a prefix keyword', () => {
             mockGetTokenIndexAtPosition.mockReturnValue(1);
-            mockGetDocumentContext.mockReturnValue({
-                tokens: [
+            mockGetDocumentContext.mockReturnValue(makeContext([
                     { tokenType: { name: 'DOT' }, image: '.' },
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
-                ],
-            });
+                ]));
             const provider = new TurtlePrefixCompletionProvider(() => '');
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeNull();
@@ -146,12 +143,10 @@ describe('TurtlePrefixCompletionProvider', () => {
 
         it('returns completion item when prefix is found in lookup', () => {
             mockGetTokenIndexAtPosition.mockReturnValue(1);
-            mockGetDocumentContext.mockReturnValue({
-                tokens: [
+            mockGetDocumentContext.mockReturnValue(makeContext([
                     { tokenType: { name: RdfToken.PREFIX.name }, image: '@prefix' },
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
-                ],
-            });
+                ]));
             mockGetUriForPrefix.mockReturnValue('http://example.org/');
             const provider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any) as any[];
@@ -162,12 +157,10 @@ describe('TurtlePrefixCompletionProvider', () => {
 
         it('returns empty array when prefix is not in lookup', () => {
             mockGetTokenIndexAtPosition.mockReturnValue(1);
-            mockGetDocumentContext.mockReturnValue({
-                tokens: [
+            mockGetDocumentContext.mockReturnValue(makeContext([
                     { tokenType: { name: RdfToken.TTL_PREFIX.name }, image: '@prefix' },
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'unknown:' },
-                ],
-            });
+                ]));
             mockGetUriForPrefix.mockReturnValue(undefined);
             const provider = new TurtlePrefixCompletionProvider(() => '');
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);

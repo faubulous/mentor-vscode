@@ -11,6 +11,9 @@ vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 		SEMICOLON:                     { name: 'SEMICOLON' },
 		A:                             { name: 'A' },
 		LBRACKET:                      { name: 'LBRACKET' },
+		LCURLY:                        { name: 'LCURLY' },
+		VAR1:                          { name: 'VAR1' },
+		VAR2:                          { name: 'VAR2' },
 		STRING_LITERAL_QUOTE:          { name: 'STRING_LITERAL_QUOTE' },
 		STRING_LITERAL_SINGLE_QUOTE:   { name: 'STRING_LITERAL_SINGLE_QUOTE' },
 		STRING_LITERAL_LONG_QUOTE:     { name: 'STRING_LITERAL_LONG_QUOTE' },
@@ -27,6 +30,7 @@ import {
 	getNamespaceDefinition,
 	getTripleComponentType,
 	getUnquotedLiteralValue,
+	isTypeAssertionObject,
 	getTokenIndexAtPosition,
 	getTokenAtPosition,
 	getTokenBeforePosition,
@@ -253,6 +257,112 @@ describe('getTripleComponentType', () => {
 	it('returns undefined for unrecognised preceding token', () => {
 		const tokens = [makeToken('STRING_LITERAL', '"hello"'), makeToken('IRIREF', '<http://example.org/>')];
 		expect(getTripleComponentType(tokens, 1)).toBeUndefined();
+	});
+
+	it('returns "subject" after an LCURLY token (SPARQL group graph pattern)', () => {
+		// WHERE { nexus:
+		const tokens = [makeToken('LCURLY', '{'), makeToken('PNAME_NS', 'nexus:')];
+		expect(getTripleComponentType(tokens, 1)).toBe('subject');
+	});
+
+	it('returns "predicate" after a variable that opens a group graph pattern', () => {
+		// { ?s nexus:
+		const tokens = [
+			makeToken('LCURLY', '{'),
+			makeToken('VAR1', '?s'),
+			makeToken('PNAME_NS', 'nexus:'),
+		];
+		expect(getTripleComponentType(tokens, 2)).toBe('predicate');
+	});
+
+	it('returns "predicate" after a variable that follows a PERIOD', () => {
+		// ?a ?b ?c . ?s nexus:
+		const tokens = [
+			makeToken('PERIOD', '.'),
+			makeToken('VAR1', '?s'),
+			makeToken('PNAME_NS', 'nexus:'),
+		];
+		expect(getTripleComponentType(tokens, 2)).toBe('predicate');
+	});
+
+	it('returns "predicate" after a variable at the start of the token stream', () => {
+		// ?s nexus:
+		const tokens = [
+			makeToken('VAR1', '?s'),
+			makeToken('PNAME_NS', 'nexus:'),
+		];
+		expect(getTripleComponentType(tokens, 1)).toBe('predicate');
+	});
+
+	it('returns "object" after a variable that follows another variable', () => {
+		// ?s ?p nexus:
+		const tokens = [
+			makeToken('VAR1', '?s'),
+			makeToken('VAR2', '$p'),
+			makeToken('PNAME_NS', 'nexus:'),
+		];
+		expect(getTripleComponentType(tokens, 2)).toBe('object');
+	});
+
+	it('returns "object" after a variable that follows a SEMICOLON', () => {
+		// ; ?p nexus:
+		const tokens = [
+			makeToken('SEMICOLON', ';'),
+			makeToken('VAR1', '?p'),
+			makeToken('PNAME_NS', 'nexus:'),
+		];
+		expect(getTripleComponentType(tokens, 2)).toBe('object');
+	});
+
+	it('returns "object" after a prefixed name predicate that follows a variable subject', () => {
+		// ?s nexus:p nexus:
+		const tokens = [
+			makeToken('VAR1', '?s'),
+			makeToken('PNAME_LN', 'nexus:p'),
+			makeToken('PNAME_NS', 'nexus:'),
+		];
+		expect(getTripleComponentType(tokens, 2)).toBe('object');
+	});
+});
+
+describe('isTypeAssertionObject', () => {
+	const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+
+	it('returns true when the preceding predicate is the "a" keyword', () => {
+		const tokens = [makeToken('A', 'a'), makeToken('PNAME_NS', 'nexus:')];
+		expect(isTypeAssertionObject(tokens, 1, {})).toBe(true);
+	});
+
+	it('returns true when the preceding predicate is a prefixed name resolving to rdf:type', () => {
+		const tokens = [makeToken('PNAME_LN', 'rdf:type'), makeToken('PNAME_NS', 'nexus:')];
+		const prefixes = { rdf: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#' };
+		expect(isTypeAssertionObject(tokens, 1, prefixes)).toBe(true);
+	});
+
+	it('returns true when the preceding predicate is an IRI reference equal to rdf:type', () => {
+		const tokens = [makeToken('IRIREF', `<${RDF_TYPE}>`), makeToken('PNAME_NS', 'nexus:')];
+		expect(isTypeAssertionObject(tokens, 1, {})).toBe(true);
+	});
+
+	it('returns false when the prefixed name resolves to a different IRI', () => {
+		const tokens = [makeToken('PNAME_LN', 'rdf:value'), makeToken('PNAME_NS', 'nexus:')];
+		const prefixes = { rdf: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#' };
+		expect(isTypeAssertionObject(tokens, 1, prefixes)).toBe(false);
+	});
+
+	it('returns false when the prefix of the predicate is not defined', () => {
+		const tokens = [makeToken('PNAME_LN', 'rdf:type'), makeToken('PNAME_NS', 'nexus:')];
+		expect(isTypeAssertionObject(tokens, 1, {})).toBe(false);
+	});
+
+	it('returns false for a non-type predicate', () => {
+		const tokens = [makeToken('PNAME_LN', 'nexus:hasPart'), makeToken('PNAME_NS', 'nexus:')];
+		expect(isTypeAssertionObject(tokens, 1, { nexus: 'http://example.org/nexus#' })).toBe(false);
+	});
+
+	it('returns false when there is no preceding token', () => {
+		const tokens = [makeToken('PNAME_NS', 'nexus:')];
+		expect(isTypeAssertionObject(tokens, 0, {})).toBe(false);
 	});
 });
 

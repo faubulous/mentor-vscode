@@ -26,21 +26,27 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 			return null;
 		}
 
-		const n = getTokenIndexAtPosition(context.tokens, position);
+		// Tokenize the current document text synchronously so that completions
+		// are always based on the up-to-date buffer content. This avoids waiting
+		// for token delivery from the language server and also makes completions
+		// work for documents that are not eagerly indexed (e.g. untitled documents).
+		const tokens = context.tokenize(document.getText());
+
+		const n = getTokenIndexAtPosition(tokens, position);
 
 		// We also need the previous token to determine if this is a prefix definition.
 		if (n < 1) {
 			return null;
 		}
 
-		const currentToken = context.tokens[n];
+		const currentToken = tokens[n];
 		const currentType = currentToken.tokenType.name;
 
 		if (!currentType || currentType !== RdfToken.PNAME_NS.name) {
 			return;
 		}
 
-		const previousToken = context.tokens[n - 1];
+		const previousToken = tokens[n - 1];
 
 		if (!previousToken) {
 			return null;
