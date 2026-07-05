@@ -220,8 +220,8 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
 
         expect(labels).toEqual(['hasPart', 'name']);
         // Object property (relation) vs. literal-valued data property icons.
-        expect(result.items[0].kind).toBe(CompletionItemKind.Reference);
-        expect(result.items[1].kind).toBe(CompletionItemKind.Property);
+        expect(result.items[0].kind).toBe(CompletionItemKind.Interface);
+        expect(result.items[1].kind).toBe(CompletionItemKind.Field);
     });
 
     it('ranks classes and individuals before properties in object position', async () => {

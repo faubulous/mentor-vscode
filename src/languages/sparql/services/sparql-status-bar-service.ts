@@ -1,18 +1,15 @@
 import * as vscode from 'vscode';
-import { ISparqlEndpointTester, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
 import { getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
 
 /**
  * Owns a single, permanently visible SPARQL status bar item that opens the SPARQL
  * results panel when clicked. Its label reflects all current activity at once —
  * query execution / connection testing and named-graph loading are composed into one
- * label — and reverts to "SPARQL" when nothing is in progress.
+ * label — and reverts to a summary of the configured connections and loaded graphs
+ * when nothing is in progress.
  */
 export class SparqlStatusBarService implements vscode.Disposable {
-	/**
-	 * The label shown on the SPARQL status bar item when no activity is in progress.
-	 */
-	private readonly _defaultLabel = '$(sparql-file) SPARQL';
 
 	/** 
 	 * Separator between activity segments when several are active at once.
@@ -57,7 +54,8 @@ export class SparqlStatusBarService implements vscode.Disposable {
 	constructor(
 		queryService: ISparqlQueryService,
 		endpointTester: ISparqlEndpointTester,
-		graphService: IGraphManagementService
+		private readonly _graphService: IGraphManagementService,
+		private readonly _connectionRegistry: ISparqlConnectionRegistry
 	) {
 		this._statusBarItem = vscode.window.createStatusBarItem(
 			vscode.StatusBarAlignment.Left,
@@ -68,7 +66,11 @@ export class SparqlStatusBarService implements vscode.Disposable {
 		this._statusBarItem.tooltip = 'Show SPARQL Panel';
 		this._render();
 
+		const graphService = this._graphService;
+
 		this._subscriptions.push(
+			this._connectionRegistry.onDidChangeConnections(() => this._render()),
+			graphService.onDidChangeGraphs(() => this._render()),
 			queryService.onDidQueryExecutionStart(state => {
 				this._activitySegment = `$(sync~spin) Executing: ${getDisplayName(state)}`;
 				this._render();
@@ -108,7 +110,8 @@ export class SparqlStatusBarService implements vscode.Disposable {
 
 	/**
 	 * Composes the item text from all active states and keeps it visible. Falls back
-	 * to the default "SPARQL" label when nothing is in progress.
+	 * to a summary of the configured connections and loaded graphs when nothing is
+	 * in progress.
 	 */
 	private _render(): void {
 		const segments: string[] = [];
@@ -122,8 +125,30 @@ export class SparqlStatusBarService implements vscode.Disposable {
 			segments.push(`$(sync~spin) Loading graphs: ${done} of ${this._totalGraphLoads} connections..`);
 		}
 
-		this._statusBarItem.text = segments.length > 0 ? segments.join(this._segmentSeparator) : this._defaultLabel;
+		this._statusBarItem.text = segments.length > 0 ? segments.join(this._segmentSeparator) : this._getSummaryLabel();
 		this._statusBarItem.show();
+	}
+
+	/**
+	 * Builds the idle label summarizing the configured connections and the total
+	 * number of loaded named graphs, in the same style as the workspace index item.
+	 * @returns The summary label, e.g. `$(sparql-file) 2 connections; 12 graphs`.
+	 */
+	private _getSummaryLabel(): string {
+		const connections = this._connectionRegistry.getConnections();
+
+		let graphCount = 0;
+
+		for (const connection of connections) {
+			graphCount += this._graphService.getGraphsForConnection(connection.id, false).length;
+		}
+
+		const parts = [
+			`${connections.length} connection${connections.length === 1 ? '' : 's'}`,
+			`${graphCount} graph${graphCount === 1 ? '' : 's'}`,
+		];
+
+		return `$(sparql-file) ${parts.join('; ')}`;
 	}
 
 	dispose(): void {

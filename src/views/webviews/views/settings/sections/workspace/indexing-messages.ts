@@ -14,6 +14,12 @@ export interface IndexingStatsView extends IndexingStatistics {
 	 * Whether an indexing run is currently in progress.
 	 */
 	isIndexing: boolean;
+
+	/**
+	 * Whether a workspace is open. Without a workspace there is nothing to
+	 * index and the reindex action is disabled.
+	 */
+	hasWorkspace: boolean;
 }
 
 /**

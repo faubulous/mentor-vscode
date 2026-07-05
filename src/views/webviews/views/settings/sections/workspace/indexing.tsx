@@ -49,6 +49,10 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 
 	const isBusy = reindexing || stats?.isIndexing === true;
 
+	// Without a workspace there is nothing to index — the reindex button is
+	// disabled instead of showing a spinner that would never stop.
+	const hasWorkspace = stats?.hasWorkspace !== false;
+
 	const handleShowLog = () => messaging?.postMessage({ id: 'ShowIndexLog' });
 
 	const handleReindex = () => {
@@ -65,7 +69,12 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 					<span className="codicon codicon-output"></span>
 					<span className="label">Show Index Log</span>
 				</vscode-toolbar-button>
-				<vscode-toolbar-button className="primary" disabled={isBusy} onClick={handleReindex}>
+				<vscode-toolbar-button
+					className="primary"
+					disabled={isBusy || !hasWorkspace}
+					title={hasWorkspace ? undefined : 'Open a folder or workspace to enable indexing'}
+					onClick={handleReindex}
+				>
 					<span className={`codicon ${isBusy ? 'codicon-sync codicon-modifier-spin' : 'codicon-refresh'}`}></span>
 					<span className="label">Reindex Workspace</span>
 				</vscode-toolbar-button>

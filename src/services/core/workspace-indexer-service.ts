@@ -82,7 +82,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		// Show the indexer item immediately so the Mentor icon is always visible in the
 		// status bar — including on an empty workspace (0 files), where the indexing code
 		// paths that update the text run late or with nothing to report.
-		this._statusBarItem.text = '$(app-mentor)';
+		this._statusBarItem.text = '$(app-mentor) 0 files';
 		this._statusBarItem.show();
 
 		this._statusLog.clear();

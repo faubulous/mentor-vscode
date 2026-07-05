@@ -213,18 +213,31 @@ async function loadConnectionGraphs() {
  * Indexes the entire workspace to provide language features such as hovers, completions and definitions. This is done on activation to ensure that these features are available immediately after the extension is activated.
  */
 async function indexWorkspace() {
-	// Discover all VS Code workspace files for workspace ID resolution.
-	const workspaceService = container.resolve<IWorkspaceService>(ServiceToken.WorkspaceService);
-	await workspaceService.discoverWorkspaces();
+	try {
+		// Without workspace folders there is nothing to discover or index. The indexer
+		// status bar item created eagerly by the service container stays visible with
+		// its default icon so the Mentor settings remain quickly accessible.
+		if (!vscode.workspace.workspaceFolders?.length) {
+			return;
+		}
 
-	// Set the monorepo root for workspace URI resolution.
-	WorkspaceUri.rootUri = workspaceService.activeRootUri;
+		// Discover all VS Code workspace files for workspace ID resolution.
+		const workspaceService = container.resolve<IWorkspaceService>(ServiceToken.WorkspaceService);
+		await workspaceService.discoverWorkspaces();
 
-	// Discover all supported files in the workspace.
-	const workspaceFileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
-	await workspaceFileService.discoverFiles();
+		// Set the monorepo root for workspace URI resolution.
+		WorkspaceUri.rootUri = workspaceService.activeRootUri;
 
-	// Index the entire workspace for providing hovers, completions and definitions.
-	const workspaceIndexerService = container.resolve<WorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
-	await workspaceIndexerService.indexWorkspace();
+		// Discover all supported files in the workspace.
+		const workspaceFileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
+		await workspaceFileService.discoverFiles();
+
+		// Index the entire workspace for providing hovers, completions and definitions.
+		const workspaceIndexerService = container.resolve<WorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
+		await workspaceIndexerService.indexWorkspace();
+	} catch (e) {
+		// This function is intentionally not awaited during activation; log instead
+		// of surfacing an unhandled rejection that could disrupt the extension host.
+		console.error('Mentor: Workspace indexing failed:', e);
+	}
 }

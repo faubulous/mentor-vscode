@@ -136,7 +136,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 
 	// Register the SPARQL status bar service and push it to subscriptions so it is
 	// disposed when the extension deactivates.
-	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlEndpointTester, graphService);
+	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlEndpointTester, graphService, connectionRegistry);
 	container.registerInstance(ServiceToken.SparqlStatusBarService, sparqlStatusBarService);
 
 	context.subscriptions.push(sparqlStatusBarService);

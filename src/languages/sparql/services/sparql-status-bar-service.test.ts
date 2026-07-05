@@ -37,7 +37,7 @@ vi.mock('vscode', async () => {
     };
 });
 
-import type { ISparqlConnectionRegistry, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
+import type { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { EventEmitter } from '@src/utilities/mocks/vscode';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
@@ -60,20 +60,38 @@ function makeServices() {
         onDidQueryExecutionEnd: queryExecutionEndEmitter.event,
     } as unknown as ISparqlQueryService;
 
-    const connectionRegistry = {
+    const endpointTester = {
         onDidConnectionTestStart: connectionTestStartEmitter.event,
         onDidConnectionTestEnd: connectionTestEndEmitter.event,
+    } as unknown as ISparqlEndpointTester;
+
+    const connectionsChangedEmitter = new EventEmitter<void>();
+    const graphsChangedEmitter = new EventEmitter<string>();
+
+    const connections: { id: string }[] = [];
+    const graphsByConnection: Record<string, string[]> = {};
+
+    const connectionRegistry = {
+        onDidChangeConnections: connectionsChangedEmitter.event,
+        getConnections: () => connections,
     } as unknown as ISparqlConnectionRegistry;
 
     const graphService = {
         onDidGraphLoadStart: graphLoadStartEmitter.event,
         onDidGraphLoadEnd: graphLoadEndEmitter.event,
+        onDidChangeGraphs: graphsChangedEmitter.event,
+        getGraphsForConnection: (id: string) => graphsByConnection[id] ?? [],
     } as unknown as IGraphManagementService;
 
     return {
         queryService,
+        endpointTester,
         connectionRegistry,
         graphService,
+        connections,
+        graphsByConnection,
+        fireConnectionsChanged: () => connectionsChangedEmitter.fire(),
+        fireGraphsChanged: (id: string) => graphsChangedEmitter.fire(id),
         fireQueryStart: (s: SparqlQueryExecutionState) => queryExecutionStartEmitter.fire(s),
         fireQueryEnd: (s: SparqlQueryExecutionState) => queryExecutionEndEmitter.fire(s),
         fireTestStart: (c: SparqlConnection) => connectionTestStartEmitter.fire(c),
@@ -97,18 +115,18 @@ describe('SparqlStatusBarService', () => {
     });
 
     describe('default state', () => {
-        it('is permanently visible with the SPARQL label and opens the panel on click', () => {
-            const { queryService, connectionRegistry, graphService } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+        it('is permanently visible with the connection summary and opens the panel on click', () => {
+            const { queryService, endpointTester, connectionRegistry, graphService } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             expect(sparqlItem().show).toHaveBeenCalled();
-            expect(sparqlItem().text).toBe('$(sparql-file) SPARQL');
+            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
             expect(sparqlItem().command).toBe('mentor.view.sparqlResultsView.focus');
         });
 
         it('creates a single status bar item', () => {
-            const { queryService, connectionRegistry, graphService } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+            const { queryService, endpointTester, connectionRegistry, graphService } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             expect(statusBar.createdItems).toHaveLength(1);
         });
@@ -116,8 +134,8 @@ describe('SparqlStatusBarService', () => {
 
     describe('query execution', () => {
         it('shows status bar with query name when execution starts', () => {
-            const { queryService, connectionRegistry, graphService, fireQueryStart } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+            const { queryService, endpointTester, connectionRegistry, graphService, fireQueryStart } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             const state = {
                 id: crypto.randomUUID(),
@@ -131,9 +149,9 @@ describe('SparqlStatusBarService', () => {
             expect(sparqlItem().text).toContain('test.sparql');
         });
 
-        it('reverts to the SPARQL label when execution ends', () => {
-            const { queryService, connectionRegistry, graphService, fireQueryStart, fireQueryEnd } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+        it('reverts to the summary label when execution ends', () => {
+            const { queryService, endpointTester, connectionRegistry, graphService, fireQueryStart, fireQueryEnd } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             const state = {
                 id: crypto.randomUUID(),
@@ -144,15 +162,15 @@ describe('SparqlStatusBarService', () => {
             fireQueryStart(state);
             fireQueryEnd(state);
 
-            expect(sparqlItem().text).toBe('$(sparql-file) SPARQL');
+            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
         });
     });
 
     describe('connection testing', () => {
         it('shows status bar with endpoint URL when test starts', () => {
-            const { queryService, connectionRegistry, graphService, fireTestStart } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+            const { queryService, endpointTester, connectionRegistry, graphService, fireTestStart } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             const connection = {
                 id: 'test-connection',
@@ -166,9 +184,9 @@ describe('SparqlStatusBarService', () => {
             expect(sparqlItem().text).toContain('https://dbpedia.org/sparql');
         });
 
-        it('reverts to the SPARQL label when connection test ends successfully', () => {
-            const { queryService, connectionRegistry, graphService, fireTestStart, fireTestEnd } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+        it('reverts to the summary label when connection test ends successfully', () => {
+            const { queryService, endpointTester, connectionRegistry, graphService, fireTestStart, fireTestEnd } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             const connection = {
                 id: 'test-connection',
@@ -179,13 +197,13 @@ describe('SparqlStatusBarService', () => {
             fireTestStart(connection);
             fireTestEnd({ connection, error: null });
 
-            expect(sparqlItem().text).toBe('$(sparql-file) SPARQL');
+            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
         });
 
-        it('reverts to the SPARQL label when connection test ends with an error', () => {
-            const { queryService, connectionRegistry, graphService, fireTestStart, fireTestEnd } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+        it('reverts to the summary label when connection test ends with an error', () => {
+            const { queryService, endpointTester, connectionRegistry, graphService, fireTestStart, fireTestEnd } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             const connection = {
                 id: 'test-connection',
@@ -196,15 +214,15 @@ describe('SparqlStatusBarService', () => {
             fireTestStart(connection);
             fireTestEnd({ connection, error: { code: 401, message: 'Unauthorized' } });
 
-            expect(sparqlItem().text).toBe('$(sparql-file) SPARQL');
+            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
         });
     });
 
     describe('graph loading', () => {
         it('shows graph-loading progress on the single item and reverts when done', () => {
-            const { queryService, connectionRegistry, graphService, fireGraphLoadStart, fireGraphLoadEnd } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+            const { queryService, endpointTester, connectionRegistry, graphService, fireGraphLoadStart, fireGraphLoadEnd } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             fireGraphLoadStart();
 
@@ -212,13 +230,13 @@ describe('SparqlStatusBarService', () => {
 
             fireGraphLoadEnd();
 
-            expect(sparqlItem().text).toBe('$(sparql-file) SPARQL');
+            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
         });
 
         it('composes query execution and graph loading into one label at the same time', () => {
-            const { queryService, connectionRegistry, graphService, fireQueryStart, fireGraphLoadStart } = makeServices();
-            new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+            const { queryService, endpointTester, connectionRegistry, graphService, fireQueryStart, fireGraphLoadStart } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             const state = {
                 id: crypto.randomUUID(),
@@ -235,10 +253,58 @@ describe('SparqlStatusBarService', () => {
         });
     });
 
+    describe('connection and graph summary', () => {
+        it('shows the connection and graph counts in the idle label', () => {
+            const services = makeServices();
+            services.connections.push({ id: 'workspace' }, { id: 'remote' });
+            services.graphsByConnection['workspace'] = ['workspace:///a.ttl', 'workspace:///b.ttl'];
+            services.graphsByConnection['remote'] = ['http://example.org/g1'];
+
+            new SparqlStatusBarService(services.queryService, services.endpointTester, services.graphService, services.connectionRegistry);
+
+            expect(sparqlItem().text).toBe('$(sparql-file) 2 connections; 3 graphs');
+        });
+
+        it('uses singular forms for a single connection and graph', () => {
+            const services = makeServices();
+            services.connections.push({ id: 'workspace' });
+            services.graphsByConnection['workspace'] = ['workspace:///a.ttl'];
+
+            new SparqlStatusBarService(services.queryService, services.endpointTester, services.graphService, services.connectionRegistry);
+
+            expect(sparqlItem().text).toBe('$(sparql-file) 1 connection; 1 graph');
+        });
+
+        it('updates the label when the connections change', () => {
+            const services = makeServices();
+
+            new SparqlStatusBarService(services.queryService, services.endpointTester, services.graphService, services.connectionRegistry);
+
+            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
+
+            services.connections.push({ id: 'workspace' });
+            services.fireConnectionsChanged();
+
+            expect(sparqlItem().text).toBe('$(sparql-file) 1 connection; 0 graphs');
+        });
+
+        it('updates the label when the graphs of a connection change', () => {
+            const services = makeServices();
+            services.connections.push({ id: 'workspace' });
+
+            new SparqlStatusBarService(services.queryService, services.endpointTester, services.graphService, services.connectionRegistry);
+
+            services.graphsByConnection['workspace'] = ['workspace:///a.ttl', 'workspace:///b.ttl'];
+            services.fireGraphsChanged('workspace');
+
+            expect(sparqlItem().text).toBe('$(sparql-file) 1 connection; 2 graphs');
+        });
+    });
+
     describe('dispose', () => {
         it('disposes the status bar item and unsubscribes all event handlers', () => {
-            const { queryService, connectionRegistry, graphService, fireQueryStart, fireTestStart } = makeServices();
-            const service = new SparqlStatusBarService(queryService, connectionRegistry, graphService);
+            const { queryService, endpointTester, connectionRegistry, graphService, fireQueryStart, fireTestStart } = makeServices();
+            const service = new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             const main = sparqlItem();
 

@@ -68,10 +68,15 @@ export class IndexingSectionController implements SettingsSectionController {
 
 		const statistics = indexer.statistics ?? { indexedFiles: 0, errorCount: 0, skippedFiles: 0, durationMs: 0 };
 
+		// Without a workspace no indexing run is ever started, so `indexingFinished`
+		// stays false forever — do not report that as an in-progress run.
+		const hasWorkspace = (vscode.workspace.workspaceFolders?.length ?? 0) > 0;
+
 		return {
 			...statistics,
 			tripleCount: store.size,
-			isIndexing: !indexer.indexingFinished,
+			isIndexing: hasWorkspace && !indexer.indexingFinished,
+			hasWorkspace,
 		};
 	}
 

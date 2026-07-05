@@ -435,8 +435,8 @@ describe('TurtleCompletionItemProvider', () => {
             const kindOf = (label: string) => result.items.find((i: any) => i.label === label)?.kind;
 
             expect(kindOf('Building')).toBe(CompletionItemKind.Class);
-            expect(kindOf('name')).toBe(CompletionItemKind.Property);
-            expect(kindOf('hasPart')).toBe(CompletionItemKind.Reference);
+            expect(kindOf('name')).toBe(CompletionItemKind.Field);
+            expect(kindOf('hasPart')).toBe(CompletionItemKind.Interface);
             expect(kindOf('factory1')).toBe(CompletionItemKind.Value);
         });
 
