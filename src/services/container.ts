@@ -9,6 +9,7 @@ import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
 import { WorkspaceService } from './core/workspace-service';
 import { DocumentContextService } from './document/document-context-service';
+import { DocumentTokenSyncService } from './document/document-token-sync-service';
 import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
 import { PrefixDownloaderService } from './document/prefix-downloader-service';
@@ -68,7 +69,15 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const documentFactory = new DocumentFactory();
 	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
 
-	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory);
+	// The token source coordinates token delivery from the language servers with
+	// waiting document loads. It must be registered before the document context
+	// service and the language clients, which both depend on it.
+	const documentTokenSource = new DocumentTokenSyncService();
+	container.registerInstance(ServiceToken.DocumentTokenSource, documentTokenSource);
+
+	context.subscriptions.push(documentTokenSource);
+
+	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory, documentTokenSource);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
 
 	const workspaceService = new WorkspaceService();

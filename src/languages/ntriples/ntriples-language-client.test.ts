@@ -18,7 +18,8 @@ vi.mock('tsyringe', () => ({
 					onNotification: vi.fn(() => ({ dispose: () => {} })),
 				});
 			}
-			if (token === 'DocumentContextService') return { contexts: {}, resolveTokens: vi.fn() };
+			if (token === 'DocumentContextService') return { contexts: {} };
+			if (token === 'DocumentTokenSource') return { deliverTokens: vi.fn() };
 			if (token === 'DocumentFactory') return { create: vi.fn(() => ({})) };
 			return {};
 		}),

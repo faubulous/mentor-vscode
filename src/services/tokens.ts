@@ -14,6 +14,8 @@ export enum ServiceToken {
 	DocumentFactory = "DocumentFactory",
 	/** Service for managing document contexts. */
 	DocumentContextService = "DocumentContextService",
+	/** Source that supplies documents with tokens and coordinates concurrent loads. */
+	DocumentTokenSource = "DocumentTokenSource",
 	/** Service for indexing workspace files. */
 	WorkspaceIndexerService = "WorkspaceIndexerService",
 	/** Service for discovering workspace files. */

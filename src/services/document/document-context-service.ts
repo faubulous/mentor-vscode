@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
+import { IDocumentTokenSource, TokenDelivery } from '@src/services/document/document-token-source.interface';
+import { getMaxCellSlugNumber } from '@src/services/notebook/notebook-cell-slugs';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
 import { isTemplate } from 'triplate';
@@ -35,37 +36,6 @@ export class DocumentContextService {
 	 */
 	activeContext: IDocumentContext | undefined;
 
-	/**
-	 * A map of pending token requests keyed by document URI.
-	 * Used to coordinate between loadDocument and language server token delivery.
-	 */
-	private readonly _pendingTokenRequests = new Map<string, {
-		resolve: (tokens: IToken[]) => void;
-		reject: (error: Error) => void;
-	}>();
-
-	/**
-	 * One-shot listeners waiting for the next token delivery for a given URI.
-	 * Used by feature providers to sync with the language server without blocking 
-	 * document loading.
-	 */
-	private readonly _nextTokenListeners = new Map<string, Array<{
-		resolve: (tokens: IToken[]) => void;
-		reject: (error: Error) => void;
-	}>>();
-
-	/**
-	 * Tracks the current load generation per URI. Incremented each time 
-	 * a new load starts for a URI, allowing older loads to detect
-	 * they have been superseded and should abandon their work.
-	 */
-	private readonly _tokenLoadGeneration = new Map<string, number>();
-
-	/**
-	 * Default timeout in milliseconds for waiting for tokens from the language server.
-	 */
-	private readonly _tokenWaitTimeout = 10000;
-
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<IDocumentContext | undefined>();
 
 	/**
@@ -77,7 +47,8 @@ export class DocumentContextService {
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _store: Store,
 		private readonly _vocabulary: VocabularyRepository,
-		private readonly _documentFactory: IDocumentFactory
+		private readonly _documentFactory: IDocumentFactory,
+		private readonly _tokenSource: IDocumentTokenSource
 	) {
 		// Register event handlers for editor and document changes.
 		this._extensionContext.subscriptions.push(...[
@@ -88,6 +59,7 @@ export class DocumentContextService {
 			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
 			vscode.workspace.onDidChangeNotebookDocument((e) => this.handleNotebookDocumentChanged(e)),
 			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e)),
+			this._tokenSource.onDidDeliverTokens((delivery) => this._handleTokenDelivery(delivery)),
 			this._onDidChangeDocumentContext,
 			this
 		]);
@@ -102,13 +74,29 @@ export class DocumentContextService {
 	 * Dispose the manager and clean up resources.
 	 */
 	dispose(): void {
-		// Reject any pending token requests
-		for (const [, pending] of this._pendingTokenRequests) {
-			pending.reject(new Error('DocumentContextService disposed'));
+		// The event emitter and subscriptions are disposed via the extension
+		// context subscriptions registered in the constructor.
+	}
+
+	/**
+	 * Handles a token delivery from the token source. When the delivery was not
+	 * consumed by a waiting document load, this is the normal path for document
+	 * edits: reload the triples of an already-loaded context to bring it up to
+	 * date with the latest tokens.
+	 * @param delivery The token delivery.
+	 */
+	private _handleTokenDelivery(delivery: TokenDelivery): void {
+		if (delivery.consumed) {
+			return;
 		}
 
-		this._pendingTokenRequests.clear();
-		this._tokenLoadGeneration.clear();
+		const context = this.contexts[delivery.uri];
+
+		if (context?.isParsed) {
+			this._reloadContextTriples(delivery.uri).catch(e => {
+				console.warn('Mentor: Failed to reload context after token delivery:', e);
+			});
+		}
 	}
 
 	/**
@@ -152,132 +140,6 @@ export class DocumentContextService {
 		}
 
 		return context as T;
-	}
-
-	/**
-	 * Wait for tokens to be delivered from the language server for a document.
-	 * If a previous wait exists for the same URI, it is cancelled (rejected) first
-	 * so that only one load at a time can be waiting for tokens per URI.
-	 * @param uri The document URI to wait for tokens.
-	 * @param timeout Optional timeout in milliseconds (defaults to _tokenWaitTimeout).
-	 * @returns A promise that resolves with the tokens or rejects on timeout/cancellation.
-	 */
-	waitForTokens(uri: string, timeout?: number): Promise<IToken[]> {
-		// Cancel any existing pending request for this URI to prevent multiple
-		// concurrent loads from racing against each other.
-		this._cancelPendingTokenRequest(uri);
-
-		return new Promise((resolve, reject) => {
-			const timeoutMs = timeout ?? this._tokenWaitTimeout;
-
-			const timeoutId = setTimeout(() => {
-				this._pendingTokenRequests.delete(uri);
-				reject(new Error(`Timeout waiting for tokens from language server for: ${uri}`));
-			}, timeoutMs);
-
-			this._pendingTokenRequests.set(uri, {
-				resolve: (tokens) => {
-					clearTimeout(timeoutId);
-					this._pendingTokenRequests.delete(uri);
-					resolve(tokens);
-				},
-				reject: (error) => {
-					clearTimeout(timeoutId);
-					this._pendingTokenRequests.delete(uri);
-					reject(error);
-				}
-			});
-		});
-	}
-
-	/**
-	 * Returns a promise that resolves with the next token delivery from the language server for the given URI.
-	 * This is a one-shot listener; it does not cancel or interfere with any pending loadDocument request.
-	 * @param uri The document URI.
-	 * @param timeout Timeout in milliseconds.
-	 * @returns A promise that resolves with the tokens or rejects on timeout.
-	 */
-	onNextTokenDelivery(uri: string, timeout: number): Promise<IToken[]> {
-		return new Promise((resolve, reject) => {
-			const timeoutId = setTimeout(() => {
-				const listeners = this._nextTokenListeners.get(uri);
-
-				if (listeners) {
-					const idx = listeners.findIndex(l => l.resolve === resolve);
-
-					if (idx >= 0) listeners.splice(idx, 1);
-					if (listeners.length === 0) this._nextTokenListeners.delete(uri);
-				}
-
-				reject(new Error(`Timeout waiting for next token delivery for: ${uri}`));
-			}, timeout);
-
-			const entry = {
-				resolve: (tokens: IToken[]) => { clearTimeout(timeoutId); resolve(tokens); },
-				reject: (error: Error) => { clearTimeout(timeoutId); reject(error); }
-			};
-
-			const existing = this._nextTokenListeners.get(uri);
-
-			if (existing) {
-				existing.push(entry);
-			} else {
-				this._nextTokenListeners.set(uri, [entry]);
-			}
-		});
-	}
-
-	/**
-	 * Cancel any pending token request for the given URI.
-	 * This rejects the existing promise, which causes any `loadDocument` awaiting it
-	 * to enter its catch block and detect that it has been superseded.
-	 * @param uri The document URI.
-	 */
-	private _cancelPendingTokenRequest(uri: string): void {
-		const pending = this._pendingTokenRequests.get(uri);
-
-		if (pending) {
-			pending.reject(new Error('Load superseded by a newer request'));
-		}
-	}
-
-	/**
-	 * Resolve pending token requests for a document. Called by language clients when tokens arrive.
-	 * If no pending request exists but the context is already loaded, reloads the triples
-	 * to ensure the context stays in sync with the latest tokens.
-	 * @param uri The document URI.
-	 * @param tokens The tokens from the language server.
-	 */
-	resolveTokens(uri: string, tokens: IToken[]): void {
-		// Notify one-shot listeners (e.g. completion providers waiting for fresh tokens).
-		const listeners = this._nextTokenListeners.get(uri);
-
-		if (listeners?.length) {
-			for (const listener of listeners) {
-				listener.resolve(tokens);
-			}
-
-			this._nextTokenListeners.delete(uri);
-		}
-
-		const pending = this._pendingTokenRequests.get(uri);
-
-		if (pending) {
-			pending.resolve(tokens);
-			return;
-		}
-
-		// Tokens arrived but no load was waiting for them. This is the normal path
-		// for document edits: handleTextDocumentChanged does not trigger a loadDocument,
-		// so when the language server sends updated tokens there is no pending waiter.
-		// Reload the triples to bring the context up to date.
-		const context = this.contexts[uri];
-
-		if (context?.isParsed) {
-			this._reloadContextTriples(uri).catch(e => {
-				console.warn('Mentor: Failed to reload context after token delivery:', e);
-			});
-		}
 	}
 
 	/**
@@ -381,11 +243,9 @@ export class DocumentContextService {
 			return context;
 		}
 
-		// Increment the load generation for this URI. This invalidates any concurrent
+		// Start a new load generation for this URI. This invalidates any concurrent
 		// load that may be in progress (awaiting tokens or loading triples).
-		const generation = (this._tokenLoadGeneration.get(uri) ?? 0) + 1;
-
-		this._tokenLoadGeneration.set(uri, generation);
+		const generation = this._tokenSource.beginLoad(uri);
 
 		// Create a new context only when one doesn't exist.
 		// On force reload we intentionally reuse the existing context so that
@@ -412,10 +272,10 @@ export class DocumentContextService {
 		if (!context.isParsed) {
 			try {
 				// Wait for tokens from the language server.
-				await this.waitForTokens(uri);
+				await this._tokenSource.waitForTokens(uri);
 			} catch (e) {
 				// If this load was superseded by a newer one, abandon silently.
-				if (this._tokenLoadGeneration.get(uri) !== generation) {
+				if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 					return;
 				}
 
@@ -431,7 +291,7 @@ export class DocumentContextService {
 		}
 
 		// Check if this load was superseded after awaiting tokens.
-		if (this._tokenLoadGeneration.get(uri) !== generation) {
+		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 			return;
 		}
 
@@ -439,7 +299,7 @@ export class DocumentContextService {
 		await context.loadTriples(content);
 
 		// Check if this load was superseded after loading triples.
-		if (this._tokenLoadGeneration.get(uri) !== generation) {
+		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 			return;
 		}
 
@@ -447,7 +307,7 @@ export class DocumentContextService {
 		await context.infer();
 
 		// Final supersession check after all async work is done.
-		if (this._tokenLoadGeneration.get(uri) !== generation) {
+		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 			return;
 		}
 
@@ -635,7 +495,7 @@ export class DocumentContextService {
 			edit: vscode.NotebookEdit;
 		}[] = [];
 
-		let n = this._getMaxCellSlugNumber(e.notebook) + 1;
+		let n = getMaxCellSlugNumber(e.notebook) + 1;
 
 		for (const cell of addedCells) {
 			const metadata = {
@@ -671,35 +531,9 @@ export class DocumentContextService {
 	}
 
 	/**
-	 * Returns the highest auto-generated slug number in the notebook.
-	 * @param notebook The notebook document.
-	 * @returns The highest auto-generated slug number.
-	 */
-	private _getMaxCellSlugNumber(notebook: vscode.NotebookDocument): number {
-		const slugPattern = /^cell-(\d+)$/;
-
-		let maxNumber = 0;
-
-		for (const c of notebook.getCells()) {
-			const slug: string | undefined = c.metadata?.slug;
-			const match = typeof slug === 'string' ? slug.match(slugPattern) : null;
-
-			if (match) {
-				const n = parseInt(match[1], 10);
-
-				if (n > maxNumber) {
-					maxNumber = n;
-				}
-			}
-		}
-
-		return maxNumber;
-	}
-
-	/**
 	 * Handle text document changed event. Does not trigger a full document reload. 
 	 * Instead, the existing contextis kept visible and the reload happens when the 
-	 * language server delivers updated tokens via resolveTokens → _reloadContextTriples.
+	 * language server delivers updated tokens via the token source → _reloadContextTriples.
 	 * @param e The text document change event.
 	 */
 	async handleTextDocumentChanged(e: vscode.TextDocumentChangeEvent): Promise<void> {

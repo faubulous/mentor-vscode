@@ -3,12 +3,16 @@ import { container } from 'tsyringe';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
-import { IDocumentContextService } from '@src/services/document';
+import { IDocumentContextService, IDocumentTokenSource } from '@src/services/document';
 import { LanguageClientBase, TurtleDocument } from '@src/languages';
 
 export class TurtleLanguageClient extends LanguageClientBase {
 	private get contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+	}
+
+	private get tokenSource() {
+		return container.resolve<IDocumentTokenSource>(ServiceToken.DocumentTokenSource);
 	}
 
 	private get documentFactory() {
@@ -39,9 +43,9 @@ export class TurtleLanguageClient extends LanguageClientBase {
 					// Update the document context with the new tokens.
 					documentContext.setTokens(params.tokens);
 
-					// Resolve any pending token requests for this document.
-					// This allows loadDocument to proceed with triple loading.
-					this.contextService.resolveTokens(params.uri, params.tokens);
+					// Deliver the tokens to resolve any pending token requests for this
+					// document. This allows loadDocument to proceed with triple loading.
+					this.tokenSource.deliverTokens(params.uri, params.tokens);
 				}
 			});
 		}

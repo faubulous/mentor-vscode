@@ -17,7 +17,7 @@ const { MockXmlDocument } = vi.hoisted(() => {
 
 const mockOnNotification = vi.fn((_method: string, _handler: any) => ({ dispose: () => {} }));
 const mockContexts: Record<string, any> = {};
-const mockResolveTokens = vi.fn();
+const mockDeliverTokens = vi.fn();
 const mockCreateDocument = vi.fn((uri: any, _langId: string) => new MockXmlDocument(uri));
 
 vi.mock('tsyringe', () => ({
@@ -31,7 +31,8 @@ vi.mock('tsyringe', () => ({
                                         onNotification: mockOnNotification,
                                 });
                         }
-                        if (token === 'DocumentContextService') return { contexts: mockContexts, resolveTokens: mockResolveTokens };
+                        if (token === 'DocumentContextService') return { contexts: mockContexts };
+                        if (token === 'DocumentTokenSource') return { deliverTokens: mockDeliverTokens };
                         if (token === 'DocumentFactory') return { create: mockCreateDocument };
                         return {};
                 }),
@@ -79,7 +80,7 @@ describe('XmlLanguageClient', () => {
                 expect(mockCreateDocument).toHaveBeenCalledWith(expect.anything(), 'xml');
         });
 
-        it('calls setParsedData and resolveTokens when existing context is an XmlDocument', () => {
+        it('calls setParsedData and deliverTokens when existing context is an XmlDocument', () => {
                 const existingDoc = new MockXmlDocument(undefined);
                 mockContexts['file:///doc.rdf'] = existingDoc;
                 new XmlLanguageClient();
@@ -87,7 +88,7 @@ describe('XmlLanguageClient', () => {
                 const parsedData = { namespaces: { ex: 'http://example.org/' } };
                 handler({ languageId: 'xml', uri: 'file:///doc.rdf', parsedData });
                 expect(existingDoc.setParsedData).toHaveBeenCalledWith(parsedData);
-                expect(mockResolveTokens).toHaveBeenCalledWith('file:///doc.rdf', []);
+                expect(mockDeliverTokens).toHaveBeenCalledWith('file:///doc.rdf', []);
         });
 
         it('does not call setParsedData when context is not an XmlDocument', () => {

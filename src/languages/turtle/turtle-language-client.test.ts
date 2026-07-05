@@ -10,7 +10,6 @@ vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 const { MockTurtleDocument } = vi.hoisted(() => {
 	class MockTurtleDocument {
 		setTokens = vi.fn();
-		resolveTokens = vi.fn();
 		constructor(public uri: any, _syntax?: any) {}
 	}
 	return { MockTurtleDocument };
@@ -20,7 +19,7 @@ const mockOnNotification = vi.fn((_method: string, _handler: any) => ({ dispose:
 const mockSubscriptions: { push: ReturnType<typeof vi.fn> } = { push: vi.fn() };
 
 const mockContexts: Record<string, any> = {};
-const mockResolveTokens = vi.fn();
+const mockDeliverTokens = vi.fn();
 const mockCreateDocument = vi.fn((uri: any, _langId: string) => new MockTurtleDocument(uri));
 
 vi.mock('tsyringe', () => ({
@@ -35,7 +34,10 @@ vi.mock('tsyringe', () => ({
 				});
 			}
 			if (token === 'DocumentContextService') {
-				return { contexts: mockContexts, resolveTokens: mockResolveTokens };
+				return { contexts: mockContexts };
+			}
+			if (token === 'DocumentTokenSource') {
+				return { deliverTokens: mockDeliverTokens };
 			}
 			if (token === 'DocumentFactory') {
 				return { create: mockCreateDocument };
@@ -95,7 +97,7 @@ describe('TurtleLanguageClient', () => {
 		expect(mockCreateDocument).toHaveBeenCalledWith(expect.anything(), 'turtle');
 	});
 
-	it('calls setTokens and resolveTokens when existing context is a TurtleDocument', () => {
+	it('calls setTokens and deliverTokens when existing context is a TurtleDocument', () => {
 		const existingDoc = new MockTurtleDocument(undefined);
 		mockContexts['file:///a.ttl'] = existingDoc;
 		new TurtleLanguageClient();
@@ -103,7 +105,7 @@ describe('TurtleLanguageClient', () => {
 		const tokens = [{ t: 1 }];
 		handler({ languageId: 'turtle', uri: 'file:///a.ttl', tokens });
 		expect(existingDoc.setTokens).toHaveBeenCalledWith(tokens);
-		expect(mockResolveTokens).toHaveBeenCalledWith('file:///a.ttl', tokens);
+		expect(mockDeliverTokens).toHaveBeenCalledWith('file:///a.ttl', tokens);
 	});
 
 	it('reuses existing document context when notification arrives for known URI', () => {

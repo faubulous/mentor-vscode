@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentContextService } from '@src/services/document';
+import { IDocumentContextService, IDocumentTokenSource } from '@src/services/document';
 import { LanguageClientBase, XmlDocument } from '@src/languages';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
@@ -9,6 +9,10 @@ import { IDocumentFactory } from '@src/services/document/document-factory.interf
 export class XmlLanguageClient extends LanguageClientBase {
 	private get contextService() {
 		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+	}
+
+	private get tokenSource() {
+		return container.resolve<IDocumentTokenSource>(ServiceToken.DocumentTokenSource);
 	}
 
 	private get documentFactory() {
@@ -38,10 +42,10 @@ export class XmlLanguageClient extends LanguageClientBase {
 					// Update the document context with the parsed data from the language server.
 					documentContext.setParsedData(params.parsedData);
 
-					// Resolve any pending token requests for this document.
-					// This allows loadDocument to proceed with triple loading.
+					// Deliver the tokens to resolve any pending token requests for this
+					// document. This allows loadDocument to proceed with triple loading.
 					// We pass an empty array since XML doesn't use tokens.
-					this.contextService.resolveTokens(params.uri, []);
+					this.tokenSource.deliverTokens(params.uri, []);
 				}
 			});
 		}

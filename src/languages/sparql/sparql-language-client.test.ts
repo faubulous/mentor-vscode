@@ -10,7 +10,6 @@ vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 const { MockSparqlDocument } = vi.hoisted(() => {
 	class MockSparqlDocument {
 		setTokens = vi.fn();
-		resolveTokens = vi.fn();
 		constructor(public uri: any) {}
 	}
 	return { MockSparqlDocument };
@@ -18,7 +17,7 @@ const { MockSparqlDocument } = vi.hoisted(() => {
 
 const mockOnNotification = vi.fn((_method: string, _handler: any) => ({ dispose: () => {} }));
 const mockContexts: Record<string, any> = {};
-const mockResolveTokens = vi.fn();
+const mockDeliverTokens = vi.fn();
 const mockCreateDocument = vi.fn((uri: any, _langId: string) => new MockSparqlDocument(uri));
 
 vi.mock('tsyringe', () => ({
@@ -32,7 +31,8 @@ vi.mock('tsyringe', () => ({
 					onNotification: mockOnNotification,
 				});
 			}
-			if (token === 'DocumentContextService') return { contexts: mockContexts, resolveTokens: mockResolveTokens };
+			if (token === 'DocumentContextService') return { contexts: mockContexts };
+			if (token === 'DocumentTokenSource') return { deliverTokens: mockDeliverTokens };
 			if (token === 'DocumentFactory') return { create: mockCreateDocument };
 			return {};
 		}),
@@ -80,7 +80,7 @@ describe('SparqlLanguageClient', () => {
 		expect(mockCreateDocument).toHaveBeenCalledWith(expect.anything(), 'sparql');
 	});
 
-	it('calls setTokens and resolveTokens when existing context is a SparqlDocument', () => {
+	it('calls setTokens and deliverTokens when existing context is a SparqlDocument', () => {
 		const existingDoc = new MockSparqlDocument(undefined);
 		mockContexts['file:///q.sparql'] = existingDoc;
 		new SparqlLanguageClient();
@@ -88,6 +88,6 @@ describe('SparqlLanguageClient', () => {
 		const tokens = [{ t: 1 }];
 		handler({ languageId: 'sparql', uri: 'file:///q.sparql', tokens });
 		expect(existingDoc.setTokens).toHaveBeenCalledWith(tokens);
-		expect(mockResolveTokens).toHaveBeenCalledWith('file:///q.sparql', tokens);
+		expect(mockDeliverTokens).toHaveBeenCalledWith('file:///q.sparql', tokens);
 	});
 });
