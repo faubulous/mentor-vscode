@@ -5,6 +5,7 @@ import { Quad_Subject } from "@rdfjs/types";
 import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
+import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
@@ -136,6 +137,8 @@ export abstract class DocumentContext implements IDocumentContext {
 	get isTemporary(): boolean {
 		return this.uri.scheme == 'git' || this.uri.scheme == 'untitled';
 	}
+
+	abstract parse(text: string): IToken[];
 
 	abstract loadTriples(data: string): Promise<void>;
 

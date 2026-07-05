@@ -338,15 +338,10 @@ const removeSourceMaps = () => {
     }
 
     const configs = [
-      // Browser builds (browser extension host and the RDF/XML language server Web Worker).
-      // RDF and SPARQL documents are tokenized and validated in the extension host,
-      // so only the RDF/XML language server is built as a separate bundle.
+      // All documents are parsed and diagnosed in the extension host — there are
+      // no language server bundles.
       extensionConfig,
-      getBrowserLanguageConfig(args, 'server', 'xml'),
-
-      // Node.js builds (desktop extension host and the RDF/XML language server via IPC)
       getNodeExtensionConfig(args),
-      getNodeLanguageConfig(args, 'server', 'xml'),
 
       // Note: Language clients run in the extension host, not as separate bundles.
       // They are bundled into extension.js via the languages/index.ts barrel export.

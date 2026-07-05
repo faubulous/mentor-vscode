@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 import { DocumentContextService } from '@src/services/document/document-context-service';
-import { DocumentTokenSyncService } from '@src/services/document/document-token-sync-service';
+import { DocumentTokenSource } from '@src/services/document/document-token-source';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 
 vi.mock('@faubulous/mentor-rdf', () => ({
@@ -55,7 +55,7 @@ function createService() {
 		create: vi.fn(() => createMockContext()),
 	};
 
-	const tokenSource = new DocumentTokenSyncService();
+	const tokenSource = new DocumentTokenSource(() => undefined);
 
 	const service = new DocumentContextService(
 		mockExtensionContext as any,

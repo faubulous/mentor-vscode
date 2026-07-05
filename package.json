@@ -92,6 +92,7 @@
     "svgicons2svgfont": "=16.0.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9",
+    "vscode-languageserver-textdocument": "^1.0.12",
     "vscode-uri": "^3.1.0"
   },
   "dependencies": {
@@ -107,9 +108,7 @@
     "shacl-engine": "^1.1.2",
     "triplate": "^0.6.0",
     "tsyringe": "^4.10.0",
-    "vscode-languageclient": "^10.0.0",
-    "vscode-languageserver": "^10.0.0",
-    "vscode-languageserver-textdocument": "^1.0.12"
+    "vscode-languageserver-types": "^3.18.0"
   },
   "activationEvents": [
     "onStartupFinished",
@@ -1764,6 +1763,12 @@
             "title": "Max File Size",
             "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors.",
             "default": 1500000
+          },
+          "mentor.index.diagnoseFiles": {
+            "type": "boolean",
+            "title": "Diagnose Files",
+            "description": "Compute syntax and lint diagnostics for all indexed workspace files so the problems panel gives an overview of all issues after an index run. When disabled, only files that are open in an editor are diagnosed, which speeds up workspace indexing. Unrelated to SHACL validation.",
+            "default": true
           },
           "mentor.editor.codeLensEnabled": {
             "type": "boolean",

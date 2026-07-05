@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import picomatch from 'picomatch';
-import { ILanguageClientRegistry } from '@src/languages/language-client-registry';
 import { IWorkspaceFileService } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService, IndexingStatistics } from './workspace-indexer.interface';
 import { IDocumentFactory } from '../document/document-factory.interface';
@@ -66,11 +65,10 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	private readonly _statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, -10000);
 
 	constructor(
-		private readonly documentFactory: IDocumentFactory,
-		private readonly contextService: DocumentContextService,
-		private readonly workspaceFileService: IWorkspaceFileService,
-		private readonly languageClientRegistry: ILanguageClientRegistry,
-		private readonly tokenSource: IDocumentTokenSource
+		private readonly _documentFactory: IDocumentFactory,
+		private readonly _contextService: DocumentContextService,
+		private readonly _workspaceFileService: IWorkspaceFileService,
+		private readonly _tokenSource: IDocumentTokenSource
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 
@@ -91,19 +89,11 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	}
 
 	/**
-	 * Requests fresh tokens for a document during re-indexing. When the token
-	 * source produces tokens itself (in-host tokenization), no language server
-	 * round-trip is needed; otherwise the refresh is requested through the
-	 * language client.
-	 * @param languageId The document language ID.
+	 * Requests fresh parser output for a document during re-indexing.
 	 * @param uri The document URI.
 	 */
-	private async _refreshDocumentTokens(languageId: string, uri: string): Promise<void> {
-		if (this.tokenSource.refreshTokens(uri)) {
-			return;
-		}
-
-		await this.languageClientRegistry.requestContextRefresh(languageId, uri);
+	private _refreshDocumentTokens(uri: string): void {
+		this._tokenSource.refreshTokens(uri);
 	}
 
 	/**
@@ -206,7 +196,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		return {
 			// Snapshot the discovered files so file-watcher mutations during the
 			// run cannot change the pass total mid-flight.
-			fileUris: [...this.workspaceFileService.files],
+			fileUris: [...this._workspaceFileService.files],
 			includeMatchers: this._loadIncludePatterns(),
 			maxSize,
 			reindex,
@@ -223,7 +213,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		const skippedFiles: string[] = [];
 
 		for (const fileUri of run.fileUris) {
-			if (this.contextService.contexts[fileUri.toString()] && !run.reindex) {
+			if (this._contextService.contexts[fileUri.toString()] && !run.reindex) {
 				continue;
 			}
 
@@ -289,7 +279,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	 * @returns A promise that settles when indexing of the file completes.
 	 */
 	private _indexWorkspaceFile(fileUri: vscode.Uri, reindex: boolean): Promise<void> {
-		return this.documentFactory.isSupportedNotebookFile(fileUri)
+		return this._documentFactory.isSupportedNotebookFile(fileUri)
 			? this._indexNotebookDocument(fileUri, reindex)
 			: this._indexTextDocument(fileUri, reindex);
 	}
@@ -440,17 +430,17 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 			// Re-check after the async open: handleActiveEditorChanged may have registered
 			// this context while we were awaiting openTextDocument (TOCTOU guard).
-			if (this.contextService.contexts[document.uri.toString()] && !reindex) {
+			if (this._contextService.contexts[document.uri.toString()] && !reindex) {
 				return;
 			}
 
 			// Try to load the document so that its graph is created and can be used for showing definitions, descriptions etc..
-			const loadPromise = this.contextService.loadDocument(document, reindex);
+			const loadPromise = this._contextService.loadDocument(document, reindex);
 
 			if (reindex) {
 				await Promise.all([
 					loadPromise,
-					this._refreshDocumentTokens(document.languageId, document.uri.toString())
+					this._refreshDocumentTokens(document.uri.toString())
 				]);
 				return;
 			}
@@ -476,13 +466,13 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		for (const cell of notebook.getCells()) {
 			const lang = cell.document.languageId;
 
-			if (!this.documentFactory.supportedLanguages.has(lang)) {
+			if (!this._documentFactory.supportedLanguages.has(lang)) {
 				continue;
 			}
 
 			const cellUri = cell.document.uri.toString();
 
-			if (this.contextService.contexts[cellUri] && !reindex) {
+			if (this._contextService.contexts[cellUri] && !reindex) {
 				continue;
 			}
 
@@ -490,12 +480,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				// Load the cell document to create its context, passing the slug so that
 				// graphIri is slug-based from the very first loadTriples call.
 				const slug = cell.metadata?.slug as string | undefined;
-				const loadPromise = this.contextService.loadDocument(cell.document, reindex, slug);
+				const loadPromise = this._contextService.loadDocument(cell.document, reindex, slug);
 
 				if (reindex) {
 					await Promise.all([
 						loadPromise,
-						this._refreshDocumentTokens(lang, cellUri)
+						this._refreshDocumentTokens(cellUri)
 					]);
 					continue;
 				}

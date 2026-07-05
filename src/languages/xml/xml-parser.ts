@@ -1,14 +1,7 @@
-import {
-	Connection,
-	Diagnostic,
-	DiagnosticSeverity,
-	Range,
-} from 'vscode-languageserver';
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { LanguageServerBase } from '@src/languages/language-server';
+import { Range } from 'vscode-languageserver-types';
 import { XmlParseResult } from './xml-types';
 
-// Inline namespace constants to avoid importing @faubulous/mentor-rdf which has CommonJS dependencies
+// Inline namespace constants to keep this module dependency-free.
 const _RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
 const _RDFS = 'http://www.w3.org/2000/01/rdf-schema#';
 const _OWL = 'http://www.w3.org/2002/07/owl#';
@@ -20,45 +13,17 @@ const _SKOS_XL = 'http://www.w3.org/2008/05/skos-xl#';
 // letters, digits, hyphens, periods, underscores (and Unicode ranges, approximated by \w).
 const _NC_NAME = '[\\w\\-.]';
 
-export class XmlLanguageServer extends LanguageServerBase {
-	constructor(connection: Connection) {
-		super(connection, 'xml', 'RDF/XML');
-	}
-
-	override async validateTextDocument(document: TextDocument): Promise<void> {
-		if (!this?.connection) {
-			return;
-		}
-
-		this.log(`Validating document: ${document.uri}`);
-
-		const content = document.getText();
-		const diagnostics: Diagnostic[] = [];
-
-		if (content.length) {
-			try {
-				const result = await this.parseXml(document);
-
-				// Send the parsed data to the client
-				this.connection.sendNotification('mentor.message.updateContext', {
-					uri: document.uri,
-					languageId: this.languageId,
-					parsedData: result
-				});
-			} catch (e) {
-				diagnostics.push({
-					severity: DiagnosticSeverity.Error,
-					message: e ? e.toString() : "An error occurred while parsing the document.",
-					range: Range.create(0, 0, 0, 0)
-				});
-			}
-		}
-
-		this.connection.sendDiagnostics({ uri: document.uri, diagnostics });
-	}
-
-	protected async parseXml(document: TextDocument): Promise<XmlParseResult> {
-		const data = document.getText();
+/**
+ * A parser for RDF/XML documents that produces an index of namespaces,
+ * subjects, references and type assertions using a line-based analysis.
+ */
+export class XmlParser {
+	/**
+	 * Parses the content of an RDF/XML document.
+	 * @param data The raw XML document text.
+	 * @returns The parsed content data.
+	 */
+	parse(data: string): XmlParseResult {
 		const lines = data.split('\n');
 		const result: XmlParseResult = {
 			namespaces: {},
@@ -182,13 +147,7 @@ export class XmlLanguageServer extends LanguageServerBase {
 				if (namespaceIri && !this._isXmlSpecificTagName(prefix, localName, namespaceIri)) {
 					const iri = namespaceIri + localName;
 
-					if (namespaceIri === 'https://spec.industrialontologies.org/ontology/construct/') {
-						console.log(`Found construct reference (${iri}) at line ${lineNumber}`);
-					}
 
-					if (iri === "https://spec.industrialontologies.org/ontology/construct/MeasurementCapability") {
-						console.log("Found MeasurementCapability reference at line " + lineNumber);
-					}
 
 					this._addRangeToIndex(result.references, iri, Range.create(
 						lineNumber, column,

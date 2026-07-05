@@ -118,6 +118,16 @@ export interface IDocumentContext {
 	readonly isTemporary: boolean;
 
 	/**
+	 * Parses the given document text and updates the context's derived state
+	 * (tokens or parse data, namespaces, references, type assertions). This is
+	 * the authoritative update path: token-based contexts use a file-scoped
+	 * blank node ID generator so blank node identities are stable across reloads.
+	 * @param text The current document text.
+	 * @returns The tokens of the document, or an empty array for contexts that are not token-based.
+	 */
+	parse(text: string): IToken[];
+
+	/**
 	 * Loads triples into the triple store using existing tokens.
 	 * @param data The file content.
 	 */

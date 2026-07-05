@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver';
+import { DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver-types';
 import {
 	NamespacePrefixLinter,
 	DUPLICATE_PREFIX_CODE,

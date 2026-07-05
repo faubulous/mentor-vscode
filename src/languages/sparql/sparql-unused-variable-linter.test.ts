@@ -2,7 +2,25 @@ import { describe, it, expect } from 'vitest';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { getUnusedVariableDiagnostics } from '@src/languages/sparql/sparql-unused-variable-diagnostics';
+import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
+import { LintDiagnosticsContext } from '@src/languages/linter-context';
+
+/** Runs the linter over the tokens the same way the diagnostics service does. */
+function getUnusedVariableDiagnostics(document: TextDocument, tokens: any[]) {
+	const linter = new SparqlUnusedVariableLinter();
+	const context: LintDiagnosticsContext = { document, content: '', tokens, prefixes: {} };
+	const result = [];
+
+	linter.reset();
+
+	for (let i = 0; i < tokens.length; i++) {
+		result.push(...linter.visitToken(context, tokens[i], i));
+	}
+
+	result.push(...linter.finalize(context));
+
+	return result;
+}
 
 function makeDoc(content = '') {
 	return TextDocument.create('file:///test.sparql', 'sparql', 1, content);
@@ -34,7 +52,7 @@ function makeToken(rdfTokenName: string, image: string, offset = 0): any {
 	};
 }
 
-describe('getUnusedVariableDiagnostics', () => {
+describe('SparqlUnusedVariableLinter', () => {
 	describe('unused variable detection', () => {
 		it('returns hint for variable used only once in a SELECT query', () => {
 			// SELECT ?s WHERE { ?s <p> <o> }

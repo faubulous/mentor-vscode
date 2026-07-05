@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 import { Store } from '@faubulous/mentor-rdf';
-import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
+import { XmlParser } from '@src/languages/xml/xml-parser';
 import { getIriFromPrefixedName } from '@src/utilities';
 
 /**
@@ -48,8 +49,15 @@ export class XmlDocument extends DocumentContext {
 		this.syntax = RdfSyntax.RdfXml;
 	}
 
+	parse(text: string): IToken[] {
+		this.setParsedData(new XmlParser().parse(text));
+
+		// RDF/XML documents are parsed structurally, not tokenized.
+		return [];
+	}
+
 	/**
-	 * Set the parsed data from the language server.
+	 * Set the parsed data of the document and update the derived indexes.
 	 * @param data The parsed document data.
 	 */
 	setParsedData(data: XmlParseResult): void {

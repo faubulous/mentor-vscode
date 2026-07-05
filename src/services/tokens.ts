@@ -56,10 +56,6 @@ export enum ServiceToken {
 	SparqlResultsController = "SparqlResultsController",
 	/** Service for discovering VS Code workspace files and their identifiers. */
 	WorkspaceService = "WorkspaceService",
-	/** Factory for creating platform-specific language clients (browser Worker vs Node.js IPC). */
-	LanguageClientFactory = "LanguageClientFactory",
-	/** Registry for active language clients and cross-language client request routing. */
-	LanguageClientRegistry = "LanguageClientRegistry",
 	/** Service for validating RDF documents against SHACL shapes. */
 	ShaclValidationService = "ShaclValidationService",
 	/** Service that shows SPARQL activity (query execution, connection testing) in the status bar. */

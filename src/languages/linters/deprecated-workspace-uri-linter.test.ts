@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { DiagnosticSeverity } from 'vscode-languageserver';
+import { DiagnosticSeverity } from 'vscode-languageserver-types';
 import { DeprecatedWorkspaceUriLinter, DEPRECATED_WORKSPACE_URI_CODE } from '@src/languages/linters/deprecated-workspace-uri-linter';
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));

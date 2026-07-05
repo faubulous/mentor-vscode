@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { DiagnosticSeverity } from 'vscode-languageserver';
+import { DiagnosticSeverity } from 'vscode-languageserver-types';
 import { XsdDatatypeValidationLinter } from '@src/languages/linters/xsd-datatype-validation-linter';
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));

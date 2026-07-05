@@ -16,7 +16,6 @@ import { ReferenceUpdateService } from './services/core/reference-update-service
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import { NotebookController } from './services/notebook/notebook-controller';
 import { DocumentLintingService } from './services/document/document-linting-service';
-import { LanguageClientFactory } from './languages/language-client-factory';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
@@ -26,12 +25,11 @@ import * as providers from './providers';
 /**
  * Shared activation logic for both browser and Node.js extension hosts.
  * @param context The extension context.
- * @param languageClientFactory Platform-specific factory for creating language clients.
  */
-export async function activateExtension(context: vscode.ExtensionContext, languageClientFactory: LanguageClientFactory) {
+export async function activateExtension(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
 
-	configureServiceContainer(context, languageClientFactory);
+	configureServiceContainer(context);
 
 	// Run pending settings migrations before any service reads the configuration.
 	const migrationService = container.resolve<ISettingsMigrationService>(ServiceToken.SettingsMigrationService);
@@ -64,16 +62,14 @@ export async function deactivate() {
 }
 
 /**
- * Registers all language clients and token providers for supported languages.
- * RDF and SPARQL documents are tokenized and validated in the extension host;
- * only RDF/XML uses a language server (for parsing and diagnostics).
+ * Registers the token providers for supported languages. All documents are
+ * parsed and diagnosed in the extension host; there are no language servers.
  */
 function registerLanguages() {
 	new languages.DatalogTokenProvider();
 	new languages.SparqlTokenProvider();
 	new languages.TrigTokenProvider();
 	new languages.TurtleTokenProvider();
-	new languages.XmlLanguageClient();
 	new languages.XmlTokenProvider();
 	new languages.TriplateTokenProvider();
 }

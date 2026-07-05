@@ -9,14 +9,12 @@ import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
 import { WorkspaceService } from './core/workspace-service';
 import { DocumentContextService } from './document/document-context-service';
-import { LocalDocumentTokenSource } from './document/local-document-token-source';
-import { LocalDocumentDiagnosticsService } from './document/local-document-diagnostics-service';
+import { DocumentTokenSource } from './document/document-token-source';
+import { DocumentDiagnosticsService } from './document/document-diagnostics-service';
 import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
 import { PrefixDownloaderService } from './document/prefix-downloader-service';
 import { PrefixLookupService } from './document/prefix-lookup-service';
-import { LanguageClientFactory } from '@src/languages/language-client-factory';
-import { LanguageClientRegistry } from '@src/languages/language-client-registry';
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { SparqlConnectionRegistry } from '@src/languages/sparql/services/sparql-connection-registry';
@@ -46,9 +44,8 @@ export class MentorGraphUriGenerator implements GraphUriGenerator {
 /**
  * Configures the service container with all necessary services and dependencies for the extension.
  * @param context The VS Code extension context, used for registering services that require access to the extension's lifecycle and storage.
- * @param languageClientFactory Platform-specific factory for creating language clients.
  */
-export function configureServiceContainer(context: vscode.ExtensionContext, languageClientFactory: LanguageClientFactory): void {
+export function configureServiceContainer(context: vscode.ExtensionContext): void {
 	// Register VS Code services and extension context.
 	container.registerInstance(ServiceToken.ExtensionContext, context);
 
@@ -71,21 +68,20 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
 
 	// The token source supplies documents with tokens and coordinates concurrent
-	// loads. RDF and SPARQL documents are tokenized synchronously in the extension
-	// host; documents without local tokenization (RDF/XML) fall back to the push
-	// protocol of their language server. The context is looked up lazily through
-	// the container because the document context service is constructed after the
-	// token source.
+	// loads. All documents are parsed synchronously in the extension host: the
+	// Turtle family and SPARQL are tokenized, RDF/XML is analyzed structurally.
+	// The context is looked up lazily through the container because the document
+	// context service is constructed after the token source.
 	const getContext = (uri: string) => container.resolve<DocumentContextService>(ServiceToken.DocumentContextService).contexts[uri];
 
-	const documentTokenSource = new LocalDocumentTokenSource(getContext);
+	const documentTokenSource = new DocumentTokenSource(getContext);
 	container.registerInstance(ServiceToken.DocumentTokenSource, documentTokenSource);
 
 	context.subscriptions.push(documentTokenSource);
 
-	// Diagnostics for locally tokenized documents are computed in the extension
-	// host — there are no language server processes for the RDF and SPARQL languages.
-	context.subscriptions.push(new LocalDocumentDiagnosticsService(documentTokenSource, getContext));
+	// Diagnostics are computed in the extension host — there are no language
+	// server processes.
+	context.subscriptions.push(new DocumentDiagnosticsService(documentTokenSource, getContext));
 
 	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory, documentTokenSource);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
@@ -96,14 +92,10 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const workspaceFileService = new WorkspaceFileService(documentFactory);
 	container.registerInstance(ServiceToken.WorkspaceFileService, workspaceFileService);
 
-	const languageClientRegistry = new LanguageClientRegistry();
-	container.registerInstance(ServiceToken.LanguageClientRegistry, languageClientRegistry);
-
 	const workspaceIndexerService = new WorkspaceIndexerService(
 		documentFactory,
 		documentContextService,
 		workspaceFileService,
-		languageClientRegistry,
 		documentTokenSource
 	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
@@ -140,9 +132,6 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 
 	const sparqlPrefixDefinitionService = new SparqlPrefixDefinitionService(documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlPrefixDefinitionService, sparqlPrefixDefinitionService);
-
-	// Register the platform-specific language client factory.
-	container.registerInstance(ServiceToken.LanguageClientFactory, languageClientFactory);
 
 	// Register the SHACL validation service.
 	const shaclValidationService = new ShaclValidationService();

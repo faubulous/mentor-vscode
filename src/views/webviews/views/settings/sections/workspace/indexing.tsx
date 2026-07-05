@@ -21,6 +21,7 @@ export const workspaceIndexingSection = {
 		'index.excludeFiles',
 		'index.includeFiles',
 		'index.maxFileSize',
+		'index.diagnoseFiles',
 	],
 } as const satisfies SettingsSectionDescriptor;
 
@@ -88,6 +89,14 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 				>
 					<span slot="content-after" className="setting-input-suffix">bytes</span>
 				</vscode-textfield>
+			</SettingRow>
+			<SettingRow {...rowProps('index.diagnoseFiles')}>
+				<vscode-checkbox
+					checked={settings['index.diagnoseFiles']?.value !== false}
+					onChange={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'index.diagnoseFiles', (e.target as HTMLInputElement).checked)}
+				>
+					Enabled
+				</vscode-checkbox>
 			</SettingRow>
 			<SettingRow {...rowProps('index.useGitIgnore')}>
 				<vscode-checkbox
