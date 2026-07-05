@@ -3,7 +3,7 @@ import { Range } from 'vscode-languageserver-types';
 import { Quad_Subject } from '@rdfjs/types';
 import { PredicateUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
-import { IToken } from '@faubulous/mentor-rdf-parsers';
+import { BlankNodeIdGenerator, IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 
 /**
  * Interface for document context that provides access to RDF document specific data.
@@ -209,6 +209,11 @@ export interface IDocumentContext {
  */
 export interface ITokenizedDocumentContext extends IDocumentContext {
 	/**
+	 * The RDF syntax of the document, which determines its lexer and parser.
+	 */
+	readonly syntax: RdfSyntax;
+
+	/**
 	 * The tokens of the document, if the document has been tokenized.
 	 */
 	tokens: IToken[];
@@ -217,9 +222,20 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	 * Tokenizes the given text synchronously using the document's own syntax,
 	 * without requiring the language server.
 	 * @param text The text to tokenize.
+	 * @param blankNodeIdGenerator Optional blank node ID generator. Use a file-scoped
+	 * generator when the tokens are meant for triple loading so that blank node
+	 * identities are stable across reloads; without one, the default generator is
+	 * used, which is only suitable for positional lookups.
 	 * @returns The tokens of the text.
 	 */
-	tokenize(text: string): IToken[];
+	tokenize(text: string, blankNodeIdGenerator?: BlankNodeIdGenerator): IToken[];
+
+	/**
+	 * Sets the tokens of the document and updates the derived indexes
+	 * (namespaces, references, type assertions and definitions).
+	 * @param tokens An array of tokens.
+	 */
+	setTokens(tokens: IToken[]): void;
 }
 
 /**

@@ -72,4 +72,12 @@ export interface IDocumentTokenSource extends vscode.Disposable {
 	 * @param tokens The delivered tokens.
 	 */
 	deliverTokens(uri: string, tokens: IToken[]): void;
+
+	/**
+	 * Requests fresh tokens for a document, e.g. during workspace re-indexing.
+	 * @param uri The document URI.
+	 * @returns `true` when this source produced fresh tokens itself; `false` when
+	 * the caller must request them from the token producer (the language server).
+	 */
+	refreshTokens(uri: string): boolean;
 }

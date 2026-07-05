@@ -8,6 +8,7 @@ export function getConfig(section: string = ''): vscode.WorkspaceConfiguration {
 	return vscode.workspace.getConfiguration(`mentor${section ? `.${section}` : ''}`);
 }
 
+
 /**
  * Resolves a formatting option using the cascading model: a language-specific
  * override (`mentor.formatting.<language>.<key>`) wins when explicitly set,

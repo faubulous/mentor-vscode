@@ -65,17 +65,10 @@ export async function deactivate() {
 
 /**
  * Registers all language clients and token providers for supported languages.
+ * RDF and SPARQL documents are tokenized and validated in the extension host;
+ * only RDF/XML uses a language server (for parsing and diagnostics).
  */
 function registerLanguages() {
-	// Register the language clients for supported languages.
-	new languages.N3LanguageClient();
-	new languages.NQuadsLanguageClient();
-	new languages.NTriplesLanguageClient();
-	new languages.SparqlLanguageClient();
-	new languages.TrigLanguageClient();
-	new languages.TurtleLanguageClient();
-
-	// Token providers must be registered after the language clients.
 	new languages.DatalogTokenProvider();
 	new languages.SparqlTokenProvider();
 	new languages.TrigTokenProvider();

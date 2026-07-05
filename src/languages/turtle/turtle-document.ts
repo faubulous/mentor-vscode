@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
-import { createLexerForSyntax } from '@src/languages/lexer-factory';
+import { BlankNodeIdGenerator, IToken, RdfSyntax, TurtleReader, RdfToken, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
+import { getLexerForSyntax, getParserForSyntax } from '@src/languages/lexer-factory';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { DocumentContext } from '@src/services/document/document-context';
@@ -53,8 +53,15 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		return this._tokens;
 	}
 
-	tokenize(text: string): IToken[] {
-		return tokenizeWithTriplate(createLexerForSyntax(this.syntax), text).tokens;
+	tokenize(text: string, blankNodeIdGenerator?: BlankNodeIdGenerator): IToken[] {
+		const lexer = getLexerForSyntax(this.syntax);
+
+		// The lexer instance is shared, so the generator must be set on every call —
+		// `undefined` restores the default generator — to prevent a file-scoped
+		// generator from leaking between documents.
+		lexer.blankNodeIdGenerator = blankNodeIdGenerator;
+
+		return tokenizeWithTriplate(lexer, text).tokens;
 	}
 
 	public override getIriAtPosition(position: vscode.Position): string | undefined {
@@ -139,8 +146,9 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			this._inferenceExecuted = false;
 
 			// Only updates the existing graphs if the document was parsed successfully.
-			// Uses existing tokens that were set by the language server.
-			const cst = new TurtleParser().parse(this._tokens);
+			// Uses the existing tokens that were set on the context. The parser is a
+			// shared instance because chevrotain parser construction is expensive.
+			const cst = getParserForSyntax(RdfSyntax.Turtle).parse(this._tokens);
 
 			for (const q of new TurtleReader().visit(cst)) {
 				const s = q.subject as Quad_Subject;

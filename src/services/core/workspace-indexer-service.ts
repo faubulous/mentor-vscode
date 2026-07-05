@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import picomatch from 'picomatch';
+import { ILanguageClientRegistry } from '@src/languages/language-client-registry';
 import { IWorkspaceFileService } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService, IndexingStatistics } from './workspace-indexer.interface';
 import { IDocumentFactory } from '../document/document-factory.interface';
+import { IDocumentTokenSource } from '../document/document-token-source.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { getConfig } from '@src/utilities/vscode/config';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
-import { ILanguageClientRegistry } from '@src/languages/language-client-registry';
 
 /**
  * Service for indexing RDF documents in the current workspace.
@@ -68,7 +69,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		private readonly documentFactory: IDocumentFactory,
 		private readonly contextService: DocumentContextService,
 		private readonly workspaceFileService: IWorkspaceFileService,
-		private readonly languageClientRegistry: ILanguageClientRegistry
+		private readonly languageClientRegistry: ILanguageClientRegistry,
+		private readonly tokenSource: IDocumentTokenSource
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 
@@ -86,6 +88,22 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		this._statusBarItem.show();
 
 		this._statusLog.clear();
+	}
+
+	/**
+	 * Requests fresh tokens for a document during re-indexing. When the token
+	 * source produces tokens itself (in-host tokenization), no language server
+	 * round-trip is needed; otherwise the refresh is requested through the
+	 * language client.
+	 * @param languageId The document language ID.
+	 * @param uri The document URI.
+	 */
+	private async _refreshDocumentTokens(languageId: string, uri: string): Promise<void> {
+		if (this.tokenSource.refreshTokens(uri)) {
+			return;
+		}
+
+		await this.languageClientRegistry.requestContextRefresh(languageId, uri);
 	}
 
 	/**
@@ -432,7 +450,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			if (reindex) {
 				await Promise.all([
 					loadPromise,
-					this.languageClientRegistry.requestContextRefresh(document.languageId, document.uri.toString())
+					this._refreshDocumentTokens(document.languageId, document.uri.toString())
 				]);
 				return;
 			}
@@ -477,7 +495,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				if (reindex) {
 					await Promise.all([
 						loadPromise,
-						this.languageClientRegistry.requestContextRefresh(lang, cellUri)
+						this._refreshDocumentTokens(lang, cellUri)
 					]);
 					continue;
 				}

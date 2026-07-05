@@ -20,6 +20,7 @@ let mockContextService: any;
 let mockWorkspaceFileService: any;
 let mockConfigValues: Record<string, any>;
 let mockLanguageClientRegistry: any;
+let mockTokenSource: any;
 
 beforeEach(() => {
 	mockIsSupportedNotebookFile = vi.fn(() => false);
@@ -51,6 +52,10 @@ beforeEach(() => {
 		requestContextRefresh: vi.fn(async () => false),
 	};
 
+	mockTokenSource = {
+		refreshTokens: vi.fn(() => false),
+	};
+
 	mockConfigValues = {};
 
 	(vscode.commands as any).executeCommand = vi.fn(async () => undefined);
@@ -76,17 +81,17 @@ beforeEach(() => {
 describe('WorkspaceIndexerService', () => {
 	describe('constructor', () => {
 		it('should initialize with indexed=false', () => {
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			expect(service.indexingFinished).toBe(false);
 		});
 
 		it('should set context to not indexing on construction', () => {
-			new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			expect(vscode.commands.executeCommand).toHaveBeenCalledWith('setContext', 'mentor.workspace.isIndexing', false);
 		});
 
 		it('should emit onDidFinishIndexing event', () => {
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			expect(service.onDidFinishIndexing).toBeDefined();
 		});
 
@@ -94,7 +99,7 @@ describe('WorkspaceIndexerService', () => {
 			const statusBarItem = { text: '', tooltip: '', command: undefined as any, show: vi.fn(), hide: vi.fn(), dispose: vi.fn() };
 			(vscode.window as any).createStatusBarItem = vi.fn(() => statusBarItem);
 
-			new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 
 			expect(statusBarItem.text).toContain('$(app-mentor)');
 			expect(statusBarItem.show).toHaveBeenCalled();
@@ -103,7 +108,7 @@ describe('WorkspaceIndexerService', () => {
 
 	describe('indexWorkspace', () => {
 		it('should mark workspace as indexed after completion', async () => {
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			expect(service.indexingFinished).toBe(true);
@@ -112,7 +117,7 @@ describe('WorkspaceIndexerService', () => {
 		it('coalesces concurrent calls into a single trailing pass instead of overlapping runs', async () => {
 			mockWorkspaceFileService.files = [vscode.Uri.parse('file:///w/a.ttl')];
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 
 			// Four concurrent requests must not run four overlapping passes: the
 			// first runs immediately and the rest collapse into one trailing pass.
@@ -129,7 +134,7 @@ describe('WorkspaceIndexerService', () => {
 		it('keeps the Mentor icon in the status bar after indexing an empty workspace', async () => {
 			mockWorkspaceFileService.files = [];
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 
@@ -145,18 +150,38 @@ describe('WorkspaceIndexerService', () => {
 				getText: vi.fn(() => ''),
 			}));
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace(true);
 			await service.waitForIndexed();
 
 			expect(mockLanguageClientRegistry.requestContextRefresh).toHaveBeenCalledWith('turtle', uri.toString());
 		});
 
+		it('should not request a server context refresh when the token source refreshes locally', async () => {
+			const uri = vscode.Uri.parse('file:///w/test.ttl');
+			mockWorkspaceFileService.files = [uri];
+			(vscode.workspace as any).openTextDocument = vi.fn(async () => ({
+				uri,
+				languageId: 'turtle',
+				getText: vi.fn(() => ''),
+			}));
+
+			// The token source produces fresh tokens itself (in-host tokenization).
+			mockTokenSource.refreshTokens = vi.fn(() => true);
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
+			await service.indexWorkspace(true);
+			await service.waitForIndexed();
+
+			expect(mockTokenSource.refreshTokens).toHaveBeenCalledWith(uri.toString());
+			expect(mockLanguageClientRegistry.requestContextRefresh).not.toHaveBeenCalled();
+		});
+
 		it('should index all workspace files', async () => {
 			const uri1 = vscode.Uri.parse('file:///w/test1.ttl');
 			const uri2 = vscode.Uri.parse('file:///w/test2.ttl');
 			mockWorkspaceFileService.files = [uri1, uri2];
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledTimes(2);
@@ -166,7 +191,7 @@ describe('WorkspaceIndexerService', () => {
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			mockWorkspaceFileService.files = [uri];
 			mockContexts[uri.toString()] = { loaded: true }; // already indexed
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace(false);
 			expect(mockLoadDocument).not.toHaveBeenCalled();
 		});
@@ -175,7 +200,7 @@ describe('WorkspaceIndexerService', () => {
 			const uri = vscode.Uri.parse('file:///w/test.ttl');
 			mockWorkspaceFileService.files = [uri];
 			mockContexts[uri.toString()] = { loaded: true }; // already indexed
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace(true);
 			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledTimes(1);
@@ -187,7 +212,7 @@ describe('WorkspaceIndexerService', () => {
 			(vscode.workspace as any).fs.stat = vi.fn(async () => ({ size: Number.MAX_SAFE_INTEGER + 1 }));
 			// getConfig().get returns MAX_SAFE_INTEGER as default, so any size > that is skipped
 			// Actually with default MAX_SAFE_INTEGER and size = MAX_SAFE_INT+1, it should skip
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace(false);
 			// Large file should be skipped since size > maxSize
 			expect(mockLoadDocument).not.toHaveBeenCalled();
@@ -204,7 +229,7 @@ describe('WorkspaceIndexerService', () => {
 				getCells: vi.fn(() => [mockCell]),
 			}));
 			(vscode.workspace as any).fs.stat = vi.fn(async () => ({ size: 100 }));
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			expect(vscode.workspace.openNotebookDocument).toHaveBeenCalledWith(notebookUri);
@@ -223,7 +248,7 @@ describe('WorkspaceIndexerService', () => {
 			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
 				getCells: vi.fn(() => [sparqlCell]),
 			}));
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			// SPARQL cell must be indexed so its references map is populated for rename support
@@ -241,7 +266,7 @@ describe('WorkspaceIndexerService', () => {
 			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
 				getCells: vi.fn(() => [markdownCell]),
 			}));
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			// Markdown is not a supported language — it must be skipped
 			expect(mockLoadDocument).not.toHaveBeenCalled();
@@ -264,7 +289,7 @@ describe('WorkspaceIndexerService', () => {
 			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
 				getCells: vi.fn(() => [turtleCell, sparqlCell, markdownCell]),
 			}));
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			// Turtle (triple-source) and SPARQL (supported non-triple-source) are indexed; markdown is skipped
@@ -275,7 +300,7 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('should fire onDidFinishIndexing after indexing', async () => {
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			let fired = false;
 			service.onDidFinishIndexing(() => { fired = true; });
 			await service.indexWorkspace();
@@ -294,7 +319,7 @@ describe('WorkspaceIndexerService', () => {
 			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
 				getCells: vi.fn(() => [sluggedCell]),
 			}));
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledWith(sluggedCell.document, false, 'my-data');
@@ -311,7 +336,7 @@ describe('WorkspaceIndexerService', () => {
 			(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
 				getCells: vi.fn(() => [noSlugCell]),
 			}));
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledWith(noSlugCell.document, false, undefined);
@@ -324,7 +349,7 @@ describe('WorkspaceIndexerService', () => {
 			mockConfigValues['index.maxFileSize'] = Number.MAX_SAFE_INTEGER;
 			mockConfigValues['index.includeFiles'] = ['/data/ontologies/*.ttl'];
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace(false);
 			await service.waitForIndexed();
 
@@ -338,7 +363,7 @@ describe('WorkspaceIndexerService', () => {
 			mockConfigValues['index.maxFileSize'] = Number.MAX_SAFE_INTEGER;
 			mockConfigValues['index.includeFiles'] = ['data/ontologies/*.ttl'];
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace(false);
 			await service.waitForIndexed();
 
@@ -348,7 +373,7 @@ describe('WorkspaceIndexerService', () => {
 
 	describe('waitForIndexed', () => {
 		it('should resolve immediately if already indexed', async () => {
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed(); // wait for background tasks to settle
 			// Now indexed=true, so a second waitForIndexed should resolve immediately
@@ -364,7 +389,7 @@ describe('WorkspaceIndexerService', () => {
 			let resolveLoad!: () => void;
 			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			const indexPromise = service.indexWorkspace();
 
 			// Let indexing dispatch and block on the unresolved load.
@@ -387,7 +412,7 @@ describe('WorkspaceIndexerService', () => {
 			let resolveLoad!: () => void;
 			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			const indexPromise = service.indexWorkspace();
 			for (let i = 0; i < 10 && !resolveLoad; i++) {
 				await Promise.resolve();
@@ -409,7 +434,7 @@ describe('WorkspaceIndexerService', () => {
 			let resolveLoad!: () => void;
 			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			let fired = false;
 			service.onDidFinishIndexing(() => { fired = true; });
 
@@ -432,7 +457,7 @@ describe('WorkspaceIndexerService', () => {
 			let resolveLoad!: () => void;
 			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			const indexPromise = service.indexWorkspace();
 			for (let i = 0; i < 10 && !resolveLoad; i++) {
 				await Promise.resolve();
@@ -457,7 +482,7 @@ describe('WorkspaceIndexerService', () => {
 			mockWorkspaceFileService.files = [uri];
 			mockLoadDocument = vi.fn(async () => { throw new Error('load failed'); });
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 
@@ -471,7 +496,7 @@ describe('WorkspaceIndexerService', () => {
 			let resolveLoad!: () => void;
 			mockLoadDocument = vi.fn(() => new Promise<void>(resolve => { resolveLoad = resolve; }));
 
-			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry);
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockLanguageClientRegistry, mockTokenSource);
 			const indexPromise = service.indexWorkspace();
 			for (let i = 0; i < 10 && !resolveLoad; i++) {
 				await Promise.resolve();

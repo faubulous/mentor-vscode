@@ -1,38 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
-
-vi.mock('vscode-languageserver', async () => {
-	const actual = await vi.importActual<any>('vscode-languageserver');
-	class TextDocuments {
-		listen = vi.fn();
-		onDidClose = vi.fn();
-		onDidChangeContent = vi.fn();
-		all = vi.fn(() => []);
-		get = vi.fn(() => undefined);
-	}
-	return { ...actual, TextDocuments };
-});
+import { describe, it, expect } from 'vitest';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { DiagnosticSeverity } from 'vscode-languageserver';
-import { SparqlLanguageServer } from '@src/languages/sparql/sparql-language-server';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
-
-function makeConnection() {
-	return {
-		onInitialize: vi.fn(),
-		onInitialized: vi.fn(),
-		onDidChangeConfiguration: vi.fn(),
-		onRequest: vi.fn(),
-		console: { log: vi.fn() },
-		sendDiagnostics: vi.fn(),
-		sendNotification: vi.fn(),
-		listen: vi.fn(),
-		client: { register: vi.fn() },
-		workspace: { onDidChangeWorkspaceFolders: vi.fn() },
-	} as any;
-}
+import { getUnusedVariableDiagnostics } from '@src/languages/sparql/sparql-unused-variable-diagnostics';
 
 function makeDoc(content = '') {
 	return TextDocument.create('file:///test.sparql', 'sparql', 1, content);
@@ -64,25 +34,8 @@ function makeToken(rdfTokenName: string, image: string, offset = 0): any {
 	};
 }
 
-/** Expose private method via casting */
-class TestSparqlServer extends SparqlLanguageServer {
-	getLint(doc: TextDocument, content: string, tokens: any[]) {
-		return this.getLintDiagnostics(doc, content, tokens);
-	}
-}
-
-describe('SparqlLanguageServer', () => {
-	let server: TestSparqlServer;
-
-	beforeEach(() => {
-		server = new TestSparqlServer(makeConnection());
-	});
-
-	it('constructs without throwing', () => {
-		expect(() => new SparqlLanguageServer(makeConnection())).not.toThrow();
-	});
-
-	describe('getLintDiagnostics – unused variable detection', () => {
+describe('getUnusedVariableDiagnostics', () => {
+	describe('unused variable detection', () => {
 		it('returns hint for variable used only once in a SELECT query', () => {
 			// SELECT ?s WHERE { ?s <p> <o> }
 			const tokens = [
@@ -93,7 +46,7 @@ describe('SparqlLanguageServer', () => {
 				makeVar(RdfToken.VAR1.name, 18),          // same ?s in WHERE (only 1 total → unused)
 				makeToken(RdfToken.RCURLY.name, '}', 20),
 			];
-			const diags = server.getLint(makeDoc(), '', tokens);
+			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
 			const hints = diags.filter(d => d.message.includes("used only once"));
 			// Variables that appear only once generate a hint
 			expect(hints.length).toBeGreaterThanOrEqual(0); // lenient: depends on counting logic
@@ -108,29 +61,14 @@ describe('SparqlLanguageServer', () => {
 				makeVar(RdfToken.VAR1.name, 17),
 				makeToken(RdfToken.RCURLY.name, '}', 20),
 			];
-			const diags = server.getLint(makeDoc(), '', tokens);
+			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
 			const hints = diags.filter(d => d.message.includes("used only once"));
 			expect(hints).toHaveLength(0);
 		});
 
-		it('includes inherited lint diagnostics from base class', () => {
-			// Inherited: duplicate prefix warning
-			const tokens = [
-				makeToken('PREFIX', 'PREFIX', 0),
-				makeToken('PNAME_NS', 'ex:', 7),
-				makeToken('IRIREF', '<http://example.org/>', 11),
-				makeToken('PREFIX', 'PREFIX', 35),
-				makeToken('PNAME_NS', 'ex:', 42),
-				makeToken('IRIREF', '<http://other.org/>', 46),
-			];
-			const diags = server.getLint(makeDoc(), '', tokens);
-			const dup = diags.filter(d => d.message.includes('already defined'));
-			expect(dup.length).toBeGreaterThanOrEqual(1);
-		});
-
 		it('handles tokens without tokenType gracefully', () => {
 			const badToken = { image: '???', startOffset: 0, endOffset: 2 };
-			expect(() => server.getLint(makeDoc(), '', [badToken as any])).not.toThrow();
+			expect(() => getUnusedVariableDiagnostics(makeDoc(), [badToken as any])).not.toThrow();
 		});
 
 		it('transitions out of select clause when LCURLY is encountered after SELECT', () => {
@@ -142,7 +80,7 @@ describe('SparqlLanguageServer', () => {
 				makeToken(RdfToken.RCURLY.name, '}', 20),
 			];
 			// Just should not throw; LCURLY sets inSelectClause=false
-			expect(() => server.getLint(makeDoc(), '', tokens)).not.toThrow();
+			expect(() => getUnusedVariableDiagnostics(makeDoc(), tokens)).not.toThrow();
 		});
 
 		it('reports hint for variable used only once (line 176 path)', () => {
@@ -157,7 +95,7 @@ describe('SparqlLanguageServer', () => {
 				makeVar(RdfToken.VAR1.name, 26),    // ?o — once only
 				makeToken(RdfToken.RCURLY.name, '}', 30),
 			];
-			const diags = server.getLint(makeDoc('SELECT ?s WHERE { ?s ?p ?o }'), '', tokens);
+			const diags = getUnusedVariableDiagnostics(makeDoc('SELECT ?s WHERE { ?s ?p ?o }'), tokens);
 			// Should not throw; may or may not produce hints depending on variable counting
 			expect(Array.isArray(diags)).toBe(true);
 		});
@@ -172,7 +110,7 @@ describe('SparqlLanguageServer', () => {
 				makeVar(RdfToken.VAR1.name, 17),
 				makeToken(RdfToken.RCURLY.name, '}', 20),
 			];
-			const diags = server.getLint(makeDoc(), '', tokens);
+			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
 			// isStarSelect=true → early return → no unused hints
 			const hints = diags.filter(d => d.message.includes('used only once'));
 			expect(hints).toHaveLength(0);
@@ -194,7 +132,7 @@ describe('SparqlLanguageServer', () => {
 				makeVar(RdfToken.VAR1.name, 42),      // ?s again
 				makeToken(RdfToken.RCURLY.name, '}', 46),  // close outer
 			];
-			expect(() => server.getLint(makeDoc(), '', tokens)).not.toThrow();
+			expect(() => getUnusedVariableDiagnostics(makeDoc(), tokens)).not.toThrow();
 		});
 
 		it('does not flag subquery-projected variables used in the outer query', () => {
@@ -223,7 +161,7 @@ describe('SparqlLanguageServer', () => {
 				v('?age', o += 2),                                                 // FILTER(?age > 18) — outer use
 				makeToken(RdfToken.RCURLY.name, '}', o += 5),                       // depth 0 → closes outer
 			];
-			const diags = server.getLint(makeDoc(), '', tokens);
+			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
 			const hints = diags.filter(d => d.message.includes('used only once'));
 			expect(hints.some(d => d.message.includes("'?age'"))).toBe(false);
 			expect(hints.some(d => d.message.includes("'?name'"))).toBe(false);
@@ -239,7 +177,7 @@ describe('SparqlLanguageServer', () => {
 				makeToken(RdfToken.LCURLY.name, '{', 21),
 				makeToken(RdfToken.RCURLY.name, '}', 23),
 			];
-			const diags = server.getLint(makeDoc(), '', tokens);
+			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
 			// Variable preceded by AS should be added as projection variable → not flagged as unused
 			expect(Array.isArray(diags)).toBe(true);
 		});

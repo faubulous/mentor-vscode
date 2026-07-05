@@ -9,7 +9,8 @@ import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
 import { WorkspaceService } from './core/workspace-service';
 import { DocumentContextService } from './document/document-context-service';
-import { DocumentTokenSyncService } from './document/document-token-sync-service';
+import { LocalDocumentTokenSource } from './document/local-document-token-source';
+import { LocalDocumentDiagnosticsService } from './document/local-document-diagnostics-service';
 import { SettingsService } from './core/settings-service';
 import { CredentialStorageService } from './core/credential-storage-service';
 import { PrefixDownloaderService } from './document/prefix-downloader-service';
@@ -69,13 +70,22 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 	const documentFactory = new DocumentFactory();
 	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
 
-	// The token source coordinates token delivery from the language servers with
-	// waiting document loads. It must be registered before the document context
-	// service and the language clients, which both depend on it.
-	const documentTokenSource = new DocumentTokenSyncService();
+	// The token source supplies documents with tokens and coordinates concurrent
+	// loads. RDF and SPARQL documents are tokenized synchronously in the extension
+	// host; documents without local tokenization (RDF/XML) fall back to the push
+	// protocol of their language server. The context is looked up lazily through
+	// the container because the document context service is constructed after the
+	// token source.
+	const getContext = (uri: string) => container.resolve<DocumentContextService>(ServiceToken.DocumentContextService).contexts[uri];
+
+	const documentTokenSource = new LocalDocumentTokenSource(getContext);
 	container.registerInstance(ServiceToken.DocumentTokenSource, documentTokenSource);
 
 	context.subscriptions.push(documentTokenSource);
+
+	// Diagnostics for locally tokenized documents are computed in the extension
+	// host — there are no language server processes for the RDF and SPARQL languages.
+	context.subscriptions.push(new LocalDocumentDiagnosticsService(documentTokenSource, getContext));
 
 	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory, documentTokenSource);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
@@ -93,7 +103,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext, lang
 		documentFactory,
 		documentContextService,
 		workspaceFileService,
-		languageClientRegistry
+		languageClientRegistry,
+		documentTokenSource
 	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
