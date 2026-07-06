@@ -48,6 +48,29 @@ describe('WorkspaceUri', () => {
 		expect(fileUri.toString()).toBe('file:///w/dir/file.ttl');
 	});
 
+	it('resolves a harmless in-root ../ segment within the workspace root', () => {
+		const workspaceUri = vscode.Uri.parse('workspace:///dir/../file.ttl');
+		const fileUri = WorkspaceUri.toFileUri(workspaceUri);
+
+		expect(fileUri.toString()).toBe('file:///w/file.ttl');
+	});
+
+	it.each([
+		'workspace:///../../../etc/passwd',
+		'workspace:///../outside.ttl',
+		'workspace:///%2e%2e/%2e%2e/x',
+	])('throws for a path-traversal workspace URI: %s', (uri) => {
+		expect(() => WorkspaceUri.toFileUri(vscode.Uri.parse(uri))).toThrow(/outside the workspace root/);
+	});
+
+	it('tryToFileUri returns undefined for a traversal URI and a file URI for a valid one', () => {
+		expect(WorkspaceUri.tryToFileUri(vscode.Uri.parse('workspace:///../../etc/passwd'))).toBeUndefined();
+
+		const resolved = WorkspaceUri.tryToFileUri(vscode.Uri.parse('workspace:///dir/file.ttl'));
+
+		expect(resolved?.toString()).toBe('file:///w/dir/file.ttl');
+	});
+
 	it('preserves hash fragments when converting file: -> workspace: (e.g., notebooks)', () => {
 		const fileUri = vscode.Uri.parse('file:///w/notebook.mnb#cell1');
 		const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri)!;

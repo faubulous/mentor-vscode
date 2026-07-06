@@ -7,6 +7,8 @@ vi.mock('@src/providers/workspace-uri', () => ({
   WorkspaceUri: {
     uriRegex: 'workspace://[^\\s>]+',
     uriScheme: 'workspace',
+    // Simulate the containment guard: a path escaping the root (contains `..`) does not resolve.
+    tryToFileUri: (uri: any) => uri.path.includes('..') ? undefined : { scheme: 'file', path: uri.path },
   },
 }));
 
@@ -129,6 +131,20 @@ describe('WorkspaceUriLinkProvider', () => {
     } as any;
     const links = provider.provideDocumentLinks(doc);
     expect(links.length).toBe(2);
+  });
+
+  it('does not offer a link for a path-traversal workspace URI', () => {
+    const provider = new WorkspaceUriLinkProvider({ subscriptions: mockSubscriptions } as any);
+    const text = 'Safe workspace:///docs/a.ttl but evil workspace:///../../etc/passwd here.';
+    const doc = {
+      getText: () => text,
+      positionAt: (offset: number) => new vscode.Position(0, offset),
+    } as any;
+    const links = provider.provideDocumentLinks(doc);
+
+    // Only the in-root link is offered; the traversal link is skipped.
+    expect(links.length).toBe(1);
+    expect(links[0].target.path).toBe('/docs/a.ttl');
   });
 
   it('matches triple-slash URI with query parameter', () => {

@@ -180,8 +180,49 @@ export class WorkspaceUri {
 		const path = workspaceUri.path.startsWith('/') ? workspaceUri.path.substring(1) : workspaceUri.path;
 		const fileUri = vscode.Uri.joinPath(root, path);
 
+		// `joinPath` normalizes `../` segments, so a workspace URI such as
+		// `workspace:///../../etc/passwd` would otherwise resolve to a path outside the
+		// workspace root. Verifying the *resolved* path stays under the root rejects path
+		// traversal regardless of how it was encoded (`../`, `%2e%2e`, absolute paths).
+		if (!this.isContainedIn(fileUri, root)) {
+			throw new Error('Refusing to resolve workspace URI outside the workspace root: ' + workspaceUri.toString());
+		}
+
 		// Preserve the fragment (e.g., notebook cell index)
 		return fileUri.with({ fragment: workspaceUri.fragment });
+	}
+
+	/**
+	 * Resolves a workspace-relative URI into an absolute file system URI, returning `undefined`
+	 * instead of throwing when the URI cannot be resolved or would escape the workspace root.
+	 * Use this where an invalid or malicious URI should be silently skipped rather than surfaced
+	 * as an error (e.g. when deciding whether to offer a document link).
+	 * @param workspaceUri The workspace-relative URI.
+	 * @returns The absolute file URI, or `undefined` if it cannot be safely resolved.
+	 */
+	static tryToFileUri(workspaceUri: vscode.Uri): vscode.Uri | undefined {
+		try {
+			return this.toFileUri(workspaceUri);
+		} catch {
+			return undefined;
+		}
+	}
+
+	/**
+	 * Determines whether a resolved URI is contained within a root URI (the root itself, or a
+	 * descendant path). Used to prevent path traversal out of the workspace root.
+	 * @param child The resolved URI to check.
+	 * @param root The root URI that must contain the child.
+	 * @returns `true` if `child` is `root` or a path beneath it.
+	 */
+	private static isContainedIn(child: vscode.Uri, root: vscode.Uri): boolean {
+		if (child.scheme !== root.scheme || child.authority !== root.authority) {
+			return false;
+		}
+
+		const rootPath = root.path.endsWith('/') ? root.path.slice(0, -1) : root.path;
+
+		return child.path === rootPath || child.path.startsWith(rootPath + '/');
 	}
 
 	static toNotebookCellUri(workspaceUri: vscode.Uri): vscode.Uri {

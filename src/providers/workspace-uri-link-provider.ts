@@ -25,7 +25,10 @@ export class WorkspaceUriLinkProvider implements vscode.DocumentLinkProvider {
       const range = new vscode.Range(start, end);
       const uri = vscode.Uri.parse(match[0]);
 
-      if (uri) {
+      // Only offer the link if it resolves to a file inside the workspace root. This stops a
+      // crafted document from turning `workspace:///../../etc/passwd` into a clickable link that
+      // would read (or, on save, write) a file outside the workspace.
+      if (uri && WorkspaceUri.tryToFileUri(uri)) {
         links.push(new vscode.DocumentLink(range, uri));
       }
     }
