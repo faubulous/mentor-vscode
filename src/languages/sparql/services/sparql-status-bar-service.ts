@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
 import { getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
 /**
  * Owns a single, permanently visible SPARQL status bar item that opens the SPARQL
@@ -41,13 +42,16 @@ export class SparqlStatusBarService implements vscode.Disposable {
 	private _activitySegment: string | undefined;
 
 	/**
-	 * Number of currently active graph loads.
+	 * Currently in-flight graph loads, keyed by connection ID, in start order.
+	 * Graph loads can run concurrently (e.g. multiple connections auto-loading
+	 * at once), so this map — rather than a single connection — tracks all of
+	 * them; the oldest still-active entry is shown as the "current" one.
 	 */
-	private _activeGraphLoads = 0;
+	private readonly _activeGraphLoads = new Map<string, SparqlConnection>();
 
 	/**
-	 * Total number of graph loads in the current batch, used to show progress 
-	 * like "Loading graphs: 2 of 5 connections..."
+	 * Total number of graph loads in the current batch, used to show progress
+	 * like "Loading graphs 2 of 5: https://example.org/sparql"
 	 */
 	private _totalGraphLoads = 0;
 
@@ -87,20 +91,20 @@ export class SparqlStatusBarService implements vscode.Disposable {
 				this._activitySegment = undefined;
 				this._render();
 			}),
-			graphService.onDidGraphLoadStart(() => {
-				if (this._activeGraphLoads === 0) {
+			graphService.onDidGraphLoadStart(connection => {
+				if (this._activeGraphLoads.size === 0) {
 					// First load of this batch — count total from scratch.
 					this._totalGraphLoads = 1;
 				} else {
 					this._totalGraphLoads++;
 				}
-				this._activeGraphLoads++;
+				this._activeGraphLoads.set(connection.id, connection);
 				this._render();
 			}),
-			graphService.onDidGraphLoadEnd(() => {
-				this._activeGraphLoads = Math.max(0, this._activeGraphLoads - 1);
+			graphService.onDidGraphLoadEnd(connection => {
+				this._activeGraphLoads.delete(connection.id);
 
-				if (this._activeGraphLoads === 0) {
+				if (this._activeGraphLoads.size === 0) {
 					this._totalGraphLoads = 0;
 				}
 				this._render();
@@ -120,9 +124,13 @@ export class SparqlStatusBarService implements vscode.Disposable {
 			segments.push(this._activitySegment);
 		}
 
-		if (this._activeGraphLoads > 0) {
-			const done = this._totalGraphLoads - this._activeGraphLoads;
-			segments.push(`$(sync~spin) Loading graphs: ${done} of ${this._totalGraphLoads} connections..`);
+		if (this._activeGraphLoads.size > 0) {
+			// The oldest still-active load is shown as "current" — with concurrent
+			// loads this is the one that has been in flight the longest.
+			const current = this._activeGraphLoads.values().next().value!;
+			const done = this._totalGraphLoads - this._activeGraphLoads.size;
+
+			segments.push(`$(sync~spin) Loading graphs ${done + 1} of ${this._totalGraphLoads}: ${current.endpointUrl}`);
 		}
 
 		this._statusBarItem.text = segments.length > 0 ? segments.join(this._segmentSeparator) : this._getSummaryLabel();

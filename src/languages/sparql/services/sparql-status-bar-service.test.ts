@@ -41,7 +41,7 @@ import type { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryServ
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
 import { EventEmitter } from '@src/utilities/mocks/vscode';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
-import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection-state';
+import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -52,8 +52,8 @@ function makeServices() {
     const queryExecutionEndEmitter = new EventEmitter<SparqlQueryExecutionState>();
     const connectionTestStartEmitter = new EventEmitter<SparqlConnection>();
     const connectionTestEndEmitter = new EventEmitter<{ connection: SparqlConnection; error: { code: number; message: string } | null }>();
-    const graphLoadStartEmitter = new EventEmitter<void>();
-    const graphLoadEndEmitter = new EventEmitter<void>();
+    const graphLoadStartEmitter = new EventEmitter<SparqlConnection>();
+    const graphLoadEndEmitter = new EventEmitter<SparqlConnection>();
 
     const queryService = {
         onDidQueryExecutionStart: queryExecutionStartEmitter.event,
@@ -96,8 +96,8 @@ function makeServices() {
         fireQueryEnd: (s: SparqlQueryExecutionState) => queryExecutionEndEmitter.fire(s),
         fireTestStart: (c: SparqlConnection) => connectionTestStartEmitter.fire(c),
         fireTestEnd: (payload: { connection: SparqlConnection; error: { code: number; message: string } | null }) => connectionTestEndEmitter.fire(payload),
-        fireGraphLoadStart: () => graphLoadStartEmitter.fire(),
-        fireGraphLoadEnd: () => graphLoadEndEmitter.fire(),
+        fireGraphLoadStart: (c: SparqlConnection) => graphLoadStartEmitter.fire(c),
+        fireGraphLoadEnd: (c: SparqlConnection) => graphLoadEndEmitter.fire(c),
     };
 }
 
@@ -220,18 +220,43 @@ describe('SparqlStatusBarService', () => {
     });
 
     describe('graph loading', () => {
-        it('shows graph-loading progress on the single item and reverts when done', () => {
+        it('shows the URL of the connection being loaded and reverts when done', () => {
             const { queryService, endpointTester, connectionRegistry, graphService, fireGraphLoadStart, fireGraphLoadEnd } = makeServices();
             new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
-            fireGraphLoadStart();
+            const connection = { id: 'c1', endpointUrl: 'https://dbpedia.org/sparql' } as SparqlConnection;
 
-            expect(sparqlItem().text).toContain('Loading graphs');
+            fireGraphLoadStart(connection);
 
-            fireGraphLoadEnd();
+            expect(sparqlItem().text).toBe('$(sync~spin) Loading graphs 1 of 1: https://dbpedia.org/sparql');
+
+            fireGraphLoadEnd(connection);
 
             expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
+        });
+
+        it('shows progress and the oldest still-loading connection when multiple loads overlap', () => {
+            const { queryService, endpointTester, connectionRegistry, graphService, fireGraphLoadStart, fireGraphLoadEnd } = makeServices();
+            new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
+
+            const first = { id: 'c1', endpointUrl: 'https://first.example.org/sparql' } as SparqlConnection;
+            const second = { id: 'c2', endpointUrl: 'https://second.example.org/sparql' } as SparqlConnection;
+
+            fireGraphLoadStart(first);
+            fireGraphLoadStart(second);
+
+            // Both loads are in flight — the oldest (first) is shown as current.
+            expect(sparqlItem().text).toBe('$(sync~spin) Loading graphs 1 of 2: https://first.example.org/sparql');
+
+            fireGraphLoadEnd(first);
+
+            // The first finished — the second is now the oldest still in flight.
+            expect(sparqlItem().text).toBe('$(sync~spin) Loading graphs 2 of 2: https://second.example.org/sparql');
+
+            fireGraphLoadEnd(second);
+
+            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
         });
 
         it('composes query execution and graph loading into one label at the same time', () => {
@@ -244,12 +269,14 @@ describe('SparqlStatusBarService', () => {
                 status: 'running',
             } as unknown as SparqlQueryExecutionState;
 
+            const connection = { id: 'c1', endpointUrl: 'https://dbpedia.org/sparql' } as SparqlConnection;
+
             fireQueryStart(state);
-            fireGraphLoadStart();
+            fireGraphLoadStart(connection);
 
             // Both activities are visible on the one item simultaneously.
             expect(sparqlItem().text).toContain('test.sparql');
-            expect(sparqlItem().text).toContain('Loading graphs');
+            expect(sparqlItem().text).toContain('Loading graphs 1 of 1: https://dbpedia.org/sparql');
         });
     });
 
