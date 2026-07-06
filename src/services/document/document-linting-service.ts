@@ -252,12 +252,20 @@ export class DocumentLintingService implements vscode.Disposable {
 		const diagnostics: vscode.Diagnostic[] = [];
 		const cache = new Map<string, boolean>();
 
-		for (const token of context.tokens) {
-			if (token.tokenType?.name !== 'IRIREF') {
+		for (let i = 1; i < context.tokens.length; i++) {
+			const previousToken = context.tokens[i - 1];
+
+			if (previousToken.tokenType?.name === 'PNAME_NS') {
 				continue;
 			}
 
-			const iri = getIriFromIriReference(token.image);
+			const currentToken = context.tokens[i];
+
+			if (currentToken.tokenType?.name !== 'IRIREF') {
+				continue;
+			}
+
+			const iri = getIriFromIriReference(currentToken.image);
 
 			if (!iri.startsWith('workspace:')) {
 				continue;
@@ -274,12 +282,13 @@ export class DocumentLintingService implements vscode.Disposable {
 
 			if (exists === undefined) {
 				exists = this._vocabulary.store.hasGraph(canonicalUri);
+
 				cache.set(canonicalUri, exists);
 			}
 
 			if (!exists) {
 				const diagnostic = this._createDiagnosticForToken(
-					token,
+					currentToken,
 					`Workspace graph not found: '${canonicalUri}'.`,
 					severity,
 					'UnresolvedWorkspaceGraph'

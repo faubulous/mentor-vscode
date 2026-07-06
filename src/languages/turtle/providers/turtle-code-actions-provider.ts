@@ -6,7 +6,7 @@ import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getIriFromIriReference, getIriFromPrefixedName, getNamespaceDefinition, getTokenAtPosition, getTokenPosition } from '@src/utilities';
 import { getPrefixesWithErrorCode } from '@src/utilities/vscode/diagnostic';
-import { INLINE_SINGLE_USE_BLANK_NODE_CODE } from '@src/languages/linters';
+import { INLINE_SINGLE_USE_BLANK_NODE_CODE } from '@src/linters/providers';
 
 /**
  * A provider for RDF document code actions.

@@ -1,9 +1,8 @@
 import { XSD } from '@faubulous/mentor-rdf';
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver-types';
-import { LintDiagnosticsContext } from '../linter-context';
-import { Linter } from '../linter';
 import { getIriFromToken, getUnquotedLiteralValue } from '@src/utilities';
+import { LintingContext, LintingProvider } from '..';
 
 /**
  * Validates XSD-typed literals against their declared datatype's lexical space.
@@ -11,8 +10,8 @@ import { getIriFromToken, getUnquotedLiteralValue } from '@src/utilities';
  * Operates on `DoubleCaret` tokens in the token stream and checks the preceding
  * literal value against the XSD datatype specified by the following token.
  */
-export class XsdDatatypeValidationLinter implements Linter {
-	visitToken(context: LintDiagnosticsContext, token: IToken, index: number): Diagnostic[] {
+export class XsdDatatypeValidationLinter implements LintingProvider {
+	visitToken(context: LintingContext, token: IToken, index: number): Diagnostic[] {
 		if (token.tokenType?.name !== RdfToken.DCARET.name) {
 			return [];
 		}

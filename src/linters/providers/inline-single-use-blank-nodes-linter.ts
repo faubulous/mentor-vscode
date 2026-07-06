@@ -1,7 +1,6 @@
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver-types';
-import { LintDiagnosticsContext } from '../linter-context';
-import { Linter } from '../linter';
+import { LintingContext, LintingProvider } from '..';
 
 /**
  * The diagnostic code for single-use blank nodes that can be inlined.
@@ -17,12 +16,12 @@ export const INLINE_SINGLE_USE_BLANK_NODE_CODE = 'InlineSingleUseBlankNode';
  * stream — once as a subject (preceded by `.`) and once as an object reference.
  * This matches the same condition used by the document context's `references` map.
  */
-export class InlineSingleUseBlankNodesLinter implements Linter {
-	visitToken(_context: LintDiagnosticsContext, _token: IToken, _index: number): Diagnostic[] {
+export class InlineSingleUseBlankNodesLinter implements LintingProvider {
+	visitToken(_context: LintingContext, _token: IToken, _index: number): Diagnostic[] {
 		return [];
 	}
 
-	finalize(context: LintDiagnosticsContext): Diagnostic[] {
+	finalize(context: LintingContext): Diagnostic[] {
 		const { document, tokens } = context;
 
 		// Group all BLANK_NODE_LABEL tokens by label value, tracking their index.

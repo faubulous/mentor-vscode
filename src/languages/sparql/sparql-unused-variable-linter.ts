@@ -1,7 +1,7 @@
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver-types';
-import { Linter } from '@src/languages/linter';
-import { LintDiagnosticsContext, LintDocument } from '@src/languages/linter-context';
+import { LintingProvider } from '@src/linters/linting-provider';
+import { LintingContext, LintDocument } from '@src/linters/linting-context';
 
 /**
  * Represents information about a SPARQL query scope (SELECT, CONSTRUCT, etc.).
@@ -43,7 +43,7 @@ interface QueryScope {
  *
  * @note Only applicable to SPARQL documents.
  */
-export class SparqlUnusedVariableLinter implements Linter {
+export class SparqlUnusedVariableLinter implements LintingProvider {
 	private _scopeStack: QueryScope[] = [];
 
 	private _currentDepth = 0;
@@ -59,7 +59,7 @@ export class SparqlUnusedVariableLinter implements Linter {
 		this._inSelectClause = false;
 	}
 
-	visitToken(context: LintDiagnosticsContext, token: IToken, index: number): Diagnostic[] {
+	visitToken(context: LintingContext, token: IToken, index: number): Diagnostic[] {
 		if (!token.tokenType) {
 			return [];
 		}
@@ -156,7 +156,7 @@ export class SparqlUnusedVariableLinter implements Linter {
 		return [];
 	}
 
-	finalize(context: LintDiagnosticsContext): Diagnostic[] {
+	finalize(context: LintingContext): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 
 		// Check any remaining scopes at end of document

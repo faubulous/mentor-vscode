@@ -5,16 +5,15 @@ import { ParserFactory } from '@src/languages/parser-factory';
 import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { getConfig } from '@src/utilities/vscode/config';
-import { Linter } from '@src/languages/linter';
-import { LintDiagnosticsContext, LintDocument } from '@src/languages/linter-context';
 import { getNamespaceDefinition, PrefixMap } from '@src/utilities';
+import { LintingContext, LintingProvider } from '@src/linters';
 import {
 	DeprecatedWorkspaceUriLinter,
 	InlineSingleUseBlankNodesLinter,
 	NamespacePrefixLinter,
 	XsdAnyUriLiteralLinter,
 	XsdDatatypeValidationLinter,
-} from '@src/languages/linters';
+} from '@src/linters/providers';
 import { IDocumentContext, isTokenizedDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
 import { IDocumentTokenSource } from './document-token-source.interface';
 
@@ -41,7 +40,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	/**
 	 * Pluggable lint rules that apply to all token-based documents.
 	 */
-	private readonly _linters: Linter[] = [
+	private readonly _linters: LintingProvider[] = [
 		new DeprecatedWorkspaceUriLinter(),
 		new InlineSingleUseBlankNodesLinter(),
 		new NamespacePrefixLinter(),
@@ -52,7 +51,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	/**
 	 * Additional lint rules that only apply to SPARQL documents.
 	 */
-	private readonly _sparqlLinters: Linter[] = [
+	private readonly _sparqlLinters: LintingProvider[] = [
 		new SparqlUnusedVariableLinter(),
 	];
 
@@ -230,7 +229,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		return diagnostics.map(d => this._toVscodeDiagnostic(d));
 	}
 
-	private _getLexDiagnostics(document: LintDocument, tokens: IToken[]): LspDiagnostic[] {
+	private _getLexDiagnostics(document: vscode.TextDocument, tokens: IToken[]): LspDiagnostic[] {
 		return tokens
 			.filter((t) => t?.tokenType?.name === 'Unknown')
 			.map(
@@ -245,7 +244,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 			);
 	}
 
-	private _getParseDiagnostics(document: LintDocument, errors: IRecognitionException[]): LspDiagnostic[] {
+	private _getParseDiagnostics(document: vscode.TextDocument, errors: IRecognitionException[]): LspDiagnostic[] {
 		const content = document.getText();
 
 		return errors.map(
@@ -293,9 +292,9 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		);
 	}
 
-	private _getLintDiagnostics(document: LintDocument, content: string, tokens: IToken[], linters: Linter[]): LspDiagnostic[] {
+	private _getLintDiagnostics(document: vscode.TextDocument, content: string, tokens: IToken[], linters: LintingProvider[]): LspDiagnostic[] {
 		const prefixes: PrefixMap = {};
-		const context: LintDiagnosticsContext = { document, content, tokens, prefixes };
+		const context: LintingContext = { document, content, tokens, prefixes };
 		const result: LspDiagnostic[] = [];
 
 		for (const linter of linters) {

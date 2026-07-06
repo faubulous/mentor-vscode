@@ -1,8 +1,7 @@
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver-types';
-import { LintDiagnosticsContext } from '../linter-context';
-import { Linter } from '../linter';
 import { getIriFromIriReference } from '@src/utilities';
+import { LintingContext, LintingProvider } from '..';
 
 /**
  * The diagnostic code for deprecated `workspace:/path` URIs.
@@ -19,8 +18,8 @@ const DEPRECATED_URI_REGEX = /^workspace:\/(?!\/)/;
  * Detects deprecated `workspace:/path` URIs in IRIREF tokens and suggests
  * replacing them with `workspace:///path`.
  */
-export class DeprecatedWorkspaceUriLinter implements Linter {
-	visitToken(context: LintDiagnosticsContext, token: IToken, _index: number): Diagnostic[] {
+export class DeprecatedWorkspaceUriLinter implements LintingProvider {
+	visitToken(context: LintingContext, token: IToken, _index: number): Diagnostic[] {
 		if (token.tokenType?.name !== RdfToken.IRIREF.name) {
 			return [];
 		}

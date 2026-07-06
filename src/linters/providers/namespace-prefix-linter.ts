@@ -1,8 +1,7 @@
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver-types';
-import { LintDiagnosticsContext } from '../linter-context';
-import { Linter } from '../linter';
 import { getNamespaceDefinition } from '@src/utilities';
+import { LintingContext, LintingProvider } from '..';
 
 /**
  * The diagnostic code for duplicate namespace prefix declarations.
@@ -22,7 +21,7 @@ export const UNUSED_NAMESPACE_PREFIX_CODE = 'UnusedNamespacePrefixHint';
 /**
  * Detects duplicate prefix declarations, invalid namespace URIs, and unused prefixes.
  */
-export class NamespacePrefixLinter implements Linter {
+export class NamespacePrefixLinter implements LintingProvider {
 	private _seenPrefixes: Record<string, boolean> = {};
 	private _usedPrefixes = new Set<string>();
 
@@ -31,7 +30,7 @@ export class NamespacePrefixLinter implements Linter {
 		this._usedPrefixes = new Set();
 	}
 
-	visitToken(context: LintDiagnosticsContext, token: IToken, index: number): Diagnostic[] {
+	visitToken(context: LintingContext, token: IToken, index: number): Diagnostic[] {
 		const type = token.tokenType?.name;
 
 		if (!type || type === 'Unknown') {
@@ -102,7 +101,7 @@ export class NamespacePrefixLinter implements Linter {
 		return result;
 	}
 
-	finalize(context: LintDiagnosticsContext): Diagnostic[] {
+	finalize(context: LintingContext): Diagnostic[] {
 		const result: Diagnostic[] = [];
 		const { tokens } = context;
 

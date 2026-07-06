@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { XSD_ANY_URI_LITERAL_CODE } from '@src/languages/linters/xsd-any-uri-literal-linter';
+import { XSD_ANY_URI_LITERAL_CODE } from '@src/linters/providers/xsd-any-uri-literal-linter';
 
 export { XSD_ANY_URI_LITERAL_CODE };
 

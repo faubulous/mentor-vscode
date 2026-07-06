@@ -1,9 +1,8 @@
 import { XSD } from '@faubulous/mentor-rdf';
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver-types';
-import { LintDiagnosticsContext } from '../linter-context';
-import { Linter } from '../linter';
 import { getIriFromToken, getUnquotedLiteralValue } from '@src/utilities';
+import { LintingContext, LintingProvider } from '..';
 
 /**
  * The diagnostic code for xsd:anyURI string literals that should be IRI references.
@@ -18,8 +17,8 @@ export const XSD_ANY_URI_LITERAL_CODE = 'XsdAnyUriLiteral';
  * rather than running a regex over the raw text, reusing the same token iteration that
  * the language server performs for XSD datatype validation.
  */
-export class XsdAnyUriLiteralLinter implements Linter {
-	visitToken(context: LintDiagnosticsContext, token: IToken, index: number): Diagnostic[] {
+export class XsdAnyUriLiteralLinter implements LintingProvider {
+	visitToken(context: LintingContext, token: IToken, index: number): Diagnostic[] {
 		if (token.tokenType?.name !== RdfToken.DCARET.name || index < 1 || index >= context.tokens.length - 1) {
 			return [];
 		}
