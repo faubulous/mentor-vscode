@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { isTemplate, symbols as templateSymbols, type TemplateSymbol } from 'triplate';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { RdfToken, isVariableToken, type IToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken, getTokenAtPosition, isPrefixTokenAtPosition } from '@src/utilities';
@@ -23,8 +21,8 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 	 */
 	readonly _parameterSymbols = new Set(['paramDecl', 'paramRef', 'bindingKey']);
 
-	private get contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+	constructor(private readonly contextService: IDocumentContextService) {
+		super();
 	}
 
 	public async prepareRename(document: vscode.TextDocument, position: vscode.Position): Promise<vscode.Range | null> {

@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { compile, isTemplate } from 'triplate';
-import { ServiceToken } from '@src/services/tokens';
 import { ISparqlQueryService } from '@src/languages/sparql/services';
 import { QuadsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { IDocumentContextService } from '@src/services/document';
@@ -26,7 +24,12 @@ export class NotebookController implements vscode.Disposable {
 
 	private _executionOrder = 0;
 
-	constructor() {
+	constructor(
+		context: vscode.ExtensionContext,
+		private readonly _contextService: IDocumentContextService,
+		private readonly _validationService: ShaclValidationService,
+		private readonly _queryService: ISparqlQueryService
+	) {
 		this._controller = vscode.notebooks.createNotebookController(this._id, NOTEBOOK_TYPE, this._label);
 		this._controller.executeHandler = this._executeAll.bind(this);
 		this._controller.supportedLanguages = this._supportedLanguages;
@@ -38,7 +41,6 @@ export class NotebookController implements vscode.Disposable {
 		this._messaging.onDidReceiveMessage(this._onDidReceiveMessage, this, this._subscriptions);
 
 		// Self-register with the extension context for automatic disposal
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(this);
 	}
 
@@ -121,8 +123,8 @@ export class NotebookController implements vscode.Disposable {
 		execution.start(Date.now());
 
 		try {
-			const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-			const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+			const contextService = this._contextService;
+			const validationService = this._validationService;
 
 			// The validation service operates on the document context by URI, so make
 			// sure the cell has been loaded before validating.
@@ -216,7 +218,7 @@ export class NotebookController implements vscode.Disposable {
 			vscode.NotebookCellOutputItem.text(content, 'text/turtle')
 		])]);
 
-		const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+		const validationService = this._validationService;
 
 		// Shape configuration lives on the cell, not on the temporary rendered document.
 		const shapeGraphs = validationService.getEffectiveShapeGraphs(cell.document.uri);
@@ -227,7 +229,7 @@ export class NotebookController implements vscode.Disposable {
 			return;
 		}
 
-		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+		const contextService = this._contextService;
 		const document = await vscode.workspace.openTextDocument({ content, language: cell.document.languageId });
 
 		try {
@@ -282,7 +284,7 @@ export class NotebookController implements vscode.Disposable {
 		});
 
 		try {
-			const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+			const queryService = this._queryService;
 			let queryState = queryService.createQuery(cell, query);
 
 			queryState = await queryService.executeQuery(queryState, tokenSource);

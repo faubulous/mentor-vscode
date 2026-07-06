@@ -58,7 +58,7 @@ export async function resolveShapeDefinitionLocations(arg: DefinitionTreeNode | 
 		return undefined;
 	}
 
-	const definitionProvider = new ResourceDefinitionProvider();
+	const definitionProvider = new ResourceDefinitionProvider(contextService);
 	const locationsByKey = new Map<string, vscode.Location>();
 
 	for (const shapeUri of shapeUris) {

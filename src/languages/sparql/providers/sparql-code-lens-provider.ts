@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionRegistry, ISparqlQueryService, IDocumentConnectionService } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '../services/sparql-connection-registry';
@@ -13,21 +11,14 @@ import { isTemplate } from 'triplate';
 export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
-	private _connectionRegistry: ISparqlConnectionRegistry;
-
-	private _documentConnectionService: IDocumentConnectionService;
-
-	private _storeConfigService: ITripleStoreConfigService;
-	
-	private _queryService: ISparqlQueryService;
-
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
-	constructor() {
-		this._connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
-		this._documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
-		this._storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
-		this._queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+	constructor(
+		private readonly _connectionRegistry: ISparqlConnectionRegistry,
+		private readonly _documentConnectionService: IDocumentConnectionService,
+		private readonly _storeConfigService: ITripleStoreConfigService,
+		private readonly _queryService: ISparqlQueryService
+	) {
 
 		this._documentConnectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();

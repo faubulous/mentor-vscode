@@ -1,16 +1,15 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { AuthCredential, MicrosoftAuthCredential } from './credential';
-import { ServiceToken } from '@src/services/tokens';
 import { loginMicrosoftAuthProvider } from '@src/commands/login-microsoft-auth-provider';
 
 /**
  * Service for managing credentials using the SecretStorage of Visual Studio Code.
  */
 export class CredentialStorageService {
+    constructor(private readonly _context: vscode.ExtensionContext) { }
+
     private get _secretStorage(): vscode.SecretStorage {
-        const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
-        return context.secrets;
+        return this._context.secrets;
     }
 
     private _getKey(uri: string): string {

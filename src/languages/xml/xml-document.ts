@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
-import { Store } from '@faubulous/mentor-rdf';
+import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
+import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
@@ -16,10 +15,6 @@ export class XmlDocument extends DocumentContext {
 	readonly syntax: RdfSyntax;
 
 	private _inferenceExecuted = false;
-
-	private get store() {
-		return container.resolve<Store>(ServiceToken.Store);
-	}
 
 	/**
 	 * Indicates whether parsed data has been received from the language server.
@@ -43,8 +38,8 @@ export class XmlDocument extends DocumentContext {
 		return false;
 	}
 
-	constructor(uri: vscode.Uri) {
-		super(uri);
+	constructor(uri: vscode.Uri, store: Store, vocabulary: VocabularyRepository, settings: ISettingsService) {
+		super(uri, store, vocabulary, settings);
 
 		this.syntax = RdfSyntax.RdfXml;
 	}
@@ -260,12 +255,12 @@ export class XmlDocument extends DocumentContext {
 	}
 
 	override async infer(): Promise<void> {
-		const reasoner = this.store.reasoner;
+		const reasoner = this._store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			this.store.executeInference(WorkspaceUri.toCanonicalString(this.graphIri));
+			this._store.executeInference(WorkspaceUri.toCanonicalString(this.graphIri));
 		}
 	}
 
@@ -281,7 +276,7 @@ export class XmlDocument extends DocumentContext {
 			// Delete old graphs to handle slug changes. loadFromXmlStream handles
 			// clearing the target graph itself via its clearGraph option.
 			if (this.graphs.length > 0) {
-				this.store.deleteGraphs([...this.graphs]);
+				this._store.deleteGraphs([...this.graphs]);
 			}
 
 			// Initialize the graphs *before* trying to load the document so 
@@ -294,7 +289,7 @@ export class XmlDocument extends DocumentContext {
 			this._inferenceExecuted = false;
 
 			// Load triples from the RDF/XML content into the store.
-			await this.store.loadFromXmlStream(data, graphUri, false);
+			await this._store.loadFromXmlStream(data, graphUri, false);
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 			console.error('Failed to load triples from RDF/XML:', e);

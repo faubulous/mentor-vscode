@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
+import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { ISettingsService } from '@src/services/core';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 
 /**
  * A document context for SPARQL documents.
  */
 export class SparqlDocument extends TurtleDocument {
-	constructor(uri: vscode.Uri) {
-		super(uri, RdfSyntax.Sparql);
+	constructor(uri: vscode.Uri, store: Store, vocabulary: VocabularyRepository, settings: ISettingsService) {
+		super(uri, RdfSyntax.Sparql, store, vocabulary, settings);
 	}
 
 	/**

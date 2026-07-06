@@ -21,7 +21,7 @@ export const revealDefinition = {
 		const editor = await context.activateDocument();
 
 		if (context.activeContext && editor && uri) {
-			const location = new ResourceDefinitionProvider().provideDefinitionForResource(context.activeContext, uri, true);
+			const location = new ResourceDefinitionProvider(contextService()).provideDefinitionForResource(context.activeContext, uri, true);
 
 			if (location instanceof vscode.Location) {
 				editor.selection = new vscode.Selection(location.range.start, location.range.end);

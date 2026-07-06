@@ -6,6 +6,8 @@ import { Store } from '@faubulous/mentor-rdf';
 import { configureServiceContainer } from './services/container';
 import { ServiceToken } from './services/tokens';
 import { ISettingsMigrationService, IWorkspaceFileService, IWorkspaceService } from './services/core';
+import { IDocumentContextService, IPrefixLookupService } from './services/document';
+import { IViewRouter } from './views/webviews';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
 import { WorkspaceUri } from './providers/workspace-uri';
 import { WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connection-registry';
@@ -14,8 +16,6 @@ import { IGraphManagementService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
-import { NotebookController } from './services/notebook/notebook-controller';
-import { DocumentLintingService } from './services/document/document-linting-service';
 import * as languages from './languages';
 import * as commands from './commands';
 import * as trees from './views/trees';
@@ -38,10 +38,10 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	await loadFrameworkOntologies();
 
 	registerLanguages();
+	registerViews(); // Views must be registered before providers, since some providers depend on the view registry.
 	registerProviders(context);
 	registerCommands(context);
-	registerViews();
-	registerNotebookSerializers();
+	registerNotebookSerializers(context);
 	registerRenameHandlers(context);
 	registerNotebookInferenceContext(context);
 
@@ -75,26 +75,31 @@ function registerLanguages() {
 }
 
 /**
- * Registers the notebook serializer and controller for the Mentor Notebook.
+ * Registers the notebook serializer for the Mentor Notebook.
  */
-function registerNotebookSerializers() {
-	container.registerInstance(ServiceToken.NotebookController, new NotebookController());
-	new NotebookSerializer();
+function registerNotebookSerializers(context: vscode.ExtensionContext) {
+	new NotebookSerializer(context);
 }
 
 /**
  * Registers various providers for language features, file system access and URI handling.
+ * This is a composition point: services are resolved from the container once and passed
+ * into the provider constructors.
  */
 function registerProviders(context: vscode.ExtensionContext) {
-	new DocumentLintingService();
-	new providers.WorkspaceUriLinkProvider();
-	new providers.WorkspaceUriCodeActionProvider();
-	new providers.WorkspaceFileSystemProvider();
-	new providers.TemplateFileSystemProvider();
-	new providers.XsdAnyUriCodeActionProvider();
-	new providers.InferenceUriLinkProvider();
-	new providers.MentorUriHandler();
-	new providers.ResourceTooltipProvider();
+	const store = container.resolve<Store>(ServiceToken.Store);
+	const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+	const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
+	const router = container.resolve<IViewRouter>(ServiceToken.WebviewRouter);
+
+	new providers.WorkspaceUriLinkProvider(context);
+	new providers.WorkspaceUriCodeActionProvider(context);
+	new providers.WorkspaceFileSystemProvider(context);
+	new providers.TemplateFileSystemProvider(context);
+	new providers.XsdAnyUriCodeActionProvider(context);
+	new providers.InferenceUriLinkProvider(context);
+	new providers.MentorUriHandler(context, store, prefixLookup, router);
+	new providers.ResourceTooltipProvider(context, contextService, store);
 }
 
 /**

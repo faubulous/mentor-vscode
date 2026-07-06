@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
@@ -20,19 +18,11 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
-
-	private get _workspaceIndexerService() {
-		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
-	}
-
-	private get _validationService() {
-		return container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
-	}
-
-	constructor() {
+	constructor(
+		private readonly _contextService: IDocumentContextService,
+		private readonly _workspaceIndexerService: IWorkspaceIndexerService,
+		private readonly _validationService: ShaclValidationService
+	) {
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.shacl') || e.affectsConfiguration('mentor.shacl.enabled')) {
 				this._enabled = getConfig().get('shacl.enabled', false);

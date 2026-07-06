@@ -109,7 +109,17 @@ function createControllerWithExecution(mockExecution: ReturnType<typeof makeExec
 		dispose: vi.fn(),
 	}) as any);
 
-	const controller = new NotebookController();
+	const controller = new NotebookController(
+		{ subscriptions: [] } as any,
+		{ contexts: {}, loadDocument: mockLoadDocument, handleDocumentClosed: mockHandleDocumentClosed } as any,
+		{
+			getEffectiveShapeGraphs: mockGetEffectiveShapeGraphs,
+			validateDocument: mockValidateDocument,
+			getReportAsText: mockGetReportAsText,
+			clearDiagnostics: mockClearDiagnostics,
+		} as any,
+		{ createQuery: mockCreateQuery, executeQuery: mockExecuteQuery } as any,
+	);
 	return { controller, executeHandler: () => capturedExecuteHandler };
 }
 

@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { container } from 'tsyringe';
 import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
 import { getTokenIndexAtPosition } from '@src/utilities';
-import { ServiceToken } from '@src/services/tokens';
+import { VocabularyRepository } from '@faubulous/mentor-rdf';
+import { IDocumentContextService } from '@src/services/document';
 import { ISparqlConnectionRegistry, IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
@@ -21,20 +21,18 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 */
 	public readonly triggerCharacters = new Set([':', '<', '/']);
 
-	private get connectionRegistry() {
-		return container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
-	}
-
-	private get documentConnectionService() {
-		return container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
-	}
-
-	private get graphService() {
-		return container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+	constructor(
+		contextService: IDocumentContextService,
+		vocabulary: VocabularyRepository,
+		private readonly _connectionRegistry: ISparqlConnectionRegistry,
+		private readonly _documentConnectionService: IDocumentConnectionService,
+		private readonly _graphService: IGraphManagementService
+	) {
+		super(contextService, vocabulary);
 	}
 
 	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | vscode.CompletionList | null> {
-		const context = this.contextService.getDocumentContext(document, TurtleDocument);
+		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
@@ -154,11 +152,11 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 * Otherwise the existing on-demand query path is used.
 	 */
 	private async _mergeGraphUris(documentUri: vscode.Uri): Promise<string[]> {
-		const connection = this.documentConnectionService.getConnectionForDocument(documentUri);
+		const connection = this._documentConnectionService.getConnectionForDocument(documentUri);
 
-		if (this.graphService.hasGraphsForConnection(connection.id)) {
-			const inferenceEnabled = this.connectionRegistry.getInferenceEnabled(connection.id);
-			const graphs = this.graphService.getGraphsForConnection(connection.id, inferenceEnabled);
+		if (this._graphService.hasGraphsForConnection(connection.id)) {
+			const inferenceEnabled = this._connectionRegistry.getInferenceEnabled(connection.id);
+			const graphs = this._graphService.getGraphsForConnection(connection.id, inferenceEnabled);
 			
 			const seen = new Set<string>();
 			const result: string[] = [];

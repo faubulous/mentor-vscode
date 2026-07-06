@@ -58,7 +58,7 @@ describe('XmlRenameProvider', () => {
     let provider: XmlRenameProvider;
 
     beforeEach(() => {
-        provider = new XmlRenameProvider();
+        provider = new XmlRenameProvider({ getDocumentContext: mockGetDocumentContext } as any);
     });
 
     describe('getWorkspaceEdits', () => {

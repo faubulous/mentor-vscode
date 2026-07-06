@@ -1,6 +1,15 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
+import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
+import { IDocumentContextService, IPrefixLookupService } from '@src/services/document';
+import {
+	ISparqlConnectionRegistry,
+	ISparqlQueryService,
+	ITripleStoreConfigService,
+	IGraphManagementService,
+	IDocumentConnectionService
+} from '@src/languages/sparql/services';
 import {
 	ResourceReferenceProvider,
 	ResourceDefinitionProvider,
@@ -21,21 +30,36 @@ import {
 } from '@src/languages/sparql/providers';
 import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sparql-prefix-definition-service';
 
+/**
+ * Registers the language feature providers for the SPARQL language.
+ *
+ * This is a composition point: services are resolved from the container once
+ * and passed into the provider constructors.
+ */
 export class SparqlTokenProvider {
 	constructor() {
-		const codeActionsProvider = new TurtleCodeActionsProvider();
-		const codeLensProvider = new SparqlCodeLensProvider();
-		const notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider();
-		const completionProvider = new SparqlCompletionItemProvider();
-		const definitionProvider = new ResourceDefinitionProvider();
-		const workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider();
+		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
+		const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
+		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
+		const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+
+		const codeActionsProvider = new TurtleCodeActionsProvider(contextService);
+		const codeLensProvider = new SparqlCodeLensProvider(connectionRegistry, documentConnectionService, storeConfigService, queryService);
+		const notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider(contextService);
+		const completionProvider = new SparqlCompletionItemProvider(contextService, vocabulary, connectionRegistry, documentConnectionService, graphService);
+		const definitionProvider = new ResourceDefinitionProvider(contextService);
+		const workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider(contextService);
 		const formattingProvider = new SparqlCodeFormattingProvider();
-		const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
-		const referenceProvider = new ResourceReferenceProvider();
-		const renameProvider = new SparqlRenameProvider();
+		const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`, contextService, prefixLookup);
+		const referenceProvider = new ResourceReferenceProvider(contextService);
+		const renameProvider = new SparqlRenameProvider(contextService);
 		const prefixDefinitionService = container.resolve<SparqlPrefixDefinitionService>(ServiceToken.SparqlPrefixDefinitionService);
-		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(['sparql'], prefixDefinitionService);
-		const graphDiagnosticProvider = new SparqlGraphDiagnosticProvider();
+		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(['sparql'], prefixDefinitionService, contextService);
+		const graphDiagnosticProvider = new SparqlGraphDiagnosticProvider(documentConnectionService, graphService);
 
 		// Self-register with the extension context for automatic disposal
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);

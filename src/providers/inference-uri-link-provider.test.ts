@@ -42,13 +42,13 @@ describe('InferenceUriLinkProvider', () => {
     });
 
     it('registers a document link provider on construction', () => {
-        const provider = new InferenceUriLinkProvider();
+        const provider = new InferenceUriLinkProvider({ subscriptions: mockSubscriptions } as any);
         expect(mockSubscriptions.length).toBe(1);
         expect(provider).toBeDefined();
     });
 
     it('returns empty array when document text contains no inference URIs', () => {
-        const provider = new InferenceUriLinkProvider();
+        const provider = new InferenceUriLinkProvider({ subscriptions: mockSubscriptions } as any);
         const doc = {
             getText: () => 'No inference graph URIs here.',
             positionAt: (offset: number) => new vscode.Position(0, offset),
@@ -58,7 +58,7 @@ describe('InferenceUriLinkProvider', () => {
     });
 
     it('returns one DocumentLink for text ending with a single inference URI', () => {
-        const provider = new InferenceUriLinkProvider();
+        const provider = new InferenceUriLinkProvider({ subscriptions: mockSubscriptions } as any);
         // InferenceUri.uriRegex = "(<[^\s>]+>)inference$" — matches <IRI>inference at end of string
         const text = '<http://example.org/ontology>inference';
         const doc = {
@@ -71,7 +71,7 @@ describe('InferenceUriLinkProvider', () => {
     });
 
     it('link range covers the full matched text', () => {
-        const provider = new InferenceUriLinkProvider();
+        const provider = new InferenceUriLinkProvider({ subscriptions: mockSubscriptions } as any);
         const text = '<http://example.org/ontology>inference';
         const doc = {
             getText: () => text,
@@ -85,7 +85,7 @@ describe('InferenceUriLinkProvider', () => {
     });
 
     it('link start position is offset into the line when IRI appears mid-text', () => {
-        const provider = new InferenceUriLinkProvider();
+        const provider = new InferenceUriLinkProvider({ subscriptions: mockSubscriptions } as any);
         const pre = 'GRAPH ';
         const match = '<http://example.org/ontology>inference';
         const text = pre + match;

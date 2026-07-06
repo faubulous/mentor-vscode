@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { XSD_ANY_URI_LITERAL_CODE } from '@src/languages/linters/xsd-any-uri-literal-linter';
 
 export { XSD_ANY_URI_LITERAL_CODE };
@@ -32,8 +30,7 @@ export class XsdAnyUriCodeActionProvider implements vscode.CodeActionProvider {
 		'datalog'
 	];
 
-	constructor() {
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+	constructor(context: vscode.ExtensionContext) {
 
 		const selector = XsdAnyUriCodeActionProvider.languages.map(language => ({ language }));
 

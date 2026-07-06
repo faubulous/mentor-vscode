@@ -9,6 +9,8 @@ import { WorkspaceIndexerService } from './core/workspace-indexer-service';
 import { WorkspaceFileService } from './core/workspace-file-service';
 import { WorkspaceService } from './core/workspace-service';
 import { DocumentContextService } from './document/document-context-service';
+import { DocumentLintingService } from './document/document-linting-service';
+import { NotebookController } from './notebook/notebook-controller';
 import { DocumentTokenSource } from './document/document-token-source';
 import { DocumentDiagnosticsService } from './document/document-diagnostics-service';
 import { SettingsService } from './core/settings-service';
@@ -61,10 +63,10 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const vocabularyRepository = new VocabularyRepository(store);
 	container.registerInstance(ServiceToken.VocabularyRepository, vocabularyRepository);
 
-	const credentialStorageService = new CredentialStorageService();
+	const credentialStorageService = new CredentialStorageService(context);
 	container.registerInstance(ServiceToken.CredentialStorageService, credentialStorageService);
 
-	const documentFactory = new DocumentFactory();
+	const documentFactory = new DocumentFactory(store, vocabularyRepository, settingsService);
 	container.registerInstance(ServiceToken.DocumentFactory, documentFactory);
 
 	// The token source supplies documents with tokens and coordinates concurrent
@@ -100,6 +102,9 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
+	// The linting service self-registers with the extension context for disposal.
+	new DocumentLintingService(context, vocabularyRepository, documentFactory, workspaceIndexerService, documentContextService);
+
 	const sparqlStoreConfigService = new TripleStoreConfigService();
 	container.registerInstance(ServiceToken.StoreConfigService, sparqlStoreConfigService);
 
@@ -134,11 +139,15 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	container.registerInstance(ServiceToken.SparqlPrefixDefinitionService, sparqlPrefixDefinitionService);
 
 	// Register the SHACL validation service.
-	const shaclValidationService = new ShaclValidationService();
+	const shaclValidationService = new ShaclValidationService(context, store, documentContextService);
 	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
+	// Register the notebook controller for the Mentor Notebook kernel.
+	const notebookController = new NotebookController(context, documentContextService, shaclValidationService, sparqlQueryService);
+	container.registerInstance(ServiceToken.NotebookController, notebookController);
+
 	// Register the graph service before the status bar so the status bar can subscribe to load events.
-	const graphService = new GraphManagementService();
+	const graphService = new GraphManagementService(connectionRegistry, sparqlQueryService, sparqlStoreConfigService, store);
 	container.registerInstance(ServiceToken.GraphManagementService, graphService);
 
 	context.subscriptions.push(graphService);
@@ -155,6 +164,9 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	container.registerInstance(ServiceToken.ReferenceUpdateService, referenceUpdateService);
 
 	// Register the settings migration service. New migrations are added to this list only.
-	const settingsMigrationService = new SettingsMigrationService(Object.values(migrations).map(m => new m()));
+	const settingsMigrationService = new SettingsMigrationService([
+		new migrations.IndexExcludeFilesMigration(),
+		new migrations.SeedDefaultStoresMigration(context),
+	]);
 	container.registerInstance(ServiceToken.SettingsMigrationService, settingsMigrationService);
 }

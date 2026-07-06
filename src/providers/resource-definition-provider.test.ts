@@ -32,7 +32,7 @@ describe('ResourceDefinitionProvider', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockContextService.contexts = {};
-        provider = new ResourceDefinitionProvider();
+        provider = new ResourceDefinitionProvider(mockContextService as any);
     });
 
     describe('provideDefinition', () => {

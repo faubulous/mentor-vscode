@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
@@ -36,29 +34,18 @@ export class DocumentLintingService implements vscode.Disposable {
 	 */
 	private _lintingEnabled: boolean = false;
 
-	private get _vocabulary() {
-		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
-	}
-
-	private get _documentFactory() {
-		return container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
-	}
-
-	private get _workspaceIndexerService() {
-		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
-	}
-
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
-
-	constructor() {
+	constructor(
+		context: vscode.ExtensionContext,
+		private readonly _vocabulary: VocabularyRepository,
+		private readonly _documentFactory: IDocumentFactory,
+		private readonly _workspaceIndexerService: IWorkspaceIndexerService,
+		private readonly _contextService: IDocumentContextService
+	) {
 		this._diagnosticCollection = vscode.languages.createDiagnosticCollection('mentor-linting');
 
 		this._loadLintingEnabledState();
 
 		// Self-register with the extension context for automatic disposal
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(this);
 
 		// Wait for workspace indexing to complete before starting validation

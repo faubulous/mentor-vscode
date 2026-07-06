@@ -1,15 +1,11 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
 /**
  * A provider that retrieves the locations of resource references in a document.
  */
 export class ResourceReferenceProvider implements vscode.ReferenceProvider {
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
+	constructor(private readonly _contextService: IDocumentContextService) { }
 
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
 		const context = this._contextService.contexts[document.uri.toString()];

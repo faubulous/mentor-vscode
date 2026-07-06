@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { getConfig } from '@src/utilities/vscode/config';
@@ -18,12 +16,12 @@ import { isTokenizedDocumentContext } from '@src/services/document/document-cont
 export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
 	private readonly _disposables: vscode.Disposable[] = [];
 
-	private readonly _contextService: IDocumentContextService;
-
-	constructor(languages: string[], private readonly _prefixService: TurtlePrefixDefinitionService) {
+	constructor(
+		languages: string[],
+		private readonly _prefixService: TurtlePrefixDefinitionService,
+		private readonly _contextService: IDocumentContextService
+	) {
 		const filter = languages.map(language => ({ language }));
-
-		this._contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 
 		this._disposables.push(
 			vscode.workspace.onDidChangeTextDocument(e => {

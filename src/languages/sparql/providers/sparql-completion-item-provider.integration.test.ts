@@ -87,14 +87,14 @@ function makeQuery(source: string) {
 }
 
 function makeProvider(queryContext: SparqlDocument, ontologyContext: TurtleDocument): SparqlCompletionItemProvider {
-    const provider = new SparqlCompletionItemProvider();
+    const provider = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
 
-    vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+    (provider as any)._contextService = ({
         getDocumentContext: () => queryContext,
         getDocumentContextFromUri: (uri: string) => uri === NEXUS ? ontologyContext : null,
         contexts: { 'file:///w/nexus.ttl': ontologyContext },
     });
-    vi.spyOn(provider as any, 'vocabulary', 'get').mockReturnValue({
+    (provider as any)._vocabulary = ({
         getProperties: () => ONTOLOGY_PROPERTIES,
         // Everything in the generated ontology except the properties and
         // individuals is declared as a class.

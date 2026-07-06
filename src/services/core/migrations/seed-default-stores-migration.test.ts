@@ -54,12 +54,11 @@ describe('SeedDefaultStoresMigration', () => {
 
 	test('seeds all default stores into global settings when unset and not yet seeded', async () => {
 		const context = createContext(0);
-		(container.resolve as any).mockReturnValue(context);
 
 		const { config, updates } = createConfig(undefined);
 		await useConfig(config);
 
-		await new SeedDefaultStoresMigration().migrate();
+		await new SeedDefaultStoresMigration(context as any).migrate();
 
 		const write = updates.find(u => u.key === 'sparql.stores' && u.target === vscode.ConfigurationTarget.Global);
 		expect(write?.value).toEqual(DEFAULT_SEED_STORES);
@@ -68,12 +67,11 @@ describe('SeedDefaultStoresMigration', () => {
 
 	test('is a no-op when the current seed version already ran', async () => {
 		const context = createContext(1);
-		(container.resolve as any).mockReturnValue(context);
 
 		const { config, updates } = createConfig(undefined);
 		await useConfig(config);
 
-		await new SeedDefaultStoresMigration().migrate();
+		await new SeedDefaultStoresMigration(context as any).migrate();
 
 		expect(updates).toHaveLength(0);
 		expect(context.globalState.update).not.toHaveBeenCalled();
@@ -81,7 +79,6 @@ describe('SeedDefaultStoresMigration', () => {
 
 	test('merges missing built-ins into an existing list while preserving the user entries', async () => {
 		const context = createContext(0);
-		(container.resolve as any).mockReturnValue(context);
 
 		// User already has a customized jena and an unrelated store; qlever/rdf4j are absent.
 		const existingJena = { id: 'jena', label: 'My Jena', queries: { listGraphs: 'SELECT 1' } };
@@ -89,7 +86,7 @@ describe('SeedDefaultStoresMigration', () => {
 		const { config, updates } = createConfig([existingJena, myStore]);
 		await useConfig(config);
 
-		await new SeedDefaultStoresMigration().migrate();
+		await new SeedDefaultStoresMigration(context as any).migrate();
 
 		const write = updates.find(u => u.key === 'sparql.stores' && u.target === vscode.ConfigurationTarget.Global);
 		const ids = write!.value.map((s: any) => s.id);
@@ -103,12 +100,11 @@ describe('SeedDefaultStoresMigration', () => {
 
 	test('writes nothing when every built-in is already present, but records the version', async () => {
 		const context = createContext(0);
-		(container.resolve as any).mockReturnValue(context);
 
 		const { config, updates } = createConfig(DEFAULT_SEED_STORES.map(s => ({ ...s })));
 		await useConfig(config);
 
-		await new SeedDefaultStoresMigration().migrate();
+		await new SeedDefaultStoresMigration(context as any).migrate();
 
 		expect(updates.some(u => u.key === 'sparql.stores')).toBe(false);
 		expect(context.globalState.update).toHaveBeenCalledWith(SEED_VERSION_KEY, 1);

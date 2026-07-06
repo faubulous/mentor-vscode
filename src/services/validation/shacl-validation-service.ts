@@ -3,9 +3,7 @@ import { DataFactory as N3DataFactory } from 'n3';
 import { DatasetCore, Quad, Term } from '@rdfjs/types';
 import { RdfStore } from 'rdf-stores';
 import { Validator } from 'shacl-engine';
-import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
@@ -140,19 +138,14 @@ export class ShaclValidationService implements vscode.Disposable {
 	 */
 	readonly onDidValidate: vscode.Event<vscode.Uri> = this._onDidValidate.event;
 
-	private get _store() {
-		return container.resolve<Store>(ServiceToken.Store);
-	}
-
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
-
-	constructor() {
+	constructor(
+		context: vscode.ExtensionContext,
+		private readonly _store: Store,
+		private readonly _contextService: IDocumentContextService
+	) {
 		this._diagnosticCollection = vscode.languages.createDiagnosticCollection('mentor-shacl');
 		this._diagnosticsMapper = new ShaclDiagnosticsMapper();
 
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(this);
 
 		// Clear diagnostics when a document is closed.

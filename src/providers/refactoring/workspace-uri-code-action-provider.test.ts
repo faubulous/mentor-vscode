@@ -68,11 +68,11 @@ describe('WorkspaceUriCodeActionProvider', () => {
 
 	describe('constructor', () => {
 		it('creates without error', () => {
-			expect(() => new WorkspaceUriCodeActionProvider()).not.toThrow();
+			expect(() => new WorkspaceUriCodeActionProvider({ subscriptions: mockSubscriptions } as any)).not.toThrow();
 		});
 
 		it('registers a code action provider', () => {
-			new WorkspaceUriCodeActionProvider();
+			new WorkspaceUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 			expect(mockSubscriptions.length).toBeGreaterThan(0);
 		});
 	});
@@ -80,7 +80,7 @@ describe('WorkspaceUriCodeActionProvider', () => {
 	describe('provideCodeActions', () => {
 		it('returns empty array when no matching diagnostics in context', () => {
 			const document = makeDocument('SELECT * WHERE { ?s ?p ?o }');
-			const provider = new WorkspaceUriCodeActionProvider();
+			const provider = new WorkspaceUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 
 			const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 5));
 			const actions = provider.provideCodeActions(document, range, { diagnostics: [] } as any);
@@ -90,7 +90,7 @@ describe('WorkspaceUriCodeActionProvider', () => {
 
 		it('returns a Quick Fix when context contains a DeprecatedWorkspaceUri diagnostic', () => {
 			const document = makeDocument('FROM <workspace:/dir/file.ttl>');
-			const provider = new WorkspaceUriCodeActionProvider();
+			const provider = new WorkspaceUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 
 			const diagnostic = makeDiagnostic(5, 30, 'workspace:///dir/file.ttl');
 			const range = new vscode.Range(new vscode.Position(0, 5), new vscode.Position(0, 30));
@@ -104,7 +104,7 @@ describe('WorkspaceUriCodeActionProvider', () => {
 
 		it('Quick Fix edit replaces the diagnostic range with canonical URI', () => {
 			const document = makeDocument('FROM <workspace:/dir/file.ttl>');
-			const provider = new WorkspaceUriCodeActionProvider();
+			const provider = new WorkspaceUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 
 			const diagnostic = makeDiagnostic(5, 30, 'workspace:///dir/file.ttl');
 			const range = new vscode.Range(new vscode.Position(0, 5), new vscode.Position(0, 30));
@@ -121,7 +121,7 @@ describe('WorkspaceUriCodeActionProvider', () => {
 
 		it('ignores diagnostics with a different code', () => {
 			const document = makeDocument('test');
-			const provider = new WorkspaceUriCodeActionProvider();
+			const provider = new WorkspaceUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 
 			const unrelatedDiag = new vscode.Diagnostic(
 				new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 4)),

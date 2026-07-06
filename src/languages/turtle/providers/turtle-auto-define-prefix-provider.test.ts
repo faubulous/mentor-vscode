@@ -38,7 +38,7 @@ const PNAME_NS = 'PNAME_NS';
 const prefixService = { implementPrefixes: mockImplementPrefixes } as any;
 
 function makeProvider(languages: string[] = ['turtle']) {
-    return new TurtleAutoDefinePrefixProvider(languages, prefixService);
+    return new TurtleAutoDefinePrefixProvider(languages, prefixService, mockContextService as any);
 }
 
 /**

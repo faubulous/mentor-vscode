@@ -49,7 +49,7 @@ describe('TemplateFileSystemProvider', () => {
     });
 
     it('registers a file system provider on construction', () => {
-        const provider = new TemplateFileSystemProvider();
+        const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
         expect(mockSubscriptions.length).toBe(1);
         expect(provider).toBeDefined();
     });
@@ -59,21 +59,21 @@ describe('TemplateFileSystemProvider', () => {
 
         it('readFile returns the current setting value', () => {
             configStore.set(key, 'SELECT * WHERE { ?s ?p ?o }');
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const uri = TemplateFileSystemProvider.globalUri(key, 'sparql');
 
             expect(decoder.decode(provider.readFile(uri))).toBe('SELECT * WHERE { ?s ?p ?o }');
         });
 
         it('readFile returns empty string for an unset setting', () => {
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const uri = TemplateFileSystemProvider.globalUri(key, 'sparql');
 
             expect(decoder.decode(provider.readFile(uri))).toBe('');
         });
 
         it('writeFile updates the setting at Global scope by default', async () => {
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const uri = TemplateFileSystemProvider.globalUri(key, 'sparql');
 
             await provider.writeFile(uri, new TextEncoder().encode('ASK { ?s ?p ?o }'));
@@ -83,7 +83,7 @@ describe('TemplateFileSystemProvider', () => {
 
         it('writeFile targets Workspace scope when the value lives there', async () => {
             inspectResult.workspaceValue = 'existing';
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const uri = TemplateFileSystemProvider.globalUri(key, 'sparql');
 
             await provider.writeFile(uri, new TextEncoder().encode('updated'));
@@ -93,7 +93,7 @@ describe('TemplateFileSystemProvider', () => {
 
         it('stat reports the size of the current value', () => {
             configStore.set(key, 'abc');
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const uri = TemplateFileSystemProvider.globalUri(key, 'sparql');
 
             const stat = provider.stat(uri);
@@ -108,7 +108,7 @@ describe('TemplateFileSystemProvider', () => {
 
         it('readFile returns the seeded buffer', () => {
             TemplateFileSystemProvider.seedScratch(token, 'SELECT ?g WHERE {}');
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const uri = TemplateFileSystemProvider.scratchUri(token, 'sparql');
 
             expect(decoder.decode(provider.readFile(uri))).toBe('SELECT ?g WHERE {}');
@@ -116,7 +116,7 @@ describe('TemplateFileSystemProvider', () => {
 
         it('writeFile updates the buffer and fires onDidSaveScratch', async () => {
             TemplateFileSystemProvider.seedScratch(token, 'old');
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const uri = TemplateFileSystemProvider.scratchUri(token, 'sparql');
 
             const saved: { token: string; content: string }[] = [];
@@ -132,14 +132,14 @@ describe('TemplateFileSystemProvider', () => {
 
     describe('unsupported operations', () => {
         it('createDirectory, delete and rename throw', () => {
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             expect(() => provider.createDirectory()).toThrow();
             expect(() => provider.delete()).toThrow();
             expect(() => provider.rename()).toThrow();
         });
 
         it('readDirectory returns an empty array and watch returns a Disposable', () => {
-            const provider = new TemplateFileSystemProvider();
+            const provider = new TemplateFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             expect(provider.readDirectory()).toEqual([]);
             expect(typeof provider.watch().dispose).toBe('function');
         });

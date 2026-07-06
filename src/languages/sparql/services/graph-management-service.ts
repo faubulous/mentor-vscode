@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { SparqlConnection } from './sparql-connection';
 import { ISparqlConnectionRegistry } from './sparql-connection-registry.interface';
 import { ISparqlQueryService } from './sparql-query-service.interface';
@@ -79,21 +77,12 @@ export class GraphManagementService implements IGraphManagementService {
      */
     public readonly onDidGraphLoadEnd = this._onDidGraphLoadEnd.event;
 
-    private get _connectionRegistry(): ISparqlConnectionRegistry {
-        return container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
-    }
-
-    private get _queryService(): ISparqlQueryService {
-        return container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
-    }
-
-    private get _storeConfigService(): ITripleStoreConfigService {
-        return container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
-    }
-
-    private get _workspaceStore(): Store {
-        return container.resolve<Store>(ServiceToken.Store);
-    }
+    constructor(
+        private readonly _connectionRegistry: ISparqlConnectionRegistry,
+        private readonly _queryService: ISparqlQueryService,
+        private readonly _storeConfigService: ITripleStoreConfigService,
+        private readonly _workspaceStore: Store
+    ) { }
 
     getGraphsForConnection(connectionId: string, inferenceEnabled: boolean): string[] {
         if (this._storeConfigService.isWorkspaceConnectionId(connectionId)) {

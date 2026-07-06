@@ -34,7 +34,7 @@ describe('ResourceReferenceProvider', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockContextService.contexts = {};
-		provider = new ResourceReferenceProvider();
+		provider = new ResourceReferenceProvider(mockContextService as any);
 	});
 
 	it('returns null when no context for document', () => {

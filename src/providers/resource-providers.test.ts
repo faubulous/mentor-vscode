@@ -5,17 +5,18 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 let mockContexts: Record<string, any>;
 
 vi.mock('tsyringe', () => ({
-	container: {
-		resolve: vi.fn(() => ({
-			subscriptions: [],
-			get contexts() { return mockContexts; },
-			matchAll: () => [],
-		})),
-	},
+	container: { resolve: vi.fn(() => ({})) },
 	injectable: () => (t: any) => t,
 	inject: () => () => {},
 	singleton: () => (t: any) => t,
 }));
+
+/** Shared mock satisfying the extension context, context service and store dependencies. */
+const mockServices: any = {
+	subscriptions: [],
+	get contexts() { return mockContexts; },
+	matchAll: () => [],
+};
 
 import * as vscode from 'vscode';
 import { ResourceDefinitionProvider } from '@src/providers/resource-definition-provider';
@@ -58,7 +59,7 @@ beforeEach(() => {
 describe('ResourceDefinitionProvider', () => {
 	describe('provideDefinition', () => {
 		it('should return null when context is not found', () => {
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			const result = provider.provideDefinition(makeDocument('file:///unknown.ttl'), new (vscode.Position as any)(0, 0));
 			expect(result).toBeNull();
 		});
@@ -66,7 +67,7 @@ describe('ResourceDefinitionProvider', () => {
 		it('should return null when no IRI at position', () => {
 			const ctx = makeCtx({ getIriAtPosition: vi.fn(() => undefined) });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			const result = provider.provideDefinition(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeNull();
 		});
@@ -78,7 +79,7 @@ describe('ResourceDefinitionProvider', () => {
 				references: { 'urn:ex#Thing': [range] },
 			});
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			const result = provider.provideDefinition(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeInstanceOf(vscode.Location);
 		});
@@ -87,7 +88,7 @@ describe('ResourceDefinitionProvider', () => {
 	describe('provideDefinitionForResource', () => {
 		it('should return null when no definition or reference exists', () => {
 			const ctx = makeCtx();
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			expect(provider.provideDefinitionForResource(ctx, 'urn:ex#Unknown')).toBeNull();
 		});
 
@@ -95,7 +96,7 @@ describe('ResourceDefinitionProvider', () => {
 			const range = makeRange(10, 0);
 			const ctx = makeCtx({ typeDefinitions: { 'urn:ex#Cls': [range] } });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			const result = provider.provideDefinitionForResource(ctx, 'urn:ex#Cls', true);
 			expect(result).toBeInstanceOf(vscode.Location);
 		});
@@ -103,7 +104,7 @@ describe('ResourceDefinitionProvider', () => {
 		it('should return Location from typeAssertions when no typeDefinition', () => {
 			const range = makeRange(3, 2);
 			const ctx = makeCtx({ typeAssertions: { 'urn:ex#Ind': [range] } });
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			const result = provider.provideDefinitionForResource(ctx, 'urn:ex#Ind', true);
 			expect(result).toBeInstanceOf(vscode.Location);
 		});
@@ -111,7 +112,7 @@ describe('ResourceDefinitionProvider', () => {
 		it('should return Location from namespaceDefinitions', () => {
 			const range = makeRange(0, 0);
 			const ctx = makeCtx({ namespaceDefinitions: { 'urn:ex#': [range] } });
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			const result = provider.provideDefinitionForResource(ctx, 'urn:ex#', true);
 			expect(result).toBeInstanceOf(vscode.Location);
 		});
@@ -119,7 +120,7 @@ describe('ResourceDefinitionProvider', () => {
 		it('should return Location from references', () => {
 			const range = makeRange(7, 4);
 			const ctx = makeCtx({ references: { 'urn:ex#ref': [range] } });
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			const result = provider.provideDefinitionForResource(ctx, 'urn:ex#ref', true);
 			expect(result).toBeInstanceOf(vscode.Location);
 		});
@@ -133,7 +134,7 @@ describe('ResourceDefinitionProvider', () => {
 			});
 			mockContexts['file:///test.ttl'] = ctxPrimary;
 			mockContexts['file:///other.ttl'] = ctxOther;
-			const provider = new ResourceDefinitionProvider();
+			const provider = new ResourceDefinitionProvider(mockServices);
 			const result = provider.provideDefinitionForResource(ctxPrimary, 'urn:ex#X');
 			expect(result).toBeInstanceOf(vscode.Location);
 		});
@@ -145,7 +146,7 @@ describe('ResourceDefinitionProvider', () => {
 describe('ResourceTooltipProvider', () => {
 	describe('provideHover', () => {
 		it('should return null when context is not found', () => {
-			const provider = new ResourceTooltipProvider();
+			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices);
 			const result = provider.provideHover(makeDocument('file:///unknown.ttl'), new (vscode.Position as any)(0, 0));
 			expect(result).toBeNull();
 		});
@@ -153,7 +154,7 @@ describe('ResourceTooltipProvider', () => {
 		it('should return null when no IRI and no literal at position', () => {
 			const ctx = makeCtx({ getIriAtPosition: vi.fn(() => undefined), getLiteralAtPosition: vi.fn(() => undefined) });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceTooltipProvider();
+			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices);
 			const result = provider.provideHover(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeNull();
 		});
@@ -161,7 +162,7 @@ describe('ResourceTooltipProvider', () => {
 		it('should return Hover with tooltip when IRI is at position', () => {
 			const ctx = makeCtx({ getIriAtPosition: vi.fn(() => 'urn:ex#Thing') });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceTooltipProvider();
+			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices);
 			const result = provider.provideHover(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeInstanceOf(vscode.Hover);
 		});
@@ -172,7 +173,7 @@ describe('ResourceTooltipProvider', () => {
 				getLiteralAtPosition: vi.fn(() => 'some literal'),
 			});
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceTooltipProvider();
+			const provider = new ResourceTooltipProvider(mockServices, mockServices, mockServices);
 			const result = provider.provideHover(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeInstanceOf(vscode.Hover);
 		});
@@ -184,7 +185,7 @@ describe('ResourceTooltipProvider', () => {
 describe('ResourceReferenceProvider', () => {
 	describe('provideReferences', () => {
 		it('should return null when context is not found', () => {
-			const provider = new ResourceReferenceProvider();
+			const provider = new ResourceReferenceProvider(mockServices);
 			const result = provider.provideReferences(makeDocument('file:///unknown.ttl'), new (vscode.Position as any)(0, 0));
 			expect(result).toBeNull();
 		});
@@ -192,7 +193,7 @@ describe('ResourceReferenceProvider', () => {
 		it('should return null when no IRI at position', () => {
 			const ctx = makeCtx({ getIriAtPosition: vi.fn(() => undefined) });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceReferenceProvider();
+			const provider = new ResourceReferenceProvider(mockServices);
 			const result = provider.provideReferences(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(result).toBeNull();
 		});
@@ -204,7 +205,7 @@ describe('ResourceReferenceProvider', () => {
 				references: { 'urn:ex#Ref': [range] },
 			});
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceReferenceProvider();
+			const provider = new ResourceReferenceProvider(mockServices);
 			const result = provider.provideReferences(makeDocument(), new (vscode.Position as any)(0, 0));
 			expect(Array.isArray(result)).toBe(true);
 			expect((result as vscode.Location[]).length).toBeGreaterThan(0);
@@ -215,14 +216,14 @@ describe('ResourceReferenceProvider', () => {
 		it('should return empty array when no contexts have references', () => {
 			const ctx = makeCtx({ references: {} });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceReferenceProvider();
+			const provider = new ResourceReferenceProvider(mockServices);
 			expect(provider.provideReferencesForIri('urn:ex#X')).toEqual([]);
 		});
 
 		it('should skip temporary contexts', () => {
 			const ctx = makeCtx({ isTemporary: true, references: { 'urn:ex#X': [makeRange()] } });
 			mockContexts['file:///test.ttl'] = ctx;
-			const provider = new ResourceReferenceProvider();
+			const provider = new ResourceReferenceProvider(mockServices);
 			expect(provider.provideReferencesForIri('urn:ex#X')).toEqual([]);
 		});
 
@@ -234,7 +235,7 @@ describe('ResourceReferenceProvider', () => {
 			});
 			mockContexts['file:///test.ttl'] = ctx1;
 			mockContexts['file:///other.ttl'] = ctx2;
-			const provider = new ResourceReferenceProvider();
+			const provider = new ResourceReferenceProvider(mockServices);
 			const result = provider.provideReferencesForIri('urn:ex#X');
 			expect(result.length).toBe(2);
 		});

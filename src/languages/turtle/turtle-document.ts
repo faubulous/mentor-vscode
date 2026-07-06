@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
 import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
-import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
+import { Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, RdfSyntax, TurtleReader, RdfToken, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
+import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
 import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
@@ -28,8 +27,8 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 	private _tokens: IToken[] = [];
 
-	constructor(uri: vscode.Uri, syntax: RdfSyntax) {
-		super(uri);
+	constructor(uri: vscode.Uri, syntax: RdfSyntax, store: Store, vocabulary: VocabularyRepository, settings: ISettingsService) {
+		super(uri, store, vocabulary, settings);
 
 		this.syntax = syntax;
 	}
@@ -116,7 +115,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	public override async infer(): Promise<void> {
-		const store = container.resolve<Store>(ServiceToken.Store);
+		const store = this._store;
 		const reasoner = store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
@@ -133,7 +132,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 */
 	public override async loadTriples(data: string): Promise<void> {
 		try {
-			const store = container.resolve<Store>(ServiceToken.Store);
+			const store = this._store;
 			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 			const g = store.dataFactory.namedNode(graphUri);
 

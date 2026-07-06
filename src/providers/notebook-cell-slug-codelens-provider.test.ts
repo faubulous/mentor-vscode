@@ -36,23 +36,23 @@ beforeEach(() => {
 
 describe('NotebookCellSlugCodeLensProvider', () => {
 	it('can be instantiated without throwing', () => {
-		expect(() => new NotebookCellSlugCodeLensProvider()).not.toThrow();
+		expect(() => new NotebookCellSlugCodeLensProvider(mockContextService as any)).not.toThrow();
 	});
 
 	it('_initialized is false before first provideCodeLenses call', () => {
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		expect((provider as any)._initialized).toBe(false);
 	});
 
 	it('returns empty array for non-notebook-cell URI scheme', () => {
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('file', 'file:///doc.ttl'));
 		expect(lenses).toEqual([]);
 	});
 
 	it('returns empty array when no slug in context or metadata', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses).toEqual([]);
 	});
@@ -60,7 +60,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 	it('returns codelens when slug is in document context', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses).toHaveLength(1);
 	});
@@ -70,7 +70,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 		const mockCell = { document: { uri: { toString: () => uriStr } }, metadata: { slug: 'meta-slug' } };
 		const mockNotebook = { getCells: () => [mockCell] };
 		(vscode.workspace as any).notebookDocuments = [mockNotebook];
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses).toHaveLength(1);
 	});
@@ -78,7 +78,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 	it('codelens title is #slug', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses[0].command?.title).toBe('#my-cell');
 	});
@@ -86,7 +86,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 	it('codelens command is mentor.command.triggerNotebookCellSlugAction', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses[0].command?.command).toBe('mentor.command.triggerNotebookCellSlugAction');
 	});
@@ -94,13 +94,13 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 	it('codelens tooltip reflects new action', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses[0].command?.tooltip).toBe('Click to edit slug or copy cell URI');
 	});
 
 	it('refresh() fires onDidChangeCodeLenses', () => {
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const fired: number[] = [];
 		provider.onDidChangeCodeLenses(() => fired.push(1));
 		provider.refresh();
@@ -116,7 +116,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 
 		const fired: number[] = [];

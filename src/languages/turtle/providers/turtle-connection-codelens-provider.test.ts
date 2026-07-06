@@ -42,7 +42,7 @@ describe('TurtleConnectionCodeLensProvider', () => {
 	it('shows the workspace connection label at the top of the document', () => {
 		mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'workspace', endpointUrl: 'workspace:' });
 
-		const provider = new TurtleConnectionCodeLensProvider();
+		const provider = new TurtleConnectionCodeLensProvider(mockConnectionService as any, mockConnectionService as any);
 		const doc = makeDoc('file:///doc.ttl');
 		const lenses = provider.provideCodeLenses(doc) as any[];
 
@@ -57,7 +57,7 @@ describe('TurtleConnectionCodeLensProvider', () => {
 	it('shows the endpoint URL for a non-workspace connection', () => {
 		mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'abc', endpointUrl: 'https://dbpedia.org/sparql' });
 
-		const provider = new TurtleConnectionCodeLensProvider();
+		const provider = new TurtleConnectionCodeLensProvider(mockConnectionService as any, mockConnectionService as any);
 		const lenses = provider.provideCodeLenses(makeDoc('file:///doc.ttl')) as any[];
 
 		expect(lenses[0].command.title).toContain('Connection: https://dbpedia.org/sparql');
@@ -66,7 +66,7 @@ describe('TurtleConnectionCodeLensProvider', () => {
 	it('returns no lenses for notebook cell documents', () => {
 		mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'workspace', endpointUrl: 'workspace:' });
 
-		const provider = new TurtleConnectionCodeLensProvider();
+		const provider = new TurtleConnectionCodeLensProvider(mockConnectionService as any, mockConnectionService as any);
 		const lenses = provider.provideCodeLenses(makeDoc('vscode-notebook-cell:///cell.ttl')) as any[];
 
 		expect(lenses).toEqual([]);
@@ -75,7 +75,7 @@ describe('TurtleConnectionCodeLensProvider', () => {
 	it('returns no lenses when there is no connection', () => {
 		mockConnectionService.getConnectionForDocument.mockReturnValue(undefined);
 
-		const provider = new TurtleConnectionCodeLensProvider();
+		const provider = new TurtleConnectionCodeLensProvider(mockConnectionService as any, mockConnectionService as any);
 		const lenses = provider.provideCodeLenses(makeDoc('file:///doc.ttl')) as any[];
 
 		expect(lenses).toEqual([]);
@@ -90,7 +90,7 @@ describe('TurtleConnectionCodeLensProvider', () => {
 			return { dispose: vi.fn() };
 		});
 
-		const provider = new TurtleConnectionCodeLensProvider();
+		const provider = new TurtleConnectionCodeLensProvider(mockConnectionService as any, mockConnectionService as any);
 
 		// Subscriptions are wired lazily on first use.
 		provider.provideCodeLenses(makeDoc('file:///doc.ttl'));

@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { getConfig } from '@src/utilities/vscode/config';
-import { ServiceToken } from '@src/services/tokens';
 import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
 import { DEFAULT_SEED_STORES } from '@src/languages/sparql/services/default-stores';
 import { ISettingsMigration } from '../settings-migration.interface';
@@ -44,8 +42,10 @@ export class SeedDefaultStoresMigration implements ISettingsMigration {
 	 */
 	readonly seedVersionKey = "mentor.sparql.storesSeedVersion";
 
+	constructor(private readonly _context: vscode.ExtensionContext) { }
+
 	async migrate(): Promise<void> {
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+		const context = this._context;
 
 		// This seed version already ran — do nothing (don't re-add user-deleted stores).
 		if (context.globalState.get<number>(this.seedVersionKey, 0) >= this.seedVersion) {

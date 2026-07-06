@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionRegistry, IDocumentConnectionService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
@@ -17,13 +15,10 @@ export class TurtleConnectionCodeLensProvider implements vscode.CodeLensProvider
 
 	private _subscribed = false;
 
-	private get _connectionRegistry() {
-		return container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
-	}
-
-	private get _documentConnectionService() {
-		return container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
-	}
+	constructor(
+		private readonly _connectionRegistry: ISparqlConnectionRegistry,
+		private readonly _documentConnectionService: IDocumentConnectionService
+	) { }
 
 	/**
 	 * Subscribe to connection changes lazily on first use, so that constructing this provider has no

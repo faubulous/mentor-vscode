@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
 import { Range } from 'vscode-languageserver-types';
-import { container } from 'tsyringe';
 import { Quad_Subject } from "@rdfjs/types";
 import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
-import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
@@ -120,7 +118,12 @@ export abstract class DocumentContext implements IDocumentContext {
 		description: [] as string[]
 	};
 
-	constructor(documentUri: vscode.Uri) {
+	constructor(
+		documentUri: vscode.Uri,
+		protected readonly _store: Store,
+		protected readonly _vocabulary: VocabularyRepository,
+		protected readonly _settings: ISettingsService
+	) {
 		const config = getConfig();
 
 		this.uri = documentUri;
@@ -175,8 +178,7 @@ export abstract class DocumentContext implements IDocumentContext {
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
-		const settings = container.resolve<ISettingsService>(ServiceToken.SettingsService);
-		const treeLabelStyle = settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
+		const treeLabelStyle = this._settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
@@ -233,10 +235,9 @@ export abstract class DocumentContext implements IDocumentContext {
 		let primaryLabel: Literal | undefined = undefined;
 		let fallbackLabel: Literal | undefined = undefined;
 
-		const store = container.resolve<Store>(ServiceToken.Store);
 
 		for (let p of predicates) {
-			for (let q of store.matchAll(graphUris, subject, p, null, false)) {
+			for (let q of this._store.matchAll(graphUris, subject, p, null, false)) {
 				if (q.object.termType === 'Literal') {
 					const literal = q.object as Literal;
 
@@ -292,9 +293,7 @@ export abstract class DocumentContext implements IDocumentContext {
 
 	getPropertyPathLabel(node: Quad_Subject): string {
 		let result = [];
-		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
-
-		for (let c of vocabulary.getPropertyPathTokens(this.graphs, node)) {
+		for (let c of this._vocabulary.getPropertyPathTokens(this.graphs, node)) {
 			if (typeof (c) === 'string') {
 				if (c === '|' || c === '/') {
 					result.push(` ${c} `);

@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IPrefixLookupService } from '@src/services/document';
 import { Store } from '@faubulous/mentor-rdf';
 import { InferenceUri } from '@src/providers/inference-uri';
@@ -24,13 +22,13 @@ export class MentorUriHandler implements vscode.UriHandler {
 		SETTINGS_GROUPS.flatMap(g => g.sections.map(s => s.id))
 	);
 
-	private get _store() {
-		return container.resolve<Store>(ServiceToken.Store);
-	}
-
-	constructor() {
+	constructor(
+		context: vscode.ExtensionContext,
+		private readonly _store: Store,
+		private readonly _prefixLookup: IPrefixLookupService,
+		private readonly _router: IViewRouter
+	) {
 		// Self-register with the extension context for automatic disposal
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		this.extensionId = context.extension.id;
 		context.subscriptions.push(
 			vscode.window.registerUriHandler(this)
@@ -64,8 +62,7 @@ export class MentorUriHandler implements vscode.UriHandler {
 			const inferenceUri = InferenceUri.toInferenceUri(targetUri);
 
 			if (this._store.hasGraph(inferenceUri)) {
-				const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
-				const namespaces = prefixLookup.getInferencePrefixes();
+				const namespaces = this._prefixLookup.getInferencePrefixes();
 				const content = await this._store.serializeGraph(inferenceUri, 'text/turtle', undefined, namespaces);
 				const document = await vscode.workspace.openTextDocument({ content, language: 'turtle' });
 
@@ -83,7 +80,7 @@ export class MentorUriHandler implements vscode.UriHandler {
 				? requested as SettingsSectionId
 				: undefined;
 
-			const router = container.resolve<IViewRouter>(ServiceToken.WebviewRouter);
+			const router = this._router;
 			
 			await router.open({ kind: 'settings', section }, vscode.ViewColumn.Active);
 		} catch (error) {

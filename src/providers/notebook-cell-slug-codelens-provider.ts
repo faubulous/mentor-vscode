@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
 /**
@@ -19,9 +17,7 @@ export class NotebookCellSlugCodeLensProvider implements vscode.CodeLensProvider
 
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
+	constructor(private readonly _contextService: IDocumentContextService) { }
 
 	private _initialize(): void {
 		if (this._initialized) {

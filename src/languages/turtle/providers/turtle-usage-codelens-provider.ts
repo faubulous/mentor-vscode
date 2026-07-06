@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 import { SH, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
@@ -26,25 +24,19 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 	 */
 	private _enabled: boolean = true;
 
-	private readonly _referenceProvider: ResourceReferenceProvider = new ResourceReferenceProvider();
+	private readonly _referenceProvider: ResourceReferenceProvider;
 
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
+	constructor(
+		private readonly _contextService: IDocumentContextService,
+		private readonly _workspaceIndexerService: IWorkspaceIndexerService,
+		private readonly _vocabulary: VocabularyRepository
+	) {
+		this._referenceProvider = new ResourceReferenceProvider(this._contextService);
 
-	private get _workspaceIndexerService() {
-		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
-	}
-
-	private get _vocabulary() {
-		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
-	}
-
-	constructor() {
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
 				this._enabled = getConfig().get('editor.codeLensEnabled', true);

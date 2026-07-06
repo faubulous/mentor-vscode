@@ -1,8 +1,6 @@
 import * as vscode from "vscode";
-import { container } from "tsyringe";
 import { Uri, VocabularyRepository } from "@faubulous/mentor-rdf";
 import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { getNamespaceIriFromPrefixedName, getPropertyTypeFromRange, getTokenIndexAtPosition, getTripleComponentType, isTypeAssertionObject, TripleComonentType } from "@src/utilities";
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -48,12 +46,11 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	 */
 	readonly maxCompletionItems = 10;
 
-	protected get contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
-
-	private get vocabulary() {
-		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
+	constructor(
+		protected readonly _contextService: IDocumentContextService,
+		protected readonly _vocabulary: VocabularyRepository
+	) {
+		super();
 	}
 
 	resolveCompletionItem?(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
@@ -61,7 +58,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	}
 
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
-		const context = this.contextService.getDocumentContext(document, TurtleDocument);
+		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
@@ -124,8 +121,8 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			// item kind, so map the resource categories from the definition tree to
 			// the closest matching kinds: classes → Class, data properties → Property,
 			// object properties (relations) → Reference, individuals → Value.
-			const classes = new Set(this.vocabulary.getClasses(queryGraphs));
-			const properties = new Set(this.vocabulary.getProperties(queryGraphs));
+			const classes = new Set(this._vocabulary.getClasses(queryGraphs));
+			const properties = new Set(this._vocabulary.getProperties(queryGraphs));
 
 			// Rank the candidates by their relevance for the position in the triple
 			// BEFORE truncation so that preferred categories survive the cut-off:
@@ -204,7 +201,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		if (properties.has(iri)) {
 			// Distinguish literal-valued data properties from object properties
 			// (relations) based on the property range, as the definition tree does.
-			const range = this.vocabulary.getRange(graphs, iri) ?? this.vocabulary.getDatatype(graphs, iri);
+			const range = this._vocabulary.getRange(graphs, iri) ?? this._vocabulary.getDatatype(graphs, iri);
 
 			return getPropertyTypeFromRange(range) === 'dataProperty'
 				? vscode.CompletionItemKind.Field
@@ -234,7 +231,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 		if (componentType === 'predicate') {
 			// In this case we only want to return properties.
-			for (let property of this.vocabulary.getProperties(graphs)) {
+			for (let property of this._vocabulary.getProperties(graphs)) {
 				this._addLocalPartCompletionItem(items, uri, property);
 			}
 		} else {
@@ -243,14 +240,14 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 
 			if (graphs) {
 				for (const g of graphs) {
-					const c = this.contextService.getDocumentContextFromUri(g);
+					const c = this._contextService.getDocumentContextFromUri(g);
 
 					if (c) {
 						contexts.push(c);
 					}
 				}
 			} else {
-				contexts.push(...Object.values(this.contextService.contexts));
+				contexts.push(...Object.values(this._contextService.contexts));
 			}
 
 			for (const c of contexts) {

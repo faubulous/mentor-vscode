@@ -70,7 +70,7 @@ describe('MentorUriHandler', () => {
 		(vscode.window as any).showErrorMessage = mockShowErrorMessage;
 		(vscode.workspace as any).openTextDocument = mockOpenTextDocument;
 		(vscode.window as any).showTextDocument = mockShowTextDocument;
-		handler = new MentorUriHandler();
+		handler = new MentorUriHandler(mockExtensionContext as any, mockStore as any, mockPrefixLookupService as any, mockRouter as any);
 	});
 
 	it('sets extensionId from context', () => {

@@ -24,27 +24,21 @@ let mockSettingsGet: (key: string, defaultValue?: any) => any;
 let mockGetPropertyPathTokens: (graphs: any, node: any) => any[];
 
 vi.mock('tsyringe', () => ({
-    container: {
-        resolve: vi.fn((token: string) => {
-            if (token === 'SettingsService') {
-                return { get: (k: string, d?: any) => mockSettingsGet(k, d) };
-            }
-            if (token === 'Store') {
-                return {
-                    matchAll: (graphUris: any, subject: any, predicate: any, object: any) =>
-                        mockStoreMatchAll(graphUris, subject, predicate, object),
-                };
-            }
-            if (token === 'VocabularyRepository') {
-                return { getPropertyPathTokens: (g: any, n: any) => mockGetPropertyPathTokens(g, n) };
-            }
-            return {};
-        }),
-    },
+    container: { resolve: vi.fn(() => ({})) },
     injectable: () => (t: any) => t,
     inject: () => () => {},
     singleton: () => (t: any) => t,
 }));
+
+/** The services injected into the document context under test. */
+const mockStore = {
+    matchAll: (graphUris: any, subject: any, predicate: any, object: any) =>
+        mockStoreMatchAll(graphUris, subject, predicate, object),
+};
+
+const mockSettings = { get: (k: string, d?: any) => mockSettingsGet(k, d) };
+
+const mockVocabulary = { getPropertyPathTokens: (g: any, n: any) => mockGetPropertyPathTokens(g, n) };
 
 // Use TurtleDocument as the concrete DocumentContext implementation.
 import * as vscode from 'vscode';
@@ -55,7 +49,7 @@ import { TreeLabelStyle } from '@src/services/core/settings-service';
 
 function makeDoc(uri = 'file:///workspace/test.ttl'): TurtleDocument {
     const vscodeUri = vscode.Uri.parse(uri);
-    return new TurtleDocument(vscodeUri as any, RdfSyntax.Turtle);
+    return new TurtleDocument(vscodeUri as any, RdfSyntax.Turtle, mockStore as any, mockVocabulary as any, mockSettings as any);
 }
 
 function makeLiteral(value: string, language = '') {

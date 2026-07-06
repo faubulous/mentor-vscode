@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { getTokenIndexAtPosition } from '@src/utilities';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { IPrefixLookupService } from '@src/services/document';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -11,16 +9,16 @@ import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-prov
 export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implements vscode.InlineCompletionItemProvider {
 	protected readonly prefixTokenTypes = new Set([RdfToken.PREFIX.name, RdfToken.TTL_PREFIX.name]);
 
-	private get contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
-
-	constructor(readonly onComplete: (uri: string) => string) {
+	constructor(
+		readonly onComplete: (uri: string) => string,
+		private readonly _contextService: IDocumentContextService,
+		private readonly _prefixLookup: IPrefixLookupService
+	) {
 		super();
 	}
 
 	provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, completion: vscode.InlineCompletionContext): vscode.ProviderResult<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
-		const context = this.contextService.getDocumentContext(document, TurtleDocument);
+		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
@@ -60,8 +58,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		}
 
 		const prefix = currentToken.image.split(":")[0];
-		const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
-		const uri = prefixLookup.getUriForPrefix(document.uri.toString(), prefix);
+		const uri = this._prefixLookup.getUriForPrefix(document.uri.toString(), prefix);
 
 		if (uri) {
 			return [{

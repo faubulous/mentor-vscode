@@ -70,7 +70,7 @@ function makeDoc(uri = 'file:///test.sparql', content = '') {
 }
 
 describe('SparqlCompletionItemProvider', () => {
-    const provider = new SparqlCompletionItemProvider();
+    const provider = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
 
     describe('isGraphDefinitionContext', () => {
         it('returns true when current token starts with < and previous is GRAPH', () => {
@@ -147,17 +147,17 @@ describe('SparqlCompletionItemProvider', () => {
         ];
 
         function makeProviderWithGraphs(available: string[]): SparqlCompletionItemProvider {
-            const p = new SparqlCompletionItemProvider();
+            const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
 
-            vi.spyOn(p as any, 'connectionRegistry', 'get').mockReturnValue({
+            (p as any)._connectionRegistry = ({
                 getInferenceEnabled: () => false,
             });
 
-            vi.spyOn(p as any, 'documentConnectionService', 'get').mockReturnValue({
+            (p as any)._documentConnectionService = ({
                 getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
             });
 
-            vi.spyOn(p as any, 'graphService', 'get').mockReturnValue({
+            (p as any)._graphService = ({
                 hasGraphsForConnection: () => true,
                 getGraphsForConnection: () => available,
             });
@@ -372,7 +372,7 @@ describe('SparqlCompletionItemProvider', () => {
 
     describe('getCompletionItems', () => {
         it('delegates to getGraphIriCompletionItems when in graph definition context', async () => {
-            const p = new SparqlCompletionItemProvider();
+            const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
             const doc = makeDoc() as any;
             const context = {} as any;
             const tokens = [
@@ -385,7 +385,7 @@ describe('SparqlCompletionItemProvider', () => {
         });
 
         it('calls super.getCompletionItems when not in graph definition context', () => {
-            const p = new SparqlCompletionItemProvider();
+            const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
             const doc = makeDoc() as any;
             const context = {} as any;
             const tokens = [
@@ -400,8 +400,8 @@ describe('SparqlCompletionItemProvider', () => {
 
     describe('provideCompletionItems', () => {
         it('returns null when context is null', async () => {
-            const p = new SparqlCompletionItemProvider();
-            vi.spyOn(p as any, 'contextService', 'get').mockReturnValue({
+            const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
+            (p as any)._contextService = ({
                 getDocumentContext: vi.fn(() => null),
             });
             const result = await p.provideCompletionItems(
@@ -411,8 +411,8 @@ describe('SparqlCompletionItemProvider', () => {
         });
 
         it('returns null when the tokens do not cover the position', async () => {
-            const p = new SparqlCompletionItemProvider();
-            vi.spyOn(p as any, 'contextService', 'get').mockReturnValue({
+            const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
+            (p as any)._contextService = ({
                 getDocumentContext: vi.fn(() => ({
                     tokenize: vi.fn(() => []),
                 })),
@@ -424,13 +424,13 @@ describe('SparqlCompletionItemProvider', () => {
         });
 
         it('tokenizes the document text and calls getCompletionItems with the fresh tokens', async () => {
-            const p = new SparqlCompletionItemProvider();
+            const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
             const tokens = [
                 makeToken('DOT', '.', 1),
                 makeToken('PNAME_NS', 'ex:', 3),
             ];
             const tokenize = vi.fn(() => tokens);
-            vi.spyOn(p as any, 'contextService', 'get').mockReturnValue({
+            (p as any)._contextService = ({
                 getDocumentContext: vi.fn(() => ({ tokenize })),
             });
             const spy = vi.spyOn(p, 'getCompletionItems').mockReturnValue([]);
@@ -443,19 +443,5 @@ describe('SparqlCompletionItemProvider', () => {
             expect(spy).toHaveBeenCalledWith(doc, expect.anything(), tokens, 1);
         });
 
-        it('connectionRegistry getter calls container.resolve', async () => {
-            const mockConnection = {
-                getConnectionForDocument: () => ({ id: 'workspace', autoLoadGraphs: false }),
-                getInferenceEnabled: () => false,
-                hasGraphsForConnection: () => true,
-                getGraphsForConnection: () => ['http://example.org/g'],
-            };
-            mockResolve.mockReturnValue(mockConnection);
-            const p = new SparqlCompletionItemProvider();
-            // Call the getter without a spy so the container.resolve path executes
-            const tokens = [makeToken(RdfToken.IRIREF.name, '<')] as any;
-            const items = await p.getGraphIriCompletionItems(makeDoc() as any, tokens, 0);
-            expect(items.length).toBe(1);
-        });
     });
 });

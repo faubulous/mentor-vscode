@@ -49,7 +49,7 @@ function makeContextService(context: TurtleDocument | null) {
  * a stub that returns the given context.
  */
 function makeProvider(context: TurtleDocument | null): TurtleRenameProvider {
-    const provider = new TurtleRenameProvider();
+    const provider = new TurtleRenameProvider({ getDocumentContext: () => null } as any);
     vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue(makeContextService(context));
     return provider;
 }
@@ -60,7 +60,7 @@ describe('TurtleRenameProvider', () => {
             // No spy on contextService: the real getter body (line 15) executes.
             // The container mock returns { getDocumentContext: () => null },
             // so prepareRename returns null without further logic.
-            const provider = new TurtleRenameProvider();
+            const provider = new TurtleRenameProvider({ getDocumentContext: () => null } as any);
             const result = await provider.prepareRename(
                 { uri: Uri.parse('file:///test.ttl') } as any,
                 new Position(0, 0) as any

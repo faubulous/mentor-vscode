@@ -34,14 +34,14 @@ function makeToken(name: string, image: string, opts: {
 }
 
 function makeProvider(): TurtleCompletionItemProvider {
-    const provider = new TurtleCompletionItemProvider();
+    const provider = new TurtleCompletionItemProvider({} as any, {} as any);
 
-    vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+    (provider as any)._contextService = ({
         getDocumentContext: () => null,
         getDocumentContextFromUri: () => null,
         contexts: {},
     });
-    vi.spyOn(provider as any, 'vocabulary', 'get').mockReturnValue({
+    (provider as any)._vocabulary = ({
         getProperties: () => [],
         getClasses: () => [],
         getRange: () => undefined,
@@ -70,7 +70,7 @@ beforeEach(() => {
 describe('TurtleCompletionItemProvider', () => {
     describe('constructor', () => {
         it('can be instantiated without throwing', () => {
-            expect(() => new TurtleCompletionItemProvider()).not.toThrow();
+            expect(() => new TurtleCompletionItemProvider({} as any, {} as any)).not.toThrow();
         });
     });
 
@@ -94,7 +94,7 @@ describe('TurtleCompletionItemProvider', () => {
             // Position (0,0) sits at the first/only token → index 0 → provider returns null.
             const mockCtx = makeMockContext([makeToken(RdfToken.PNAME_LN.name, 'ex:F')]);
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -114,7 +114,7 @@ describe('TurtleCompletionItemProvider', () => {
             ];
             const mockCtx = makeMockContext(tokens, {});
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -135,7 +135,7 @@ describe('TurtleCompletionItemProvider', () => {
             const mockCtx = makeMockContext([], {});
             mockCtx.tokenize = vi.fn(() => tokens);
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -168,7 +168,7 @@ describe('TurtleCompletionItemProvider', () => {
             ];
             context.setTokens(tokens as any);
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => context,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -188,7 +188,7 @@ describe('TurtleCompletionItemProvider', () => {
             ];
             context.setTokens(tokens as any);
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => context,
                 getDocumentContextFromUri: () => null,
                 contexts: {},
@@ -224,12 +224,12 @@ describe('TurtleCompletionItemProvider', () => {
                 getDatatype: () => undefined,
             };
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => null),
                 contexts: {},
             });
-            vi.spyOn(provider as any, 'vocabulary', 'get').mockReturnValue(mockVocab);
+            (provider as any)._vocabulary = (mockVocab);
 
             const doc = { uri: Uri.parse('file:///w/test.ttl') };
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens2, 2).items as any[];
@@ -254,7 +254,7 @@ describe('TurtleCompletionItemProvider', () => {
                 subjects: { 'http://example.org/Foo': true, 'http://example.org/Bar': true },
             };
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn((uri: string) =>
                     uri === 'workspace:///test.ttl' || uri === 'http://example.org/' ? subContext : null
@@ -288,7 +288,7 @@ describe('TurtleCompletionItemProvider', () => {
                 uri === 'untitled:Untitled-1' ? subContext : null
             );
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri,
                 contexts: {},
@@ -313,7 +313,7 @@ describe('TurtleCompletionItemProvider', () => {
                 subjects: { 'http://example.org/Fizz': true },
             };
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 // Return null for graph-based lookup (no local context for those URIs)
                 getDocumentContextFromUri: vi.fn(() => null),
@@ -339,7 +339,7 @@ describe('TurtleCompletionItemProvider', () => {
             const ctx2 = { subjects: { 'http://example.org/Foo': true, 'http://example.org/Far': true } };
 
             let callCount = 0;
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => {
                     callCount++;
@@ -367,7 +367,7 @@ describe('TurtleCompletionItemProvider', () => {
             for (let i = 0; i < 15; i++) {
                 subjects[`http://example.org/${String.fromCharCode(65 + i)}`] = true;
             }
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => ({ subjects })),
                 contexts: {},
@@ -389,7 +389,7 @@ describe('TurtleCompletionItemProvider', () => {
                 makeToken(RdfToken.PNAME_LN.name, 'ex:F'),
             ];
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => ({ subjects: { 'http://example.org/Foo': true } })),
                 contexts: {},
@@ -417,12 +417,12 @@ describe('TurtleCompletionItemProvider', () => {
                 [`${ns}factory1`]: true,          // individual
             };
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => ({ subjects })),
                 contexts: {},
             });
-            vi.spyOn(provider as any, 'vocabulary', 'get').mockReturnValue({
+            (provider as any)._vocabulary = ({
                 getClasses: () => [`${ns}Building`],
                 getProperties: () => [`${ns}hasPart`, `${ns}name`],
                 // 'name' has a literal range → data property; 'hasPart' has none → object property.
@@ -455,12 +455,12 @@ describe('TurtleCompletionItemProvider', () => {
                 [`${ns}cClass`]: true,
             };
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => ({ subjects })),
                 contexts: {},
             });
-            vi.spyOn(provider as any, 'vocabulary', 'get').mockReturnValue({
+            (provider as any)._vocabulary = ({
                 getClasses: () => [`${ns}cClass`],
                 getProperties: () => [`${ns}aProperty`],
                 getRange: () => undefined,
@@ -496,12 +496,12 @@ describe('TurtleCompletionItemProvider', () => {
                 [`${ns}bClass`]: true,
             };
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => ({ subjects })),
                 contexts: {},
             });
-            vi.spyOn(provider as any, 'vocabulary', 'get').mockReturnValue({
+            (provider as any)._vocabulary = ({
                 getClasses: () => [`${ns}bClass`],
                 getProperties: () => [],
                 getRange: () => undefined,
@@ -529,12 +529,12 @@ describe('TurtleCompletionItemProvider', () => {
                 [`${ns}cIndividual`]: true,
             };
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => ({ subjects })),
                 contexts: {},
             });
-            vi.spyOn(provider as any, 'vocabulary', 'get').mockReturnValue({
+            (provider as any)._vocabulary = ({
                 getClasses: () => [`${ns}bClass`],
                 getProperties: () => [`${ns}aProperty`],
                 getRange: () => undefined,
@@ -571,12 +571,12 @@ describe('TurtleCompletionItemProvider', () => {
 
             subjects[`${ns}zClass`] = true;
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => ({ subjects })),
                 contexts: {},
             });
-            vi.spyOn(provider as any, 'vocabulary', 'get').mockReturnValue({
+            (provider as any)._vocabulary = ({
                 getClasses: () => [`${ns}zClass`],
                 getProperties: () => propertyIris,
                 getRange: () => undefined,
@@ -603,7 +603,7 @@ describe('TurtleCompletionItemProvider', () => {
 
             const mockCtx = makeMockContext([], { nexus: 'http://example.org/nexus#' });
 
-            vi.spyOn(provider as any, 'contextService', 'get').mockReturnValue({
+            (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
                 getDocumentContextFromUri: vi.fn(() => ({ subjects })),
                 contexts: {},
@@ -628,22 +628,6 @@ describe('TurtleCompletionItemProvider', () => {
             const narrow = (provider as any).getCompletionItems(doc, mockCtx, narrowTokens, 1);
             expect(narrow.items.some((i: any) => i.label === 'SparePartStorageFacility')).toBe(true);
             expect(narrow.isIncomplete).toBe(false);
-        });
-    });
-
-    describe('getter bodies', () => {
-        it('contextService getter calls container.resolve', () => {
-            const provider = new TurtleCompletionItemProvider();
-            // No spy — real getter body (line 52) must execute
-            const service = (provider as any).contextService;
-            expect(service).toBeDefined();
-        });
-
-        it('vocabulary getter calls container.resolve', () => {
-            const provider = new TurtleCompletionItemProvider();
-            // No spy — real getter body (line 56) must execute
-            const vocab = (provider as any).vocabulary;
-            expect(vocab).toBeDefined();
         });
     });
 

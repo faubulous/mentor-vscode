@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
 
 /**
@@ -23,15 +21,10 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
 
     private readonly _subscriptions: vscode.Disposable[] = [];
 
-    private get _documentConnectionService(): IDocumentConnectionService {
-        return container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
-    }
-
-    private get _graphService(): IGraphManagementService {
-        return container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
-    }
-
-    constructor() {
+    constructor(
+        private readonly _documentConnectionService: IDocumentConnectionService,
+        private readonly _graphService: IGraphManagementService
+    ) {
         this._collection = vscode.languages.createDiagnosticCollection('sparql-graphs');
 
         this._subscriptions.push(
@@ -42,7 +35,7 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
         );
 
         // Re-validate open SPARQL documents whenever the graph cache changes.
-        const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+        const graphService = this._graphService;
 
         this._subscriptions.push(
             graphService.onDidChangeGraphs(connectionId => this._revalidateForConnection(connectionId))

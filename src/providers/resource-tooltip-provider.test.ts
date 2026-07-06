@@ -43,7 +43,7 @@ describe('ResourceTooltipProvider', () => {
 		mockContextService.contexts = {};
 		mockContextService.activeContext = undefined;
 		mockStore.matchAll = vi.fn(() => []);
-		provider = new ResourceTooltipProvider();
+		provider = new ResourceTooltipProvider({ subscriptions: [] } as any, mockContextService as any, mockStore as any);
 	});
 
 	function makeDoc(uri: string, text = '', context?: any) {

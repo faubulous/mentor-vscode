@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { NotSupportedError } from '@src/utilities/error';
 import { getConfig } from '@src/utilities/vscode/config';
 
@@ -54,9 +52,8 @@ export class TemplateFileSystemProvider implements vscode.FileSystemProvider {
 
 	readonly onDidChangeFile = this._onDidChangeFile.event;
 
-	constructor() {
+	constructor(context: vscode.ExtensionContext) {
 		// Self-register with the extension context for automatic disposal.
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(
 			vscode.workspace.registerFileSystemProvider(TEMPLATE_URI_SCHEME, this, {
 				isCaseSensitive: true,

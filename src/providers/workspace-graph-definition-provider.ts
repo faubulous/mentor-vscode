@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
 /**
@@ -9,9 +7,7 @@ import { IDocumentContextService } from '@src/services/document';
  * `GRAPH` clause, or a Turtle `<workspace:///…>` reference).
  */
 export class WorkspaceGraphDefinitionProvider implements vscode.DefinitionProvider {
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
+	constructor(private readonly _contextService: IDocumentContextService) { }
 
 	provideDefinition(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Definition> {
 		const context = this._contextService.contexts[document.uri.toString()];

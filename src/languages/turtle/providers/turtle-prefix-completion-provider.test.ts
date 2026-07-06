@@ -58,35 +58,35 @@ beforeEach(() => {
 describe('TurtlePrefixCompletionProvider', () => {
     it('stores the onComplete callback', () => {
         const cb = (uri: string) => ` <${uri}>`;
-        const provider = new TurtlePrefixCompletionProvider(cb);
+        const provider = new TurtlePrefixCompletionProvider(cb, { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
         expect(provider.onComplete).toBe(cb);
     });
 
     it('onComplete produces the expected string', () => {
-        const provider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`);
+        const provider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`, { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
         expect(provider.onComplete('http://example.org/')).toBe(' <http://example.org/> .');
     });
 
     it('prefixTokenTypes contains the PREFIX token name', () => {
-        const provider = new TurtlePrefixCompletionProvider(() => '');
+        const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
         const types = (provider as any).prefixTokenTypes as Set<string>;
         expect(types.has(RdfToken.PREFIX.name)).toBe(true);
     });
 
     it('prefixTokenTypes contains the TTL_PREFIX token name', () => {
-        const provider = new TurtlePrefixCompletionProvider(() => '');
+        const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
         const types = (provider as any).prefixTokenTypes as Set<string>;
         expect(types.has(RdfToken.TTL_PREFIX.name)).toBe(true);
     });
 
     it('prefixTokenTypes contains exactly two entries', () => {
-        const provider = new TurtlePrefixCompletionProvider(() => '');
+        const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
         const types = (provider as any).prefixTokenTypes as Set<string>;
         expect(types.size).toBe(2);
     });
 
     it('does not add extra token types beyond PREFIX and TTL_PREFIX', () => {
-        const provider = new TurtlePrefixCompletionProvider(() => '');
+        const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
         const types = (provider as any).prefixTokenTypes as Set<string>;
         const expected = new Set([RdfToken.PREFIX.name, RdfToken.TTL_PREFIX.name]);
         expect(types).toEqual(expected);
@@ -95,7 +95,7 @@ describe('TurtlePrefixCompletionProvider', () => {
     describe('provideInlineCompletionItems', () => {
         it('returns null when no document context', () => {
             mockGetDocumentContext.mockReturnValue(null);
-            const provider = new TurtlePrefixCompletionProvider(() => '');
+            const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeNull();
         });
@@ -103,7 +103,7 @@ describe('TurtlePrefixCompletionProvider', () => {
         it('returns null when token index is less than 1', () => {
             mockGetTokenIndexAtPosition.mockReturnValue(0);
             mockGetDocumentContext.mockReturnValue(makeContext([{ tokenType: { name: 'SomeToken' }, image: 'ex:' }]));
-            const provider = new TurtlePrefixCompletionProvider(() => '');
+            const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeNull();
         });
@@ -114,7 +114,7 @@ describe('TurtlePrefixCompletionProvider', () => {
                     { tokenType: { name: RdfToken.PREFIX.name }, image: '@prefix' },
                     { tokenType: { name: 'SomeOtherToken' }, image: 'foo' },
                 ]));
-            const provider = new TurtlePrefixCompletionProvider(() => '');
+            const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeUndefined();
         });
@@ -125,7 +125,7 @@ describe('TurtlePrefixCompletionProvider', () => {
                     undefined,
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
                 ]));
-            const provider = new TurtlePrefixCompletionProvider(() => '');
+            const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeNull();
         });
@@ -136,7 +136,7 @@ describe('TurtlePrefixCompletionProvider', () => {
                     { tokenType: { name: 'DOT' }, image: '.' },
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
                 ]));
-            const provider = new TurtlePrefixCompletionProvider(() => '');
+            const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toBeNull();
         });
@@ -148,7 +148,7 @@ describe('TurtlePrefixCompletionProvider', () => {
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'ex:' },
                 ]));
             mockGetUriForPrefix.mockReturnValue('http://example.org/');
-            const provider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`);
+            const provider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`, { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any) as any[];
             expect(Array.isArray(result)).toBe(true);
             expect(result.length).toBe(1);
@@ -162,7 +162,7 @@ describe('TurtlePrefixCompletionProvider', () => {
                     { tokenType: { name: RdfToken.PNAME_NS.name }, image: 'unknown:' },
                 ]));
             mockGetUriForPrefix.mockReturnValue(undefined);
-            const provider = new TurtlePrefixCompletionProvider(() => '');
+            const provider = new TurtlePrefixCompletionProvider(() => '', { getDocumentContext: mockGetDocumentContext } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toEqual([]);
         });

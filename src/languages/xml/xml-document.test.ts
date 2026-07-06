@@ -48,7 +48,7 @@ function makeParseResult(overrides: Partial<Parameters<XmlDocument['setParsedDat
 }
 
 function makeDoc(uri = 'file:///test.xml'): XmlDocument {
-    return new XmlDocument(Uri.parse(uri) as any);
+    return new XmlDocument(Uri.parse(uri) as any, mockStore as any, {} as any, {} as any);
 }
 
 describe('XmlDocument', () => {

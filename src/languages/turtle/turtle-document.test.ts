@@ -8,28 +8,40 @@ const storeControl = vi.hoisted(() => ({
 }));
 
 vi.mock('tsyringe', () => ({
-    container: {
-        resolve: vi.fn(() => {
-            if (storeControl.shouldThrowLoad) {
-                throw new Error('store unavailable');
-            }
-            return {
-                reasoner: storeControl.reasoner,
-                executeInference: vi.fn(),
-                deleteGraphs: vi.fn(),
-                dataFactory: {
-                    namedNode: (iri: string) => ({ termType: 'NamedNode', value: iri }),
-                    quad: (s: any, p: any, o: any, g: any) => ({ subject: s, predicate: p, object: o, graph: g }),
-                },
-                add: vi.fn(),
-                graphs: [],
-            };
-        }),
-    },
+    container: { resolve: vi.fn(() => ({})) },
     injectable: () => (_target: any) => _target,
     inject: () => () => {},
     singleton: () => (_target: any) => _target,
 }));
+
+/**
+ * Store mock injected into the document context. Property access throws when
+ * `storeControl.shouldThrowLoad` is set, simulating an unavailable store.
+ */
+function makeStore(): any {
+    const store = {
+        executeInference: vi.fn(),
+        deleteGraphs: vi.fn(),
+        dataFactory: {
+            namedNode: (iri: string) => ({ termType: 'NamedNode', value: iri }),
+            quad: (s: any, p: any, o: any, g: any) => ({ subject: s, predicate: p, object: o, graph: g }),
+        },
+        add: vi.fn(),
+        graphs: [],
+    };
+
+    return new Proxy(store, {
+        get(target, property) {
+            if (storeControl.shouldThrowLoad) {
+                throw new Error('store unavailable');
+            }
+            if (property === 'reasoner') {
+                return storeControl.reasoner;
+            }
+            return (target as any)[property];
+        },
+    });
+}
 
 import { Uri, Position } from '@src/utilities/mocks/vscode';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -55,7 +67,7 @@ function makeToken(name: string, image: string, opts: {
 }
 
 function makeDoc(uri = 'file:///test.ttl'): TurtleDocument {
-    return new TurtleDocument(Uri.parse(uri) as any, RdfSyntax.Turtle);
+    return new TurtleDocument(Uri.parse(uri) as any, RdfSyntax.Turtle, makeStore(), {} as any, {} as any);
 }
 
 describe('TurtleDocument', () => {
@@ -387,69 +399,47 @@ describe('TurtleDocument', () => {
 
         it('executes inference when reasoner is present', async () => {
             const executeInference = vi.fn();
-            storeControl.reasoner = { infer: vi.fn() };
-            // Override the resolve mock temporarily
-            const { container } = await import('tsyringe');
-            (container.resolve as any).mockImplementationOnce(() => ({
+            const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
                 dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            }));
-            const doc = makeDoc();
+            };
+            const doc = new TurtleDocument(Uri.parse('file:///test.ttl') as any, RdfSyntax.Turtle, store as any, {} as any, {} as any);
             await doc.infer();
             expect(executeInference).toHaveBeenCalled();
         });
 
         it('does not re-execute inference if already executed', async () => {
             const executeInference = vi.fn();
-            const { container } = await import('tsyringe');
-            (container.resolve as any).mockImplementation(() => ({
+            const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
                 dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            }));
-            const doc = makeDoc();
+            };
+            const doc = new TurtleDocument(Uri.parse('file:///test.ttl') as any, RdfSyntax.Turtle, store as any, {} as any, {} as any);
             await doc.infer();
             await doc.infer();
             expect(executeInference).toHaveBeenCalledTimes(1);
-            // Restore to default mock
-            (container.resolve as any).mockImplementation(() => ({
-                reasoner: storeControl.reasoner,
-                executeInference: vi.fn(),
-                deleteGraphs: vi.fn(),
-                dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
-                add: vi.fn(),
-            }));
         });
 
         it('re-executes inference after loadTriples resets the flag', async () => {
             const executeInference = vi.fn();
-            const deleteGraphs = vi.fn();
-            const { container } = await import('tsyringe');
-            (container.resolve as any).mockImplementation(() => ({
+            const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
-                deleteGraphs,
+                deleteGraphs: vi.fn(),
                 dataFactory: { namedNode: (v: string) => ({ termType: 'NamedNode', value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            }));
-            const doc = makeDoc();
+            };
+            const doc = new TurtleDocument(Uri.parse('file:///test.ttl') as any, RdfSyntax.Turtle, store as any, {} as any, {} as any);
             await doc.infer();
             expect(executeInference).toHaveBeenCalledTimes(1);
             // Simulate a slug update reload: loadTriples must reset the flag
             await doc.loadTriples('');
             await doc.infer();
             expect(executeInference).toHaveBeenCalledTimes(2);
-            // Restore to default mock
-            (container.resolve as any).mockImplementation(() => ({
-                reasoner: storeControl.reasoner,
-                executeInference: vi.fn(),
-                deleteGraphs: vi.fn(),
-                dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
-                add: vi.fn(),
-            }));
         });
     });
 

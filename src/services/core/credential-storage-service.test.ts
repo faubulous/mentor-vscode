@@ -34,7 +34,13 @@ beforeEach(() => {
 	mockSecretsStore = vi.fn(async () => {});
 	mockSecretsGet = vi.fn(async () => undefined);
 	mockSecretsDelete = vi.fn(async () => {});
-	service = new CredentialStorageService();
+	service = new CredentialStorageService({
+		secrets: {
+			store: (...args: any[]) => mockSecretsStore(...args),
+			get: (...args: any[]) => mockSecretsGet(...args),
+			delete: (...args: any[]) => mockSecretsDelete(...args),
+		},
+	} as any);
 });
 
 describe('CredentialStorageService', () => {

@@ -1,19 +1,16 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { Store, NamedNode } from '@faubulous/mentor-rdf';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
 /**
  * Provides hover information for tokens in RDF documents and for HTTP/HTTPS URIs in any file type.
  */
 export class ResourceTooltipProvider implements vscode.HoverProvider {	
-	private readonly _contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-
-	private readonly _store = container.resolve<Store>(ServiceToken.Store);
-
-	constructor() {
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+	constructor(
+		context: vscode.ExtensionContext,
+		private readonly _contextService: IDocumentContextService,
+		private readonly _store: Store
+	) {
 		context.subscriptions.push(vscode.languages.registerHoverProvider('*', this));
 	}
 

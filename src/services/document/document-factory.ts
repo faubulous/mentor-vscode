@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
+import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { ISettingsService } from '@src/services/core/settings-service.interface';
 import { TurtleDocument, SparqlDocument, XmlDocument } from '@src/languages';
 import { IDocumentContext } from './document-context.interface';
 import { ILanguageInfo } from './document-factory.interface';
@@ -55,7 +57,11 @@ export class DocumentFactory {
 		'.mnb': { language: 'json', isTripleSource: false }
 	}
 
-	constructor() {
+	constructor(
+		private readonly _store: Store,
+		private readonly _vocabulary: VocabularyRepository,
+		private readonly _settings: ISettingsService
+	) {
 		const extensions = Object.keys(this.supportedExtensions);
 		const languages = extensions.map(e => this.supportedExtensions[e].language);
 
@@ -158,19 +164,19 @@ export class DocumentFactory {
 
 		switch (language) {
 			case 'turtle':
-				return new TurtleDocument(documentUri, RdfSyntax.Turtle);
+				return new TurtleDocument(documentUri, RdfSyntax.Turtle, this._store, this._vocabulary, this._settings);
 			case 'ntriples':
-				return new TurtleDocument(documentUri, RdfSyntax.NTriples);
+				return new TurtleDocument(documentUri, RdfSyntax.NTriples, this._store, this._vocabulary, this._settings);
 			case 'nquads':
-				return new TurtleDocument(documentUri, RdfSyntax.NQuads);
+				return new TurtleDocument(documentUri, RdfSyntax.NQuads, this._store, this._vocabulary, this._settings);
 			case 'n3':
-				return new TurtleDocument(documentUri, RdfSyntax.N3);
+				return new TurtleDocument(documentUri, RdfSyntax.N3, this._store, this._vocabulary, this._settings);
 			case 'trig':
-				return new TurtleDocument(documentUri, RdfSyntax.TriG);
+				return new TurtleDocument(documentUri, RdfSyntax.TriG, this._store, this._vocabulary, this._settings);
 			case 'sparql':
-				return new SparqlDocument(documentUri);
+				return new SparqlDocument(documentUri, this._store, this._vocabulary, this._settings);
 			case 'xml':
-				return new XmlDocument(documentUri);
+				return new XmlDocument(documentUri, this._store, this._vocabulary, this._settings);
 			default:
 				throw new Error('Unsupported language:' + language);
 		}
