@@ -116,6 +116,20 @@
     "onNotebook:mentor-notebook",
     "onUri"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "SPARQL endpoint connections and query templates from workspace settings are only applied in trusted workspaces. This prevents an untrusted workspace from directing the extension to make network requests to arbitrary hosts.",
+      "restrictedConfigurations": [
+        "mentor.sparql.connections",
+        "mentor.sparql.listGraphsQuery",
+        "mentor.sparql.dropGraphQuery",
+        "mentor.sparql.describeQueryTemplate",
+        "mentor.sparql.exportGraphQuery",
+        "mentor.sparql.countGraphQuery"
+      ]
+    }
+  },
   "contributes": {
     "viewsContainers": {
       "activitybar": [

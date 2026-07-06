@@ -1,7 +1,8 @@
+import * as vscode from 'vscode';
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver-types';
 import { LintingProvider } from '@src/linters/linting-provider';
-import { LintingContext, LintDocument } from '@src/linters/linting-context';
+import { LintingContext } from '@src/linters/linting-context';
 
 /**
  * Represents information about a SPARQL query scope (SELECT, CONSTRUCT, etc.).
@@ -190,7 +191,7 @@ export class SparqlUnusedVariableLinter implements LintingProvider {
 	/**
 	 * Check a query scope for unused variables and return diagnostics.
 	 */
-	private _checkScopeForUnusedVariables(document: LintDocument, scope: QueryScope): Diagnostic[] {
+	private _checkScopeForUnusedVariables(document: vscode.TextDocument, scope: QueryScope): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 
 		// Don't report unused variables if this is a SELECT * query

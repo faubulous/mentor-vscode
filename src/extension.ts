@@ -54,7 +54,17 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 
 	// Load named graphs for connections with auto-loading enabled. Runs in parallel
 	// with indexing so the status bar can show both activities simultaneously.
-	loadConnectionGraphs();
+	//
+	// Gated on Workspace Trust: auto-loading issues outbound requests to endpoints that
+	// may be defined by workspace settings, so it must never run for untrusted content.
+	// If trust is granted later in the session, load then.
+	if (vscode.workspace.isTrusted) {
+		loadConnectionGraphs();
+	}
+
+	context.subscriptions.push(
+		vscode.workspace.onDidGrantWorkspaceTrust(() => loadConnectionGraphs())
+	);
 }
 
 export async function deactivate() {

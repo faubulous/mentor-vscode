@@ -6,6 +6,8 @@ export const workspace = {
   workspaceFolders: [
     { name: 'root', index: 0, uri: workspaceRoot },
   ],
+  isTrusted: true,
+  onDidGrantWorkspaceTrust: (_handler: any) => ({ dispose: () => {} }),
   findFiles: async () => [] as any[],
   createFileSystemWatcher: () => ({
     onDidCreate: () => ({ dispose: () => {} }),

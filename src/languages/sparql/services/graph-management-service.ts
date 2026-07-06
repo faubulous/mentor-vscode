@@ -6,6 +6,8 @@ import { IGraphManagementService } from './graph-management-service.interface';
 import { ITripleStoreConfigService } from './triple-store-config-service.interface';
 import { Store } from '@faubulous/mentor-rdf';
 import { InferenceUri } from '@src/providers/inference-uri';
+import { ConfigurationScope } from '@src/utilities/config-scope';
+import { isHttpEndpoint, isSafeAutoLoadEndpoint } from '@src/utilities/endpoint-url';
 
 /**
  * An entry in the graph cache.
@@ -152,17 +154,49 @@ export class GraphManagementService implements IGraphManagementService {
     }
 
     async autoLoadConnections(): Promise<void> {
+        // Auto-loading issues outbound network requests to endpoints that may be defined by
+        // workspace settings. Never do this for untrusted workspaces.
+        if (!vscode.workspace.isTrusted) {
+            return;
+        }
+
         const connections = this._connectionRegistry
             .getConnections()
             .filter(c => c.autoLoadGraphs && !c.isProtected);
 
-        if (connections.length === 0) {
+        // Only auto-contact endpoints that are safe for their configuration scope. User-scoped
+        // connections are configured by the user and may target loopback/private hosts (e.g. a
+        // local Fuseki), so they only need to be HTTP(S). Workspace-scoped connections may come
+        // from shared/untrusted settings, so they are additionally required not to target
+        // internal hosts (SSRF / cloud-metadata protection).
+        const safe: SparqlConnection[] = [];
+        let skipped = 0;
+
+        for (const c of connections) {
+            const isSafe = c.configScope === ConfigurationScope.User
+                ? isHttpEndpoint(c.endpointUrl)
+                : isSafeAutoLoadEndpoint(c.endpointUrl);
+
+            if (isSafe) {
+                safe.push(c);
+            } else {
+                skipped++;
+            }
+        }
+
+        if (skipped > 0) {
+            vscode.window.showWarningMessage(
+                `Mentor did not auto-load ${skipped} SPARQL connection(s) whose endpoint is not a public HTTP(S) URL. Open a connection manually to load its graphs.`
+            );
+        }
+
+        if (safe.length === 0) {
             return;
         }
 
-        await Promise.all(connections.map(c => this.loadGraphsForConnection(c)));
+        await Promise.all(safe.map(c => this.loadGraphsForConnection(c)));
 
-        for (const connection of connections) {
+        for (const connection of safe) {
             this._scheduleReload(connection);
         }
     }
