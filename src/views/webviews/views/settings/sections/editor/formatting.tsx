@@ -6,7 +6,7 @@ import { SettingRow } from '../../components/setting-row';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { VSCodeSettings } from '../../settings-types';
 import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { useSettingRowProps } from '../../components/use-setting-row-props';
+import { useSettingRowProps } from '../../hooks/use-setting-row-props';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 

@@ -29,6 +29,19 @@
 	border-top: var(--mentor-border-panel);
 }
 
+vscode-badge [variant="tab-header-counter"] .root,
+vscode-badge [variant="counter"] .root {
+	/* Fix for the counter badge style not being desaturated. */
+	background-color: var(--vscode-profileBadge-background);
+	color: var(--vscode-profileBadge-foreground);
+}
+
+vscode-textfield vscode-icon[slot="content-before"] {
+	display: flex;
+    min-width: 24px;
+    justify-content: center;
+}
+
 vscode-toolbar-button {
 	justify-content: center;
 	display: flex;

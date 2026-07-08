@@ -1,6 +1,6 @@
 import { useCallback, useContext } from 'react';
 import { SettingScope, SettingState, SettingsSource } from '../settings-types';
-import { SettingsScopeTargetContext, SettingsWorkspaceContext } from './setting-context';
+import { SettingsScopeTargetContext, SettingsWorkspaceContext } from '../components/setting-context';
 
 /**
  * Generates props for a SettingRow component for the given source's slice of

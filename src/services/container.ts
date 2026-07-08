@@ -81,12 +81,14 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	context.subscriptions.push(documentTokenSource);
 
-	// Diagnostics are computed in the extension host — there are no language
-	// server processes.
-	context.subscriptions.push(new DocumentDiagnosticsService(documentTokenSource, getContext));
-
 	const documentContextService = new DocumentContextService(context, store, vocabularyRepository, documentFactory, documentTokenSource);
 	container.registerInstance(ServiceToken.DocumentContextService, documentContextService);
+
+	// Diagnostics are computed in the extension host — there are no language
+	// server processes. Constructed after DocumentContextService is registered:
+	// its constructor eagerly validates already-visible editors, which resolves
+	// the context service through the `getContext` closure.
+	context.subscriptions.push(new DocumentDiagnosticsService(documentTokenSource, getContext));
 
 	const workspaceService = new WorkspaceService();
 	container.registerInstance(ServiceToken.WorkspaceService, workspaceService);
@@ -167,6 +169,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const settingsMigrationService = new SettingsMigrationService([
 		new migrations.IndexExcludeFilesMigration(),
 		new migrations.SeedDefaultStoresMigration(context),
+		new migrations.ShaclValidationProfilesMigration(),
 	]);
 	container.registerInstance(ServiceToken.SettingsMigrationService, settingsMigrationService);
 }

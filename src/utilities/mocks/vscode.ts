@@ -546,6 +546,10 @@ export class ThemeIcon {
   constructor(public readonly id: string, public readonly color?: ThemeColor) {}
 }
 
+export const QuickInputButtons = {
+  Back: { iconPath: new ThemeIcon('arrow-left'), tooltip: 'Back' },
+};
+
 export class TreeItem {
   label?: string;
   id?: string;

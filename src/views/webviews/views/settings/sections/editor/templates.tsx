@@ -6,8 +6,8 @@ import { SettingRow } from '../../components/setting-row';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import { MENTOR_LANGUAGE_IDS, LanguageId } from '@src/services/document/document-languages';
-import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
-import { useSettingRowProps } from '../../components/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
+import { useSettingRowProps } from '../../hooks/use-setting-row-props';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 

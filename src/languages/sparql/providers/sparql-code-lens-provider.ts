@@ -83,7 +83,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		// Inference status CodeLens (only for connections that support inference)
 		if (this._storeConfigService.supportsInference(connection)) {
 			const inferenceEnabled = this._documentConnectionService.getInferenceEnabledForDocument(document.uri);
-			const inferenceIcon = inferenceEnabled ? '$(lightbulb-sparkle)' : '$(lightbulb)';
+			const inferenceIcon = '$(lightbulb)';
 			const inferenceText = inferenceEnabled ? 'on' : 'off';
 			const inferenceTooltip = inferenceEnabled
 				? 'Inferred triples are included. Click to exclude them.'

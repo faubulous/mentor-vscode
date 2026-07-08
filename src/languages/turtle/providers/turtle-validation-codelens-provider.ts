@@ -91,20 +91,37 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			const range = new vscode.Range(0, 0, 0, 0);
 			const result: vscode.CodeLens[] = [];
 
-			const shapeFiles = this._validationService.getEffectiveShapeGraphs(document.uri);
-			const shapeCount = shapeFiles.length;
-			const shapeFilesTooltip = shapeCount > 0
-				? `Configured SHACL shapes:\n\n${shapeFiles.map(shapeFile => `- ${shapeFile}`).join('\n')}`
-				: 'Configure SHACL shape files for this document';
+			const state = this._validationService.getDocumentValidationState(document.uri);
+			const shapeCount = state.effectiveShapes.length;
+			const hasBrokenProfiles = state.unknownProfiles.length > 0;
 
-			let title = "";
+			let title = '';
+			let tooltip: string;
 
-			if (shapeCount > 1) {
-				title += `$(file)\u00A0Validation: ${shapeCount} files enabled`;
-			} else if (shapeCount === 1) {
-				title += `$(file)\u00A0Validation: ${shapeCount} file enabled`;
+			if (state.profileNames.length > 0) {
+				// Named profiles are applied \u2014 show the profile names instead of a file count.
+				const names = state.profileNames.slice(0, 3).join(', ')
+					+ (state.profileNames.length > 3 ? ` +${state.profileNames.length - 3}` : '');
+				const adHocSuffix = state.adHocShapes.length > 0
+					? ` +${state.adHocShapes.length} file(s)`
+					: '';
+
+				title = `$(checklist)\u00A0Validation: ${names}${adHocSuffix}`;
+				tooltip = `Applied validation profiles: ${state.profileNames.join(', ')}`
+					+ (state.effectiveShapes.length > 0
+						? `\n\nShape files:\n\n${state.effectiveShapes.map(shapeFile => `- ${shapeFile}`).join('\n')}`
+						: '');
+			} else if (shapeCount > 0) {
+				title = `$(checklist)\u00A0Validation: ${shapeCount} file${shapeCount === 1 ? '' : 's'} enabled`;
+				tooltip = `Configured SHACL shapes:\n\n${state.effectiveShapes.map(shapeFile => `- ${shapeFile}`).join('\n')}`;
 			} else {
-				title += `$(file)\u00A0Validation: not configured`;
+				title = `$(checklist)\u00A0Validation: not configured`;
+				tooltip = 'Configure SHACL validation for this document';
+			}
+
+			if (hasBrokenProfiles) {
+				title = `$(warning)\u00A0${title}`;
+				tooltip += `\n\nUnknown profiles: ${state.unknownProfiles.join(', ')}`;
 			}
 
 			// When a shape source is configured, the Validate action leads the group;
@@ -120,7 +137,7 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			result.push(new vscode.CodeLens(range, {
 				title: title,
 				command: 'mentor.command.manageShaclShapes',
-				tooltip: shapeFilesTooltip
+				tooltip: tooltip
 			}));
 
 			// Show status from last validation, if available. Suppressed in notebook cells —

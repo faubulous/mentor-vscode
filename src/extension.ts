@@ -50,7 +50,10 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	// Do not await this, to allow the extension to finish activating while indexing
 	// is still in progress. This may cause some language features to not be available
 	// until indexing is complete, but provides a better user experience overall.
-	indexWorkspace();
+	//
+	// Once indexing is complete, check the SHACL validation profiles for references
+	// to missing files and warn if any are broken.
+	indexWorkspace().then(() => checkValidationProfiles());
 
 	// Load named graphs for connections with auto-loading enabled. Runs in parallel
 	// with indexing so the status bar can show both activities simultaneously.
@@ -138,8 +141,9 @@ function registerCommands(context: vscode.ExtensionContext) {
 }
 
 /**
- * Registers rename/move handlers that migrate per-document settings when files or folders
- * are renamed in the workspace.
+ * Registers rename and delete handlers that migrate per-document settings when files or
+ * folders are renamed in the workspace, and detect deletions that affect SHACL validation
+ * profiles.
  */
 function registerRenameHandlers(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
@@ -148,7 +152,7 @@ function registerRenameHandlers(context: vscode.ExtensionContext) {
 			const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
 			await documentConnectionService.handleFileRenames(e.files);
 
-			// Migrate SHACL global settings (graphs keys and defaults entries).
+			// Migrate SHACL workspace settings (profile shapes and document assignments).
 			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 			await shaclService.migrateShaclSettings(e.files);
 
@@ -156,6 +160,12 @@ function registerRenameHandlers(context: vscode.ExtensionContext) {
 			const referenceUpdateService = container.resolve<ReferenceUpdateService>(ServiceToken.ReferenceUpdateService);
 			const changes = referenceUpdateService.buildChangesForRenames(e.files);
 			await referenceUpdateService.batchUpdate(changes);
+		}),
+		vscode.workspace.onDidDeleteFiles(async (e) => {
+			// Prune SHACL assignments for deleted documents and warn about profiles
+			// that still reference deleted shape files.
+			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+			await shaclService.handleFileDeletes(e.files);
 		})
 	);
 }
@@ -243,5 +253,19 @@ async function indexWorkspace() {
 		// This function is intentionally not awaited during activation; log instead
 		// of surfacing an unhandled rejection that could disrupt the extension host.
 		console.error('Mentor: Workspace indexing failed:', e);
+	}
+}
+
+/**
+ * Checks all SHACL validation profiles for references to missing shape files and warns the user if any are broken.
+ * @note This is run after workspace indexing is complete, so that all shape files in the workspace are known.
+ */
+async function checkValidationProfiles() {
+	try {
+		const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+
+		shaclService.runStartupProfileCheck();
+	} catch (e) {
+		console.error('Mentor: SHACL profile check failed:', e);
 	}
 }

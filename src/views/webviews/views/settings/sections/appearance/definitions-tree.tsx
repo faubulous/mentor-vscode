@@ -1,8 +1,8 @@
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { SettingRow } from '../../components/setting-row';
-import { useSettingRowProps } from '../../components/use-setting-row-props';
-import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
+import { useSettingRowProps } from '../../hooks/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
 import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';

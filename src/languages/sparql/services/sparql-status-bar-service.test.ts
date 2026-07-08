@@ -120,7 +120,7 @@ describe('SparqlStatusBarService', () => {
             new SparqlStatusBarService(queryService, endpointTester, graphService, connectionRegistry);
 
             expect(sparqlItem().show).toHaveBeenCalled();
-            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 0 connections; 0 graphs');
             expect(sparqlItem().command).toBe('mentor.view.sparqlResultsView.focus');
         });
 
@@ -162,7 +162,7 @@ describe('SparqlStatusBarService', () => {
             fireQueryStart(state);
             fireQueryEnd(state);
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
         });
     });
@@ -197,7 +197,7 @@ describe('SparqlStatusBarService', () => {
             fireTestStart(connection);
             fireTestEnd({ connection, error: null });
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
         });
 
@@ -214,7 +214,7 @@ describe('SparqlStatusBarService', () => {
             fireTestStart(connection);
             fireTestEnd({ connection, error: { code: 401, message: 'Unauthorized' } });
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
         });
     });
@@ -232,7 +232,7 @@ describe('SparqlStatusBarService', () => {
 
             fireGraphLoadEnd(connection);
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 0 connections; 0 graphs');
             expect(sparqlItem().hide).not.toHaveBeenCalled();
         });
 
@@ -256,7 +256,7 @@ describe('SparqlStatusBarService', () => {
 
             fireGraphLoadEnd(second);
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 0 connections; 0 graphs');
         });
 
         it('composes query execution and graph loading into one label at the same time', () => {
@@ -289,7 +289,7 @@ describe('SparqlStatusBarService', () => {
 
             new SparqlStatusBarService(services.queryService, services.endpointTester, services.graphService, services.connectionRegistry);
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 2 connections; 3 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 2 connections; 3 graphs');
         });
 
         it('uses singular forms for a single connection and graph', () => {
@@ -299,7 +299,7 @@ describe('SparqlStatusBarService', () => {
 
             new SparqlStatusBarService(services.queryService, services.endpointTester, services.graphService, services.connectionRegistry);
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 1 connection; 1 graph');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 1 connection; 1 graph');
         });
 
         it('updates the label when the connections change', () => {
@@ -307,12 +307,12 @@ describe('SparqlStatusBarService', () => {
 
             new SparqlStatusBarService(services.queryService, services.endpointTester, services.graphService, services.connectionRegistry);
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 0 connections; 0 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 0 connections; 0 graphs');
 
             services.connections.push({ id: 'workspace' });
             services.fireConnectionsChanged();
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 1 connection; 0 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 1 connection; 0 graphs');
         });
 
         it('updates the label when the graphs of a connection change', () => {
@@ -324,7 +324,7 @@ describe('SparqlStatusBarService', () => {
             services.graphsByConnection['workspace'] = ['workspace:///a.ttl', 'workspace:///b.ttl'];
             services.fireGraphsChanged('workspace');
 
-            expect(sparqlItem().text).toBe('$(sparql-file) 1 connection; 2 graphs');
+            expect(sparqlItem().text).toBe('$(arrow-swap) 1 connection; 2 graphs');
         });
     });
 

@@ -140,7 +140,7 @@ export class SparqlStatusBarService implements vscode.Disposable {
 	/**
 	 * Builds the idle label summarizing the configured connections and the total
 	 * number of loaded named graphs, in the same style as the workspace index item.
-	 * @returns The summary label, e.g. `$(sparql-file) 2 connections; 12 graphs`.
+	 * @returns The summary label, e.g. `$(arrow-swap) 2 connections; 12 graphs`.
 	 */
 	private _getSummaryLabel(): string {
 		const connections = this._connectionRegistry.getConnections();
@@ -156,7 +156,7 @@ export class SparqlStatusBarService implements vscode.Disposable {
 			`${graphCount} graph${graphCount === 1 ? '' : 's'}`,
 		];
 
-		return `$(sparql-file) ${parts.join('; ')}`;
+		return `$(arrow-swap) ${parts.join('; ')}`;
 	}
 
 	dispose(): void {

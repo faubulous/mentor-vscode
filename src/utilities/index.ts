@@ -1,5 +1,6 @@
 export * from './iterator';
 export * from './rdf';
+export * from './shacl';
 export * from './string';
 export * from './tokens';
 export * from './triplate';

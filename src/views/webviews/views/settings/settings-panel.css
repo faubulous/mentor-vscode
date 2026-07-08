@@ -299,12 +299,12 @@ vscode-textarea.monospace {
 
 /* Setting rows */
 
-.connections-subsection,
+.settings-list-section,
 .setting-row {
 	margin-bottom: 1em;
 }
 
-.connections-subsection,
+.settings-list-section,
 .setting-row {
 	padding: 0.5em 0 0.5em 12px;
 	border-left: 2px solid transparent;
@@ -712,22 +712,22 @@ vscode-textarea.monospace {
 	flex: 0 0 110px;
 }
 
-/* ── Connections section ─────────────────────────────────────── */
+/* ── Settings list (stores / connections / validation profiles) ── */
 
-.connections-list-container {
+.settings-list-container {
 	display: flex;
 	flex-direction: column;
 	gap: 6.5px;
 }
 
-.connections-subsection {
+.settings-list-section {
 	display: flex;
 	flex-direction: column;
 	gap: var(--mentor-space-4);
 	margin-bottom: 1em;
 }
 
-.connections-empty-message {
+.settings-list-empty {
 	margin: 0;
 	padding: var(--mentor-space-2) 0;
 	font-size: 0.9em;
@@ -735,19 +735,19 @@ vscode-textarea.monospace {
 	font-style: italic;
 }
 
-.connections-empty-message strong {
+.settings-list-empty strong {
 	font-style: normal;
 	font-weight: 600;
 }
 
-.connections-list {
+.settings-list {
 	display: flex;
 	flex-direction: column;
 	gap: var(--mentor-space-2);
 	margin-bottom: var(--mentor-space-2);
 }
 
-.connection-item {
+.settings-item {
 	display: flex;
 	align-items: flex-start;
 	padding: var(--mentor-space-1) var(--mentor-space-4);
@@ -758,52 +758,52 @@ vscode-textarea.monospace {
 	transition: background-color 0.1s ease, border-color 0.2s ease;
 }
 
-.connection-item:hover {
+.settings-item:hover {
 	background: var(--vscode-list-hoverBackground);
 }
 
-.connection-item.selected {
+.settings-item.selected {
 	background: var(--vscode-list-activeSelectionBackground);
 	color: var(--vscode-list-activeSelectionForeground);
 }
 
-.connection-item:focus-visible {
+.settings-item:focus-visible {
 	outline: 1px solid var(--vscode-focusBorder);
 	outline-offset: -1px;
 }
 
-.connection-item.testing {
+.settings-item.testing {
 	border-left-color: var(--vscode-textLink-activeForeground);
 }
 
-.connection-item.test-success {
+.settings-item.test-success {
 	border-left-color: var(--vscode-notebookStatusSuccessIcon-foreground);
 }
 
-.connection-item.test-error {
+.settings-item.test-error {
 	border-left-color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
-.connection-item-icon {
+.settings-item-icon {
 	margin-right: var(--mentor-space-4);
 	margin-top: 6px;
 	flex-shrink: 0;
 }
 
-.connection-item-icon.icon-testing {
+.settings-item-icon.icon-testing {
 	color: var(--vscode-textLink-activeForeground);
 	animation: pulse 1s ease-in-out infinite;
 }
 
-.connection-item-icon.icon-success {
+.settings-item-icon.icon-success {
 	color: var(--vscode-notebookStatusSuccessIcon-foreground);
 }
 
-.connection-item-icon.icon-error {
+.settings-item-icon.icon-error {
 	color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
-.connection-item-body {
+.settings-item-body {
 	flex: 1;
 	min-width: 0;
 	display: flex;
@@ -813,7 +813,7 @@ vscode-textarea.monospace {
 	padding: 3px 0;
 }
 
-.connection-item-titlerow {
+.settings-item-titlerow {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -821,7 +821,7 @@ vscode-textarea.monospace {
 	min-width: 0;
 }
 
-.connection-item-name {
+.settings-item-name {
 	flex: 1;
 	min-width: 0;
 	overflow: hidden;
@@ -830,7 +830,7 @@ vscode-textarea.monospace {
 	line-height: 1.4;
 }
 
-.connection-item-subline {
+.settings-item-subline {
 	display: flex;
 	flex-direction: row;
 	align-items: baseline;
@@ -838,7 +838,7 @@ vscode-textarea.monospace {
 	min-width: 0;
 }
 
-.connection-item-description {
+.settings-item-description {
 	flex: 1;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -849,7 +849,7 @@ vscode-textarea.monospace {
 	min-width: 0;
 }
 
-.connection-item-meta {
+.settings-item-meta {
 	display: flex;
 	flex-direction: row;
 	gap: var(--mentor-space-6);
@@ -860,7 +860,7 @@ vscode-textarea.monospace {
 	line-height: 1.5em;
 }
 
-.connection-item-meta-item {
+.settings-item-meta-item {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.3em;
@@ -868,7 +868,7 @@ vscode-textarea.monospace {
 	white-space: nowrap;
 }
 
-.connection-item-meta-description {
+.settings-item-meta-description {
 	flex: 0 1 auto;
 	min-width: 0;
 	overflow: hidden;
@@ -876,27 +876,27 @@ vscode-textarea.monospace {
 	display: block;
 }
 
-.connection-item-meta-item.graph-status-error {
+.settings-item-meta-item.graph-status-error {
 	color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
-.connection-item-meta-dot {
+.settings-item-meta-dot {
 	flex-shrink: 0;
 	opacity: 0.6;
 }
 
-.connection-item-meta-icon {
+.settings-item-meta-icon {
 	font-size: 1em;
 }
 
-.connection-item-lock {
+.settings-item-lock {
 	font-size: 14px;
 	color: var(--vscode-descriptionForeground);
 	flex-shrink: 0;
 }
 
 
-.connection-item-actions {
+.settings-item-actions {
 	display: flex;
 	gap: var(--mentor-space-2);
 	opacity: 0;
@@ -908,16 +908,16 @@ vscode-textarea.monospace {
 	flex-shrink: 0;
 }
 
-.connection-item:hover .connection-item-actions,
-.connection-item:focus-within .connection-item-actions,
-.connection-item.selected .connection-item-actions {
+.settings-item:hover .settings-item-actions,
+.settings-item:focus-within .settings-item-actions,
+.settings-item.selected .settings-item-actions {
 	opacity: 1;
 	visibility: visible;
 }
 
 /* Reserves a button's worth of space without ever becoming visible or interactive,
    so action-less rows match the height of rows that have buttons. */
-.connection-item-action-placeholder {
+.settings-item-action-placeholder {
 	visibility: hidden;
 	pointer-events: none;
 }

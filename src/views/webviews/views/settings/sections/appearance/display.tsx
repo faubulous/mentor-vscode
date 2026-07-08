@@ -2,8 +2,8 @@ import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { SettingRow } from '../../components/setting-row';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { StringListEditor } from '../../components/string-list-editor';
-import { useSettingRowProps } from '../../components/use-setting-row-props';
-import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
+import { useSettingRowProps } from '../../hooks/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 

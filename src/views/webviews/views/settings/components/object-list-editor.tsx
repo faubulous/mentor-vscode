@@ -57,7 +57,7 @@ export function ObjectListEditor({ items, fields, onChange }: ObjectListEditorPr
 			</div>
 			{allItems.map((item, i) => {
 				const isGhost = i === items.length;
-				
+
 				return (
 					<div key={isGhost ? 'ghost' : i} className="object-list-item">
 						{fields.map(f => (
