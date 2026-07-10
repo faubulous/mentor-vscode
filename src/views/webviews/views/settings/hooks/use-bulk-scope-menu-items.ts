@@ -1,4 +1,5 @@
 import { SettingState, SettingsSource } from "../settings-types";
+import { ScopeKey } from '@src/utilities/config-scope';
 import { SectionHeaderContextMenuItem } from "@src/views/webviews/components/section-header-context-menu";
 
 /**
@@ -10,7 +11,7 @@ export function useBulkScopeMenuItems(
 	source: SettingsSource,
 	keys: string[] | undefined,
 	settings: Record<string, SettingState> | undefined,
-	onBulkScope: ((source: SettingsSource, keys: string[], scope: 'user' | 'workspace') => void) | undefined,
+	onBulkScope: ((source: SettingsSource, keys: string[], scope: ScopeKey) => void) | undefined,
 ): SectionHeaderContextMenuItem[] {
 	const modifiedKeys = keys && settings
 		? keys.filter(k => settings[k]?.scope !== 'default')

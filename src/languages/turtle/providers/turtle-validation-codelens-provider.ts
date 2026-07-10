@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
+import { getProfileDisplayName, isGlobPattern } from '@src/services/validation/shacl-validation-configuration';
 import { getConfig } from '@src/utilities/vscode/config';
 
 /**
@@ -34,7 +35,6 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 	private async _initialize() {
 		this._initializing = true;
 		this._initialized = false;
-
 		this._enabled = getConfig().get('shacl.enabled', false);
 
 		this._workspaceIndexerService.waitForIndexed().then(() => {
@@ -93,35 +93,33 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 
 			const state = this._validationService.getDocumentValidationState(document.uri);
 			const shapeCount = state.effectiveShapes.length;
-			const hasBrokenProfiles = state.unknownProfiles.length > 0;
+
+			// Glob patterns that applied a profile are listed in the tooltip for
+			// transparency; the title itself stays unqualified.
+			const matchedPatterns = state.matchedPaths.filter(isGlobPattern);
+			const matchedPatternsTooltip = matchedPatterns.length > 0
+				? `\n\nMatched path patterns:\n\n${matchedPatterns.map(pattern => `- ${pattern}`).join('\n')}`
+				: '';
 
 			let title = '';
 			let tooltip: string;
 
 			if (state.profileNames.length > 0) {
-				// Named profiles are applied \u2014 show the profile names instead of a file count.
-				const names = state.profileNames.slice(0, 3).join(', ')
-					+ (state.profileNames.length > 3 ? ` +${state.profileNames.length - 3}` : '');
-				const adHocSuffix = state.adHocShapes.length > 0
-					? ` +${state.adHocShapes.length} file(s)`
-					: '';
+				// The state holds stable profile ids; resolve them to display names.
+				const settings = this._validationService.getValidationSettings();
+				const displayNames = state.profileNames.map(id => getProfileDisplayName(settings, id));
+				const names = displayNames.slice(0, 3).join(', ')
+					+ (displayNames.length > 3 ? ` +${displayNames.length - 3}` : '');
 
-				title = `$(checklist)\u00A0Validation: ${names}${adHocSuffix}`;
-				tooltip = `Applied validation profiles: ${state.profileNames.join(', ')}`
+				title = `$(checklist)\u00A0Validation: ${names}`;
+				tooltip = `Applied validation profiles: ${displayNames.join(', ')}`
 					+ (state.effectiveShapes.length > 0
 						? `\n\nShape files:\n\n${state.effectiveShapes.map(shapeFile => `- ${shapeFile}`).join('\n')}`
-						: '');
-			} else if (shapeCount > 0) {
-				title = `$(checklist)\u00A0Validation: ${shapeCount} file${shapeCount === 1 ? '' : 's'} enabled`;
-				tooltip = `Configured SHACL shapes:\n\n${state.effectiveShapes.map(shapeFile => `- ${shapeFile}`).join('\n')}`;
+						: '')
+					+ matchedPatternsTooltip;
 			} else {
 				title = `$(checklist)\u00A0Validation: not configured`;
 				tooltip = 'Configure SHACL validation for this document';
-			}
-
-			if (hasBrokenProfiles) {
-				title = `$(warning)\u00A0${title}`;
-				tooltip += `\n\nUnknown profiles: ${state.unknownProfiles.join(', ')}`;
 			}
 
 			// When a shape source is configured, the Validate action leads the group;

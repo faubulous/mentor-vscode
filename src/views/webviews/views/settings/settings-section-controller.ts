@@ -12,7 +12,9 @@ import { SettingsSectionMessages } from './settings-panel-messages';
  * shell's built-in `GetSettings`/`UpdateSetting` handlers cover them.
  */
 export interface SettingsSectionController extends vscode.Disposable {
-	/** The section identifier this controller is registered for. */
+	/**
+	 * The section identifier this controller is registered for.
+	 */
 	readonly id: SettingsSectionId;
 
 	/**

@@ -62,7 +62,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	// single contiguous group (indexer → graph → SPARQL, left-to-right). The low
 	// values place the group at the far right of the left-aligned status bar — after
 	// built-in items like "Auto Attach" (priority 0) — so they are the last items.
-	private readonly _statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, -10000);
+	private readonly _statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, -10001);
 
 	constructor(
 		private readonly _documentFactory: IDocumentFactory,

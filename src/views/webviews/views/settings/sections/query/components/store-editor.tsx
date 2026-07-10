@@ -1,23 +1,23 @@
 import * as React from 'react';
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { VscodeSingleSelect } from '@vscode-elements/elements';
-import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } from '@src/views/webviews/components/modal-dialog';
-import { ScopeSelect } from '@src/views/webviews/components/scope-select';
 import { TemplatePreview } from '@src/views/webviews/components/template-preview';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { useScopedWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { useScopedWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/hooks';
 import {
 	TripleStoreConfig,
 	TripleStoreInferenceConfig,
 	SparqlQueryKind,
 } from '@src/languages/sparql/services/triple-store-config';
-import { SettingState } from '../../settings-types';
-import { StoresSectionMessages } from './stores-messages';
-import modalFormStylesheet from '@src/views/webviews/components/modal-form.css';
+import { SettingState } from '../../../settings-types';
+import { StoresSectionMessages } from '../stores-messages';
+import { useSettingsItemDraft } from '../../../hooks/use-settings-item-draft';
+import { ModalSettingsItemEditor } from '../../../components/modal-settings-item-editor';
 import stylesheet from './store-editor.css';
 
-/** Builds the scratch token identifying an open per-store query-template editor. */
+/**
+ * Builds the scratch token identifying an open per-store query-template editor.
+ */
 const templateToken = (storeId: string, kind: SparqlQueryKind) => `${kind}~${storeId}`;
 
 
@@ -55,20 +55,19 @@ export interface StoreEditorProps {
 }
 
 /**
- * The form rendered inside the store edit modal. Holds a local draft of the
- * store and commits it only when Save is clicked; until then nothing is written
- * to settings. Save/Delete portal into the modal header. Styling follows the
- * shared `modal-form` look used by the SPARQL connection editor.
+ * The form rendered inside the store edit modal. Holds a local draft of the store
+ * (via {@link useSettingsItemDraft}) and commits it only when Save is clicked. The
+ * shared {@link ModalSettingsItemEditor} frame handles the Save/Delete and scope
+ * portals; this component supplies the store-specific tabbed body.
  */
 export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, onSave, onDelete, onDirtyChange }: StoreEditorProps) {
-	useStylesheet('modal-form-styles', modalFormStylesheet);
 	useStylesheet('store-editor-styles', stylesheet);
 
-	const headerActionsSlot = useContext(ModalDialogHeaderActionsContext);
-	const titleAccessoriesSlot = useContext(ModalDialogTitleAccessoriesContext);
+	const { draft, setDraft, canSave, activeTab, tabsRef } = useSettingsItemDraft(store, {
+		onDirtyChange,
+		validate: d => d.label.trim().length > 0,
+	});
 
-	const [draft, setDraft] = useState<TripleStoreConfig>(store);
-	const [activeTab, setActiveTab] = useState(0);
 	const [queryKind, setQueryKind] = useState<string>('');
 
 	// The store-overridable query templates are discovered from the settings payload: every
@@ -84,19 +83,9 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 	// The selected kind, clamped to a still-valid entry (defaults to the first discovered query).
 	const activeQuery = queryKinds.find(q => q.kind === queryKind) ?? queryKinds[0];
 
-	// Reseed the draft whenever a different store is opened.
-	useEffect(() => {
-		setDraft(store);
-		setActiveTab(0);
-		setQueryKind('');
-	}, [store]);
-
-	const hasChanges = JSON.stringify(draft) !== JSON.stringify(store);
-	const canSave = draft.label.trim().length > 0 && hasChanges;
-
-	useEffect(() => {
-		onDirtyChange(hasChanges);
-	}, [hasChanges]);
+	// Reset the selected query kind whenever a different store is opened (the draft and active
+	// tab are reset by useSettingsItemDraft).
+	useEffect(() => setQueryKind(''), [store]);
 
 	const updateInference = (patch: Partial<TripleStoreInferenceConfig>) => {
 		setDraft(d => {
@@ -169,10 +158,6 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 
 	useScopedWebviewMessaging<StoresSectionMessages>('query.stores', handleSavedTemplate);
 
-	const tabsRef = useVscodeElementRef<HTMLElement & { selectedIndex: number }>('vsc-tabs-select', (element) => {
-		setActiveTab(element.selectedIndex);
-	});
-
 	// Toggle reasoning support from the current draft state rather than reading the checkbox's
 	// `checked` property: the controlled vscode-checkbox reports its value unreliably on the first
 	// change, which previously meant the new state was only captured on the second toggle.
@@ -197,37 +182,21 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 	const reasoningSupported = draft.inference?.supported ?? false;
 	const reasoningFieldsDisabled = readOnly || !reasoningSupported;
 
-	const renderActions = () => (
-		<div className={`form-actions ${readOnly ? 'readonly' : ''}`}>
-			{readOnly && <vscode-icon name="lock" title="Built-in store" />}
-			{!readOnly && (
-				<>
-					{!isNew && (
-						<vscode-toolbar-button title="Delete store" onClick={() => onDelete(draft)}>
-							<vscode-icon name="trash" />
-						</vscode-toolbar-button>
-					)}
-					<vscode-button title="Save store" onClick={() => onSave({ ...draft, label: draft.label.trim() })} disabled={!canSave}>
-						Save
-					</vscode-button>
-				</>
-			)}
-		</div>
-	);
-
 	return (
-		<div className="modal-form store-editor-content">
-			{headerActionsSlot && createPortal(renderActions(), headerActionsSlot)}
-
-			{!readOnly && titleAccessoriesSlot && createPortal(
-				<ScopeSelect
-					value={draft.configScope === ConfigurationScope.Workspace ? 'workspace' : 'user'}
-					onChange={(scope) => setDraft(d => ({ ...d, configScope: scope === 'workspace' ? ConfigurationScope.Workspace : ConfigurationScope.User }))}
-					hasWorkspace={hasWorkspace}
-				/>,
-				titleAccessoriesSlot
-			)}
-
+		<ModalSettingsItemEditor
+			className="store-editor-content"
+			scope={draft.configScope ?? ConfigurationScope.User}
+			onScopeChange={scope => setDraft(d => ({ ...d, configScope: scope }))}
+			hasWorkspace={hasWorkspace}
+			isNew={isNew}
+			canSave={canSave}
+			onSave={() => onSave({ ...draft, label: draft.label.trim() })}
+			onDelete={() => onDelete(draft)}
+			saveTitle="Save store"
+			deleteTitle="Delete store"
+			readOnly={readOnly}
+			readOnlyLabel="Built-in store"
+		>
 			<vscode-tabs ref={tabsRef} selectedIndex={activeTab}>
 				<vscode-tab-header slot="header">General</vscode-tab-header>
 				<vscode-tab-panel>
@@ -317,6 +286,6 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 					</section>
 				</vscode-tab-panel>
 			</vscode-tabs>
-		</div>
+		</ModalSettingsItemEditor>
 	);
 }

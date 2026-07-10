@@ -1,9 +1,10 @@
 import { LanguageId } from '@src/services/document/document-languages';
+import { ScopeKey } from '@src/utilities/config-scope';
 
 /**
  * Scope of a settings that correspond to the different levels of settings in VS Code.
  */
-export type SettingScope = 'default' | 'user' | 'workspace';
+export type SettingScope = 'default' | ScopeKey;
 
 /**
  * Identifies which "bucket" of VS Code configuration a setting lives in.

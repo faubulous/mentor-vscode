@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { createContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useStylesheet } from '../webview-hooks';
+import { useStylesheet } from '../hooks';
 import stylesheet from './modal-dialog.css';
 
 /**

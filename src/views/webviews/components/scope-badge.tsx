@@ -1,9 +1,11 @@
 import { ConfigurationScope, getConfigurationScopeDescription, getConfigurationScopeLabel } from '@src/utilities/config-scope';
-import { useStylesheet } from '@src/views/webviews/webview-hooks';
+import { useStylesheet } from '@src/views/webviews/hooks';
 import stylesheet from './scope-badge.css';
 
 export interface ScopeBadgeProps {
-	/** The scope the item is defined in. */
+	/**
+	 * The scope the item is defined in.
+	 */
 	scope: ConfigurationScope;
 }
 

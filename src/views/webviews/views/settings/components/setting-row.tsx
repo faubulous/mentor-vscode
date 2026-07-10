@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { SettingScope, SettingState } from '../settings-types';
 import { MarkdownText } from './markdown-text';
 import { SectionHeaderContextMenu, SectionHeaderContextMenuItem } from '@src/views/webviews/components/section-header-context-menu';
@@ -53,13 +54,13 @@ export interface SettingRowProps {
 	 * The scope this setting currently targets ('user' | 'workspace'), shown in the dropdown.
 	 * Omitted for sub-field rows that are not independent settings (no scope dropdown shown).
 	 */
-	scope?: 'user' | 'workspace';
+	scope?: ScopeKey;
 
 	/**
 	 * Invoked when the user picks a different scope from the dropdown. Omitted together with
 	 * `scope` for sub-field rows.
 	 */
-	onScopeSelect?: (scope: 'user' | 'workspace') => void;
+	onScopeSelect?: (scope: ScopeKey) => void;
 
 	/**
 	 * Whether a workspace folder is open; disables the Workspace option when false.

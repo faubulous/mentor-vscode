@@ -6,24 +6,36 @@ import { useEffect, useRef, useState } from 'react';
  * fields to the item's focusable root element.
  */
 export interface ListItemNavProps {
-	/** Tab order of the item. Every item is a tab stop. */
+	/**
+	 * Tab order of the item. Every item is a tab stop.
+	 */
 	tabIndex: number;
 
-	/** Whether this item is the active (selected) item. */
+	/**
+	 * Whether this item is the active (selected) item.
+	 */
 	selected: boolean;
 
-	/** Registers the item's root element so the hook can move focus to it. */
+	/**
+	 * Registers the item's root element so the hook can move focus to it.
+	 */
 	ref: (element: HTMLElement | null) => void;
 
-	/** Keyboard handler implementing Arrow/Home/End navigation and Enter/Space activation. */
+	/**
+	 * Keyboard handler implementing Arrow/Home/End navigation and Enter/Space activation.
+	 */
 	onKeyDown: (event: React.KeyboardEvent) => void;
 
-	/** Marks the item active when it receives focus. */
+	/**
+	 * Marks the item active when it receives focus.
+	 */
 	onFocus: () => void;
 }
 
 interface ListKeyboardNavigationOptions {
-	/** Called when an item is activated via Enter or Space. */
+	/**
+	 * Called when an item is activated via Enter or Space.
+	 */
 	onActivate?: (id: string) => void;
 }
 

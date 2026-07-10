@@ -19,7 +19,9 @@ export interface SettingsListItemProps {
 	 */
 	tooltip?: string;
 
-	/** Trailing action buttons, wrapped in a stop-propagation container. */
+	/**
+	 * Trailing action buttons, wrapped in a stop-propagation container.
+	 */
 	actions?: React.ReactNode;
 
 	/**

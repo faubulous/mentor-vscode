@@ -1,4 +1,6 @@
-/** Captures the opening fence, body and closing fence of a triplate frontmatter block. */
+/**
+ * Captures the opening fence, body and closing fence of a triplate frontmatter block.
+ */
 const FRONTMATTER_RE = /^(---[ \t]*\r?\n)([\s\S]*?)\r?\n---[ \t]*(\r?\n|$)/;
 
 /**

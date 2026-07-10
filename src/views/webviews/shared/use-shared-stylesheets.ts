@@ -1,4 +1,4 @@
-import { useStylesheet } from '@src/views/webviews/webview-hooks';
+import { useStylesheet } from '@src/views/webviews/hooks';
 import tokens from './webview-tokens.css';
 import utilities from './webview-utilities.css';
 

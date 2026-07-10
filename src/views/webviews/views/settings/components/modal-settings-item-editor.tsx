@@ -3,8 +3,8 @@ import { useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } from '@src/views/webviews/components/modal-dialog';
 import { ScopeSelect } from '@src/views/webviews/components/scope-select';
-import { ConfigurationScope } from '@src/utilities/config-scope';
-import { useStylesheet } from '@src/views/webviews/webview-hooks';
+import { ConfigurationScope, keyToScope, scopeToKey } from '@src/utilities/config-scope';
+import { useStylesheet } from '@src/views/webviews/hooks';
 import modalFormStylesheet from '@src/views/webviews/components/modal-form.css';
 
 export interface ModalSettingsItemEditorProps {
@@ -27,6 +27,12 @@ export interface ModalSettingsItemEditorProps {
 	 * Whether a workspace folder is open; disables the Workspace scope option when false.
 	 */
 	hasWorkspace?: boolean;
+
+	/**
+	 * Whether the User/Workspace scope picker is rendered. Defaults to true; set to
+	 * false for sections whose items are stored in a fixed scope.
+	 */
+	showScope?: boolean;
 
 	/**
 	 * Whether this is a brand-new (unsaved) item — hides the Delete action.
@@ -86,6 +92,7 @@ export function ModalSettingsItemEditor({
 	scope,
 	onScopeChange,
 	hasWorkspace,
+	showScope = true,
 	isNew,
 	canSave,
 	onSave,
@@ -123,10 +130,10 @@ export function ModalSettingsItemEditor({
 		<div className={`modal-form ${className ?? ''}`.trim()}>
 			{headerActionsSlot && createPortal(renderActions(), headerActionsSlot)}
 
-			{!readOnly && titleAccessoriesSlot && createPortal(
+			{!readOnly && showScope && titleAccessoriesSlot && createPortal(
 				<ScopeSelect
-					value={scope === ConfigurationScope.Workspace ? 'workspace' : 'user'}
-					onChange={s => onScopeChange(s === 'workspace' ? ConfigurationScope.Workspace : ConfigurationScope.User)}
+					value={scopeToKey(scope)}
+					onChange={key => onScopeChange(keyToScope(key))}
 					hasWorkspace={hasWorkspace}
 				/>,
 				titleAccessoriesSlot

@@ -4,7 +4,7 @@ import { ConnectionEditorMessages } from './sections/query/connection-editor-mes
 import { ConnectionsListMessages } from './sections/query/connections-list-messages';
 import { StoresSectionMessages } from './sections/query/stores-messages';
 import { IndexingMessages } from './sections/workspace/indexing-messages';
-import { ValidationSectionMessages } from './sections/editor/validation-messages';
+import { ValidationProfilesMessages } from './sections/validation/profiles-messages';
 
 /**
  * Messages routed between a settings section webview component and its section
@@ -16,7 +16,7 @@ export type SettingsSectionMessages =
 	| ({ section: 'query.connections' } & (ConnectionsListMessages | ConnectionEditorMessages))
 	| ({ section: 'query.stores' } & StoresSectionMessages)
 	| ({ section: 'workspace.indexing' } & IndexingMessages)
-	| ({ section: 'editor.validation' } & ValidationSectionMessages);
+	| ({ section: 'validation.profiles' } & ValidationProfilesMessages);
 
 /**
  * Messages exchanged between the settings panel webview and the extension.

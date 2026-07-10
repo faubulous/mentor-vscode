@@ -1,5 +1,5 @@
 import { Fragment } from 'react/jsx-runtime';
-import { useStylesheet } from '@src/views/webviews/webview-hooks';
+import { useStylesheet } from '@src/views/webviews/hooks';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { BindingsTablePagingState } from './bindings-table-paging-state';
 import { Stopwatch } from './stopwatch';

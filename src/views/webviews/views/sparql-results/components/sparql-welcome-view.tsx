@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useWebviewMessaging, useStylesheet } from '@src/views/webviews/webview-hooks';
+import { useWebviewMessaging, useStylesheet } from '@src/views/webviews/hooks';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
 import { SparqlQueryExecutionState, getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
 import { toDisplayPath, getPath } from '@src/utilities/uri';

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useWebviewMessaging } from '@src/views/webviews/webview-hooks';
+import { useWebviewMessaging } from '@src/views/webviews/hooks';
 import { ExecuteCommandMessage } from '@src/views/webviews/webview-messaging';
 
 /**

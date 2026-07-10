@@ -1876,43 +1876,38 @@
           "mentor.shacl.validation": {
             "type": "object",
             "title": "SHACL Validation Configuration",
-            "description": "Explicit SHACL shape configuration. Configure workspace defaults and per-graph include/exclude rules.",
+            "description": "Named, self-contained SHACL validation profiles. Each profile bundles a set of shape graphs with the workspace paths it applies to; the shapes of all profiles matching a document are combined.",
             "properties": {
-              "defaults": {
-                "type": "array",
-                "description": "Default SHACL shape graph URIs applied when a graph does not override defaults.",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "graphs": {
+              "profiles": {
                 "type": "object",
-                "description": "Per-graph SHACL shape settings keyed by canonical workspace graph URI.",
+                "description": "Named SHACL validation profiles keyed by a stable identifier. The key is auto-generated from the name when a profile is created via the settings UI (slugified, disambiguated with a numeric suffix on collision) and never changes on rename.",
                 "additionalProperties": {
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
-                    "includeDefaults": {
-                      "type": "boolean",
-                      "description": "If true, include default SHACL shape graphs for this graph before applying include/exclude rules.",
-                      "default": true
+                    "name": {
+                      "type": "string",
+                      "description": "Display name. Falls back to the profile's key when omitted."
                     },
-                    "includeShapes": {
+                    "shapes": {
                       "type": "array",
-                      "description": "Additional SHACL shape graph URIs included for this graph.",
+                      "description": "SHACL shape graphs, referenced by graph URI. Workspace files are addressed by their canonical 'workspace:///' URI, built-in vocabulary graphs by their namespace URI (e.g. 'http://www.w3.org/ns/shacl#').",
                       "items": {
                         "type": "string"
                       },
                       "default": []
                     },
-                    "excludeShapes": {
+                    "paths": {
                       "type": "array",
-                      "description": "SHACL shape graph URIs removed from the effective set for this graph. Exclusions win over includes.",
+                      "description": "Workspace-relative paths this profile applies to: glob patterns (e.g. 'ontologies/*' or '**/*.ttl') or exact file paths (e.g. 'models/data.ttl'). Entries whose last segment has no file extension automatically match only the currently-recognized RDF file extensions. A '#<cell-slug>' suffix (itself glob-capable) targets specific notebook cells. Prefix an entry with '!' to exclude matching documents from the profile.",
                       "items": {
                         "type": "string"
                       },
                       "default": []
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Optional human-readable description of the profile."
                     }
                   }
                 },
@@ -1920,17 +1915,13 @@
               }
             },
             "additionalProperties": false,
-            "default": {
-              "defaults": [],
-              "graphs": {}
-            }
+            "default": {}
           },
           "mentor.shacl.enabled": {
             "type": "boolean",
             "title": "Enable SHACL Validation",
-            "description": "If enabled, Mentor will show experimental SHACL validation features including the titlebar validate button and SHACL validation code lenses.",
-            "default": false,
-            "experimental": true
+            "description": "If enabled, Mentor will show the titlebar validate button and editor code lenses.",
+            "default": true
           },
           "mentor.formatting.common.maxLineWidth": {
             "type": "number",

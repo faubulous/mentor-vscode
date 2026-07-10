@@ -1,4 +1,5 @@
 import { useCallback, useContext } from 'react';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { SettingScope, SettingState, SettingsSource } from '../settings-types';
 import { SettingsScopeTargetContext, SettingsWorkspaceContext } from '../components/setting-context';
 
@@ -29,7 +30,7 @@ export function useSettingRowProps(
 			setScope: (value: unknown, scope: SettingScope) => onScopeChange(source, key, scope, value),
 			scope: scopeTarget?.get(source, key, state) ?? 'user',
 			hasWorkspace,
-			onScopeSelect: (newScope: 'user' | 'workspace') => scopeTarget?.select(source, key, newScope, state),
+			onScopeSelect: (newScope: ScopeKey) => scopeTarget?.select(source, key, newScope, state),
 		};
 	}, [source, settings, onScopeChange, scopeTarget, hasWorkspace]);
 }

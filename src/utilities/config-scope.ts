@@ -9,6 +9,31 @@ export enum ConfigurationScope {
 }
 
 /**
+ * String form of a {@link ConfigurationScope}, used as a serializable
+ * discriminator in webview messages, settings-panel state and section
+ * descriptors.
+ */
+export type ScopeKey = 'user' | 'workspace';
+
+/**
+ * Converts a {@link ConfigurationScope} into its serializable {@link ScopeKey}.
+ * @param scope A configuration scope value.
+ * @returns The corresponding scope key.
+ */
+export function scopeToKey(scope: ConfigurationScope): ScopeKey {
+	return scope === ConfigurationScope.User ? 'user' : 'workspace';
+}
+
+/**
+ * Converts a serializable {@link ScopeKey} back into its {@link ConfigurationScope}.
+ * @param key A scope key.
+ * @returns The corresponding configuration scope.
+ */
+export function keyToScope(key: ScopeKey): ConfigurationScope {
+	return key === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
+}
+
+/**
  * Get a label for a configuration scope.
  * @param scope A configuration scope value.
  * @returns A string label for the configuration scope.

@@ -16,7 +16,7 @@ This folder contains reusable infrastructure and components for building Mentor 
 - `webview-messaging.ts`: Message types and interfaces including the shared `ExecuteCommandMessage` type.
 - `webview-host.ts`: Singleton manager for VS Code API in webviews (state persistence, messaging).
 - `webview-component.tsx`: React base class for client components with automatic messaging initialization, stylesheet injection, command execution helpers, and `createVscodeElementRef` for managing VS Code web component event listeners.
-- `webview-hooks.ts`: React hooks for functional components: `useWebviewMessaging`, `useWebviewState`, `useVscodeElementRef`, and `useStylesheet`.
+- `hooks/`: React hooks for functional components, one file per hook: `useWebviewMessaging`, `useScopedWebviewMessaging`, `useWebviewState`, `useVscodeElementRef`, and `useStylesheet`.
 - `webview-registry.ts`: Central registry to register all controllers from one place.
 
 ## Conventions
@@ -55,7 +55,7 @@ This folder contains reusable infrastructure and components for building Mentor 
 - For shared styles, consider injecting them via `WebviewComponent.addStylesheet()` to avoid HTML template changes.
 - If you support both a View and a Panel for the same feature, use a single controller class with both `viewType` and `panelId/panelTitle` set.
 - Use `this.executeCommand(...)` in components instead of manually constructing `ExecuteCommand` messages.
-- For functional components, use the hooks from `webview-hooks.ts` instead of the class-based `WebviewComponent`.
+- For functional components, use the hooks from `hooks/` instead of the class-based `WebviewComponent`.
 
 ## Using VS Code Web Components (vscode-elements)
 
@@ -87,10 +87,10 @@ For functional components, use the `useVscodeElementRef` hook instead.
 
 ## React Hooks for Functional Components
 
-For modern functional components, use the hooks from `webview-hooks.ts`:
+For modern functional components, use the hooks from `hooks/`:
 
 ```tsx
-import { useWebviewMessaging, useWebviewState, useVscodeElementRef, useStylesheet } from '@src/views/webviews/webview-hooks';
+import { useWebviewMessaging, useWebviewState, useVscodeElementRef, useStylesheet } from '@src/views/webviews/hooks';
 
 function MyView() {
   // Auto-managed messaging with command execution

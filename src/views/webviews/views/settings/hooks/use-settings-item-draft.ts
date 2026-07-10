@@ -1,34 +1,52 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { useVscodeElementRef } from '@src/views/webviews/hooks';
 
-/** A tabbed element exposing its currently selected tab index. */
+/**
+ * A tabbed element exposing its currently selected tab index.
+ */
 type TabbedElement = HTMLElement & { selectedIndex: number };
 
 export interface UseSettingsItemDraftOptions<T> {
-	/** Called whenever the dirty state changes. */
+	/**
+	 * Called whenever the dirty state changes.
+	 */
 	onDirtyChange?: (dirty: boolean) => void;
 
-	/** Extra validity gate for enabling Save, beyond "has changes". Defaults to always valid. */
+	/**
+	 * Extra validity gate for enabling Save, beyond "has changes". Defaults to always valid.
+	 */
 	validate?: (draft: T) => boolean;
 }
 
 export interface SettingsItemDraft<T> {
-	/** The working copy the editor mutates. */
+	/**
+	 * The working copy the editor mutates.
+	 */
 	draft: T;
 
-	/** Updates the working copy. */
+	/**
+	 * Updates the working copy.
+	 */
 	setDraft: Dispatch<SetStateAction<T>>;
 
-	/** Whether the draft differs from the seeded item. */
+	/**
+	 * Whether the draft differs from the seeded item.
+	 */
 	hasChanges: boolean;
 
-	/** Whether Save should be enabled (`hasChanges` && `validate(draft)`). */
+	/**
+	 * Whether Save should be enabled (`hasChanges` && `validate(draft)`).
+	 */
 	canSave: boolean;
 
-	/** The active `<vscode-tabs>` tab index. */
+	/**
+	 * The active `<vscode-tabs>` tab index.
+	 */
 	activeTab: number;
 
-	/** Ref callback to bind to the `<vscode-tabs>` element so tab changes update `activeTab`. */
+	/**
+	 * Ref callback to bind to the `<vscode-tabs>` element so tab changes update `activeTab`.
+	 */
 	tabsRef: (element: TabbedElement | null) => void;
 }
 

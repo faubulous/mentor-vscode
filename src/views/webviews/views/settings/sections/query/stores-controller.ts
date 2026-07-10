@@ -6,6 +6,7 @@ import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { SettingsSectionController } from '../../settings-section-controller';
 import { SettingsSectionMessages } from '../../settings-panel-messages';
+import { confirmSettingsItemDeletion } from '../../confirm-settings-item-deletion';
 import { SettingsSectionId } from '..';
 
 const SECTION_ID = 'query.stores' satisfies SettingsSectionId;
@@ -50,19 +51,13 @@ export class StoresSectionController implements SettingsSectionController {
 				const affected = connectionRegistry.getConnections().filter(c => c.storeType === profileId && !c.isProtected);
 
 				if (affected.length === 0) {
-					const answer = await vscode.window.showWarningMessage(
-						`Are you sure you want to delete the store "${label}"?`,
-						{ modal: true },
-						'Delete'
-					);
-
-					if (answer === 'Delete') {
-						this._post({ section: SECTION_ID, id: 'StoreProfileDeleted', profileId });
-					}
+					await confirmSettingsItemDeletion(this._post, {
+						message: `Are you sure you want to delete the store "${label}"?`,
+						deletedMessage: { section: SECTION_ID, id: 'StoreProfileDeleted', profileId },
+					});
 
 					return true;
 				} else {
-
 					const count = affected.length;
 					const noun = count === 1 ? 'connection' : 'connections';
 

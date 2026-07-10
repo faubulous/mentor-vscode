@@ -5,7 +5,7 @@ import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import { StringListEditor } from '../../components/string-list-editor';
 import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
 import { useSettingRowProps } from '../../hooks/use-setting-row-props';
-import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 

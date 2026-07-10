@@ -3,7 +3,7 @@ import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { SettingRow } from '../../components/setting-row';
 import { useSettingRowProps } from '../../hooks/use-setting-row-props';
 import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
-import { useVscodeElementRef } from '@src/views/webviews/webview-hooks';
+import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';

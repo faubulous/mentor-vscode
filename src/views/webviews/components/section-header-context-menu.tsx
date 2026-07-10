@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useStylesheet } from '../webview-hooks';
+import { useStylesheet } from '../hooks';
 import stylesheet from './section-header-context-menu.css';
 
 /**

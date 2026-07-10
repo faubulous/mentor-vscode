@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } from '@src/views/webviews/components/modal-dialog';
 import { ScopeSelect } from '@src/views/webviews/components/scope-select';
-import { useStylesheet, useVscodeElementRef, useScopedWebviewMessaging } from '@src/views/webviews/webview-hooks';
+import { useStylesheet, useVscodeElementRef, useScopedWebviewMessaging } from '@src/views/webviews/hooks';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
 import { SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
 import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
@@ -16,8 +16,8 @@ import {
 	MicrosoftAuthCredential
 } from '@src/services/core/credential';
 import { CredentialFactory } from '@src/services/core/credential-factory';
-import { ConfigurationScope } from '@src/utilities/config-scope';
-import { ConnectionEditorMessages } from './connection-editor-messages';
+import { ConfigurationScope, ScopeKey, keyToScope } from '@src/utilities/config-scope';
+import { ConnectionEditorMessages } from '../connection-editor-messages';
 import modalFormStylesheet from '@src/views/webviews/components/modal-form.css';
 import stylesheet from './connection-editor.css';
 
@@ -78,13 +78,19 @@ function makeInitialFormState(connection: SparqlConnectionView): FormState {
 }
 
 export interface ConnectionEditorProps {
-	/** The connection being edited. For a new connection this is a freshly created, unsaved record. */
+	/**
+	 * The connection being edited. For a new connection this is a freshly created, unsaved record.
+	 */
 	connection: SparqlConnectionView;
 
-	/** Called after a successful save, e.g. to close the modal. */
+	/**
+	 * Called after a successful save, e.g. to close the modal.
+	 */
 	onSaved: () => void;
 
-	/** Notifies the host whenever the form's unsaved-changes state changes. */
+	/**
+	 * Notifies the host whenever the form's unsaved-changes state changes.
+	 */
 	onDirtyChange: (dirty: boolean) => void;
 }
 
@@ -178,8 +184,8 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 		onDirtyChange(draft.hasUnsavedChanges);
 	}, [draft.hasUnsavedChanges, onDirtyChange]);
 
-	const handleScopeChange = (scope: 'user' | 'workspace') => {
-		const configScope = scope === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace;
+	const handleScopeChange = (scope: ScopeKey) => {
+		const configScope = keyToScope(scope);
 
 		setDraft(prev => ({
 			...prev,

@@ -1,4 +1,5 @@
 import { SettingScope, SettingState, SettingsSource } from "./settings-types";
+import { ScopeKey } from "@src/utilities/config-scope";
 
 /**
  * Section for settings related to how the workspace is indexed for search and query purposes.
@@ -38,5 +39,5 @@ export interface SettingsSectionProps {
 	 * @param keys The keys of the settings being updated.
 	 * @param scope The new scope for the settings.
 	 */
-	onBulkScope: (source: SettingsSource, keys: string[], scope: 'user' | 'workspace') => void;
+	onBulkScope: (source: SettingsSource, keys: string[], scope: ScopeKey) => void;
 }

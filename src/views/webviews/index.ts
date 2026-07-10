@@ -6,4 +6,4 @@ export { WebviewControllerRegistry } from './webview-controller-registry';
 export { WebviewComponent, WebviewComponentProps, createVscodeElementRef, VscodeElementRefOptions } from './webview-component';
 export { WebviewHost } from './webview-host';
 export { WebviewMessaging, WebviewMessage, ExecuteCommandMessage } from './webview-messaging';
-export * from './webview-hooks';
+export * from './hooks';

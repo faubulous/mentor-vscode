@@ -3,7 +3,7 @@ import { Quad, Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { NTriplesSerializer } from '@faubulous/mentor-rdf-serializers';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
-import { useStylesheet } from '@src/views/webviews/webview-hooks';
+import { useStylesheet } from '@src/views/webviews/hooks';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { getDescribeQueryCommandArgs } from '../helpers/describe-query-args';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
@@ -11,10 +11,14 @@ import stylesheet from './bindings-table.css';
 
 const ntriplesSerializer = new NTriplesSerializer();
 
-/** Width, in pixels, of the leading row-number column. */
+/**
+ * Width, in pixels, of the leading row-number column.
+ */
 const ROW_NUMBER_COLUMN_WIDTH = 50;
 
-/** Minimum width, in pixels, given to each binding column before the table scrolls horizontally. */
+/**
+ * Minimum width, in pixels, given to each binding column before the table scrolls horizontally.
+ */
 const MIN_COLUMN_WIDTH = 150;
 
 /**

@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SectionHeader } from '@src/views/webviews/components/section-header';
-import { useScopedWebviewMessaging } from '@src/views/webviews/webview-hooks';
+import { useScopedWebviewMessaging } from '@src/views/webviews/hooks';
 import { SettingRow } from '../../components/setting-row';
 import { StringListEditor } from '../../components/string-list-editor';
-import { useSettingRowProps } from '../../components/use-setting-row-props';
-import { useBulkScopeMenuItems } from '../../components/use-bulk-scope-menu-items';
+import { useSettingRowProps } from '../../hooks/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
-import { IndexingDashboard } from './indexing-dashboard';
+import { IndexingDashboard } from './components/indexing-dashboard';
 import { IndexingMessages, IndexingStatsView } from './indexing-messages';
 
 export const workspaceIndexingSection = {

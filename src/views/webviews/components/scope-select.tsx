@@ -1,16 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { ConfigurationScope, getConfigurationScopeDescription } from '@src/utilities/config-scope';
-import { useStylesheet } from '@src/views/webviews/webview-hooks';
+import { ConfigurationScope, ScopeKey, getConfigurationScopeDescription, keyToScope } from '@src/utilities/config-scope';
+import { useStylesheet } from '@src/views/webviews/hooks';
 import stylesheet from './scope-select.css';
 
 export interface ScopeSelectProps {
-	/** The currently selected scope. */
-	value: 'user' | 'workspace';
+	/**
+	 * The currently selected scope.
+	 */
+	value: ScopeKey;
 
-	/** Invoked with the newly selected scope when the user changes the selection. */
-	onChange: (scope: 'user' | 'workspace') => void;
+	/**
+	 * Invoked with the newly selected scope when the user changes the selection.
+	 */
+	onChange: (scope: ScopeKey) => void;
 
-	/** Disables the whole control (e.g. for read-only / built-in items). */
+	/**
+	 * Disables the whole control (e.g. for read-only / built-in items).
+	 */
 	disabled?: boolean;
 
 	/**
@@ -20,7 +26,7 @@ export interface ScopeSelectProps {
 	hasWorkspace?: boolean;
 }
 
-const SCOPES: { scope: 'user' | 'workspace'; label: string; configScope: ConfigurationScope }[] = [
+const SCOPES: { scope: ScopeKey; label: string; configScope: ConfigurationScope }[] = [
 	{ scope: 'user', label: 'User', configScope: ConfigurationScope.User },
 	{ scope: 'workspace', label: 'Workspace', configScope: ConfigurationScope.Workspace },
 ];
@@ -52,7 +58,7 @@ export function ScopeSelect({ value, onChange, disabled, hasWorkspace = true }: 
 		return () => document.removeEventListener('mousedown', handler);
 	}, [open]);
 
-	const select = (scope: 'user' | 'workspace') => {
+	const select = (scope: ScopeKey) => {
 		setOpen(false);
 
 		if (scope !== value) {
@@ -70,7 +76,7 @@ export function ScopeSelect({ value, onChange, disabled, hasWorkspace = true }: 
 				disabled={disabled}
 				aria-haspopup="listbox"
 				aria-expanded={open}
-				title={getConfigurationScopeDescription(value === 'user' ? ConfigurationScope.User : ConfigurationScope.Workspace)}
+				title={getConfigurationScopeDescription(keyToScope(value))}
 				onClick={() => setOpen(o => !o)}
 			>
 				<span className="scope-select-label">{activeLabel}</span>

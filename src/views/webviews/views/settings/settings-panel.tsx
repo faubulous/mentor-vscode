@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { createRoot } from 'react-dom/client';
 import { SettingsSectionId, SETTINGS_GROUPS, defaultScopeForKey } from './sections';
 import { SettingsSectionDescriptor } from './settings-section-descriptor';
@@ -16,7 +17,7 @@ import {
 } from './settings-types';
 import { SettingsPanelMessages } from './settings-panel-messages';
 import { SettingsScopeTargetApi, SettingsScopeTargetContext, SettingsWorkspaceContext } from './components/setting-context';
-import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/webview-hooks';
+import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/hooks';
 import { patchNestedRecord } from '@src/views/webviews/webview-utils';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
 import stylesheet from './settings-panel.css';
@@ -56,7 +57,7 @@ interface SettingsPanelState {
 	 * {@link scopeKeyOf}. When a key is absent the target falls back to the setting's
 	 * current scope (or `'user'` when unset).
 	 */
-	scopeByKey: Record<string, 'user' | 'workspace'>;
+	scopeByKey: Record<string, ScopeKey>;
 
 	/**
 	 * Extension version, shown in the header.
@@ -162,7 +163,7 @@ function SettingsPanel() {
 	 * {@link defaultScopeForKey}, downgraded to `'user'` when no workspace folder is open
 	 * (a Workspace write would otherwise be invalid).
 	 */
-	const resolveDefaultScope = useCallback((source: SettingsSource, key: string): 'user' | 'workspace' => {
+	const resolveDefaultScope = useCallback((source: SettingsSource, key: string): ScopeKey => {
 		const scope = defaultScopeForKey(source, key);
 		return scope === 'workspace' && !state.hasWorkspace ? 'user' : scope;
 	}, [state.hasWorkspace]);
@@ -171,7 +172,7 @@ function SettingsPanel() {
 	 * The scope a setting's next write targets: an explicit {@link scopeByKey} choice if
 	 * present, otherwise the scope it currently lives in, otherwise its default scope.
 	 */
-	const resolveTargetScope = useCallback((source: SettingsSource, key: string, st: SettingState | undefined): 'user' | 'workspace' => {
+	const resolveTargetScope = useCallback((source: SettingsSource, key: string, st: SettingState | undefined): ScopeKey => {
 		const explicitChoice = state.scopeByKey[scopeKeyOf(source, key)];
 
 		if (explicitChoice) {
@@ -231,7 +232,7 @@ function SettingsPanel() {
 	/**
 	 * Applies {@link handleSetScope} to many keys of one source at once.
 	 */
-	const handleBulkScope = useCallback((source: SettingsSource, keys: string[], scope: 'user' | 'workspace') => {
+	const handleBulkScope = useCallback((source: SettingsSource, keys: string[], scope: ScopeKey) => {
 		const slice = state.settingsBySource[settingsSourceKey(source)] ?? {};
 
 		for (const key of keys) {
@@ -244,7 +245,7 @@ function SettingsPanel() {
 	 * when the setting already holds a non-default value in a different scope, moves it there
 	 * (writes the new scope, clears the old) so it lands in its new home.
 	 */
-	const handleSelectScope = useCallback((source: SettingsSource, key: string, newScope: 'user' | 'workspace', st: SettingState | undefined) => {
+	const handleSelectScope = useCallback((source: SettingsSource, key: string, newScope: ScopeKey, st: SettingState | undefined) => {
 		setState(prev => ({ ...prev, scopeByKey: { ...prev.scopeByKey, [scopeKeyOf(source, key)]: newScope } }));
 
 		const settingScope = st?.scope ?? 'default';
@@ -281,7 +282,9 @@ function SettingsPanel() {
 
 	// --- RENDERING
 
-	/** Shows search results while a query is active, otherwise the active section's component. */
+	/**
+	 * Shows search results while a query is active, otherwise the active section's component.
+	 */
 	const renderContent = () => {
 		if (state.searchTerm.trim()) {
 			return (

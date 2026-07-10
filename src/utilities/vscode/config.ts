@@ -1,4 +1,21 @@
 import * as vscode from 'vscode';
+import { ConfigurationScope, ScopeKey, keyToScope } from '../config-scope';
+
+/**
+ * Converts a Mentor {@link ConfigurationScope} or {@link ScopeKey} into the VS Code
+ * configuration target to write to. The numeric {@link ConfigurationScope} values
+ * deliberately equal their `vscode.ConfigurationTarget` counterparts; this helper
+ * keeps that invariant in one place.
+ * @param scope A configuration scope or its serializable key.
+ * @returns The corresponding VS Code configuration target.
+ */
+export function toConfigurationTarget(scope: ConfigurationScope | ScopeKey): vscode.ConfigurationTarget {
+	const value = typeof scope === 'string' ? keyToScope(scope) : scope;
+
+	return value === ConfigurationScope.User
+		? vscode.ConfigurationTarget.Global
+		: vscode.ConfigurationTarget.Workspace;
+}
 
 /**
  * Retrieves the VS Code configuration section for the Mentor extension.

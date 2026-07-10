@@ -1,15 +1,16 @@
-import { useCallback, useContext, useRef, useState } from 'react';
+import { useCallback, useContext, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { ModalDialog } from '@src/views/webviews/components/modal-dialog';
-import { useScopedWebviewMessaging } from '@src/views/webviews/webview-hooks';
+import { useScopedWebviewMessaging } from '@src/views/webviews/hooks';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { SettingsWorkspaceContext } from '../../components/setting-context';
+import { useScopedSettingValue } from '../../hooks/use-scoped-setting-value';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
-import { StoresList } from './stores-list';
+import { StoresList } from './components/stores-list';
 import { StoresSectionMessages } from './stores-messages';
-import { StoreEditor } from './store-editor';
+import { StoreEditor } from './components/store-editor';
 import { WORKSPACE_STORE } from '@src/languages/sparql/services/workspace-store';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 
@@ -24,16 +25,31 @@ export const queryStoresSection = {
 	]
 } as const satisfies SettingsSectionDescriptor;
 
+/**
+ * Removes the UI-specific `configScope` marker before an item is persisted.
+ */
+function stripStoreScope(store: TripleStoreConfig): TripleStoreConfig {
+	const copy = { ...store };
+	delete copy.configScope;
+	return copy;
+}
+
 export function QueryStoresSection({ settings, setScope }: SettingsSectionProps) {
 	const hasWorkspace = useContext(SettingsWorkspaceContext);
 
-	// Stores are split across the two configuration scopes. Tag each with its scope so the
-	// editor and the persistence logic know where it lives; the list shows them merged.
-	const userStores = ((settings[STORES_KEY]?.userValue ?? []) as TripleStoreConfig[])
-		.map(s => ({ ...s, configScope: ConfigurationScope.User }));
+	// Stores are split across the user and workspace scopes; the shared hook owns the
+	// read/diff/write mechanics. The persisted arrays carry no `configScope`; we tag each
+	// entry with its scope here for display.
+	const { userValue, workspaceValue, userRef, workspaceRef, commit } = useScopedSettingValue<TripleStoreConfig[]>({
+		source: MENTOR_SETTINGS_SOURCE,
+		key: STORES_KEY,
+		settings,
+		setScope,
+		read: raw => (Array.isArray(raw) ? raw : []) as TripleStoreConfig[],
+	});
 
-	const workspaceStores = ((settings[STORES_KEY]?.workspaceValue ?? []) as TripleStoreConfig[])
-		.map(s => ({ ...s, configScope: ConfigurationScope.Workspace }));
+	const userStores = userValue.map(s => ({ ...s, configScope: ConfigurationScope.User }));
+	const workspaceStores = workspaceValue.map(s => ({ ...s, configScope: ConfigurationScope.Workspace }));
 
 	// The generic `sparql` store ships as the package.json `default` of `mentor.sparql.stores`.
 	// VS Code serves it from the installed manifest, so it is always present without being
@@ -47,30 +63,13 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 	const [editing, setEditing] = useState<TripleStoreConfig | undefined>(undefined);
 	const [editorDirty, setEditorDirty] = useState(false);
 
-	// Persists a single scope's store array (transient scope markers stripped). Reuses the
-	// generic scope-targeted write so all configuration writes go through one host path.
-	const writeScopeStores = useCallback((scope: 'user' | 'workspace', stores: TripleStoreConfig[]) => {
-		setScope(MENTOR_SETTINGS_SOURCE, STORES_KEY, scope, stores.map(stripStoreScope));
-	}, [setScope]);
-
-	// Refs keep the latest values available to message callbacks bound once.
-	const userStoresRef = useRef(userStores);
-	userStoresRef.current = userStores;
-
-	const workspaceStoresRef = useRef(workspaceStores);
-	workspaceStoresRef.current = workspaceStores;
-
-	const writeRef = useRef(writeScopeStores);
-	writeRef.current = writeScopeStores;
-
 	const handleMessage = useCallback((message: StoresSectionMessages) => {
 		if (message.id === 'StoreProfileDeleted') {
-			const inUser = userStoresRef.current.some(s => s.id === message.profileId);
-			const scope = inUser ? 'user' : 'workspace';
-			const remaining = (inUser ? userStoresRef.current : workspaceStoresRef.current)
-				.filter(s => s.id !== message.profileId);
+			// The host confirmed the deletion — drop the store from whichever scope holds it.
+			const nextUser = userRef.current.filter(s => s.id !== message.profileId);
+			const nextWorkspace = workspaceRef.current.filter(s => s.id !== message.profileId);
 
-			writeRef.current(scope, remaining);
+			commit(nextUser, nextWorkspace);
 
 			setEditing(prev => prev?.id === message.profileId ? undefined : prev);
 			setEditorDirty(false);
@@ -101,31 +100,17 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 		setEditing(undefined);
 	};
 
-	const stripStoreScope = (store: TripleStoreConfig): TripleStoreConfig => {
-		const copy = { ...store };
-		delete copy.configScope; // Remove the UI-specific configScope field.
-		return copy;
-	}
-
 	const handleSave = (store: TripleStoreConfig) => {
 		const target = store.configScope === ConfigurationScope.Workspace ? 'workspace' : 'user';
 		const clean = stripStoreScope(store);
 
 		// Recompute both scope arrays so a moved store ends up only in its target scope.
-		const nextUser = userStores.filter(s => s.id !== store.id).map(stripStoreScope);
-		const nextWorkspace = workspaceStores.filter(s => s.id !== store.id).map(stripStoreScope);
+		const nextUser = userRef.current.filter(s => s.id !== store.id);
+		const nextWorkspace = workspaceRef.current.filter(s => s.id !== store.id);
 
 		(target === 'user' ? nextUser : nextWorkspace).push(clean);
 
-		// Only write a scope whose array actually changed — this avoids writing the (empty)
-		// workspace array when no workspace is open.
-		if (JSON.stringify(nextUser) !== JSON.stringify(userStores.map(stripStoreScope))) {
-			writeScopeStores('user', nextUser);
-		}
-		if (JSON.stringify(nextWorkspace) !== JSON.stringify(workspaceStores.map(stripStoreScope))) {
-			writeScopeStores('workspace', nextWorkspace);
-		}
-
+		commit(nextUser, nextWorkspace);
 		closeEditor();
 	};
 

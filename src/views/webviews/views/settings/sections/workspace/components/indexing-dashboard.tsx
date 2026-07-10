@@ -1,5 +1,5 @@
-import { useStylesheet } from '@src/views/webviews/webview-hooks';
-import { IndexingStatsView } from './indexing-messages';
+import { useStylesheet } from '@src/views/webviews/hooks';
+import { IndexingStatsView } from '../indexing-messages';
 import stylesheet from './indexing-dashboard.css';
 
 export interface IndexingDashboardProps {

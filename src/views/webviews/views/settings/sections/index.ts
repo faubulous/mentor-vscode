@@ -1,4 +1,5 @@
 import { SettingsNavigationGroupConfig, SettingsSource } from '../settings-types';
+import { ScopeKey } from '@src/utilities/config-scope';
 import type { SettingsSectionDescriptor } from '../settings-section-descriptor';
 
 import { appearanceDisplaySection } from './appearance/display';
@@ -7,7 +8,8 @@ import { editorGeneralSection } from './editor/general';
 import { editorTemplatesSection } from './editor/templates';
 import { editorFormattingSection } from './editor/formatting';
 import { editorSortingSection } from './editor/sorting';
-import { editorValidationSection } from './editor/validation';
+import { validationGeneralSection } from './validation/general';
+import { validationProfilesSection } from './validation/profiles';
 import { queryStoresSection } from './query/stores';
 import { queryConnectionsSection } from './query/connections';
 import { workspaceIndexingSection } from './workspace/indexing';
@@ -37,7 +39,14 @@ export const SETTINGS_GROUPS = [
 			editorTemplatesSection,
 			editorFormattingSection,
 			editorSortingSection,
-			editorValidationSection,
+		],
+	},
+	{
+		id: 'validation',
+		label: 'Validation',
+		sections: [
+			validationGeneralSection,
+			validationProfilesSection,
 		],
 	},
 	{
@@ -76,7 +85,7 @@ export const ALL_SECTIONS: readonly SettingsSectionDescriptor[] = SETTINGS_GROUP
  *   section's `keys`/`hiddenKeys`, `languageEditor` keys against its `vscodeKeys`.
  * @param key The bare setting key (without the `mentor.`/`editor.` prefix).
  */
-export function defaultScopeForKey(source: SettingsSource, key: string): 'user' | 'workspace' {
+export function defaultScopeForKey(source: SettingsSource, key: string): ScopeKey {
 	const ownsKey = (section: SettingsSectionDescriptor): boolean => {
 		if (source.kind === 'mentor') {
 			return section.keys.includes(key) || (section.hiddenKeys?.includes(key) ?? false);

@@ -141,7 +141,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	container.registerInstance(ServiceToken.SparqlPrefixDefinitionService, sparqlPrefixDefinitionService);
 
 	// Register the SHACL validation service.
-	const shaclValidationService = new ShaclValidationService(context, store, documentContextService);
+	const shaclValidationService = new ShaclValidationService(context, store, documentContextService, documentFactory);
 	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
 	// Register the notebook controller for the Mentor Notebook kernel.

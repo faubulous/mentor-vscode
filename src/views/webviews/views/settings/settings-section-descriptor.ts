@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { ScopeKey } from '@src/utilities/config-scope';
 
 /**
  * A VS Code built-in setting that a Mentor settings section surfaces in its UI
@@ -73,14 +74,14 @@ export interface SettingsSectionDescriptor {
 	 * Only the initial target is affected: a value already set in a specific scope
 	 * keeps targeting that scope, and the user can always re-target per row.
 	 */
-	readonly defaultScope?: 'user' | 'workspace';
+	readonly defaultScope?: ScopeKey;
 
 	/**
 	 * Per-key exceptions to {@link defaultScope}, for sections that mix
 	 * project-shareable and personal keys. Keys are the bare `mentor.*` keys (or
 	 * VS Code builtin keys) this section owns. Empty/omitted for uniform sections.
 	 */
-	readonly keyScopeOverrides?: Record<string, 'user' | 'workspace'>;
+	readonly keyScopeOverrides?: Record<string, ScopeKey>;
 }
 
 /**
