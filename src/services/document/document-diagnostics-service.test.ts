@@ -101,6 +101,9 @@ function makeSetup(contextsByUri: Record<string, any>) {
 
 const VALID_TURTLE = '@prefix ex: <http://example.org/> .\nex:subject ex:predicate ex:object .';
 const INVALID_TURTLE = '@prefix ex: <http://example.org/> .\nex:subject ex:predicate ;';
+// Junk appended to an IRI in object position: the lexer skips the junk and the
+// remaining tokens still parse, so only the lexer error surfaces the problem.
+const LEXER_ERROR_TURTLE = '@prefix ex: <http://example.org/> .\nex:s ex:p <http://example.org/o>www .';
 
 describe('DocumentDiagnosticsService', () => {
     beforeEach(() => {
@@ -136,6 +139,28 @@ describe('DocumentDiagnosticsService', () => {
         const diagnostics = collection.set.mock.calls.at(-1)![1];
         expect(diagnostics.length).toBeGreaterThan(0);
         expect(diagnostics[0].severity).toBe(0); // vscode.DiagnosticSeverity.Error
+    });
+
+    it('publishes lexer error diagnostics when invalid characters are skipped but the rest still parses', () => {
+        const uri = 'file:///test.ttl';
+        const document = makeDocument(uri, LEXER_ERROR_TURTLE);
+        env.textDocuments.push(document);
+        env.visibleTextEditors.push({ document });
+
+        const { collection, deliverTokens } = makeSetup({ [uri]: makeTurtleContext() });
+
+        deliverTokens(uri);
+
+        const diagnostics = collection.set.mock.calls.at(-1)![1];
+        expect(diagnostics.length).toBeGreaterThan(0);
+        expect(diagnostics[0].severity).toBe(0); // vscode.DiagnosticSeverity.Error
+
+        // The range points at the skipped "www" (line 1, characters 32-35).
+        const { range } = diagnostics[0];
+        expect(range.start.line).toBe(1);
+        expect(range.start.character).toBe(32);
+        expect(range.end.line).toBe(1);
+        expect(range.end.character).toBe(35);
     });
 
     it('validates loaded but invisible documents by default (workspace overview)', () => {

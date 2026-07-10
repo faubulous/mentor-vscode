@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import type { ILexingError } from 'chevrotain';
 import { createFileBlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic as LspDiagnostic, DiagnosticSeverity as LspDiagnosticSeverity, Range as LspRange } from 'vscode-languageserver-types';
 import { ParserFactory } from '@src/languages/parser-factory';
@@ -207,8 +208,10 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 
 		// Triplate-aware tokenization: the parser consumes placeholder `parseTokens`
 		// (so its CST/error recovery stay correct) while `tokens` is the faithful
-		// stream that the lexer and lint diagnostics consume.
-		const { tokens, parseTokens } = tokenizeWithTriplate(lexer, content);
+		// stream that the lint diagnostics consume. `lexErrors` are the characters
+		// the lexer could not match — it skips them (no token is emitted), so they
+		// are only surfaced here.
+		const { tokens, parseTokens, errors: lexErrors } = tokenizeWithTriplate(lexer, content);
 
 		const parser = ParserFactory.getParser(context.syntax);
 
@@ -221,7 +224,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 			: this._linters;
 
 		const diagnostics = [
-			...this._getLexDiagnostics(document, tokens),
+			...this._getLexDiagnostics(document, lexErrors),
 			...this._getParseDiagnostics(document, errors),
 			...this._getLintDiagnostics(document, content, tokens, linters),
 		];
@@ -229,19 +232,28 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		return diagnostics.map(d => this._toVscodeDiagnostic(d));
 	}
 
-	private _getLexDiagnostics(document: vscode.TextDocument, tokens: IToken[]): LspDiagnostic[] {
-		return tokens
-			.filter((t) => t?.tokenType?.name === 'Unknown')
-			.map(
-				(unknownToken): LspDiagnostic => ({
+	/**
+	 * Maps lexer errors to diagnostics. The lexer skips characters it cannot
+	 * match (no token is emitted for them) and records them here, so these are
+	 * the only signal for invalid characters — e.g. junk appended to an IRI —
+	 * that leaves a token stream which still parses.
+	 */
+	private _getLexDiagnostics(document: vscode.TextDocument, errors: ILexingError[]): LspDiagnostic[] {
+		return errors.map(
+			(error): LspDiagnostic => {
+				// Guarantee a visible range even for a zero-length error.
+				const length = Math.max(error.length ?? 0, 1);
+
+				return {
 					severity: LspDiagnosticSeverity.Error,
-					message: `Unknown token`,
+					message: error.message,
 					range: {
-						start: document.positionAt(unknownToken.startOffset),
-						end: document.positionAt((unknownToken.endOffset ?? unknownToken.startOffset) + 1),
+						start: document.positionAt(error.offset),
+						end: document.positionAt(error.offset + length),
 					},
-				})
-			);
+				};
+			}
+		);
 	}
 
 	private _getParseDiagnostics(document: vscode.TextDocument, errors: IRecognitionException[]): LspDiagnostic[] {
