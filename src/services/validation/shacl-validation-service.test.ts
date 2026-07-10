@@ -4,6 +4,16 @@ import * as vscode from 'vscode';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
+const { ValidatorMock } = vi.hoisted(() => {
+	const ValidatorMock = vi.fn(function (this: any) {
+		this.validate = vi.fn(async () => ({ conforms: true, dataset: {}, results: [] }));
+	});
+
+	return { ValidatorMock };
+});
+
+vi.mock('shacl-engine', () => ({ Validator: ValidatorMock }));
+
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ShaclValidationSettings } from '@src/services/validation/shacl-validation-configuration';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
@@ -186,6 +196,102 @@ describe('ShaclValidationService.migrateShaclSettings', () => {
 		]);
 
 		expect(updates).toHaveLength(0);
+	});
+});
+
+/**
+ * Constructs the service with a store stub whose per-graph versions can be
+ * mutated between validation runs, and a document context registered for
+ * `file:///w/data.ttl`.
+ */
+function createValidationService(graphVersions: Record<string, number> = {}) {
+	(vscode.workspace as any).getConfiguration = vi.fn(() => ({
+		get: (_key: string, defaultValue?: any) => defaultValue,
+		inspect: () => ({}),
+		update: async () => { },
+	}));
+
+	const context = { subscriptions: [] } as any;
+	const store = {
+		hasGraph: () => true,
+		getGraphVersion: vi.fn((uri: string) => graphVersions[uri] ?? 0),
+		getDataset: vi.fn(() => ({})),
+	} as any;
+
+	const documentUri = vscode.Uri.parse('file:///w/data.ttl');
+	const documentContext = { graphs: [documentUri.toString()], subjects: {}, references: {} } as any;
+	const contextService = {
+		contexts: { [documentUri.toString()]: documentContext },
+		onDidChangeDocumentContext: () => ({ dispose: () => { } }),
+	} as any;
+	const documentFactory = { supportedExtensions: {} } as any;
+
+	const service = new ShaclValidationService(context, store, contextService, documentFactory);
+
+	return { service, store, documentUri, graphVersions };
+}
+
+describe('ShaclValidationService.validateDocument', () => {
+	const shapes = ['workspace:///shapes/core.ttl'];
+
+	it('reuses the cached validator when the shape graph versions are unchanged', async () => {
+		const { service, documentUri } = createValidationService({ [shapes[0]]: 1 });
+
+		await service.validateDocument(documentUri, shapes);
+		await service.validateDocument(documentUri, shapes);
+
+		expect(ValidatorMock).toHaveBeenCalledTimes(1);
+		expect((ValidatorMock.mock.instances[0] as any).validate).toHaveBeenCalledTimes(2);
+	});
+
+	it('rebuilds the validator when a shape graph version changes', async () => {
+		const { service, documentUri, graphVersions } = createValidationService({ [shapes[0]]: 1 });
+
+		await service.validateDocument(documentUri, shapes);
+
+		graphVersions[shapes[0]] = 2;
+
+		await service.validateDocument(documentUri, shapes);
+
+		expect(ValidatorMock).toHaveBeenCalledTimes(2);
+	});
+
+	it('shares a single validation between concurrent triggers', async () => {
+		const { service, documentUri } = createValidationService();
+
+		const [first, second] = await Promise.all([
+			service.validateDocument(documentUri, shapes),
+			service.validateDocument(documentUri, shapes),
+		]);
+
+		expect(first).toBe(second);
+		expect(ValidatorMock).toHaveBeenCalledTimes(1);
+		expect((ValidatorMock.mock.instances[0] as any).validate).toHaveBeenCalledTimes(1);
+	});
+
+	it('resolves the result without waiting for the status bar hold', async () => {
+		vi.useFakeTimers();
+
+		try {
+			const dispose = vi.fn();
+			(vscode.window as any).setStatusBarMessage = vi.fn(() => ({ dispose }));
+
+			const { service, documentUri } = createValidationService();
+			const promise = service.validateDocument(documentUri, shapes);
+
+			await vi.advanceTimersByTimeAsync(0);
+
+			const result = await promise;
+
+			expect(result).toBeDefined();
+			expect(dispose).not.toHaveBeenCalled();
+
+			await vi.advanceTimersByTimeAsync(300);
+
+			expect(dispose).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });
 

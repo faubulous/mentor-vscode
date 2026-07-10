@@ -29,13 +29,6 @@
 	border-top: var(--mentor-border-panel);
 }
 
-vscode-badge [variant="tab-header-counter"] .root,
-vscode-badge [variant="counter"] .root {
-	/* Fix for the counter badge style not being desaturated. */
-	background-color: var(--vscode-profileBadge-background);
-	color: var(--vscode-profileBadge-foreground);
-}
-
 vscode-textfield vscode-icon[slot="content-before"] {
 	display: flex;
     min-width: 24px;
@@ -62,4 +55,10 @@ vscode-toolbar-button.primary .mentor-icon,
 vscode-toolbar-button.primary .codicon,
 vscode-toolbar-button.primary .label {
 	color: var(--vscode-textLink-foreground);
+}
+
+/* Muted (non-blue) counter badges in the editor's tab headers. */
+vscode-badge[variant="tab-header-counter"] {
+	--vscode-activityBarBadge-background: var(--vscode-checkbox-disabled\.background);
+	--vscode-activityBarBadge-foreground: var(--vscode-badge-foreground);
 }

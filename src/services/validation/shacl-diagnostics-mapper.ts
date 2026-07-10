@@ -16,8 +16,12 @@ export class ShaclDiagnosticsMapper {
 	mapToDiagnostics(result: ShaclValidationResult, context: IDocumentContext): vscode.Diagnostic[] {
 		const diagnostics: vscode.Diagnostic[] = [];
 
+		// Precompute the sorted subject start lines once so that resolving the
+		// next-subject boundary per result is a binary search instead of a scan.
+		const subjectStartLines = this._getSortedSubjectStartLines(context);
+
 		for (const entry of result.results) {
-			const range = this._resolveRange(entry, context);
+			const range = this._resolveRange(entry, context, subjectStartLines);
 			const severity = this._mapSeverity(entry.severity);
 			const message = this._buildMessage(entry);
 
@@ -38,14 +42,14 @@ export class ShaclDiagnosticsMapper {
 	 * Resolve the document range for a validation result entry.
 	 * Prefers highlighting the offending predicate or value over the focus node.
 	 */
-	private _resolveRange(entry: ShaclValidationResultEntry, context: IDocumentContext): vscode.Range {
+	private _resolveRange(entry: ShaclValidationResultEntry, context: IDocumentContext, subjectStartLines: number[]): vscode.Range {
 		// Determine the focus node's start line so we can anchor relative lookups.
 		const focusNodeStartLine = this._getFocusNodeStartLine(entry.focusNode, context);
 
 		// Determine where the next subject starts so we can scope lookups
 		// to only the focus node's block (avoids picking up predicates that
 		// belong to a different subject further down in the document).
-		const nextSubjectStartLine = this._getNextSubjectStartLine(focusNodeStartLine, context);
+		const nextSubjectStartLine = this._getNextSubjectStartLine(focusNodeStartLine, subjectStartLines);
 
 		// 1. Try the value IRI (most specific).
 		if (entry.value) {
@@ -81,23 +85,43 @@ export class ShaclDiagnosticsMapper {
 	}
 
 	/**
-	 * Returns the smallest subject start line that is strictly greater than
-	 * the given focus node start line, or undefined if no such subject exists.
+	 * Returns the start lines of all subjects in the document, sorted ascending.
 	 */
-	private _getNextSubjectStartLine(focusNodeStartLine: number | undefined, context: IDocumentContext): number | undefined {
-		if (focusNodeStartLine === undefined) return undefined;
-
-		let nearest: number | undefined;
+	private _getSortedSubjectStartLines(context: IDocumentContext): number[] {
+		const lines: number[] = [];
 
 		for (const ranges of Object.values(context.subjects)) {
-			if (!ranges?.length) continue;
-			const line = ranges[0].start.line;
-			if (line > focusNodeStartLine && (nearest === undefined || line < nearest)) {
-				nearest = line;
+			if (ranges?.length) {
+				lines.push(ranges[0].start.line);
 			}
 		}
 
-		return nearest;
+		return lines.sort((a, b) => a - b);
+	}
+
+	/**
+	 * Returns the smallest subject start line that is strictly greater than
+	 * the given focus node start line, or undefined if no such subject exists.
+	 * @param subjectStartLines The subject start lines, sorted ascending.
+	 */
+	private _getNextSubjectStartLine(focusNodeStartLine: number | undefined, subjectStartLines: number[]): number | undefined {
+		if (focusNodeStartLine === undefined) return undefined;
+
+		// Binary search for the first start line strictly greater than the focus node's.
+		let low = 0;
+		let high = subjectStartLines.length;
+
+		while (low < high) {
+			const mid = (low + high) >>> 1;
+
+			if (subjectStartLines[mid] > focusNodeStartLine) {
+				high = mid;
+			} else {
+				low = mid + 1;
+			}
+		}
+
+		return low < subjectStartLines.length ? subjectStartLines[low] : undefined;
 	}
 
 	/**

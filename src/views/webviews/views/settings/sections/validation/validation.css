@@ -223,9 +223,3 @@
 	cursor: pointer;
 	font-family: var(--vscode-editor-font-family, monospace);
 }
-
-/* Muted (non-blue) counter badges in the editor's tab headers. */
-.modal-form.validation-profile-editor vscode-badge {
-	--vscode-activityBarBadge-background: var(--vscode-badge-background);
-	--vscode-activityBarBadge-foreground: var(--vscode-badge-foreground);
-}

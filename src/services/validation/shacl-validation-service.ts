@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DataFactory as N3DataFactory } from 'n3';
-import { DatasetCore, Quad, Term } from '@rdfjs/types';
+import { DatasetCore } from '@rdfjs/types';
 import { RdfStore } from 'rdf-stores';
 import { Validator } from 'shacl-engine';
 import { Store } from '@faubulous/mentor-rdf';
@@ -24,64 +24,6 @@ import {
 	ShaclValidationSettings,
 	toUniqueStringArray,
 } from './shacl-validation-configuration';
-
-/**
- * A read-only DatasetCore view over a subset of graphs in the internal Store.
- * Avoids copying triples by delegating match() and iteration directly to the store.
- */
-// TODO: Move this into mentor-rdf
-class StoreDatasetView implements DatasetCore {
-	private readonly _graphUris: readonly string[];
-	private readonly _s: Term | null;
-	private readonly _p: Term | null;
-	private readonly _o: Term | null;
-
-	constructor(
-		private readonly _store: Store,
-		graphUris: readonly string[],
-		s: Term | null = null,
-		p: Term | null = null,
-		o: Term | null = null
-	) {
-		this._graphUris = graphUris;
-		this._s = s;
-		this._p = p;
-		this._o = o;
-	}
-
-	get size(): number {
-		let n = 0;
-		for (const _ of this) n++;
-		return n;
-	}
-
-	add(_quad: Quad): this { return this; }
-	delete(_quad: Quad): this { return this; }
-
-	has(quad: Quad): boolean {
-		for (const q of this) {
-			if (q.equals(quad)) return true;
-		}
-		return false;
-	}
-
-	match(s?: Term | null, p?: Term | null, o?: Term | null, g?: Term | null): DatasetCore {
-		const graphUris = g != null
-			? (this._graphUris.includes(g.value) ? [g.value] : [])
-			: this._graphUris as string[];
-		return new StoreDatasetView(this._store, graphUris, s ?? null, p ?? null, o ?? null);
-	}
-
-	[Symbol.iterator](): Iterator<Quad> {
-		return this._store.matchAll(
-			this._graphUris as string[],
-			this._s as any,
-			this._p as any,
-			this._o as any,
-			false
-		);
-	}
-}
 
 /**
  * A combined RDF/JS factory that provides DataFactory methods plus a dataset() method,
@@ -164,6 +106,19 @@ export class ShaclValidationService implements vscode.Disposable {
 	 * Stores the last validation result per document URI for report export.
 	 */
 	private readonly _lastResults = new Map<string, ShaclValidationResult>();
+
+	/**
+	 * Caches SHACL validators per shape graph combination so that shapes are not
+	 * recompiled on every validation run. Entries are keyed by the sorted shape
+	 * graph URIs and invalidated by comparing the store's per-graph versions.
+	 */
+	private readonly _validatorCache = new Map<string, { validator: Validator; versions: number[] }>();
+
+	/**
+	 * Tracks in-flight validation runs per document and shape graph combination
+	 * so that concurrent triggers share a single validation.
+	 */
+	private readonly _inflightValidations = new Map<string, Promise<ShaclValidationResult | undefined>>();
 
 	private readonly _onDidValidate = new vscode.EventEmitter<vscode.Uri>();
 
@@ -288,22 +243,40 @@ export class ShaclValidationService implements vscode.Disposable {
 			}
 		}
 
+		// Share a single validation run between concurrent triggers for the same
+		// document and shape graph combination.
+		const inflightKey = documentUri.toString() + '\n' + [...shapeGraphUris].sort().join('\n');
+		const inflight = this._inflightValidations.get(inflightKey);
+
+		if (inflight) {
+			return inflight;
+		}
+
+		const validation = this._runValidation(documentUri, context, shapeGraphUris);
+
+		this._inflightValidations.set(inflightKey, validation);
+
+		try {
+			return await validation;
+		} finally {
+			this._inflightValidations.delete(inflightKey);
+		}
+	}
+
+	private async _runValidation(documentUri: vscode.Uri, context: IDocumentContext, shapeGraphUris: string[]): Promise<ShaclValidationResult | undefined> {
 		const fileName = documentUri.path.split('/').pop() ?? documentUri.toString();
 		const statusBarMessage = vscode.window.setStatusBarMessage(`$(loading~spin) Running SHACL validation for: ${fileName}`);
 		const statusBarMessageStartTime = Date.now();
 		const minStatusBarMessageDurationMs = 300;
 
-		// Create read-only views over the store — no triple copying needed.
-		const shapesDataset = new StoreDatasetView(this._store, shapeGraphUris);
-		const dataDataset = new StoreDatasetView(this._store, context.graphs);
-
-		// Run SHACL validation
-		const validator = new Validator(shapesDataset, { factory: rdfFactory });
-
 		// Yield once so VS Code can paint the status bar spinner before validation starts.
 		await new Promise(resolve => setTimeout(resolve, 0));
 
 		try {
+			// A read-only view over the store — no triple copying needed.
+			const dataDataset = this._store.getDataset(context.graphs, false);
+			const validator = this._getValidator(shapeGraphUris);
+
 			const report = await validator.validate({ dataset: dataDataset });
 
 			// Map results
@@ -323,14 +296,35 @@ export class ShaclValidationService implements vscode.Disposable {
 			vscode.window.showErrorMessage(`SHACL validation failed: ${error}`);
 			return undefined;
 		} finally {
-			const elapsedMs = Date.now() - statusBarMessageStartTime;
+			// Keep the status bar message visible for a minimum duration without
+			// delaying the validation result for callers.
+			const remainingMs = Math.max(0, minStatusBarMessageDurationMs - (Date.now() - statusBarMessageStartTime));
 
-			if (elapsedMs < minStatusBarMessageDurationMs) {
-				await new Promise(resolve => setTimeout(resolve, minStatusBarMessageDurationMs - elapsedMs));
-			}
-
-			statusBarMessage.dispose();
+			setTimeout(() => statusBarMessage.dispose(), remainingMs);
 		}
+	}
+
+	/**
+	 * Get a SHACL validator for the given shape graphs. Validators are cached and
+	 * reused until the contents of any of their shape graphs change in the store,
+	 * so that shapes are not recompiled on every validation run.
+	 */
+	private _getValidator(shapeGraphUris: string[]): Validator {
+		const sorted = [...shapeGraphUris].sort();
+		const key = sorted.join('\n');
+		const versions = sorted.map(graphUri => this._store.getGraphVersion(graphUri));
+		const cached = this._validatorCache.get(key);
+
+		if (cached && cached.versions.every((version, i) => version === versions[i])) {
+			return cached.validator;
+		}
+
+		const shapesDataset = this._store.getDataset(sorted, false);
+		const validator = new Validator(shapesDataset, { factory: rdfFactory });
+
+		this._validatorCache.set(key, { validator, versions });
+
+		return validator;
 	}
 
 	/**

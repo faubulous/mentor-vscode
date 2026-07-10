@@ -97,7 +97,7 @@
   },
   "dependencies": {
     "@comunica/query-sparql": "^5.2.4",
-    "@faubulous/mentor-rdf": "^1.4.2",
+    "@faubulous/mentor-rdf": "^2.0.0",
     "@faubulous/mentor-rdf-parsers": "^1.11.0",
     "@faubulous/mentor-rdf-serializers": "^1.7.1",
     "@vscode/codicons": "^0.0.45",

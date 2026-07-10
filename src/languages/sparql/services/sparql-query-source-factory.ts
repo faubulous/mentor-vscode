@@ -57,13 +57,13 @@ export class SparqlQuerySourceFactory implements ISparqlQuerySourceFactory {
 				// Filter out inference graph quads.
 				return {
 					type: 'rdfjs',
-					value: createFilteredSource(this._store),
+					value: createFilteredSource(this._store.asSource()),
 				};
 			} else {
 				// Include all quads including inferred ones.
 				return {
 					type: 'rdfjs',
-					value: this._store,
+					value: this._store.asSource(),
 				};
 			}
 		} else {

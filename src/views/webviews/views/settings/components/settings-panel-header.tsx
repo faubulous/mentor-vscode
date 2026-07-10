@@ -29,7 +29,6 @@ export function SettingsPanelHeader({ version, searchTerm, onSearchChange, onOpe
 					<MentorIcon />
 					<div className="panel-header-title-wrapper">
 						<span className="panel-header-title">Mentor</span>
-						{version && <span className="panel-header-version">v{version}</span>}
 					</div>
 				</div>
 				<div className="panel-header-search">
@@ -43,6 +42,7 @@ export function SettingsPanelHeader({ version, searchTerm, onSearchChange, onOpe
 						</vscode-textfield>
 					</div>
 				</div>
+				<span className="panel-header-version">v{version}</span>
 				<div className="panel-header-help">
 					<vscode-toolbar-button
 						title="Open Mentor homepage"

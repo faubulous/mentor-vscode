@@ -211,6 +211,57 @@ describe('ShaclDiagnosticsMapper', () => {
 			// Should fall through to focus node at line 50, not the value ref at line 10.
 			expect(diagnostics[0].range.start.line).toBe(50);
 		});
+
+		it('scopes each result to its own subject block in a document with many subjects', () => {
+			// Guards the next-subject boundary resolution: with subjects at lines
+			// 0, 10, 20 and 30, a path reference inside the focus node's block
+			// (line 12) must win over one in the next block (line 22).
+			const FOCUS_NODE = 'http://example.org/ClassB';
+			const PATH = 'http://www.w3.org/2000/01/rdf-schema#label';
+
+			const context = makeContext({
+				subjects: {
+					'http://example.org/ClassA': [range(0, 0, 0, 30)],
+					[FOCUS_NODE]: [range(10, 0, 10, 30)],
+					'http://example.org/ClassC': [range(20, 0, 20, 30)],
+					'http://example.org/ClassD': [range(30, 0, 30, 30)],
+				},
+				references: {
+					[PATH]: [range(2, 4, 2, 20), range(12, 4, 12, 20), range(22, 4, 22, 20)],
+				},
+			});
+
+			const entry = makeEntry({ focusNode: FOCUS_NODE, path: PATH });
+			const result = makeResult([entry]);
+			const diagnostics = mapper.mapToDiagnostics(result, context);
+
+			expect(diagnostics).toHaveLength(1);
+			expect(diagnostics[0].range.start.line).toBe(12);
+		});
+
+		it('resolves the boundary for the last subject in the document', () => {
+			// The last subject has no next-subject boundary — the binary search
+			// must return undefined and allow references after the subject line.
+			const FOCUS_NODE = 'http://example.org/ClassZ';
+			const PATH = 'http://www.w3.org/2000/01/rdf-schema#label';
+
+			const context = makeContext({
+				subjects: {
+					'http://example.org/ClassA': [range(0, 0, 0, 30)],
+					[FOCUS_NODE]: [range(40, 0, 40, 30)],
+				},
+				references: {
+					[PATH]: [range(42, 4, 42, 20)],
+				},
+			});
+
+			const entry = makeEntry({ focusNode: FOCUS_NODE, path: PATH });
+			const result = makeResult([entry]);
+			const diagnostics = mapper.mapToDiagnostics(result, context);
+
+			expect(diagnostics).toHaveLength(1);
+			expect(diagnostics[0].range.start.line).toBe(42);
+		});
 	});
 
 	describe('severity mapping', () => {

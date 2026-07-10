@@ -158,6 +158,7 @@ vscode-textfield .root {
 
 .panel-status-banner {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: var(--mentor-space-3);
 	padding: var(--mentor-space-3) var(--mentor-space-6);

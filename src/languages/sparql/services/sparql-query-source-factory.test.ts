@@ -43,7 +43,8 @@ function makeFactory() {
         storeConfigService,
     );
     const documentConnectionService = new DocumentConnectionService(ctx as any, connectionRegistry);
-    const factory = new SparqlQuerySourceFactory({} as any, storeConfigService, connectionRegistry, documentConnectionService);
+    const store = { asSource: () => ({ match: () => ({}) }) } as any;
+    const factory = new SparqlQuerySourceFactory(store, storeConfigService, connectionRegistry, documentConnectionService);
     return { factory, connectionRegistry };
 }
 
