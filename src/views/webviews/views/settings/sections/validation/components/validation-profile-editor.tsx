@@ -41,6 +41,18 @@ export interface ValidationProfileEditorProps {
 	readOnly?: boolean;
 
 	/**
+	 * Shown as a Customize action in the read-only viewer: creates an
+	 * independent, editable copy of the built-in preset.
+	 */
+	onCustomize?: () => void;
+
+	/**
+	 * Blocks Save while the draft name matches an existing profile name.
+	 * Used by the customize flow so a preset copy must get its own name.
+	 */
+	requireUniqueName?: boolean;
+
+	/**
 	 * Live matched-file counts per (positive) path entry; undefined entries are still loading.
 	 */
 	entryCounts: Record<string, number | undefined>;
@@ -94,6 +106,8 @@ export function ValidationProfileEditor({
 	profile,
 	isNew,
 	readOnly,
+	onCustomize,
+	requireUniqueName,
 	existingNames,
 	candidates,
 	missingShapes,
@@ -114,6 +128,7 @@ export function ValidationProfileEditor({
 			const paths = cleanPaths(d.paths);
 
 			return d.name.trim().length > 0
+				&& (!requireUniqueName || !existingNames.includes(d.name.trim()))
 				&& paths.every(isValidPathKey)
 				&& new Set(paths).size === paths.length;
 		},
@@ -136,6 +151,11 @@ export function ValidationProfileEditor({
 			isNew={isNew}
 			readOnly={readOnly}
 			readOnlyLabel="Built-in preset — not editable"
+			readOnlyActions={onCustomize && (
+				<vscode-button title="Create an editable copy of this preset" onClick={onCustomize}>
+					Customize
+				</vscode-button>
+			)}
 			canSave={canSave}
 			onSave={() => onSave(profile.id, profile.scope, { ...draft, name: trimmedName, paths })}
 			onDelete={() => onDelete(profile)}
@@ -155,7 +175,11 @@ export function ValidationProfileEditor({
 								onInput={(e: any) => setDraft(d => ({ ...d, name: (e.target as HTMLInputElement).value }))}
 							/>
 							{nameDuplicate && (
-								<p className="section-description validation-shape-warning">Another profile already uses this name.</p>
+								<p className="section-description validation-shape-warning">
+									{requireUniqueName
+										? 'Another profile already uses this name — the copy needs a name of its own.'
+										: 'Another profile already uses this name.'}
+								</p>
 							)}
 						</div>
 						<div>

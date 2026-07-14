@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
-const { mockSparqlResultsController, mockConnectionService } = vi.hoisted(() => ({
-	mockSparqlResultsController: {
-		executeQuery: vi.fn(async () => undefined),
-		executeQueryFromTextDocument: vi.fn(async () => undefined),
+const { mockQueryService, mockConnectionService } = vi.hoisted(() => ({
+	mockQueryService: {
+		executeQueryOnConnection: vi.fn(async () => ({ type: 'quads', data: '# result' })),
 	},
 	mockConnectionService: {
 		getConnectionForDocument: vi.fn(() => ({ id: 'workspace' })),
+		getInferenceEnabledForDocument: vi.fn(() => false),
 		setQuerySourceForDocument: vi.fn(async () => undefined),
 		getQueryTemplate: vi.fn((_conn: any, _kind: string) => undefined as string | undefined),
 	},
@@ -17,7 +17,7 @@ const { mockSparqlResultsController, mockConnectionService } = vi.hoisted(() => 
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlResultsController') return mockSparqlResultsController;
+			if (token === 'SparqlQueryService') return mockQueryService;
 			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService' || token === 'StoreConfigService') return mockConnectionService;
 			return {};
 		}),
@@ -55,6 +55,7 @@ beforeEach(() => {
 	(vscode.window as any).showTextDocument = vi.fn(async () => undefined);
 
 	mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'workspace' });
+	mockQueryService.executeQueryOnConnection.mockResolvedValue({ type: 'quads', data: '# result' });
 });
 
 afterEach(() => {
@@ -71,14 +72,50 @@ describe('executeDescribeQuery', () => {
 		const docUri = vscode.Uri.parse('file:///no-such.ttl');
 		await executeDescribeQuery.handler(docUri, 'urn:ex#res');
 		expect(warn).toHaveBeenCalled();
-		expect(mockSparqlResultsController.executeQuery).not.toHaveBeenCalled();
+		expect(mockQueryService.executeQueryOnConnection).not.toHaveBeenCalled();
 		warn.mockRestore();
 	});
 
-	it('should open SPARQL document and execute when document is found', async () => {
+	it('should run the query against the document connection in the background', async () => {
+		mockDescribeTemplate();
+		const connection = { id: 'my-conn' };
+		mockConnectionService.getConnectionForDocument.mockReturnValue(connection);
+		mockConnectionService.getInferenceEnabledForDocument.mockReturnValue(true);
+
+		const uriStr = 'file:///test.ttl';
+		const fakeDoc = { uri: { toString: () => uriStr } };
+		(vscode.workspace as any).textDocuments = [fakeDoc];
+
+		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res');
+
+		expect(mockConnectionService.getConnectionForDocument).toHaveBeenCalledWith(fakeDoc.uri);
+		expect(mockQueryService.executeQueryOnConnection).toHaveBeenCalledWith(
+			expect.stringContaining('urn:ex#res'),
+			connection,
+			true
+		);
+	});
+
+	it('should open the result as a Turtle document without opening the results panel', async () => {
 		mockDescribeTemplate();
 
-		const uriStr = 'file:///test.sparql';
+		const uriStr = 'file:///test.ttl';
+		const fakeDoc = { uri: { toString: () => uriStr } };
+		(vscode.workspace as any).textDocuments = [fakeDoc];
+
+		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res');
+
+		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
+			expect.objectContaining({ content: '# result', language: 'turtle' })
+		);
+		expect(vscode.window.showTextDocument).toHaveBeenCalled();
+	});
+
+	it('should not open a document when the query returns no quads', async () => {
+		mockDescribeTemplate();
+		mockQueryService.executeQueryOnConnection.mockResolvedValue(null);
+
+		const uriStr = 'file:///test.ttl';
 		const fakeDoc = { uri: { toString: () => uriStr } };
 		(vscode.workspace as any).textDocuments = [fakeDoc];
 
@@ -86,61 +123,44 @@ describe('executeDescribeQuery', () => {
 
 		expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
 		expect(vscode.window.showTextDocument).not.toHaveBeenCalled();
-		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
-			fakeDoc,
-			expect.stringContaining('urn:ex#res')
-		);
-	});
-
-	it('should execute query without creating a temporary SPARQL document', async () => {
-		mockDescribeTemplate();
-		mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'my-conn' });
-
-		const uriStr = 'file:///test.sparql';
-		const fakeDoc = { uri: { toString: () => uriStr } };
-		(vscode.workspace as any).textDocuments = [fakeDoc];
-
-		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res');
-
-		expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
-		expect(mockConnectionService.setQuerySourceForDocument).not.toHaveBeenCalled();
-		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalled();
 	});
 
 	it('should build query from template without FROM clauses when graph IRIs are not provided', async () => {
 		mockDescribeTemplate();
 
-		const uriStr = 'file:///test.sparql';
+		const uriStr = 'file:///test.ttl';
 		const fakeDoc = { uri: { toString: () => uriStr } };
 		(vscode.workspace as any).textDocuments = [fakeDoc];
 
 		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res');
 
-		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
-			fakeDoc,
-			'CONSTRUCT { <urn:ex#res> ?p ?o }\nWHERE { <urn:ex#res> ?p ?o }'
+		expect(mockQueryService.executeQueryOnConnection).toHaveBeenCalledWith(
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\nWHERE { <urn:ex#res> ?p ?o }',
+			expect.anything(),
+			expect.anything()
 		);
 	});
 
 	it('should add one FROM clause when one graph IRI is provided', async () => {
 		mockDescribeTemplate();
 
-		const uriStr = 'file:///test.sparql';
+		const uriStr = 'file:///test.ttl';
 		const fakeDoc = { uri: { toString: () => uriStr } };
 		(vscode.workspace as any).textDocuments = [fakeDoc];
 
 		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res', ['https://example.org/graph']);
 
-		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
-			fakeDoc,
-			'CONSTRUCT { <urn:ex#res> ?p ?o }\nFROM <https://example.org/graph>\nWHERE { <urn:ex#res> ?p ?o }'
+		expect(mockQueryService.executeQueryOnConnection).toHaveBeenCalledWith(
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\nFROM <https://example.org/graph>\nWHERE { <urn:ex#res> ?p ?o }',
+			expect.anything(),
+			expect.anything()
 		);
 	});
 
 	it('should add multiple FROM clauses for multiple graph IRIs', async () => {
 		mockDescribeTemplate();
 
-		const uriStr = 'file:///test.sparql';
+		const uriStr = 'file:///test.ttl';
 		const fakeDoc = { uri: { toString: () => uriStr } };
 		(vscode.workspace as any).textDocuments = [fakeDoc];
 
@@ -149,9 +169,10 @@ describe('executeDescribeQuery', () => {
 			'https://example.org/graph-b',
 		]);
 
-		expect(mockSparqlResultsController.executeQuery).toHaveBeenCalledWith(
-			fakeDoc,
-			'CONSTRUCT { <urn:ex#res> ?p ?o }\nFROM <https://example.org/graph-a>\nFROM <https://example.org/graph-b>\nWHERE { <urn:ex#res> ?p ?o }'
+		expect(mockQueryService.executeQueryOnConnection).toHaveBeenCalledWith(
+			'CONSTRUCT { <urn:ex#res> ?p ?o }\nFROM <https://example.org/graph-a>\nFROM <https://example.org/graph-b>\nWHERE { <urn:ex#res> ?p ?o }',
+			expect.anything(),
+			expect.anything()
 		);
 	});
 });

@@ -24,6 +24,15 @@ export interface IDocumentFactory {
 	isTripleSourceLanguage(languageId: string): boolean;
 
 	/**
+	 * Indicates whether a language is one of Mentor's first-class RDF authoring languages
+	 * (see `RDF_LANGUAGE_IDS`) — i.e. one in which resources can be authored, referenced
+	 * and described. Used to gate resource-oriented editor features such as "Describe Resource".
+	 * @param languageId The language ID to check (e.g. 'turtle', 'sparql').
+	 * @returns `true` if the language is an RDF language, otherwise `false`.
+	 */
+	isRdfLanguage(languageId: string): boolean;
+
+	/**
 	 * Checks if a document can be converted to another format.
 	 * @param languageId The language ID of the document.
 	 * @returns `true` if the document can be converted, otherwise `false`.

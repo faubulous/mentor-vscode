@@ -75,6 +75,12 @@ export interface ModalSettingsItemEditorProps {
 	readOnlyLabel?: string;
 
 	/**
+	 * Extra actions rendered before the lock icon in the read-only frame
+	 * (e.g. a Customize button on built-in presets).
+	 */
+	readOnlyActions?: React.ReactNode;
+
+	/**
 	 * The editor body (fields / tabs).
 	 */
 	children: React.ReactNode;
@@ -101,6 +107,7 @@ export function ModalSettingsItemEditor({
 	deleteTitle,
 	readOnly,
 	readOnlyLabel,
+	readOnlyActions,
 	children,
 }: ModalSettingsItemEditorProps) {
 	useStylesheet('modal-form-styles', modalFormStylesheet);
@@ -110,7 +117,12 @@ export function ModalSettingsItemEditor({
 
 	const renderActions = () => (
 		<div className={`form-actions ${readOnly ? 'readonly' : ''}`}>
-			{readOnly && <vscode-icon name="lock" title={readOnlyLabel} />}
+			{readOnly && (
+				<>
+					{readOnlyActions}
+					<vscode-icon name="lock" title={readOnlyLabel} />
+				</>
+			)}
 			{!readOnly && (
 				<>
 					{!isNew && (

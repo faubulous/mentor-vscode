@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { getConfig } from '@src/utilities/vscode/config';
+import { PRESET_STORES } from './default-stores';
 import { SparqlConnection } from './sparql-connection';
 import { TripleStoreConfig, SparqlQueryKind, TRIPLE_STORE_QUERY_KIND_PROPERTY } from './triple-store-config';
 import { ITripleStoreConfigService } from './triple-store-config-service.interface';
@@ -27,32 +28,38 @@ export class TripleStoreConfigService implements ITripleStoreConfigService {
 	readonly defaultStoreType = 'sparql';
 
 	/**
-	 * Returns the available store configs, merged across configuration scopes. Because
-	 * `sparql.stores` is an array, VS Code does not merge it across scopes — the highest
-	 * scope replaces the others — which would hide built-in defaults and user-scope store types
-	 * whenever a workspace value exists. We therefore union the default, user, and workspace
-	 * arrays (later scopes overriding earlier by `id`) so every defined store type is selectable.
-	 * @returns An array of store configs in display order (defaults first).
+	 * Returns the available store configs: the built-in read-only presets followed by the
+	 * user- and workspace-defined stores. Because `sparql.stores` is an array, VS Code does
+	 * not merge it across scopes — the highest scope replaces the others — which would hide
+	 * user-scope store types whenever a workspace value exists. We therefore union the user
+	 * and workspace arrays (workspace overriding user by `id`) so every defined store type is
+	 * selectable. Settings entries whose id collides with a preset are ignored: presets
+	 * cannot be shadowed, and stale copies from the former first-run seeding stay hidden.
+	 * @returns An array of store configs in display order (presets first).
 	 */
 	getStoreConfigs(): TripleStoreConfig[] {
 		const config = getConfig();
 		const inspected = config.inspect<TripleStoreConfig[]>(this._storesConfigKey);
+		const presetIds = new Set(PRESET_STORES.map(s => s.id));
 
 		// Fall back to the merged effective value when inspect is unavailable.
 		if (!inspected) {
-			return config.get<TripleStoreConfig[]>(this._storesConfigKey) ?? [];
+			const stores = config.get<TripleStoreConfig[]>(this._storesConfigKey) ?? [];
+
+			return [...PRESET_STORES, ...stores.filter(s => !presetIds.has(s.id))];
 		} else {
 			const merged = new Map<string, TripleStoreConfig>();
 
 			for (const store of [
-				...(inspected.defaultValue ?? []),
 				...(inspected.globalValue ?? []),
 				...(inspected.workspaceValue ?? []),
 			]) {
-				merged.set(store.id, store);
+				if (!presetIds.has(store.id)) {
+					merged.set(store.id, store);
+				}
 			}
 
-			return [...merged.values()];
+			return [...PRESET_STORES, ...merged.values()];
 		}
 	}
 

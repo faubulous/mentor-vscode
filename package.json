@@ -102,7 +102,7 @@
     "@comunica/query-sparql": "^5.2.4",
     "@faubulous/mentor-rdf": "^2.0.0",
     "@faubulous/mentor-rdf-parsers": "^1.11.0",
-    "@faubulous/mentor-rdf-serializers": "^1.7.1",
+    "@faubulous/mentor-rdf-serializers": "^1.8.0",
     "@vscode/codicons": "^0.0.45",
     "picomatch": "^4.0.5",
     "react": "^19.2.7",
@@ -193,7 +193,7 @@
       {
         "command": "mentor.command.describeResourceFromPosition",
         "key": "alt+f12",
-        "when": "editorTextFocus && mentor.editor.cursorOnResource && (editorLangId == 'turtle' || editorLangId == 'sparql' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads')"
+        "when": "editorTextFocus && mentor.editor.cursorOnResource && mentor.editor.isMentorLanguage"
       }
     ],
     "notebooks": [
@@ -1132,7 +1132,7 @@
         {
           "command": "mentor.command.describeResourceFromPosition",
           "group": "navigation@0",
-          "when": "editorTextFocus && mentor.editor.cursorOnResource && (editorLangId == 'turtle' || editorLangId == 'sparql' || editorLangId == 'trig' || editorLangId == 'n3' || editorLangId == 'ntriples' || editorLangId == 'nquads')"
+          "when": "editorTextFocus && mentor.editor.isMentorLanguage"
         },
         {
           "submenu": "mentor.submenu.convertDocument",
@@ -1522,14 +1522,8 @@
           "mentor.sparql.stores": {
             "type": "array",
             "title": "SPARQL Stores",
-            "description": "User-defined SPARQL store profiles. Each profile describes a store type: how it controls reasoning (a URL parameter or an inline query pragma) and its default queries. Manage these from the Query > Stores settings section. The built-in in-memory Workspace store is not configurable here.",
-            "default": [
-              {
-                "id": "sparql",
-                "label": "SPARQL Endpoint",
-                "website": "https://www.w3.org/TR/sparql11-query/"
-              }
-            ],
+            "description": "User- and workspace-defined SPARQL store profiles. Each profile describes a store type: how it controls reasoning (a URL parameter or an inline query pragma) and its default queries. Manage these from the Query > Stores settings section. The built-in store presets (SPARQL Endpoint, Apache Jena Fuseki, RDF4J, QLever) and the in-memory Workspace store are not configurable here.",
+            "default": [],
             "items": {
               "type": "object",
               "required": [
@@ -1549,9 +1543,9 @@
                   "type": "string",
                   "description": "Optional free-text description of the store type."
                 },
-                "website": {
+                "documentation": {
                   "type": "string",
-                  "description": "Optional website or documentation URL shown as an 'open in browser' link in the store list."
+                  "description": "Optional documentation URL shown as an 'open documentation' link in the store list."
                 },
                 "isProtected": {
                   "type": "boolean",
@@ -1918,7 +1912,24 @@
               }
             },
             "additionalProperties": false,
-            "default": {}
+            "default": {
+              "profiles": {
+                "basic-ontology": {
+                  "name": "Basic Ontology",
+                  "description": "Checks that every class, property and named individual has a label, a comment and a reference to its defining ontology, and that the ontology header has a title and description. Applies to no files until customized.",
+                  "shapes": [
+                    "https://w3id.org/mentor/shacl/profiles/basic-ontology"
+                  ]
+                },
+                "basic-taxonomy": {
+                  "name": "Basic Taxonomy",
+                  "description": "Checks that every SKOS concept and concept scheme has a preferred label and a definition, and that every concept belongs to a concept scheme. Applies to no files until customized.",
+                  "shapes": [
+                    "https://w3id.org/mentor/shacl/profiles/basic-taxonomy"
+                  ]
+                }
+              }
+            }
           },
           "mentor.shacl.enabled": {
             "type": "boolean",

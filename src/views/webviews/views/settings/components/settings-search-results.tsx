@@ -1,4 +1,5 @@
 import { SettingsSectionId, SETTINGS_GROUPS } from '../sections';
+import { useListKeyboardNavigation } from '../hooks/use-list-keyboard-navigation';
 import type { SettingState } from '../settings-types';
 
 type SettingsSearchEntry = { section: SettingsSectionId; key: string; label?: string; description?: string };
@@ -38,23 +39,45 @@ export function SearchResults({ searchTerm, settings, onNavigate }: SearchResult
 		return label.includes(term) || description.includes(term) || sectionLabel.includes(term);
 	});
 
+	const resultId = (entry: SettingsSearchEntry) => `${entry.section}:${entry.key}`;
+
+	// The same arrow/Home/End/Enter navigation as the settings lists.
+	const { getItemProps } = useListKeyboardNavigation(results.map(resultId), {
+		onActivate: (id) => {
+			const entry = results.find(e => resultId(e) === id);
+
+			if (entry) {
+				onNavigate(entry.section);
+			}
+		},
+	});
+
 	if (results.length === 0) {
 		return <div className="search-empty">No settings found for "{searchTerm}".</div>;
 	}
 
 	return (
 		<div className="search-results">
-			{results.map((entry, i) => (
-				<div
-					key={i}
-					className="search-result-item"
-					onClick={() => onNavigate(entry.section)}
-				>
-					<div className="search-result-breadcrumb">{SECTION_TITLES[entry.section] ?? entry.section}</div>
-					<div className="search-result-label">{getLabel(entry)}</div>
-					<div className="search-result-description">{getDescription(entry)}</div>
-				</div>
-			))}
+			{results.map((entry) => {
+				const navProps = getItemProps(resultId(entry));
+
+				return (
+					<div
+						key={resultId(entry)}
+						role="button"
+						className={navProps.selected ? 'search-result-item selected' : 'search-result-item'}
+						tabIndex={navProps.tabIndex}
+						ref={navProps.ref}
+						onKeyDown={navProps.onKeyDown}
+						onFocus={navProps.onFocus}
+						onClick={() => onNavigate(entry.section)}
+					>
+						<div className="search-result-breadcrumb">{SECTION_TITLES[entry.section] ?? entry.section}</div>
+						<div className="search-result-label">{getLabel(entry)}</div>
+						<div className="search-result-description">{getDescription(entry)}</div>
+					</div>
+				);
+			})}
 		</div>
 	);
 }

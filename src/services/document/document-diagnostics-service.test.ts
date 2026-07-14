@@ -86,6 +86,10 @@ function makeTurtleContext() {
     return { providesTokens: true, syntax: RdfSyntax.Turtle } as any;
 }
 
+function makeSparqlContext() {
+    return { providesTokens: true, syntax: RdfSyntax.Sparql } as any;
+}
+
 function makeSetup(contextsByUri: Record<string, any>) {
     const deliveryEmitter = new EventEmitter<TokenDelivery>();
     const tokenSource = { onDidDeliverTokens: deliveryEmitter.event } as any;
@@ -161,6 +165,28 @@ describe('DocumentDiagnosticsService', () => {
         expect(range.start.character).toBe(32);
         expect(range.end.line).toBe(1);
         expect(range.end.character).toBe(35);
+    });
+
+    it('publishes lexer error diagnostics for SPARQL when trailing characters are skipped', () => {
+        const uri = 'file:///query.sparql';
+        // "www" is skipped by the lexer; the remaining tokens form a complete query.
+        const document = makeDocument(uri, 'SELECT * WHERE { ?s ?p ?o . }www');
+        env.textDocuments.push(document);
+        env.visibleTextEditors.push({ document });
+
+        const { collection, deliverTokens } = makeSetup({ [uri]: makeSparqlContext() });
+
+        deliverTokens(uri);
+
+        const diagnostics = collection.set.mock.calls.at(-1)![1];
+        expect(diagnostics.length).toBeGreaterThan(0);
+        expect(diagnostics[0].severity).toBe(0); // vscode.DiagnosticSeverity.Error
+
+        // The range points at the skipped "www" (line 0, characters 29-32).
+        const { range } = diagnostics[0];
+        expect(range.start.line).toBe(0);
+        expect(range.start.character).toBe(29);
+        expect(range.end.character).toBe(32);
     });
 
     it('validates loaded but invisible documents by default (workspace overview)', () => {

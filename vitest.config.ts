@@ -1,7 +1,21 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, type Plugin } from 'vitest/config';
+import * as fs from 'fs';
 import * as path from 'path';
 
+// Mirrors the esbuild `.ttl: 'text'` loader (build.js) so tests can import the
+// bundled Turtle files as strings, exactly like the extension bundle does.
+const turtleTextPlugin = (): Plugin => ({
+  name: 'turtle-text-loader',
+  enforce: 'pre',
+  load(id: string) {
+    if (id.endsWith('.ttl')) {
+      return { code: `export default ${JSON.stringify(fs.readFileSync(id, 'utf8'))};`, map: null };
+    }
+  },
+});
+
 export default defineConfig({
+  plugins: [turtleTextPlugin()],
   test: {
     typecheck: {
       tsconfig: './tsconfig.spec.json'

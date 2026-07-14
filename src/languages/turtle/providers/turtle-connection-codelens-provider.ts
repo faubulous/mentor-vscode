@@ -39,11 +39,9 @@ export class TurtleConnectionCodeLensProvider implements vscode.CodeLensProvider
 	public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
 		this._ensureSubscribed();
 
-		// Notebook cells show the connection via the cell toolbar; the slug lens owns the top row.
-		if (document.uri.scheme === 'vscode-notebook-cell') {
-			return [];
-		}
-
+		// The lens is shown for standalone documents and for notebook data cells alike: data cells
+		// can also describe resources against an endpoint, so they need a per-cell connection
+		// selector just like SPARQL cells do (it shares the top row with the slug lens).
 		const connection = this._documentConnectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {

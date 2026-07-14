@@ -7,13 +7,13 @@ import { TurtleDocument, SparqlDocument, XmlDocument } from '@src/languages';
 import { IDocumentContext } from './document-context.interface';
 import { ILanguageInfo } from './document-factory.interface';
 import {
-	MENTOR_LANGUAGE_IDS,
+	RDF_LANGUAGE_IDS,
 	FORMATTABLE_LANGUAGE_IDS,
 	LanguageId,
 	FormattableLanguageId,
 } from './document-languages';
 
-export { MENTOR_LANGUAGE_IDS, FORMATTABLE_LANGUAGE_IDS as FORMATTING_LANGUAGE_IDS };
+export { RDF_LANGUAGE_IDS, FORMATTABLE_LANGUAGE_IDS };
 export type { LanguageId, FormattableLanguageId };
 
 /**
@@ -83,6 +83,18 @@ export class DocumentFactory {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Indicates whether a language is one of Mentor's first-class RDF authoring languages
+	 * (see {@link RDF_LANGUAGE_IDS}) — i.e. one in which resources can be authored,
+	 * referenced and described. Used to gate resource-oriented editor features such as
+	 * "Describe Resource".
+	 * @param languageId The language ID to check (e.g. 'turtle', 'sparql').
+	 * @returns `true` if the language is an RDF language, otherwise `false`.
+	 */
+	isRdfLanguage(languageId: string): boolean {
+		return (RDF_LANGUAGE_IDS as readonly string[]).includes(languageId);
 	}
 
 	/**

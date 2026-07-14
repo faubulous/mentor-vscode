@@ -202,11 +202,12 @@ export class SparqlConnectionRegistry {
 
 	/**
 	 * Creates a new, unsaved SPARQL connection with a generated ID and default settings.
+	 * @param scope The configuration scope to create the connection in. When omitted, new
+	 * connections are project-scoped so endpoints can be shared via version control,
+	 * falling back to User scope when no workspace folder is open.
 	 * @returns A promise that resolves to the new connection.
 	 */
-	async createConnection(): Promise<SparqlConnection> {
-		// New connections are project-scoped by default so endpoints can be shared via
-		// version control, falling back to User scope when no workspace folder is open.
+	async createConnection(scope?: ConfigurationScope): Promise<SparqlConnection> {
 		const hasWorkspace = (vscode.workspace.workspaceFolders?.length ?? 0) > 0;
 
 		const connection: SparqlConnection = {
@@ -215,7 +216,7 @@ export class SparqlConnectionRegistry {
 			isModified: false,
 			endpointUrl: 'https://',
 			autoLoadGraphs: true,
-			configScope: hasWorkspace ? ConfigurationScope.Workspace : ConfigurationScope.User
+			configScope: scope ?? (hasWorkspace ? ConfigurationScope.Workspace : ConfigurationScope.User)
 		};
 
 		this._connections.push(connection);

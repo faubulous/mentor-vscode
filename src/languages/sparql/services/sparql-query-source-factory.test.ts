@@ -17,10 +17,8 @@ import { DocumentConnectionService } from '@src/languages/sparql/services/docume
 import { SparqlConnectionRegistry, WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { TripleStoreConfigService } from '@src/languages/sparql/services/triple-store-config-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { DEFAULT_SEED_STORES } from '@src/languages/sparql/services/default-stores';
 import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import type { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
-import packageJson from '../../../../package.json';
 
 function makeContext() {
     const store = new Map<string, any>();
@@ -49,14 +47,11 @@ function makeFactory() {
 }
 
 /**
- * The built-in store catalog as seen at runtime: the protected `sparql` store (the package.json
- * `default`) unioned with the stores seeded into user settings on first run ({@link DEFAULT_SEED_STORES}).
+ * The built-in store presets (sparql, jena, qlever, rdf4j) are hardcoded in the config
+ * service and always present — no settings value is needed for them, so tests that need
+ * the built-in catalog run against an empty `sparql.stores` setting.
  */
-const manifestDefaultStores: TripleStoreConfig[] = (packageJson as any).contributes.configuration
-    .flatMap((b: any) => Object.entries(b.properties ?? {}))
-    .find(([key]: [string]) => key === 'mentor.sparql.stores')?.[1]?.default ?? [];
-
-const builtInStoreConfigs: TripleStoreConfig[] = [...manifestDefaultStores, ...DEFAULT_SEED_STORES];
+const builtInStoreConfigs: TripleStoreConfig[] = [];
 
 /**
  * Runs the test callback with the built-in store configs available via the config mock.

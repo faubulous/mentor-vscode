@@ -1,4 +1,5 @@
 import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
+import { ScopeKey } from '@src/utilities/config-scope';
 import { ExecuteCommandMessage } from '../../../../webview-messaging';
 
 export interface GraphStatus {
@@ -12,7 +13,7 @@ export type ConnectionsListMessages =
     { id: 'GetConnectionsResult', connections: SparqlConnectionView[] } |
     { id: 'ConnectionsChanged', connections: SparqlConnectionView[] } |
     { id: 'DeleteConnection', connection: SparqlConnection } |
-    { id: 'CreateConnection' } |
+    { id: 'CreateConnection', scope: ScopeKey } |
     { id: 'ListGraphs', connection: SparqlConnection } |
     { id: 'ReloadGraphs' } |
     { id: 'TestConnection', connection: SparqlConnection } |
@@ -20,4 +21,5 @@ export type ConnectionsListMessages =
     { id: 'OpenInBrowser', url: string } |
     { id: 'GetGraphStatuses' } |
     { id: 'GetGraphStatusesResult', statuses: Record<string, GraphStatus> } |
-    { id: 'GraphStatusChanged', connectionId: string, status: GraphStatus };
+    { id: 'GraphStatusChanged', connectionId: string, status: GraphStatus } |
+    { id: 'GraphLoadingChanged', connectionId: string, loading: boolean };

@@ -168,7 +168,6 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	// Register the settings migration service. New migrations are added to this list only.
 	const settingsMigrationService = new SettingsMigrationService([
 		new migrations.IndexExcludeFilesMigration(),
-		new migrations.SeedDefaultStoresMigration(context),
 		new migrations.ShaclValidationProfilesMigration(),
 	]);
 	container.registerInstance(ServiceToken.SettingsMigrationService, settingsMigrationService);

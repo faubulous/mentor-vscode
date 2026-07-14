@@ -14,6 +14,7 @@ import { WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connect
 import { ITripleStoreConfigService, IDocumentConnectionService } from './languages/sparql/services';
 import { IGraphManagementService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
+import { loadPresetShapeGraphs } from './services/validation/profiles';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import * as languages from './languages';
@@ -207,11 +208,16 @@ function registerNotebookInferenceContext(context: vscode.ExtensionContext) {
 }
 
 /**
- * Loads the RDF framework ontologies into the store, which are required for providing completions and hovers for built-in concepts.
+ * Loads the RDF framework ontologies into the store, which are required 
+ * for providing completions and hovers for built-in concepts.
  */
 async function loadFrameworkOntologies() {
 	const store = container.resolve<Store>(ServiceToken.Store);
 	await store.loadFrameworkOntologies();
+
+	// Load the bundled SHACL shape graphs referenced by the built-in validation
+	// profiles shipped as the mentor.shacl.validation manifest default.
+	loadPresetShapeGraphs(store);
 }
 
 /**

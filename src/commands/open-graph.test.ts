@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
-vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
 let mockExecuteQueryOnConnection: Mock;
 
@@ -85,6 +84,26 @@ describe('openGraph command', () => {
 			expect.objectContaining({ language: 'turtle' })
 		);
 		expect(vscode.window.showTextDocument).toHaveBeenCalled();
+	});
+
+	it('should open the serialized document content verbatim', async () => {
+		// Pretty printing happens in the result serializer (TurtleSerializer),
+		// so the command opens the data exactly as it arrives.
+		mockExecuteQueryOnConnection
+			.mockResolvedValueOnce({
+				type: 'bindings',
+				bindings: [{ get: (_k: string) => ({ value: '100' }) }],
+			})
+			.mockResolvedValueOnce({
+				type: 'quads',
+				data: '@prefix ex: <http://example.org/> . ex:s ex:p ex:o .',
+			});
+
+		await openGraph.handler('http://example.org/graph');
+
+		expect(vscode.workspace.openTextDocument).toHaveBeenCalledWith(
+			expect.objectContaining({ content: '@prefix ex: <http://example.org/> . ex:s ex:p ex:o .' })
+		);
 	});
 
 	it('should show information message when graph is empty', async () => {

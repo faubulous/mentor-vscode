@@ -1,31 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import * as vscode from 'vscode';
 import { DataFactory } from 'n3';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
-
-// Control flag: when set, the next Writer.end() call will invoke callback with an error
-const writerControl = vi.hoisted(() => ({ shouldError: false }));
-
-vi.mock('n3', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('n3')>();
-    class WriterMock {
-        private _real: any;
-        constructor(...args: any[]) {
-            this._real = new actual.Writer(...args);
-        }
-        addQuads(quads: any[]) { return this._real.addQuads(quads); }
-        end(callback: (error: Error | null, result: string) => void) {
-            if (writerControl.shouldError) {
-                writerControl.shouldError = false;
-                callback(new Error('writer error'), '');
-            } else {
-                this._real.end(callback);
-            }
-        }
-    }
-    return { ...actual, Writer: WriterMock };
-});
 
 // Minimal cancellation token that is never cancelled
 const token = {
@@ -352,38 +330,169 @@ describe('SparqlResultSerializer', () => {
             consoleSpy.mockRestore();
         });
 
-        it('rejects and catches error when Writer.end returns error in serializeQuads', async () => {
-            // Cover line 171: reject(error) in writer.end callback
-            writerControl.shouldError = true;
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    describe('pretty printing', () => {
+        const RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+        const SH_NS = 'http://www.w3.org/ns/shacl#';
+
+        it('emits @prefix directives', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
             const quad = DataFactory.quad(
                 DataFactory.namedNode('http://example.org/s'),
                 DataFactory.namedNode('http://example.org/p'),
                 DataFactory.namedNode('http://example.org/o'),
-                DataFactory.defaultGraph()
             );
-            await expect(serializer.serializeQuads(
-                makeContext() as any,
-                asyncGen(quad) as any,
-                token as any
-            )).rejects.toThrow('writer error');
-            consoleSpy.mockRestore();
+            const result = await serializer.serializeQuadsToString([quad], { ex: 'http://example.org/' });
+            expect(result).toContain('@prefix ex: <http://example.org/> .');
         });
 
-        it('rejects and catches error when Writer.end returns error in serializeQuadsToString', async () => {
-            // Cover line 247: reject(error) in writer.end callback
-            writerControl.shouldError = true;
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        it('collapses duplicate quads into a single statement', async () => {
+            const serializer = new SparqlResultSerializer(noPrefixService as any);
+            const quad = () => DataFactory.quad(
+                DataFactory.namedNode('http://example.org/s'),
+                DataFactory.namedNode('http://example.org/p'),
+                DataFactory.namedNode('http://example.org/o'),
+            );
+            const result = await serializer.serializeQuadsToString([quad(), quad()], { ex: 'http://example.org/' });
+            expect(result.match(/ex:s ex:p ex:o/g)).toHaveLength(1);
+        });
+
+        it('serializes named-graph quads as plain triples', async () => {
             const serializer = new SparqlResultSerializer(noPrefixService as any);
             const quad = DataFactory.quad(
                 DataFactory.namedNode('http://example.org/s'),
                 DataFactory.namedNode('http://example.org/p'),
                 DataFactory.namedNode('http://example.org/o'),
-                DataFactory.defaultGraph()
+                DataFactory.namedNode('http://example.org/graph')
             );
-            await expect(serializer.serializeQuadsToString([quad])).rejects.toThrow('writer error');
-            consoleSpy.mockRestore();
+            const result = await serializer.serializeQuadsToString([quad], { ex: 'http://example.org/' });
+            expect(result).toContain('ex:s ex:p ex:o');
+        });
+
+        it('serializes SHACL-style shapes with inline blank nodes and collections', async () => {
+            const serializer = new SparqlResultSerializer(noPrefixService as any);
+            const propertyShape = DataFactory.blankNode('13xf400_b0');
+            const listHead = DataFactory.blankNode('13xf400_b1');
+            const listTail = DataFactory.blankNode('13xf400_b2');
+
+            const quads = [
+                DataFactory.quad(
+                    DataFactory.namedNode('http://example.org/shape'),
+                    DataFactory.namedNode(`${SH_NS}property`),
+                    propertyShape
+                ),
+                DataFactory.quad(propertyShape, DataFactory.namedNode(`${SH_NS}path`), listHead),
+                DataFactory.quad(listHead, DataFactory.namedNode(`${RDF_NS}first`), DataFactory.namedNode('http://example.org/broader')),
+                DataFactory.quad(listHead, DataFactory.namedNode(`${RDF_NS}rest`), listTail),
+                DataFactory.quad(listTail, DataFactory.namedNode(`${RDF_NS}first`), DataFactory.namedNode('http://example.org/narrower')),
+                DataFactory.quad(listTail, DataFactory.namedNode(`${RDF_NS}rest`), DataFactory.namedNode(`${RDF_NS}nil`)),
+            ];
+
+            const result = await serializer.serializeQuadsToString(quads, { ex: 'http://example.org/', sh: SH_NS });
+
+            expect(result).toContain('sh:property [ sh:path ( ex:broader ex:narrower ) ]');
+            expect(result).not.toContain('rdf:first');
+            expect(result).not.toContain('13xf400');
+        });
+
+        describe('blankLinesBetweenSubjects setting', () => {
+            const twoSubjects = [
+                DataFactory.quad(
+                    DataFactory.namedNode('http://example.org/a'),
+                    DataFactory.namedNode('http://example.org/p'),
+                    DataFactory.namedNode('http://example.org/x'),
+                ),
+                DataFactory.quad(
+                    DataFactory.namedNode('http://example.org/b'),
+                    DataFactory.namedNode('http://example.org/p'),
+                    DataFactory.namedNode('http://example.org/y'),
+                ),
+            ];
+
+            // Drives resolveFormattingConfig: mentor.formatting.common.blankLinesBetweenSubjects.
+            const driveBlankLines = (value: boolean) => {
+                (vscode.workspace as any).getConfiguration = vi.fn((section?: string) => ({
+                    get: (key: string, defaultValue?: any) =>
+                        (section === 'mentor.formatting.common' && key === 'blankLinesBetweenSubjects')
+                            ? value
+                            : defaultValue,
+                    has: () => false,
+                    inspect: () => undefined,
+                    update: async () => {},
+                }));
+            };
+
+            afterEach(() => {
+                (vscode.workspace as any).getConfiguration = vi.fn(() => ({
+                    get: (_k: string, def?: any) => def,
+                    has: () => false,
+                    inspect: () => undefined,
+                    update: async () => {},
+                }));
+            });
+
+            it('inserts a blank line between subjects when enabled', async () => {
+                driveBlankLines(true);
+                const serializer = new SparqlResultSerializer(noPrefixService as any);
+                const result = await serializer.serializeQuadsToString(twoSubjects, { ex: 'http://example.org/' });
+                expect(result).toContain('ex:a ex:p ex:x .\n\nex:b ex:p ex:y .');
+            });
+
+            it('omits the blank line between subjects when disabled', async () => {
+                driveBlankLines(false);
+                const serializer = new SparqlResultSerializer(noPrefixService as any);
+                const result = await serializer.serializeQuadsToString(twoSubjects, { ex: 'http://example.org/' });
+                expect(result).not.toContain('\n\nex:b');
+                expect(result).toContain('ex:a ex:p ex:x .\nex:b ex:p ex:y .');
+            });
+        });
+
+        describe('spaceBeforePunctuation setting', () => {
+            const oneSubject = [
+                DataFactory.quad(
+                    DataFactory.namedNode('http://example.org/s'),
+                    DataFactory.namedNode('http://example.org/p'),
+                    DataFactory.namedNode('http://example.org/o'),
+                ),
+            ];
+
+            const driveSpace = (value: boolean) => {
+                (vscode.workspace as any).getConfiguration = vi.fn((section?: string) => ({
+                    get: (key: string, defaultValue?: any) =>
+                        (section === 'mentor.formatting.common' && key === 'spaceBeforePunctuation')
+                            ? value
+                            : defaultValue,
+                    has: () => false,
+                    inspect: () => undefined,
+                    update: async () => {},
+                }));
+            };
+
+            afterEach(() => {
+                (vscode.workspace as any).getConfiguration = vi.fn(() => ({
+                    get: (_k: string, def?: any) => def,
+                    has: () => false,
+                    inspect: () => undefined,
+                    update: async () => {},
+                }));
+            });
+
+            it('inserts a space before the statement terminator when enabled', async () => {
+                driveSpace(true);
+                const serializer = new SparqlResultSerializer(noPrefixService as any);
+                const result = await serializer.serializeQuadsToString(oneSubject, { ex: 'http://example.org/' });
+                expect(result).toContain('ex:s ex:p ex:o .');
+                expect(result).toContain('@prefix ex: <http://example.org/> .');
+            });
+
+            it('hugs the statement terminator when disabled', async () => {
+                driveSpace(false);
+                const serializer = new SparqlResultSerializer(noPrefixService as any);
+                const result = await serializer.serializeQuadsToString(oneSubject, { ex: 'http://example.org/' });
+                expect(result).toContain('ex:s ex:p ex:o.');
+                expect(result).toContain('@prefix ex: <http://example.org/>.');
+            });
         });
     });
 });

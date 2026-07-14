@@ -14,6 +14,7 @@ The developer friendly IDE for RDF knowledge graphs.
   - Structural reasoning and multilingual labels.
 - **Syntax Highlighting & Validation**
   - N3 / Turtle / TriG / RDF-XML and SPARQL.
+  - SHACL validation profiles with built-in presets for basic ontology and taxonomy hygiene.
 - **Editing**
   - Repository wide auto-complete
   - Built in prefix.cc support for namespace lookups

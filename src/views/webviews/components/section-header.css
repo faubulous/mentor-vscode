@@ -17,6 +17,10 @@
 	font-size: 1.6em;
 }
 
+.form-section-header.variant-title .form-section-leader {
+	visibility: hidden;
+}
+
 .form-section-header.variant-subsection .form-section-leader {
 	display: none;
 }

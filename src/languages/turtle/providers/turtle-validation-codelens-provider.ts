@@ -122,8 +122,12 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 				tooltip = 'Configure SHACL validation for this document';
 			}
 
-			// When a shape source is configured, the Validate action leads the group;
-			// the shape-configuration lens follows it. Suppressed in notebook cells (play button).
+			// Lens order: Validate, validation status, validation profiles. The connection
+			// lens from TurtleConnectionCodeLensProvider renders last because that provider
+			// is registered before this one (see TurtleTokenProvider.registerForLanguage).
+
+			// When a shape source is configured, the Validate action leads the group.
+			// Suppressed in notebook cells (play button).
 			if (shapeCount > 0 && !isCell) {
 				result.push(new vscode.CodeLens(range, {
 					title: '$(run-coverage)\u00A0Validate',
@@ -131,12 +135,6 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 					tooltip: 'Validate this document against configured SHACL shape files'
 				}));
 			}
-
-			result.push(new vscode.CodeLens(range, {
-				title: title,
-				command: 'mentor.command.manageShaclShapes',
-				tooltip: tooltip
-			}));
 
 			// Show status from last validation, if available. Suppressed in notebook cells —
 			// the result is shown as the cell's execution output instead.
@@ -153,6 +151,12 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 					tooltip: 'View the SHACL validation report'
 				}));
 			}
+
+			result.push(new vscode.CodeLens(range, {
+				title: title,
+				command: 'mentor.command.manageShaclShapes',
+				tooltip: tooltip
+			}));
 
 			return resolve(result);
 		});

@@ -69,17 +69,6 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 			}
 		}
 
-		// Connection CodeLens
-		const connectionUrl = this._getConnectionLabel(connection);
-		const connectionCodeLens = new vscode.CodeLens(range, {
-			title: `$(arrow-swap)\u00A0Connection: ${connectionUrl}`,
-			tooltip: 'Click to change the SPARQL endpoint for this file',
-			command: 'mentor.command.selectSparqlConnection',
-			arguments: [document],
-		});
-
-		codeLenses.push(connectionCodeLens);
-
 		// Inference status CodeLens (only for connections that support inference)
 		if (this._storeConfigService.supportsInference(connection)) {
 			const inferenceEnabled = this._documentConnectionService.getInferenceEnabledForDocument(document.uri);
@@ -108,6 +97,16 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 				arguments: [connection],
 			}));
 		}
+
+		// Connection CodeLens, always last in the group.
+		const connectionUrl = this._getConnectionLabel(connection);
+
+		codeLenses.push(new vscode.CodeLens(range, {
+			title: `$(arrow-swap)\u00A0Connection: ${connectionUrl}`,
+			tooltip: 'Click to change the SPARQL endpoint for this file',
+			command: 'mentor.command.selectSparqlConnection',
+			arguments: [document],
+		}));
 
 		return codeLenses;
 	}

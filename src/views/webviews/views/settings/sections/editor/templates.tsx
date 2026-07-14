@@ -5,7 +5,7 @@ import { TemplatePreview } from '@src/views/webviews/components/template-preview
 import { SettingRow } from '../../components/setting-row';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
-import { MENTOR_LANGUAGE_IDS, LanguageId } from '@src/services/document/document-languages';
+import { RDF_LANGUAGE_IDS, LanguageId } from '@src/services/document/document-languages';
 import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
 import { useSettingRowProps } from '../../hooks/use-setting-row-props';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
@@ -69,7 +69,7 @@ function TemplatesSection({ keys, settings, setScope, onBulkScope, languageLabel
 	const defaultTemplateLabel = (
 		<span className="template-language-label">
 			<vscode-single-select ref={languageRef} value={language}>
-				{MENTOR_LANGUAGE_IDS.map((id) => (
+				{RDF_LANGUAGE_IDS.map((id) => (
 					<vscode-option key={id} value={id}>{languageLabels[id] ?? id}</vscode-option>
 				))}
 			</vscode-single-select>

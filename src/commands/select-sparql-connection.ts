@@ -4,6 +4,14 @@ import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
 import { IDocumentConnectionService } from '@src/languages/sparql/services';
 
+/**
+ * Title bar button that opens the connection settings.
+ */
+const MANAGE_CONNECTIONS_BUTTON: vscode.QuickInputButton = {
+	iconPath: new vscode.ThemeIcon('gear'),
+	tooltip: 'Manage connections…'
+};
+
 export const selectSparqlConnection = {
 	id: 'mentor.command.selectSparqlConnection',
 	handler: async (document: vscode.TextDocument) => {
@@ -35,14 +43,18 @@ export const selectSparqlConnection = {
 			}]
 		}));
 
-		items.push({
-			label: '$(settings-gear) Manage Connections...',
-			command: 'mentor.command.manageSparqlConnections'
-		});
-
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.items = items;
 		quickPick.placeholder = 'Select a SPARQL endpoint';
+		quickPick.buttons = [MANAGE_CONNECTIONS_BUTTON];
+
+		quickPick.onDidTriggerButton((button) => {
+			if (button === MANAGE_CONNECTIONS_BUTTON) {
+				vscode.commands.executeCommand('mentor.command.manageSparqlConnections');
+			}
+
+			quickPick.hide();
+		});
 
 		quickPick.onDidTriggerItemButton(async (e) => {
 			const button = e.button as any;
@@ -55,9 +67,7 @@ export const selectSparqlConnection = {
 		quickPick.onDidChangeSelection(async (e) => {
 			const selected = e[0] as any;
 
-			if (selected?.command) {
-				await vscode.commands.executeCommand(selected.command);
-			} else if (selected?.connection) {
+			if (selected?.connection) {
 				await documentConnectionService.setQuerySourceForDocument(document.uri, selected.connection.id);
 			}
 

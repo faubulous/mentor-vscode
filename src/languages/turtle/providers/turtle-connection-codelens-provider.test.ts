@@ -63,13 +63,17 @@ describe('TurtleConnectionCodeLensProvider', () => {
 		expect(lenses[0].command.title).toContain('Connection: https://dbpedia.org/sparql');
 	});
 
-	it('returns no lenses for notebook cell documents', () => {
-		mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'workspace', endpointUrl: 'workspace:' });
+	it('shows the connection lens for notebook data cells', () => {
+		mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'abc', endpointUrl: 'https://dbpedia.org/sparql' });
 
 		const provider = new TurtleConnectionCodeLensProvider(mockConnectionService as any, mockConnectionService as any);
-		const lenses = provider.provideCodeLenses(makeDoc('vscode-notebook-cell:///cell.ttl')) as any[];
+		const cell = makeDoc('vscode-notebook-cell:///cell.ttl');
+		const lenses = provider.provideCodeLenses(cell) as any[];
 
-		expect(lenses).toEqual([]);
+		expect(lenses).toHaveLength(1);
+		expect(lenses[0].command.command).toBe('mentor.command.selectSparqlConnection');
+		expect(lenses[0].command.arguments).toEqual([cell]);
+		expect(lenses[0].command.title).toContain('Connection: https://dbpedia.org/sparql');
 	});
 
 	it('returns no lenses when there is no connection', () => {

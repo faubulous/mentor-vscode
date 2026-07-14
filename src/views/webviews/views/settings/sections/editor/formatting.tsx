@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { SectionHeader } from '@src/views/webviews/components/section-header';
-import { MENTOR_LANGUAGE_IDS } from '@src/services/document/document-languages';
+import { RDF_LANGUAGE_IDS } from '@src/services/document/document-languages';
 import { MENTOR_SETTINGS_SOURCE, SettingsSource } from '../../settings-types';
 import { SettingRow } from '../../components/setting-row';
 import { SettingsSectionProps } from '../../settings-section-props';
@@ -61,7 +61,7 @@ export function EditorFormattingSection({
 	const vscodeSlice = vscodeSettings['turtle'] ?? {};
 
 	const updateVscodeAll = (key: string, value: unknown) => {
-		for (const languageId of MENTOR_LANGUAGE_IDS) {
+		for (const languageId of RDF_LANGUAGE_IDS) {
 			onUpdate({ kind: 'languageEditor', languageId }, key, value);
 		}
 	};

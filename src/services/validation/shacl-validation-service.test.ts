@@ -23,7 +23,7 @@ import { WorkspaceUri } from '@src/providers/workspace-uri';
  * `inspect().workspaceValue` returns the given settings and whose `update` calls
  * are recorded.
  */
-function createService(settings: ShaclValidationSettings, defaults?: ShaclValidationSettings) {
+function createService(settings: ShaclValidationSettings, defaults?: ShaclValidationSettings, hasGraph: (uri: string) => boolean = () => false) {
 	const updates: { key: string; value: any; target: number }[] = [];
 
 	(vscode.workspace as any).getConfiguration = vi.fn(() => ({
@@ -33,7 +33,7 @@ function createService(settings: ShaclValidationSettings, defaults?: ShaclValida
 	}));
 
 	const context = { subscriptions: [] } as any;
-	const store = { hasGraph: () => false } as any;
+	const store = { hasGraph } as any;
 	const contextService = { contexts: {}, onDidChangeDocumentContext: () => ({ dispose: () => {} }) } as any;
 	const documentFactory = {
 		supportedExtensions: {
@@ -143,6 +143,42 @@ describe('ShaclValidationService.getEffectiveShapeGraphs', () => {
 
 		expect(service.getEffectiveShapeGraphs(vscode.Uri.parse('file:///w/models/data.ttl')))
 			.toEqual(['workspace:///shapes/skos.ttl']);
+	});
+
+	it('resolves no shape graphs for dormant presets without paths', () => {
+		const { service } = createService(
+			{},
+			{
+				profiles: {
+					'basic-ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor/shacl/profiles/basic-ontology'] },
+				},
+			}
+		);
+
+		expect(service.getEffectiveShapeGraphs(vscode.Uri.parse('file:///w/models/data.ttl')))
+			.toEqual([]);
+	});
+});
+
+describe('ShaclValidationService.checkShaclProfiles', () => {
+	const defaults: ShaclValidationSettings = {
+		profiles: {
+			'basic-ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor/shacl/profiles/basic-ontology'] },
+		},
+	};
+
+	it('reports preset shape graphs clean when they are loaded in the store', async () => {
+		const { service } = createService({}, defaults, () => true);
+
+		expect(await service.checkShaclProfiles()).toEqual({ profiles: {} });
+	});
+
+	it('reports preset shape graphs missing when they are not in the store', async () => {
+		const { service } = createService({}, defaults, () => false);
+
+		expect(await service.checkShaclProfiles()).toEqual({
+			profiles: { 'basic-ontology': ['https://w3id.org/mentor/shacl/profiles/basic-ontology'] },
+		});
 	});
 });
 

@@ -219,7 +219,6 @@
 	margin-top: var(--mentor-space-2);
 }
 
-.validation-pattern-chip {
-	cursor: pointer;
-	font-family: var(--vscode-editor-font-family, monospace);
+vscode-toolbar-button.primary {
+	color: var(--vscode-textLink-foreground);
 }

@@ -18,9 +18,7 @@ import { TripleStoreConfigService } from '@src/languages/sparql/services/triple-
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import type { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
-import { DEFAULT_SEED_STORES } from '@src/languages/sparql/services/default-stores';
 import type { AuthCredential } from '@src/services/core/credential';
-import packageJson from '../../../../package.json';
 
 /**
  * Builds a minimal ExtensionContext stub with an in-memory workspaceState.
@@ -54,15 +52,11 @@ function makeService() {
 }
 
 /**
- * The built-in store catalog as seen at runtime: the protected `sparql` store (the package.json
- * `default`) unioned with the stores seeded into user settings on first run ({@link DEFAULT_SEED_STORES}).
- * Used by tests that need the real defaults without mocking the full config.
+ * The built-in store presets (sparql, jena, qlever, rdf4j) are hardcoded in the config
+ * service and always present — no settings value is needed for them, so tests that need
+ * the built-in catalog run against an empty `sparql.stores` setting.
  */
-const manifestDefaultStores: TripleStoreConfig[] = (packageJson as any).contributes.configuration
-    .flatMap((b: any) => Object.entries(b.properties ?? {}))
-    .find(([key]: [string]) => key === 'mentor.sparql.stores')?.[1]?.default ?? [];
-
-const builtInStoreConfigs: TripleStoreConfig[] = [...manifestDefaultStores, ...DEFAULT_SEED_STORES];
+const builtInStoreConfigs: TripleStoreConfig[] = [];
 
 /**
  * Runs the test callback with the built-in store configs available via the config mock.
@@ -204,6 +198,18 @@ describe('SparqlConnectionRegistry', () => {
             } finally {
                 (vscode.workspace as { workspaceFolders: unknown }).workspaceFolders = original;
             }
+        });
+
+        it('uses an explicitly requested User scope', async () => {
+            const svc = makeService();
+            const conn = await svc.createConnection(ConfigurationScope.User);
+            expect(conn.configScope).toBe(ConfigurationScope.User);
+        });
+
+        it('uses an explicitly requested Workspace scope', async () => {
+            const svc = makeService();
+            const conn = await svc.createConnection(ConfigurationScope.Workspace);
+            expect(conn.configScope).toBe(ConfigurationScope.Workspace);
         });
     });
 
@@ -433,7 +439,7 @@ describe('SparqlConnectionRegistry', () => {
         it('lists the built-in store configs (and not the internal workspace store)', () =>
             withBuiltInStoreConfigs(() => {
                 const ids = makeStoreConfigService().getStoreConfigs().map((s: TripleStoreConfig) => s.id);
-                expect(ids).toEqual(['sparql', 'jena', 'rdf4j', 'qlever']);
+                expect(ids).toEqual(['sparql', 'jena', 'qlever', 'rdf4j']);
                 expect(ids).not.toContain('workspace');
             })
         );

@@ -753,7 +753,7 @@ vscode-textarea.monospace {
 	align-items: flex-start;
 	padding: var(--mentor-space-1) var(--mentor-space-4);
 	background: var(--vscode-settings-textInputBackground);
-	border-radius: var(--mentor-radius-sm);
+	border-radius: var(--vscode-cornerRadius-small);
 	border-left: 3px solid transparent;
 	cursor: pointer;
 	transition: background-color 0.1s ease, border-color 0.2s ease;
@@ -1009,10 +1009,11 @@ vscode-textarea.monospace {
 /* Search results */
 
 .search-result-item {
-	padding: 10px 0;
+	padding: 10px var(--mentor-space-4);
 	cursor: pointer;
 	border-bottom: var(--mentor-border-panel);
-	transition: padding-left 0.1s;
+	border-radius: var(--vscode-cornerRadius-small);
+	transition: background-color 0.1s ease;
 }
 
 .search-result-item:last-child {
@@ -1020,7 +1021,17 @@ vscode-textarea.monospace {
 }
 
 .search-result-item:hover {
-	padding-left: var(--mentor-space-3);
+	background: var(--vscode-list-hoverBackground);
+}
+
+.search-result-item.selected {
+	background: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+}
+
+.search-result-item:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
 }
 
 .search-result-breadcrumb {

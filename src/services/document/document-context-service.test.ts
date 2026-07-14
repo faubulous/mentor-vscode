@@ -52,6 +52,7 @@ function createService() {
 		getConvertibleTargetLanguageIds: vi.fn(() => []),
 		isConvertibleLanguage: vi.fn(() => false),
 		isTripleSourceLanguage: vi.fn(() => false),
+		isRdfLanguage: vi.fn(() => false),
 		create: vi.fn(() => createMockContext()),
 	};
 
@@ -517,6 +518,39 @@ describe('DocumentContextService', () => {
 
 			// When no editor is active, isConvertibleLanguage is not called (languageId undefined → fast path)
 			expect(mockDocumentFactory.isConvertibleLanguage).not.toHaveBeenCalled();
+		});
+
+		it('publishes mentor.editor.isMentorLanguage=true for a Mentor-language editor', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(mockDocumentFactory.isRdfLanguage as any).mockReturnValue(true);
+
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const ctx = createMockContext({ uri, isLoaded: true });
+			service.contexts[uri.toString()] = ctx;
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+			(vscode.window as any).activeTextEditor = { document: { languageId: 'turtle', uri, getText: () => '' } };
+
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand');
+
+			await service.handleActiveEditorChanged();
+
+			expect(mockDocumentFactory.isRdfLanguage).toHaveBeenCalledWith('turtle');
+			expect(executeCommandSpy).toHaveBeenCalledWith('setContext', 'mentor.editor.isMentorLanguage', true);
+
+			executeCommandSpy.mockRestore();
+		});
+
+		it('publishes mentor.editor.isMentorLanguage=false when no editor is active', async () => {
+			const { service } = createService();
+			(vscode.window as any).activeTextEditor = undefined;
+
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand');
+
+			await service.handleActiveEditorChanged();
+
+			expect(executeCommandSpy).toHaveBeenCalledWith('setContext', 'mentor.editor.isMentorLanguage', false);
+
+			executeCommandSpy.mockRestore();
 		});
 
 		it('loads the document and fires context-changed when a new editor becomes active', async () => {

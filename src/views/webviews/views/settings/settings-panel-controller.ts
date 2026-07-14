@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { EnumOption, SettingScope, SettingState, SettingsSource } from './settings-types';
 import { getConfig } from '@src/utilities/vscode/config';
-import { MENTOR_LANGUAGE_IDS } from '@src/services/document/document-factory';
+import { RDF_LANGUAGE_IDS } from '@src/services/document/document-factory';
 import { ServiceToken } from '@src/services/tokens';
 import { SETTINGS_GROUPS, SettingsSectionId } from './sections';
 import { createSectionControllers } from './sections/controllers';
@@ -43,7 +43,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	 */
 	readonly _sources: readonly SettingsSource[] = [
 		{ kind: 'mentor' },
-		...MENTOR_LANGUAGE_IDS.map(languageId => ({ kind: 'languageEditor', languageId } as const)),
+		...RDF_LANGUAGE_IDS.map(languageId => ({ kind: 'languageEditor', languageId } as const)),
 	];
 
 	private readonly _sections: SettingsSectionDescriptor[] = SETTINGS_GROUPS.flatMap(g => [...g.sections]);
@@ -145,7 +145,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 	/**
 	 * Human-readable display names for the Mentor languages, sourced from the
 	 * `contributes.languages` aliases in package.json — the single source of truth
-	 * VS Code itself reads language display names from. Scoped to {@link MENTOR_LANGUAGE_IDS},
+	 * VS Code itself reads language display names from. Scoped to {@link RDF_LANGUAGE_IDS},
 	 * with the language id as a fallback when an alias is missing.
 	 */
 	private _getLanguageLabels(): Record<string, string> {
@@ -154,7 +154,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 
 		const byId = new Map(languages.map(l => [l.id, l.aliases?.[0] ?? l.id]));
 
-		return Object.fromEntries(MENTOR_LANGUAGE_IDS.map(id => [id, byId.get(id) ?? id]));
+		return Object.fromEntries(RDF_LANGUAGE_IDS.map(id => [id, byId.get(id) ?? id]));
 	}
 
 	/**

@@ -9,6 +9,7 @@ const { mockResolveFormatting } = vi.hoisted(() => ({
 vi.mock('@src/utilities/vscode/config', () => ({
 	getConfig: vi.fn(() => ({ get: (_k: string, d?: any) => d })),
 	resolveFormattingConfig: mockResolveFormatting,
+	resolveFormattingIndent: (_doc: any, options: any) => options.insertSpaces ? ' '.repeat(options.tabSize) : '\t',
 }));
 
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({

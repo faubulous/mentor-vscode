@@ -21,9 +21,10 @@ const getBaseConfig = (args) => {
     // lru-cache@11 uses node:diagnostics_channel only in its CJS bundle).
     conditions: ['import', 'browser', 'default'],
     loader: {
-      // Configure HTML and CSS files to be imported as strings
+      // Configure HTML, CSS and Turtle files to be imported as strings
       '.html': 'text',
-      '.css': 'text'
+      '.css': 'text',
+      '.ttl': 'text'
     },
     define: {
       // This is not defined in the browser environment, so we need to provide a polyfill.
@@ -71,7 +72,8 @@ const getNodeBaseConfig = (args) => {
     platform: 'node',
     loader: {
       '.html': 'text',
-      '.css': 'text'
+      '.css': 'text',
+      '.ttl': 'text'
     },
     plugins: [
       {

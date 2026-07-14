@@ -1,25 +1,45 @@
 import { TripleStoreConfig } from './triple-store-config';
+import { WORKSPACE_STORE } from './workspace-store';
 
 /**
- * The built-in store types seeded into the user's `mentor.sparql.stores` setting on first run
- * (see `SeedDefaultStoresMigration`). Unlike the generic `sparql` store — which ships as the
- * package.json `default` and is therefore always present and protected — these are seeded as
- * ordinary, editable user stores so their query templates can be tested/adjusted and reasoning
- * support configured per deployment.
+ * The built-in store type presets. They are defined in code, always present, cannot be
+ * edited or deleted, and are never written to the `mentor.sparql.stores` setting — that
+ * setting only holds user- and workspace-defined stores. Settings entries whose id
+ * collides with a preset are ignored (see `TripleStoreConfigService.getStoreConfigs`).
+ *
+ * This module must stay importable from the webview bundle: no `vscode` imports.
  */
-export const DEFAULT_SEED_STORES: TripleStoreConfig[] = [
+export const PRESET_STORES: TripleStoreConfig[] = [
+	{
+		id: 'sparql',
+		label: 'SPARQL Endpoint',
+		description: 'A generic endpoint conforming to the SPARQL 1.1 Protocol.',
+		documentation: 'https://www.w3.org/TR/sparql11-query/',
+		isProtected: true
+	},
 	{
 		id: 'jena',
 		label: 'Apache Jena Fuseki',
-		website: 'https://jena.apache.org/',
+		description: 'SPARQL server of the Apache Jena framework.',
+		documentation: 'https://jena.apache.org/',
+		isProtected: true,
 		queries: {
 			listGraphs: 'SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph {}\n}\nORDER BY ?graph'
 		}
 	},
 	{
+		id: 'qlever',
+		label: 'QLever',
+		description: 'High-performance SPARQL engine for very large knowledge graphs.',
+		documentation: 'https://github.com/ad-freiburg/qlever',
+		isProtected: true
+	},
+	{
 		id: 'rdf4j',
 		label: 'RDF4J',
-		website: 'https://rdf4j.org/',
+		description: 'Eclipse RDF4J server with per-query reasoning control.',
+		documentation: 'https://rdf4j.org/',
+		isProtected: true,
 		inference: {
 			supported: true,
 			urlParameters: {
@@ -27,10 +47,5 @@ export const DEFAULT_SEED_STORES: TripleStoreConfig[] = [
 				disabled: 'infer=false'
 			}
 		}
-	},
-	{
-		id: 'qlever',
-		label: 'QLever',
-		website: 'https://github.com/ad-freiburg/qlever'
 	}
 ];

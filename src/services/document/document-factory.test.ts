@@ -85,6 +85,24 @@ describe('DocumentFactory', () => {
 		});
 	});
 
+	describe('isRdfLanguage', () => {
+		it.each(['turtle', 'sparql', 'trig', 'n3', 'ntriples', 'nquads'])('returns true for %s', (languageId) => {
+			expect(factory.isRdfLanguage(languageId)).toBe(true);
+		});
+
+		it('returns false for xml (RDF/XML is not a first-class authoring language here)', () => {
+			expect(factory.isRdfLanguage('xml')).toBe(false);
+		});
+
+		it('returns false for json (notebook)', () => {
+			expect(factory.isRdfLanguage('json')).toBe(false);
+		});
+
+		it('returns false for unknown language', () => {
+			expect(factory.isRdfLanguage('unknown')).toBe(false);
+		});
+	});
+
 	describe('isConvertibleLanguage', () => {
 		it('returns true for ntriples', () => {
 			expect(factory.isConvertibleLanguage('ntriples')).toBe(true);

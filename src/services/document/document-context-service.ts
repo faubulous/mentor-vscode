@@ -422,9 +422,11 @@ export class DocumentContextService {
 	}
 
 	/**
-	 * Set the context for convert file format commands based on the current language ID to 
-	 * support menu visibility and enablement of conversion related commands.
-	 * @param languageId The language ID of the current document. If `undefined`, all convert file format contexts will be set to `false`.
+	 * Sets the language-derived editor context keys for the active document: convert-file-format
+	 * command visibility/enablement, `mentor.editor.isRdfDocument`, and `mentor.editor.isMentorLanguage`
+	 * (used to gate resource-oriented features such as the "Describe Resource" menu item). Keying off
+	 * the active document — rather than the caret — keeps these stable when a right-click opens a menu.
+	 * @param languageId The language ID of the current document. If `undefined`, all contexts are set to `false`.
 	 * @returns A promise that resolves when the contexts have been set.
 	 */
 	private async _setConvertFileFormatContexts(languageId?: string, uri?: string): Promise<void> {
@@ -437,8 +439,13 @@ export class DocumentContextService {
 		const isTripleSource = languageId ? this._documentFactory.isTripleSourceLanguage(languageId) : false;
 		const isRdfDocument = isTripleSource && (languageId !== 'xml' || (uri !== undefined && this.contexts[uri]?.isLoaded === true));
 
+		// Whether the document is one of Mentor's first-class RDF authoring languages, sourced from
+		// the canonical RDF_LANGUAGE_IDS list so menu `when` clauses need not duplicate it.
+		const isRdfLanguage = languageId ? this._documentFactory.isRdfLanguage(languageId) : false;
+
 		await vscode.commands.executeCommand('setContext', 'mentor.command.convertFileFormat.executable', convertible);
 		await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', isRdfDocument);
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.isMentorLanguage', isRdfLanguage);
 
 		for (const targetLanguageId of this._convertTargetLanguageIds) {
 			await vscode.commands.executeCommand(
@@ -455,12 +462,15 @@ export class DocumentContextService {
 	 * @param editor The notebook editor.
 	 */
 	async handleActiveNotebookEditorChanged(editor: vscode.NotebookEditor | undefined): Promise<void> {
-		if (!editor) return;
+		if (!editor) {
+			return;
+		}
 
 		// Load all RDF cells in the notebook to ensure their graphs are created.
 		for (const cell of editor.notebook.getCells()) {
 			if (this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
 				const slug = cell.metadata?.slug as string | undefined;
+
 				await this.loadDocument(cell.document, false, slug);
 			}
 		}

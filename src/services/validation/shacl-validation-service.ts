@@ -149,6 +149,17 @@ export class ShaclValidationService implements vscode.Disposable {
 				this._diagnosticCollection.delete(doc.uri);
 				this._lastResults.delete(doc.uri.toString());
 				this._onDidValidate.fire(doc.uri);
+			}),
+			// Editing a document invalidates its last validation result: drop it so
+			// the status CodeLens no longer reports a stale conforming state.
+			vscode.workspace.onDidChangeTextDocument(e => {
+				if (e.contentChanges.length === 0) {
+					return;
+				}
+
+				if (this._lastResults.delete(e.document.uri.toString())) {
+					this._onDidValidate.fire(e.document.uri);
+				}
 			})
 		);
 	}

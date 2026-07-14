@@ -24,16 +24,15 @@ export interface TripleStoreConfig {
     label: string;
 
     /**
-     * Optional free-text description of the store type. Set on built-in stores (e.g. the
-     * workspace store) for informational display; user-defined stores use {@link website} instead.
+     * Optional free-text description of the store type, shown as the subline in the store list.
      */
     description?: string;
 
     /**
-     * Optional website/documentation URL for the store type. When set, the store list shows it as
-     * the subline and offers an "open in browser" action.
+     * Optional documentation URL for the store type. When set, the store list offers an
+     * "open documentation" action.
      */
-    website?: string;
+    documentation?: string;
 
     /**
      * Reasoning control configuration; absent means the store does not support reasoning.

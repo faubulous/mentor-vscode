@@ -2,8 +2,9 @@
 **/out
 **/dist
 **/coverage
+**/.vscode-test-web
+**/.claude
 log.txt
-.vscode-test-web/**
 
 # Generated icon font artifacts
 media/mentor-icons.json

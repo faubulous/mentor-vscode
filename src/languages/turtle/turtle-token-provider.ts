@@ -101,6 +101,7 @@ export class TurtleTokenProvider {
 			vscode.languages.registerInlineCompletionItemProvider({ language }, this._prefixCompletionProvider),
 			vscode.languages.registerReferenceProvider({ language }, this._referenceProvider),
 			vscode.languages.registerRenameProvider({ language }, this._renameProvider),
+			// Note: Load same-line code lenses in inverted order of appearance.
 			vscode.languages.registerCodeLensProvider({ language }, this._connectionCodelensProvider),
 			vscode.languages.registerCodeLensProvider({ language }, this._validationCodelensProvider),
 			vscode.languages.registerCodeLensProvider({ language }, this._notebookSlugCodelensProvider),

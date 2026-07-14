@@ -11,6 +11,7 @@ import type { SettingsSectionDescriptor } from '../../settings-section-descripto
 import { StoresList } from './components/stores-list';
 import { StoresSectionMessages } from './stores-messages';
 import { StoreEditor } from './components/store-editor';
+import { PRESET_STORES } from '@src/languages/sparql/services/default-stores';
 import { WORKSPACE_STORE } from '@src/languages/sparql/services/workspace-store';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 
@@ -51,13 +52,6 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 	const userStores = userValue.map(s => ({ ...s, configScope: ConfigurationScope.User }));
 	const workspaceStores = workspaceValue.map(s => ({ ...s, configScope: ConfigurationScope.Workspace }));
 
-	// The generic `sparql` store ships as the package.json `default` of `mentor.sparql.stores`.
-	// VS Code serves it from the installed manifest, so it is always present without being
-	// persisted to settings. Shown read-only/protected, never removable. The other built-ins
-	// (jena, rdf4j, ...) are seeded once into user settings and appear as editable user stores.
-	const defaultStores = ((settings[STORES_KEY]?.defaultValue ?? []) as TripleStoreConfig[])
-		.map(s => ({ ...s, isProtected: true }));
-
 	const allConfigStores = [...userStores, ...workspaceStores];
 
 	const [editing, setEditing] = useState<TripleStoreConfig | undefined>(undefined);
@@ -80,16 +74,19 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 
 	// The built-in workspace store is synthetic and shown read-only; any stray persisted entry
 	// (id 'workspace') is filtered out of the editable list. Inference is controlled per connection.
-	// User/workspace entries that reuse a built-in id are legacy duplicates of a catalog store
-	// (built-ins now ship from the manifest). Hide them so each store appears once — the protected
-	// built-in is shown instead, mirroring the runtime union-by-id in getStoreConfigs().
-	const defaultIds = new Set(defaultStores.map(s => s.id));
-	const editableStores = allConfigStores.filter(p => !p.isProtected && !defaultIds.has(p.id));
-	const allStores = [
-		WORKSPACE_STORE,
-		...[...defaultStores].sort((a, b) => a.label.localeCompare(b.label)),
-		...[...editableStores].sort((a, b) => a.label.localeCompare(b.label)),
-	];
+	// User/workspace entries that reuse a preset id are legacy duplicates from the former
+	// first-run seeding. Hide them so each store appears once — the read-only preset is shown
+	// instead, mirroring the preset-id filter in getStoreConfigs().
+	const presetIds = new Set(PRESET_STORES.map(s => s.id));
+	const isEditable = (store: TripleStoreConfig) => !store.isProtected && !presetIds.has(store.id) && store.id !== WORKSPACE_STORE.id;
+
+	const sortByLabel = (stores: TripleStoreConfig[]) => [...stores].sort((a, b) => a.label.localeCompare(b.label));
+
+	// Presets follow their canonical definition order (workspace, sparql, jena, qlever, rdf4j)
+	// rather than being sorted alphabetically.
+	const presetStores = [WORKSPACE_STORE, ...PRESET_STORES];
+	const editableUserStores = sortByLabel(userStores.filter(isEditable));
+	const editableWorkspaceStores = sortByLabel(workspaceStores.filter(isEditable));
 
 	const isReadOnly = !!editing && !!editing.isProtected;
 	// A store is "new" until it has been saved into the settings array (protected stores are never new).
@@ -125,8 +122,11 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 	return (
 		<>
 			<StoresList
-				stores={allStores}
-				onCreate={() => setEditing({ id: uuidv4(), label: '', configScope: ConfigurationScope.User })}
+				presetStores={presetStores}
+				workspaceStores={editableWorkspaceStores}
+				userStores={editableUserStores}
+				hasWorkspace={hasWorkspace}
+				onCreate={(scope) => setEditing({ id: uuidv4(), label: '', configScope: scope })}
 				onEdit={(store) => setEditing(store)}
 				onDelete={handleDelete}
 				onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}

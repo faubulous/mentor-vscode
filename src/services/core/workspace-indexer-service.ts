@@ -185,7 +185,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		// status and the final summary share the same location.
 		this._statusBarItem.text = '$(sync~spin) Indexing workspace...';
 		this._statusBarItem.show();
-		this._statusLog.info(`Started workspace indexing${reindex ? ' (reindex)' : ''}...`);
+		this._statusLog.info(`-- Started workspace indexing${reindex ? ' (reindex)' : ''}...`);
 
 		// The default value is set to Number.MAX_SAFE_INTEGER to disable the
 		// file size limit and make issues with the configuration more visible.
@@ -509,7 +509,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		this._onDidFinishIndexing.fire(true);
 
-		this._statusLog.info('Finished workspace indexing.');
+		this._statusLog.info('-- Finished workspace indexing.');
 	}
 
 	/**

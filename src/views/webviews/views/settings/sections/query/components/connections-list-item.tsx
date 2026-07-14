@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
-import { ScopeBadge } from '@src/views/webviews/components/scope-badge';
+import { Badge } from '@src/views/webviews/components/badge';
 import { TestResult } from '../../../settings-types';
 import { GraphStatus } from '../connections-list-messages';
 import { ListItemNavProps } from '../../../hooks/use-list-keyboard-navigation';
@@ -11,6 +11,7 @@ export interface ConnectionsListItemProps {
 	testResult?: TestResult;
 	graphStatus?: GraphStatus;
 	isTesting: boolean;
+	isLoadingGraphs: boolean;
 	navProps?: ListItemNavProps;
 	onEditConnection: (connection: SparqlConnection) => void;
 	onDeleteConnection: (connection: SparqlConnection) => void;
@@ -29,6 +30,7 @@ export function ConnectionsListItem({
 	testResult,
 	graphStatus,
 	isTesting,
+	isLoadingGraphs,
 	navProps,
 	onEditConnection,
 	onDeleteConnection,
@@ -39,7 +41,10 @@ export function ConnectionsListItem({
 	const isProtected = connection.isProtected === true;
 	const isWorkspaceStore = connection.id === 'workspace';
 
-	const connectionIcon = isTesting
+	// Loading graphs renders the row busy in the same way as testing the connection.
+	const isBusy = isTesting || isLoadingGraphs;
+
+	const connectionIcon = isBusy
 		? <vscode-icon name="ellipsis" className="settings-item-icon icon-testing" />
 		: testResult?.success === true
 			? <vscode-icon name="pass" className="settings-item-icon icon-success" />
@@ -57,7 +62,7 @@ export function ConnectionsListItem({
 
 	let statusClass = '';
 
-	if (isTesting) {
+	if (isBusy) {
 		statusClass = 'testing';
 	} else if (testResult?.success === true) {
 		statusClass = 'test-success';
@@ -65,7 +70,6 @@ export function ConnectionsListItem({
 		statusClass = 'test-error';
 	}
 
-	const showGraphCount = graphStatus?.count !== undefined && (connection.autoLoadGraphs || isWorkspaceStore);
 	const metaItems: React.ReactNode[] = [];
 
 	if (connection.description) {
@@ -76,26 +80,10 @@ export function ConnectionsListItem({
 		);
 	}
 
-	if (showGraphCount) {
-		metaItems.push(
-			<span key="graphs" className="settings-item-meta-item">
-				{graphStatus!.count} {graphStatus!.count === 1 ? 'graph' : 'graphs'}
-			</span>
-		);
-	}
-
 	if (connection.canToggleInference) {
 		metaItems.push(
 			<span key="inference" className="settings-item-meta-item">
 				Inference Supported
-			</span>
-		);
-	}
-
-	if (graphStatus?.error) {
-		metaItems.push(
-			<span key="graphs" className="settings-item-meta-item graph-status-error" title={graphStatus.error}>
-				Error loading graphs
 			</span>
 		);
 	}
@@ -136,7 +124,31 @@ export function ConnectionsListItem({
 		</>
 	);
 
-	const subline = (metaItems.length > 0 || !isProtected)
+	// The badge slot shows the live graph state: a loading indicator while the
+	// graphs are being (re-)loaded, the load error when one occurred, or the
+	// graph count when known. The storage scope is communicated by the list
+	// section, which this badge replaced.
+	const graphBadge = isLoadingGraphs
+		? (
+			<Badge className="badge-busy" title="Loading graphs from this connection...">
+				Loading...
+			</Badge>
+		)
+		: graphStatus?.error
+			? (
+				<Badge className="badge-error" title={graphStatus.error}>
+					Error loading graphs
+				</Badge>
+			)
+			: graphStatus?.count !== undefined
+				? (
+					<Badge title="Number of graphs on this connection">
+						{graphStatus.count} {graphStatus.count === 1 ? 'graph' : 'graphs'}
+					</Badge>
+				)
+				: null;
+
+	const subline = metaItems.length > 0
 		? (
 			<div className="settings-item-meta">
 				{metaItems.map((item, index) => (
@@ -155,7 +167,7 @@ export function ConnectionsListItem({
 			tooltip={isWorkspaceStore ? 'Edit workspace store settings' : `Edit ${connection.endpointUrl}`}
 			actions={actions}
 			subline={subline}
-			badge={!isProtected ? <ScopeBadge scope={connection.configScope} /> : null}
+			badge={graphBadge}
 			locked={isProtected}
 			lockTitle="Built-in connection"
 			className={statusClass || undefined}

@@ -8,6 +8,7 @@ import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-conn
 import { IDocumentContextService } from '@src/services/document';
 import { ICredentialStorageService } from '@src/services/core';
 import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
+import { keyToScope } from '@src/utilities/config-scope';
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
 import { SettingsSectionMessages } from '../../settings-panel-messages';
@@ -50,6 +51,24 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					section: SECTION_ID,
 					id: 'ConnectionsChanged',
 					connections: connectionRegistry.getConnections().map(c => this._toConnectionView(c)),
+				});
+			}),
+			// Mirror graph loading activity (bulk reloads, auto-loads) as a busy
+			// indicator on the affected list items, like connection testing.
+			graphService.onDidGraphLoadStart(connection => {
+				this._post({
+					section: SECTION_ID,
+					id: 'GraphLoadingChanged',
+					connectionId: connection.id,
+					loading: true,
+				});
+			}),
+			graphService.onDidGraphLoadEnd(connection => {
+				this._post({
+					section: SECTION_ID,
+					id: 'GraphLoadingChanged',
+					connectionId: connection.id,
+					loading: false,
 				});
 			}),
 			graphService.onDidChangeGraphs(connectionId => {
@@ -126,7 +145,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				return true;
 			}
 			case 'CreateConnection': {
-				const connection = await connectionRegistry.createConnection();
+				const connection = await connectionRegistry.createConnection(keyToScope(message.scope));
 				this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection: this._toConnectionView(connection) });
 
 				return true;
@@ -182,14 +201,26 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					return true;
 				}
 
-				this._post({
-					section: SECTION_ID,
-					id: 'TestConnectionResult',
-					connectionId: connection.id,
-					success: true,
-				});
+				// Post the result only after the graphs have been listed so the item's
+				// busy indicator covers the whole operation, not just the test.
+				try {
+					await vscode.commands.executeCommand('mentor.command.listGraphs', connection);
 
-				await vscode.commands.executeCommand('mentor.command.listGraphs', connection);
+					this._post({
+						section: SECTION_ID,
+						id: 'TestConnectionResult',
+						connectionId: connection.id,
+						success: true,
+					});
+				} catch (e) {
+					this._post({
+						section: SECTION_ID,
+						id: 'TestConnectionResult',
+						connectionId: connection.id,
+						success: false,
+						error: e instanceof Error ? e.message : String(e),
+					});
+				}
 
 				return true;
 			}

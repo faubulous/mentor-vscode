@@ -6,7 +6,7 @@ import { SettingsSectionDescriptor } from './settings-section-descriptor';
 import { SettingsPanelHeader } from './components/settings-panel-header';
 import { SearchResults } from './components/settings-search-results';
 import { SettingsNavigation } from './components/settings-navigation';
-import { MENTOR_LANGUAGE_IDS } from '@src/services/document/document-languages';
+import { RDF_LANGUAGE_IDS } from '@src/services/document/document-languages';
 import {
 	MENTOR_SETTINGS_SOURCE,
 	SettingScope,
@@ -35,7 +35,7 @@ const SECTIONS_BY_ID = Object.fromEntries(
  */
 const SETTINGS_SOURCES: SettingsSource[] = [
 	MENTOR_SETTINGS_SOURCE,
-	...MENTOR_LANGUAGE_IDS.map(languageId => ({ kind: 'languageEditor', languageId } as const)),
+	...RDF_LANGUAGE_IDS.map(languageId => ({ kind: 'languageEditor', languageId } as const)),
 ];
 
 /**
@@ -143,7 +143,7 @@ function SettingsPanel() {
 	const mentorSettings = state.settingsBySource[settingsSourceKey(MENTOR_SETTINGS_SOURCE)] ?? {};
 
 	const vscodeSettings: VSCodeSettings = useMemo(
-		() => MENTOR_LANGUAGE_IDS.reduce((acc, languageId) => {
+		() => RDF_LANGUAGE_IDS.reduce((acc, languageId) => {
 			acc[languageId] = state.settingsBySource[settingsSourceKey({ kind: 'languageEditor', languageId })] ?? {};
 			return acc;
 		}, {} as VSCodeSettings),

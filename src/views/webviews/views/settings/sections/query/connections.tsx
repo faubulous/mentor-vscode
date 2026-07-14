@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { ModalDialog } from '../../../../components/modal-dialog';
 import { SettingRow } from '../../components/setting-row';
 import { useSettingRowProps } from '../../hooks/use-setting-row-props';
@@ -10,6 +10,8 @@ import { ConnectionsList } from './components/connections-list';
 import { ConnectionsListMessages, GraphStatus } from './connections-list-messages';
 import { MENTOR_SETTINGS_SOURCE, TestResult } from '../../settings-types';
 import { SettingsSectionProps } from '../../settings-section-props';
+import { SettingsWorkspaceContext } from '../../components/setting-context';
+import { ConfigurationScope, scopeToKey } from '@src/utilities/config-scope';
 import { useScopedWebviewMessaging } from '../../../../hooks';
 import { patchRecord } from '@src/views/webviews/webview-utils';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
@@ -25,6 +27,7 @@ type QueryConnectionsSectionMessage = ConnectionsListMessages | ConnectionEditor
 
 export function QueryConnectionsSection({ settings, onUpdate, setScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
+	const hasWorkspace = useContext(SettingsWorkspaceContext);
 
 	const [connections, setConnections] = useState<SparqlConnectionView[]>([]);
 	const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
@@ -32,6 +35,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 	const [editingConnection, setEditingConnection] = useState<SparqlConnectionView | undefined>(undefined);
 	const [editorDirty, setEditorDirty] = useState(false);
 	const [testingConnections, setTestingConnections] = useState<Set<string>>(new Set());
+	const [loadingGraphs, setLoadingGraphs] = useState<Set<string>>(new Set());
 
 	const handleMessage = useCallback((message: QueryConnectionsSectionMessage) => {
 		switch (message.id) {
@@ -51,6 +55,23 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 				return;
 			case 'GraphStatusChanged':
 				setGraphStatuses(prev => ({ ...prev, [message.connectionId]: message.status }));
+				return;
+			case 'GraphLoadingChanged':
+				setLoadingGraphs(prev => {
+					if (prev.has(message.connectionId) === message.loading) {
+						return prev;
+					}
+
+					const updated = new Set(prev);
+
+					if (message.loading) {
+						updated.add(message.connectionId);
+					} else {
+						updated.delete(message.connectionId);
+					}
+
+					return updated;
+				});
 				return;
 			case 'EditSparqlConnection':
 				setEditingConnection(message.connection);
@@ -110,7 +131,9 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 				testResults={testResults}
 				graphStatuses={graphStatuses}
 				testingConnections={testingConnections}
-				onCreateConnection={() => messaging?.postMessage({ id: 'CreateConnection' })}
+				loadingGraphs={loadingGraphs}
+				hasWorkspace={hasWorkspace}
+				onCreateConnection={(scope: ConfigurationScope) => messaging?.postMessage({ id: 'CreateConnection', scope: scopeToKey(scope) })}
 				onEditConnection={(connection) => setEditingConnection(connection)}
 				onDeleteConnection={(connection) => messaging?.postMessage({ id: 'DeleteConnection', connection })}
 				onTestConnection={handleTestConnection}

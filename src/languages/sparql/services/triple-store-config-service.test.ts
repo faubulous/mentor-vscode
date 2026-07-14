@@ -3,9 +3,12 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('vscode', () => import('../../../utilities/mocks/vscode'));
 
 import { TripleStoreConfigService } from './triple-store-config-service';
+import { PRESET_STORES } from './default-stores';
 import type { TripleStoreConfig } from './triple-store-config';
 import type { SparqlConnection } from './sparql-connection';
 import { ConfigurationScope } from '../../../utilities/config-scope';
+
+const presetIds = PRESET_STORES.map(s => s.id);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -91,43 +94,49 @@ describe('TripleStoreConfigService – defaultStoreType', () => {
 // ---------------------------------------------------------------------------
 
 describe('TripleStoreConfigService – getStoreConfigs', () => {
-    it('returns configs from the setting when set', () =>
-        withStoreConfigs([rdf4jConfig, sparqlConfig], svc => {
-            expect(svc.getStoreConfigs()).toHaveLength(2);
-            expect(svc.getStoreConfigs()[0].id).toBe('rdf4j');
+    it('always returns the built-in presets first, even when the setting is unset', () => {
+        expect(makeService().getStoreConfigs().map(s => s.id)).toEqual(presetIds);
+    });
+
+    it('appends configs from the setting after the presets', () =>
+        withStoreConfigs([{ id: 'my-store', label: 'My Store' }], svc => {
+            expect(svc.getStoreConfigs().map(s => s.id)).toEqual([...presetIds, 'my-store']);
         })
     );
 
-    it('returns [] when the setting is unset (VS Code provides the package.json default at runtime)', () => {
-        // Default mock returns `def` for any get() call; no default is passed, so undefined → []
-        expect(makeService().getStoreConfigs()).toEqual([]);
-    });
-
-    it('unions default, user, and workspace store types so none are shadowed by another scope', () =>
+    it('unions user and workspace store types so none are shadowed by another scope', () =>
         withInspectedStoreConfigs(
             {
-                defaultValue: [sparqlConfig, qleverConfig],
                 globalValue: [{ id: 'user-store', label: 'User Store' }],
                 workspaceValue: [{ id: 'ws-store', label: 'Workspace Store' }],
             },
             svc => {
-                expect(svc.getStoreConfigs().map(s => s.id)).toEqual(['sparql', 'qlever', 'user-store', 'ws-store']);
+                expect(svc.getStoreConfigs().map(s => s.id)).toEqual([...presetIds, 'user-store', 'ws-store']);
             }
         )
     );
 
-    it('lets a workspace store type override a built-in default with the same id', () =>
+    it('ignores settings entries whose id collides with a preset (presets cannot be shadowed)', () =>
         withInspectedStoreConfigs(
             {
-                defaultValue: [sparqlConfig],
+                globalValue: [{ id: 'jena', label: 'Legacy Seeded Jena' }],
                 workspaceValue: [{ id: 'sparql', label: 'Custom SPARQL' }],
             },
             svc => {
                 const configs = svc.getStoreConfigs();
-                expect(configs).toHaveLength(1);
-                expect(configs[0].label).toBe('Custom SPARQL');
+                expect(configs.map(s => s.id)).toEqual(presetIds);
+                expect(configs.find(s => s.id === 'sparql')?.label).toBe('SPARQL Endpoint');
+                expect(configs.find(s => s.id === 'jena')?.label).toBe('Apache Jena Fuseki');
             }
         )
+    );
+
+    it('ignores preset-id entries in the non-inspect fallback path', () =>
+        withStoreConfigs([rdf4jConfig, { id: 'my-store', label: 'My Store' }], svc => {
+            const configs = svc.getStoreConfigs();
+            expect(configs.map(s => s.id)).toEqual([...presetIds, 'my-store']);
+            expect(configs.find(s => s.id === 'rdf4j')?.label).toBe('RDF4J');
+        })
     );
 });
 
@@ -154,11 +163,13 @@ describe('TripleStoreConfigService – getStoreConfig', () => {
         })
     );
 
-    it('returns undefined when the default store type is not in the list', () =>
-        withStoreConfigs([rdf4jConfig], svc => {
-            expect(svc.getStoreConfig(undefined)).toBeUndefined();
-        })
-    );
+    it('resolves the default store type from the presets when the setting is unset', () => {
+        expect(makeService().getStoreConfig(undefined)?.label).toBe('SPARQL Endpoint');
+    });
+
+    it('resolves preset store types without any settings value', () => {
+        expect(makeService().getStoreConfig('jena')?.label).toBe('Apache Jena Fuseki');
+    });
 });
 
 // ---------------------------------------------------------------------------

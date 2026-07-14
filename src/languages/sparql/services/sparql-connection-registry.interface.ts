@@ -65,9 +65,11 @@ export interface ISparqlConnectionRegistry {
 
 	/**
 	 * Adds a new SPARQL connection.
+	 * @param scope The configuration scope to create the connection in. Defaults to the
+	 * workspace scope when a workspace folder is open, otherwise the user scope.
 	 * @returns A promise that resolves to the new SPARQL connection.
 	 */
-	createConnection(): Promise<SparqlConnection>;
+	createConnection(scope?: ConfigurationScope): Promise<SparqlConnection>;
 
 	/**
 	 * Updates an existing SPARQL connection.

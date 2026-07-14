@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import { AsyncIterator } from 'asynciterator';
-import { Store, Writer } from 'n3';
+import { DataFactory } from 'n3';
 import { Uri } from '@faubulous/mentor-rdf';
 import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
+import { SerializationOptions, termToString, TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
 import { Bindings, Quad, Term } from "@rdfjs/types";
 import { IPrefixLookupService } from '@src/services/document';
 import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state";
 import { toArrayWithCancellation } from '@src/utilities/vscode/cancellation';
+import { resolveFormattingConfig } from '@src/utilities/vscode/config';
 import { NamespaceMap } from '@src/utilities';
 
 /**
@@ -14,6 +16,45 @@ import { NamespaceMap } from '@src/utilities';
  */
 export class SparqlResultSerializer {
 	constructor(private readonly _prefixLookupService: IPrefixLookupService) { }
+
+	/**
+	 * Dedupes triples and drops named-graph terms: Turtle has no graphs, and
+	 * the serializer would skip named-graph quads outright.
+	 */
+	private _prepareQuads(quads: Quad[]): Quad[] {
+		const unique = new Map<string, Quad>();
+
+		for (const q of quads) {
+			const key = `${termToString(q.subject)} ${termToString(q.predicate)} ${termToString(q.object)}`;
+
+			if (!unique.has(key)) {
+				unique.set(key, q.graph.termType === 'DefaultGraph'
+					? q
+					: DataFactory.quad(q.subject as any, q.predicate as any, q.object as any));
+			}
+		}
+
+		return [...unique.values()];
+	}
+
+	/**
+	 * Builds pretty-printing serializer options from the `mentor.formatting.*`
+	 * settings, mirroring the Format Document defaults. Blank nodes are
+	 * relabeled so store-internal ids do not leak into exports.
+	 */
+	private _buildTurtleOptions(prefixes: Record<string, string>): SerializationOptions {
+		return {
+			prefixes,
+			directiveStyle: 'turtle',
+			// prettyPrint gates blank-line and inline-blank-node formatting in the
+			// serializer; set it explicitly so exports never depend on the library default.
+			prettyPrint: true,
+			maxLineWidth: resolveFormattingConfig('turtle', 'maxLineWidth', 120),
+			spaceBeforePunctuation: resolveFormattingConfig('turtle', 'spaceBeforePunctuation', true),
+			blankLinesBetweenSubjects: resolveFormattingConfig('turtle', 'blankLinesBetweenSubjects', true),
+			relabelBlankNodes: true,
+		};
+	}
 
 	/**
 	 * Serializes SPARQL query results into a format suitable for the webview.
@@ -150,18 +191,10 @@ export class SparqlResultSerializer {
 	 */
 	async serializeQuads(context: SparqlQueryExecutionState, quadStream: AsyncIterator<Quad>, token: vscode.CancellationToken): Promise<string> {
 		try {
-			const quads = await toArrayWithCancellation(quadStream, token);
+			const inputQuads = await toArrayWithCancellation(quadStream, token);
 
-			if (quads.length === 0) {
+			if (inputQuads.length === 0) {
 				return '';
-			}
-
-			// TODO: Request quads from communica instead of manually filtering the triples.
-			const store = new Store();
-
-			// Add all quads to the writer
-			for (const q of quads) {
-				store.addQuad(q.subject, q.predicate, q.object);
 			}
 
 			// Get namespace prefixes for better formatting
@@ -171,7 +204,7 @@ export class SparqlResultSerializer {
 			// Collect unique namespace IRIs from the quads
 			const namespaces = new Set<string>();
 
-			for (const quad of quads) {
+			for (const quad of inputQuads) {
 				if (quad.subject.termType === 'NamedNode') {
 					namespaces.add(Uri.getNamespaceIri(quad.subject.value));
 				}
@@ -192,24 +225,10 @@ export class SparqlResultSerializer {
 				}
 			}
 
-			// Create N3 writer with prefixes
-			const writer = new Writer({
-				format: 'text/turtle',
-				prefixes: prefixMap
-			});
+			const outputQuads = this._prepareQuads(inputQuads);
+			const outputOptions = this._buildTurtleOptions(prefixMap);
 
-			writer.addQuads(store.toArray());
-
-			// Return the serialized Turtle string
-			return new Promise<string>((resolve, reject) => {
-				writer.end((error, result) => {
-					if (error) {
-						reject(error);
-					} else {
-						resolve(result);
-					}
-				});
-			});
+			return new TurtleSerializer().serialize(outputQuads, outputOptions);
 		} catch (error) {
 			console.error('Error serializing quads to Turtle:', error);
 			return '';
@@ -226,12 +245,6 @@ export class SparqlResultSerializer {
 		try {
 			if (quads.length === 0) {
 				return '';
-			}
-
-			const store = new Store();
-
-			for (const q of quads) {
-				store.addQuad(q.subject, q.predicate, q.object);
 			}
 
 			const prefixMap: Record<string, string> = {};
@@ -270,22 +283,7 @@ export class SparqlResultSerializer {
 				}
 			}
 
-			const writer = new Writer({
-				format: 'text/turtle',
-				prefixes: prefixMap
-			});
-
-			writer.addQuads(store.toArray());
-
-			return new Promise<string>((resolve, reject) => {
-				writer.end((error, result) => {
-					if (error) {
-						reject(error);
-					} else {
-						resolve(result);
-					}
-				});
-			});
+			return new TurtleSerializer().serialize(this._prepareQuads(quads), this._buildTurtleOptions(prefixMap));
 		} catch (error) {
 			console.error('Error serializing quads to Turtle:', error);
 			return '';
