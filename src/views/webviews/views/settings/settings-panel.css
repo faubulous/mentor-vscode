@@ -409,6 +409,41 @@ vscode-textarea.monospace {
 	min-height: 12em;
 }
 
+/* Documentation link pinned to the top-right corner of the preview; revealed
+   on hover or keyboard focus, mirroring the click-to-edit hint. */
+.template-preview-docs {
+	position: absolute;
+	top: 6px;
+	right: 8px;
+	z-index: 1;
+	padding: 1px 6px;
+	border-radius: var(--mentor-radius-sm, 4px);
+	background-color: var(--vscode-editorWidget-background, var(--vscode-editorHoverWidget-background, #252526));
+	color: var(--vscode-descriptionForeground);
+	font-family: var(--vscode-font-family);
+	font-size: 11px;
+	line-height: 1.4;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 80ms ease-in-out;
+}
+
+.template-preview:hover .template-preview-docs,
+.template-preview:focus-within .template-preview-docs {
+	pointer-events: auto;
+	opacity: 1;
+}
+
+.template-preview-docs a {
+	color: var(--vscode-textLink-foreground);
+	text-decoration: none;
+}
+
+.template-preview-docs a:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+	text-decoration: underline;
+}
+
 /* Hint chip revealed on hover/focus to clarify the click-to-edit behaviour. */
 .template-preview-hint {
 	position: absolute;
@@ -751,21 +786,18 @@ vscode-textarea.monospace {
 .settings-item {
 	display: flex;
 	align-items: flex-start;
-	padding: var(--mentor-space-1) var(--mentor-space-4);
-	background: var(--vscode-settings-textInputBackground);
+	padding: var(--mentor-space-2) var(--mentor-space-5) var(--mentor-space-2) var(--mentor-space-3);
+	background: var(--vscode-list-hoverBackground);
 	border-radius: var(--vscode-cornerRadius-small);
 	border-left: 3px solid transparent;
 	cursor: pointer;
 	transition: background-color 0.1s ease, border-color 0.2s ease;
 }
 
-.settings-item:hover {
-	background: var(--vscode-list-hoverBackground);
-}
-
+.settings-item:hover,
 .settings-item.selected {
 	background: var(--vscode-list-activeSelectionBackground);
-	color: var(--vscode-list-activeSelectionForeground);
+	color: var(--vscode-list-inactiveSelectionForeground);
 }
 
 .settings-item:focus-visible {
@@ -789,6 +821,7 @@ vscode-textarea.monospace {
 	margin-right: var(--mentor-space-4);
 	margin-top: 6px;
 	flex-shrink: 0;
+	color: var(--vscode-symbolIcon-enumeratorMemberForeground);
 }
 
 .settings-item-icon.icon-testing {

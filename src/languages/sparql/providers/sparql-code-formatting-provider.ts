@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SparqlFormatter } from '@faubulous/mentor-rdf-serializers';
-import { getConfig, resolveFormattingConfig } from '@src/utilities/vscode/config';
+import { getConfig, resolveFormattingConfig, resolveFormattingIndent } from '@src/utilities/vscode/config';
 
 /**
  * Provides formatting edits for SPARQL documents in VS Code.
@@ -16,7 +16,7 @@ export class SparqlCodeFormattingProvider implements vscode.DocumentFormattingEd
         const config = getConfig('formatting.sparql');
 
         const result = this._formatter.formatFromText(text, {
-            indent: options.insertSpaces ? ' '.repeat(options.tabSize) : '\t',
+            indent: resolveFormattingIndent(document, options),
             prettyPrint: true,
             uppercaseKeywords: config.get('uppercaseKeywords', false),
             alignPatterns: config.get('alignPatterns', true),

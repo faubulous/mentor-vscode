@@ -27,6 +27,19 @@ export function getConfig(section: string = ''): vscode.WorkspaceConfiguration {
 
 
 /**
+ * The workspace-relative folder a template's shapes are copied into when a
+ * validation profile is created from it. Reads `mentor.shacl.shapesFolder`,
+ * falling back to `.mentor/shapes`.
+ * @returns The configured shapes folder as a workspace-relative POSIX path.
+ */
+export function getShapesFolder(): string {
+	const folder = getConfig('shacl').get<string>('shapesFolder', '.mentor/shapes').trim();
+
+	// Normalize away leading/trailing slashes so callers can join freely.
+	return folder.replace(/^\/+|\/+$/g, '') || '.mentor/shapes';
+}
+
+/**
  * Resolves a formatting option using the cascading model: a language-specific
  * override (`mentor.formatting.<language>.<key>`) wins when explicitly set,
  * otherwise the shared common value (`mentor.formatting.common.<key>`) is used,
@@ -58,33 +71,34 @@ export function resolveFormattingConfig<T>(language: string, key: string, fallba
 }
 
 /**
- * Returns the first explicitly-configured value of an `editor.*` key across the
- * user/workspace/folder scopes and their per-language `[languageId]` override
- * variants, or `undefined` when the key is only at its default. Unlike `get()`,
- * this ignores the value VS Code derives from `editor.detectIndentation`, which
- * lives on the editor model rather than the configuration.
+ * Returns the first explicitly-configured value of an inspected `editor.*` key
+ * across the user/workspace/folder scopes and their per-language `[languageId]`
+ * override variants, or `undefined` when the key is only at its default. Unlike
+ * `get()`, this ignores the value VS Code derives from `editor.detectIndentation`,
+ * which lives on the editor model rather than the configuration.
  */
-function resolveExplicitEditorValue<T>(config: vscode.WorkspaceConfiguration, key: string): T | undefined {
-	const inspected = config.inspect<T>(key);
-
-	return inspected?.workspaceFolderLanguageValue
+function explicitEditorValue<T>(inspected: ReturnType<vscode.WorkspaceConfiguration['inspect']>): T | undefined {
+	return (inspected?.workspaceFolderLanguageValue
 		?? inspected?.workspaceLanguageValue
 		?? inspected?.globalLanguageValue
 		?? inspected?.workspaceFolderValue
 		?? inspected?.workspaceValue
-		?? inspected?.globalValue;
+		?? inspected?.globalValue) as T | undefined;
 }
 
 /**
  * Resolves the indentation string a document formatter should use.
  *
- * An explicitly configured `editor.tabSize` / `editor.insertSpaces` (including a
- * per-language `[languageId]` override, which the Mentor settings UI writes)
- * takes precedence, because the {@link vscode.FormattingOptions} VS Code passes
- * to a formatter are derived from the editor model and therefore reflect
- * `editor.detectIndentation` — which would otherwise ignore the configured
- * values for a file whose existing indentation was auto-detected. Falls back to
- * the FormattingOptions (respecting detection) when nothing is configured.
+ * When the user has explicitly configured `editor.tabSize` or `editor.insertSpaces`
+ * (including a per-language `[languageId]` override, which the Mentor settings UI
+ * writes), the two are honored as a unit: the pair takes precedence over the
+ * {@link vscode.FormattingOptions} VS Code passes to the formatter, and any half the
+ * user did not set is filled from VS Code's own default rather than from those
+ * options. This matters because the FormattingOptions are derived from the editor
+ * model and therefore reflect `editor.detectIndentation` — so a file whose body
+ * happens to be indented with tabs would otherwise force tab output even though the
+ * user configured a spaces-based tab size (and vice versa). Falls back to the
+ * FormattingOptions (respecting detection) only when neither setting is configured.
  * @param document The document being formatted.
  * @param options The FormattingOptions supplied by VS Code.
  * @returns The indentation string for one indent level.
@@ -92,8 +106,18 @@ function resolveExplicitEditorValue<T>(config: vscode.WorkspaceConfiguration, ke
 export function resolveFormattingIndent(document: vscode.TextDocument, options: vscode.FormattingOptions): string {
 	const config = vscode.workspace.getConfiguration('editor', { languageId: document.languageId, uri: document.uri });
 
-	const tabSize = resolveExplicitEditorValue<number>(config, 'tabSize') ?? options.tabSize;
-	const insertSpaces = resolveExplicitEditorValue<boolean>(config, 'insertSpaces') ?? options.insertSpaces;
+	const tabSizeInspect = config.inspect<number>('tabSize');
+	const insertSpacesInspect = config.inspect<boolean>('insertSpaces');
 
-	return insertSpaces ? ' '.repeat(tabSize) : '\t';
+	const explicitTabSize = explicitEditorValue<number>(tabSizeInspect);
+	const explicitInsertSpaces = explicitEditorValue<boolean>(insertSpacesInspect);
+
+	if (explicitTabSize !== undefined || explicitInsertSpaces !== undefined) {
+		const tabSize = explicitTabSize ?? tabSizeInspect?.defaultValue as number ?? options.tabSize;
+		const insertSpaces = explicitInsertSpaces ?? insertSpacesInspect?.defaultValue as boolean ?? options.insertSpaces;
+
+		return insertSpaces ? ' '.repeat(tabSize) : '\t';
+	}
+
+	return options.insertSpaces ? ' '.repeat(options.tabSize) : '\t';
 }

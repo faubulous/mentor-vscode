@@ -53,6 +53,12 @@ const mockVocabularyRepository: { store: { matchAll: any } } = {
 
 const mockNodeProvider = {
 	getNodeForUri: vi.fn((_iri: string) => undefined as any),
+	// The lazy ancestor build resolves each violation against the root nodes. Expose a single
+	// synthetic root whose resolveNodeForUri delegates to getNodeForUri, so existing tests that
+	// mock getNodeForUri keep driving resolution.
+	getChildren: vi.fn((_node?: any) => [{
+		resolveNodeForUri: (iri: string) => mockNodeProvider.getNodeForUri(iri),
+	}] as any),
 };
 
 const mockValidationHandlers: Array<() => void> = [];
@@ -395,6 +401,8 @@ describe('DefinitionNodeDecorationProvider — getIssueColor', () => {
 
 	it('returns warning color for mentor ancestor nodes with warning severity', () => {
 		(dec as any)._ancestorSeverity.set('mentor:shapes', SH_Warning);
+		// Mark the lazy aggregation clean so getIssueColor serves the seeded value instead of rebuilding.
+		(dec as any)._ancestorSeverityDirty = false;
 
 		const color = dec.getIssueColor(vscode.Uri.parse('mentor:shapes'));
 
@@ -520,6 +528,9 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 
 		for (const h of mockValidationHandlers) { h(); }
 
+		// Requesting the container decoration triggers the lazy ancestor build.
+		dec.provideFileDecoration(vscode.Uri.parse(CONTAINER_URI), {} as any);
+
 		const ancestorSeverity = (dec as any)._ancestorSeverity as Map<string, string>;
 
 		// Intermediate real-IRI parent should NOT be in ancestor map
@@ -626,7 +637,7 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 		expect((dec as any)._ancestorSeverity.size).toBe(0);
 	});
 
-	it('fires decoration events for both violated and ancestor URIs', () => {
+	it('fires a single full-refresh decoration event on validation (no eager per-URI walk)', () => {
 		const containerNode = makeMockNode(CONTAINER_URI);
 		const leafNode = makeMockNode(LEAF_IRI, containerNode);
 
@@ -643,14 +654,12 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 
 		for (const h of mockValidationHandlers) { h(); }
 
-		// Should fire with specific URIs (violated + ancestor) and then with undefined
-		expect(fireSpy).toHaveBeenCalledTimes(2);
-		// First call: array of URIs
-		const firstCallArg = fireSpy.mock.calls[0][0] as vscode.Uri[];
-		expect(Array.isArray(firstCallArg)).toBe(true);
-		expect(firstCallArg.length).toBe(2); // 1 violated + 1 ancestor
-		// Second call: undefined for full refresh
-		expect(fireSpy.mock.calls[1][0]).toBeUndefined();
+		// A single undefined fire asks VS Code to re-request visible items; the ancestor walk is
+		// deferred (lazy), so no eager per-URI computation happens here.
+		expect(fireSpy).toHaveBeenCalledTimes(1);
+		expect(fireSpy.mock.calls[0][0]).toBeUndefined();
+		expect((dec as any)._ancestorSeverity.size).toBe(0);
+		expect(mockNodeProvider.getChildren).not.toHaveBeenCalled();
 	});
 
 	it('filters stale violations after context change removes a subject', () => {
@@ -745,8 +754,8 @@ describe('DefinitionNodeDecorationProvider — violation cap', () => {
 		dec = new DefinitionNodeDecorationProvider(mockNodeProvider as any);
 	});
 
-	it('caps ancestor walks at MAX_DECORATED_VIOLATIONS', () => {
-		// Create 150 violations - only first 100 (sorted by severity) should get ancestor walks
+	it('walks ancestors for all violations without a cap and builds them lazily', () => {
+		// 150 violations — the previous implementation capped ancestor walks at 100.
 		const results = [];
 		const nodeMap = new Map<string, any>();
 		const containerNode = { uri: CONTAINER_URI, parent: undefined, getResourceUri: () => vscode.Uri.parse(CONTAINER_URI) };
@@ -770,50 +779,37 @@ describe('DefinitionNodeDecorationProvider — violation cap', () => {
 
 		for (const h of mockValidationHandlers) { h(); }
 
-		// All 150 should be in _shaclViolations (no cap on direct violations)
+		// All 150 direct violations are recorded, and the ancestor walk has NOT run yet (lazy).
 		expect((dec as any)._shaclViolations.size).toBe(150);
+		expect(mockNodeProvider.getNodeForUri).not.toHaveBeenCalled();
 
-		// getNodeForUri should have been called at most 100 times (the cap)
-		expect(mockNodeProvider.getNodeForUri).toHaveBeenCalledTimes(100);
+		// Requesting a container decoration triggers the (uncapped) lazy build.
+		dec.provideFileDecoration(vscode.Uri.parse(CONTAINER_URI), {} as any);
+
+		// Every violation is resolved — no 100-item cap.
+		expect(mockNodeProvider.getNodeForUri).toHaveBeenCalledTimes(150);
+		expect((dec as any)._ancestorSeverity.get(CONTAINER_URI)).toBe(SH_Violation);
 	});
 
-	it('prioritizes Violation severity over Info when capping', () => {
-		const results = [];
-		const nodeMap = new Map<string, any>();
-		const subjects: Record<string, any> = {};
-
-		// Both groups share the same mentor: container
+	it('builds the ancestor aggregation once and memoizes it until the next change', () => {
 		const containerNode = { uri: CONTAINER_URI, parent: undefined, getResourceUri: () => vscode.Uri.parse(CONTAINER_URI) };
-
-		// 60 Info violations first (lower severity)
-		for (let i = 0; i < 60; i++) {
-			const iri = `http://example.org/InfoShape${i}`;
-			results.push({ focusNode: iri, severity: SH_Info });
-			nodeMap.set(iri, { uri: iri, parent: containerNode, getResourceUri: () => vscode.Uri.parse(iri) });
-			subjects[iri] = [{ start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }];
-		}
-
-		// 50 Violation entries (higher severity)
-		for (let i = 0; i < 50; i++) {
-			const iri = `http://example.org/ViolationShape${i}`;
-			results.push({ focusNode: iri, severity: SH_Violation });
-			nodeMap.set(iri, { uri: iri, parent: containerNode, getResourceUri: () => vscode.Uri.parse(iri) });
-			subjects[iri] = [{ start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }];
-		}
+		const iri = 'http://example.org/Shape0';
 
 		mockContextService.activeContext = {
 			...mockContextService.activeContext,
-			subjects,
+			subjects: { [iri]: [{ start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }] },
 		};
 
-		mockNodeProvider.getNodeForUri.mockImplementation((iri: string) => nodeMap.get(iri));
-		mockValidationService.getLastResult.mockReturnValue({ results });
+		mockNodeProvider.getNodeForUri.mockImplementation((i: string) =>
+			i === iri ? { uri: iri, parent: containerNode, getResourceUri: () => vscode.Uri.parse(iri) } : undefined);
+		mockValidationService.getLastResult.mockReturnValue({ results: [{ focusNode: iri, severity: SH_Violation }] });
 
 		for (const h of mockValidationHandlers) { h(); }
 
-		const ancestorSeverity = (dec as any)._ancestorSeverity as Map<string, string>;
+		dec.provideFileDecoration(vscode.Uri.parse(CONTAINER_URI), {} as any);
+		dec.provideFileDecoration(vscode.Uri.parse(CONTAINER_URI), {} as any);
 
-		// Container gets worst overall (Violation processed first due to sort)
-		expect(ancestorSeverity.get(CONTAINER_URI)).toBe(SH_Violation);
+		// The roots are fetched exactly once despite two container decoration requests.
+		expect(mockNodeProvider.getChildren).toHaveBeenCalledTimes(1);
 	});
 });

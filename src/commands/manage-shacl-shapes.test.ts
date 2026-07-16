@@ -140,7 +140,7 @@ describe('manageShaclShapes', () => {
 					'models-example-ttl': {
 						name: DOCUMENT_KEY,
 						shapes: ['workspace:///shapes/default.ttl'],
-						paths: [DOCUMENT_KEY],
+						includeFiles: [DOCUMENT_KEY],
 					},
 				},
 			},
@@ -154,9 +154,9 @@ describe('manageShaclShapes', () => {
 				'models-example-ttl': {
 					name: DOCUMENT_KEY,
 					shapes: ['workspace:///shapes/default.ttl'],
-					paths: [DOCUMENT_KEY],
+					includeFiles: [DOCUMENT_KEY],
 				},
-				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], paths: ['other/*'] },
+				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], includeFiles: ['other/*'] },
 			},
 		});
 		mockValidationService.getDocumentValidationState.mockReturnValue({
@@ -190,7 +190,7 @@ describe('manageShaclShapes', () => {
 				'models-example-ttl': {
 					name: DOCUMENT_KEY,
 					shapes: ['workspace:///shapes/old.ttl'],
-					paths: [DOCUMENT_KEY],
+					includeFiles: [DOCUMENT_KEY],
 				},
 			},
 		});
@@ -217,7 +217,7 @@ describe('manageShaclShapes', () => {
 					'models-example-ttl': {
 						name: DOCUMENT_KEY,
 						shapes: ['workspace:///shapes/default.ttl'],
-						paths: [DOCUMENT_KEY],
+						includeFiles: [DOCUMENT_KEY],
 					},
 				},
 			},
@@ -231,9 +231,9 @@ describe('manageShaclShapes', () => {
 				'models-example-ttl': {
 					name: DOCUMENT_KEY,
 					shapes: ['workspace:///shapes/default.ttl'],
-					paths: [DOCUMENT_KEY],
+					includeFiles: [DOCUMENT_KEY],
 				},
-				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], paths: ['other/*'] },
+				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], includeFiles: ['other/*'] },
 			},
 		});
 		mockValidationService.getDocumentValidationState.mockReturnValue({
@@ -263,7 +263,7 @@ describe('manageShaclShapes', () => {
 	it('adds the document path to a newly checked profile', async () => {
 		useSettings({
 			profiles: {
-				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], paths: ['other/*'] },
+				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], includeFiles: ['other/*'] },
 			},
 		});
 
@@ -287,7 +287,7 @@ describe('manageShaclShapes', () => {
 					'core': {
 						name: 'Core',
 						shapes: ['workspace:///shapes/core.ttl'],
-						paths: ['other/*', DOCUMENT_KEY],
+						includeFiles: ['other/*', DOCUMENT_KEY],
 					},
 				},
 			},
@@ -301,7 +301,7 @@ describe('manageShaclShapes', () => {
 			{},
 			{
 				profiles: {
-					'personal': { name: 'Personal', shapes: ['workspace:///shapes/personal.ttl'], paths: ['other/*'] },
+					'personal': { name: 'Personal', shapes: ['workspace:///shapes/personal.ttl'], includeFiles: ['other/*'] },
 				},
 			}
 		);
@@ -322,7 +322,7 @@ describe('manageShaclShapes', () => {
 					'personal': {
 						name: 'Personal',
 						shapes: ['workspace:///shapes/personal.ttl'],
-						paths: ['other/*', DOCUMENT_KEY],
+						includeFiles: ['other/*', DOCUMENT_KEY],
 					},
 				},
 			},
@@ -336,7 +336,7 @@ describe('manageShaclShapes', () => {
 				'core': {
 					name: 'Core',
 					shapes: ['workspace:///shapes/core.ttl'],
-					paths: ['other/*', DOCUMENT_KEY],
+					includeFiles: ['other/*', DOCUMENT_KEY],
 				},
 			},
 		});
@@ -365,7 +365,7 @@ describe('manageShaclShapes', () => {
 					'core': {
 						name: 'Core',
 						shapes: ['workspace:///shapes/core.ttl'],
-						paths: ['other/*'],
+						includeFiles: ['other/*'],
 					},
 				},
 			},
@@ -380,9 +380,9 @@ describe('manageShaclShapes', () => {
 				'models-example-ttl': {
 					name: DOCUMENT_KEY,
 					shapes: ['workspace:///shapes/extra.ttl'],
-					paths: [DOCUMENT_KEY],
+					includeFiles: [DOCUMENT_KEY],
 				},
-				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], paths: ['**/*'] },
+				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], includeFiles: ['**/*'] },
 			},
 		});
 		mockValidationService.getDocumentValidationState.mockReturnValue({
@@ -411,10 +411,10 @@ describe('manageShaclShapes', () => {
 		expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
 	});
 
-	it('shows an info message instead of writing when a pattern-matched profile is unchecked', async () => {
+	it('excludes the document when a pattern-matched profile is unchecked', async () => {
 		useSettings({
 			profiles: {
-				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], paths: ['**/*'] },
+				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], includeFiles: ['**/*'] },
 			},
 		});
 		mockValidationService.getDocumentValidationState.mockReturnValue({
@@ -433,14 +433,73 @@ describe('manageShaclShapes', () => {
 
 		await manageShaclShapes.handler();
 
-		expect(mockConfigUpdate).not.toHaveBeenCalled();
-		expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(expect.stringContaining('"Core"'));
+		expect(mockConfigUpdate).toHaveBeenCalledWith(
+			'validation',
+			{
+				profiles: {
+					'core': {
+						name: 'Core',
+						shapes: ['workspace:///shapes/core.ttl'],
+						includeFiles: ['**/*'],
+						excludeFiles: [DOCUMENT_KEY],
+					},
+				},
+			},
+			vscode.ConfigurationTarget.Workspace
+		);
+		expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
+	});
+
+	it('drops the exclusion when a previously-excluded pattern profile is re-checked', async () => {
+		useSettings({
+			profiles: {
+				'core': {
+					name: 'Core',
+					shapes: ['workspace:///shapes/core.ttl'],
+					includeFiles: ['**/*'],
+					excludeFiles: [DOCUMENT_KEY],
+				},
+			},
+		});
+		// The document is excluded, so no profile currently matches it.
+		mockValidationService.getDocumentValidationState.mockReturnValue({
+			mode: 'none',
+			profileNames: [],
+			effectiveShapes: [],
+			matchedPaths: [],
+		});
+
+		const quickPick = createQuickPickMock((qp, handlers) => {
+			expect(qp.selectedItems).toEqual([]);
+
+			qp.selectedItems = qp.items;
+			handlers.accept?.();
+		});
+
+		(vscode.window as any).createQuickPick = vi.fn(() => quickPick);
+
+		await manageShaclShapes.handler();
+
+		expect(mockConfigUpdate).toHaveBeenCalledWith(
+			'validation',
+			{
+				profiles: {
+					'core': {
+						name: 'Core',
+						shapes: ['workspace:///shapes/core.ttl'],
+						includeFiles: ['**/*'],
+					},
+				},
+			},
+			vscode.ConfigurationTarget.Workspace
+		);
+		expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
 	});
 
 	it('does not write when the selection matches the applied profiles', async () => {
 		useSettings({
 			profiles: {
-				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], paths: ['**/*'] },
+				'core': { name: 'Core', shapes: ['workspace:///shapes/core.ttl'], includeFiles: ['**/*'] },
 			},
 		});
 		mockValidationService.getDocumentValidationState.mockReturnValue({
@@ -465,7 +524,7 @@ describe('manageShaclShapes', () => {
 
 	it('marks broken profiles with a warning in the description', async () => {
 		useSettings({
-			profiles: { 'core': { name: 'Core', shapes: ['workspace:///shapes/missing.ttl'], paths: ['other/*'] } },
+			profiles: { 'core': { name: 'Core', shapes: ['workspace:///shapes/missing.ttl'], includeFiles: ['other/*'] } },
 		});
 		mockValidationService.checkShaclProfiles.mockResolvedValue({
 			profiles: { 'core': ['workspace:///shapes/missing.ttl'] },
@@ -488,7 +547,7 @@ describe('manageShaclShapes', () => {
 
 	it('opens the validation profiles settings when the manage-profiles button is triggered', async () => {
 		useSettings({
-			profiles: { 'core': { shapes: [], paths: ['other/*'] } },
+			profiles: { 'core': { shapes: [], includeFiles: ['other/*'] } },
 		});
 
 		const quickPick = createQuickPickMock((qp, handlers) => {
@@ -506,7 +565,7 @@ describe('manageShaclShapes', () => {
 
 	it('switches from the profile picker to the file picker and back', async () => {
 		useSettings({
-			profiles: { 'core': { shapes: ['workspace:///shapes/core.ttl'], paths: ['other/*'] } },
+			profiles: { 'core': { shapes: ['workspace:///shapes/core.ttl'], includeFiles: ['other/*'] } },
 		});
 
 		const seenTitles: string[] = [];

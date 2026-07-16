@@ -122,4 +122,25 @@ describe('resolveFormattingIndent', () => {
 
 		expect(resolveFormattingIndent(document, { tabSize: 4, insertSpaces: true })).toBe('\t');
 	});
+
+	it('fills an unset insertSpaces from its default (not detection) when tabSize is explicit', () => {
+		// The user set tabSize=4 (spaces) but never touched insertSpaces; the file body
+		// happens to use tabs, so detectIndentation reports insertSpaces=false. The
+		// configured tab size must still win, yielding four spaces rather than a tab.
+		driveEditorConfig({
+			tabSize: { key: 'tabSize', defaultValue: 2, globalValue: 4 },
+			insertSpaces: { key: 'insertSpaces', defaultValue: true },
+		});
+
+		expect(resolveFormattingIndent(document, { tabSize: 8, insertSpaces: false })).toBe('    ');
+	});
+
+	it('fills an unset tabSize from its default when insertSpaces is explicit', () => {
+		driveEditorConfig({
+			tabSize: { key: 'tabSize', defaultValue: 4 },
+			insertSpaces: { key: 'insertSpaces', defaultValue: true, globalValue: true },
+		});
+
+		expect(resolveFormattingIndent(document, { tabSize: 2, insertSpaces: false })).toBe('    ');
+	});
 });

@@ -9,6 +9,19 @@ import { ExecuteCommandMessage } from '@src/views/webviews/webview-messaging';
  */
 export function TemplatePreview({ language, target, value, muted, readOnly, onReset }: TemplatePreviewProps) {
 	const open = useOpenTemplateEditor(language, target);
+	const messaging = useWebviewMessaging<ExecuteCommandMessage>();
+
+	const openDocs = (e: React.MouseEvent | React.KeyboardEvent) => {
+		// Anchor clicks do not navigate inside the webview — open the docs via
+		// the command host, and keep the click from activating the cell.
+		e.preventDefault();
+		e.stopPropagation();
+		messaging?.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.command.openInBrowser',
+			args: ['https://triplate.dev'],
+		});
+	};
 
 	const activate = () => {
 		if (!readOnly) {
@@ -40,6 +53,20 @@ export function TemplatePreview({ language, target, value, muted, readOnly, onRe
 				}
 			}}
 		>
+			<span className="template-preview-docs">
+				Learn more:{' '}
+				<a
+					href="https://triplate.dev"
+					onClick={openDocs}
+					onKeyDown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') {
+							openDocs(e);
+						}
+					}}
+				>
+					triplate.dev
+				</a>
+			</span>
 			<pre className="template-preview-code">{value}</pre>
 			{!readOnly && (
 				<span className="template-preview-hint">

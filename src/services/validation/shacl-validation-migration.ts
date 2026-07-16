@@ -131,7 +131,7 @@ export function migrateLegacyShaclValidationConfig(legacy: LegacyShaclValidation
 		profiles[LEGACY_DEFAULT_PROFILE_ID] = {
 			name: LEGACY_DEFAULT_PROFILE_NAME,
 			shapes: defaults,
-			paths: [LEGACY_DEFAULT_PATHS_KEY],
+			includeFiles: [LEGACY_DEFAULT_PATHS_KEY],
 		};
 	}
 
@@ -155,20 +155,20 @@ export function migrateLegacyShaclValidationConfig(legacy: LegacyShaclValidation
 			: includeShapes;
 
 		if (defaults.length > 0 && (!includeDefaults || excludeShapes.length > 0)) {
-			defaultExclusions.push(`!${documentKey}`);
+			defaultExclusions.push(documentKey);
 		}
 
 		if (shapes.length > 0) {
 			const id = generateProfileId(documentKey, Object.keys(profiles));
 
-			profiles[id] = { name: documentKey, shapes, paths: [documentKey] };
+			profiles[id] = { name: documentKey, shapes, includeFiles: [documentKey] };
 		}
 	}
 
 	if (defaultExclusions.length > 0) {
 		const defaultProfile = profiles[LEGACY_DEFAULT_PROFILE_ID];
 
-		defaultProfile.paths = [...(defaultProfile.paths ?? []), ...defaultExclusions];
+		defaultProfile.excludeFiles = [...(defaultProfile.excludeFiles ?? []), ...defaultExclusions];
 	}
 
 	return Object.keys(profiles).length > 0 ? { profiles } : {};

@@ -7,6 +7,7 @@ import { SettingsSectionProps } from '../../settings-section-props';
 import { VSCodeSettings } from '../../settings-types';
 import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { useSettingRowProps } from '../../hooks/use-setting-row-props';
+import { useBulkScopeMenuItems } from '../../hooks/use-bulk-scope-menu-items';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
@@ -66,9 +67,6 @@ export function EditorFormattingSection({
 		}
 	};
 
-	const mentorKeys = editorFormattingSection.keys as readonly string[];
-	const nonDefaultKeys = mentorKeys.filter(k => settings[k]?.scope !== 'default');
-
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 	const vscodeRowProps = useSettingRowProps(vscodeSource, vscodeSlice, setScope);
 
@@ -77,14 +75,14 @@ export function EditorFormattingSection({
 		(element) => updateVscodeAll('wordWrap', element.value)
 	);
 
-	const copyMenuItems = nonDefaultKeys.length > 0 ? [
-		{ label: 'Copy all to User', onClick: () => onBulkScope(MENTOR_SETTINGS_SOURCE, nonDefaultKeys, 'user') },
-		{ label: 'Copy all to Workspace', onClick: () => onBulkScope(MENTOR_SETTINGS_SOURCE, nonDefaultKeys, 'workspace') },
-	] : [];
+	// "Copy all to User / Workspace" lives on the section title (as in the other settings
+	// sections), covering the Mentor formatting options; the per-row scope dropdowns handle
+	// the built-in editor settings.
+	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, [...editorFormattingSection.keys], settings, onBulkScope);
 
 	return (
 		<div>
-			<SectionHeader title={editorFormattingSection.label} variant="title" />
+			<SectionHeader title={editorFormattingSection.label} menuItems={menuItems} variant="title" />
 			<SettingRow
 				{...vscodeRowProps('formatOnSave')}
 				label="Format on save"
@@ -140,7 +138,6 @@ export function EditorFormattingSection({
 				<SectionHeader
 					title="Common"
 					description="Shared formatting options applied to all RDF and SPARQL documents. Each can be overridden per language in settings.json."
-					menuItems={copyMenuItems}
 					variant="subsection"
 				/>
 				<SettingRow {...rowProps('formatting.common.maxLineWidth')}>

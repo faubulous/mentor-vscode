@@ -156,6 +156,21 @@ export function ValidationShapeGraphList({ selected, candidates, missingShapes, 
 		<div className="validation-shape-list-editor">
 			<div className="validation-paths-header">
 				<vscode-label>Included Shapes</vscode-label>
+				{!readOnly && (
+					<div className="validation-shape-edit-toggle">
+						{effectiveMode === 'all' ? (
+							<vscode-toolbar-button className="primary" onClick={() => setMode('assigned')}>
+								<span className="codicon codicon-check" />
+								<span className="label">Done</span>
+							</vscode-toolbar-button>
+						) : (
+							<vscode-toolbar-button className="primary" onClick={() => setMode('all')}>
+								<span className="codicon codicon-edit" />
+								<span className="label">Edit</span>
+							</vscode-toolbar-button>
+						)}
+					</div>
+				)}
 			</div>
 			<div className="validation-shape-toolbar">
 				<div className="search-field-wrapper">
@@ -178,17 +193,6 @@ export function ValidationShapeGraphList({ selected, candidates, missingShapes, 
 						)}
 					</vscode-textfield>
 				</div>
-				{!readOnly && (effectiveMode === 'all' ? (
-					<vscode-toolbar-button className="primary" onClick={() => setMode('assigned')}>
-						<span className="codicon codicon-check" />
-						<span className="label">Done</span>
-					</vscode-toolbar-button>
-				) : (
-					<vscode-toolbar-button className="primary" onClick={() => setMode('all')}>
-						<span className="codicon codicon-edit" />
-						<span className="label">Edit</span>
-					</vscode-toolbar-button>
-				))}
 			</div>
 			{body}
 		</div>

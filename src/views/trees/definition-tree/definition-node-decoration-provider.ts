@@ -7,13 +7,17 @@ import { IDocumentContextService } from '@src/services/document';
 import { getConfig } from '@src/utilities/vscode/config';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { DefinitionNodeProvider } from './definition-node-provider';
+import { DefinitionTreeNode } from './definition-tree-node';
 
 /**
- * Maximum number of violated focus nodes for which ancestor walks are performed.
- * Limits the cost of tree traversal when there are many violations.
- * Direct leaf decorations are unaffected by this cap.
+ * SHACL severity precedence used when a node aggregates several results:
+ * `sh:Violation` > `sh:Warning` > `sh:Info`.
  */
-const MAX_DECORATED_VIOLATIONS = 100;
+const SEVERITY_RANK: Record<string, number> = {
+	[SH.Violation]: 3,
+	[SH.Warning]: 2,
+	[SH.Info]: 1,
+};
 
 /**
  * Indicates the where missing language tags should be decorated.
@@ -57,8 +61,18 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	 * nodes. Built by walking the `.parent` chain of each violated tree node. Only `mentor:`
 	 * URIs are recorded — real-IRI nodes that appear in multiple branches use synthetic
 	 * `mentor:properties:<iri>` / `mentor:individuals:<iri>` URIs via `getResourceUri()`.
+	 *
+	 * Built lazily (see {@link _ensureAncestorSeverity}) the first time a container decoration is
+	 * requested after a change, so the tree walk runs only when the tree is actually rendered and
+	 * only once per validation — never eagerly on every `onDidValidate`.
 	 */
 	private _ancestorSeverity = new Map<string, string>();
+
+	/**
+	 * Whether {@link _ancestorSeverity} needs rebuilding from the current {@link _shaclViolations}.
+	 * Set when validations change; cleared once the (lazy) rebuild runs.
+	 */
+	private _ancestorSeverityDirty = true;
 
 	private readonly _onDidChangeFileDecorations = new vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>();
 
@@ -102,26 +116,16 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 				this._labelPredicates = new Set();
 			}
 
-			// Reload SHACL violations for the new active document and refresh decorations.
-			this._updateShaclViolations();
-			this._onDidChangeFileDecorations.fire(undefined);
+			// Reload the (cheap) leaf violations for the new active document and invalidate
+			// the lazily-built ancestor aggregation; VS Code re-requests visible items.
+			this._reloadViolations();
 		});
 
 		this._validationService.onDidValidate(() => {
-			// Reload violations for the currently active document and refresh decorations.
-			this._updateShaclViolations();
-
-			// Fire for violated URIs and ancestor URIs so VS Code proactively caches
-			// their decorations, then fire undefined to refresh all visible items.
-			const violatedUris = [...this._shaclViolations.keys()].map(iri => vscode.Uri.parse(iri));
-			const ancestorUris = [...this._ancestorSeverity.keys()].map(uri => vscode.Uri.parse(uri));
-			const allUris = [...violatedUris, ...ancestorUris];
-
-			if (allUris.length > 0) {
-				this._onDidChangeFileDecorations.fire(allUris);
-			}
-
-			this._onDidChangeFileDecorations.fire(undefined);
+			// Rebuild only the cheap leaf map and mark the ancestor aggregation dirty. The
+			// expensive tree walk is deferred to _ensureAncestorSeverity, which runs lazily
+			// when a container decoration is actually requested (i.e. the tree is visible).
+			this._reloadViolations();
 		});
 
 		this._settings.onDidChange("view.activeLanguage", () => {
@@ -131,96 +135,107 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	}
 
 	/**
-	 * Rebuild the violations map from the last validation result for the currently active document.
+	 * Rebuild the cheap per-focus-node leaf severity map for the active document and invalidate
+	 * the lazily-built ancestor aggregation, then ask VS Code to re-request decorations for all
+	 * visible items. Cheap enough to run on every validation / context change.
 	 */
-	private _updateShaclViolations(): void {
+	private _reloadViolations(): void {
 		this._shaclViolations.clear();
 		this._ancestorSeverity.clear();
+		this._ancestorSeverityDirty = true;
 
 		const activeContext = this._contextService.activeContext;
 		const documentUri = activeContext?.uri;
+		const last = documentUri ? this._validationService.getLastResult(documentUri) : undefined;
 
-		if (!documentUri) {
-			return;
-		}
+		if (last) {
+			// Only include violations whose focus node is a subject in the active document.
+			// This prevents false-positive decorations for nodes that are merely referenced
+			// (e.g. as sh:path objects) but have violations originating from imported shapes.
+			const subjects = activeContext?.subjects;
 
-		const last = this._validationService.getLastResult(documentUri);
+			for (const entry of last.results) {
+				const iri = entry.focusNode;
 
-		if (!last) {
-			return;
-		}
-
-		// Severity precedence: Violation > Warning > Info
-		const severityRank: Record<string, number> = {
-			[SH.Violation]: 3,
-			[SH.Warning]: 2,
-			[SH.Info]: 1,
-		};
-
-		// Step 1: Build per-focus-node severity map.
-		// Only include violations whose focus node is a subject in the active document.
-		// This prevents false-positive decorations for nodes that are merely referenced
-		// (e.g. as sh:path objects) but have violations originating from imported shapes.
-		const subjects = activeContext?.subjects;
-
-		for (const entry of last.results) {
-			const iri = entry.focusNode;
-
-			if (subjects && !subjects[iri]) {
-				continue;
-			}
-
-			const newRank = severityRank[entry.severity] ?? 0;
-			const existing = this._shaclViolations.get(iri);
-			const existingRank = existing ? (severityRank[existing] ?? 0) : 0;
-
-			if (newRank > existingRank) {
-				this._shaclViolations.set(iri, entry.severity);
-			}
-		}
-
-		// Step 2: Walk ancestors for each violated node (capped for performance).
-		// Only record severity for `mentor:` container nodes — intermediate nodes
-		// with real IRIs are skipped because FileDecorationProvider decorates by URI,
-		// and the same IRI may appear in multiple tree branches (e.g. a property that
-		// is both an ancestor under shapes and a leaf under properties).
-		if (this._nodeProvider) {
-			// Sort by severity so the most important violations are processed first
-			// when we hit the cap.
-			const entries = [...this._shaclViolations.entries()]
-				.sort((a, b) => (severityRank[b[1]] ?? 0) - (severityRank[a[1]] ?? 0));
-
-			const limit = Math.min(entries.length, MAX_DECORATED_VIOLATIONS);
-
-			for (let i = 0; i < limit; i++) {
-				const [iri, severity] = entries[i];
-				const treeNode = this._nodeProvider.getNodeForUri(iri);
-
-				if (!treeNode) {
+				if (subjects && !subjects[iri]) {
 					continue;
 				}
 
-				const rank = severityRank[severity] ?? 0;
-				let ancestor = treeNode.parent;
+				const newRank = SEVERITY_RANK[entry.severity] ?? 0;
+				const existing = this._shaclViolations.get(iri);
+				const existingRank = existing ? (SEVERITY_RANK[existing] ?? 0) : 0;
 
-				while (ancestor) {
-					// Use the node's resourceUri as the decoration key. Intermediate grouping
-					// nodes (e.g. PropertyClassNode, IndividualClassNode) override getResourceUri()
-					// to return a synthetic mentor: URI so they can be safely decorated without
-					// causing false positives on other tree branches that share the same real IRI.
-					const resourceUri = ancestor.getResourceUri()?.toString();
-
-					if (resourceUri?.startsWith('mentor:')) {
-						const existingAncestor = this._ancestorSeverity.get(resourceUri);
-						const existingAncestorRank = existingAncestor ? (severityRank[existingAncestor] ?? 0) : 0;
-
-						if (rank > existingAncestorRank) {
-							this._ancestorSeverity.set(resourceUri, severity);
-						}
-					}
-
-					ancestor = ancestor.parent;
+				if (newRank > existingRank) {
+					this._shaclViolations.set(iri, entry.severity);
 				}
+			}
+		}
+
+		this._onDidChangeFileDecorations.fire(undefined);
+	}
+
+	/**
+	 * Lazily build {@link _ancestorSeverity} from the current leaf violations, once per change.
+	 *
+	 * Called from {@link _getShaclSeverity} only when a container (`mentor:`) decoration is
+	 * actually requested — i.e. the tree is being rendered — so the tree walk never runs for a
+	 * hidden panel and never runs per file during a batch. For every violated leaf (uncapped) we
+	 * resolve its tree node against a single, reused root list and walk its `.parent` chain,
+	 * recording the worst severity on each `mentor:` ancestor URI. Fetching the roots once avoids
+	 * the per-node cold rebuild that `getNodeForUri` would otherwise incur.
+	 */
+	private _ensureAncestorSeverity(): void {
+		if (!this._ancestorSeverityDirty) {
+			return;
+		}
+
+		this._ancestorSeverityDirty = false;
+		this._ancestorSeverity.clear();
+
+		if (!this._nodeProvider || this._shaclViolations.size === 0) {
+			return;
+		}
+
+		// Resolve the root nodes once and reuse them for every violation lookup.
+		const roots = this._nodeProvider.getChildren(undefined) ?? [];
+
+		for (const [iri, severity] of this._shaclViolations) {
+			let treeNode: DefinitionTreeNode | undefined;
+
+			for (const root of roots) {
+				treeNode = root.resolveNodeForUri(iri);
+
+				if (treeNode) {
+					break;
+				}
+			}
+
+			if (!treeNode) {
+				continue;
+			}
+
+			const rank = SEVERITY_RANK[severity] ?? 0;
+
+			// Only record severity for `mentor:` container nodes — intermediate nodes with real
+			// IRIs are skipped because FileDecorationProvider decorates by URI, and the same IRI
+			// may appear in multiple tree branches (e.g. a property that is both an ancestor under
+			// shapes and a leaf under properties). Grouping nodes override getResourceUri() to
+			// return a synthetic mentor: URI so they can be decorated without cross-branch bleed.
+			let ancestor = treeNode.parent;
+
+			while (ancestor) {
+				const resourceUri = ancestor.getResourceUri()?.toString();
+
+				if (resourceUri?.startsWith('mentor:')) {
+					const existingAncestor = this._ancestorSeverity.get(resourceUri);
+					const existingAncestorRank = existingAncestor ? (SEVERITY_RANK[existingAncestor] ?? 0) : 0;
+
+					if (rank > existingAncestorRank) {
+						this._ancestorSeverity.set(resourceUri, severity);
+					}
+				}
+
+				ancestor = ancestor.parent;
 			}
 		}
 	}
@@ -334,9 +349,11 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			return undefined;
 		}
 
-		// Container nodes (mentor: scheme) and intermediate ancestor nodes are decorated
-		// via the ancestor severity map, built by walking .parent from each violated node.
+		// Container nodes (mentor: scheme) and intermediate ancestor nodes are decorated via the
+		// ancestor severity map, built lazily on first request (only when the tree is rendered).
 		if (uri.scheme === 'mentor') {
+			this._ensureAncestorSeverity();
+
 			return this._ancestorSeverity.get(uri.toString());
 		}
 

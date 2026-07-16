@@ -11,6 +11,7 @@ const { mockQueryService, mockConnectionService } = vi.hoisted(() => ({
 		getInferenceEnabledForDocument: vi.fn(() => false),
 		setQuerySourceForDocument: vi.fn(async () => undefined),
 		getQueryTemplate: vi.fn((_conn: any, _kind: string) => undefined as string | undefined),
+		getConnection: vi.fn((_id: string) => undefined as { id: string } | undefined),
 	},
 }));
 
@@ -55,6 +56,7 @@ beforeEach(() => {
 	(vscode.window as any).showTextDocument = vi.fn(async () => undefined);
 
 	mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'workspace' });
+	mockConnectionService.getConnection.mockReturnValue(undefined);
 	mockQueryService.executeQueryOnConnection.mockResolvedValue({ type: 'quads', data: '# result' });
 });
 
@@ -93,6 +95,44 @@ describe('executeDescribeQuery', () => {
 			expect.stringContaining('urn:ex#res'),
 			connection,
 			true
+		);
+	});
+
+	it('should reuse the connection the query ran against when a connectionId is provided', async () => {
+		mockDescribeTemplate();
+		const queryConnection = { id: 'dbpedia' };
+		mockConnectionService.getConnection.mockReturnValue(queryConnection);
+		// The source document is configured for the workspace store, but the results came
+		// from dbpedia; the describe must follow the connection the query actually used.
+		mockConnectionService.getConnectionForDocument.mockReturnValue({ id: 'workspace' });
+
+		const uriStr = 'file:///test.sparql';
+		const fakeDoc = { uri: { toString: () => uriStr } };
+		(vscode.workspace as any).textDocuments = [fakeDoc];
+
+		await executeDescribeQuery.handler(vscode.Uri.parse(uriStr), 'urn:ex#res', undefined, 'dbpedia');
+
+		expect(mockConnectionService.getConnection).toHaveBeenCalledWith('dbpedia');
+		expect(mockConnectionService.getConnectionForDocument).not.toHaveBeenCalled();
+		expect(mockQueryService.executeQueryOnConnection).toHaveBeenCalledWith(
+			expect.stringContaining('urn:ex#res'),
+			queryConnection,
+			expect.anything()
+		);
+	});
+
+	it('should describe against the connectionId even when the source document is not open', async () => {
+		mockDescribeTemplate();
+		const queryConnection = { id: 'dbpedia' };
+		mockConnectionService.getConnection.mockReturnValue(queryConnection);
+		(vscode.workspace as any).textDocuments = [];
+
+		await executeDescribeQuery.handler('file:///not-open.sparql', 'urn:ex#res', undefined, 'dbpedia');
+
+		expect(mockQueryService.executeQueryOnConnection).toHaveBeenCalledWith(
+			expect.stringContaining('urn:ex#res'),
+			queryConnection,
+			undefined
 		);
 	});
 

@@ -13,11 +13,11 @@ import {
 	ShaclValidationSettings,
 	findDocumentProfileId,
 	generateProfileId,
-	isExclusionEntry,
 	isGlobPattern,
 	matchesPathKey,
 	matchesProfilePaths,
 	toDocumentPatternKey,
+	toPathEntries,
 	toUniqueStringArray,
 } from '@src/services/validation/shacl-validation-configuration';
 
@@ -300,9 +300,17 @@ class ManageShaclShapesCommand {
 
 	/**
 	 * Diffs the accepted profile selection against the currently matching
-	 * profiles: checking a profile adds the document's literal path to its
-	 * paths, unchecking one removes its literal entries. Pattern matches cannot
-	 * be changed per file. Writes go to whichever scope each profile is stored in.
+	 * profiles and translates it into per-profile `includeFiles`/`excludeFiles`
+	 * edits:
+	 *
+	 * - Checking a profile the document does not yet match adds the document's
+	 *   literal path to its `includeFiles`; if it was only unmatched because the
+	 *   document sat in its `excludeFiles`, the exclusion is dropped instead.
+	 * - Unchecking a profile removes the document's literal `includeFiles` entry;
+	 *   if a path pattern still matches afterwards, the document's literal path is
+	 *   added to `excludeFiles` so the profile stops applying to this file.
+	 *
+	 * Writes go to whichever scope each profile is stored in.
 	 */
 	private async _applyProfileSelection(
 		settings: ShaclValidationSettings,
@@ -313,10 +321,13 @@ class ManageShaclShapesCommand {
 		const selected = new Set(profileNames);
 		const documentProfileId = findDocumentProfileId(settings, this._key);
 
-		const added: Record<ScopeKey, string[]> = { user: [], workspace: [] };
-		const removed: Record<ScopeKey, string[]> = { user: [], workspace: [] };
+		const addInclude: Record<ScopeKey, string[]> = { user: [], workspace: [] };
+		const removeInclude: Record<ScopeKey, string[]> = { user: [], workspace: [] };
+		const addExclude: Record<ScopeKey, string[]> = { user: [], workspace: [] };
+		const removeExclude: Record<ScopeKey, string[]> = { user: [], workspace: [] };
 		const blocked: string[] = [];
 
+		// Newly-checked profiles: those selected but not currently matching.
 		for (const id of profileNames) {
 			if (matching.has(id)) {
 				continue;
@@ -324,57 +335,101 @@ class ManageShaclShapesCommand {
 
 			const found = this._settingsWriter.findProfile(id);
 
-			if (found) {
-				added[found.scope].push(id);
+			if (!found) {
+				continue;
+			}
+
+			const excludesDocument = (found.profile.excludeFiles ?? []).some(entry => this._isLiteralDocumentEntry(entry));
+
+			if (!excludesDocument) {
+				addInclude[found.scope].push(id);
+				continue;
+			}
+
+			// The document is only unmatched because it sits in the exclude list —
+			// re-checking lifts the exclusion.
+			removeExclude[found.scope].push(id);
+
+			// If nothing else would match once the exclusion is gone, the profile
+			// needs the document's literal path in its includeFiles as well.
+			const remainingExcludes = (found.profile.excludeFiles ?? []).filter(entry => !this._isLiteralDocumentEntry(entry));
+
+			if (!matchesProfilePaths(toPathEntries(found.profile.includeFiles, remainingExcludes), this._location, this._rdfExtensions)) {
+				addInclude[found.scope].push(id);
 			}
 		}
 
+		// Newly-unchecked profiles: those currently matching but no longer selected.
 		for (const id of state.profileNames) {
 			if (selected.has(id)) {
 				continue;
 			}
 
 			const found = this._settingsWriter.findProfile(id);
-			const literalEntries = (found?.profile.paths ?? []).filter(entry => this._isLiteralDocumentEntry(entry));
 
-			if (!found || literalEntries.length === 0) {
-				// Applies via a pattern — not changeable per file.
+			if (!found) {
 				blocked.push(id);
 				continue;
 			}
 
-			removed[found.scope].push(id);
+			const literalEntries = (found.profile.includeFiles ?? []).filter(entry => this._isLiteralDocumentEntry(entry));
 
-			// Removing the literal entries may not stop a pattern from matching.
-			const remaining = (found.profile.paths ?? []).filter(entry => !this._isLiteralDocumentEntry(entry));
+			if (literalEntries.length > 0) {
+				removeInclude[found.scope].push(id);
+			}
 
-			if (matchesProfilePaths(remaining, this._location, this._rdfExtensions)) {
-				blocked.push(id);
+			// Removing the literal entries may not stop a pattern from matching; in
+			// that case exclude the document explicitly so the profile no longer
+			// applies to this file.
+			const remaining = (found.profile.includeFiles ?? []).filter(entry => !this._isLiteralDocumentEntry(entry));
+
+			if (matchesProfilePaths(toPathEntries(remaining, found.profile.excludeFiles), this._location, this._rdfExtensions)) {
+				addExclude[found.scope].push(id);
 			}
 		}
 
 		for (const scope of ['workspace', 'user'] as ScopeKey[]) {
-			if (added[scope].length === 0 && removed[scope].length === 0) {
+			if (addInclude[scope].length === 0 && removeInclude[scope].length === 0
+				&& addExclude[scope].length === 0 && removeExclude[scope].length === 0) {
 				continue;
 			}
 
 			await this._settingsWriter.mutateProfiles(scope, profiles => {
-				for (const id of added[scope]) {
-					const profile = profiles[id];
-
-					if (profile) {
-						profiles[id] = { ...profile, paths: [...(profile.paths ?? []), this._key] };
-					}
-				}
-
-				for (const id of removed[scope]) {
+				for (const id of removeExclude[scope]) {
 					const profile = profiles[id];
 
 					if (!profile) {
 						continue;
 					}
 
-					const kept = (profile.paths ?? []).filter(entry => !this._isLiteralDocumentEntry(entry));
+					const kept = (profile.excludeFiles ?? []).filter(entry => !this._isLiteralDocumentEntry(entry));
+					const next = { ...profile };
+
+					if (kept.length > 0) {
+						next.excludeFiles = kept;
+					} else {
+						delete next.excludeFiles;
+					}
+
+					profiles[id] = next;
+				}
+
+				for (const id of addInclude[scope]) {
+					const profile = profiles[id];
+
+					if (profile) {
+						profiles[id] = { ...profile, includeFiles: [...(profile.includeFiles ?? []), this._key] };
+					}
+				}
+
+				for (const id of removeInclude[scope]) {
+					const profile = profiles[id];
+
+					if (!profile) {
+						continue;
+					}
+
+					const kept = (profile.includeFiles ?? []).filter(entry => !this._isLiteralDocumentEntry(entry));
 
 					if (kept.length === 0 && id === documentProfileId) {
 						// The document's auto-created profile exists only to bind
@@ -384,12 +439,23 @@ class ManageShaclShapesCommand {
 						const next = { ...profile };
 
 						if (kept.length > 0) {
-							next.paths = kept;
+							next.includeFiles = kept;
 						} else {
-							delete next.paths;
+							delete next.includeFiles;
 						}
 
 						profiles[id] = next;
+					}
+				}
+
+				for (const id of addExclude[scope]) {
+					const profile = profiles[id];
+
+					// A profile removed above (auto-created, now empty) needs no exclusion.
+					if (profile) {
+						const excludeFiles = [...(profile.excludeFiles ?? []), this._key];
+
+						profiles[id] = { ...profile, excludeFiles };
 					}
 				}
 			});
@@ -399,8 +465,8 @@ class ManageShaclShapesCommand {
 			const names = blocked.map(id => settings.profiles?.[id]?.name ?? id);
 
 			vscode.window.showInformationMessage(
-				`The selection for ${names.map(name => `"${name}"`).join(', ')} could not be fully applied: `
-				+ 'these profiles apply via path patterns. Manage them in the validation settings.'
+				`The selection for ${names.map(name => `"${name}"`).join(', ')} could not be applied. `
+				+ 'Manage these profiles in the validation settings.'
 			);
 		}
 	}
@@ -478,7 +544,7 @@ class ManageShaclShapesCommand {
 					...Object.keys(profiles),
 				]);
 
-				profiles[id] = { name: this._key, shapes, paths: [this._key] };
+				profiles[id] = { name: this._key, shapes, includeFiles: [this._key] };
 			}
 		});
 	}
@@ -488,8 +554,7 @@ class ManageShaclShapesCommand {
 	 * managed document, i.e. one the per-file toggle may add or remove.
 	 */
 	private _isLiteralDocumentEntry(entry: string): boolean {
-		return !isExclusionEntry(entry)
-			&& !isGlobPattern(entry)
+		return !isGlobPattern(entry)
 			&& matchesPathKey(entry, this._location, this._rdfExtensions);
 	}
 

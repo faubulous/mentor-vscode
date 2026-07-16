@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TurtleFormatter } from '@faubulous/mentor-rdf-serializers';
-import { resolveFormattingConfig } from '@src/utilities/vscode/config';
+import { resolveFormattingConfig, resolveFormattingIndent } from '@src/utilities/vscode/config';
 
 /**
  * Provides formatting edits for Turtle documents using the TurtleFormatter.
@@ -18,7 +18,7 @@ export class TurtleCodeFormattingProvider implements vscode.DocumentFormattingEd
     ): vscode.TextEdit[] {
         const text = document.getText();
         const result = this._formatter.formatFromText(text, {
-            indent: options.insertSpaces ? ' '.repeat(options.tabSize) : '\t',
+            indent: resolveFormattingIndent(document, options),
             prettyPrint: true,
             maxLineWidth: resolveFormattingConfig('turtle', 'maxLineWidth', 120),
             spaceBeforePunctuation: resolveFormattingConfig('turtle', 'spaceBeforePunctuation', true),

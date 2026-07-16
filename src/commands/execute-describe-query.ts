@@ -2,25 +2,33 @@ import * as vscode from 'vscode';
 import { render } from 'triplate';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { IDocumentConnectionService, ISparqlQueryService, ITripleStoreConfigService } from '@src/languages/sparql/services';
+import { IDocumentConnectionService, ISparqlConnectionRegistry, ISparqlQueryService, ITripleStoreConfigService } from '@src/languages/sparql/services';
 
 export const executeDescribeQuery = {
 	id: 'mentor.command.executeDescribeQuery',
-	handler: async (documentUri: vscode.Uri | string, resourceIri: string, graphIris?: string[]) => {
-		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === documentUri.toString());
-
-		if (!document) {
-			console.warn(`Unable to retrieve document for URI: ${documentUri.toString()}`);
-			return;
-		}
+	handler: async (documentUri: vscode.Uri | string, resourceIri: string, graphIris?: string[], connectionId?: string) => {
+		const uri = typeof documentUri === 'string' ? vscode.Uri.parse(documentUri) : documentUri;
+		const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
 
 		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 		const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 
-		// Resolve the connection selected for this document (or notebook cell); falls back to the
+		// Reuse the exact connection the originating query ran against when it is known
+		// (the results view forwards it for every binding-table describe). This keeps the
+		// describe on the same store even for background/generated queries whose source
+		// document targets a different connection. Otherwise fall back to the connection
+		// configured for the source document (or notebook cell), defaulting to the
 		// workspace store when none is set.
-		const connection = documentConnectionService.getConnectionForDocument(document.uri);
+		const connection = (connectionId ? connectionRegistry.getConnection(connectionId) : undefined)
+			?? (document ? documentConnectionService.getConnectionForDocument(document.uri) : undefined);
+
+		if (!connection) {
+			console.warn(`Unable to resolve a connection for describe query: ${uri.toString()}`);
+			return;
+		}
+
 		const template = storeConfigService.getQueryTemplate(connection, 'describe');
 
 		if (!template) {
@@ -29,7 +37,9 @@ export const executeDescribeQuery = {
 		}
 
 		const query = render(template, { resourceIri, graphIris: graphIris ?? [] });
-		const inferenceEnabled = documentConnectionService.getInferenceEnabledForDocument(document.uri);
+		const inferenceEnabled = document
+			? documentConnectionService.getInferenceEnabledForDocument(document.uri)
+			: undefined;
 
 		// Run the query entirely in the background against the selected connection and only reveal
 		// the resulting triples as a Turtle document. The SPARQL results panel is intentionally not

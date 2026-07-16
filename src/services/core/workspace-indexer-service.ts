@@ -139,6 +139,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 					await this._runIndexingPass(passReindex);
 				}
+			} catch (e) {
+				this._statusLog.error(`Error: ${e}`);
 			} finally {
 				this._activeRun = undefined;
 			}
@@ -259,7 +261,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			try {
 				await this._indexWorkspaceFile(fileUri, run.reindex);
 
-				// this._statusLog.info(`Loaded ${fileUri.toString()}`);
+				this._statusLog.info(`Indexed ${fileUri.toString()}`);
 			} catch {
 				errorCount++;
 			}

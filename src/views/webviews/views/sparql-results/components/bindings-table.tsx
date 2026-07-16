@@ -2,10 +2,10 @@ import { useRef } from 'react';
 import { Quad, Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { NTriplesSerializer } from '@faubulous/mentor-rdf-serializers';
+import { extractFromClauseGraphUris } from '@faubulous/mentor-rdf-parsers';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { useStylesheet } from '@src/views/webviews/hooks';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
-import { getDescribeQueryCommandArgs } from '../helpers/describe-query-args';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
 import stylesheet from './bindings-table.css';
 
@@ -86,12 +86,20 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 	};
 
 	const handleDescribeNamedNode = (node: Term) => {
-		const value = node.value;
+		// Forward the graph URIs from the query's FROM clauses (when any) and the exact
+		// connection the query ran against, so the describe reuses that connection rather
+		// than re-resolving it from the source document.
+		const graphUris = extractFromClauseGraphUris(queryContext.query);
 
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.executeDescribeQuery',
-			args: getDescribeQueryCommandArgs(queryContext.documentIri ?? '', value, queryContext.query)
+			args: [
+				queryContext.documentIri ?? '',
+				node.value,
+				graphUris.length > 0 ? graphUris : undefined,
+				queryContext.connectionId,
+			]
 		});
 	};
 
@@ -181,14 +189,11 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 	const renderNodeActions = (binding: Term, isGraph: boolean): React.ReactNode => {
 		switch (binding.termType) {
 			case 'NamedNode':
+				// The copy button is rendered last so it stays the right-most action in every
+				// cell, keeping it aligned with the copy button in the column header.
 				if (isGraph) {
 					return (
 						<>
-							<vscode-toolbar-button
-								title="Copy Cell Value"
-								onClick={() => handleCopyCellClick(binding)}>
-								<span className="codicon codicon-copy"></span>
-							</vscode-toolbar-button>
 							<vscode-toolbar-button
 								title="Download Graph"
 								onClick={() => handleOpenGraph(binding)}>
@@ -199,20 +204,25 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 								onClick={() => handleDeleteGraph(binding)}>
 								<span className="codicon codicon-trash"></span>
 							</vscode-toolbar-button>
+							<vscode-toolbar-button
+								title="Copy Cell Value"
+								onClick={() => handleCopyCellClick(binding)}>
+								<span className="codicon codicon-copy"></span>
+							</vscode-toolbar-button>
 						</>
 					);
 				} else {
 					return (
 						<>
 							<vscode-toolbar-button
-								title="Copy Cell Value"
-								onClick={() => handleCopyCellClick(binding)}>
-								<span className="codicon codicon-copy"></span>
-							</vscode-toolbar-button>
-							<vscode-toolbar-button
 								title="Open in Browser"
 								onClick={() => handleNamedNodeClick(binding)}>
 								<span className="codicon codicon-link-external"></span>
+							</vscode-toolbar-button>
+							<vscode-toolbar-button
+								title="Copy Cell Value"
+								onClick={() => handleCopyCellClick(binding)}>
+								<span className="codicon codicon-copy"></span>
 							</vscode-toolbar-button>
 						</>
 					);

@@ -1,5 +1,4 @@
 import { TripleStoreConfig } from './triple-store-config';
-import { WORKSPACE_STORE } from './workspace-store';
 
 /**
  * The built-in store type presets. They are defined in code, always present, cannot be

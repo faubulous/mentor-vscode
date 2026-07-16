@@ -53,12 +53,13 @@ describe('ShaclValidationProfilesMigration', () => {
 				'default': {
 					name: 'Default',
 					shapes: ['workspace:///shapes/core.ttl'],
-					paths: ['**/*', '!data.ttl'],
+					includeFiles: ['**/*'],
+					excludeFiles: ['data.ttl'],
 				},
 				'data-ttl': {
 					name: 'data.ttl',
 					shapes: ['workspace:///shapes/extra.ttl'],
-					paths: ['data.ttl'],
+					includeFiles: ['data.ttl'],
 				},
 			},
 		});

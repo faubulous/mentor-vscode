@@ -570,8 +570,9 @@ export class CancellationTokenSource {
   private _isCancellationRequested = false;
 
   readonly token = {
-    get isCancellationRequested() { return false; },
+    get isCancellationRequested() { return (this as any)._source._isCancellationRequested; },
     onCancellationRequested: (_handler: any) => ({ dispose: () => {} }),
+    _source: this,
   };
 
   cancel() {

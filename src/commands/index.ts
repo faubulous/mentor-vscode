@@ -1,6 +1,7 @@
 export { reindexWorkspace } from './reindex-workspace';
 export { addActiveEditorToNotebook } from './add-active-editor-to-notebook';
 export { cancelSparqlQueryExecution } from './cancel-sparql-query-execution';
+export { cancelValidation } from './cancel-validation';
 export { clearQueryHistory } from './clear-query-history';
 export { cleanDocument } from './clean-document';
 export {
@@ -79,3 +80,5 @@ export { toggleDocumentInference } from './toggle-document-inference';
 export { toggleSparqlConnectionInference } from './toggle-sparql-connection-inference';
 export { updatePrefixes } from './update-prefixes';
 export { validateDocument } from './validate-document';
+export { validateProfile } from './validate-profile';
+export { validateAllProfiles as validateProfiles } from './validate-all-profiles';
