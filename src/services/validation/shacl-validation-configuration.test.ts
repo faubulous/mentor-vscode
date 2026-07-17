@@ -7,9 +7,7 @@ import {
 	getDocumentValidationState,
 	getMatchingProfiles,
 	getProfileDisplayName,
-	getRdfExtensionGlob,
 	hasBrokenReferences,
-	isGlobPattern,
 	isValidPathKey,
 	matchesPathKey,
 	matchesProfilePaths,
@@ -17,7 +15,6 @@ import {
 	resolveEffectiveShapeGraphs,
 	resolveProfileShapes,
 	toDocumentPatternKey,
-	toUniqueStringArray,
 	ShaclDocumentRename,
 	ShaclValidationSettings,
 } from '@src/services/validation/shacl-validation-configuration';
@@ -28,7 +25,7 @@ import {
 	LEGACY_DEFAULT_PROFILE_ID,
 	LEGACY_DEFAULT_PROFILE_NAME,
 	LegacyShaclValidationConfiguration,
-} from '@src/services/validation/shacl-validation-migration';
+} from '@src/services/validation/migrations/shacl-validation-legacy-migration';
 
 /**
  * The RDF extension list injected into the pure matching functions, mirroring
@@ -37,12 +34,6 @@ import {
 const EXTS = ['.ttl', '.n3', '.nt', '.nq', '.trig', '.rdf'];
 
 describe('shacl-validation-configuration', () => {
-	describe('toUniqueStringArray', () => {
-		it('keeps first occurrence order and removes non-string/empty values', () => {
-			expect(toUniqueStringArray(['a', 'b', 'a', '', '  ', 2, 'c', 'b'] as any)).toEqual(['a', 'b', 'c']);
-		});
-	});
-
 	describe('generateProfileId', () => {
 		it('slugifies the display name', () => {
 			expect(generateProfileId('My Core Shapes', [])).toBe('my-core-shapes');
@@ -72,30 +63,6 @@ describe('shacl-validation-configuration', () => {
 			expect(getProfileDisplayName(settings, 'core')).toBe('Core Shapes');
 			expect(getProfileDisplayName(settings, 'extra')).toBe('extra');
 			expect(getProfileDisplayName(undefined, 'core')).toBe('core');
-		});
-	});
-
-	describe('isGlobPattern', () => {
-		it('detects glob syntax including negation', () => {
-			expect(isGlobPattern('*.ttl')).toBe(true);
-			expect(isGlobPattern('**/models/*')).toBe(true);
-			expect(isGlobPattern('!ontologies/*.ttl')).toBe(true);
-			expect(isGlobPattern('models/data.ttl')).toBe(false);
-			expect(isGlobPattern('')).toBe(false);
-		});
-	});
-
-	describe('getRdfExtensionGlob', () => {
-		it('builds a brace group for several extensions', () => {
-			expect(getRdfExtensionGlob(['.ttl', '.n3'])).toBe('.{ttl,n3}');
-		});
-
-		it('returns a plain suffix for a single extension', () => {
-			expect(getRdfExtensionGlob(['.ttl'])).toBe('.ttl');
-		});
-
-		it('returns an empty string for an empty list', () => {
-			expect(getRdfExtensionGlob([])).toBe('');
 		});
 	});
 
@@ -211,9 +178,9 @@ describe('shacl-validation-configuration', () => {
 		it('returns matching profile ids in definition order', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'a': { paths: ['models/*'] },
-					'b': { paths: ['**/*.ttl'] },
-					'c': { paths: ['other/*'] },
+					'a': { includeFiles: ['models/*'] },
+					'b': { includeFiles: ['**/*.ttl'] },
+					'c': { includeFiles: ['other/*'] },
 					'd': { shapes: ['shape:1'] },
 				},
 			};
@@ -231,9 +198,9 @@ describe('shacl-validation-configuration', () => {
 		it('finds the profile whose paths are exactly the literal document key', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'catch-all': { paths: ['**/*'] },
-					'models-data-ttl': { paths: ['models/data.ttl'] },
-					'multi': { paths: ['models/data.ttl', 'other.ttl'] },
+					'catch-all': { includeFiles: ['**/*'] },
+					'models-data-ttl': { includeFiles: ['models/data.ttl'] },
+					'multi': { includeFiles: ['models/data.ttl', 'other.ttl'] },
 				},
 			};
 
@@ -243,7 +210,7 @@ describe('shacl-validation-configuration', () => {
 		it('normalizes entries before comparing', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'doc': { paths: ['./models/data.ttl'] },
+					'doc': { includeFiles: ['./models/data.ttl'] },
 				},
 			};
 
@@ -252,7 +219,7 @@ describe('shacl-validation-configuration', () => {
 
 		it('returns undefined when no exact single-entry profile exists', () => {
 			const settings: ShaclValidationSettings = {
-				profiles: { 'catch-all': { paths: ['**/*'] } },
+				profiles: { 'catch-all': { includeFiles: ['**/*'] } },
 			};
 
 			expect(findDocumentProfileId(settings, 'models/data.ttl')).toBeUndefined();
@@ -277,9 +244,9 @@ describe('shacl-validation-configuration', () => {
 		it('unions the shapes of every matching profile', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'a': { shapes: ['shape:1'], paths: ['models/*'] },
-					'b': { shapes: ['shape:2', 'shape:1'], paths: ['**/*.ttl'] },
-					'c': { shapes: ['shape:3'], paths: ['other/*'] },
+					'a': { shapes: ['shape:1'], includeFiles: ['models/*'] },
+					'b': { shapes: ['shape:2', 'shape:1'], includeFiles: ['**/*.ttl'] },
+					'c': { shapes: ['shape:3'], includeFiles: ['other/*'] },
 				},
 			};
 
@@ -288,7 +255,7 @@ describe('shacl-validation-configuration', () => {
 
 		it('returns an empty list when nothing matches', () => {
 			const settings: ShaclValidationSettings = {
-				profiles: { 'a': { shapes: ['shape:1'], paths: ['other/*'] } },
+				profiles: { 'a': { shapes: ['shape:1'], includeFiles: ['other/*'] } },
 			};
 
 			expect(resolveEffectiveShapeGraphs(settings, { path: 'doc.ttl' }, EXTS)).toEqual([]);
@@ -297,8 +264,8 @@ describe('shacl-validation-configuration', () => {
 		it('respects bang exclusions', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'a': { shapes: ['shape:1'], paths: ['**/*', '!models/doc.ttl'] },
-					'b': { shapes: ['shape:2'], paths: ['models/doc.ttl'] },
+					'a': { shapes: ['shape:1'], includeFiles: ['**/*'], excludeFiles: ['models/doc.ttl'] },
+					'b': { shapes: ['shape:2'], includeFiles: ['models/doc.ttl'] },
 				},
 			};
 
@@ -311,9 +278,9 @@ describe('shacl-validation-configuration', () => {
 		it('returns matched mode with the matched path entries', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'a': { shapes: ['shape:1'], paths: ['models/*', '**/*.ttl'] },
-					'b': { shapes: ['shape:2'], paths: ['**/*.ttl'] },
-					'c': { shapes: ['shape:3'], paths: ['other/*'] },
+					'a': { shapes: ['shape:1'], includeFiles: ['models/*', '**/*.ttl'] },
+					'b': { shapes: ['shape:2'], includeFiles: ['**/*.ttl'] },
+					'c': { shapes: ['shape:3'], includeFiles: ['other/*'] },
 				},
 			};
 
@@ -328,7 +295,7 @@ describe('shacl-validation-configuration', () => {
 		it('excludes profiles whose bang entries match', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'a': { shapes: ['shape:1'], paths: ['**/*', '!doc.ttl'] },
+					'a': { shapes: ['shape:1'], includeFiles: ['**/*'], excludeFiles: ['doc.ttl'] },
 				},
 			};
 
@@ -342,7 +309,7 @@ describe('shacl-validation-configuration', () => {
 
 		it('returns none mode when nothing applies', () => {
 			const settings: ShaclValidationSettings = {
-				profiles: { 'a': { shapes: ['shape:1'], paths: ['other/*'] } },
+				profiles: { 'a': { shapes: ['shape:1'], includeFiles: ['other/*'] } },
 			};
 
 			const state = getDocumentValidationState(settings, { path: 'doc.ttl' }, EXTS);
@@ -384,7 +351,7 @@ describe('shacl-validation-configuration', () => {
 
 		it('returns empty results for healthy settings', () => {
 			const settings: ShaclValidationSettings = {
-				profiles: { 'a': { shapes: ['shape:ok'], paths: ['**/*'] } },
+				profiles: { 'a': { shapes: ['shape:ok'], includeFiles: ['**/*'] } },
 			};
 
 			const broken = findBrokenReferences(settings, () => true);
@@ -408,19 +375,19 @@ describe('shacl-validation-configuration', () => {
 
 		it('returns settings unchanged when no renames match', () => {
 			const settings: ShaclValidationSettings = {
-				profiles: { 'a': { shapes: ['workspace:///shapes.ttl'], paths: ['models/*'] } },
+				profiles: { 'a': { shapes: ['workspace:///shapes.ttl'], includeFiles: ['models/*'] } },
 			};
 
 			const result = migrateShaclValidationConfig(settings, [rename('other.ttl', 'new.ttl')]);
 
 			expect(result.profiles?.['a'].shapes).toEqual(['workspace:///shapes.ttl']);
-			expect(result.profiles?.['a'].paths).toEqual(['models/*']);
+			expect(result.profiles?.['a'].includeFiles).toEqual(['models/*']);
 		});
 
 		it('migrates shape URIs and literal path entries', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'a': { name: 'A', shapes: ['workspace:///shapes/old.ttl'], paths: ['models/data.ttl'] },
+					'a': { name: 'A', shapes: ['workspace:///shapes/old.ttl'], includeFiles: ['models/data.ttl'] },
 				},
 			};
 
@@ -432,7 +399,7 @@ describe('shacl-validation-configuration', () => {
 			expect(result.profiles?.['a']).toEqual({
 				name: 'A',
 				shapes: ['workspace:///shapes/new.ttl'],
-				paths: ['models/renamed.ttl'],
+				includeFiles: ['models/renamed.ttl'],
 			});
 		});
 
@@ -441,7 +408,7 @@ describe('shacl-validation-configuration', () => {
 				profiles: {
 					'a': {
 						shapes: ['workspace:///models/shapes.ttl'],
-						paths: ['models/x.ttl', 'models/sub/**', 'models-extra/b.ttl'],
+						includeFiles: ['models/x.ttl', 'models/sub/**', 'models-extra/b.ttl'],
 					},
 				},
 			};
@@ -449,46 +416,63 @@ describe('shacl-validation-configuration', () => {
 			const result = migrateShaclValidationConfig(settings, [rename('models', 'renamed')]);
 
 			expect(result.profiles?.['a'].shapes).toEqual(['workspace:///renamed/shapes.ttl']);
-			expect(result.profiles?.['a'].paths).toEqual(['renamed/x.ttl', 'renamed/sub/**', 'models-extra/b.ttl']);
+			expect(result.profiles?.['a'].includeFiles).toEqual(['renamed/x.ttl', 'renamed/sub/**', 'models-extra/b.ttl']);
 		});
 
 		it('migrates fragment-qualified entries on a file rename', () => {
 			const settings: ShaclValidationSettings = {
-				profiles: { 'a': { paths: ['notebook.mnb#cell-1'] } },
+				profiles: { 'a': { includeFiles: ['notebook.mnb#cell-1'] } },
 			};
 
 			const result = migrateShaclValidationConfig(settings, [rename('notebook.mnb', 'renamed.mnb')]);
 
-			expect(result.profiles?.['a'].paths).toEqual(['renamed.mnb#cell-1']);
+			expect(result.profiles?.['a'].includeFiles).toEqual(['renamed.mnb#cell-1']);
 		});
 
-		it('rewrites the literal base of folder-scoped patterns and preserves exclusions', () => {
+		it('rewrites the literal base of folder-scoped patterns in both include and exclude lists', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'a': { paths: ['ontologies/*.ttl', '!ontologies/scratch.ttl'] },
+					'a': { includeFiles: ['ontologies/*.ttl'], excludeFiles: ['ontologies/scratch.ttl'] },
 				},
 			};
 
 			const result = migrateShaclValidationConfig(settings, [rename('ontologies', 'vocabularies')]);
 
-			expect(result.profiles?.['a'].paths).toEqual(['vocabularies/*.ttl', '!vocabularies/scratch.ttl']);
+			expect(result.profiles?.['a'].includeFiles).toEqual(['vocabularies/*.ttl']);
+			expect(result.profiles?.['a'].excludeFiles).toEqual(['vocabularies/scratch.ttl']);
 		});
 
 		it('leaves root-anchored patterns without a literal base untouched', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'a': { paths: ['**/*.ttl', '*.ttl'] },
+					'a': { includeFiles: ['**/*.ttl', '*.ttl'] },
 				},
 			};
 
 			const result = migrateShaclValidationConfig(settings, [rename('models', 'renamed')]);
 
-			expect(result.profiles?.['a'].paths).toEqual(['**/*.ttl', '*.ttl']);
+			expect(result.profiles?.['a'].includeFiles).toEqual(['**/*.ttl', '*.ttl']);
+		});
+
+		it('rewrites a moved written shapes folder and leaves external shape URIs untouched', () => {
+			const settings: ShaclValidationSettings = {
+				profiles: {
+					'copy': { shapes: ['workspace:///.mentor/shapes/basic-ontology.shape.ttl'] },
+					'external': { shapes: ['https://w3id.org/mentor/shacl/profiles/ontology'] },
+				},
+			};
+
+			const result = migrateShaclValidationConfig(settings, [rename('.mentor/shapes', '.mentor/validation')]);
+
+			// The written copy's workspace URI follows the folder move.
+			expect(result.profiles?.['copy'].shapes).toEqual(['workspace:///.mentor/validation/basic-ontology.shape.ttl']);
+			// A non-workspace shape URI is untouched.
+			expect(result.profiles?.['external'].shapes).toEqual(['https://w3id.org/mentor/shacl/profiles/ontology']);
 		});
 	});
 });
 
-describe('shacl-validation-migration', () => {
+describe('shacl-validation-legacy-migration', () => {
 	describe('isLegacyShaclValidationConfig', () => {
 		it('detects the legacy shape', () => {
 			expect(isLegacyShaclValidationConfig({ defaults: [] })).toBe(true);
@@ -517,7 +501,7 @@ describe('shacl-validation-migration', () => {
 					[LEGACY_DEFAULT_PROFILE_ID]: {
 						name: LEGACY_DEFAULT_PROFILE_NAME,
 						shapes: ['workspace:///shapes/core.ttl'],
-						paths: [LEGACY_DEFAULT_PATHS_KEY],
+						includeFiles: [LEGACY_DEFAULT_PATHS_KEY],
 					},
 				},
 			});
@@ -549,10 +533,10 @@ describe('shacl-validation-migration', () => {
 			expect(result.profiles?.['models-doc-ttl']).toEqual({
 				name: 'models/doc.ttl',
 				shapes: ['shape:extra'],
-				paths: ['models/doc.ttl'],
+				includeFiles: ['models/doc.ttl'],
 			});
 			// The catch-all Default profile still contributes the defaults.
-			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].paths).toEqual([LEGACY_DEFAULT_PATHS_KEY]);
+			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].includeFiles).toEqual([LEGACY_DEFAULT_PATHS_KEY]);
 		});
 
 		it('excludes the defaults and freezes own shapes for includeDefaults:false entries', () => {
@@ -568,9 +552,10 @@ describe('shacl-validation-migration', () => {
 			expect(result.profiles?.['doc-ttl']).toEqual({
 				name: 'doc.ttl',
 				shapes: ['shape:1'],
-				paths: ['doc.ttl'],
+				includeFiles: ['doc.ttl'],
 			});
-			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].paths).toEqual([LEGACY_DEFAULT_PATHS_KEY, '!doc.ttl']);
+			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].includeFiles).toEqual([LEGACY_DEFAULT_PATHS_KEY]);
+			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].excludeFiles).toEqual(['doc.ttl']);
 		});
 
 		it('freezes fully-resolved shapes for entries with exclusions', () => {
@@ -590,9 +575,9 @@ describe('shacl-validation-migration', () => {
 			expect(result.profiles?.['doc-ttl']).toEqual({
 				name: 'doc.ttl',
 				shapes: ['shape:default-1', 'shape:extra'],
-				paths: ['doc.ttl'],
+				includeFiles: ['doc.ttl'],
 			});
-			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].paths).toEqual([LEGACY_DEFAULT_PATHS_KEY, '!doc.ttl']);
+			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].excludeFiles).toEqual(['doc.ttl']);
 		});
 
 		it('converts disable-only entries into a bare default exclusion', () => {
@@ -606,7 +591,7 @@ describe('shacl-validation-migration', () => {
 			const result = migrateLegacyShaclValidationConfig(legacy);
 
 			expect(Object.keys(result.profiles ?? {})).toEqual([LEGACY_DEFAULT_PROFILE_ID]);
-			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].paths).toEqual([LEGACY_DEFAULT_PATHS_KEY, '!doc.ttl']);
+			expect(result.profiles?.[LEGACY_DEFAULT_PROFILE_ID].excludeFiles).toEqual(['doc.ttl']);
 		});
 
 		it('creates auto profiles without a Default profile when no defaults exist', () => {
@@ -618,7 +603,7 @@ describe('shacl-validation-migration', () => {
 
 			expect(migrateLegacyShaclValidationConfig(legacy)).toEqual({
 				profiles: {
-					'doc-ttl': { name: 'doc.ttl', shapes: ['shape:1'], paths: ['doc.ttl'] },
+					'doc-ttl': { name: 'doc.ttl', shapes: ['shape:1'], includeFiles: ['doc.ttl'] },
 				},
 			});
 		});
@@ -636,12 +621,12 @@ describe('shacl-validation-migration', () => {
 			expect(result.profiles?.['my-models-doc-ttl']).toEqual({
 				name: 'my models/doc.ttl',
 				shapes: ['shape:1'],
-				paths: ['my models/doc.ttl'],
+				includeFiles: ['my models/doc.ttl'],
 			});
 			expect(result.profiles?.['notebook-mnb-cell-1']).toEqual({
 				name: 'notebook.mnb#cell-1',
 				shapes: ['shape:2'],
-				paths: ['notebook.mnb#cell-1'],
+				includeFiles: ['notebook.mnb#cell-1'],
 			});
 		});
 	});

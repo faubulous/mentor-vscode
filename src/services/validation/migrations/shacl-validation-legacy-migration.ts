@@ -1,9 +1,9 @@
+import { toUniqueStringArray } from '@src/utilities/array';
 import {
 	ShaclValidationProfile,
 	ShaclValidationSettings,
 	generateProfileId,
-	toUniqueStringArray,
-} from './shacl-validation-configuration';
+} from '../shacl-validation-configuration';
 
 /**
  * The display name given to the profile created from the legacy `defaults` list.
@@ -16,7 +16,7 @@ export const LEGACY_DEFAULT_PROFILE_NAME = 'Default';
 export const LEGACY_DEFAULT_PROFILE_ID = generateProfileId(LEGACY_DEFAULT_PROFILE_NAME, []);
 
 /**
- * The catch-all `paths` entry that replaces the legacy "defaults apply
+ * The catch-all `includeFiles` entry that replaces the legacy "defaults apply
  * everywhere" behavior: it matches every recognized RDF file in the workspace.
  */
 export const LEGACY_DEFAULT_PATHS_KEY = '**/*';
@@ -108,19 +108,19 @@ function toBareDocumentKey(key: string): string {
 /**
  * Converts a legacy `{ defaults, graphs }` configuration into the
  * self-contained profile model (`{ profiles }`, each profile owning its
- * `paths`):
+ * `includeFiles`/`excludeFiles`):
  *
  * - A non-empty `defaults` list becomes a profile named "Default" with a
- *   catch-all `**\/*` path, preserving the "defaults apply everywhere"
- *   behavior.
+ *   catch-all `**\/*` include entry, preserving the "defaults apply
+ *   everywhere" behavior.
  * - Graph entries equivalent to implicit defaults behavior are dropped.
  * - Entries that add shapes on top of the defaults become an auto profile
  *   named after the document's bare relative path, applied to exactly that
  *   path (the catch-all still contributes the defaults).
  * - Entries that suppress the defaults (`includeDefaults: false` or
- *   exclusions) additionally append a `!<path>` exclusion to the Default
- *   profile's paths; exclusions are fully resolved and frozen as the auto
- *   profile's shapes, since per-shape exclusion is not representable.
+ *   exclusions) additionally append the document's path to the Default
+ *   profile's `excludeFiles`; exclusions are fully resolved and frozen as the
+ *   auto profile's shapes, since per-shape exclusion is not representable.
  */
 export function migrateLegacyShaclValidationConfig(legacy: LegacyShaclValidationConfiguration): ShaclValidationSettings {
 	const profiles: Record<string, ShaclValidationProfile> = {};

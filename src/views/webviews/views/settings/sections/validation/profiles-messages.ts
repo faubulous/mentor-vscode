@@ -10,10 +10,13 @@ export type ValidationProfilesMessages =
 	| { id: 'GetShapeCandidatesResult'; candidates: string[] }
 	| { id: 'GetValidationHealth' }
 	| { id: 'GetValidationHealthResult'; broken: ShaclBrokenReferences }
-	| { id: 'GetProfileMatchPreview'; key: string; paths: string[] }
+	| { id: 'GetProfileMatchPreview'; key: string; includeFiles: string[]; excludeFiles: string[] }
 	| { id: 'GetProfileMatchPreviewResult'; key: string; count: number; sample: string[] }
 	| { id: 'EditPathPattern'; pattern: string }
 	| { id: 'EditPathPatternResult'; pattern?: string }
 	| { id: 'OpenShapeGraph'; uri: string }
+	| { id: 'WritePresetShapes'; presetId: string }
+	| { id: 'WritePresetShapesResult'; presetId: string; uri?: string; error?: string }
+	| { id: 'ValidateProfile'; profileId: string }
 	| { id: 'DeleteValidationProfile'; profileId: string; name: string; scope: ScopeKey }
 	| { id: 'ValidationProfileDeleted'; profileId: string; scope: ScopeKey };

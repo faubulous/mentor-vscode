@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { ScopeBadge } from '@src/views/webviews/components/scope-badge';
 import { ListItemNavProps } from '../../../hooks/use-list-keyboard-navigation';
 import { SettingsListItem } from '../../../components/settings-list-item';
 import { ValidationProfileView } from '../shared';
@@ -26,17 +25,22 @@ export interface ValidationProfileListItemProps {
 
 	onEdit: (profile: ValidationProfileView) => void;
 
+	/**
+	 * Runs SHACL validation for the profile's matched files. Omitted (and the
+	 * validate button hidden) when SHACL validation is disabled.
+	 */
+	onValidate?: (profile: ValidationProfileView) => void;
+
 	onDelete: (profile: ValidationProfileView) => void;
 }
 
 /**
  * A single row in the validation profiles list. A thin field-mapper over
  * {@link SettingsListItem}: shows the description, shape graph count, live
- * target and excluded file counts, a scope badge, and a warning when the
- * profile has no shape graphs or references missing graphs. Built-in presets
- * render locked (viewable, not editable or deletable).
+ * target and excluded file counts, and a warning when the profile has no
+ * shape graphs or references missing graphs.
  */
-export function ValidationProfileListItem({ profile, missingShapes, matchCount, excludedCount, navProps, onEdit, onDelete }: ValidationProfileListItemProps) {
+export function ValidationProfileListItem({ profile, missingShapes, matchCount, excludedCount, navProps, onEdit, onValidate, onDelete }: ValidationProfileListItemProps) {
 	const displayName = profile.name.trim() || profile.id;
 	const shapeCount = profile.shapes.length;
 	const missingCount = missingShapes?.length ?? 0;
@@ -53,19 +57,20 @@ export function ValidationProfileListItem({ profile, missingShapes, matchCount, 
 			{description && (
 				<span className="validation-profile-description">{description}</span>
 			)}
-			{!isEmpty && <span>{shapeCount} shape graph{shapeCount === 1 ? '' : 's'}</span>}
-			{matchCount !== undefined && (
-				<span>{matchCount} target file{matchCount === 1 ? '' : 's'}</span>
-			)}
-			{excludedCount !== undefined && (
-				<span>{excludedCount} excluded file{excludedCount === 1 ? '' : 's'}</span>
-			)}
-			{warningText && (
-				<span className="validation-item-warning">
-					<vscode-icon name="warning" />
-					{warningText}
-				</span>
-			)}
+			<span className="validation-profile-stats">
+				{matchCount !== undefined && (
+					<span>{matchCount} target file{matchCount === 1 ? '' : 's'}</span>
+				)}
+				{excludedCount !== undefined && (
+					<span>{excludedCount} excluded file{excludedCount === 1 ? '' : 's'}</span>
+				)}
+				{!isEmpty && <span>{shapeCount} graph{shapeCount === 1 ? '' : 's'}</span>}
+				{warningText && (
+					<span className="validation-item-warning">
+						• {warningText}
+					</span>
+				)}
+			</span>
 		</div>
 	);
 
@@ -73,19 +78,26 @@ export function ValidationProfileListItem({ profile, missingShapes, matchCount, 
 		<SettingsListItem
 			icon={<vscode-icon name="checklist" className="settings-item-icon" />}
 			name={displayName}
-			tooltip={profile.isProtected ? `View ${displayName}` : `Edit ${displayName}`}
-			locked={profile.isProtected}
-			lockTitle="Built-in preset — not editable"
-			actions={!profile.isProtected && (
-				<vscode-toolbar-button
-					title="Delete profile"
-					onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(profile); }}
-				>
-					<vscode-icon name="trash" />
-				</vscode-toolbar-button>
+			tooltip={`Edit ${displayName}`}
+			actions={(
+				<>
+					{onValidate && (
+						<vscode-toolbar-button
+							title="Validate profile using SHACL"
+							onClick={(e: React.MouseEvent) => { e.stopPropagation(); onValidate(profile); }}
+						>
+							<vscode-icon name="run-coverage" />
+						</vscode-toolbar-button>
+					)}
+					<vscode-toolbar-button
+						title="Delete profile"
+						onClick={(e: React.MouseEvent) => { e.stopPropagation(); onDelete(profile); }}
+					>
+						<vscode-icon name="trash" />
+					</vscode-toolbar-button>
+				</>
 			)}
 			subline={subline}
-			badge={profile.isProtected ? undefined : <ScopeBadge scope={profile.scope} />}
 			keyboardNavProps={navProps}
 			onClick={() => onEdit(profile)}
 		/>

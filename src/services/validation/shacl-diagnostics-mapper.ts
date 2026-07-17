@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SH } from '@faubulous/mentor-rdf';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { ShaclValidationResult, ShaclValidationResultEntry } from './shacl-validation-service';
 
 /**
@@ -27,7 +28,7 @@ export class ShaclDiagnosticsMapper {
 
 			const diagnostic = new vscode.Diagnostic(range, message, severity);
 			diagnostic.source = 'SHACL';
-			diagnostic.code = this._extractLocalName(entry.constraintComponent);
+			diagnostic.code = getLocalPartAndQuery(entry.constraintComponent);
 			(diagnostic as vscode.Diagnostic & { data?: { focusNode: string } }).data = {
 				focusNode: entry.focusNode,
 			};
@@ -169,11 +170,11 @@ export class ShaclDiagnosticsMapper {
 		}
 
 		const parts: string[] = [];
-		const component = this._extractLocalName(entry.constraintComponent);
+		const component = getLocalPartAndQuery(entry.constraintComponent);
 		parts.push(`Constraint violation: ${component}`);
 
 		if (entry.path) {
-			parts.push(`Path: ${this._extractLocalName(entry.path)}`);
+			parts.push(`Path: ${getLocalPartAndQuery(entry.path)}`);
 		}
 
 		if (entry.value) {
@@ -181,24 +182,5 @@ export class ShaclDiagnosticsMapper {
 		}
 
 		return parts.join(' | ');
-	}
-
-	/**
-	 * Extract the local name from an IRI.
-	 */
-	private _extractLocalName(iri: string): string {
-		const hashIndex = iri.lastIndexOf('#');
-
-		if (hashIndex >= 0) {
-			return iri.substring(hashIndex + 1);
-		}
-
-		const slashIndex = iri.lastIndexOf('/');
-
-		if (slashIndex >= 0) {
-			return iri.substring(slashIndex + 1);
-		}
-
-		return iri;
 	}
 }

@@ -115,7 +115,8 @@ describe('ValidationProfilesSectionController', () => {
 			section: 'validation.profiles',
 			id: 'GetProfileMatchPreview',
 			key: 'core',
-			paths: ['models/*'],
+			includeFiles: ['models/*'],
+			excludeFiles: [],
 		} as any);
 
 		expect(handled).toBe(true);
@@ -134,7 +135,8 @@ describe('ValidationProfilesSectionController', () => {
 			section: 'validation.profiles',
 			id: 'GetProfileMatchPreview',
 			key: 'draft:new',
-			paths: ['**/*', '!scratch.ttl'],
+			includeFiles: ['**/*'],
+			excludeFiles: ['scratch.ttl'],
 		} as any);
 
 		const message = post.mock.calls[0][0];

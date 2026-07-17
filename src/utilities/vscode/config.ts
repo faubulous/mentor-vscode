@@ -27,7 +27,7 @@ export function getConfig(section: string = ''): vscode.WorkspaceConfiguration {
 
 
 /**
- * The workspace-relative folder a template's shapes are copied into when a
+ * The workspace-relative folder a preset's shapes are copied into when a
  * validation profile is created from it. Reads `mentor.shacl.shapesFolder`,
  * falling back to `.mentor/shapes`.
  * @returns The configured shapes folder as a workspace-relative POSIX path.

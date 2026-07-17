@@ -1,6 +1,6 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
-import { ShaclValidationProfilesMigration } from '@src/services/core/migrations/shacl-validation-profiles-migration';
+import { ShaclValidationProfilesMigration } from '@src/services/validation/migrations/shacl-validation-profiles-migration';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@src/utilities/vscode/config', () => ({

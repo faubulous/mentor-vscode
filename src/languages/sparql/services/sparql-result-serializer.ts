@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { AsyncIterator } from 'asynciterator';
-import { DataFactory } from 'n3';
 import { Uri } from '@faubulous/mentor-rdf';
+import { rdfDataFactory } from '@src/utilities/rdf';
 import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
 import { SerializationOptions, termToString, TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
 import { Bindings, Quad, Term } from "@rdfjs/types";
@@ -30,7 +30,7 @@ export class SparqlResultSerializer {
 			if (!unique.has(key)) {
 				unique.set(key, q.graph.termType === 'DefaultGraph'
 					? q
-					: DataFactory.quad(q.subject as any, q.predicate as any, q.object as any));
+					: rdfDataFactory.quad(q.subject as any, q.predicate as any, q.object as any));
 			}
 		}
 

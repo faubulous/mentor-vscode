@@ -1,9 +1,22 @@
-/* Profile description shown first in a list row's subline; truncated if long. */
+/* Profile description shown first in a list row's subline; takes the remaining
+   width and is truncated with an ellipsis when long. */
 .settings-item-subline .validation-profile-description {
+	flex: 1 1 auto;
+	min-width: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	max-width: 40ch;
+}
+
+/* Shape/target/excluded counts (and any warning), right-aligned after the
+   description. */
+.settings-item-subline .validation-profile-stats {
+	display: inline-flex;
+	flex-direction: row;
+	align-items: baseline;
+	gap: var(--mentor-space-6);
+	flex-shrink: 0;
+	margin-left: auto;
 }
 
 /* Warning text (missing / empty) in a profile list row: icon + text, warning-colored. */
@@ -162,6 +175,11 @@
 	display: flex;
 	align-items: center;
 	gap: var(--mentor-space-2);
+}
+
+/* Right-aligns the Edit/Done toggle on the "Included Shapes" title line. */
+.validation-shape-edit-toggle {
+	margin-left: auto;
 }
 
 .validation-paths-header .validation-info-icon {

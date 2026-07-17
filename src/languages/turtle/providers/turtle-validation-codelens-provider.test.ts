@@ -19,9 +19,9 @@ const DOCUMENT_URI = vscode.Uri.parse('file:///w/models/example.ttl');
 
 /**
  * Constructs the provider with a validation-service double returning the given
- * document state and settings.
+ * document state, settings and optional last-skip record.
  */
-function createProvider(state: ShaclDocumentValidationState, settings: any = {}) {
+function createProvider(state: ShaclDocumentValidationState, settings: any = {}, lastSkip?: { triples: number; maxGraphSize: number }) {
 	const contextService = {
 		contexts: { [DOCUMENT_URI.toString()]: { graphs: [] } },
 		onDidChangeDocumentContext: vi.fn(() => ({ dispose: () => {} })),
@@ -35,6 +35,7 @@ function createProvider(state: ShaclDocumentValidationState, settings: any = {})
 		getDocumentValidationState: vi.fn(() => state),
 		getValidationSettings: vi.fn(() => settings),
 		getLastResult: vi.fn(() => undefined),
+		getLastSkip: vi.fn(() => lastSkip),
 		onDidValidate: vi.fn(() => ({ dispose: () => {} })),
 	} as any;
 
@@ -132,5 +133,37 @@ describe('TurtleValidationCodeLensProvider', () => {
 		const lens = await getStatusLens(provider);
 
 		expect(lens.command?.title).toContain('not configured');
+	});
+
+	it('surfaces a skipped automatic validation with a validate action', async () => {
+		const provider = createProvider(
+			state({
+				mode: 'matched',
+				profileNames: ['core'],
+				effectiveShapes: ['workspace:///shapes/core.ttl'],
+				matchedPaths: ['**/*.ttl'],
+			}),
+			{ profiles: { 'core': { name: 'Core' } } },
+			{ triples: 82_000, maxGraphSize: 50_000 }
+		);
+
+		const document = { uri: DOCUMENT_URI } as any;
+		const lenses = await provider.provideCodeLenses(document, {} as any) as vscode.CodeLens[];
+		const skipLens = lenses.find(l => l.command?.title.includes('Validation skipped'));
+
+		expect(skipLens).toBeDefined();
+		expect(skipLens!.command?.title).toContain('Validation skipped (size limit)');
+		expect(skipLens!.command?.command).toBe('mentor.command.validateDocument');
+		expect(skipLens!.command?.tooltip).toContain('82000 triples');
+		expect(skipLens!.command?.tooltip).toContain('mentor.shacl.maxGraphSize (50000)');
+	});
+
+	it('shows no skip lens without a recorded skip', async () => {
+		const provider = createProvider(state({ mode: 'matched', profileNames: ['core'], effectiveShapes: ['s:1'], matchedPaths: [] }));
+
+		const document = { uri: DOCUMENT_URI } as any;
+		const lenses = await provider.provideCodeLenses(document, {} as any) as vscode.CodeLens[];
+
+		expect(lenses.some(l => l.command?.title.includes('Validation skipped'))).toBe(false);
 	});
 });

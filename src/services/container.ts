@@ -28,10 +28,12 @@ import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-re
 import { GraphManagementService } from '@src/languages/sparql/services/graph-management-service';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sparql-prefix-definition-service';
+import { ShaclProfileSettingsService } from '@src/services/validation/shacl-profile-settings-service';
+import { ShaclValidationProfilesMigration } from '@src/services/validation/migrations';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
-import * as migrations from './core/migrations/';
+import { IndexExcludeFilesMigration } from './core/migrations/';
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
@@ -140,8 +142,11 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const sparqlPrefixDefinitionService = new SparqlPrefixDefinitionService(documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlPrefixDefinitionService, sparqlPrefixDefinitionService);
 
-	// Register the SHACL validation service.
-	const shaclValidationService = new ShaclValidationService(context, store, documentContextService, documentFactory);
+	// Register the SHACL profile settings service and the validation service built on it.
+	const shaclProfileSettingsService = new ShaclProfileSettingsService();
+	container.registerInstance(ServiceToken.ShaclProfileSettingsService, shaclProfileSettingsService);
+
+	const shaclValidationService = new ShaclValidationService(context, store, documentContextService, documentFactory, shaclProfileSettingsService);
 	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
 	// Register the notebook controller for the Mentor Notebook kernel.
@@ -167,8 +172,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	// Register the settings migration service. New migrations are added to this list only.
 	const settingsMigrationService = new SettingsMigrationService([
-		new migrations.IndexExcludeFilesMigration(),
-		new migrations.ShaclValidationProfilesMigration(),
+		new IndexExcludeFilesMigration(),
+		new ShaclValidationProfilesMigration(),
 	]);
 	container.registerInstance(ServiceToken.SettingsMigrationService, settingsMigrationService);
 }

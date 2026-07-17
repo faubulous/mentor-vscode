@@ -3,9 +3,11 @@ import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
-import { ShaclProfileSettingsWriter } from '@src/services/validation/shacl-profile-settings-writer';
+import { ShaclProfileSettingsService } from '@src/services/validation/shacl-profile-settings-service';
 import { ScopeKey } from '@src/utilities/config-scope';
 import { getShapeGraphCandidates, toDisplayPath } from '@src/utilities';
+import { toUniqueStringArray } from '@src/utilities/array';
+import { isGlobPattern } from '@src/utilities/glob';
 import {
 	ShaclBrokenReferences,
 	ShaclDocumentLocation,
@@ -13,12 +15,10 @@ import {
 	ShaclValidationSettings,
 	findDocumentProfileId,
 	generateProfileId,
-	isGlobPattern,
 	matchesPathKey,
 	matchesProfilePaths,
 	toDocumentPatternKey,
 	toPathEntries,
-	toUniqueStringArray,
 } from '@src/services/validation/shacl-validation-configuration';
 
 export const manageShaclShapes = {
@@ -207,7 +207,7 @@ function showFilePicker(
 class ManageShaclShapesCommand {
 	private readonly _validationService: ShaclValidationService;
 
-	private readonly _settingsWriter = new ShaclProfileSettingsWriter();
+	private readonly _settingsWriter = container.resolve<ShaclProfileSettingsService>(ServiceToken.ShaclProfileSettingsService);
 
 	private readonly _documentUri: vscode.Uri;
 

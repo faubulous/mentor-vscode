@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
-import { getProfileDisplayName, isGlobPattern } from '@src/services/validation/shacl-validation-configuration';
+import { isGlobPattern } from '@src/utilities/glob';
+import { getProfileDisplayName } from '@src/services/validation/shacl-validation-configuration';
 import { getConfig } from '@src/utilities/vscode/config';
 
 /**
@@ -149,6 +150,19 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 					title: statusTitle,
 					command: 'mentor.command.viewShaclReport',
 					tooltip: 'View the SHACL validation report'
+				}));
+			}
+
+			// Surface a skipped automatic validation so silence is not mistaken for a
+			// clean result. A validation result supersedes the skip, so both never show.
+			const lastSkip = isCell || lastResult ? undefined : this._validationService.getLastSkip(document.uri);
+
+			if (lastSkip) {
+				result.push(new vscode.CodeLens(range, {
+					title: '$(warning)\u00A0Validation skipped (size limit)',
+					command: 'mentor.command.validateDocument',
+					tooltip: `Automatic SHACL validation was skipped: the data graph (${lastSkip.triples} triples) `
+						+ `exceeds mentor.shacl.maxGraphSize (${lastSkip.maxGraphSize}). Validate explicitly to bypass the limit.`
 				}));
 			}
 

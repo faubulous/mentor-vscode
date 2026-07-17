@@ -258,6 +258,12 @@ export class CanonicalWorkspaceUri {
 	get fragment(): string { return this._inner.fragment; }
 	get fsPath(): string { return this._inner.fsPath; }
 
+	/**
+	 * The workspace-relative path without a leading slash (e.g. `models/data.ttl`),
+	 * the form used by settings keys such as validation profile include/exclude entries.
+	 */
+	get relativePath(): string { return this._inner.path.replace(/^\/+/, ''); }
+
 	with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): vscode.Uri {
 		return this._inner.with(change);
 	}

@@ -6,12 +6,10 @@ import { getShapeGraphCandidates } from '@src/utilities/shacl';
 import {
 	BASIC_ONTOLOGY_SHAPES_URI,
 	BASIC_TAXONOMY_SHAPES_URI,
-	VALIDATION_TEMPLATES,
-	getBundledShapeVersions,
-	getPresetShapeSource,
-	loadPresetShapeGraphs,
+	VALIDATION_PRESETS,
 	getVersionedShapeUri,
-} from './index';
+} from '../preset-definitions';
+import { getPresetShapeSource, loadPresetShapeGraphs } from './index';
 
 describe('loadPresetShapeGraphs', () => {
 	it('registers both shape graphs in the store', () => {
@@ -26,7 +24,7 @@ describe('loadPresetShapeGraphs', () => {
 		);
 	});
 
-	it('does not ship any profiles in the manifest default (templates live in code)', () => {
+	it('does not ship any profiles in the manifest default (presets live in code)', () => {
 		const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../package.json'), 'utf8'));
 		const settings = manifest.contributes.configuration
 			.flatMap((section: any) => Object.entries(section.properties ?? {}))
@@ -36,34 +34,28 @@ describe('loadPresetShapeGraphs', () => {
 		expect(settings![1].default).toEqual({});
 	});
 
-	it('exposes templates whose shape URIs match the loaded graphs', () => {
-		const ids = VALIDATION_TEMPLATES.map(t => t.id);
+	it('exposes presets whose shape URIs match the loaded graphs', () => {
+		const ids = VALIDATION_PRESETS.map(t => t.id);
 
 		expect(ids).toEqual(['basic-ontology', 'basic-taxonomy']);
 
-		const byId = Object.fromEntries(VALIDATION_TEMPLATES.map(t => [t.id, t]));
+		const byId = Object.fromEntries(VALIDATION_PRESETS.map(t => [t.id, t]));
 
 		expect(byId['basic-ontology'].shapes).toEqual([BASIC_ONTOLOGY_SHAPES_URI]);
 		expect(byId['basic-taxonomy'].shapes).toEqual([BASIC_TAXONOMY_SHAPES_URI]);
 	});
 
 	it('carries a version whose owl:versionInfo matches the bundled shape file', () => {
-		for (const template of VALIDATION_TEMPLATES) {
-			expect(template.version).toBeTruthy();
+		for (const preset of VALIDATION_PRESETS) {
+			expect(preset.version).toBeTruthy();
 
-			const source = getPresetShapeSource(template.id);
+			const source = getPresetShapeSource(preset.id);
 
 			expect(source).toBeDefined();
-			// The template version, the owl:versionInfo and the owl:versionIRI segment agree.
-			expect(source).toContain(`owl:versionInfo "${template.version}"`);
-			expect(source).toContain(getVersionedShapeUri(template.shapes[0], template.version));
+			// The preset version, the owl:versionInfo and the owl:versionIRI segment agree.
+			expect(source).toContain(`owl:versionInfo "${preset.version}"`);
+			expect(source).toContain(getVersionedShapeUri(preset.shapes[0], preset.version));
 		}
 	});
 
-	it('maps every bundled shape URI to its current version', () => {
-		expect(getBundledShapeVersions()).toEqual({
-			[BASIC_ONTOLOGY_SHAPES_URI]: '1.0',
-			[BASIC_TAXONOMY_SHAPES_URI]: '1.0',
-		});
-	});
 });

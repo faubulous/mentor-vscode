@@ -1,50 +1,70 @@
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
 import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { StoresListItem } from './stores-list-item';
-import { SettingsList } from '../../../components/settings-list';
+import { SettingsList, SettingsListSection } from '../../../components/settings-list';
+import {
+	PRESETS_SECTION_DESCRIPTION,
+	PRESETS_SECTION_TITLE,
+	USER_SECTION_DESCRIPTION,
+	USER_SECTION_TITLE,
+	WORKSPACE_SECTION_DESCRIPTION,
+	WORKSPACE_SECTION_TITLE,
+} from '../../../components/scope-section-copy';
 
 export interface StoresListProps {
-	stores: TripleStoreConfig[];
-	onCreate: () => void;
+	presetStores: TripleStoreConfig[];
+	workspaceStores: TripleStoreConfig[];
+	userStores: TripleStoreConfig[];
+	hasWorkspace: boolean;
+	onCreate: (scope: ConfigurationScope) => void;
 	onEdit: (store: TripleStoreConfig) => void;
 	onDelete: (store: TripleStoreConfig) => void;
 	onOpenInBrowser: (url: string) => void;
 }
 
 /**
- * Lists the defined SPARQL store types via the shared {@link SettingsList}: a
- * page-level header, a "Protected" group for built-in stores (hidden when empty),
- * and a "User Defined" group with an Add action. All edits happen in the modal
- * opened from a row.
+ * Lists the defined SPARQL store types via the shared {@link SettingsList},
+ * grouped by where they are stored: built-in presets, workspace settings and
+ * user settings. The workspace group is omitted when no workspace folder is
+ * open. All edits happen in the modal opened from a row.
  */
-export function StoresList({ stores, onCreate, onEdit, onDelete, onOpenInBrowser }: StoresListProps) {
-	const protectedStores = stores.filter(s => s.isProtected);
-	const userDefinedStores = stores.filter(s => !s.isProtected);
+export function StoresList({ presetStores, workspaceStores, userStores, hasWorkspace, onCreate, onEdit, onDelete, onOpenInBrowser }: StoresListProps) {
+	const addAction = (scope: ConfigurationScope) => (
+		<vscode-toolbar-button className="primary" title="Add a new store" onClick={() => onCreate(scope)}>
+			<span className="codicon codicon-add" />
+			<span className="label">Add Store</span>
+		</vscode-toolbar-button>
+	);
+
+	const sections: SettingsListSection<TripleStoreConfig>[] = [
+		{
+			title: PRESETS_SECTION_TITLE,
+			description: PRESETS_SECTION_DESCRIPTION,
+			items: presetStores,
+			emptyMessage: '',
+			hideWhenEmpty: true,
+		},
+		...(hasWorkspace ? [{
+			title: WORKSPACE_SECTION_TITLE,
+			description: WORKSPACE_SECTION_DESCRIPTION,
+			action: addAction(ConfigurationScope.Workspace),
+			items: workspaceStores,
+			emptyMessage: 'No workspace stores yet.',
+		}] : []),
+		{
+			title: USER_SECTION_TITLE,
+			description: USER_SECTION_DESCRIPTION,
+			action: addAction(ConfigurationScope.User),
+			items: userStores,
+			emptyMessage: 'No user stores yet.',
+		},
+	];
 
 	return (
 		<SettingsList<TripleStoreConfig>
 			header={<SectionHeader title="Stores" variant="title" />}
-			sections={[
-				{
-					title: 'Protected',
-					description: 'Mentor built-in stores that cannot be removed.',
-					items: protectedStores,
-					emptyMessage: '',
-					hideWhenEmpty: true,
-				},
-				{
-					title: 'User Defined',
-					description: 'Store types you have configured.',
-					action: (
-						<vscode-toolbar-button className="primary" title="Add a new store" onClick={onCreate}>
-							<span className="codicon codicon-add" />
-							<span className="label">Add Store</span>
-						</vscode-toolbar-button>
-					),
-					items: userDefinedStores,
-					emptyMessage: 'No user-defined stores yet.',
-				},
-			]}
+			sections={sections}
 			getItemId={store => store.id}
 			renderItem={(store, navProps) => (
 				<StoresListItem

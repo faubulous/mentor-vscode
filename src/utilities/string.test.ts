@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { countLeadingWhitespace, countTrailingWhitespace, findPosition } from '@src/utilities/string';
+import { countLeadingWhitespace, countTrailingWhitespace, findPosition, generateUniqueSlug } from '@src/utilities/string';
+
+describe('generateUniqueSlug', () => {
+	it('slugifies the display name', () => {
+		expect(generateUniqueSlug('My Core Shapes', [], 'fallback')).toBe('my-core-shapes');
+		expect(generateUniqueSlug('models/data.ttl', [], 'fallback')).toBe('models-data-ttl');
+	});
+
+	it('disambiguates collisions with a numeric suffix', () => {
+		expect(generateUniqueSlug('Core', ['core'], 'fallback')).toBe('core-2');
+		expect(generateUniqueSlug('Core', ['core', 'core-2'], 'fallback')).toBe('core-3');
+	});
+
+	it('falls back to the given fallback for names without usable characters', () => {
+		expect(generateUniqueSlug('***', [], 'fallback')).toBe('fallback');
+		expect(generateUniqueSlug('', ['fallback'], 'fallback')).toBe('fallback-2');
+	});
+});
 
 describe('countLeadingWhitespace', () => {
 	it('returns 0 for a string with no leading whitespace', () => {

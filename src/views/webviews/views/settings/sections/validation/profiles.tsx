@@ -15,8 +15,8 @@ import type { SettingsSectionDescriptor } from '../../settings-section-descripto
 import { ValidationProfilesList } from './components/validation-profiles-list';
 import { ValidationProfileEditor } from './components/validation-profile-editor';
 import { ValidationProfilesMessages } from './profiles-messages';
-import { applyProfileSave, isEmptySettings, ProfileEditorMode, readSettings, templateToDraft, templateToLinkedDraft, toProfileViews, ValidationProfileView, VALIDATION_STYLESHEET_ID } from './shared';
-import { VALIDATION_TEMPLATES, type ValidationTemplate } from '@src/services/validation/template-definitions';
+import { applyProfileSave, isEmptySettings, ProfileEditorMode, readSettings, presetToDraft, toProfileViews, ValidationProfileView, VALIDATION_STYLESHEET_ID } from './shared';
+import { VALIDATION_PRESETS, type ValidationPreset } from '@src/services/validation/preset-definitions';
 import stylesheet from './validation.css';
 
 export const validationProfilesSection = {
@@ -85,9 +85,9 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 	// host quick pick can be open at a time.
 	const patternEditRef = useRef<((pattern: string) => void) | undefined>(undefined);
 
-	// The template awaiting a shapes-copy result from the host, keyed by template
+	// The preset awaiting a shapes-copy result from the host, keyed by preset
 	// id, so the editor can be opened once the workspace copies are written.
-	const pendingTemplateRef = useRef<Record<string, { template: ValidationTemplate; scope: ConfigurationScope }>>({});
+	const pendingPresetRef = useRef<Record<string, { preset: ValidationPreset; scope: ConfigurationScope }>>({});
 
 	const handleMessage = useCallback((message: ValidationProfilesMessages) => {
 		switch (message.id) {
@@ -114,15 +114,15 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 
 				return;
 			}
-			case 'MaterializeTemplateShapesResult': {
-				const pending = pendingTemplateRef.current[message.templateId];
+			case 'WritePresetShapesResult': {
+				const pending = pendingPresetRef.current[message.presetId];
 
-				delete pendingTemplateRef.current[message.templateId];
+				delete pendingPresetRef.current[message.presetId];
 
 				// On failure the host has already surfaced an error; leave the editor closed.
 				if (pending && message.uri) {
 					setEditorMode('create');
-					setEditing(templateToDraft(pending.template, pending.scope, [message.uri]));
+					setEditing(presetToDraft(pending.preset, pending.scope, [message.uri]));
 				}
 
 				return;
@@ -257,24 +257,13 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 		setEditing({ ...profile, name: profile.name.trim() || profile.id });
 	};
 
-	// Creates a profile from a built-in template. By default the template's shapes
-	// are copied into the workspace (frozen, version-controlled) and the New Profile
-	// dialog opens once the host has written them; without a workspace to copy into,
-	// falls back to linking the built-in graph.
-	const handleUseTemplate = (template: ValidationTemplate) => {
-		if (hasWorkspace) {
-			pendingTemplateRef.current[template.id] = { template, scope: ConfigurationScope.Workspace };
-			messaging?.postMessage({ id: 'MaterializeTemplateShapes', templateId: template.id });
-		} else {
-			handleLinkTemplate(template);
-		}
-	};
-
-	// Creates a profile that links the built-in (in-memory) shape graph, which stays
-	// in sync with Mentor updates; the version is recorded so later changes surface.
-	const handleLinkTemplate = (template: ValidationTemplate) => {
-		setEditorMode('create');
-		setEditing(templateToLinkedDraft(template, hasWorkspace ? ConfigurationScope.Workspace : ConfigurationScope.User));
+	// Creates a profile from a built-in preset: the preset's shapes are copied into
+	// the workspace (frozen, version-controlled) and the New Profile dialog opens
+	// once the host has written them. Without a workspace to copy into, the host
+	// reports an error notification.
+	const handleUsePreset = (preset: ValidationPreset) => {
+		pendingPresetRef.current[preset.id] = { preset, scope: ConfigurationScope.Workspace };
+		messaging?.postMessage({ id: 'WritePresetShapes', presetId: preset.id });
 	};
 
 	const handleSave = (originalId: string, originalScope: ConfigurationScope, next: ValidationProfileView) => {
@@ -333,15 +322,14 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 
 			<ValidationProfilesList
 				profiles={profiles}
-				templates={VALIDATION_TEMPLATES}
+				presets={VALIDATION_PRESETS}
 				brokenProfiles={broken.profiles}
 				matchCounts={matchCounts}
 				excludedCounts={excludedCounts}
 				hasWorkspace={hasWorkspace}
 				onCreate={handleCreate}
 				onEdit={handleEdit}
-				onUseTemplate={handleUseTemplate}
-				onLinkTemplate={handleLinkTemplate}
+				onUsePreset={handleUsePreset}
 				onValidate={settings['shacl.enabled']?.value === true ? handleValidate : undefined}
 				onDelete={handleDelete}
 			/>

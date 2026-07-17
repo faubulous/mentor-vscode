@@ -14,7 +14,7 @@ import { WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connect
 import { ITripleStoreConfigService, IDocumentConnectionService } from './languages/sparql/services';
 import { IGraphManagementService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
-import { loadPresetShapeGraphs } from './services/validation/profiles';
+import { getConfig } from './utilities/vscode/config';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import * as languages from './languages';
@@ -54,7 +54,7 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	//
 	// Once indexing is complete, check the SHACL validation profiles for references
 	// to missing files and warn if any are broken.
-	indexWorkspace().then(() => checkValidationProfiles());
+	indexWorkspace().then(() => activateValidation());
 
 	// Load named graphs for connections with auto-loading enabled. Runs in parallel
 	// with indexing so the status bar can show both activities simultaneously.
@@ -155,7 +155,7 @@ function registerRenameHandlers(context: vscode.ExtensionContext) {
 
 			// Migrate SHACL workspace settings (profile shapes and document assignments).
 			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
-			await shaclService.migrateShaclSettings(e.files);
+			await shaclService.settingsSync.migrateShaclSettings(e.files);
 
 			// Update all workspace: URI references across indexed documents.
 			const referenceUpdateService = container.resolve<ReferenceUpdateService>(ServiceToken.ReferenceUpdateService);
@@ -166,7 +166,7 @@ function registerRenameHandlers(context: vscode.ExtensionContext) {
 			// Prune SHACL assignments for deleted documents and warn about profiles
 			// that still reference deleted shape files.
 			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
-			await shaclService.handleFileDeletes(e.files);
+			await shaclService.settingsSync.handleFileDeletes(e.files);
 		})
 	);
 }
@@ -214,10 +214,6 @@ function registerNotebookInferenceContext(context: vscode.ExtensionContext) {
 async function loadFrameworkOntologies() {
 	const store = container.resolve<Store>(ServiceToken.Store);
 	await store.loadFrameworkOntologies();
-
-	// Load the bundled SHACL shape graphs referenced by the built-in validation
-	// profiles shipped as the mentor.shacl.validation manifest default.
-	loadPresetShapeGraphs(store);
 }
 
 /**
@@ -266,11 +262,24 @@ async function indexWorkspace() {
  * Checks all SHACL validation profiles for references to missing shape files and warns the user if any are broken.
  * @note This is run after workspace indexing is complete, so that all shape files in the workspace are known.
  */
-async function checkValidationProfiles() {
+async function activateValidation() {
 	try {
 		const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 
-		shaclService.runStartupProfileCheck();
+		shaclService.settingsSync.runStartupProfileCheck();
+
+		// Silently validate all profile-covered files on startup when enabled. The
+		// diagnostics are published by the service; no notification is shown.
+		const shaclConfig = getConfig('shacl');
+
+		if (shaclConfig.get<boolean>('enabled', false) && shaclConfig.get<boolean>('validateOnStartup', false)) {
+			const fileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
+
+			// The service drives its own validation status bar item (progress + cancel) and
+			// yields between files, so the startup batch stays responsive and cancellable
+			// without a progress notification.
+			await shaclService.validateAllProfiles(fileService.files);
+		}
 	} catch (e) {
 		console.error('Mentor: SHACL profile check failed:', e);
 	}

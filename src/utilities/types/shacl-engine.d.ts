@@ -1,7 +1,7 @@
 declare module 'shacl-engine' {
 	import { DatasetCore, DataFactory, Term } from '@rdfjs/types';
 
-	interface ValidatorOptions {
+	export interface ValidatorOptions {
 		factory: DataFactory & { dataset(): DatasetCore };
 		coverage?: boolean;
 		debug?: boolean;
@@ -10,22 +10,32 @@ declare module 'shacl-engine' {
 		[key: string]: any;
 	}
 
-	interface ValidateOptions {
+	export interface ValidateOptions {
 		dataset: DatasetCore;
 	}
 
-	interface ValidationResult {
-		focusNode: any;
-		severity: Term;
-		constraintComponent: Term;
-		message: Term[];
-		path: any[];
-		value: any;
-		shape: { ptr: { term: Term } };
+	/**
+	 * A node in a validation result that is either a plain RDF/JS term or a
+	 * grapoi pointer wrapping one; shacl-engine emits both shapes depending on
+	 * the constraint, so consumers read `term?.value ?? value`.
+	 */
+	export interface TermOrPointer {
+		term?: Term;
+		value?: string;
+	}
+
+	export interface ValidationResult {
+		focusNode: TermOrPointer | null;
+		severity: Term | null;
+		constraintComponent: Term | null;
+		message: Term[] | null;
+		path: { predicates: Term[] }[] | null;
+		value: TermOrPointer | null;
+		shape: { ptr: { term: Term } } | null;
 		results: ValidationResult[];
 	}
 
-	interface ValidationReport {
+	export interface ValidationReport {
 		conforms: boolean;
 		dataset: DatasetCore;
 		results: ValidationResult[];

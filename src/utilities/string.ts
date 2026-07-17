@@ -1,4 +1,36 @@
 /**
+ * Generates a unique URL-safe slug from a display name: lowercased, runs of
+ * non-alphanumeric characters collapsed to `-`, trimmed, falling back to
+ * {@link fallback} for names without usable characters. On a collision with an
+ * existing id, a numeric suffix (`-2`, `-3`, ...) is appended.
+ * @param name The display name to derive the slug from.
+ * @param existingIds Ids the slug must not collide with.
+ * @param fallback The slug used when the name yields no usable characters.
+ * @returns A slug unique among the existing ids.
+ */
+export function generateUniqueSlug(name: string, existingIds: readonly string[], fallback: string): string {
+	const slug = name
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		|| fallback;
+
+	const taken = new Set(existingIds);
+
+	if (!taken.has(slug)) {
+		return slug;
+	}
+
+	for (let suffix = 2; ; suffix++) {
+		const candidate = `${slug}-${suffix}`;
+
+		if (!taken.has(candidate)) {
+			return candidate;
+		}
+	}
+}
+
+/**
  * Count the number of leading whitespace characters in a string.
  * @param str A string.
  * @returns The number of leading whitespace characters in the string.

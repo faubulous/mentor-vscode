@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { getConfig } from '@src/utilities/vscode/config';
-import { isLegacyShaclValidationConfig, migrateLegacyShaclValidationConfig } from '@src/services/validation/shacl-validation-migration';
-import { ISettingsMigration } from '../settings-migration.interface';
+import { isLegacyShaclValidationConfig, migrateLegacyShaclValidationConfig } from './shacl-validation-legacy-migration';
+import { ISettingsMigration } from '@src/services/core/settings-migration.interface';
 
 const KEY = 'shacl.validation';
 
 /**
  * Migrates the legacy `mentor.shacl.validation` value (`{ defaults, graphs }`)
- * to the profile-based model (`{ profiles, documents }`).
+ * to the profile-based model (`{ profiles }`).
  *
  * Legacy values were written to the user (global) scope, which prevented sharing
  * them with a team. The migrated settings are written to the workspace scope and

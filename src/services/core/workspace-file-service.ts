@@ -3,6 +3,7 @@ import picomatch from 'picomatch';
 import { Utils } from 'vscode-uri';
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { IWorkspaceFileService, WorkspaceFileChangeEvent } from './workspace-file-service.interface';
+import { normalizeGlobPattern } from '@src/utilities/glob';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
 
@@ -258,7 +259,7 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 	 */
 	private _applyExcludeGlobs(files: vscode.Uri[]): vscode.Uri[] {
 		const patterns = getConfig().get<string[]>('index.excludeFiles', [])
-			.map(p => p.trim().replace(/\\/g, '/').replace(/^\.?\/+/, ''))
+			.map(normalizeGlobPattern)
 			.filter(Boolean);
 
 		if (patterns.length === 0) {
@@ -275,9 +276,7 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 				return true;
 			}
 
-			const relativePath = workspaceUri.path.replace(/^\/+/, '');
-
-			return !isExcluded(relativePath);
+			return !isExcluded(workspaceUri.relativePath);
 		});
 	}
 

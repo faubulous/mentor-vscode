@@ -1,101 +1,36 @@
 import * as vscode from 'vscode';
-import { DataFactory as N3DataFactory } from 'n3';
-import { DatasetCore } from '@rdfjs/types';
-import { RdfStore } from 'rdf-stores';
-import { Validator } from 'shacl-engine';
 import { Store } from '@faubulous/mentor-rdf';
 import { IDocumentContextService, IDocumentFactory } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
+import { toUniqueStringArray } from '@src/utilities/array';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
 import {
-	findBrokenReferences,
-	getAllReferencedShapeUris,
 	getDocumentValidationState,
-	getPathPatternBase,
-	hasBrokenReferences,
-	migrateShaclValidationConfig,
+	matchesProfilePaths,
+	profilePathEntries,
 	resolveEffectiveShapeGraphs,
 	ShaclBrokenReferences,
 	ShaclDocumentLocation,
-	ShaclDocumentRename,
 	ShaclDocumentValidationState,
 	ShaclValidationSettings,
-	toUniqueStringArray,
 } from './shacl-validation-configuration';
+import { ShaclProfileSettingsService } from './shacl-profile-settings-service';
+import { ShaclSettingsSyncService } from './shacl-settings-sync-service';
+import { ShaclValidationResult, ShaclValidatorEngine } from './shacl-validator-engine';
+import { formatReportAsText, serializeReportAsTurtle } from './shacl-report-exporter';
+import { ShaclValidationPresenter } from './shacl-validation-presenter';
+import { BatchValidationOptions, ProfileValidationSummary, ShaclBatchRunner } from './shacl-batch-runner';
+
+export type { ShaclValidationResult, ShaclValidationResultEntry } from './shacl-validator-engine';
+export type { BatchValidationOptions, ProfileValidationSummary } from './shacl-batch-runner';
 
 /**
- * A combined RDF/JS factory that provides DataFactory methods plus a dataset() method,
- * which is required by shacl-engine's Validator.
- */
-const rdfFactory = {
-	...N3DataFactory,
-	// N3's literal() throws when passed null (vs. undefined) as the language/datatype argument.
-	// shacl-engine calls factory.literal(text, message.language || null) when there is no
-	// language tag, so we normalize null to undefined here.
-	literal(value: string, languageOrDataType?: any) {
-		return N3DataFactory.literal(value, languageOrDataType ?? undefined);
-	},
-	dataset(): DatasetCore {
-		return RdfStore.createDefault().asDataset();
-	}
-};
-
-/**
- * Result of a SHACL validation operation.
- */
-export interface ShaclValidationResult {
-	/**
-	 * Whether the data conforms to all shapes.
-	 */
-	conforms: boolean;
-	/**
-	 * The validation report as an RDF dataset.
-	 */
-	reportDataset: DatasetCore;
-	/**
-	 * Individual validation results.
-	 */
-	results: ShaclValidationResultEntry[];
-}
-
-/**
- * An individual SHACL validation result entry.
- */
-export interface ShaclValidationResultEntry {
-	/**
-	 * The focus node that was validated.
-	 */
-	focusNode: string;
-	/**
-	 * The severity of the violation (sh:Violation, sh:Warning, sh:Info).
-	 */
-	severity: string;
-	/**
-	 * The constraint component that triggered the result.
-	 */
-	constraintComponent: string;
-	/**
-	 * The result message(s).
-	 */
-	messages: string[];
-	/**
-	 * The result path (property), if applicable.
-	 */
-	path?: string;
-	/**
-	 * The value that caused the violation, if applicable.
-	 */
-	value?: string;
-	/**
-	 * The source shape URI.
-	 */
-	sourceShape: string;
-}
-
-/**
- * Service for validating RDF documents against SHACL shapes.
+ * The facade for SHACL validation of RDF documents: resolves the profiles that
+ * apply to a document, runs single-document and batch validations through the
+ * {@link ShaclValidatorEngine} and {@link ShaclBatchRunner}, publishes the
+ * resulting diagnostics and notifies consumers via {@link onDidValidate}.
  */
 export class ShaclValidationService implements vscode.Disposable {
 	private readonly _diagnosticCollection: vscode.DiagnosticCollection;
@@ -108,11 +43,11 @@ export class ShaclValidationService implements vscode.Disposable {
 	private readonly _lastResults = new Map<string, ShaclValidationResult>();
 
 	/**
-	 * Caches SHACL validators per shape graph combination so that shapes are not
-	 * recompiled on every validation run. Entries are keyed by the sorted shape
-	 * graph URIs and invalidated by comparing the store's per-graph versions.
+	 * Documents whose automatic validation was skipped because their data graph
+	 * exceeds `mentor.shacl.maxGraphSize`, keyed by document URI. Surfaced by the
+	 * validation code lens; cleared when the document is validated, edited or closed.
 	 */
-	private readonly _validatorCache = new Map<string, { validator: Validator; versions: number[] }>();
+	private readonly _lastSkips = new Map<string, { triples: number; maxGraphSize: number }>();
 
 	/**
 	 * Tracks in-flight validation runs per document and shape graph combination
@@ -123,9 +58,31 @@ export class ShaclValidationService implements vscode.Disposable {
 	private readonly _onDidValidate = new vscode.EventEmitter<vscode.Uri>();
 
 	/**
-	 * Ensures the startup profile health check runs at most once per session.
+	 * Log channel for validation activity, mirroring the "Mentor Indexer" channel.
+	 * Records per-file validation timings and batch summaries.
 	 */
-	private _startupProfileCheckDone = false;
+	private readonly _log: vscode.LogOutputChannel = vscode.window.createOutputChannel('Mentor Validation', { log: true });
+
+	/**
+	 * Drives the validation status bar item shown while a run is in flight.
+	 */
+	private readonly _presenter = new ShaclValidationPresenter();
+
+	/**
+	 * The vscode-free validation core (validator cache + result mapping).
+	 */
+	private readonly _engine: ShaclValidatorEngine;
+
+	/**
+	 * Runs batch validations (progress, cancellation, event coalescing).
+	 */
+	private readonly _batchRunner: ShaclBatchRunner;
+
+	/**
+	 * Keeps the validation settings in sync with the workspace (renames,
+	 * deletions) and runs the startup health checks.
+	 */
+	readonly settingsSync: ShaclSettingsSyncService;
 
 	/**
 	 * Fired when a validation completes (or results are cleared) for a document.
@@ -136,57 +93,144 @@ export class ShaclValidationService implements vscode.Disposable {
 		context: vscode.ExtensionContext,
 		private readonly _store: Store,
 		private readonly _contextService: IDocumentContextService,
-		private readonly _documentFactory: IDocumentFactory
+		private readonly _documentFactory: IDocumentFactory,
+		private readonly _profileSettings: ShaclProfileSettingsService = new ShaclProfileSettingsService()
 	) {
 		this._diagnosticCollection = vscode.languages.createDiagnosticCollection('mentor-shacl');
 		this._diagnosticsMapper = new ShaclDiagnosticsMapper();
+		this._engine = new ShaclValidatorEngine(_store, message => this._log.info(message));
+		this.settingsSync = new ShaclSettingsSyncService(_store, this._profileSettings);
+		this._batchRunner = new ShaclBatchRunner({
+			contextService: _contextService,
+			store: _store,
+			log: this._log,
+			presenter: this._presenter,
+			validateAndPublish: (uri, documentContext, shapes) => this._validateAndPublish(uri, documentContext, shapes),
+			onBatchEnd: () => {
+				// Coalesced refresh: fire once for the active document so the tree, decorations
+				// and code lenses rebuild a single time for the whole batch instead of per file.
+				const activeUri = this._contextService.activeContext?.uri;
+
+				if (activeUri) {
+					this._onDidValidate.fire(activeUri);
+				}
+			},
+			onFileSkipped: (uri, triples, maxGraphSize) => {
+				this._lastSkips.set(uri.toString(), { triples, maxGraphSize });
+			},
+		});
 
 		context.subscriptions.push(this);
+
+		this._log.clear();
+
+		this._disposables.push(this._log, this._presenter);
 
 		// Clear diagnostics when a document is closed.
 		this._disposables.push(
 			vscode.workspace.onDidCloseTextDocument(doc => {
 				this._diagnosticCollection.delete(doc.uri);
 				this._lastResults.delete(doc.uri.toString());
+				this._lastSkips.delete(doc.uri.toString());
 				this._onDidValidate.fire(doc.uri);
 			}),
-			// Editing a document invalidates its last validation result: drop it so
-			// the status CodeLens no longer reports a stale conforming state.
+			// Editing a document invalidates its last validation result and skip
+			// state: drop them so the status CodeLens no longer reports a stale state.
 			vscode.workspace.onDidChangeTextDocument(e => {
+				const key = e.document.uri.toString();
+
 				if (e.contentChanges.length === 0) {
 					return;
 				}
 
-				if (this._lastResults.delete(e.document.uri.toString())) {
+				const droppedResult = this._lastResults.delete(key);
+				const droppedSkip = this._lastSkips.delete(key);
+
+				if (droppedResult || droppedSkip) {
 					this._onDidValidate.fire(e.document.uri);
 				}
-			})
+			}),
+			// Auto-validate on change: a fresh document context is delivered after
+			// the debounced re-parse (on open and on edit).
+			this._contextService.onDidChangeDocumentContext(context => this._autoValidateOnChange(context))
 		);
 	}
 
 	/**
-	 * Get the current SHACL validation settings, merging profiles and document
-	 * assignments across the user and workspace scopes (workspace overrides user
-	 * on a name/key conflict). Profiles can live in either scope, mirroring how
-	 * SPARQL stores and connections are resolved.
+	 * Validates a document against its matching profiles when `mentor.shacl.enabled`
+	 * and `mentor.shacl.validateOnChange` are both on. Skips documents that are not
+	 * covered by a profile or that currently have syntax errors, and never shows a
+	 * notification (diagnostics are published quietly).
 	 */
-	getValidationSettings(): ShaclValidationSettings {
-		const inspected = getConfig('shacl').inspect<ShaclValidationSettings>('validation');
-
-		if (!inspected) {
-			return getConfig('shacl').get<ShaclValidationSettings>('validation', {});
+	private async _autoValidateOnChange(context: IDocumentContext | undefined): Promise<void> {
+		if (!context) {
+			return;
 		}
 
-		const scopes = [inspected.defaultValue, inspected.globalValue, inspected.workspaceValue];
+		const shaclConfig = getConfig('shacl');
 
-		return {
-			profiles: Object.assign({}, ...scopes.map(s => s?.profiles ?? {})),
-		};
+		if (!shaclConfig.get<boolean>('enabled', false) || !shaclConfig.get<boolean>('validateOnChange', false)) {
+			return;
+		}
+
+		const shapeGraphUris = this.getEffectiveShapeGraphs(context.uri);
+
+		if (shapeGraphUris.length === 0 || this._hasSyntaxErrors(context.uri)) {
+			return;
+		}
+
+		// Never auto-validate a pathologically large data graph on change: it would block
+		// the extension host on every edit. Explicit validation commands bypass this guard.
+		const maxGraphSize = this._batchRunner.getMaxGraphSize();
+		const triples = maxGraphSize > 0 ? this._batchRunner.getDataGraphSize(context) : 0;
+
+		if (maxGraphSize > 0 && triples > maxGraphSize) {
+			this._log.info(`Skipped on-change validation for ${context.uri.toString()}: data graph exceeds mentor.shacl.maxGraphSize.`);
+			this._lastSkips.set(context.uri.toString(), { triples, maxGraphSize });
+			this._onDidValidate.fire(context.uri);
+			return;
+		}
+
+		// Reflect the run on the status bar item unless a batch already owns it.
+		const ownsStatusBar = !this._batchRunner.isValidating;
+
+		if (ownsStatusBar) {
+			const fileName = context.uri.path.split('/').pop() ?? context.uri.toString();
+			this._presenter.showRunning(`$(sync~spin) Validating ${fileName}...`);
+		}
+
+		try {
+			await this._validateAndPublish(context.uri, context, shapeGraphUris);
+		} catch (error) {
+			this._log.error(`SHACL auto-validation failed for ${context.uri.toString()}: ${error}`);
+		} finally {
+			if (ownsStatusBar) {
+				this._presenter.clearRunning();
+			}
+		}
+	}
+
+	/**
+	 * Whether the document currently has blocking syntax errors: any error-severity
+	 * diagnostic that is not a SHACL result (SHACL diagnostics carry `source: 'SHACL'`).
+	 */
+	private _hasSyntaxErrors(uri: vscode.Uri): boolean {
+		return vscode.languages.getDiagnostics(uri).some(diagnostic =>
+			diagnostic.severity === vscode.DiagnosticSeverity.Error && diagnostic.source !== 'SHACL');
+	}
+
+	/**
+	 * Get the current SHACL validation settings, merging profiles across the
+	 * user and workspace scopes (workspace overrides user on an id conflict).
+	 * See {@link ShaclProfileSettingsService.getMergedSettings}.
+	 */
+	getValidationSettings(): ShaclValidationSettings {
+		return this._profileSettings.getMergedSettings();
 	}
 
 	/**
 	 * Get the workspace-relative location of a document, as matched against the
-	 * `documents` and `paths` settings keys. Documents outside the workspace get
+	 * profiles's include/exclude entries. Documents outside the workspace get
 	 * an inert location (their full URI as the path) that nothing matches.
 	 */
 	getDocumentLocation(documentUri: vscode.Uri): ShaclDocumentLocation {
@@ -197,14 +241,14 @@ export class ShaclValidationService implements vscode.Disposable {
 		}
 
 		return {
-			path: wsUri.path.replace(/^\/+/, ''),
+			path: wsUri.relativePath,
 			fragment: wsUri.fragment || undefined,
 		};
 	}
 
 	/**
 	 * Get the currently-recognized RDF file extensions (e.g. `.ttl`), used to
-	 * narrow extension-less `paths` patterns to RDF files.
+	 * narrow extension-less include/exclude patterns to RDF files.
 	 */
 	getRdfExtensions(): string[] {
 		return Object.entries(this._documentFactory.supportedExtensions)
@@ -274,68 +318,116 @@ export class ShaclValidationService implements vscode.Disposable {
 		}
 	}
 
+	/**
+	 * Validates every workspace file matched by the given profile against that
+	 * profile's shape graphs, publishing diagnostics for each. Files without a
+	 * loaded context (e.g. not yet indexed) are skipped.
+	 * @param profileId The id of the profile to validate.
+	 * @param files The workspace files to consider.
+	 */
+	async validateProfile(profileId: string, files: ReadonlyArray<vscode.Uri>, options?: BatchValidationOptions): Promise<ProfileValidationSummary> {
+		const profile = this.getValidationSettings().profiles?.[profileId];
+
+		if (!profile) {
+			return { matched: 0, validated: 0, issues: 0, issueFiles: [], hasShapes: false, skipped: 0 };
+		}
+
+		const shapes = toUniqueStringArray(profile.shapes);
+		const entries = profilePathEntries(profile);
+		const rdfExtensions = this.getRdfExtensions();
+
+		return this._batchRunner.run(`profile "${profileId}"`, files, shapes.length > 0, uri =>
+			matchesProfilePaths(entries, this.getDocumentLocation(uri), rdfExtensions) ? shapes : undefined,
+			options
+		);
+	}
+
+	/**
+	 * Validates every workspace file matched by any profile against its effective
+	 * shape graphs (the union of all matching profiles), publishing diagnostics
+	 * for each. Files without a loaded context are skipped.
+	 * @param files The workspace files to consider.
+	 */
+	async validateAllProfiles(files: ReadonlyArray<vscode.Uri>, options?: BatchValidationOptions): Promise<ProfileValidationSummary> {
+		const hasProfiles = Object.keys(this.getValidationSettings().profiles ?? {}).length > 0;
+
+		return this._batchRunner.run('workspace', files, hasProfiles, uri => {
+			const shapes = this.getEffectiveShapeGraphs(uri);
+
+			return shapes.length > 0 ? shapes : undefined;
+		}, options);
+	}
+
+	/**
+	 * Whether a batch validation run is currently in flight (and therefore cancellable).
+	 */
+	get isValidating(): boolean {
+		return this._batchRunner.isValidating;
+	}
+
+	/**
+	 * Cancels the batch validation run currently in flight, if any. Invoked (after an
+	 * explicit confirmation) by the `mentor.command.cancelValidation` command that the
+	 * status bar item triggers.
+	 */
+	cancelActiveValidation(): void {
+		this._batchRunner.cancel();
+	}
+
+	/**
+	 * Runs a single-document validation while reflecting it on the status bar item
+	 * and reporting failures with an error notification.
+	 */
 	private async _runValidation(documentUri: vscode.Uri, context: IDocumentContext, shapeGraphUris: string[]): Promise<ShaclValidationResult | undefined> {
 		const fileName = documentUri.path.split('/').pop() ?? documentUri.toString();
-		const statusBarMessage = vscode.window.setStatusBarMessage(`$(loading~spin) Running SHACL validation for: ${fileName}`);
-		const statusBarMessageStartTime = Date.now();
-		const minStatusBarMessageDurationMs = 300;
+
+		// Reflect the single-file run on the dedicated status bar item (no snackbar); it is
+		// hidden again afterwards. Batch runs manage their own status text.
+		this._presenter.showRunning(`$(sync~spin) Validating ${fileName}...`);
 
 		// Yield once so VS Code can paint the status bar spinner before validation starts.
 		await new Promise(resolve => setTimeout(resolve, 0));
 
 		try {
-			// A read-only view over the store — no triple copying needed.
-			const dataDataset = this._store.getDataset(context.graphs, false);
-			const validator = this._getValidator(shapeGraphUris);
-
-			const report = await validator.validate({ dataset: dataDataset });
-
-			// Map results
-			const result: ShaclValidationResult = {
-				conforms: report.conforms,
-				reportDataset: report.dataset,
-				results: this._mapResults(report.results)
-			};
-
-			// Cache and publish diagnostics
-			this._lastResults.set(documentUri.toString(), result);
-			this._publishDiagnostics(documentUri, context, result);
-			this._onDidValidate.fire(documentUri);
-
-			return result;
+			return await this._validateAndPublish(documentUri, context, shapeGraphUris);
 		} catch (error) {
+			this._log.error(`SHACL validation failed for ${documentUri.toString()}: ${error}`);
 			vscode.window.showErrorMessage(`SHACL validation failed: ${error}`);
 			return undefined;
 		} finally {
-			// Keep the status bar message visible for a minimum duration without
-			// delaying the validation result for callers.
-			const remainingMs = Math.max(0, minStatusBarMessageDurationMs - (Date.now() - statusBarMessageStartTime));
-
-			setTimeout(() => statusBarMessage.dispose(), remainingMs);
+			this._presenter.clearRunning();
 		}
 	}
 
 	/**
-	 * Get a SHACL validator for the given shape graphs. Validators are cached and
-	 * reused until the contents of any of their shape graphs change in the store,
-	 * so that shapes are not recompiled on every validation run.
+	 * Validates a document's data against the given shape graphs and publishes the
+	 * resulting diagnostics. Unlike {@link _runValidation} this shows no status bar
+	 * message, so it is suitable for batch validation of many files.
 	 */
-	private _getValidator(shapeGraphUris: string[]): Validator {
-		const sorted = [...shapeGraphUris].sort();
-		const key = sorted.join('\n');
-		const versions = sorted.map(graphUri => this._store.getGraphVersion(graphUri));
-		const cached = this._validatorCache.get(key);
+	private async _validateAndPublish(documentUri: vscode.Uri, context: IDocumentContext, shapeGraphUris: string[]): Promise<ShaclValidationResult> {
+		// A read-only view over the store — no triple copying needed.
+		const dataDataset = this._store.getDataset(context.graphs, false);
 
-		if (cached && cached.versions.every((version, i) => version === versions[i])) {
-			return cached.validator;
+		// Time only the data-graph validation here; shape compilation is timed separately
+		// by the engine. Logging both makes it easy to tell whether a slow "small" file is
+		// paying for its own validation or for a one-off validator build.
+		const startTime = performance.now();
+		const result = await this._engine.validate(shapeGraphUris, dataDataset);
+		const duration = Math.round(performance.now() - startTime);
+
+		this._log.info(`Validated ${documentUri.toString()}: ${duration}ms, ${dataDataset.size} triples, ${result.results.length} issues`);
+
+		this._lastResults.set(documentUri.toString(), result);
+		this._lastSkips.delete(documentUri.toString());
+		this._publishDiagnostics(documentUri, context, result);
+
+		// During a batch the event is coalesced into a single fire when the batch ends
+		// (see ShaclBatchRunner); firing per file would refresh the tree/decorations 48× over.
+		if (!this._batchRunner.isBatchActive) {
+			this._onDidValidate.fire(documentUri);
 		}
 
-		const shapesDataset = this._store.getDataset(sorted, false);
-		const validator = new Validator(shapesDataset, { factory: rdfFactory });
-
-		this._validatorCache.set(key, { validator, versions });
-
-		return validator;
+		return result;
 	}
 
 	/**
@@ -346,11 +438,21 @@ export class ShaclValidationService implements vscode.Disposable {
 	}
 
 	/**
+	 * Get the recorded skip of the last automatic validation run for a document:
+	 * present when the document's data graph exceeded `mentor.shacl.maxGraphSize`
+	 * and no validation has run since. Surfaced by the validation code lens.
+	 */
+	getLastSkip(documentUri: vscode.Uri): { triples: number; maxGraphSize: number } | undefined {
+		return this._lastSkips.get(documentUri.toString());
+	}
+
+	/**
 	 * Clear validation diagnostics for a document.
 	 */
 	clearDiagnostics(documentUri: vscode.Uri): void {
 		this._diagnosticCollection.delete(documentUri);
 		this._lastResults.delete(documentUri.toString());
+		this._lastSkips.delete(documentUri.toString());
 		this._onDidValidate.fire(documentUri);
 	}
 
@@ -360,33 +462,7 @@ export class ShaclValidationService implements vscode.Disposable {
 	getReportAsText(documentUri: vscode.Uri): string | undefined {
 		const result = this._lastResults.get(documentUri.toString());
 
-		if (!result) {
-			return undefined;
-		}
-
-		const lines: string[] = [];
-		lines.push(`SHACL Validation Report`);
-		lines.push(`Conforms: ${result.conforms}`);
-		lines.push(`Results: ${result.results.length}`);
-		lines.push('');
-
-		for (const r of result.results) {
-			lines.push(`  Focus Node: ${r.focusNode}`);
-			lines.push(`  Severity:   ${this._severityLabel(r.severity)}`);
-			if (r.path) {
-				lines.push(`  Path:       ${r.path}`);
-			}
-			for (const msg of r.messages) {
-				lines.push(`  Message:    ${msg}`);
-			}
-			if (r.value) {
-				lines.push(`  Value:      ${r.value}`);
-			}
-			lines.push(`  Shape:      ${r.sourceShape}`);
-			lines.push('');
-		}
-
-		return lines.join('\n');
+		return result ? formatReportAsText(result) : undefined;
 	}
 
 	/**
@@ -399,32 +475,7 @@ export class ShaclValidationService implements vscode.Disposable {
 			return undefined;
 		}
 
-		// Use the store's serialization capabilities to write the report dataset as Turtle.
-		const tempStore = new Store();
-
-		const tempGraphUri = 'urn:shacl:report';
-
-		for (const q of result.reportDataset) {
-			tempStore.add(rdfFactory.quad(q.subject, q.predicate, q.object, rdfFactory.namedNode(tempGraphUri)));
-		}
-
-		return tempStore.serializeGraph(tempGraphUri, 'text/turtle', undefined, {
-			'sh': 'http://www.w3.org/ns/shacl#',
-			'xsd': 'http://www.w3.org/2001/XMLSchema#',
-			'rdf': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
-		});
-	}
-
-	private _mapResults(results: any[]): ShaclValidationResultEntry[] {
-		return results.map(r => ({
-			focusNode: r.focusNode?.term?.value ?? r.focusNode?.value ?? '',
-			severity: r.severity?.value ?? '',
-			constraintComponent: r.constraintComponent?.value ?? '',
-			messages: (r.message ?? []).map((m: any) => m.value ?? String(m)),
-			path: r.path?.[0]?.predicates?.[0]?.value,
-			value: r.value?.term?.value ?? r.value?.value,
-			sourceShape: r.shape?.ptr?.term?.value ?? ''
-		}));
+		return serializeReportAsTurtle(result);
 	}
 
 	private _publishDiagnostics(documentUri: vscode.Uri, context: IDocumentContext, result: ShaclValidationResult): void {
@@ -432,234 +483,12 @@ export class ShaclValidationService implements vscode.Disposable {
 		this._diagnosticCollection.set(documentUri, diagnostics);
 	}
 
-	private _severityLabel(severity: string): string {
-		if (severity.endsWith('Violation')) return 'Violation';
-		if (severity.endsWith('Warning')) return 'Warning';
-		if (severity.endsWith('Info')) return 'Info';
-		return severity;
-	}
-
 	/**
-	 * Checks all validation profiles and document assignments for broken references:
-	 * shape files that no longer exist and assignments naming unknown profiles.
+	 * Checks all validation profiles for broken references. See
+	 * {@link ShaclSettingsSyncService.checkShaclProfiles}.
 	 */
-	async checkShaclProfiles(): Promise<ShaclBrokenReferences> {
-		const settings = this.getValidationSettings();
-		const existing = new Set<string>();
-
-		for (const uri of getAllReferencedShapeUris(settings)) {
-			if (await this._shapeFileExists(uri)) {
-				existing.add(uri);
-			}
-		}
-
-		return findBrokenReferences(settings, uri => existing.has(uri));
-	}
-
-	/**
-	 * Runs the startup health check once per session: if any profile or assignment
-	 * references missing files or unknown profiles, shows a warning with an action
-	 * to open the validation settings.
-	 */
-	async runStartupProfileCheck(): Promise<void> {
-		if (this._startupProfileCheckDone || !getConfig('shacl').get<boolean>('enabled', false)) {
-			return;
-		}
-
-		this._startupProfileCheckDone = true;
-
-		const broken = await this.checkShaclProfiles();
-
-		if (!hasBrokenReferences(broken)) {
-			return;
-		}
-
-		const brokenProfiles = Object.keys(broken.profiles);
-
-		const action = await vscode.window.showWarningMessage(
-			`Some SHACL validation profiles reference missing shape graphs. Affected profiles: ${brokenProfiles.join(', ')}`,
-			'Manage Profiles'
-		);
-
-		if (action === 'Manage Profiles') {
-			await vscode.commands.executeCommand('mentor.command.openSettings', 'validation.profiles');
-		}
-	}
-
-	/**
-	 * Migrates SHACL validation settings for renamed/moved files or folders.
-	 *
-	 * Shape entries in `mentor.shacl.validation` are canonical
-	 * `workspace:///...` URIs while `documents`/`paths` keys are bare
-	 * workspace-relative paths, so each rename carries both forms. Only renames
-	 * for files whose old URI can be resolved to a workspace-relative URI are
-	 * migrated.
-	 */
-	async migrateShaclSettings(files: ReadonlyArray<{ oldUri: vscode.Uri; newUri: vscode.Uri }>): Promise<void> {
-		const renames: ShaclDocumentRename[] = [];
-
-		for (const { oldUri, newUri } of files) {
-			const oldWorkspaceUri = WorkspaceUri.toWorkspaceUri(oldUri);
-
-			if (!oldWorkspaceUri) {
-				// File is outside the current workspace root — skip.
-				continue;
-			}
-
-			const newWorkspaceUri = WorkspaceUri.toWorkspaceUri(newUri);
-
-			renames.push({
-				oldUri: WorkspaceUri.toCanonicalString(oldWorkspaceUri),
-				newUri: newWorkspaceUri
-					? WorkspaceUri.toCanonicalString(newWorkspaceUri)
-					: newUri.toString(),
-				oldPath: oldWorkspaceUri.path.replace(/^\/+/, ''),
-				newPath: newWorkspaceUri
-					? newWorkspaceUri.path.replace(/^\/+/, '')
-					: newUri.toString(),
-			});
-		}
-
-		if (renames.length === 0) {
-			return;
-		}
-
-		const shacl = vscode.workspace.getConfiguration('mentor.shacl');
-		const current = shacl.inspect<ShaclValidationSettings>('validation')?.workspaceValue;
-
-		if (!current) {
-			return;
-		}
-
-		const migrated = migrateShaclValidationConfig(current, renames);
-
-		await shacl.update('validation', migrated, vscode.ConfigurationTarget.Workspace);
-	}
-
-	/**
-	 * Handles file/folder deletions:
-	 * - Prunes `paths` entries whose literal path or fixed pattern prefix lies
-	 *   inside a deleted path (they can never match anything again). Root-anchored
-	 *   patterns are left untouched.
-	 * - Warns — without modifying shape lists — when a deleted file is still
-	 *   referenced as a shape file by a profile.
-	 */
-	async handleFileDeletes(files: ReadonlyArray<vscode.Uri>): Promise<void> {
-		// Shape entries are canonical workspace:/// URIs, paths entries are bare
-		// relative paths — collect the deletions in both forms.
-		const deletedUris: string[] = [];
-		const deletedPaths: string[] = [];
-
-		for (const uri of files) {
-			const wsUri = WorkspaceUri.toWorkspaceUri(uri);
-
-			if (wsUri) {
-				deletedUris.push(WorkspaceUri.toCanonicalString(wsUri));
-				deletedPaths.push(wsUri.path.replace(/^\/+/, ''));
-			}
-		}
-
-		if (deletedPaths.length === 0) {
-			return;
-		}
-
-		// Deletions may be folders; match by key or path prefix with boundary guards.
-		const isDeletedUri = (uri: string) =>
-			deletedUris.some(key => uri === key || uri.startsWith(key + '/'));
-
-		const isDeletedPathEntry = (entry: string) => {
-			const pattern = entry.startsWith('!') ? entry.slice(1) : entry;
-			const base = getPathPatternBase(pattern);
-
-			return base.length > 0 && deletedPaths.some(path =>
-				base === path || base.startsWith(path + '/') || base.startsWith(path + '#'));
-		};
-
-		const shacl = vscode.workspace.getConfiguration('mentor.shacl');
-		const settings = shacl.inspect<ShaclValidationSettings>('validation')?.workspaceValue;
-
-		if (!settings) {
-			return;
-		}
-
-		let changed = false;
-		const profiles = { ...(settings.profiles ?? {}) };
-
-		for (const [id, profile] of Object.entries(profiles)) {
-			const paths = profile?.paths;
-
-			if (!paths?.length) {
-				continue;
-			}
-
-			const kept = paths.filter(entry => !isDeletedPathEntry(entry));
-
-			if (kept.length !== paths.length) {
-				const next = { ...profile };
-
-				if (kept.length > 0) {
-					next.paths = kept;
-				} else {
-					delete next.paths;
-				}
-
-				profiles[id] = next;
-				changed = true;
-			}
-		}
-
-		if (changed) {
-			await shacl.update('validation', { ...settings, profiles }, vscode.ConfigurationTarget.Workspace);
-		}
-
-		// Warn about profiles that reference deleted shape files.
-		const affectedProfiles = Object.entries(profiles)
-			.filter(([, profile]) => toUniqueStringArray(profile?.shapes).some(isDeletedUri))
-			.map(([id]) => id);
-
-		if (affectedProfiles.length === 0) {
-			return;
-		}
-
-		const action = await vscode.window.showWarningMessage(
-			`Deleted files are still referenced as shape graphs by SHACL validation profiles. Affected profiles: ${affectedProfiles.join(', ')}`,
-			'Manage Profiles'
-		);
-
-		if (action === 'Manage Profiles') {
-			await vscode.commands.executeCommand('mentor.command.openSettings', 'validation.profiles');
-		}
-	}
-
-	/**
-	 * Checks whether a shape file URI exists: `workspace:` URIs are resolved
-	 * against the file system, other URIs are looked up as graphs in the store.
-	 */
-	private async _shapeFileExists(uri: string): Promise<boolean> {
-		let parsed: vscode.Uri;
-
-		try {
-			parsed = vscode.Uri.parse(uri, true);
-		} catch {
-			return false;
-		}
-
-		if (parsed.scheme === WorkspaceUri.uriScheme) {
-			const fileUri = WorkspaceUri.tryToFileUri(parsed);
-
-			if (!fileUri) {
-				return false;
-			}
-
-			try {
-				await vscode.workspace.fs.stat(fileUri);
-				return true;
-			} catch {
-				return false;
-			}
-		}
-
-		return this._store.hasGraph(uri);
+	checkShaclProfiles(): Promise<ShaclBrokenReferences> {
+		return this.settingsSync.checkShaclProfiles();
 	}
 
 	dispose(): void {

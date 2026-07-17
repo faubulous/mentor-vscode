@@ -3,10 +3,11 @@ import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
-import { isValidPathKey, matchesPathKey, matchesProfilePaths } from '@src/services/validation/shacl-validation-configuration';
+import { isValidPathKey, matchesPathKey, matchesProfilePaths, toPathEntries } from '@src/services/validation/shacl-validation-configuration';
 import { IWorkspaceFileService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { writePresetShapes } from '@src/services/validation/preset-shape-writer';
 import { getShapeGraphCandidates } from '@src/utilities';
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
@@ -79,7 +80,8 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 				return true;
 			}
 			case 'GetProfileMatchPreview': {
-				const { key, paths } = message;
+				const { key, includeFiles, excludeFiles } = message;
+				const entries = toPathEntries(includeFiles, excludeFiles);
 
 				const fileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
 				const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
@@ -90,7 +92,7 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 				for (const uri of fileService.files) {
 					const location = validationService.getDocumentLocation(uri);
 
-					if (matchesProfilePaths(paths, location, rdfExtensions)) {
+					if (matchesProfilePaths(entries, location, rdfExtensions)) {
 						matches.push(location.path);
 					}
 				}
@@ -141,6 +143,26 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 					// graph exporter, which serializes the store graph into an editor.
 					await vscode.commands.executeCommand('mentor.command.openGraph', message.uri);
 				}
+
+				return true;
+			}
+			case 'WritePresetShapes': {
+				try {
+					const { uri } = await writePresetShapes(message.presetId);
+
+					this._post({ section: SECTION_ID, id: 'WritePresetShapesResult', presetId: message.presetId, uri });
+				} catch (error) {
+					const reason = error instanceof Error ? error.message : String(error);
+
+					vscode.window.showErrorMessage(`Could not copy the preset shapes into the workspace: ${reason}`);
+
+					this._post({ section: SECTION_ID, id: 'WritePresetShapesResult', presetId: message.presetId, error: reason });
+				}
+
+				return true;
+			}
+			case 'ValidateProfile': {
+				await vscode.commands.executeCommand('mentor.command.validateProfile', message.profileId);
 
 				return true;
 			}

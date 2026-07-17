@@ -1,13 +1,23 @@
-import picomatch from 'picomatch';
+import { toUniqueStringArray } from '@src/utilities/array';
+import {
+	getExtensionGlob,
+	getGlobPatternBase,
+	isSafeRelativePath,
+	matchGlob,
+	normalizeGlobPattern,
+	splitNegatedPatterns,
+} from '@src/utilities/glob';
+import { generateUniqueSlug } from '@src/utilities/string';
 
 /**
- * A named, self-contained set of SHACL shape files together with the paths it
- * applies to.
+ * A named, self-contained set of SHACL shape files together with the files and
+ * folders it applies to.
  *
  * Profiles are stored in a record keyed by a stable, auto-generated identifier
  * (a slug derived from the display name at creation time). Nothing references
- * a profile from elsewhere in the settings — a profile owns its `paths`, so
- * renaming or deleting one never requires rewriting other entries.
+ * a profile from elsewhere in the settings — a profile owns its `includeFiles`
+ * and `excludeFiles`, so renaming or deleting one never requires rewriting
+ * other entries.
  */
 export interface ShaclValidationProfile {
 	/**
@@ -21,10 +31,16 @@ export interface ShaclValidationProfile {
 	/**
 	 * Workspace-relative paths this profile applies to: glob patterns
 	 * (`ontologies/*`, `**\/*.ttl`) or exact file paths (`models/data.ttl`,
-	 * optionally `#fragment`-qualified for notebook cells). Entries prefixed
-	 * with `!` exclude matching documents from the profile.
+	 * optionally `#fragment`-qualified for notebook cells). Mirrors the index
+	 * section's `includeFiles`.
 	 */
-	paths?: string[];
+	includeFiles?: string[];
+	/**
+	 * Workspace-relative paths excluded from the profile, in the same pattern
+	 * form as {@link includeFiles} (no `!` prefix). Mirrors the index section's
+	 * `excludeFiles`.
+	 */
+	excludeFiles?: string[];
 	/**
 	 * Optional human-readable description of the profile.
 	 */
@@ -41,7 +57,7 @@ export interface ShaclValidationSettings {
 
 /**
  * The location of a document inside the workspace, as matched against the
- * profiles' `paths` entries.
+ * profiles' include/exclude entries.
  */
 export interface ShaclDocumentLocation {
 	/**
@@ -57,8 +73,8 @@ export interface ShaclDocumentLocation {
 /**
  * A single file or folder rename, carrying both the canonical-URI and the bare
  * workspace-relative-path form. Shape file entries are canonical
- * `workspace:///...` URIs while `paths` entries are bare relative paths, so
- * both forms are needed to migrate a settings object.
+ * `workspace:///...` URIs while include/exclude entries are bare relative
+ * paths, so both forms are needed to migrate a settings object.
  */
 export interface ShaclDocumentRename {
 	/**
@@ -96,7 +112,7 @@ export interface ShaclDocumentValidationState {
 	 */
 	effectiveShapes: string[];
 	/**
-	 * The distinct `paths` entries that matched the document (literal and glob).
+	 * The distinct include entries that matched the document (literal and glob).
 	 */
 	matchedPaths: string[];
 }
@@ -113,63 +129,15 @@ export interface ShaclBrokenReferences {
 }
 
 /**
- * Returns a stable unique array of non-empty string values.
- */
-export function toUniqueStringArray(value: unknown): string[] {
-	if (!Array.isArray(value)) {
-		return [];
-	}
-
-	const seen = new Set<string>();
-	const result: string[] = [];
-
-	for (const entry of value) {
-		if (typeof entry !== 'string') {
-			continue;
-		}
-
-		const trimmed = entry.trim();
-
-		if (!trimmed || seen.has(trimmed)) {
-			continue;
-		}
-
-		seen.add(trimmed);
-		result.push(trimmed);
-	}
-
-	return result;
-}
-
-/**
- * Generates a stable profile id from a display name: lowercased, runs of
- * non-alphanumeric characters collapsed to `-`, trimmed, falling back to
- * `profile` for names without usable characters. On a collision with an
- * existing id, a numeric suffix (`-2`, `-3`, ...) is appended.
+ * Generates a stable profile id from a display name (see
+ * {@link generateUniqueSlug}), falling back to `profile` for names without
+ * usable characters.
  *
  * The id is minted once when a profile is first saved and never changes on
  * rename.
  */
 export function generateProfileId(name: string, existingIds: readonly string[]): string {
-	const slug = name
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-+|-+$/g, '')
-		|| 'profile';
-
-	const taken = new Set(existingIds);
-
-	if (!taken.has(slug)) {
-		return slug;
-	}
-
-	for (let suffix = 2; ; suffix++) {
-		const candidate = `${slug}-${suffix}`;
-
-		if (!taken.has(candidate)) {
-			return candidate;
-		}
-	}
+	return generateUniqueSlug(name, existingIds, 'profile');
 }
 
 /**
@@ -180,64 +148,16 @@ export function getProfileDisplayName(settings: ShaclValidationSettings | undefi
 }
 
 /**
- * Returns true when the given string contains glob syntax (including negation).
- * Never throws on malformed input.
- */
-export function isGlobPattern(pattern: string): boolean {
-	try {
-		const scanned = picomatch.scan(pattern);
-
-		return scanned.isGlob === true || scanned.negated === true;
-	} catch {
-		return false;
-	}
-}
-
-/**
- * Builds the glob suffix appended to extension-less patterns so they only match
- * the currently-recognized RDF file extensions, e.g. `.{ttl,n3,nt,nq,trig,rdf}`.
- * Returns an empty string when no extensions are given (the pattern is then
- * left untouched).
- */
-export function getRdfExtensionGlob(rdfExtensions: readonly string[]): string {
-	const names = toUniqueStringArray([...rdfExtensions]).map(ext => ext.replace(/^\.+/, '').toLowerCase()).filter(Boolean);
-
-	if (names.length === 0) {
-		return '';
-	}
-
-	return names.length === 1 ? `.${names[0]}` : `.{${names.join(',')}}`;
-}
-
-/**
- * Normalizes a raw `paths` entry: trims, converts backslashes to slashes and
- * strips leading `./`/`/` and trailing `/` sequences.
- */
-function normalizePathKey(rawKey: string): string {
-	return rawKey
-		.trim()
-		.replace(/\\/g, '/')
-		.replace(/^(?:\.\/+|\/+)+/, '')
-		.replace(/\/+$/, '');
-}
-
-/**
- * Returns true when a normalized pattern is safe to match: it must not contain
- * `..` segments or absolute-path-looking syntax (drive letters). Consistent
- * with the path-traversal guarding of `WorkspaceUri`.
+ * Returns true when a normalized entry is safe to match: its path part (before
+ * an optional `#fragment` for notebook cells) must be free of `..` segments and
+ * absolute-path syntax. See {@link isSafeRelativePath}.
  */
 function isSafePathKey(normalizedKey: string): boolean {
-	if (/^[a-zA-Z]:/.test(normalizedKey)) {
-		return false;
-	}
-
-	const pathPart = normalizedKey.split('#', 1)[0];
-
-	return !pathPart.split('/').some(segment => segment === '..');
+	return isSafeRelativePath(normalizedKey.split('#', 1)[0]);
 }
 
 /**
- * Returns true when a raw `paths` entry — optionally `!`-prefixed for an
+ * Returns true when a raw include/exclude entry — optionally `!`-prefixed for an
  * exclusion — is non-empty and free of path traversal after normalization.
  * Used by the settings-UI pattern validation; the matcher applies the same
  * guard defensively.
@@ -245,13 +165,13 @@ function isSafePathKey(normalizedKey: string): boolean {
 export function isValidPathKey(rawKey: string): boolean {
 	const trimmed = rawKey.trim();
 	const pattern = trimmed.startsWith('!') ? trimmed.slice(1) : trimmed;
-	const normalized = normalizePathKey(pattern);
+	const normalized = normalizeGlobPattern(pattern);
 
 	return normalized.length > 0 && isSafePathKey(normalized);
 }
 
 /**
- * Expands a normalized `paths` entry into the effective glob pattern:
+ * Expands a normalized include/exclude entry into the effective glob pattern:
  *
  * - When the last path segment has no literal `.`, the pattern is
  *   extension-agnostic and the recognized RDF extensions are appended
@@ -270,22 +190,16 @@ function expandPathKey(normalizedKey: string, rdfExtensions: readonly string[]):
 	const lastSegment = pathPart.split('/').pop() ?? pathPart;
 
 	if (lastSegment === '**') {
-		pathPart += '/*' + getRdfExtensionGlob(rdfExtensions);
+		pathPart += '/*' + getExtensionGlob(rdfExtensions);
 	} else if (!lastSegment.includes('.')) {
-		pathPart += getRdfExtensionGlob(rdfExtensions);
+		pathPart += getExtensionGlob(rdfExtensions);
 	}
 
 	return fragmentPart !== undefined ? pathPart + fragmentPart : pathPart + '{#*,}';
 }
 
 /**
- * Compiled matchers per expanded pattern string. Safe to memoize at module
- * level: a compiled matcher for a given pattern string is always identical.
- */
-const matcherCache = new Map<string, picomatch.Matcher>();
-
-/**
- * Tests whether a single `paths` entry matches a document location.
+ * Tests whether a single include/exclude entry matches a document location.
  *
  * Entries use standard glob semantics matched against the workspace-relative
  * path (a single `*` does not cross `/`; use `**\/` to match at any depth).
@@ -303,7 +217,7 @@ export function matchesPathKey(
 	document: ShaclDocumentLocation,
 	rdfExtensions: readonly string[]
 ): boolean {
-	const normalized = normalizePathKey(rawKey);
+	const normalized = normalizeGlobPattern(rawKey);
 
 	if (!normalized || !isSafePathKey(normalized)) {
 		return false;
@@ -311,19 +225,7 @@ export function matchesPathKey(
 
 	const expanded = expandPathKey(normalized, rdfExtensions);
 
-	let matcher = matcherCache.get(expanded);
-
-	if (!matcher) {
-		try {
-			matcher = picomatch(expanded, { dot: true });
-		} catch {
-			return false;
-		}
-
-		matcherCache.set(expanded, matcher);
-	}
-
-	return matcher(toDocumentPatternKey(document));
+	return matchGlob(expanded, toDocumentPatternKey(document));
 }
 
 /**
@@ -335,44 +237,30 @@ export function toDocumentPatternKey(document: ShaclDocumentLocation): string {
 }
 
 /**
- * Whether a raw `paths` entry is a `!`-prefixed exclusion. Leading whitespace
- * is ignored so entries edited by hand behave the same as trimmed ones.
+ * Combines a profile's `includeFiles` and `excludeFiles` into the internal
+ * match-entry form, where exclusions carry a leading `!`. The matching
+ * functions operate on this combined array; the stored profile keeps the two
+ * separate arrays (mirroring the index section).
  */
-export function isExclusionEntry(entry: string): boolean {
-	return entry.trimStart().startsWith('!');
+export function toPathEntries(
+	includeFiles: readonly string[] | undefined,
+	excludeFiles: readonly string[] | undefined
+): string[] {
+	return [
+		...toUniqueStringArray(includeFiles),
+		...toUniqueStringArray(excludeFiles).map(entry => `!${entry}`),
+	];
 }
 
 /**
- * Strips the `!` exclusion prefix (and any leading whitespace) from a raw
- * `paths` entry. Positive entries are returned unchanged apart from the trim.
+ * Returns a profile's combined match entries (see {@link toPathEntries}).
  */
-export function stripExclusionPrefix(entry: string): string {
-	const trimmed = entry.trimStart();
-
-	return trimmed.startsWith('!') ? trimmed.slice(1) : trimmed;
+export function profilePathEntries(profile: ShaclValidationProfile | undefined): string[] {
+	return toPathEntries(profile?.includeFiles, profile?.excludeFiles);
 }
 
 /**
- * Splits a profile's `paths` entries into positive patterns and `!`-prefixed
- * exclusions (with the `!` stripped).
- */
-export function splitPathEntries(paths: readonly string[] | undefined): { positives: string[]; negatives: string[] } {
-	const positives: string[] = [];
-	const negatives: string[] = [];
-
-	for (const entry of toUniqueStringArray([...(paths ?? [])])) {
-		if (isExclusionEntry(entry)) {
-			negatives.push(stripExclusionPrefix(entry));
-		} else {
-			positives.push(entry);
-		}
-	}
-
-	return { positives, negatives };
-}
-
-/**
- * Tests whether a profile's `paths` entries match a document location: at
+ * Tests whether a profile's include/exclude entries match a document location: at
  * least one positive entry must match and no `!`-prefixed exclusion may match.
  * A profile without positive entries matches nothing.
  */
@@ -381,7 +269,7 @@ export function matchesProfilePaths(
 	document: ShaclDocumentLocation,
 	rdfExtensions: readonly string[]
 ): boolean {
-	const { positives, negatives } = splitPathEntries(paths);
+	const { positives, negatives } = splitNegatedPatterns(paths);
 
 	if (!positives.some(entry => matchesPathKey(entry, document, rdfExtensions))) {
 		return false;
@@ -391,7 +279,7 @@ export function matchesProfilePaths(
 }
 
 /**
- * Returns the ids of the profiles whose `paths` match the document location,
+ * Returns the ids of the profiles whose include/exclude entries match the document location,
  * in definition order.
  */
 export function getMatchingProfiles(
@@ -400,30 +288,31 @@ export function getMatchingProfiles(
 	rdfExtensions: readonly string[]
 ): string[] {
 	return Object.entries(settings?.profiles ?? {})
-		.filter(([, profile]) => matchesProfilePaths(profile?.paths, document, rdfExtensions))
+		.filter(([, profile]) => matchesProfilePaths(profilePathEntries(profile), document, rdfExtensions))
 		.map(([id]) => id);
 }
 
 /**
  * Returns the id of the profile that represents an exact per-document
- * assignment for the given document key: a profile whose `paths` consist of
- * exactly that literal path. Used by the quick pick to find-or-create the
- * document's auto-named profile.
+ * assignment for the given document key: a profile whose `includeFiles`
+ * consist of exactly that literal path and which has no exclusions. Used by the
+ * quick pick to find-or-create the document's auto-named profile.
  */
 export function findDocumentProfileId(
 	settings: ShaclValidationSettings | undefined,
 	documentKey: string
 ): string | undefined {
-	const target = normalizePathKey(documentKey);
+	const target = normalizeGlobPattern(documentKey);
 
 	if (!target) {
 		return undefined;
 	}
 
 	for (const [id, profile] of Object.entries(settings?.profiles ?? {})) {
-		const entries = toUniqueStringArray([...(profile?.paths ?? [])]);
+		const includes = toUniqueStringArray(profile?.includeFiles);
+		const excludes = toUniqueStringArray(profile?.excludeFiles);
 
-		if (entries.length === 1 && normalizePathKey(entries[0]) === target) {
+		if (includes.length === 1 && excludes.length === 0 && normalizeGlobPattern(includes[0]) === target) {
 			return id;
 		}
 	}
@@ -455,7 +344,7 @@ export function resolveProfileShapes(
 
 /**
  * Resolves the effective shape file URIs for a document: the union of the
- * shapes of every profile whose `paths` match the document.
+ * shapes of every profile whose include/exclude entries match the document.
  */
 export function resolveEffectiveShapeGraphs(
 	settings: ShaclValidationSettings | undefined,
@@ -477,7 +366,7 @@ export function getDocumentValidationState(
 	const matchedPaths: string[] = [];
 
 	for (const [id, profile] of Object.entries(settings?.profiles ?? {})) {
-		const { positives, negatives } = splitPathEntries(profile?.paths);
+		const { positives, negatives } = splitNegatedPatterns(profilePathEntries(profile));
 		const matchedPositives = positives.filter(entry => matchesPathKey(entry, document, rdfExtensions));
 
 		if (matchedPositives.length === 0) {
@@ -544,20 +433,6 @@ export function hasBrokenReferences(broken: ShaclBrokenReferences): boolean {
 }
 
 /**
- * Returns the fixed literal prefix of a glob pattern (`picomatch.scan().base`),
- * which degenerates to the whole string for a literal-looking key. Root-anchored
- * patterns like `**\/*.ttl` have no fixed prefix and yield an empty string.
- * Used to follow folder renames and deletions for `paths` entries.
- */
-export function getPathPatternBase(pattern: string): string {
-	try {
-		return picomatch.scan(pattern).base ?? '';
-	} catch {
-		return '';
-	}
-}
-
-/**
  * Rewrites a value under a renamed prefix. Matches the whole value, a `/`
  * path-segment boundary, or a `#` fragment boundary (notebook cell keys), so
  * renaming `models` does not affect `models-extra/thing.ttl`.
@@ -574,7 +449,7 @@ function rewritePrefixed(value: string, oldKey: string, newKey: string): string 
  * Migrates SHACL validation settings when files or folders are renamed.
  *
  * Shape file entries are canonical `workspace:///...` URIs and are rewritten
- * by exact prefix using the renames' URI forms. `paths` entries are rewritten
+ * by exact prefix using the renames' URI forms. Include/exclude entries are rewritten
  * on their fixed literal prefix (`picomatch.scan().base`, the whole string for
  * a literal path) using the bare-path forms, so a folder-scoped pattern and an
  * exact document path both follow a rename while a root-anchored pattern like
@@ -605,9 +480,7 @@ export function migrateShaclValidationConfig(
 	};
 
 	const migratePathEntry = (entry: string): string => {
-		const negated = entry.startsWith('!');
-		const pattern = negated ? entry.slice(1) : entry;
-		const base = getPathPatternBase(pattern);
+		const base = getGlobPatternBase(entry);
 
 		if (!base) {
 			return entry;
@@ -617,7 +490,7 @@ export function migrateShaclValidationConfig(
 			const rewritten = rewritePrefixed(base, oldPath, newPath);
 
 			if (rewritten !== undefined) {
-				return (negated ? '!' : '') + rewritten + pattern.slice(base.length);
+				return rewritten + entry.slice(base.length);
 			}
 		}
 
@@ -633,7 +506,8 @@ export function migrateShaclValidationConfig(
 			migratedProfiles[id] = {
 				...profile,
 				...(profile?.shapes !== undefined ? { shapes: profile.shapes.map(migrateUri) } : {}),
-				...(profile?.paths !== undefined ? { paths: profile.paths.map(migratePathEntry) } : {}),
+				...(profile?.includeFiles !== undefined ? { includeFiles: profile.includeFiles.map(migratePathEntry) } : {}),
+				...(profile?.excludeFiles !== undefined ? { excludeFiles: profile.excludeFiles.map(migratePathEntry) } : {}),
 			};
 		}
 	}

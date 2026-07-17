@@ -1,4 +1,27 @@
+import { DataFactory as N3DataFactory } from 'n3';
+import { DatasetCore } from '@rdfjs/types';
+import { RdfStore } from 'rdf-stores';
 import { XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
+
+/**
+ * An RDF/JS DataFactory extended with a `dataset()` method (DatasetCoreFactory),
+ * as required by libraries that consume an RDF/JS environment such as shacl-engine.
+ *
+ * `literal()` tolerates `null` as the language/datatype argument: N3's literal()
+ * throws when passed `null` (vs. `undefined`), but shacl-engine calls
+ * `factory.literal(text, message.language || null)` when there is no language
+ * tag, so `null` is normalized to `undefined` here. This is harmless for every
+ * other caller.
+ */
+export const rdfDataFactory = {
+	...N3DataFactory,
+	literal(value: string, languageOrDataType?: any) {
+		return N3DataFactory.literal(value, languageOrDataType ?? undefined);
+	},
+	dataset(): DatasetCore {
+		return RdfStore.createDefault().asDataset();
+	}
+};
 
 /**
  * The type of an RDF property derived from its range.

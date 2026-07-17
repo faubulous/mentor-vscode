@@ -211,12 +211,21 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 							/>
 						</div>
 						<div>
-							<vscode-label>Website <span className="label-optional">(optional)</span></vscode-label>
+							<vscode-label>Description <span className="label-optional">(optional)</span></vscode-label>
 							<vscode-textfield
-								value={draft.website ?? ''}
+								value={draft.description ?? ''}
+								placeholder="A short description of the store type"
+								disabled={readOnly}
+								onInput={(e: any) => setDraft(d => ({ ...d, description: (e.target as HTMLInputElement).value || undefined }))}
+							/>
+						</div>
+						<div>
+							<vscode-label>Documentation URL <span className="label-optional">(optional)</span></vscode-label>
+							<vscode-textfield
+								value={draft.documentation ?? ''}
 								placeholder="https://..."
 								disabled={readOnly}
-								onInput={(e: any) => setDraft(d => ({ ...d, website: (e.target as HTMLInputElement).value || undefined }))}
+								onInput={(e: any) => setDraft(d => ({ ...d, documentation: (e.target as HTMLInputElement).value || undefined }))}
 							/>
 						</div>
 					</section>

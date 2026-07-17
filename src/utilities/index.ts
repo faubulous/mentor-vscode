@@ -1,3 +1,5 @@
+export * from './array';
+export * from './glob';
 export * from './iterator';
 export * from './rdf';
 export * from './shacl';

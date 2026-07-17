@@ -57,6 +57,7 @@ export enum ServiceToken {
 	/** Service for discovering VS Code workspace files and their identifiers. */
 	WorkspaceService = "WorkspaceService",
 	/** Service for validating RDF documents against SHACL shapes. */
+	ShaclProfileSettingsService = "ShaclProfileSettingsService",
 	ShaclValidationService = "ShaclValidationService",
 	/** Service that shows SPARQL activity (query execution, connection testing) in the status bar. */
 	SparqlStatusBarService = "SparqlStatusBarService",

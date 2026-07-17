@@ -1,14 +1,12 @@
 import { Store } from '@faubulous/mentor-rdf';
-import basicOntologyShapes from '@src/services/validation/profiles/ontology-1.0.shape.ttl';
-import basicTaxonomyShapes from '@src/services/validation/profiles/taxonomy-1.0.shape.ttl';
-import { BASIC_ONTOLOGY_SHAPES_URI, BASIC_TAXONOMY_SHAPES_URI } from '../template-definitions';
-
-export * from '../template-definitions';
+import basicOntologyShapes from './ontology-1.0.shape.ttl';
+import basicTaxonomyShapes from './taxonomy-1.0.shape.ttl';
+import { BASIC_ONTOLOGY_SHAPES_URI, BASIC_TAXONOMY_SHAPES_URI } from '../preset-definitions';
 
 /**
- * The bundled Turtle source of each preset shape graph, keyed by template id. Used
- * both to seed the in-memory store ({@link loadPresetShapeGraphs}) and to materialize
- * a frozen copy into the workspace when a template is instantiated.
+ * The bundled Turtle source of each preset shape graph, keyed by preset id. Used
+ * both to seed the in-memory store ({@link loadPresetShapeGraphs}) and to write
+ * a frozen copy into the workspace when a preset is instantiated.
  */
 const PRESET_SHAPE_SOURCES: Record<string, string> = {
 	'basic-ontology': basicOntologyShapes,
@@ -17,15 +15,15 @@ const PRESET_SHAPE_SOURCES: Record<string, string> = {
 
 /**
  * Returns the bundled Turtle source for a preset shape graph, or `undefined` when
- * the template id is unknown.
+ * the preset id is unknown.
  */
-export function getPresetShapeSource(templateId: string): string | undefined {
-	return PRESET_SHAPE_SOURCES[templateId];
+export function getPresetShapeSource(presetId: string): string | undefined {
+	return PRESET_SHAPE_SOURCES[presetId];
 }
 
 /**
  * Loads the bundled SHACL shape graphs referenced by the built-in validation
- * templates into the store. Inference is skipped: the graphs are only ever read
+ * presets into the store. Inference is skipped: the graphs are only ever read
  * as shape datasets.
  */
 export function loadPresetShapeGraphs(store: Store): void {

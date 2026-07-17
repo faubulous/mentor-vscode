@@ -6,6 +6,7 @@ import { IDocumentFactory } from '../document/document-factory.interface';
 import { IDocumentTokenSource } from '../document/document-token-source.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { getConfig } from '@src/utilities/vscode/config';
+import { normalizeGlobPattern } from '@src/utilities/glob';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 /**
@@ -82,7 +83,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		// Show the indexer item immediately so the Mentor icon is always visible in the
 		// status bar — including on an empty workspace (0 files), where the indexing code
 		// paths that update the text run late or with nothing to report.
-		this._statusBarItem.text = '$(app-mentor) 0 files';
+		this._statusBarItem.text = '$(app-mentor) Indexed 0 files';
 		this._statusBarItem.show();
 
 		this._statusLog.clear();
@@ -312,7 +313,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
 
-		const parts = [`$(app-mentor) ${successfulFiles} files`];
+		const parts = [`$(app-mentor) Indexed ${successfulFiles} files`];
 
 		if (summary.errorCount > 0) {
 			parts.push(`${summary.errorCount} error${summary.errorCount > 1 ? 's' : ''}`);
@@ -352,7 +353,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		let hasErrors = false;
 
 		for (const rawPattern of getConfig().get<string[]>('index.includeFiles', [])) {
-			const pattern = this._normalizeGlobPattern(rawPattern);
+			const pattern = normalizeGlobPattern(rawPattern);
 
 			if (!pattern) {
 				this._statusLog.error("Empty pattern in 'mentor.index.includeFiles'.");
@@ -390,21 +391,6 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		}
 
 		return result;
-	}
-
-	/**
-	 * Normalizes a glob pattern by trimming whitespace, converting backslashes to forward 
-	 * slashes, and removing leading './' or '/' characters. This ensures consistent matching 
-	 * against normalized file paths.
-	 * @param pattern The glob pattern to normalize.
-	 * @returns The normalized glob pattern.
-	 */
-	private _normalizeGlobPattern(pattern: string): string {
-		return pattern
-			.trim()
-			.replace(/\\/g, "/")
-			.replace(/^\.\/+/, "")
-			.replace(/^\/+/, "");
 	}
 
 	/**

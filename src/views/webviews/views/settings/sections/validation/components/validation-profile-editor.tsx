@@ -36,23 +36,6 @@ export interface ValidationProfileEditorProps {
 	missingShapes: string[];
 
 	/**
-	 * Renders the editor as a read-only viewer (built-in presets).
-	 */
-	readOnly?: boolean;
-
-	/**
-	 * Shown as a Customize action in the read-only viewer: creates an
-	 * independent, editable copy of the built-in preset.
-	 */
-	onCustomize?: () => void;
-
-	/**
-	 * Blocks Save while the draft name matches an existing profile name.
-	 * Used by the customize flow so a preset copy must get its own name.
-	 */
-	requireUniqueName?: boolean;
-
-	/**
 	 * Live matched-file counts per (positive) path entry; undefined entries are still loading.
 	 */
 	entryCounts: Record<string, number | undefined>;
@@ -105,9 +88,6 @@ function cleanPaths(paths: readonly string[]): string[] {
 export function ValidationProfileEditor({
 	profile,
 	isNew,
-	readOnly,
-	onCustomize,
-	requireUniqueName,
 	existingNames,
 	candidates,
 	missingShapes,
@@ -125,20 +105,27 @@ export function ValidationProfileEditor({
 	const { draft, setDraft, canSave, activeTab, tabsRef } = useSettingsItemDraft(profile, {
 		onDirtyChange,
 		validate: d => {
-			const paths = cleanPaths(d.paths);
+			const include = cleanPaths(d.includeFiles);
+			const exclude = cleanPaths(d.excludeFiles);
+			const all = [...include, ...exclude];
 
 			return d.name.trim().length > 0
-				&& (!requireUniqueName || !existingNames.includes(d.name.trim()))
-				&& paths.every(isValidPathKey)
-				&& new Set(paths).size === paths.length;
+				&& all.every(isValidPathKey)
+				&& new Set(include).size === include.length
+				&& new Set(exclude).size === exclude.length;
 		},
 	});
 
 	const trimmedName = draft.name.trim();
+	const nameEmpty = trimmedName.length === 0;
 	const nameDuplicate = trimmedName.length > 0 && existingNames.includes(trimmedName);
 
-	const paths = useMemo(() => cleanPaths(draft.paths), [draft.paths]);
-	const hasDuplicatePaths = new Set(paths).size !== paths.length;
+	const includeFiles = useMemo(() => cleanPaths(draft.includeFiles), [draft.includeFiles]);
+	const excludeFiles = useMemo(() => cleanPaths(draft.excludeFiles), [draft.excludeFiles]);
+	const hasDuplicatePaths = new Set(includeFiles).size !== includeFiles.length
+		|| new Set(excludeFiles).size !== excludeFiles.length;
+
+	const pathCount = includeFiles.length + excludeFiles.length;
 
 	const shapeCount = draft.shapes.length;
 
@@ -149,15 +136,8 @@ export function ValidationProfileEditor({
 			onScopeChange={scope => setDraft(d => ({ ...d, scope }))}
 			hasWorkspace={hasWorkspace}
 			isNew={isNew}
-			readOnly={readOnly}
-			readOnlyLabel="Built-in preset — not editable"
-			readOnlyActions={onCustomize && (
-				<vscode-button title="Create an editable copy of this preset" onClick={onCustomize}>
-					Customize
-				</vscode-button>
-			)}
 			canSave={canSave}
-			onSave={() => onSave(profile.id, profile.scope, { ...draft, name: trimmedName, paths })}
+			onSave={() => onSave(profile.id, profile.scope, { ...draft, name: trimmedName, includeFiles, excludeFiles })}
 			onDelete={() => onDelete(profile)}
 			saveTitle="Save profile"
 			deleteTitle="Delete profile"
@@ -171,15 +151,13 @@ export function ValidationProfileEditor({
 							<vscode-textfield
 								value={draft.name}
 								placeholder="Profile name"
-								disabled={readOnly}
+								invalid={nameEmpty}
 								onInput={(e: any) => setDraft(d => ({ ...d, name: (e.target as HTMLInputElement).value }))}
 							/>
-							{nameDuplicate && (
-								<p className="section-description validation-shape-warning">
-									{requireUniqueName
-										? 'Another profile already uses this name — the copy needs a name of its own.'
-										: 'Another profile already uses this name.'}
-								</p>
+							{nameEmpty ? (
+								<p className="section-description validation-shape-warning">A name is required.</p>
+							) : nameDuplicate && (
+								<p className="section-description validation-shape-warning">Another profile already uses this name.</p>
 							)}
 						</div>
 						<div>
@@ -189,7 +167,6 @@ export function ValidationProfileEditor({
 								value={draft.description}
 								rows={3}
 								placeholder="Describe what this profile validates…"
-								disabled={readOnly}
 								onInput={(e: any) => setDraft(d => ({ ...d, description: (e.target as HTMLTextAreaElement).value }))}
 							/>
 						</div>
@@ -207,7 +184,6 @@ export function ValidationProfileEditor({
 							selected={draft.shapes}
 							candidates={candidates}
 							missingShapes={missingShapes}
-							readOnly={readOnly}
 							onChange={(shapes) => setDraft(d => ({ ...d, shapes }))}
 							onOpen={onOpenShape}
 						/>
@@ -215,15 +191,16 @@ export function ValidationProfileEditor({
 				</vscode-tab-panel>
 
 				<vscode-tab-header slot="header">
-					Files <vscode-badge slot="content-after" variant="tab-header-counter">{paths.length}</vscode-badge>
+					Files <vscode-badge slot="content-after" variant="tab-header-counter">{pathCount}</vscode-badge>
 				</vscode-tab-header>
 
 				<vscode-tab-panel>
 					<section>
 						<ValidationProfilePathsEditor
-							paths={draft.paths}
-							readOnly={readOnly}
-							onChange={(next) => setDraft(d => ({ ...d, paths: next }))}
+							includeFiles={draft.includeFiles}
+							excludeFiles={draft.excludeFiles}
+							onIncludeChange={(next) => setDraft(d => ({ ...d, includeFiles: next }))}
+							onExcludeChange={(next) => setDraft(d => ({ ...d, excludeFiles: next }))}
 							entryCounts={entryCounts}
 							onRequestEntryCount={onRequestEntryCount}
 							onEditEntry={onEditEntry}

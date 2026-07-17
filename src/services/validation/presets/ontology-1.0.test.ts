@@ -1,24 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { DataFactory as N3DataFactory } from 'n3';
-import { DatasetCore } from '@rdfjs/types';
-import { RdfStore } from 'rdf-stores';
 import { Validator } from 'shacl-engine';
 import { Store } from '@faubulous/mentor-rdf';
-import {
-	BASIC_ONTOLOGY_SHAPES_URI,
-	loadPresetShapeGraphs,
-} from './index';
-
-// The same combined RDF/JS factory the validation service passes to shacl-engine.
-const rdfFactory = {
-	...N3DataFactory,
-	literal(value: string, languageOrDataType?: any) {
-		return N3DataFactory.literal(value, languageOrDataType ?? undefined);
-	},
-	dataset(): DatasetCore {
-		return RdfStore.createDefault().asDataset();
-	}
-};
+import { rdfDataFactory } from '@src/utilities/rdf';
+import { BASIC_ONTOLOGY_SHAPES_URI } from '../preset-definitions';
+import { loadPresetShapeGraphs } from './index';
 
 const DATA_GRAPH_URI = 'urn:test:data';
 
@@ -42,7 +27,7 @@ async function validate(shapesUri: string, dataTurtle: string) {
 	loadPresetShapeGraphs(store);
 	store.loadTurtle(dataTurtle, DATA_GRAPH_URI, false);
 
-	const validator = new Validator(store.getDataset([shapesUri], false), { factory: rdfFactory });
+	const validator = new Validator(store.getDataset([shapesUri], false), { factory: rdfDataFactory });
 
 	return validator.validate({ dataset: store.getDataset([DATA_GRAPH_URI], false) });
 }
