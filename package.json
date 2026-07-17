@@ -930,6 +930,18 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.validateProfile",
+        "title": "Validate Profile using SHACL",
+        "icon": "$(run)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.validateAllProfiles",
+        "title": "Validate All Profiles using SHACL",
+        "icon": "$(run-all-coverage)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.manageShaclShapes",
         "title": "Configure SHACL Shapes",
         "icon": "$(settings-gear)",
@@ -1009,6 +1021,11 @@
           "command": "mentor.command.reindexWorkspace",
           "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && !mentor.workspace.isIndexing",
           "group": "2_workspace"
+        },
+        {
+          "command": "mentor.command.validateAllProfiles",
+          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && config.mentor.shacl.enabled",
+          "group": "navigation@1"
         },
         {
           "command": "mentor.command.createDocument",
@@ -1190,6 +1207,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "mentor.command.validateProfile",
+          "when": "false"
+        },
         {
           "command": "mentor.command.executeTriplateExample",
           "when": "false"
@@ -1543,7 +1564,7 @@
                   "type": "string",
                   "description": "Optional free-text description of the store type."
                 },
-                "documentation": {
+                "documentationUrl": {
                   "type": "string",
                   "description": "Optional documentation URL shown as an 'open documentation' link in the store list."
                 },
@@ -1894,9 +1915,17 @@
                       },
                       "default": []
                     },
-                    "paths": {
+                    "includeFiles": {
                       "type": "array",
-                      "description": "Workspace-relative paths this profile applies to: glob patterns (e.g. 'ontologies/*' or '**/*.ttl') or exact file paths (e.g. 'models/data.ttl'). Entries whose last segment has no file extension automatically match only the currently-recognized RDF file extensions. A '#<cell-slug>' suffix (itself glob-capable) targets specific notebook cells. Prefix an entry with '!' to exclude matching documents from the profile.",
+                      "description": "Workspace-relative paths this profile applies to: glob patterns (e.g. 'ontologies/*' or '**/*.ttl') or exact file paths (e.g. 'models/data.ttl'). Entries whose last segment has no file extension automatically match only the currently-recognized RDF file extensions. A '#<cell-slug>' suffix (itself glob-capable) targets specific notebook cells.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    },
+                    "excludeFiles": {
+                      "type": "array",
+                      "description": "Workspace-relative paths excluded from the profile, in the same pattern form as 'includeFiles'.",
                       "items": {
                         "type": "string"
                       },
@@ -1905,6 +1934,13 @@
                     "description": {
                       "type": "string",
                       "description": "Optional human-readable description of the profile."
+                    },
+                    "shapeVersions": {
+                      "type": "object",
+                      "description": "For profiles that link to a built-in shape graph (rather than a workspace copy), records the shape graph version the profile was created or last reconciled against, keyed by shape graph URI. Used to detect and surface changes when Mentor's bundled shapes are updated.",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
                     }
                   }
                 },
@@ -1912,30 +1948,38 @@
               }
             },
             "additionalProperties": false,
-            "default": {
-              "profiles": {
-                "basic-ontology": {
-                  "name": "Basic Ontology",
-                  "description": "Checks that every class, property and named individual has a label, a comment and a reference to its defining ontology, and that the ontology header has a title and description. Applies to no files until customized.",
-                  "shapes": [
-                    "https://w3id.org/mentor/shacl/profiles/basic-ontology"
-                  ]
-                },
-                "basic-taxonomy": {
-                  "name": "Basic Taxonomy",
-                  "description": "Checks that every SKOS concept and concept scheme has a preferred label and a definition, and that every concept belongs to a concept scheme. Applies to no files until customized.",
-                  "shapes": [
-                    "https://w3id.org/mentor/shacl/profiles/basic-taxonomy"
-                  ]
-                }
-              }
-            }
+            "default": {}
           },
           "mentor.shacl.enabled": {
             "type": "boolean",
             "title": "Enable SHACL Validation",
             "description": "If enabled, Mentor will show the titlebar validate button and editor code lenses.",
             "default": true
+          },
+          "mentor.shacl.validateOnStartup": {
+            "type": "boolean",
+            "title": "Validate Profiles on Startup",
+            "description": "Automatically validate all files covered by a validation profile after the workspace finishes indexing.",
+            "default": false
+          },
+          "mentor.shacl.validateOnChange": {
+            "type": "boolean",
+            "title": "Validate on Change",
+            "description": "Automatically re-validate a file against its matching profiles as you edit, once it is free of syntax errors.",
+            "default": false
+          },
+          "mentor.shacl.maxGraphSize": {
+            "type": "number",
+            "title": "Maximum Validation Graph Size",
+            "description": "Skip automatic SHACL validation for documents whose data graph exceeds this many triples. Very large graphs (e.g. imported vocabularies) can take a long time to validate and would otherwise block the editor. Explicit validation commands ignore this limit. Set to 0 to disable the limit.",
+            "default": 50000,
+            "minimum": 0
+          },
+          "mentor.shacl.shapesFolder": {
+            "type": "string",
+            "title": "Shapes Folder",
+            "description": "Workspace-relative folder where a copy of the built-in SHACL shapes is written when a validation profile is created from a template. Keeping the shapes in the workspace freezes them against future changes to Mentor's bundled shapes and lets you edit and version-control them.",
+            "default": ".mentor/shapes"
           },
           "mentor.formatting.common.maxLineWidth": {
             "type": "number",

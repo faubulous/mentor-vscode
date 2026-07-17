@@ -222,10 +222,10 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 						<div>
 							<vscode-label>Documentation URL <span className="label-optional">(optional)</span></vscode-label>
 							<vscode-textfield
-								value={draft.documentation ?? ''}
+								value={draft.documentationUrl ?? ''}
 								placeholder="https://..."
 								disabled={readOnly}
-								onInput={(e: any) => setDraft(d => ({ ...d, documentation: (e.target as HTMLInputElement).value || undefined }))}
+								onInput={(e: any) => setDraft(d => ({ ...d, documentationUrl: (e.target as HTMLInputElement).value || undefined }))}
 							/>
 						</div>
 					</section>

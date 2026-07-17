@@ -21,10 +21,10 @@ export function StoresListItem({ store, navProps, onEdit, onDelete, onOpenInBrow
 
 	const actions = (
 		<>
-			{store.documentation && (
+			{store.documentationUrl && (
 				<vscode-toolbar-button
 					title="Open documentation"
-					onClick={(e: React.MouseEvent) => { e.stopPropagation(); onOpenInBrowser(store.documentation!); }}
+					onClick={(e: React.MouseEvent) => { e.stopPropagation(); onOpenInBrowser(store.documentationUrl!); }}
 				>
 					<vscode-icon name="book" />
 				</vscode-toolbar-button>
@@ -37,7 +37,7 @@ export function StoresListItem({ store, navProps, onEdit, onDelete, onOpenInBrow
 					<vscode-icon name="trash" />
 				</vscode-toolbar-button>
 			)}
-			{!store.documentation && isProtected && (
+			{!store.documentationUrl && isProtected && (
 				// Placeholder reserving the same row height as rows that have action buttons.
 				<vscode-toolbar-button className="settings-item-action-placeholder" aria-hidden="true" tabIndex={-1}>
 					<vscode-icon name="blank" />

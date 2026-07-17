@@ -1,17 +1,20 @@
 import * as React from 'react';
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { ConnectionsListItem } from './connections-list-item';
 import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { TestResult } from '../../../settings-types';
 import { GraphStatus } from '../connections-list-messages';
-import { SettingsList } from '../../../components/settings-list';
+import { SettingsList, SettingsListSection } from '../../../components/settings-list';
 
 export interface ConnectionsListProps {
 	connections: SparqlConnection[];
 	testResults: Record<string, TestResult>;
 	graphStatuses: Record<string, GraphStatus>;
 	testingConnections: Set<string>;
-	onCreateConnection: () => void;
+	loadingGraphs: Set<string>;
+	hasWorkspace: boolean;
+	onCreateConnection: (scope: ConfigurationScope) => void;
 	onEditConnection: (connection: SparqlConnection) => void;
 	onDeleteConnection: (connection: SparqlConnection) => void;
 	onTestConnection: (connection: SparqlConnection, e: React.MouseEvent) => void;
@@ -21,15 +24,18 @@ export interface ConnectionsListProps {
 }
 
 /**
- * Lists the configured SPARQL connections via the shared {@link SettingsList}: a
- * page-level header with Reload/Test-all actions, a "Protected" group for built-in
- * connections (hidden when empty), and a "User Defined" group with an Add action.
+ * Lists the configured SPARQL connections via the shared {@link SettingsList},
+ * grouped by where they are stored: built-in presets (the workspace store),
+ * workspace settings and user settings. The workspace group is omitted when no
+ * workspace folder is open. The page header offers Reload/Test-all actions.
  */
 export function ConnectionsList({
 	connections,
 	testResults,
 	graphStatuses,
 	testingConnections,
+	loadingGraphs,
+	hasWorkspace,
 	onCreateConnection,
 	onEditConnection,
 	onDeleteConnection,
@@ -40,8 +46,9 @@ export function ConnectionsList({
 }: ConnectionsListProps) {
 	const testableCount = connections.length;
 
-	const protectedConnections = connections.filter(c => c.isProtected === true);
-	const userDefinedConnections = connections.filter(c => c.isProtected !== true);
+	const presetConnections = connections.filter(c => c.isProtected === true);
+	const workspaceConnections = connections.filter(c => c.isProtected !== true && c.configScope === ConfigurationScope.Workspace);
+	const userConnections = connections.filter(c => c.isProtected !== true && c.configScope !== ConfigurationScope.Workspace);
 
 	const testAllConnections = () => {
 		connections.forEach((c, i) => setTimeout(
@@ -49,6 +56,13 @@ export function ConnectionsList({
 			i * 300
 		));
 	};
+
+	const addAction = (scope: ConfigurationScope) => (
+		<vscode-toolbar-button className="primary" title="Create a new connection" onClick={() => onCreateConnection(scope)}>
+			<span className="codicon codicon-add" />
+			<span className="label">Add Connection</span>
+		</vscode-toolbar-button>
+	);
 
 	const header = (
 		<SectionHeader
@@ -69,30 +83,34 @@ export function ConnectionsList({
 		/>
 	);
 
+	const sections: SettingsListSection<SparqlConnection>[] = [
+		{
+			title: 'Presets',
+			description: 'Built-in connections that ship with Mentor. They cannot be edited or removed.',
+			items: presetConnections,
+			emptyMessage: '',
+			hideWhenEmpty: true,
+		},
+		...(hasWorkspace ? [{
+			title: 'Workspace',
+			description: 'Connections kept in the workspace settings (.vscode/settings.json), which can be shared via version control.',
+			action: addAction(ConfigurationScope.Workspace),
+			items: workspaceConnections,
+			emptyMessage: 'No workspace connections yet.',
+		}] : []),
+		{
+			title: 'User',
+			description: 'Connections kept in your user settings, available in all your workspaces on this machine.',
+			action: addAction(ConfigurationScope.User),
+			items: userConnections,
+			emptyMessage: 'No user connections yet.',
+		},
+	];
+
 	return (
 		<SettingsList<SparqlConnection>
 			header={header}
-			sections={[
-				{
-					title: 'Protected',
-					description: 'Mentor built-in connections that cannot be removed.',
-					items: protectedConnections,
-					emptyMessage: '',
-					hideWhenEmpty: true,
-				},
-				{
-					title: 'User Defined',
-					description: 'SPARQL endpoints you have configured.',
-					action: (
-						<vscode-toolbar-button className="primary" title="Create a new connection" onClick={onCreateConnection}>
-							<span className="codicon codicon-add" />
-							<span className="label">Add Connection</span>
-						</vscode-toolbar-button>
-					),
-					items: userDefinedConnections,
-					emptyMessage: 'No user-defined connections yet.',
-				},
-			]}
+			sections={sections}
 			getItemId={connection => connection.id}
 			renderItem={(connection, navProps) => (
 				<ConnectionsListItem
@@ -100,6 +118,7 @@ export function ConnectionsList({
 					testResult={testResults[connection.id]}
 					graphStatus={graphStatuses[connection.id]}
 					isTesting={testingConnections.has(connection.id)}
+					isLoadingGraphs={loadingGraphs.has(connection.id)}
 					navProps={navProps}
 					onEditConnection={onEditConnection}
 					onDeleteConnection={onDeleteConnection}

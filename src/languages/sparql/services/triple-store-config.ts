@@ -32,7 +32,7 @@ export interface TripleStoreConfig {
      * Optional documentation URL for the store type. When set, the store list offers an
      * "open documentation" action.
      */
-    documentation?: string;
+    documentationUrl?: string;
 
     /**
      * Reasoning control configuration; absent means the store does not support reasoning.

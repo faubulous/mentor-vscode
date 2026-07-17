@@ -13,14 +13,14 @@ export const PRESET_STORES: TripleStoreConfig[] = [
 		id: 'sparql',
 		label: 'SPARQL Endpoint',
 		description: 'A generic endpoint conforming to the SPARQL 1.1 Protocol.',
-		documentation: 'https://www.w3.org/TR/sparql11-query/',
+		documentationUrl: 'https://www.w3.org/TR/sparql11-query/',
 		isProtected: true
 	},
 	{
 		id: 'jena',
 		label: 'Apache Jena Fuseki',
 		description: 'SPARQL server of the Apache Jena framework.',
-		documentation: 'https://jena.apache.org/',
+		documentationUrl: 'https://jena.apache.org/',
 		isProtected: true,
 		queries: {
 			listGraphs: 'SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph {}\n}\nORDER BY ?graph'
@@ -30,14 +30,14 @@ export const PRESET_STORES: TripleStoreConfig[] = [
 		id: 'qlever',
 		label: 'QLever',
 		description: 'High-performance SPARQL engine for very large knowledge graphs.',
-		documentation: 'https://github.com/ad-freiburg/qlever',
+		documentationUrl: 'https://github.com/ad-freiburg/qlever',
 		isProtected: true
 	},
 	{
 		id: 'rdf4j',
 		label: 'RDF4J',
 		description: 'Eclipse RDF4J server with per-query reasoning control.',
-		documentation: 'https://rdf4j.org/',
+		documentationUrl: 'https://rdf4j.org/',
 		isProtected: true,
 		inference: {
 			supported: true,

@@ -1,5 +1,4 @@
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import type { ShaclValidationSettings } from '@src/services/validation/shacl-validation-configuration';
 
 /**
  * The stylesheet id under which `validation.css` is injected once per document,
@@ -27,9 +26,14 @@ export interface ValidationProfileView {
 	shapes: string[];
 
 	/**
-	 * Path entries (glob patterns or exact paths, `!`-prefixed for exclusions) the profile applies to.
+	 * Glob/path patterns the profile applies to.
 	 */
-	paths: string[];
+	includeFiles: string[];
+
+	/**
+	 * Glob/path patterns excluded from the profile.
+	 */
+	excludeFiles: string[];
 
 	/**
 	 * Optional human-readable description.
@@ -40,43 +44,4 @@ export interface ValidationProfileView {
 	 * The configuration scope the profile is stored in.
 	 */
 	scope: ConfigurationScope;
-
-	/**
-	 * Whether the profile is a built-in preset shipped with Mentor (read-only).
-	 */
-	isProtected?: boolean;
-}
-
-/**
- * Reads a per-scope SHACL validation settings object from the section state.
- */
-export function readSettings(value: unknown): ShaclValidationSettings {
-	return (value && typeof value === 'object' ? value : {}) as ShaclValidationSettings;
-}
-
-/**
- * Whether a settings object holds no profiles.
- */
-export function isEmptySettings(value: ShaclValidationSettings): boolean {
-	return !value.profiles || Object.keys(value.profiles).length === 0;
-}
-
-/**
- * Projects a single scope's settings object into profile views tagged with that
- * scope; `isProtected` marks built-in presets shipped via the manifest default.
- */
-export function toProfileViews(
-	settings: ShaclValidationSettings,
-	scope: ConfigurationScope,
-	isProtected = false
-): ValidationProfileView[] {
-	return Object.entries(settings.profiles ?? {}).map(([id, profile]) => ({
-		id,
-		name: profile?.name ?? '',
-		shapes: [...(profile?.shapes ?? [])],
-		paths: [...(profile?.paths ?? [])],
-		description: profile?.description ?? '',
-		scope,
-		...(isProtected ? { isProtected: true } : {}),
-	}));
 }

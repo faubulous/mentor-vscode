@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { VALIDATION_PRESETS } from '@src/services/validation/preset-definitions';
-import { applyProfileSave, presetToDraft, toProfileValue, ValidationProfileView } from './shared';
+import { applyProfileSave, presetToDraft, toProfileValue } from './profiles';
+import { ValidationProfileView } from './shared';
 
 function view(overrides: Partial<ValidationProfileView> = {}): ValidationProfileView {
 	return {
@@ -26,8 +27,6 @@ describe('toProfileValue', () => {
 			excludeFiles: ['drafts/**'],
 			description: 'Checks the core model.',
 		});
-	});
-
 	});
 });
 

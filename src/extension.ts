@@ -54,7 +54,7 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	//
 	// Once indexing is complete, check the SHACL validation profiles for references
 	// to missing files and warn if any are broken.
-	indexWorkspace().then(() => activateValidation());
+	indexWorkspace().then(() => initializeValidation());
 
 	// Load named graphs for connections with auto-loading enabled. Runs in parallel
 	// with indexing so the status bar can show both activities simultaneously.
@@ -262,7 +262,7 @@ async function indexWorkspace() {
  * Checks all SHACL validation profiles for references to missing shape files and warns the user if any are broken.
  * @note This is run after workspace indexing is complete, so that all shape files in the workspace are known.
  */
-async function activateValidation() {
+async function initializeValidation() {
 	try {
 		const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 

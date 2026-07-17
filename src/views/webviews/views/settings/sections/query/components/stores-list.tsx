@@ -3,14 +3,6 @@ import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-c
 import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { StoresListItem } from './stores-list-item';
 import { SettingsList, SettingsListSection } from '../../../components/settings-list';
-import {
-	PRESETS_SECTION_DESCRIPTION,
-	PRESETS_SECTION_TITLE,
-	USER_SECTION_DESCRIPTION,
-	USER_SECTION_TITLE,
-	WORKSPACE_SECTION_DESCRIPTION,
-	WORKSPACE_SECTION_TITLE,
-} from '../../../components/scope-section-copy';
 
 export interface StoresListProps {
 	presetStores: TripleStoreConfig[];
@@ -39,22 +31,22 @@ export function StoresList({ presetStores, workspaceStores, userStores, hasWorks
 
 	const sections: SettingsListSection<TripleStoreConfig>[] = [
 		{
-			title: PRESETS_SECTION_TITLE,
-			description: PRESETS_SECTION_DESCRIPTION,
+			title: 'Presets',
+			description: 'Built-in triple store configurations that ship with Mentor. They cannot be edited or removed.',
 			items: presetStores,
 			emptyMessage: '',
 			hideWhenEmpty: true,
 		},
 		...(hasWorkspace ? [{
-			title: WORKSPACE_SECTION_TITLE,
-			description: WORKSPACE_SECTION_DESCRIPTION,
+			title: 'Workspace',
+			description: 'Stores kept in the workspace settings (.vscode/settings.json), which can be shared via version control.',
 			action: addAction(ConfigurationScope.Workspace),
 			items: workspaceStores,
 			emptyMessage: 'No workspace stores yet.',
 		}] : []),
 		{
-			title: USER_SECTION_TITLE,
-			description: USER_SECTION_DESCRIPTION,
+			title: 'User',
+			description: 'Stores kept in your user settings, available in all your workspaces on this machine.',
 			action: addAction(ConfigurationScope.User),
 			items: userStores,
 			emptyMessage: 'No user stores yet.',

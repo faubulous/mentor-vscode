@@ -4,7 +4,9 @@ import { ModalDialog } from '@src/views/webviews/components/modal-dialog';
 import { useStylesheet, useScopedWebviewMessaging } from '@src/views/webviews/hooks';
 import { ConfigurationScope, scopeToKey } from '@src/utilities/config-scope';
 import {
+	generateProfileId,
 	type ShaclBrokenReferences,
+	type ShaclValidationProfile,
 	type ShaclValidationSettings,
 } from '@src/services/validation/shacl-validation-configuration';
 import { SettingsSectionProps } from '../../settings-section-props';
@@ -15,8 +17,8 @@ import type { SettingsSectionDescriptor } from '../../settings-section-descripto
 import { ValidationProfilesList } from './components/validation-profiles-list';
 import { ValidationProfileEditor } from './components/validation-profile-editor';
 import { ValidationProfilesMessages } from './profiles-messages';
-import { applyProfileSave, isEmptySettings, ProfileEditorMode, readSettings, presetToDraft, toProfileViews, ValidationProfileView, VALIDATION_STYLESHEET_ID } from './shared';
-import { VALIDATION_PRESETS, type ValidationPreset } from '@src/services/validation/preset-definitions';
+import { ValidationProfileView, VALIDATION_STYLESHEET_ID } from './shared';
+import { PRESET_DEFAULT_PATHS, VALIDATION_PRESETS, type ValidationPreset } from '@src/services/validation/preset-definitions';
 import stylesheet from './validation.css';
 
 export const validationProfilesSection = {
@@ -30,6 +32,122 @@ export const validationProfilesSection = {
 } as const satisfies SettingsSectionDescriptor;
 
 const VALIDATION_KEY = 'shacl.validation';
+
+/**
+ * Reads a per-scope SHACL validation settings object from the section state.
+ */
+export function readSettings(value: unknown): ShaclValidationSettings {
+	return (value && typeof value === 'object' ? value : {}) as ShaclValidationSettings;
+}
+
+/**
+ * Whether a settings object holds no profiles.
+ */
+export function isEmptySettings(value: ShaclValidationSettings): boolean {
+	return !value.profiles || Object.keys(value.profiles).length === 0;
+}
+
+/**
+ * Projects a single scope's settings object into profile views tagged with that scope.
+ */
+export function toProfileViews(
+	settings: ShaclValidationSettings,
+	scope: ConfigurationScope
+): ValidationProfileView[] {
+	return Object.entries(settings.profiles ?? {}).map(([id, profile]) => ({
+		id,
+		name: profile?.name ?? '',
+		shapes: [...(profile?.shapes ?? [])],
+		includeFiles: [...(profile?.includeFiles ?? [])],
+		excludeFiles: [...(profile?.excludeFiles ?? [])],
+		description: profile?.description ?? '',
+		scope,
+	}));
+}
+
+/**
+ * Seeds a new-profile draft from a built-in preset: the preset's description is
+ * copied, the name is left empty (the user names their profile), the default
+ * all-files include patterns make it active immediately and the `shapes` are
+ * the canonical `workspace:///` URIs of the frozen copies the host wrote into
+ * the workspace.
+ */
+export function presetToDraft(preset: ValidationPreset, scope: ConfigurationScope, shapes: string[]): ValidationProfileView {
+	return {
+		id: '',
+		name: '',
+		shapes: [...shapes],
+		includeFiles: [...PRESET_DEFAULT_PATHS],
+		excludeFiles: [],
+		description: preset.description,
+		scope,
+	};
+}
+
+/**
+ * How the profile editor was opened: creating a new profile or editing an existing one.
+ */
+export type ProfileEditorMode = 'create' | 'edit';
+
+/**
+ * Serializes a profile view into the stored profile value (omitting empty fields).
+ */
+export function toProfileValue(profile: ValidationProfileView): ShaclValidationProfile {
+	const name = profile.name.trim();
+	const description = profile.description.trim();
+
+	return {
+		...(name ? { name } : {}),
+		...(profile.shapes.length > 0 ? { shapes: profile.shapes } : {}),
+		...(profile.includeFiles.length > 0 ? { includeFiles: profile.includeFiles } : {}),
+		...(profile.excludeFiles.length > 0 ? { excludeFiles: profile.excludeFiles } : {}),
+		...(description ? { description } : {}),
+	};
+}
+
+/**
+ * Applies a profile save to the per-scope profile records and returns the new records.
+ *
+ * On `create` (including instantiating a preset) a fresh id is minted,
+ * disambiguated against the existing user and workspace ids. On `edit` the id
+ * is kept and the profile is removed from its original scope first, which may
+ * differ from the target scope on a move.
+ */
+export function applyProfileSave(options: {
+	mode: ProfileEditorMode;
+	originalId: string;
+	originalScope: ConfigurationScope;
+	next: ValidationProfileView;
+	userProfiles: Record<string, ShaclValidationProfile>;
+	workspaceProfiles: Record<string, ShaclValidationProfile>;
+}): { user: Record<string, ShaclValidationProfile>; workspace: Record<string, ShaclValidationProfile> } {
+	const { mode, originalId, originalScope, next } = options;
+
+	const user = { ...options.userProfiles };
+	const workspace = { ...options.workspaceProfiles };
+
+	const id = mode === 'edit'
+		? originalId
+		: generateProfileId(next.name, [...Object.keys(user), ...Object.keys(workspace)]);
+
+	if (mode === 'edit') {
+		if (scopeToKey(originalScope) === 'user') {
+			delete user[originalId];
+		} else {
+			delete workspace[originalId];
+		}
+	}
+
+	const value = toProfileValue(next);
+
+	if (scopeToKey(next.scope) === 'user') {
+		user[id] = value;
+	} else {
+		workspace[id] = value;
+	}
+
+	return { user, workspace };
+}
 
 /**
  * The preview-map key used for a single path entry's live match count.

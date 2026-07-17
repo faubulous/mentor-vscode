@@ -3,14 +3,6 @@ import { ValidationPreset } from '@src/services/validation/preset-definitions';
 import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { SettingsList, SettingsListSection } from '../../../components/settings-list';
 import { SettingsListItem } from '../../../components/settings-list-item';
-import {
-	VALIDATION_PRESETS_SECTION_DESCRIPTION,
-	PRESETS_SECTION_TITLE,
-	USER_SECTION_DESCRIPTION,
-	USER_SECTION_TITLE,
-	WORKSPACE_SECTION_DESCRIPTION,
-	WORKSPACE_SECTION_TITLE,
-} from '../../../components/scope-section-copy';
 import { ValidationProfileView } from '../shared';
 import { ValidationProfileListItem } from './validation-profile-list-item';
 
@@ -83,15 +75,15 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 
 	const sections: SettingsListSection<ValidationProfileView>[] = [
 		...(hasWorkspace ? [{
-			title: WORKSPACE_SECTION_TITLE,
-			description: WORKSPACE_SECTION_DESCRIPTION,
+			title: 'Workspace',
+			description: 'Profiles kept in the workspace settings (.vscode/settings.json), which can be shared via version control.',
 			action: addAction(ConfigurationScope.Workspace),
 			items: workspaceProfiles,
 			emptyMessage: 'No workspace profiles yet.',
 		}] : []),
 		{
-			title: USER_SECTION_TITLE,
-			description: USER_SECTION_DESCRIPTION,
+			title: 'User',
+			description: 'Profiles kept in your user settings, available in all your workspaces on this machine.',
 			action: addAction(ConfigurationScope.User),
 			items: userProfiles,
 			emptyMessage: 'No user profiles yet.',
@@ -102,7 +94,7 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 		<div className="settings-list-container">
 			{presets.length > 0 && (
 				<section className="settings-list-section">
-					<SectionHeader title={PRESETS_SECTION_TITLE} description={VALIDATION_PRESETS_SECTION_DESCRIPTION} />
+					<SectionHeader title="Presets" description="Built-in starting points that ship with Mentor. Use one to create a new profile you can edit." />
 					<div className="settings-list">
 						{presets.map(preset => (
 							<SettingsListItem
