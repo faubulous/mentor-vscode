@@ -177,6 +177,40 @@ describe('ShaclValidationService.checkShaclProfiles', () => {
 			profiles: { 'basic-ontology': ['https://w3id.org/mentor/shacl/profiles/ontology'] },
 		});
 	});
+
+	it('shows a configuration error on the status bar for broken references and clears it on a clean check', async () => {
+		const texts: string[] = [];
+		let hidden = 0;
+		const originalCreate = (vscode.window as any).createStatusBarItem;
+		(vscode.window as any).createStatusBarItem = vi.fn(() => {
+			let value = '';
+			return {
+				get text() { return value; },
+				set text(v: string) { value = v; texts.push(v); },
+				tooltip: '', command: undefined, show: () => { }, hide: () => { hidden++; }, dispose: () => { },
+			};
+		});
+
+		try {
+			let hasGraph = false;
+			const { service } = createService(settings, undefined, () => hasGraph);
+
+			await service.checkShaclProfiles();
+
+			expect(texts[texts.length - 1]).toBe('$(warning) Configuration error');
+
+			// The missing shape graph appears (e.g. the file is restored) — the next
+			// check clears the error and, without a run summary, hides the item.
+			hasGraph = true;
+			const hiddenBefore = hidden;
+
+			await service.checkShaclProfiles();
+
+			expect(hidden).toBeGreaterThan(hiddenBefore);
+		} finally {
+			(vscode.window as any).createStatusBarItem = originalCreate;
+		}
+	});
 });
 
 describe('ShaclValidationService.validateProfile', () => {

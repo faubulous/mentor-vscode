@@ -16,7 +16,7 @@ import {
 	settingsSourceKey,
 } from './settings-types';
 import { SettingsPanelMessages } from './settings-panel-messages';
-import { SettingsScopeTargetApi, SettingsScopeTargetContext, SettingsWorkspaceContext } from './components/setting-context';
+import { SettingsExecuteCommandContext, SettingsScopeTargetApi, SettingsScopeTargetContext, SettingsWorkspaceContext } from './components/setting-context';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/hooks';
 import { patchNestedRecord } from '@src/views/webviews/webview-utils';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
@@ -264,6 +264,13 @@ function SettingsPanel() {
 		select: handleSelectScope,
 	}), [resolveTargetScope, handleSelectScope]);
 
+	/**
+	 * Executes a VS Code command on the host, e.g. to open the native settings UI.
+	 */
+	const executeCommand = useCallback((command: string, ...args: unknown[]) => {
+		messaging?.postMessage({ id: 'ExecuteCommand', command, args });
+	}, [messaging]);
+
 	// --- EVENT HANDLERS
 
 	/**
@@ -320,6 +327,7 @@ function SettingsPanel() {
 	return (
 		<SettingsWorkspaceContext.Provider value={state.hasWorkspace}>
 			<SettingsScopeTargetContext.Provider value={scopeTarget}>
+			<SettingsExecuteCommandContext.Provider value={executeCommand}>
 				<div className="settings-panel">
 					<SettingsPanelHeader
 						version={state.version}
@@ -346,6 +354,7 @@ function SettingsPanel() {
 						</div>
 					</div>
 				</div>
+			</SettingsExecuteCommandContext.Provider>
 			</SettingsScopeTargetContext.Provider>
 		</SettingsWorkspaceContext.Provider>
 	);

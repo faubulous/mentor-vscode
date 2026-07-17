@@ -4,7 +4,10 @@ import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-styl
 import { SparqlQueryExecutionState, getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
 import { toDisplayPath, getPath } from '@src/utilities/uri';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
+import { SparqlConnectionsList } from './sparql-connections-list';
 import stylesheet from './sparql-welcome-view.css';
+import sparqlFileIconDark from '../../../../../../media/icons/dark/sparql-file.svg';
+import sparqlFileIconLight from '../../../../../../media/icons/light/sparql-file.svg';
 
 /**
  * Component to display a welcome message for the SPARQL results view.
@@ -109,7 +112,7 @@ export function SparqlWelcomeView() {
 						</vscode-toolbar-button>
 					</div>
 				</div>
-				<div className="column">
+				<div className="column column-wide">
 					<div className="header">
 						<h3>Recent Queries</h3>
 						<vscode-toolbar-button onClick={handleClearHistory} disabled={history.length === 0}>
@@ -123,6 +126,8 @@ export function SparqlWelcomeView() {
 								<a className='execute-button codicon codicon-play' role="button" title="Run"
 									onClick={() => handleExecuteQuery(queryState)}>
 								</a>
+								<img className="file-icon file-icon-dark" src={sparqlFileIconDark} alt="" />
+								<img className="file-icon file-icon-light" src={sparqlFileIconLight} alt="" />
 								<a className="file-link" onClick={() => handleOpenDocument(queryState)}>
 									<span>{getDisplayName(queryState)}</span>
 								</a>
@@ -134,6 +139,7 @@ export function SparqlWelcomeView() {
 						))}
 					</div>
 				</div>
+				<SparqlConnectionsList />
 			</div>
 		</vscode-scrollable>
 	);

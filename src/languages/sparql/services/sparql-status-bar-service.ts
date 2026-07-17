@@ -67,7 +67,7 @@ export class SparqlStatusBarService implements vscode.Disposable {
 			this._priority
 		);
 
-		this._statusBarItem.command = 'mentor.view.sparqlResultsView.focus';
+		this._statusBarItem.command = 'mentor.command.showSparqlPanel';
 		this._statusBarItem.tooltip = 'Show SPARQL Panel';
 		this._render();
 
@@ -153,7 +153,7 @@ export class SparqlStatusBarService implements vscode.Disposable {
 		}
 
 		const parts = [
-			`${connections.length} connection${connections.length === 1 ? '' : 's'}`,
+			`${connections.length} Connection${connections.length === 1 ? '' : 's'}`,
 			`${graphCount} graph${graphCount === 1 ? '' : 's'}`,
 		];
 

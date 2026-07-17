@@ -27,12 +27,15 @@ export class ShaclSettingsSyncService {
 
 	constructor(
 		private readonly _store: Store,
-		private readonly _profileSettings: ShaclProfileSettingsService
+		private readonly _profileSettings: ShaclProfileSettingsService,
+		private readonly _onHealthChecked?: (broken: ShaclBrokenReferences) => void
 	) { }
 
 	/**
 	 * Checks all validation profiles for broken references: shape files that no
-	 * longer exist.
+	 * longer exist. Every check also reports its outcome through the
+	 * `onHealthChecked` callback, so the validation status bar item can surface
+	 * (and clear) a configuration error.
 	 */
 	async checkShaclProfiles(): Promise<ShaclBrokenReferences> {
 		const settings = this._profileSettings.getMergedSettings();
@@ -44,7 +47,11 @@ export class ShaclSettingsSyncService {
 			}
 		}
 
-		return findBrokenReferences(settings, uri => existing.has(uri));
+		const broken = findBrokenReferences(settings, uri => existing.has(uri));
+
+		this._onHealthChecked?.(broken);
+
+		return broken;
 	}
 
 	/**

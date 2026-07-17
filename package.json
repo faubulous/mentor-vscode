@@ -976,6 +976,24 @@
         "title": "Show Index Status",
         "icon": "$(list-ordered)",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.showValidationLog",
+        "title": "Show Validation Log",
+        "icon": "$(output)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.createQueryForConnection",
+        "title": "New Query on Connection",
+        "icon": "$(new-file)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.showSparqlPanel",
+        "title": "Show SPARQL Panel",
+        "icon": "$(mentor-database-connection)",
+        "category": "Mentor"
       }
     ],
     "submenus": [
@@ -2111,9 +2129,9 @@
           },
           "mentor.language.sparql.documentQueryTemplate": {
             "type": "string",
-            "title": "Document Query Template",
+            "title": "Default Query Template",
             "description": "SPARQL query template used when creating a query for an RDF document.",
-            "default": "---\nparams {\n  documentIri: iri\n}\n---\nSELECT ?s ?p ?o\nFROM ${documentIri}\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
+            "default": "---\nparams {\n  documentIri: iri\n}\nexample rdf {  documentIri: \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }",
             "editPresentation": "multilineText"
           },
           "mentor.language.turtle.defaultDocumentTemplate": {

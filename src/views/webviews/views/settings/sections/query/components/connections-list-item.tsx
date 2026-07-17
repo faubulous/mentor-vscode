@@ -44,12 +44,14 @@ export function ConnectionsListItem({
 	// Loading graphs renders the row busy in the same way as testing the connection.
 	const isBusy = isTesting || isLoadingGraphs;
 
+	// A successful test tints the connection icon green rather than swapping it
+	// for a checkmark, so the row keeps its identity.
 	const connectionIcon = isBusy
 		? <vscode-icon name="ellipsis" className="settings-item-icon icon-testing" />
 		: testResult?.success === true
-			? <vscode-icon name="pass" className="settings-item-icon icon-success" />
+			? <vscode-icon name="arrow-swap" className="settings-item-icon icon-success" title="Connection test succeeded" />
 			: testResult?.success === false
-				? <vscode-icon name="error" className="settings-item-icon icon-error" title={testResult.error} />
+				? <vscode-icon name="arrow-swap" className="settings-item-icon icon-error" title={testResult.error} />
 				: <vscode-icon name="arrow-swap" className="settings-item-icon" />;
 
 	const testTitle = isTesting

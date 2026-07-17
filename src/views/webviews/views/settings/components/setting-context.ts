@@ -33,3 +33,10 @@ export interface SettingsScopeTargetApi {
  * `null` when rendered outside the settings panel.
  */
 export const SettingsScopeTargetContext = React.createContext<SettingsScopeTargetApi | null>(null);
+
+/**
+ * Executes a VS Code command on the host (via the panel's `ExecuteCommand` message).
+ * Setting rows use this for actions that leave the webview, e.g. "Edit in Settings".
+ * `null` when rendered outside the settings panel.
+ */
+export const SettingsExecuteCommandContext = React.createContext<((command: string, ...args: unknown[]) => void) | null>(null);

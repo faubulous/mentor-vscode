@@ -63,6 +63,10 @@ function SparqlResultsPanel() {
 	const handleMessage = useCallback((message: SparqlResultsWebviewMessages) => {
 		if (message.id === 'PostSparqlQueryHistory') {
 			onDidChangeQueryHistory(message.history);
+		} else if (message.id === 'ShowSparqlWelcome') {
+			// Opening the panel from the status bar selects the welcome tab instead
+			// of restoring the last active query tab.
+			setState(prev => ({ ...prev, activeTabIndex: 0 }));
 		} else if (message.id === 'UpdateQueryDocumentIri') {
 			// The documentIri now points to the opened query document whose content is the query
 			// itself, so it is no longer "generated" — clear the flag so repeat clicks are stable.

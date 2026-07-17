@@ -13,6 +13,7 @@ export {
 } from './convert-file-format';
 export { createDocument } from './create-document';
 export { createDocumentFromLanguage } from './create-document-from-language';
+export { createQueryForConnection } from './create-query-for-connection';
 export { createNotebook } from './create-notebook';
 export { createSparqlQueryFromDocument } from './create-sparql-query-from-document';
 export { createSparqlConnection } from './create-sparql-connection';
@@ -66,6 +67,7 @@ export { setNotebookInference } from './set-notebook-inference';
 export { showAnnotatedLabels } from './show-annotated-labels';
 export { showIndividualTypes } from './show-individual-types';
 export { showIndexStatus } from './show-index-status';
+export { showSparqlPanel } from './show-sparql-panel';
 export { showValidationLog } from './show-validation-log';
 export { showPropertyTypes } from './show-property-types';
 export { showShapeReferences } from './show-shape-references';

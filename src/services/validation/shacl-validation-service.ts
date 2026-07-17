@@ -107,7 +107,17 @@ export class ShaclValidationService implements vscode.Disposable {
 		this._diagnosticCollection = vscode.languages.createDiagnosticCollection('mentor-shacl');
 		this._diagnosticsMapper = new ShaclDiagnosticsMapper();
 		this._engine = new ShaclValidatorEngine(_store, message => this._log.info(message));
-		this.settingsSync = new ShaclSettingsSyncService(_store, this._profileSettings);
+		this.settingsSync = new ShaclSettingsSyncService(_store, this._profileSettings, broken => {
+			// Surface broken profile references on the status bar item; a passing
+			// check clears the error again.
+			const brokenProfiles = Object.keys(broken.profiles);
+
+			this._presenter.setConfigurationError(brokenProfiles.length > 0
+				? 'Some SHACL validation profiles reference missing shape graphs. '
+				+ `Affected profiles: ${brokenProfiles.join(', ')}.`
+				+ '\nClick to manage the validation profiles.'
+				: undefined);
+		});
 		this._batchRunner = new ShaclBatchRunner({
 			contextService: _contextService,
 			store: _store,

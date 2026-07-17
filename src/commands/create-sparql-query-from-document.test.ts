@@ -57,7 +57,7 @@ describe('createSparqlQueryFromDocument command', () => {
 	it('should open SPARQL document when template and workspace URI are available', async () => {
 		mockGetConfig.mockImplementation(() => ({
 			get: (k: string, d?: any) => k === 'language.sparql.documentQueryTemplate'
-				? '---\nparams {\n  documentIri: iri\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }'
+				? '---\nparams {\n  documentIri: iri\n}\nexample rdf {  documentIri: \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }'
 				: d,
 		}));
 		(vscode.window as any).activeTextEditor = {

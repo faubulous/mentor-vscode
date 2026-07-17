@@ -31,6 +31,8 @@ export const editTemplate = {
 			await vscode.languages.setTextDocumentLanguage(document, arg.language);
 		}
 
-		await vscode.window.showTextDocument(document, { preview: false });
+		// Open beside the settings webview so the template can be edited next to
+		// the settings without replacing them.
+		await vscode.window.showTextDocument(document, { preview: false, viewColumn: vscode.ViewColumn.Beside });
 	}
 };

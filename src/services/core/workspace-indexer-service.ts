@@ -78,7 +78,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			title: 'Open Indexing Settings',
 			arguments: ['workspace.indexing']
 		};
-		this._statusBarItem.tooltip = 'Open Indexing Settings';
+		this._statusBarItem.tooltip = 'Click to open the indexing settings.';
 
 		// Show the indexer item immediately so the Mentor icon is always visible in the
 		// status bar — including on an empty workspace (0 files), where the indexing code
@@ -323,7 +323,16 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			parts.push(`${skippedFiles.length} skipped`);
 		}
 
+		// The tooltip mirrors the format of the SHACL validation status bar item.
+		const tooltip = `Workspace indexing: ${totalFiles} files discovered, `
+			+ `${successfulFiles} indexed, ${summary.errorCount} errors, ${skippedFiles.length} skipped.`
+			+ (skippedFiles.length > 0
+				? '\nSkipped files exceed mentor.index.maxFileSize; add them to mentor.index.includeFiles to index them regardless.'
+				: '')
+			+ '\nClick to open the indexing settings.';
+
 		this._statusBarItem.text = parts.join('; ');
+		this._statusBarItem.tooltip = tooltip;
 		this._statusBarItem.show();
 
 		this._finishIndexing();

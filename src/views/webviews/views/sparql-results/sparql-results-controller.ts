@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionRegistry, ISparqlQueryService, ISparqlResultSerializer, IDocumentConnectionService } from '@src/languages/sparql/services';
+import { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryService, ISparqlResultSerializer, IDocumentConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
-import { SparqlResultsWebviewMessages } from './sparql-results-messages';
+import { SparqlConnectionGraphStatus, SparqlResultsWebviewMessages } from './sparql-results-messages';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 
 /**
@@ -21,8 +21,30 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         });
 
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+        const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 
         this.subscribe(queryService.onDidHistoryChange(this._postQueryHistory, this));
+
+        // Keep the welcome view's connections column live: refresh the list when
+        // connections change and mirror per-connection graph loading and counts.
+        this.subscribe(connectionRegistry.onDidChangeConnections(this._postConnections, this));
+
+        this.subscribe(graphService.onDidGraphLoadStart(connection => {
+            this.postMessage({ id: 'SparqlConnectionGraphsLoading', connectionId: connection.id, loading: true });
+        }));
+
+        this.subscribe(graphService.onDidGraphLoadEnd(connection => {
+            this.postMessage({ id: 'SparqlConnectionGraphsLoading', connectionId: connection.id, loading: false });
+        }));
+
+        this.subscribe(graphService.onDidChangeGraphs(connectionId => {
+            this.postMessage({
+                id: 'SparqlConnectionGraphsChanged',
+                connectionId,
+                status: this._getGraphStatus(connectionId),
+            });
+        }));
     }
 
     private _postQueryHistory() {
@@ -34,10 +56,72 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         });
     }
 
+    /**
+     * The graph-list status of a single connection, read from the graph service's cache.
+     */
+    private _getGraphStatus(connectionId: string): SparqlConnectionGraphStatus {
+        const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+
+        if (connectionId === WORKSPACE_CONNECTION.id) {
+            return { count: graphService.getWorkspaceGraphs(false).length };
+        }
+
+        const error = graphService.getGraphLoadError(connectionId);
+
+        return {
+            count: graphService.getGraphsForConnection(connectionId, false).length,
+            ...(error !== undefined ? { error } : {}),
+        };
+    }
+
+    /**
+     * Posts the connection list and the cached graph statuses to the welcome view.
+     * Connections without cached graphs and no load error carry no status entry.
+     */
+    private _postConnections() {
+        const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+        const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+
+        const connections = connectionRegistry.getConnections();
+        const statuses: Record<string, SparqlConnectionGraphStatus> = {};
+
+        for (const connection of connections) {
+            if (connection.id === WORKSPACE_CONNECTION.id
+                || graphService.hasGraphsForConnection(connection.id)
+                || graphService.getGraphLoadError(connection.id) !== undefined) {
+                statuses[connection.id] = this._getGraphStatus(connection.id);
+            }
+        }
+
+        this.postMessage({ id: 'PostSparqlConnections', connections, statuses });
+    }
+
     protected async onDidReceiveMessage(message: SparqlResultsWebviewMessages): Promise<boolean> {
         switch (message.id) {
             case 'GetSparqlQueryHistory': {
                 this._postQueryHistory();
+                return true;
+            }
+            case 'GetSparqlConnections': {
+                this._postConnections();
+                return true;
+            }
+            case 'TestSparqlConnection': {
+                const endpointTester = container.resolve<ISparqlEndpointTester>(ServiceToken.SparqlEndpointTester);
+
+                const result = await endpointTester.testConnection(message.connection);
+
+                this.postMessage({
+                    id: 'TestSparqlConnectionResult',
+                    connectionId: message.connection.id,
+                    success: result === null,
+                    error: result?.message,
+                });
+
+                return true;
+            }
+            case 'ListSparqlConnectionGraphs': {
+                await this._handleListConnectionGraphs(message.connection);
                 return true;
             }
             case 'EditBackgroundQuery': {
@@ -50,6 +134,39 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
             }
             default:
                 return super.onDidReceiveMessage(message);
+        }
+    }
+
+    /**
+     * Lists a connection's graphs in the results panel: the connection is tested first
+     * so failures surface as a test result on the welcome view's connections column
+     * instead of a failing background query.
+     */
+    private async _handleListConnectionGraphs(connection: SparqlConnection) {
+        const endpointTester = container.resolve<ISparqlEndpointTester>(ServiceToken.SparqlEndpointTester);
+
+        const testResult = await endpointTester.testConnection(connection);
+
+        if (testResult !== null) {
+            this.postMessage({
+                id: 'TestSparqlConnectionResult',
+                connectionId: connection.id,
+                success: false,
+                error: testResult.message,
+            });
+
+            return;
+        }
+
+        try {
+            await vscode.commands.executeCommand('mentor.command.listGraphs', connection);
+        } catch (e) {
+            this.postMessage({
+                id: 'TestSparqlConnectionResult',
+                connectionId: connection.id,
+                success: false,
+                error: e instanceof Error ? e.message : String(e),
+            });
         }
     }
 
@@ -225,6 +342,18 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         queryState.result = serializer.serializeIriList(query, graphs);
 
         queryService.registerCompletedQuery(queryState);
+    }
+
+    /**
+     * Reveals the results panel on its welcome tab. Used by the status bar item,
+     * which opens the panel as a hub rather than to inspect the last query: a
+     * freshly created webview starts on the welcome tab anyway, and an already
+     * running one is switched to it.
+     */
+    async showWelcome() {
+        await this._ensurePanelVisible();
+
+        this.postMessage({ id: 'ShowSparqlWelcome' });
     }
 
     /**

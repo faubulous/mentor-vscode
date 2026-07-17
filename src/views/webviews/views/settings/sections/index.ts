@@ -42,19 +42,19 @@ export const SETTINGS_GROUPS = [
 		],
 	},
 	{
-		id: 'validation',
-		label: 'Validation',
-		sections: [
-			validationGeneralSection,
-			validationProfilesSection,
-		],
-	},
-	{
 		id: 'query',
 		label: 'Query',
 		sections: [
 			queryConnectionsSection,
 			queryStoresSection,
+		],
+	},
+	{
+		id: 'validation',
+		label: 'Validation',
+		sections: [
+			validationGeneralSection,
+			validationProfilesSection,
 		],
 	},
 	{

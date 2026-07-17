@@ -66,6 +66,19 @@ export interface SettingRowProps {
 	 * Whether a workspace folder is open; disables the Workspace option when false.
 	 */
 	hasWorkspace?: boolean;
+
+	/**
+	 * The full setting id as it appears in settings.json (e.g. `mentor.predicates.label`).
+	 * When provided, the row's context menu offers "Copy Setting ID" and "Copy Setting URL".
+	 * Omitted for sub-field rows that are not independent settings.
+	 */
+	settingId?: string;
+
+	/**
+	 * Opens the setting in VS Code's native settings UI. When provided together with
+	 * `settingId`, the row's context menu offers "Edit in Settings".
+	 */
+	onEditInSettings?: () => void;
 }
 
 /**
@@ -73,7 +86,7 @@ export interface SettingRowProps {
  * @param props The props for the setting row.
  * @returns A JSX element representing the setting row.
  */
-export function SettingRow({ label, description, state, setScope, scope, onScopeSelect, hasWorkspace, children }: SettingRowProps) {
+export function SettingRow({ label, description, state, setScope, scope, onScopeSelect, hasWorkspace, settingId, onEditInSettings, children }: SettingRowProps) {
 	const settingScope = state?.scope ?? 'default';
 	const isModified = settingScope !== 'default' && !valuesEqual(state?.value, state?.defaultValue);
 
@@ -82,6 +95,18 @@ export function SettingRow({ label, description, state, setScope, scope, onScope
 	const menuItems: SectionHeaderContextMenuItem[] = [
 		{ label: 'Restore defaults', onClick: () => setScope(state?.value, 'default'), disabled: settingScope === 'default' },
 	];
+
+	if (settingId) {
+		menuItems.push(
+			{ separator: true },
+			{ label: 'Copy Setting ID', onClick: () => navigator.clipboard.writeText(settingId) },
+			{ label: 'Copy Setting URL', onClick: () => navigator.clipboard.writeText(`vscode://settings/${settingId}`) },
+		);
+
+		if (onEditInSettings) {
+			menuItems.push({ label: 'Edit in Settings', onClick: onEditInSettings });
+		}
+	}
 
 	return (
 		<div className={`setting-row${isModified ? ' setting-row-modified' : ''}`}>
