@@ -1,6 +1,5 @@
-import { useStylesheet } from '@src/views/webviews/hooks';
+import { StatsDashboard, STATS_PLACEHOLDER, formatDuration } from '../../../components/stats-dashboard';
 import { IndexingStatsView } from '../indexing-messages';
-import stylesheet from './indexing-dashboard.css';
 
 export interface IndexingDashboardProps {
 	/**
@@ -9,57 +8,21 @@ export interface IndexingDashboardProps {
 	stats?: IndexingStatsView;
 }
 
-const PLACEHOLDER = '—';
-
 /**
- * Formats a millisecond duration into a compact human-readable string.
- */
-function formatDuration(ms: number): string {
-	if (ms < 1000) {
-		return `${ms} ms`;
-	}
-
-	if (ms < 60000) {
-		return `${(ms / 1000).toFixed(1)} s`;
-	}
-
-	const minutes = Math.floor(ms / 60000);
-	const seconds = Math.round((ms % 60000) / 1000);
-
-	return `${minutes}m ${seconds}s`;
-}
-
-/**
- * A prominent statistics dashboard shown at the top of the Indexing settings section.
- * Renders large metric values with small labels below, separated by thin vertical lines.
+ * The statistics dashboard shown at the top of the Indexing settings section.
  */
 export function IndexingDashboard({ stats }: IndexingDashboardProps) {
-	useStylesheet('mentor-indexing-dashboard-styles', stylesheet);
-
-	const num = (value: number | undefined) => (value === undefined ? PLACEHOLDER : value.toLocaleString());
+	const num = (value: number | undefined) => (value === undefined ? STATS_PLACEHOLDER : value.toLocaleString());
 
 	return (
-		<div className="indexing-dashboard">
-			<div className="indexing-dashboard-metric">
-				<span className="indexing-dashboard-value">{num(stats?.tripleCount)}</span>
-				<span className="indexing-dashboard-label">Triples</span>
-			</div>
-			<div className="indexing-dashboard-metric">
-				<span className="indexing-dashboard-value">{num(stats?.indexedFiles)}</span>
-				<span className="indexing-dashboard-label">Indexed files</span>
-			</div>
-			<div className={`indexing-dashboard-metric${stats && stats.errorCount > 0 ? ' has-errors' : ''}`}>
-				<span className="indexing-dashboard-value">{num(stats?.errorCount)}</span>
-				<span className="indexing-dashboard-label">Errors</span>
-			</div>
-			<div className="indexing-dashboard-metric">
-				<span className="indexing-dashboard-value">{num(stats?.skippedFiles)}</span>
-				<span className="indexing-dashboard-label">Skipped</span>
-			</div>
-			<div className="indexing-dashboard-metric">
-				<span className="indexing-dashboard-value">{stats ? formatDuration(stats.durationMs) : PLACEHOLDER}</span>
-				<span className="indexing-dashboard-label">Time</span>
-			</div>
-		</div>
+		<StatsDashboard
+			metrics={[
+				{ value: num(stats?.indexedFiles), label: 'Indexed Files' },
+				{ value: num(stats?.skippedFiles), label: 'Skipped Files' },
+				{ value: num(stats?.errorCount), label: 'Errors', error: stats !== undefined && stats.errorCount > 0 },
+				{ value: num(stats?.tripleCount), label: 'Triples' },
+				{ value: stats ? formatDuration(stats.durationMs) : STATS_PLACEHOLDER, label: 'Time' },
+			]}
+		/>
 	);
 }

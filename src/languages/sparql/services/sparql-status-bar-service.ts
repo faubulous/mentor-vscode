@@ -20,9 +20,10 @@ export class SparqlStatusBarService implements vscode.Disposable {
 	/**
 	 * Status bar priority. The low value keeps the item at the far right of the
 	 * left-aligned status bar — after built-in items such as "Auto Attach"
-	 * (priority 0) — so it stays with the other Mentor items.
+	 * (priority 0) — so it stays with the other Mentor items, as the last one
+	 * after the indexer (-10001) and validation (-10002) items.
 	 */
-	private readonly _priority = -10002;
+	private readonly _priority = -10003;
 
 	/**
 	 * The status bar item owned by this service. It is created once and kept alive 

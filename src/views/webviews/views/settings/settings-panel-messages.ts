@@ -4,6 +4,7 @@ import { ConnectionEditorMessages } from './sections/query/connection-editor-mes
 import { ConnectionsListMessages } from './sections/query/connections-list-messages';
 import { StoresSectionMessages } from './sections/query/stores-messages';
 import { IndexingMessages } from './sections/workspace/indexing-messages';
+import { ValidationGeneralMessages } from './sections/validation/general-messages';
 import { ValidationProfilesMessages } from './sections/validation/profiles-messages';
 
 /**
@@ -16,6 +17,7 @@ export type SettingsSectionMessages =
 	| ({ section: 'query.connections' } & (ConnectionsListMessages | ConnectionEditorMessages))
 	| ({ section: 'query.stores' } & StoresSectionMessages)
 	| ({ section: 'workspace.indexing' } & IndexingMessages)
+	| ({ section: 'validation.general' } & ValidationGeneralMessages)
 	| ({ section: 'validation.profiles' } & ValidationProfilesMessages);
 
 /**

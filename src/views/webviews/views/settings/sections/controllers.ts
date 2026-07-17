@@ -2,6 +2,7 @@ import { SettingsSectionController } from '../settings-section-controller';
 import { ConnectionsSectionController } from './query/connections-controller';
 import { StoresSectionController } from './query/stores-controller';
 import { IndexingSectionController } from './workspace/indexing-controller';
+import { ValidationGeneralSectionController } from './validation/general-controller';
 import { ValidationProfilesSectionController } from './validation/profiles-controller';
 
 /**
@@ -14,6 +15,7 @@ export function createSectionControllers(): SettingsSectionController[] {
 		new ConnectionsSectionController(),
 		new StoresSectionController(),
 		new IndexingSectionController(),
+		new ValidationGeneralSectionController(),
 		new ValidationProfilesSectionController(),
 	];
 }

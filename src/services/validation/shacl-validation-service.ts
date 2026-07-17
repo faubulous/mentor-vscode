@@ -21,10 +21,10 @@ import { ShaclSettingsSyncService } from './shacl-settings-sync-service';
 import { ShaclValidationResult, ShaclValidatorEngine } from './shacl-validator-engine';
 import { formatReportAsText, serializeReportAsTurtle } from './shacl-report-exporter';
 import { ShaclValidationPresenter } from './shacl-validation-presenter';
-import { BatchValidationOptions, ProfileValidationSummary, ShaclBatchRunner } from './shacl-batch-runner';
+import { BatchValidationOptions, ProfileValidationSummary, ShaclBatchRunner, ValidationRunStatistics } from './shacl-batch-runner';
 
 export type { ShaclValidationResult, ShaclValidationResultEntry } from './shacl-validator-engine';
-export type { BatchValidationOptions, ProfileValidationSummary } from './shacl-batch-runner';
+export type { BatchValidationOptions, ProfileValidationSummary, ValidationRunStatistics } from './shacl-batch-runner';
 
 /**
  * The facade for SHACL validation of RDF documents: resolves the profiles that
@@ -56,6 +56,8 @@ export class ShaclValidationService implements vscode.Disposable {
 	private readonly _inflightValidations = new Map<string, Promise<ShaclValidationResult | undefined>>();
 
 	private readonly _onDidValidate = new vscode.EventEmitter<vscode.Uri>();
+
+	private readonly _onDidFinishValidation = new vscode.EventEmitter<void>();
 
 	/**
 	 * Log channel for validation activity, mirroring the "Mentor Indexer" channel.
@@ -89,6 +91,12 @@ export class ShaclValidationService implements vscode.Disposable {
 	 */
 	readonly onDidValidate: vscode.Event<vscode.Uri> = this._onDidValidate.event;
 
+	/**
+	 * Fired when a batch validation run finishes, after {@link lastRunStatistics}
+	 * has been updated. Used by the validation dashboard to refresh its metrics.
+	 */
+	readonly onDidFinishValidation: vscode.Event<void> = this._onDidFinishValidation.event;
+
 	constructor(
 		context: vscode.ExtensionContext,
 		private readonly _store: Store,
@@ -114,6 +122,8 @@ export class ShaclValidationService implements vscode.Disposable {
 				if (activeUri) {
 					this._onDidValidate.fire(activeUri);
 				}
+
+				this._onDidFinishValidation.fire();
 			},
 			onFileSkipped: (uri, triples, maxGraphSize) => {
 				this._lastSkips.set(uri.toString(), { triples, maxGraphSize });
@@ -329,7 +339,7 @@ export class ShaclValidationService implements vscode.Disposable {
 		const profile = this.getValidationSettings().profiles?.[profileId];
 
 		if (!profile) {
-			return { matched: 0, validated: 0, issues: 0, issueFiles: [], hasShapes: false, skipped: 0 };
+			return { matched: 0, validated: 0, issues: 0, errors: 0, warnings: 0, issueFiles: [], hasShapes: false, skipped: 0 };
 		}
 
 		const shapes = toUniqueStringArray(profile.shapes);
@@ -363,6 +373,21 @@ export class ShaclValidationService implements vscode.Disposable {
 	 */
 	get isValidating(): boolean {
 		return this._batchRunner.isValidating;
+	}
+
+	/**
+	 * Summary statistics of the most recent batch validation run, or `undefined`
+	 * when no batch has run yet in this session.
+	 */
+	get lastRunStatistics(): ValidationRunStatistics | undefined {
+		return this._batchRunner.statistics;
+	}
+
+	/**
+	 * Reveals the "Mentor Validation" log output channel.
+	 */
+	showLog(): void {
+		this._log.show();
 	}
 
 	/**

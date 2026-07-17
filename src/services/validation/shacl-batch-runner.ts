@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Store } from '@faubulous/mentor-rdf';
+import { SH, Store } from '@faubulous/mentor-rdf';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
@@ -23,6 +23,14 @@ export interface ProfileValidationSummary {
 	 */
 	issues: number;
 	/**
+	 * Number of error-severity results (`sh:Violation`) across all validated files.
+	 */
+	errors: number;
+	/**
+	 * Number of warning-severity results (`sh:Warning`) across all validated files.
+	 */
+	warnings: number;
+	/**
 	 * The validated files that had at least one issue.
 	 */
 	issueFiles: vscode.Uri[];
@@ -39,6 +47,40 @@ export interface ProfileValidationSummary {
 	 * Whether the run stopped early because its cancellation token was triggered.
 	 */
 	cancelled?: boolean;
+}
+
+/**
+ * Summary statistics of the most recent batch validation run, surfaced on the
+ * validation dashboard in the settings panel.
+ */
+export interface ValidationRunStatistics {
+	/**
+	 * The number of files that were validated.
+	 */
+	validatedFiles: number;
+
+	/**
+	 * The number of matched files skipped because their data graph exceeded
+	 * `mentor.shacl.maxGraphSize`.
+	 */
+	skippedFiles: number;
+
+	/**
+	 * The number of error-severity results (`sh:Violation`) summed across all
+	 * validated files.
+	 */
+	errorCount: number;
+
+	/**
+	 * The number of warning-severity results (`sh:Warning`) summed across all
+	 * validated files.
+	 */
+	warningCount: number;
+
+	/**
+	 * The wall-clock duration of the run in milliseconds.
+	 */
+	durationMs: number;
 }
 
 /**
@@ -133,7 +175,20 @@ export class ShaclBatchRunner {
 	 */
 	private _batchDepth = 0;
 
+	/**
+	 * Summary statistics of the most recent finished batch run.
+	 */
+	private _statistics?: ValidationRunStatistics;
+
 	constructor(private readonly _deps: ShaclBatchRunnerDependencies) { }
+
+	/**
+	 * Summary statistics of the most recent finished batch run, or `undefined`
+	 * when no batch has run yet in this session.
+	 */
+	get statistics(): ValidationRunStatistics | undefined {
+		return this._statistics;
+	}
 
 	/**
 	 * Whether a batch validation run is currently in flight (and therefore cancellable).
@@ -223,6 +278,14 @@ export class ShaclBatchRunner {
 
 			const duration = Math.round(performance.now() - startTime);
 
+			this._statistics = {
+				validatedFiles: summary.validated,
+				skippedFiles: summary.skipped,
+				errorCount: summary.errors,
+				warningCount: summary.warnings,
+				durationMs: duration,
+			};
+
 			this._deps.log.info(
 				`Validated ${summary.validated} of ${summary.matched} files in ${duration} ms`
 				+ (summary.skipped > 0 ? `; ${summary.skipped} skipped` : '')
@@ -271,7 +334,8 @@ export class ShaclBatchRunner {
 			+ (summary.cancelled ? ' (run cancelled)' : '') + '.'
 			+ (summary.skipped > 0
 				? '\nSkipped files exceed mentor.shacl.maxGraphSize; run a validate command to validate them explicitly.'
-				: '');
+				: '')
+			+ '\nClick to open the validation dashboard.';
 
 		this._deps.presenter.showSummary(text, tooltip);
 	}
@@ -291,6 +355,8 @@ export class ShaclBatchRunner {
 		let matched = 0;
 		let validated = 0;
 		let issues = 0;
+		let errors = 0;
+		let warnings = 0;
 		let skipped = 0;
 		let cancelled = false;
 		const issueFiles: vscode.Uri[] = [];
@@ -374,6 +440,14 @@ export class ShaclBatchRunner {
 				if (result.results.length > 0) {
 					issueFiles.push(uri);
 					issues += result.results.length;
+
+					for (const entry of result.results) {
+						if (entry.severity === SH.Violation) {
+							errors++;
+						} else if (entry.severity === SH.Warning) {
+							warnings++;
+						}
+					}
 				}
 			} catch (error) {
 				this._deps.log.error(`SHACL validation failed for ${uri.toString()}: ${error}`);
@@ -383,7 +457,7 @@ export class ShaclBatchRunner {
 			options?.onProgress?.(completed, total);
 		}
 
-		return { matched, validated, issues, issueFiles, hasShapes, skipped, cancelled };
+		return { matched, validated, issues, errors, warnings, issueFiles, hasShapes, skipped, cancelled };
 	}
 
 	/**

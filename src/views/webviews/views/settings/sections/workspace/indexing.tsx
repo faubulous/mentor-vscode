@@ -65,7 +65,7 @@ export function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, o
 		<div>
 			<SectionHeader title={workspaceIndexingSection.label} menuItems={menuItems} variant="title" />
 			<IndexingDashboard stats={stats} />
-			<div className="indexing-actions">
+			<div className="stats-dashboard-actions">
 				<vscode-toolbar-button className="primary" onClick={handleShowLog}>
 					<span className="codicon codicon-output"></span>
 					<span className="label">Show Index Log</span>

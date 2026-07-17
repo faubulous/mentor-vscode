@@ -220,7 +220,7 @@ describe('ShaclValidationService.validateProfile', () => {
 		const { service } = createService({});
 
 		expect(await service.validateProfile('nope', files)).toEqual({
-			matched: 0, validated: 0, issues: 0, issueFiles: [], hasShapes: false, skipped: 0,
+			matched: 0, validated: 0, issues: 0, errors: 0, warnings: 0, issueFiles: [], hasShapes: false, skipped: 0,
 		});
 	});
 });

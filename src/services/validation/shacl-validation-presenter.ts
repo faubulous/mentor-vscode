@@ -1,17 +1,18 @@
 import * as vscode from 'vscode';
 
 /**
- * Owns the dedicated validation status bar item, which sits alongside the
- * indexer/graph/SPARQL group (priorities -10000..-10002).
+ * Owns the dedicated validation status bar item, which sits directly after the
+ * indexer item (-10001) and before the SPARQL connection item (-10003).
  *
  * The item has three states: hidden (no run yet), running (spinner text;
  * clicking triggers the cancel-confirmation command) and summary (the outcome
- * of the last batch run, mirroring the indexer's persistent summary). Runs
- * that finish without producing a summary — single-file and on-change
- * validations — restore the last batch summary instead of clearing it.
+ * of the last batch run, mirroring the indexer's persistent summary; clicking
+ * opens the validation dashboard in the settings). Runs that finish without
+ * producing a summary — single-file and on-change validations — restore the
+ * last batch summary instead of clearing it.
  */
 export class ShaclValidationPresenter implements vscode.Disposable {
-	private readonly _statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, -10003);
+	private readonly _statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, -10002);
 
 	/**
 	 * The summary of the last finished batch run, restored after transient
@@ -36,15 +37,19 @@ export class ShaclValidationPresenter implements vscode.Disposable {
 	}
 
 	/**
-	 * Shows a persistent summary of a finished batch run. The cancel affordance
-	 * is removed: there is nothing to cancel while idle.
+	 * Shows a persistent summary of a finished batch run. While idle, clicking
+	 * the item opens the validation dashboard in the settings panel.
 	 */
 	showSummary(text: string, tooltip: string): void {
 		this._summary = { text, tooltip };
 
 		this._statusBarItem.text = text;
 		this._statusBarItem.tooltip = tooltip;
-		this._statusBarItem.command = undefined;
+		this._statusBarItem.command = {
+			title: 'Open Validation Dashboard',
+			command: 'mentor.command.openSettings',
+			arguments: ['validation.general'],
+		};
 		this._statusBarItem.show();
 	}
 
