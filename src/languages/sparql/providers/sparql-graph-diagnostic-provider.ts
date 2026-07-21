@@ -41,6 +41,12 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
             graphService.onDidChangeGraphs(connectionId => this._revalidateForConnection(connectionId))
         );
 
+        // Re-validate a document when its connection (or inference setting) changes, so graph
+        // diagnostics are recomputed against the new source's graphs rather than the old set.
+        this._subscriptions.push(
+            this._documentConnectionService.onDidChangeConnectionForDocument(uri => this._revalidateDocument(uri))
+        );
+
         // Validate all currently open SPARQL documents on startup.
         for (const doc of vscode.workspace.textDocuments) {
             this._validateIfSparql(doc);
@@ -50,6 +56,14 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
     private _validateIfSparql(document: vscode.TextDocument): void {
         if (document.languageId === 'sparql') {
             this._validateDocument(document);
+        }
+    }
+
+    private _revalidateDocument(uri: vscode.Uri): void {
+        const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
+
+        if (document) {
+            this._validateIfSparql(document);
         }
     }
 
