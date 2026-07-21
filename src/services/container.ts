@@ -133,7 +133,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const sparqlQueryResultSerializer = new SparqlResultSerializer(prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlQueryResultSerializer, sparqlQueryResultSerializer);
 
-	const sparqlQueryService = new SparqlQueryService(context, credentialStorageService, connectionRegistry, sparqlQueryResultSerializer, sparqlStoreConfigService, sparqlQuerySourceFactory);
+	const sparqlQueryService = new SparqlQueryService(context, credentialStorageService, connectionRegistry, sparqlQueryResultSerializer, sparqlStoreConfigService, sparqlQuerySourceFactory, documentConnectionService);
 	container.registerInstance(ServiceToken.SparqlQueryService, sparqlQueryService);
 
 	const turtlePrefixDefinitionService = new TurtlePrefixDefinitionService(documentContextService, prefixLookupService);

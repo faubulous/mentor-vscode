@@ -60,6 +60,11 @@ export const executeDescribeQuery = {
 				language: 'turtle'
 			});
 
+			// Bind the result document to the same connection the describe ran against, so its
+			// connection indicator reflects the originating store and any follow-up queries run
+			// from it target that store rather than defaulting to the workspace.
+			await documentConnectionService.setQuerySourceForDocument(resultDocument.uri, connection.id);
+
 			await vscode.window.showTextDocument(resultDocument, { preview: true });
 		} catch (error: any) {
 			vscode.window.showErrorMessage(`Failed to describe resource: ${error.message}`);

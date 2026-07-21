@@ -6,7 +6,7 @@ import { Bindings, Quad } from "@rdfjs/types";
 import { AuthCredential } from '@src/services/core/credential';
 import { ICredentialStorageService } from '@src/services/core';
 import { getAuthorizationHeaderProvider } from './sparql-auth';
-import { ISparqlConnectionRegistry, ISparqlQuerySourceFactory } from '@src/languages/sparql/services';
+import { IDocumentConnectionService, ISparqlConnectionRegistry, ISparqlQuerySourceFactory } from '@src/languages/sparql/services';
 import { ISparqlResultSerializer } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from './triple-store-config-service.interface';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
@@ -76,7 +76,8 @@ export class SparqlQueryService {
 		private readonly _connectionRegistry: ISparqlConnectionRegistry,
 		private readonly _resultSerializer: ISparqlResultSerializer,
 		private readonly _storeConfigService: ITripleStoreConfigService,
-		private readonly _querySourceFactory: ISparqlQuerySourceFactory
+		private readonly _querySourceFactory: ISparqlQuerySourceFactory,
+		private readonly _documentConnectionService: IDocumentConnectionService
 	) {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);
@@ -295,6 +296,12 @@ export class SparqlQueryService {
 			} else {
 				const documentIri = vscode.Uri.parse(context.documentIri!);
 				source = await this._querySourceFactory.getQuerySourceForDocument(documentIri);
+
+				// Record the exact connection this query ran against so downstream actions
+				// triggered from the results view (e.g. Describe Resource on a binding) reuse
+				// it, rather than re-resolving from the source document — which may have since
+				// changed or fall back to the workspace store.
+				context.connectionId = this._documentConnectionService.getConnectionForDocument(documentIri).id;
 			}
 
 			const result = await this._executeQueryOnSource(query, source, tokenSource.token, (raw) => {
