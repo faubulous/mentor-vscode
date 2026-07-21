@@ -70,10 +70,6 @@ export function SparqlWelcomeView() {
 		}
 	};
 
-	const handleManageConnections = () => {
-		executeCommand('mentor.command.manageSparqlConnections');
-	};
-
 	const handleOpenDocument = (query: SparqlQueryExecutionState) => {
 		executeCommand('mentor.command.openDocument', query.documentIri);
 	};
@@ -93,28 +89,12 @@ export function SparqlWelcomeView() {
 	return (
 		<vscode-scrollable>
 			<div className="sparql-welcome-view-container">
-				<div className="column">
-					<div className="header">
-						<h3>Start</h3>
-					</div>
-					<div className="body button-list button-list-xl">
-						<vscode-toolbar-button className="primary" onClick={handleSelectSparqlQueryFile}>
-							<span className="codicon codicon-folder-opened"></span>
-							<span className="label">Open Query...</span>
-						</vscode-toolbar-button>
-						<vscode-toolbar-button className="primary" onClick={handleCreateSparqlQueryFile}>
-							<span className="codicon codicon-new-file"></span>
-							<span className="label">New Query...</span>
-						</vscode-toolbar-button>
-						<vscode-toolbar-button className="primary" onClick={handleManageConnections}>
-							<span className="codicon codicon-mentor-database-connection"></span>
-							<span className="label">Manage Connections...</span>
-						</vscode-toolbar-button>
-					</div>
-				</div>
 				<div className="column column-wide">
 					<div className="header">
 						<h3>Recent Queries</h3>
+						<vscode-toolbar-button onClick={handleSelectSparqlQueryFile}>
+							<span className="muted">Open</span>
+						</vscode-toolbar-button>
 						<vscode-toolbar-button onClick={handleClearHistory} disabled={history.length === 0}>
 							<span className="muted">Clear</span>
 						</vscode-toolbar-button>
@@ -123,18 +103,20 @@ export function SparqlWelcomeView() {
 						{history.length === 0 && <span className="muted">No recent queries in this workspace.</span>}
 						{history.length > 0 && history.map((queryState, index) => (
 							<div key={`${queryState.documentIri}-${index}`} className="history-item">
-								<a className='execute-button codicon codicon-play' role="button" title="Run"
-									onClick={() => handleExecuteQuery(queryState)}>
-								</a>
 								<img className="file-icon file-icon-dark" src={sparqlFileIconDark} alt="" />
 								<img className="file-icon file-icon-light" src={sparqlFileIconLight} alt="" />
 								<a className="file-link" onClick={() => handleOpenDocument(queryState)}>
 									<span>{getDisplayName(queryState)}</span>
 								</a>
 								<span className="folder muted">{getWorkspacePath(queryState)}</span>
-								<a className="remove-button codicon codicon-close" role="button" title="Remove"
-									onClick={() => handleRemoveFromHistory(queryState)}>
-								</a>
+								<span className="actions">
+									<a className='execute-button codicon codicon-play' role="button" title="Run"
+										onClick={() => handleExecuteQuery(queryState)}>
+									</a>
+									<a className="remove-button codicon codicon-close" role="button" title="Remove"
+										onClick={() => handleRemoveFromHistory(queryState)}>
+									</a>
+								</span>
 							</div>
 						))}
 					</div>

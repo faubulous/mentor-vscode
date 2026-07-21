@@ -15,6 +15,7 @@ export type ValidationProfilesMessages =
 	| { id: 'EditPathPattern'; pattern: string }
 	| { id: 'EditPathPatternResult'; pattern?: string }
 	| { id: 'OpenShapeGraph'; uri: string }
+	| { id: 'OpenPresetShapeGraph'; presetId: string }
 	| { id: 'WritePresetShapes'; presetId: string }
 	| { id: 'WritePresetShapesResult'; presetId: string; uri?: string; error?: string }
 	| { id: 'ValidateProfile'; profileId: string }

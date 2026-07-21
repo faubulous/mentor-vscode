@@ -217,7 +217,7 @@ export function ValidationProfilePathsEditor({ includeFiles, excludeFiles, onInc
 				)}
 			/>
 			<PathListSection
-				label="Excluded Paths"
+				label="Excluded Files"
 				placeholder="e.g. drafts/** or scratch.ttl"
 				entries={excludeFiles}
 				onChange={onExcludeChange}

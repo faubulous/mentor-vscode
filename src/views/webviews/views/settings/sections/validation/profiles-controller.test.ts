@@ -11,15 +11,36 @@ vi.mock('tsyringe', () => ({ container: { resolve: vi.fn() } }));
 
 const BROKEN = { profiles: { 'core': ['workspace:///missing.ttl'] } };
 
-function setup(files: string[] = []) {
+function setup(files: string[] = [], cells: { notebook: string; slug: string }[] = []) {
 	const store = {
 		getGraphs: vi.fn(() => ['workspace:///shapes/core.ttl']),
 		any: vi.fn(() => true),
 	};
+
+	// Cell contexts, keyed by the opaque cell-handle URI, exposing a slug-based
+	// graph IRI — mirroring how the indexer stores notebook cell contexts.
+	const cellContexts: Record<string, any> = {};
+
+	for (const { notebook, slug } of cells) {
+		const cellUri = vscode.Uri.parse(`vscode-notebook-cell:///${notebook}#HANDLE-${slug}`);
+		cellContexts[cellUri.toString()] = {
+			uri: cellUri,
+			graphIri: vscode.Uri.parse(`workspace:///${notebook}#${slug}`),
+		};
+	}
+
+	const contextService = { contexts: cellContexts };
+
 	const validationService = {
 		checkShaclProfiles: vi.fn(async () => BROKEN),
 		getRdfExtensions: vi.fn(() => ['.ttl', '.rdf']),
-		getDocumentLocation: vi.fn((uri: vscode.Uri) => ({ path: uri.path.replace(/^\/+/, '') })),
+		// Resolves cells to their slug-based location (as the real service does after
+		// the notebook-cell fix), and files to their bare workspace-relative path.
+		getDocumentLocation: vi.fn((uri: vscode.Uri) => {
+			const graphIri = uri.scheme === 'vscode-notebook-cell' ? cellContexts[uri.toString()]?.graphIri : undefined;
+			const source = graphIri ?? uri;
+			return { path: source.path.replace(/^\/+/, ''), fragment: source.fragment || undefined };
+		}),
 	};
 	const fileService = {
 		files: files.map(path => vscode.Uri.parse(`file:///${path}`)),
@@ -29,6 +50,7 @@ function setup(files: string[] = []) {
 		if (token === ServiceToken.Store) return store;
 		if (token === ServiceToken.ShaclValidationService) return validationService;
 		if (token === ServiceToken.WorkspaceFileService) return fileService;
+		if (token === ServiceToken.DocumentContextService) return contextService;
 		return {};
 	});
 
@@ -143,6 +165,48 @@ describe('ValidationProfilesSectionController', () => {
 
 		expect(message.count).toBe(4);
 		expect(message.sample).toHaveLength(3);
+	});
+
+	it('counts an exact notebook cell pattern as exactly one match', async () => {
+		const { controller, post } = setup(
+			['nb.mnb'],
+			[{ notebook: 'nb.mnb', slug: 'cell-1' }, { notebook: 'nb.mnb', slug: 'cell-2' }]
+		);
+
+		await controller.handleMessage({
+			section: 'validation.profiles',
+			id: 'GetProfileMatchPreview',
+			key: 'core',
+			includeFiles: ['nb.mnb#cell-1'],
+			excludeFiles: [],
+		} as any);
+
+		expect(post).toHaveBeenCalledWith(expect.objectContaining({
+			id: 'GetProfileMatchPreviewResult',
+			count: 1,
+			sample: ['nb.mnb#cell-1'],
+		}));
+	});
+
+	it('applies a fragment-less notebook pattern to all cells, excluding the container file', async () => {
+		const { controller, post } = setup(
+			['nb.mnb'],
+			[{ notebook: 'nb.mnb', slug: 'cell-1' }, { notebook: 'nb.mnb', slug: 'cell-2' }]
+		);
+
+		await controller.handleMessage({
+			section: 'validation.profiles',
+			id: 'GetProfileMatchPreview',
+			key: 'core',
+			includeFiles: ['nb.mnb'],
+			excludeFiles: [],
+		} as any);
+
+		const message = post.mock.calls[0][0];
+
+		// The two cells match; the notebook container file is not counted.
+		expect(message.count).toBe(2);
+		expect(message.sample).toEqual(['nb.mnb#cell-1', 'nb.mnb#cell-2']);
 	});
 
 	it('shows the matched files in the pattern editor and posts the confirmed pattern', async () => {

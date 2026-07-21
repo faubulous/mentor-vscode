@@ -3,11 +3,12 @@ import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
-import { isValidPathKey, matchesPathKey, matchesProfilePaths, toPathEntries } from '@src/services/validation/shacl-validation-configuration';
+import { isValidPathKey, matchesPathKey, matchesProfilePaths, toDocumentPatternKey, toPathEntries, ShaclDocumentLocation } from '@src/services/validation/shacl-validation-configuration';
 import { IWorkspaceFileService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { writePresetShapes } from '@src/services/validation/preset-shape-writer';
+import { getPresetShapeSource } from '@src/services/validation/presets';
 import { getShapeGraphCandidates } from '@src/utilities';
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
@@ -83,17 +84,14 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 				const { key, includeFiles, excludeFiles } = message;
 				const entries = toPathEntries(includeFiles, excludeFiles);
 
-				const fileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
 				const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 				const rdfExtensions = validationService.getRdfExtensions();
 
 				const matches: string[] = [];
 
-				for (const uri of fileService.files) {
-					const location = validationService.getDocumentLocation(uri);
-
+				for (const { location } of this._getMatchCandidates()) {
 					if (matchesProfilePaths(entries, location, rdfExtensions)) {
-						matches.push(location.path);
+						matches.push(toDocumentPatternKey(location));
 					}
 				}
 
@@ -146,6 +144,24 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 
 				return true;
 			}
+			case 'OpenPresetShapeGraph': {
+				// Templates ship as bundled Turtle sources with no workspace file yet.
+				// Open the source in an editor so the user can adapt it and save their
+				// own copy into the workspace.
+				const source = getPresetShapeSource(message.presetId);
+
+				if (!source) {
+					vscode.window.showWarningMessage(`No shape graph is bundled for the template "${message.presetId}".`);
+
+					return true;
+				}
+
+				const document = await vscode.workspace.openTextDocument({ content: source, language: 'turtle' });
+
+				await vscode.window.showTextDocument(document);
+
+				return true;
+			}
 			case 'WritePresetShapes': {
 				try {
 					const { uri } = await writePresetShapes(message.presetId);
@@ -183,6 +199,34 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 	}
 
 	/**
+	 * Returns every validate-able document location in the workspace: indexed RDF
+	 * files plus notebook cells (addressed by their slug). Notebook container files
+	 * are excluded — only their cells are validate-able documents — so match-count
+	 * previews reflect the units validation actually runs on.
+	 */
+	private _getMatchCandidates(): { location: ShaclDocumentLocation; uri: vscode.Uri }[] {
+		const fileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
+		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+		const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
+
+		// Notebook cells: their context URI is the opaque cell handle, but
+		// getDocumentLocation resolves it to the slug-based path#fragment.
+		const cells = Object.values(contextService.contexts)
+			.filter(ctx => ctx.uri.scheme === 'vscode-notebook-cell')
+			.map(ctx => ({ location: validationService.getDocumentLocation(ctx.uri), uri: ctx.uri }));
+
+		// A cell's location.path is its notebook's workspace-relative path; use that
+		// to drop the notebook container file from the enumerated files.
+		const notebookPaths = new Set(cells.map(c => c.location.path));
+
+		const files = fileService.files
+			.map(uri => ({ location: validationService.getDocumentLocation(uri), uri }))
+			.filter(f => !notebookPaths.has(f.location.path));
+
+		return [...files, ...cells];
+	}
+
+	/**
 	 * Opens the interactive pattern editor: a quick pick whose input holds the
 	 * pattern and whose items preview the workspace files it currently matches,
 	 * updating live while typing. Accepting the typed value resolves with the
@@ -191,7 +235,6 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 	 * dismissed.
 	 */
 	private _showPatternEditor(pattern: string): Promise<string | undefined> {
-		const fileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
 		const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 		const rdfExtensions = validationService.getRdfExtensions();
 
@@ -206,11 +249,9 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 			const matches: { path: string; uri: vscode.Uri }[] = [];
 
 			if (trimmed.length > 0 && isValidPathKey(trimmed)) {
-				for (const uri of fileService.files) {
-					const location = validationService.getDocumentLocation(uri);
-
+				for (const { location, uri } of this._getMatchCandidates()) {
 					if (matchesPathKey(trimmed, location, rdfExtensions)) {
-						matches.push({ path: location.path, uri });
+						matches.push({ path: toDocumentPatternKey(location), uri });
 					}
 				}
 			}

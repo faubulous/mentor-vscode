@@ -15,6 +15,7 @@ let mockGetConnection: Mock;
 let mockGetConnectionForDocument: Mock;
 let mockSetQuerySource: Mock;
 let mockTestConnection: Mock;
+let historyChangeHandler: (() => void) | undefined;
 
 vi.mock('tsyringe', () => ({
 	container: {
@@ -24,7 +25,7 @@ vi.mock('tsyringe', () => ({
 			}
 			if (token === 'SparqlQueryService') {
 				return {
-					onDidHistoryChange: vi.fn(() => ({ dispose: () => {} })),
+					onDidHistoryChange: vi.fn((cb: () => void) => { historyChangeHandler = cb; return { dispose: () => {} }; }),
 					getQueryHistory: () => history,
 				};
 			}
@@ -81,6 +82,7 @@ beforeEach(() => {
 	mockGetConnectionForDocument = vi.fn(() => ({ id: 'conn-1' }));
 	mockSetQuerySource = vi.fn(async () => undefined);
 	mockTestConnection = vi.fn(async () => null);
+	historyChangeHandler = undefined;
 	(vscode.window as any).showTextDocument = vi.fn(async () => undefined);
 	(vscode.window as any).registerWebviewViewProvider = vi.fn(() => ({ dispose: () => {} }));
 	(vscode.workspace as any).openTextDocument = vi.fn(async (opts: any) => ({
@@ -137,6 +139,33 @@ describe('SparqlResultsController EditBackgroundQuery handler', () => {
 
 		expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
 		expect(mockSetQuerySource).not.toHaveBeenCalled();
+	});
+});
+
+describe('SparqlResultsController query history', () => {
+	it('does not select the latest tab when the history is pulled (e.g. welcome view refresh)', async () => {
+		history = [{ id: 'q1', documentIri: 'file:///a.sparql' }];
+
+		const controller = makeController();
+		await (controller as any).onDidReceiveMessage({ id: 'GetSparqlQueryHistory' });
+
+		expect((controller as any).postMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ id: 'PostSparqlQueryHistory', selectLatest: false })
+		);
+	});
+
+	it('selects the latest tab on an execution-driven history change', async () => {
+		history = [{ id: 'q1', documentIri: 'file:///a.sparql' }];
+
+		const controller = makeController();
+
+		// The constructor registered the history-change handler; firing it mirrors a
+		// query execution pushing updated history to the panel.
+		historyChangeHandler?.();
+
+		expect((controller as any).postMessage).toHaveBeenCalledWith(
+			expect.objectContaining({ id: 'PostSparqlQueryHistory', selectLatest: true })
+		);
 	});
 });
 

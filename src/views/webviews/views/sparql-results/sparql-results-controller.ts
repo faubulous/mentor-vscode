@@ -24,7 +24,9 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
         const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 
-        this.subscribe(queryService.onDidHistoryChange(this._postQueryHistory, this));
+        // A history change is execution/mutation driven — select the latest query's
+        // tab so a freshly run query's results come to the front.
+        this.subscribe(queryService.onDidHistoryChange(() => this._postQueryHistory(true), this));
 
         // Keep the welcome view's connections column live: refresh the list when
         // connections change and mirror per-connection graph loading and counts.
@@ -47,12 +49,20 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         }));
     }
 
-    private _postQueryHistory() {
+    /**
+     * Posts the query history to the webview.
+     * @param selectLatest When `true` (an execution/mutation-driven push), the panel
+     * brings the latest query's tab to the front. When `false` (a pull/refresh, e.g.
+     * the welcome view requesting its history list), the panel updates its tabs without
+     * changing the selected tab — so refreshing the list never steals the welcome tab.
+     */
+    private _postQueryHistory(selectLatest: boolean = false) {
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 
         this.postMessage({
             id: 'PostSparqlQueryHistory',
-            history: queryService.getQueryHistory()
+            history: queryService.getQueryHistory(),
+            selectLatest
         });
     }
 

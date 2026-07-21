@@ -386,6 +386,12 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 		messaging?.postMessage({ id: 'WritePresetShapes', presetId: preset.id });
 	};
 
+	// Opens the template's bundled shape graph in an editor so the user can adapt
+	// it and save their own copy into the workspace.
+	const handleEditPreset = (preset: ValidationPreset) => {
+		messaging?.postMessage({ id: 'OpenPresetShapeGraph', presetId: preset.id });
+	};
+
 	const handleSave = (originalId: string, originalScope: ConfigurationScope, next: ValidationProfileView) => {
 		const result = applyProfileSave({
 			mode: editorMode,
@@ -450,6 +456,7 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 				onCreate={handleCreate}
 				onEdit={handleEdit}
 				onUsePreset={handleUsePreset}
+				onEditPreset={handleEditPreset}
 				onValidate={settings['shacl.enabled']?.value === true ? handleValidate : undefined}
 				onDelete={handleDelete}
 			/>

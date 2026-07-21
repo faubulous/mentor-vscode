@@ -21,9 +21,9 @@ const DOCUMENT_URI = vscode.Uri.parse('file:///w/models/example.ttl');
  * Constructs the provider with a validation-service double returning the given
  * document state, settings and optional last-skip record.
  */
-function createProvider(state: ShaclDocumentValidationState, settings: any = {}, lastSkip?: { triples: number; maxGraphSize: number }) {
+function createProvider(state: ShaclDocumentValidationState, settings: any = {}, lastSkip?: { triples: number; maxGraphSize: number }, docUri: { toString(): string } = DOCUMENT_URI) {
 	const contextService = {
-		contexts: { [DOCUMENT_URI.toString()]: { graphs: [] } },
+		contexts: { [docUri.toString()]: { graphs: [] } },
 		onDidChangeDocumentContext: vi.fn(() => ({ dispose: () => {} })),
 	} as any;
 
@@ -165,5 +165,22 @@ describe('TurtleValidationCodeLensProvider', () => {
 		const lenses = await provider.provideCodeLenses(document, {} as any) as vscode.CodeLens[];
 
 		expect(lenses.some(l => l.command?.title.includes('Validation skipped'))).toBe(false);
+	});
+
+	it('shows the Validate button in notebook cells (consistent with the editor)', async () => {
+		const cellUri = { scheme: 'vscode-notebook-cell', toString: () => 'vscode-notebook-cell:///w/models/example.ttl#c1' };
+		const provider = createProvider(
+			state({ mode: 'matched', profileNames: ['core'], effectiveShapes: ['workspace:///shapes/core.ttl'], matchedPaths: [] }),
+			{ profiles: { 'core': { name: 'Core' } } },
+			undefined,
+			cellUri
+		);
+
+		const lenses = await provider.provideCodeLenses({ uri: cellUri } as any, {} as any) as vscode.CodeLens[];
+		const validateLens = lenses.find(l => l.command?.command === 'mentor.command.validateDocument');
+
+		// The Validate button is no longer suppressed in cells.
+		expect(validateLens).toBeDefined();
+		expect(validateLens!.command?.title).toContain('Validate');
 	});
 });

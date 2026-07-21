@@ -62,7 +62,7 @@ function SparqlResultsPanel() {
 	// Set up messaging with message handler
 	const handleMessage = useCallback((message: SparqlResultsWebviewMessages) => {
 		if (message.id === 'PostSparqlQueryHistory') {
-			onDidChangeQueryHistory(message.history);
+			onDidChangeQueryHistory(message.history, message.selectLatest ?? false);
 		} else if (message.id === 'ShowSparqlWelcome') {
 			// Opening the panel from the status bar selects the welcome tab instead
 			// of restoring the last active query tab.
@@ -136,7 +136,7 @@ function SparqlResultsPanel() {
 		}
 	};
 
-	const onDidChangeQueryHistory = (history: SparqlQueryExecutionState[]) => {
+	const onDidChangeQueryHistory = (history: SparqlQueryExecutionState[], selectLatest: boolean) => {
 		setState(prevState => {
 			const query = history[0];
 
@@ -187,7 +187,11 @@ function SparqlResultsPanel() {
 				activeQueryIndex = activeQueries.length - 1;
 			}
 
-			const activeTabIndex = activeQueryIndex + 1;
+			// Only bring the latest query's tab to the front for execution-driven pushes.
+			// A pull/refresh (e.g. the welcome view loading its history list) updates the
+			// tabs but must not steal the current selection — otherwise opening the panel
+			// on the welcome tab would immediately jump to the last query.
+			const activeTabIndex = selectLatest ? activeQueryIndex + 1 : prevState.activeTabIndex;
 
 			return {
 				...prevState,

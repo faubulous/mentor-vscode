@@ -78,6 +78,27 @@ describe('ShaclValidationService.getDocumentLocation', () => {
 		expect(service.getDocumentLocation(vscode.Uri.parse('file:///other/data.ttl')))
 			.toEqual({ path: 'file:///other/data.ttl' });
 	});
+
+	it('resolves a notebook cell URI to its slug-based location, not the opaque handle', () => {
+		const { service } = createService({});
+
+		// A live cell URI carries VS Code's opaque handle as its fragment; the loaded
+		// context exposes the slug-based graph IRI, which is what profiles are written against.
+		const cellUri = vscode.Uri.parse('vscode-notebook-cell:///w/nb.mnb#W0sZmlsZQ==');
+		(service as any)._contextService.contexts[cellUri.toString()] = {
+			uri: cellUri,
+			graphIri: vscode.Uri.parse('workspace:///nb.mnb#cell-3'),
+		};
+
+		expect(service.getDocumentLocation(cellUri)).toEqual({ path: 'nb.mnb', fragment: 'cell-3' });
+	});
+
+	it('falls back to the raw cell fragment when no context is loaded', () => {
+		const { service } = createService({});
+
+		expect(service.getDocumentLocation(vscode.Uri.parse('vscode-notebook-cell:///w/nb.mnb#W0sZmlsZQ==')))
+			.toEqual({ path: 'nb.mnb', fragment: 'W0sZmlsZQ==' });
+	});
 });
 
 describe('ShaclValidationService.getRdfExtensions', () => {

@@ -104,13 +104,15 @@ describe('TriplateCodeLensProvider', () => {
 		expect(lenses.every(l => l.command?.command === 'mentor.command.executeTriplateExample')).toBe(true);
 	});
 
-	it('omits the top-of-file Run lens in notebook cells (the cell play button covers it)', () => {
+	it('shows the top-of-file Run lens in notebook cells (consistent with the editor)', () => {
 		const doc = makeDoc(FRONTMATTER, 'turtle', 1, 'vscode-notebook-cell:///nb.ttl#c1');
 		const lenses = provider.provideCodeLenses(doc);
 
-		// Only the per-example Run lenses remain; the redundant top Run lens is dropped.
-		expect(lenses).toHaveLength(2);
-		expect(lenses.every(l => l.command?.command === 'mentor.command.executeTriplateExample')).toBe(true);
+		// 1 top-of-file Run lens + a Run lens for each of the two examples, just like
+		// in a standalone editor.
+		expect(lenses).toHaveLength(3);
+		expect(lenses[0].command?.command).toBe('mentor.command.executeTriplateTemplate');
+		expect(lenses.slice(1).every(l => l.command?.command === 'mentor.command.executeTriplateExample')).toBe(true);
 	});
 
 	it('emits only the top Execute lens when compile throws', async () => {

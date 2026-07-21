@@ -254,7 +254,20 @@ export class ShaclValidationService implements vscode.Disposable {
 	 * an inert location (their full URI as the path) that nothing matches.
 	 */
 	getDocumentLocation(documentUri: vscode.Uri): ShaclDocumentLocation {
-		const wsUri = WorkspaceUri.toWorkspaceUri(documentUri);
+		let uri = documentUri;
+
+		// Notebook cells must match by their human-readable slug fragment
+		// (e.g. notebook.mnb#cell-3) — the same identity used for the cell's graph
+		// IRI — not the opaque VS Code cell handle carried by the raw cell URI.
+		if (documentUri.scheme === 'vscode-notebook-cell') {
+			const context = this._contextService.contexts[documentUri.toString()];
+
+			if (context) {
+				uri = context.graphIri;
+			}
+		}
+
+		const wsUri = WorkspaceUri.toWorkspaceUri(uri);
 
 		if (!wsUri) {
 			return { path: documentUri.toString() };

@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { ValidationPreset } from '@src/services/validation/preset-definitions';
 import { SectionHeader } from '@src/views/webviews/components/section-header';
@@ -10,7 +11,7 @@ export interface ValidationProfilesListProps {
 	profiles: ValidationProfileView[];
 
 	/**
-	 * Built-in presets offered as one-click starting points.
+	 * Built-in templates offered as one-click starting points.
 	 */
 	presets: ValidationPreset[];
 
@@ -36,10 +37,16 @@ export interface ValidationProfilesListProps {
 	onEdit: (profile: ValidationProfileView) => void;
 
 	/**
-	 * Creates a profile from a built-in preset, copying its shapes into the
+	 * Creates a profile from a built-in template, copying its shapes into the
 	 * workspace. Opens the New Profile dialog once the copy is written.
 	 */
 	onUsePreset: (preset: ValidationPreset) => void;
+
+	/**
+	 * Opens a template's shape graph in an editor so it can be adapted and saved
+	 * into the workspace.
+	 */
+	onEditPreset: (preset: ValidationPreset) => void;
 
 	/**
 	 * Runs SHACL validation for the profile's matched files. Omitted (and the
@@ -62,7 +69,7 @@ const profileKey = (profile: ValidationProfileView) => `${profile.scope}:${profi
  * edits happen in the modal opened from a row; clicking a preset opens the
  * New Profile dialog pre-filled from it.
  */
-export function ValidationProfilesList({ profiles, presets, brokenProfiles, matchCounts, excludedCounts, hasWorkspace, onCreate, onEdit, onUsePreset, onValidate, onDelete }: ValidationProfilesListProps) {
+export function ValidationProfilesList({ profiles, presets, brokenProfiles, matchCounts, excludedCounts, hasWorkspace, onCreate, onEdit, onUsePreset, onEditPreset, onValidate, onDelete }: ValidationProfilesListProps) {
 	const workspaceProfiles = profiles.filter(p => p.scope === ConfigurationScope.Workspace);
 	const userProfiles = profiles.filter(p => p.scope !== ConfigurationScope.Workspace);
 
@@ -98,7 +105,7 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 		<div className="settings-list-container">
 			{presets.length > 0 && (
 				<section className="settings-list-section">
-					<SectionHeader title="Presets" description="Built-in starting points that ship with Mentor. Use one to create a new profile you can edit." />
+					<SectionHeader title="Templates" description="Built-in SHACL shape graphs that ship with Mentor. Use one to create a profile, or edit a template's shapes and store your adapted copy in the workspace." />
 					<div className="settings-list">
 						{presets.map(preset => (
 							<SettingsListItem
@@ -107,7 +114,7 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 								name={(
 									<>
 										{preset.name}
-										<span className="settings-item-version" title={`Shapes version ${preset.version}`}>{preset.version}</span>
+										<span className="settings-item-version" title={`Shapes version ${preset.version}`}>Version {preset.version}</span>
 									</>
 								)}
 								tooltip={hasWorkspace
@@ -117,6 +124,14 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 									<div className="settings-item-meta">
 										<span className="validation-profile-description">{preset.description}</span>
 									</div>
+								)}
+								actions={(
+									<vscode-toolbar-button
+										title={`Open the ${preset.name} shape graph for editing`}
+										onClick={(e: React.MouseEvent) => { e.stopPropagation(); onEditPreset(preset); }}
+									>
+										<vscode-icon name="edit" />
+									</vscode-toolbar-button>
 								)}
 								onClick={() => onUsePreset(preset)}
 							/>

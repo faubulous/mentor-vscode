@@ -33,7 +33,7 @@ import { ShaclValidationProfilesMigration, ShaclValidationScopeMigration } from 
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
-import { IndexExcludeFilesMigration } from './core/migrations/';
+import { IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
@@ -173,6 +173,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	// Register the settings migration service. New migrations are added to this list only.
 	const settingsMigrationService = new SettingsMigrationService([
 		new IndexExcludeFilesMigration(),
+		new LegacyTemplateFormatMigration(),
 		new ShaclValidationProfilesMigration(),
 		new ShaclValidationScopeMigration(),
 	]);

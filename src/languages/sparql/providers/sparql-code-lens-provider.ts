@@ -49,24 +49,22 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		// order, so for `.sparql`-language Triplate templates this provider supplies the Run
 		// lens itself (delegating to the template command) instead of relying on
 		// TriplateCodeLensProvider's lens landing first, which empirically it doesn't.
-		// Notebook cells have a native run button that outputs results inline; triggering a
-		// run command from a cell document would route to the SPARQL results panel instead.
-		if (document.uri.scheme !== 'vscode-notebook-cell') {
-			if (isTemplate(document.getText())) {
-				codeLenses.push(new vscode.CodeLens(range, {
-					title: '$(play)\u00A0Run',
-					tooltip: 'Render this template with parameter values',
-					command: 'mentor.command.executeTriplateTemplate',
-					arguments: [document.uri.toString()],
-				}));
-			} else {
-				codeLenses.push(new vscode.CodeLens(range, {
-					title: '$(play)\u00A0Run',
-					command: 'mentor.command.executeSparqlQuery',
-					tooltip: 'Execute this SPARQL query',
-					arguments: [this._queryService.createQueryFromDocument(document)],
-				}));
-			}
+		// The Run lens is shown in notebook cells too, so the lens group is consistent with
+		// how it appears in a standalone editor.
+		if (isTemplate(document.getText())) {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: '$(play)\u00A0Run',
+				tooltip: 'Render this template with parameter values',
+				command: 'mentor.command.executeTriplateTemplate',
+				arguments: [document.uri.toString()],
+			}));
+		} else {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: '$(play)\u00A0Run',
+				command: 'mentor.command.executeSparqlQuery',
+				tooltip: 'Execute this SPARQL query',
+				arguments: [this._queryService.createQueryFromDocument(document)],
+			}));
 		}
 
 		// Inference status CodeLens (only for connections that support inference)

@@ -13,8 +13,8 @@
 .sparql-welcome-view-container {
 	display: flex;
 	flex-direction: row;
-	gap: 50px;
-	padding: 15px;
+	gap: 60px;
+	padding: 20px;
 	min-width: 1000px;
 }
 
@@ -28,7 +28,8 @@
 }
 
 .sparql-welcome-view-container .column-wide {
-	min-width: 300px;
+	min-width: 360px;
+	max-width: 460px;
 }
 
 .sparql-welcome-view-container .column .header {
@@ -40,7 +41,8 @@
 
 .sparql-welcome-view-container .column .header h3 {
 	margin: 0;
-	font-weight: 400;
+	margin-right: var(--mentor-space-6);
+	font-weight: 500;
 }
 
 .sparql-welcome-view-container .column .body {
@@ -61,6 +63,10 @@
 .sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .codicon {
 	padding: 2em .5em;
 	font-size: large;
+}
+
+.sparql-welcome-view-container .column .body.button-list .codicon-arrow-swap {
+	color: var(--vscode-symbolIcon-enumeratorMemberForeground);
 }
 
 .sparql-welcome-view-container .column .body.button-list-xl vscode-toolbar-button {
@@ -107,14 +113,16 @@
 }
 
 .sparql-welcome-view-container .execute-button {
-	color: var(--vscode-debugIcon-restartForeground) !important;
 	min-width: 16px;
 	min-height: 16px;
 	text-align: center;
 }
 
-.sparql-welcome-view-container .remove-button {
+.sparql-welcome-view-container .actions {
 	margin-left: auto;
+	display: flex;
+	flex-direction: row;
+	gap: var(--mentor-space-3);
 }
 
 .sparql-welcome-view-container .file-icon {

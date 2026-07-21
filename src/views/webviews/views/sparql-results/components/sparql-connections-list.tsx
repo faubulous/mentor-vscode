@@ -76,6 +76,10 @@ export function SparqlConnectionsList() {
 		messaging?.postMessage({ id: 'TestSparqlConnection', connection });
 	};
 
+	const handleManageConnections = () => {
+		executeCommand('mentor.command.manageSparqlConnections');
+	};
+
 	const handleTestAll = () => {
 		for (const connection of connections) {
 			handleTestConnection(connection);
@@ -112,6 +116,9 @@ export function SparqlConnectionsList() {
 		<div className="column column-wide">
 			<div className="header">
 				<h3>Connections</h3>
+				<vscode-toolbar-button onClick={handleManageConnections}>
+					<span className="muted">Manage</span>
+				</vscode-toolbar-button>
 				<vscode-toolbar-button onClick={handleTestAll} disabled={connections.length === 0}>
 					<span className="muted">Test All</span>
 				</vscode-toolbar-button>
@@ -124,14 +131,13 @@ export function SparqlConnectionsList() {
 
 					return (
 						<div key={connection.id} className="history-item">
-							<a className="execute-button" role="button" title="New query on this connection"
-								onClick={() => handleNewQuery(connection)}>
-									?
-							</a>
-							<span
-								className={`codicon codicon-arrow-swap${testResult?.success ? ' connection-status-pass' : ''}`}
-								title={testResult?.success ? 'Connection test succeeded' : undefined}
-							></span>
+							{testing[connection.id] ?
+								<span className="codicon codicon-sync codicon-modifier-spin" title="Testing connection..."></span> :
+								<span
+									className={`codicon codicon-arrow-swap${testResult?.success ? ' connection-status-pass' : ''}`}
+									title={testResult?.success ? 'Connection test succeeded' : undefined}
+								></span>
+							}
 							<a className="file-link" title="Edit connection settings" onClick={() => handleEditConnection(connection)}>
 								<span>{connection.endpointUrl}</span>
 							</a>
@@ -143,16 +149,17 @@ export function SparqlConnectionsList() {
 							{testResult?.success === false && (
 								<span className="codicon codicon-error connection-status-error" title={testResult.error}></span>
 							)}
-							<a className="remove-button codicon codicon-list-unordered" role="button" title="List graphs"
-								onClick={() => handleListGraphs(connection)}>
-							</a>
-							{testing[connection.id]
-								? <span className="codicon codicon-sync codicon-modifier-spin" title="Testing connection..."></span>
-								: (
-									<a className="codicon codicon-debug-disconnect" role="button" title="Test connection"
-										onClick={() => handleTestConnection(connection)}>
-									</a>
-								)}
+							<span className="actions">
+								<a className="execute-button codicon codicon-play" role="button" title="New query on this connection"
+									onClick={() => handleNewQuery(connection)}>
+								</a>
+								<a className="codicon codicon-debug-disconnect" role="button" title="Test connection" aria-disabled={testing[connection.id]}
+									onClick={() => handleTestConnection(connection)}>
+								</a>
+								<a className="remove-button codicon codicon-list-unordered" role="button" title="List graphs"
+									onClick={() => handleListGraphs(connection)}>
+								</a>
+							</span>
 						</div>
 					);
 				})}

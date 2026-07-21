@@ -174,6 +174,19 @@ describe('SparqlCodeLensProvider', () => {
             expect(lenses[0].command?.command).toBe('mentor.command.executeSparqlQuery');
             expect(lenses[0].command?.title).toContain('Run');
         });
+
+        it('shows the Run lens in notebook cells (consistent with the editor)', async () => {
+            getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = {
+                uri: { scheme: 'vscode-notebook-cell', toString: () => 'vscode-notebook-cell:///nb.sparql#c1' },
+                getText: () => 'SELECT * WHERE { ?s ?p ?o }',
+            };
+            const lenses = await provider.provideCodeLenses(doc as any);
+            // Run lens is no longer suppressed for cells; it still leads the group.
+            expect(lenses[0].command?.command).toBe('mentor.command.executeSparqlQuery');
+            expect(lenses[0].command?.title).toContain('Run');
+        });
     });
 
     describe('provideCodeLenses with inference', () => {

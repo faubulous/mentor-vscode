@@ -37,9 +37,9 @@ export class TriplateCodeLensProvider implements vscode.CodeLensProvider {
 		// lens for the same range is the one that reliably ends up first on screen, so skip
 		// it here to avoid a duplicate. For other Triplate-flavored languages (turtle, trig,
 		// etc.) this provider is the only one contributing lenses, so it owns the Run lens.
-		// In notebook cells the native cell play button already runs the template, so the
-		// top Run lens would be a redundant duplicate — omit it there (per-example lenses stay).
-		if (document.languageId !== 'sparql' && document.uri.scheme !== 'vscode-notebook-cell') {
+		// The Run lens is shown in notebook cells too, so the lens group stays consistent
+		// with how it appears in a standalone editor.
+		if (document.languageId !== 'sparql') {
 			const topRange = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
 
 			codeLenses.push(new vscode.CodeLens(topRange, {
