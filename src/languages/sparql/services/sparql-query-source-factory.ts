@@ -15,6 +15,12 @@ import { createFilteredSource } from './sparql-inference-filter';
  * receives the store config's URL-parameter reasoning control (if any).
  */
 export class SparqlQuerySourceFactory implements ISparqlQuerySourceFactory {
+	/**
+	 * Store-type ids already warned about this session, so the degradation
+	 * warning fires once per store type rather than on every query.
+	 */
+	private readonly _warnedStoreTypes = new Set<string>();
+
 	constructor(
 		private readonly _store: Store,
 		private readonly _storeConfigService: ITripleStoreConfigService,
@@ -69,6 +75,14 @@ export class SparqlQuerySourceFactory implements ISparqlQuerySourceFactory {
 		} else {
 			const store = this._storeConfigService.getStoreConfig(connection.storeType);
 
+			// A store type that no longer resolves (deleted, or defined in the user
+			// settings of another machine) silently degrades to generic SPARQL
+			// behavior: store-specific query templates and inference control are
+			// lost. Warn once per store type per session instead of hiding it.
+			if (connection.storeType !== undefined && store === undefined) {
+				this._warnUnresolvedStoreType(connection);
+			}
+
 			let value = connection.endpointUrl;
 
 			if (store?.inference?.supported && store.inference.urlParameters) {
@@ -85,6 +99,32 @@ export class SparqlQuerySourceFactory implements ISparqlQuerySourceFactory {
 
 			return { type: 'sparql', value, connection, inferenceEnabled };
 		}
+	}
+
+	/**
+	 * Shows a one-time-per-session warning that a connection's store type is not
+	 * defined on this machine, with an action to open the store settings.
+	 * Fire-and-forget: query execution proceeds with the generic SPARQL fallback.
+	 * @param connection The connection whose store type did not resolve.
+	 */
+	private _warnUnresolvedStoreType(connection: SparqlConnection): void {
+		const storeType = connection.storeType!;
+
+		if (this._warnedStoreTypes.has(storeType)) {
+			return;
+		}
+
+		this._warnedStoreTypes.add(storeType);
+
+		vscode.window.showWarningMessage(
+			`The store type "${storeType}" of the connection ${connection.endpointUrl} is not defined on this machine. `
+			+ 'Queries use generic SPARQL defaults; store-specific queries and inference control are unavailable.',
+			'Manage Stores'
+		).then(action => {
+			if (action === 'Manage Stores') {
+				vscode.commands.executeCommand('mentor.command.openSettings', 'query.stores');
+			}
+		});
 	}
 
 	/**

@@ -3,9 +3,9 @@
 	flex-direction: row;
 	align-items: stretch;
 	margin-bottom: var(--mentor-space-6);
-	border: 1px solid var(--vscode-editorGroup-border, var(--vscode-panel-border));
 	border-radius: var(--mentor-radius-md);
-	background: var(--vscode-settings-textInputBackground, transparent);
+	overflow: hidden;
+	gap: 1px;
 }
 
 .stats-dashboard-metric {
@@ -18,10 +18,7 @@
 	padding: var(--mentor-space-5) var(--mentor-space-4);
 	min-width: 0;
 	text-align: center;
-}
-
-.stats-dashboard-metric + .stats-dashboard-metric {
-	border-left: 1px solid var(--vscode-editorGroup-border, var(--vscode-panel-border));
+	background: var(--vscode-list-hoverBackground);
 }
 
 .stats-dashboard-value {

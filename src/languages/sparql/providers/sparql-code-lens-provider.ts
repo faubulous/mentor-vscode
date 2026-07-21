@@ -98,15 +98,28 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 			}));
 		}
 
-		// Connection CodeLens, always last in the group.
-		const connectionUrl = this._getConnectionLabel(connection);
+		// Connection CodeLens, always last in the group. A stored binding that no
+		// longer resolves (deleted connection, or one defined in the user settings
+		// of another machine) silently falls back to the workspace store \u2014 make
+		// that visible instead of presenting the fallback as the configured state.
+		const unresolvedConnectionId = this._documentConnectionService.getUnresolvedConnectionId(document.uri);
 
-		codeLenses.push(new vscode.CodeLens(range, {
-			title: `$(arrow-swap)\u00A0Connection: ${connectionUrl}`,
-			tooltip: 'Click to change the SPARQL endpoint for this file',
-			command: 'mentor.command.selectSparqlConnection',
-			arguments: [document],
-		}));
+		if (unresolvedConnectionId) {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: `$(warning)\u00A0Connection unavailable: ${unresolvedConnectionId}`,
+				tooltip: `The connection "${unresolvedConnectionId}" configured for this file is not available on this machine. `
+					+ 'Queries run against the in-memory workspace store instead. Click to pick a connection.',
+				command: 'mentor.command.selectSparqlConnection',
+				arguments: [document],
+			}));
+		} else {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: `$(arrow-swap)\u00A0Connection: ${this._getConnectionLabel(connection)}`,
+				tooltip: 'Click to change the SPARQL endpoint for this file',
+				command: 'mentor.command.selectSparqlConnection',
+				arguments: [document],
+			}));
+		}
 
 		return codeLenses;
 	}

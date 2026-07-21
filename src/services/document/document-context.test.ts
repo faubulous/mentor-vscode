@@ -2,11 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
+// Overridable per test: DocumentContext reads the predicate settings live from
+// the configuration (so setting changes apply without recreating the context).
+let mockLabelPredicates = ['http://www.w3.org/2000/01/rdf-schema#label'];
+let mockDescriptionPredicates = ['http://www.w3.org/2000/01/rdf-schema#comment'];
+
 vi.mock('@src/utilities/vscode/config', () => ({
     getConfig: () => ({
         get: (key: string, defaultValue?: any) => {
-            if (key === 'predicates.label') return ['http://www.w3.org/2000/01/rdf-schema#label'];
-            if (key === 'predicates.description') return ['http://www.w3.org/2000/01/rdf-schema#comment'];
+            if (key === 'predicates.label') return mockLabelPredicates;
+            if (key === 'predicates.description') return mockDescriptionPredicates;
             return defaultValue;
         },
     }),
@@ -63,6 +68,8 @@ function makeNamedNode(value: string) {
 beforeEach(() => {
     mockStoreMatchAll = () => [];
     mockGetPropertyPathTokens = () => [];
+    mockLabelPredicates = ['http://www.w3.org/2000/01/rdf-schema#label'];
+    mockDescriptionPredicates = ['http://www.w3.org/2000/01/rdf-schema#comment'];
     mockSettingsGet = (key: string, defaultValue?: any) => {
         if (key === 'view.definitionTree.labelStyle') return TreeLabelStyle.AnnotatedLabels;
         return defaultValue;
@@ -479,10 +486,10 @@ describe('DocumentContext – getResourceLabel (AnnotatedLabels advanced)', () =
             { object: { termType: 'NamedNode', value: 'http://example.org/prop' } },
         ];
         // The predicate used is the label predicate; simulate SH.path being returned as the predicate value
-        // We need the predicate in the loop to be SH.path — we override predicates.label to be SH.path
+        // We need the predicate in the loop to be SH.path — we override the configured label predicates
         mockGetPropertyPathTokens = () => ['myProp'];
+        mockLabelPredicates = [SH_PATH];
         const doc = makeDoc();
-        (doc as any).predicates.label = [SH_PATH];
         const label = doc.getResourceLabel('http://example.org/path-node');
         // Should have invoked getPropertyPathLabel returning 'myProp'
         expect(typeof label.value).toBe('string');

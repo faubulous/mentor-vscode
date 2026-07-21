@@ -165,8 +165,10 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 
 	const hasWorkspace = useContext(SettingsWorkspaceContext);
 
-	// Profiles are self-contained (they own their paths), so they can live in
-	// either the user or the workspace scope; the shared hook owns the
+	// Profiles are workspace-scope only (their shapes and paths are
+	// workspace-relative), but the user scope is still read and written for
+	// tolerance: hand-edited or pre-migration user-scope profiles are shown and
+	// get moved into the workspace when edited. The shared hook owns the
 	// read/diff/write mechanics (clearing a scope that ends up empty).
 	const { userValue, workspaceValue, userRef, workspaceRef, commit } = useScopedSettingValue<ShaclValidationSettings>({
 		source: MENTOR_SETTINGS_SOURCE,
@@ -355,7 +357,7 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 		setEditing(undefined);
 	};
 
-	const handleCreate = (scope: ConfigurationScope) => {
+	const handleCreate = () => {
 		setEditorMode('create');
 		setEditing({
 			id: '',
@@ -364,7 +366,7 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 			includeFiles: [],
 			excludeFiles: [],
 			description: '',
-			scope,
+			scope: ConfigurationScope.Workspace,
 		});
 	};
 

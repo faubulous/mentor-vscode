@@ -22,6 +22,12 @@ export const validationGeneralSection = {
 		'shacl.maxGraphSize',
 		'shacl.shapesFolder',
 	],
+	// Whether validation runs automatically is a personal preference (e.g. performance
+	// on a given machine), not something to impose on the whole team via .vscode/settings.json.
+	keyScopeOverrides: {
+		'shacl.validateOnStartup': 'user',
+		'shacl.validateOnChange': 'user',
+	},
 	// Claimed but not rendered: linting is experimental and stays configurable
 	// via settings.json only.
 	hiddenKeys: [

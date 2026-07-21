@@ -273,12 +273,41 @@ export class DocumentConnectionService implements IDocumentConnectionService {
 	 */
 	getConnectionForDocument(documentIri: vscode.Uri | string): SparqlConnection {
 		const uri = typeof documentIri === 'string' ? vscode.Uri.parse(documentIri) : documentIri;
-
-		const connectionId = uri.scheme === 'vscode-notebook-cell'
-			? this._getConnectionIdForCell(uri)
-			: this._extensionContext.workspaceState.get<string>(`${this._documentConnectionStorageKeyPrefix}${uri.toString()}`);
+		const connectionId = this._getStoredConnectionId(uri);
 
 		return this._connectionRegistry.getConnection(connectionId ?? '') ?? WORKSPACE_CONNECTION;
+	}
+
+	/**
+	 * Returns the stored connection id of a document or notebook cell when that id
+	 * no longer resolves to a registered connection — e.g. the connection was
+	 * deleted, or it lives in the user settings of another machine. Callers use
+	 * this to surface that {@link getConnectionForDocument} silently fell back to
+	 * the workspace store rather than honoring the stored binding.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns The dangling connection id, or `undefined` when no binding is
+	 * stored or the stored binding resolves.
+	 */
+	getUnresolvedConnectionId(documentUri: vscode.Uri): string | undefined {
+		const connectionId = this._getStoredConnectionId(documentUri);
+
+		if (connectionId && !this._connectionRegistry.getConnection(connectionId)) {
+			return connectionId;
+		}
+
+		return undefined;
+	}
+
+	/**
+	 * Reads the raw stored connection id for a document (workspace state) or
+	 * notebook cell (cell metadata), without resolving it against the registry.
+	 * @param uri The URI of the document or notebook cell.
+	 * @returns The stored connection id, or `undefined` when none is set.
+	 */
+	private _getStoredConnectionId(uri: vscode.Uri): string | undefined {
+		return uri.scheme === 'vscode-notebook-cell'
+			? this._getConnectionIdForCell(uri)
+			: this._extensionContext.workspaceState.get<string>(`${this._documentConnectionStorageKeyPrefix}${uri.toString()}`);
 	}
 
 	/**

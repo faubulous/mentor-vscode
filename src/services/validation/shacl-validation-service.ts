@@ -312,10 +312,13 @@ export class ShaclValidationService implements vscode.Disposable {
 			return undefined;
 		}
 
-		for (const graphUri of shapeGraphUris) {
-			if (!this._store.hasGraph(graphUri)) {
-				vscode.window.showWarningMessage(`Shape graph does not exist: ${graphUri}`);
-			}
+		const missingShapeGraphs = shapeGraphUris.filter(graphUri => !this._store.hasGraph(graphUri));
+
+		if (missingShapeGraphs.length > 0) {
+			vscode.window.showWarningMessage(
+				`${missingShapeGraphs.length} of ${shapeGraphUris.length} configured shape graphs do not exist — the result may be incomplete: `
+				+ missingShapeGraphs.join(', ')
+			);
 		}
 
 		// Share a single validation run between concurrent triggers for the same
@@ -443,12 +446,23 @@ export class ShaclValidationService implements vscode.Disposable {
 		// A read-only view over the store — no triple copying needed.
 		const dataDataset = this._store.getDataset(context.graphs, false);
 
+		// Shape graphs that are not in the store contribute no shapes, so the run
+		// silently validates against less than what the profile promises. Record
+		// them on the result so consumers (status code lens, report export) can
+		// present it as incomplete rather than a clean pass.
+		const missingShapeGraphs = shapeGraphUris.filter(uri => !this._store.hasGraph(uri));
+
 		// Time only the data-graph validation here; shape compilation is timed separately
 		// by the engine. Logging both makes it easy to tell whether a slow "small" file is
 		// paying for its own validation or for a one-off validator build.
 		const startTime = performance.now();
 		const result = await this._engine.validate(shapeGraphUris, dataDataset);
 		const duration = Math.round(performance.now() - startTime);
+
+		if (missingShapeGraphs.length > 0) {
+			result.missingShapeGraphs = missingShapeGraphs;
+			this._log.warn(`Validated ${documentUri.toString()} with missing shape graphs: ${missingShapeGraphs.join(', ')}`);
+		}
 
 		this._log.info(`Validated ${documentUri.toString()}: ${duration}ms, ${dataDataset.size} triples, ${result.results.length} issues`);
 

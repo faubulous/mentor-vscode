@@ -113,10 +113,19 @@ export abstract class DocumentContext implements IDocumentContext {
 		return this._activeLanguage;
 	}
 
-	readonly predicates = {
-		label: [] as string[],
-		description: [] as string[]
-	};
+	/**
+	 * The label and description predicates from the `mentor.predicates.*` settings.
+	 * Read live from the configuration so setting changes apply immediately (e.g.
+	 * to hover tooltips) instead of being frozen at context creation time.
+	 */
+	get predicates(): { label: string[]; description: string[] } {
+		const config = getConfig();
+
+		return {
+			label: config.get('predicates.label') ?? [],
+			description: config.get('predicates.description') ?? [],
+		};
+	}
 
 	constructor(
 		documentUri: vscode.Uri,
@@ -124,11 +133,7 @@ export abstract class DocumentContext implements IDocumentContext {
 		protected readonly _vocabulary: VocabularyRepository,
 		protected readonly _settings: ISettingsService
 	) {
-		const config = getConfig();
-
 		this.uri = documentUri;
-		this.predicates.label = config.get('predicates.label') ?? [];
-		this.predicates.description = config.get('predicates.description') ?? [];
 	}
 
 	abstract get isLoaded(): boolean;
@@ -234,7 +239,6 @@ export abstract class DocumentContext implements IDocumentContext {
 		let languageLabel: Literal | undefined = undefined;
 		let primaryLabel: Literal | undefined = undefined;
 		let fallbackLabel: Literal | undefined = undefined;
-
 
 		for (let p of predicates) {
 			for (let q of this._store.matchAll(graphUris, subject, p, null, false)) {

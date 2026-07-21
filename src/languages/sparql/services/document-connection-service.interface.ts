@@ -20,6 +20,17 @@ export interface IDocumentConnectionService {
 	getConnectionForDocument(documentIri: vscode.Uri | string): SparqlConnection;
 
 	/**
+	 * Returns the stored connection id of a document or notebook cell when that id no
+	 * longer resolves to a registered connection (deleted, or defined in the user
+	 * settings of another machine), so callers can surface that
+	 * {@link getConnectionForDocument} fell back to the workspace store.
+	 * @param documentUri The URI of the document or notebook cell.
+	 * @returns The dangling connection id, or `undefined` when no binding is stored
+	 * or the stored binding resolves.
+	 */
+	getUnresolvedConnectionId(documentUri: vscode.Uri): string | undefined;
+
+	/**
 	 * Sets the SPARQL connection for a specific document.
 	 * @param documentUri The URI of the document or notebook cell.
 	 * @param connectionId The ID of the connection to set.

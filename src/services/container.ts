@@ -29,7 +29,7 @@ import { GraphManagementService } from '@src/languages/sparql/services/graph-man
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
 import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sparql-prefix-definition-service';
 import { ShaclProfileSettingsService } from '@src/services/validation/shacl-profile-settings-service';
-import { ShaclValidationProfilesMigration } from '@src/services/validation/migrations';
+import { ShaclValidationProfilesMigration, ShaclValidationScopeMigration } from '@src/services/validation/migrations';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
@@ -174,6 +174,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const settingsMigrationService = new SettingsMigrationService([
 		new IndexExcludeFilesMigration(),
 		new ShaclValidationProfilesMigration(),
+		new ShaclValidationScopeMigration(),
 	]);
 	container.registerInstance(ServiceToken.SettingsMigrationService, settingsMigrationService);
 }

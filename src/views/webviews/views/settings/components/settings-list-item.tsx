@@ -35,6 +35,23 @@ export interface SettingsListItemProps {
 	badge?: React.ReactNode;
 
 	/**
+	 * Visual status of the row. Tints the row background and the leading icon in
+	 * the corresponding warning/error color; also colors {@link statusMessage}.
+	 */
+	status?: 'warning' | 'error';
+
+	/**
+	 * Short status text rendered right-aligned at the end of the subline,
+	 * prefixed with "• " and colored per {@link status}.
+	 */
+	statusMessage?: string;
+
+	/**
+	 * Tooltip for the status message.
+	 */
+	statusTooltip?: string;
+
+	/**
 	 * Renders a lock icon in the title row for protected/built-in items.
 	 */
 	locked?: boolean;
@@ -74,17 +91,20 @@ export function SettingsListItem({
 	actions,
 	subline,
 	badge,
+	status,
+	statusMessage,
+	statusTooltip,
 	locked,
 	lockTitle,
 	className,
 	keyboardNavProps: navProps,
 	onClick,
 }: SettingsListItemProps) {
-	const rootClass = ['settings-item', navProps?.selected ? 'selected' : '', className ?? '']
+	const rootClass = ['settings-item', navProps?.selected ? 'selected' : '', status ? `status-${status}` : '', className ?? '']
 		.filter(Boolean)
 		.join(' ');
 
-	const hasSubline = subline != null || badge != null;
+	const hasSubline = subline != null || badge != null || statusMessage != null;
 
 	return (
 		<div
@@ -114,6 +134,9 @@ export function SettingsListItem({
 					<div className="settings-item-subline">
 						{subline}
 						{badge}
+						{statusMessage && (
+							<span className="settings-item-status" title={statusTooltip}>{statusMessage}</span>
+						)}
 					</div>
 				)}
 			</div>

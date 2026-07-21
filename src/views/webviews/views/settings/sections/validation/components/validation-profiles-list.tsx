@@ -31,7 +31,7 @@ export interface ValidationProfilesListProps {
 
 	hasWorkspace: boolean;
 
-	onCreate: (scope: ConfigurationScope) => void;
+	onCreate: () => void;
 
 	onEdit: (profile: ValidationProfileView) => void;
 
@@ -66,28 +66,32 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 	const workspaceProfiles = profiles.filter(p => p.scope === ConfigurationScope.Workspace);
 	const userProfiles = profiles.filter(p => p.scope !== ConfigurationScope.Workspace);
 
-	const addAction = (scope: ConfigurationScope) => (
-		<vscode-toolbar-button className="primary" title="Add a new profile" onClick={() => onCreate(scope)}>
+	const addAction = (
+		<vscode-toolbar-button className="primary" title="Add a new profile" onClick={() => onCreate()}>
 			<span className="codicon codicon-add" />
 			<span className="label">Add Profile</span>
 		</vscode-toolbar-button>
 	);
 
+	// Profiles are workspace-scope only: their shapes and paths are
+	// workspace-relative, so a user-scope profile silently misbehaves in every
+	// other workspace. User-scope entries can still appear here when settings
+	// were hand-edited or predate the workspace-scope migration; they are shown
+	// read-only-ish (no add action) and editing one moves it into the workspace.
 	const sections: SettingsListSection<ValidationProfileView>[] = [
 		...(hasWorkspace ? [{
 			title: 'Workspace',
-			description: 'Profiles kept in the workspace settings (.vscode/settings.json), which can be shared via version control.',
-			action: addAction(ConfigurationScope.Workspace),
+			description: 'Profiles are kept in the workspace settings (.vscode/settings.json), which can be shared via version control.',
+			action: addAction,
 			items: workspaceProfiles,
-			emptyMessage: 'No workspace profiles yet.',
+			emptyMessage: 'No profiles yet.',
 		}] : []),
-		{
+		...(userProfiles.length > 0 ? [{
 			title: 'User',
-			description: 'Profiles kept in your user settings, available in all your workspaces on this machine.',
-			action: addAction(ConfigurationScope.User),
+			description: 'Legacy profiles found in your user settings. Profiles reference workspace files and only work in the workspace they were created for — editing one moves it into the workspace settings.',
 			items: userProfiles,
-			emptyMessage: 'No user profiles yet.',
-		},
+			emptyMessage: '',
+		}] : []),
 	];
 
 	return (
@@ -100,7 +104,12 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 							<SettingsListItem
 								key={preset.id}
 								icon={<vscode-icon name="checklist" className="settings-item-icon" />}
-								name={preset.name}
+								name={(
+									<>
+										{preset.name}
+										<span className="settings-item-version" title={`Shapes version ${preset.version}`}>{preset.version}</span>
+									</>
+								)}
 								tooltip={hasWorkspace
 									? `Create a profile from ${preset.name} (copies the shapes into the workspace)`
 									: `Open a workspace folder to create a profile from ${preset.name} (the shapes are copied into the workspace)`}

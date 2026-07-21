@@ -46,9 +46,12 @@ export class SparqlConnectionRegistry {
 		private readonly _credentialStorage: ICredentialStorageService,
 		private readonly _storeConfigService: ITripleStoreConfigService
 	) {
+		// Workspace-scope connections load before user-scope ones so that a
+		// workspace definition wins on a duplicate id in `getConnection`,
+		// matching how stores and validation profiles resolve scope collisions.
 		this._connections = [this._createWorkspaceStoreConnection()];
-		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));
 		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Workspace));
+		this._connections.push(...this._loadConnectionsFromConfiguration(vscode.ConfigurationTarget.Global));
 
 		this._onDidChangeConnections.fire();
 	}

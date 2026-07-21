@@ -1,9 +1,8 @@
 import { useCallback, useContext, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { ModalDialog } from '@src/views/webviews/components/modal-dialog';
 import { useScopedWebviewMessaging } from '@src/views/webviews/hooks';
 import { ConfigurationScope } from '@src/utilities/config-scope';
-import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
+import { TripleStoreConfig, generateStoreId } from '@src/languages/sparql/services/triple-store-config';
 import { SettingsSectionProps } from '../../settings-section-props';
 import { SettingsWorkspaceContext } from '../../components/setting-context';
 import { useScopedSettingValue } from '../../hooks/use-scoped-setting-value';
@@ -99,15 +98,36 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 
 	const handleSave = (store: TripleStoreConfig) => {
 		const target = store.configScope === ConfigurationScope.Workspace ? 'workspace' : 'user';
-		const clean = stripStoreScope(store);
+
+		// The id is minted from the label at first save (empty-id draft) and never
+		// changes on a rename, mirroring how validation-profile ids work. Preset
+		// and reserved internal ids are excluded because settings entries colliding
+		// with them are silently hidden at read time.
+		const id = store.id || generateStoreId(store.label, [
+			...PRESET_STORES.map(s => s.id),
+			WORKSPACE_STORE.id,
+			...userRef.current.map(s => s.id),
+			...workspaceRef.current.map(s => s.id),
+		]);
+
+		const clean = stripStoreScope({ ...store, id });
+
+		// A store that previously lived in the other scope is being moved: the host
+		// warns about connections in the old scope that still reference it.
+		const movedScope = (target === 'user' ? workspaceRef.current : userRef.current).some(s => s.id === id);
 
 		// Recompute both scope arrays so a moved store ends up only in its target scope.
-		const nextUser = userRef.current.filter(s => s.id !== store.id);
-		const nextWorkspace = workspaceRef.current.filter(s => s.id !== store.id);
+		const nextUser = userRef.current.filter(s => s.id !== id);
+		const nextWorkspace = workspaceRef.current.filter(s => s.id !== id);
 
 		(target === 'user' ? nextUser : nextWorkspace).push(clean);
 
 		commit(nextUser, nextWorkspace);
+
+		if (movedScope) {
+			messaging?.postMessage({ id: 'StoreScopeChanged', storeId: id, label: clean.label, newScope: target });
+		}
+
 		closeEditor();
 	};
 
@@ -126,7 +146,7 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 				workspaceStores={editableWorkspaceStores}
 				userStores={editableUserStores}
 				hasWorkspace={hasWorkspace}
-				onCreate={(scope) => setEditing({ id: uuidv4(), label: '', configScope: scope })}
+				onCreate={(scope) => setEditing({ id: '', label: '', configScope: scope })}
 				onEdit={(store) => setEditing(store)}
 				onDelete={handleDelete}
 				onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}

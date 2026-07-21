@@ -49,13 +49,13 @@ export interface ValidationPreset {
  * Graph URI of the bundled "Basic Ontology" SHACL shape graph. A w3id.org
  * permanent identifier that redirects to the bundled file's source on GitHub.
  */
-export const BASIC_ONTOLOGY_SHAPES_URI = 'https://w3id.org/mentor/shacl/profiles/ontology';
+export const ONTOLOGY_SHAPES_URI = 'https://w3id.org/mentor/shacl/profiles/ontology';
 
 /**
  * Graph URI of the bundled "Basic Taxonomy" SHACL shape graph. A w3id.org
  * permanent identifier that redirects to the bundled file's source on GitHub.
  */
-export const BASIC_TAXONOMY_SHAPES_URI = 'https://w3id.org/mentor/shacl/profiles/taxonomy';
+export const TAXONOMY_SHAPES_URI = 'https://w3id.org/mentor/shacl/profiles/taxonomy';
 
 
 /**
@@ -69,18 +69,18 @@ export const PRESET_DEFAULT_PATHS = ['**/*'];
  */
 export const VALIDATION_PRESETS: ValidationPreset[] = [
 	{
-		id: 'basic-ontology',
-		name: 'Basic Ontology',
+		id: 'ontology',
+		name: 'Ontology',
 		description: 'Classes, properties and named individuals must have a label, a comment and a reference to the defining ontology.',
 		version: '1.0',
-		shapes: [BASIC_ONTOLOGY_SHAPES_URI],
+		shapes: [ONTOLOGY_SHAPES_URI],
 	},
 	{
-		id: 'basic-taxonomy',
-		name: 'Basic Taxonomy',
-		description: 'Concepts and concept schemes must have a preferred label, a definition and every concept must belong to a concept scheme.',
+		id: 'taxonomy',
+		name: 'Taxonomy',
+		description: 'Concepts and schemes must have a preferred label and a definition. Every concept must belong to a scheme.',
 		version: '1.0',
-		shapes: [BASIC_TAXONOMY_SHAPES_URI],
+		shapes: [TAXONOMY_SHAPES_URI],
 	},
 ];
 

@@ -1,4 +1,5 @@
 import { ConfigurationScope } from '@src/utilities/config-scope';
+import { generateUniqueSlug } from '@src/utilities/string';
 
 /**
  * A user-definable SPARQL store type. Store configs are stored in the `mentor.sparql.stores`
@@ -49,6 +50,20 @@ export interface TripleStoreConfig {
      * Store-specific default query templates; a blank field falls back to the global setting.
      */
     queries?: TripleStoreQueryTemplates;
+}
+
+/**
+ * Generates a stable store id from a display label: slugified, disambiguated
+ * with a numeric suffix on collision (`my-store`, `my-store-2`, …), mirroring
+ * how validation-profile ids are minted. The id is minted once when a store is
+ * first saved and never changes on rename. Callers must include the preset and
+ * reserved internal ids (e.g. `sparql`, `workspace`) in `existingIds`, since
+ * settings entries colliding with those are silently hidden at read time.
+ * @param label The store's display label.
+ * @param existingIds Every id the new one must not collide with.
+ */
+export function generateStoreId(label: string, existingIds: readonly string[]): string {
+    return generateUniqueSlug(label, existingIds, 'store');
 }
 
 /**

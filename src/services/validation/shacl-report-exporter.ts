@@ -11,6 +11,18 @@ export function formatReportAsText(result: ShaclValidationResult): string {
 	lines.push(`SHACL Validation Report`);
 	lines.push(`Conforms: ${result.conforms}`);
 	lines.push(`Results: ${result.results.length}`);
+
+	// A run with missing shape graphs validated against less than the profile
+	// promises — flag the report as potentially incomplete.
+	if (result.missingShapeGraphs?.length) {
+		lines.push('');
+		lines.push(`WARNING: The result may be incomplete. ${result.missingShapeGraphs.length} configured shape graph(s) do not exist:`);
+
+		for (const uri of result.missingShapeGraphs) {
+			lines.push(`  ${uri}`);
+		}
+	}
+
 	lines.push('');
 
 	for (const r of result.results) {

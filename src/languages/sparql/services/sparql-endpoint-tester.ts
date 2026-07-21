@@ -49,6 +49,11 @@ export class SparqlEndpointTester implements ISparqlEndpointTester {
 				'Accept': 'application/sparql-results+json,application/json'
 			};
 
+			// An explicit credential (or explicit null) comes from the connection
+			// editor, where the user is entering credentials right now; only a
+			// stored-credential lookup can come back empty unexpectedly.
+			const usingStoredCredential = credential === undefined;
+
 			if (credential === undefined) {
 				credential = await this._credentialStorage.getCredential(connection.id);
 			}
@@ -70,9 +75,22 @@ export class SparqlEndpointTester implements ISparqlEndpointTester {
 				return null;
 			}
 
+			let message = await response.text() || response.statusText;
+
+			// Credentials live in the machine-local secret storage and are not
+			// synced with the settings a connection is stored in. A connection
+			// arriving from another machine (or another user, via version control)
+			// therefore fails authentication with no stored credential — explain
+			// that instead of leaving a bare HTTP error.
+			if ((response.status === 401 || response.status === 407) && usingStoredCredential && !credential) {
+				message = 'The endpoint requires authentication, but no credentials are stored for this connection on this machine. '
+					+ 'Credentials are kept in the local secret storage and do not sync with settings — '
+					+ `open the connection editor to enter them. (${message})`;
+			}
+
 			const error = {
 				code: response.status,
-				message: await response.text() || response.statusText
+				message
 			};
 
 			this._onDidConnectionTestEnd.fire({ connection, error });

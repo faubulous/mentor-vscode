@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('../../../utilities/mocks/vscode'));
 
 import { TripleStoreConfigService } from './triple-store-config-service';
 import { PRESET_STORES } from './default-stores';
-import type { TripleStoreConfig } from './triple-store-config';
+import { generateStoreId, type TripleStoreConfig } from './triple-store-config';
 import type { SparqlConnection } from './sparql-connection';
 import { ConfigurationScope } from '../../../utilities/config-scope';
 
@@ -138,6 +138,98 @@ describe('TripleStoreConfigService – getStoreConfigs', () => {
             expect(configs.find(s => s.id === 'rdf4j')?.label).toBe('RDF4J');
         })
     );
+
+    it('tags settings-defined stores with their configuration scope and leaves presets untagged', () =>
+        withInspectedStoreConfigs(
+            {
+                globalValue: [{ id: 'user-store', label: 'User Store' }],
+                workspaceValue: [{ id: 'ws-store', label: 'Workspace Store' }],
+            },
+            svc => {
+                const configs = svc.getStoreConfigs();
+                expect(configs.find(s => s.id === 'user-store')?.configScope).toBe(ConfigurationScope.User);
+                expect(configs.find(s => s.id === 'ws-store')?.configScope).toBe(ConfigurationScope.Workspace);
+                expect(configs.filter(s => presetIds.includes(s.id)).every(s => s.configScope === undefined)).toBe(true);
+            }
+        )
+    );
+
+    it('keeps the workspace scope tag when the same id is defined in both scopes', () =>
+        withInspectedStoreConfigs(
+            {
+                globalValue: [{ id: 'shared', label: 'User Copy' }],
+                workspaceValue: [{ id: 'shared', label: 'Workspace Copy' }],
+            },
+            svc => {
+                const shared = svc.getStoreConfigs().find(s => s.id === 'shared');
+                expect(shared?.label).toBe('Workspace Copy');
+                expect(shared?.configScope).toBe(ConfigurationScope.Workspace);
+            }
+        )
+    );
+});
+
+// ---------------------------------------------------------------------------
+// getStoreConfigScope
+// ---------------------------------------------------------------------------
+
+describe('TripleStoreConfigService – getStoreConfigScope', () => {
+    it('reports presets as preset', () => {
+        expect(makeService().getStoreConfigScope('jena')).toBe('preset');
+    });
+
+    it('reports the scope a settings-defined store lives in', () =>
+        withInspectedStoreConfigs(
+            {
+                globalValue: [{ id: 'user-store', label: 'User Store' }],
+                workspaceValue: [{ id: 'ws-store', label: 'Workspace Store' }],
+            },
+            svc => {
+                expect(svc.getStoreConfigScope('user-store')).toBe('user');
+                expect(svc.getStoreConfigScope('ws-store')).toBe('workspace');
+            }
+        )
+    );
+
+    it('reports workspace when the same id is defined in both scopes', () =>
+        withInspectedStoreConfigs(
+            {
+                globalValue: [{ id: 'shared', label: 'User Copy' }],
+                workspaceValue: [{ id: 'shared', label: 'Workspace Copy' }],
+            },
+            svc => {
+                expect(svc.getStoreConfigScope('shared')).toBe('workspace');
+            }
+        )
+    );
+
+    it('returns undefined for an unknown id', () => {
+        expect(makeService().getStoreConfigScope('mystery')).toBeUndefined();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// generateStoreId
+// ---------------------------------------------------------------------------
+
+describe('generateStoreId', () => {
+    it('slugifies the label', () => {
+        expect(generateStoreId('My GraphDB Store', [])).toBe('my-graphdb-store');
+    });
+
+    it('disambiguates against existing ids with a numeric suffix', () => {
+        expect(generateStoreId('My Store', ['my-store'])).toBe('my-store-2');
+        expect(generateStoreId('My Store', ['my-store', 'my-store-2'])).toBe('my-store-3');
+    });
+
+    it('avoids preset and reserved ids when they are passed as existing', () => {
+        expect(generateStoreId('SPARQL', ['sparql', 'workspace'])).toBe('sparql-2');
+        expect(generateStoreId('Workspace', ['sparql', 'workspace'])).toBe('workspace-2');
+    });
+
+    it('falls back to "store" for labels without slug characters', () => {
+        expect(generateStoreId('***', [])).toBe('store');
+    });
 });
 
 // ---------------------------------------------------------------------------

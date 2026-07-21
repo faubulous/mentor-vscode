@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { getConfig } from '@src/utilities/vscode/config';
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { PRESET_STORES } from './default-stores';
 import { SparqlConnection } from './sparql-connection';
 import { TripleStoreConfig, SparqlQueryKind, TRIPLE_STORE_QUERY_KIND_PROPERTY } from './triple-store-config';
@@ -35,6 +36,10 @@ export class TripleStoreConfigService implements ITripleStoreConfigService {
 	 * and workspace arrays (workspace overriding user by `id`) so every defined store type is
 	 * selectable. Settings entries whose id collides with a preset are ignored: presets
 	 * cannot be shadowed, and stale copies from the former first-run seeding stay hidden.
+	 *
+	 * Settings-defined stores are tagged with the transient `configScope` field so consumers
+	 * (e.g. the connection editor) can enforce scope compatibility; presets stay untagged,
+	 * meaning they are usable from any scope.
 	 * @returns An array of store configs in display order (presets first).
 	 */
 	getStoreConfigs(): TripleStoreConfig[] {
@@ -42,7 +47,8 @@ export class TripleStoreConfigService implements ITripleStoreConfigService {
 		const inspected = config.inspect<TripleStoreConfig[]>(this._storesConfigKey);
 		const presetIds = new Set(PRESET_STORES.map(s => s.id));
 
-		// Fall back to the merged effective value when inspect is unavailable.
+		// Fall back to the merged effective value when inspect is unavailable. The
+		// per-entry scope is unknowable here, so the entries stay untagged.
 		if (!inspected) {
 			const stores = config.get<TripleStoreConfig[]>(this._storesConfigKey) ?? [];
 
@@ -50,12 +56,14 @@ export class TripleStoreConfigService implements ITripleStoreConfigService {
 		} else {
 			const merged = new Map<string, TripleStoreConfig>();
 
-			for (const store of [
-				...(inspected.globalValue ?? []),
-				...(inspected.workspaceValue ?? []),
-			]) {
-				if (!presetIds.has(store.id)) {
-					merged.set(store.id, store);
+			for (const [value, configScope] of [
+				[inspected.globalValue, ConfigurationScope.User],
+				[inspected.workspaceValue, ConfigurationScope.Workspace],
+			] as const) {
+				for (const store of value ?? []) {
+					if (!presetIds.has(store.id)) {
+						merged.set(store.id, { ...store, configScope });
+					}
 				}
 			}
 
@@ -70,6 +78,33 @@ export class TripleStoreConfigService implements ITripleStoreConfigService {
 	 */
 	getStoreConfig(storeType: string | undefined): TripleStoreConfig | undefined {
 		return this.getStoreConfigs().find(s => s.id === (storeType ?? this.defaultStoreType));
+	}
+
+	/**
+	 * Returns where a store type is defined: a built-in preset, the user
+	 * settings, the workspace settings, or nowhere (`undefined`). A store id
+	 * defined in both settings scopes reports `workspace`, matching the
+	 * resolution precedence of `getStoreConfigs`.
+	 * @param storeType The store-type id to look up.
+	 */
+	getStoreConfigScope(storeType: string | undefined): 'preset' | 'user' | 'workspace' | undefined {
+		const id = storeType ?? this.defaultStoreType;
+
+		if (PRESET_STORES.some(s => s.id === id)) {
+			return 'preset';
+		}
+
+		const inspected = getConfig().inspect<TripleStoreConfig[]>(this._storesConfigKey);
+
+		if (inspected?.workspaceValue?.some(s => s.id === id)) {
+			return 'workspace';
+		}
+
+		if (inspected?.globalValue?.some(s => s.id === id)) {
+			return 'user';
+		}
+
+		return undefined;
 	}
 
 	/**

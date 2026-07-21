@@ -50,6 +50,22 @@ export class TurtleConnectionCodeLensProvider implements vscode.CodeLensProvider
 
 		const range = new vscode.Range(0, 0, 0, 0);
 
+		// Surface a stored binding that no longer resolves instead of silently
+		// presenting the workspace-store fallback as the configured connection.
+		const unresolvedConnectionId = this._documentConnectionService.getUnresolvedConnectionId(document.uri);
+
+		if (unresolvedConnectionId) {
+			return [
+				new vscode.CodeLens(range, {
+					title: `$(warning) Connection unavailable — using ${WORKSPACE_CONNECTION.id}`,
+					tooltip: `The connection "${unresolvedConnectionId}" configured for this file is not available on this machine. `
+						+ 'Resources are described against the in-memory workspace store instead. Click to pick a connection.',
+					command: 'mentor.command.selectSparqlConnection',
+					arguments: [document],
+				}),
+			];
+		}
+
 		return [
 			new vscode.CodeLens(range, {
 				title: `$(arrow-swap) Connection: ${this._getConnectionLabel(connection)}`,

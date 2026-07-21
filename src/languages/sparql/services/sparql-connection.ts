@@ -82,4 +82,21 @@ export type SparqlConnectionView = SparqlConnection & {
      * The connection's persisted default inference setting, resolved at send time.
      */
     inferenceEnabled?: boolean;
+
+    /**
+     * Set to the connection's `storeType` when that id does not resolve to any
+     * store config on this machine (e.g. a user-scope store referenced by a
+     * shared workspace connection). The connection then behaves like a generic
+     * SPARQL endpoint; the settings list surfaces this with a warning badge.
+     */
+    unresolvedStoreType?: string;
+
+    /**
+     * Set to the scope the connection's store type is actually defined in when
+     * that differs from the connection's own scope (user connection → workspace
+     * store, or workspace connection → user store). Such a reference breaks as
+     * soon as the settings roam; the settings list surfaces it with a warning
+     * badge. Mutually exclusive with `unresolvedStoreType`.
+     */
+    incompatibleStoreScope?: 'user' | 'workspace';
 };

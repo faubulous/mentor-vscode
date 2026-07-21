@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Validator } from 'shacl-engine';
 import { Store } from '@faubulous/mentor-rdf';
 import { rdfDataFactory } from '@src/utilities/rdf';
-import { BASIC_ONTOLOGY_SHAPES_URI } from '../preset-definitions';
+import { ONTOLOGY_SHAPES_URI } from '../preset-definitions';
 import { loadPresetShapeGraphs } from './index';
 
 const DATA_GRAPH_URI = 'urn:test:data';
@@ -49,7 +49,7 @@ const CONFORMING_HEADER = `
 
 describe('Basic Ontology preset shapes', () => {
 	it('accepts a fully documented ontology', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 			${CONFORMING_HEADER}
 
@@ -73,7 +73,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('accepts skos:prefLabel and skos:definition in place of rdfs:label and rdfs:comment', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 			${CONFORMING_HEADER}
 
@@ -87,7 +87,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('accepts a dc: (Dublin Core Elements) ontology header', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 
 			ex: a owl:Ontology ;
@@ -99,7 +99,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('does not flag anonymous class expressions (owl:Restriction / owl:unionOf blank nodes)', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 			${CONFORMING_HEADER}
 
@@ -116,7 +116,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('reports a class without a label', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 			${CONFORMING_HEADER}
 
@@ -131,7 +131,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('reports a property without a comment', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 			${CONFORMING_HEADER}
 
@@ -145,7 +145,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('reports a term without an rdfs:isDefinedBy reference', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 			${CONFORMING_HEADER}
 
@@ -160,7 +160,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('accepts an rdfs:isDefinedBy reference to any IRI', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 			${CONFORMING_HEADER}
 
@@ -174,7 +174,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('reports an rdfs:isDefinedBy reference that is not an IRI', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 			${CONFORMING_HEADER}
 
@@ -190,7 +190,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('reports an ontology header without a title', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 
 			ex: a owl:Ontology ;
@@ -202,7 +202,7 @@ describe('Basic Ontology preset shapes', () => {
 	});
 
 	it('reports an ontology header with a comment but no dct:description', async () => {
-		const report = await validate(BASIC_ONTOLOGY_SHAPES_URI, `
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
 			${ONTOLOGY_PREFIXES}
 
 			ex: a owl:Ontology ;

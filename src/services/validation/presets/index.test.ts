@@ -4,8 +4,8 @@ import * as path from 'path';
 import { Store } from '@faubulous/mentor-rdf';
 import { getShapeGraphCandidates } from '@src/utilities/shacl';
 import {
-	BASIC_ONTOLOGY_SHAPES_URI,
-	BASIC_TAXONOMY_SHAPES_URI,
+	ONTOLOGY_SHAPES_URI,
+	TAXONOMY_SHAPES_URI,
 	VALIDATION_PRESETS,
 	getVersionedShapeUri,
 } from '../preset-definitions';
@@ -17,10 +17,10 @@ describe('loadPresetShapeGraphs', () => {
 
 		loadPresetShapeGraphs(store);
 
-		expect(store.hasGraph(BASIC_ONTOLOGY_SHAPES_URI)).toBe(true);
-		expect(store.hasGraph(BASIC_TAXONOMY_SHAPES_URI)).toBe(true);
+		expect(store.hasGraph(ONTOLOGY_SHAPES_URI)).toBe(true);
+		expect(store.hasGraph(TAXONOMY_SHAPES_URI)).toBe(true);
 		expect(getShapeGraphCandidates(store)).toEqual(
-			expect.arrayContaining([BASIC_ONTOLOGY_SHAPES_URI, BASIC_TAXONOMY_SHAPES_URI])
+			expect.arrayContaining([ONTOLOGY_SHAPES_URI, TAXONOMY_SHAPES_URI])
 		);
 	});
 
@@ -37,12 +37,12 @@ describe('loadPresetShapeGraphs', () => {
 	it('exposes presets whose shape URIs match the loaded graphs', () => {
 		const ids = VALIDATION_PRESETS.map(t => t.id);
 
-		expect(ids).toEqual(['basic-ontology', 'basic-taxonomy']);
+		expect(ids).toEqual(['ontology', 'taxonomy']);
 
 		const byId = Object.fromEntries(VALIDATION_PRESETS.map(t => [t.id, t]));
 
-		expect(byId['basic-ontology'].shapes).toEqual([BASIC_ONTOLOGY_SHAPES_URI]);
-		expect(byId['basic-taxonomy'].shapes).toEqual([BASIC_TAXONOMY_SHAPES_URI]);
+		expect(byId['ontology'].shapes).toEqual([ONTOLOGY_SHAPES_URI]);
+		expect(byId['taxonomy'].shapes).toEqual([TAXONOMY_SHAPES_URI]);
 	});
 
 	it('carries a version whose owl:versionInfo matches the bundled shape file', () => {

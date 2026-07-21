@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Validator } from 'shacl-engine';
 import { Store } from '@faubulous/mentor-rdf';
 import { rdfDataFactory } from '@src/utilities/rdf';
-import { BASIC_TAXONOMY_SHAPES_URI } from '../preset-definitions';
+import { TAXONOMY_SHAPES_URI } from '../preset-definitions';
 import { loadPresetShapeGraphs } from './index';
 
 const DATA_GRAPH_URI = 'urn:test:data';
@@ -40,7 +40,7 @@ const TAXONOMY_PREFIXES = `
 
 describe('Basic Taxonomy preset shapes', () => {
 	it('accepts a fully documented taxonomy', async () => {
-		const report = await validate(BASIC_TAXONOMY_SHAPES_URI, `
+		const report = await validate(TAXONOMY_SHAPES_URI, `
 			${TAXONOMY_PREFIXES}
 
 			ex:scheme a skos:ConceptScheme ;
@@ -62,7 +62,7 @@ describe('Basic Taxonomy preset shapes', () => {
 	});
 
 	it('reports a concept without a preferred label', async () => {
-		const report = await validate(BASIC_TAXONOMY_SHAPES_URI, `
+		const report = await validate(TAXONOMY_SHAPES_URI, `
 			${TAXONOMY_PREFIXES}
 
 			ex:leaf a skos:Concept ;
@@ -75,7 +75,7 @@ describe('Basic Taxonomy preset shapes', () => {
 	});
 
 	it('reports a concept without a definition', async () => {
-		const report = await validate(BASIC_TAXONOMY_SHAPES_URI, `
+		const report = await validate(TAXONOMY_SHAPES_URI, `
 			${TAXONOMY_PREFIXES}
 
 			ex:leaf a skos:Concept ;
@@ -88,7 +88,7 @@ describe('Basic Taxonomy preset shapes', () => {
 	});
 
 	it('reports a concept that is not part of a concept scheme', async () => {
-		const report = await validate(BASIC_TAXONOMY_SHAPES_URI, `
+		const report = await validate(TAXONOMY_SHAPES_URI, `
 			${TAXONOMY_PREFIXES}
 
 			ex:leaf a skos:Concept ;
@@ -101,7 +101,7 @@ describe('Basic Taxonomy preset shapes', () => {
 	});
 
 	it('reports duplicate preferred labels in the same language', async () => {
-		const report = await validate(BASIC_TAXONOMY_SHAPES_URI, `
+		const report = await validate(TAXONOMY_SHAPES_URI, `
 			${TAXONOMY_PREFIXES}
 
 			ex:leaf a skos:Concept ;
@@ -116,7 +116,7 @@ describe('Basic Taxonomy preset shapes', () => {
 	});
 
 	it('reports a concept scheme without a definition', async () => {
-		const report = await validate(BASIC_TAXONOMY_SHAPES_URI, `
+		const report = await validate(TAXONOMY_SHAPES_URI, `
 			${TAXONOMY_PREFIXES}
 
 			ex:scheme a skos:ConceptScheme ;

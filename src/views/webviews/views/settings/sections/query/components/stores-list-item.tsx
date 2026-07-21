@@ -2,6 +2,7 @@ import * as React from 'react';
 import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
 import { ListItemNavProps } from '../../../hooks/use-list-keyboard-navigation';
 import { SettingsListItem } from '../../../components/settings-list-item';
+import { SettingsItemDescription } from '../../../components/settings-item-description';
 
 export interface StoresListItemProps {
 	store: TripleStoreConfig;
@@ -52,7 +53,7 @@ export function StoresListItem({ store, navProps, onEdit, onDelete, onOpenInBrow
 			name={store.label}
 			tooltip={isProtected ? `View ${store.label} settings` : `Edit ${store.label}`}
 			actions={actions}
-			subline={store.description ? <span className="settings-item-description">{store.description}</span> : null}
+			subline={<SettingsItemDescription text={store.description} />}
 			locked={isProtected}
 			lockTitle="Built-in store"
 			keyboardNavProps={navProps}

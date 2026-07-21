@@ -59,6 +59,7 @@ export class DefinitionTree implements TreeView {
 			this._registerDecorationProvider(),
 			this._registerValidationHandler(),
 			this._registerActiveLanguageHandler(),
+			this._registerPredicateSettingsHandler(),
 			this._registerRefreshCommand(),
 			this._registerEditorSelectionHandler()
 		];
@@ -82,6 +83,17 @@ export class DefinitionTree implements TreeView {
 	private _registerActiveLanguageHandler(): vscode.Disposable {
 		return this._settings.onDidChange("view.activeLanguage", () => {
 			this._updateViewTitle();
+		});
+	}
+
+	private _registerPredicateSettingsHandler(): vscode.Disposable {
+		// Node labels and tooltips are derived from the mentor.predicates.* settings;
+		// re-render the tree as soon as they change so the new predicates apply
+		// immediately instead of on the next document switch.
+		return vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('mentor.predicates.label') || e.affectsConfiguration('mentor.predicates.description')) {
+				this.treeDataProvider.refresh(this._contextService.activeContext);
+			}
 		});
 	}
 

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { TemplateFileSystemProvider } from '@src/providers/template-file-system-provider';
 import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
@@ -96,6 +97,31 @@ export class StoresSectionController implements SettingsSectionController {
 
 					return true;
 				}
+			}
+			case 'StoreScopeChanged': {
+				// A store moved between the user and workspace scopes. Connections may
+				// only use preset or same-scope stores, so connections in the old scope
+				// that reference this store are now scope-incompatible — name them in a
+				// non-blocking warning; the connections list badges the persistent state.
+				const { storeId, label, newScope } = message;
+				
+				const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+				const affected = connectionRegistry.getConnections().filter(c =>
+					c.storeType === storeId
+					&& !c.isProtected
+					&& (c.configScope === ConfigurationScope.Workspace ? 'workspace' : 'user') !== newScope);
+
+				if (affected.length > 0) {
+					const noun = affected.length === 1 ? 'connection' : 'connections';
+
+					vscode.window.showWarningMessage(
+						`The store "${label}" was moved to the ${newScope} settings, but ${affected.length} ${noun} in the other scope still use${affected.length === 1 ? 's' : ''} it: `
+						+ affected.map(c => c.endpointUrl).join(', ')
+						+ '. Those connections now reference a store outside their own scope and fall back to generic SPARQL defaults wherever the store is missing.'
+					);
+				}
+
+				return true;
 			}
 			case 'OpenInBrowser': {
 				await vscode.env.openExternal(vscode.Uri.parse(message.url));

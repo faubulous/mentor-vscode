@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { ConfigurationScope } from '@src/utilities/config-scope';
 import { StoresSectionController } from '@src/views/webviews/views/settings/sections/query/stores-controller';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
@@ -103,5 +104,52 @@ describe('StoresSectionController – DeleteStoreProfile', () => {
 		expect(connectionRegistry.deleteConnection).not.toHaveBeenCalled();
 		expect(connectionRegistry.saveConfiguration).not.toHaveBeenCalled();
 		expect(post).not.toHaveBeenCalled();
+	});
+});
+
+describe('StoresSectionController – StoreScopeChanged', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	const scopeChangeMessage = { section: 'query.stores', id: 'StoreScopeChanged', storeId: 'my-store', label: 'My Store', newScope: 'user' } as any;
+
+	it('warns naming connections in the other scope that still reference the store', async () => {
+		const conns = [
+			{ id: 'c1', endpointUrl: 'http://e1', storeType: 'my-store', configScope: ConfigurationScope.Workspace },
+			{ id: 'c2', endpointUrl: 'http://e2', storeType: 'jena', configScope: ConfigurationScope.Workspace },
+		];
+		const { controller } = setup(conns);
+		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+
+		await controller.handleMessage(scopeChangeMessage);
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0][0]).toContain('http://e1');
+		expect(warn.mock.calls[0][0]).not.toContain('http://e2');
+	});
+
+	it('does not warn when every referencing connection is in the new scope', async () => {
+		const conns = [
+			{ id: 'c1', endpointUrl: 'http://e1', storeType: 'my-store', configScope: ConfigurationScope.User },
+		];
+		const { controller } = setup(conns);
+		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+
+		await controller.handleMessage(scopeChangeMessage);
+
+		expect(warn).not.toHaveBeenCalled();
+	});
+
+	it('ignores protected connections', async () => {
+		const conns = [
+			{ id: 'workspace', endpointUrl: 'workspace:', storeType: 'my-store', configScope: ConfigurationScope.Workspace, isProtected: true },
+		];
+		const { controller } = setup(conns);
+		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+
+		await controller.handleMessage(scopeChangeMessage);
+
+		expect(warn).not.toHaveBeenCalled();
 	});
 });

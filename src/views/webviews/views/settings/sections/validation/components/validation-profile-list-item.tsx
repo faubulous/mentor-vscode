@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ListItemNavProps } from '../../../hooks/use-list-keyboard-navigation';
 import { SettingsListItem } from '../../../components/settings-list-item';
+import { SettingsItemDescription } from '../../../components/settings-item-description';
 import { ValidationProfileView } from '../shared';
 
 export interface ValidationProfileListItemProps {
@@ -50,13 +51,9 @@ export function ValidationProfileListItem({ profile, missingShapes, matchCount, 
 		? 'No shape graphs defined'
 		: missingCount > 0 ? `${missingCount} missing graph${missingCount === 1 ? '' : 's'}` : '';
 
-	const description = profile.description.trim();
-
 	const subline = (
 		<div className="settings-item-meta">
-			{description && (
-				<span className="validation-profile-description">{description}</span>
-			)}
+			<SettingsItemDescription text={profile.description} className="validation-profile-description" />
 			<span className="validation-profile-stats">
 				{matchCount !== undefined && (
 					<span>{matchCount} target file{matchCount === 1 ? '' : 's'}</span>
@@ -65,11 +62,6 @@ export function ValidationProfileListItem({ profile, missingShapes, matchCount, 
 					<span>{excludedCount} excluded file{excludedCount === 1 ? '' : 's'}</span>
 				)}
 				{!isEmpty && <span>{shapeCount} graph{shapeCount === 1 ? '' : 's'}</span>}
-				{warningText && (
-					<span className="validation-item-warning">
-						• {warningText}
-					</span>
-				)}
 			</span>
 		</div>
 	);
@@ -98,6 +90,9 @@ export function ValidationProfileListItem({ profile, missingShapes, matchCount, 
 				</>
 			)}
 			subline={subline}
+			status={warningText ? 'warning' : undefined}
+			statusMessage={warningText || undefined}
+			statusTooltip={missingCount > 0 ? missingShapes?.join(', ') : undefined}
 			keyboardNavProps={navProps}
 			onClick={() => onEdit(profile)}
 		/>

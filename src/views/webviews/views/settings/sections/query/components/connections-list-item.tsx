@@ -1,13 +1,15 @@
 import * as React from 'react';
-import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { ConfigurationScope } from '@src/utilities/config-scope';
+import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
 import { Badge } from '@src/views/webviews/components/badge';
 import { TestResult } from '../../../settings-types';
 import { GraphStatus } from '../connections-list-messages';
 import { ListItemNavProps } from '../../../hooks/use-list-keyboard-navigation';
 import { SettingsListItem } from '../../../components/settings-list-item';
+import { SettingsItemDescription } from '../../../components/settings-item-description';
 
 export interface ConnectionsListItemProps {
-	connection: SparqlConnection;
+	connection: SparqlConnectionView;
 	testResult?: TestResult;
 	graphStatus?: GraphStatus;
 	isTesting: boolean;
@@ -72,15 +74,13 @@ export function ConnectionsListItem({
 		statusClass = 'test-error';
 	}
 
-	const metaItems: React.ReactNode[] = [];
-
-	if (connection.description) {
-		metaItems.push(
-			<span key="description" className="settings-item-meta-item settings-item-meta-description">
-				{connection.description}
-			</span>
-		);
-	}
+	const metaItems: React.ReactNode[] = [
+		<SettingsItemDescription
+			key="description"
+			text={connection.description}
+			className="settings-item-meta-item settings-item-meta-description"
+		/>,
+	];
 
 	if (connection.canToggleInference) {
 		metaItems.push(
@@ -130,25 +130,63 @@ export function ConnectionsListItem({
 	// graphs are being (re-)loaded, the load error when one occurred, or the
 	// graph count when known. The storage scope is communicated by the list
 	// section, which this badge replaced.
+	// A store type that does not resolve on this machine (e.g. a user-scope
+	// store referenced by a shared workspace connection) silently degrades the
+	// connection to generic SPARQL behavior — flag it instead of hiding it.
+	// A store defined in the other configuration scope resolves here but breaks
+	// wherever the connection roams (version control, Settings Sync) — flag that
+	// too. The two states are mutually exclusive by construction.
+	const connectionScope = connection.configScope === ConfigurationScope.Workspace ? 'workspace' : 'user';
+
+	const storeStatus = connection.unresolvedStoreType
+		? {
+			status: 'error' as const,
+			message: 'Unknown store type',
+			tooltip: `The store type "${connection.unresolvedStoreType}" is not defined on this machine. `
+				+ 'The connection falls back to generic SPARQL defaults: store-specific queries and inference control are unavailable. '
+				+ 'Define the store in the Stores section or select another store type in the connection editor.',
+		}
+		: connection.incompatibleStoreScope
+			? {
+				status: 'warning' as const,
+				message: 'Store scope mismatch',
+				tooltip: `This ${connectionScope} connection uses a store type defined in the ${connection.incompatibleStoreScope} settings. `
+					+ `A connection may only use preset stores or stores defined in its own scope — wherever the ${connection.incompatibleStoreScope} settings are missing, `
+					+ 'the connection falls back to generic SPARQL defaults. Open the connection to pick a compatible store.',
+			}
+			: undefined;
+
+	// Erroneous rows (failed test, failed graph load) get the shared error row
+	// style, outranking a store scope warning so a broken connection is never
+	// masked by the milder hint. The right-aligned status slot follows the same
+	// precedence: a graph load error takes it over from the store status (which
+	// returns once the error clears); a failed test keeps its details in the
+	// icon tooltip. While (re-)loading, the busy badge alone communicates the
+	// state, so the graph error message steps back until the reload settles.
+	const hasConnectionError = testResult?.success === false || graphStatus?.error !== undefined;
+
+	const rowStatus = hasConnectionError ? 'error' as const : storeStatus?.status;
+
+	const graphErrorStatus = !isLoadingGraphs && graphStatus?.error !== undefined
+		? { message: 'Error loading graphs', tooltip: graphStatus.error }
+		: undefined;
+
+	const statusInfo = graphErrorStatus
+		?? (hasConnectionError && storeStatus?.status === 'warning' ? undefined : storeStatus);
+
 	const graphBadge = isLoadingGraphs
 		? (
 			<Badge className="badge-busy" title="Loading graphs from this connection...">
 				Loading...
 			</Badge>
 		)
-		: graphStatus?.error
+		: graphStatus?.error === undefined && graphStatus?.count !== undefined
 			? (
-				<Badge className="badge-error" title={graphStatus.error}>
-					Error loading graphs
+				<Badge title="Number of graphs on this connection">
+					{graphStatus.count} {graphStatus.count === 1 ? 'graph' : 'graphs'}
 				</Badge>
 			)
-			: graphStatus?.count !== undefined
-				? (
-					<Badge title="Number of graphs on this connection">
-						{graphStatus.count} {graphStatus.count === 1 ? 'graph' : 'graphs'}
-					</Badge>
-				)
-				: null;
+			: null;
 
 	const subline = metaItems.length > 0
 		? (
@@ -170,6 +208,9 @@ export function ConnectionsListItem({
 			actions={actions}
 			subline={subline}
 			badge={graphBadge}
+			status={rowStatus}
+			statusMessage={statusInfo?.message}
+			statusTooltip={statusInfo?.tooltip}
 			locked={isProtected}
 			lockTitle="Built-in connection"
 			className={statusClass || undefined}

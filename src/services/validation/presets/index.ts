@@ -1,7 +1,7 @@
 import { Store } from '@faubulous/mentor-rdf';
 import basicOntologyShapes from './ontology-1.0.shape.ttl';
 import basicTaxonomyShapes from './taxonomy-1.0.shape.ttl';
-import { BASIC_ONTOLOGY_SHAPES_URI, BASIC_TAXONOMY_SHAPES_URI } from '../preset-definitions';
+import { ONTOLOGY_SHAPES_URI, TAXONOMY_SHAPES_URI } from '../preset-definitions';
 
 /**
  * The bundled Turtle source of each preset shape graph, keyed by preset id. Used
@@ -9,8 +9,8 @@ import { BASIC_ONTOLOGY_SHAPES_URI, BASIC_TAXONOMY_SHAPES_URI } from '../preset-
  * a frozen copy into the workspace when a preset is instantiated.
  */
 const PRESET_SHAPE_SOURCES: Record<string, string> = {
-	'basic-ontology': basicOntologyShapes,
-	'basic-taxonomy': basicTaxonomyShapes,
+	'ontology': basicOntologyShapes,
+	'taxonomy': basicTaxonomyShapes,
 };
 
 /**
@@ -27,6 +27,6 @@ export function getPresetShapeSource(presetId: string): string | undefined {
  * as shape datasets.
  */
 export function loadPresetShapeGraphs(store: Store): void {
-	store.loadTurtle(basicOntologyShapes, BASIC_ONTOLOGY_SHAPES_URI, false);
-	store.loadTurtle(basicTaxonomyShapes, BASIC_TAXONOMY_SHAPES_URI, false);
+	store.loadTurtle(basicOntologyShapes, ONTOLOGY_SHAPES_URI, false);
+	store.loadTurtle(basicTaxonomyShapes, TAXONOMY_SHAPES_URI, false);
 }

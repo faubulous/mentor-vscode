@@ -82,8 +82,10 @@ function cleanPaths(paths: readonly string[]): string[] {
  *
  * Profiles are stored under a stable id minted from the name at first save, so a
  * duplicate display name is only a cosmetic ambiguity — flagged with a
- * non-blocking hint, never a Save blocker. Profiles are self-contained, so they
- * can live in either the user or the workspace scope.
+ * non-blocking hint, never a Save blocker. Profiles are workspace-scope only
+ * (their shapes and paths are workspace-relative), so no scope picker is shown
+ * and saving always targets the workspace — which also moves any legacy
+ * user-scope profile into the workspace on its next edit.
  */
 export function ValidationProfileEditor({
 	profile,
@@ -132,12 +134,13 @@ export function ValidationProfileEditor({
 	return (
 		<ModalSettingsItemEditor
 			className="validation-profile-editor"
-			scope={draft.scope}
-			onScopeChange={scope => setDraft(d => ({ ...d, scope }))}
+			scope={ConfigurationScope.Workspace}
+			onScopeChange={() => { }}
+			showScope={false}
 			hasWorkspace={hasWorkspace}
 			isNew={isNew}
-			canSave={canSave}
-			onSave={() => onSave(profile.id, profile.scope, { ...draft, name: trimmedName, includeFiles, excludeFiles })}
+			canSave={canSave && hasWorkspace !== false}
+			onSave={() => onSave(profile.id, profile.scope, { ...draft, scope: ConfigurationScope.Workspace, name: trimmedName, includeFiles, excludeFiles })}
 			onDelete={() => onDelete(profile)}
 			saveTitle="Save profile"
 			deleteTitle="Delete profile"

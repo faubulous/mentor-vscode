@@ -106,6 +106,14 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 				this._onDidChangeFileDecorations.fire(undefined);
 			}
+
+			// The cached label predicates otherwise only update on document context
+			// changes; apply a settings change immediately.
+			if (e.affectsConfiguration('mentor.predicates.label')) {
+				this._labelPredicates = new Set(this._contextService.activeContext?.predicates.label ?? []);
+
+				this._onDidChangeFileDecorations.fire(undefined);
+			}
 		});
 
 		this._contextService.onDidChangeDocumentContext((context) => {

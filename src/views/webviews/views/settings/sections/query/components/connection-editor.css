@@ -131,3 +131,20 @@
 .connection-editor-container section.auth div vscode-label:first-child {
 	margin-top: -5px;
 }
+
+/* Scope-compatibility warning shown right next to the store dropdown. Shares
+   the row with the select (the row is a flex container) and uses the warning
+   color for both the text and a translucent background tint. */
+.connection-editor-container .store-scope-warning {
+	display: flex;
+    align-items: center;
+    gap: 0.5em;
+	flex: 1;
+	min-width: 0;
+	color: var(--vscode-editorWarning-foreground);
+	background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 12%, transparent);
+	border-radius: var(--vscode-cornerRadius-small, 2px);
+	padding: var(--mentor-space-2, 4px) var(--mentor-space-3, 8px);
+	font-size: 0.9em;
+	line-height: 1.4;
+}

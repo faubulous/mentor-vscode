@@ -1952,13 +1952,6 @@
                     "description": {
                       "type": "string",
                       "description": "Optional human-readable description of the profile."
-                    },
-                    "shapeVersions": {
-                      "type": "object",
-                      "description": "For profiles that link to a built-in shape graph (rather than a workspace copy), records the shape graph version the profile was created or last reconciled against, keyed by shape graph URI. Used to detect and surface changes when Mentor's bundled shapes are updated.",
-                      "additionalProperties": {
-                        "type": "string"
-                      }
                     }
                   }
                 },
@@ -2169,12 +2162,6 @@
             "default": "",
             "editPresentation": "multilineText"
           }
-        },
-        "mentor.language.turtle.maxNumberOfProblems": {
-          "scope": "resource",
-          "type": "number",
-          "default": 100,
-          "description": "Controls the maximum number of problems produced by the server."
         }
       }
     ]

@@ -8,7 +8,7 @@ import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-conn
 import { IDocumentContextService } from '@src/services/document';
 import { ICredentialStorageService } from '@src/services/core';
 import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
-import { keyToScope } from '@src/utilities/config-scope';
+import { ConfigurationScope, keyToScope } from '@src/utilities/config-scope';
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
 import { SettingsSectionMessages } from '../../settings-panel-messages';
@@ -30,12 +30,40 @@ export class ConnectionsSectionController implements SettingsSectionController {
 
 	/**
 	 * Projects a connection for the webview, attaching its resolved per-connection inference
-	 * default. Inference is not stored on the domain object, so it is resolved here at send time.
+	 * default and flagging a store type that does not resolve on this machine or is defined
+	 * in the other configuration scope. All are runtime-only state, so they are resolved
+	 * here at send time.
 	 */
 	private _toConnectionView(connection: SparqlConnection): SparqlConnectionView {
 		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 
-		return { ...connection, inferenceEnabled: connectionRegistry.getInferenceEnabled(connection.id) };
+		const isWorkspaceConnection = storeConfigService.isWorkspaceConnectionId(connection.id);
+
+		const storeTypeUnresolved = connection.storeType !== undefined
+			&& !isWorkspaceConnection
+			&& storeConfigService.getStoreConfig(connection.storeType) === undefined;
+
+		// A connection may only use preset stores or stores defined in its own
+		// scope; a cross-scope reference breaks when the settings roam. Presets
+		// report 'preset' and unresolved ids report undefined, so neither flags.
+		const storeScope = !isWorkspaceConnection
+			? storeConfigService.getStoreConfigScope(connection.storeType)
+			: undefined;
+		const connectionScope = connection.configScope === ConfigurationScope.Workspace ? 'workspace' : 'user';
+		const incompatibleStoreScope = (storeScope === 'user' || storeScope === 'workspace') && storeScope !== connectionScope
+			? storeScope
+			: undefined;
+
+		// The flags are always assigned (not conditionally spread) so that a stale
+		// value on a round-tripped view — e.g. a connection the editor sent back on
+		// save — is overwritten once the underlying issue has been corrected.
+		return {
+			...connection,
+			inferenceEnabled: connectionRegistry.getInferenceEnabled(connection.id),
+			unresolvedStoreType: storeTypeUnresolved ? connection.storeType : undefined,
+			incompatibleStoreScope,
+		};
 	}
 
 	initialize(post: (message: SettingsSectionMessages) => void): void {
@@ -52,6 +80,18 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					id: 'ConnectionsChanged',
 					connections: connectionRegistry.getConnections().map(c => this._toConnectionView(c)),
 				});
+			}),
+			// The store-related flags on the connection views (unresolved type, scope
+			// mismatch) depend on the store configs, so a stores settings change (e.g.
+			// moving a store into the matching scope) re-projects the list as well.
+			vscode.workspace.onDidChangeConfiguration(e => {
+				if (e.affectsConfiguration('mentor.sparql.stores')) {
+					this._post({
+						section: SECTION_ID,
+						id: 'ConnectionsChanged',
+						connections: connectionRegistry.getConnections().map(c => this._toConnectionView(c)),
+					});
+				}
 			}),
 			// Mirror graph loading activity (bulk reloads, auto-loads) as a busy
 			// indicator on the affected list items, like connection testing.
@@ -253,7 +293,9 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				return true;
 			}
 			case 'SaveSparqlConnection': {
-				const connection = message.connection;
+				// The editor sends the full view object back; the view-only flags are
+				// stripped so runtime display state never enters the registry.
+				const { inferenceEnabled, unresolvedStoreType, incompatibleStoreScope, ...connection } = message.connection;
 
 				try {
 					await connectionRegistry.saveConnectionWithCredential(connection, message.credential);
@@ -335,7 +377,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 		for (const d of this._disposables) {
 			d.dispose();
 		}
-		
+
 		this._disposables = [];
 	}
 }

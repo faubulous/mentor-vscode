@@ -18,6 +18,7 @@ const mockConnectionService = {
         return { dispose: () => { } };
     },
     getConnectionForDocument: () => getConnectionForDocumentResult,
+    getUnresolvedConnectionId: () => undefined,
     supportsInference: () => supportsInferenceResult,
     getInferenceEnabledForDocument: () => getInferenceEnabledResult,
     getGraphsForDocument: async () => [],

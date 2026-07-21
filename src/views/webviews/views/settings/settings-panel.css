@@ -817,6 +817,52 @@ vscode-textarea.monospace {
 	border-left-color: var(--vscode-notebookStatusErrorIcon-foreground);
 }
 
+/* Shared warning/error row status (see SettingsListItem's `status` prop):
+   tints the row background and the leading icon in the status color, and
+   colors the right-aligned status message. Hover/selection keeps a visible
+   tint by mixing the status color into the selection background. */
+.settings-item.status-warning {
+	background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.settings-item.status-warning:hover,
+.settings-item.status-warning.selected {
+	background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 12%, var(--vscode-list-activeSelectionBackground));
+}
+
+.settings-item.status-warning .settings-item-icon {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.settings-item.status-error {
+	background: color-mix(in srgb, var(--vscode-notebookStatusErrorIcon-foreground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.settings-item.status-error:hover,
+.settings-item.status-error.selected {
+	background: color-mix(in srgb, var(--vscode-notebookStatusErrorIcon-foreground) 12%, var(--vscode-list-activeSelectionBackground));
+}
+
+.settings-item.status-error .settings-item-icon {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.settings-item-status {
+	margin-left: auto;
+	flex-shrink: 0;
+	white-space: nowrap;
+	font-size: 0.85em;
+	line-height: 1.5em;
+}
+
+.settings-item.status-warning .settings-item-status {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.settings-item.status-error .settings-item-status {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
 .settings-item-icon {
 	margin-right: var(--mentor-space-4);
 	margin-top: 6px;
@@ -843,7 +889,7 @@ vscode-textarea.monospace {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	gap: 1px;
+	gap: 0.25em;
 	padding: 3px 0;
 }
 
@@ -864,6 +910,13 @@ vscode-textarea.monospace {
 	line-height: 1.4;
 }
 
+/* Muted version number rendered next to an item's name (e.g. preset shape versions). */
+.settings-item-name .settings-item-version {
+	margin-left: var(--mentor-space-3);
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+}
+
 .settings-item-subline {
 	display: flex;
 	flex-direction: row;
@@ -881,6 +934,12 @@ vscode-textarea.monospace {
 	color: var(--vscode-descriptionForeground);
 	line-height: 1.5em;
 	min-width: 0;
+}
+
+/* Placeholder shown by SettingsItemDescription for items without a description. */
+.settings-item-description-empty {
+	font-style: italic;
+	opacity: 0.7;
 }
 
 .settings-item-meta {

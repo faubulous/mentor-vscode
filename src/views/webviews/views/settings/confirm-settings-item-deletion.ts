@@ -35,7 +35,6 @@ export async function confirmSettingsItemDeletion(
 	{ message, affected, affectedIntro, deletedMessage }: ConfirmSettingsItemDeletionOptions
 ): Promise<void> {
 	const hasAffected = !!affected && affected.length > 0;
-
 	const answer = await vscode.window.showWarningMessage(
 		message,
 		{

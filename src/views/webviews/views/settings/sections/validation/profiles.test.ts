@@ -33,7 +33,7 @@ describe('toProfileValue', () => {
 describe('presetToDraft', () => {
 	it('seeds a create draft that references the written workspace copies', () => {
 		const preset = VALIDATION_PRESETS[0];
-		const shapes = ['workspace:///.mentor/shapes/basic-ontology.shape.ttl'];
+		const shapes = ['workspace:///.mentor/shapes/ontology.shape.ttl'];
 		const draft = presetToDraft(preset, ConfigurationScope.Workspace, shapes);
 
 		expect(draft.id).toBe('');
@@ -47,7 +47,7 @@ describe('presetToDraft', () => {
 
 	it('copies the supplied shapes so edits do not mutate the caller array', () => {
 		const preset = VALIDATION_PRESETS[0];
-		const shapes = ['workspace:///.mentor/shapes/basic-ontology.shape.ttl'];
+		const shapes = ['workspace:///.mentor/shapes/ontology.shape.ttl'];
 		const draft = presetToDraft(preset, ConfigurationScope.User, shapes);
 
 		draft.shapes.push('extra');
@@ -82,7 +82,7 @@ describe('applyProfileSave', () => {
 
 	it('instantiates a preset into a fresh profile referencing the written workspace shapes', () => {
 		const preset = VALIDATION_PRESETS[1];
-		const shapes = ['workspace:///.mentor/shapes/basic-taxonomy.shape.ttl'];
+		const shapes = ['workspace:///.mentor/shapes/taxonomy.shape.ttl'];
 		const draft = { ...presetToDraft(preset, ConfigurationScope.Workspace, shapes), name: 'My Taxonomy' };
 
 		const result = applyProfileSave({

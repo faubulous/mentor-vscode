@@ -41,6 +41,15 @@ export interface ITripleStoreConfigService {
 	isWorkspaceConnectionId(connectionId: string): boolean;
 
 	/**
+	 * Returns where a store type is defined: a built-in preset, the user
+	 * settings, the workspace settings, or nowhere (`undefined`). A store id
+	 * defined in both settings scopes reports `workspace`, matching the
+	 * resolution precedence of `getStoreConfigs`.
+	 * @param storeType The store-type id to look up.
+	 */
+	getStoreConfigScope(storeType: string | undefined): 'preset' | 'user' | 'workspace' | undefined;
+
+	/**
 	 * Resolves the effective SPARQL query template of the given kind for a connection.
 	 * Resolution order: the store config's own query → global `mentor.sparql.*` fallback.
 	 * @param connection The SPARQL connection.

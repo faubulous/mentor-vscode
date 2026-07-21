@@ -457,7 +457,7 @@ describe('shacl-validation-configuration', () => {
 		it('rewrites a moved written shapes folder and leaves external shape URIs untouched', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
-					'copy': { shapes: ['workspace:///.mentor/shapes/basic-ontology.shape.ttl'] },
+					'copy': { shapes: ['workspace:///.mentor/shapes/ontology.shape.ttl'] },
 					'external': { shapes: ['https://w3id.org/mentor/shacl/profiles/ontology'] },
 				},
 			};
@@ -465,7 +465,7 @@ describe('shacl-validation-configuration', () => {
 			const result = migrateShaclValidationConfig(settings, [rename('.mentor/shapes', '.mentor/validation')]);
 
 			// The written copy's workspace URI follows the folder move.
-			expect(result.profiles?.['copy'].shapes).toEqual(['workspace:///.mentor/validation/basic-ontology.shape.ttl']);
+			expect(result.profiles?.['copy'].shapes).toEqual(['workspace:///.mentor/validation/ontology.shape.ttl']);
 			// A non-workspace shape URI is untouched.
 			expect(result.profiles?.['external'].shapes).toEqual(['https://w3id.org/mentor/shacl/profiles/ontology']);
 		});

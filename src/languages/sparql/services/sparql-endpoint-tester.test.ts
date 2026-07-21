@@ -101,6 +101,36 @@ describe('SparqlEndpointTester', () => {
 			});
 		});
 
+		it('explains a 401 when no credential is stored on this machine', async () => {
+			// Credentials live in machine-local secret storage: a connection synced
+			// from another machine arrives without them and fails authentication.
+			const tester = makeTester();
+			vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+				ok: false,
+				status: 401,
+				statusText: 'Unauthorized',
+				text: async () => 'Auth required',
+			}));
+			const result = await tester.testConnection(makeConnection());
+			expect(result?.code).toBe(401);
+			expect(result?.message).toContain('no credentials are stored for this connection on this machine');
+			expect(result?.message).toContain('Auth required');
+		});
+
+		it('does not rewrite a 401 when the caller supplied the credential explicitly', async () => {
+			// An explicit credential (or explicit null) comes from the connection
+			// editor, where the user is entering credentials right now.
+			const tester = makeTester();
+			vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+				ok: false,
+				status: 401,
+				statusText: 'Unauthorized',
+				text: async () => 'Auth required',
+			}));
+			const result = await tester.testConnection(makeConnection(), null);
+			expect(result?.message).toBe('Auth required');
+		});
+
 		it('loads the stored credential when none is provided', async () => {
 			const getCredential = vi.fn(async () => ({ type: 'bearer', token: 'stored-token' }));
 			const tester = new SparqlEndpointTester({ getCredential } as any);

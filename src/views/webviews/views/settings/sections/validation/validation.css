@@ -8,8 +8,8 @@
 	white-space: nowrap;
 }
 
-/* Shape/target/excluded counts (and any warning), right-aligned after the
-   description. */
+/* Shape/target/excluded counts, right-aligned after the description. Warnings
+   are rendered by the shared settings-item status message (settings-panel.css). */
 .settings-item-subline .validation-profile-stats {
 	display: inline-flex;
 	flex-direction: row;
@@ -17,18 +17,6 @@
 	gap: var(--mentor-space-6);
 	flex-shrink: 0;
 	margin-left: auto;
-}
-
-/* Warning text (missing / empty) in a profile list row: icon + text, warning-colored. */
-.settings-item-subline .validation-item-warning {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--mentor-space-1);
-	color: var(--vscode-editorWarning-foreground);
-}
-
-.settings-item-subline .validation-item-warning vscode-icon {
-	font-size: 1em;
 }
 
 .modal-form.validation-profile-editor .validation-default-toggle {

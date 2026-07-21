@@ -142,14 +142,27 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			const lastResult = isCell ? undefined : this._validationService.getLastResult(document.uri);
 
 			if (lastResult) {
-				const statusTitle = lastResult.conforms
-					? '$(pass)\u00A0Conforms'
-					: `$(error)\u00A0${lastResult.results.length} issue(s)`;
+				// A run with missing shape graphs validated against less than the
+				// profile promises — never present it as a clean pass.
+				const missing = lastResult.missingShapeGraphs ?? [];
+
+				const statusTitle = missing.length > 0
+					? (lastResult.conforms
+						? `$(warning)\u00A0Conforms (${missing.length} shape graph${missing.length === 1 ? '' : 's'} missing)`
+						: `$(error)\u00A0${lastResult.results.length} issue(s) (${missing.length} shape graph${missing.length === 1 ? '' : 's'} missing)`)
+					: (lastResult.conforms
+						? '$(pass)\u00A0Conforms'
+						: `$(error)\u00A0${lastResult.results.length} issue(s)`);
+
+				const statusTooltip = missing.length > 0
+					? 'The result may be incomplete — these configured shape graphs do not exist: '
+					+ missing.join(', ')
+					: 'View the SHACL validation report';
 
 				result.push(new vscode.CodeLens(range, {
 					title: statusTitle,
 					command: 'mentor.command.viewShaclReport',
-					tooltip: 'View the SHACL validation report'
+					tooltip: statusTooltip
 				}));
 			}
 

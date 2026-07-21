@@ -234,7 +234,18 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 	const isFormReadOnly = () => draft.endpoint.isProtected === true;
 	const isWorkspaceStore = draft.endpoint.id === 'workspace';
 	const showScopeTabs = !isWorkspaceStore;
-	const isFormValid = () => draft.endpoint.endpointUrl.trim().length > 0;
+
+	// A connection may only use preset stores (no configScope) or stores defined
+	// in its own configuration scope: a cross-scope reference breaks as soon as
+	// the settings roam (version control, Settings Sync) because the other scope
+	// is not carried along.
+	const isStoreScopeCompatible = () => {
+		const store = storeConfigs.find(s => s.id === (draft.endpoint.storeType ?? 'sparql'));
+
+		return store?.configScope === undefined || store.configScope === draft.endpoint.configScope;
+	};
+
+	const isFormValid = () => draft.endpoint.endpointUrl.trim().length > 0 && isStoreScopeCompatible();
 	const isConnectionSuccessful = () => testResult === null;
 	const hasConnectionError = () => testResult !== null && testResult !== undefined;
 
@@ -306,6 +317,15 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 	const selectedStoreConfig = storeConfigs.find(s => s.id === selectedStoreType);
 	// Derive inference capability from the selected store type so the toggle updates live on change.
 	const canToggleInference = selectedStoreConfig?.inference?.supported ?? endpoint.canToggleInference ?? false;
+
+	// Stores from the other configuration scope stay listed but are disabled and
+	// labeled with their scope, so the picker shows why they are unavailable.
+	const storeScopeCompatible = isStoreScopeCompatible();
+
+	const isIncompatibleStore = (store: TripleStoreConfig) =>
+		store.configScope !== undefined && store.configScope !== endpoint.configScope;
+
+	const scopeLabel = (scope: ConfigurationScope | undefined) => scope === ConfigurationScope.User ? 'user' : 'workspace';
 
 	const renderFormActions = () => (
 		<div className={`form-actions ${isFormReadOnly() ? 'readonly' : ''}`}>
@@ -519,22 +539,28 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 										onInput={handleDescriptionChange}
 									/>
 								</div>
-								{(isWorkspaceStore || storeConfigs.length > 0) && (
-									<div className="section-store-type-row">
-										{!isWorkspaceStore && (
-											<div className="section-store-type">
-												<vscode-label>Store</vscode-label>
-												<vscode-single-select
-													className="wide"
-													ref={storeTypeSelectRef}
-													value={selectedStoreType}
-													disabled={isFormReadOnly()}>
-													{storeConfigs.map(s => (
-														<vscode-option key={s.id} value={s.id}>{s.label}</vscode-option>
-													))}
-												</vscode-single-select>
-											</div>
-										)}
+								{!isWorkspaceStore && (
+									<div className="section-store-type">
+										<vscode-label>Store</vscode-label>
+										<vscode-single-select
+											className="wide"
+											ref={storeTypeSelectRef}
+											value={selectedStoreType}
+											disabled={isFormReadOnly()}>
+											{storeConfigs.map(s => (
+												<vscode-option key={s.id} value={s.id} disabled={isIncompatibleStore(s)}>
+													{isIncompatibleStore(s)
+														? `${s.label} - ${s.configScope === ConfigurationScope.User ? 'User' : 'Workspace'} settings`
+														: s.label}
+												</vscode-option>
+											))}
+										</vscode-single-select>
+									</div>
+								)}
+								{!isWorkspaceStore && !storeScopeCompatible && selectedStoreConfig && (
+									<div className="store-scope-warning">
+										<span className="codicon codicon-warning-compact"></span> This store is defined in {selectedStoreConfig.configScope === ConfigurationScope.User ? 'your user settings' : 'the workspace settings'} and
+										can't be used by a {scopeLabel(endpoint.configScope)} connection.
 									</div>
 								)}
 								{!canToggleInference && (

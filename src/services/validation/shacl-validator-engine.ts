@@ -19,6 +19,13 @@ export interface ShaclValidationResult {
 	 * Individual validation results.
 	 */
 	results: ShaclValidationResultEntry[];
+	/**
+	 * Shape graph URIs that were requested but not present in the store when the
+	 * validation ran (e.g. a deleted workspace shape file). The validation ran
+	 * without their shapes, so `conforms` may be a false all-clear — consumers
+	 * must present the result as incomplete when this is non-empty.
+	 */
+	missingShapeGraphs?: string[];
 }
 
 /**
