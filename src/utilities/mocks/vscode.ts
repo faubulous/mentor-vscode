@@ -62,6 +62,7 @@ export const window = {
   activeColorTheme: { kind: 1 },
   activeTextEditor: undefined as any,
   activeNotebookEditor: undefined as any,
+  visibleTextEditors: [] as any[],
   onDidChangeActiveTextEditor: (_handler: any) => ({ dispose: () => {} }),
   onDidChangeTextEditorSelection: (_handler: any) => ({ dispose: () => {} }),
   onDidChangeActiveNotebookEditor: (_handler: any) => ({ dispose: () => {} }),
@@ -177,6 +178,27 @@ export const FileChangeType = {
   Changed: 2,
   Deleted: 3,
 };
+
+export class FileSystemError extends Error {
+  code = 'Unknown';
+
+  constructor(messageOrUri?: string | any) {
+    super(typeof messageOrUri === 'string' ? messageOrUri : messageOrUri?.toString?.() ?? '');
+  }
+
+  private static _create(code: string, messageOrUri?: string | any): FileSystemError {
+    const error = new FileSystemError(messageOrUri);
+    error.code = code;
+    return error;
+  }
+
+  static FileNotFound(messageOrUri?: string | any) { return FileSystemError._create('FileNotFound', messageOrUri); }
+  static FileExists(messageOrUri?: string | any) { return FileSystemError._create('FileExists', messageOrUri); }
+  static FileNotADirectory(messageOrUri?: string | any) { return FileSystemError._create('FileNotADirectory', messageOrUri); }
+  static FileIsADirectory(messageOrUri?: string | any) { return FileSystemError._create('FileIsADirectory', messageOrUri); }
+  static NoPermissions(messageOrUri?: string | any) { return FileSystemError._create('NoPermissions', messageOrUri); }
+  static Unavailable(messageOrUri?: string | any) { return FileSystemError._create('Unavailable', messageOrUri); }
+}
 
 export const FileType = {
   Unknown: 0,

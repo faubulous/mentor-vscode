@@ -31,6 +31,9 @@ import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sp
 import { ShaclProfileSettingsService } from '@src/services/validation/shacl-profile-settings-service';
 import { ShaclValidationProfilesMigration, ShaclValidationScopeMigration } from '@src/services/validation/migrations';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
+import { ShapeGraphService, USER_SHAPES_FOLDER } from '@src/services/validation/shape-graph-service';
+import { SettingsFileStore } from './core/settings-file-store';
+import { UserFileSystemProvider } from '@src/providers/user-file-system-provider';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
 import { IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
@@ -148,6 +151,25 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	const shaclValidationService = new ShaclValidationService(context, store, documentContextService, documentFactory, shaclProfileSettingsService);
 	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
+
+	// User shape files live in the user-level mentor.shacl.shapes settings value and
+	// are served as user:///shapes/<file> documents. The folder must be registered
+	// before the UserFileSystemProvider is constructed in registerProviders.
+	const userShapeFileStore = new SettingsFileStore('shacl.shapes');
+	UserFileSystemProvider.registerFolder(USER_SHAPES_FOLDER, userShapeFileStore);
+	container.registerInstance(ServiceToken.UserShapeFileStore, userShapeFileStore);
+
+	const shapeGraphService = new ShapeGraphService(store, userShapeFileStore, shaclProfileSettingsService);
+	container.registerInstance(ServiceToken.ShapeGraphService, shapeGraphService);
+
+	context.subscriptions.push(userShapeFileStore, shapeGraphService);
+
+	// When shape graphs change (editor save, Settings Sync update, cleanup), refresh
+	// the open documents' validation state and the profile health check.
+	context.subscriptions.push(shapeGraphService.onDidChangeShapeGraphs(() => {
+		shaclValidationService.revalidateOpenDocuments();
+		shaclValidationService.checkShaclProfiles();
+	}));
 
 	// Register the notebook controller for the Mentor Notebook kernel.
 	const notebookController = new NotebookController(context, documentContextService, shaclValidationService, sparqlQueryService);

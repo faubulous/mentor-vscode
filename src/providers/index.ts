@@ -10,5 +10,7 @@ export * from './workspace-graph-definition-provider';
 export * from './resource-tooltip-provider';
 export * from './workspace-file-system-provider';
 export * from './template-file-system-provider';
+export * from './user-file-system-provider';
+export * from './user-uri';
 export * from './workspace-uri-link-provider';
 export * from './workspace-uri';

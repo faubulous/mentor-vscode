@@ -29,6 +29,11 @@ export const validationProfilesSection = {
 	keys: [
 		'shacl.validation',
 	],
+	// User shape files are stored under this key; the section manages them
+	// through the profile editor rather than rendering the raw value.
+	hiddenKeys: [
+		'shacl.shapes',
+	],
 } as const satisfies SettingsSectionDescriptor;
 
 const VALIDATION_KEY = 'shacl.validation';
@@ -165,10 +170,9 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 
 	const hasWorkspace = useContext(SettingsWorkspaceContext);
 
-	// Profiles are workspace-scope only (their shapes and paths are
-	// workspace-relative), but the user scope is still read and written for
-	// tolerance: hand-edited or pre-migration user-scope profiles are shown and
-	// get moved into the workspace when edited. The shared hook owns the
+	// Profiles live in the workspace scope (shared via version control) or the
+	// user scope (portable profiles referencing only built-in graphs and user
+	// shapes, synced via Settings Sync). The shared hook owns the
 	// read/diff/write mechanics (clearing a scope that ends up empty).
 	const { userValue, workspaceValue, userRef, workspaceRef, commit } = useScopedSettingValue<ShaclValidationSettings>({
 		source: MENTOR_SETTINGS_SOURCE,
@@ -204,6 +208,14 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 	// The pending apply-callback of the interactive pattern editor; only one
 	// host quick pick can be open at a time.
 	const patternEditRef = useRef<((pattern: string) => void) | undefined>(undefined);
+
+	// The pending apply-callback of the create-shape flow: adds the created user
+	// shape URI to the open profile draft once the host reports it.
+	const createShapeRef = useRef<((uri: string) => void) | undefined>(undefined);
+
+	// Lets the once-bound message handler post follow-up messages (the messaging
+	// object is created after the handler).
+	const messagingRef = useRef<{ postMessage: (message: ValidationProfilesMessages) => void } | undefined>(undefined);
 
 	// The preset awaiting a shapes-copy result from the host, keyed by preset
 	// id, so the editor can be opened once the workspace copies are written.
@@ -268,12 +280,28 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 
 				setEditing(prev => (prev?.id === profileId && scopeToKey(prev.scope) === scope) ? undefined : prev);
 				setEditorDirty(false);
+
+				// The deletion may have left user shape files unreferenced; the host
+				// re-reads the committed settings and offers to delete the orphans.
+				messagingRef.current?.postMessage({ id: 'CheckOrphanedShapes' });
+				return;
+			}
+			case 'CreateUserShapeResult': {
+				const apply = createShapeRef.current;
+
+				createShapeRef.current = undefined;
+
+				if (message.uri) {
+					apply?.(message.uri);
+				}
+
 				return;
 			}
 		}
 	}, []);
 
 	const messaging = useScopedWebviewMessaging<ValidationProfilesMessages>('validation.profiles', handleMessage);
+	messagingRef.current = messaging;
 
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetShapeCandidates' });
@@ -357,7 +385,7 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 		setEditing(undefined);
 	};
 
-	const handleCreate = () => {
+	const handleCreate = (scope: ConfigurationScope) => {
 		setEditorMode('create');
 		setEditing({
 			id: '',
@@ -366,7 +394,7 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 			includeFiles: [],
 			excludeFiles: [],
 			description: '',
-			scope: ConfigurationScope.Workspace,
+			scope,
 		});
 	};
 
@@ -377,11 +405,19 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 		setEditing({ ...profile, name: profile.name.trim() || profile.id });
 	};
 
-	// Creates a profile from a built-in preset: the preset's shapes are copied into
-	// the workspace (frozen, version-controlled) and the New Profile dialog opens
-	// once the host has written them. Without a workspace to copy into, the host
-	// reports an error notification.
+	// Creates a profile from a built-in preset. With a workspace open, the
+	// preset's shapes are copied into the workspace (frozen, version-controlled)
+	// and the New Profile dialog opens once the host has written them. Without a
+	// workspace, the profile is created in the user scope referencing the
+	// bundled preset graphs directly — no copy is needed since the graphs are
+	// loaded at activation.
 	const handleUsePreset = (preset: ValidationPreset) => {
+		if (!hasWorkspace) {
+			setEditorMode('create');
+			setEditing(presetToDraft(preset, ConfigurationScope.User, [...preset.shapes]));
+			return;
+		}
+
 		pendingPresetRef.current[preset.id] = { preset, scope: ConfigurationScope.Workspace };
 		messaging?.postMessage({ id: 'WritePresetShapes', presetId: preset.id });
 	};
@@ -426,6 +462,13 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 	const handleEditEntry = (pattern: string, apply: (newPattern: string) => void) => {
 		patternEditRef.current = apply;
 		messaging?.postMessage({ id: 'EditPathPattern', pattern });
+	};
+
+	// Prompts the host for a file name, creates the user shape file and adds the
+	// resulting user:/// URI to the open profile draft once reported back.
+	const handleCreateShape = (apply: (uri: string) => void) => {
+		createShapeRef.current = apply;
+		messaging?.postMessage({ id: 'CreateUserShape' });
 	};
 
 	// The names shown in the duplicate-name hint: everything except the profile
@@ -486,6 +529,7 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 						})}
 						onEditEntry={handleEditEntry}
 						onOpenShape={(uri) => messaging?.postMessage({ id: 'OpenShapeGraph', uri })}
+						onCreateShape={handleCreateShape}
 						hasWorkspace={hasWorkspace}
 						onSave={handleSave}
 						onDelete={handleDelete}

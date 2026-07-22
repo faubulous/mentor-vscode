@@ -11,6 +11,7 @@ export const appearanceDisplaySection = {
 	id: 'appearance.display',
 	label: 'Display',
 	component: DisplaySection,
+	defaultScope: 'workspace',
 	keys: [
 		'predicates.label',
 		'predicates.description'

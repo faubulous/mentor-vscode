@@ -48,10 +48,25 @@ vscode-textfield .root {
 	background: var(--vscode-list-hoverBackground);
 }
 
+/* Selection colors follow the focus state, matching native VS Code lists:
+   the active-selection colors while the navigation has focus, the
+   inactive-selection colors otherwise. */
 .settings-nav-group-header.active {
+	background: var(--vscode-list-inactiveSelectionBackground);
+	color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-foreground));
+	font-weight: 600;
+}
+
+.settings-nav:focus-within .settings-nav-group-header.active {
 	background: var(--vscode-list-activeSelectionBackground);
 	color: var(--vscode-list-activeSelectionForeground);
-	font-weight: 600;
+}
+
+/* The keyboard focus indicator, drawn inside the row like in native lists. */
+.settings-nav-group-header:focus-visible,
+.settings-nav-item:focus-visible {
+	outline: 1px solid var(--vscode-list-focusOutline, var(--vscode-focusBorder));
+	outline-offset: -1px;
 }
 
 .settings-nav-group-header .codicon {
@@ -83,9 +98,14 @@ vscode-textfield .root {
 }
 
 .settings-nav-item.active {
+	background: var(--vscode-list-inactiveSelectionBackground);
+	color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-foreground));
+	font-weight: 600;
+}
+
+.settings-nav:focus-within .settings-nav-item.active {
 	background: var(--vscode-list-activeSelectionBackground);
 	color: var(--vscode-list-activeSelectionForeground);
-	font-weight: 600;
 }
 
 /* Content area */
@@ -789,9 +809,8 @@ vscode-textarea.monospace {
 	padding: var(--mentor-space-2) var(--mentor-space-5) var(--mentor-space-2) var(--mentor-space-3);
 	background: var(--vscode-list-hoverBackground);
 	border-radius: var(--vscode-cornerRadius-small);
-	border-left: 3px solid transparent;
 	cursor: pointer;
-	transition: background-color 0.1s ease, border-color 0.2s ease;
+	transition: background-color 0.1s ease;
 }
 
 .settings-item:hover,
@@ -805,46 +824,66 @@ vscode-textarea.monospace {
 	outline-offset: -1px;
 }
 
+/* Shared success/warning/error row status (see SettingsListItem's `status`
+   prop and the connection-test classes): tints the row background and colors
+   the leading icon and the right-aligned status message in the status color.
+   The colors are the shared --mentor-status-* tokens, so the rows stay in
+   sync with the stats dashboards. Hover/selection keeps a visible tint by
+   mixing the status color into the selection background. */
 .settings-item.testing {
-	border-left-color: var(--vscode-textLink-activeForeground);
+	background: color-mix(in srgb, var(--vscode-textLink-activeForeground) 12%, var(--vscode-list-hoverBackground));
 }
 
+.settings-item.testing:hover,
+.settings-item.testing.selected {
+	background: color-mix(in srgb, var(--vscode-textLink-activeForeground) 12%, var(--vscode-list-activeSelectionBackground));
+}
+
+.settings-item.status-success,
 .settings-item.test-success {
-	border-left-color: var(--vscode-notebookStatusSuccessIcon-foreground);
+	background: color-mix(in srgb, var(--mentor-status-success-foreground) 12%, var(--vscode-list-hoverBackground));
 }
 
-.settings-item.test-error {
-	border-left-color: var(--vscode-notebookStatusErrorIcon-foreground);
+.settings-item.status-success:hover,
+.settings-item.status-success.selected,
+.settings-item.test-success:hover,
+.settings-item.test-success.selected {
+	background: color-mix(in srgb, var(--mentor-status-success-foreground) 12%, var(--vscode-list-activeSelectionBackground));
 }
 
-/* Shared warning/error row status (see SettingsListItem's `status` prop):
-   tints the row background and the leading icon in the status color, and
-   colors the right-aligned status message. Hover/selection keeps a visible
-   tint by mixing the status color into the selection background. */
+.settings-item.status-success .settings-item-icon,
+.settings-item.test-success .settings-item-icon {
+	color: var(--mentor-status-success-foreground);
+}
+
 .settings-item.status-warning {
-	background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 12%, var(--vscode-list-hoverBackground));
+	background: color-mix(in srgb, var(--mentor-status-warning-foreground) 12%, var(--vscode-list-hoverBackground));
 }
 
 .settings-item.status-warning:hover,
 .settings-item.status-warning.selected {
-	background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 12%, var(--vscode-list-activeSelectionBackground));
+	background: color-mix(in srgb, var(--mentor-status-warning-foreground) 12%, var(--vscode-list-activeSelectionBackground));
 }
 
 .settings-item.status-warning .settings-item-icon {
-	color: var(--vscode-editorWarning-foreground);
+	color: var(--mentor-status-warning-foreground);
 }
 
-.settings-item.status-error {
-	background: color-mix(in srgb, var(--vscode-notebookStatusErrorIcon-foreground) 12%, var(--vscode-list-hoverBackground));
+.settings-item.status-error,
+.settings-item.test-error {
+	background: color-mix(in srgb, var(--mentor-status-error-foreground) 12%, var(--vscode-list-hoverBackground));
 }
 
 .settings-item.status-error:hover,
-.settings-item.status-error.selected {
-	background: color-mix(in srgb, var(--vscode-notebookStatusErrorIcon-foreground) 12%, var(--vscode-list-activeSelectionBackground));
+.settings-item.status-error.selected,
+.settings-item.test-error:hover,
+.settings-item.test-error.selected {
+	background: color-mix(in srgb, var(--mentor-status-error-foreground) 12%, var(--vscode-list-activeSelectionBackground));
 }
 
-.settings-item.status-error .settings-item-icon {
-	color: var(--vscode-notebookStatusErrorIcon-foreground);
+.settings-item.status-error .settings-item-icon,
+.settings-item.test-error .settings-item-icon {
+	color: var(--mentor-status-error-foreground);
 }
 
 .settings-item-status {
@@ -855,12 +894,16 @@ vscode-textarea.monospace {
 	line-height: 1.5em;
 }
 
+.settings-item.status-success .settings-item-status {
+	color: var(--mentor-status-success-foreground);
+}
+
 .settings-item.status-warning .settings-item-status {
-	color: var(--vscode-editorWarning-foreground);
+	color: var(--mentor-status-warning-foreground);
 }
 
 .settings-item.status-error .settings-item-status {
-	color: var(--vscode-notebookStatusErrorIcon-foreground);
+	color: var(--mentor-status-error-foreground);
 }
 
 .settings-item-icon {
@@ -876,11 +919,11 @@ vscode-textarea.monospace {
 }
 
 .settings-item-icon.icon-success {
-	color: var(--vscode-notebookStatusSuccessIcon-foreground);
+	color: var(--mentor-status-success-foreground);
 }
 
 .settings-item-icon.icon-error {
-	color: var(--vscode-notebookStatusErrorIcon-foreground);
+	color: var(--mentor-status-error-foreground);
 }
 
 .settings-item-body {

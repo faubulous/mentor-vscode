@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
+import { UserUri } from './user-uri';
 
 /**
  * A helper class which provides methods to convert between absolute file system 
@@ -50,12 +51,20 @@ export class WorkspaceUri {
 	 * serializing `workspace:///path` as `workspace:/path`. This method ensures the
 	 * canonical triple-slash form `workspace:///path` is always produced.
 	 * 
-	 * For non-workspace URIs, delegates to `toString(true)` (skip encoding).
+	 * For `user:` URIs, delegates to {@link UserUri.toCanonicalString}, which applies
+	 * the same authority fix — this matters because graph IRIs derived from open
+	 * documents flow through this method, and a `user:///` document must produce
+	 * the same graph IRI here as the settings-backed shape loader uses.
+	 * For other non-workspace URIs, delegates to `toString(true)` (skip encoding).
 	 * For string inputs, returns the string unchanged.
 	 */
 	static toCanonicalString(uri: vscode.Uri | string): string {
 		if (typeof uri === 'string') {
 			return uri;
+		}
+
+		if (uri.scheme === UserUri.uriScheme) {
+			return UserUri.toCanonicalString(uri);
 		}
 
 		if (uri.scheme !== this.uriScheme) {
@@ -117,6 +126,14 @@ export class WorkspaceUri {
 			}
 
 			return result;
+		}
+
+		// Only translate schemes that actually address workspace files. Virtual schemes
+		// (user:, untitled:, mentor-template:, …) must keep their own identity — matching
+		// them by path prefix would mis-map e.g. `user:///shapes/x.ttl` to a workspace URI
+		// whenever the effective root path happens to be a prefix of the virtual path.
+		if (!this.supportedSchemes.has(documentIri.scheme)) {
+			return undefined;
 		}
 
 		const root = this.getEffectiveRootUri();

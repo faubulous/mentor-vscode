@@ -4,9 +4,12 @@ import { Store } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { isValidPathKey, matchesPathKey, matchesProfilePaths, toDocumentPatternKey, toPathEntries, ShaclDocumentLocation } from '@src/services/validation/shacl-validation-configuration';
-import { IWorkspaceFileService } from '@src/services/core';
+import { IWorkspaceFileService, SettingsFileStore } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { UserUri } from '@src/providers/user-uri';
+import { ShapeGraphService } from '@src/services/validation/shape-graph-service';
+import { createUserShapeFile } from '@src/commands/create-user-shape';
 import { writePresetShapes } from '@src/services/validation/preset-shape-writer';
 import { getPresetShapeSource } from '@src/services/validation/presets';
 import { getShapeGraphCandidates } from '@src/utilities';
@@ -50,15 +53,37 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 		// Shape graphs appear as documents are indexed; keep the candidate list live.
 		const documentContextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 
+		const postCandidates = () => {
+			this._post({
+				section: SECTION_ID,
+				id: 'GetShapeCandidatesResult',
+				candidates: this._getShapeCandidates(),
+			});
+		};
+
 		this._disposables.push(
-			documentContextService.onDidChangeDocumentContext(() => {
-				this._post({
-					section: SECTION_ID,
-					id: 'GetShapeCandidatesResult',
-					candidates: getShapeGraphCandidates(container.resolve<Store>(ServiceToken.Store)),
-				});
-			})
+			documentContextService.onDidChangeDocumentContext(postCandidates),
+			// User shape graphs also change without any document being open, e.g.
+			// through a Settings Sync update or the orphan cleanup command.
+			container.resolve<ShapeGraphService>(ServiceToken.ShapeGraphService).onDidChangeShapeGraphs(postCandidates)
 		);
+	}
+
+	/**
+	 * The shape graphs offered in the pickers: graphs in the store that contain
+	 * shape definitions, plus every user shape file. A user shape file is a
+	 * candidate by definition — its whole purpose is to hold shapes — so it is
+	 * listed even while it is still empty or holds only a commented skeleton
+	 * (in which case its graph is absent from the store).
+	 */
+	private _getShapeCandidates(): string[] {
+		const store = container.resolve<Store>(ServiceToken.Store);
+		const shapeGraphService = container.resolve<ShapeGraphService>(ServiceToken.ShapeGraphService);
+
+		const userShapeUris = shapeGraphService.getUserShapeFileNames()
+			.map(fileName => shapeGraphService.getUserShapeGraphUri(fileName));
+
+		return [...new Set([...getShapeGraphCandidates(store), ...userShapeUris])].sort();
 	}
 
 	async handleMessage(message: SettingsSectionMessages): Promise<boolean> {
@@ -67,7 +92,7 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 				this._post({
 					section: SECTION_ID,
 					id: 'GetShapeCandidatesResult',
-					candidates: getShapeGraphCandidates(container.resolve<Store>(ServiceToken.Store)),
+					candidates: this._getShapeCandidates(),
 				});
 
 				return true;
@@ -136,6 +161,10 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 					} else {
 						vscode.window.showWarningMessage(`Cannot open shape graph: ${message.uri}`);
 					}
+				} else if (parsed.scheme === UserUri.uriScheme) {
+					// User shape files are served by the user file system provider —
+					// open the editable document, not a serialized graph copy.
+					await vscode.window.showTextDocument(parsed, { preview: false });
 				} else {
 					// Other graphs (e.g. built-in vocabularies) are viewed through the
 					// graph exporter, which serializes the store graph into an editor.
@@ -192,8 +221,67 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 
 				return true;
 			}
+			case 'CreateUserShape': {
+				const uri = await createUserShapeFile();
+
+				this._post({ section: SECTION_ID, id: 'CreateUserShapeResult', uri });
+
+				return true;
+			}
+			case 'CheckOrphanedShapes': {
+				await this._promptDeleteOrphanedShapes();
+
+				return true;
+			}
 			default: {
 				return false;
+			}
+		}
+	}
+
+	/**
+	 * Offers to delete user shape files that are no longer referenced by any
+	 * validation profile, after a profile deletion. The webview posts the check
+	 * right after committing the deletion, so this first waits for the settings
+	 * write to land (bounded by a timeout) before computing the orphans.
+	 */
+	private async _promptDeleteOrphanedShapes(): Promise<void> {
+		await new Promise<void>(resolve => {
+			const timer = setTimeout(() => {
+				disposable.dispose();
+				resolve();
+			}, 1500);
+
+			const disposable = vscode.workspace.onDidChangeConfiguration(e => {
+				if (e.affectsConfiguration('mentor.shacl.validation')) {
+					clearTimeout(timer);
+					disposable.dispose();
+					resolve();
+				}
+			});
+		});
+
+		const shapeGraphService = container.resolve<ShapeGraphService>(ServiceToken.ShapeGraphService);
+		const orphaned = shapeGraphService.getOrphanedUserShapeFiles();
+
+		if (orphaned.length === 0) {
+			return;
+		}
+
+		const fileList = orphaned.join(', ');
+		const action = await vscode.window.showWarningMessage(
+			`The user shape file${orphaned.length === 1 ? '' : 's'} ${fileList} ${orphaned.length === 1 ? 'is' : 'are'} `
+			+ 'no longer referenced by any validation profile in this workspace or your user settings. Delete? '
+			+ 'Profiles in other workspaces may still reference them.',
+			'Delete',
+			'Keep'
+		);
+
+		if (action === 'Delete') {
+			const files = container.resolve<SettingsFileStore>(ServiceToken.UserShapeFileStore);
+
+			for (const fileName of orphaned) {
+				await files.delete(fileName);
 			}
 		}
 	}

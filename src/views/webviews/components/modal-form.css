@@ -142,7 +142,7 @@
 }
 
 .modal-form .section-description {
-	margin: 0 0 0.5em;
+	margin: 0.5em 0;
 	color: var(--vscode-descriptionForeground);
 }
 

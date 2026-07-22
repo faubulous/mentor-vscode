@@ -297,6 +297,28 @@ export class ShaclValidationService implements vscode.Disposable {
 	}
 
 	/**
+	 * Re-runs on-change validation for all currently open documents, e.g. after
+	 * shape graphs were reloaded from changed user shape files. Respects the
+	 * `mentor.shacl.enabled` / `validateOnChange` settings and all other
+	 * auto-validation guards.
+	 */
+	async revalidateOpenDocuments(): Promise<void> {
+		const seen = new Set<string>();
+
+		for (const editor of vscode.window.visibleTextEditors) {
+			const key = editor.document.uri.toString();
+
+			if (seen.has(key)) {
+				continue;
+			}
+
+			seen.add(key);
+
+			await this._autoValidateOnChange(this._contextService.contexts[key]);
+		}
+	}
+
+	/**
 	 * Get the fully-resolved validation state of a document, including the
 	 * applied profile ids, for UI purposes such as code lenses.
 	 */

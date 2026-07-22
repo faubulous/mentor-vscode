@@ -28,8 +28,33 @@
 	font-variant-numeric: tabular-nums;
 }
 
-.stats-dashboard-metric.has-errors .stats-dashboard-value {
-	color: var(--vscode-errorForeground);
+/* Status metrics tint the cell background and color the value and its label
+   in the shared status tokens — the same treatment as the settings list rows. */
+.stats-dashboard-metric.status-success {
+	background: color-mix(in srgb, var(--mentor-status-success-foreground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.stats-dashboard-metric.status-success .stats-dashboard-value,
+.stats-dashboard-metric.status-success .stats-dashboard-label {
+	color: var(--mentor-status-success-foreground);
+}
+
+.stats-dashboard-metric.status-warning {
+	background: color-mix(in srgb, var(--mentor-status-warning-foreground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.stats-dashboard-metric.status-warning .stats-dashboard-value,
+.stats-dashboard-metric.status-warning .stats-dashboard-label {
+	color: var(--mentor-status-warning-foreground);
+}
+
+.stats-dashboard-metric.status-error {
+	background: color-mix(in srgb, var(--mentor-status-error-foreground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.stats-dashboard-metric.status-error .stats-dashboard-value,
+.stats-dashboard-metric.status-error .stats-dashboard-label {
+	color: var(--mentor-status-error-foreground);
 }
 
 .stats-dashboard-label {

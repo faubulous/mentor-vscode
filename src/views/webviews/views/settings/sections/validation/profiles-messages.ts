@@ -20,4 +20,12 @@ export type ValidationProfilesMessages =
 	| { id: 'WritePresetShapesResult'; presetId: string; uri?: string; error?: string }
 	| { id: 'ValidateProfile'; profileId: string }
 	| { id: 'DeleteValidationProfile'; profileId: string; name: string; scope: ScopeKey }
-	| { id: 'ValidationProfileDeleted'; profileId: string; scope: ScopeKey };
+	| { id: 'ValidationProfileDeleted'; profileId: string; scope: ScopeKey }
+	// Prompts for a file name, creates a user shape file (user:///shapes/…) seeded
+	// with a SHACL skeleton and opens it in an editor. The result carries the
+	// canonical graph URI, or none when the prompt was dismissed.
+	| { id: 'CreateUserShape' }
+	| { id: 'CreateUserShapeResult'; uri?: string }
+	// Posted by the webview after a profile deletion has been committed; the host
+	// checks for newly orphaned user shape files and offers to delete them.
+	| { id: 'CheckOrphanedShapes' };

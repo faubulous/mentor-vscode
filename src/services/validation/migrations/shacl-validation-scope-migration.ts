@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getConfig } from '@src/utilities/vscode/config';
 import { ISettingsMigration } from '@src/services/core/settings-migration.interface';
+import { requiresWorkspaceScope } from '../shacl-validation-configuration';
 
 const KEY = 'shacl.validation';
 
@@ -20,28 +21,28 @@ interface StoredSettings {
 }
 
 /**
- * Moves SHACL validation profiles out of the user (global) scope and drops the
- * removed `shapeVersions` field from stored profiles.
+ * Moves *workspace-bound* SHACL validation profiles out of the user (global)
+ * scope and drops the removed `shapeVersions` field from stored profiles.
  *
- * Profiles are workspace-relative through and through — their `shapes` are
- * `workspace:///` URIs and their include/exclude entries are workspace-relative
- * paths — so a user-scope profile only ever made sense for the workspace it was
- * created in and silently misbehaves in every other one. Profiles are therefore
- * workspace-scope only: any global profiles are merged into the workspace value
- * (an existing workspace profile wins on an id collision, matching the runtime
- * merge precedence) and the global value is cleared. Without an open workspace
- * folder the global value is left in place, minus the pruned fields.
+ * A profile that references `workspace:///` shape URIs only ever made sense for
+ * the workspace it was created in and silently misbehaves in every other one —
+ * such profiles are merged into the workspace value (an existing workspace
+ * profile wins on an id collision, matching the runtime merge precedence).
+ * Portable profiles — those referencing only bundled graphs and `user:///`
+ * shapes — legitimately live in the user scope and are left there. Without an
+ * open workspace folder the global value is left in place, minus the pruned
+ * fields.
  *
  * Runs after {@link ShaclValidationProfilesMigration}, so only the
  * profile-based model needs to be handled here.
  *
- * Idempotent: does nothing when no global profiles and no `shapeVersions`
- * fields remain.
+ * Idempotent: does nothing when no workspace-bound global profiles and no
+ * `shapeVersions` fields remain.
  */
 export class ShaclValidationScopeMigration implements ISettingsMigration {
 	readonly id = 'shacl.validation.workspace-scope';
 
-	readonly description = 'Move SHACL validation profiles into workspace settings and drop the removed shapeVersions field.';
+	readonly description = 'Move workspace-bound SHACL validation profiles into workspace settings and drop the removed shapeVersions field.';
 
 	async migrate(): Promise<void> {
 		const config = getConfig();
@@ -56,7 +57,23 @@ export class ShaclValidationScopeMigration implements ISettingsMigration {
 		const canWriteWorkspace = !!vscode.workspace.workspaceFolders?.length;
 
 		const globalProfiles = global.value?.profiles ?? {};
-		const moveGlobal = canWriteWorkspace && Object.keys(globalProfiles).length > 0;
+
+		// Only profiles referencing workspace:/// shapes are bound to the workspace;
+		// portable profiles (bundled graphs, user:/// shapes) stay in the user scope.
+		const boundProfiles: Record<string, StoredProfile> = {};
+		const portableProfiles: Record<string, StoredProfile> = {};
+
+		for (const [id, profile] of Object.entries(globalProfiles)) {
+			const shapes = Array.isArray(profile?.shapes) ? profile.shapes as string[] : undefined;
+
+			if (requiresWorkspaceScope(shapes)) {
+				boundProfiles[id] = profile;
+			} else {
+				portableProfiles[id] = profile;
+			}
+		}
+
+		const moveGlobal = canWriteWorkspace && Object.keys(boundProfiles).length > 0;
 
 		if (moveGlobal) {
 			const workspaceSettings: StoredSettings = { ...(workspace.value ?? {}) };
@@ -64,12 +81,20 @@ export class ShaclValidationScopeMigration implements ISettingsMigration {
 			// An existing workspace profile wins on an id collision, matching the
 			// runtime merge precedence of the profile settings service.
 			workspaceSettings.profiles = {
-				...globalProfiles,
+				...boundProfiles,
 				...(workspace.value?.profiles ?? {}),
 			};
 
+			const globalSettings: StoredSettings = { ...(global.value ?? {}) };
+
+			if (Object.keys(portableProfiles).length > 0) {
+				globalSettings.profiles = portableProfiles;
+			} else {
+				delete globalSettings.profiles;
+			}
+
 			await config.update(KEY, workspaceSettings, vscode.ConfigurationTarget.Workspace);
-			await config.update(KEY, undefined, vscode.ConfigurationTarget.Global);
+			await config.update(KEY, Object.keys(globalSettings).length > 0 ? globalSettings : undefined, vscode.ConfigurationTarget.Global);
 
 			return;
 		}

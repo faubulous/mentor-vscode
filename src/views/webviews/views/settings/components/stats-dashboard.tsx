@@ -16,9 +16,11 @@ export interface StatsDashboardMetric {
 	label: string;
 
 	/**
-	 * Highlights the value in the error color, e.g. for non-zero error counts.
+	 * Highlights the value in the corresponding status color (the shared
+	 * `--mentor-status-*` tokens, in sync with the settings list rows), e.g.
+	 * `error` for non-zero error counts or `warning` for non-zero warnings.
 	 */
-	error?: boolean;
+	status?: 'success' | 'warning' | 'error';
 }
 
 export interface StatsDashboardProps {
@@ -59,7 +61,7 @@ export function StatsDashboard({ metrics }: StatsDashboardProps) {
 	return (
 		<div className="stats-dashboard">
 			{metrics.map(metric => (
-				<div key={metric.label} className={`stats-dashboard-metric${metric.error ? ' has-errors' : ''}`}>
+				<div key={metric.label} className={`stats-dashboard-metric${metric.status ? ` status-${metric.status}` : ''}`}>
 					<span className="stats-dashboard-value">{metric.value}</span>
 					<span className="stats-dashboard-label">{metric.label}</span>
 				</div>

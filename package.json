@@ -587,6 +587,24 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.createUserShape",
+        "title": "New User Shape File...",
+        "icon": "$(new-file)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.importUserShape",
+        "title": "Import Workspace Shape File into User Shapes...",
+        "icon": "$(cloud-upload)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.cleanUpUserShapes",
+        "title": "Clean Up User Shapes...",
+        "icon": "$(trash)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.renameWorkspaceItem",
         "title": "Rename...",
         "icon": "$(edit)",
@@ -1731,6 +1749,7 @@
             "default": [
               "http://www.w3.org/2004/02/skos/core#definition",
               "http://www.w3.org/2000/01/rdf-schema#comment",
+              "http://www.w3.org/ns/shacl#message",
               "http://purl.org/dc/terms/description",
               "http://purl.org/dc/terms/abstract",
               "https://schema.org/description",
@@ -1927,7 +1946,7 @@
                     },
                     "shapes": {
                       "type": "array",
-                      "description": "SHACL shape graphs, referenced by graph URI. Workspace files are addressed by their canonical 'workspace:///' URI, built-in vocabulary graphs by their namespace URI (e.g. 'http://www.w3.org/ns/shacl#').",
+                      "description": "SHACL shape graphs, referenced by graph URI. Workspace files are addressed by their canonical 'workspace:///' URI, user shape files by their 'user:///' URI, built-in vocabulary graphs by their namespace URI (e.g. 'http://www.w3.org/ns/shacl#').",
                       "items": {
                         "type": "string"
                       },
@@ -1959,6 +1978,35 @@
               }
             },
             "additionalProperties": false,
+            "default": {}
+          },
+          "mentor.shacl.shapes": {
+            "type": "object",
+            "scope": "application",
+            "title": "User SHACL Shape Files",
+            "description": "SHACL shape files stored in the user settings and addressed as 'user:///shapes/<name>'. Managed by Mentor (create user shapes from the validation profile editor); the content is stored gzip-compressed and synced via Settings Sync.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "encoding",
+                "content"
+              ],
+              "properties": {
+                "encoding": {
+                  "type": "string",
+                  "enum": [
+                    "gzip+base64",
+                    "plain"
+                  ],
+                  "description": "How the content is encoded. Mentor always writes 'gzip+base64'; 'plain' is tolerated for hand-edited entries."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "The file content, encoded as declared by 'encoding'."
+                }
+              }
+            },
             "default": {}
           },
           "mentor.shacl.enabled": {

@@ -139,6 +139,12 @@
 	color: var(--vscode-editorWarning-foreground);
 }
 
+/* Blocking validation errors (they prevent saving), as opposed to the
+   non-blocking warnings above. */
+.validation-error {
+	color: var(--vscode-errorForeground) !important;
+}
+
 .validation-empty-message {
 	color: var(--vscode-descriptionForeground);
 	font-style: italic;
@@ -166,8 +172,11 @@
 }
 
 /* Right-aligns the Edit/Done toggle on the "Included Shapes" title line. */
-.validation-shape-edit-toggle {
+.validation-shape-actions {
 	margin-left: auto;
+	display: flex;
+	flex-direction: row;
+	gap: var(--mentor-space-4);
 }
 
 .validation-paths-header .validation-info-icon {
@@ -223,8 +232,4 @@
 	flex-wrap: wrap;
 	gap: var(--mentor-space-2);
 	margin-top: var(--mentor-space-2);
-}
-
-vscode-toolbar-button.primary {
-	color: var(--vscode-textLink-foreground);
 }

@@ -87,6 +87,7 @@ export function EditorFormattingSection({
 				{...vscodeRowProps('formatOnSave')}
 				label="Format on save"
 				description="Automatically format documents on save."
+				scope='user'
 			>
 				<vscode-checkbox
 					checked={vscodeSlice['formatOnSave']?.value === true}

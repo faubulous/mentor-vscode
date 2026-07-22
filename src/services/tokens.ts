@@ -59,6 +59,10 @@ export enum ServiceToken {
 	/** Service for validating RDF documents against SHACL shapes. */
 	ShaclProfileSettingsService = "ShaclProfileSettingsService",
 	ShaclValidationService = "ShaclValidationService",
+	/** Service that loads the bundled preset and user shape graphs into the store. */
+	ShapeGraphService = "ShapeGraphService",
+	/** Settings-backed file store for the user shape files (mentor.shacl.shapes). */
+	UserShapeFileStore = "UserShapeFileStore",
 	/** Service that shows SPARQL activity (query execution, connection testing) in the status bar. */
 	SparqlStatusBarService = "SparqlStatusBarService",
 	/** Service for updating workspace: URI references across all indexed documents on rename. */

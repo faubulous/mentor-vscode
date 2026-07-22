@@ -4,6 +4,8 @@ import { getConfig } from '@src/utilities/vscode/config';
 import { toUniqueStringArray } from '@src/utilities/array';
 import { getGlobPatternBase } from '@src/utilities/glob';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { UserUri } from '@src/providers/user-uri';
+import { UserFileSystemProvider } from '@src/providers/user-file-system-provider';
 import {
 	findBrokenReferences,
 	getAllReferencedShapeUris,
@@ -12,6 +14,7 @@ import {
 	ShaclDocumentRename,
 } from './shacl-validation-configuration';
 import { ShaclProfileSettingsService } from './shacl-profile-settings-service';
+import { USER_SHAPES_FOLDER } from './shape-graph-service';
 
 /**
  * Keeps the `mentor.shacl.validation` settings in sync with the workspace:
@@ -241,7 +244,8 @@ export class ShaclSettingsSyncService {
 
 	/**
 	 * Checks whether a shape file URI exists: `workspace:` URIs are resolved
-	 * against the file system, other URIs are looked up as graphs in the store.
+	 * against the file system, `user:` URIs against the settings-backed user
+	 * file store, other URIs are looked up as graphs in the store.
 	 */
 	private async _shapeFileExists(uri: string): Promise<boolean> {
 		let parsed: vscode.Uri;
@@ -265,6 +269,15 @@ export class ShaclSettingsSyncService {
 			} catch {
 				return false;
 			}
+		}
+
+		if (parsed.scheme === UserUri.uriScheme) {
+			// Check the settings map, not the store: an entry that failed to parse
+			// still exists as a file and must not be reported as a broken reference.
+			const store = UserFileSystemProvider.getStore(USER_SHAPES_FOLDER);
+
+			return store !== undefined && parsed.path.startsWith(`${USER_SHAPES_FOLDER}/`)
+				&& store.has(parsed.path.slice(USER_SHAPES_FOLDER.length + 1));
 		}
 
 		return this._store.hasGraph(uri);

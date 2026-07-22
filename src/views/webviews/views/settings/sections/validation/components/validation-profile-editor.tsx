@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { ConfigurationScope } from '@src/utilities/config-scope';
+import { ConfigurationScope, scopeToKey } from '@src/utilities/config-scope';
 import { useStylesheet } from '@src/views/webviews/hooks';
-import { isValidPathKey } from '@src/services/validation/shacl-validation-configuration';
+import { isUserShapeUri, isValidPathKey, isWorkspaceShapeUri, requiresWorkspaceScope } from '@src/services/validation/shacl-validation-configuration';
 import { useSettingsItemDraft } from '../../../hooks/use-settings-item-draft';
 import { ModalSettingsItemEditor } from '../../../components/modal-settings-item-editor';
 import { ValidationProfileView, VALIDATION_STYLESHEET_ID } from '../shared';
@@ -56,6 +56,12 @@ export interface ValidationProfileEditorProps {
 	onOpenShape: (uri: string) => void;
 
 	/**
+	 * Creates a new user shape file on the host; `apply` receives the created
+	 * `user:///` URI so the editor can assign it to the profile draft.
+	 */
+	onCreateShape?: (apply: (uri: string) => void) => void;
+
+	/**
 	 * Whether a workspace folder is open; disables the Workspace scope when false.
 	 */
 	hasWorkspace?: boolean;
@@ -82,10 +88,14 @@ function cleanPaths(paths: readonly string[]): string[] {
  *
  * Profiles are stored under a stable id minted from the name at first save, so a
  * duplicate display name is only a cosmetic ambiguity — flagged with a
- * non-blocking hint, never a Save blocker. Profiles are workspace-scope only
- * (their shapes and paths are workspace-relative), so no scope picker is shown
- * and saving always targets the workspace — which also moves any legacy
- * user-scope profile into the workspace on its next edit.
+ * non-blocking hint, never a Save blocker. A profile lives in the workspace or
+ * the user scope (the title-bar scope picker), and the shape candidates follow
+ * that scope: user-scope profiles are available in every workspace and synced
+ * via Settings Sync, so they must not reference `workspace:///` shape files —
+ * such a draft cannot be saved until the scope or the shapes change. Workspace
+ * profiles are shared with the team, so personal `user:///` shapes are not
+ * offered; ones already assigned (e.g. after a scope switch) stay visible with
+ * a non-blocking hint so they can be unchecked.
  */
 export function ValidationProfileEditor({
 	profile,
@@ -97,6 +107,7 @@ export function ValidationProfileEditor({
 	onRequestEntryCount,
 	onEditEntry,
 	onOpenShape,
+	onCreateShape,
 	hasWorkspace,
 	onSave,
 	onDelete,
@@ -114,7 +125,8 @@ export function ValidationProfileEditor({
 			return d.name.trim().length > 0
 				&& all.every(isValidPathKey)
 				&& new Set(include).size === include.length
-				&& new Set(exclude).size === exclude.length;
+				&& new Set(exclude).size === exclude.length
+				&& !(scopeToKey(d.scope) === 'user' && requiresWorkspaceScope(d.shapes));
 		},
 	});
 
@@ -131,16 +143,33 @@ export function ValidationProfileEditor({
 
 	const shapeCount = draft.shapes.length;
 
+	const isUserScope = scopeToKey(draft.scope) === 'user';
+
+	// The candidates follow the draft's scope: a user-scope profile must be
+	// portable, so workspace shape files are hidden (and block saving when
+	// still assigned, e.g. after a scope switch); a workspace-scope profile is
+	// shared with the team, so personal user shapes are hidden. Shapes already
+	// assigned to the profile stay visible either way so they can be unchecked.
+	const visibleCandidates = useMemo(
+		() => isUserScope
+			? candidates.filter(uri => !isWorkspaceShapeUri(uri))
+			: candidates.filter(uri => !isUserShapeUri(uri)),
+		[candidates, isUserScope]
+	);
+
+	const workspaceShapeConflict = isUserScope && requiresWorkspaceScope(draft.shapes);
+	const hasUserShapes = !isUserScope && draft.shapes.some(isUserShapeUri);
+
 	return (
 		<ModalSettingsItemEditor
 			className="validation-profile-editor"
-			scope={ConfigurationScope.Workspace}
-			onScopeChange={() => { }}
-			showScope={false}
+			scope={draft.scope}
+			onScopeChange={(scope) => setDraft(d => ({ ...d, scope }))}
+			showScope={true}
 			hasWorkspace={hasWorkspace}
 			isNew={isNew}
-			canSave={canSave && hasWorkspace !== false}
-			onSave={() => onSave(profile.id, profile.scope, { ...draft, scope: ConfigurationScope.Workspace, name: trimmedName, includeFiles, excludeFiles })}
+			canSave={canSave && (hasWorkspace !== false || isUserScope)}
+			onSave={() => onSave(profile.id, profile.scope, { ...draft, name: trimmedName, includeFiles, excludeFiles })}
 			onDelete={() => onDelete(profile)}
 			saveTitle="Save profile"
 			deleteTitle="Delete profile"
@@ -158,7 +187,7 @@ export function ValidationProfileEditor({
 								onInput={(e: any) => setDraft(d => ({ ...d, name: (e.target as HTMLInputElement).value }))}
 							/>
 							{nameEmpty ? (
-								<p className="section-description validation-shape-warning">A name is required.</p>
+								<p className="section-description validation-error">A name is required.</p>
 							) : nameDuplicate && (
 								<p className="section-description validation-shape-warning">Another profile already uses this name.</p>
 							)}
@@ -185,11 +214,25 @@ export function ValidationProfileEditor({
 						<ValidationShapeGraphList
 							key={profile.id}
 							selected={draft.shapes}
-							candidates={candidates}
+							candidates={visibleCandidates}
 							missingShapes={missingShapes}
 							onChange={(shapes) => setDraft(d => ({ ...d, shapes }))}
 							onOpen={onOpenShape}
+							onCreateShape={onCreateShape && isUserScope
+								? () => onCreateShape((uri) => setDraft(d => d.shapes.includes(uri) ? d : { ...d, shapes: [...d.shapes, uri] }))
+								: undefined}
 						/>
+						{workspaceShapeConflict && (
+							<p className="section-description validation-error">
+								This profile references workspace shape files and must be saved in the workspace scope.
+							</p>
+						)}
+						{hasUserShapes && (
+							<p className="section-description">
+								User shapes (user:///…) are stored in your user settings and are not shared with your team —
+								teammates will see this profile as missing its shapes.
+							</p>
+						)}
 					</section>
 				</vscode-tab-panel>
 

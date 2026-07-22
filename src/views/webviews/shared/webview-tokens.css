@@ -16,6 +16,8 @@
 	/* Semantic status colors */
 	--mentor-status-success-foreground: var(--vscode-notebookStatusSuccessIcon-foreground);
 	--mentor-status-success-background: rgba(from var(--mentor-status-success-foreground) r g b / 0.1);
+	--mentor-status-warning-foreground: var(--vscode-editorWarning-foreground);
+	--mentor-status-warning-background: rgba(from var(--mentor-status-warning-foreground) r g b / 0.1);
 	--mentor-status-error-foreground: var(--vscode-notebookStatusErrorIcon-foreground);
 	--mentor-status-error-background: rgba(from var(--mentor-status-error-foreground) r g b / 0.1);
 

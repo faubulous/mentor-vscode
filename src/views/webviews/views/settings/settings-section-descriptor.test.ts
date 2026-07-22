@@ -21,6 +21,7 @@ describe('defaultScopeForKey', () => {
 	const turtleEditor: SettingsSource = { kind: 'languageEditor', languageId: 'turtle' };
 
 	it.each([
+		'predicates.label',
 		'formatting.common.maxLineWidth',
 		'formatting.sparql.uppercaseKeywords',
 		'formatting.turtle.maxLineWidth', // hidden key in the Formatting section
@@ -33,7 +34,6 @@ describe('defaultScopeForKey', () => {
 	});
 
 	it.each([
-		'predicates.label',
 		'definitionTree.labelStyle',
 		'editor.codeLensEnabled',
 		'prefixes.prefixDefinitionMode',

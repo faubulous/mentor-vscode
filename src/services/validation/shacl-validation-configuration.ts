@@ -390,6 +390,32 @@ export function getDocumentValidationState(
 }
 
 /**
+ * Whether a shape URI addresses a workspace file (`workspace:///...`).
+ * String-based so it is usable in the settings webview, which cannot import vscode.
+ */
+export function isWorkspaceShapeUri(uri: string): boolean {
+	return uri.startsWith('workspace:');
+}
+
+/**
+ * Whether a shape URI addresses a user shape file (`user:///...`), i.e. one
+ * stored in the user settings and available in every workspace.
+ */
+export function isUserShapeUri(uri: string): boolean {
+	return uri.startsWith('user:');
+}
+
+/**
+ * Whether a profile's shape references bind it to the workspace scope.
+ * Workspace shape URIs are meaningless outside the workspace they were created
+ * in, so a profile referencing one cannot be stored in the user scope. Profiles
+ * referencing only bundled graphs and user shapes are portable.
+ */
+export function requiresWorkspaceScope(shapes: readonly string[] | undefined): boolean {
+	return (shapes ?? []).some(isWorkspaceShapeUri);
+}
+
+/**
  * Returns all shape file URIs referenced by the profiles.
  */
 export function getAllReferencedShapeUris(settings: ShaclValidationSettings | undefined): string[] {

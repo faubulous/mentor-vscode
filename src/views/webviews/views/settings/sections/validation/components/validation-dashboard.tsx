@@ -21,8 +21,8 @@ export function ValidationDashboard({ stats }: ValidationDashboardProps) {
 			metrics={[
 				{ value: num(stats?.validatedFiles), label: 'Validated Files' },
 				{ value: num(stats?.skippedFiles), label: 'Skipped Files' },
-				{ value: num(stats?.warningCount), label: 'Warnings' },
-				{ value: num(stats?.errorCount), label: 'Errors', error: stats !== undefined && stats.errorCount > 0 },
+				{ value: num(stats?.warningCount), label: 'Warnings', status: stats !== undefined && stats.warningCount > 0 ? 'warning' : undefined },
+				{ value: num(stats?.errorCount), label: 'Errors', status: stats !== undefined && stats.errorCount > 0 ? 'error' : undefined },
 				{ value: stats ? formatDuration(stats.durationMs) : STATS_PLACEHOLDER, label: 'Time' },
 			]}
 		/>

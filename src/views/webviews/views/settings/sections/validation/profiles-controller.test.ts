@@ -11,10 +11,19 @@ vi.mock('tsyringe', () => ({ container: { resolve: vi.fn() } }));
 
 const BROKEN = { profiles: { 'core': ['workspace:///missing.ttl'] } };
 
-function setup(files: string[] = [], cells: { notebook: string; slug: string }[] = []) {
+function setup(files: string[] = [], cells: { notebook: string; slug: string }[] = [], userShapeFiles: string[] = []) {
 	const store = {
 		getGraphs: vi.fn(() => ['workspace:///shapes/core.ttl']),
 		any: vi.fn(() => true),
+	};
+
+	// User shape files are candidates by definition, even when their graph is
+	// empty and therefore absent from the store.
+	const shapeGraphService = {
+		getUserShapeFileNames: vi.fn(() => userShapeFiles),
+		getUserShapeGraphUri: vi.fn((fileName: string) => `user:///shapes/${fileName}`),
+		getOrphanedUserShapeFiles: vi.fn(() => [] as string[]),
+		onDidChangeShapeGraphs: vi.fn(() => ({ dispose: () => { } })),
 	};
 
 	// Cell contexts, keyed by the opaque cell-handle URI, exposing a slug-based
@@ -51,6 +60,7 @@ function setup(files: string[] = [], cells: { notebook: string; slug: string }[]
 		if (token === ServiceToken.ShaclValidationService) return validationService;
 		if (token === ServiceToken.WorkspaceFileService) return fileService;
 		if (token === ServiceToken.DocumentContextService) return contextService;
+		if (token === ServiceToken.ShapeGraphService) return shapeGraphService;
 		return {};
 	});
 
@@ -58,7 +68,7 @@ function setup(files: string[] = [], cells: { notebook: string; slug: string }[]
 	const post = vi.fn();
 	(controller as any)._post = post;
 
-	return { controller, post, store, validationService };
+	return { controller, post, store, validationService, shapeGraphService };
 }
 
 const deleteMessage = {
@@ -112,6 +122,19 @@ describe('ValidationProfilesSectionController', () => {
 		expect(post).toHaveBeenCalledWith(expect.objectContaining({
 			id: 'GetShapeCandidatesResult',
 			candidates: ['workspace:///shapes/core.ttl'],
+		}));
+	});
+
+	it('includes user shape files in the candidates even when their graph is empty', async () => {
+		// A freshly created user shape file holds only the commented skeleton, so
+		// its graph is absent from the store — it must be offered regardless.
+		const { controller, post } = setup([], [], ['drafted.ttl']);
+
+		await controller.handleMessage({ section: 'validation.profiles', id: 'GetShapeCandidates' } as any);
+
+		expect(post).toHaveBeenCalledWith(expect.objectContaining({
+			id: 'GetShapeCandidatesResult',
+			candidates: ['user:///shapes/drafted.ttl', 'workspace:///shapes/core.ttl'],
 		}));
 	});
 

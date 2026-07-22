@@ -14,6 +14,7 @@ import { WORKSPACE_CONNECTION } from './languages/sparql/services/sparql-connect
 import { ITripleStoreConfigService, IDocumentConnectionService } from './languages/sparql/services';
 import { IGraphManagementService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
+import { ShapeGraphService } from './services/validation/shape-graph-service';
 import { getConfig } from './utilities/vscode/config';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
@@ -37,6 +38,7 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	await migrationService.runMigrations();
 
 	await loadFrameworkOntologies();
+	await loadShapeGraphs();
 
 	registerLanguages();
 	registerViews(); // Views must be registered before providers, since some providers depend on the view registry.
@@ -110,6 +112,7 @@ function registerProviders(context: vscode.ExtensionContext) {
 	new providers.WorkspaceUriCodeActionProvider(context);
 	new providers.WorkspaceFileSystemProvider(context);
 	new providers.TemplateFileSystemProvider(context);
+	new providers.UserFileSystemProvider(context);
 	new providers.XsdAnyUriCodeActionProvider(context);
 	new providers.InferenceUriLinkProvider(context);
 	new providers.MentorUriHandler(context, store, prefixLookup, router);
@@ -208,12 +211,21 @@ function registerNotebookInferenceContext(context: vscode.ExtensionContext) {
 }
 
 /**
- * Loads the RDF framework ontologies into the store, which are required 
+ * Loads the RDF framework ontologies into the store, which are required
  * for providing completions and hovers for built-in concepts.
  */
 async function loadFrameworkOntologies() {
 	const store = container.resolve<Store>(ServiceToken.Store);
 	await store.loadFrameworkOntologies();
+}
+
+/**
+ * Loads the bundled preset shape graphs and the user shape files into the
+ * store, so validation profiles can reference them without workspace copies.
+ */
+async function loadShapeGraphs() {
+	const shapeGraphService = container.resolve<ShapeGraphService>(ServiceToken.ShapeGraphService);
+	await shapeGraphService.loadAll();
 }
 
 /**

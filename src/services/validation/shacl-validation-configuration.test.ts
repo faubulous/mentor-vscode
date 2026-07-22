@@ -8,10 +8,13 @@ import {
 	getMatchingProfiles,
 	getProfileDisplayName,
 	hasBrokenReferences,
+	isUserShapeUri,
 	isValidPathKey,
+	isWorkspaceShapeUri,
 	matchesPathKey,
 	matchesProfilePaths,
 	migrateShaclValidationConfig,
+	requiresWorkspaceScope,
 	resolveEffectiveShapeGraphs,
 	resolveProfileShapes,
 	toDocumentPatternKey,
@@ -34,6 +37,27 @@ import {
 const EXTS = ['.ttl', '.n3', '.nt', '.nq', '.trig', '.rdf'];
 
 describe('shacl-validation-configuration', () => {
+	describe('shape URI scope helpers', () => {
+		it('classifies shape URIs by scheme', () => {
+			expect(isWorkspaceShapeUri('workspace:///shapes/a.ttl')).toBe(true);
+			expect(isWorkspaceShapeUri('user:///shapes/a.ttl')).toBe(false);
+			expect(isWorkspaceShapeUri('https://w3id.org/mentor/shacl/profiles/ontology')).toBe(false);
+
+			expect(isUserShapeUri('user:///shapes/a.ttl')).toBe(true);
+			expect(isUserShapeUri('workspace:///shapes/a.ttl')).toBe(false);
+			expect(isUserShapeUri('https://example.org/user')).toBe(false);
+		});
+
+		it('requiresWorkspaceScope is true iff any shape is a workspace URI', () => {
+			expect(requiresWorkspaceScope(undefined)).toBe(false);
+			expect(requiresWorkspaceScope([])).toBe(false);
+			expect(requiresWorkspaceScope(['user:///shapes/a.ttl'])).toBe(false);
+			expect(requiresWorkspaceScope(['https://w3id.org/mentor/shacl/profiles/ontology'])).toBe(false);
+			expect(requiresWorkspaceScope(['workspace:///a.ttl'])).toBe(true);
+			expect(requiresWorkspaceScope(['user:///shapes/a.ttl', 'workspace:///a.ttl'])).toBe(true);
+		});
+	});
+
 	describe('generateProfileId', () => {
 		it('slugifies the display name', () => {
 			expect(generateProfileId('My Core Shapes', [])).toBe('my-core-shapes');

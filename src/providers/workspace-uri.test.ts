@@ -391,6 +391,26 @@ describe('WorkspaceUri', () => {
 			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri)!;
 			expect(WorkspaceUri.toCanonicalString(wsUri)).toBe('workspace:///Sub%20Folder/file.ttl');
 		});
+
+		it('produces triple-slash format for user URIs', () => {
+			// Graph IRIs of open user:/// documents flow through this method; they must
+			// match the canonical IRIs the settings-backed shape loader uses.
+			const userUri = vscode.Uri.parse('user:///shapes/my-shapes.ttl');
+			expect(WorkspaceUri.toCanonicalString(userUri)).toBe('user:///shapes/my-shapes.ttl');
+		});
+	});
+
+	describe('virtual scheme guard', () => {
+		it.each(['user:///shapes/x.ttl', 'untitled:Untitled-1', 'mentor-template:/global/key.ttl'])(
+			'toWorkspaceUri returns undefined for unsupported scheme %s even when the root path matches',
+			(raw) => {
+				// A root of '/' makes every path a prefix match — the scheme guard must
+				// reject the translation regardless.
+				WorkspaceUri.rootUri = vscode.Uri.parse('file:///');
+
+				expect(WorkspaceUri.toWorkspaceUri(vscode.Uri.parse(raw))).toBeUndefined();
+			}
+		);
 	});
 
 	describe('with paths containing whitespace', () => {

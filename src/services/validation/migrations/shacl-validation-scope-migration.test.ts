@@ -43,7 +43,7 @@ describe('ShaclValidationScopeMigration', () => {
 		(vscode.workspace as any).workspaceFolders = [{ uri: vscode.Uri.parse('file:///w'), name: 'w', index: 0 }];
 	});
 
-	test('moves global profiles into the workspace and clears the global value', async () => {
+	test('moves workspace-bound global profiles into the workspace and clears the global value', async () => {
 		const updates = await migrate({
 			globalValue: { profiles: { 'a': { name: 'A', shapes: ['workspace:///a.ttl'] } } },
 		});
@@ -55,9 +55,47 @@ describe('ShaclValidationScopeMigration', () => {
 		expect(clearGlobal?.value).toBeUndefined();
 	});
 
+	test('portable global profiles stay in the user scope', async () => {
+		// The regression user-scope profiles depend on: profiles referencing only
+		// bundled graphs or user shapes must never be moved to the workspace.
+		const updates = await migrate({
+			globalValue: {
+				profiles: {
+					'preset': { name: 'Preset', shapes: ['https://w3id.org/mentor/shacl/profiles/ontology'] },
+					'user': { name: 'User', shapes: ['user:///shapes/my-shapes.ttl'] },
+					'empty': { name: 'Empty' },
+				},
+			},
+		});
+
+		expect(updates).toHaveLength(0);
+	});
+
+	test('splits mixed global profiles: bound ones move, portable ones stay', async () => {
+		const updates = await migrate({
+			globalValue: {
+				profiles: {
+					'bound': { name: 'Bound', shapes: ['workspace:///a.ttl', 'user:///shapes/x.ttl'] },
+					'portable': { name: 'Portable', shapes: ['user:///shapes/x.ttl'] },
+				},
+			},
+		});
+
+		const write = updates.find(u => u.target === vscode.ConfigurationTarget.Workspace);
+		expect(write?.value).toEqual({ profiles: { 'bound': { name: 'Bound', shapes: ['workspace:///a.ttl', 'user:///shapes/x.ttl'] } } });
+
+		const global = updates.find(u => u.target === vscode.ConfigurationTarget.Global);
+		expect(global?.value).toEqual({ profiles: { 'portable': { name: 'Portable', shapes: ['user:///shapes/x.ttl'] } } });
+	});
+
 	test('an existing workspace profile wins on an id collision', async () => {
 		const updates = await migrate({
-			globalValue: { profiles: { 'a': { name: 'User A' }, 'b': { name: 'User B' } } },
+			globalValue: {
+				profiles: {
+					'a': { name: 'User A', shapes: ['workspace:///a.ttl'] },
+					'b': { name: 'User B', shapes: ['workspace:///b.ttl'] },
+				},
+			},
 			workspaceValue: { profiles: { 'a': { name: 'Workspace A' } } },
 		});
 
@@ -65,7 +103,7 @@ describe('ShaclValidationScopeMigration', () => {
 		expect(write?.value).toEqual({
 			profiles: {
 				'a': { name: 'Workspace A' },
-				'b': { name: 'User B' },
+				'b': { name: 'User B', shapes: ['workspace:///b.ttl'] },
 			},
 		});
 	});
@@ -73,12 +111,26 @@ describe('ShaclValidationScopeMigration', () => {
 	test('drops the removed shapeVersions field from moved profiles', async () => {
 		const updates = await migrate({
 			globalValue: {
-				profiles: { 'a': { name: 'A', shapeVersions: { 'urn:x': '1.0' } } },
+				profiles: { 'a': { name: 'A', shapes: ['workspace:///a.ttl'], shapeVersions: { 'urn:x': '1.0' } } },
 			},
 		});
 
 		const write = updates.find(u => u.target === vscode.ConfigurationTarget.Workspace);
-		expect(write?.value).toEqual({ profiles: { 'a': { name: 'A' } } });
+		expect(write?.value).toEqual({ profiles: { 'a': { name: 'A', shapes: ['workspace:///a.ttl'] } } });
+	});
+
+	test('prunes shapeVersions from portable global profiles in place', async () => {
+		const updates = await migrate({
+			globalValue: {
+				profiles: { 'a': { name: 'A', shapes: ['user:///shapes/x.ttl'], shapeVersions: { 'urn:x': '1.0' } } },
+			},
+		});
+
+		expect(updates).toHaveLength(1);
+		expect(updates[0]).toMatchObject({
+			target: vscode.ConfigurationTarget.Global,
+			value: { profiles: { 'a': { name: 'A', shapes: ['user:///shapes/x.ttl'] } } },
+		});
 	});
 
 	test('prunes shapeVersions from workspace profiles in place', async () => {

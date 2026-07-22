@@ -36,9 +36,10 @@ export interface SettingsListItemProps {
 
 	/**
 	 * Visual status of the row. Tints the row background and the leading icon in
-	 * the corresponding warning/error color; also colors {@link statusMessage}.
+	 * the corresponding status color (the shared `--mentor-status-*` tokens, in
+	 * sync with the stats dashboards); also colors {@link statusMessage}.
 	 */
-	status?: 'warning' | 'error';
+	status?: 'success' | 'warning' | 'error';
 
 	/**
 	 * Short status text rendered right-aligned at the end of the subline,

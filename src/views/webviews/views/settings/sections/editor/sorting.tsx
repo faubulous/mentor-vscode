@@ -45,24 +45,30 @@ export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: Se
 	const unmatchedPositionOptions = state?.nestedEnumOptions?.unmatchedPosition ?? [];
 	const unmatchedSortOptions = state?.nestedEnumOptions?.unmatchedSort ?? [];
 
+	// All four rows edit sub-fields of the single `sorting.typeSortingOptions`
+	// object, so they share that key's row props: every row shows the setting's
+	// real scope and its dropdown moves the whole object between scopes
+	// (workspace by default, per the section descriptor).
+	const sortingRowProps = rowProps('sorting.typeSortingOptions');
+
 	return (
 		<div>
 			<SectionHeader title={editorSortingSection.label} menuItems={menuItems} variant="title" />
-			<SettingRow {...rowProps('sorting.typeSortingOptions')}>
+			<SettingRow {...sortingRowProps}>
 				<StringListEditor
 					items={opts.typeOrder ?? []}
 					placeholder="https://..."
 					onChange={v => update({ typeOrder: v })}
 				/>
 			</SettingRow>
-			<SettingRow label="Predicate order" description="Predicate IRIs for secondary sorting within each type group." state={undefined} setScope={() => {}}>
+			<SettingRow {...sortingRowProps} label="Predicate order" description="Predicate IRIs for secondary sorting within each type group.">
 				<StringListEditor
 					items={opts.predicateOrder ?? []}
 					placeholder="https://..."
 					onChange={v => update({ predicateOrder: v })}
 				/>
 			</SettingRow>
-			<SettingRow label="Unmatched resource position" description="Where to place resources that do not match any type in the type order list." state={undefined} setScope={() => {}}>
+			<SettingRow {...sortingRowProps} label="Unmatched resource position" description="Where to place resources that do not match any type in the type order list.">
 				<vscode-single-select
 					ref={unmatchedPositionRef}
 					value={opts.unmatchedPosition ?? 'end'}
@@ -72,7 +78,7 @@ export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: Se
 					))}
 				</vscode-single-select>
 			</SettingRow>
-			<SettingRow label="Unmatched resource sort" description="How to sort resources that do not match any type in the type order list." state={undefined} setScope={() => {}}>
+			<SettingRow {...sortingRowProps} label="Unmatched resource sort" description="How to sort resources that do not match any type in the type order list.">
 				<vscode-single-select
 					ref={unmatchedSortRef}
 					value={opts.unmatchedSort ?? 'alphabetical'}

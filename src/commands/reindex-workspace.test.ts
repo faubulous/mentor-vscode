@@ -7,6 +7,7 @@ let mockIndexWorkspace: ReturnType<typeof vi.fn>;
 let mockStoreGetGraphs: ReturnType<typeof vi.fn>;
 let mockStoreDeleteGraphs: ReturnType<typeof vi.fn>;
 let mockStoreLoadFrameworkOntologies: ReturnType<typeof vi.fn>;
+let mockLoadShapeGraphs: ReturnType<typeof vi.fn>;
 
 vi.mock('tsyringe', () => ({
 	container: {
@@ -21,6 +22,10 @@ vi.mock('tsyringe', () => ({
 
 			if (token === 'WorkspaceIndexerService') {
 				return { indexWorkspace: (...args: any[]) => mockIndexWorkspace(...args) };
+			}
+
+			if (token === 'ShapeGraphService') {
+				return { loadAll: (...args: any[]) => mockLoadShapeGraphs(...args) };
 			}
 
 			return {};
@@ -38,6 +43,7 @@ beforeEach(() => {
 	mockStoreGetGraphs = vi.fn(() => []);
 	mockStoreDeleteGraphs = vi.fn();
 	mockStoreLoadFrameworkOntologies = vi.fn(async () => undefined);
+	mockLoadShapeGraphs = vi.fn(async () => undefined);
 });
 
 describe('reindexWorkspace command', () => {
@@ -48,5 +54,10 @@ describe('reindexWorkspace command', () => {
 	it('should call indexWorkspace with force=true', async () => {
 		await reindexWorkspace.handler();
 		expect(mockIndexWorkspace).toHaveBeenCalledWith(true);
+	});
+
+	it('restores the preset and user shape graphs after the wipe', async () => {
+		await reindexWorkspace.handler();
+		expect(mockLoadShapeGraphs).toHaveBeenCalled();
 	});
 });
