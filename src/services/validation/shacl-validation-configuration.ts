@@ -45,6 +45,16 @@ export interface ShaclValidationProfile {
 	 * Optional human-readable description of the profile.
 	 */
 	description?: string;
+	/**
+	 * Automatically validate the profile's matched files after workspace
+	 * indexing completes. Absent means false.
+	 */
+	validateOnStartup?: boolean;
+	/**
+	 * Automatically re-validate a matched document as it is edited, once it is
+	 * free of syntax errors. Absent means false.
+	 */
+	validateOnChange?: boolean;
 }
 
 /**
@@ -352,6 +362,41 @@ export function resolveEffectiveShapeGraphs(
 	rdfExtensions: readonly string[]
 ): string[] {
 	return resolveProfileShapes(settings, getMatchingProfiles(settings, document, rdfExtensions));
+}
+
+/**
+ * An automatic validation trigger: the per-profile flag that opts a profile
+ * into it.
+ */
+export type ShaclAutoValidationTrigger = 'validateOnStartup' | 'validateOnChange';
+
+/**
+ * Returns the ids of the profiles that opt into the given automatic
+ * validation trigger, in definition order.
+ */
+export function getAutoValidationProfiles(
+	settings: ShaclValidationSettings | undefined,
+	trigger: ShaclAutoValidationTrigger
+): string[] {
+	return Object.entries(settings?.profiles ?? {})
+		.filter(([, profile]) => profile?.[trigger] === true)
+		.map(([id]) => id);
+}
+
+/**
+ * Resolves the union of shape files of the profiles that both match the
+ * document and opt into the given automatic validation trigger.
+ */
+export function resolveAutoValidationShapeGraphs(
+	settings: ShaclValidationSettings | undefined,
+	document: ShaclDocumentLocation,
+	rdfExtensions: readonly string[],
+	trigger: ShaclAutoValidationTrigger
+): string[] {
+	const optedIn = new Set(getAutoValidationProfiles(settings, trigger));
+	const ids = getMatchingProfiles(settings, document, rdfExtensions).filter(id => optedIn.has(id));
+
+	return resolveProfileShapes(settings, ids);
 }
 
 /**

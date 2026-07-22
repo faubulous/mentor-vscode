@@ -1971,6 +1971,16 @@
                     "description": {
                       "type": "string",
                       "description": "Optional human-readable description of the profile."
+                    },
+                    "validateOnStartup": {
+                      "type": "boolean",
+                      "description": "Automatically validate this profile's matched files after the workspace finishes indexing.",
+                      "default": false
+                    },
+                    "validateOnChange": {
+                      "type": "boolean",
+                      "description": "Automatically re-validate a matched document against this profile as you edit, once it is free of syntax errors.",
+                      "default": false
                     }
                   }
                 },
@@ -2014,18 +2024,6 @@
             "title": "Enable SHACL Validation",
             "description": "If enabled, Mentor will show the titlebar validate button and editor code lenses.",
             "default": true
-          },
-          "mentor.shacl.validateOnStartup": {
-            "type": "boolean",
-            "title": "Validate Profiles on Startup",
-            "description": "Automatically validate all files covered by a validation profile after the workspace finishes indexing.",
-            "default": false
-          },
-          "mentor.shacl.validateOnChange": {
-            "type": "boolean",
-            "title": "Validate on Change",
-            "description": "Automatically re-validate a file against its matching profiles as you edit, once it is free of syntax errors.",
-            "default": false
           },
           "mentor.shacl.maxGraphSize": {
             "type": "number",

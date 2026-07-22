@@ -12,6 +12,8 @@ function view(overrides: Partial<ValidationProfileView> = {}): ValidationProfile
 		includeFiles: ['models/*'],
 		excludeFiles: [],
 		description: '',
+		validateOnStartup: false,
+		validateOnChange: false,
 		scope: ConfigurationScope.Workspace,
 		...overrides,
 	};
@@ -28,6 +30,15 @@ describe('toProfileValue', () => {
 			description: 'Checks the core model.',
 		});
 	});
+
+	it('serializes the auto-validation flags sparsely', () => {
+		expect(toProfileValue(view())).not.toHaveProperty('validateOnStartup');
+		expect(toProfileValue(view())).not.toHaveProperty('validateOnChange');
+		expect(toProfileValue(view({ validateOnStartup: true, validateOnChange: true }))).toMatchObject({
+			validateOnStartup: true,
+			validateOnChange: true,
+		});
+	});
 });
 
 describe('presetToDraft', () => {
@@ -42,6 +53,8 @@ describe('presetToDraft', () => {
 		expect(draft.description).toBe(preset.description);
 		expect(draft.includeFiles).toEqual(['**/*']);
 		expect(draft.excludeFiles).toEqual([]);
+		expect(draft.validateOnStartup).toBe(false);
+		expect(draft.validateOnChange).toBe(false);
 		expect(draft.scope).toBe(ConfigurationScope.Workspace);
 	});
 

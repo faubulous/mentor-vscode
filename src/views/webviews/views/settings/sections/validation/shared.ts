@@ -41,6 +41,17 @@ export interface ValidationProfileView {
 	description: string;
 
 	/**
+	 * Whether the profile's matched files are validated automatically after
+	 * workspace indexing.
+	 */
+	validateOnStartup: boolean;
+
+	/**
+	 * Whether matched documents are re-validated automatically as they are edited.
+	 */
+	validateOnChange: boolean;
+
+	/**
 	 * The configuration scope the profile is stored in.
 	 */
 	scope: ConfigurationScope;

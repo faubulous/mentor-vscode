@@ -17,17 +17,9 @@ export const validationGeneralSection = {
 	defaultScope: 'workspace',
 	keys: [
 		'shacl.enabled',
-		'shacl.validateOnStartup',
-		'shacl.validateOnChange',
 		'shacl.maxGraphSize',
 		'shacl.shapesFolder',
 	],
-	// Whether validation runs automatically is a personal preference (e.g. performance
-	// on a given machine), not something to impose on the whole team via .vscode/settings.json.
-	keyScopeOverrides: {
-		'shacl.validateOnStartup': 'user',
-		'shacl.validateOnChange': 'user',
-	},
 	// Claimed but not rendered: linting is experimental and stays configurable
 	// via settings.json only.
 	hiddenKeys: [
@@ -39,10 +31,10 @@ export const validationGeneralSection = {
 
 export function ValidationGeneralSection({ settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
-	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, ['shacl.enabled', 'shacl.validateOnStartup', 'shacl.validateOnChange', 'shacl.maxGraphSize', 'shacl.shapesFolder'], settings, onBulkScope);
+	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, ['shacl.enabled', 'shacl.maxGraphSize', 'shacl.shapesFolder'], settings, onBulkScope);
 
-	// The auto-validation options only take effect while SHACL validation is
-	// enabled, so they are disabled until the master switch is on.
+	// The max-graph-size guard and the validate button only take effect while
+	// SHACL validation is enabled, so they are disabled until the master switch is on.
 	const shaclEnabled = settings['shacl.enabled']?.value === true;
 
 	const [stats, setStats] = useState<ValidationStatsView>();
@@ -102,24 +94,6 @@ export function ValidationGeneralSection({ settings, onUpdate, setScope, onBulkS
 				<vscode-checkbox
 					checked={shaclEnabled}
 					onChange={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'shacl.enabled', (e.target as HTMLInputElement).checked)}
-				>
-					Enabled
-				</vscode-checkbox>
-			</SettingRow>
-			<SettingRow {...rowProps('shacl.validateOnStartup')}>
-				<vscode-checkbox
-					checked={settings['shacl.validateOnStartup']?.value === true}
-					disabled={!shaclEnabled}
-					onChange={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'shacl.validateOnStartup', (e.target as HTMLInputElement).checked)}
-				>
-					Enabled
-				</vscode-checkbox>
-			</SettingRow>
-			<SettingRow {...rowProps('shacl.validateOnChange')}>
-				<vscode-checkbox
-					checked={settings['shacl.validateOnChange']?.value === true}
-					disabled={!shaclEnabled}
-					onChange={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'shacl.validateOnChange', (e.target as HTMLInputElement).checked)}
 				>
 					Enabled
 				</vscode-checkbox>

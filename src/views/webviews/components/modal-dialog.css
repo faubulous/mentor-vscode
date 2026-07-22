@@ -12,7 +12,7 @@
 	position: relative;
 	display: flex;
 	flex-direction: column;
-	width: min(90vw, 600px);
+	width: min(90vw, 660px);
 	max-height: 90vh;
 	background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
 	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));

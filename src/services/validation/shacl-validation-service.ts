@@ -7,9 +7,11 @@ import { toUniqueStringArray } from '@src/utilities/array';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
 import {
+	getAutoValidationProfiles,
 	getDocumentValidationState,
 	matchesProfilePaths,
 	profilePathEntries,
+	resolveAutoValidationShapeGraphs,
 	resolveEffectiveShapeGraphs,
 	ShaclBrokenReferences,
 	ShaclDocumentLocation,
@@ -177,10 +179,10 @@ export class ShaclValidationService implements vscode.Disposable {
 	}
 
 	/**
-	 * Validates a document against its matching profiles when `mentor.shacl.enabled`
-	 * and `mentor.shacl.validateOnChange` are both on. Skips documents that are not
-	 * covered by a profile or that currently have syntax errors, and never shows a
-	 * notification (diagnostics are published quietly).
+	 * Validates a document against the matching profiles that have
+	 * `validateOnChange` enabled, when `mentor.shacl.enabled` is on. Skips
+	 * documents that no opted-in profile covers or that currently have syntax
+	 * errors, and never shows a notification (diagnostics are published quietly).
 	 */
 	private async _autoValidateOnChange(context: IDocumentContext | undefined): Promise<void> {
 		if (!context) {
@@ -189,11 +191,11 @@ export class ShaclValidationService implements vscode.Disposable {
 
 		const shaclConfig = getConfig('shacl');
 
-		if (!shaclConfig.get<boolean>('enabled', false) || !shaclConfig.get<boolean>('validateOnChange', false)) {
+		if (!shaclConfig.get<boolean>('enabled', false)) {
 			return;
 		}
 
-		const shapeGraphUris = this.getEffectiveShapeGraphs(context.uri);
+		const shapeGraphUris = this.getOnChangeShapeGraphs(context.uri);
 
 		if (shapeGraphUris.length === 0 || this._hasSyntaxErrors(context.uri)) {
 			return;
@@ -297,10 +299,19 @@ export class ShaclValidationService implements vscode.Disposable {
 	}
 
 	/**
+	 * Get the shape graph URIs applied to a document by automatic on-change
+	 * validation: the union of the shapes of the matching profiles that have
+	 * `validateOnChange` enabled.
+	 */
+	getOnChangeShapeGraphs(documentUri: vscode.Uri): string[] {
+		return resolveAutoValidationShapeGraphs(this.getValidationSettings(), this.getDocumentLocation(documentUri), this.getRdfExtensions(), 'validateOnChange');
+	}
+
+	/**
 	 * Re-runs on-change validation for all currently open documents, e.g. after
 	 * shape graphs were reloaded from changed user shape files. Respects the
-	 * `mentor.shacl.enabled` / `validateOnChange` settings and all other
-	 * auto-validation guards.
+	 * `mentor.shacl.enabled` setting, the per-profile `validateOnChange` flags
+	 * and all other auto-validation guards.
 	 */
 	async revalidateOpenDocuments(): Promise<void> {
 		const seen = new Set<string>();
@@ -411,6 +422,30 @@ export class ShaclValidationService implements vscode.Disposable {
 
 		return this._batchRunner.run('workspace', files, hasProfiles, uri => {
 			const shapes = this.getEffectiveShapeGraphs(uri);
+
+			return shapes.length > 0 ? shapes : undefined;
+		}, options);
+	}
+
+	/**
+	 * Validates every workspace file matched by a profile that has
+	 * `validateOnStartup` enabled against the union of those profiles' shape
+	 * graphs, publishing diagnostics for each. Returns `undefined` without
+	 * running a batch when no profile opts in, so the status bar and the last
+	 * run statistics are untouched.
+	 * @param files The workspace files to consider.
+	 */
+	async validateStartupProfiles(files: ReadonlyArray<vscode.Uri>, options?: BatchValidationOptions): Promise<ProfileValidationSummary | undefined> {
+		const settings = this.getValidationSettings();
+
+		if (getAutoValidationProfiles(settings, 'validateOnStartup').length === 0) {
+			return undefined;
+		}
+
+		const rdfExtensions = this.getRdfExtensions();
+
+		return this._batchRunner.run('startup profiles', files, true, uri => {
+			const shapes = resolveAutoValidationShapeGraphs(settings, this.getDocumentLocation(uri), rdfExtensions, 'validateOnStartup');
 
 			return shapes.length > 0 ? shapes : undefined;
 		}, options);

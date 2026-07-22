@@ -202,6 +202,23 @@ export function ValidationProfileEditor({
 								onInput={(e: any) => setDraft(d => ({ ...d, description: (e.target as HTMLTextAreaElement).value }))}
 							/>
 						</div>
+						<div>
+							<vscode-label>Options</vscode-label>
+							<div className="validation-auto-options">
+								<vscode-checkbox
+									checked={draft.validateOnStartup}
+									onChange={(e: any) => setDraft(d => ({ ...d, validateOnStartup: (e.target as HTMLInputElement).checked }))}
+								>
+									Auto validate on startup
+								</vscode-checkbox>
+								<vscode-checkbox
+									checked={draft.validateOnChange}
+									onChange={(e: any) => setDraft(d => ({ ...d, validateOnChange: (e.target as HTMLInputElement).checked }))}
+								>
+									Auto validate on document change
+								</vscode-checkbox>
+							</div>
+						</div>
 					</section>
 				</vscode-tab-panel>
 

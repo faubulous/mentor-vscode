@@ -28,6 +28,14 @@
 	resize: vertical;
 }
 
+/* The two auto-validation checkboxes in the profile editor's General tab. */
+.modal-form.validation-profile-editor .validation-auto-options {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-2);
+	margin-top: var(--mentor-space-2);
+}
+
 /* Searchable checklist of shape files. */
 .validation-shape-list-editor {
 	display: flex;

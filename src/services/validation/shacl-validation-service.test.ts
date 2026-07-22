@@ -559,6 +559,59 @@ describe('ShaclValidationService.validateAllProfiles', () => {
 	});
 });
 
+describe('ShaclValidationService.getOnChangeShapeGraphs', () => {
+	it('resolves only the shapes of matching profiles with validateOnChange enabled', () => {
+		const { service } = createService({
+			profiles: {
+				'auto': { shapes: ['s:1'], includeFiles: ['models/*'], validateOnChange: true },
+				'manual': { shapes: ['s:2'], includeFiles: ['models/*'] },
+			},
+		});
+
+		expect(service.getOnChangeShapeGraphs(vscode.Uri.parse('file:///w/models/data.ttl')))
+			.toEqual(['s:1']);
+	});
+
+	it('returns an empty list when no matching profile opts in', () => {
+		const { service } = createService({
+			profiles: {
+				'manual': { shapes: ['s:1'], includeFiles: ['models/*'] },
+			},
+		});
+
+		expect(service.getOnChangeShapeGraphs(vscode.Uri.parse('file:///w/models/data.ttl')))
+			.toEqual([]);
+	});
+});
+
+describe('ShaclValidationService.validateStartupProfiles', () => {
+	it('returns undefined without running a batch when no profile opts in', async () => {
+		const { service } = createService({
+			profiles: { 'manual': { shapes: ['s:1'], includeFiles: ['**/*'] } },
+		});
+
+		expect(await service.validateStartupProfiles([vscode.Uri.parse('file:///w/a.ttl')])).toBeUndefined();
+		expect(service.lastRunStatistics).toBeUndefined();
+	});
+
+	it('matches only files covered by profiles with validateOnStartup enabled', async () => {
+		const { service } = createService({
+			profiles: {
+				'startup': { shapes: ['s:1'], includeFiles: ['models/*'], validateOnStartup: true },
+				'manual': { shapes: ['s:2'], includeFiles: ['other/*'] },
+			},
+		});
+
+		const summary = await service.validateStartupProfiles([
+			vscode.Uri.parse('file:///w/models/x.ttl'),
+			vscode.Uri.parse('file:///w/other/y.ttl'),
+		]);
+
+		expect(summary?.matched).toBe(1);
+		expect(summary?.hasShapes).toBe(true);
+	});
+});
+
 describe('ShaclValidationService.getDocumentValidationState', () => {
 	it('reports the matched profiles and path entries', () => {
 		const { service } = createService({

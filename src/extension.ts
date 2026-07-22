@@ -280,17 +280,18 @@ async function initializeValidation() {
 
 		shaclService.settingsSync.runStartupProfileCheck();
 
-		// Silently validate all profile-covered files on startup when enabled. The
-		// diagnostics are published by the service; no notification is shown.
+		// Silently validate the files covered by profiles with validateOnStartup
+		// enabled. The diagnostics are published by the service; no notification
+		// is shown.
 		const shaclConfig = getConfig('shacl');
 
-		if (shaclConfig.get<boolean>('enabled', false) && shaclConfig.get<boolean>('validateOnStartup', false)) {
+		if (shaclConfig.get<boolean>('enabled', false)) {
 			const fileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
 
 			// The service drives its own validation status bar item (progress + cancel) and
 			// yields between files, so the startup batch stays responsive and cancellable
-			// without a progress notification.
-			await shaclService.validateAllProfiles(fileService.files);
+			// without a progress notification. No-op when no profile opts in.
+			await shaclService.validateStartupProfiles(fileService.files);
 		}
 	} catch (e) {
 		console.error('Mentor: SHACL profile check failed:', e);

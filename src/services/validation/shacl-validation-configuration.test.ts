@@ -4,6 +4,7 @@ import {
 	findDocumentProfileId,
 	generateProfileId,
 	getAllReferencedShapeUris,
+	getAutoValidationProfiles,
 	getDocumentValidationState,
 	getMatchingProfiles,
 	getProfileDisplayName,
@@ -15,6 +16,7 @@ import {
 	matchesProfilePaths,
 	migrateShaclValidationConfig,
 	requiresWorkspaceScope,
+	resolveAutoValidationShapeGraphs,
 	resolveEffectiveShapeGraphs,
 	resolveProfileShapes,
 	toDocumentPatternKey,
@@ -295,6 +297,75 @@ describe('shacl-validation-configuration', () => {
 
 			expect(resolveEffectiveShapeGraphs(settings, { path: 'models/doc.ttl' }, EXTS)).toEqual(['shape:2']);
 			expect(resolveEffectiveShapeGraphs(settings, { path: 'models/other.ttl' }, EXTS)).toEqual(['shape:1']);
+		});
+	});
+
+	describe('getAutoValidationProfiles', () => {
+		it('returns only the ids of profiles with the trigger flag set to true', () => {
+			const settings: ShaclValidationSettings = {
+				profiles: {
+					'a': { shapes: ['shape:1'], validateOnChange: true },
+					'b': { shapes: ['shape:2'], validateOnStartup: true },
+					'c': { shapes: ['shape:3'], validateOnChange: false },
+					'd': { shapes: ['shape:4'] },
+				},
+			};
+
+			expect(getAutoValidationProfiles(settings, 'validateOnChange')).toEqual(['a']);
+			expect(getAutoValidationProfiles(settings, 'validateOnStartup')).toEqual(['b']);
+		});
+
+		it('returns an empty list without settings or profiles', () => {
+			expect(getAutoValidationProfiles(undefined, 'validateOnChange')).toEqual([]);
+			expect(getAutoValidationProfiles({}, 'validateOnStartup')).toEqual([]);
+		});
+	});
+
+	describe('resolveAutoValidationShapeGraphs', () => {
+		it('unions the shapes of only the matching profiles that opt into the trigger', () => {
+			const settings: ShaclValidationSettings = {
+				profiles: {
+					'a': { shapes: ['shape:1'], includeFiles: ['models/*'], validateOnChange: true },
+					'b': { shapes: ['shape:2'], includeFiles: ['**/*.ttl'] },
+					'c': { shapes: ['shape:3'], includeFiles: ['models/*'], validateOnChange: true },
+				},
+			};
+
+			expect(resolveAutoValidationShapeGraphs(settings, { path: 'models/doc.ttl' }, EXTS, 'validateOnChange')).toEqual(['shape:1', 'shape:3']);
+		});
+
+		it('excludes a flagged profile whose paths do not match the document', () => {
+			const settings: ShaclValidationSettings = {
+				profiles: {
+					'a': { shapes: ['shape:1'], includeFiles: ['other/*'], validateOnStartup: true },
+					'b': { shapes: ['shape:2'], includeFiles: ['models/*'], validateOnStartup: true },
+				},
+			};
+
+			expect(resolveAutoValidationShapeGraphs(settings, { path: 'models/doc.ttl' }, EXTS, 'validateOnStartup')).toEqual(['shape:2']);
+		});
+
+		it('returns an empty list when no matching profile opts in', () => {
+			const settings: ShaclValidationSettings = {
+				profiles: {
+					'a': { shapes: ['shape:1'], includeFiles: ['models/*'] },
+					'b': { shapes: ['shape:2'], includeFiles: ['models/*'], validateOnChange: false },
+				},
+			};
+
+			expect(resolveAutoValidationShapeGraphs(settings, { path: 'models/doc.ttl' }, EXTS, 'validateOnChange')).toEqual([]);
+		});
+
+		it('respects the profile exclusions', () => {
+			const settings: ShaclValidationSettings = {
+				profiles: {
+					'a': { shapes: ['shape:1'], includeFiles: ['**/*'], excludeFiles: ['models/doc.ttl'], validateOnChange: true },
+					'b': { shapes: ['shape:2'], includeFiles: ['models/doc.ttl'], validateOnChange: true },
+				},
+			};
+
+			expect(resolveAutoValidationShapeGraphs(settings, { path: 'models/doc.ttl' }, EXTS, 'validateOnChange')).toEqual(['shape:2']);
+			expect(resolveAutoValidationShapeGraphs(settings, { path: 'models/other.ttl' }, EXTS, 'validateOnChange')).toEqual(['shape:1']);
 		});
 	});
 

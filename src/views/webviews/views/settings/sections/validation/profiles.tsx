@@ -66,6 +66,8 @@ export function toProfileViews(
 		includeFiles: [...(profile?.includeFiles ?? [])],
 		excludeFiles: [...(profile?.excludeFiles ?? [])],
 		description: profile?.description ?? '',
+		validateOnStartup: profile?.validateOnStartup === true,
+		validateOnChange: profile?.validateOnChange === true,
 		scope,
 	}));
 }
@@ -85,6 +87,8 @@ export function presetToDraft(preset: ValidationPreset, scope: ConfigurationScop
 		includeFiles: [...PRESET_DEFAULT_PATHS],
 		excludeFiles: [],
 		description: preset.description,
+		validateOnStartup: false,
+		validateOnChange: false,
 		scope,
 	};
 }
@@ -107,6 +111,8 @@ export function toProfileValue(profile: ValidationProfileView): ShaclValidationP
 		...(profile.includeFiles.length > 0 ? { includeFiles: profile.includeFiles } : {}),
 		...(profile.excludeFiles.length > 0 ? { excludeFiles: profile.excludeFiles } : {}),
 		...(description ? { description } : {}),
+		...(profile.validateOnStartup ? { validateOnStartup: true } : {}),
+		...(profile.validateOnChange ? { validateOnChange: true } : {}),
 	};
 }
 
@@ -394,6 +400,8 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 			includeFiles: [],
 			excludeFiles: [],
 			description: '',
+			validateOnStartup: false,
+			validateOnChange: false,
 			scope,
 		});
 	};

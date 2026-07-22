@@ -55,6 +55,9 @@ export function ValidationProfileListItem({ profile, missingShapes, matchCount, 
 		<div className="settings-item-meta">
 			<SettingsItemDescription text={profile.description} className="validation-profile-description" />
 			<span className="validation-profile-stats">
+				{(profile.validateOnStartup || profile.validateOnChange) && (
+					<span>{[profile.validateOnStartup && 'startup', profile.validateOnChange && 'on change'].filter(Boolean).join(', ')}</span>
+				)}
 				{matchCount !== undefined && (
 					<span>{matchCount} target file{matchCount === 1 ? '' : 's'}</span>
 				)}
