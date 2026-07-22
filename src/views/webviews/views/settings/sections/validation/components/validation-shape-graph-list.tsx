@@ -27,6 +27,12 @@ export interface ValidationShapeGraphListProps {
 	onOpen?: (uri: string) => void;
 
 	/**
+	 * Creates a new user shape file (stored in the user settings) and assigns it
+	 * to the profile. The "New Shape" button is omitted when absent.
+	 */
+	onCreateShape?: () => void;
+
+	/**
 	 * Renders the checklist as a read-only viewer (built-in presets): only the
 	 * assigned graphs are shown and the selection cannot be changed.
 	 */
@@ -48,7 +54,7 @@ type ShapeFilterMode = 'assigned' | 'all';
  * URI — the scheme distinguishes workspace file graphs (`workspace:///…`) from
  * built-in vocabulary graphs (`http…`).
  */
-export function ValidationShapeGraphList({ selected, candidates, missingShapes, onChange, onOpen, readOnly }: ValidationShapeGraphListProps) {
+export function ValidationShapeGraphList({ selected, candidates, missingShapes, onChange, onOpen, onCreateShape, readOnly }: ValidationShapeGraphListProps) {
 	// Start on the full list when nothing is assigned yet so graphs can be added.
 	const [mode, setMode] = useState<ShapeFilterMode>(selected.length === 0 ? 'all' : 'assigned');
 	const [filter, setFilter] = useState('');
@@ -157,7 +163,17 @@ export function ValidationShapeGraphList({ selected, candidates, missingShapes, 
 			<div className="validation-paths-header">
 				<vscode-label>Included Shapes</vscode-label>
 				{!readOnly && (
-					<div className="validation-shape-edit-toggle">
+					<div className="validation-shape-actions">
+						{effectiveMode === 'all' && onCreateShape && (
+							<vscode-toolbar-button
+								className='primary'
+								title="Create a new user shape file (stored in your user settings)"
+								onClick={() => onCreateShape()}
+							>
+								<span className="codicon codicon-new-file" />
+								<span className="label">New</span>
+							</vscode-toolbar-button>
+						)}
 						{effectiveMode === 'all' ? (
 							<vscode-toolbar-button className="primary" onClick={() => setMode('assigned')}>
 								<span className="codicon codicon-check" />

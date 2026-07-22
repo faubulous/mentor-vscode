@@ -19,7 +19,7 @@ export function IndexingDashboard({ stats }: IndexingDashboardProps) {
 			metrics={[
 				{ value: num(stats?.indexedFiles), label: 'Indexed Files' },
 				{ value: num(stats?.skippedFiles), label: 'Skipped Files' },
-				{ value: num(stats?.errorCount), label: 'Errors', error: stats !== undefined && stats.errorCount > 0 },
+				{ value: num(stats?.errorCount), label: 'Errors', status: stats !== undefined && stats.errorCount > 0 ? 'error' : undefined },
 				{ value: num(stats?.tripleCount), label: 'Triples' },
 				{ value: stats ? formatDuration(stats.durationMs) : STATS_PLACEHOLDER, label: 'Time' },
 			]}

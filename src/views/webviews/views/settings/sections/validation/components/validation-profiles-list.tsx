@@ -32,7 +32,11 @@ export interface ValidationProfilesListProps {
 
 	hasWorkspace: boolean;
 
-	onCreate: () => void;
+	/**
+	 * Opens the New Profile dialog with the given scope preselected — the group
+	 * whose add button was clicked determines the default scope.
+	 */
+	onCreate: (scope: ConfigurationScope) => void;
 
 	onEdit: (profile: ValidationProfileView) => void;
 
@@ -73,32 +77,33 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 	const workspaceProfiles = profiles.filter(p => p.scope === ConfigurationScope.Workspace);
 	const userProfiles = profiles.filter(p => p.scope !== ConfigurationScope.Workspace);
 
-	const addAction = (
-		<vscode-toolbar-button className="primary" title="Add a new profile" onClick={() => onCreate()}>
+	const addAction = (scope: ConfigurationScope) => (
+		<vscode-toolbar-button className="primary" title="Add a new profile" onClick={() => onCreate(scope)}>
 			<span className="codicon codicon-add" />
 			<span className="label">Add Profile</span>
 		</vscode-toolbar-button>
 	);
 
-	// Profiles are workspace-scope only: their shapes and paths are
-	// workspace-relative, so a user-scope profile silently misbehaves in every
-	// other workspace. User-scope entries can still appear here when settings
-	// were hand-edited or predate the workspace-scope migration; they are shown
-	// read-only-ish (no add action) and editing one moves it into the workspace.
+	// Profiles are grouped by the scope they are stored in, like the stores
+	// section. Workspace profiles are shared via version control; user profiles
+	// are available in every workspace and synced via Settings Sync, referencing
+	// only portable shapes (built-in graphs and user shape files).
 	const sections: SettingsListSection<ValidationProfileView>[] = [
 		...(hasWorkspace ? [{
 			title: 'Workspace',
 			description: 'Profiles are kept in the workspace settings (.vscode/settings.json), which can be shared via version control.',
-			action: addAction,
+			action: addAction(ConfigurationScope.Workspace),
 			items: workspaceProfiles,
 			emptyMessage: 'No profiles yet.',
 		}] : []),
-		...(userProfiles.length > 0 ? [{
+		{
 			title: 'User',
-			description: 'Legacy profiles found in your user settings. Profiles reference workspace files and only work in the workspace they were created for — editing one moves it into the workspace settings.',
+			description: 'Profiles kept in your user settings — available in every workspace and synced via Settings Sync. '
+				+ 'They can reference built-in and user shapes, but not workspace files.',
+			action: addAction(ConfigurationScope.User),
 			items: userProfiles,
-			emptyMessage: '',
-		}] : []),
+			emptyMessage: 'No profiles yet.',
+		},
 	];
 
 	return (

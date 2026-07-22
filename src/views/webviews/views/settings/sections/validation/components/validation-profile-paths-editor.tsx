@@ -210,7 +210,7 @@ export function ValidationProfilePathsEditor({ includeFiles, excludeFiles, onInc
 								key={suggestion}
 								onClick={() => onIncludeChange([...includeFiles, suggestion])}
 							>
-								{suggestion}
+								<span className="label">{suggestion}</span>
 							</vscode-toolbar-button>
 						))}
 					</div>
