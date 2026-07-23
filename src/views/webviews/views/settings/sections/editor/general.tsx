@@ -25,7 +25,7 @@ export const editorGeneralSection = {
 	],
 } as const satisfies SettingsSectionDescriptor;
 
-export function EditorGeneralSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
+function EditorGeneralSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const namespaces = (settings['namespaces']?.value as { uri: string; defaultPrefix: string }[]) ?? [];
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, [...keys], settings, onBulkScope);

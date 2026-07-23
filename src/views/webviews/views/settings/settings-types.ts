@@ -114,7 +114,7 @@ export interface EnumOption {
 /**
  * A leaf section in the settings UI which groups related settings together under a common label.
  */
-export interface SettingsNavigationSectionConfig {
+interface SettingsNavigationSectionConfig {
 	/**
 	 * A unique identifier for the section.
 	 */

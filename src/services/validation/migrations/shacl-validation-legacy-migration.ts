@@ -24,7 +24,7 @@ export const LEGACY_DEFAULT_PATHS_KEY = '**/*';
 /**
  * Legacy per-graph include/exclude configuration (pre-profiles model).
  */
-export interface LegacyShaclGraphShapeConfiguration {
+interface LegacyShaclGraphShapeConfiguration {
 	includeDefaults?: boolean;
 	includeShapes?: string[];
 	excludeShapes?: string[];

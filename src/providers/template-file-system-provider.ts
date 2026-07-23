@@ -5,7 +5,7 @@ import { getConfig } from '@src/utilities/vscode/config';
 /**
  * The URI scheme for editable template documents opened from the Mentor settings UI.
  */
-export const TEMPLATE_URI_SCHEME = 'mentor-template';
+const TEMPLATE_URI_SCHEME = 'mentor-template';
 
 /**
  * Maps a Mentor language id to the file extension used in template URIs so VS Code picks the

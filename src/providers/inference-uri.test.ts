@@ -1,18 +1,18 @@
 import { describe, expect, test } from 'vitest';
-import { URI } from 'vscode-uri';
+import * as vscode from 'vscode';
 import { InferenceUri } from '@src/providers/inference-uri';
 
 describe('InferenceUri (with vscode-uri)', () => {
 	test('toInferenceUri appends ?inference=mentor when no query is present', () => {
 		const base = 'https://example.org/ontology';
-		const result = InferenceUri.toInferenceUri(URI.parse(base) as any);
+		const result = InferenceUri.toInferenceUri(vscode.Uri.parse(base));
 
 		expect(result).toBe(`${base}?${InferenceUri.queryAppendix}`);
 	});
 
 	test('toInferenceUri appends &inference=mentor when query is present', () => {
 		const baseUri = 'https://example.org/ontology?x=1';
-		const result = InferenceUri.toInferenceUri(URI.parse(baseUri) as any);
+		const result = InferenceUri.toInferenceUri(vscode.Uri.parse(baseUri));
 
 		expect(result).toBe(`${baseUri}&${InferenceUri.queryAppendix}`);
 	});
@@ -23,9 +23,9 @@ describe('InferenceUri (with vscode-uri)', () => {
 
 		expect(InferenceUri.isInferenceUri(result)).toBe(true);
 
-		const parsed = URI.parse(result);
+		const parsed = vscode.Uri.parse(result);
 
-		expect(InferenceUri.isInferenceUri(parsed as any)).toBe(true);
+		expect(InferenceUri.isInferenceUri(parsed)).toBe(true);
 	});
 
 	test('toUri removes inference appendix and restores original URL (no other params)', () => {

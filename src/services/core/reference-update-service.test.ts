@@ -5,6 +5,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 import * as vscode from 'vscode';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { getTextEdits } from '@src/utilities/mocks/factories';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -49,7 +50,7 @@ describe('ReferenceUpdateService', () => {
 
 	beforeEach(() => {
 		applyEditSpy = vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValue(true);
-		showWarningMessageSpy = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		showWarningMessageSpy = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		// Default: openTextDocument returns a document whose getText returns an IRIREF-shaped string
 		openTextDocumentSpy = vi.spyOn(vscode.workspace, 'openTextDocument').mockImplementation(async (uri: any) => ({
@@ -159,7 +160,7 @@ describe('ReferenceUpdateService', () => {
 
 			// Inspect the WorkspaceEdit that was applied
 			const editArg: vscode.WorkspaceEdit = applyEditSpy.mock.calls[0][0];
-			const edits = (editArg as any).entries as Array<any>;
+			const edits = getTextEdits(editArg);
 			expect(edits.length).toBeGreaterThan(0);
 			expect(edits[0].newText).toBe(`<${newIri}>`);
 		});
@@ -184,7 +185,7 @@ describe('ReferenceUpdateService', () => {
 			await service.batchUpdate(new Map([[oldIri, newIri]]));
 
 			const editArg: vscode.WorkspaceEdit = applyEditSpy.mock.calls[0][0];
-			const edits = (editArg as any).entries as Array<any>;
+			const edits = getTextEdits(editArg);
 			// PNAME fallback: emit full IRI form
 			expect(edits[0].newText).toBe(`<${newIri}>`);
 		});
@@ -213,7 +214,7 @@ describe('ReferenceUpdateService', () => {
 			await service.batchUpdate(changes);
 
 			const editArg: vscode.WorkspaceEdit = applyEditSpy.mock.calls[0][0];
-			const edits = (editArg as any).entries as Array<any>;
+			const edits = getTextEdits(editArg);
 			expect(edits).toHaveLength(2);
 		});
 

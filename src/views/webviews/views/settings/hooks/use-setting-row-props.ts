@@ -8,7 +8,7 @@ import { SettingsExecuteCommandContext, SettingsScopeTargetContext, SettingsWork
  * in settings.json — `mentor.*` for Mentor keys, `editor.*` for the built-in editor
  * keys surfaced per language.
  */
-export function settingIdOf(source: SettingsSource, key: string): string {
+function settingIdOf(source: SettingsSource, key: string): string {
 	return source.kind === 'mentor' ? `mentor.${key}` : `editor.${key}`;
 }
 

@@ -41,7 +41,7 @@ import { IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './cor
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
  */
-export class MentorGraphUriGenerator implements GraphUriGenerator {
+class MentorGraphUriGenerator implements GraphUriGenerator {
 	getGraphUri(uri: string | Quad_Graph): string {
 		const value = typeof uri === 'string' ? uri : uri.value;
 		return InferenceUri.toInferenceUri(value);
@@ -145,12 +145,10 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const sparqlPrefixDefinitionService = new SparqlPrefixDefinitionService(documentContextService, prefixLookupService);
 	container.registerInstance(ServiceToken.SparqlPrefixDefinitionService, sparqlPrefixDefinitionService);
 
-	// Register the SHACL profile settings service and the validation service built on it.
+	// Register the SHACL profile settings service and the shape graph service the
+	// validation service resolves its shape graphs through.
 	const shaclProfileSettingsService = new ShaclProfileSettingsService();
 	container.registerInstance(ServiceToken.ShaclProfileSettingsService, shaclProfileSettingsService);
-
-	const shaclValidationService = new ShaclValidationService(context, store, documentContextService, documentFactory, shaclProfileSettingsService);
-	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
 	// User shape files live in the user-level mentor.shacl.shapes settings value and
 	// are served as user:///shapes/<file> documents. The folder must be registered
@@ -161,6 +159,9 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	const shapeGraphService = new ShapeGraphService(store, userShapeFileStore, shaclProfileSettingsService);
 	container.registerInstance(ServiceToken.ShapeGraphService, shapeGraphService);
+
+	const shaclValidationService = new ShaclValidationService(context, store, documentContextService, documentFactory, shaclProfileSettingsService, shapeGraphService);
+	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
 	context.subscriptions.push(userShapeFileStore, shapeGraphService);
 
@@ -176,7 +177,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	container.registerInstance(ServiceToken.NotebookController, notebookController);
 
 	// Register the graph service before the status bar so the status bar can subscribe to load events.
-	const graphService = new GraphManagementService(connectionRegistry, sparqlQueryService, sparqlStoreConfigService, store);
+	const graphService = new GraphManagementService(context, connectionRegistry, sparqlQueryService, sparqlStoreConfigService, store);
 	container.registerInstance(ServiceToken.GraphManagementService, graphService);
 
 	context.subscriptions.push(graphService);

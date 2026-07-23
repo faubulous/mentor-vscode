@@ -121,7 +121,7 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 	// Query-template fields: a value equal to the (global) default — or left blank — clears the
 	// per-store override so the store falls back to the global default (matching how the connection
 	// service resolves templates at runtime).
-	const updateQuery = (kind: SparqlQueryKind, value: string, defaultValue: string) => {
+	const updateQuery = useCallback((kind: SparqlQueryKind, value: string, defaultValue: string) => {
 		setDraft(d => {
 			const queries = { ...d.queries };
 
@@ -133,7 +133,7 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 
 			return { ...d, queries: Object.keys(queries).length > 0 ? queries : undefined };
 		});
-	};
+	}, [setDraft]);
 
 	const queryKindRef = useVscodeElementRef<VscodeSingleSelect>('change', (element) => setQueryKind(element.value));
 
@@ -154,7 +154,7 @@ export function StoreEditor({ store, isNew, readOnly, hasWorkspace, settings, on
 
 		const defaultValue = String(settings[entry.key]?.value ?? '');
 		updateQuery(kind, message.content, defaultValue);
-	}, [draft.id, settings, queryKinds]);
+	}, [draft.id, settings, queryKinds, updateQuery]);
 
 	useScopedWebviewMessaging<StoresSectionMessages>('query.stores', handleSavedTemplate);
 

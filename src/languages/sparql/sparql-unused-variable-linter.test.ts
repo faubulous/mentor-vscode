@@ -3,12 +3,14 @@ import { describe, it, expect } from 'vitest';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
-import { LintDiagnosticsContext } from '@src/languages/linter-context';
+import { LintingContext } from '@src/linters/linting-context';
 
 /** Runs the linter over the tokens the same way the diagnostics service does. */
 function getUnusedVariableDiagnostics(document: TextDocument, tokens: any[]) {
 	const linter = new SparqlUnusedVariableLinter();
-	const context: LintDiagnosticsContext = { document, content: '', tokens, prefixes: {} };
+	// The linter only ever passes `context.document` through untouched; the LSP TextDocument
+	// fixture used here is structurally compatible with vscode.TextDocument for that purpose.
+	const context: LintingContext = { document: document as unknown as LintingContext['document'], content: '', tokens, prefixes: {} };
 	const result = [];
 
 	linter.reset();
@@ -65,7 +67,7 @@ describe('SparqlUnusedVariableLinter', () => {
 				makeToken(RdfToken.RCURLY.name, '}', 20),
 			];
 			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
-			const hints = diags.filter(d => d.message.includes("used only once"));
+			const hints = diags.filter(d => (d.message as string).includes("used only once"));
 			// Variables that appear only once generate a hint
 			expect(hints.length).toBeGreaterThanOrEqual(0); // lenient: depends on counting logic
 		});
@@ -80,7 +82,7 @@ describe('SparqlUnusedVariableLinter', () => {
 				makeToken(RdfToken.RCURLY.name, '}', 20),
 			];
 			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
-			const hints = diags.filter(d => d.message.includes("used only once"));
+			const hints = diags.filter(d => (d.message as string).includes("used only once"));
 			expect(hints).toHaveLength(0);
 		});
 
@@ -130,7 +132,7 @@ describe('SparqlUnusedVariableLinter', () => {
 			];
 			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
 			// isStarSelect=true → early return → no unused hints
-			const hints = diags.filter(d => d.message.includes('used only once'));
+			const hints = diags.filter(d => (d.message as string).includes('used only once'));
 			expect(hints).toHaveLength(0);
 		});
 
@@ -180,9 +182,9 @@ describe('SparqlUnusedVariableLinter', () => {
 				makeToken(RdfToken.RCURLY.name, '}', o += 5),                       // depth 0 → closes outer
 			];
 			const diags = getUnusedVariableDiagnostics(makeDoc(), tokens);
-			const hints = diags.filter(d => d.message.includes('used only once'));
-			expect(hints.some(d => d.message.includes("'?age'"))).toBe(false);
-			expect(hints.some(d => d.message.includes("'?name'"))).toBe(false);
+			const hints = diags.filter(d => (d.message as string).includes('used only once'));
+			expect(hints.some(d => (d.message as string).includes("'?age'"))).toBe(false);
+			expect(hints.some(d => (d.message as string).includes("'?name'"))).toBe(false);
 		});
 
 		it('adds projection variable when AS precedes variable in SELECT clause (line 126)', () => {

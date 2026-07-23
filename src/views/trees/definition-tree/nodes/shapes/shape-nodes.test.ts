@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SH } from '@faubulous/mentor-rdf';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -185,7 +186,6 @@ describe('ShapeClassNode', () => {
 
 	describe('getIndividualNode — ParameterNode', () => {
 		it('should return ParameterNode when type is sh:Parameter', () => {
-			const { SH } = require('@faubulous/mentor-rdf');
 			mockVocabularyStub.hasType = vi.fn((_g: any, _iri: any, type: any) => type === SH.Parameter);
 			const node = makeNode(ShapeClassNode).getIndividualNode('urn:ex#p');
 			expect(node).toBeInstanceOf(ParameterNode);
@@ -194,7 +194,6 @@ describe('ShapeClassNode', () => {
 
 	describe('getIndividualNode — PropertyShapeNode', () => {
 		it('should return PropertyShapeNode when type is sh:PropertyShape', () => {
-			const { SH } = require('@faubulous/mentor-rdf');
 			mockVocabularyStub.hasType = vi.fn((_g: any, _iri: any, type: any) => type === SH.PropertyShape);
 			const node = makeNode(ShapeClassNode).getIndividualNode('urn:ex#ps');
 			expect(node).toBeInstanceOf(PropertyShapeNode);
@@ -254,7 +253,6 @@ describe('ShapesNode', () => {
 
 	describe('resolveNodeForUri — is a shape class', () => {
 		it('should return undefined when hierarchy path is empty', () => {
-			const { SH } = require('@faubulous/mentor-rdf');
 			mockVocabularyStub.hasType = vi.fn((_g: any, _iri: any, type: any) => type === SH.Shape);
 			mockVocabularyStub.getRootShapePath = vi.fn(function*() {});
 			mockVocabularyStub.getSubClasses = vi.fn(function*() {});
@@ -264,7 +262,6 @@ describe('ShapesNode', () => {
 
 	describe('resolveNodeForUri — is an individual shape', () => {
 		it('should return undefined when individual has no type with path', () => {
-			const { SH } = require('@faubulous/mentor-rdf');
 			mockVocabularyStub.hasType = vi.fn(() => false);
 			mockVocabularyStub.getIndividualTypes = vi.fn(function*() { yield 'urn:ex#T'; });
 			mockVocabularyStub.getRootShapePath = vi.fn(function*() {});
@@ -345,7 +342,6 @@ describe('ClassNodeBase via ShapeClassNode (showIndividuals = true)', () => {
 
 describe('ShapeClassNode.getSubClassIris with pre-populated notDefinedBy', () => {
 	it('should add _SH to an existing notDefinedBy set', () => {
-		const { _SH } = require('@faubulous/mentor-rdf');
 		mockVocabularyStub.getSubClasses = vi.fn(function*() { yield 'urn:ex#SubShape'; });
 		mockVocabularyStub.hasSubjectsOfType = vi.fn(() => true);
 		const ctx = makeContext();

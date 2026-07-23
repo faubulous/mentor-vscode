@@ -36,7 +36,7 @@ import { revealShapeDefinition } from '@src/commands/reveal-shape-definition';
 function makeEditor(uriStr = 'file:///doc.ttl') {
 	return {
 		document: { uri: vscode.Uri.parse(uriStr) },
-		selection: undefined as any,
+		selection: undefined,
 		revealRange: vi.fn(),
 	};
 }

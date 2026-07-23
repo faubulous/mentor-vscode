@@ -65,10 +65,10 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json --noEmit && npm run lint"
   },
   "devDependencies": {
-    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@rdfjs/types": "^2.0.1",
     "@types/n3": "^1.26.1",
     "@types/node": "^25.9.3",
@@ -80,12 +80,14 @@
     "@typescript-eslint/eslint-plugin": "^8.61.1",
     "@typescript-eslint/parser": "^8.61.1",
     "@vitest/coverage-v8": "^4.1.9",
-    "@vscode-elements/react-elements": "^2.4.0",
+    "@vscode-elements/elements": "^2.5.1",
+    "@vscode/codicons": "^0.0.45",
     "@vscode/test-web": "^0.0.80",
+    "@vscode/vsce": "^3.9.2",
     "chevrotain": "^12.0.0",
     "esbuild": "^0.28.1",
-    "esbuild-plugin-copy": "^2.1.1",
     "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "fonteditor-core": "^2.6.3",
     "glob": "^13.0.6",
     "rimraf": "^6.1.3",
@@ -103,14 +105,17 @@
     "@faubulous/mentor-rdf": "^2.0.0",
     "@faubulous/mentor-rdf-parsers": "^1.11.0",
     "@faubulous/mentor-rdf-serializers": "^1.8.0",
-    "@vscode/codicons": "^0.0.45",
+    "asynciterator": "^3.10.0",
+    "n3": "^2.1.1",
     "picomatch": "^4.0.5",
+    "rdf-stores": "^2.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "reflect-metadata": "^0.2.2",
     "shacl-engine": "^1.1.2",
     "triplate": "^0.6.0",
     "tsyringe": "^4.10.0",
+    "uuid": "^14.0.1",
     "vscode-languageserver-types": "^3.18.0"
   },
   "activationEvents": [
@@ -848,26 +853,6 @@
         "command": "mentor.command.selectActiveLanguage",
         "title": "Select Active Language",
         "icon": "$(select-language)",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.highlightNamespaceDefinitions",
-        "title": "Highlight Namespace Definitions",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.highlightTypeDefinitions",
-        "title": "Highlight Type Definitions",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.highlightTypeAssertions",
-        "title": "Highlight Type Assertions",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.highlightReferencedIris",
-        "title": "Highlight Referenced IRIs",
         "category": "Mentor"
       },
       {
@@ -2170,7 +2155,7 @@
             "type": "string",
             "title": "Default Query Template",
             "description": "SPARQL query template used when creating a query for an RDF document.",
-            "default": "---\nparams {\n  documentIri: iri\n}\nexample rdf {  documentIri: \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }",
+            "default": "---\nparams {\n  documentIri: iri\n}\nexample rdf {\n  documentIri: \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }",
             "editPresentation": "multilineText"
           },
           "mentor.language.turtle.defaultDocumentTemplate": {

@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as vscode from 'vscode';
 
 vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
 
@@ -15,29 +14,10 @@ vi.mock('triplate', () => ({
 }));
 
 import { TriplateCodeLensProvider } from './triplate-code-lens-provider';
+import { createMockTextDocument } from '@src/utilities/mocks/factories';
 
 function makeDoc(text: string, languageId = 'turtle', version = 1, uri = 'file:///test.ttl') {
-	const lines = text.split('\n');
-
-	return {
-		getText: () => text,
-		uri: vscode.Uri.parse(uri),
-		languageId,
-		version,
-		positionAt: (offset: number) => {
-			let remaining = offset;
-
-			for (let line = 0; line < lines.length; line++) {
-				if (remaining <= lines[line].length) {
-					return new vscode.Position(line, remaining);
-				}
-
-				remaining -= lines[line].length + 1;
-			}
-
-			return new vscode.Position(lines.length - 1, 0);
-		},
-	} as unknown as vscode.TextDocument;
+	return createMockTextDocument(text, { uri, languageId, version });
 }
 
 const FRONTMATTER =

@@ -17,11 +17,20 @@ vi.mock('@src/languages/turtle', async () => ({
     TurtleDocument: (await import('@src/languages/turtle/turtle-document')).TurtleDocument,
 }));
 
-import { Uri, Position, CompletionList, CompletionItemKind } from '@src/utilities/mocks/vscode';
-import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import * as vscode from 'vscode';
 import { SparqlCompletionItemProvider } from '@src/languages/sparql/providers/sparql-completion-item-provider';
 import { SparqlDocument } from '@src/languages/sparql/sparql-document';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import { ISparqlConnectionRegistry, IDocumentConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { ConfigurationScope } from '@src/utilities/config-scope';
+import {
+    createTurtleDocument,
+    createSparqlDocument,
+    createMockDocumentContextService,
+    createMockTextDocument,
+    createTestVocabulary,
+} from '@src/utilities/mocks/factories';
 
 /**
  * End-to-end regression tests for local part completion in SPARQL queries.
@@ -56,7 +65,7 @@ function makeOntologyContext(classCount = 15): TurtleDocument {
     source += 'nexus:name a rdf:Property .\n';
     source += 'nexus:factory1 a nexus:SparePartStorageFacility .\n';
 
-    const context = new TurtleDocument(Uri.parse('file:///w/nexus.ttl') as any, RdfSyntax.Turtle);
+    const context = createTurtleDocument('file:///w/nexus.ttl');
     context.setTokens(context.tokenize(source));
 
     return context;
@@ -73,21 +82,79 @@ const ONTOLOGY_INDIVIDUALS = [`${NEXUS}factory1`];
  * stub whose cursor position sits at the end of the source.
  */
 function makeQuery(source: string) {
-    const uri = Uri.parse('file:///w/query.sparql');
-    const context = new SparqlDocument(uri as any);
+    const uri = vscode.Uri.parse('file:///w/query.sparql');
+    const context = createSparqlDocument(uri);
 
     context.setTokens(context.tokenize(source));
 
-    const document = { uri, getText: () => source } as any;
+    const document = createMockTextDocument(source, { uri, languageId: 'sparql' });
 
     const lines = source.split('\n');
-    const position = new Position(lines.length - 1, lines[lines.length - 1].length);
+    const position = new vscode.Position(lines.length - 1, lines[lines.length - 1].length);
 
     return { context, document, position };
 }
 
+/** A minimal saved connection for the no-op service stubs below. */
+const stubConnection: SparqlConnection = {
+    id: 'test-connection',
+    endpointUrl: 'workspace:',
+    configScope: ConfigurationScope.Workspace,
+};
+
+/** Typed no-op stub — the graph completion path is not exercised by these tests. */
+const connectionRegistry: ISparqlConnectionRegistry = {
+    onDidChangeConnections: new vscode.EventEmitter<void>().event,
+    saveConfiguration: async () => { },
+    getConnections: () => [],
+    getConnectionsForConfigurationScope: () => [],
+    getConnection: () => undefined,
+    getInferenceEnabled: () => false,
+    setInferenceEnabled: async () => { },
+    toggleInferenceEnabled: async () => false,
+    createConnection: async () => stubConnection,
+    updateConnection: async () => { },
+    saveConnectionWithCredential: async () => { },
+    deleteConnection: async () => { },
+};
+
+/** Typed no-op stub — the graph completion path is not exercised by these tests. */
+const documentConnectionService: IDocumentConnectionService = {
+    onDidChangeConnectionForDocument: new vscode.EventEmitter<vscode.Uri>().event,
+    getConnectionForDocument: () => stubConnection,
+    getUnresolvedConnectionId: () => undefined,
+    setQuerySourceForDocument: async () => { },
+    setConnectionForCell: async () => { },
+    notifyDocumentConnectionChanged: () => { },
+    getInferenceEnabledForDocument: () => false,
+    setInferenceEnabledForDocument: async () => { },
+    toggleInferenceEnabledForDocument: async () => false,
+    handleFileRenames: async () => { },
+};
+
+/** Typed no-op stub — the graph completion path is not exercised by these tests. */
+const graphService: IGraphManagementService = {
+    onDidChangeGraphs: new vscode.EventEmitter<string>().event,
+    onDidGraphLoadStart: new vscode.EventEmitter<SparqlConnection>().event,
+    onDidGraphLoadEnd: new vscode.EventEmitter<SparqlConnection>().event,
+    getWorkspaceGraphs: () => [],
+    getGraphsForConnection: () => [],
+    hasGraphsForConnection: () => false,
+    getGraphLoadError: () => undefined,
+    loadGraphsForConnection: async () => { },
+    autoLoadConnections: async () => { },
+    ensureGraphsLoadedForConnection: async () => { },
+    dispose: () => { },
+};
+
 function makeProvider(queryContext: SparqlDocument, ontologyContext: TurtleDocument): SparqlCompletionItemProvider {
-    const provider = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
+    const provider = new SparqlCompletionItemProvider(
+        createMockDocumentContextService(),
+        createTestVocabulary(),
+        connectionRegistry,
+        documentConnectionService,
+        graphService
+    );
 
     (provider as any)._contextService = ({
         getDocumentContext: () => queryContext,
@@ -108,6 +175,10 @@ function makeProvider(queryContext: SparqlDocument, ontologyContext: TurtleDocum
     return provider;
 }
 
+/** Shared invocation arguments for provideCompletionItems. */
+const cancellationToken = new vscode.CancellationTokenSource().token;
+const completionContext: vscode.CompletionContext = { triggerKind: vscode.CompletionTriggerKind.Invoke, triggerCharacter: undefined };
+
 describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
     it('indexes the ontology subjects via the real tokenizer', () => {
         const ontology = makeOntologyContext();
@@ -124,15 +195,15 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
         );
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
 
-        expect(result).toBeInstanceOf(CompletionList);
+        expect(result).toBeInstanceOf(vscode.CompletionList);
         expect(result.items.some((i: any) => i.label === 'SparePartStorageFacility')).toBe(true);
         // All matches fit into the list — no re-query needed.
         expect(result.isIncomplete).toBe(false);
         // Classes are rendered with the class symbol icon in the completion widget.
         const item = result.items.find((i: any) => i.label === 'SparePartStorageFacility');
-        expect(item.kind).toBe(CompletionItemKind.Class);
+        expect(item?.kind).toBe(vscode.CompletionItemKind.Class);
     });
 
     it('marks the broad result at the prefix trigger as incomplete so VS Code re-queries while typing', async () => {
@@ -145,7 +216,7 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
         );
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
 
         expect(result.items).toHaveLength(provider.maxCompletionItems);
         expect(result.isIncomplete).toBe(true);
@@ -161,7 +232,7 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
         );
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
 
         expect(result.items).toHaveLength(0);
     });
@@ -173,7 +244,7 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
         );
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
 
         expect(result.items.some((i: any) => i.label === 'SparePartStorageFacility')).toBe(true);
     });
@@ -185,7 +256,7 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
         );
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
         const labels = result.items.map((i: any) => i.label);
 
         expect(labels).toEqual(['ClassA', 'ClassB', 'ClassC']);
@@ -200,10 +271,10 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
         );
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
 
         expect(result.items).toHaveLength(provider.maxCompletionItems);
-        expect(result.items.every((i: any) => i.kind === CompletionItemKind.Class)).toBe(true);
+        expect(result.items.every((i: any) => i.kind === vscode.CompletionItemKind.Class)).toBe(true);
         expect(result.items.some((i: any) => i.label === 'hasPart' || i.label === 'name' || i.label === 'factory1')).toBe(false);
     });
 
@@ -215,13 +286,13 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
         );
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
         const labels = result.items.map((i: any) => i.label);
 
         expect(labels).toEqual(['hasPart', 'name']);
         // Object property (relation) vs. literal-valued data property icons.
-        expect(result.items[0].kind).toBe(CompletionItemKind.Interface);
-        expect(result.items[1].kind).toBe(CompletionItemKind.Field);
+        expect(result.items[0].kind).toBe(vscode.CompletionItemKind.Interface);
+        expect(result.items[1].kind).toBe(vscode.CompletionItemKind.Field);
     });
 
     it('ranks classes and individuals before properties in object position', async () => {
@@ -232,7 +303,7 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
         );
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
         const labels = result.items.map((i: any) => i.label);
 
         // Classes and the individual share the top priority (locale-sorted by
@@ -243,17 +314,17 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
     it('works for untitled documents where the graph IRI falls back to the document URI', async () => {
         const ontology = makeOntologyContext();
         const source = `PREFIX nexus: <${NEXUS}>\nSELECT * WHERE { ?s a nexus:SparePartStor`;
-        const uri = Uri.parse('untitled:Untitled-1');
-        const context = new SparqlDocument(uri as any);
+        const uri = vscode.Uri.parse('untitled:Untitled-1');
+        const context = createSparqlDocument(uri);
 
         context.setTokens(context.tokenize(source));
 
-        const document = { uri, getText: () => source } as any;
+        const document = createMockTextDocument(source, { uri, languageId: 'sparql' });
         const lines = source.split('\n');
-        const position = new Position(lines.length - 1, lines[lines.length - 1].length);
+        const position = new vscode.Position(lines.length - 1, lines[lines.length - 1].length);
         const provider = makeProvider(context, ontology);
 
-        const result = await provider.provideCompletionItems(document, position as any, {} as any, {} as any) as any;
+        const result = await provider.provideCompletionItems(document, position, cancellationToken, completionContext) as vscode.CompletionList;
 
         expect(result.items.some((i: any) => i.label === 'SparePartStorageFacility')).toBe(true);
     });

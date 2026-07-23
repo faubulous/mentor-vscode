@@ -8,7 +8,6 @@ import { CollectionsNode } from "./collections/collections-node";
  */
 export class ConceptSchemeNode extends DefinitionTreeNode {
 	override getIcon() {
-		// return undefined;
 		return new vscode.ThemeIcon('rdf-concept-scheme', this.getIconColor());
 	}
 

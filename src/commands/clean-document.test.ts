@@ -27,7 +27,7 @@ beforeEach(() => {
 	(vscode.workspace as any).textDocuments = [];
 	(vscode.window as any).activeTextEditor = undefined;
 
-	vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+	vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 	vi.spyOn(vscode.workspace, 'applyEdit').mockResolvedValue(true);
 });
 
@@ -116,7 +116,7 @@ describe('cleanDocument', () => {
 
 		vi.spyOn(vscode.languages, 'getDiagnostics').mockReturnValue([diagnostics as any]);
 
-		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 		const documentUri = vscode.Uri.parse(uri);
 
 		await cleanDocument.handler(documentUri);

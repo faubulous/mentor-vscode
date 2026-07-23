@@ -9,6 +9,8 @@ log.txt
 # Generated icon font artifacts
 media/mentor-icons.json
 media/mentor-icons.woff
+media/mentor-icons.css
+media/mentor-icons-inline.css
 media/codicon.css
 media/codicon-inline.css
 media/codicon.ttf

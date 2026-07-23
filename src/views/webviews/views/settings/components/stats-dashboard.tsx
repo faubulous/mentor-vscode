@@ -4,7 +4,7 @@ import stylesheet from './stats-dashboard.css';
 /**
  * A single metric shown on a {@link StatsDashboard}.
  */
-export interface StatsDashboardMetric {
+interface StatsDashboardMetric {
 	/**
 	 * The formatted metric value, e.g. `1,234` or `1.2 s`.
 	 */

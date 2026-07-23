@@ -17,16 +17,16 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({
     },
 }));
 
+import * as vscode from 'vscode';
 import { TurtleCodeFormattingProvider } from '@src/languages/turtle/providers/turtle-code-formatting-provider';
 import { SparqlCodeFormattingProvider } from '@src/languages/sparql/providers/sparql-code-formatting-provider';
-import { Position, Range, TextEdit } from '@src/utilities/mocks/vscode';
 
 function makeDocument(content: string) {
     return {
         getText: () => content,
         positionAt: (offset: number) => {
             const lines = content.substring(0, offset).split('\n');
-            return new Position(lines.length - 1, lines[lines.length - 1].length);
+            return new vscode.Position(lines.length - 1, lines[lines.length - 1].length);
         },
     };
 }
@@ -48,7 +48,7 @@ describe('TurtleCodeFormattingProvider', () => {
         const content = '@prefix ex: <http://example.org/> .';
         const doc = makeDocument(content) as any;
         const edits = provider.provideDocumentFormattingEdits(doc, defaultOptions as any, token as any);
-        expect(edits[0]).toBeInstanceOf(TextEdit);
+        expect(edits[0]).toBeInstanceOf(vscode.TextEdit);
         // The range should start at (0,0)
         expect(edits[0].range.start.line).toBe(0);
         expect(edits[0].range.start.character).toBe(0);
@@ -91,7 +91,7 @@ describe('SparqlCodeFormattingProvider', () => {
         const content = 'SELECT ?s WHERE { ?s ?p ?o }';
         const doc = makeDocument(content) as any;
         const edits = provider.provideDocumentFormattingEdits(doc, defaultOptions as any, token as any);
-        expect(edits[0]).toBeInstanceOf(TextEdit);
+        expect(edits[0]).toBeInstanceOf(vscode.TextEdit);
         expect(edits[0].range.start.line).toBe(0);
         expect(edits[0].range.start.character).toBe(0);
     });

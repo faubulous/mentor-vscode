@@ -270,7 +270,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				// onDidChangeGraphs, which posts a GraphStatusChanged update to the webview.
 				const connections = connectionRegistry.getConnections().filter(c => !c.isProtected);
 
-				await Promise.all(connections.map(c => graphService.loadGraphsForConnection(c)));
+				await Promise.all(connections.map(c => graphService.loadGraphsForConnection(c, { force: true })));
 
 				return true;
 			}
@@ -307,9 +307,10 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				vscode.window.showInformationMessage('SPARQL connection saved.');
 
 				// If the connection now has auto-loading enabled, kick off a load immediately
-				// so the user sees the result without restarting VS Code.
+				// so the user sees the result without restarting VS Code. Forced, because the
+				// saved settings (e.g. the endpoint URL) may invalidate the cached list.
 				if (connection.autoLoadGraphs) {
-					graphService.loadGraphsForConnection(connection);
+					graphService.loadGraphsForConnection(connection, { force: true });
 				}
 
 				return true;

@@ -37,9 +37,9 @@ vi.mock('vscode', async () => {
     };
 });
 
+import * as vscode from 'vscode';
 import type { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryService, IGraphManagementService } from '@src/languages/sparql/services';
 import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-status-bar-service';
-import { EventEmitter } from '@src/utilities/mocks/vscode';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import type { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 
@@ -48,25 +48,25 @@ import type { SparqlConnection } from '@src/languages/sparql/services/sparql-con
 // ---------------------------------------------------------------------------
 
 function makeServices() {
-    const queryExecutionStartEmitter = new EventEmitter<SparqlQueryExecutionState>();
-    const queryExecutionEndEmitter = new EventEmitter<SparqlQueryExecutionState>();
-    const connectionTestStartEmitter = new EventEmitter<SparqlConnection>();
-    const connectionTestEndEmitter = new EventEmitter<{ connection: SparqlConnection; error: { code: number; message: string } | null }>();
-    const graphLoadStartEmitter = new EventEmitter<SparqlConnection>();
-    const graphLoadEndEmitter = new EventEmitter<SparqlConnection>();
+    const queryExecutionStartEmitter = new vscode.EventEmitter<SparqlQueryExecutionState>();
+    const queryExecutionEndEmitter = new vscode.EventEmitter<SparqlQueryExecutionState>();
+    const connectionTestStartEmitter = new vscode.EventEmitter<SparqlConnection>();
+    const connectionTestEndEmitter = new vscode.EventEmitter<{ connection: SparqlConnection; error: { code: number; message: string } | null }>();
+    const graphLoadStartEmitter = new vscode.EventEmitter<SparqlConnection>();
+    const graphLoadEndEmitter = new vscode.EventEmitter<SparqlConnection>();
 
     const queryService = {
         onDidQueryExecutionStart: queryExecutionStartEmitter.event,
         onDidQueryExecutionEnd: queryExecutionEndEmitter.event,
-    } as unknown as ISparqlQueryService;
+    } as unknown as ISparqlQueryService; // partial stub: only the events this service subscribes to
 
     const endpointTester = {
         onDidConnectionTestStart: connectionTestStartEmitter.event,
         onDidConnectionTestEnd: connectionTestEndEmitter.event,
-    } as unknown as ISparqlEndpointTester;
+    } as unknown as ISparqlEndpointTester; // partial stub: only the events this service subscribes to
 
-    const connectionsChangedEmitter = new EventEmitter<void>();
-    const graphsChangedEmitter = new EventEmitter<string>();
+    const connectionsChangedEmitter = new vscode.EventEmitter<void>();
+    const graphsChangedEmitter = new vscode.EventEmitter<string>();
 
     const connections: { id: string }[] = [];
     const graphsByConnection: Record<string, string[]> = {};
@@ -74,14 +74,14 @@ function makeServices() {
     const connectionRegistry = {
         onDidChangeConnections: connectionsChangedEmitter.event,
         getConnections: () => connections,
-    } as unknown as ISparqlConnectionRegistry;
+    } as unknown as ISparqlConnectionRegistry; // partial stub: only the events/methods this service consumes
 
     const graphService = {
         onDidGraphLoadStart: graphLoadStartEmitter.event,
         onDidGraphLoadEnd: graphLoadEndEmitter.event,
         onDidChangeGraphs: graphsChangedEmitter.event,
         getGraphsForConnection: (id: string) => graphsByConnection[id] ?? [],
-    } as unknown as IGraphManagementService;
+    } as unknown as IGraphManagementService; // partial stub: only the events/methods this service consumes
 
     return {
         queryService,
@@ -141,7 +141,7 @@ describe('SparqlStatusBarService', () => {
                 id: crypto.randomUUID(),
                 documentIri: 'file:///test.sparql',
                 status: 'running',
-            } as unknown as SparqlQueryExecutionState;
+            } as unknown as SparqlQueryExecutionState; // partial fixture: only the fields this service reads
 
             fireQueryStart(state);
 
@@ -157,7 +157,7 @@ describe('SparqlStatusBarService', () => {
                 id: crypto.randomUUID(),
                 documentIri: 'file:///test.sparql',
                 status: 'complete',
-            } as unknown as SparqlQueryExecutionState;
+            } as unknown as SparqlQueryExecutionState; // partial fixture: only the fields this service reads
 
             fireQueryStart(state);
             fireQueryEnd(state);
@@ -267,7 +267,7 @@ describe('SparqlStatusBarService', () => {
                 id: crypto.randomUUID(),
                 documentIri: 'file:///test.sparql',
                 status: 'running',
-            } as unknown as SparqlQueryExecutionState;
+            } as unknown as SparqlQueryExecutionState; // partial fixture: only the fields this service reads
 
             const connection = { id: 'c1', endpointUrl: 'https://dbpedia.org/sparql' } as SparqlConnection;
 
@@ -345,7 +345,7 @@ describe('SparqlStatusBarService', () => {
                 id: crypto.randomUUID(),
                 documentIri: 'file:///test.sparql',
                 status: 'running',
-            } as unknown as SparqlQueryExecutionState;
+            } as unknown as SparqlQueryExecutionState; // partial fixture: only the fields this service reads
 
             const connection = {
                 id: 'test-connection',

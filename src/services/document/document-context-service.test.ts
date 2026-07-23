@@ -76,7 +76,7 @@ describe('DocumentContextService', () => {
 
 				describe('getDocumentContext', () => {
 		it('returns null when no context exists for the document', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const doc = { uri: vscode.Uri.parse('file:///missing.ttl') } as any;
 
 			class Ctx { }
@@ -85,7 +85,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns null when the context is not of the expected type', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			const doc = { uri } as any;
 
@@ -98,7 +98,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns the typed context when it matches', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			const doc = { uri } as any;
 
@@ -113,7 +113,7 @@ describe('DocumentContextService', () => {
 
 	describe('getDocumentContextFromUri', () => {
 		it('resolves a workspace: URI to the underlying file: context', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const fileUri = 'file:///w/test.ttl';
 			const context = createMockContext();
 
@@ -125,7 +125,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns context directly for a file: URI', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const uri = 'file:///test.ttl';
 			const context = createMockContext();
 
@@ -135,7 +135,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns undefined for an unknown URI', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 
 			expect(service.getDocumentContextFromUri('file:///nonexistent.ttl')).toBeUndefined();
 		});
@@ -143,7 +143,7 @@ describe('DocumentContextService', () => {
 
 	describe('handleDocumentClosed', () => {
 		it('removes a temporary context and deletes its graphs from the store', () => {
-			const { service, tokenSource, mockStore } = createService();
+			const { service, mockStore } = createService();
 			const uri = vscode.Uri.parse('file:///temp.ttl');
 			const context = createMockContext({ uri, isTemporary: true, graphs: ['file:///temp.ttl'] });
 
@@ -155,7 +155,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('keeps a non-temporary context open', () => {
-			const { service, tokenSource, mockStore } = createService();
+			const { service, mockStore } = createService();
 			const uri = vscode.Uri.parse('file:///permanent.ttl');
 			const context = createMockContext({ uri, isTemporary: false });
 
@@ -169,7 +169,7 @@ describe('DocumentContextService', () => {
 
 		describe('loadDocument', () => {
 		it('returns undefined for unsupported language', async () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const doc = {
 				languageId: 'python',
 				uri: vscode.Uri.parse('file:///test.py'),
@@ -182,7 +182,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns undefined when document is null/undefined', async () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 
 			const result = await service.loadDocument(null as any);
 
@@ -212,7 +212,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns existing context immediately when already loaded and not force-reloading', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -234,7 +234,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('force-reloads an already loaded context without replacing it', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -246,7 +246,7 @@ describe('DocumentContextService', () => {
 			// Pre-populate context as already loaded
 			const existingCtx = createMockContext({ uri: doc.uri, isLoaded: true });
 			service.contexts[uri] = existingCtx;
-			existingCtx.isParsed = true;
+			(existingCtx as { isParsed: boolean }).isParsed = true;
 
 			const result = await service.loadDocument(doc, true);
 
@@ -256,7 +256,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does not block when context already has tokens', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -277,7 +277,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('sets ctx.slug before calling loadTriples when a slug is provided', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///nb.mnb#cell1';
 			const doc = {
 				languageId: 'turtle',
@@ -300,7 +300,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does not set ctx.slug when no slug argument is provided', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -318,7 +318,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('updates ctx.slug and triggers reload when context is already loaded with a different slug', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service } = createService();
 			const uri = 'file:///nb.mnb#cell1';
 			const doc = {
 				languageId: 'turtle',
@@ -346,7 +346,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does not reload when already-loaded context has the same slug', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service } = createService();
 			const uri = 'file:///nb.mnb#cell1';
 			const doc = {
 				languageId: 'turtle',
@@ -367,7 +367,7 @@ describe('DocumentContextService', () => {
 
 		it('returns context (partial load) on token timeout', async () => {
 			vi.useFakeTimers();
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -393,7 +393,7 @@ describe('DocumentContextService', () => {
 
 	describe('getContextFromUri', () => {
 		it('returns context for a file: URI directly', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const uri = 'file:///test.ttl';
 			const context = createMockContext();
 			service.contexts[uri] = context;
@@ -402,7 +402,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('resolves a workspace: URI to the underlying file: context', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const fileUri = 'file:///w/test.ttl';
 			const context = createMockContext();
 			service.contexts[fileUri] = context;
@@ -411,14 +411,14 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns undefined for an unknown URI', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			expect(service.getContextFromUri('file:///missing.ttl')).toBeUndefined();
 		});
 	});
 
 	describe('getContext', () => {
 		it('returns null when no context exists for the document', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const doc = { uri: vscode.Uri.parse('file:///missing.ttl') } as any;
 
 			class Ctx { }
@@ -427,7 +427,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns null when the context is not of the expected type', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			const doc = { uri } as any;
 
@@ -440,7 +440,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns the typed context when it matches', () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			const doc = { uri } as any;
 
@@ -511,7 +511,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('clears convert-file-format contexts when no editor is active', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			(vscode.window as any).activeTextEditor = undefined;
 
 			await service.handleActiveEditorChanged();
@@ -554,7 +554,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('loads the document and fires context-changed when a new editor becomes active', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			const doc = {
 				languageId: 'turtle',
@@ -579,7 +579,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does nothing when the active editor URI is unchanged from activeContext', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service } = createService();
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			const ctx = createMockContext({ uri });
 			service.contexts[uri.toString()] = ctx;
@@ -596,7 +596,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('passes slug from notebookDocuments to loadDocument for notebook-cell URIs', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const cellUri = vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#abc123');
 			const cellDoc = {
 				languageId: 'turtle',
@@ -625,7 +625,7 @@ describe('DocumentContextService', () => {
 
 	describe('handleActiveNotebookEditorChanged', () => {
 		it('does nothing when editor is undefined', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 
 			await service.handleActiveNotebookEditorChanged(undefined);
 
@@ -633,7 +633,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('loads triple-source cells from the notebook', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
 
 			const cellDoc = { languageId: 'turtle', uri: vscode.Uri.parse('file:///nb.mnb#cell0'), scheme: 'vscode-notebook-cell', getText: () => '' };
@@ -652,7 +652,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('skips non-triple-source cells', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(false);
 
 			const editor = {
@@ -669,7 +669,7 @@ describe('DocumentContextService', () => {
 
 	describe('handleNotebookDocumentChanged', () => {
 		it('assigns auto slugs to newly added RDF notebook cells and loads their contexts', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
 			(mockDocumentFactory.create as any).mockReturnValue(
 				createMockContext({
@@ -721,7 +721,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('keeps an existing slug for newly added RDF notebook cells', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
 			(mockDocumentFactory.create as any).mockReturnValue(
 				createMockContext({
@@ -768,7 +768,7 @@ describe('DocumentContextService', () => {
 
 	describe('handleTextDocumentChanged', () => {
 		it('creates a context for a new supported document', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = vscode.Uri.parse('file:///new.ttl');
 			const e = {
 				document: {
@@ -784,7 +784,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('calls onDidChangeDocument on an existing context', async () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const uri = vscode.Uri.parse('file:///existing.ttl');
 			const ctx = createMockContext({ uri });
 			service.contexts[uri.toString()] = ctx;
@@ -802,7 +802,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does nothing for unsupported language documents', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const e = {
 				document: {
 					languageId: 'markdown',
@@ -927,7 +927,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does not set activeContext — activation is handleActiveEditorChanged\'s responsibility', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, tokenSource } = createService();
 			const uri = 'file:///active.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -954,7 +954,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('opens the active context document when it differs from the active editor (line 449)', async () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const contextUri = vscode.Uri.parse('file:///context.ttl');
 
 			// Set an active context whose URI doesn't match the active editor.
@@ -971,7 +971,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns the active editor without opening when activeContext is not set', async () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			(vscode.window as any).activeTextEditor = undefined;
 
 			const result = await service.activateDocument();
@@ -986,7 +986,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('calls _setConvertFileFormatContexts and returns when editor document has no URI (lines 470-471)', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 
 			// Provide an editor where document.uri is null/falsy.
 			(vscode.window as any).activeTextEditor = {
@@ -1081,7 +1081,7 @@ describe('DocumentContextService', () => {
 
 	describe('loadDocument (vscode-notebook-cell scheme)', () => {
 		it('does not log the document URI when loading a notebook cell', async () => {
-			const { service, tokenSource, mockDocumentFactory } = createService();
+			const { service, mockDocumentFactory } = createService();
 			const uri = 'file:///nb.mnb#cell0';
 			const doc = {
 				languageId: 'turtle',
@@ -1102,7 +1102,7 @@ describe('DocumentContextService', () => {
 
 	describe('constructor event callback lambdas (lines 78-81)', () => {
 		it('invokes handleActiveEditorChanged via the registered onDidChangeActiveTextEditor callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.window, 'onDidChangeActiveTextEditor').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1112,7 +1112,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('invokes handleActiveNotebookEditorChanged via the registered onDidChangeActiveNotebookEditor callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.window, 'onDidChangeActiveNotebookEditor').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1122,7 +1122,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('invokes handleTextDocumentChanged via the registered onDidChangeTextDocument callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.workspace, 'onDidChangeTextDocument').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1133,7 +1133,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('invokes handleTextDocumentClosed via the registered onDidCloseTextDocument callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.workspace, 'onDidCloseTextDocument').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1143,7 +1143,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('invokes handleNotebookDocumentChanged via the registered onDidChangeNotebookDocument callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.workspace, 'onDidChangeNotebookDocument').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1155,7 +1155,7 @@ describe('DocumentContextService', () => {
 
 	describe('_reloadContextTriples – isParsed=false early return (line 275)', () => {
 		it('returns early without loading triples when context.isParsed is false', async () => {
-			const { service, tokenSource } = createService();
+			const { service } = createService();
 			const uri = 'file:///test.ttl';
 			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: false });
 			service.contexts[uri] = ctx;

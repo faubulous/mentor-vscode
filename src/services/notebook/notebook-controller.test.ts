@@ -14,12 +14,12 @@ const {
 	mockClearDiagnostics,
 	mockRender,
 } = vi.hoisted(() => ({
-	mockCreateQuery: vi.fn((_cell: any, query: string) => ({ queryType: 'bindings', query })),
+	mockCreateQuery: vi.fn((_cell: any, query: string): { queryType: string; query?: string } => ({ queryType: 'bindings', query })),
 	mockExecuteQuery: vi.fn(async (state: any) => state),
 	mockLoadDocument: vi.fn(async () => ({})),
 	mockHandleDocumentClosed: vi.fn(() => {}),
 	mockGetEffectiveShapeGraphs: vi.fn(() => ['shapes:graph']),
-	mockValidateDocument: vi.fn(async () => ({ conforms: true, results: [] })),
+	mockValidateDocument: vi.fn(async (): Promise<{ conforms: boolean; results: unknown[] }> => ({ conforms: true, results: [] })),
 	mockGetReportAsText: vi.fn(() => 'SHACL Validation Report'),
 	mockClearDiagnostics: vi.fn(() => {}),
 	mockRender: vi.fn(() => 'SELECT * WHERE { ?s ?p ?o }'),
@@ -82,7 +82,7 @@ function makeExecution() {
 		token: { onCancellationRequested: vi.fn(() => ({ dispose: () => {} })) },
 		start: vi.fn(),
 		end: vi.fn(),
-		replaceOutput: vi.fn(async () => {}),
+		replaceOutput: vi.fn<(outputs: vscode.NotebookCellOutput[]) => Promise<void>>(async () => { }),
 		clearOutput: vi.fn(async () => {}),
 	};
 }
@@ -148,7 +148,7 @@ describe('NotebookController', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(mockExecution.replaceOutput).toHaveBeenCalledOnce();
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('application/sparql-results+json');
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
@@ -165,7 +165,7 @@ describe('NotebookController', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(mockExecution.replaceOutput).toHaveBeenCalledOnce();
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('application/sparql-results+json');
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
@@ -185,7 +185,7 @@ describe('NotebookController', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(mockExecution.replaceOutput).toHaveBeenCalledOnce();
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('text/turtle');
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
@@ -202,7 +202,7 @@ describe('NotebookController', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(mockExecution.replaceOutput).toHaveBeenCalledOnce();
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('application/vnd.code.notebook.error');
 			expect(mockExecution.end).toHaveBeenCalledWith(false, expect.any(Number));
 		});
@@ -232,7 +232,7 @@ describe('NotebookController', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(mockExecution.replaceOutput).toHaveBeenCalledOnce();
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('text/plain');
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
@@ -249,7 +249,7 @@ describe('NotebookController', () => {
 
 			expect(mockGetReportAsText).toHaveBeenCalledWith(cell.document.uri);
 			expect(mockExecution.replaceOutput).toHaveBeenCalledOnce();
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('text/plain');
 			expect(mockExecution.end).toHaveBeenCalledWith(false, expect.any(Number));
 		});
@@ -260,7 +260,7 @@ describe('NotebookController', () => {
 			const cell = makeCell('turtle');
 
 			mockGetEffectiveShapeGraphs.mockReturnValue([]);
-			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 			await executeHandler()!([cell], {}, {});
 			await new Promise(resolve => setTimeout(resolve, 0));
@@ -295,7 +295,7 @@ describe('NotebookController', () => {
 
 			// The rendered query (not the raw template text) is what gets executed.
 			expect(mockCreateQuery).toHaveBeenCalledWith(expect.anything(), 'SELECT ?x WHERE { ?x a ?t }');
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('application/sparql-results+json');
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
@@ -316,7 +316,7 @@ describe('NotebookController', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			// The cell output is the rendered Turtle, not the SHACL summary text.
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('text/turtle');
 			// Validation still runs against the cell's shapes; conformance is shown as an info snackbar.
 			expect(mockValidateDocument).toHaveBeenCalledWith(expect.anything(), ['shapes:graph']);
@@ -344,7 +344,7 @@ describe('NotebookController', () => {
 			await executeHandler()!([makeTemplateCell('turtle')], {}, {});
 			await new Promise(resolve => setTimeout(resolve, 0));
 
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('text/turtle');
 			expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('SHACL validation: 2 issue(s) found.');
 			expect(mockExecution.end).toHaveBeenCalledWith(false, expect.any(Number));
@@ -361,7 +361,7 @@ describe('NotebookController', () => {
 			await executeHandler()!([makeTemplateCell('turtle')], {}, {});
 			await new Promise(resolve => setTimeout(resolve, 0));
 
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('text/turtle');
 			expect(mockValidateDocument).not.toHaveBeenCalled();
 			expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
@@ -387,7 +387,7 @@ describe('NotebookController', () => {
 
 		it('executes the command without throwing when args is missing', () => {
 			const { messageHandler } = createControllerWithMessaging();
-			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 			expect(() => messageHandler({ message: { id: 'ExecuteCommand', command: 'mentor.test' } })).not.toThrow();
 			expect(executeCommand).toHaveBeenCalledWith('mentor.test');
@@ -395,7 +395,7 @@ describe('NotebookController', () => {
 
 		it('spreads args into the command when provided', () => {
 			const { messageHandler } = createControllerWithMessaging();
-			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 			messageHandler({ message: { id: 'ExecuteCommand', command: 'mentor.test', args: ['a', 1] } });
 
@@ -404,7 +404,7 @@ describe('NotebookController', () => {
 
 		it('ignores messages with other ids', () => {
 			const { messageHandler } = createControllerWithMessaging();
-			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+			const executeCommand = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 			messageHandler({ message: { id: 'SomethingElse' } });
 
@@ -422,7 +422,7 @@ describe('NotebookController', () => {
 
 			expect(mockValidateDocument).not.toHaveBeenCalled();
 			expect(mockExecuteQuery).not.toHaveBeenCalled();
-			const [outputs] = mockExecution.replaceOutput.mock.calls[0] as unknown as [vscode.NotebookCellOutput[]];
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
 			expect(outputs[0].items[0].mime).toBe('text/turtle');
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});

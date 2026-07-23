@@ -20,9 +20,9 @@ vi.mock('tsyringe', () => ({
     singleton: () => (_target: any) => _target,
 }));
 
-import { Uri } from '@src/utilities/mocks/vscode';
 import { SparqlDocument } from '@src/languages/sparql/sparql-document';
 import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { createSparqlDocument } from '@src/utilities/mocks/factories';
 
 /**
  * Build a minimal IToken with position information.
@@ -43,7 +43,7 @@ function makeToken(name: string, image: string, opts: {
 }
 
 function makeDoc(uri = 'file:///test.sparql'): SparqlDocument {
-    return new SparqlDocument(Uri.parse(uri) as any);
+    return createSparqlDocument(uri);
 }
 
 describe('SparqlDocument', () => {

@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { createMockTextEditor } from '@src/utilities/mocks/factories';
 import { ValidationProfilesSectionController } from '@src/views/webviews/views/settings/sections/validation/profiles-controller';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
@@ -263,7 +264,7 @@ describe('ValidationProfilesSectionController', () => {
 	it('opens a picked file and leaves the pattern unchanged', async () => {
 		const { controller, post } = setup(['models/a.ttl', 'models/b.ttl']);
 
-		const show = vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue(undefined as any);
+		const show = vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue(createMockTextEditor());
 
 		const quickPick = createQuickPickMock((qp, handlers) => {
 			// Pick the first file item instead of confirming the typed pattern.
@@ -333,7 +334,7 @@ describe('ValidationProfilesSectionController', () => {
 		(vscode.workspace as any).workspaceFolders = [{ uri: vscode.Uri.parse('file:///w'), name: 'w', index: 0 }];
 		WorkspaceUri.rootUri = undefined;
 
-		const show = vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue(undefined as any);
+		const show = vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue(createMockTextEditor());
 
 		const handled = await controller.handleMessage({
 			section: 'validation.profiles',
@@ -349,7 +350,7 @@ describe('ValidationProfilesSectionController', () => {
 	it('opens a non-workspace shape graph through the graph exporter', async () => {
 		const { controller } = setup();
 
-		const show = vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue(undefined as any);
+		const show = vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue(createMockTextEditor());
 		(vscode.commands as any).executeCommand = vi.fn(async () => undefined);
 
 		const handled = await controller.handleMessage({
@@ -369,8 +370,8 @@ describe('ValidationProfilesSectionController', () => {
 		(vscode.workspace as any).workspaceFolders = undefined;
 		WorkspaceUri.rootUri = undefined;
 
-		const show = vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue(undefined as any);
-		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		const show = vi.spyOn(vscode.window, 'showTextDocument').mockResolvedValue(createMockTextEditor());
+		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		await controller.handleMessage({
 			section: 'validation.profiles',
@@ -397,7 +398,7 @@ describe('ValidationProfilesSectionController', () => {
 
 	it('does not post when the deletion is cancelled', async () => {
 		const { controller, post } = setup();
-		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		await controller.handleMessage(deleteMessage);
 

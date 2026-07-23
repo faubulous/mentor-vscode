@@ -52,7 +52,7 @@ export async function renderTemplateInteractively(compiled: CompiledTemplate): P
  * @param compiled A compiled triplate template.
  * @returns The chosen example or the manually entered values, or `undefined` if cancelled.
  */
-export async function selectTemplateInputs(compiled: CompiledTemplate): Promise<TemplateInputChoice | undefined> {
+async function selectTemplateInputs(compiled: CompiledTemplate): Promise<TemplateInputChoice | undefined> {
 	if (compiled.examples.length > 0) {
 		const manualItem: ExampleQuickPickItem = { label: 'Enter values manually…' };
 
@@ -95,7 +95,7 @@ export async function selectTemplateInputs(compiled: CompiledTemplate): Promise<
  *
  * @param params The parameter declarations from a compiled template's schema.
  */
-export async function promptForParameters(params: ParamDecl[]): Promise<Map<string, string | undefined> | undefined> {
+async function promptForParameters(params: ParamDecl[]): Promise<Map<string, string | undefined> | undefined> {
 	const inputs = new Map<string, string | undefined>();
 
 	for (const param of params) {

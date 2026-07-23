@@ -15,6 +15,7 @@ const { ValidatorMock } = vi.hoisted(() => {
 vi.mock('shacl-engine', () => ({ Validator: ValidatorMock }));
 
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
+import { ShaclSettingsSyncService } from '@src/services/validation/shacl-settings-sync-service';
 import { ShaclValidationSettings } from '@src/services/validation/shacl-validation-configuration';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 
@@ -196,6 +197,43 @@ describe('ShaclValidationService.checkShaclProfiles', () => {
 
 		expect(await service.checkShaclProfiles()).toEqual({
 			profiles: { 'ontology': ['https://w3id.org/mentor/shacl/profiles/ontology'] },
+		});
+	});
+
+	it('loads referenced workspace shape graphs on demand before deciding (ADR-0003)', async () => {
+		const workspaceShape = 'workspace:///.mentor/shapes/ontology.ttl';
+		const loaded = new Set<string>();
+		const store = { hasGraph: (uri: string) => loaded.has(uri) } as any;
+		const profileSettings = {
+			getMergedSettings: () => ({
+				profiles: { 'ontology': { name: 'Ontology', shapes: [workspaceShape] } },
+			}),
+		} as any;
+
+		// The ensure callback simulates a successful on-demand load into the store.
+		const sync = new ShaclSettingsSyncService(store, profileSettings, undefined, async uris => {
+			for (const uri of uris) {
+				loaded.add(uri);
+			}
+		});
+
+		expect(await sync.checkShaclProfiles()).toEqual({ profiles: {} });
+	});
+
+	it('reports a shape graph broken when the on-demand load cannot provide it', async () => {
+		const workspaceShape = 'workspace:///.mentor/shapes/deleted.ttl';
+		const store = { hasGraph: () => false } as any;
+		const profileSettings = {
+			getMergedSettings: () => ({
+				profiles: { 'ontology': { name: 'Ontology', shapes: [workspaceShape] } },
+			}),
+		} as any;
+
+		// The ensure callback resolves without loading anything (file missing or unparsable).
+		const sync = new ShaclSettingsSyncService(store, profileSettings, undefined, async () => { });
+
+		expect(await sync.checkShaclProfiles()).toEqual({
+			profiles: { 'ontology': [workspaceShape] },
 		});
 	});
 

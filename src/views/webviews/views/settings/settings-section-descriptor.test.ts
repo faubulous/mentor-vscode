@@ -6,6 +6,7 @@ import * as packageJson from '../../../../../package.json';
 
 describe('section descriptors', () => {
 	it('claim every mentor.* key in package.json exactly once', () => {
+		// Narrow the JSON import to the slice of package.json this test reads.
 		const properties = (packageJson as unknown as {
 			contributes: { configuration: Array<{ properties: Record<string, unknown> }> };
 		}).contributes.configuration[0].properties;

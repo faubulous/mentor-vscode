@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 import { DataFactory } from 'n3';
+import type { Literal, Quad } from '@rdfjs/types';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
@@ -100,8 +101,8 @@ describe('SparqlResultSerializer', () => {
             const row = result.rows[0];
             expect(row['label'].termType).toBe('Literal');
             expect(row['label'].value).toBe('Hello');
-            expect(row['label'].language).toBe('en');
-            expect(row['label'].datatype.termType).toBe('NamedNode');
+            expect((row['label'] as Literal).language).toBe('en');
+            expect((row['label'] as Literal).datatype.termType).toBe('NamedNode');
         });
 
         it('resolves prefix for NamedNode namespaces', async () => {
@@ -307,9 +308,9 @@ describe('SparqlResultSerializer', () => {
             );
             const row = result.rows[0];
             expect(row['q'].termType).toBe('Quad');
-            expect(row['q'].subject).toBeDefined();
-            expect(row['q'].predicate).toBeDefined();
-            expect(row['q'].object).toBeDefined();
+            expect((row['q'] as Quad).subject).toBeDefined();
+            expect((row['q'] as Quad).predicate).toBeDefined();
+            expect((row['q'] as Quad).object).toBeDefined();
         });
     });
 

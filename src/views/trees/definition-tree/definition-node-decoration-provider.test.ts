@@ -26,7 +26,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 
 const mockContextChangeHandlers: Array<(ctx: any) => void> = [];
 const mockContextService = {
-	activeContext: undefined as any,
+	activeContext: undefined as Record<string, any> | undefined,
 	onDidChangeDocumentContext: vi.fn((handler: (ctx: any) => void) => {
 		mockContextChangeHandlers.push(handler);
 		return { dispose: () => {} };
@@ -52,7 +52,7 @@ const mockVocabularyRepository: { store: { matchAll: any } } = {
 };
 
 const mockNodeProvider = {
-	getNodeForUri: vi.fn((_iri: string) => undefined as any),
+	getNodeForUri: vi.fn<(iri: string) => unknown>(() => undefined),
 	// The lazy ancestor build resolves each violation against the root nodes. Expose a single
 	// synthetic root whose resolveNodeForUri delegates to getNodeForUri, so existing tests that
 	// mock getNodeForUri keep driving resolution.
@@ -67,7 +67,7 @@ const mockValidationService = {
 		mockValidationHandlers.push(handler);
 		return { dispose: () => {} };
 	}),
-	getLastResult: vi.fn(() => undefined as any),
+	getLastResult: vi.fn<() => unknown>(() => undefined),
 };
 
 vi.mock('tsyringe', () => ({
@@ -233,7 +233,6 @@ describe('DefinitionNodeDecorationProvider — provideFileDecoration (non-Disabl
 		};
 	}
 
-	let fireSpy: any;
 	let dec: any;
 
 	beforeEach(() => {

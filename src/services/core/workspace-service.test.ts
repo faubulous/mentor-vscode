@@ -1,6 +1,5 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
-import { URI } from 'vscode-uri';
 import { WorkspaceService } from '@src/services/core/workspace-service';
 
 describe('WorkspaceService', () => {
@@ -27,45 +26,45 @@ describe('WorkspaceService', () => {
 
 	describe('createDescriptor', () => {
 		describe('Linux paths', () => {
-			const rootUri = URI.parse('file:///home/user/project');
+			const rootUri = vscode.Uri.parse('file:///home/user/project');
 
 			test('should extract ID from workspace filename', () => {
-				const fileUri = URI.parse('file:///home/user/project/my-workspace.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.id).toBe('my-workspace');
 			});
 
 			test('should compute relative path for a file at the project root', () => {
-				const fileUri = URI.parse('file:///home/user/project/my-workspace.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.relativePath).toBe('my-workspace.code-workspace');
 			});
 
 			test('should compute relative path for a nested file', () => {
-				const fileUri = URI.parse('file:///home/user/project/sub/dir/my-workspace.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/project/sub/dir/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.relativePath).toBe('sub/dir/my-workspace.code-workspace');
 			});
 
 			test('should set absolutePath to the fsPath of the URI', () => {
-				const fileUri = URI.parse('file:///home/user/project/my-workspace.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.absolutePath).toBe('/home/user/project/my-workspace.code-workspace');
 			});
 
 			test('should preserve the original URI', () => {
-				const fileUri = URI.parse('file:///home/user/project/my-workspace.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.uri).toBe(fileUri);
 			});
 
 			test('should handle deeply nested workspace files', () => {
-				const fileUri = URI.parse('file:///home/user/project/a/b/c/d/test.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/project/a/b/c/d/test.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.id).toBe('test');
@@ -73,8 +72,8 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should handle workspace root with trailing slash', () => {
-				const rootWithSlash = URI.parse('file:///home/user/project/');
-				const fileUri = URI.parse('file:///home/user/project/my-workspace.code-workspace');
+				const rootWithSlash = vscode.Uri.parse('file:///home/user/project/');
+				const fileUri = vscode.Uri.parse('file:///home/user/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootWithSlash);
 
 				expect(descriptor.id).toBe('my-workspace');
@@ -83,31 +82,31 @@ describe('WorkspaceService', () => {
 		});
 
 		describe('Windows paths', () => {
-			const rootUri = URI.parse('file:///c:/Users/user/project');
+			const rootUri = vscode.Uri.parse('file:///c:/Users/user/project');
 
 			test('should extract ID from workspace filename', () => {
-				const fileUri = URI.parse('file:///c:/Users/user/project/my-workspace.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///c:/Users/user/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.id).toBe('my-workspace');
 			});
 
 			test('should compute relative path with forward slashes', () => {
-				const fileUri = URI.parse('file:///c:/Users/user/project/sub/dir/my-workspace.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///c:/Users/user/project/sub/dir/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.relativePath).toBe('sub/dir/my-workspace.code-workspace');
 			});
 
 			test('should set absolutePath to the fsPath of the URI', () => {
-				const fileUri = URI.parse('file:///c:/Users/user/project/my-workspace.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///c:/Users/user/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.absolutePath).toBe(fileUri.fsPath);
 			});
 
 			test('should handle workspace files at the project root', () => {
-				const fileUri = URI.parse('file:///c:/Users/user/project/test.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///c:/Users/user/project/test.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.id).toBe('test');
@@ -115,8 +114,8 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should handle uppercase drive letters', () => {
-				const root = URI.parse('file:///C:/Users/user/project');
-				const fileUri = URI.parse('file:///C:/Users/user/project/my-workspace.code-workspace');
+				const root = vscode.Uri.parse('file:///C:/Users/user/project');
+				const fileUri = vscode.Uri.parse('file:///C:/Users/user/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, root);
 
 				expect(descriptor.id).toBe('my-workspace');
@@ -124,7 +123,7 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should handle deeply nested workspace files', () => {
-				const fileUri = URI.parse('file:///c:/Users/user/project/a/b/c/test.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///c:/Users/user/project/a/b/c/test.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.id).toBe('test');
@@ -134,8 +133,8 @@ describe('WorkspaceService', () => {
 
 		describe('UNC paths', () => {
 			test('should handle UNC network paths', () => {
-				const rootUri = URI.parse('file://server/share/project');
-				const fileUri = URI.parse('file://server/share/project/my-workspace.code-workspace');
+				const rootUri = vscode.Uri.parse('file://server/share/project');
+				const fileUri = vscode.Uri.parse('file://server/share/project/my-workspace.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.id).toBe('my-workspace');
@@ -144,10 +143,10 @@ describe('WorkspaceService', () => {
 		});
 
 		describe('rootOffset and rootUri', () => {
-			const rootUri = URI.parse('file:///home/user/monorepo');
+			const rootUri = vscode.Uri.parse('file:///home/user/monorepo');
 
 			test('should have undefined rootOffset and rootUri when no content is provided', () => {
-				const fileUri = URI.parse('file:///home/user/monorepo/frontend.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/monorepo/frontend.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri);
 
 				expect(descriptor.rootOffset).toBeUndefined();
@@ -155,7 +154,7 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should have undefined rootOffset and rootUri when content has no settings', () => {
-				const fileUri = URI.parse('file:///home/user/monorepo/frontend.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/monorepo/frontend.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri, { folders: [] });
 
 				expect(descriptor.rootOffset).toBeUndefined();
@@ -163,7 +162,7 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should have undefined rootOffset and rootUri when settings has no rootOffset', () => {
-				const fileUri = URI.parse('file:///home/user/monorepo/frontend.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/monorepo/frontend.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri, {
 					settings: { 'some.other.setting': true }
 				});
@@ -173,7 +172,7 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should resolve rootUri with rootOffset "." for workspace at monorepo root', () => {
-				const fileUri = URI.parse('file:///home/user/monorepo/frontend.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/monorepo/frontend.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri, {
 					settings: { 'mentor.workspace.rootOffset': '.' }
 				});
@@ -184,7 +183,7 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should resolve rootUri with rootOffset ".." for workspace in a subdirectory', () => {
-				const fileUri = URI.parse('file:///home/user/monorepo/tools/backend.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/monorepo/tools/backend.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri, {
 					settings: { 'mentor.workspace.rootOffset': '..' }
 				});
@@ -195,7 +194,7 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should resolve rootUri with rootOffset "../.." for deeply nested workspace', () => {
-				const fileUri = URI.parse('file:///home/user/monorepo/a/b/deep.code-workspace');
+				const fileUri = vscode.Uri.parse('file:///home/user/monorepo/a/b/deep.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, rootUri, {
 					settings: { 'mentor.workspace.rootOffset': '../..' }
 				});
@@ -206,8 +205,8 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should resolve rootUri on Windows paths', () => {
-				const winRoot = URI.parse('file:///c:/Projects/monorepo');
-				const fileUri = URI.parse('file:///c:/Projects/monorepo/tools/backend.code-workspace');
+				const winRoot = vscode.Uri.parse('file:///c:/Projects/monorepo');
+				const fileUri = vscode.Uri.parse('file:///c:/Projects/monorepo/tools/backend.code-workspace');
 				const descriptor = WorkspaceService.createDescriptor(fileUri, winRoot, {
 					settings: { 'mentor.workspace.rootOffset': '..' }
 				});
@@ -217,8 +216,8 @@ describe('WorkspaceService', () => {
 			});
 
 			test('should produce identical rootUri for workspace files at different depths', () => {
-				const frontendUri = URI.parse('file:///home/user/monorepo/frontend.code-workspace');
-				const backendUri = URI.parse('file:///home/user/monorepo/tools/backend.code-workspace');
+				const frontendUri = vscode.Uri.parse('file:///home/user/monorepo/frontend.code-workspace');
+				const backendUri = vscode.Uri.parse('file:///home/user/monorepo/tools/backend.code-workspace');
 
 				const frontendDescriptor = WorkspaceService.createDescriptor(frontendUri, rootUri, {
 					settings: { 'mentor.workspace.rootOffset': '.' }
@@ -235,21 +234,21 @@ describe('WorkspaceService', () => {
 
 	describe('resolveRootUri', () => {
 		test('should resolve "." to the workspace file directory', () => {
-			const fileUri = URI.parse('file:///home/user/monorepo/frontend.code-workspace');
+			const fileUri = vscode.Uri.parse('file:///home/user/monorepo/frontend.code-workspace');
 			const rootUri = WorkspaceService.resolveRootUri(fileUri, '.');
 
 			expect(rootUri.path).toBe('/home/user/monorepo');
 		});
 
 		test('should resolve ".." to the parent of the workspace file directory', () => {
-			const fileUri = URI.parse('file:///home/user/monorepo/tools/backend.code-workspace');
+			const fileUri = vscode.Uri.parse('file:///home/user/monorepo/tools/backend.code-workspace');
 			const rootUri = WorkspaceService.resolveRootUri(fileUri, '..');
 
 			expect(rootUri.path).toBe('/home/user/monorepo');
 		});
 
 		test('should resolve a named subdirectory offset', () => {
-			const fileUri = URI.parse('file:///home/user/monorepo/frontend.code-workspace');
+			const fileUri = vscode.Uri.parse('file:///home/user/monorepo/frontend.code-workspace');
 			const rootUri = WorkspaceService.resolveRootUri(fileUri, 'sub');
 
 			expect(rootUri.path).toBe('/home/user/monorepo/sub');
@@ -269,10 +268,10 @@ describe('WorkspaceService', () => {
 	describe('discoverWorkspaces', () => {
 		test('should discover workspace files and populate the list', async () => {
 			const mockFiles = [
-				URI.parse('file:///w/my-workspace.code-workspace'),
-				URI.parse('file:///w/other.code-workspace'),
+				vscode.Uri.parse('file:///w/my-workspace.code-workspace'),
+				vscode.Uri.parse('file:///w/other.code-workspace'),
 			];
-			findFilesSpy.mockResolvedValue(mockFiles as any);
+			findFilesSpy.mockResolvedValue(mockFiles);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({ folders: [] }));
 
 			await service.discoverWorkspaces();
@@ -304,8 +303,8 @@ describe('WorkspaceService', () => {
 
 		test('should clear previous results on re-discovery', async () => {
 			findFilesSpy.mockResolvedValueOnce([
-				URI.parse('file:///w/first.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/first.code-workspace'),
+			]);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({ folders: [] }));
 
 			await service.discoverWorkspaces();
@@ -314,8 +313,8 @@ describe('WorkspaceService', () => {
 			expect(service.workspaces[0].id).toBe('first');
 
 			findFilesSpy.mockResolvedValueOnce([
-				URI.parse('file:///w/second.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/second.code-workspace'),
+			]);
 
 			await service.discoverWorkspaces();
 
@@ -333,9 +332,9 @@ describe('WorkspaceService', () => {
 
 		test('should compute correct relative paths from workspace root', async () => {
 			const mockFiles = [
-				URI.parse('file:///w/sub/dir/test.code-workspace'),
+				vscode.Uri.parse('file:///w/sub/dir/test.code-workspace'),
 			];
-			findFilesSpy.mockResolvedValue(mockFiles as any);
+			findFilesSpy.mockResolvedValue(mockFiles);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({ folders: [] }));
 
 			await service.discoverWorkspaces();
@@ -345,9 +344,9 @@ describe('WorkspaceService', () => {
 
 		test('should parse rootOffset from workspace file content', async () => {
 			const mockFiles = [
-				URI.parse('file:///w/frontend.code-workspace'),
+				vscode.Uri.parse('file:///w/frontend.code-workspace'),
 			];
-			findFilesSpy.mockResolvedValue(mockFiles as any);
+			findFilesSpy.mockResolvedValue(mockFiles);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({
 				folders: [{ path: 'ui' }],
 				settings: { 'mentor.workspace.rootOffset': '.' }
@@ -362,9 +361,9 @@ describe('WorkspaceService', () => {
 
 		test('should handle workspace files that cannot be read', async () => {
 			const mockFiles = [
-				URI.parse('file:///w/broken.code-workspace'),
+				vscode.Uri.parse('file:///w/broken.code-workspace'),
 			];
-			findFilesSpy.mockResolvedValue(mockFiles as any);
+			findFilesSpy.mockResolvedValue(mockFiles);
 			readFileSpy.mockRejectedValue(new Error('file not found'));
 
 			await service.discoverWorkspaces();
@@ -376,9 +375,9 @@ describe('WorkspaceService', () => {
 
 		test('should handle workspace files with invalid JSON', async () => {
 			const mockFiles = [
-				URI.parse('file:///w/invalid.code-workspace'),
+				vscode.Uri.parse('file:///w/invalid.code-workspace'),
 			];
-			findFilesSpy.mockResolvedValue(mockFiles as any);
+			findFilesSpy.mockResolvedValue(mockFiles);
 			readFileSpy.mockResolvedValue(new TextEncoder().encode('not valid json'));
 
 			await service.discoverWorkspaces();
@@ -395,8 +394,8 @@ describe('WorkspaceService', () => {
 
 		test('should be undefined when no workspace file is active', async () => {
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/frontend.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/frontend.code-workspace'),
+			]);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({
 				settings: { 'mentor.workspace.rootOffset': '.' }
 			}));
@@ -409,11 +408,11 @@ describe('WorkspaceService', () => {
 
 		test('should resolve when the active workspace file has a rootOffset', async () => {
 			const original = vscode.workspace.workspaceFile;
-			(vscode.workspace as any).workspaceFile = URI.parse('file:///w/frontend.code-workspace');
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///w/frontend.code-workspace');
 
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/frontend.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/frontend.code-workspace'),
+			]);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({
 				settings: { 'mentor.workspace.rootOffset': '.' }
 			}));
@@ -428,11 +427,11 @@ describe('WorkspaceService', () => {
 
 		test('should be undefined when the active workspace file has no rootOffset', async () => {
 			const original = vscode.workspace.workspaceFile;
-			(vscode.workspace as any).workspaceFile = URI.parse('file:///w/frontend.code-workspace');
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///w/frontend.code-workspace');
 
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/frontend.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/frontend.code-workspace'),
+			]);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({
 				folders: [{ path: 'ui' }]
 			}));
@@ -446,11 +445,11 @@ describe('WorkspaceService', () => {
 
 		test('should be cleared on re-discovery', async () => {
 			const original = vscode.workspace.workspaceFile;
-			(vscode.workspace as any).workspaceFile = URI.parse('file:///w/frontend.code-workspace');
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///w/frontend.code-workspace');
 
 			findFilesSpy.mockResolvedValueOnce([
-				URI.parse('file:///w/frontend.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/frontend.code-workspace'),
+			]);
 			readFileSpy.mockResolvedValueOnce(encodeWorkspaceFile({
 				settings: { 'mentor.workspace.rootOffset': '.' }
 			}));
@@ -473,8 +472,8 @@ describe('WorkspaceService', () => {
 	describe('getWorkspaceById', () => {
 		test('should return the descriptor for a valid ID', async () => {
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/my-workspace.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/my-workspace.code-workspace'),
+			]);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({ folders: [] }));
 
 			await service.discoverWorkspaces();
@@ -488,8 +487,8 @@ describe('WorkspaceService', () => {
 
 		test('should return undefined for an unknown ID', async () => {
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/my-workspace.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/my-workspace.code-workspace'),
+			]);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({ folders: [] }));
 
 			await service.discoverWorkspaces();
@@ -503,8 +502,8 @@ describe('WorkspaceService', () => {
 
 		test('should return undefined after re-discovery clears previous results', async () => {
 			findFilesSpy.mockResolvedValueOnce([
-				URI.parse('file:///w/old.code-workspace'),
-			] as any);
+				vscode.Uri.parse('file:///w/old.code-workspace'),
+			]);
 			readFileSpy.mockResolvedValue(encodeWorkspaceFile({ folders: [] }));
 
 			await service.discoverWorkspaces();

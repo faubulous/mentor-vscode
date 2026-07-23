@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { DEPRECATED_WORKSPACE_URI_CODE } from '@src/linters/providers/deprecated-workspace-uri-linter';
 
-export { DEPRECATED_WORKSPACE_URI_CODE };
 
 /**
  * Regex to extract the canonical URI from the diagnostic message produced by `DeprecatedWorkspaceUriLinter`.

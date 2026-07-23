@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { IToken } from '@faubulous/mentor-rdf-parsers';
 
 vi.mock('@faubulous/mentor-rdf-parsers', () => ({
 	RdfToken: {
@@ -390,8 +391,9 @@ describe('getUnquotedLiteralValue', () => {
 
 describe('getTokenIndexAtPosition', () => {
 	// Tokens are 1-based (chevrotain); positions are 0-based (editor).
-	function tok(name: string, image: string, startLine: number, startColumn: number) {
-		return { tokenType: { name }, image, startLine, endLine: startLine, startColumn, endColumn: startColumn + image.length - 1 };
+	function tok(name: string, image: string, startLine: number, startColumn: number): IToken {
+		// Partial stub: only the fields these tests read from IToken are set.
+		return { tokenType: { name }, image, startLine, endLine: startLine, startColumn, endColumn: startColumn + image.length - 1 } as unknown as IToken;
 	}
 
 	it('returns the index of a single-line token containing the position', () => {

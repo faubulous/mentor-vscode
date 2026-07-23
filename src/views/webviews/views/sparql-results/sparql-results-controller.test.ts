@@ -143,29 +143,62 @@ describe('SparqlResultsController EditBackgroundQuery handler', () => {
 });
 
 describe('SparqlResultsController query history', () => {
-	it('does not select the latest tab when the history is pulled (e.g. welcome view refresh)', async () => {
+	it('carries no select id when the history is posted with no execution in flight (e.g. welcome refresh)', async () => {
 		history = [{ id: 'q1', documentIri: 'file:///a.sparql' }];
 
 		const controller = makeController();
 		await (controller as any).onDidReceiveMessage({ id: 'GetSparqlQueryHistory' });
 
 		expect((controller as any).postMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ id: 'PostSparqlQueryHistory', selectLatest: false })
+			expect.objectContaining({ id: 'PostSparqlQueryHistory', selectQueryId: undefined })
 		);
 	});
 
-	it('selects the latest tab on an execution-driven history change', async () => {
+	it('carries the executing query id on every history post so the panel selects its tab', async () => {
 		history = [{ id: 'q1', documentIri: 'file:///a.sparql' }];
 
 		const controller = makeController();
 
-		// The constructor registered the history-change handler; firing it mirrors a
-		// query execution pushing updated history to the panel.
-		historyChangeHandler?.();
+		// Simulate an execution in flight (set by _executeQuery around the query run).
+		(controller as any)._pendingSelectQueryId = 'q1';
 
-		expect((controller as any).postMessage).toHaveBeenCalledWith(
-			expect.objectContaining({ id: 'PostSparqlQueryHistory', selectLatest: true })
-		);
+		// Both an execution-driven push (onDidHistoryChange) and the webview's mount pull
+		// (GetSparqlQueryHistory) must carry the pending id.
+		historyChangeHandler?.();
+		await (controller as any).onDidReceiveMessage({ id: 'GetSparqlQueryHistory' });
+
+		const posts = (controller as any).postMessage.mock.calls
+			.map((c: any[]) => c[0])
+			.filter((m: any) => m.id === 'PostSparqlQueryHistory');
+
+		expect(posts.length).toBeGreaterThanOrEqual(2);
+		expect(posts.every((m: any) => m.selectQueryId === 'q1')).toBe(true);
+	});
+
+	it('defers execution until a just-opened webview reports it is listening', async () => {
+		const controller = makeController();
+
+		// Panel just opened: readiness is armed but not yet signaled.
+		(controller as any)._armWebviewReady();
+
+		let ready = false;
+		const wait = (controller as any)._awaitWebviewReady(5000).then(() => { ready = true; });
+
+		await Promise.resolve();
+		expect(ready).toBe(false);
+
+		// The webview's first history request doubles as its readiness signal.
+		await (controller as any).onDidReceiveMessage({ id: 'GetSparqlQueryHistory' });
+		await wait;
+
+		expect(ready).toBe(true);
+	});
+
+	it('does not wait for readiness when the panel was already open', async () => {
+		const controller = makeController();
+
+		// No readiness armed (panel already visible) — resolves immediately.
+		await (controller as any)._awaitWebviewReady(5000);
 	});
 });
 

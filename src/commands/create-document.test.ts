@@ -2,8 +2,10 @@ import * as vscode from 'vscode';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDocument } from '@src/commands/create-document';
 
-const mockShowQuickPick = vi.fn(async () => undefined as any);
-const mockExecuteCommand = vi.fn(async () => undefined as any);
+// Assigned directly onto the real vscode.window/commands properties below, whose
+// signatures are overloaded/generic; a concrete return type wouldn't structurally match.
+const mockShowQuickPick = vi.fn<(...args: any[]) => Promise<any>>(async () => undefined);
+const mockExecuteCommand = vi.fn<(...args: any[]) => Promise<any>>(async () => undefined);
 
 const mockDocumentFactory = {
 	getSupportedLanguagesInfo: vi.fn(async () => [

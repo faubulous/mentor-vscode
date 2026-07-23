@@ -20,7 +20,7 @@ vi.mock('@comunica/query-sparql', () => ({
 
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
-import { Uri } from '@src/utilities/mocks/vscode';
+import * as vscode from 'vscode';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,7 +47,7 @@ function makeContext(initialHistory: SparqlQueryExecutionState[] = []) {
             update: vi.fn(async (key: string, value: any) => { store.set(key, value); }),
         },
         subscriptions: { push: vi.fn() },
-    } as unknown as import('vscode').ExtensionContext;
+    } as unknown as import('vscode').ExtensionContext; // partial stub: only workspaceState/subscriptions are read
 }
 
 function makeService(context = makeContext()) {
@@ -180,7 +180,7 @@ describe('SparqlQueryService – getQueryStateForDocument', () => {
         const state = makeState('file:///workspace/known.sparql');
         const service = makeService(makeContext([state]));
 
-        const result = service.getQueryStateForDocument(state.documentIri);
+        const result = service.getQueryStateForDocument(state.documentIri!);
         expect(result).toBeDefined();
         expect(result!.documentIri).toBe(state.documentIri);
     });
@@ -489,7 +489,7 @@ describe('SparqlQueryService – _getFetchHandler', () => {
 describe('SparqlQueryService – createQuery', () => {
     it('creates a query state from a TextDocument', () => {
         const service = makeService();
-        const uri = Uri.parse('file:///workspace/query.sparql');
+        const uri = vscode.Uri.parse('file:///workspace/query.sparql');
         const mockDoc = {
             uri,
             getText: () => 'SELECT * WHERE { ?s ?p ?o }',
@@ -502,8 +502,8 @@ describe('SparqlQueryService – createQuery', () => {
 
     it('creates a query state from a NotebookCell', () => {
         const service = makeService();
-        const notebookUri = Uri.parse('file:///workspace/notebook.sparql-book');
-        const cellUri = Uri.parse('vscode-notebook-cell:///workspace/notebook.sparql-book#cell2');
+        const notebookUri = vscode.Uri.parse('file:///workspace/notebook.sparql-book');
+        const cellUri = vscode.Uri.parse('vscode-notebook-cell:///workspace/notebook.sparql-book#cell2');
         const mockCell = {
             notebook: { uri: notebookUri },
             index: 2,
@@ -525,7 +525,7 @@ describe('SparqlQueryService – createQuery', () => {
 describe('SparqlQueryService – createQueryFromDocument', () => {
     it('creates a query state from a TextDocument with its text content', () => {
         const service = makeService();
-        const uri = Uri.parse('file:///workspace/query.sparql');
+        const uri = vscode.Uri.parse('file:///workspace/query.sparql');
         const mockDoc = {
             uri,
             getText: () => 'CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }',
@@ -558,7 +558,6 @@ describe('SparqlQueryService – cancelQuery (active token)', () => {
 // ---------------------------------------------------------------------------
 describe('SparqlQueryService – _onTextDocumentClosed', () => {
     it('removes untitled document from history when closed', async () => {
-        const { workspace } = await import('vscode');
         const untitledUri = {
             toString: () => 'untitled:query-1',
             scheme: 'untitled'
@@ -590,9 +589,8 @@ describe('SparqlQueryService – _onTextDocumentClosed', () => {
     });
 
     it('removes untitled document via the registered onDidCloseTextDocument event handler', async () => {
-        const { workspace } = await import('vscode');
         let capturedHandler: ((doc: any) => void) | undefined;
-        const spy = vi.spyOn(workspace, 'onDidCloseTextDocument').mockImplementation((handler: any) => {
+        const spy = vi.spyOn(vscode.workspace, 'onDidCloseTextDocument').mockImplementation((handler: any) => {
             capturedHandler = handler;
             return { dispose: () => {} };
         });
@@ -614,8 +612,7 @@ describe('SparqlQueryService – _getQueryText', () => {
     });
 
     it('returns document getText when documentIri matches workspace textDocuments', async () => {
-        const vscode = await import('vscode');
-        const uri = Uri.parse('file:///workspace/q.sparql');
+        const uri = vscode.Uri.parse('file:///workspace/q.sparql');
         (vscode.workspace as any).textDocuments = [{ uri, getText: () => 'SELECT 1' }];
         const service = makeService();
         const ctx: any = { documentIri: uri.toString() };
@@ -630,8 +627,7 @@ describe('SparqlQueryService – _getQueryText', () => {
     });
 
     it('returns notebook cell text when notebookIri matches', async () => {
-        const vscode = await import('vscode');
-        const nbUri = Uri.parse('file:///workspace/nb.sparql-book');
+        const nbUri = vscode.Uri.parse('file:///workspace/nb.sparql-book');
         const mockNotebook = {
             uri: nbUri,
             cellAt: (_i: number) => ({ document: { getText: () => 'ASK {}' } })

@@ -65,7 +65,7 @@ describe('triggerNotebookCellSlugAction command', () => {
 	});
 
 	it('shows warning when no cell URI provided', async () => {
-		await triggerNotebookCellSlugAction.handler(undefined as any);
+		await triggerNotebookCellSlugAction.handler(undefined);
 		expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('No notebook cell specified.');
 	});
 

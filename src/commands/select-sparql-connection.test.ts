@@ -88,6 +88,31 @@ describe('selectSparqlConnection command', () => {
 		expect(mockSetQuerySourceForDocument).toHaveBeenCalledWith(mockDoc.uri, mockConn.id);
 	});
 
+	it('does not preselect any connection (clears the default active item)', async () => {
+		const mockConn = { id: 'c1', endpointUrl: 'http://sparql.example.org', description: 'Test' };
+		mockGetConnections.mockResolvedValue([mockConn]);
+		const mockDoc = { uri: vscode.Uri.parse('file:///test.ttl') } as any;
+
+		const mockQP = {
+			items: [] as any[],
+			activeItems: undefined as string[] | undefined,
+			placeholder: '',
+			buttons: [] as any[],
+			onDidChangeSelection: vi.fn(() => ({ dispose: () => {} })),
+			onDidTriggerButton: vi.fn(() => ({ dispose: () => {} })),
+			onDidTriggerItemButton: vi.fn(() => ({ dispose: () => {} })),
+			onDidHide: vi.fn(() => ({ dispose: () => {} })),
+			show: vi.fn(),
+			hide: vi.fn(),
+			dispose: vi.fn(),
+		};
+		(vscode.window as any).createQuickPick = vi.fn(() => mockQP);
+
+		await selectSparqlConnection.handler(mockDoc);
+
+		expect(mockQP.activeItems).toEqual([]);
+	});
+
 	it('offers a manage-connections title button instead of a list item', async () => {
 		const mockConn = { id: 'c1', endpointUrl: 'http://sparql.example.org', description: 'Test' };
 		mockGetConnections.mockResolvedValue([mockConn]);

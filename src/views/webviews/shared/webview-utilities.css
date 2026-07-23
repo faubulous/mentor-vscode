@@ -40,6 +40,11 @@ vscode-textfield .root input[type="text"] {
 	width: auto;
 }
 
+/* Fix cut-off rounded corners of input boxes. */
+vscode-textfield .root {
+	overflow: hidden !important;
+}
+
 /* The component's own invalid rule colors the :host border, but the visible
    border is drawn by the inner .root element, which reads this variable —
    overriding it shows the error border while the field is unfocused (the

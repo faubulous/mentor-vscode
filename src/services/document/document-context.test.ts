@@ -36,33 +36,35 @@ vi.mock('tsyringe', () => ({
 }));
 
 /** The services injected into the document context under test. */
+// Partial stub: only `matchAll` is exercised by the label/description queries under test.
 const mockStore = {
     matchAll: (graphUris: any, subject: any, predicate: any, object: any) =>
         mockStoreMatchAll(graphUris, subject, predicate, object),
-};
+} as unknown as Store;
 
-const mockSettings = { get: (k: string, d?: any) => mockSettingsGet(k, d) };
+// Partial stub: only `get` is read (live label-style lookups).
+const mockSettings = { get: (k: string, d?: any) => mockSettingsGet(k, d) } as unknown as ISettingsService;
 
-const mockVocabulary = { getPropertyPathTokens: (g: any, n: any) => mockGetPropertyPathTokens(g, n) };
+// Partial stub: only `getPropertyPathTokens` is exercised via getPropertyPathLabel.
+const mockVocabulary = { getPropertyPathTokens: (g: any, n: any) => mockGetPropertyPathTokens(g, n) } as unknown as VocabularyRepository;
 
 // Use TurtleDocument as the concrete DocumentContext implementation.
 import * as vscode from 'vscode';
+import type { Quad_Subject } from '@rdfjs/types';
+import type { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import type { ISettingsService } from '@src/services/core/settings-service.interface';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
 
 function makeDoc(uri = 'file:///workspace/test.ttl'): TurtleDocument {
     const vscodeUri = vscode.Uri.parse(uri);
-    return new TurtleDocument(vscodeUri as any, RdfSyntax.Turtle, mockStore as any, mockVocabulary as any, mockSettings as any);
+    return new TurtleDocument(vscodeUri, RdfSyntax.Turtle, mockStore, mockVocabulary, mockSettings);
 }
 
 function makeLiteral(value: string, language = '') {
     return { termType: 'Literal', value, language };
-}
-
-function makeNamedNode(value: string) {
-    return { termType: 'NamedNode', value };
 }
 
 beforeEach(() => {
@@ -513,14 +515,14 @@ describe('DocumentContext – getPropertyPathLabel', () => {
     it('returns empty string when vocabulary yields no tokens', () => {
         mockGetPropertyPathTokens = () => [];
         const doc = makeDoc();
-        const node = { termType: 'NamedNode', value: 'http://example.org/prop' } as any;
+        const node = { termType: 'NamedNode', value: 'http://example.org/prop' } as Quad_Subject;
         expect(doc.getPropertyPathLabel(node)).toBe('');
     });
 
     it('formats | and / operators with surrounding spaces', () => {
         mockGetPropertyPathTokens = () => ['prop1', '|', 'prop2'];
         const doc = makeDoc();
-        const node = {} as any;
+        const node = { termType: 'NamedNode', value: 'http://example.org/prop' } as Quad_Subject;
         const result = doc.getPropertyPathLabel(node);
         expect(result).toBe('prop1 | prop2');
     });
@@ -528,7 +530,7 @@ describe('DocumentContext – getPropertyPathLabel', () => {
     it('formats / operator with surrounding spaces', () => {
         mockGetPropertyPathTokens = () => ['prop1', '/', 'prop2'];
         const doc = makeDoc();
-        const node = {} as any;
+        const node = { termType: 'NamedNode', value: 'http://example.org/prop' } as Quad_Subject;
         const result = doc.getPropertyPathLabel(node);
         expect(result).toBe('prop1 / prop2');
     });
@@ -538,7 +540,7 @@ describe('DocumentContext – getPropertyPathLabel', () => {
         mockGetPropertyPathTokens = () => [{ value: 'http://example.org/prop' }];
         mockStoreMatchAll = () => [{ object: makeLiteral('My Property', 'en') }];
         const doc = makeDoc();
-        const node = {} as any;
+        const node = { termType: 'NamedNode', value: 'http://example.org/prop' } as Quad_Subject;
         const result = doc.getPropertyPathLabel(node);
         expect(result).toBe('My Property');
     });

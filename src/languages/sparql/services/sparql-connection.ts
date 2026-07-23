@@ -1,6 +1,13 @@
 import { ConfigurationScope } from '@src/utilities/config-scope';
 
 /**
+ * The graph list cache lifetime applied when a connection does not specify
+ * `graphReloadIntervalSeconds`. The connection editor displays this value for
+ * connections without an explicit interval and persists it on save.
+ */
+export const DEFAULT_GRAPH_RELOAD_INTERVAL_SECONDS = 24 * 3600;
+
+/**
  * Connection information for a SPARQL endpoint.
  */
 export interface SparqlConnection {
@@ -59,16 +66,30 @@ export interface SparqlConnection {
 
     /**
      * When `true`, named graphs are loaded from the endpoint on extension startup
-     * and refreshed on the interval defined by `graphReloadIntervalSeconds`.
+     * and cached; the cache expires after `graphReloadIntervalSeconds`.
      */
     autoLoadGraphs?: boolean;
 
     /**
-     * How often to reload the graph list, in seconds. Only meaningful when
-     * `autoLoadGraphs` is `true`. The UI presents this in minutes or hours
-     * and converts to seconds before saving.
+     * How long a loaded graph list stays fresh, in seconds. On-demand loads serve
+     * from the cache within this interval and only query the endpoint again once it
+     * is exceeded. Unset falls back to {@link DEFAULT_GRAPH_RELOAD_INTERVAL_SECONDS};
+     * an explicit `0` (settings.json only, the UI cannot produce it) means the cache
+     * never expires and is only refreshed by an explicit reload. Only meaningful when
+     * `autoLoadGraphs` is `true`. The UI presents this in minutes, hours or days and
+     * converts to seconds before saving.
      */
     graphReloadIntervalSeconds?: number;
+
+    /**
+     * The local time of day (`HH:MM`, 24-hour) after which a stale graph list is
+     * reloaded. When set, a reload becomes due at the first occurrence of this time
+     * after the last load — plus the remaining full days when the reload interval
+     * spans multiple days — instead of a plain sliding interval. Useful for stores
+     * that are updated on a schedule (e.g. nightly builds). Only meaningful when
+     * `autoLoadGraphs` is `true`; the UI offers it for day-based intervals.
+     */
+    graphReloadTime?: string;
 }
 
 /**

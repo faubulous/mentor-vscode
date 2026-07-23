@@ -22,7 +22,6 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import * as vscode from 'vscode';
 import { RuleNode } from '@src/views/trees/definition-tree/nodes/rules/rule-node';
 import { RuleClassNode } from '@src/views/trees/definition-tree/nodes/rules/rule-class-node';
 import { RulesNode } from '@src/views/trees/definition-tree/nodes/rules/rules-node';

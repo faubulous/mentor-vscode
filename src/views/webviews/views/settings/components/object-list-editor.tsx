@@ -5,7 +5,7 @@ import { useCallback } from 'react';
  * Definition for a single field in the ObjectListEditor. Each field 
  * corresponds to a text input in each row of the editor.
  */
-export interface ObjectListEditorFieldDef {
+interface ObjectListEditorFieldDef {
 	key: string;
 
 	label: string;

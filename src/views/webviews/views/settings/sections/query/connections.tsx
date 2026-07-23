@@ -25,7 +25,7 @@ export const queryConnectionsSection = {
 
 type QueryConnectionsSectionMessage = ConnectionsListMessages | ConnectionEditorMessages;
 
-export function QueryConnectionsSection({ settings, onUpdate, setScope }: SettingsSectionProps) {
+function QueryConnectionsSection({ settings, onUpdate, setScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 	const hasWorkspace = useContext(SettingsWorkspaceContext);
 
@@ -84,7 +84,7 @@ export function QueryConnectionsSection({ settings, onUpdate, setScope }: Settin
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetConnections' });
 		messaging?.postMessage({ id: 'GetGraphStatuses' });
-	}, []);
+	}, [messaging]);
 
 	useEffect(() => {
 		setTestingConnections(prev => {

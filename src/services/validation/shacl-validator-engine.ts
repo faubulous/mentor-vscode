@@ -65,7 +65,7 @@ export interface ShaclValidationResultEntry {
 /**
  * Maps shacl-engine's raw validation results to plain result entries.
  */
-export function mapValidationResults(results: ValidationResult[]): ShaclValidationResultEntry[] {
+function mapValidationResults(results: ValidationResult[]): ShaclValidationResultEntry[] {
 	return results.map(r => ({
 		focusNode: r.focusNode?.term?.value ?? r.focusNode?.value ?? '',
 		severity: r.severity?.value ?? '',

@@ -14,6 +14,25 @@ import { IDocumentFactory } from '@src/services/document/document-factory.interf
  * message passing, and execution of SPARQL queries.
  */
 export class SparqlResultsController extends WebviewController<SparqlResultsWebviewMessages> {
+    /**
+     * Resolves once a freshly opened webview has signaled it is listening (via its
+     * first history request). Armed when the panel is opened and resolved when the
+     * webview reports in, so query execution can wait for the panel to be ready
+     * before it relies on the execution-driven history pushes that select the query's
+     * tab. Without this, a query run while the panel is still mounting races the
+     * mount and the pushes are dropped, leaving the tab visible but unselected.
+     */
+    private _webviewReady?: Promise<void>;
+
+    private _resolveWebviewReady?: () => void;
+
+    /**
+     * The id of the query currently being executed, which the panel should select once its
+     * result tab appears. Set for the duration of an execution and posted with every history
+     * message so tab selection is independent of message ordering.
+     */
+    private _pendingSelectQueryId?: string;
+
     constructor() {
         super({
             viewType: 'mentor.view.sparqlResultsView',
@@ -24,9 +43,9 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
         const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
 
-        // A history change is execution/mutation driven — select the latest query's
-        // tab so a freshly run query's results come to the front.
-        this.subscribe(queryService.onDidHistoryChange(() => this._postQueryHistory(true), this));
+        // Any history post carries the pending selection (the query currently being
+        // executed, if any), so the panel selects that query's tab as soon as it appears.
+        this.subscribe(queryService.onDidHistoryChange(() => this._postQueryHistory(), this));
 
         // Keep the welcome view's connections column live: refresh the list when
         // connections change and mirror per-connection graph loading and counts.
@@ -50,19 +69,21 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
     }
 
     /**
-     * Posts the query history to the webview.
-     * @param selectLatest When `true` (an execution/mutation-driven push), the panel
-     * brings the latest query's tab to the front. When `false` (a pull/refresh, e.g.
-     * the welcome view requesting its history list), the panel updates its tabs without
-     * changing the selected tab — so refreshing the list never steals the welcome tab.
+     * Posts the query history to the webview, carrying the pending tab selection.
+     *
+     * `selectQueryId` is the id of the query the panel should bring to front — set while a
+     * query is executing (see {@link _executeQuery}) and `undefined` otherwise. Because it
+     * rides on EVERY history post (both the execution-driven push and the webview's mount
+     * pull), the panel selects that query's tab regardless of which message wins the race;
+     * a refresh with no execution in flight carries `undefined` and never moves the tab.
      */
-    private _postQueryHistory(selectLatest: boolean = false) {
+    private _postQueryHistory() {
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 
         this.postMessage({
             id: 'PostSparqlQueryHistory',
             history: queryService.getQueryHistory(),
-            selectLatest
+            selectQueryId: this._pendingSelectQueryId
         });
     }
 
@@ -109,6 +130,8 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
     protected async onDidReceiveMessage(message: SparqlResultsWebviewMessages): Promise<boolean> {
         switch (message.id) {
             case 'GetSparqlQueryHistory': {
+                // The webview's history request doubles as its "I'm listening" signal.
+                this._resolveWebviewReady?.();
                 this._postQueryHistory();
                 return true;
             }
@@ -263,9 +286,34 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         if ('uri' in queryContext && queryContext.uri.scheme === 'vscode-notebook-cell') {
             return;
         } else if (!this.view) {
+            this._armWebviewReady();
+
             await vscode.commands.executeCommand('workbench.action.togglePanel');
             await vscode.commands.executeCommand(`${this.viewType}.focus`);
         }
+    }
+
+    /**
+     * Arms the readiness signal for a webview that is about to be created, so a query
+     * executed right after opening the panel waits for the webview to be listening.
+     */
+    private _armWebviewReady() {
+        this._webviewReady = new Promise<void>(resolve => { this._resolveWebviewReady = resolve; });
+    }
+
+    /**
+     * Waits until the webview has reported it is listening, capped by a timeout so a
+     * missing signal never blocks execution.
+     */
+    private async _awaitWebviewReady(timeoutMs: number = 3000): Promise<void> {
+        if (!this._webviewReady) {
+            return;
+        }
+
+        await Promise.race([
+            this._webviewReady,
+            new Promise<void>(resolve => setTimeout(resolve, timeoutMs)),
+        ]);
     }
 
     private async _executeQuery(queryState: SparqlQueryExecutionState) {
@@ -273,17 +321,35 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
             this.view.show();
         }
 
-        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
-        const updatedState = await queryService.executeQuery(queryState);
+        // Mark this query as the one to select. Every history post during the execution
+        // (and the webview's mount pull) carries this id, so the panel activates the tab as
+        // soon as it appears — no dependence on which message reaches the webview first.
+        this._pendingSelectQueryId = queryState.id;
 
-        if (updatedState.result?.type === 'quads') {
-            const result = updatedState.result as QuadsResult;
-            const document = await vscode.workspace.openTextDocument({
-                content: result.document,
-                language: 'turtle'
-            });
+        try {
+            // When the panel was just opened for this query, wait until the webview is
+            // listening so the execution-driven history pushes (which add the query's tab)
+            // are delivered rather than dropped by the still-mounting webview.
+            await this._awaitWebviewReady();
 
-            await vscode.window.showTextDocument(document);
+            const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+            const updatedState = await queryService.executeQuery(queryState);
+
+            if (updatedState.result?.type === 'quads') {
+                const result = updatedState.result as QuadsResult;
+                const document = await vscode.workspace.openTextDocument({
+                    content: result.document,
+                    language: 'turtle'
+                });
+
+                await vscode.window.showTextDocument(document);
+            }
+        } finally {
+            // Clear the intent once the query is done so a later, unrelated history refresh
+            // does not re-select this tab.
+            if (this._pendingSelectQueryId === queryState.id) {
+                this._pendingSelectQueryId = undefined;
+            }
         }
     }
 
@@ -351,7 +417,20 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         const queryState = queryService.createBackgroundQuery(connection, query, 'List Graphs');
         queryState.result = serializer.serializeIriList(query, graphs);
 
-        queryService.registerCompletedQuery(queryState);
+        // Select this graph-list tab once it appears (carried on every history post).
+        this._pendingSelectQueryId = queryState.id;
+
+        try {
+            // Wait for a just-opened panel to be listening so the tab is added and selected
+            // rather than left on the welcome page.
+            await this._awaitWebviewReady();
+
+            queryService.registerCompletedQuery(queryState);
+        } finally {
+            if (this._pendingSelectQueryId === queryState.id) {
+                this._pendingSelectQueryId = undefined;
+            }
+        }
     }
 
     /**
@@ -371,6 +450,8 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
      */
     private async _ensurePanelVisible() {
         if (!this.view) {
+            this._armWebviewReady();
+            
             await vscode.commands.executeCommand('workbench.action.togglePanel');
             await vscode.commands.executeCommand(`${this.viewType}.focus`);
         } else {

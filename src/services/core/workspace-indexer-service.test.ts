@@ -88,7 +88,7 @@ describe('WorkspaceIndexerService', () => {
 		});
 
 		it('shows the Mentor icon in the status bar immediately so it is visible with 0 files', () => {
-			const statusBarItem = { text: '', tooltip: '', command: undefined as any, show: vi.fn(), hide: vi.fn(), dispose: vi.fn() };
+			const statusBarItem = { text: '', tooltip: '', command: undefined, show: vi.fn(), hide: vi.fn(), dispose: vi.fn() };
 			(vscode.window as any).createStatusBarItem = vi.fn(() => statusBarItem);
 
 			new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource);

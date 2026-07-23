@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { XSD_ANY_URI_LITERAL_CODE } from '@src/linters/providers/xsd-any-uri-literal-linter';
 
-export { XSD_ANY_URI_LITERAL_CODE };
 
 /**
  * Regex to extract the URI value from the diagnostic message produced by `XsdAnyUriLiteralLinter`.

@@ -44,11 +44,11 @@ export const editorFormattingSection = {
 } as const satisfies SettingsSectionDescriptor;
 
 
-export interface EditorFormattingSectionProps extends SettingsSectionProps {
+interface EditorFormattingSectionProps extends SettingsSectionProps {
 	vscodeSettings: VSCodeSettings;
 }
 
-export function EditorFormattingSection({
+function EditorFormattingSection({
 	settings,
 	vscodeSettings,
 	onUpdate,

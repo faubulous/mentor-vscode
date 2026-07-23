@@ -41,7 +41,7 @@ describe('deleteSparqlConnection', () => {
 	});
 
 	it('should not delete when user does not confirm', async () => {
-		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		const connection = { id: 'conn1', endpointUrl: 'http://endpoint' } as any;
 		await deleteSparqlConnection.handler(connection);

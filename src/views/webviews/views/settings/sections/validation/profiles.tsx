@@ -41,21 +41,21 @@ const VALIDATION_KEY = 'shacl.validation';
 /**
  * Reads a per-scope SHACL validation settings object from the section state.
  */
-export function readSettings(value: unknown): ShaclValidationSettings {
+function readSettings(value: unknown): ShaclValidationSettings {
 	return (value && typeof value === 'object' ? value : {}) as ShaclValidationSettings;
 }
 
 /**
  * Whether a settings object holds no profiles.
  */
-export function isEmptySettings(value: ShaclValidationSettings): boolean {
+function isEmptySettings(value: ShaclValidationSettings): boolean {
 	return !value.profiles || Object.keys(value.profiles).length === 0;
 }
 
 /**
  * Projects a single scope's settings object into profile views tagged with that scope.
  */
-export function toProfileViews(
+function toProfileViews(
 	settings: ShaclValidationSettings,
 	scope: ConfigurationScope
 ): ValidationProfileView[] {
@@ -171,7 +171,7 @@ const entryPreviewKey = (pattern: string) => `entry:${pattern}`;
  */
 const positivePreviewKey = (profileId: string) => `positive:${profileId}`;
 
-export function ValidationProfilesSection({ settings, setScope }: SettingsSectionProps) {
+function ValidationProfilesSection({ settings, setScope }: SettingsSectionProps) {
 	useStylesheet(VALIDATION_STYLESHEET_ID, stylesheet);
 
 	const hasWorkspace = useContext(SettingsWorkspaceContext);
@@ -304,7 +304,7 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 				return;
 			}
 		}
-	}, []);
+	}, [commit, userRef, workspaceRef]);
 
 	const messaging = useScopedWebviewMessaging<ValidationProfilesMessages>('validation.profiles', handleMessage);
 	messagingRef.current = messaging;
@@ -312,12 +312,15 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetShapeCandidates' });
 		messaging?.postMessage({ id: 'GetValidationHealth' });
-	}, []);
+	}, [messaging]);
 
 	// Refresh the health report whenever the settings value changes.
+	const validationUserValue = settings[VALIDATION_KEY]?.userValue;
+	const validationWorkspaceValue = settings[VALIDATION_KEY]?.workspaceValue;
+
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetValidationHealth' });
-	}, [settings[VALIDATION_KEY]?.userValue, settings[VALIDATION_KEY]?.workspaceValue]);
+	}, [messaging, validationUserValue, validationWorkspaceValue]);
 
 	// Keep the per-row matching-file counts current. Profiles with exclusions
 	// additionally get a positives-only count, whose difference to the target
@@ -342,7 +345,7 @@ export function ValidationProfilesSection({ settings, setScope }: SettingsSectio
 				}
 			}
 		}
-	}, [profiles]);
+	}, [messaging, profiles]);
 
 	const matchCounts = useMemo(() => {
 		const counts: Record<string, number | undefined> = {};

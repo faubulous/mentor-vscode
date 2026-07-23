@@ -6,7 +6,7 @@ export type ComunicaEndpoint = SparqlEndpoint | QuadStoreEndpoint;
 /**
  * A Comunica-compatible source configuration for a SPARQL endpoint.
  */
-export interface SparqlEndpoint {
+interface SparqlEndpoint {
 	/**
 	 * Indicates that this endpoint is managed using the SPARQL protocol.
 	 */
@@ -37,7 +37,7 @@ export interface SparqlEndpoint {
 /**
  * A Comunica-compatible source configuration for an in-memory RDF/JS store.
  */
-export interface QuadStoreEndpoint {
+interface QuadStoreEndpoint {
 	/**
 	 * Indicates that this endpoint is managed using the RDFJS Quad Source API.
 	 */

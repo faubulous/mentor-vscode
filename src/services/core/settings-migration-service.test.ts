@@ -1,6 +1,6 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { SettingsMigrationService } from '@src/services/core/settings-migration-service';
-import { ISettingsMigration } from '@src/services/core/migrations/settings-migration.interface';
+import { ISettingsMigration } from '@src/services/core/settings-migration.interface';
 
 /**
  * Builds a migration double that records when its `migrate` method runs.

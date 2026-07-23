@@ -18,7 +18,7 @@ vi.mock('tsyringe', () => ({
  * Store mock injected into the document context. Property access throws when
  * `storeControl.shouldThrowLoad` is set, simulating an unavailable store.
  */
-function makeStore(): any {
+function makeStore(): Store {
     const store = {
         executeInference: vi.fn(),
         deleteGraphs: vi.fn(),
@@ -30,6 +30,7 @@ function makeStore(): any {
         graphs: [],
     };
 
+    // Partial stub: only the members above (plus the proxied `reasoner`) are exercised by TurtleDocument.
     return new Proxy(store, {
         get(target, property) {
             if (storeControl.shouldThrowLoad) {
@@ -40,13 +41,14 @@ function makeStore(): any {
             }
             return (target as any)[property];
         },
-    });
+    }) as unknown as Store;
 }
 
-import { Uri, Position } from '@src/utilities/mocks/vscode';
-import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import * as vscode from 'vscode';
+import type { Store } from '@faubulous/mentor-rdf';
 import { RdfSyntax, RdfToken, TurtleLexer, TurtleParser, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
-import { RDF } from '@faubulous/mentor-rdf';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import { createTurtleDocument, createMockTextDocument } from '@src/utilities/mocks/factories';
 
 /**
  * Build a minimal IToken with position information.
@@ -67,7 +69,7 @@ function makeToken(name: string, image: string, opts: {
 }
 
 function makeDoc(uri = 'file:///test.ttl'): TurtleDocument {
-    return new TurtleDocument(Uri.parse(uri) as any, RdfSyntax.Turtle, makeStore(), {} as any, {} as any);
+    return createTurtleDocument(uri, RdfSyntax.Turtle, { store: makeStore() });
 }
 
 describe('TurtleDocument', () => {
@@ -138,7 +140,7 @@ describe('TurtleDocument', () => {
         it('returns undefined when no token is at position (null-token guard)', () => {
             const doc = makeDoc();
             // No tokens set → getTokenAtPosition returns undefined → early return
-            const result = doc.getLiteralAtPosition(new Position(0, 0) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 0));
             expect(result).toBeUndefined();
         });
 
@@ -146,7 +148,7 @@ describe('TurtleDocument', () => {
             const doc = makeDoc();
             const token = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 2) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 2));
             expect(result).toBeUndefined();
         });
 
@@ -154,7 +156,7 @@ describe('TurtleDocument', () => {
             const doc = makeDoc();
             const token = makeToken(RdfToken.STRING_LITERAL_QUOTE.name, '"hello"', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 7 });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 3) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 3));
             expect(result).toBe('hello');
         });
 
@@ -162,7 +164,7 @@ describe('TurtleDocument', () => {
             const doc = makeDoc();
             const token = makeToken(RdfToken.STRING_LITERAL_SINGLE_QUOTE.name, "'world'", { startLine: 1, startColumn: 1, endLine: 1, endColumn: 7 });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 3) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 3));
             expect(result).toBe('world');
         });
 
@@ -172,7 +174,7 @@ describe('TurtleDocument', () => {
                 startLine: 1, startColumn: 1, endLine: 1, endColumn: 15,
             });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 5) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 5));
             expect(result).toBe('long text');
         });
 
@@ -182,7 +184,7 @@ describe('TurtleDocument', () => {
                 startLine: 1, startColumn: 1, endLine: 1, endColumn: 15,
             });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 5) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 5));
             expect(result).toBe('long text');
         });
     });
@@ -201,7 +203,7 @@ describe('TurtleDocument', () => {
             ];
             doc.setTokens(tokens as any);
             // Position line 1 (0-based), character 1 → inside "ex" prefix part
-            const result = doc.getIriAtPosition(new Position(1, 1) as any);
+            const result = doc.getIriAtPosition(new vscode.Position(1, 1));
             expect(result).toBe('http://example.org/');
         });
 
@@ -216,13 +218,13 @@ describe('TurtleDocument', () => {
             ];
             doc.setTokens(tokens as any);
             // Position line 1, character 5 → inside "Thing" local name part
-            const result = doc.getIriAtPosition(new Position(1, 5) as any);
+            const result = doc.getIriAtPosition(new vscode.Position(1, 5));
             expect(result).toBeDefined();
         });
 
         it('returns undefined when no token is at the given position', () => {
             const doc = makeDoc();
-            const result = doc.getIriAtPosition(new Position(99, 0) as any);
+            const result = doc.getIriAtPosition(new vscode.Position(99, 0));
             expect(result).toBeUndefined();
         });
     });
@@ -388,7 +390,12 @@ describe('TurtleDocument', () => {
 
         it('onDidChangeDocument resolves without error', async () => {
             const doc = makeDoc();
-            await expect(doc.onDidChangeDocument({} as any)).resolves.toBeUndefined();
+            const event: vscode.TextDocumentChangeEvent = {
+                document: createMockTextDocument(),
+                contentChanges: [],
+                reason: undefined,
+            };
+            await expect(doc.onDidChangeDocument(event)).resolves.toBeUndefined();
         });
 
         it('does nothing when store has no reasoner', async () => {
@@ -399,26 +406,28 @@ describe('TurtleDocument', () => {
 
         it('executes inference when reasoner is present', async () => {
             const executeInference = vi.fn();
+            // Partial stub: only the members required by TurtleDocument.infer are provided.
             const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
                 dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            };
-            const doc = new TurtleDocument(Uri.parse('file:///test.ttl') as any, RdfSyntax.Turtle, store as any, {} as any, {} as any);
+            } as unknown as Store;
+            const doc = createTurtleDocument('file:///test.ttl', RdfSyntax.Turtle, { store });
             await doc.infer();
             expect(executeInference).toHaveBeenCalled();
         });
 
         it('does not re-execute inference if already executed', async () => {
             const executeInference = vi.fn();
+            // Partial stub: only the members required by TurtleDocument.infer are provided.
             const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
                 dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            };
-            const doc = new TurtleDocument(Uri.parse('file:///test.ttl') as any, RdfSyntax.Turtle, store as any, {} as any, {} as any);
+            } as unknown as Store;
+            const doc = createTurtleDocument('file:///test.ttl', RdfSyntax.Turtle, { store });
             await doc.infer();
             await doc.infer();
             expect(executeInference).toHaveBeenCalledTimes(1);
@@ -426,14 +435,15 @@ describe('TurtleDocument', () => {
 
         it('re-executes inference after loadTriples resets the flag', async () => {
             const executeInference = vi.fn();
+            // Partial stub: only the members required by infer and loadTriples are provided.
             const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
                 deleteGraphs: vi.fn(),
                 dataFactory: { namedNode: (v: string) => ({ termType: 'NamedNode', value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            };
-            const doc = new TurtleDocument(Uri.parse('file:///test.ttl') as any, RdfSyntax.Turtle, store as any, {} as any, {} as any);
+            } as unknown as Store;
+            const doc = createTurtleDocument('file:///test.ttl', RdfSyntax.Turtle, { store });
             await doc.infer();
             expect(executeInference).toHaveBeenCalledTimes(1);
             // Simulate a slug update reload: loadTriples must reset the flag

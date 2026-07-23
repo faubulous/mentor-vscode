@@ -20,10 +20,6 @@ export enum ServiceToken {
 	WorkspaceIndexerService = "WorkspaceIndexerService",
 	/** Service for discovering workspace files. */
 	WorkspaceFileService = "WorkspaceFileService",
-	/** Service for workspace-scoped storage. */
-	WorkspaceStorageService = "WorkspaceStorageService",
-	/** Service for global storage. */
-	GlobalStorageService = "GlobalStorageService",
 	/** Service for secure credential storage. */
 	CredentialStorageService = "CredentialStorageService",
 	/** Service for managing SPARQL connections. */

@@ -6,7 +6,7 @@ const { mockConnectionService } = vi.hoisted(() => ({
 	mockConnectionService: {
 		getConnectionForDocument: vi.fn(),
 		getUnresolvedConnectionId: vi.fn(() => undefined),
-		onDidChangeConnectionForDocument: vi.fn(() => ({ dispose: vi.fn() })),
+		onDidChangeConnectionForDocument: vi.fn((_handler?: unknown) => ({ dispose: vi.fn() })),
 		onDidChangeConnections: vi.fn(() => ({ dispose: vi.fn() })),
 	},
 }));

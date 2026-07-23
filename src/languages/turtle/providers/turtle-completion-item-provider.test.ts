@@ -10,13 +10,22 @@ vi.mock('tsyringe', () => ({
     singleton: () => (_target: any) => _target,
 }));
 
-import { Uri, Position, CompletionItemKind } from '@src/utilities/mocks/vscode';
+import * as vscode from 'vscode';
 import { TurtleCompletionItemProvider } from '@src/languages/turtle/providers/turtle-completion-item-provider';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
-import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import {
+    createTurtleDocument,
+    createMockDocumentContextService,
+    createMockTextDocument,
+    createTestVocabulary,
+} from '@src/utilities/mocks/factories';
+
+/** Shared invocation arguments for provideCompletionItems/resolveCompletionItem. */
+const cancellationToken = new vscode.CancellationTokenSource().token;
+const completionContext: vscode.CompletionContext = { triggerKind: vscode.CompletionTriggerKind.Invoke, triggerCharacter: undefined };
 
 function makeDoc(uri = 'file:///w/test.ttl'): TurtleDocument {
-    return new TurtleDocument(Uri.parse(uri) as any, RdfSyntax.Turtle);
+    return createTurtleDocument(uri);
 }
 
 function makeToken(name: string, image: string, opts: {
@@ -34,7 +43,7 @@ function makeToken(name: string, image: string, opts: {
 }
 
 function makeProvider(): TurtleCompletionItemProvider {
-    const provider = new TurtleCompletionItemProvider({} as any, {} as any);
+    const provider = new TurtleCompletionItemProvider(createMockDocumentContextService(), createTestVocabulary());
 
     (provider as any)._contextService = ({
         getDocumentContext: () => null,
@@ -70,7 +79,7 @@ beforeEach(() => {
 describe('TurtleCompletionItemProvider', () => {
     describe('constructor', () => {
         it('can be instantiated without throwing', () => {
-            expect(() => new TurtleCompletionItemProvider({} as any, {} as any)).not.toThrow();
+            expect(() => new TurtleCompletionItemProvider(createMockDocumentContextService(), createTestVocabulary())).not.toThrow();
         });
     });
 
@@ -84,8 +93,8 @@ describe('TurtleCompletionItemProvider', () => {
     describe('provideCompletionItems', () => {
         it('returns null when context is not available for the document', () => {
             const provider = makeProvider();
-            const doc = { uri: Uri.parse('file:///w/test.ttl'), languageId: 'turtle', getText: () => '' };
-            const result = provider.provideCompletionItems(doc as any, new Position(0, 5) as any, {} as any, {} as any);
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
+            const result = provider.provideCompletionItems(doc, new vscode.Position(0, 5), cancellationToken, completionContext);
             expect(result).toBeNull();
         });
 
@@ -100,8 +109,8 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl'), getText: () => 'ex:F' };
-            const result = provider.provideCompletionItems(doc as any, new Position(0, 0) as any, {} as any, {} as any);
+            const doc = createMockTextDocument('ex:F', { uri: 'file:///w/test.ttl' });
+            const result = provider.provideCompletionItems(doc, new vscode.Position(0, 0), cancellationToken, completionContext);
             expect(result).toBeNull();
         });
 
@@ -120,8 +129,8 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl'), getText: () => '. ex:F' };
-            const result = provider.provideCompletionItems(doc as any, new Position(0, 3) as any, {} as any, {} as any) as any;
+            const doc = createMockTextDocument('. ex:F', { uri: 'file:///w/test.ttl' });
+            const result = provider.provideCompletionItems(doc, new vscode.Position(0, 3), cancellationToken, completionContext) as vscode.CompletionList;
             expect(Array.isArray(result.items)).toBe(true);
         });
 
@@ -141,8 +150,8 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl'), getText: () => '. ex:F' };
-            const result = provider.provideCompletionItems(doc as any, new Position(0, 3) as any, {} as any, {} as any) as any;
+            const doc = createMockTextDocument('. ex:F', { uri: 'file:///w/test.ttl' });
+            const result = provider.provideCompletionItems(doc, new vscode.Position(0, 3), cancellationToken, completionContext) as vscode.CompletionList;
 
             expect(mockCtx.tokenize).toHaveBeenCalledWith('. ex:F');
             expect(Array.isArray(result.items)).toBe(true);
@@ -152,8 +161,8 @@ describe('TurtleCompletionItemProvider', () => {
     describe('resolveCompletionItem', () => {
         it('returns the item unchanged', () => {
             const provider = makeProvider();
-            const item = { label: 'ex:Thing', kind: 5 };
-            const result = provider.resolveCompletionItem!(item as any, {} as any);
+            const item = new vscode.CompletionItem('ex:Thing', vscode.CompletionItemKind.Variable);
+            const result = provider.resolveCompletionItem!(item, cancellationToken);
             expect(result).toBe(item);
         });
     });
@@ -174,8 +183,8 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
-            const result = (provider as any).getCompletionItems(doc as any, context, tokens, 0);
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
+            const result = (provider as any).getCompletionItems(doc, context, tokens, 0);
             expect(result.items).toEqual([]);
         });
 
@@ -194,8 +203,8 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
-            const result = (provider as any).getCompletionItems(doc as any, context, tokens, 1);
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
+            const result = (provider as any).getCompletionItems(doc, context, tokens, 1);
             expect(result.items).toEqual([]);
         });
 
@@ -203,7 +212,7 @@ describe('TurtleCompletionItemProvider', () => {
             const provider = makeProvider();
 
             // Tokens: PERIOD, IRIREF (subject), PNAME_LN (predicate being typed)
-            const tokens = [
+            const _tokens = [
                 makeToken(RdfToken.PERIOD.name, '.', { startLine: 1, startColumn: 1 }),
                 makeToken(RdfToken.IRIREF.name, '<http://example.org/Sub>', { startLine: 1, startColumn: 3 }),
                 makeToken(RdfToken.PNAME_LN.name, 'ex:n', { startLine: 1, startColumn: 28 }),
@@ -231,7 +240,7 @@ describe('TurtleCompletionItemProvider', () => {
             });
             (provider as any)._vocabulary = (mockVocab);
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens2, 2).items as any[];
 
             // 'ex:n' is typed → namespaceIri = 'http://example.org/', localPart = 'n'
@@ -262,7 +271,7 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 1).items as any[];
 
             // 'ex:F' → namespaceIri = 'http://example.org/', localPart = 'F'
@@ -294,7 +303,7 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('untitled:Untitled-1') };
+            const doc = createMockTextDocument('', { uri: 'untitled:Untitled-1' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 1).items as any[];
 
             // The untitled graph IRI must be queried for local subjects.
@@ -321,7 +330,7 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: { global: globalContext },
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 1).items as any[];
 
             // Since graph lookups return null, result[0] empty → falls back to contextService.contexts
@@ -348,7 +357,7 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 1).items as any[];
 
             const fooItems = result.filter((item: any) => item.label === 'Foo');
@@ -373,7 +382,7 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 1);
 
             expect(result.items.length).toBeLessThanOrEqual(provider.maxCompletionItems);
@@ -395,7 +404,7 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 1);
 
             expect(result.items).toHaveLength(1);
@@ -430,14 +439,14 @@ describe('TurtleCompletionItemProvider', () => {
                 getDatatype: () => undefined,
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 1);
             const kindOf = (label: string) => result.items.find((i: any) => i.label === label)?.kind;
 
-            expect(kindOf('Building')).toBe(CompletionItemKind.Class);
-            expect(kindOf('name')).toBe(CompletionItemKind.Field);
-            expect(kindOf('hasPart')).toBe(CompletionItemKind.Interface);
-            expect(kindOf('factory1')).toBe(CompletionItemKind.Value);
+            expect(kindOf('Building')).toBe(vscode.CompletionItemKind.Class);
+            expect(kindOf('name')).toBe(vscode.CompletionItemKind.Field);
+            expect(kindOf('hasPart')).toBe(vscode.CompletionItemKind.Interface);
+            expect(kindOf('factory1')).toBe(vscode.CompletionItemKind.Value);
         });
 
         it('ranks classes first for the object of a type assertion', () => {
@@ -467,7 +476,7 @@ describe('TurtleCompletionItemProvider', () => {
                 getDatatype: () => undefined,
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 2);
             const labels = result.items.map((i: any) => i.label);
 
@@ -508,7 +517,7 @@ describe('TurtleCompletionItemProvider', () => {
                 getDatatype: () => undefined,
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 2);
             const labels = result.items.map((i: any) => i.label);
 
@@ -541,7 +550,7 @@ describe('TurtleCompletionItemProvider', () => {
                 getDatatype: () => undefined,
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 1);
             const labels = result.items.map((i: any) => i.label);
 
@@ -583,7 +592,7 @@ describe('TurtleCompletionItemProvider', () => {
                 getDatatype: () => undefined,
             });
 
-            const doc = { uri: Uri.parse('file:///w/test.ttl') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/test.ttl' });
             const result = (provider as any).getCompletionItems(doc, mockCtx, tokens, 2);
 
             // Without ranking, the class would be cut off by the label-sorted truncation.
@@ -609,7 +618,7 @@ describe('TurtleCompletionItemProvider', () => {
                 contexts: {},
             });
 
-            const doc = { uri: Uri.parse('file:///w/query.sparql') };
+            const doc = createMockTextDocument('', { uri: 'file:///w/query.sparql' });
 
             // Broad query at the 'nexus:' trigger — result is truncated and incomplete.
             const broadTokens = [
@@ -633,7 +642,7 @@ describe('TurtleCompletionItemProvider', () => {
 
     describe('_addLocalPartCompletionItem', () => {
         it('returns early without adding item when localPart is empty', () => {
-            const provider = new TurtleCompletionItemProvider();
+            const provider = new TurtleCompletionItemProvider(createMockDocumentContextService(), createTestVocabulary());
             const result: Record<string, any> = {};
             // IRI ending in '/' has empty local part → triggers the !localPart return
             (provider as any)._addLocalPartCompletionItem(result, 'http://example.org/', 'http://example.org/');

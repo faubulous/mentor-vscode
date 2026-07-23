@@ -29,7 +29,6 @@ export class OntologyNode extends DefinitionTreeNode {
 	}
 
 	override getIcon() {
-		// return undefined;
 		return new vscode.ThemeIcon('rdf-ontology', this.getIconColor());
 	}
 

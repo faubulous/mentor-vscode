@@ -20,7 +20,7 @@ export interface SectionHeaderContextMenuSeparator  {
  * @property label The text to display for the menu item.
  * @property onClick The function to call when the menu item is clicked.
  */
-export interface SectionHeaderContextMenuCommand {
+interface SectionHeaderContextMenuCommand {
 	/**
 	 * The text to display for the menu item.
 	 */

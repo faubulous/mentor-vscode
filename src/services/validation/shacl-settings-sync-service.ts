@@ -4,8 +4,6 @@ import { getConfig } from '@src/utilities/vscode/config';
 import { toUniqueStringArray } from '@src/utilities/array';
 import { getGlobPatternBase } from '@src/utilities/glob';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
-import { UserUri } from '@src/providers/user-uri';
-import { UserFileSystemProvider } from '@src/providers/user-file-system-provider';
 import {
 	findBrokenReferences,
 	getAllReferencedShapeUris,
@@ -14,7 +12,6 @@ import {
 	ShaclDocumentRename,
 } from './shacl-validation-configuration';
 import { ShaclProfileSettingsService } from './shacl-profile-settings-service';
-import { USER_SHAPES_FOLDER } from './shape-graph-service';
 
 /**
  * Keeps the `mentor.shacl.validation` settings in sync with the workspace:
@@ -31,26 +28,26 @@ export class ShaclSettingsSyncService {
 	constructor(
 		private readonly _store: Store,
 		private readonly _profileSettings: ShaclProfileSettingsService,
-		private readonly _onHealthChecked?: (broken: ShaclBrokenReferences) => void
+		private readonly _onHealthChecked?: (broken: ShaclBrokenReferences) => void,
+		private readonly _ensureShapesLoaded?: (uris: string[]) => Promise<void>
 	) { }
 
 	/**
-	 * Checks all validation profiles for broken references: shape files that no
-	 * longer exist. Every check also reports its outcome through the
-	 * `onHealthChecked` callback, so the validation status bar item can surface
-	 * (and clear) a configuration error.
+	 * Checks all validation profiles for broken references: shape graphs that are
+	 * not available in the store. This asks the same question validation asks
+	 * (ADR-0003) — a shape file that exists but cannot be resolved, loaded or
+	 * parsed is reported as broken, because validating against it would silently
+	 * use no shapes. Referenced workspace shape graphs are loaded on demand first,
+	 * so the check does not depend on startup ordering. Every check also reports
+	 * its outcome through the `onHealthChecked` callback, so the validation status
+	 * bar item can surface (and clear) a configuration error.
 	 */
 	async checkShaclProfiles(): Promise<ShaclBrokenReferences> {
 		const settings = this._profileSettings.getMergedSettings();
-		const existing = new Set<string>();
 
-		for (const uri of getAllReferencedShapeUris(settings)) {
-			if (await this._shapeFileExists(uri)) {
-				existing.add(uri);
-			}
-		}
+		await this._ensureShapesLoaded?.(getAllReferencedShapeUris(settings));
 
-		const broken = findBrokenReferences(settings, uri => existing.has(uri));
+		const broken = findBrokenReferences(settings, uri => this._store.hasGraph(uri));
 
 		this._onHealthChecked?.(broken);
 
@@ -242,44 +239,4 @@ export class ShaclSettingsSyncService {
 		}
 	}
 
-	/**
-	 * Checks whether a shape file URI exists: `workspace:` URIs are resolved
-	 * against the file system, `user:` URIs against the settings-backed user
-	 * file store, other URIs are looked up as graphs in the store.
-	 */
-	private async _shapeFileExists(uri: string): Promise<boolean> {
-		let parsed: vscode.Uri;
-
-		try {
-			parsed = vscode.Uri.parse(uri, true);
-		} catch {
-			return false;
-		}
-
-		if (parsed.scheme === WorkspaceUri.uriScheme) {
-			const fileUri = WorkspaceUri.tryToFileUri(parsed);
-
-			if (!fileUri) {
-				return false;
-			}
-
-			try {
-				await vscode.workspace.fs.stat(fileUri);
-				return true;
-			} catch {
-				return false;
-			}
-		}
-
-		if (parsed.scheme === UserUri.uriScheme) {
-			// Check the settings map, not the store: an entry that failed to parse
-			// still exists as a file and must not be reported as a broken reference.
-			const store = UserFileSystemProvider.getStore(USER_SHAPES_FOLDER);
-
-			return store !== undefined && parsed.path.startsWith(`${USER_SHAPES_FOLDER}/`)
-				&& store.has(parsed.path.slice(USER_SHAPES_FOLDER.length + 1));
-		}
-
-		return this._store.hasGraph(uri);
-	}
 }

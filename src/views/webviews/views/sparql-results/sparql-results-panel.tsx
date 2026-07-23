@@ -7,27 +7,8 @@ import { SparqlQueryExecutionState, getDisplayName } from '@src/languages/sparql
 import { SparqlResultsView } from './components/sparql-results-view';
 import { SparqlWelcomeView } from './components/sparql-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
+import { SparqlResultsPanelState, reduceOnHistory, reduceOnShowWelcome } from './sparql-results-panel-state';
 import stylesheet from './sparql-results-panel.css';
-
-/**
- * State for the SPARQL results panel component.
- */
-interface SparqlResultsPanelState {
-	/**
-	 * A key that forces a full re-render of the component when changed.
-	 */
-	renderKey: number;
-
-	/**
-	 * The list of active SPARQL queries with results to display in tabs.
-	 */
-	activeQueries: SparqlQueryExecutionState[];
-
-	/**
-	 * The index of the currently active tab. `0` indicates the welcome view.
-	 */
-	activeTabIndex: number;
-}
 
 /**
  * Main webview component for displaying SPARQL query results and history.
@@ -42,6 +23,7 @@ function SparqlResultsPanel() {
 			return {
 				...previousState,
 				activeTabIndex: 0,
+				pendingSelectQueryId: undefined,
 				activeQueries: activeQueries.filter(q =>
 					!q.isBackground &&
 					q.documentIri &&
@@ -62,11 +44,11 @@ function SparqlResultsPanel() {
 	// Set up messaging with message handler
 	const handleMessage = useCallback((message: SparqlResultsWebviewMessages) => {
 		if (message.id === 'PostSparqlQueryHistory') {
-			onDidChangeQueryHistory(message.history, message.selectLatest ?? false);
+			setState(prev => reduceOnHistory(prev, message.history, message.selectQueryId));
 		} else if (message.id === 'ShowSparqlWelcome') {
 			// Opening the panel from the status bar selects the welcome tab instead
 			// of restoring the last active query tab.
-			setState(prev => ({ ...prev, activeTabIndex: 0 }));
+			setState(reduceOnShowWelcome);
 		} else if (message.id === 'UpdateQueryDocumentIri') {
 			// The documentIri now points to the opened query document whose content is the query
 			// itself, so it is no longer "generated" — clear the flag so repeat clicks are stable.
@@ -95,13 +77,15 @@ function SparqlResultsPanel() {
 		}
 	);
 
-	// Restore query on mount if needed
+	// Restore the persisted query once on mount; re-running on later state changes
+	// would re-request results the user has already navigated away from.
 	useEffect(() => {
 		if (state.activeTabIndex > 0) {
 			const query = state.activeQueries[state.activeTabIndex - 1];
 			restoreSparqlQueryResults(query);
 		}
-	}, []); // Only run on mount
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	// Save state to WebviewHost when it changes
 	useEffect(() => {
@@ -134,84 +118,6 @@ function SparqlResultsPanel() {
 				}]
 			});
 		}
-	};
-
-	const onDidChangeQueryHistory = (history: SparqlQueryExecutionState[], selectLatest: boolean) => {
-		setState(prevState => {
-			const query = history[0];
-
-			if (!query || !shouldHandleQueryResults(query)) {
-				return prevState;
-			}
-
-			// For background queries also match tabs that carry label+connectionId but
-			// lost the background flag because they were replaced by a doc execution
-			// (i.e., the user clicked Edit → ran from the untitled doc).
-			const n = query.isBackground
-				? prevState.activeQueries.findIndex(q => q.label === query.label && q.connectionId === query.connectionId)
-				: prevState.activeQueries.findIndex(q => q.documentIri === query.documentIri);
-
-			const activeQueries = [...prevState.activeQueries];
-			let activeQueryIndex = n;
-
-			if (n >= 0) {
-				const existingTab = activeQueries[n];
-
-				// When a background-query tab is replaced by a doc execution, carry over
-				// the routing metadata (id, label, connectionId, connectionName) so the
-				// tab can still be matched and reload can fall back to the background
-				// path after the document is closed.
-				//
-				// IMPORTANT: we test for the presence of label+connectionId rather than
-				// existingTab.background===true because _logQueryExecution fires TWICE
-				// per execution (start + end). The first fire merges correctly but sets
-				// background=false on the stored entry; the second fire would then see
-				// existingTab.background===false and skip the merge, losing the metadata.
-				const existingHasBgMetadata = !!(existingTab.label && existingTab.connectionId);
-
-				const mergedQuery =
-					!query.isBackground && existingHasBgMetadata
-						? {
-								...query,
-								id: existingTab.id,
-								label: existingTab.label,
-								connectionId: query.connectionId ?? existingTab.connectionId,
-								connectionName: existingTab.connectionName,
-							}
-						: query;
-
-				activeQueries.splice(n, 1, mergedQuery);
-				activeQueryIndex = n;
-			} else {
-				activeQueries.push(query);
-				activeQueryIndex = activeQueries.length - 1;
-			}
-
-			// Only bring the latest query's tab to the front for execution-driven pushes.
-			// A pull/refresh (e.g. the welcome view loading its history list) updates the
-			// tabs but must not steal the current selection — otherwise opening the panel
-			// on the welcome tab would immediately jump to the last query.
-			const activeTabIndex = selectLatest ? activeQueryIndex + 1 : prevState.activeTabIndex;
-
-			return {
-				...prevState,
-				renderKey: (prevState.renderKey || 0) + 1,
-				activeTabIndex: activeTabIndex,
-				activeQueries: activeQueries,
-			};
-		});
-	};
-
-	const shouldHandleQueryResults = (queryState: SparqlQueryExecutionState) => {
-		if (queryState.queryType === 'quads' || queryState.queryType === 'void') {
-			return false;
-		}
-
-		if (queryState.notebookIri) {
-			return false;
-		}
-
-		return true;
 	};
 
 	const closeQuery = (query: SparqlQueryExecutionState) => {

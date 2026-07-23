@@ -6,15 +6,9 @@ import { ISettingsService } from '@src/services/core/settings-service.interface'
 import { TurtleDocument, SparqlDocument, XmlDocument } from '@src/languages';
 import { IDocumentContext } from './document-context.interface';
 import { ILanguageInfo } from './document-factory.interface';
-import {
-	RDF_LANGUAGE_IDS,
-	FORMATTABLE_LANGUAGE_IDS,
-	LanguageId,
-	FormattableLanguageId,
-} from './document-languages';
+import { RDF_LANGUAGE_IDS } from './document-languages';
 
-export { RDF_LANGUAGE_IDS, FORMATTABLE_LANGUAGE_IDS };
-export type { LanguageId, FormattableLanguageId };
+export { RDF_LANGUAGE_IDS };
 
 /**
  * Metadata about a supported file extension.

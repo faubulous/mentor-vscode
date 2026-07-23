@@ -114,7 +114,7 @@ describe('ConnectionsSectionController – store scope compatibility', () => {
 
 		expect(post).toHaveBeenCalledWith(expect.objectContaining({ id: 'ConnectionsChanged' }));
 
-		const message = post.mock.calls.at(-1)![0];
+		const message = post.mock.calls[post.mock.calls.length - 1][0];
 		expect(message.connections[0].incompatibleStoreScope).toBe('user');
 	});
 
@@ -129,7 +129,7 @@ describe('ConnectionsSectionController – store scope compatibility', () => {
 
 		fireConfigChange('mentor.sparql.stores');
 
-		const message = post.mock.calls.at(-1)![0];
+		const message = post.mock.calls[post.mock.calls.length - 1][0];
 		expect(message.connections[0].incompatibleStoreScope).toBeUndefined();
 	});
 
@@ -139,7 +139,7 @@ describe('ConnectionsSectionController – store scope compatibility', () => {
 
 		fireConnectionsChanged();
 
-		const message = post.mock.calls.at(-1)![0];
+		const message = post.mock.calls[post.mock.calls.length - 1][0];
 		expect(message.id).toBe('ConnectionsChanged');
 		expect(message.connections[0].incompatibleStoreScope).toBe('workspace');
 	});
@@ -162,7 +162,7 @@ describe('ConnectionsSectionController – store scope compatibility', () => {
 
 		fireConfigChange('mentor.sparql.stores');
 
-		const message = post.mock.calls.at(-1)![0];
+		const message = post.mock.calls[post.mock.calls.length - 1][0];
 		expect(message.connections.every((c: any) => c.incompatibleStoreScope === undefined)).toBe(true);
 	});
 

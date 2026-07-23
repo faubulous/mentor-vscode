@@ -89,7 +89,7 @@ export interface TripleStoreInferenceConfig {
 /**
  * Provides generic string parameter values for enablding or disabling inference on SPARQL queries.
  */
-export interface TripleStoreInferenceConfigParameters {
+interface TripleStoreInferenceConfigParameters {
     /**
      * Parameter value to be used when inference is on.
      */
@@ -120,4 +120,4 @@ export type SparqlQueryKind = 'listGraphs' | 'dropGraph' | 'describe' | 'exportG
 /**
  * Per-store query template overrides, keyed by {@link SparqlQueryKind}.
  */
-export type TripleStoreQueryTemplates = Partial<Record<SparqlQueryKind, string>>;
+type TripleStoreQueryTemplates = Partial<Record<SparqlQueryKind, string>>;

@@ -31,7 +31,7 @@ export function SparqlWelcomeView() {
 	// Load history on mount
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetSparqlQueryHistory' });
-	}, []);
+	}, [messaging]);
 
 	// Helper functions
 	const executeCommand = (command: string, ...args: any[]) => {
@@ -76,10 +76,6 @@ export function SparqlWelcomeView() {
 
 	const handleRemoveFromHistory = (query: SparqlQueryExecutionState) => {
 		executeCommand('mentor.command.removeFromQueryHistory', query.documentIri);
-	};
-
-	const handleCreateSparqlQueryFile = () => {
-		executeCommand('mentor.command.createDocumentFromLanguage', 'sparql');
 	};
 
 	const handleSelectSparqlQueryFile = () => {

@@ -32,7 +32,7 @@ import { revealDefinition } from '@src/commands/reveal-definition';
 function makeEditor(uriStr = 'file:///doc.ttl') {
 	return {
 		document: { uri: vscode.Uri.parse(uriStr) },
-		selection: undefined as any,
+		selection: undefined,
 		revealRange: vi.fn(),
 	};
 }
@@ -91,7 +91,7 @@ describe('revealDefinition', () => {
 		const loc = makeLocation('file:///doc.ttl', 2, 0, 2, 10);
 		const { ResourceDefinitionProvider } = await import('@src/providers');
 		vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionForResource').mockReturnValue(loc);
-		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 		await revealDefinition.handler('urn:ex#X', true);
 

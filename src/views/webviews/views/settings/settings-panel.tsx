@@ -136,7 +136,7 @@ function SettingsPanel() {
 		messaging?.postMessage({ id: 'GetVersion' });
 		messaging?.postMessage({ id: 'GetLanguageLabels' });
 		messaging?.postMessage({ id: 'GetWorkspaceState' });
-	}, []);
+	}, [messaging]);
 
 	// --- SETTINGS STATE
 

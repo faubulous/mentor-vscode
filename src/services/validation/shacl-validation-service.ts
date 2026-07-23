@@ -20,6 +20,7 @@ import {
 } from './shacl-validation-configuration';
 import { ShaclProfileSettingsService } from './shacl-profile-settings-service';
 import { ShaclSettingsSyncService } from './shacl-settings-sync-service';
+import { ShapeGraphService } from './shape-graph-service';
 import { ShaclValidationResult, ShaclValidatorEngine } from './shacl-validator-engine';
 import { formatReportAsText, serializeReportAsTurtle } from './shacl-report-exporter';
 import { ShaclValidationPresenter } from './shacl-validation-presenter';
@@ -104,7 +105,8 @@ export class ShaclValidationService implements vscode.Disposable {
 		private readonly _store: Store,
 		private readonly _contextService: IDocumentContextService,
 		private readonly _documentFactory: IDocumentFactory,
-		private readonly _profileSettings: ShaclProfileSettingsService = new ShaclProfileSettingsService()
+		private readonly _profileSettings: ShaclProfileSettingsService = new ShaclProfileSettingsService(),
+		private readonly _shapeGraphs?: ShapeGraphService
 	) {
 		this._diagnosticCollection = vscode.languages.createDiagnosticCollection('mentor-shacl');
 		this._diagnosticsMapper = new ShaclDiagnosticsMapper();
@@ -119,7 +121,7 @@ export class ShaclValidationService implements vscode.Disposable {
 				+ `Affected profiles: ${brokenProfiles.join(', ')}.`
 				+ '\nClick to manage the validation profiles.'
 				: undefined);
-		});
+		}, uris => this._shapeGraphs?.ensureLoaded(uris) ?? Promise.resolve());
 		this._batchRunner = new ShaclBatchRunner({
 			contextService: _contextService,
 			store: _store,
@@ -513,6 +515,11 @@ export class ShaclValidationService implements vscode.Disposable {
 	 * message, so it is suitable for batch validation of many files.
 	 */
 	private async _validateAndPublish(documentUri: vscode.Uri, context: IDocumentContext, shapeGraphUris: string[]): Promise<ShaclValidationResult> {
+		// Self-healing shape resolution (ADR-0003): load any referenced workspace shape
+		// graph that resolves on disk but is not in the store yet, so validation never
+		// depends on startup ordering or the indexer having walked over the shape file.
+		await this._shapeGraphs?.ensureLoaded(shapeGraphUris);
+
 		// A read-only view over the store — no triple copying needed.
 		const dataDataset = this._store.getDataset(context.graphs, false);
 

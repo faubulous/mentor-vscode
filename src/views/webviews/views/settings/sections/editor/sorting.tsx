@@ -17,7 +17,7 @@ export const editorSortingSection = {
 	keys: ['sorting.typeSortingOptions'],
 } as const satisfies SettingsSectionDescriptor;
 
-export function SortingSection({ settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
+function SortingSection({ settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, ['sorting.typeSortingOptions'], settings, onBulkScope);
 	const state = settings['sorting.typeSortingOptions'];

@@ -9,7 +9,7 @@ import stylesheet from './section-header.css';
  * - `'subsection'`: medium heading for a group of settings within a page.
  * - `'setting'`: small heading for an individual setting (default).
  */
-export type SectionHeaderVariant = 'title' | 'subsection' | 'setting';
+type SectionHeaderVariant = 'title' | 'subsection' | 'setting';
 
 export interface SectionHeaderProps {
 	/**

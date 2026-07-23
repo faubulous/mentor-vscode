@@ -74,7 +74,7 @@ export type SettingsSectionId = (typeof SETTINGS_GROUPS)[number]['sections'][num
 /**
  * Flat list of every section descriptor, in display order.
  */
-export const ALL_SECTIONS: readonly SettingsSectionDescriptor[] = SETTINGS_GROUPS.flatMap(g => [...g.sections]);
+const ALL_SECTIONS: readonly SettingsSectionDescriptor[] = SETTINGS_GROUPS.flatMap(g => [...g.sections]);
 
 /**
  * The scope a key defaults to when it is still unset and the user edits it, per the

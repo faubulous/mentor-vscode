@@ -31,7 +31,7 @@ vi.mock('./definition-node-decoration-provider', () => ({
 
 const mockContextChangeHandlers: Array<() => void> = [];
 const mockContextService = {
-	activeContext: undefined as any,
+	activeContext: undefined as Record<string, any> | undefined,
 	contexts: {} as Record<string, any>,
 	onDidChangeDocumentContext: vi.fn((handler: () => void) => {
 		mockContextChangeHandlers.push(handler);

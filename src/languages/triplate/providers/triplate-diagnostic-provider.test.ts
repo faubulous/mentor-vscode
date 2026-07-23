@@ -17,17 +17,10 @@ vi.mock('triplate', () => {
 });
 
 import { TriplateDiagnosticProvider } from './triplate-diagnostic-provider';
+import { createMockTextDocument } from '@src/utilities/mocks/factories';
 
 function makeDoc(text: string, languageId = 'sparql') {
-	const lines = text.split('\n');
-
-	return {
-		getText: () => text,
-		uri: vscode.Uri.parse('file:///test.sparql'),
-		languageId,
-		lineCount: lines.length,
-		lineAt: (line: number) => ({ range: { end: { character: lines[line].length } } }),
-	} as unknown as vscode.TextDocument;
+	return createMockTextDocument(text, { uri: 'file:///test.sparql', languageId });
 }
 
 beforeEach(() => {

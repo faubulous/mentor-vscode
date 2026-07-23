@@ -18,7 +18,7 @@ export function useBindingsTablePaging(result?: BindingsResult, defaultPageSize?
 		} else {
 			setPaging(undefined);
 		}
-	}, [result]);
+	}, [result, defaultPageSize]);
 
 	const updatePage = useCallback((page: number) => {
 		if (paging && result) {

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Store } from '@faubulous/mentor-rdf';
 import { SettingsFileStore, SettingsFileChangeEvent } from '@src/services/core';
 import { UserUri } from '@src/providers/user-uri';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { loadPresetShapeGraphs } from './presets';
 import { ShaclProfileSettingsService } from './shacl-profile-settings-service';
 import { getAllReferencedShapeUris } from './shacl-validation-configuration';
@@ -36,6 +37,12 @@ export class ShapeGraphService implements vscode.Disposable {
 
 	private readonly _disposables: vscode.Disposable[] = [];
 
+	/**
+	 * In-flight loads of workspace shape files, keyed by graph URI, so concurrent
+	 * {@link ensureLoaded} calls for the same graph share a single file read.
+	 */
+	private readonly _pendingLoads = new Map<string, Promise<boolean>>();
+
 	constructor(
 		private readonly _store: Store,
 		private readonly _files: SettingsFileStore,
@@ -62,6 +69,102 @@ export class ShapeGraphService implements vscode.Disposable {
 		}
 
 		this._onDidChangeShapeGraphs.fire();
+	}
+
+	/**
+	 * Loads every `workspace:///` shape graph referenced by a validation profile
+	 * into the store (see ADR-0003). Runs at startup after the workspace root is
+	 * resolved, independent of — and typically long before — workspace indexing,
+	 * so validation never depends on the indexer having walked over a shape file.
+	 */
+	async loadReferencedShapeGraphs(): Promise<void> {
+		const uris = getAllReferencedShapeUris(this._profileSettings.getMergedSettings());
+
+		await this.ensureLoaded(uris);
+	}
+
+	/**
+	 * Ensures the given shape graphs are present in the store, loading any missing
+	 * `workspace:///` graph from its file. Concurrent calls for the same graph share
+	 * a single file read; a graph whose file cannot be resolved or parsed stays
+	 * absent (the caller's missing-graph handling reports it). Non-workspace URIs
+	 * are not loaded here: presets and `user:///` shapes are owned by
+	 * {@link loadAll}, so their absence is a genuine broken reference.
+	 * Fires {@link onDidChangeShapeGraphs} when at least one graph was loaded.
+	 * @param shapeGraphUris The shape graph URIs referenced by a validation run or profile.
+	 */
+	async ensureLoaded(shapeGraphUris: readonly string[]): Promise<void> {
+		const loads: Promise<boolean>[] = [];
+
+		for (const uri of new Set(shapeGraphUris)) {
+			if (this._store.hasGraph(uri)) {
+				continue;
+			}
+
+			let parsed: vscode.Uri;
+
+			try {
+				parsed = vscode.Uri.parse(uri, true);
+			} catch {
+				continue;
+			}
+
+			if (parsed.scheme !== WorkspaceUri.uriScheme) {
+				continue;
+			}
+
+			let pending = this._pendingLoads.get(uri);
+
+			if (!pending) {
+				pending = this._loadWorkspaceShapeFile(parsed, uri)
+					.finally(() => this._pendingLoads.delete(uri));
+
+				this._pendingLoads.set(uri, pending);
+			}
+
+			loads.push(pending);
+		}
+
+		if (loads.length === 0) {
+			return;
+		}
+
+		const results = await Promise.all(loads);
+
+		if (results.some(loaded => loaded)) {
+			this._onDidChangeShapeGraphs.fire();
+		}
+	}
+
+	/**
+	 * Loads one workspace shape file into the store under the given graph URI,
+	 * returning whether the graph was loaded. Failures are logged and swallowed —
+	 * the graph simply stays absent from the store.
+	 */
+	private async _loadWorkspaceShapeFile(workspaceUri: vscode.Uri, graphUri: string): Promise<boolean> {
+		const fileUri = WorkspaceUri.tryToFileUri(workspaceUri);
+
+		if (!fileUri) {
+			this._log.warn(`Cannot resolve the workspace shape URI ${graphUri} to a file.`);
+			return false;
+		}
+
+		try {
+			const content = new TextDecoder().decode(await vscode.workspace.fs.readFile(fileUri));
+
+			if (workspaceUri.path.endsWith('.nq')) {
+				this._store.loadNQuads(content, graphUri, false, true);
+			} else {
+				// .ttl and .nt — the Turtle loader handles both.
+				this._store.loadTurtle(content, graphUri, false, true);
+			}
+
+			this._log.info(`Loaded workspace shape graph ${graphUri}.`);
+			return true;
+		} catch (error) {
+			this._log.warn(`Skipped the workspace shape file ${graphUri}: ${error instanceof Error ? error.message : error}`);
+			return false;
+		}
 	}
 
 	/**

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
+import { getTextEdits } from '@src/utilities/mocks/factories';
 
 const mockSubscriptions: any[] = [];
 
@@ -55,7 +56,6 @@ function makeDiagnostic(startChar: number, endChar: number, canonicalUri: string
 
 describe('WorkspaceUriCodeActionProvider', () => {
 	let WorkspaceUriCodeActionProvider: any;
-	let DEPRECATED_WORKSPACE_URI_CODE: string;
 
 	beforeEach(async () => {
 		mockSubscriptions.length = 0;
@@ -63,7 +63,6 @@ describe('WorkspaceUriCodeActionProvider', () => {
 
 		const module = await import('@src/providers/refactoring/workspace-uri-code-action-provider');
 		WorkspaceUriCodeActionProvider = module.WorkspaceUriCodeActionProvider;
-		DEPRECATED_WORKSPACE_URI_CODE = module.DEPRECATED_WORKSPACE_URI_CODE;
 	});
 
 	describe('constructor', () => {
@@ -112,11 +111,10 @@ describe('WorkspaceUriCodeActionProvider', () => {
 
 			expect(actions.length).toBeGreaterThanOrEqual(1);
 
-			const edit: any = actions[0].edit;
-			const entries: any[] = edit.entries;
+			const edits = getTextEdits(actions[0].edit);
 
-			expect(entries.length).toBe(1);
-			expect(entries[0].newText).toBe('<workspace:///dir/file.ttl>');
+			expect(edits.length).toBe(1);
+			expect(edits[0].newText).toBe('<workspace:///dir/file.ttl>');
 		});
 
 		it('ignores diagnostics with a different code', () => {

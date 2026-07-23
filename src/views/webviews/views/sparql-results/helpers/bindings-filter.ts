@@ -11,7 +11,7 @@ import { BindingsResult } from '@src/languages/sparql/services/sparql-query-stat
  * @param namespaceMap Maps namespace IRIs to prefixes for named-node prefixing.
  * @returns The displayed text of the term.
  */
-export function getTermText(term: Term | undefined, namespaceMap?: Record<string, string>): string {
+function getTermText(term: Term | undefined, namespaceMap?: Record<string, string>): string {
 	if (!term) {
 		return '';
 	}

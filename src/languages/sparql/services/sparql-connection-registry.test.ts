@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -12,7 +12,6 @@ vi.mock('tsyringe', () => ({
 // uuid produces real IDs — a simple mock is fine for our purposes
 vi.mock('uuid', () => ({ v4: () => 'test-uuid-1234' }));
 
-import { Uri } from '@src/utilities/mocks/vscode';
 import { SparqlConnectionRegistry, WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { TripleStoreConfigService } from '@src/languages/sparql/services/triple-store-config-service';
 import { ConfigurationScope } from '@src/utilities/config-scope';

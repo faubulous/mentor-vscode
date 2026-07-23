@@ -112,7 +112,7 @@ describe('addActiveEditorToNotebook command', () => {
 		(vscode.window as any).showQuickPick = vi.fn(async (items: any[]) => items[1]);
 		const mockNotebookEditor = {
 			selection: undefined,
-			selections: [],
+			selections: [] as { start: number; end: number }[],
 			revealRange: vi.fn(),
 		};
 		(vscode.window as any).showNotebookDocument = vi.fn(async () => mockNotebookEditor);

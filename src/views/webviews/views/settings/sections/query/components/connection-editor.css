@@ -92,17 +92,22 @@
 .connection-editor-container .section-graph-loading {
 	display: flex;
 	flex-direction: row;
-	gap: 1.5em;
+	gap: 0.5em;
 }
 
 .connection-editor-container .section-graph-loading-interval {
 	display: flex;
 	flex-direction: row;
+	align-items: center;
 	gap: 0.5em;
 }
 
 .connection-editor-container .section-graph-loading-interval vscode-textfield {
 	width: 60px;
+}
+
+.connection-editor-container .section-graph-loading-interval vscode-textfield.reload-time {
+	width: auto;
 }
 
 .connection-editor-container section.auth {

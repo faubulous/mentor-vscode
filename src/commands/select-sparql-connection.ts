@@ -45,6 +45,11 @@ export const selectSparqlConnection = {
 
 		const quickPick = vscode.window.createQuickPick();
 		quickPick.items = items;
+		// Do not pre-focus the first connection (the workspace store): assigning items
+		// defaults the active item to the first row, which reads as if it were already
+		// the selected connection. Clearing it leaves no connection highlighted until the
+		// user picks one.
+		quickPick.activeItems = [];
 		quickPick.placeholder = 'Select a SPARQL endpoint';
 		quickPick.buttons = [MANAGE_CONNECTIONS_BUTTON];
 

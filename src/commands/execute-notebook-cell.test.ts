@@ -45,7 +45,7 @@ describe('executeNotebookCell command', () => {
 
 	it('should execute notebook cell command when cell index is valid', async () => {
 		const mockCell = { index: 0, notebook: { uri: vscode.Uri.parse('file:///test.mentor-notebook') } };
-		const mockEditor = { selection: undefined as any };
+		const mockEditor = { selection: undefined };
 		(vscode.workspace as any).openNotebookDocument = vi.fn(async () => ({
 			uri: vscode.Uri.parse('file:///test.mentor-notebook'),
 			cellCount: 3,

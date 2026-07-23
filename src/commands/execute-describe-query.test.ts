@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 const { mockQueryService, mockConnectionService } = vi.hoisted(() => ({
 	mockQueryService: {
-		executeQueryOnConnection: vi.fn(async () => ({ type: 'quads', data: '# result' })),
+		executeQueryOnConnection: vi.fn<(...args: unknown[]) => Promise<{ type: string; data: string } | null>>(async () => ({ type: 'quads', data: '# result' })),
 	},
 	mockConnectionService: {
 		getConnectionForDocument: vi.fn(() => ({ id: 'workspace' })),

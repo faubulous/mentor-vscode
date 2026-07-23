@@ -46,10 +46,10 @@ export class BindingsTablePagingState {
 	private _getPageSizeOptions(bindings: BindingsResult, pageSize: number): number[] {
 		const result = [100];
 
-		bindings.rows.length >= 500 && result.push(500);
-		bindings.rows.length >= 1000 && result.push(1000);
-		bindings.rows.length >= 2000 && result.push(2000);
-		bindings.rows.length >= 5000 && result.push(5000);
+		if (bindings.rows.length >= 500) result.push(500);
+		if (bindings.rows.length >= 1000) result.push(1000);
+		if (bindings.rows.length >= 2000) result.push(2000);
+		if (bindings.rows.length >= 5000) result.push(5000);
 
 		if (!result.includes(pageSize)) {
 			result.push(pageSize);

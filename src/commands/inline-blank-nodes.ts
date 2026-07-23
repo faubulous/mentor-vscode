@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
-import { QuadContextSerializer, TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
+import { TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers/workspace-uri';

@@ -57,7 +57,7 @@ describe('openMentorHomepage', () => {
 		(vscode.extensions as any).getExtension = vi.fn(() => ({
 			packageJSON: { homepage: homepageUrl }
 		}));
-		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 		await openMentorHomepage.handler();
 

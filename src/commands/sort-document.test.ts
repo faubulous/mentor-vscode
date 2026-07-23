@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as vscode from 'vscode';
 import * as mockVscode from '@src/utilities/mocks/vscode';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -54,7 +55,7 @@ describe('sortDocument', () => {
 	});
 
 	it('should show error when document has syntax errors', async () => {
-		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
+		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = { uri, getText: () => 'invalid turtle', languageId: 'turtle' };
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
 		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([
@@ -66,11 +67,11 @@ describe('sortDocument', () => {
 	});
 
 	it('should ignore SHACL error diagnostics and continue sorting', async () => {
-		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
+		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = {
 			uri,
 			getText: () => '@prefix ex: <urn:ex#> .\nex:A a ex:B .',
-			positionAt: (offset: number) => new (mockVscode as any).Position(0, offset),
+			positionAt: (offset: number) => new vscode.Position(0, offset),
 		};
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
 
@@ -95,7 +96,7 @@ describe('sortDocument', () => {
 	});
 
 	it('should show error when document context is not available', async () => {
-		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
+		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = { uri, getText: () => 'valid turtle' };
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
 		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([]);
@@ -106,11 +107,11 @@ describe('sortDocument', () => {
 	});
 
 	it('should apply result edit when all conditions are met', async () => {
-		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
+		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = {
 			uri,
 			getText: () => '@prefix ex: <urn:ex#> .\nex:A a ex:B .',
-			positionAt: (offset: number) => new (mockVscode as any).Position(0, offset),
+			positionAt: (offset: number) => new vscode.Position(0, offset),
 		};
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
 		vi.spyOn(mockVscode.languages, 'getDiagnostics').mockReturnValue([]);

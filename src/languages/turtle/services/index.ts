@@ -1,1 +1,0 @@
-export * from './turtle-prefix-definition-service';

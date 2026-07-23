@@ -11,7 +11,7 @@ vi.mock('tsyringe', () => ({
 
 vi.mock('uuid', () => ({ v4: () => 'test-uuid-1234' }));
 
-import { Uri } from '@src/utilities/mocks/vscode';
+import * as vscode from 'vscode';
 import { SparqlQuerySourceFactory } from '@src/languages/sparql/services/sparql-query-source-factory';
 import { DocumentConnectionService } from '@src/languages/sparql/services/document-connection-service';
 import { SparqlConnectionRegistry, WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
@@ -58,7 +58,6 @@ const builtInStoreConfigs: TripleStoreConfig[] = [];
  */
 function withBuiltInStoreConfigs(run: (factory: SparqlQuerySourceFactory) => void | Promise<void>) {
     return (async () => {
-        const vscode = await import('vscode');
         const original = vscode.workspace.getConfiguration;
         (vscode.workspace as any).getConfiguration = () => ({
             get: (key: string, def: any) => key === 'sparql.stores' ? builtInStoreConfigs : def,
@@ -78,8 +77,8 @@ describe('SparqlQuerySourceFactory', () => {
     describe('getQuerySourceForDocument', () => {
         it('returns a ComunicaEndpoint for a file URI', async () => {
             const { factory } = makeFactory();
-            const uri = Uri.parse('file:///test.sparql');
-            const source = await factory.getQuerySourceForDocument(uri as any);
+            const uri = vscode.Uri.parse('file:///test.sparql');
+            const source = await factory.getQuerySourceForDocument(uri);
             expect(source).toBeDefined();
         });
     });

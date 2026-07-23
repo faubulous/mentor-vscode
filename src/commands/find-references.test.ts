@@ -32,7 +32,7 @@ import { findReferences } from '@src/commands/find-references';
 function makeEditor(uriStr = 'file:///doc.ttl') {
 	return {
 		document: { uri: vscode.Uri.parse(uriStr) },
-		selection: undefined as any,
+		selection: undefined,
 		revealRange: vi.fn(),
 	};
 }
@@ -77,7 +77,7 @@ describe('findReferences', () => {
 		const { ResourceDefinitionProvider } = await import('@src/providers');
 		vi.spyOn(ResourceDefinitionProvider.prototype, 'provideDefinitionForResource').mockReturnValue(loc);
 
-		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 		await findReferences.handler('urn:ex#Res');
 

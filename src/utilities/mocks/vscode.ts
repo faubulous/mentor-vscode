@@ -366,8 +366,15 @@ export class Location {
   constructor(public readonly uri: any, public readonly range: Range) {}
 }
 
+/**
+ * Matches the real API: a single content value is normalized to a one-element array.
+ */
 export class Hover {
-  constructor(public readonly contents: any, public readonly range?: Range) {}
+  public readonly contents: any[];
+
+  constructor(contents: any, public readonly range?: Range) {
+    this.contents = Array.isArray(contents) ? contents : [contents];
+  }
 }
 
 export class DocumentLink {
@@ -394,6 +401,11 @@ export class Selection extends Range {
   active: Position;
 }
 
+export const EndOfLine = {
+  LF: 1,
+  CRLF: 2,
+};
+
 export const TextEditorRevealType = {
   Default: 0,
   InCenter: 1,
@@ -401,39 +413,64 @@ export const TextEditorRevealType = {
   AtTop: 3,
 };
 
+/**
+ * API-faithful WorkspaceEdit mock: text edits are grouped per resource and
+ * exposed via the `entries()` method returning `[Uri, TextEdit[]]` tuples,
+ * and `size` is the number of affected resources — both matching the real
+ * vscode API semantics.
+ */
 export class WorkspaceEdit {
-  private readonly _edits: Array<{ uri: any; type: string; range?: Range; newText?: string; position?: Position; text?: string }> = [];
+  private readonly _entries = new Map<string, [any, TextEdit[]]>();
+  private readonly _fileOperations: Array<{ type: string; oldUri?: any; newUri?: any; options?: any }> = [];
 
-  replace(uri: any, range: Range, newText: string): void {
-    this._edits.push({ uri, type: 'replace', range, newText });
+  private _push(uri: any, edit: TextEdit): void {
+    const key = uri.toString();
+
+    if (!this._entries.has(key)) {
+      this._entries.set(key, [uri, []]);
+    }
+
+    this._entries.get(key)![1].push(edit);
   }
 
-  insert(uri: any, position: Position, text: string): void {
-    this._edits.push({ uri, type: 'insert', position, text });
+  replace(uri: any, range: Range, newText: string): void {
+    this._push(uri, new TextEdit(range, newText));
+  }
+
+  insert(uri: any, position: Position, newText: string): void {
+    this._push(uri, TextEdit.insert(position, newText));
   }
 
   delete(uri: any, range: Range): void {
-    this._edits.push({ uri, type: 'delete', range });
+    this._push(uri, TextEdit.delete(range));
   }
 
-  renameFile(oldUri: any, newUri: any, _options?: any): void {
-    this._edits.push({ uri: oldUri, type: 'renameFile', newText: newUri?.toString() });
+  has(uri: any): boolean {
+    return this._entries.has(uri.toString());
   }
 
-  get size(): number {
-    return this._edits.length;
+  get(uri: any): TextEdit[] {
+    return this._entries.get(uri.toString())?.[1] ?? [];
   }
 
-  set(uri: any, edits: any[]): void {
-    for (const edit of edits) {
-      if (edit.range && edit.newText !== undefined) {
-        this.replace(uri, edit.range, edit.newText);
-      }
+  set(uri: any, edits: readonly TextEdit[] | null | undefined): void {
+    if (!edits || edits.length === 0) {
+      this._entries.delete(uri.toString());
+    } else {
+      this._entries.set(uri.toString(), [uri, [...edits]]);
     }
   }
 
-  get entries(): Array<{ uri: any; type: string; range?: Range; newText?: string; position?: Position; text?: string }> {
-    return this._edits;
+  renameFile(oldUri: any, newUri: any, options?: any): void {
+    this._fileOperations.push({ type: 'renameFile', oldUri, newUri, options });
+  }
+
+  get size(): number {
+    return this._entries.size;
+  }
+
+  entries(): Array<[any, TextEdit[]]> {
+    return [...this._entries.values()].map(([uri, edits]) => [uri, [...edits]]);
   }
 }
 
@@ -475,6 +512,10 @@ export const CompletionItemKind = {
   Unit: 10, Value: 11, Enum: 12, Keyword: 13, Snippet: 14,
   Color: 15, Reference: 16, File: 17, Folder: 18, EnumMember: 19,
   Constant: 20, Struct: 21, Event: 22, Operator: 23, TypeParameter: 24,
+};
+
+export const CompletionTriggerKind = {
+  Invoke: 0, TriggerCharacter: 1, TriggerForIncompleteCompletions: 2,
 };
 
 export class CompletionItem {

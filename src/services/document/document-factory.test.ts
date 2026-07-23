@@ -9,12 +9,13 @@ vi.mock('@src/languages', () => ({
 }));
 
 import { DocumentFactory } from '@src/services/document/document-factory';
+import { createTestStore, createTestVocabulary, createTestSettings } from '@src/utilities/mocks/factories';
 
 describe('DocumentFactory', () => {
 	let factory: DocumentFactory;
 
 	beforeEach(() => {
-		factory = new DocumentFactory();
+		factory = new DocumentFactory(createTestStore(), createTestVocabulary(), createTestSettings());
 	});
 
 	describe('supportedLanguages', () => {

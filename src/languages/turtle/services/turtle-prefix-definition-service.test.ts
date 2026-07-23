@@ -2,12 +2,15 @@ import 'reflect-metadata';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
+import type { TurtleDocument } from '@src/languages';
+import type { PrefixLookupService } from '@src/services/document/prefix-lookup-service';
+import { getTextEdits, isInsertEdit, isDeleteEdit, isReplaceEdit } from '@src/utilities/mocks/factories';
 
 // Mock all problematic modules BEFORE importing the service
 vi.mock('@src/languages', () => ({
 	TurtleDocument: class MockTurtleDocument {
 		uri: any;
-		namespaces: Record<string, string>;
+		namespaces!: Record<string, string>;
 	}
 }));
 
@@ -84,12 +87,16 @@ interface MockContext {
  * Create a minimal mock context that satisfies the TurtleDocument interface
  * for the getUniquePrefixForIri method.
  */
-function createMockContext(documentUri: string, namespaces: Record<string, string> = {}, tokens: any[] = []): MockContext {
-	return {
+function createMockContext(documentUri: string, namespaces: Record<string, string> = {}, tokens: any[] = []): TurtleDocument {
+	const context: MockContext = {
 		uri: vscode.Uri.parse(documentUri),
 		namespaces: { ...namespaces },
 		tokens,
 	};
+
+	// `@src/languages` is fully mocked above with a minimal stub class; this satisfies
+	// only the members getUniquePrefixForIri actually reads.
+	return context as unknown as TurtleDocument;
 }
 
 /**
@@ -142,15 +149,16 @@ function createMockDocument(
 }
 
 /**
- * Create a mock PrefixLookupService.
+ * Create a mock PrefixLookupService. Only the members exercised by
+ * TurtlePrefixDefinitionService are implemented, hence the cast.
  */
-function createMockPrefixLookupService(getPrefixForIriImpl?: (documentUri: string, namespaceIri: string, defaultValue: string) => string) {
+function createMockPrefixLookupService(getPrefixForIriImpl?: (documentUri: string, namespaceIri: string, defaultValue: string) => string): PrefixLookupService {
 	return {
 		getPrefixForIri: vi.fn(getPrefixForIriImpl ?? ((_, __, defaultValue) => defaultValue)),
 		getUriForPrefix: vi.fn(() => ''),
 		getDefaultPrefixes: vi.fn(() => ({})),
 		getInferencePrefixes: vi.fn(() => ({})),
-	};
+	} as unknown as PrefixLookupService;
 }
 
 /**
@@ -437,9 +445,9 @@ describe('TurtlePrefixDefinitionService', () => {
 
 			const edit = await service.sortPrefixes(doc);
 
-			expect(edit.size).toBe(1);
-			const [entry] = edit.entries;
-			expect(entry.type).toBe('replace');
+			expect(getTextEdits(edit)).toHaveLength(1);
+			const [entry] = getTextEdits(edit);
+			expect(isReplaceEdit(entry)).toBe(true);
 			// The sorted text should have 'a' before 'z'
 			expect(entry.newText).toMatch(/a:.*z:/s);
 		});
@@ -459,8 +467,8 @@ describe('TurtlePrefixDefinitionService', () => {
 
 			const edit = await service.sortPrefixes(doc);
 
-			expect(edit.size).toBe(1);
-			const [entry] = edit.entries;
+			expect(getTextEdits(edit)).toHaveLength(1);
+			const [entry] = getTextEdits(edit);
 			// Replace text should be identical (same order)
 			expect(entry.newText).toBe(lines[0] + '\n' + lines[1]);
 		});
@@ -510,7 +518,7 @@ describe('TurtlePrefixDefinitionService', () => {
 
 			const edit = await service.deletePrefixes(doc, ['ex']);
 			expect(edit.size).toBeGreaterThan(0);
-			expect(edit.entries[0].type).toBe('delete');
+			expect(isDeleteEdit(getTextEdits(edit)[0])).toBe(true);
 		});
 	});
 
@@ -557,8 +565,8 @@ describe('TurtlePrefixDefinitionService', () => {
 
 			// Should have at least one insert for the new prefix declaration
 			expect(edit.size).toBeGreaterThan(0);
-			const inserts = edit.entries.filter(e => e.type === 'insert');
-			expect(inserts.some(e => e.text?.includes('ex') && e.text?.includes('http://example.org/'))).toBe(true);
+			const inserts = getTextEdits(edit).filter(isInsertEdit);
+			expect(inserts.some(e => e.newText.includes('ex') && e.newText.includes('http://example.org/'))).toBe(true);
 		});
 
 		it('does not insert a prefix that is already declared in the document', async () => {
@@ -592,7 +600,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
 
 			// _deleteEmptyLinesAfterToken should delete the empty line (line 1)
-			const deletes = edit.entries.filter(e => e.type === 'delete');
+			const deletes = getTextEdits(edit).filter(isDeleteEdit);
 			expect(deletes.length).toBeGreaterThanOrEqual(1);
 		});
 	});
@@ -633,8 +641,8 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.deletePrefixes(doc, ['ex']);
 
 			// Expect 2 delete edits: the prefix line and the empty line following it.
-			expect(edit.size).toBe(2);
-			expect(edit.entries.every(e => e.type === 'delete')).toBe(true);
+			expect(getTextEdits(edit)).toHaveLength(2);
+			expect(getTextEdits(edit).every(isDeleteEdit)).toBe(true);
 		});
 
 		it('does not delete empty lines after the last prefix', async () => {
@@ -655,7 +663,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.deletePrefixes(doc, ['ex']);
 
 			// Only 1 delete (just the prefix line, not the following empty line).
-			expect(edit.size).toBe(1);
+			expect(getTextEdits(edit)).toHaveLength(1);
 		});
 	});
 
@@ -691,7 +699,7 @@ describe('TurtlePrefixDefinitionService', () => {
 
 			// Should have at least one insert
 			expect(edit.size).toBeGreaterThan(0);
-			const inserts = edit.entries.filter(e => e.type === 'insert');
+			const inserts = getTextEdits(edit).filter(isInsertEdit);
 			expect(inserts.length).toBeGreaterThan(0);
 		});
 
@@ -703,9 +711,9 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
 
 			// Last insert should be the trailing newline
-			const inserts = edit.entries.filter(e => e.type === 'insert');
+			const inserts = getTextEdits(edit).filter(isInsertEdit);
 			const lastInsert = inserts[inserts.length - 1];
-			expect(lastInsert?.text).toBe('\n');
+			expect(lastInsert?.newText).toBe('\n');
 		});
 
 		it('deletes existing prefix token lines when tokens are present in the document', async () => {
@@ -721,7 +729,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const doc = createMockDocument('file:///test.ttl', 'turtle', ['PREFIX owl: <http://owl/>', '<http://x> a owl:Thing .']);
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
 
-			const deletes = edit.entries.filter(e => e.type === 'delete');
+			const deletes = getTextEdits(edit).filter(isDeleteEdit);
 			expect(deletes.length).toBeGreaterThan(0);
 		});
 
@@ -745,7 +753,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
 
 			// Empty line should have been deleted by _deleteEmptyLinesAfterToken
-			const deletes = edit.entries.filter(e => e.type === 'delete');
+			const deletes = getTextEdits(edit).filter(isDeleteEdit);
 			// At least 2 deletes: the prefix line + the empty line following it
 			expect(deletes.length).toBeGreaterThanOrEqual(2);
 		});
@@ -766,7 +774,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
 
 			// Only the prefix line (line 0) should be deleted, not line 1 (non-prefix)
-			const deletes = edit.entries.filter(e => e.type === 'delete');
+			const deletes = getTextEdits(edit).filter(isDeleteEdit);
 			expect(deletes.length).toBeGreaterThanOrEqual(1);
 		});
 	});
@@ -819,7 +827,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixForIri(doc, 'http://example.org/Thing');
 
 			expect(edit.size).toBeGreaterThan(0);
-			const replaces = edit.entries.filter(e => e.type === 'replace');
+			const replaces = getTextEdits(edit).filter(isReplaceEdit);
 			expect(replaces.length).toBeGreaterThan(0);
 			expect(replaces[0].newText).toContain('custom' in {} ? 'ex:Thing' : 'Thing');
 		});
@@ -834,7 +842,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixForIri(doc, 'http://example.org/Thing');
 
 			// No replace edits because the only IRIREF is in a BASE statement.
-			const replaces = edit.entries.filter(e => e.type === 'replace');
+			const replaces = getTextEdits(edit).filter(isReplaceEdit);
 			expect(replaces.length).toBe(0);
 		});
 
@@ -862,7 +870,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixForIri(doc, 'http://example.org/Thing');
 
 			// Only the IRIREF on line 2 should be replaced, not the one in the PREFIX definition.
-			const replaces = edit.entries.filter(e => e.type === 'replace');
+			const replaces = getTextEdits(edit).filter(isReplaceEdit);
 			expect(replaces.length).toBe(1);
 		});
 
@@ -878,7 +886,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const doc = createMockDocument('file:///test.ttl', 'turtle', ['<http://example.org/some/path>']);
 			const edit = await service.implementPrefixForIri(doc, 'http://example.org/some/path');
 
-			const replaces = edit.entries.filter(e => e.type === 'replace');
+			const replaces = getTextEdits(edit).filter(isReplaceEdit);
 			expect(replaces.length).toBe(0);
 		});
 
@@ -899,9 +907,9 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixForIri(doc, 'http://example.org/Thing');
 
 			// Only a replace edit (no insert for prefix declaration)
-			const inserts = edit.entries.filter(e => e.type === 'insert');
+			const inserts = getTextEdits(edit).filter(isInsertEdit);
 			expect(inserts.length).toBe(0);
-			const replaces = edit.entries.filter(e => e.type === 'replace');
+			const replaces = getTextEdits(edit).filter(isReplaceEdit);
 			expect(replaces.length).toBeGreaterThan(0);
 		});
 	});
@@ -940,7 +948,7 @@ describe('TurtlePrefixDefinitionService', () => {
 
 			// namespaceIri: undefined → looked up via prefixLookupService.getUriForPrefix
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: undefined }]);
-			const insertText = edit.entries.filter(e => e.type === 'insert').map(e => e.text).join('');
+			const insertText = getTextEdits(edit).filter(isInsertEdit).map(e => e.newText).join('');
 
 			// Default token type is RdfToken.PREFIX → SPARQL-style (lowercase because isUpperCaseToken is false)
 			expect(insertText).toContain('prefix ex: <http://example.org/>');
@@ -964,7 +972,7 @@ describe('TurtlePrefixDefinitionService', () => {
 			const doc = createMockDocument('file:///test.ttl', 'turtle', []);
 
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: undefined }]);
-			const insertText = edit.entries.filter(e => e.type === 'insert').map(e => e.text).join('');
+			const insertText = getTextEdits(edit).filter(isInsertEdit).map(e => e.newText).join('');
 
 			expect(insertText).toContain('@prefix ex: <http://example.org/> .');
 		});
@@ -1017,12 +1025,12 @@ describe('TurtlePrefixDefinitionService', () => {
 			const doc = createMockDocument('file:///q.sparql', 'sparql', TEMPLATE_LINES);
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: undefined }]);
 
-			const inserts = edit.entries.filter(e => e.type === 'insert');
+			const inserts = getTextEdits(edit).filter(isInsertEdit);
 			expect(inserts.length).toBeGreaterThan(0);
 			// All inserts land on or below the content start line (3), never inside the header.
-			expect(inserts.every(e => (e.position?.line ?? 0) >= 3)).toBe(true);
+			expect(inserts.every(e => e.range.start.line >= 3)).toBe(true);
 			// The frontmatter lines (0–2) are never deleted.
-			expect(edit.entries.filter(e => e.type === 'delete').every(e => (e.range?.start.line ?? 99) >= 3)).toBe(true);
+			expect(getTextEdits(edit).filter(isDeleteEdit).every(e => e.range.start.line >= 3)).toBe(true);
 		});
 
 		it('keeps the frontmatter intact and anchors sorted prefixes below it (sorted mode)', async () => {
@@ -1046,11 +1054,11 @@ describe('TurtlePrefixDefinitionService', () => {
 			const edit = await service.implementPrefixes(doc, [{ prefix: 'ex', namespaceIri: 'http://example.org/' }]);
 
 			// Inserts are anchored at the content start line (3), below the header.
-			const inserts = edit.entries.filter(e => e.type === 'insert');
+			const inserts = getTextEdits(edit).filter(isInsertEdit);
 			expect(inserts.length).toBeGreaterThan(0);
-			expect(inserts.every(e => (e.position?.line ?? 0) >= 3)).toBe(true);
+			expect(inserts.every(e => e.range.start.line >= 3)).toBe(true);
 			// The frontmatter lines (0–2) are never deleted.
-			expect(edit.entries.filter(e => e.type === 'delete').every(e => (e.range?.start.line ?? 99) >= 3)).toBe(true);
+			expect(getTextEdits(edit).filter(isDeleteEdit).every(e => e.range.start.line >= 3)).toBe(true);
 		});
 
 		it('deletes the existing body prefix when a frontmatter block token leads the stream (sorted mode)', async () => {
@@ -1082,10 +1090,10 @@ describe('TurtlePrefixDefinitionService', () => {
 
 			// The existing body PREFIX (line 3) must be deleted, otherwise the regenerated
 			// prologue is prepended and the prologue is duplicated.
-			const deletes = edit.entries.filter(e => e.type === 'delete');
-			expect(deletes.some(e => e.range?.start.line === 3)).toBe(true);
+			const deletes = getTextEdits(edit).filter(isDeleteEdit);
+			expect(deletes.some(e => e.range.start.line === 3)).toBe(true);
 			// And the frontmatter (lines 0–2) is still never touched.
-			expect(deletes.every(e => (e.range?.start.line ?? 99) >= 3)).toBe(true);
+			expect(deletes.every(e => e.range.start.line >= 3)).toBe(true);
 		});
 	});
 });

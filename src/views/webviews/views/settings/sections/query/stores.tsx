@@ -34,7 +34,7 @@ function stripStoreScope(store: TripleStoreConfig): TripleStoreConfig {
 	return copy;
 }
 
-export function QueryStoresSection({ settings, setScope }: SettingsSectionProps) {
+function QueryStoresSection({ settings, setScope }: SettingsSectionProps) {
 	const hasWorkspace = useContext(SettingsWorkspaceContext);
 
 	// Stores are split across the user and workspace scopes; the shared hook owns the
@@ -67,7 +67,7 @@ export function QueryStoresSection({ settings, setScope }: SettingsSectionProps)
 			setEditing(prev => prev?.id === message.profileId ? undefined : prev);
 			setEditorDirty(false);
 		}
-	}, []);
+	}, [commit, userRef, workspaceRef]);
 
 	const messaging = useScopedWebviewMessaging<StoresSectionMessages>('query.stores', handleMessage);
 

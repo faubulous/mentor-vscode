@@ -101,7 +101,6 @@ export function useScopedSettingValue<T>({
 		if (JSON.stringify(nextWorkspace) !== JSON.stringify(workspaceRef.current)) {
 			setScopeRef.current(source, key, 'workspace', isEmptyRef.current?.(nextWorkspace) ? undefined : nextWorkspace);
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [source, key]);
 
 	return { userValue, workspaceValue, userRef, workspaceRef, commit };

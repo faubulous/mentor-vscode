@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-let mockClearQueryHistory: ReturnType<typeof vi.fn>;
+let mockClearQueryHistory: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
 
 vi.mock('tsyringe', () => ({
 	container: {

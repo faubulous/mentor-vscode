@@ -14,12 +14,12 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 const mockGetDiagnostics = vi.fn(() => [] as any[]);
-const mockShowErrorMessage = vi.fn(async () => undefined as any);
-const mockShowWarningMessage = vi.fn(async () => undefined as any);
-const mockShowQuickPick = vi.fn(async () => undefined as any);
-const mockShowTextDocument = vi.fn(async () => undefined as any);
+const mockShowErrorMessage = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined);
+const mockShowWarningMessage = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined);
+const mockShowQuickPick = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined);
+const mockShowTextDocument = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined);
 const mockOpenTextDocument = vi.fn(async () => ({ uri: vscode.Uri.parse('file:///result.ttl') } as any));
-const mockShowInputBox = vi.fn(async () => undefined as any);
+const mockShowInputBox = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined);
 
 const mockDocumentFactory = {
 	getSupportedLanguagesInfo: vi.fn(async () => [

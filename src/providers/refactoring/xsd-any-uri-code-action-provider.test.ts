@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
+import { getTextEdits } from '@src/utilities/mocks/factories';
 
 const mockSubscriptions: any[] = [];
 
@@ -53,7 +54,6 @@ function makeDiagnostic(startChar: number, endChar: number, iriValue: string): v
 
 describe('XsdAnyUriCodeActionProvider', () => {
 	let XsdAnyUriCodeActionProvider: any;
-	let XSD_ANY_URI_LITERAL_CODE: string;
 
 	beforeEach(async () => {
 		mockSubscriptions.length = 0;
@@ -61,7 +61,6 @@ describe('XsdAnyUriCodeActionProvider', () => {
 
 		const module = await import('@src/providers/refactoring/xsd-any-uri-code-action-provider');
 		XsdAnyUriCodeActionProvider = module.XsdAnyUriCodeActionProvider;
-		XSD_ANY_URI_LITERAL_CODE = module.XSD_ANY_URI_LITERAL_CODE;
 	});
 
 	describe('constructor', () => {
@@ -110,11 +109,10 @@ describe('XsdAnyUriCodeActionProvider', () => {
 
 			expect(actions.length).toBeGreaterThanOrEqual(1);
 
-			const edit: any = actions[0].edit;
-			const entries: any[] = edit.entries;
+			const edits = getTextEdits(actions[0].edit);
 
-			expect(entries.length).toBe(1);
-			expect(entries[0].newText).toBe('<http://example.com/>');
+			expect(edits.length).toBe(1);
+			expect(edits[0].newText).toBe('<http://example.com/>');
 		});
 
 		it('ignores diagnostics with a different code', () => {

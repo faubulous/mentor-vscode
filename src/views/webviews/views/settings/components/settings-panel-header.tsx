@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-export function MentorIcon() {
+function MentorIcon() {
 	const url = document.getElementById('root')?.dataset.mentorIconUrl;
 
 	return (

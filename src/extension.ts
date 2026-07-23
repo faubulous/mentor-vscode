@@ -50,13 +50,11 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
-	// Do not await this, to allow the extension to finish activating while indexing
-	// is still in progress. This may cause some language features to not be available
+	// Do not await this, to allow the extension to finish activating while the
+	// workspace initialization (shape loading, indexing, startup validation) is
+	// still in progress. This may cause some language features to not be available
 	// until indexing is complete, but provides a better user experience overall.
-	//
-	// Once indexing is complete, check the SHACL validation profiles for references
-	// to missing files and warn if any are broken.
-	indexWorkspace().then(() => initializeValidation());
+	initializeWorkspace();
 
 	// Load named graphs for connections with auto-loading enabled. Runs in parallel
 	// with indexing so the status bar can show both activities simultaneously.
@@ -238,24 +236,60 @@ async function loadConnectionGraphs() {
 }
 
 /**
- * Indexes the entire workspace to provide language features such as hovers, completions and definitions. This is done on activation to ensure that these features are available immediately after the extension is activated.
+ * Runs the workspace startup sequence (see ADR-0003): resolves the monorepo root
+ * first — `workspace:///` URI resolution and the graph IRIs the indexer produces
+ * depend on it — then loads the profile-referenced shape graphs in parallel with
+ * file discovery and indexing. Startup validation runs once both are done: it
+ * needs the shape graphs for the profiles and the files' data graphs from the
+ * index. The two tracks never wait for each other; only validation joins them.
  */
-async function indexWorkspace() {
-	try {
-		// Without workspace folders there is nothing to discover or index. The indexer
-		// status bar item created eagerly by the service container stays visible with
-		// its default icon so the Mentor settings remain quickly accessible.
-		if (!vscode.workspace.workspaceFolders?.length) {
-			return;
-		}
+async function initializeWorkspace() {
+	// Without workspace folders there is nothing to resolve, index or validate. The
+	// indexer status bar item created eagerly by the service container stays visible
+	// with its default icon so the Mentor settings remain quickly accessible.
+	if (!vscode.workspace.workspaceFolders?.length) {
+		return;
+	}
 
+	try {
 		// Discover all VS Code workspace files for workspace ID resolution.
 		const workspaceService = container.resolve<IWorkspaceService>(ServiceToken.WorkspaceService);
 		await workspaceService.discoverWorkspaces();
 
 		// Set the monorepo root for workspace URI resolution.
 		WorkspaceUri.rootUri = workspaceService.activeRootUri;
+	} catch (e) {
+		// This function is intentionally not awaited during activation; log instead
+		// of surfacing an unhandled rejection that could disrupt the extension host.
+		console.error('Mentor: Workspace discovery failed:', e);
+		return;
+	}
 
+	// Both tracks handle their own failures and never reject.
+	await Promise.all([loadReferencedShapeGraphs(), indexWorkspaceFiles()]);
+
+	await initializeValidation();
+}
+
+/**
+ * Loads the shape graphs referenced by SHACL validation profiles into the store.
+ * Fast (a handful of small files) and independent of workspace indexing, so
+ * validation never depends on the indexer having walked over a shape file.
+ */
+async function loadReferencedShapeGraphs() {
+	try {
+		const shapeGraphService = container.resolve<ShapeGraphService>(ServiceToken.ShapeGraphService);
+		await shapeGraphService.loadReferencedShapeGraphs();
+	} catch (e) {
+		console.error('Mentor: Loading referenced shape graphs failed:', e);
+	}
+}
+
+/**
+ * Indexes the entire workspace to provide language features such as hovers, completions and definitions. This is done on activation to ensure that these features are available immediately after the extension is activated.
+ */
+async function indexWorkspaceFiles() {
+	try {
 		// Discover all supported files in the workspace.
 		const workspaceFileService = container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService);
 		await workspaceFileService.discoverFiles();
@@ -264,15 +298,15 @@ async function indexWorkspace() {
 		const workspaceIndexerService = container.resolve<WorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
 		await workspaceIndexerService.indexWorkspace();
 	} catch (e) {
-		// This function is intentionally not awaited during activation; log instead
-		// of surfacing an unhandled rejection that could disrupt the extension host.
 		console.error('Mentor: Workspace indexing failed:', e);
 	}
 }
 
 /**
- * Checks all SHACL validation profiles for references to missing shape files and warns the user if any are broken.
- * @note This is run after workspace indexing is complete, so that all shape files in the workspace are known.
+ * Checks all SHACL validation profiles for references to missing shape graphs and warns the
+ * user if any are broken, then runs the `validateOnStartup` batch.
+ * @note This runs after shape loading and workspace indexing have both completed, so the
+ * profiles' shape graphs and the files' data graphs are in the store (see ADR-0003).
  */
 async function initializeValidation() {
 	try {

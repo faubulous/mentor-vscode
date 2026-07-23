@@ -50,7 +50,7 @@ describe('StoresSectionController – DeleteStoreProfile', () => {
 
 	it('does not delete when the simple confirm is cancelled', async () => {
 		const { controller, post } = setup([]);
-		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		await controller.handleMessage(deleteMessage);
 
@@ -96,7 +96,7 @@ describe('StoresSectionController – DeleteStoreProfile', () => {
 	it('leaves the store and connections untouched when the choice dialog is cancelled', async () => {
 		const conns = [{ id: 'c1', endpointUrl: 'http://e1', storeType: 'qlever' }];
 		const { controller, post, connectionRegistry } = setup(conns);
-		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		await controller.handleMessage(deleteMessage);
 
@@ -120,7 +120,7 @@ describe('StoresSectionController – StoreScopeChanged', () => {
 			{ id: 'c2', endpointUrl: 'http://e2', storeType: 'jena', configScope: ConfigurationScope.Workspace },
 		];
 		const { controller } = setup(conns);
-		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		await controller.handleMessage(scopeChangeMessage);
 
@@ -134,7 +134,7 @@ describe('StoresSectionController – StoreScopeChanged', () => {
 			{ id: 'c1', endpointUrl: 'http://e1', storeType: 'my-store', configScope: ConfigurationScope.User },
 		];
 		const { controller } = setup(conns);
-		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		await controller.handleMessage(scopeChangeMessage);
 
@@ -146,7 +146,7 @@ describe('StoresSectionController – StoreScopeChanged', () => {
 			{ id: 'workspace', endpointUrl: 'workspace:', storeType: 'my-store', configScope: ConfigurationScope.Workspace, isProtected: true },
 		];
 		const { controller } = setup(conns);
-		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+		const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 		await controller.handleMessage(scopeChangeMessage);
 

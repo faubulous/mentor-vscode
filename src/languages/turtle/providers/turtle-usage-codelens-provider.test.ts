@@ -6,14 +6,14 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 const { mockContextService, mockIndexerService, mockVocabulary } = vi.hoisted(() => ({
     mockContextService: {
         contexts: {} as Record<string, any>,
-        onDidChangeDocumentContext: vi.fn(() => ({ dispose: vi.fn() })),
+        onDidChangeDocumentContext: vi.fn((_handler?: unknown) => ({ dispose: vi.fn() })),
     },
     mockIndexerService: {
         waitForIndexed: vi.fn(() => new Promise(() => { })), // never resolves
     },
     mockVocabulary: {
         hasType: vi.fn(() => false),
-        getShapes: vi.fn(function*() {}),
+        getShapes: vi.fn(function*(): Generator<string, void, unknown> {}),
     },
 }));
 

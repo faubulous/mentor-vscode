@@ -50,16 +50,34 @@ export interface IGraphManagementService extends vscode.Disposable {
     getGraphLoadError(connectionId: string): string | undefined;
 
     /**
-     * Executes the `listGraphs` query for a connection and stores the result in the
-     * cache. Fires `onDidGraphLoadStart` before and `onDidGraphLoadEnd` after.
+     * Loads the graph list for a connection, serving from the cache while the last
+     * result is younger than the connection's `graphReloadIntervalSeconds` (unset falls
+     * back to the 24-hour default; an explicit `0` means the cache never expires).
+     * When the cache is stale, missing
+     * or the reload is forced, executes the `listGraphs` query and stores the result,
+     * firing `onDidGraphLoadStart` before and `onDidGraphLoadEnd` after. Concurrent
+     * calls for the same connection share a single query.
      * @param connection The SPARQL connection to load graphs for.
+     * @param options Set `force` to bypass the cache, e.g. for a user-initiated reload.
      */
-    loadGraphsForConnection(connection: SparqlConnection): Promise<void>;
+    loadGraphsForConnection(connection: SparqlConnection, options?: { force?: boolean }): Promise<void>;
 
     /**
-     * Loads graphs in parallel for all connections that have `autoLoadGraphs` enabled,
-     * then schedules periodic reloads according to each connection's
-     * `graphReloadIntervalSeconds` setting.
+     * Loads graphs in parallel for all connections that have `autoLoadGraphs` enabled.
+     * Later on-demand loads refresh a connection's list once its
+     * `graphReloadIntervalSeconds` has been exceeded.
      */
     autoLoadConnections(): Promise<void>;
+
+    /**
+     * Loads a connection's graphs on demand — used when a document is switched to a
+     * connection whose graphs were not auto-loaded at startup, so consumers (e.g. the
+     * graph linter) reflect the newly selected source. Applies the same trust,
+     * `autoLoadGraphs`, protected and endpoint-safety constraints as
+     * {@link autoLoadConnections}. Serves from the cache while it is fresh; the endpoint
+     * is only contacted when no load has been attempted yet or the connection's reload
+     * interval has been exceeded.
+     * @param connection The SPARQL connection to ensure graphs are loaded for.
+     */
+    ensureGraphsLoadedForConnection(connection: SparqlConnection): Promise<void>;
 }

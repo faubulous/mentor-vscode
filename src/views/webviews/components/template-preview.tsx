@@ -137,7 +137,7 @@ export interface TemplatePreviewProps {
  * @param language The target document language.
  * @param target Options for identifying the template to be edited.
  */
-export function useOpenTemplateEditor(language: string, target: EditTemplateTarget): () => void {
+function useOpenTemplateEditor(language: string, target: EditTemplateTarget): () => void {
 	const messaging = useWebviewMessaging<ExecuteCommandMessage>();
 
 	return () => {

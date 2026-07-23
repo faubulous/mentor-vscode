@@ -6,7 +6,7 @@ import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } f
 import { ScopeSelect } from '@src/views/webviews/components/scope-select';
 import { useStylesheet, useVscodeElementRef, useScopedWebviewMessaging } from '@src/views/webviews/hooks';
 import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
-import { SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
+import { DEFAULT_GRAPH_RELOAD_INTERVAL_SECONDS, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
 import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
 import {
 	AuthCredential,
@@ -29,10 +29,12 @@ enum AuthTypeIndex {
 	EntraClientCredentials = 4
 }
 
-type ReloadIntervalUnit = 'minutes' | 'hours';
+type ReloadIntervalUnit = 'minutes' | 'hours' | 'days';
 
 function secondsToDisplayInterval(seconds: number): { value: number; unit: ReloadIntervalUnit } {
-	if (seconds > 0 && seconds % 3600 === 0) {
+	if (seconds > 0 && seconds % 86400 === 0) {
+		return { value: seconds / 86400, unit: 'days' };
+	} else if (seconds > 0 && seconds % 3600 === 0) {
 		return { value: seconds / 3600, unit: 'hours' };
 	} else {
 		return { value: Math.max(1, Math.round(seconds / 60)), unit: 'minutes' };
@@ -40,7 +42,7 @@ function secondsToDisplayInterval(seconds: number): { value: number; unit: Reloa
 }
 
 function displayIntervalToSeconds(value: number, unit: ReloadIntervalUnit): number {
-	return value * (unit === 'hours' ? 3600 : 60);
+	return value * (unit === 'days' ? 86400 : unit === 'hours' ? 3600 : 60);
 }
 
 interface FormState {
@@ -58,12 +60,13 @@ interface FormState {
 }
 
 function makeInitialFormState(connection: SparqlConnectionView): FormState {
-	const { value: reloadIntervalValue, unit: reloadIntervalUnit } = connection.graphReloadIntervalSeconds
-		? secondsToDisplayInterval(connection.graphReloadIntervalSeconds)
-		: { value: 24, unit: 'hours' as ReloadIntervalUnit };
+	// Materialize the default interval into the draft so saving persists the value the
+	// form displays — otherwise the 24h default would be display-only and never saved.
+	const graphReloadIntervalSeconds = connection.graphReloadIntervalSeconds || DEFAULT_GRAPH_RELOAD_INTERVAL_SECONDS;
+	const { value: reloadIntervalValue, unit: reloadIntervalUnit } = secondsToDisplayInterval(graphReloadIntervalSeconds);
 
 	return {
-		endpoint: connection,
+		endpoint: { ...connection, graphReloadIntervalSeconds },
 		selectedAuthTypeIndex: AuthTypeIndex.None,
 		basicCredential: CredentialFactory.createBasicAuthCredential(),
 		bearerCredential: CredentialFactory.createBearerAuthCredential(),
@@ -167,11 +170,14 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 
 	const messaging = useScopedWebviewMessaging<ConnectionEditorMessages>('query.connections', handleMessage);
 
-	// Reseed the form whenever a different connection is opened.
+	// Reseed the form only when a different connection is opened — depending on the
+	// `connection` object itself would wipe the user's draft edits whenever the parent
+	// re-renders with a fresh object for the same connection.
 	useEffect(() => {
 		setDraft(makeInitialFormState(connection));
 		setTestResult(undefined);
 		setIsTesting(false);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [connection.id]);
 
 	// Load the stored credential and available store types once messaging is ready.
@@ -215,14 +221,35 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 
 		setDraft(prev => {
 			const graphReloadIntervalSeconds = displayIntervalToSeconds(prev.reloadIntervalValue, unit);
+			const endpoint = { ...prev.endpoint, graphReloadIntervalSeconds };
+
+			// A reload time only applies to day-based intervals.
+			if (unit !== 'days') {
+				delete endpoint.graphReloadTime;
+			}
+
 			return {
 				...prev,
 				reloadIntervalUnit: unit,
-				endpoint: { ...prev.endpoint, graphReloadIntervalSeconds },
+				endpoint,
 				hasUnsavedChanges: true,
 			};
 		});
 	});
+
+	// Chromium renders a clock glyph inside `type="time"` inputs that does not follow
+	// the editor theme. The input lives in the component's shadow root, out of reach
+	// of page stylesheets, so the rule hiding it is injected into the shadow root.
+	const reloadTimeFieldRef = useCallback((element: HTMLElement | null) => {
+		const shadowRoot = element?.shadowRoot;
+
+		if (shadowRoot && !shadowRoot.querySelector('#hide-picker-icon')) {
+			const style = document.createElement('style');
+			style.id = 'hide-picker-icon';
+			style.textContent = 'input::-webkit-calendar-picker-indicator { display: none; }';
+			shadowRoot.appendChild(style);
+		}
+	}, []);
 
 	const tabsRef = useVscodeElementRef<HTMLElement & { selectedIndex: number }, { selectedIndex: number }>(
 		'vsc-tabs-select',
@@ -617,7 +644,34 @@ export function ConnectionEditor({ connection, onSaved, onDirtyChange }: Connect
 												disabled={isFormReadOnly() || !endpoint.autoLoadGraphs}>
 												<vscode-option value="minutes">minutes</vscode-option>
 												<vscode-option value="hours">hours</vscode-option>
+												<vscode-option value="days">days</vscode-option>
 											</vscode-single-select>
+											{draft.reloadIntervalUnit === 'days' && (
+												<>
+													<span className="section-graph-loading-interval-label">after</span>
+													<vscode-textfield
+														ref={reloadTimeFieldRef}
+														className="reload-time"
+														type="time"
+														value={draft.endpoint.graphReloadTime ?? ''}
+														disabled={isFormReadOnly() || !endpoint.autoLoadGraphs}
+														onInput={(e: React.FormEvent<HTMLElement>) => {
+															const graphReloadTime = (e.target as HTMLInputElement).value;
+															setDraft(prev => {
+																const endpoint = { ...prev.endpoint };
+
+																if (graphReloadTime) {
+																	endpoint.graphReloadTime = graphReloadTime;
+																} else {
+																	delete endpoint.graphReloadTime;
+																}
+
+																return { ...prev, endpoint, hasUnsavedChanges: true };
+															});
+														}}
+													/>
+												</>
+											)}
 										</div>
 									</div>
 								)}

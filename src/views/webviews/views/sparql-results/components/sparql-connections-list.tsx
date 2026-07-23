@@ -56,7 +56,7 @@ export function SparqlConnectionsList() {
 
 	useEffect(() => {
 		messaging?.postMessage({ id: 'GetSparqlConnections' });
-	}, []);
+	}, [messaging]);
 
 	const executeCommand = (command: string, ...args: any[]) => {
 		messaging?.postMessage({ id: 'ExecuteCommand', command, args });

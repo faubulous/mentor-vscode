@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/workspace-store';
 
 /**
  * Matches the IRI value inside `FROM <…>`, `FROM NAMED <…>`, and `GRAPH <…>` clauses.
@@ -11,9 +12,11 @@ const GRAPH_IRI_RE = /\b(?:FROM\s+(?:NAMED\s+)?|GRAPH\s+)<([^>]+)>/gi;
  * Produces `DiagnosticSeverity.Warning` diagnostics for graph IRIs referenced in a SPARQL
  * document that are not present in the cached graph list for the document's connection.
  *
- * Diagnostics are only produced when:
- * - the connection has `autoLoadGraphs` enabled, and
- * - the graph service has successfully loaded graphs at least once for that connection.
+ * Diagnostics are produced when a reliable graph list is available for the document's
+ * connection, i.e. when either:
+ * - the connection is the in-memory workspace store (its graph list is always available), or
+ * - the connection has `autoLoadGraphs` enabled and the graph service has successfully
+ *   loaded graphs at least once for it.
  */
 export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
 
@@ -84,7 +87,21 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
     private _validateDocument(document: vscode.TextDocument): void {
         const connection = this._documentConnectionService.getConnectionForDocument(document.uri);
 
-        if (!connection.autoLoadGraphs || !this._graphService.hasGraphsForConnection(connection.id)) {
+        // Load the connection's graphs on demand when they are not cached yet or the
+        // cached list's reload interval has been exceeded (e.g. after switching the
+        // document to a connection that was not auto-loaded at startup). The load fires
+        // onDidChangeGraphs on completion, which re-validates this document against the
+        // freshly loaded set. Served from the cache when fresh; no-op when not eligible.
+        void this._graphService.ensureGraphsLoadedForConnection(connection);
+
+        // The in-memory workspace store always has a graph list (so it lints regardless of
+        // the auto-load setting); a remote connection lints only when it auto-loads graphs
+        // and a load has succeeded.
+        const isWorkspace = connection.id === WORKSPACE_CONNECTION.id;
+        const canValidate = this._graphService.hasGraphsForConnection(connection.id)
+            && (isWorkspace || !!connection.autoLoadGraphs);
+
+        if (!canValidate) {
             this._collection.delete(document.uri);
         } else {
             const knownGraphs = new Set(this._graphService.getGraphsForConnection(connection.id, this._documentConnectionService.getInferenceEnabledForDocument(document.uri)));

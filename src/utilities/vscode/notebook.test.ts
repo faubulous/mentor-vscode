@@ -64,7 +64,7 @@ describe('findNotebookContainingCell', () => {
 		const notebook = {
 			uri: vscode.Uri.parse('file:///nb.mnb'),
 			getCells: vi.fn(() => [{ document: { uri: cellUri } }]),
-		} as unknown as vscode.NotebookDocument;
+		} as unknown as vscode.NotebookDocument; // partial stub: only uri/getCells are read
 		(vscode.workspace as any).notebookDocuments = [notebook];
 
 		expect(findNotebookContainingCell(cellUri)).toBe(notebook);

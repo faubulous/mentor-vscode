@@ -6,9 +6,9 @@ import { ConfigurationScope } from '@src/utilities/config-scope';
 import { AuthCredential } from '@src/services/core/credential';
 import { SparqlConnection } from './sparql-connection';
 import { ITripleStoreConfigService } from './triple-store-config-service.interface';
-import { WORKSPACE_CONNECTION, WORKSPACE_STORE } from './workspace-store';
+import { WORKSPACE_CONNECTION } from './workspace-store';
 
-export { WORKSPACE_CONNECTION, WORKSPACE_STORE };
+export { WORKSPACE_CONNECTION };
 
 /**
  * Service for managing connections to SPARQL endpoints: the in-memory connection
@@ -157,6 +157,7 @@ export class SparqlConnectionRegistry {
 				storeType: c.storeType ?? this._storeConfigService.defaultStoreType,
 				...(c.autoLoadGraphs !== undefined ? { autoLoadGraphs: c.autoLoadGraphs } : {}),
 				...(c.graphReloadIntervalSeconds !== undefined ? { graphReloadIntervalSeconds: c.graphReloadIntervalSeconds } : {}),
+				...(c.graphReloadTime !== undefined ? { graphReloadTime: c.graphReloadTime } : {}),
 			}));
 	}
 

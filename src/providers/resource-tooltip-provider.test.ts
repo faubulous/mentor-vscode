@@ -11,7 +11,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 
 const mockContextService = {
 	contexts: {} as Record<string, any>,
-	activeContext: undefined as any,
+	activeContext: undefined as Record<string, any> | undefined,
 };
 
 const mockStore = {
@@ -72,7 +72,7 @@ describe('ResourceTooltipProvider', () => {
 		});
 		const result = provider.provideHover(doc, mockPosition) as any;
 		expect(result).toBeDefined();
-		expect(result.contents).toBe('This is a class.');
+		expect(result.contents[0]).toBe('This is a class.');
 	});
 
 	it('returns hover with literal value when literal at position', () => {
@@ -82,7 +82,7 @@ describe('ResourceTooltipProvider', () => {
 		});
 		const result = provider.provideHover(doc, mockPosition) as any;
 		expect(result).toBeDefined();
-		expect(result.contents).toBe('hello world');
+		expect(result.contents[0]).toBe('hello world');
 	});
 
 	it('returns null when nothing at position', () => {
@@ -134,7 +134,7 @@ describe('ResourceTooltipProvider', () => {
 		const result = provider.provideHover(doc, new vscode.Position(3, 12)) as any;
 
 		expect(result).toBeDefined();
-		expect(result.contents).toBe('Person class.');
+		expect(result.contents[0]).toBe('Person class.');
 	});
 
 	it('returns null for an unknown URI inside triplate frontmatter', () => {

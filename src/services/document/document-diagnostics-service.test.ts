@@ -6,11 +6,13 @@ const env = vi.hoisted(() => ({
     visibleTextEditors: [] as any[],
     textDocuments: [] as any[],
     diagnoseFiles: true,
-    fireVisibleEditorsChanged: undefined as any,
-    fireDocumentClosed: undefined as any,
-    fireFilesDeleted: undefined as any,
-    fireFilesRenamed: undefined as any,
-    fireConfigurationChanged: undefined as any,
+    // Handler-capture slots: the vscode mock below stores the subscribed
+    // event handlers here so tests can fire the events directly.
+    fireVisibleEditorsChanged: undefined as ((e: unknown) => void) | undefined,
+    fireDocumentClosed: undefined as ((e: unknown) => void) | undefined,
+    fireFilesDeleted: undefined as ((e: unknown) => void) | undefined,
+    fireFilesRenamed: undefined as ((e: unknown) => void) | undefined,
+    fireConfigurationChanged: undefined as ((e: unknown) => void) | undefined,
 }));
 
 vi.mock('vscode', async () => {
@@ -60,7 +62,7 @@ vi.mock('vscode', async () => {
     };
 });
 
-import { Uri, EventEmitter } from '@src/utilities/mocks/vscode';
+import * as vscode from 'vscode';
 import { DocumentDiagnosticsService } from '@src/services/document/document-diagnostics-service';
 import { TokenDelivery } from '@src/services/document/document-token-source.interface';
 
@@ -70,7 +72,7 @@ import { TokenDelivery } from '@src/services/document/document-token-source.inte
  */
 function makeDocument(uri: string, text: string) {
     return {
-        uri: Uri.parse(uri),
+        uri: vscode.Uri.parse(uri),
         getText: () => text,
         positionAt: (offset: number) => {
             const clamped = Math.max(0, Math.min(offset, text.length));
@@ -91,7 +93,7 @@ function makeSparqlContext() {
 }
 
 function makeSetup(contextsByUri: Record<string, any>) {
-    const deliveryEmitter = new EventEmitter<TokenDelivery>();
+    const deliveryEmitter = new vscode.EventEmitter<TokenDelivery>();
     const tokenSource = { onDidDeliverTokens: deliveryEmitter.event } as any;
     const service = new DocumentDiagnosticsService(tokenSource, uri => contextsByUri[uri]);
     const collection = env.collections[env.collections.length - 1];
@@ -253,7 +255,7 @@ describe('DocumentDiagnosticsService', () => {
 
         env.textDocuments.push(document);
         env.visibleTextEditors.push({ document });
-        env.fireVisibleEditorsChanged(env.visibleTextEditors);
+        env.fireVisibleEditorsChanged!(env.visibleTextEditors);
 
         expect(collection.set).toHaveBeenCalledWith(document.uri, []);
     });
@@ -290,7 +292,7 @@ describe('DocumentDiagnosticsService', () => {
 
         const { collection } = makeSetup({ [uri]: makeTurtleContext() });
 
-        env.fireDocumentClosed(document);
+        env.fireDocumentClosed!(document);
 
         expect(collection.delete).not.toHaveBeenCalled();
     });
@@ -303,7 +305,7 @@ describe('DocumentDiagnosticsService', () => {
 
         const { collection } = makeSetup({ [uri]: makeTurtleContext() });
 
-        env.fireDocumentClosed(document);
+        env.fireDocumentClosed!(document);
 
         expect(collection.delete).toHaveBeenCalledWith(document.uri);
     });
@@ -314,7 +316,7 @@ describe('DocumentDiagnosticsService', () => {
 
         const { collection } = makeSetup({ [uri]: makeTurtleContext() });
 
-        env.fireDocumentClosed(document);
+        env.fireDocumentClosed!(document);
 
         expect(collection.delete).toHaveBeenCalledWith(document.uri);
     });
@@ -325,7 +327,7 @@ describe('DocumentDiagnosticsService', () => {
 
         const { collection } = makeSetup({ [uri]: makeTurtleContext() });
 
-        env.fireFilesDeleted({ files: [document.uri] });
+        env.fireFilesDeleted!({ files: [document.uri] });
 
         expect(collection.delete).toHaveBeenCalledWith(document.uri);
     });
@@ -336,7 +338,7 @@ describe('DocumentDiagnosticsService', () => {
 
         const { collection } = makeSetup({});
 
-        env.fireFilesRenamed({ files: [{ oldUri: oldDocument.uri, newUri: newDocument.uri }] });
+        env.fireFilesRenamed!({ files: [{ oldUri: oldDocument.uri, newUri: newDocument.uri }] });
 
         expect(collection.delete).toHaveBeenCalledWith(oldDocument.uri);
     });
@@ -350,7 +352,7 @@ describe('DocumentDiagnosticsService', () => {
         const { collection } = makeSetup({ [uri]: makeTurtleContext() });
         collection.set.mockClear();
 
-        env.fireConfigurationChanged({ affectsConfiguration: (key: string) => key === 'mentor.index.diagnoseFiles' });
+        env.fireConfigurationChanged!({ affectsConfiguration: (key: string) => key === 'mentor.index.diagnoseFiles' });
 
         expect(collection.clear).toHaveBeenCalled();
         expect(collection.set).toHaveBeenCalledWith(document.uri, []);

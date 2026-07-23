@@ -17,26 +17,12 @@ vi.mock('triplate', () => ({
 }));
 
 import { TriplateHoverProvider } from './triplate-hover-provider';
+import { createMockTextDocument } from '@src/utilities/mocks/factories';
 
 const FRONTMATTER = '---\nparams {\n  type: iri\n  graphIris: iri[] optional\n  limit: int optional\n}\n---\n';
 
 function makeDoc(text: string, version = 1) {
-	const lines = text.split('\n');
-
-	return {
-		getText: () => text,
-		uri: vscode.Uri.parse('file:///test.sparql'),
-		version,
-		offsetAt: (pos: vscode.Position) => {
-			let offset = 0;
-
-			for (let i = 0; i < pos.line; i++) {
-				offset += lines[i].length + 1;
-			}
-
-			return offset + pos.character;
-		},
-	} as unknown as vscode.TextDocument;
+	return createMockTextDocument(text, { uri: 'file:///test.sparql', version });
 }
 
 function positionOf(text: string, substring: string): vscode.Position {
@@ -83,7 +69,7 @@ describe('TriplateHoverProvider', () => {
 		const doc = makeDoc(text);
 		const pos = positionOf(text, '${type}');
 		const result = provider.provideHover(doc, pos) as vscode.Hover;
-		const md = result.contents as vscode.MarkdownString;
+		const md = result.contents[0] as vscode.MarkdownString;
 
 		expect(md.value).toContain('**type**');
 		expect(md.value).toContain('iri');
@@ -95,7 +81,7 @@ describe('TriplateHoverProvider', () => {
 		const doc = makeDoc(text);
 		const pos = positionOf(text, '${graphIris}');
 		const result = provider.provideHover(doc, pos) as vscode.Hover;
-		const md = result.contents as vscode.MarkdownString;
+		const md = result.contents[0] as vscode.MarkdownString;
 
 		expect(md.value).toContain('**graphIris**');
 		expect(md.value).toContain('iri[]');
@@ -107,7 +93,7 @@ describe('TriplateHoverProvider', () => {
 		const doc = makeDoc(text);
 		const pos = positionOf(text, '${limit}');
 		const result = provider.provideHover(doc, pos) as vscode.Hover;
-		const md = result.contents as vscode.MarkdownString;
+		const md = result.contents[0] as vscode.MarkdownString;
 
 		expect(md.value).toContain('**limit**');
 		expect(md.value).toContain('int');

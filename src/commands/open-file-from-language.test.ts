@@ -75,8 +75,8 @@ describe('openFileFromLanguage', () => {
 		} : undefined);
 
 		mockOpenTextDocument = vi.fn(async (uri: any) => ({ uri } as any));
-		mockShowTextDocument = vi.fn(async () => undefined as any);
-		mockExecuteCommand = vi.fn(async () => undefined as any);
+		mockShowTextDocument = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined);
+		mockExecuteCommand = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined);
 
 		mockQuickPick = {
 			title: '',

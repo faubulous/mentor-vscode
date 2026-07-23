@@ -3,11 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-let mockIndexWorkspace: ReturnType<typeof vi.fn>;
-let mockStoreGetGraphs: ReturnType<typeof vi.fn>;
-let mockStoreDeleteGraphs: ReturnType<typeof vi.fn>;
-let mockStoreLoadFrameworkOntologies: ReturnType<typeof vi.fn>;
-let mockLoadShapeGraphs: ReturnType<typeof vi.fn>;
+let mockIndexWorkspace: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
+let mockStoreGetGraphs: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
+let mockStoreDeleteGraphs: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
+let mockStoreLoadFrameworkOntologies: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
+let mockLoadShapeGraphs: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
 
 vi.mock('tsyringe', () => ({
 	container: {

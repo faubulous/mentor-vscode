@@ -127,7 +127,7 @@ describe('Basic Ontology preset shapes', () => {
 
 		expect(report.conforms).toBe(false);
 		expect(report.results).toHaveLength(1);
-		expect(report.results[0].severity.value).toBe('http://www.w3.org/ns/shacl#Violation');
+		expect(report.results[0].severity!.value).toBe('http://www.w3.org/ns/shacl#Violation');
 	});
 
 	it('reports a property without a comment', async () => {

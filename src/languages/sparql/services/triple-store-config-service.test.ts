@@ -77,7 +77,6 @@ const rdf4jConfig: TripleStoreConfig = {
 };
 
 const sparqlConfig: TripleStoreConfig = { id: 'sparql', label: 'SPARQL Endpoint' };
-const qleverConfig: TripleStoreConfig = { id: 'qlever', label: 'QLever' };
 
 // ---------------------------------------------------------------------------
 // defaultStoreType

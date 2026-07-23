@@ -12,37 +12,40 @@ interface StopwatchProps {
 function StopwatchBase({ sparqlResults }: StopwatchProps) {
 	const { queryContext } = sparqlResults;
 
-	if (!queryContext.startTime) {
-		return null;
-	}
-
 	const [elapsedTime, setElapsedTime] = useState(0);
 	const intervalRef = useRef(null as ReturnType<typeof setInterval> | null);
 
-	const updateElapsedTime = () => {
-		const startTime = queryContext.startTime;
-		const endTime = queryContext.endTime ? queryContext.endTime : Date.now();
-
-		setElapsedTime(Math.max(0, endTime - startTime));
-	};
-
 	useEffect(() => {
+		const updateElapsedTime = () => {
+			const startTime = queryContext.startTime;
+
+			if (!startTime) {
+				return;
+			}
+
+			const endTime = queryContext.endTime ? queryContext.endTime : Date.now();
+
+			setElapsedTime(Math.max(0, endTime - startTime));
+		};
+
 		updateElapsedTime();
 
-		if (!queryContext.endTime) {
+		if (queryContext.startTime && !queryContext.endTime) {
 			// If no end date, start interval to update every 10ms
 			intervalRef.current = setInterval(updateElapsedTime, 10);
-		} else {
-            updateElapsedTime();
-        }
+		}
 
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-        };
-    }, [queryContext.startTime, queryContext.endTime]);
+		return () => {
+			if (intervalRef.current) {
+				clearInterval(intervalRef.current);
+				intervalRef.current = null;
+			}
+		};
+	}, [queryContext.startTime, queryContext.endTime]);
+
+	if (!queryContext.startTime) {
+		return null;
+	}
 
 	const formatTime = (elapsedMilliseconds: number) => {
 		return `${Math.round(elapsedMilliseconds)}ms`;

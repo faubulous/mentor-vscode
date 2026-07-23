@@ -11,17 +11,6 @@ export const RDF_LANGUAGE_IDS = ['turtle', 'sparql', 'trig', 'n3', 'ntriples', '
 export type LanguageId = typeof RDF_LANGUAGE_IDS[number];
 
 /**
- * The subset of {@link RDF_LANGUAGE_IDS} for which Mentor provides its own
- * formatter and exposes formatting settings in the Settings webview.
- */
-export const FORMATTABLE_LANGUAGE_IDS = ['turtle', 'sparql'] as const;
-
-/**
- * Union of {@link FORMATTABLE_LANGUAGE_IDS}.
- */
-export type FormattableLanguageId = typeof FORMATTABLE_LANGUAGE_IDS[number];
-
-/**
  * The language IDs whose documents may contain triplate templates — every RDF
  * language Mentor supports except RDF/XML, which is exactly {@link RDF_LANGUAGE_IDS}.
  *

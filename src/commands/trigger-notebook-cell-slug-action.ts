@@ -8,7 +8,7 @@ import { editNotebookCellSlug } from './edit-notebook-cell-slug';
 
 export const triggerNotebookCellSlugAction = {
 	id: 'mentor.command.triggerNotebookCellSlugAction',
-	handler: async (cellDocumentUri: vscode.Uri) => {
+	handler: async (cellDocumentUri?: vscode.Uri) => {
 		if (!cellDocumentUri) {
 			vscode.window.showWarningMessage('No notebook cell specified.');
 			return;

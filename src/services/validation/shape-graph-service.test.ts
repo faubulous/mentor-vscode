@@ -1,5 +1,6 @@
-import { describe, expect, test, beforeEach } from 'vitest';
+import { describe, expect, test, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { Store } from '@faubulous/mentor-rdf';
 import { SettingsFileStore, SettingsFileEntry } from '@src/services/core';
 import { ShapeGraphService } from '@src/services/validation/shape-graph-service';
@@ -165,5 +166,124 @@ describe('ShapeGraphService', () => {
 		const { service } = createService();
 
 		expect(service.getOrphanedUserShapeFiles()).toEqual(['orphan.ttl']);
+	});
+});
+
+describe('ShapeGraphService workspace shape loading', () => {
+	const SHAPE_URI = 'workspace:///.mentor/shapes/test.shape.ttl';
+
+	let readFileCalls: string[];
+
+	beforeEach(() => {
+		WorkspaceUri.rootUri = vscode.Uri.parse('file:///repo');
+		readFileCalls = [];
+
+		(vscode.workspace as any).fs = {
+			readFile: async (uri: vscode.Uri) => {
+				readFileCalls.push(uri.toString());
+
+				if (uri.path.includes('missing')) {
+					throw new Error('ENOENT');
+				}
+
+				return new TextEncoder().encode(SHAPE_TTL);
+			},
+		};
+	});
+
+	afterEach(() => {
+		WorkspaceUri.rootUri = undefined;
+		delete (vscode.workspace as any).fs;
+	});
+
+	test('ensureLoaded loads a missing workspace shape graph from its file', async () => {
+		const { service, store } = createService();
+
+		await service.ensureLoaded([SHAPE_URI]);
+
+		expect(store.hasGraph(SHAPE_URI)).toBe(true);
+		expect(readFileCalls).toEqual(['file:///repo/.mentor/shapes/test.shape.ttl']);
+	});
+
+	test('ensureLoaded does not re-read a graph that is already in the store', async () => {
+		const { service } = createService();
+
+		await service.ensureLoaded([SHAPE_URI]);
+		await service.ensureLoaded([SHAPE_URI]);
+
+		expect(readFileCalls).toHaveLength(1);
+	});
+
+	test('ensureLoaded shares a single file read between concurrent calls', async () => {
+		const { service, store } = createService();
+
+		await Promise.all([
+			service.ensureLoaded([SHAPE_URI]),
+			service.ensureLoaded([SHAPE_URI, SHAPE_URI]),
+		]);
+
+		expect(store.hasGraph(SHAPE_URI)).toBe(true);
+		expect(readFileCalls).toHaveLength(1);
+	});
+
+	test('ensureLoaded leaves the graph absent when the file cannot be read', async () => {
+		const missingUri = 'workspace:///.mentor/shapes/missing.shape.ttl';
+		const { service, store } = createService();
+
+		await service.ensureLoaded([missingUri]);
+
+		expect(store.hasGraph(missingUri)).toBe(false);
+	});
+
+	test('ensureLoaded ignores non-workspace URIs', async () => {
+		const { service, store } = createService();
+
+		await service.ensureLoaded(['user:///shapes/not-loaded-here.ttl', 'https://example.org/shapes']);
+
+		expect(readFileCalls).toHaveLength(0);
+		expect(store.hasGraph('user:///shapes/not-loaded-here.ttl')).toBe(false);
+	});
+
+	test('ensureLoaded refuses to resolve a URI escaping the workspace root', async () => {
+		const traversalUri = 'workspace:///../../etc/passwd.ttl';
+		const { service, store } = createService();
+
+		await service.ensureLoaded([traversalUri]);
+
+		expect(readFileCalls).toHaveLength(0);
+		expect(store.hasGraph(traversalUri)).toBe(false);
+	});
+
+	test('ensureLoaded fires onDidChangeShapeGraphs only when a graph was loaded', async () => {
+		const { service } = createService();
+
+		let changes = 0;
+		service.onDidChangeShapeGraphs(() => changes++);
+
+		await service.ensureLoaded([SHAPE_URI]);
+		expect(changes).toBe(1);
+
+		// Already loaded and unresolvable URIs cause no event.
+		await service.ensureLoaded([SHAPE_URI]);
+		await service.ensureLoaded(['workspace:///.mentor/shapes/missing.shape.ttl']);
+		expect(changes).toBe(1);
+	});
+
+	test('loadReferencedShapeGraphs loads the workspace shapes referenced by profiles', async () => {
+		userValidation = {
+			profiles: { a: { shapes: [SHAPE_URI] } },
+		};
+
+		workspaceValidation = {
+			profiles: { b: { shapes: ['workspace:///shapes/other.shape.ttl'] } },
+		};
+
+		const { service, store } = createService();
+
+		await service.loadReferencedShapeGraphs();
+
+		expect(store.hasGraph(SHAPE_URI)).toBe(true);
+		expect(store.hasGraph('workspace:///shapes/other.shape.ttl')).toBe(true);
+		expect(readFileCalls).toHaveLength(2);
 	});
 });

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as vscode from 'vscode';
 
 const { mockExecuteHandler } = vi.hoisted(() => ({
 	mockExecuteHandler: vi.fn(async () => undefined),
@@ -8,19 +9,16 @@ vi.mock('@src/commands/execute-describe-query', () => ({
 	executeDescribeQuery: { id: 'mentor.command.executeDescribeQuery', handler: mockExecuteHandler },
 }));
 
-vi.mock('@src/views/trees/definition-tree/definition-tree-node', () => {
-	class DefinitionTreeNode {
-		constructor(public document: any, public uri: string) { }
-	}
-
-	return {
-		DefinitionTreeNode,
-		getIriFromArgument: (arg: any) => (arg instanceof DefinitionTreeNode ? arg.uri : arg),
-	};
-});
+vi.mock('tsyringe', () => ({
+	container: { resolve: vi.fn(() => ({})) },
+	injectable: () => (target: any) => target,
+	inject: () => () => { },
+	singleton: () => (target: any) => target,
+}));
 
 import { describeResource } from '@src/commands/describe-resource';
 import { DefinitionTreeNode } from '@src/views/trees/definition-tree/definition-tree-node';
+import { createMockDocumentContext } from '@src/utilities/mocks/factories';
 
 beforeEach(() => {
 	vi.clearAllMocks();
@@ -32,12 +30,13 @@ describe('describeResource', () => {
 	});
 
 	it('describes the resource of a tree node using its document URI', async () => {
-		const docUri = { toString: () => 'file:///doc.ttl' };
-		const node = new DefinitionTreeNode({ uri: docUri }, 'http://example.org/Person') as any;
+		const docUri = vscode.Uri.parse('file:///doc.ttl');
+		const iri = 'http://example.org/Person';
+		const node = new DefinitionTreeNode(createMockDocumentContext({ uri: docUri }), iri, iri);
 
 		await describeResource.handler(node);
 
-		expect(mockExecuteHandler).toHaveBeenCalledWith(docUri, 'http://example.org/Person');
+		expect(mockExecuteHandler).toHaveBeenCalledWith(docUri, iri);
 	});
 
 	it('does nothing when the argument is not a tree node', async () => {

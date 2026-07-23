@@ -52,7 +52,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 const { mockGetConfig } = vi.hoisted(() => ({
-    mockGetConfig: vi.fn(() => ({ get: (_key: string, defaultValue?: any) => defaultValue })),
+    mockGetConfig: vi.fn((..._args: any[]) => ({ get: (_key: string, defaultValue?: any) => defaultValue })),
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({

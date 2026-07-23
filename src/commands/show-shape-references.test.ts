@@ -80,7 +80,7 @@ describe('showShapeReferences', () => {
 		mockActivateDocument.mockResolvedValue(editor);
 		mockGetShapes.mockImplementation(function*() {});
 
-		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 		await showShapeReferences.handler('urn:ex#Res');
 
@@ -110,7 +110,7 @@ describe('showShapeReferences', () => {
 		});
 
 		const showTextDocumentSpy = vi.spyOn(vscode.window, 'showTextDocument');
-		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined as any);
+		const execSpy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
 
 		await showShapeReferences.handler('urn:ex#Res');
 

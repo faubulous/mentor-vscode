@@ -1,8 +1,7 @@
 export { ICredentialStorageService } from './credential-storage-service.interface';
-export { IMicrosoftAuthService } from './microsoft-auth-service.interface';
 export { ISettingsService } from './settings-service.interface';
 export { ISettingsMigrationService } from './settings-migration-service.interface';
 export { IWorkspaceIndexerService } from './workspace-indexer.interface';
-export { IWorkspaceFileService, WorkspaceFileChangeEvent } from './workspace-file-service.interface';
-export { IWorkspaceService, WorkspaceDescriptor } from './workspace-service.interface';
+export { IWorkspaceFileService } from './workspace-file-service.interface';
+export { IWorkspaceService } from './workspace-service.interface';
 export { SettingsFileStore, SettingsFileEntry, SettingsFileChangeEvent } from './settings-file-store';

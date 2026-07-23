@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 const mockContextService = {
 	contexts: {} as Record<string, any>,
-	onDidChangeDocumentContext: vi.fn(() => ({ dispose: vi.fn() })),
+	onDidChangeDocumentContext: vi.fn((_handler?: (...args: unknown[]) => void) => ({ dispose: vi.fn() })),
 };
 
 vi.mock('tsyringe', () => ({

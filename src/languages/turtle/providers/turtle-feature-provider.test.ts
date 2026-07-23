@@ -123,7 +123,7 @@ describe('TurtleFeatureProvider', () => {
             const iri = '<http://example.org/>';
             const token = makeToken(RdfToken.IRIREF.name, iri, 1, 1, 1, iri.length);
             // When namespace == full URI (no local name), the result may be null or an empty range
-            const range = provider.testGetLabelEditRange(token);
+            provider.testGetLabelEditRange(token);
             // The important thing is it doesn't throw
             expect(() => provider.testGetLabelEditRange(token)).not.toThrow();
         });

@@ -5,7 +5,7 @@ import { ScopeKey } from '@src/utilities/config-scope';
  * A VS Code built-in setting that a Mentor settings section surfaces in its UI
  * (e.g. `editor.formatOnSave` shown alongside the Turtle/SPARQL formatting options).
  */
-export interface VSCodeBuiltinKey {
+interface VSCodeBuiltinKey {
 	/**
 	 * Bare VS Code key without the `editor.` prefix, e.g. `"formatOnSave"`.
 	 */

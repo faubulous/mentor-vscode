@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import * as vscode from 'vscode';
 import * as mockVscode from '@src/utilities/mocks/vscode';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -36,13 +37,13 @@ describe('sortPrefixes command', () => {
 
 	it('should do nothing when document is not in textDocuments', async () => {
 		(mockVscode.workspace as any).textDocuments = [];
-		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
+		const uri = vscode.Uri.parse('file:///test.ttl');
 		await sortPrefixes.handler(uri);
 		expect(mockPrefixService.sortPrefixes).not.toHaveBeenCalled();
 	});
 
 	it('should call sortPrefixes on service when document is found', async () => {
-		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
+		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = { uri, getText: () => '' };
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
 		await sortPrefixes.handler(uri);
@@ -50,7 +51,7 @@ describe('sortPrefixes command', () => {
 	});
 
 	it('should apply edit when edit has changes', async () => {
-		const uri = (mockVscode as any).Uri.parse('file:///test.ttl');
+		const uri = vscode.Uri.parse('file:///test.ttl');
 		const fakeDoc = { uri, getText: () => '' };
 		(mockVscode.workspace as any).textDocuments = [fakeDoc];
 		mockPrefixService.sortPrefixes = vi.fn(async () => ({ size: 3 }));
