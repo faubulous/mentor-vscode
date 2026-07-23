@@ -1,6 +1,6 @@
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic } from 'vscode-languageserver-types';
-import { LintingContext } from '@src/linters/linting-context';
+import { LintingContext } from '@src/providers/linting/linting-context';
 
 /**
  * Interface for pluggable lint rules that integrate into the language server's

@@ -5,7 +5,7 @@ import { VscodeSingleSelect } from '@vscode-elements/elements';
 import { ModalDialogHeaderActionsContext, ModalDialogTitleAccessoriesContext } from '@src/views/webviews/components/modal-dialog';
 import { ScopeSelect } from '@src/views/webviews/components/scope-select';
 import { useStylesheet, useVscodeElementRef, useScopedWebviewMessaging } from '@src/views/webviews/hooks';
-import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
+import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
 import { DEFAULT_GRAPH_RELOAD_INTERVAL_SECONDS, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
 import { TripleStoreConfig } from '@src/languages/sparql/services/triple-store-config';
 import {

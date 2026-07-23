@@ -20,7 +20,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { openSettings } from '@src/commands/settings/open-settings';
+import { openSettings } from '@src/commands/open-settings';
 
 beforeEach(() => {
 	vi.clearAllMocks();

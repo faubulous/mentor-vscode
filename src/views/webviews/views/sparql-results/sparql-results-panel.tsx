@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { Fragment, useState, useEffect, useCallback } from 'react';
 import { WebviewHost } from '@src/views/webviews/webview-host';
 import { useWebviewMessaging, useStylesheet, useVscodeElementRef } from '@src/views/webviews/hooks';
-import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
+import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
 import { SparqlQueryExecutionState, getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlResultsView } from './components/sparql-results-view';
 import { SparqlWelcomeView } from './components/sparql-welcome-view';

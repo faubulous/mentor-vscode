@@ -19,7 +19,7 @@ import { SettingsPanelMessages } from './settings-panel-messages';
 import { SettingsExecuteCommandContext, SettingsScopeTargetApi, SettingsScopeTargetContext, SettingsWorkspaceContext } from './components/setting-context';
 import { useWebviewMessaging, useWebviewState, useStylesheet } from '@src/views/webviews/hooks';
 import { patchNestedRecord } from '@src/views/webviews/webview-utils';
-import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
+import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
 import stylesheet from './settings-panel.css';
 
 /**

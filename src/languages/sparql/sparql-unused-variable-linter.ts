@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver-types';
-import { LintingProvider } from '@src/linters/linting-provider';
-import { LintingContext } from '@src/linters/linting-context';
+import { LintingProvider } from '@src/providers/linting/linting-provider';
+import { LintingContext } from '@src/providers/linting/linting-context';
 
 /**
  * Represents information about a SPARQL query scope (SELECT, CONSTRUCT, etc.).

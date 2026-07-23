@@ -1,6 +1,6 @@
 import { useStylesheet } from '@src/views/webviews/hooks';
 import { useWebviewMessaging } from '@src/views/webviews/hooks';
-import { useSharedStylesheets } from '@src/views/webviews/shared/use-shared-stylesheets';
+import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
 import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
 import { BooleanResult } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';

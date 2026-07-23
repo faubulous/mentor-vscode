@@ -7,14 +7,14 @@ import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { getConfig } from '@src/utilities/vscode/config';
 import { getNamespaceDefinition, PrefixMap } from '@src/utilities';
-import { LintingContext, LintingProvider } from '@src/linters';
+import { LintingContext, LintingProvider } from '@src/providers/linting';
 import {
 	DeprecatedWorkspaceUriLinter,
 	InlineSingleUseBlankNodesLinter,
 	NamespacePrefixLinter,
 	XsdAnyUriLiteralLinter,
 	XsdDatatypeValidationLinter,
-} from '@src/linters/providers';
+} from '@src/providers/linting/linters';
 import { IDocumentContext, isTokenizedDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
 import { IDocumentTokenSource } from './document-token-source.interface';
 

@@ -1,6 +1,5 @@
 import { useStylesheet } from '@src/views/webviews/hooks';
-import tokens from './webview-tokens.css';
-import utilities from './webview-utilities.css';
+import shared from '../webview-styles.css';
 
 /**
  * Injects the shared Mentor webview design tokens and utility classes.
@@ -9,6 +8,5 @@ import utilities from './webview-utilities.css';
  * from multiple roots within the same document is safe.
  */
 export function useSharedStylesheets(): void {
-	useStylesheet('mentor-webview-tokens', tokens);
-	useStylesheet('mentor-webview-utilities', utilities);
+	useStylesheet('mentor-shared-styles', shared);
 }

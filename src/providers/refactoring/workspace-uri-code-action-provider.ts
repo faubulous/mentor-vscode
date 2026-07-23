@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { DEPRECATED_WORKSPACE_URI_CODE } from '@src/linters/providers/deprecated-workspace-uri-linter';
+import { DEPRECATED_WORKSPACE_URI_CODE } from '@src/providers/linting/linters/deprecated-workspace-uri-linter';
 
 
 /**

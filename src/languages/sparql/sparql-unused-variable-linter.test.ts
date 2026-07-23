@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
-import { LintingContext } from '@src/linters/linting-context';
+import { LintingContext } from '@src/providers/linting/linting-context';
 
 /** Runs the linter over the tokens the same way the diagnostics service does. */
 function getUnusedVariableDiagnostics(document: TextDocument, tokens: any[]) {
