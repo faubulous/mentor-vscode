@@ -9,7 +9,7 @@ import { IDocumentContextService } from '@src/services/document';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { UserUri } from '@src/providers/user-uri';
 import { ShapeGraphService } from '@src/services/validation/shape-graph-service';
-import { createUserShapeFile } from '@src/commands/create-user-shape';
+import { createUserShapeFile } from '@src/commands/validation/create-user-shape';
 import { writePresetShapes } from '@src/services/validation/preset-shape-writer';
 import { getPresetShapeSource } from '@src/services/validation/presets';
 import { getShapeGraphCandidates } from '@src/utilities';

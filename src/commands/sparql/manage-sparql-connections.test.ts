@@ -20,20 +20,25 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
-import { openSettings } from '@src/commands/settings/open-settings';
+import * as vscode from 'vscode';
+import { manageSparqlConnections } from '@src/commands/sparql/manage-sparql-connections';
 
 beforeEach(() => {
 	vi.clearAllMocks();
 	mockRouter.open.mockResolvedValue(undefined);
 });
 
-describe('openSettings command', () => {
-	it('should have the correct id', () => {
-		expect(openSettings.id).toBe('mentor.command.openSettings');
+describe('manageSparqlConnections', () => {
+	it('should have the correct command id', () => {
+		expect(manageSparqlConnections.id).toBe('mentor.command.manageSparqlConnections');
 	});
 
-	it('should route to the settings panel via ViewRouter', async () => {
-		await openSettings.handler();
-		expect(mockRouter.open).toHaveBeenCalledWith({ kind: 'settings' });
+	it('should route to the settings panel on the connections section', async () => {
+		await manageSparqlConnections.handler();
+
+		expect(mockRouter.open).toHaveBeenCalledWith(
+			{ kind: 'settings', section: 'query.connections' },
+			vscode.ViewColumn.Active
+		);
 	});
 });

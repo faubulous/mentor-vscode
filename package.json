@@ -646,12 +646,6 @@
         "category": "Mentor"
       },
       {
-        "command": "mentor.webview.show",
-        "title": "Show Webview",
-        "icon": "$(layout-panel)",
-        "category": "Mentor"
-      },
-      {
         "command": "mentor.command.createDocument",
         "title": "Create Document",
         "icon": "$(new-file)",

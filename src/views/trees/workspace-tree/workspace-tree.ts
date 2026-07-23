@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { TreeView } from '@src/views/trees/tree-view';
-import { renameWorkspaceItem } from '@src/commands/rename-workspace-item';
+import { renameWorkspaceItem } from '@src/commands/workspace/rename-workspace-item';
 import { WorkspaceNodeProvider } from './workspace-node-provider';
 
 export class WorkspaceTree implements TreeView {
