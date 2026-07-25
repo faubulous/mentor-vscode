@@ -1,13 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
-    "src/extension.node.ts",
     "src/extension.browser.ts",
     "src/views/webviews/views/sparql-results/sparql-results-notebook-renderer.tsx",
     "src/views/webviews/views/sparql-results/sparql-results-panel.tsx",
-    "src/views/webviews/views/settings/settings-panel.tsx",
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx"
+    "src/views/webviews/views/settings/settings-panel.tsx"
   ],
   "project": ["src/**/*.{ts,tsx}"],
   "ignoreDependencies": ["@types/vscode"]

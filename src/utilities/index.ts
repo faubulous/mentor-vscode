@@ -1,4 +1,5 @@
 export * from './array';
+export * from './debounce';
 export * from './glob';
 export * from './iterator';
 export * from './rdf';

@@ -239,14 +239,13 @@ describe('ShaclValidationService.checkShaclProfiles', () => {
 
 	it('shows a configuration error on the status bar for broken references and clears it on a clean check', async () => {
 		const texts: string[] = [];
-		let hidden = 0;
 		const originalCreate = (vscode.window as any).createStatusBarItem;
 		(vscode.window as any).createStatusBarItem = vi.fn(() => {
 			let value = '';
 			return {
 				get text() { return value; },
 				set text(v: string) { value = v; texts.push(v); },
-				tooltip: '', command: undefined, show: () => { }, hide: () => { hidden++; }, dispose: () => { },
+				tooltip: '', command: undefined, show: () => { }, hide: () => { }, dispose: () => { },
 			};
 		});
 
@@ -259,13 +258,13 @@ describe('ShaclValidationService.checkShaclProfiles', () => {
 			expect(texts[texts.length - 1]).toBe('$(warning) Configuration error');
 
 			// The missing shape graph appears (e.g. the file is restored) — the next
-			// check clears the error and, without a run summary, hides the item.
+			// check clears the error and, while SHACL is enabled and no run summary
+			// exists yet, falls back to the baseline "0 files" indicator.
 			hasGraph = true;
-			const hiddenBefore = hidden;
 
 			await service.checkShaclProfiles();
 
-			expect(hidden).toBeGreaterThan(hiddenBefore);
+			expect(texts[texts.length - 1]).toBe('$(checklist) Validated 0 files');
 		} finally {
 			(vscode.window as any).createStatusBarItem = originalCreate;
 		}
@@ -902,5 +901,111 @@ describe('ShaclSettingsSyncService.handleFileDeletes', () => {
 
 		expect(updates).toHaveLength(0);
 		expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+	});
+});
+
+describe('ShaclValidationService.scheduleShapeGraphReaction', () => {
+	it('coalesces a burst of fires into a single revalidate + profile-check pass', async () => {
+		vi.useFakeTimers();
+		try {
+			const { service } = createService({ profiles: {} });
+			const revalidate = vi.spyOn(service, 'revalidateOpenDocuments').mockResolvedValue(undefined);
+			const check = vi.spyOn(service, 'checkShaclProfiles').mockResolvedValue({ profiles: {} });
+
+			// A startup storm: many shape graphs load in rapid succession.
+			for (let i = 0; i < 10; i++) {
+				service.scheduleShapeGraphReaction();
+			}
+
+			await vi.advanceTimersByTimeAsync(250);
+
+			expect(revalidate).toHaveBeenCalledTimes(1);
+			expect(check).toHaveBeenCalledTimes(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('runs exactly one follow-up pass when fires arrive mid-pass', async () => {
+		vi.useFakeTimers();
+		try {
+			const { service } = createService({ profiles: {} });
+
+			let resolveFirst!: () => void;
+			const revalidate = vi.spyOn(service, 'revalidateOpenDocuments')
+				.mockImplementationOnce(() => new Promise<void>(resolve => { resolveFirst = resolve; }))
+				.mockResolvedValue(undefined);
+			const check = vi.spyOn(service, 'checkShaclProfiles').mockResolvedValue({ profiles: {} });
+
+			service.scheduleShapeGraphReaction();
+			await vi.advanceTimersByTimeAsync(250);
+			expect(revalidate).toHaveBeenCalledTimes(1);
+
+			// Three more fires while the first pass is still running…
+			service.scheduleShapeGraphReaction();
+			service.scheduleShapeGraphReaction();
+			service.scheduleShapeGraphReaction();
+			await vi.advanceTimersByTimeAsync(250);
+
+			// …must not start an overlapping pass.
+			expect(revalidate).toHaveBeenCalledTimes(1);
+
+			resolveFirst();
+			await vi.advanceTimersByTimeAsync(250);
+
+			// One trailing pass covers all three fires.
+			expect(revalidate).toHaveBeenCalledTimes(2);
+			expect(check).toHaveBeenCalledTimes(2);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+});
+
+describe('ShaclValidationService missing shape graph reporting', () => {
+	const A = 'file:///w/a.ttl';
+
+	function createServiceWithShapeGraphs(hasShapeSource: (uri: string) => boolean) {
+		(vscode.workspace as any).getConfiguration = vi.fn(() => ({
+			get: (_key: string, defaultValue?: any) => defaultValue,
+			inspect: (key: string) => key === 'validation'
+				? { globalValue: undefined, workspaceValue: { profiles: { all: { shapes: ['user:///shapes/empty.ttl'], includeFiles: ['**/*'] } } } }
+				: {},
+			update: async () => { },
+		}));
+
+		const store = {
+			hasGraph: () => false,
+			getGraphVersion: vi.fn(() => 0),
+			getDataset: vi.fn(() => ({ size: 1 })),
+		} as any;
+
+		const contexts: Record<string, any> = {
+			[A]: { graphs: [A], subjects: {}, references: {} },
+		};
+
+		const contextService = { contexts, onDidChangeDocumentContext: () => ({ dispose: () => { } }) } as any;
+		const documentFactory = { supportedExtensions: { '.ttl': { language: 'turtle', isTripleSource: true } } } as any;
+		const shapeGraphs = { ensureLoaded: vi.fn(async () => { }), hasShapeSource: vi.fn(hasShapeSource) } as any;
+
+		const service = new ShaclValidationService({ subscriptions: [] } as any, store, contextService, documentFactory, undefined, shapeGraphs);
+
+		return { service };
+	}
+
+	it('does not report an existing-but-empty shape source as missing', async () => {
+		const { service } = createServiceWithShapeGraphs(uri => uri === 'user:///shapes/empty.ttl');
+
+		await service.validateAllProfiles([vscode.Uri.parse(A)]);
+
+		expect(service.getLastResult(vscode.Uri.parse(A))?.missingShapeGraphs).toBeUndefined();
+	});
+
+	it('still reports a shape graph without any source as missing', async () => {
+		const { service } = createServiceWithShapeGraphs(() => false);
+
+		await service.validateAllProfiles([vscode.Uri.parse(A)]);
+
+		expect(service.getLastResult(vscode.Uri.parse(A))?.missingShapeGraphs).toEqual(['user:///shapes/empty.ttl']);
 	});
 });

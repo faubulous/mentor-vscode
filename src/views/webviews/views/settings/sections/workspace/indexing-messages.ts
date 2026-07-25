@@ -30,4 +30,5 @@ export type IndexingMessages =
 	| { id: 'IndexingStatsResult'; stats: IndexingStatsView }
 	| { id: 'IndexingStatsChanged'; stats: IndexingStatsView }
 	| { id: 'ShowIndexLog' }
-	| { id: 'ReindexWorkspace' };
+	| { id: 'ReindexWorkspace' }
+	| { id: 'DiagnoseWorkspace' };

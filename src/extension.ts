@@ -5,7 +5,7 @@ import { container } from 'tsyringe';
 import { Store } from '@faubulous/mentor-rdf';
 import { configureServiceContainer } from './services/container';
 import { ServiceToken } from './services/tokens';
-import { ISettingsMigrationService, IWorkspaceFileService, IWorkspaceService } from './services/core';
+import { ISettingsMigrationService, IWorkspaceFileService, IWorkspaceService, SettingsFileStore } from './services/core';
 import { IDocumentContextService, IPrefixLookupService } from './services/document';
 import { IViewRouter } from './views/webviews';
 import { WorkspaceIndexerService } from './services/core/workspace-indexer-service';
@@ -16,6 +16,7 @@ import { IGraphManagementService } from './languages/sparql/services';
 import { ShaclValidationService } from './services/validation/shacl-validation-service';
 import { ShapeGraphService } from './services/validation/shape-graph-service';
 import { getConfig } from './utilities/vscode/config';
+import { getLog } from './utilities/vscode/log';
 import { ReferenceUpdateService } from './services/core/reference-update-service';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import * as languages from './languages';
@@ -30,6 +31,8 @@ import * as providers from './providers';
  */
 export async function activateExtension(context: vscode.ExtensionContext) {
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', true);
+
+	context.subscriptions.push(getLog());
 
 	configureServiceContainer(context);
 
@@ -105,12 +108,13 @@ function registerProviders(context: vscode.ExtensionContext) {
 	const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 	const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
 	const router = container.resolve<IViewRouter>(ServiceToken.WebviewRouter);
+	const fileStore = container.resolve<SettingsFileStore>(ServiceToken.UserFileStore);
 
 	new providers.WorkspaceUriLinkProvider(context);
 	new providers.WorkspaceUriCodeActionProvider(context);
 	new providers.WorkspaceFileSystemProvider(context);
 	new providers.TemplateFileSystemProvider(context);
-	new providers.UserFileSystemProvider(context);
+	new providers.UserFileSystemProvider(context, fileStore);
 	new providers.XsdAnyUriCodeActionProvider(context);
 	new providers.InferenceUriLinkProvider(context);
 	new providers.MentorUriHandler(context, store, prefixLookup, router);
@@ -261,7 +265,7 @@ async function initializeWorkspace() {
 	} catch (e) {
 		// This function is intentionally not awaited during activation; log instead
 		// of surfacing an unhandled rejection that could disrupt the extension host.
-		console.error('Mentor: Workspace discovery failed:', e);
+		getLog().error('Workspace discovery failed:', e);
 		return;
 	}
 
@@ -281,7 +285,7 @@ async function loadReferencedShapeGraphs() {
 		const shapeGraphService = container.resolve<ShapeGraphService>(ServiceToken.ShapeGraphService);
 		await shapeGraphService.loadReferencedShapeGraphs();
 	} catch (e) {
-		console.error('Mentor: Loading referenced shape graphs failed:', e);
+		getLog().error('Loading referenced shape graphs failed:', e);
 	}
 }
 
@@ -298,7 +302,7 @@ async function indexWorkspaceFiles() {
 		const workspaceIndexerService = container.resolve<WorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
 		await workspaceIndexerService.indexWorkspace();
 	} catch (e) {
-		console.error('Mentor: Workspace indexing failed:', e);
+		getLog().error('Workspace indexing failed:', e);
 	}
 }
 
@@ -328,6 +332,6 @@ async function initializeValidation() {
 			await shaclService.validateStartupProfiles(fileService.files);
 		}
 	} catch (e) {
-		console.error('Mentor: SHACL profile check failed:', e);
+		getLog().error('SHACL profile check failed:', e);
 	}
 }

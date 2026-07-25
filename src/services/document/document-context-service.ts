@@ -7,6 +7,8 @@ import { getMaxCellSlugNumber } from '@src/services/notebook/notebook-cell-slugs
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
 import { isTemplate } from 'triplate';
+import { getLog } from '@src/utilities/vscode/log';
+import { getErrorMessage } from '@src/utilities/error';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -94,7 +96,7 @@ export class DocumentContextService {
 
 		if (context?.isParsed) {
 			this._reloadContextTriples(delivery.uri).catch(e => {
-				console.warn('Mentor: Failed to reload context after token delivery:', e);
+				getLog().warn('Failed to reload context after token delivery:', e);
 			});
 		}
 	}
@@ -233,7 +235,7 @@ export class DocumentContextService {
 				context.slug = slug;
 
 				this._reloadContextTriples(uri).catch(e => {
-					console.warn('Mentor: Failed to reload context after slug update:', e);
+					getLog().warn('Failed to reload context after slug update:', e);
 				});
 			}
 
@@ -271,8 +273,13 @@ export class DocumentContextService {
 		// that arrived early). If not, wait for tokens from the language server.
 		if (!context.isParsed) {
 			try {
-				// Wait for tokens from the language server.
-				await this._tokenSource.waitForTokens(uri);
+				// Parse the already-open document in-process. Passing the document
+				// keeps this reliable and O(1): looking it up by URI in
+				// `workspace.textDocuments` can miss a just-opened document that VS
+				// Code has already dropped from the list (e.g. during bulk
+				// indexing), which would otherwise stall for the full token-wait
+				// timeout waiting for a delivery that never comes.
+				await this._tokenSource.waitForTokens(uri, undefined, document);
 			} catch (e) {
 				// If this load was superseded by a newer one, abandon silently.
 				if (!this._tokenSource.isCurrentLoad(uri, generation)) {
@@ -282,9 +289,9 @@ export class DocumentContextService {
 				// Timeout waiting for tokens - this can happen if the language server is slow
 				// or not responding or if the document simply does not contain any tokens (e.g. empty document). 
 				// In this case, we proceed with loading the document without tokens, and log a warning.
-				const message = e instanceof Error ? e.message : String(e);
+				const message = getErrorMessage(e);
 
-				console.warn(`Mentor: Timeout waiting for tokens: ${uri}`, message);
+				getLog().warn(`Timeout waiting for tokens: ${uri}`, message);
 
 				return context;
 			}
@@ -318,6 +325,83 @@ export class DocumentContextService {
 		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
 
 		this.contexts[uri] = context;
+
+		return context;
+	}
+
+	/**
+	 * Loads a document into a context directly from its raw content, without
+	 * opening a VS Code text document. Workspace indexing uses this to avoid the
+	 * dominant per-file cost of `openTextDocument` — building the text-document
+	 * model and firing `onDidOpenTextDocument` to every registered provider — which
+	 * profiling showed accounts for the bulk of indexing time.
+	 *
+	 * Parsing happens in-process and does not go through the token source, so this
+	 * path deliberately does not emit token deliveries and therefore does not
+	 * trigger the diagnostics that ride on them. Use an explicit workspace
+	 * diagnostics run to validate indexed files.
+	 * @param uri The document URI.
+	 * @param content The document text (e.g. read via `workspace.fs.readFile`).
+	 * @param forceReload Whether to rebuild an already-loaded context.
+	 * @returns The loaded context, or `undefined` when the language is unsupported
+	 * or the load was superseded by a newer one.
+	 */
+	async loadDocumentContent(uri: vscode.Uri, content: string, forceReload: boolean = false): Promise<IDocumentContext | undefined> {
+		const languageId = this._documentFactory.getDocumentLanguageId(uri);
+
+		if (!languageId || !this._documentFactory.supportedLanguages.has(languageId)) {
+			return;
+		}
+
+		const key = uri.toString();
+
+		let context = this._contexts[key];
+
+		if (context?.isLoaded && !forceReload) {
+			// Compute the inference graph on the document, if it does not exist.
+			context.infer();
+
+			return context;
+		}
+
+		// Start a new load generation so a concurrent editor-driven load can detect
+		// that it superseded this one (and vice versa), mirroring loadDocument.
+		const generation = this._tokenSource.beginLoad(key);
+
+		if (!context) {
+			context = this._documentFactory.create(uri, languageId);
+
+			this._contexts[key] = context;
+		}
+
+		// Parse the content in-process. This sets the context's tokens/parsed data
+		// exactly as a token-source delivery would, but without a text document.
+		context.parse(content);
+
+		if (!this._tokenSource.isCurrentLoad(key, generation)) {
+			return;
+		}
+
+		await context.loadTriples(content);
+
+		if (!this._tokenSource.isCurrentLoad(key, generation)) {
+			return;
+		}
+
+		// Compute the inference graph on the document to simplify querying.
+		await context.infer();
+
+		if (!this._tokenSource.isCurrentLoad(key, generation)) {
+			return;
+		}
+
+		// Set the language tag statistics for the document, needed for rendering multi-language labels.
+		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
+
+		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
+		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
+
+		this._contexts[key] = context;
 
 		return context;
 	}

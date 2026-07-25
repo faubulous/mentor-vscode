@@ -1,15 +1,17 @@
-import * as vscode from 'vscode';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { PrefixMap } from '@src/utilities';
+import { PositionMapper } from '@src/utilities/position';
 
 /**
  * Context passed to each lint rule during diagnostic evaluation.
  */
 export interface LintingContext {
 	/**
-	 * The text document being validated.
+	 * Maps a character offset to a position. Backed by an open document's
+	 * `positionAt` or, during indexing, a content-based mapper — so lint rules
+	 * work without a `vscode.TextDocument`.
 	 */
-	document: vscode.TextDocument;
+	positionAt: PositionMapper;
 
 	/**
 	 * The raw text content of the document.

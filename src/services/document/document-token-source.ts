@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
+import { KeyedDebouncer } from '@src/utilities/debounce';
 import { IDocumentContext } from './document-context.interface';
 import { IDocumentTokenSource, TokenDelivery } from './document-token-source.interface';
 
@@ -39,14 +40,9 @@ export class DocumentTokenSource implements IDocumentTokenSource {
 	private readonly _tokenWaitTimeout = 10000;
 
 	/**
-	 * Delay in milliseconds before an edited document is re-parsed.
+	 * Debounces re-parses of edited documents, one timer per document URI.
 	 */
-	private readonly _editDebounceMs = 300;
-
-	/**
-	 * Pending re-parse timers keyed by document URI.
-	 */
-	private readonly _debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+	private readonly _editDebouncer = new KeyedDebouncer(300);
 
 	private readonly _changeSubscription: vscode.Disposable;
 
@@ -75,12 +71,12 @@ export class DocumentTokenSource implements IDocumentTokenSource {
 		return this._loadGenerations.get(uri) === generation;
 	}
 
-	waitForTokens(uri: string, timeout?: number): Promise<IToken[]> {
+	waitForTokens(uri: string, timeout?: number, document?: vscode.TextDocument): Promise<IToken[]> {
 		// Register the waiter first so that the local delivery below resolves it
 		// through the same code path as any other delivery.
 		const promise = this._registerTokenRequest(uri, timeout);
 
-		const tokens = this._parseLocally(uri);
+		const tokens = this._parseLocally(uri, document);
 
 		if (tokens) {
 			this.deliverTokens(uri, tokens);
@@ -175,46 +171,36 @@ export class DocumentTokenSource implements IDocumentTokenSource {
 			return;
 		}
 
-		const existing = this._debounceTimers.get(uri);
-
-		if (existing) {
-			clearTimeout(existing);
-		}
-
-		this._debounceTimers.set(uri, setTimeout(() => {
-			this._debounceTimers.delete(uri);
-
+		this._editDebouncer.schedule(uri, () => {
 			const tokens = this._parseLocally(uri);
 
 			if (tokens) {
 				this.deliverTokens(uri, tokens);
 			}
-		}, this._editDebounceMs));
+		});
 	}
 
 	/**
 	 * Parses the current text of an open document and updates its context.
 	 * @param uri The document URI.
+	 * @param document The document to parse, when the caller already holds it.
+	 * Falls back to searching `workspace.textDocuments` by URI when omitted.
 	 * @returns The tokens (empty for structurally parsed documents such as
 	 * RDF/XML), or `undefined` when the document is not open or has no context.
 	 */
-	private _parseLocally(uri: string): IToken[] | undefined {
-		const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+	private _parseLocally(uri: string, document?: vscode.TextDocument): IToken[] | undefined {
+		const doc = document ?? vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
 		const context = this._getContext(uri);
 
-		if (!document || !context) {
+		if (!doc || !context) {
 			return undefined;
 		}
 
-		return context.parse(document.getText());
+		return context.parse(doc.getText());
 	}
 
 	dispose(): void {
-		for (const timer of this._debounceTimers.values()) {
-			clearTimeout(timer);
-		}
-
-		this._debounceTimers.clear();
+		this._editDebouncer.dispose();
 		this._changeSubscription.dispose();
 
 		for (const [, pending] of this._pendingTokenRequests) {

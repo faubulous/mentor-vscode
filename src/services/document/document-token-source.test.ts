@@ -108,6 +108,22 @@ describe('DocumentTokenSource', () => {
             await expect(promise).resolves.toBe(tokens);
             expect(context.parse).not.toHaveBeenCalled();
         });
+
+        it('parses a caller-supplied document without searching workspace.textDocuments', async () => {
+            const uri = 'file:///indexed.ttl';
+            const tokens: IToken[] = [{ image: 'ex:' } as any];
+            const context = makeContext(tokens);
+            const source = new DocumentTokenSource(() => context);
+
+            // The document is NOT in workspace.textDocuments (as during bulk
+            // indexing, when VS Code may have dropped the just-opened document).
+            // Passing it directly must still resolve locally instead of waiting
+            // for a delivery that never comes.
+            const document = makeDocument(uri, '@prefix ex: <http://example.org/> .') as any;
+
+            await expect(source.waitForTokens(uri, 5000, document)).resolves.toBe(tokens);
+            expect(context.parse).toHaveBeenCalledWith('@prefix ex: <http://example.org/> .');
+        });
     });
 
     describe('document edits', () => {

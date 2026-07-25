@@ -25,6 +25,36 @@ export function getConfig(section: string = ''): vscode.WorkspaceConfiguration {
 	return vscode.workspace.getConfiguration(`mentor${section ? `.${section}` : ''}`);
 }
 
+let predicatesCache: { label: string[]; description: string[] } | undefined;
+let predicatesCacheWatcher: vscode.Disposable | undefined;
+
+/**
+ * The annotation predicates from the `mentor.predicates.*` settings, cached and
+ * invalidated on configuration changes. Resolving resource labels reads these
+ * per tree node / hover, and each raw configuration read deep-clones both
+ * arrays — the cache keeps that off the hot path while setting changes still
+ * apply immediately.
+ */
+export function getPredicatesConfig(): { label: string[]; description: string[] } {
+	// One listener for the extension lifetime; disposed with the extension host.
+	predicatesCacheWatcher ??= vscode.workspace.onDidChangeConfiguration(e => {
+		if (e.affectsConfiguration('mentor.predicates')) {
+			predicatesCache = undefined;
+		}
+	});
+
+	if (!predicatesCache) {
+		const config = getConfig();
+
+		predicatesCache = {
+			label: config.get<string[]>('predicates.label') ?? [],
+			description: config.get<string[]>('predicates.description') ?? [],
+		};
+	}
+
+	return predicatesCache;
+}
+
 
 /**
  * The workspace-relative folder a preset's shapes are copied into when a

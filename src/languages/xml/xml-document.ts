@@ -7,6 +7,7 @@ import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { getIriFromPrefixedName } from '@src/utilities';
+import { getLog } from '@src/utilities/vscode/log';
 
 /**
  * A document context for RDF/XML documents.
@@ -292,7 +293,7 @@ export class XmlDocument extends DocumentContext {
 			await this._store.loadFromXmlStream(data, graphUri, false);
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
-			console.error('Failed to load triples from RDF/XML:', e);
+			getLog().error('Failed to load triples from RDF/XML:', e);
 		}
 	}
 }

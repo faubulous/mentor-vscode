@@ -12,6 +12,7 @@ import { ConfigurationScope, keyToScope } from '@src/utilities/config-scope';
 import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
 import { SettingsSectionMessages } from '../../settings-panel-messages';
+import { getErrorMessage } from '@src/utilities/error';
 
 const SECTION_ID = 'query.connections' satisfies SettingsSectionId;
 
@@ -202,7 +203,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					try {
 						await connectionRegistry.deleteConnection(connection.id);
 					} catch (e) {
-						vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
+						vscode.window.showErrorMessage(getErrorMessage(e));
 						return true;
 					}
 
@@ -258,7 +259,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 						id: 'TestConnectionResult',
 						connectionId: connection.id,
 						success: false,
-						error: e instanceof Error ? e.message : String(e),
+						error: getErrorMessage(e),
 					});
 				}
 
@@ -300,7 +301,7 @@ export class ConnectionsSectionController implements SettingsSectionController {
 				try {
 					await connectionRegistry.saveConnectionWithCredential(connection, message.credential);
 				} catch (e) {
-					vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
+					vscode.window.showErrorMessage(getErrorMessage(e));
 					return true;
 				}
 

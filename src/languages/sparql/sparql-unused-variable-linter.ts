@@ -1,8 +1,8 @@
-import * as vscode from 'vscode';
 import { IToken, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { Diagnostic, DiagnosticSeverity, DiagnosticTag } from 'vscode-languageserver-types';
 import { LintingProvider } from '@src/providers/linting/linting-provider';
 import { LintingContext } from '@src/providers/linting/linting-context';
+import { PositionMapper } from '@src/utilities/position';
 
 /**
  * Represents information about a SPARQL query scope (SELECT, CONSTRUCT, etc.).
@@ -112,7 +112,7 @@ export class SparqlUnusedVariableLinter implements LintingProvider {
 				while (this._scopeStack.length > 0 && this._scopeStack[this._scopeStack.length - 1].depth > this._currentDepth) {
 					const closedScope = this._scopeStack.pop()!;
 
-					diagnostics.push(...this._checkScopeForUnusedVariables(context.document, closedScope));
+					diagnostics.push(...this._checkScopeForUnusedVariables(context.positionAt, closedScope));
 					this._propagateProjectedVariables(closedScope);
 				}
 
@@ -164,7 +164,7 @@ export class SparqlUnusedVariableLinter implements LintingProvider {
 		while (this._scopeStack.length > 0) {
 			const closedScope = this._scopeStack.pop()!;
 
-			diagnostics.push(...this._checkScopeForUnusedVariables(context.document, closedScope));
+			diagnostics.push(...this._checkScopeForUnusedVariables(context.positionAt, closedScope));
 			this._propagateProjectedVariables(closedScope);
 		}
 
@@ -191,7 +191,7 @@ export class SparqlUnusedVariableLinter implements LintingProvider {
 	/**
 	 * Check a query scope for unused variables and return diagnostics.
 	 */
-	private _checkScopeForUnusedVariables(document: vscode.TextDocument, scope: QueryScope): Diagnostic[] {
+	private _checkScopeForUnusedVariables(positionAt: PositionMapper, scope: QueryScope): Diagnostic[] {
 		const diagnostics: Diagnostic[] = [];
 
 		// Don't report unused variables if this is a SELECT * query
@@ -211,8 +211,8 @@ export class SparqlUnusedVariableLinter implements LintingProvider {
 					tags: [DiagnosticTag.Unnecessary],
 					message: `Variable '${varName}' is used only once.`,
 					range: {
-						start: document.positionAt(token.startOffset),
-						end: document.positionAt((token.endOffset ?? token.startOffset) + 1)
+						start: positionAt(token.startOffset),
+						end: positionAt((token.endOffset ?? token.startOffset) + 1)
 					}
 				});
 			}

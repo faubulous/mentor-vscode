@@ -61,9 +61,13 @@ export interface IDocumentTokenSource extends vscode.Disposable {
 	 * a time can be waiting for tokens per URI.
 	 * @param uri The document URI to wait for tokens.
 	 * @param timeout Optional timeout in milliseconds.
+	 * @param document The already-open document to parse, when the caller holds it.
+	 * Passing it makes local parsing reliable and O(1) instead of searching
+	 * `workspace.textDocuments` by URI (which can miss a just-opened document that
+	 * VS Code has already dropped from the list, causing a needless timeout).
 	 * @returns A promise that resolves with the tokens or rejects on timeout/cancellation.
 	 */
-	waitForTokens(uri: string, timeout?: number): Promise<IToken[]>;
+	waitForTokens(uri: string, timeout?: number, document?: vscode.TextDocument): Promise<IToken[]>;
 
 	/**
 	 * Delivers tokens for a document. Resolves a pending {@link waitForTokens}

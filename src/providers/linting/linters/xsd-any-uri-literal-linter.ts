@@ -23,7 +23,7 @@ export class XsdAnyUriLiteralLinter implements LintingProvider {
 			return [];
 		}
 
-		const { document, tokens, prefixes } = context;
+		const { positionAt, tokens, prefixes } = context;
 		const datatype = getIriFromToken(prefixes, tokens[index + 1]);
 
 		if (datatype !== XSD.anyURI) {
@@ -43,8 +43,8 @@ export class XsdAnyUriLiteralLinter implements LintingProvider {
 			message: `Use the IRI reference '<${value}>' instead of a typed string literal.`,
 			source: 'Mentor',
 			range: {
-				start: document.positionAt(valueToken.startOffset),
-				end: document.positionAt((tokens[index + 1].endOffset ?? tokens[index + 1].startOffset) + 1),
+				start: positionAt(valueToken.startOffset),
+				end: positionAt((tokens[index + 1].endOffset ?? tokens[index + 1].startOffset) + 1),
 			}
 		}];
 	}

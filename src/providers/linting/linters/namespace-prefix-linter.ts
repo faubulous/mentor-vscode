@@ -37,7 +37,7 @@ export class NamespacePrefixLinter implements LintingProvider {
 			return [];
 		}
 
-		const { document, tokens } = context;
+		const { positionAt, tokens } = context;
 		const result: Diagnostic[] = [];
 
 		switch (type) {
@@ -70,8 +70,8 @@ export class NamespacePrefixLinter implements LintingProvider {
 							severity: DiagnosticSeverity.Error,
 							message: `Invalid namespace URI.`,
 							range: {
-								start: document.positionAt(u.startOffset),
-								end: document.positionAt(u.endOffset ?? 0)
+								start: positionAt(u.startOffset),
+								end: positionAt(u.endOffset ?? 0)
 							}
 						});
 					}

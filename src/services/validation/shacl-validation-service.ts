@@ -4,6 +4,7 @@ import { IDocumentContextService, IDocumentFactory } from '@src/services/documen
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
 import { toUniqueStringArray } from '@src/utilities/array';
+import { Debouncer } from '@src/utilities/debounce';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
 import {
@@ -53,10 +54,24 @@ export class ShaclValidationService implements vscode.Disposable {
 	private readonly _lastSkips = new Map<string, { triples: number; maxGraphSize: number }>();
 
 	/**
-	 * Tracks in-flight validation runs per document and shape graph combination
-	 * so that concurrent triggers share a single validation.
+	 * Tracks in-flight validation runs per document and shape graph combination so
+	 * that concurrent triggers share a single run. Guards `_validateAndPublish`,
+	 * the choke point every path funnels through — explicit commands, the
+	 * auto-validation path (`_autoValidateOnChange`) and batch runs — so e.g. a
+	 * shape-graph change reaction firing while an indexing document-context change
+	 * validates the same file coalesces into one run.
 	 */
-	private readonly _inflightValidations = new Map<string, Promise<ShaclValidationResult | undefined>>();
+	private readonly _inflightValidations = new Map<string, Promise<ShaclValidationResult>>();
+
+	/**
+	 * Debounce/serialization state for {@link scheduleShapeGraphReaction}, which
+	 * coalesces bursts of shape-graph changes (startup lazy loads, Settings Sync
+	 * churn) into a single revalidate + profile-check pass. The 200ms trailing
+	 * delay is long enough to collapse a startup storm of lazy-load fires.
+	 */
+	private readonly _shapeGraphReactionDebouncer = new Debouncer(200);
+	private _shapeGraphReactionRunning = false;
+	private _shapeGraphReactionPending = false;
 
 	private readonly _onDidValidate = new vscode.EventEmitter<vscode.Uri>();
 
@@ -121,7 +136,8 @@ export class ShaclValidationService implements vscode.Disposable {
 				+ `Affected profiles: ${brokenProfiles.join(', ')}.`
 				+ '\nClick to manage the validation profiles.'
 				: undefined);
-		}, uris => this._shapeGraphs?.ensureLoaded(uris) ?? Promise.resolve());
+		}, uris => this._shapeGraphs?.ensureLoaded(uris) ?? Promise.resolve(),
+			uri => this._shapeGraphs?.hasShapeSource(uri) ?? false);
 		this._batchRunner = new ShaclBatchRunner({
 			contextService: _contextService,
 			store: _store,
@@ -174,10 +190,20 @@ export class ShaclValidationService implements vscode.Disposable {
 					this._onDidValidate.fire(e.document.uri);
 				}
 			}),
+			// Keep the status bar item's baseline "0 files" indicator in sync with
+			// whether SHACL validation is enabled.
+			vscode.workspace.onDidChangeConfiguration(e => {
+				if (e.affectsConfiguration('mentor.shacl.enabled')) {
+					this._presenter.setEnabled(getConfig('shacl').get<boolean>('enabled', false));
+				}
+			}),
 			// Auto-validate on change: a fresh document context is delivered after
 			// the debounced re-parse (on open and on edit).
 			this._contextService.onDidChangeDocumentContext(context => this._autoValidateOnChange(context))
 		);
+
+		// Show the baseline "0 files" indicator immediately when SHACL is enabled.
+		this._presenter.setEnabled(getConfig('shacl').get<boolean>('enabled', false));
 	}
 
 	/**
@@ -310,6 +336,40 @@ export class ShaclValidationService implements vscode.Disposable {
 	}
 
 	/**
+	 * Reacts to a shape-graph change (a shape file was loaded, reloaded or removed)
+	 * by revalidating open documents and re-checking profile health — debounced and
+	 * serialized. Shape loading itself fires the change event, and loading is lazy,
+	 * so a single startup or Settings-Sync tick can fan out into many rapid fires;
+	 * coalescing them into one trailing pass (with at most one follow-up when fires
+	 * arrive mid-pass) prevents the O(fires × open-docs) revalidation storm and the
+	 * repeated validator-cache invalidation it caused.
+	 */
+	scheduleShapeGraphReaction(): void {
+		this._shapeGraphReactionPending = true;
+		this._shapeGraphReactionDebouncer.schedule(() => void this._flushShapeGraphReaction());
+	}
+
+	private async _flushShapeGraphReaction(): Promise<void> {
+		// A pass is already running; it will pick up the pending flag and run again.
+		if (this._shapeGraphReactionRunning) {
+			return;
+		}
+
+		this._shapeGraphReactionRunning = true;
+
+		try {
+			while (this._shapeGraphReactionPending) {
+				this._shapeGraphReactionPending = false;
+
+				await this.revalidateOpenDocuments();
+				await this.checkShaclProfiles();
+			}
+		} finally {
+			this._shapeGraphReactionRunning = false;
+		}
+	}
+
+	/**
 	 * Re-runs on-change validation for all currently open documents, e.g. after
 	 * shape graphs were reloaded from changed user shape files. Respects the
 	 * `mentor.shacl.enabled` setting, the per-profile `validateOnChange` flags
@@ -369,24 +429,9 @@ export class ShaclValidationService implements vscode.Disposable {
 			);
 		}
 
-		// Share a single validation run between concurrent triggers for the same
-		// document and shape graph combination.
-		const inflightKey = documentUri.toString() + '\n' + [...shapeGraphUris].sort().join('\n');
-		const inflight = this._inflightValidations.get(inflightKey);
-
-		if (inflight) {
-			return inflight;
-		}
-
-		const validation = this._runValidation(documentUri, context, shapeGraphUris);
-
-		this._inflightValidations.set(inflightKey, validation);
-
-		try {
-			return await validation;
-		} finally {
-			this._inflightValidations.delete(inflightKey);
-		}
+		// Concurrent triggers for the same document and shape graph combination
+		// share a single run through the in-flight guard in _validateAndPublish.
+		return this._runValidation(documentUri, context, shapeGraphUris);
 	}
 
 	/**
@@ -411,6 +456,16 @@ export class ShaclValidationService implements vscode.Disposable {
 			matchesProfilePaths(entries, this.getDocumentLocation(uri), rdfExtensions) ? shapes : undefined,
 			options
 		);
+	}
+
+	/**
+	 * Shows running progress text on the shared validation status bar item. Used
+	 * by the Diagnose Workspace command to surface the syntax-diagnostics phase on
+	 * the same item before SHACL validation takes over it.
+	 * @param text The status bar text (may include a `$(sync~spin)` codicon).
+	 */
+	showRunningProgress(text: string): void {
+		this._presenter.showRunning(text);
 	}
 
 	/**
@@ -492,11 +547,11 @@ export class ShaclValidationService implements vscode.Disposable {
 		const fileName = documentUri.path.split('/').pop() ?? documentUri.toString();
 
 		// Reflect the single-file run on the dedicated status bar item (no snackbar); it is
-		// hidden again afterwards. Batch runs manage their own status text.
+		// hidden again afterwards. Batch runs manage their own status text. The run is
+		// started synchronously so a concurrent trigger in the same tick joins it
+		// through the in-flight guard; the run itself yields before the heavy work,
+		// which lets VS Code paint the spinner.
 		this._presenter.showRunning(`$(sync~spin) Validating ${fileName}...`);
-
-		// Yield once so VS Code can paint the status bar spinner before validation starts.
-		await new Promise(resolve => setTimeout(resolve, 0));
 
 		try {
 			return await this._validateAndPublish(documentUri, context, shapeGraphUris);
@@ -514,7 +569,28 @@ export class ShaclValidationService implements vscode.Disposable {
 	 * resulting diagnostics. Unlike {@link _runValidation} this shows no status bar
 	 * message, so it is suitable for batch validation of many files.
 	 */
-	private async _validateAndPublish(documentUri: vscode.Uri, context: IDocumentContext, shapeGraphUris: string[]): Promise<ShaclValidationResult> {
+	private _validateAndPublish(documentUri: vscode.Uri, context: IDocumentContext, shapeGraphUris: string[]): Promise<ShaclValidationResult> {
+		// Coalesce concurrent identical runs (e.g. a shape-graph reaction and a
+		// document-context change validating the same file) into one.
+		const key = documentUri.toString() + '\n' + [...shapeGraphUris].sort().join('\n');
+		const inflight = this._inflightValidations.get(key);
+
+		if (inflight) {
+			return inflight;
+		}
+
+		const run = this._doValidateAndPublish(documentUri, context, shapeGraphUris);
+
+		this._inflightValidations.set(key, run);
+
+		return run.finally(() => this._inflightValidations.delete(key));
+	}
+
+	private async _doValidateAndPublish(documentUri: vscode.Uri, context: IDocumentContext, shapeGraphUris: string[]): Promise<ShaclValidationResult> {
+		// Yield once so VS Code can paint status bar updates (the single-run spinner,
+		// batch progress) before the CPU-bound validation work starts.
+		await new Promise(resolve => setTimeout(resolve, 0));
+
 		// Self-healing shape resolution (ADR-0003): load any referenced workspace shape
 		// graph that resolves on disk but is not in the store yet, so validation never
 		// depends on startup ordering or the indexer having walked over the shape file.
@@ -526,8 +602,11 @@ export class ShaclValidationService implements vscode.Disposable {
 		// Shape graphs that are not in the store contribute no shapes, so the run
 		// silently validates against less than what the profile promises. Record
 		// them on the result so consumers (status code lens, report export) can
-		// present it as incomplete rather than a clean pass.
-		const missingShapeGraphs = shapeGraphUris.filter(uri => !this._store.hasGraph(uri));
+		// present it as incomplete rather than a clean pass. An existing-but-empty
+		// user shape file is a valid (no-op) reference, not a missing one — the
+		// same semantics the profile health check applies via hasShapeSource.
+		const missingShapeGraphs = shapeGraphUris.filter(uri =>
+			!this._store.hasGraph(uri) && !(this._shapeGraphs?.hasShapeSource(uri) ?? false));
 
 		// Time only the data-graph validation here; shape compilation is timed separately
 		// by the engine. Logging both makes it easy to tell whether a slow "small" file is
@@ -618,6 +697,7 @@ export class ShaclValidationService implements vscode.Disposable {
 	}
 
 	dispose(): void {
+		this._shapeGraphReactionDebouncer.dispose();
 		this._diagnosticCollection.dispose();
 
 		for (const d of this._disposables) {

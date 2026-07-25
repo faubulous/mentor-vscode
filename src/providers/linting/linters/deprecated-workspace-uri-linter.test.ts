@@ -6,9 +6,11 @@ import { DeprecatedWorkspaceUriLinter, DEPRECATED_WORKSPACE_URI_CODE } from './d
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
 function runProvider(rule: any, ctx: { document: any; content: string; tokens: any[]; prefixes: any }) {
+	// Adapt the test's `document` to the LintingContext's `positionAt` mapper.
+	const context = { positionAt: (o: number) => ctx.document.positionAt(o), content: ctx.content, tokens: ctx.tokens, prefixes: ctx.prefixes };
 	rule.reset?.();
-	const result = ctx.tokens.flatMap((t: any, i: number) => rule.visitToken(ctx, t, i));
-	result.push(...(rule.finalize?.(ctx) ?? []));
+	const result = ctx.tokens.flatMap((t: any, i: number) => rule.visitToken(context, t, i));
+	result.push(...(rule.finalize?.(context) ?? []));
 	return result;
 }
 

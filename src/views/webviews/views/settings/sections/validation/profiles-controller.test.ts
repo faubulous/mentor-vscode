@@ -22,7 +22,7 @@ function setup(files: string[] = [], cells: { notebook: string; slug: string }[]
 	// empty and therefore absent from the store.
 	const shapeGraphService = {
 		getUserShapeFileNames: vi.fn(() => userShapeFiles),
-		getUserShapeGraphUri: vi.fn((fileName: string) => `user:///shapes/${fileName}`),
+		getUserShapeGraphUri: vi.fn((path: string) => `user:///${path}`),
 		getOrphanedUserShapeFiles: vi.fn(() => [] as string[]),
 		onDidChangeShapeGraphs: vi.fn(() => ({ dispose: () => { } })),
 	};
@@ -129,7 +129,7 @@ describe('ValidationProfilesSectionController', () => {
 	it('includes user shape files in the candidates even when their graph is empty', async () => {
 		// A freshly created user shape file holds only the commented skeleton, so
 		// its graph is absent from the store — it must be offered regardless.
-		const { controller, post } = setup([], [], ['drafted.ttl']);
+		const { controller, post } = setup([], [], ['shapes/drafted.ttl']);
 
 		await controller.handleMessage({ section: 'validation.profiles', id: 'GetShapeCandidates' } as any);
 
@@ -412,5 +412,41 @@ describe('ValidationProfilesSectionController', () => {
 
 		expect(handled).toBe(false);
 		expect(post).not.toHaveBeenCalled();
+	});
+
+	it('prompts to delete orphaned user shape files on CheckOrphanedShapes', async () => {
+		vi.useFakeTimers();
+		try {
+			const { controller, shapeGraphService } = setup();
+			shapeGraphService.getOrphanedUserShapeFiles.mockReturnValue(['shapes/test.ttl']);
+			const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+
+			const pending = controller.handleMessage({ section: 'validation.profiles', id: 'CheckOrphanedShapes' } as any);
+			// No mentor.shacl.validation change fires (a pure create/abandon), so the
+			// prompt waits out the settle timeout before reading the orphans.
+			await vi.advanceTimersByTimeAsync(1500);
+			await pending;
+
+			expect(warn).toHaveBeenCalledWith(expect.stringContaining('shapes/test.ttl'), 'Delete', 'Keep');
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('does not prompt when there are no orphaned user shape files', async () => {
+		vi.useFakeTimers();
+		try {
+			const { controller, shapeGraphService } = setup();
+			shapeGraphService.getOrphanedUserShapeFiles.mockReturnValue([]);
+			const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+
+			const pending = controller.handleMessage({ section: 'validation.profiles', id: 'CheckOrphanedShapes' } as any);
+			await vi.advanceTimersByTimeAsync(1500);
+			await pending;
+
+			expect(warn).not.toHaveBeenCalled();
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 });

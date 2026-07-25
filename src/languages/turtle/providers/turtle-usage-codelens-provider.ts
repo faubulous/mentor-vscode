@@ -107,15 +107,17 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 				const shapeCount = shapeUris.length;
 				const shapeTitle = `${shapeCount} shape${shapeCount === 1 ? '' : 's'}`;
 
+				// The count depends only on the IRI, and counting scans every indexed
+				// document — compute it once per subject, not once per occurrence, and
+				// count without materializing the reference locations.
+				const n = Math.max(this._referenceProvider.countReferencesForIri(iri) - 1, 0);
+				const usageTitle = `${n} usage${n === 1 ? '' : 's'}`;
+
 				for (const range of context.subjects[iri]) {
-					let n = Math.max(this._referenceProvider.provideReferencesForIri(iri).length - 1, 0);
-					
 					const codeLensRange = new vscode.Range(
 						new vscode.Position(range.start.line, range.start.character),
 						new vscode.Position(range.end.line, range.end.character)
 					);
-
-					const usageTitle = `${n} usage${n === 1 ? '' : 's'}`;
 
 					result.push(new vscode.CodeLens(codeLensRange, {
 						command: 'mentor.command.findReferences',

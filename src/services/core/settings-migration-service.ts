@@ -1,5 +1,6 @@
 import { ISettingsMigration } from './settings-migration.interface';
 import { ISettingsMigrationService } from './settings-migration-service.interface';
+import { getLog } from '@src/utilities/vscode/log';
 
 /**
  * Owns the registry of settings migrations and runs them on activation.
@@ -17,7 +18,7 @@ export class SettingsMigrationService implements ISettingsMigrationService {
 				await migration.migrate();
 			} catch (error) {
 				// Isolate failures so one bad migration does not block the rest or activation.
-				console.error(`Mentor: settings migration "${migration.id}" failed:`, error);
+				getLog().error(`Settings migration "${migration.id}" failed:`, error);
 			}
 		}
 	}

@@ -1,7 +1,7 @@
 import { DataFactory as N3DataFactory } from 'n3';
 import { DatasetCore } from '@rdfjs/types';
 import { RdfStore } from 'rdf-stores';
-import { XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
+import { Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
 
 /**
  * An RDF/JS DataFactory extended with a `dataset()` method (DatasetCoreFactory),
@@ -70,5 +70,24 @@ export function getPropertyTypeFromRange(rangeIri?: string): PropertyType {
 		default: {
 			return 'objectProperty';
 		}
+	}
+}
+
+/**
+ * Loads RDF content into a store graph, choosing the loader by the source file's
+ * extension: `.nq` is parsed as N-Quads, everything else (`.ttl`, `.nt`) through
+ * the Turtle loader, which handles both. Inference is skipped and the target
+ * graph is replaced. The single source of truth for the extension → loader
+ * dispatch that shape and template loading rely on.
+ * @param store The RDF store to load into.
+ * @param content The serialized RDF content.
+ * @param graphUri The graph URI to load the triples under.
+ * @param fileName The source file name or path whose extension selects the loader.
+ */
+export function loadRdfContent(store: Store, content: string, graphUri: string, fileName: string): void {
+	if (fileName.endsWith('.nq')) {
+		store.loadNQuads(content, graphUri, false, true);
+	} else {
+		store.loadTurtle(content, graphUri, false, true);
 	}
 }

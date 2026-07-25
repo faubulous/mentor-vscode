@@ -71,29 +71,29 @@
   "devDependencies": {
     "@rdfjs/types": "^2.0.1",
     "@types/n3": "^1.26.1",
-    "@types/node": "^25.9.3",
+    "@types/node": "^26.1.1",
     "@types/picomatch": "^4.0.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.105.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
-    "@typescript-eslint/eslint-plugin": "^8.61.1",
-    "@typescript-eslint/parser": "^8.61.1",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "@vscode-elements/elements": "^2.5.1",
     "@vscode/codicons": "^0.0.45",
-    "@vscode/test-web": "^0.0.80",
+    "@vscode/test-web": "^0.0.81",
     "@vscode/vsce": "^3.9.2",
     "chevrotain": "^12.0.0",
     "esbuild": "^0.28.1",
-    "eslint": "^10.6.0",
+    "eslint": "^10.7.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "fonteditor-core": "^2.6.3",
     "glob": "^13.0.6",
     "rimraf": "^6.1.3",
     "svgicons2svgfont": "=16.0.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.9",
+    "vitest": "^4.1.10",
     "vscode-languageserver-textdocument": "^1.0.12",
     "vscode-uri": "^3.1.0"
   },
@@ -101,7 +101,7 @@
     "morgan": "^1.11.0"
   },
   "dependencies": {
-    "@comunica/query-sparql": "^5.2.4",
+    "@comunica/query-sparql": "^5.3.0",
     "@faubulous/mentor-rdf": "^2.0.0",
     "@faubulous/mentor-rdf-parsers": "^1.11.0",
     "@faubulous/mentor-rdf-serializers": "^1.8.0",
@@ -109,8 +109,8 @@
     "n3": "^2.1.1",
     "picomatch": "^4.0.5",
     "rdf-stores": "^2.2.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "reflect-metadata": "^0.2.2",
     "shacl-engine": "^1.1.2",
     "triplate": "^0.6.0",
@@ -934,7 +934,7 @@
       },
       {
         "command": "mentor.command.validateAllProfiles",
-        "title": "Validate All Profiles using SHACL",
+        "title": "Validate Workspace (Syntax + SHACL)",
         "icon": "$(run-all-coverage)",
         "category": "Mentor"
       },
@@ -1039,7 +1039,7 @@
         },
         {
           "command": "mentor.command.validateAllProfiles",
-          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing && config.mentor.shacl.enabled",
+          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing",
           "group": "navigation@1"
         },
         {
@@ -1969,11 +1969,11 @@
             "additionalProperties": false,
             "default": {}
           },
-          "mentor.shacl.shapes": {
+          "mentor.files": {
             "type": "object",
             "scope": "application",
-            "title": "User SHACL Shape Files",
-            "description": "SHACL shape files stored in the user settings and addressed as 'user:///shapes/<name>'. Managed by Mentor (create user shapes from the validation profile editor); the content is stored gzip-compressed and synced via Settings Sync.",
+            "title": "User Files",
+            "description": "User-scoped virtual files stored in the settings and addressed as 'user:///<path>'. Each key is a slash-delimited virtual path (e.g. 'shapes/my-shapes.ttl'); nested folders are derived from the path. Managed by Mentor (e.g. SHACL shapes created from the validation profile editor); the content is stored gzip-compressed and synced via Settings Sync.",
             "additionalProperties": {
               "type": "object",
               "additionalProperties": false,
@@ -1993,10 +1993,38 @@
                 "content": {
                   "type": "string",
                   "description": "The file content, encoded as declared by 'encoding'."
+                },
+                "references": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "id",
+                      "name"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Stable id of the referencing workspace (its 'mentor.workspaceId')."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Last-seen display name of the referencing workspace."
+                      }
+                    }
+                  },
+                  "description": "Managed by Mentor: workspaces whose validation profiles reference this file. Used to protect the file from being offered for deletion in other workspaces."
                 }
               }
             },
             "default": {}
+          },
+          "mentor.workspaceId": {
+            "type": "string",
+            "scope": "window",
+            "title": "Workspace Id",
+            "description": "A stable, Mentor-generated identifier for this workspace, stored in the workspace settings. Used to record which workspaces reference user shape files so they are not deleted by accident. Generated automatically; you normally don't need to edit this."
           },
           "mentor.shacl.enabled": {
             "type": "boolean",

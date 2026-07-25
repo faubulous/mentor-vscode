@@ -38,8 +38,8 @@ export class DeprecatedWorkspaceUriLinter implements LintingProvider {
 			message: `Deprecated workspace URI scheme. Use '${canonical}' instead.`,
 			source: 'Mentor',
 			range: {
-				start: context.document.positionAt(token.startOffset),
-				end: context.document.positionAt((token.endOffset ?? token.startOffset) + 1),
+				start: context.positionAt(token.startOffset),
+				end: context.positionAt((token.endOffset ?? token.startOffset) + 1),
 			}
 		}];
 	}

@@ -42,24 +42,15 @@ export class UserUri {
 	}
 
 	/**
-	 * Indicates whether a URI or URI string uses the user scheme.
+	 * Returns the canonical user URI string of a settings-backed file.
+	 * @param path The virtual file path, e.g. `shapes/my-shapes.ttl`. A leading
+	 * slash is optional and normalized away.
 	 */
-	static isUserUri(uri: vscode.Uri | string): boolean {
-		return typeof uri === 'string'
-			? uri.startsWith(`${this.uriScheme}:`)
-			: uri.scheme === this.uriScheme;
-	}
+	static forPath(path: string): string {
+		const normalized = path.replace(/^\/+/, '');
 
-	/**
-	 * Returns the canonical user URI string of a file in a settings-backed folder.
-	 * @param folder The virtual folder path, e.g. `/shapes`.
-	 * @param fileName The file name within the folder, e.g. `my-shapes.ttl`.
-	 */
-	static forFile(folder: string, fileName: string): string {
-		const prefix = folder.startsWith('/') ? folder : `/${folder}`;
-
-		// The empty authority ('//') plus the leading slash of the folder path
-		// yields the canonical triple-slash form, e.g. 'user:///shapes/my.ttl'.
-		return `${this.uriScheme}://${prefix}/${fileName}`;
+		// The empty authority ('//') plus the leading slash of the path yields the
+		// canonical triple-slash form, e.g. 'user:///shapes/my.ttl'.
+		return `${this.uriScheme}:///${normalized}`;
 	}
 }

@@ -74,20 +74,22 @@ function ValidationGeneralSection({ settings, onUpdate, setScope, onBulkScope }:
 			<SectionHeader title={validationGeneralSection.label} menuItems={menuItems} variant="title" />
 			<ValidationDashboard stats={stats} />
 			<div className="stats-dashboard-actions">
-				<vscode-toolbar-button className="primary" onClick={handleShowLog}>
-					<span className="codicon codicon-output"></span>
-					<span className="label">Show Validation Log</span>
-				</vscode-toolbar-button>
 				<vscode-toolbar-button
 					className="primary"
 					disabled={isBusy || !hasWorkspace || !shaclEnabled}
 					title={!hasWorkspace
 						? 'Open a folder or workspace to enable validation'
-						: (!shaclEnabled ? 'Enable SHACL validation to validate the workspace' : undefined)}
+						: (!shaclEnabled ?
+							'Enable SHACL validation to validate the workspace' :
+							'Run syntax check and SHACL validation over the whole workspace')}
 					onClick={handleValidate}
 				>
 					<span className={`codicon ${isBusy ? 'codicon-sync codicon-modifier-spin' : 'codicon-run-all-coverage'}`}></span>
 					<span className="label">Validate Workspace</span>
+				</vscode-toolbar-button>
+				<vscode-toolbar-button className="primary" onClick={handleShowLog}>
+					<span className="codicon codicon-output"></span>
+					<span className="label">Show Validation Log</span>
 				</vscode-toolbar-button>
 			</div>
 			<SettingRow {...rowProps('shacl.enabled')}>

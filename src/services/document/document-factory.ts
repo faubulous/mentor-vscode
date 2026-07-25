@@ -7,6 +7,7 @@ import { TurtleDocument, SparqlDocument, XmlDocument } from '@src/languages';
 import { IDocumentContext } from './document-context.interface';
 import { ILanguageInfo } from './document-factory.interface';
 import { RDF_LANGUAGE_IDS } from './document-languages';
+import { getLog } from '@src/utilities/vscode/log';
 
 export { RDF_LANGUAGE_IDS };
 
@@ -318,7 +319,7 @@ export class DocumentFactory {
 
 			return JSON.parse(content);
 		} catch (error) {
-			console.warn('Could not read package.json:', error);
+			getLog().warn('Could not read package.json:', error);
 			return null;
 		}
 	}

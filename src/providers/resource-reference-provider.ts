@@ -24,6 +24,28 @@ export class ResourceReferenceProvider implements vscode.ReferenceProvider {
 	}
 
 	/**
+	 * Counts the references to a given resource across all indexed documents
+	 * without allocating `Location` objects — use this when only the number is
+	 * needed (e.g. the usage CodeLens), not the locations.
+	 * @param iri The IRI of the resource.
+	 * @returns The number of references.
+	 */
+	countReferencesForIri(iri: string): number {
+		let count = 0;
+
+		for (const context of Object.values(this._contextService.contexts)) {
+			// Do not count references in temporary, non-persisted git diff views or other in-memory documents.
+			if (context.isTemporary || !context.references[iri]) {
+				continue;
+			}
+
+			count += context.references[iri].length;
+		}
+
+		return count;
+	}
+
+	/**
 	 * Get the locations of references for a given resource.
 	 * @param iri The IRI of the resource.
 	 * @returns The locations of the references.

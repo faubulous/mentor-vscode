@@ -34,7 +34,7 @@ export const importUserShape = {
 	id: 'mentor.command.importUserShape',
 	handler: async () => {
 		const store = container.resolve<Store>(ServiceToken.Store);
-		const files = container.resolve<SettingsFileStore>(ServiceToken.UserShapeFileStore);
+		const files = container.resolve<SettingsFileStore>(ServiceToken.UserFileStore);
 
 		const candidates = getShapeGraphCandidates(store).filter(isWorkspaceShapeUri);
 
@@ -63,14 +63,14 @@ export const importUserShape = {
 			return;
 		}
 
-		const fileName = withDefaultShapeExtension(input.trim());
-		const targetUri = UserUri.forFile(USER_SHAPES_FOLDER, fileName);
+		const path = `${USER_SHAPES_FOLDER}/${withDefaultShapeExtension(input.trim())}`;
+		const targetUri = UserUri.forPath(path);
 
 		// Quad formats re-label the graph to the new user URI; triple formats carry
 		// no graph label and are addressed by the settings entry alone.
-		const content = await store.serializeGraph(source, formatForExtension(fileName), targetUri);
+		const content = await store.serializeGraph(source, formatForExtension(path), targetUri);
 
-		await files.write(fileName, content);
+		await files.write(path, content);
 
 		vscode.window.showInformationMessage(`Imported the shape graph as '${targetUri}'.`);
 	}

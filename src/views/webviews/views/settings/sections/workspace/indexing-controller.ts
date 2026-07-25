@@ -53,6 +53,12 @@ export class IndexingSectionController implements SettingsSectionController {
 
 				return true;
 			}
+			case 'DiagnoseWorkspace': {
+				// Runs syntax + SHACL diagnostics over the whole workspace.
+				await vscode.commands.executeCommand('mentor.command.diagnoseWorkspace');
+
+				return true;
+			}
 			default: {
 				return false;
 			}

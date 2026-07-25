@@ -16,7 +16,7 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 			return [];
 		}
 
-		const { document, tokens, prefixes } = context;
+		const { positionAt, tokens, prefixes } = context;
 
 		if (index > (tokens.length - 2)) {
 			// We do not flag a linter error because this is a
@@ -38,8 +38,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: [scheme:]scheme-specific-part[#fragment]",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -54,8 +54,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: [0-9a-fA-F]+",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -70,8 +70,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid boolean: true or false.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -86,8 +86,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: [-]0*[0-9]+",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -102,8 +102,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: [-]YYYY-MM-DD[Z|(+|-)hh:mm]",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -118,8 +118,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid the lexical space: [-]YYYY-MM-DDThh:mm:ss[Z|(+|-)hh:mm]",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -134,8 +134,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid decimal.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -150,8 +150,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid double.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -166,8 +166,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the valid lexical space: PnYnMnDTnHnMnS",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -182,8 +182,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid float.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -198,8 +198,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid integer.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -209,8 +209,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the allowed value space: [-2147483648, 2147483647]",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -225,8 +225,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid integer.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -241,8 +241,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid long.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -252,8 +252,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the allowed value space: [-9223372036854775808, 9223372036854775807]",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -268,8 +268,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid negative integer.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -279,8 +279,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the allowed value space: < 0",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -295,8 +295,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid non-negative integer.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -306,8 +306,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the allowed value space: >= 0",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -322,8 +322,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid non-positive integer.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -333,8 +333,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the allowed value space: <= 0",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -349,8 +349,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid positive integer.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -360,8 +360,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the allowed value space: > 0",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -376,8 +376,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is not a valid short.",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -387,8 +387,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside the allowed value space: [-32768, 32767]",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}
@@ -403,8 +403,8 @@ export class XsdDatatypeValidationLinter implements LintingProvider {
 						severity: DiagnosticSeverity.Warning,
 						message: "The value is outside valid the lexical space: hh:mm:ss[Z|(+|-)hh:mm].",
 						range: {
-							start: document.positionAt(value.startOffset),
-							end: document.positionAt((value.endOffset ?? 0) + 1)
+							start: positionAt(value.startOffset),
+							end: positionAt((value.endOffset ?? 0) + 1)
 						}
 					});
 				}

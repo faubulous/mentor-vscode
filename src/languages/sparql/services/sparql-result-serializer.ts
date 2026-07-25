@@ -10,6 +10,7 @@ import { BindingsResult, SparqlQueryExecutionState } from "./sparql-query-state"
 import { toArrayWithCancellation } from '@src/utilities/vscode/cancellation';
 import { resolveFormattingConfig } from '@src/utilities/vscode/config';
 import { NamespaceMap } from '@src/utilities';
+import { getLog } from '@src/utilities/vscode/log';
 
 /**
  * Handler for serializing SPARQL query results.
@@ -230,7 +231,7 @@ export class SparqlResultSerializer {
 
 			return new TurtleSerializer().serialize(outputQuads, outputOptions);
 		} catch (error) {
-			console.error('Error serializing quads to Turtle:', error);
+			getLog().error('Error serializing quads to Turtle:', error);
 			return '';
 		}
 	}
@@ -285,7 +286,7 @@ export class SparqlResultSerializer {
 
 			return new TurtleSerializer().serialize(this._prepareQuads(quads), this._buildTurtleOptions(prefixMap));
 		} catch (error) {
-			console.error('Error serializing quads to Turtle:', error);
+			getLog().error('Error serializing quads to Turtle:', error);
 			return '';
 		}
 	}

@@ -30,6 +30,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { executeDescribeQuery } from '@src/commands/sparql/execute-describe-query';
+import { getLog } from '@src/utilities/vscode/log';
 
 const DESCRIBE_TEMPLATE = `---
 params {
@@ -70,7 +71,7 @@ describe('executeDescribeQuery', () => {
 	});
 
 	it('should log a warning and return when document is not found', async () => {
-		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const warn = vi.spyOn(getLog(), 'warn').mockImplementation(() => {});
 		const docUri = vscode.Uri.parse('file:///no-such.ttl');
 		await executeDescribeQuery.handler(docUri, 'urn:ex#res');
 		expect(warn).toHaveBeenCalled();

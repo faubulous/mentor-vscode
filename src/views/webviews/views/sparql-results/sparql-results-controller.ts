@@ -8,6 +8,7 @@ import { SparqlConnection } from '@src/languages/sparql/services/sparql-connecti
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlConnectionGraphStatus, SparqlResultsWebviewMessages } from './sparql-results-messages';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
+import { getErrorMessage } from '@src/utilities/error';
 
 /**
  * A controller for the SPARQL results webview. It handles the registration of the webview, 
@@ -198,7 +199,7 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
                 id: 'TestSparqlConnectionResult',
                 connectionId: connection.id,
                 success: false,
-                error: e instanceof Error ? e.message : String(e),
+                error: getErrorMessage(e),
             });
         }
     }

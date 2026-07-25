@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { Debouncer } from '@src/utilities/debounce';
 import { ISettingsService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { TreeView } from '@src/views/trees/tree-view';
@@ -116,14 +117,10 @@ export class DefinitionTree implements TreeView {
 	}
 
 	private _registerEditorSelectionHandler(): vscode.Disposable {
-		let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+		const debouncer = new Debouncer(300);
 
 		return vscode.window.onDidChangeTextEditorSelection((e) => {
-			if (debounceTimer) {
-				clearTimeout(debounceTimer);
-			}
-
-			debounceTimer = setTimeout(() => {
+			debouncer.schedule(() => {
 				if (this.treeView.visible === false) {
 					return;
 				}
@@ -146,7 +143,7 @@ export class DefinitionTree implements TreeView {
 				if (iri) {
 					this._revealForUri(iri);
 				}
-			}, 300);
+			});
 		});
 	}
 

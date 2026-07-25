@@ -16,6 +16,30 @@ export interface SettingsFileEntry {
 	 * The file content, encoded per {@link encoding}.
 	 */
 	content: string;
+
+	/**
+	 * Managed by Mentor: the workspaces whose validation profiles reference this
+	 * file. Present only when at least one workspace references it; used to protect
+	 * the file from being offered for deletion in other workspaces.
+	 */
+	references?: WorkspaceReference[];
+}
+
+/**
+ * A workspace that references a settings-backed file. The {@link id} is a stable,
+ * Mentor-generated workspace id (survives renames); {@link name} is the last-seen
+ * display name only.
+ */
+export interface WorkspaceReference {
+	id: string;
+	name: string;
+}
+
+/**
+ * Compares two reference lists for equality (order-sensitive, by id and name).
+ */
+function referencesEqual(a: WorkspaceReference[], b: WorkspaceReference[]): boolean {
+	return a.length === b.length && a.every((ref, i) => ref.id === b[i].id && ref.name === b[i].name);
 }
 
 /**
@@ -66,6 +90,15 @@ export class SettingsFileStore implements vscode.Disposable {
 	private _snapshot: Record<string, SettingsFileEntry>;
 
 	/**
+	 * Cached backing map. `WorkspaceConfiguration.inspect()` deep-clones the whole
+	 * value (including every entry's encoded content) on each call, so reading it
+	 * per `keys()`/`has()`/`getReferences()`/`read()` — often in loops — is costly.
+	 * The cache holds VS Code's already-frozen clone and is invalidated whenever
+	 * the backing value changes (config-change event) or this store writes it.
+	 */
+	private _cache: Record<string, SettingsFileEntry> | undefined;
+
+	/**
 	 * Per-key modification times, bumped whenever a value change is observed.
 	 */
 	private readonly _mtimes = new Map<string, number>();
@@ -79,7 +112,7 @@ export class SettingsFileStore implements vscode.Disposable {
 	private readonly _disposables: vscode.Disposable[] = [];
 
 	/**
-	 * @param settingsKey The bare Mentor settings key holding the file map, e.g. `shacl.shapes`.
+	 * @param settingsKey The bare Mentor settings key holding the file map, e.g. `files`.
 	 * @param options Optional overrides; `maxEntryLength` bounds the encoded size of a single entry.
 	 */
 	constructor(readonly settingsKey: string, options?: { maxEntryLength?: number }) {
@@ -141,7 +174,54 @@ export class SettingsFileStore implements vscode.Disposable {
 		}
 
 		await this._mutateMap(map => {
-			map[key] = { encoding: 'gzip+base64', content: encoded };
+			// Merge so Mentor-managed metadata (e.g. references) survives a content edit.
+			map[key] = { ...map[key], encoding: 'gzip+base64', content: encoded };
+		});
+	}
+
+	/**
+	 * The workspace references recorded for a file entry (empty when none).
+	 */
+	getReferences(key: string): WorkspaceReference[] {
+		return this._readMap()[key]?.references ?? [];
+	}
+
+	/**
+	 * Applies workspace-reference updates to existing entries in a single write.
+	 * A non-empty list is stored as the entry's `references`; an empty list clears
+	 * the field. Keys without a backing entry are skipped (deleted files are never
+	 * resurrected). Does nothing when no update actually changes the stored value.
+	 * @param refsByKey The new reference lists, keyed by file entry key.
+	 */
+	async setReferences(refsByKey: Record<string, WorkspaceReference[]>): Promise<void> {
+		const map = this._readMap();
+
+		const changed = Object.entries(refsByKey).some(([key, refs]) => {
+			const entry = map[key];
+
+			return entry ? !referencesEqual(refs, entry.references ?? []) : false;
+		});
+
+		if (!changed) {
+			return;
+		}
+
+		await this._mutateMap(next => {
+			for (const [key, refs] of Object.entries(refsByKey)) {
+				const entry = next[key];
+
+				if (!entry) {
+					continue;
+				}
+
+				if (refs.length > 0) {
+					next[key] = { ...entry, references: refs };
+				} else if (entry.references) {
+					const rest = { ...entry };
+					delete rest.references;
+					next[key] = rest;
+				}
+			}
 		});
 	}
 
@@ -193,7 +273,11 @@ export class SettingsFileStore implements vscode.Disposable {
 	 * user-scope by definition.
 	 */
 	private _readMap(): Record<string, SettingsFileEntry> {
-		return getConfig().inspect<Record<string, SettingsFileEntry>>(this.settingsKey)?.globalValue ?? {};
+		if (!this._cache) {
+			this._cache = getConfig().inspect<Record<string, SettingsFileEntry>>(this.settingsKey)?.globalValue ?? {};
+		}
+
+		return this._cache;
 	}
 
 	/**
@@ -209,6 +293,10 @@ export class SettingsFileStore implements vscode.Disposable {
 			const value = Object.keys(map).length > 0 ? map : undefined;
 
 			await getConfig().update(this.settingsKey, value, vscode.ConfigurationTarget.Global);
+
+			// The written map is now current; cache it so reads before the resulting
+			// config-change event don't re-inspect (deep-clone) the whole value.
+			this._cache = value ?? {};
 		};
 
 		const result = this._writeQueue.then(operation, operation);
@@ -225,6 +313,11 @@ export class SettingsFileStore implements vscode.Disposable {
 	 */
 	private _handleConfigurationChange(): void {
 		const previous = this._snapshot;
+
+		// The backing value changed (our own write, a hand edit, or a Settings Sync
+		// update) — drop the cache so the fresh value is read.
+		this._cache = undefined;
+
 		const next = this._readMap();
 
 		const created: string[] = [];

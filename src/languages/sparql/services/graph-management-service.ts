@@ -8,6 +8,7 @@ import { Store } from '@faubulous/mentor-rdf';
 import { InferenceUri } from '@src/providers/inference-uri';
 import { ConfigurationScope } from '@src/utilities/config-scope';
 import { isHttpEndpoint, isSafeAutoLoadEndpoint } from '@src/utilities/endpoint-url';
+import { getErrorMessage } from '@src/utilities/error';
 
 /**
  * An entry in the graph cache.
@@ -343,7 +344,7 @@ export class GraphManagementService implements IGraphManagementService {
 
             this._graphCache.set(connection.id, { graphs, loadedAt: Date.now() });
         } catch (e) {
-            const error = e instanceof Error ? e.message : String(e);
+            const error = getErrorMessage(e);
             this._graphCache.set(connection.id, { graphs: [], loadedAt: Date.now(), error });
         } finally {
             this._persistCache();

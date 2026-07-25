@@ -115,6 +115,7 @@ export function ValidationProfilesList({ profiles, presets, brokenProfiles, matc
 						{presets.map(preset => (
 							<SettingsListItem
 								key={preset.id}
+								className="actions-persistent"
 								icon={<vscode-icon name="checklist" className="settings-item-icon" />}
 								name={(
 									<>

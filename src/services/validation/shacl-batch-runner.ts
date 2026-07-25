@@ -332,9 +332,6 @@ export class ShaclBatchRunner {
 		const tooltip = `SHACL validation: ${summary.matched} files matched by profiles, `
 			+ `${summary.validated} validated, ${summary.skipped} skipped`
 			+ (summary.cancelled ? ' (run cancelled)' : '') + '.'
-			+ (summary.skipped > 0
-				? '\nSkipped files exceed mentor.shacl.maxGraphSize; run a validate command to validate them explicitly.'
-				: '')
 			+ '\nClick to open the validation dashboard.';
 
 		this._deps.presenter.showSummary(text, tooltip);

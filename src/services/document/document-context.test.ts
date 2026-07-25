@@ -15,6 +15,11 @@ vi.mock('@src/utilities/vscode/config', () => ({
             return defaultValue;
         },
     }),
+    // Uncached in tests so the per-test overrides above apply immediately.
+    getPredicatesConfig: () => ({
+        label: mockLabelPredicates,
+        description: mockDescriptionPredicates,
+    }),
 }));
 
 vi.mock('@src/providers/workspace-uri', () => ({

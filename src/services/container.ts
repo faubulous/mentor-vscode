@@ -31,9 +31,9 @@ import { SparqlPrefixDefinitionService } from '@src/languages/sparql/services/sp
 import { ShaclProfileSettingsService } from '@src/services/validation/shacl-profile-settings-service';
 import { ShaclValidationProfilesMigration, ShaclValidationScopeMigration } from '@src/services/validation/migrations';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
-import { ShapeGraphService, USER_SHAPES_FOLDER } from '@src/services/validation/shape-graph-service';
+import { ShapeGraphService } from '@src/services/validation/shape-graph-service';
+import { ShapeReferenceRegistryService } from '@src/services/validation/shape-reference-registry-service';
 import { SettingsFileStore } from './core/settings-file-store';
-import { UserFileSystemProvider } from '@src/providers/user-file-system-provider';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
 import { IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
@@ -82,7 +82,6 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const getContext = (uri: string) => container.resolve<DocumentContextService>(ServiceToken.DocumentContextService).contexts[uri];
 
 	const documentTokenSource = new DocumentTokenSource(getContext);
-	container.registerInstance(ServiceToken.DocumentTokenSource, documentTokenSource);
 
 	context.subscriptions.push(documentTokenSource);
 
@@ -92,8 +91,11 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	// Diagnostics are computed in the extension host — there are no language
 	// server processes. Constructed after DocumentContextService is registered:
 	// its constructor eagerly validates already-visible editors, which resolves
-	// the context service through the `getContext` closure.
-	context.subscriptions.push(new DocumentDiagnosticsService(documentTokenSource, getContext));
+	// the context service through the `getContext` closure. Registered so the
+	// Diagnose Workspace command can trigger an explicit workspace-wide pass.
+	const documentDiagnosticsService = new DocumentDiagnosticsService(documentTokenSource, getContext);
+	container.registerInstance(ServiceToken.DocumentDiagnosticsService, documentDiagnosticsService);
+	context.subscriptions.push(documentDiagnosticsService);
 
 	const workspaceService = new WorkspaceService();
 	container.registerInstance(ServiceToken.WorkspaceService, workspaceService);
@@ -105,7 +107,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 		documentFactory,
 		documentContextService,
 		workspaceFileService,
-		documentTokenSource
+		documentTokenSource,
+		documentDiagnosticsService
 	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
@@ -125,7 +128,6 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	container.registerInstance(ServiceToken.DocumentConnectionService, documentConnectionService);
 
 	const sparqlQuerySourceFactory = new SparqlQuerySourceFactory(store, sparqlStoreConfigService, connectionRegistry, documentConnectionService);
-	container.registerInstance(ServiceToken.SparqlQuerySourceFactory, sparqlQuerySourceFactory);
 
 	const prefixDownloaderService = new PrefixDownloaderService();
 	container.registerInstance(ServiceToken.PrefixDownloaderService, prefixDownloaderService);
@@ -150,26 +152,33 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const shaclProfileSettingsService = new ShaclProfileSettingsService();
 	container.registerInstance(ServiceToken.ShaclProfileSettingsService, shaclProfileSettingsService);
 
-	// User shape files live in the user-level mentor.shacl.shapes settings value and
-	// are served as user:///shapes/<file> documents. The folder must be registered
-	// before the UserFileSystemProvider is constructed in registerProviders.
-	const userShapeFileStore = new SettingsFileStore('shacl.shapes');
-	UserFileSystemProvider.registerFolder(USER_SHAPES_FOLDER, userShapeFileStore);
-	container.registerInstance(ServiceToken.UserShapeFileStore, userShapeFileStore);
+	// User-scoped virtual files live in the user-level mentor.files settings value
+	// and are served as user:///<path> documents by the UserFileSystemProvider
+	// (constructed in registerProviders, which resolves this store).
+	const userFileStore = new SettingsFileStore('files');
+	container.registerInstance(ServiceToken.UserFileStore, userFileStore);
 
-	const shapeGraphService = new ShapeGraphService(store, userShapeFileStore, shaclProfileSettingsService);
+	const shapeGraphService = new ShapeGraphService(store, userFileStore, shaclProfileSettingsService);
 	container.registerInstance(ServiceToken.ShapeGraphService, shapeGraphService);
 
 	const shaclValidationService = new ShaclValidationService(context, store, documentContextService, documentFactory, shaclProfileSettingsService, shapeGraphService);
 	container.registerInstance(ServiceToken.ShaclValidationService, shaclValidationService);
 
-	context.subscriptions.push(userShapeFileStore, shapeGraphService);
+	context.subscriptions.push(userFileStore, shapeGraphService);
+
+	// Record which workspaces reference each user shape file so shapes used by
+	// other workspaces are protected from the orphan-cleanup prompt. Reconciles
+	// on activation and whenever the validation profiles change.
+	const shapeReferenceRegistryService = new ShapeReferenceRegistryService(userFileStore, shaclProfileSettingsService);
+	context.subscriptions.push(shapeReferenceRegistryService);
+	void shapeReferenceRegistryService.reconcile();
 
 	// When shape graphs change (editor save, Settings Sync update, cleanup), refresh
-	// the open documents' validation state and the profile health check.
+	// the open documents' validation state and the profile health check. Debounced
+	// and serialized: shape loading is lazy and re-fires this event, so a startup or
+	// sync burst is coalesced into a single revalidation pass.
 	context.subscriptions.push(shapeGraphService.onDidChangeShapeGraphs(() => {
-		shaclValidationService.revalidateOpenDocuments();
-		shaclValidationService.checkShaclProfiles();
+		shaclValidationService.scheduleShapeGraphReaction();
 	}));
 
 	// Register the notebook controller for the Mentor Notebook kernel.
@@ -185,7 +194,6 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	// Register the SPARQL status bar service and push it to subscriptions so it is
 	// disposed when the extension deactivates.
 	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlEndpointTester, graphService, connectionRegistry);
-	container.registerInstance(ServiceToken.SparqlStatusBarService, sparqlStatusBarService);
 
 	context.subscriptions.push(sparqlStatusBarService);
 

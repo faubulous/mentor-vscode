@@ -23,6 +23,11 @@ export const workspaceIndexingSection = {
 		'index.maxFileSize',
 		'index.diagnoseFiles',
 	],
+	// Mentor-managed workspace identity; not rendered, but claimed so the
+	// descriptor validator sees every mentor.* key owned by a section.
+	hiddenKeys: [
+		'workspaceId',
+	],
 } as const satisfies SettingsSectionDescriptor;
 
 function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
@@ -61,14 +66,21 @@ function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkSc
 		messaging?.postMessage({ id: 'ReindexWorkspace' });
 	};
 
+	const handleDiagnose = () => messaging?.postMessage({ id: 'DiagnoseWorkspace' });
+
 	return (
 		<div>
 			<SectionHeader title={workspaceIndexingSection.label} menuItems={menuItems} variant="title" />
 			<IndexingDashboard stats={stats} />
 			<div className="stats-dashboard-actions">
-				<vscode-toolbar-button className="primary" onClick={handleShowLog}>
-					<span className="codicon codicon-output"></span>
-					<span className="label">Show Index Log</span>
+				<vscode-toolbar-button
+					className="primary"
+					disabled={isBusy || !hasWorkspace}
+					title={hasWorkspace ? 'Run syntax diagnostics over the whole workspace' : 'Open a folder or workspace to enable diagnostics'}
+					onClick={handleDiagnose}
+				>
+					<span className="codicon codicon-debug-alt"></span>
+					<span className="label">Diagnose Workspace</span>
 				</vscode-toolbar-button>
 				<vscode-toolbar-button
 					className="primary"
@@ -78,6 +90,10 @@ function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkSc
 				>
 					<span className={`codicon ${isBusy ? 'codicon-sync codicon-modifier-spin' : 'codicon-refresh'}`}></span>
 					<span className="label">Reindex Workspace</span>
+				</vscode-toolbar-button>
+				<vscode-toolbar-button className="primary" onClick={handleShowLog}>
+					<span className="codicon codicon-output"></span>
+					<span className="label">Show Index Log</span>
 				</vscode-toolbar-button>
 			</div>
 			<SettingRow {...rowProps('index.maxFileSize')}>

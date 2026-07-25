@@ -29,10 +29,11 @@ export const validationProfilesSection = {
 	keys: [
 		'shacl.validation',
 	],
-	// User shape files are stored under this key; the section manages them
-	// through the profile editor rather than rendering the raw value.
+	// User shape files are stored under this key (as `shapes/…` paths in the
+	// generic user file map); the section manages them through the profile editor
+	// rather than rendering the raw value.
 	hiddenKeys: [
-		'shacl.shapes',
+		'files',
 	],
 } as const satisfies SettingsSectionDescriptor;
 
@@ -392,6 +393,11 @@ function ValidationProfilesSection({ settings, setScope }: SettingsSectionProps)
 	const closeEditor = () => {
 		setEditorDirty(false);
 		setEditing(undefined);
+
+		// Closing the editor may have left a user shape file unreferenced (created
+		// but not added to a saved profile, or removed from one) — ask the host to
+		// check for orphans and offer to clean them up.
+		messagingRef.current?.postMessage({ id: 'CheckOrphanedShapes' });
 	};
 
 	const handleCreate = (scope: ConfigurationScope) => {

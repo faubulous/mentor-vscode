@@ -3,6 +3,7 @@ import { render } from 'triplate';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentConnectionService, ISparqlConnectionRegistry, ISparqlQueryService, ITripleStoreConfigService } from '@src/languages/sparql/services';
+import { getLog } from '@src/utilities/vscode/log';
 
 export const executeDescribeQuery = {
 	id: 'mentor.command.executeDescribeQuery',
@@ -25,7 +26,7 @@ export const executeDescribeQuery = {
 			?? (document ? documentConnectionService.getConnectionForDocument(document.uri) : undefined);
 
 		if (!connection) {
-			console.warn(`Unable to resolve a connection for describe query: ${uri.toString()}`);
+			getLog().warn(`Unable to resolve a connection for describe query: ${uri.toString()}`);
 			return;
 		}
 

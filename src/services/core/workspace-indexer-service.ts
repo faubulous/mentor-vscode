@@ -5,9 +5,35 @@ import { IWorkspaceIndexerService, IndexingStatistics } from './workspace-indexe
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { IDocumentTokenSource } from '../document/document-token-source.interface';
 import { DocumentContextService } from '../document/document-context-service';
+import { DocumentDiagnosticsService } from '../document/document-diagnostics-service';
 import { getConfig } from '@src/utilities/vscode/config';
 import { normalizeGlobPattern } from '@src/utilities/glob';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
+
+/**
+ * Per-file indexing duration (ms) above which a file is logged as slow. A single
+ * RDF file should index in well under a second; anything at or above this points
+ * to a stall (e.g. a token-wait timeout) rather than genuine parsing work.
+ */
+const SLOW_FILE_THRESHOLD_MS = 1000;
+
+/**
+ * How many of the slowest files to list in the per-run timing summary.
+ */
+const SLOWEST_FILES_TO_LOG = 10;
+
+/**
+ * How many `fs.stat` calls the pre-scan issues concurrently. The stats are
+ * independent; bounding the fan-out keeps remote file systems responsive.
+ */
+const SCAN_CONCURRENCY = 16;
+
+/**
+ * How many upcoming files the indexing loop reads ahead. Parsing is CPU-bound
+ * and serialized; prefetching overlaps the next files' I/O with the current
+ * file's parse so the loop never idles on a cold read.
+ */
+const READ_PREFETCH = 4;
 
 /**
  * Service for indexing RDF documents in the current workspace.
@@ -69,7 +95,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		private readonly _documentFactory: IDocumentFactory,
 		private readonly _contextService: DocumentContextService,
 		private readonly _workspaceFileService: IWorkspaceFileService,
-		private readonly _tokenSource: IDocumentTokenSource
+		private readonly _tokenSource: IDocumentTokenSource,
+		private readonly _diagnosticsService: DocumentDiagnosticsService
 	) {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isIndexing', false);
 
@@ -83,7 +110,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		// Show the indexer item immediately so the Mentor icon is always visible in the
 		// status bar — including on an empty workspace (0 files), where the indexing code
 		// paths that update the text run late or with nothing to report.
-		this._statusBarItem.text = '$(app-mentor) Indexed 0 files';
+		this._statusBarItem.text = '$(list-tree) Indexed 0 files';
 		this._statusBarItem.show();
 
 		this._statusLog.clear();
@@ -202,6 +229,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			fileUris: [...this._workspaceFileService.files],
 			includeMatchers: this._loadIncludePatterns(),
 			maxSize,
+			diagnoseFiles: getConfig().get<boolean>('index.diagnoseFiles', true),
 			reindex,
 		};
 	}
@@ -214,6 +242,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	private async _scanIndexFiles(run: IndexingRun): Promise<IndexScanResult> {
 		const indexedUris: vscode.Uri[] = [];
 		const skippedFiles: string[] = [];
+		const candidates: { fileUri: vscode.Uri; path: string }[] = [];
 
 		for (const fileUri of run.fileUris) {
 			if (this._contextService.contexts[fileUri.toString()] && !run.reindex) {
@@ -230,19 +259,30 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				continue;
 			}
 
-			const path = this._normalizeFilePath(workspaceUri.path);
-			const stat = await vscode.workspace.fs.stat(fileUri);
-			const size = stat.size;
+			candidates.push({ fileUri, path: this._normalizeFilePath(workspaceUri.path) });
+		}
 
-			if (size > run.maxSize && !run.includeMatchers.some(match => match(path))) {
-				const message = `Skipped large file ${fileUri.toString()} (${size} bytes)`;
-				this._statusLog.warn(message);
+		// Stat the candidates with bounded concurrency: the stats are independent
+		// I/O round-trips, and issuing them one-by-one serializes disk/remote-fs
+		// latency across the whole corpus.
+		for (let i = 0; i < candidates.length; i += SCAN_CONCURRENCY) {
+			const chunk = candidates.slice(i, i + SCAN_CONCURRENCY);
+			const sizes = await Promise.all(chunk.map(({ fileUri }) => vscode.workspace.fs.stat(fileUri).then(stat => stat.size)));
 
-				skippedFiles.push(fileUri.toString());
-				continue;
+			for (let j = 0; j < chunk.length; j++) {
+				const { fileUri, path } = chunk[j];
+				const size = sizes[j];
+
+				if (size > run.maxSize && !run.includeMatchers.some(match => match(path))) {
+					const message = `Skipped large file ${fileUri.toString()} (${size} bytes)`;
+					this._statusLog.warn(message);
+
+					skippedFiles.push(fileUri.toString());
+					continue;
+				}
+
+				indexedUris.push(fileUri);
 			}
-
-			indexedUris.push(fileUri);
 		}
 
 		return { targetFileUris: indexedUris, skippedFiles };
@@ -258,13 +298,61 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		let completed = 0;
 		let errorCount = 0;
 
-		for (const fileUri of indexedUris) {
-			try {
-				await this._indexWorkspaceFile(fileUri, run.reindex);
+		const timings: FileIndexTiming[] = [];
 
-				this._statusLog.info(`Indexed ${fileUri.toString()}`);
+		// Content read-ahead: parsing is CPU-bound and serialized, so the next few
+		// files' reads are started while the current file parses. Rejections are
+		// silenced here (they would otherwise be unhandled while queued) and
+		// surface when the consumer awaits the entry.
+		const prefetchedReads = new Map<string, Promise<Uint8Array>>();
+
+		const prefetch = (index: number) => {
+			for (let i = index; i < Math.min(index + READ_PREFETCH, indexedUris.length); i++) {
+				const uri = indexedUris[i];
+				const key = uri.toString();
+
+				if (!prefetchedReads.has(key) && !this._documentFactory.isSupportedNotebookFile(uri)) {
+					const read = Promise.resolve(vscode.workspace.fs.readFile(uri));
+
+					read.catch(() => undefined);
+					prefetchedReads.set(key, read);
+				}
+			}
+		};
+
+		for (let index = 0; index < indexedUris.length; index++) {
+			const fileUri = indexedUris[index];
+
+			prefetch(index);
+
+			const fileStart = performance.now();
+			let phases: FileIndexPhases | undefined;
+
+			try {
+				phases = await this._indexWorkspaceFile(fileUri, run, prefetchedReads);
 			} catch {
 				errorCount++;
+			} finally {
+				prefetchedReads.delete(fileUri.toString());
+			}
+
+			const totalMs = Math.round(performance.now() - fileStart);
+
+			// Log every file's duration so the log carries the raw numbers. The
+			// open/load split shows whether time went to opening the document (I/O)
+			// or to parsing, loading triples and inference (CPU).
+			if (phases) {
+				this._statusLog.info(
+					`Indexed ${fileUri.toString()} in ${totalMs} ms (read ${phases.readMs} ms, load ${phases.loadMs} ms)`
+				);
+
+				timings.push({ uri: fileUri.toString(), totalMs, readMs: phases.readMs, loadMs: phases.loadMs });
+			}
+
+			// Flag files that took unusually long so latent per-file stalls (e.g. a
+			// token-wait timeout) stand out in the log.
+			if (totalMs >= SLOW_FILE_THRESHOLD_MS) {
+				this._statusLog.warn(`Slow file: ${fileUri.toString()} took ${totalMs} ms`);
 			}
 
 			completed++;
@@ -272,19 +360,47 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			this._reportIndexingProgress(completed, indexedUris.length);
 		}
 
+		this._logIndexingTimings(timings);
+
 		return { completed, errorCount };
+	}
+
+	/**
+	 * Logs aggregate per-file timing for a run: total, average and the slowest
+	 * files. This turns the raw per-file lines into a quick summary for spotting
+	 * which files dominate the indexing time.
+	 * @param timings The per-file timings collected during the run.
+	 */
+	private _logIndexingTimings(timings: FileIndexTiming[]): void {
+		if (timings.length === 0) {
+			return;
+		}
+
+		const totalMs = timings.reduce((sum, t) => sum + t.totalMs, 0);
+		const avgMs = Math.round(totalMs / timings.length);
+
+		this._statusLog.info(`Per-file indexing: ${timings.length} files, ${totalMs} ms total, ${avgMs} ms avg`);
+
+		const slowest = [...timings].sort((a, b) => b.totalMs - a.totalMs).slice(0, SLOWEST_FILES_TO_LOG);
+
+		this._statusLog.info(`Slowest ${slowest.length} files:`);
+
+		for (const t of slowest) {
+			this._statusLog.info(`  ${t.totalMs} ms (read ${t.readMs} ms, load ${t.loadMs} ms)  ${t.uri}`);
+		}
 	}
 
 	/**
 	 * Routes a workspace file to the appropriate indexing strategy.
 	 * @param fileUri The URI of the workspace file to index.
-	 * @param reindex Whether to force re-indexing of already indexed data.
-	 * @returns A promise that settles when indexing of the file completes.
+	 * @param run The shared indexing run state.
+	 * @param prefetchedReads Read-ahead file contents keyed by URI, when available.
+	 * @returns The open/load phase timings for the file.
 	 */
-	private _indexWorkspaceFile(fileUri: vscode.Uri, reindex: boolean): Promise<void> {
+	private _indexWorkspaceFile(fileUri: vscode.Uri, run: IndexingRun, prefetchedReads?: Map<string, Promise<Uint8Array>>): Promise<FileIndexPhases> {
 		return this._documentFactory.isSupportedNotebookFile(fileUri)
-			? this._indexNotebookDocument(fileUri, reindex)
-			: this._indexTextDocument(fileUri, reindex);
+			? this._indexNotebookDocument(fileUri, run.reindex)
+			: this._indexTextDocument(fileUri, run, prefetchedReads);
 	}
 
 	/**
@@ -313,7 +429,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
 
-		const parts = [`$(app-mentor) Indexed ${successfulFiles} files`];
+		const parts = [`$(list-tree) Indexed ${successfulFiles} files`];
 
 		if (summary.errorCount > 0) {
 			parts.push(`${summary.errorCount} error${summary.errorCount > 1 ? 's' : ''}`);
@@ -326,9 +442,6 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		// The tooltip mirrors the format of the SHACL validation status bar item.
 		const tooltip = `Workspace indexing: ${totalFiles} files discovered, `
 			+ `${successfulFiles} indexed, ${summary.errorCount} errors, ${skippedFiles.length} skipped.`
-			+ (skippedFiles.length > 0
-				? '\nSkipped files exceed mentor.index.maxFileSize; add them to mentor.index.includeFiles to index them regardless.'
-				: '')
 			+ '\nClick to open the indexing settings.';
 
 		this._statusBarItem.text = parts.join('; ');
@@ -417,48 +530,92 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 	/**
 	 * Index a regular text document.
+	 *
+	 * Reads the file bytes and builds the context from content instead of opening
+	 * a VS Code text document per file: profiling showed `openTextDocument`
+	 * (document-model creation + `onDidOpenTextDocument` notifications) dominated
+	 * indexing time, while the actual RDF parsing is cheap. An already-open
+	 * document is reused so live, possibly unsaved, content wins.
 	 * @param uri The URI of the document to index.
-	 * @param reindex Whether to force re-indexing of the document.
+	 * @param run The shared indexing run state.
+	 * @param prefetchedReads Read-ahead file contents keyed by URI, when available.
+	 * @returns The read/load phase timings for the document.
 	 */
-	private async _indexTextDocument(uri: vscode.Uri, reindex: boolean): Promise<void> {
-		try {
-			// Open the document to trigger the language server to analyze it.
-			const document = await vscode.workspace.openTextDocument(uri);
+	private async _indexTextDocument(uri: vscode.Uri, run: IndexingRun, prefetchedReads?: Map<string, Promise<Uint8Array>>): Promise<FileIndexPhases> {
+		// The `open` phase now measures reading the content (from an open document
+		// or from disk) rather than opening a text document.
+		const openStart = performance.now();
 
-			// Re-check after the async open: handleActiveEditorChanged may have registered
-			// this context while we were awaiting openTextDocument (TOCTOU guard).
-			if (this._contextService.contexts[document.uri.toString()] && !reindex) {
-				return;
+		// Prefer an already-open document so unsaved edits win. This set is tiny
+		// during indexing, so the lookup is cheap.
+		const openDocument = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+
+		let content: string;
+
+		if (openDocument) {
+			content = openDocument.getText();
+		} else {
+			try {
+				// A prefetched read may already be resolved (started while the previous
+				// file was parsing), in which case this await is effectively free.
+				const bytes = await (prefetchedReads?.get(uri.toString()) ?? vscode.workspace.fs.readFile(uri));
+
+				content = new TextDecoder().decode(bytes);
+			} catch (error) {
+				// Log and rethrow so the background settlement can count failures accurately.
+				this._statusLog.error(`File ${uri.toString()} cannot be read`);
+				throw error;
 			}
-
-			// Try to load the document so that its graph is created and can be used for showing definitions, descriptions etc..
-			const loadPromise = this._contextService.loadDocument(document, reindex);
-
-			if (reindex) {
-				await Promise.all([
-					loadPromise,
-					this._refreshDocumentTokens(document.uri.toString())
-				]);
-				return;
-			}
-
-			await loadPromise;
-		} catch (error) {
-			// VS Code may refuse to open files it considers binary (e.g., files containing
-			// ASCII control characters like W3C test files). Log and rethrow so the
-			// background settlement can count failures accurately.
-			this._statusLog.error(`File ${uri.toString()} cannot be opened as text`);
-			throw error;
 		}
+
+		const readMs = Math.round(performance.now() - openStart);
+
+		// Re-check after the async read: handleActiveEditorChanged may have registered
+		// this context while we were awaiting (TOCTOU guard).
+		if (this._contextService.contexts[uri.toString()] && !run.reindex) {
+			return { readMs, loadMs: 0 };
+		}
+
+		// Load the document so that its graph is created and can be used for showing definitions, descriptions etc..
+		const loadStart = performance.now();
+		const loadPromise = this._contextService.loadDocumentContent(uri, content, run.reindex);
+
+		if (run.reindex) {
+			await Promise.all([
+				loadPromise,
+				// Refresh editor tokens for an open document; a no-op for files not
+				// open in an editor.
+				this._refreshDocumentTokens(uri.toString())
+			]);
+		} else {
+			await loadPromise;
+		}
+
+		const loadMs = Math.round(performance.now() - loadStart);
+
+		// Compute syntax and lint diagnostics in-process from the content we already
+		// read (no openTextDocument), so `index.diagnoseFiles` gives the workspace-wide
+		// problems overview without the per-file document-open cost. The flag is
+		// snapshotted once per run instead of re-read per file.
+		if (run.diagnoseFiles) {
+			this._diagnosticsService.diagnoseContent(uri, content);
+		}
+
+		return { readMs, loadMs };
 	}
 
 	/**
 	 * Index RDF cells within a notebook document.
 	 * @param notebookUri The URI of the notebook file.
 	 * @param reindex Whether to force re-indexing of already indexed cells.
+	 * @returns The open/load phase timings for the notebook.
 	 */
-	private async _indexNotebookDocument(notebookUri: vscode.Uri, reindex: boolean): Promise<void> {
+	private async _indexNotebookDocument(notebookUri: vscode.Uri, reindex: boolean): Promise<FileIndexPhases> {
+		const openStart = performance.now();
 		const notebook = await vscode.workspace.openNotebookDocument(notebookUri);
+		const readMs = Math.round(performance.now() - openStart);
+
+		const loadStart = performance.now();
 
 		for (const cell of notebook.getCells()) {
 			const lang = cell.document.languageId;
@@ -494,6 +651,8 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				throw error;
 			}
 		}
+
+		return { readMs, loadMs: Math.round(performance.now() - loadStart) };
 	}
 
 	/**
@@ -564,6 +723,12 @@ type IndexingRun = {
 	maxSize: number;
 
 	/**
+	 * Whether syntax/lint diagnostics are computed per indexed file. Snapshotted
+	 * once per run so the hot loop does not re-read the configuration per file.
+	 */
+	diagnoseFiles: boolean;
+
+	/**
 	 * Indicates whether already indexed files should be indexed again.
 	 */
 	reindex: boolean;
@@ -582,6 +747,39 @@ type IndexScanResult = {
 	 * The file identifiers skipped during the pre-scan phase.
 	 */
 	skippedFiles: string[];
+};
+
+/**
+ * The read/load phase durations (ms) measured while indexing a single file.
+ */
+type FileIndexPhases = {
+	/**
+	 * Time spent acquiring the content — reading the file bytes, or reading an
+	 * already-open document's text (I/O) — in milliseconds.
+	 */
+	readMs: number;
+
+	/**
+	 * Time spent loading the document — parsing, loading triples and inference
+	 * (CPU) — in milliseconds.
+	 */
+	loadMs: number;
+};
+
+/**
+ * A single file's indexing timing, including its URI, for run summaries.
+ */
+type FileIndexTiming = FileIndexPhases & {
+	/**
+	 * The indexed file URI.
+	 */
+	uri: string;
+
+	/**
+	 * The total wall-clock time to index the file (ms), including overhead
+	 * around the open/load phases.
+	 */
+	totalMs: number;
 };
 
 /**

@@ -4,6 +4,7 @@ import { ServiceToken } from '@src/services/tokens';
 import { ICredentialStorageService } from '@src/services/core';
 import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { getErrorMessage } from '@src/utilities/error';
 
 export const deleteSparqlConnection = {
 	id: 'mentor.command.deleteSparqlConnection',
@@ -24,7 +25,7 @@ export const deleteSparqlConnection = {
 		try {
 			await connectionRegistry.deleteConnection(connection.id);
 		} catch (e) {
-			vscode.window.showErrorMessage(e instanceof Error ? e.message : String(e));
+			vscode.window.showErrorMessage(getErrorMessage(e));
 			return;
 		}
 

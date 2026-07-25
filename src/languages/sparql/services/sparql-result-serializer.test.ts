@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { DataFactory } from 'n3';
 import type { Literal, Quad } from '@rdfjs/types';
 import { SparqlResultSerializer } from '@src/languages/sparql/services/sparql-result-serializer';
+import { getLog } from '@src/utilities/vscode/log';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -268,7 +269,7 @@ describe('SparqlResultSerializer', () => {
 
         it('returns empty string and logs error when serialization throws', async () => {
             // Cover catch block lines 254-255: getInferencePrefixes throws (no namespaces arg path)
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const consoleSpy = vi.spyOn(getLog(), 'error').mockImplementation(() => {});
             const throwingPrefixService = {
                 getPrefixForIri: (_d: any, _i: any, def: any) => def,
                 getInferencePrefixes: () => { throw new Error('prefix error'); },
@@ -317,7 +318,7 @@ describe('SparqlResultSerializer', () => {
     describe('serializeQuads - error paths', () => {
         it('returns empty string and logs error when quad stream throws', async () => {
             // Cover catch block lines 178-179 by having the async stream throw
-            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const consoleSpy = vi.spyOn(getLog(), 'error').mockImplementation(() => {});
             async function* throwingStream(): AsyncIterable<any> {
                 throw new Error('stream error');
             }

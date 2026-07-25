@@ -22,7 +22,7 @@ export class InlineSingleUseBlankNodesLinter implements LintingProvider {
 	}
 
 	finalize(context: LintingContext): Diagnostic[] {
-		const { document, tokens } = context;
+		const { positionAt, tokens } = context;
 
 		// Group all BLANK_NODE_LABEL tokens by label value, tracking their index.
 		const occurrences = new Map<string, { token: IToken; index: number }[]>();
@@ -82,8 +82,8 @@ export class InlineSingleUseBlankNodesLinter implements LintingProvider {
 				message: `Single-use blank node '${label}' can be inlined.`,
 				source: 'Mentor',
 				range: {
-					start: document.positionAt(token.startOffset),
-					end: document.positionAt((token.endOffset ?? token.startOffset) + 1),
+					start: positionAt(token.startOffset),
+					end: positionAt((token.endOffset ?? token.startOffset) + 1),
 				},
 			});
 		}

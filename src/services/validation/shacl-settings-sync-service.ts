@@ -29,15 +29,17 @@ export class ShaclSettingsSyncService {
 		private readonly _store: Store,
 		private readonly _profileSettings: ShaclProfileSettingsService,
 		private readonly _onHealthChecked?: (broken: ShaclBrokenReferences) => void,
-		private readonly _ensureShapesLoaded?: (uris: string[]) => Promise<void>
+		private readonly _ensureShapesLoaded?: (uris: string[]) => Promise<void>,
+		private readonly _shapeSourceExists?: (uri: string) => boolean
 	) { }
 
 	/**
-	 * Checks all validation profiles for broken references: shape graphs that are
-	 * not available in the store. This asks the same question validation asks
-	 * (ADR-0003) — a shape file that exists but cannot be resolved, loaded or
-	 * parsed is reported as broken, because validating against it would silently
-	 * use no shapes. Referenced workspace shape graphs are loaded on demand first,
+	 * Checks all validation profiles for broken references: shape graphs whose
+	 * source is missing. A reference is broken only when neither the store holds
+	 * the graph nor its backing shape file exists. An existing-but-empty shape
+	 * file (no triples) is treated as valid — validating against it is a harmless
+	 * no-op, and the profile picker offers such files, so flagging them would be
+	 * inconsistent. Referenced workspace shape graphs are loaded on demand first,
 	 * so the check does not depend on startup ordering. Every check also reports
 	 * its outcome through the `onHealthChecked` callback, so the validation status
 	 * bar item can surface (and clear) a configuration error.
@@ -47,7 +49,8 @@ export class ShaclSettingsSyncService {
 
 		await this._ensureShapesLoaded?.(getAllReferencedShapeUris(settings));
 
-		const broken = findBrokenReferences(settings, uri => this._store.hasGraph(uri));
+		const broken = findBrokenReferences(settings, uri =>
+			this._store.hasGraph(uri) || (this._shapeSourceExists?.(uri) ?? false));
 
 		this._onHealthChecked?.(broken);
 

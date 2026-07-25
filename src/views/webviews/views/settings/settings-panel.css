@@ -1051,6 +1051,13 @@ vscode-textarea.monospace {
 	visibility: visible;
 }
 
+/* Template rows keep their edit action permanently visible: the row click uses a
+   template (creates a profile), so the edit affordance must always be reachable. */
+.settings-item.actions-persistent .settings-item-actions {
+	opacity: 1;
+	visibility: visible;
+}
+
 /* Reserves a button's worth of space without ever becoming visible or interactive,
    so action-less rows match the height of rows that have buttons. */
 .settings-item-action-placeholder {

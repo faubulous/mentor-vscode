@@ -22,7 +22,15 @@ vi.mock('vscode', async () => {
         languages: {
             ...base.languages,
             createDiagnosticCollection: (name?: string) => {
-                const collection = { name, set: vi.fn(), delete: vi.fn(), clear: vi.fn(), dispose: vi.fn() };
+                const store = new Map<string, any>();
+                const collection = {
+                    name,
+                    set: vi.fn((uri: any, diagnostics: any) => store.set(uri.toString(), diagnostics)),
+                    get: (uri: any) => store.get(uri.toString()),
+                    delete: vi.fn((uri: any) => store.delete(uri.toString())),
+                    clear: vi.fn(() => store.clear()),
+                    dispose: vi.fn(),
+                };
                 env.collections.push(collection);
                 return collection;
             },
@@ -38,6 +46,8 @@ vi.mock('vscode', async () => {
         workspace: {
             ...base.workspace,
             get textDocuments() { return env.textDocuments; },
+            openTextDocument: (uri: any) =>
+                Promise.resolve(env.textDocuments.find((d: any) => d.uri.toString() === uri.toString())),
             getConfiguration: () => ({
                 get: (key: string, defaultValue?: any) =>
                     key === 'index.diagnoseFiles' ? env.diagnoseFiles : defaultValue,
@@ -372,5 +382,82 @@ describe('DocumentDiagnosticsService', () => {
         deliverTokens(uri);
 
         expect(collection.set).not.toHaveBeenCalled();
+    });
+
+    describe('diagnoseFiles', () => {
+        it('validates each indexed file and reports per-file progress', async () => {
+            const uri = 'file:///a.ttl';
+            const document = makeDocument(uri, VALID_TURTLE);
+            env.textDocuments.push(document);
+
+            const { service, collection } = makeSetup({ [uri]: makeTurtleContext() });
+
+            const progress: Array<[number, number]> = [];
+            const result = await service.diagnoseFiles([document.uri], (p, t) => progress.push([p, t]));
+
+            expect(progress).toEqual([[1, 1]]);
+            expect(result.validated).toBe(1);
+            expect(result.filesWithErrors).toBe(0);
+            expect(collection.set).toHaveBeenCalledWith(document.uri, []);
+        });
+
+        it('skips files without a loaded context but still advances progress', async () => {
+            const uriA = vscode.Uri.parse('file:///a.ttl');
+            const uriB = vscode.Uri.parse('file:///b.ttl');
+            env.textDocuments.push(makeDocument(uriA.toString(), VALID_TURTLE));
+
+            // Only A has an indexed context; B must be skipped (no context).
+            const { service } = makeSetup({ [uriA.toString()]: makeTurtleContext() });
+
+            const progress: Array<[number, number]> = [];
+            const result = await service.diagnoseFiles([uriA, uriB], (p, t) => progress.push([p, t]));
+
+            expect(progress).toEqual([[1, 2], [2, 2]]);
+            expect(result.validated).toBe(1);
+        });
+
+        it('counts files that have at least one error', async () => {
+            const uri = vscode.Uri.parse('file:///bad.ttl');
+            env.textDocuments.push(makeDocument(uri.toString(), INVALID_TURTLE));
+
+            const { service } = makeSetup({ [uri.toString()]: makeTurtleContext() });
+
+            const result = await service.diagnoseFiles([uri]);
+
+            expect(result.validated).toBe(1);
+            expect(result.filesWithErrors).toBe(1);
+        });
+    });
+
+    describe('diagnoseContent', () => {
+        it('publishes diagnostics from raw content without an open document', () => {
+            const uri = 'file:///indexed.ttl';
+            // No document is pushed to workspace.textDocuments, proving diagnoseContent
+            // needs no open TextDocument — only the loaded context and the content.
+            const { service, collection } = makeSetup({ [uri]: makeTurtleContext() });
+
+            service.diagnoseContent(vscode.Uri.parse(uri), INVALID_TURTLE);
+
+            const diagnostics = collection.set.mock.calls.at(-1)![1];
+            expect(diagnostics.length).toBeGreaterThan(0);
+            expect(diagnostics[0].severity).toBe(0); // vscode.DiagnosticSeverity.Error
+        });
+
+        it('publishes an empty diagnostics array for valid content', () => {
+            const uri = 'file:///indexed.ttl';
+            const { service, collection } = makeSetup({ [uri]: makeTurtleContext() });
+
+            service.diagnoseContent(vscode.Uri.parse(uri), VALID_TURTLE);
+
+            expect(collection.set).toHaveBeenLastCalledWith(expect.anything(), []);
+        });
+
+        it('skips files that were not indexed (no context)', () => {
+            const { service, collection } = makeSetup({});
+
+            service.diagnoseContent(vscode.Uri.parse('file:///not-indexed.ttl'), VALID_TURTLE);
+
+            expect(collection.set).not.toHaveBeenCalled();
+        });
     });
 });

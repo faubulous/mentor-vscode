@@ -4,7 +4,7 @@ import { SettingsFileStore, SettingsFileChangeEvent, SettingsFileEntry } from '@
 import { compressToBase64 } from '@src/utilities/compression';
 
 /**
- * In-memory stand-in for the user-level `mentor.shacl.shapes` value. The fake
+ * In-memory stand-in for the user-level `mentor.files` value. The fake
  * `update` mirrors the real host by firing the configuration-change listeners
  * after a write.
  */
@@ -14,7 +14,7 @@ let listeners: Array<(e: vscode.ConfigurationChangeEvent) => void>;
 
 function fireConfigurationChange(): void {
 	for (const listener of [...listeners]) {
-		listener({ affectsConfiguration: (section: string) => section === 'mentor.shacl.shapes' } as vscode.ConfigurationChangeEvent);
+		listener({ affectsConfiguration: (section: string) => section === 'mentor.files' } as vscode.ConfigurationChangeEvent);
 	}
 }
 
@@ -40,7 +40,7 @@ beforeEach(() => {
 
 describe('SettingsFileStore', () => {
 	test('write stores gzip+base64 in the global scope and read round-trips', async () => {
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 
 		await store.write('my-shapes.ttl', '<a> a <b> .');
 
@@ -55,13 +55,13 @@ describe('SettingsFileStore', () => {
 	test('read tolerates plain entries', async () => {
 		globalValue = { 'hand-edited.ttl': { encoding: 'plain', content: '<x> a <y> .' } };
 
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 
 		expect(await store.read('hand-edited.ttl')).toBe('<x> a <y> .');
 	});
 
 	test('read throws for a missing entry', async () => {
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 
 		await expect(store.read('nope.ttl')).rejects.toThrow(/nope\.ttl/);
 	});
@@ -69,7 +69,7 @@ describe('SettingsFileStore', () => {
 	test('write preserves sibling entries', async () => {
 		globalValue = { 'other.ttl': { encoding: 'plain', content: '<o> a <k> .' } };
 
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 
 		await store.write('new.ttl', '<n> a <e> .');
 
@@ -80,7 +80,7 @@ describe('SettingsFileStore', () => {
 	test('deleting the last entry clears the settings key', async () => {
 		globalValue = { 'only.ttl': { encoding: 'plain', content: '<a> a <b> .' } };
 
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 
 		await store.delete('only.ttl');
 
@@ -89,7 +89,7 @@ describe('SettingsFileStore', () => {
 	});
 
 	test('rejects entries exceeding the size gate without writing', async () => {
-		const store = new SettingsFileStore('shacl.shapes', { maxEntryLength: 16 });
+		const store = new SettingsFileStore('files', { maxEntryLength: 16 });
 
 		await expect(store.write('big.ttl', 'x'.repeat(10_000) + Math.random())).rejects.toThrow(/too large/);
 		expect(updates).toHaveLength(0);
@@ -99,7 +99,7 @@ describe('SettingsFileStore', () => {
 		const encoded = await compressToBase64('<a> a <b> .');
 		globalValue = { 'old.ttl': { encoding: 'gzip+base64', content: encoded } };
 
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 
 		await store.rename('old.ttl', 'new.ttl');
 
@@ -110,7 +110,7 @@ describe('SettingsFileStore', () => {
 	});
 
 	test('reports created, changed and deleted keys on external value changes', async () => {
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 		const events: SettingsFileChangeEvent[] = [];
 		store.onDidChangeEntries(e => events.push(e));
 
@@ -132,7 +132,7 @@ describe('SettingsFileStore', () => {
 	});
 
 	test('bumps mtimes on observed changes and drops them on deletion', async () => {
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 
 		expect(store.mtime('a.ttl')).toBe(0);
 
@@ -151,7 +151,7 @@ describe('SettingsFileStore', () => {
 	test('ignores configuration changes that do not alter the map', () => {
 		globalValue = { 'a.ttl': { encoding: 'plain', content: 'one' } };
 
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 		const events: SettingsFileChangeEvent[] = [];
 		store.onDidChangeEntries(e => events.push(e));
 
@@ -161,7 +161,7 @@ describe('SettingsFileStore', () => {
 	});
 
 	test('serializes concurrent writes so no entry is lost', async () => {
-		const store = new SettingsFileStore('shacl.shapes');
+		const store = new SettingsFileStore('files');
 
 		await Promise.all([
 			store.write('a.ttl', '<a> a <x> .'),
@@ -170,5 +170,86 @@ describe('SettingsFileStore', () => {
 		]);
 
 		expect(store.keys().sort()).toEqual(['a.ttl', 'b.ttl', 'c.ttl']);
+	});
+
+	test('write preserves an existing references field', async () => {
+		globalValue = { 'shapes/x.ttl': { encoding: 'plain', content: 'old', references: [{ id: 'ws-a', name: 'A' }] } };
+
+		const store = new SettingsFileStore('files');
+
+		await store.write('shapes/x.ttl', '<a> a <b> .');
+
+		expect(globalValue!['shapes/x.ttl'].references).toEqual([{ id: 'ws-a', name: 'A' }]);
+		expect(await store.read('shapes/x.ttl')).toBe('<a> a <b> .');
+	});
+
+	test('setReferences adds, clears and skips missing entries', async () => {
+		globalValue = {
+			'shapes/x.ttl': { encoding: 'plain', content: 'x' },
+			'shapes/y.ttl': { encoding: 'plain', content: 'y', references: [{ id: 'ws-a', name: 'A' }] },
+		};
+
+		const store = new SettingsFileStore('files');
+
+		await store.setReferences({
+			'shapes/x.ttl': [{ id: 'ws-a', name: 'A' }],        // adds
+			'shapes/y.ttl': [],                                 // clears
+			'shapes/missing.ttl': [{ id: 'ws-b', name: 'B' }],  // skipped — no backing entry
+		});
+
+		expect(globalValue!['shapes/x.ttl'].references).toEqual([{ id: 'ws-a', name: 'A' }]);
+		expect(globalValue!['shapes/y.ttl'].references).toBeUndefined();
+		expect(globalValue!['shapes/missing.ttl']).toBeUndefined();
+		expect(store.getReferences('shapes/x.ttl')).toEqual([{ id: 'ws-a', name: 'A' }]);
+	});
+
+	test('setReferences does not write when nothing changes', async () => {
+		globalValue = { 'shapes/x.ttl': { encoding: 'plain', content: 'x', references: [{ id: 'ws-a', name: 'A' }] } };
+
+		const store = new SettingsFileStore('files');
+
+		await store.setReferences({ 'shapes/x.ttl': [{ id: 'ws-a', name: 'A' }] });
+
+		expect(updates).toHaveLength(0);
+	});
+
+	test('caches the backing map between changes instead of re-inspecting per read', () => {
+		globalValue = { 'shapes/x.ttl': { encoding: 'plain', content: 'x' } };
+
+		let inspects = 0;
+
+		(vscode.workspace as any).getConfiguration = () => ({
+			inspect: (_key: string) => {
+				inspects++;
+				return { globalValue };
+			},
+			update: async (_key: string, value: any) => {
+				globalValue = value;
+				fireConfigurationChange();
+			},
+		});
+
+		const store = new SettingsFileStore('files');
+		const afterConstruction = inspects;
+
+		// A change-free burst of reads — as in a reconcile or orphan scan over N
+		// files — must not re-inspect (deep-clone) the map per call.
+		for (let i = 0; i < 25; i++) {
+			store.keys();
+			store.has('shapes/x.ttl');
+			store.getReferences('shapes/x.ttl');
+		}
+
+		expect(inspects).toBe(afterConstruction);
+
+		// An external change invalidates the cache: the next read re-inspects.
+		globalValue = { 'shapes/x.ttl': { encoding: 'plain', content: 'y' } };
+		fireConfigurationChange();
+
+		const afterChange = inspects;
+
+		expect(store.keys()).toEqual(['shapes/x.ttl']);
+		expect(inspects).toBe(afterChange);
+		expect(afterChange).toBeGreaterThan(afterConstruction);
 	});
 });

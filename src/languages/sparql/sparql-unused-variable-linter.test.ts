@@ -8,9 +8,9 @@ import { LintingContext } from '@src/providers/linting/linting-context';
 /** Runs the linter over the tokens the same way the diagnostics service does. */
 function getUnusedVariableDiagnostics(document: TextDocument, tokens: any[]) {
 	const linter = new SparqlUnusedVariableLinter();
-	// The linter only ever passes `context.document` through untouched; the LSP TextDocument
-	// fixture used here is structurally compatible with vscode.TextDocument for that purpose.
-	const context: LintingContext = { document: document as unknown as LintingContext['document'], content: '', tokens, prefixes: {} };
+	// The linter maps token offsets to positions via `context.positionAt`; the LSP
+	// TextDocument fixture's `positionAt` is structurally compatible with vscode.Position.
+	const context: LintingContext = { positionAt: (offset: number) => document.positionAt(offset) as any, content: '', tokens, prefixes: {} };
 	const result = [];
 
 	linter.reset();

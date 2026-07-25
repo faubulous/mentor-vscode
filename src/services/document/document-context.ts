@@ -8,7 +8,7 @@ import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
-import { getConfig } from '@src/utilities/vscode/config';
+import { getPredicatesConfig } from '@src/utilities/vscode/config';
 import { IDocumentContext } from './document-context.interface';
 
 /**
@@ -115,16 +115,12 @@ export abstract class DocumentContext implements IDocumentContext {
 
 	/**
 	 * The label and description predicates from the `mentor.predicates.*` settings.
-	 * Read live from the configuration so setting changes apply immediately (e.g.
-	 * to hover tooltips) instead of being frozen at context creation time.
+	 * Backed by a cache that invalidates on configuration changes, so setting
+	 * changes apply immediately (e.g. to hover tooltips) without a configuration
+	 * read per access — this getter runs per tree node during a tree refresh.
 	 */
 	get predicates(): { label: string[]; description: string[] } {
-		const config = getConfig();
-
-		return {
-			label: config.get('predicates.label') ?? [],
-			description: config.get('predicates.description') ?? [],
-		};
+		return getPredicatesConfig();
 	}
 
 	constructor(

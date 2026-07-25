@@ -14,8 +14,8 @@ export enum ServiceToken {
 	DocumentFactory = "DocumentFactory",
 	/** Service for managing document contexts. */
 	DocumentContextService = "DocumentContextService",
-	/** Source that supplies documents with tokens and coordinates concurrent loads. */
-	DocumentTokenSource = "DocumentTokenSource",
+	/** Service that computes syntax and lint diagnostics for documents. */
+	DocumentDiagnosticsService = "DocumentDiagnosticsService",
 	/** Service for indexing workspace files. */
 	WorkspaceIndexerService = "WorkspaceIndexerService",
 	/** Service for discovering workspace files. */
@@ -28,8 +28,6 @@ export enum ServiceToken {
 	SparqlEndpointTester = "SparqlEndpointTester",
 	/** Service for per-document and notebook-cell SPARQL connection and inference settings. */
 	DocumentConnectionService = "DocumentConnectionService",
-	/** Factory for Comunica-compatible SPARQL query sources. */
-	SparqlQuerySourceFactory = "SparqlQuerySourceFactory",
 	/** Service for reading and resolving SPARQL store configurations. */
 	StoreConfigService = "StoreConfigService",
 	/** Serializer for SPARQL query results. */
@@ -57,10 +55,8 @@ export enum ServiceToken {
 	ShaclValidationService = "ShaclValidationService",
 	/** Service that loads the bundled preset and user shape graphs into the store. */
 	ShapeGraphService = "ShapeGraphService",
-	/** Settings-backed file store for the user shape files (mentor.shacl.shapes). */
-	UserShapeFileStore = "UserShapeFileStore",
-	/** Service that shows SPARQL activity (query execution, connection testing) in the status bar. */
-	SparqlStatusBarService = "SparqlStatusBarService",
+	/** Settings-backed virtual file store for user-scoped files (mentor.files). */
+	UserFileStore = "UserFileStore",
 	/** Service for updating workspace: URI references across all indexed documents on rename. */
 	ReferenceUpdateService = "ReferenceUpdateService",
 	/** Controller for the custom Mentor settings panel. */

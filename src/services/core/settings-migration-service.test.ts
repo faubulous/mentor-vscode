@@ -1,6 +1,7 @@
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { SettingsMigrationService } from '@src/services/core/settings-migration-service';
 import { ISettingsMigration } from '@src/services/core/settings-migration.interface';
+import { getLog } from '@src/utilities/vscode/log';
 
 /**
  * Builds a migration double that records when its `migrate` method runs.
@@ -38,7 +39,7 @@ describe('SettingsMigrationService', () => {
 
 	test('logs a failing migration and continues with the rest', async () => {
 		const order: string[] = [];
-		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const consoleError = vi.spyOn(getLog(), 'error').mockImplementation(() => {});
 
 		const failing = createMigration('failing', order, async () => {
 			throw new Error('boom');

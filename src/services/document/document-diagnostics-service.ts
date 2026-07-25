@@ -7,6 +7,7 @@ import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { getConfig } from '@src/utilities/vscode/config';
 import { getNamespaceDefinition, PrefixMap } from '@src/utilities';
+import { createPositionMapper, PositionMapper } from '@src/utilities/position';
 import { LintingContext, LintingProvider } from '@src/providers/linting';
 import {
 	DeprecatedWorkspaceUriLinter,
@@ -108,6 +109,64 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	}
 
 	/**
+	 * Runs an explicit syntax and lint validation over the given files and
+	 * publishes the results to the Problems panel — used by the Diagnose Workspace
+	 * command. Reads each file's content (from an already-open document when
+	 * present, otherwise from disk) and validates it in-process via
+	 * {@link diagnoseContent}, without opening a `vscode.TextDocument`. Files that
+	 * were not indexed (no context) or cannot be read are skipped.
+	 * @param uris The files to validate.
+	 * @param onProgress Optional callback invoked once per file with the number
+	 * processed so far and the total, for status bar progress.
+	 * @returns The number of files validated and how many have at least one error.
+	 */
+	async diagnoseFiles(
+		uris: readonly vscode.Uri[],
+		onProgress?: (processed: number, total: number) => void
+	): Promise<{ validated: number; filesWithErrors: number }> {
+		let validated = 0;
+		let filesWithErrors = 0;
+
+		for (let i = 0; i < uris.length; i++) {
+			const uri = uris[i];
+
+			onProgress?.(i + 1, uris.length);
+
+			// Only indexed files have a context to validate against.
+			if (!this._getContext(uri.toString())) {
+				continue;
+			}
+
+			// Prefer an already-open document's live text; otherwise read the bytes.
+			const openDocument = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri.toString());
+
+			let content: string;
+
+			if (openDocument) {
+				content = openDocument.getText();
+			} else {
+				try {
+					content = new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
+				} catch {
+					// Binary/undecodable files cannot be validated as text.
+					continue;
+				}
+			}
+
+			this.diagnoseContent(uri, content);
+			validated++;
+
+			const problems = this._collection.get(uri) ?? [];
+
+			if (problems.some(d => d.severity === vscode.DiagnosticSeverity.Error)) {
+				filesWithErrors++;
+			}
+		}
+
+		return { validated, filesWithErrors };
+	}
+
+	/**
 	 * Indicates whether all indexed files are validated (workspace-wide problems
 	 * overview) or only documents visible in an editor.
 	 */
@@ -158,38 +217,65 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	}
 
 	/**
-	 * Computes and publishes diagnostics for a locally tokenized document,
-	 * mirroring the language server's validation: lexer errors, parser and
-	 * semantic errors, and lint rule results.
+	 * Computes and publishes diagnostics for an open document, using its own
+	 * `positionAt` for offset → position mapping.
 	 * @param document The document to validate.
 	 */
 	private _validate(document: vscode.TextDocument): void {
-		const uri = document.uri.toString();
-		const context = this._getContext(uri);
+		this._diagnose(document.uri, document.getText(), offset => document.positionAt(offset));
+	}
+
+	/**
+	 * Computes and publishes syntax and lint diagnostics for an indexed file
+	 * directly from its content, without opening a `vscode.TextDocument`. Mirrors
+	 * how SHACL validation publishes from the in-memory context: offsets are
+	 * mapped to positions with a content-backed mapper instead of a document.
+	 * Used by the workspace indexer so `index.diagnoseFiles` gives a workspace-wide
+	 * overview without the per-file document-open cost. Skips files without a
+	 * loaded context.
+	 * @param uri The document URI.
+	 * @param content The document text (as read for indexing).
+	 */
+	diagnoseContent(uri: vscode.Uri, content: string): void {
+		if (!this._getContext(uri.toString())) {
+			return;
+		}
+
+		this._diagnose(uri, content, createPositionMapper(content));
+	}
+
+	/**
+	 * Computes and publishes diagnostics for a locally tokenized document,
+	 * mirroring the language server's validation: lexer errors, parser and
+	 * semantic errors, and lint rule results.
+	 * @param uri The document URI.
+	 * @param content The document text.
+	 * @param positionAt Maps a character offset to a position.
+	 */
+	private _diagnose(uri: vscode.Uri, content: string, positionAt: PositionMapper): void {
+		const context = this._getContext(uri.toString());
 
 		if (!context) {
 			return;
 		}
 
-		const content = document.getText();
-
 		if (!content.length) {
-			this._collection.set(document.uri, []);
+			this._collection.set(uri, []);
 			return;
 		}
 
 		try {
 			if (isTokenizedDocumentContext(context)) {
-				this._collection.set(document.uri, this._computeDiagnostics(document, context, content));
+				this._collection.set(uri, this._computeDiagnostics(uri, context, content, positionAt));
 			} else {
 				// Structurally parsed documents (RDF/XML): the parse either succeeds
 				// or the catch below reports the failure, matching the previous
 				// language server behavior.
 				new XmlParser().parse(content);
-				this._collection.set(document.uri, []);
+				this._collection.set(uri, []);
 			}
 		} catch (e) {
-			this._collection.set(document.uri, [
+			this._collection.set(uri, [
 				new vscode.Diagnostic(
 					new vscode.Range(0, 0, 0, 0),
 					e ? e.toString() : 'An error occurred while parsing the document.',
@@ -199,12 +285,12 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		}
 	}
 
-	private _computeDiagnostics(document: vscode.TextDocument, context: ITokenizedDocumentContext, content: string): vscode.Diagnostic[] {
+	private _computeDiagnostics(uri: vscode.Uri, context: ITokenizedDocumentContext, content: string, positionAt: PositionMapper): vscode.Diagnostic[] {
 		const lexer = ParserFactory.getLexer(context.syntax);
 
 		// The lexer instance is shared — set the generator on every call so a
 		// file-scoped generator does not leak between documents.
-		lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(document.uri.toString());
+		lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(uri.toString());
 
 		// Triplate-aware tokenization: the parser consumes placeholder `parseTokens`
 		// (so its CST/error recovery stay correct) while `tokens` is the faithful
@@ -224,9 +310,9 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 			: this._linters;
 
 		const diagnostics = [
-			...this._getLexDiagnostics(document, lexErrors),
-			...this._getParseDiagnostics(document, errors),
-			...this._getLintDiagnostics(document, content, tokens, linters),
+			...this._getLexDiagnostics(positionAt, lexErrors),
+			...this._getParseDiagnostics(positionAt, content, errors),
+			...this._getLintDiagnostics(positionAt, content, tokens, linters),
 		];
 
 		return diagnostics.map(d => this._toVscodeDiagnostic(d));
@@ -238,7 +324,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	 * the only signal for invalid characters — e.g. junk appended to an IRI —
 	 * that leaves a token stream which still parses.
 	 */
-	private _getLexDiagnostics(document: vscode.TextDocument, errors: ILexingError[]): LspDiagnostic[] {
+	private _getLexDiagnostics(positionAt: PositionMapper, errors: ILexingError[]): LspDiagnostic[] {
 		return errors.map(
 			(error): LspDiagnostic => {
 				// Guarantee a visible range even for a zero-length error.
@@ -248,17 +334,15 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 					severity: LspDiagnosticSeverity.Error,
 					message: error.message,
 					range: {
-						start: document.positionAt(error.offset),
-						end: document.positionAt(error.offset + length),
+						start: positionAt(error.offset),
+						end: positionAt(error.offset + length),
 					},
 				};
 			}
 		);
 	}
 
-	private _getParseDiagnostics(document: vscode.TextDocument, errors: IRecognitionException[]): LspDiagnostic[] {
-		const content = document.getText();
-
+	private _getParseDiagnostics(positionAt: PositionMapper, content: string, errors: IRecognitionException[]): LspDiagnostic[] {
 		return errors.map(
 			(error): LspDiagnostic => {
 				const { message, name, context, token } = error;
@@ -277,8 +361,8 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 
 				if (token.tokenType?.name !== 'EOF') {
 					constructedDiagnostic.range = LspRange.create(
-						document.positionAt(token.startOffset),
-						document.positionAt((token.endOffset ?? token.startOffset) + 1)
+						positionAt(token.startOffset),
+						positionAt((token.endOffset ?? token.startOffset) + 1)
 					);
 				} else {
 					const { previousToken = {} } = error as any; // chevrotain doesn't have this typed fully, but it exists for early exit exceptions
@@ -294,8 +378,8 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 					}
 
 					constructedDiagnostic.range = LspRange.create(
-						document.positionAt(rangeStart),
-						document.positionAt(rangeEnd)
+						positionAt(rangeStart),
+						positionAt(rangeEnd)
 					);
 				}
 
@@ -304,9 +388,9 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		);
 	}
 
-	private _getLintDiagnostics(document: vscode.TextDocument, content: string, tokens: IToken[], linters: LintingProvider[]): LspDiagnostic[] {
+	private _getLintDiagnostics(positionAt: PositionMapper, content: string, tokens: IToken[], linters: LintingProvider[]): LspDiagnostic[] {
 		const prefixes: PrefixMap = {};
-		const context: LintingContext = { document, content, tokens, prefixes };
+		const context: LintingContext = { positionAt, content, tokens, prefixes };
 		const result: LspDiagnostic[] = [];
 
 		for (const linter of linters) {

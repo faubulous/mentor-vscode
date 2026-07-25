@@ -17,6 +17,7 @@ import { SettingsSectionId } from '..';
 import { SettingsSectionController } from '../../settings-section-controller';
 import { SettingsSectionMessages } from '../../settings-panel-messages';
 import { confirmSettingsItemDeletion } from '../../confirm-settings-item-deletion';
+import { getErrorMessage } from '@src/utilities/error';
 
 const SECTION_ID = 'validation.profiles' satisfies SettingsSectionId;
 
@@ -197,7 +198,7 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 
 					this._post({ section: SECTION_ID, id: 'WritePresetShapesResult', presetId: message.presetId, uri });
 				} catch (error) {
-					const reason = error instanceof Error ? error.message : String(error);
+					const reason = getErrorMessage(error);
 
 					vscode.window.showErrorMessage(`Could not copy the preset shapes into the workspace: ${reason}`);
 
@@ -241,9 +242,10 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 
 	/**
 	 * Offers to delete user shape files that are no longer referenced by any
-	 * validation profile, after a profile deletion. The webview posts the check
-	 * right after committing the deletion, so this first waits for the settings
-	 * write to land (bounded by a timeout) before computing the orphans.
+	 * validation profile. The webview posts the check after closing the profile
+	 * editor or committing a profile deletion — either of which may leave a shape
+	 * unreferenced — so this first waits (bounded by a timeout) for any in-flight
+	 * `mentor.shacl.validation` write to land before computing the orphans.
 	 */
 	private async _promptDeleteOrphanedShapes(): Promise<void> {
 		await new Promise<void>(resolve => {
@@ -278,7 +280,7 @@ export class ValidationProfilesSectionController implements SettingsSectionContr
 		);
 
 		if (action === 'Delete') {
-			const files = container.resolve<SettingsFileStore>(ServiceToken.UserShapeFileStore);
+			const files = container.resolve<SettingsFileStore>(ServiceToken.UserFileStore);
 
 			for (const fileName of orphaned) {
 				await files.delete(fileName);

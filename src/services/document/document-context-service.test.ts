@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as vscode from 'vscode';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { DocumentTokenSource } from '@src/services/document/document-token-source';
+import { getLog } from '@src/utilities/vscode/log';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 
 vi.mock('@faubulous/mentor-rdf', () => ({
@@ -1012,7 +1013,7 @@ describe('DocumentContextService', () => {
 			service.contexts[uri] = ctx;
 			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
 
-			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const warnSpy = vi.spyOn(getLog(), 'warn').mockImplementation(() => {});
 
 			tokenSource.deliverTokens(uri, []);
 			await new Promise(resolve => setTimeout(resolve, 10));

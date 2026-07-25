@@ -61,7 +61,7 @@ export function validateUserShapeFileName(value: string, files: SettingsFileStor
 		return `Supported file extensions: ${ALLOWED_EXTENSIONS.join(', ')}.`;
 	}
 
-	if (files.has(withExtension)) {
+	if (files.has(`${USER_SHAPES_FOLDER}/${withExtension}`)) {
 		return `A user shape file named '${withExtension}' already exists.`;
 	}
 
@@ -70,14 +70,14 @@ export function validateUserShapeFileName(value: string, files: SettingsFileStor
 
 /**
  * Prompts for a file name, creates a new user shape file seeded with a SHACL
- * skeleton in the user settings (`mentor.shacl.shapes`) and opens it in an
- * editor beside the active one. Saving the editor updates the settings entry;
- * the shape graph service loads it into the store on every change.
+ * skeleton in the user settings (`mentor.files`, under the `shapes/` path) and
+ * opens it in an editor beside the active one. Saving the editor updates the
+ * settings entry; the shape graph service loads it into the store on reference.
  * @returns The canonical `user:///` graph URI of the created file, or
  * `undefined` when the prompt was dismissed.
  */
 export async function createUserShapeFile(): Promise<string | undefined> {
-	const files = container.resolve<SettingsFileStore>(ServiceToken.UserShapeFileStore);
+	const files = container.resolve<SettingsFileStore>(ServiceToken.UserFileStore);
 
 	const input = await vscode.window.showInputBox({
 		title: 'New User Shape File',
@@ -90,11 +90,11 @@ export async function createUserShapeFile(): Promise<string | undefined> {
 		return undefined;
 	}
 
-	const fileName = withDefaultShapeExtension(input.trim());
+	const path = `${USER_SHAPES_FOLDER}/${withDefaultShapeExtension(input.trim())}`;
 
-	await files.write(fileName, SHAPE_SKELETON);
+	await files.write(path, SHAPE_SKELETON);
 
-	const uri = UserUri.forFile(USER_SHAPES_FOLDER, fileName);
+	const uri = UserUri.forPath(path);
 	const document = await vscode.workspace.openTextDocument(vscode.Uri.parse(uri));
 
 	await vscode.window.showTextDocument(document, { preview: false, viewColumn: vscode.ViewColumn.Beside });
