@@ -47,6 +47,7 @@ function makeStore(): Store {
 import * as vscode from 'vscode';
 import type { Store } from '@faubulous/mentor-rdf';
 import { RdfSyntax, RdfToken, TurtleLexer, TurtleParser, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
+import { ParserFactory } from '@src/languages/parser-factory';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { createTurtleDocument, createMockTextDocument } from '@src/utilities/mocks/factories';
 
@@ -498,5 +499,67 @@ describe('blank node collision prevention', () => {
         expect(idsA.length).toBeGreaterThan(0);
         expect(idsB.length).toBeGreaterThan(0);
         expect(idsA.some(id => idsB.includes(id))).toBe(false);
+    });
+});
+
+describe('TurtleDocument.parse — grammar parse failures', () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('does not fail the parse when the grammar parse throws', () => {
+        const doc = makeDoc();
+
+        // A recursive-descent parser exhausts the stack on a pathologically
+        // large document; the tokens are still valid and must survive.
+        vi.spyOn(ParserFactory, 'getParser').mockReturnValue({
+            parse: () => { throw new RangeError('Maximum call stack size exceeded'); },
+            errors: [],
+            semanticErrors: [],
+            input: [],
+        } as any);
+
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+        expect(() => doc.parse(text)).not.toThrow();
+
+        // The token-derived state is populated as usual.
+        expect(doc.tokens.length).toBeGreaterThan(0);
+        expect(doc.namespaces['ex']).toBe('http://example.org/');
+        expect(doc.isParsed).toBe(true);
+
+        // Without a usable parse result every consumer falls back to its own
+        // parse, where the failure is handled (reported or swallowed) already.
+        expect(doc.getParseResult(text)).toBeUndefined();
+    });
+
+    it('still loads no triples when the grammar parse throws', async () => {
+        const doc = makeDoc();
+
+        vi.spyOn(ParserFactory, 'getParser').mockReturnValue({
+            parse: () => { throw new RangeError('Maximum call stack size exceeded'); },
+            errors: [],
+            semanticErrors: [],
+            input: [],
+        } as any);
+
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+        doc.parse(text);
+
+        await expect(doc.loadTriples(text)).resolves.toBeUndefined();
+    });
+
+    it('captures a reusable parse result when the grammar parse succeeds', () => {
+        const doc = makeDoc();
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+        doc.parse(text);
+
+        const result = doc.getParseResult(text);
+
+        expect(result).toBeDefined();
+        expect(result!.cst).toBeDefined();
+        expect(result!.tokens.length).toBeGreaterThan(0);
     });
 });

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/workspace-store';
+import { KeyedDebouncer } from '@src/utilities/debounce';
 
 /**
  * Matches the IRI value inside `FROM <…>`, `FROM NAMED <…>`, and `GRAPH <…>` clauses.
@@ -24,6 +25,13 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
 
     private readonly _subscriptions: vscode.Disposable[] = [];
 
+    /**
+     * Debounces per-edit validation: each pass resolves the document connection
+     * (a scan over open notebooks), probes the graph cache and sweeps the text,
+     * which is too much to run on every keystroke.
+     */
+    private readonly _changeDebouncer = new KeyedDebouncer<string>(300);
+
     constructor(
         private readonly _documentConnectionService: IDocumentConnectionService,
         private readonly _graphService: IGraphManagementService
@@ -32,9 +40,17 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
 
         this._subscriptions.push(
             this._collection,
+            this._changeDebouncer,
             vscode.workspace.onDidOpenTextDocument(doc => this._validateIfSparql(doc)),
-            vscode.workspace.onDidChangeTextDocument(e => this._validateIfSparql(e.document)),
-            vscode.workspace.onDidCloseTextDocument(doc => this._collection.delete(doc.uri)),
+            vscode.workspace.onDidChangeTextDocument(e => {
+                if (e.document.languageId === 'sparql') {
+                    this._changeDebouncer.schedule(e.document.uri.toString(), () => this._validateIfSparql(e.document));
+                }
+            }),
+            vscode.workspace.onDidCloseTextDocument(doc => {
+                this._changeDebouncer.cancel(doc.uri.toString());
+                this._collection.delete(doc.uri);
+            }),
         );
 
         // Re-validate open SPARQL documents whenever the graph cache changes.
@@ -50,6 +66,24 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
             this._documentConnectionService.onDidChangeConnectionForDocument(uri => this._revalidateDocument(uri))
         );
 
+        // Safety net for the applyEdit/event-ordering race: the connection-change
+        // event fires right after `applyEdit` resolves, which may be before the
+        // extension host has applied the cell-metadata change — a revalidation at
+        // that moment reads the old connection. The notebook event carries the
+        // final metadata, so re-validate affected SPARQL cells from here as well
+        // (debounced, so the two triggers coalesce into one pass).
+        this._subscriptions.push(
+            vscode.workspace.onDidChangeNotebookDocument(e => {
+                for (const change of e.cellChanges) {
+                    if (change.metadata !== undefined && change.cell.document.languageId === 'sparql') {
+                        const cellDocument = change.cell.document;
+
+                        this._changeDebouncer.schedule(cellDocument.uri.toString(), () => this._validateIfSparql(cellDocument));
+                    }
+                }
+            })
+        );
+
         // Validate all currently open SPARQL documents on startup.
         for (const doc of vscode.workspace.textDocuments) {
             this._validateIfSparql(doc);
@@ -63,10 +97,30 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
     }
 
     private _revalidateDocument(uri: vscode.Uri): void {
-        const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString());
+        const key = uri.toString();
+        const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === key);
 
         if (document) {
-            this._validateIfSparql(document);
+            if (document.languageId === 'sparql') {
+                // An explicit connection change retries a previously failed graph
+                // load, so the recovery via onDidChangeGraphs can fire.
+                this._validateDocument(document, { retryOnError: true });
+            }
+
+            return;
+        }
+
+        // Defensive fan-out: a notebook-level notification carries the notebook
+        // URI, which never matches a text document — cell documents do. Re-validate
+        // the notebook's SPARQL cells instead of silently dropping the event.
+        const notebook = vscode.workspace.notebookDocuments.find(nb => nb.uri.toString() === key);
+
+        if (notebook) {
+            for (const cell of notebook.getCells()) {
+                if (cell.document.languageId === 'sparql') {
+                    this._validateDocument(cell.document, { retryOnError: true });
+                }
+            }
         }
     }
 
@@ -84,7 +138,7 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
         }
     }
 
-    private _validateDocument(document: vscode.TextDocument): void {
+    private _validateDocument(document: vscode.TextDocument, options?: { retryOnError?: boolean }): void {
         const connection = this._documentConnectionService.getConnectionForDocument(document.uri);
 
         // Load the connection's graphs on demand when they are not cached yet or the
@@ -92,7 +146,9 @@ export class SparqlGraphDiagnosticProvider implements vscode.Disposable {
         // document to a connection that was not auto-loaded at startup). The load fires
         // onDidChangeGraphs on completion, which re-validates this document against the
         // freshly loaded set. Served from the cache when fresh; no-op when not eligible.
-        void this._graphService.ensureGraphsLoadedForConnection(connection);
+        // `retryOnError` is only passed for explicit connection changes — never from
+        // the per-edit path — so failing endpoints are not re-queried per keystroke.
+        void this._graphService.ensureGraphsLoadedForConnection(connection, options);
 
         // The in-memory workspace store always has a graph list (so it lints regardless of
         // the auto-load setting); a remote connection lints only when it auto-loads graphs

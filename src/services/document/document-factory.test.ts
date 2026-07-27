@@ -438,7 +438,7 @@ describe('DocumentFactory', () => {
 			expect(sparql?.icon).toBe('sparql-file');
 		});
 
-		it('returns file icon for an unknown language id', async () => {
+		it('does not list the notebook container language (json)', async () => {
 			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
 				new TextEncoder().encode(JSON.stringify({
 					contributes: {
@@ -449,10 +449,11 @@ describe('DocumentFactory', () => {
 				})) as any
 			);
 
+			// The .mnb notebook container maps to 'json', but json is not a
+			// document context language: create() has no case for it.
 			const result = await factory.getSupportedLanguagesInfo();
-			const json = result.find(l => l.id === 'json');
 
-			expect(json?.icon).toBe('rdf-file');
+			expect(result.find(l => l.id === 'json')).toBeUndefined();
 		});
 	});
 

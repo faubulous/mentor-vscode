@@ -6,7 +6,7 @@ import { useSettingsItemDraft } from '../../../hooks/use-settings-item-draft';
 import { ModalSettingsItemEditor } from '../../../components/modal-settings-item-editor';
 import { ValidationProfileView, VALIDATION_STYLESHEET_ID } from '../shared';
 import { ValidationShapeGraphList } from './validation-shape-graph-list';
-import { ValidationProfilePathsEditor } from './validation-profile-paths-editor';
+import { ValidationProfileDraftCounts, ValidationProfilePathsEditor } from './validation-profile-paths-editor';
 import stylesheet from '../validation.css';
 
 export interface ValidationProfileEditorProps {
@@ -44,6 +44,16 @@ export interface ValidationProfileEditorProps {
 	 * Requests a live match count for a (positive) path entry.
 	 */
 	onRequestEntryCount: (pattern: string) => void;
+
+	/**
+	 * Live aggregate counts for the edited draft's path lists.
+	 */
+	draftCounts: ValidationProfileDraftCounts;
+
+	/**
+	 * Requests the aggregate counts for the draft's path lists.
+	 */
+	onRequestDraftCounts: (includeFiles: string[], excludeFiles: string[]) => void;
 
 	/**
 	 * Opens the interactive pattern editor for a path entry.
@@ -105,6 +115,8 @@ export function ValidationProfileEditor({
 	missingShapes,
 	entryCounts,
 	onRequestEntryCount,
+	draftCounts,
+	onRequestDraftCounts,
 	onEditEntry,
 	onOpenShape,
 	onCreateShape,
@@ -266,6 +278,8 @@ export function ValidationProfileEditor({
 							onExcludeChange={(next) => setDraft(d => ({ ...d, excludeFiles: next }))}
 							entryCounts={entryCounts}
 							onRequestEntryCount={onRequestEntryCount}
+							draftCounts={draftCounts}
+							onRequestDraftCounts={onRequestDraftCounts}
 							onEditEntry={onEditEntry}
 						/>
 						{hasDuplicatePaths && (

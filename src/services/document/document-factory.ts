@@ -60,7 +60,11 @@ export class DocumentFactory {
 		const extensions = Object.keys(this.supportedExtensions);
 		const languages = extensions.map(e => this.supportedExtensions[e].language);
 
-		this.supportedLanguages = new Set(languages);
+		// Notebook container files (.mnb → 'json') are opened by the notebook
+		// serializer, not as document contexts: create() has no 'json' case, and
+		// admitting the language here would try (and fail) to create a context
+		// on every edit of any JSON file.
+		this.supportedLanguages = new Set(languages.filter(language => language !== 'json'));
 	}
 
 	/**

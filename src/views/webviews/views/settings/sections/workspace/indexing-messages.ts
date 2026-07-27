@@ -31,4 +31,15 @@ export type IndexingMessages =
 	| { id: 'IndexingStatsChanged'; stats: IndexingStatsView }
 	| { id: 'ShowIndexLog' }
 	| { id: 'ReindexWorkspace' }
-	| { id: 'DiagnoseWorkspace' };
+	| { id: 'DiagnoseWorkspace' }
+	// Live match count for a single include/exclude glob pattern, so the
+	// pattern inputs can show how many workspace files a pattern covers.
+	| { id: 'GetIndexMatchPreview'; pattern: string }
+	| { id: 'IndexMatchPreviewResult'; pattern: string; count: number }
+	// Invalidates the webview's cached counts after the candidate file set changed.
+	| { id: 'IndexMatchPreviewsInvalidated' }
+	// Opens the interactive pattern editor (a host quick pick previewing the
+	// matched files); the result carries the confirmed pattern, or none when the
+	// editor was dismissed.
+	| { id: 'EditIndexPattern'; pattern: string }
+	| { id: 'EditIndexPatternResult'; pattern?: string };

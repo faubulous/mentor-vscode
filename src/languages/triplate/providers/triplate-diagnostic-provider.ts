@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { compile, isTemplate, TriplateError } from 'triplate';
 import { TRIPLATE_LANGUAGE_IDS } from '@src/services/document/document-languages';
+import { KeyedDebouncer } from '@src/utilities/debounce';
 
 /**
  * Publishes diagnostics for triplate template syntax errors by running the triplate
@@ -13,14 +14,25 @@ export class TriplateDiagnosticProvider implements vscode.Disposable {
 
 	private readonly _subscriptions: vscode.Disposable[] = [];
 
+	/**
+	 * Debounces per-edit validation: `compile()` runs a full template parse and
+	 * would otherwise execute on every keystroke in every open document.
+	 */
+	private readonly _changeDebouncer = new KeyedDebouncer<string>(300);
+
 	constructor() {
 		this._collection = vscode.languages.createDiagnosticCollection('triplate');
 
 		this._subscriptions.push(
 			this._collection,
+			this._changeDebouncer,
 			vscode.workspace.onDidOpenTextDocument(doc => this._validate(doc)),
-			vscode.workspace.onDidChangeTextDocument(e => this._validate(e.document)),
-			vscode.workspace.onDidCloseTextDocument(doc => this._collection.delete(doc.uri)),
+			vscode.workspace.onDidChangeTextDocument(e =>
+				this._changeDebouncer.schedule(e.document.uri.toString(), () => this._validate(e.document))),
+			vscode.workspace.onDidCloseTextDocument(doc => {
+				this._changeDebouncer.cancel(doc.uri.toString());
+				this._collection.delete(doc.uri);
+			}),
 		);
 
 		for (const doc of vscode.workspace.textDocuments) {

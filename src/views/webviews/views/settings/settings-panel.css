@@ -629,6 +629,34 @@ vscode-textarea.monospace {
 	opacity: 0.35;
 }
 
+/* Live match count shown as after-content of a list entry: a single
+   right-aligned line taking only the space it needs, sitting left of the
+   remove icon. */
+.string-list-item .string-list-count {
+	flex: 0 0 auto;
+	white-space: nowrap;
+	text-align: right;
+}
+
+/* The count opens the pattern editor when one is wired up. The shared suffix
+   class disables pointer events; re-enable them so the count is clickable. */
+.string-list-item .string-list-count-action {
+	color: var(--vscode-textLink-foreground);
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.string-list-item .string-list-count-action:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+	text-decoration: underline;
+}
+
+/* Warning icon shown as after-content of an invalid list entry. */
+.string-list-item .string-list-warning {
+	color: var(--vscode-editorWarning-foreground);
+	cursor: help;
+}
+
 /* Drop indicators on items — shift items apart and show a prominent line */
 .string-list-item.drop-before {
 	margin-top: 20px;

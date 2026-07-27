@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -12,6 +12,8 @@ vi.mock('tsyringe', () => ({
 vi.mock('uuid', () => ({ v4: () => 'test-uuid-1234' }));
 
 import * as vscode from 'vscode';
+import { __events } from '@src/utilities/mocks/vscode';
+import { createMockNotebook } from '@src/utilities/mocks/factories';
 import { DocumentConnectionService } from '@src/languages/sparql/services/document-connection-service';
 import { SparqlConnectionRegistry, WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
 import { TripleStoreConfigService } from '@src/languages/sparql/services/triple-store-config-service';
@@ -552,5 +554,107 @@ describe('DocumentConnectionService', () => {
 
             expect(ctx.workspaceState.get('sparql.connection:untitled:Untitled-1')).toBe('conn-1');
         });
+    });
+});
+
+describe('DocumentConnectionService — notebook-level bulk updates', () => {
+    beforeEach(() => {
+        // Services under test subscribe to the shared mock events; drop the
+        // listeners left behind by previous tests before firing events.
+        __events.reset();
+        (vscode.workspace as any).notebookDocuments = [];
+    });
+
+    afterEach(() => {
+        (vscode.workspace as any).notebookDocuments = [];
+    });
+
+    function makeNotebookSetup(metadata: Array<Record<string, any>>) {
+        const notebook = createMockNotebook(metadata.map(m => ({ languageId: 'sparql', metadata: m })));
+
+        (vscode.workspace as any).notebookDocuments = [notebook];
+
+        const { svc } = makeServices();
+
+        return { notebook, svc, cells: notebook.getCells() };
+    }
+
+    it('setConnectionForNotebook applies the metadata and fires once per cell URI', async () => {
+        const { notebook, svc, cells } = makeNotebookSetup([{ connectionId: 'a' }, { connectionId: 'a' }]);
+
+        const fired: string[] = [];
+        svc.onDidChangeConnectionForDocument(uri => fired.push(uri.toString()));
+
+        const changed = await svc.setConnectionForNotebook(notebook, 'b');
+
+        expect(changed).toHaveLength(2);
+
+        // The metadata round-trips through the mock applyEdit...
+        expect(cells.map(c => c.metadata.connectionId)).toEqual(['b', 'b']);
+
+        // ...and the events carry the CELL URIs — a notebook URI would be lost
+        // on URI-scoped consumers such as the FROM-graph linter.
+        expect(fired).toEqual(cells.map(c => c.document.uri.toString()));
+
+        // The stored binding is readable back through the public API.
+        expect(svc.getUnresolvedConnectionId(cells[0].document.uri)).toBe('b');
+    });
+
+    it('setConnectionForNotebook skips cells that already have the connection', async () => {
+        const { notebook, svc, cells } = makeNotebookSetup([{ connectionId: 'b' }, { connectionId: 'a' }]);
+
+        const fired: string[] = [];
+        svc.onDidChangeConnectionForDocument(uri => fired.push(uri.toString()));
+
+        const changed = await svc.setConnectionForNotebook(notebook, 'b');
+
+        expect(changed).toHaveLength(1);
+        expect(fired).toEqual([cells[1].document.uri.toString()]);
+    });
+
+    it('setInferenceEnabledForNotebook sets, clears and fires per changed cell', async () => {
+        const { notebook, svc, cells } = makeNotebookSetup([{}, { inferenceEnabled: true }]);
+
+        // Setting true only changes the first cell.
+        let changed = await svc.setInferenceEnabledForNotebook(notebook, true);
+
+        expect(changed).toHaveLength(1);
+        expect(cells.map(c => c.metadata.inferenceEnabled)).toEqual([true, true]);
+        expect(svc.getInferenceEnabledForDocument(cells[0].document.uri)).toBe(true);
+
+        // Clearing removes the key from both cells.
+        changed = await svc.setInferenceEnabledForNotebook(notebook, undefined);
+
+        expect(changed).toHaveLength(2);
+        expect(cells.every(c => !('inferenceEnabled' in c.metadata))).toBe(true);
+    });
+
+    it('invalidates the cell lookup cache when notebook metadata changes', async () => {
+        const { notebook, svc, cells } = makeNotebookSetup([{ connectionId: 'a' }]);
+
+        // Populate the cache with the first read.
+        expect(svc.getUnresolvedConnectionId(cells[0].document.uri)).toBe('a');
+
+        // A raw metadata edit fires onDidChangeNotebookDocument via the mock
+        // applyEdit; the service must drop its cached cell lookup.
+        const edit = new vscode.WorkspaceEdit();
+        edit.set(notebook.uri, [vscode.NotebookEdit.updateCellMetadata(0, { connectionId: 'c' })] as any);
+
+        await vscode.workspace.applyEdit(edit);
+
+        expect(svc.getUnresolvedConnectionId(cells[0].document.uri)).toBe('c');
+    });
+
+    it('drops the cell lookup cache when a notebook closes', async () => {
+        const { notebook, svc, cells } = makeNotebookSetup([{ connectionId: 'a' }]);
+
+        expect(svc.getUnresolvedConnectionId(cells[0].document.uri)).toBe('a');
+
+        // Closing the notebook clears the cache; with the notebook gone, the
+        // lookup falls back to scanning the (now empty) notebook list.
+        (vscode.workspace as any).notebookDocuments = [];
+        __events.fireDidCloseNotebookDocument(notebook);
+
+        expect(svc.getUnresolvedConnectionId(cells[0].document.uri)).toBeUndefined();
     });
 });

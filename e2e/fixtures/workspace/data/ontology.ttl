@@ -1,0 +1,14 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix ex: <http://example.org/e2e#> .
+
+ex: a owl:Ontology ;
+    rdfs:label "E2E fixture ontology"@en .
+
+ex:Thing a owl:Class ;
+    rdfs:label "Thing"@en ;
+    rdfs:comment "The root class of the e2e fixture."@en .
+
+ex:name a owl:DatatypeProperty ;
+    rdfs:label "name"@en ;
+    rdfs:domain ex:Thing .

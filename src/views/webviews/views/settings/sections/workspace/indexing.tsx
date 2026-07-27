@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { isValidPathKey } from '@src/services/validation/shacl-validation-configuration';
 import { SectionHeader } from '@src/views/webviews/components/section-header';
 import { useScopedWebviewMessaging } from '@src/views/webviews/hooks';
 import { SettingRow } from '../../components/setting-row';
@@ -37,12 +38,45 @@ function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkSc
 	const [stats, setStats] = useState<IndexingStatsView>();
 	const [reindexing, setReindexing] = useState(false);
 
+	// Live match counts per include/exclude pattern, keyed by the raw pattern.
+	const [matchCounts, setMatchCounts] = useState<Record<string, number | undefined>>({});
+
+	// The pending apply-callback of the interactive pattern editor; only one host
+	// quick pick can be open at a time.
+	const patternEditRef = useRef<((pattern: string) => void) | undefined>(undefined);
+
 	const handleMessage = useCallback((message: IndexingMessages) => {
 		if (message.id === 'IndexingStatsResult' || message.id === 'IndexingStatsChanged') {
 			setStats(message.stats);
 
 			if (!message.stats.isIndexing) {
 				setReindexing(false);
+			}
+
+			return;
+		}
+
+		if (message.id === 'IndexMatchPreviewResult') {
+			setMatchCounts(prev => ({ ...prev, [message.pattern]: message.count }));
+
+			return;
+		}
+
+		if (message.id === 'IndexMatchPreviewsInvalidated') {
+			// The candidate file set changed; drop the counts so the editors
+			// re-request them instead of showing stale numbers.
+			setMatchCounts({});
+
+			return;
+		}
+
+		if (message.id === 'EditIndexPatternResult') {
+			const apply = patternEditRef.current;
+
+			patternEditRef.current = undefined;
+
+			if (message.pattern !== undefined) {
+				apply?.(message.pattern);
 			}
 		}
 	}, []);
@@ -67,6 +101,23 @@ function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkSc
 	};
 
 	const handleDiagnose = () => messaging?.postMessage({ id: 'DiagnoseWorkspace' });
+
+	const requestMatchCount = useCallback((pattern: string) => {
+		messaging?.postMessage({ id: 'GetIndexMatchPreview', pattern });
+	}, [messaging]);
+
+	// Patterns that cannot match anything in the workspace-relative path space
+	// the indexer matches against — flagged in the input instead of counted.
+	const getPatternProblem = useCallback((pattern: string) => {
+		return isValidPathKey(pattern)
+			? undefined
+			: 'Patterns must be workspace-relative, without .. segments or absolute paths.';
+	}, []);
+
+	const handleEditPattern = useCallback((pattern: string, apply: (newPattern: string) => void) => {
+		patternEditRef.current = apply;
+		messaging?.postMessage({ id: 'EditIndexPattern', pattern });
+	}, [messaging]);
 
 	return (
 		<div>
@@ -127,6 +178,11 @@ function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkSc
 					items={(settings['index.excludeFiles']?.value as string[]) ?? []}
 					placeholder="**/node_modules/**"
 					onChange={v => onUpdate(MENTOR_SETTINGS_SOURCE, 'index.excludeFiles', v)}
+					entryCounts={matchCounts}
+					onRequestEntryCount={requestMatchCount}
+					getEntryProblem={getPatternProblem}
+					countTitle="Indexable files this pattern excludes"
+					onEditEntry={handleEditPattern}
 				/>
 			</SettingRow>
 			<SettingRow {...rowProps('index.includeFiles')}>
@@ -134,6 +190,11 @@ function WorkspaceIndexingSection({ keys, settings, onUpdate, setScope, onBulkSc
 					items={(settings['index.includeFiles']?.value as string[]) ?? []}
 					placeholder="**/*.ttl"
 					onChange={v => onUpdate(MENTOR_SETTINGS_SOURCE, 'index.includeFiles', v)}
+					entryCounts={matchCounts}
+					onRequestEntryCount={requestMatchCount}
+					getEntryProblem={getPatternProblem}
+					countTitle="Indexable files this pattern matches"
+					onEditEntry={handleEditPattern}
 				/>
 			</SettingRow>
 		</div>

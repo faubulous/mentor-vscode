@@ -69,6 +69,7 @@ export class SparqlStatusBarService implements vscode.Disposable {
 
 		this._statusBarItem.command = 'mentor.command.showSparqlPanel';
 		this._statusBarItem.tooltip = 'Show SPARQL Panel';
+
 		this._render();
 
 		const graphService = this._graphService;
@@ -111,6 +112,15 @@ export class SparqlStatusBarService implements vscode.Disposable {
 				this._render();
 			})
 		);
+	}
+
+	/**
+	 * The currently rendered status bar text. The status bar item itself is not
+	 * reachable through the VS Code API, so consistency checks (e2e tests) read
+	 * the rendered label through this getter.
+	 */
+	get statusBarText(): string {
+		return this._statusBarItem.text;
 	}
 
 	/**

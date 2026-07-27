@@ -52,17 +52,27 @@ export class DefinitionTree implements TreeView {
 			showCollapseAll: true
 		});
 
+		// Defer tree rebuilds while the view is hidden and run them when it is
+		// shown again.
+		this.treeDataProvider.setViewVisibilityProvider(() => this.treeView.visible);
+
 		this._onDidChangeDocumentContext();
 
 		const disposables: vscode.Disposable[] = [
 			this.treeView,
+			this._decorationProvider,
 			this._registerDocumentContextHandler(),
 			this._registerDecorationProvider(),
 			this._registerValidationHandler(),
 			this._registerActiveLanguageHandler(),
 			this._registerPredicateSettingsHandler(),
 			this._registerRefreshCommand(),
-			this._registerEditorSelectionHandler()
+			this._registerEditorSelectionHandler(),
+			this.treeView.onDidChangeVisibility(e => {
+				if (e.visible) {
+					this.treeDataProvider.flushPendingRefresh();
+				}
+			})
 		];
 
 		const showReferences = this._settings.get('view.showReferences', true);
@@ -111,8 +121,14 @@ export class DefinitionTree implements TreeView {
 	}
 
 	private _registerValidationHandler(): vscode.Disposable {
+		// Validations fire per document (and on every edit that drops a stale
+		// result); coalesce the full tree rebuilds they trigger.
+		const debouncer = new Debouncer(250);
+
 		return this._validationService.onDidValidate(() => {
-			this.treeDataProvider.refresh(this._contextService.activeContext);
+			debouncer.schedule(() => {
+				this.treeDataProvider.refresh(this._contextService.activeContext);
+			});
 		});
 	}
 

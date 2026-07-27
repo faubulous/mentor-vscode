@@ -39,29 +39,50 @@ export class DocumentConnectionService implements IDocumentConnectionService {
 	 */
 	private readonly _untitledSparqlSnapshots = new Map<string, string>();
 
+	/**
+	 * Caches notebook cells by their document URI. Cell lookups run once per
+	 * cell per code-lens or diagnostics refresh, and scanning
+	 * `notebook.getCells()` for each makes a refresh of an N-cell notebook
+	 * O(N²). Cleared on any notebook change or close; entries repopulate lazily.
+	 */
+	private readonly _cellsByUri = new Map<string, vscode.NotebookCell>();
+
 	constructor(
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _connectionRegistry: ISparqlConnectionRegistry
 	) {
-		vscode.workspace.onDidChangeNotebookDocument(async e => {
-			for (const change of e.contentChanges) {
-				if (change.addedCells.length > 0) {
-					await this._inheritSettingsForNewCells(e.notebook, change.addedCells);
+		// Register with the extension context so the subscriptions are disposed
+		// on deactivation instead of leaking.
+		this._extensionContext.subscriptions.push(
+			vscode.workspace.onDidChangeNotebookDocument(async e => {
+				// Structural and metadata changes both invalidate cached cell lookups.
+				this._cellsByUri.clear();
+
+				for (const change of e.contentChanges) {
+					if (change.addedCells.length > 0) {
+						await this._inheritSettingsForNewCells(e.notebook, change.addedCells);
+					}
 				}
-			}
-		});
+			}),
 
-		vscode.workspace.onDidOpenTextDocument(document => {
-			this._snapshotUntitledSparqlDocument(document);
-		});
+			vscode.workspace.onDidCloseNotebookDocument(() => {
+				this._cellsByUri.clear();
+			}),
 
-		vscode.workspace.onDidChangeTextDocument(e => {
-			this._snapshotUntitledSparqlDocument(e.document);
-		});
+			vscode.workspace.onDidOpenTextDocument(document => {
+				this._snapshotUntitledSparqlDocument(document);
+			}),
 
-		vscode.workspace.onDidSaveTextDocument(async document => {
-			await this._migrateUntitledSave(document);
-		});
+			vscode.workspace.onDidChangeTextDocument(e => {
+				this._snapshotUntitledSparqlDocument(e.document);
+			}),
+
+			vscode.workspace.onDidSaveTextDocument(async document => {
+				await this._migrateUntitledSave(document);
+			}),
+
+			this._onDidChangeConnectionForDocument
+		);
 	}
 
 	/**
@@ -178,18 +199,10 @@ export class DocumentConnectionService implements IDocumentConnectionService {
 	 * @returns The cell-level inference setting, or `undefined` if not set.
 	 */
 	private _getInferenceEnabledForCell(cellUri: vscode.Uri): boolean | undefined {
-		const notebook = this._getNotebookFromCellUri(cellUri);
+		const inferenceEnabled = this._getCellFromUri(cellUri)?.metadata?.inferenceEnabled;
 
-		if (notebook) {
-			const cell = notebook.getCells().find(cell => cell.document.uri.toString() === cellUri.toString());
-
-			if (cell) {
-				const inferenceEnabled = cell.metadata?.inferenceEnabled;
-
-				if (typeof inferenceEnabled === 'boolean') {
-					return inferenceEnabled;
-				}
-			}
+		if (typeof inferenceEnabled === 'boolean') {
+			return inferenceEnabled;
 		}
 
 		return undefined;
@@ -316,19 +329,35 @@ export class DocumentConnectionService implements IDocumentConnectionService {
 	 * @returns The connection ID, or `undefined` if none is set.
 	 */
 	private _getConnectionIdForCell(cellUri: vscode.Uri): string | undefined {
-		const notebook = this._getNotebookFromCellUri(cellUri);
+		const connectionId = this._getCellFromUri(cellUri)?.metadata?.connectionId;
 
-		if (notebook) {
-			const cell = notebook.getCells().find(cell => cell.document.uri.toString() === cellUri.toString());
-
-			if (cell) {
-				const connectionId = cell.metadata?.connectionId;
-
-				if (typeof connectionId === 'string') {
-					return connectionId;
-				}
-			}
+		if (typeof connectionId === 'string') {
+			return connectionId;
 		}
+	}
+
+	/**
+	 * Finds a notebook cell by its document URI, served from {@link _cellsByUri}
+	 * when possible.
+	 * @param cellUri The URI of the notebook cell.
+	 * @returns The cell, or `undefined` when no open notebook contains it.
+	 */
+	private _getCellFromUri(cellUri: vscode.Uri): vscode.NotebookCell | undefined {
+		const key = cellUri.toString();
+		const cached = this._cellsByUri.get(key);
+
+		if (cached) {
+			return cached;
+		}
+
+		const notebook = this._getNotebookFromCellUri(cellUri);
+		const cell = notebook?.getCells().find(cell => cell.document.uri.toString() === key);
+
+		if (cell) {
+			this._cellsByUri.set(key, cell);
+		}
+
+		return cell;
 	}
 
 	/**
@@ -352,6 +381,91 @@ export class DocumentConnectionService implements IDocumentConnectionService {
 		}
 
 		this._onDidChangeConnectionForDocument.fire(documentUri);
+	}
+
+	/**
+	 * Sets the SPARQL connection for every cell of a notebook in one bulk
+	 * metadata edit, then fires {@link onDidChangeConnectionForDocument} once per
+	 * changed cell.
+	 * @param notebook The notebook document.
+	 * @param connectionId The ID of the connection to set.
+	 * @returns The cells whose metadata was changed.
+	 */
+	async setConnectionForNotebook(notebook: vscode.NotebookDocument, connectionId: string): Promise<vscode.NotebookCell[]> {
+		return this._updateNotebookCellMetadata(notebook, cell => {
+			if (cell.metadata?.connectionId === connectionId) {
+				return undefined;
+			}
+
+			return { ...cell.metadata, connectionId };
+		});
+	}
+
+	/**
+	 * Sets the inference setting for every cell of a notebook in one bulk
+	 * metadata edit, then fires {@link onDidChangeConnectionForDocument} once per
+	 * changed cell.
+	 * @param notebook The notebook document.
+	 * @param inferenceEnabled `true`/`false` to set, `undefined` to clear the cell setting.
+	 * @returns The cells whose metadata was changed.
+	 */
+	async setInferenceEnabledForNotebook(notebook: vscode.NotebookDocument, inferenceEnabled: boolean | undefined): Promise<vscode.NotebookCell[]> {
+		return this._updateNotebookCellMetadata(notebook, cell => {
+			if (cell.metadata?.inferenceEnabled === inferenceEnabled) {
+				return undefined;
+			}
+
+			const metadata = { ...cell.metadata };
+
+			if (inferenceEnabled === undefined) {
+				delete metadata.inferenceEnabled;
+			} else {
+				metadata.inferenceEnabled = inferenceEnabled;
+			}
+
+			return metadata;
+		});
+	}
+
+	/**
+	 * Applies a metadata update to every cell of a notebook as one workspace edit
+	 * and fires {@link onDidChangeConnectionForDocument} for each changed cell.
+	 * Firing per cell matters: URI-scoped consumers (e.g. the FROM-graph linter)
+	 * resolve the event URI against cell documents — a notebook URI matches nothing.
+	 * @param notebook The notebook document.
+	 * @param update Returns the new metadata for a cell, or `undefined` to leave it unchanged.
+	 * @returns The cells whose metadata was changed.
+	 */
+	private async _updateNotebookCellMetadata(
+		notebook: vscode.NotebookDocument,
+		update: (cell: vscode.NotebookCell) => { [key: string]: any } | undefined
+	): Promise<vscode.NotebookCell[]> {
+		const changed: vscode.NotebookCell[] = [];
+		const edits: vscode.NotebookEdit[] = [];
+
+		for (const cell of notebook.getCells()) {
+			const metadata = update(cell);
+
+			if (metadata) {
+				changed.push(cell);
+				edits.push(vscode.NotebookEdit.updateCellMetadata(cell.index, metadata));
+			}
+		}
+
+		if (edits.length === 0) {
+			return changed;
+		}
+
+		const workspaceEdit = new vscode.WorkspaceEdit();
+		workspaceEdit.set(notebook.uri, edits);
+
+		await vscode.workspace.applyEdit(workspaceEdit);
+
+		for (const cell of changed) {
+			this._onDidChangeConnectionForDocument.fire(cell.document.uri);
+		}
+
+		return changed;
 	}
 
 	/**

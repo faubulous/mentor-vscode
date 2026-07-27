@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, RdfSyntax, TurtleReader, RdfToken, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
+import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, RdfSyntax, RdfToken, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
-import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
+import { DocumentParseResult, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
 	getIriFromIriReference,
@@ -26,6 +26,12 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	private _inferenceExecuted = false;
 
 	private _tokens: IToken[] = [];
+
+	/**
+	 * The output of the last {@link parse} pass, reused by the diagnostics
+	 * service and {@link loadTriples} when it is still fresh for their text.
+	 */
+	private _lastParse: DocumentParseResult | undefined;
 
 	constructor(uri: vscode.Uri, syntax: RdfSyntax, store: Store, vocabulary: VocabularyRepository, settings: ISettingsService) {
 		super(uri, store, vocabulary, settings);
@@ -65,12 +71,50 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 	parse(text: string): IToken[] {
 		// Use a file-scoped blank node ID generator so that blank node identities
-		// are stable across reloads of the same document.
-		const tokens = this.tokenize(text, createFileBlankNodeIdGenerator(this.uri.toString()));
+		// are stable across reloads of the same document. The lexer instance is
+		// shared, so the generator must be set on every call.
+		const lexer = ParserFactory.getLexer(this.syntax);
+		lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(this.uri.toString());
+
+		const { tokens, parseTokens, errors: lexErrors, template } = tokenizeWithTriplate(lexer, text);
+
+		// Run the grammar parse here, once, with error recovery, so that the
+		// diagnostics service and loadTriples can reuse the result instead of
+		// re-tokenizing and re-parsing the same text.
+		//
+		// The parse can fail outright rather than just collecting errors — a
+		// recursive-descent parser exhausts the stack on a pathologically large
+		// document (e.g. a 24k-line SPARQL query). That must not fail the whole
+		// parse: the tokens drive most language features and are already
+		// available. Leaving the result unset makes every consumer fall back to
+		// its own parse, where such a failure is reported as a diagnostic
+		// (diagnostics service) or leaves the graph unloaded (loadTriples).
+		try {
+			const parser = ParserFactory.getParser(this.syntax);
+			const cst = parser.parse(parseTokens, false);
+
+			this._lastParse = {
+				text,
+				tokens,
+				parseTokens,
+				template,
+				cst,
+				lexErrors,
+				// The shared parser resets its error state on the next parse; copy it.
+				parserErrors: [...parser.errors],
+				semanticErrors: [...parser.semanticErrors]
+			};
+		} catch {
+			this._lastParse = undefined;
+		}
 
 		this.setTokens(tokens);
 
 		return tokens;
+	}
+
+	getParseResult(text: string): DocumentParseResult | undefined {
+		return this._lastParse?.text === text ? this._lastParse : undefined;
 	}
 
 	public override getIriAtPosition(position: vscode.Position): string | undefined {
@@ -154,12 +198,28 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			// a fresh inference pass is needed to populate the slug-based graph.
 			this._inferenceExecuted = false;
 
+			// Reuse the CST captured by parse() when it was produced from exactly
+			// this content and parsed cleanly. An errored or stale result falls
+			// back to the throwing parse below, so invalid documents keep loading
+			// no triples. Templates are excluded: their CST is built from
+			// placeholder tokens.
+			const cached = this.getParseResult(data);
+			const canReuseCst = cached !== undefined
+				&& !cached.template
+				&& cached.lexErrors.length === 0
+				&& cached.parserErrors.length === 0
+				&& cached.semanticErrors.length === 0;
+
 			// Only updates the existing graphs if the document was parsed successfully.
 			// Uses the existing tokens that were set on the context. The parser is a
 			// shared instance because chevrotain parser construction is expensive.
-			const cst = ParserFactory.getParser(RdfSyntax.Turtle).parse(this._tokens);
+			// The parser and reader must match the document syntax: TriG graph
+			// blocks or N-Quads graph terms are invisible to the Turtle grammar.
+			const cst = canReuseCst
+				? cached.cst
+				: ParserFactory.getParser(this.syntax).parse(this._tokens);
 
-			for (const q of new TurtleReader().visit(cst)) {
+			for (const q of ParserFactory.createReader(this.syntax).visit(cst)) {
 				const s = q.subject as Quad_Subject;
 				const p = q.predicate as Quad_Predicate;
 				const o = q.object as Quad_Object;

@@ -1,13 +1,60 @@
 import * as React from 'react';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useDebouncedValue } from '@src/views/webviews/hooks';
 
 interface StringListEditorProps {
 	items: string[];
 	placeholder?: string;
 	onChange: (items: string[]) => void;
+
+	/**
+	 * Live match counts per entry, keyed by the trimmed entry. Entries without a
+	 * key are still loading and render no indicator. Enables the in-input match
+	 * indicator together with {@link onRequestEntryCount}.
+	 */
+	entryCounts?: Record<string, number | undefined>;
+
+	/**
+	 * Requests a live match count for an entry. Called for every non-empty entry
+	 * once typing has settled.
+	 */
+	onRequestEntryCount?: (entry: string) => void;
+
+	/**
+	 * Returns why an entry is invalid, or `undefined` when it is fine. Invalid
+	 * entries show a warning instead of a count.
+	 */
+	getEntryProblem?: (entry: string) => string | undefined;
+
+	/**
+	 * Renders the indicator label for a match count, e.g. `n => `${n} files``.
+	 */
+	formatCount?: (count: number) => string;
+
+	/**
+	 * Tooltip shown on the match indicator.
+	 */
+	countTitle?: string;
+
+	/**
+	 * Opens the interactive pattern editor for an entry; `apply` writes the
+	 * confirmed pattern back to that entry. When given, the match indicator
+	 * becomes a link that opens the editor.
+	 */
+	onEditEntry?: (entry: string, apply: (newEntry: string) => void) => void;
 }
 
-export function StringListEditor({ items, placeholder = 'Enter value', onChange }: StringListEditorProps) {
+export function StringListEditor({
+	items,
+	placeholder = 'Enter value',
+	onChange,
+	entryCounts,
+	onRequestEntryCount,
+	getEntryProblem,
+	formatCount = count => `${count} file${count === 1 ? '' : 's'}`,
+	countTitle,
+	onEditEntry,
+}: StringListEditorProps) {
 	const [dragIndex, setDragIndex] = useState<number | null>(null);
 	const [dropIndex, setDropIndex] = useState<number | null>(null);
 	const [dropBefore, setDropBefore] = useState(true);
@@ -79,6 +126,83 @@ export function StringListEditor({ items, placeholder = 'Enter value', onChange 
 		setDropIndex(null);
 	}, []);
 
+	// Keep the live match counts current, but off the keystroke path: each count
+	// is computed by the host over every workspace file.
+	const countableKey = JSON.stringify(
+		onRequestEntryCount
+			? items.map(item => item.trim()).filter(item => item.length > 0 && !getEntryProblem?.(item))
+			: []
+	);
+	const settledCountableKey = useDebouncedValue(countableKey);
+
+	useEffect(() => {
+		if (!onRequestEntryCount) {
+			return;
+		}
+
+		for (const entry of JSON.parse(settledCountableKey) as string[]) {
+			onRequestEntryCount(entry);
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [settledCountableKey]);
+
+	/**
+	 * The in-input indicator for an entry: a warning for invalid entries, the
+	 * live match count once the host reported one, nothing while it loads. With
+	 * {@link onEditEntry} the count opens the interactive pattern editor.
+	 * @param entry The raw entry text.
+	 * @param apply Writes an edited entry back to wherever it lives.
+	 */
+	const renderIndicator = (entry: string, apply: (newEntry: string) => void) => {
+		const trimmed = entry.trim();
+
+		if (!entryCounts || trimmed.length === 0) {
+			return null;
+		}
+
+		const problem = getEntryProblem?.(trimmed);
+
+		if (problem) {
+			return (
+				<vscode-icon
+					slot="content-after"
+					name="warning"
+					className="string-list-warning"
+					title={problem}
+				/>
+			);
+		}
+
+		const count = entryCounts[trimmed];
+
+		if (count === undefined) {
+			return null;
+		}
+
+		if (!onEditEntry) {
+			return (
+				<span slot="content-after" className="setting-input-suffix string-list-count" title={countTitle}>
+					{formatCount(count)}
+				</span>
+			);
+		}
+
+		return (
+			<span
+				slot="content-after"
+				className="setting-input-suffix string-list-count string-list-count-action"
+				role="button"
+				title="Preview and edit the matched files…"
+				onClick={(e: React.MouseEvent) => {
+					e.stopPropagation();
+					onEditEntry(trimmed, apply);
+				}}
+			>
+				{formatCount(count)}
+			</span>
+		);
+	};
+
 	const allItems = [...items, ''];
 
 	return (
@@ -132,6 +256,7 @@ export function StringListEditor({ items, placeholder = 'Enter value', onChange 
 							placeholder={placeholder}
 							onInput={(e: React.FormEvent<HTMLElement>) => handleChange(i, (e.target as HTMLInputElement).value)}
 						>
+							{renderIndicator(item, newEntry => handleChange(i, newEntry))}
 							<vscode-icon
 								slot="content-after"
 								name="close"

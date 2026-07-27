@@ -15,6 +15,7 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({
 }));
 
 vi.mock('@faubulous/mentor-rdf-parsers', () => ({
+	RdfSyntax: { Turtle: 'turtle' },
 	TurtleLexer: class { tokenize(_text: string) { return { tokens: [] }; } },
 	TurtleParser: class { parse(_tokens: any) { return {}; } },
 	TurtleReader: class { readQuadContexts(_cst: any, _tokens: any) { return []; } },

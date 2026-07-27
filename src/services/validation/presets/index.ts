@@ -1,6 +1,6 @@
 import { Store } from '@faubulous/mentor-rdf';
-import basicOntologyShapes from './ontology-1.0.shape.ttl';
-import basicTaxonomyShapes from './taxonomy-1.0.shape.ttl';
+import basicOntologyShapes from '@src/ontologies/shapes/ontology-1.0.0.ttl';
+import basicTaxonomyShapes from '@src/ontologies/shapes/taxonomy-1.0.0.ttl';
 import { ONTOLOGY_SHAPES_URI, TAXONOMY_SHAPES_URI } from '../preset-definitions';
 
 /**

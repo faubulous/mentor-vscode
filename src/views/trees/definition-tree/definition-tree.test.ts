@@ -14,6 +14,8 @@ const { mockDefinitionNodeProvider } = vi.hoisted(() => ({
 		refresh: vi.fn(),
 		getNodeForUri: vi.fn(() => undefined),
 		setIssueColorProvider: vi.fn(),
+		setViewVisibilityProvider: vi.fn(),
+		flushPendingRefresh: vi.fn(),
 	},
 }));
 
@@ -22,6 +24,8 @@ vi.mock('./definition-node-provider', () => ({
 		refresh = mockDefinitionNodeProvider.refresh;
 		getNodeForUri = mockDefinitionNodeProvider.getNodeForUri;
 		setIssueColorProvider = mockDefinitionNodeProvider.setIssueColorProvider;
+		setViewVisibilityProvider = mockDefinitionNodeProvider.setViewVisibilityProvider;
+		flushPendingRefresh = mockDefinitionNodeProvider.flushPendingRefresh;
 	},
 }));
 

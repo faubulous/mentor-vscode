@@ -43,6 +43,12 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	await loadFrameworkOntologies();
 	await loadShapeGraphs();
 
+	// The framework ontologies and shape graphs were loaded directly into the
+	// store; publish the change so graph-count consumers (e.g. the SPARQL status
+	// bar, which rendered before any data existed) correct themselves right away
+	// instead of only after workspace indexing finishes.
+	container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService).notifyWorkspaceGraphsChanged();
+
 	registerLanguages();
 	registerViews(); // Views must be registered before providers, since some providers depend on the view registry.
 	registerProviders(context);
@@ -57,20 +63,24 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	// workspace initialization (shape loading, indexing, startup validation) is
 	// still in progress. This may cause some language features to not be available
 	// until indexing is complete, but provides a better user experience overall.
-	initializeWorkspace();
+	const workspaceInitialized = initializeWorkspace();
 
-	// Load named graphs for connections with auto-loading enabled. Runs in parallel
-	// with indexing so the status bar can show both activities simultaneously.
+	// Load named graphs for connections with auto-loading enabled — deferred until
+	// the workspace initialization has settled. Even the graph-list queries pay
+	// Comunica's query parsing/planning (synchronous CPU on the shared extension
+	// host), so running them during the activation window competes with indexing
+	// and with other extensions' activation. The lists only feed the connection
+	// pickers; nothing at startup depends on them.
 	//
 	// Gated on Workspace Trust: auto-loading issues outbound requests to endpoints that
 	// may be defined by workspace settings, so it must never run for untrusted content.
 	// If trust is granted later in the session, load then.
 	if (vscode.workspace.isTrusted) {
-		loadConnectionGraphs();
+		workspaceInitialized.finally(() => loadConnectionGraphs().catch(e => getLog().error('Auto-loading connection graphs failed:', e)));
 	}
 
 	context.subscriptions.push(
-		vscode.workspace.onDidGrantWorkspaceTrust(() => loadConnectionGraphs())
+		vscode.workspace.onDidGrantWorkspaceTrust(() => loadConnectionGraphs().catch(e => getLog().error('Auto-loading connection graphs failed:', e)))
 	);
 }
 
@@ -85,7 +95,8 @@ export async function deactivate() {
 function registerLanguages() {
 	new languages.DatalogTokenProvider();
 	new languages.SparqlTokenProvider();
-	new languages.TrigTokenProvider();
+	// TriG is covered by the TurtleTokenProvider: a separate provider instance
+	// would duplicate every event subscription and code-lens refresh.
 	new languages.TurtleTokenProvider();
 	new languages.XmlTokenProvider();
 	new languages.TriplateTokenProvider();

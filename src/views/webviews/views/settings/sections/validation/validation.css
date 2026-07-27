@@ -234,6 +234,15 @@
 	text-decoration: underline;
 }
 
+/* Aggregate effect of the draft's path lists, below the two lists. */
+.validation-paths-summary {
+	margin-top: var(--mentor-space-3, 8px);
+}
+
+.validation-paths-summary-matched {
+	color: var(--vscode-foreground);
+}
+
 /* One-click pattern suggestions under the included paths list. */
 .validation-pattern-chips {
 	display: flex;

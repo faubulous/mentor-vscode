@@ -83,16 +83,23 @@ export class TurtleTokenProvider {
 	}
 
 	/**
-	 * Returns the languages this provider should register for.
+	 * Returns the languages this provider should register for. One instance
+	 * covers the whole Turtle family: separate instances per language would
+	 * multiply the event subscriptions, and every extra `onDidChangeCodeLenses`
+	 * fire makes VS Code re-request the lenses of all visible documents.
 	 * Override in subclasses to register for different languages.
 	 */
 	protected getLanguages(): string[] {
-		return ['ntriples', 'nquads', 'turtle', 'n3'];
+		return ['ntriples', 'nquads', 'turtle', 'n3', 'trig'];
 	}
 
 	protected registerForLanguage(language: string): vscode.Disposable[] {
 		return [
-			vscode.languages.registerCodeActionsProvider({ language }, this._codeActionsProvider),
+			// The metadata lets VS Code skip this provider entirely for requests
+			// of other action kinds (e.g. source.* rounds on save).
+			vscode.languages.registerCodeActionsProvider({ language }, this._codeActionsProvider, {
+				providedCodeActionKinds: TurtleCodeActionsProvider.providedCodeActionKinds
+			}),
 			vscode.languages.registerCodeLensProvider({ language }, this._codelensProvider),
 			vscode.languages.registerCompletionItemProvider({ language }, this._completionProvider, ':'),
 			vscode.languages.registerDefinitionProvider({ language }, this._definitionProvider),

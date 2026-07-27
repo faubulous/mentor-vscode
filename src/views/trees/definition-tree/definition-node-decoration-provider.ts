@@ -40,7 +40,19 @@ enum MissingLanguageTagDecorationScope {
 /**
  * A decoration provider that adds a badge to definition tree nodes.
  */
-export class DefinitionNodeDecorationProvider implements vscode.FileDecorationProvider {
+export class DefinitionNodeDecorationProvider implements vscode.FileDecorationProvider, vscode.Disposable {
+
+	/**
+	 * URI schemes this provider decorates: `mentor:` container nodes and the
+	 * schemes of resource IRIs rendered in the definition tree. The provider is
+	 * registered window-wide, so every other scheme — editor tabs, notebook
+	 * cells, `user:`/`workspace:`/`git:` documents — must be left untouched:
+	 * returning a decoration for them re-colors their tab and Open Editors
+	 * labels on every invalidation.
+	 */
+	private static readonly _decoratedSchemes = new Set(['mentor', 'http', 'https', 'urn']);
+
+	private readonly _subscriptions: vscode.Disposable[] = [];
 
 	private readonly _warningColor = new vscode.ThemeColor("list.warningForeground");
 
@@ -99,58 +111,73 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	constructor(private readonly _nodeProvider?: DefinitionNodeProvider) {
 		this._decorationScope = this._getDecorationScopeFromConfiguration();
 
-		// If the configuration for decorating missing language tags changes, update the decoration provider.
-		vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('mentor.definitionTree.decorateMissingLanguageTags')) {
-				this._decorationScope = this._getDecorationScopeFromConfiguration();
+		this._subscriptions.push(
+			// If the configuration for decorating missing language tags changes, update the decoration provider.
+			vscode.workspace.onDidChangeConfiguration((e) => {
+				if (e.affectsConfiguration('mentor.definitionTree.decorateMissingLanguageTags')) {
+					this._decorationScope = this._getDecorationScopeFromConfiguration();
 
+					this._onDidChangeFileDecorations.fire(undefined);
+				}
+
+				// The cached label predicates otherwise only update on document context
+				// changes; apply a settings change immediately.
+				if (e.affectsConfiguration('mentor.predicates.label')) {
+					this._labelPredicates = new Set(this._contextService.activeContext?.predicates.label ?? []);
+
+					this._onDidChangeFileDecorations.fire(undefined);
+				}
+			}),
+
+			this._contextService.onDidChangeDocumentContext((context) => {
+				if (context) {
+					// When the context changes, the label predicates need to be updated.
+					this._labelPredicates = new Set(context?.predicates.label ?? []);
+				} else {
+					this._labelPredicates = new Set();
+				}
+
+				// Reload the (cheap) leaf violations for the new active document and invalidate
+				// the lazily-built ancestor aggregation; VS Code re-requests visible items.
+				// Always fire: the grey and language decorations depend on the new context
+				// even when the SHACL severities are unchanged.
+				this._reloadViolations(true);
+			}),
+
+			this._validationService.onDidValidate(() => {
+				// Rebuild only the cheap leaf map and mark the ancestor aggregation dirty. The
+				// expensive tree walk is deferred to _ensureAncestorSeverity, which runs lazily
+				// when a container decoration is actually requested (i.e. the tree is visible).
+				// Validations fire for every open document (and on every edit that drops a
+				// result); skip the repaint when the severities did not change.
+				this._reloadViolations(false);
+			}),
+
+			this._settings.onDidChange("view.activeLanguage", () => {
+				// When the active language changes, the decorations need to be updated.
 				this._onDidChangeFileDecorations.fire(undefined);
-			}
+			})
+		);
+	}
 
-			// The cached label predicates otherwise only update on document context
-			// changes; apply a settings change immediately.
-			if (e.affectsConfiguration('mentor.predicates.label')) {
-				this._labelPredicates = new Set(this._contextService.activeContext?.predicates.label ?? []);
+	dispose(): void {
+		for (const subscription of this._subscriptions) {
+			subscription.dispose();
+		}
 
-				this._onDidChangeFileDecorations.fire(undefined);
-			}
-		});
-
-		this._contextService.onDidChangeDocumentContext((context) => {
-			if (context) {
-				// When the context changes, the label predicates need to be updated.
-				this._labelPredicates = new Set(context?.predicates.label ?? []);
-			} else {
-				this._labelPredicates = new Set();
-			}
-
-			// Reload the (cheap) leaf violations for the new active document and invalidate
-			// the lazily-built ancestor aggregation; VS Code re-requests visible items.
-			this._reloadViolations();
-		});
-
-		this._validationService.onDidValidate(() => {
-			// Rebuild only the cheap leaf map and mark the ancestor aggregation dirty. The
-			// expensive tree walk is deferred to _ensureAncestorSeverity, which runs lazily
-			// when a container decoration is actually requested (i.e. the tree is visible).
-			this._reloadViolations();
-		});
-
-		this._settings.onDidChange("view.activeLanguage", () => {
-			// When the active language changes, the decorations need to be updated.
-			this._onDidChangeFileDecorations.fire(undefined);
-		});
+		this._subscriptions.length = 0;
+		this._onDidChangeFileDecorations.dispose();
 	}
 
 	/**
 	 * Rebuild the cheap per-focus-node leaf severity map for the active document and invalidate
 	 * the lazily-built ancestor aggregation, then ask VS Code to re-request decorations for all
 	 * visible items. Cheap enough to run on every validation / context change.
+	 * @param forceFire Fire the change event even when the severities are unchanged — needed
+	 * when the active context changed, because the other decorations depend on it.
 	 */
-	private _reloadViolations(): void {
-		this._shaclViolations.clear();
-		this._ancestorSeverity.clear();
-		this._ancestorSeverityDirty = true;
+	private _reloadViolations(forceFire: boolean): void {
+		const next = new Map<string, string>();
 
 		const activeContext = this._contextService.activeContext;
 		const documentUri = activeContext?.uri;
@@ -170,16 +197,40 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 				}
 
 				const newRank = SEVERITY_RANK[entry.severity] ?? 0;
-				const existing = this._shaclViolations.get(iri);
+				const existing = next.get(iri);
 				const existingRank = existing ? (SEVERITY_RANK[existing] ?? 0) : 0;
 
 				if (newRank > existingRank) {
-					this._shaclViolations.set(iri, entry.severity);
+					next.set(iri, entry.severity);
 				}
 			}
 		}
 
+		// Unchanged severities mean unchanged decorations: keep the lazily-built
+		// ancestor aggregation and skip the workbench-wide repaint.
+		if (!forceFire && DefinitionNodeDecorationProvider._severitiesEqual(this._shaclViolations, next)) {
+			return;
+		}
+
+		this._shaclViolations = next;
+		this._ancestorSeverity.clear();
+		this._ancestorSeverityDirty = true;
+
 		this._onDidChangeFileDecorations.fire(undefined);
+	}
+
+	private static _severitiesEqual(a: Map<string, string>, b: Map<string, string>): boolean {
+		if (a.size !== b.size) {
+			return false;
+		}
+
+		for (const [iri, severity] of a) {
+			if (b.get(iri) !== severity) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -267,7 +318,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 	provideFileDecoration(uri: vscode.Uri, token: vscode.CancellationToken) {
 		const context = this._contextService.activeContext;
 
-		if (!context || !uri || uri.scheme === 'file' || uri.scheme === 'untitled') {
+		if (!context || !uri || !DefinitionNodeDecorationProvider._decoratedSchemes.has(uri.scheme)) {
 			return undefined;
 		}
 

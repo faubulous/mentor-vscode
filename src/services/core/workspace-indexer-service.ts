@@ -8,6 +8,8 @@ import { DocumentContextService } from '../document/document-context-service';
 import { DocumentDiagnosticsService } from '../document/document-diagnostics-service';
 import { getConfig } from '@src/utilities/vscode/config';
 import { normalizeGlobPattern } from '@src/utilities/glob';
+import { createYieldBudget } from '@src/utilities/scheduling';
+import { getErrorMessage } from '@src/utilities/error';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 /**
@@ -90,6 +92,11 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	// values place the group at the far right of the left-aligned status bar — after
 	// built-in items like "Auto Attach" (priority 0) — so they are the last items.
 	private readonly _statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, -10001);
+
+	/**
+	 * When the indexing progress was last rendered; see {@link _reportProgress}.
+	 */
+	private _lastProgressReport = 0;
 
 	constructor(
 		private readonly _documentFactory: IDocumentFactory,
@@ -320,8 +327,15 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			}
 		};
 
+		// Parsing and inference are CPU-bound; with the reads prefetched, the
+		// per-file awaits resolve as microtasks and the loop would never return
+		// to the event loop, freezing the extension host for the whole pass.
+		const yieldBudget = createYieldBudget();
+
 		for (let index = 0; index < indexedUris.length; index++) {
 			const fileUri = indexedUris[index];
+
+			await yieldBudget.maybeYield();
 
 			prefetch(index);
 
@@ -330,8 +344,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 			try {
 				phases = await this._indexWorkspaceFile(fileUri, run, prefetchedReads);
-			} catch {
+			} catch (error) {
+				// Never swallow the reason: the summary reports the error count, so
+				// a failure without a log line leaves "1 error" with nothing to act on.
 				errorCount++;
+
+				this._statusLog.error(`Failed to index ${fileUri.toString()}: ${getErrorMessage(error)}`, error);
 			} finally {
 				prefetchedReads.delete(fileUri.toString());
 			}
@@ -478,8 +496,9 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			const pattern = normalizeGlobPattern(rawPattern);
 
 			if (!pattern) {
-				this._statusLog.error("Empty pattern in 'mentor.index.includeFiles'.");
-				hasErrors = true;
+				// A blank entry is a settings-UI artifact — clearing a list row
+				// persists an empty string — and cannot change what is indexed.
+				// Skip it quietly instead of reporting a configuration error.
 				continue;
 			}
 
@@ -578,17 +597,14 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		// Load the document so that its graph is created and can be used for showing definitions, descriptions etc..
 		const loadStart = performance.now();
-		const loadPromise = this._contextService.loadDocumentContent(uri, content, run.reindex);
+		await this._contextService.loadDocumentContent(uri, content, run.reindex);
 
 		if (run.reindex) {
-			await Promise.all([
-				loadPromise,
-				// Refresh editor tokens for an open document; a no-op for files not
-				// open in an editor.
-				this._refreshDocumentTokens(uri.toString())
-			]);
-		} else {
-			await loadPromise;
+			// Refresh editor tokens for an open document; a no-op for files not
+			// open in an editor. Strictly after the load: the delivery triggers a
+			// triple reload on the same context and graph, and running it
+			// concurrently would interleave deleteGraphs/add on one graph.
+			this._refreshDocumentTokens(uri.toString());
 		}
 
 		const loadMs = Math.round(performance.now() - loadStart);
@@ -617,7 +633,13 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		const loadStart = performance.now();
 
+		// Each cell pays a full parse, triple load and inference pass; yield
+		// between cells so a large notebook does not block the extension host.
+		const yieldBudget = createYieldBudget();
+
 		for (const cell of notebook.getCells()) {
+			await yieldBudget.maybeYield();
+
 			const lang = cell.document.languageId;
 
 			if (!this._documentFactory.supportedLanguages.has(lang)) {
@@ -634,17 +656,14 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				// Load the cell document to create its context, passing the slug so that
 				// graphIri is slug-based from the very first loadTriples call.
 				const slug = cell.metadata?.slug as string | undefined;
-				const loadPromise = this._contextService.loadDocument(cell.document, reindex, slug);
+
+				await this._contextService.loadDocument(cell.document, reindex, slug);
 
 				if (reindex) {
-					await Promise.all([
-						loadPromise,
-						this._refreshDocumentTokens(cellUri)
-					]);
-					continue;
+					// Strictly after the load — the delivery triggers a triple reload
+					// on the same context and graph (see _indexTextDocument).
+					this._refreshDocumentTokens(cellUri);
 				}
-
-				await loadPromise;
 			} catch (error) {
 				// Log and rethrow so the background settlement can count failures accurately.
 				this._statusLog.error(`Failed to index notebook cell ${cellUri}:`, error);
@@ -669,11 +688,22 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	}
 
 	/**
-	 * Reports indexing progress on the status bar item.
+	 * Reports indexing progress on the status bar item. Throttled to ~10
+	 * updates per second: each update is an IPC message to the renderer, and a
+	 * fast pass over many small files would otherwise flood it. The first and
+	 * final counts always render so the bar never sticks below the total.
 	 * @param completed The number of files indexed so far.
 	 * @param total The total number of files to index.
 	 */
 	private _reportProgress(completed: number, total: number): void {
+		const now = Date.now();
+
+		if (completed > 0 && completed < total && now - this._lastProgressReport < 100) {
+			return;
+		}
+
+		this._lastProgressReport = now;
+
 		this._statusBarItem.text = `$(sync~spin) Indexing: ${completed} of ${total} files...`;
 		this._statusBarItem.show();
 	}

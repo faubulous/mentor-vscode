@@ -61,7 +61,7 @@ describe('ShaclValidationScopeMigration', () => {
 		const updates = await migrate({
 			globalValue: {
 				profiles: {
-					'preset': { name: 'Preset', shapes: ['https://w3id.org/mentor/shacl/profiles/ontology'] },
+					'preset': { name: 'Preset', shapes: ['https://w3id.org/mentor/shapes/ontology'] },
 					'user': { name: 'User', shapes: ['user:///shapes/my-shapes.ttl'] },
 					'empty': { name: 'Empty' },
 				},

@@ -95,11 +95,11 @@ function makeDocument(uri: string, text: string) {
 }
 
 function makeTurtleContext() {
-    return { providesTokens: true, syntax: RdfSyntax.Turtle } as any;
+    return { providesTokens: true, syntax: RdfSyntax.Turtle, getParseResult: () => undefined } as any;
 }
 
 function makeSparqlContext() {
-    return { providesTokens: true, syntax: RdfSyntax.Sparql } as any;
+    return { providesTokens: true, syntax: RdfSyntax.Sparql, getParseResult: () => undefined } as any;
 }
 
 function makeSetup(contextsByUri: Record<string, any>) {

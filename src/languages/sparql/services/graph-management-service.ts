@@ -5,8 +5,10 @@ import { ISparqlQueryService } from './sparql-query-service.interface';
 import { IGraphManagementService } from './graph-management-service.interface';
 import { ITripleStoreConfigService } from './triple-store-config-service.interface';
 import { Store } from '@faubulous/mentor-rdf';
+import { WORKSPACE_CONNECTION } from './workspace-store';
 import { InferenceUri } from '@src/providers/inference-uri';
 import { ConfigurationScope } from '@src/utilities/config-scope';
+import { Debouncer } from '@src/utilities/debounce';
 import { isHttpEndpoint, isSafeAutoLoadEndpoint } from '@src/utilities/endpoint-url';
 import { getErrorMessage } from '@src/utilities/error';
 
@@ -111,6 +113,18 @@ export class GraphManagementService implements IGraphManagementService {
      */
     public readonly onDidGraphLoadEnd = this._onDidGraphLoadEnd.event;
 
+    /**
+     * The workspace store's graph IRIs at the last {@link notifyWorkspaceGraphsChanged}
+     * evaluation, used to fire `onDidChangeGraphs` only when the set actually changed.
+     */
+    private _workspaceGraphsSnapshot = new Set<string>();
+
+    /**
+     * Debounces workspace change notifications: notifications arrive once per file
+     * during indexing, and every evaluation scans the store's graph list.
+     */
+    private readonly _workspaceGraphsDebouncer = new Debouncer(300);
+
     constructor(
         private readonly _context: vscode.ExtensionContext,
         private readonly _connectionRegistry: ISparqlConnectionRegistry,
@@ -119,6 +133,27 @@ export class GraphManagementService implements IGraphManagementService {
         private readonly _workspaceStore: Store
     ) {
         this._hydrateCache();
+    }
+
+    notifyWorkspaceGraphsChanged(): void {
+        this._workspaceGraphsDebouncer.schedule(() => {
+            const graphs = this._workspaceStore.getGraphs();
+
+            const unchanged = graphs.length === this._workspaceGraphsSnapshot.size
+                && graphs.every(g => this._workspaceGraphsSnapshot.has(g));
+
+            if (unchanged) {
+                return;
+            }
+
+            this._workspaceGraphsSnapshot = new Set(graphs);
+
+            // The workspace connection never goes through _executeGraphLoad, so this
+            // is the only place its onDidChangeGraphs event is emitted. Every consumer
+            // of workspace graph counts (status bar, connections list, graph linting)
+            // converges on this one signal.
+            this._onDidChangeGraphs.fire(WORKSPACE_CONNECTION.id);
+        });
     }
 
     /**
@@ -390,10 +425,17 @@ export class GraphManagementService implements IGraphManagementService {
             return;
         }
 
-        await Promise.all(safe.map(c => this.loadGraphsForConnection(c)));
+        // Load sequentially: each load pays Comunica's query parsing/planning —
+        // synchronous CPU on the shared extension host — so firing all
+        // connections at once bursts that work into a single window (typically
+        // during startup, delaying other extensions). The lists only feed the
+        // connection pickers, so slower overall completion is harmless.
+        for (const connection of safe) {
+            await this.loadGraphsForConnection(connection);
+        }
     }
 
-    async ensureGraphsLoadedForConnection(connection: SparqlConnection): Promise<void> {
+    async ensureGraphsLoadedForConnection(connection: SparqlConnection, options?: { retryOnError?: boolean }): Promise<void> {
         // Mirror the auto-load eligibility and safety constraints: never contact
         // endpoints in an untrusted workspace, only `autoLoadGraphs` connections opt in,
         // and protected connections are excluded.
@@ -411,9 +453,16 @@ export class GraphManagementService implements IGraphManagementService {
             return;
         }
 
+        // A fresh cache entry that holds an error would silently serve the failure
+        // for the rest of the reload interval — and no onDidChangeGraphs recovery
+        // event would ever fire. Explicit user actions (e.g. switching a document's
+        // connection) opt into retrying the failed load.
+        const retryFailedLoad = options?.retryOnError === true
+            && this._graphCache.get(connection.id)?.error !== undefined;
+
         // The load itself is cache-aware: it only contacts the endpoint when no entry
         // exists yet or the reload interval has been exceeded.
-        await this.loadGraphsForConnection(connection);
+        await this.loadGraphsForConnection(connection, { force: retryFailedLoad });
     }
 
     /**
@@ -428,6 +477,7 @@ export class GraphManagementService implements IGraphManagementService {
     }
 
     dispose(): void {
+        this._workspaceGraphsDebouncer.dispose();
         this._onDidChangeGraphs.dispose();
         this._onDidGraphLoadStart.dispose();
         this._onDidGraphLoadEnd.dispose();

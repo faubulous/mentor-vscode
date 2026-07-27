@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { SparqlLexer, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { ParserFactory } from '@src/languages/parser-factory';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
@@ -48,6 +49,15 @@ export class SparqlQueryService {
 	 * A map of cancellation tokens for currently running queries, keyed by query state ID.
 	 */
 	private readonly _cancellationTokens = new Map<string, vscode.CancellationTokenSource>();
+
+	/**
+	 * The shared Comunica query engine, created lazily on the first query.
+	 * Constructing an engine builds its entire actor/mediator pipeline —
+	 * expensive, synchronous CPU on the shared extension host — while the engine
+	 * itself holds no per-query state (sources and options are passed per call),
+	 * so a single instance serves all queries.
+	 */
+	private _queryEngine: QueryEngine | undefined;
 
 	private readonly _onDidHistoryChange = new vscode.EventEmitter<void>();
 
@@ -453,7 +463,9 @@ export class SparqlQueryService {
 			options.timeout = timeout;
 		}
 
-		const preparedQuery = await new QueryEngine().query(query, options);
+		this._queryEngine ??= new QueryEngine();
+
+		const preparedQuery = await this._queryEngine.query(query, options);
 
 		if (preparedQuery.resultType === 'boolean') {
 			const value = token
@@ -536,7 +548,13 @@ export class SparqlQueryService {
 	}
 
 	_getQueryType(query: string): SparqlQueryType | undefined {
-		const lexingResult = new SparqlLexer().tokenize(query);
+		// Lexer construction is expensive (~3-7 ms) and this runs per code-lens
+		// refresh; use the shared instance. It may carry another caller's blank
+		// node ID generator — restore the default before tokenizing.
+		const lexer = ParserFactory.getLexer(RdfSyntax.Sparql);
+		lexer.blankNodeIdGenerator = undefined;
+
+		const lexingResult = lexer.tokenize(query);
 
 		for (const token of lexingResult.tokens) {
 			switch (token.tokenType.name) {

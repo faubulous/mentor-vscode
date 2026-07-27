@@ -3,6 +3,7 @@ import { SH, Store } from '@faubulous/mentor-rdf';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
+import { createYieldBudget } from '@src/utilities/scheduling';
 import { ShaclValidationResult } from './shacl-validator-engine';
 import { ShaclValidationPresenter } from './shacl-validation-presenter';
 
@@ -387,11 +388,9 @@ export class ShaclBatchRunner {
 
 		// `shacl-engine`'s validate() is a CPU-bound loop that only yields microtasks, so a
 		// tight batch would starve the extension-host event loop (frozen status bar, webviews
-		// and trees). Yield a macrotask whenever more than this budget of wall-clock time has
-		// elapsed since the last yield, letting VS Code paint and process queued work between
-		// files without paying a timer per (possibly tiny) file.
-		const yieldBudgetMs = 50;
-		let lastYield = Date.now();
+		// and trees). The budget yields a macrotask between files whenever enough wall-clock
+		// time has elapsed, letting VS Code paint and process queued work.
+		const yieldBudget = createYieldBudget();
 		let completed = 0;
 
 		for (const { uri, shapes } of workItems) {
@@ -421,10 +420,7 @@ export class ShaclBatchRunner {
 				continue;
 			}
 
-			if (Date.now() - lastYield > yieldBudgetMs) {
-				await this._yieldToEventLoop();
-				lastYield = Date.now();
-			}
+			await yieldBudget.maybeYield();
 
 			try {
 				const result = await this._deps.validateAndPublish(uri, context, shapes);
@@ -455,14 +451,5 @@ export class ShaclBatchRunner {
 		}
 
 		return { matched, validated, issues, errors, warnings, issueFiles, hasShapes, skipped, cancelled };
-	}
-
-	/**
-	 * Yields control to the event loop for one macrotask so VS Code can paint and
-	 * process queued messages between validations. Awaiting a resolved promise only
-	 * drains microtasks, which is not enough to unblock the renderer.
-	 */
-	private _yieldToEventLoop(): Promise<void> {
-		return new Promise(resolve => setTimeout(resolve, 0));
 	}
 }

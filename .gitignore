@@ -3,6 +3,7 @@
 **/dist
 **/coverage
 **/.vscode-test-web
+**/.vscode-test
 **/.claude
 log.txt
 

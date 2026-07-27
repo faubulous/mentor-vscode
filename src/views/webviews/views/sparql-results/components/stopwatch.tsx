@@ -31,8 +31,9 @@ function StopwatchBase({ sparqlResults }: StopwatchProps) {
 		updateElapsedTime();
 
 		if (queryContext.startTime && !queryContext.endTime) {
-			// If no end date, start interval to update every 10ms
-			intervalRef.current = setInterval(updateElapsedTime, 10);
+			// While the query is running, update at 10 Hz: faster intervals burn
+			// renderer CPU without a readable gain in precision.
+			intervalRef.current = setInterval(updateElapsedTime, 100);
 		}
 
 		return () => {

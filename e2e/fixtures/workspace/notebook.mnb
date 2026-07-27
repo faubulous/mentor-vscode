@@ -1,0 +1,11 @@
+{
+    "cells": [
+        {
+            "kind": 2,
+            "language": "sparql",
+            "value": "SELECT * FROM <urn:e2e:missing> WHERE { ?s ?p ?o }",
+            "metadata": { "slug": "query-1" }
+        }
+    ],
+    "metadata": { "cellCounter": 1 }
+}

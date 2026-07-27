@@ -170,7 +170,7 @@ describe('ShaclValidationService.getEffectiveShapeGraphs', () => {
 	it('resolves no shape graphs for a profile without paths', () => {
 		const { service } = createService({
 			profiles: {
-				'ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor/shacl/profiles/ontology'] },
+				'ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor/shapes/ontology'] },
 			},
 		});
 
@@ -182,7 +182,7 @@ describe('ShaclValidationService.getEffectiveShapeGraphs', () => {
 describe('ShaclValidationService.checkShaclProfiles', () => {
 	const settings: ShaclValidationSettings = {
 		profiles: {
-			'ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor/shacl/profiles/ontology'] },
+			'ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor/shapes/ontology'] },
 		},
 	};
 
@@ -196,7 +196,7 @@ describe('ShaclValidationService.checkShaclProfiles', () => {
 		const { service } = createService(settings, undefined, () => false);
 
 		expect(await service.checkShaclProfiles()).toEqual({
-			profiles: { 'ontology': ['https://w3id.org/mentor/shacl/profiles/ontology'] },
+			profiles: { 'ontology': ['https://w3id.org/mentor/shapes/ontology'] },
 		});
 	});
 
@@ -553,7 +553,9 @@ describe('ShaclValidationService batch cooperative behaviour', () => {
 	it('yields a macrotask to the event loop once the time budget is exceeded', async () => {
 		const { service } = createBatchService({ 'file:///w/a.ttl': 10, 'file:///w/b.ttl': 10, 'file:///w/c.ttl': 10 });
 
-		const yieldSpy = vi.spyOn((service as any)._batchRunner, '_yieldToEventLoop');
+		// The shared yield budget schedules a zero-delay macrotask when the
+		// wall-clock budget is exceeded; observe it through setTimeout.
+		const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
 
 		// Force wall-clock time to jump past the ~50ms budget between files so the loop
 		// takes its yield branch deterministically (validation itself is instantaneous here).
@@ -567,9 +569,10 @@ describe('ShaclValidationService batch cooperative behaviour', () => {
 				vscode.Uri.parse('file:///w/c.ttl'),
 			]);
 
-			expect(yieldSpy).toHaveBeenCalled();
+			expect(timeoutSpy.mock.calls.some(call => call[1] === 0)).toBe(true);
 		} finally {
 			dateSpy.mockRestore();
+			timeoutSpy.mockRestore();
 		}
 	});
 });

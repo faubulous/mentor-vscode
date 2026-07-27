@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
 let mockGetConnections: Mock;
-let mockNotifyDocumentConnectionChanged: Mock;
+let mockSetConnectionForNotebook: Mock;
 
 vi.mock('tsyringe', () => ({
 	container: {
@@ -12,7 +12,7 @@ vi.mock('tsyringe', () => ({
 			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') {
 				return {
 					getConnections: (...args: any[]) => mockGetConnections(...args),
-					notifyDocumentConnectionChanged: (...args: any[]) => mockNotifyDocumentConnectionChanged(...args),
+					setConnectionForNotebook: (...args: any[]) => mockSetConnectionForNotebook(...args),
 				};
 			}
 			return {};
@@ -28,7 +28,7 @@ import { setNotebookConnection } from '@src/commands/notebook/set-notebook-conne
 
 beforeEach(() => {
 	mockGetConnections = vi.fn(() => []);
-	mockNotifyDocumentConnectionChanged = vi.fn();
+	mockSetConnectionForNotebook = vi.fn(async () => []);
 	(vscode.window as any).activeNotebookEditor = undefined;
 	(vscode.window as any).showWarningMessage = vi.fn(async () => undefined);
 	(vscode.window as any).showQuickPick = vi.fn(async () => undefined);
@@ -67,7 +67,7 @@ describe('setNotebookConnection command', () => {
 		expect(vscode.window.showWarningMessage).toHaveBeenCalledWith('No SPARQL connections configured.');
 	});
 
-	it('should update cell metadata when connection selected', async () => {
+	it('should delegate the update to setConnectionForNotebook when a connection is selected', async () => {
 		const mockConn = { id: 'conn-1', endpointUrl: 'http://sparql.example.org', description: 'Test' };
 		mockGetConnections.mockReturnValue([mockConn]);
 		const mockCell = { index: 0, metadata: {} };
@@ -81,7 +81,10 @@ describe('setNotebookConnection command', () => {
 			connection: mockConn,
 		}));
 		await setNotebookConnection.handler();
-		expect(vscode.workspace.applyEdit).toHaveBeenCalled();
-		expect(mockNotifyDocumentConnectionChanged).toHaveBeenCalledWith(mockNotebook.uri);
+
+		// The service applies the bulk edit and fires the change event once per
+		// cell — a notebook-level notification would be lost on URI-scoped
+		// consumers such as the FROM-graph linter.
+		expect(mockSetConnectionForNotebook).toHaveBeenCalledWith(mockNotebook, 'conn-1');
 	});
 });

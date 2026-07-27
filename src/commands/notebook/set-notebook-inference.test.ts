@@ -3,14 +3,14 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-let mockNotifyDocumentConnectionChanged: Mock;
+let mockSetInferenceEnabledForNotebook: Mock;
 
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
 			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') {
 				return {
-					notifyDocumentConnectionChanged: (...args: any[]) => mockNotifyDocumentConnectionChanged(...args),
+					setInferenceEnabledForNotebook: (...args: any[]) => mockSetInferenceEnabledForNotebook(...args),
 				};
 			}
 			return {};
@@ -25,7 +25,7 @@ import * as vscode from 'vscode';
 import { setNotebookInference } from '@src/commands/notebook/set-notebook-inference';
 
 beforeEach(() => {
-	mockNotifyDocumentConnectionChanged = vi.fn();
+	mockSetInferenceEnabledForNotebook = vi.fn(async () => []);
 	(vscode.window as any).activeNotebookEditor = undefined;
 	(vscode.window as any).showWarningMessage = vi.fn(async () => undefined);
 	(vscode.window as any).showQuickPick = vi.fn(async () => undefined);
@@ -51,10 +51,10 @@ describe('setNotebookInference command', () => {
 		(vscode.window as any).activeNotebookEditor = { notebook: mockNotebook };
 		(vscode.window as any).showQuickPick = vi.fn(async () => undefined);
 		await setNotebookInference.handler();
-		expect(vscode.workspace.applyEdit).not.toHaveBeenCalled();
+		expect(mockSetInferenceEnabledForNotebook).not.toHaveBeenCalled();
 	});
 
-	it('should update inference metadata for all cells', async () => {
+	it('should delegate the update to setInferenceEnabledForNotebook', async () => {
 		const mockCell = { index: 0, metadata: {} };
 		const mockNotebook = {
 			uri: vscode.Uri.parse('file:///test.mentor-notebook'),
@@ -66,6 +66,9 @@ describe('setNotebookInference command', () => {
 			value: true,
 		}));
 		await setNotebookInference.handler();
-		expect(vscode.workspace.applyEdit).toHaveBeenCalled();
+
+		// The service applies the bulk edit and fires the change event once per
+		// cell — see setConnectionForNotebook for the rationale.
+		expect(mockSetInferenceEnabledForNotebook).toHaveBeenCalledWith(mockNotebook, true);
 	});
 });

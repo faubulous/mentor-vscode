@@ -4,14 +4,19 @@ import {
 	RdfSyntax,
 	TurtleLexer,
 	TurtleParser,
+	TurtleReader,
 	TrigLexer,
 	TrigParser,
+	TrigReader,
 	N3Lexer,
 	N3Parser,
+	N3Reader,
 	NTriplesLexer,
 	NTriplesParser,
+	NTriplesReader,
 	NQuadsLexer,
 	NQuadsParser,
+	NQuadsReader,
 	SparqlLexer,
 	SparqlParser
 } from '@faubulous/mentor-rdf-parsers';
@@ -117,6 +122,31 @@ export class ParserFactory {
 				return new SparqlParser();
 			default:
 				throw new Error(`No parser available for syntax: ${syntax}`);
+		}
+	}
+
+	/**
+	 * Creates a new reader (CST visitor) instance for a given RDF syntax. Unlike
+	 * lexers and parsers, readers hold per-document state (namespaces, base IRI)
+	 * and are cheap to construct, so they are not shared. The reader must match
+	 * the parser that produced the CST — see {@link getParser}.
+	 * @param syntax The RDF syntax to create a reader for.
+	 * @returns A reader whose `visit` returns the quads of a parsed document.
+	 */
+	static createReader(syntax: RdfSyntax): TurtleReader | TrigReader | N3Reader | NTriplesReader | NQuadsReader {
+		switch (syntax) {
+			case RdfSyntax.Turtle:
+				return new TurtleReader();
+			case RdfSyntax.TriG:
+				return new TrigReader();
+			case RdfSyntax.N3:
+				return new N3Reader();
+			case RdfSyntax.NTriples:
+				return new NTriplesReader();
+			case RdfSyntax.NQuads:
+				return new NQuadsReader();
+			default:
+				throw new Error(`No reader available for syntax: ${syntax}`);
 		}
 	}
 }

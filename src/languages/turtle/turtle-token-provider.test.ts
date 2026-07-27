@@ -56,7 +56,7 @@ describe('TurtleTokenProvider', () => {
 	it('getLanguages returns expected language list', () => {
 		const provider = new TurtleTokenProvider();
 		const languages = (provider as any).getLanguages();
-		expect(languages).toEqual(['ntriples', 'nquads', 'turtle', 'n3']);
+		expect(languages).toEqual(['ntriples', 'nquads', 'turtle', 'n3', 'trig']);
 	});
 
 	it('registerForLanguage returns an array of disposables', () => {
@@ -69,8 +69,8 @@ describe('TurtleTokenProvider', () => {
 	it('registers providers for each language returned by getLanguages', () => {
 		const spy = vi.spyOn(vscode.languages, 'registerRenameProvider');
 		new TurtleTokenProvider();
-		// One rename provider registration per language (ntriples, nquads, turtle, n3)
-		expect(spy).toHaveBeenCalledTimes(4);
+		// One rename provider registration per language (ntriples, nquads, turtle, n3, trig)
+		expect(spy).toHaveBeenCalledTimes(5);
 	});
 
 	it('inline completion provider onComplete callback returns formatted IRI string', () => {

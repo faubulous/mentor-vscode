@@ -74,7 +74,7 @@ describe('DefinitionNodeProvider', () => {
 			expect(mockSettingsStub.onDidChange).toHaveBeenCalled();
 		});
 
-		it('should refresh tree when onDidChangeDocumentContext handler fires', () => {
+		it('should refresh tree (debounced) when onDidChangeDocumentContext handler fires', async () => {
 			let ctxHandler: any;
 			mockContextServiceStub.onDidChangeDocumentContext = vi.fn((h: any) => {
 				ctxHandler = h;
@@ -84,6 +84,10 @@ describe('DefinitionNodeProvider', () => {
 			provider.document = makeContext();
 			const fireSpy = vi.spyOn((provider as any)._onDidChangeTreeData, 'fire');
 			ctxHandler(makeContext());
+
+			// The refresh is coalesced through a 250 ms trailing debouncer.
+			expect(fireSpy).not.toHaveBeenCalled();
+			await new Promise(r => setTimeout(r, 300));
 			expect(fireSpy).toHaveBeenCalled();
 		});
 

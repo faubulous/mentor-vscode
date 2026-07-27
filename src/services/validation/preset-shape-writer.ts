@@ -25,7 +25,7 @@ export interface WrittenPresetShapes {
  * created from a preset validates against a frozen, version-controlled copy
  * rather than the bundled graph (which may change in a future Mentor release).
  *
- * The file is written to `<shapesFolder>/<presetId>-<version>.shape.ttl` (see the
+ * The file is written to `<shapesFolder>/<presetId>-<version>.ttl` (see the
  * `mentor.shacl.shapesFolder` setting), mirroring the bundled source's file name —
  * the version in the name ties the frozen copy to the shape graph release it was
  * taken from. When a file already exists at that path, an identical one is reused.
@@ -72,10 +72,10 @@ export async function writePresetShapes(presetId: string): Promise<WrittenPreset
 
 /**
  * Picks the file URI to write the shapes to under `<folder>`: the plain
- * `<baseName>.shape.ttl` when free or already holding identical content (reused).
+ * `<baseName>.ttl` when free or already holding identical content (reused).
  * When it holds different content (edited, or from an older Mentor release), the
  * user chooses between reusing that copy and keeping both; keeping both picks
- * the first free `<baseName>-N.shape.ttl`.
+ * the first free `<baseName>-N.ttl`.
  */
 async function resolveTargetUri(
 	root: vscode.Uri,
@@ -85,7 +85,7 @@ async function resolveTargetUri(
 	source: string
 ): Promise<{ uri: vscode.Uri; reused: boolean }> {
 	for (let index = 1; ; index++) {
-		const name = index === 1 ? `${baseName}.shape.ttl` : `${baseName}-${index}.shape.ttl`;
+		const name = index === 1 ? `${baseName}.ttl` : `${baseName}-${index}.ttl`;
 		const uri = vscode.Uri.joinPath(root, folder, name);
 		const existing = await readIfExists(uri);
 

@@ -4,7 +4,7 @@ import { IDocumentContextService, IDocumentFactory } from '@src/services/documen
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
 import { toUniqueStringArray } from '@src/utilities/array';
-import { Debouncer } from '@src/utilities/debounce';
+import { Debouncer, KeyedDebouncer } from '@src/utilities/debounce';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { ShaclDiagnosticsMapper } from './shacl-diagnostics-mapper';
 import {
@@ -72,6 +72,13 @@ export class ShaclValidationService implements vscode.Disposable {
 	private readonly _shapeGraphReactionDebouncer = new Debouncer(200);
 	private _shapeGraphReactionRunning = false;
 	private _shapeGraphReactionPending = false;
+
+	/**
+	 * Debounces on-change auto-validation per document: context changes are
+	 * fired on every debounced reload tick while typing, and each
+	 * auto-validation is a blocking `shacl-engine` run on the extension host.
+	 */
+	private readonly _autoValidateDebouncer = new KeyedDebouncer<string>(500);
 
 	private readonly _onDidValidate = new vscode.EventEmitter<vscode.Uri>();
 
@@ -198,8 +205,20 @@ export class ShaclValidationService implements vscode.Disposable {
 				}
 			}),
 			// Auto-validate on change: a fresh document context is delivered after
-			// the debounced re-parse (on open and on edit).
-			this._contextService.onDidChangeDocumentContext(context => this._autoValidateOnChange(context))
+			// the debounced re-parse (on open and on edit). Debounced per document
+			// and re-resolved at fire time so a context replaced in the meantime
+			// is not validated stale.
+			this._contextService.onDidChangeDocumentContext(context => {
+				if (!context) {
+					return;
+				}
+
+				const key = context.uri.toString();
+
+				this._autoValidateDebouncer.schedule(key, () => {
+					void this._autoValidateOnChange(this._contextService.contexts[key]);
+				});
+			})
 		);
 
 		// Show the baseline "0 files" indicator immediately when SHACL is enabled.
@@ -698,6 +717,7 @@ export class ShaclValidationService implements vscode.Disposable {
 
 	dispose(): void {
 		this._shapeGraphReactionDebouncer.dispose();
+		this._autoValidateDebouncer.dispose();
 		this._diagnosticCollection.dispose();
 
 		for (const d of this._disposables) {

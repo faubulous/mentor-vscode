@@ -1,4 +1,4 @@
-PREFIX : <https://w3id.org/mentor/shacl/profiles/taxonomy#>
+PREFIX : <https://w3id.org/mentor/shapes/taxonomy#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -6,10 +6,10 @@ PREFIX sh: <http://www.w3.org/ns/shacl#>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
-<https://w3id.org/mentor/shacl/profiles/taxonomy> a owl:Ontology ;
-    owl:versionIRI <https://w3id.org/mentor/shacl/profiles/taxonomy/1.0> ;
-    owl:versionInfo "1.0" ;
-    dct:title "Basic Taxonomy"@en ;
+<https://w3id.org/mentor/shapes/taxonomy> a owl:Ontology ;
+    owl:versionIRI <https://w3id.org/mentor/shapes/taxonomy/1.0.0> ;
+    owl:versionInfo "1.0.0" ;
+    dct:title "Mentor Taxonomy"@en ;
     dct:description "Concepts and concept schemes must have a preferred label, a definition and every concept must belong to a concept scheme."@en ;
     dct:modified "2026-07-16"^^xsd:date .
 

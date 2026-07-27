@@ -191,11 +191,44 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 
 	context.subscriptions.push(graphService);
 
+	// The workspace connection's graphs live in the in-memory store and never go
+	// through the remote load path, so its onDidChangeGraphs signal is derived
+	// from the events that change the store's contents. Consumers of workspace
+	// graph counts (status bar, connections list, graph linting) all converge on
+	// that one event.
+	context.subscriptions.push(
+		workspaceIndexerService.onDidFinishIndexing(() => graphService.notifyWorkspaceGraphsChanged()),
+		documentContextService.onDidChangeDocumentContext(() => graphService.notifyWorkspaceGraphsChanged()),
+		shapeGraphService.onDidChangeShapeGraphs(() => graphService.notifyWorkspaceGraphsChanged())
+	);
+
 	// Register the SPARQL status bar service and push it to subscriptions so it is
 	// disposed when the extension deactivates.
 	const sparqlStatusBarService = new SparqlStatusBarService(sparqlQueryService, sparqlEndpointTester, graphService, connectionRegistry);
 
 	context.subscriptions.push(sparqlStatusBarService);
+
+	// Test-only hooks for the e2e suite: expose internal state the VS Code API
+	// cannot reach (rendered status bar text, graph counts) and non-interactive
+	// variants of interactive commands. Never registered in normal runs.
+	if (typeof process !== 'undefined' && process.env.MENTOR_E2E === '1') {
+		context.subscriptions.push(
+			vscode.commands.registerCommand('mentor.e2e.getState', () => ({
+				workspaceGraphCount: graphService.getWorkspaceGraphs(false).length,
+				statusBarText: sparqlStatusBarService.statusBarText,
+				indexingFinished: workspaceIndexerService.indexingFinished,
+			})),
+			vscode.commands.registerCommand('mentor.e2e.setNotebookConnection', async (notebookUri: string, connectionId: string) => {
+				const notebook = vscode.workspace.notebookDocuments.find(nb => nb.uri.toString() === notebookUri);
+
+				if (!notebook) {
+					throw new Error(`Notebook not found: ${notebookUri}`);
+				}
+
+				await documentConnectionService.setConnectionForNotebook(notebook, connectionId);
+			})
+		);
+	}
 
 	// Register the reference update service for cross-workspace URI rename support.
 	const referenceUpdateService = new ReferenceUpdateService(documentContextService);

@@ -5,7 +5,6 @@ import { ISparqlConnectionRegistry, ISparqlEndpointTester } from '@src/languages
 import { IGraphManagementService } from '@src/languages/sparql/services';
 import { ITripleStoreConfigService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
-import { IDocumentContextService } from '@src/services/document';
 import { ICredentialStorageService } from '@src/services/core';
 import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
 import { ConfigurationScope, keyToScope } from '@src/utilities/config-scope';
@@ -72,7 +71,6 @@ export class ConnectionsSectionController implements SettingsSectionController {
 
 		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
-		const documentContextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 
 		this._disposables.push(
 			connectionRegistry.onDidChangeConnections(() => {
@@ -112,6 +110,9 @@ export class ConnectionsSectionController implements SettingsSectionController {
 					loading: false,
 				});
 			}),
+			// Covers the workspace connection too: the graph service derives a
+			// debounced onDidChangeGraphs('workspace') from store changes
+			// (indexing, document loads, shape graphs) — see container.ts.
 			graphService.onDidChangeGraphs(connectionId => {
 				this._post({
 					section: SECTION_ID,
@@ -123,15 +124,6 @@ export class ConnectionsSectionController implements SettingsSectionController {
 							? { error: graphService.getGraphLoadError(connectionId) }
 							: {}),
 					},
-				});
-			}),
-			// The workspace store's graphs change as documents are loaded; keep its count live.
-			documentContextService.onDidChangeDocumentContext(() => {
-				this._post({
-					section: SECTION_ID,
-					id: 'GraphStatusChanged',
-					connectionId: WORKSPACE_CONNECTION.id,
-					status: { count: graphService.getWorkspaceGraphs(false).length },
 				});
 			})
 		);

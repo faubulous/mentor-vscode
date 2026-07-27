@@ -561,3 +561,69 @@ describe('GraphManagementService cache hydration', () => {
         expect(reloaded.contacted).toEqual(['retry']);
     });
 });
+
+describe('GraphManagementService.ensureGraphsLoadedForConnection — error retry', () => {
+    beforeEach(() => {
+        workspace.isTrusted = true;
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('serves a fresh error entry silently without the retry option', async () => {
+        const connection = makeConnection({ id: 'a', endpointUrl: 'https://example.org/sparql' });
+        const { service, contacted, queryService } = makeService([connection]);
+
+        queryService.executeQueryOnConnection.mockRejectedValueOnce(new Error('endpoint down'));
+
+        await service.loadGraphsForConnection(connection);
+
+        expect(service.getGraphLoadError('a')).toBeDefined();
+
+        contacted.length = 0;
+
+        // The per-edit probe path: a failing endpoint must not be re-queried
+        // on every keystroke while its cache entry is fresh.
+        await service.ensureGraphsLoadedForConnection(connection);
+
+        expect(contacted).toEqual([]);
+    });
+
+    it('retries an error-cached load when retryOnError is set', async () => {
+        const connection = makeConnection({ id: 'a', endpointUrl: 'https://example.org/sparql' });
+        const { service, contacted, queryService } = makeService([connection]);
+
+        queryService.executeQueryOnConnection.mockRejectedValueOnce(new Error('endpoint down'));
+
+        await service.loadGraphsForConnection(connection);
+
+        expect(service.getGraphLoadError('a')).toBeDefined();
+
+        contacted.length = 0;
+
+        // An explicit user action (e.g. switching a document's connection)
+        // opts into retrying, so the onDidChangeGraphs recovery event can fire.
+        const fired: string[] = [];
+        service.onDidChangeGraphs(id => fired.push(id));
+
+        await service.ensureGraphsLoadedForConnection(connection, { retryOnError: true });
+
+        expect(contacted).toEqual(['a']);
+        expect(service.getGraphLoadError('a')).toBeUndefined();
+        expect(fired).toEqual(['a']);
+    });
+
+    it('does not force a reload when the fresh entry holds no error', async () => {
+        const connection = makeConnection({ id: 'a', endpointUrl: 'https://example.org/sparql' });
+        const { service, contacted } = makeService([connection]);
+
+        await service.loadGraphsForConnection(connection);
+
+        contacted.length = 0;
+
+        await service.ensureGraphsLoadedForConnection(connection, { retryOnError: true });
+
+        expect(contacted).toEqual([]);
+    });
+});

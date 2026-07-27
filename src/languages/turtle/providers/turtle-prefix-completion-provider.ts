@@ -17,10 +17,13 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		super();
 	}
 
-	provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, completion: vscode.InlineCompletionContext): vscode.ProviderResult<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
+	provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, completion: vscode.InlineCompletionContext, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
 		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
-		if (!context) {
+		// Inline completions are requested (and the previous request cancelled)
+		// on essentially every keystroke; skip the full tokenization when the
+		// result would be discarded anyway.
+		if (!context || token?.isCancellationRequested) {
 			return null;
 		}
 
@@ -29,6 +32,10 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		// for token delivery from the language server and also makes completions
 		// work for documents that are not eagerly indexed (e.g. untitled documents).
 		const tokens = context.tokenize(document.getText());
+
+		if (token?.isCancellationRequested) {
+			return null;
+		}
 
 		const n = getTokenIndexAtPosition(tokens, position);
 

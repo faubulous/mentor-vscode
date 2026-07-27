@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
-import { TurtleLexer, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import { ParserFactory } from '@src/languages/parser-factory';
 import { QuadContextSerializer, TurtleSerializer, QuadSortingStrategy } from '@faubulous/mentor-rdf-serializers';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
@@ -48,11 +49,16 @@ export async function sortDocument(documentUri: vscode.Uri | undefined, strategy
 		const text = document.getText();
 
 		// Re-lex the document to obtain a full token array including comments.
-		const lexResult = new TurtleLexer().tokenize(text);
+		// The shared lexer may carry another caller's blank node ID generator —
+		// restore the default before tokenizing.
+		const lexer = ParserFactory.getLexer(RdfSyntax.Turtle);
+		lexer.blankNodeIdGenerator = undefined;
+
+		const lexResult = lexer.tokenize(text);
 		const tokens = lexResult.tokens;
 
 		// Parse tokens into a CST.
-		const cst = new TurtleParser().parse(tokens);
+		const cst = ParserFactory.getParser(RdfSyntax.Turtle).parse(tokens);
 
 		// Extract QuadContexts with associated comments.
 		const reader = new TurtleReader();

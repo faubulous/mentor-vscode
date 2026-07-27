@@ -1,9 +1,61 @@
 import * as vscode from 'vscode';
+import type { CstNode, ILexingError } from 'chevrotain';
 import { Range } from 'vscode-languageserver-types';
 import { Quad_Subject } from '@rdfjs/types';
 import { PredicateUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
-import { BlankNodeIdGenerator, IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { BlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+
+/**
+ * The output of one parse pass over a document text: the token streams, the
+ * concrete syntax tree and the collected errors. Captured by
+ * {@link ITokenizedDocumentContext.parse} so that the diagnostics service and
+ * the triple loader can share a single tokenization and grammar parse per edit
+ * instead of re-deriving them from the same text.
+ */
+export interface DocumentParseResult {
+	/**
+	 * The exact text the result was produced from; used as the freshness check.
+	 */
+	readonly text: string;
+
+	/**
+	 * The faithful token stream that IDE features and linters consume.
+	 */
+	readonly tokens: IToken[];
+
+	/**
+	 * The tokens consumed by the grammar parser — placeholder tokens for
+	 * Triplate templates, identical to {@link tokens} otherwise.
+	 */
+	readonly parseTokens: IToken[];
+
+	/**
+	 * Whether the text is a Triplate template.
+	 */
+	readonly template: boolean;
+
+	/**
+	 * The concrete syntax tree produced by the shared parser with error
+	 * recovery enabled.
+	 */
+	readonly cst: CstNode;
+
+	/**
+	 * The characters the lexer could not match.
+	 */
+	readonly lexErrors: ILexingError[];
+
+	/**
+	 * A copy of the shared parser's recognition errors, which reset on every parse.
+	 */
+	readonly parserErrors: IRecognitionException[];
+
+	/**
+	 * A copy of the shared parser's semantic errors, which reset on every parse.
+	 */
+	readonly semanticErrors: IRecognitionException[];
+}
 
 /**
  * Interface for document context that provides access to RDF document specific data.
@@ -246,6 +298,15 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	 * @param tokens An array of tokens.
 	 */
 	setTokens(tokens: IToken[]): void;
+
+	/**
+	 * Returns the result of the last {@link IDocumentContext.parse} pass when
+	 * it was produced from exactly the given text, or `undefined` when it is
+	 * stale or no parse has run yet. Callers fall back to deriving the data
+	 * themselves in that case.
+	 * @param text The current document text.
+	 */
+	getParseResult(text: string): DocumentParseResult | undefined;
 }
 
 /**

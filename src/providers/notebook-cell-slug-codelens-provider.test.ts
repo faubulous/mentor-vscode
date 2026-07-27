@@ -107,7 +107,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 		expect(fired).toHaveLength(1);
 	});
 
-	it('fires onDidChangeCodeLenses when context changes', () => {
+	it('fires onDidChangeCodeLenses (debounced) when context changes', async () => {
 		let capturedHandler: (() => void) | undefined;
 		mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
 			capturedHandler = handler;
@@ -124,6 +124,10 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 
 		expect(capturedHandler).toBeDefined();
 		capturedHandler!();
+
+		// The refresh is coalesced through a 250 ms trailing debouncer.
+		expect(fired).toHaveLength(0);
+		await new Promise(r => setTimeout(r, 300));
 		expect(fired).toHaveLength(1);
 	});
 });

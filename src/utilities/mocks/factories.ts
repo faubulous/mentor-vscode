@@ -337,3 +337,151 @@ export function isDeleteEdit(edit: FlatTextEdit): boolean {
 export function isReplaceEdit(edit: FlatTextEdit): boolean {
 	return !isInsertEdit(edit) && !isDeleteEdit(edit);
 }
+
+/**
+ * Specification of a notebook cell for {@link createMockNotebook}.
+ */
+export interface MockNotebookCellSpec {
+	/**
+	 * The cell language, e.g. 'sparql' or 'turtle'.
+	 */
+	languageId: string;
+
+	/**
+	 * The cell source text.
+	 */
+	content?: string;
+
+	/**
+	 * The initial cell metadata.
+	 */
+	metadata?: { [key: string]: any };
+}
+
+/**
+ * Creates a mock notebook document whose cells carry live `metadata` objects
+ * and `index` properties. When registered in `vscode.workspace.notebookDocuments`,
+ * the mock `workspace.applyEdit` applies `NotebookEdit.updateCellMetadata`
+ * descriptors to these cells and fires `onDidChangeNotebookDocument`, so
+ * "set metadata → read metadata" round-trips can be asserted in tests.
+ * @param cells The cell specifications.
+ * @param options Optional notebook URI (defaults to `file:///w/test.mnb`).
+ */
+export function createMockNotebook(
+	cells: MockNotebookCellSpec[],
+	options?: { uri?: vscode.Uri }
+): vscode.NotebookDocument {
+	const uri = options?.uri ?? vscode.Uri.parse('file:///w/test.mnb');
+
+	const notebookCells: any[] = cells.map((spec, index) => ({
+		index,
+		kind: 2, // NotebookCellKind.Code
+		notebook: undefined as any,
+		document: createMockTextDocument(spec.content ?? '', {
+			uri: uri.with({ scheme: 'vscode-notebook-cell', fragment: `cell${index}` }),
+			languageId: spec.languageId,
+		}),
+		metadata: spec.metadata ?? {},
+		outputs: [],
+		executionSummary: undefined,
+	}));
+
+	const notebook: any = {
+		uri,
+		notebookType: 'mentor-notebook',
+		isDirty: false,
+		isUntitled: false,
+		isClosed: false,
+		metadata: {},
+		version: 1,
+		get cellCount() { return notebookCells.length; },
+		getCells: () => notebookCells,
+		cellAt: (index: number) => notebookCells[index],
+		save: async () => true,
+	};
+
+	for (const cell of notebookCells) {
+		cell.notebook = notebook;
+	}
+
+	return notebook as vscode.NotebookDocument;
+}
+
+/**
+ * A status bar item as captured by {@link createStatusBarRecorder}: reads and
+ * writes of `text` work as usual, and every write is appended to `texts`.
+ */
+export interface RecordedStatusBarItem {
+	alignment: number | undefined;
+	priority: number | undefined;
+
+	/**
+	 * Every value assigned to `text`, in order — for asserting progress
+	 * sequences and write-throttling.
+	 */
+	texts: string[];
+
+	text: string;
+	tooltip: string;
+	command: unknown;
+	shownCount: number;
+	show(): void;
+	hide(): void;
+	dispose(): void;
+}
+
+/**
+ * The recorder returned by {@link createStatusBarRecorder}.
+ */
+export interface StatusBarRecorder {
+	/**
+	 * All created items in creation order.
+	 */
+	items: RecordedStatusBarItem[];
+
+	/**
+	 * The most recently created item with the given priority — the reliable way
+	 * to tell the extension's status bar items apart (indexer −10001,
+	 * validation −10002, SPARQL summary).
+	 */
+	byPriority(priority: number): RecordedStatusBarItem | undefined;
+}
+
+/**
+ * Replaces the mock `window.createStatusBarItem` with a recorder that captures
+ * every created item and the sequence of its `text` writes. Install before the
+ * service under test is constructed.
+ */
+export function createStatusBarRecorder(): StatusBarRecorder {
+	const items: RecordedStatusBarItem[] = [];
+
+	(vscode.window as any).createStatusBarItem = (alignment?: number, priority?: number) => {
+		let value = '';
+
+		const item: RecordedStatusBarItem = {
+			alignment,
+			priority,
+			texts: [],
+			get text() { return value; },
+			set text(newValue: string) {
+				value = newValue;
+				this.texts.push(newValue);
+			},
+			tooltip: '',
+			command: undefined,
+			shownCount: 0,
+			show() { this.shownCount++; },
+			hide() { },
+			dispose() { },
+		};
+
+		items.push(item);
+
+		return item;
+	};
+
+	return {
+		items,
+		byPriority: (priority: number) => [...items].reverse().find(item => item.priority === priority),
+	};
+}

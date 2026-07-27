@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
@@ -519,4 +519,141 @@ describe('WorkspaceIndexerService', () => {
 			expect(textAfterSettlement).toMatch(/files/);
 		});
 	});
+});
+
+describe('WorkspaceIndexerService progress rendering and yielding', () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it('throttles progress rendering to about ten writes per second', () => {
+		const texts: string[] = [];
+		let value = '';
+
+		(vscode.window as any).createStatusBarItem = vi.fn(() => ({
+			get text() { return value; },
+			set text(newValue: string) { value = newValue; texts.push(newValue); },
+			tooltip: '',
+			command: undefined,
+			show: vi.fn(),
+			hide: vi.fn(),
+			dispose: vi.fn(),
+		}));
+
+		const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+
+		let now = 100_000;
+		vi.spyOn(Date, 'now').mockImplementation(() => now);
+
+		// 100 per-file updates spaced 10 ms apart — a fast pass over small files.
+		for (let completed = 1; completed <= 100; completed++) {
+			now += 10;
+			(service as any)._reportProgress(completed, 100);
+		}
+
+		const progressTexts = texts.filter(text => text.includes('Indexing:'));
+
+		// Each status bar write is an IPC message; ~1 second of updates must
+		// collapse to roughly ten renders — and the final count always renders.
+		expect(progressTexts.length).toBeLessThanOrEqual(13);
+		expect(progressTexts[progressTexts.length - 1]).toContain('100 of 100');
+	});
+
+	it('yields to the event loop between indexed files', async () => {
+		mockWorkspaceFileService.files = [
+			vscode.Uri.parse('file:///w/a.ttl'),
+			vscode.Uri.parse('file:///w/b.ttl'),
+			vscode.Uri.parse('file:///w/c.ttl'),
+		];
+
+		const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+
+		// Force the wall clock past the ~50 ms budget between files so the loop
+		// takes its yield branch deterministically (parsing is instantaneous here).
+		let now = 100_000;
+		const dateSpy = vi.spyOn(Date, 'now').mockImplementation(() => (now += 100));
+		const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+
+		try {
+			await service.indexWorkspace();
+
+			// A zero-delay macrotask was scheduled at least once during the pass —
+			// the mechanism that lets the renderer paint while indexing runs.
+			expect(timeoutSpy.mock.calls.some(call => call[1] === 0)).toBe(true);
+		} finally {
+			dateSpy.mockRestore();
+			timeoutSpy.mockRestore();
+		}
+	});
+});
+
+describe('WorkspaceIndexerService error reporting', () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	/**
+	 * Captures what the indexer writes to its output channel, so the log content
+	 * itself can be asserted.
+	 */
+	function captureLog() {
+		const errors: string[] = [];
+		const infos: string[] = [];
+
+		(vscode.window as any).createOutputChannel = vi.fn(() => ({
+			appendLine: vi.fn(),
+			append: vi.fn(),
+			trace: vi.fn(),
+			debug: vi.fn(),
+			info: vi.fn((message: string) => infos.push(message)),
+			warn: vi.fn(),
+			error: vi.fn((message: string) => errors.push(message)),
+			clear: vi.fn(),
+			dispose: vi.fn(),
+			show: vi.fn(),
+			hide: vi.fn(),
+		}));
+
+		return { errors, infos };
+	}
+
+	it('logs the file and reason when indexing a file fails', async () => {
+		const { errors } = captureLog();
+
+		mockWorkspaceFileService.files = [vscode.Uri.parse('file:///w/broken.ttl')];
+		mockLoadDocument.mockRejectedValueOnce(new RangeError('Maximum call stack size exceeded'));
+
+		const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+
+		await service.indexWorkspace();
+		await service.waitForIndexed();
+
+		// A counted error must never be invisible: the summary reports "1 error",
+		// so the log has to name the file and the reason.
+		const failure = errors.find(message => message.includes('broken.ttl'));
+
+		expect(failure).toBeDefined();
+		expect(failure).toContain('Maximum call stack size exceeded');
+		expect((service as any)._statusBarItem.text).toMatch(/1 error/);
+	});
+
+	it('ignores blank include patterns without reporting a configuration error', async () => {
+		const { errors } = captureLog();
+
+		// Clearing a row in the settings list persists an empty string; it cannot
+		// change what is indexed, so it must not be surfaced as an error.
+		mockConfigValues['index.includeFiles'] = ['', '  ', 'data/**'];
+
+		const showWarningMessage = vi.fn(async () => undefined);
+		(vscode.window as any).showWarningMessage = showWarningMessage;
+
+		const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+
+		await service.indexWorkspace();
+		await service.waitForIndexed();
+
+		expect(errors.filter(message => message.includes('includeFiles'))).toEqual([]);
+		expect(showWarningMessage).not.toHaveBeenCalled();
+	});
+
 });

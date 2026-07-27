@@ -1,0 +1,9 @@
+{
+    "mentor.sparql.connections": [
+        {
+            "id": "e2e-dummy",
+            "endpointUrl": "https://example.invalid/sparql",
+            "storeType": "sparql"
+        }
+    ]
+}

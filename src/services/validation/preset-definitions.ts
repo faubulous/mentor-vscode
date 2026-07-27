@@ -49,13 +49,13 @@ export interface ValidationPreset {
  * Graph URI of the bundled "Basic Ontology" SHACL shape graph. A w3id.org
  * permanent identifier that redirects to the bundled file's source on GitHub.
  */
-export const ONTOLOGY_SHAPES_URI = 'https://w3id.org/mentor/shacl/profiles/ontology';
+export const ONTOLOGY_SHAPES_URI = 'https://w3id.org/mentor/shapes/ontology';
 
 /**
  * Graph URI of the bundled "Basic Taxonomy" SHACL shape graph. A w3id.org
  * permanent identifier that redirects to the bundled file's source on GitHub.
  */
-export const TAXONOMY_SHAPES_URI = 'https://w3id.org/mentor/shacl/profiles/taxonomy';
+export const TAXONOMY_SHAPES_URI = 'https://w3id.org/mentor/shapes/taxonomy';
 
 
 /**
@@ -72,22 +72,22 @@ export const VALIDATION_PRESETS: ValidationPreset[] = [
 		id: 'ontology',
 		name: 'Ontology',
 		description: 'Classes, properties and named individuals must have a label, a comment and a reference to the defining ontology.',
-		version: '1.0',
+		version: '1.0.0',
 		shapes: [ONTOLOGY_SHAPES_URI],
 	},
 	{
 		id: 'taxonomy',
 		name: 'Taxonomy',
 		description: 'Concepts and schemes must have a preferred label and a definition. Every concept must belong to a scheme.',
-		version: '1.0',
+		version: '1.0.0',
 		shapes: [TAXONOMY_SHAPES_URI],
 	},
 ];
 
 /**
  * Derives the version-pinned identity of a shape graph URI, e.g.
- * `https://w3id.org/mentor/shacl/profiles/ontology` + `1.0`
- * → `https://w3id.org/mentor/shacl/profiles/ontology/1.0`.
+ * `https://w3id.org/mentor/shapes/ontology` + `1.0.0`
+ * → `https://w3id.org/mentor/shapes/ontology/1.0.0`.
  *
  * This mirrors the `owl:versionIRI` declared in the bundled shape file and the
  * versioned w3id redirect.

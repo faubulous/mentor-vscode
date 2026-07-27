@@ -172,6 +172,14 @@ const entryPreviewKey = (pattern: string) => `entry:${pattern}`;
  */
 const positivePreviewKey = (profileId: string) => `positive:${profileId}`;
 
+/**
+ * The preview-map keys used for the open draft's aggregate counts. The draft is
+ * not persisted, so its counts cannot be keyed by profile id — the editor shows
+ * one draft at a time, so a fixed pair of keys is enough.
+ */
+const DRAFT_TARGET_KEY = 'draft:target';
+const DRAFT_POSITIVE_KEY = 'draft:positive';
+
 function ValidationProfilesSection({ settings, setScope }: SettingsSectionProps) {
 	useStylesheet(VALIDATION_STYLESHEET_ID, stylesheet);
 
@@ -390,6 +398,50 @@ function ValidationProfilesSection({ settings, setScope }: SettingsSectionProps)
 		return counts;
 	}, [matchPreviews]);
 
+	// The open draft's aggregate counts, shown as the editor's summary line. The
+	// excluded count is the difference between the include-only and the
+	// exclusion-applied match, so it reflects the draft's exclusions before save.
+	const draftCounts = useMemo(() => {
+		const matched = matchPreviews[DRAFT_TARGET_KEY]?.count;
+		const positive = matchPreviews[DRAFT_POSITIVE_KEY]?.count;
+
+		return {
+			matched,
+			excluded: matched !== undefined && positive !== undefined
+				? Math.max(0, positive - matched)
+				: undefined,
+		};
+	}, [matchPreviews]);
+
+	// The draft counts are keyed per editor session, not per profile, so drop them
+	// whenever a different profile is opened — otherwise the summary would show
+	// the previously edited profile's numbers until the new ones arrive.
+	const editingKey = editing ? `${scopeToKey(editing.scope)}:${editing.id}` : undefined;
+
+	useEffect(() => {
+		setMatchPreviews(prev => {
+			const { [DRAFT_TARGET_KEY]: _target, [DRAFT_POSITIVE_KEY]: _positive, ...rest } = prev;
+
+			return rest;
+		});
+	}, [editingKey]);
+
+	const handleRequestDraftCounts = useCallback((includeFiles: string[], excludeFiles: string[]) => {
+		messagingRef.current?.postMessage({
+			id: 'GetProfileMatchPreview',
+			key: DRAFT_TARGET_KEY,
+			includeFiles,
+			excludeFiles,
+		});
+
+		messagingRef.current?.postMessage({
+			id: 'GetProfileMatchPreview',
+			key: DRAFT_POSITIVE_KEY,
+			includeFiles,
+			excludeFiles: [],
+		});
+	}, []);
+
 	const closeEditor = () => {
 		setEditorDirty(false);
 		setEditing(undefined);
@@ -481,6 +533,15 @@ function ValidationProfilesSection({ settings, setScope }: SettingsSectionProps)
 		messaging?.postMessage({ id: 'EditPathPattern', pattern });
 	};
 
+	const handleRequestEntryCount = useCallback((pattern: string) => {
+		messagingRef.current?.postMessage({
+			id: 'GetProfileMatchPreview',
+			key: entryPreviewKey(pattern),
+			includeFiles: [pattern],
+			excludeFiles: [],
+		});
+	}, []);
+
 	// Prompts the host for a file name, creates the user shape file and adds the
 	// resulting user:/// URI to the open profile draft once reported back.
 	const handleCreateShape = (apply: (uri: string) => void) => {
@@ -538,12 +599,9 @@ function ValidationProfilesSection({ settings, setScope }: SettingsSectionProps)
 						candidates={candidates}
 						missingShapes={broken.profiles[editing.id] ?? []}
 						entryCounts={entryCounts}
-						onRequestEntryCount={(pattern) => messaging?.postMessage({
-							id: 'GetProfileMatchPreview',
-							key: entryPreviewKey(pattern),
-							includeFiles: [pattern],
-							excludeFiles: [],
-						})}
+						onRequestEntryCount={handleRequestEntryCount}
+						draftCounts={draftCounts}
+						onRequestDraftCounts={handleRequestDraftCounts}
 						onEditEntry={handleEditEntry}
 						onOpenShape={(uri) => messaging?.postMessage({ id: 'OpenShapeGraph', uri })}
 						onCreateShape={handleCreateShape}

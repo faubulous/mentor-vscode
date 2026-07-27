@@ -45,6 +45,26 @@ export interface IDocumentConnectionService {
 	setConnectionForCell(cellUri: vscode.Uri, connectionId: string): Promise<void>;
 
 	/**
+	 * Sets the SPARQL connection for every cell of a notebook in one bulk metadata
+	 * edit, then fires {@link onDidChangeConnectionForDocument} once per changed
+	 * cell — URI-scoped consumers (e.g. the FROM-graph linter) resolve the event
+	 * URI against cell documents, so a notebook-level notification would be lost.
+	 * @param notebook The notebook document.
+	 * @param connectionId The ID of the connection to set.
+	 * @returns The cells whose metadata was changed.
+	 */
+	setConnectionForNotebook(notebook: vscode.NotebookDocument, connectionId: string): Promise<vscode.NotebookCell[]>;
+
+	/**
+	 * Sets the inference setting for every cell of a notebook in one bulk metadata
+	 * edit, then fires {@link onDidChangeConnectionForDocument} once per changed cell.
+	 * @param notebook The notebook document.
+	 * @param inferenceEnabled `true`/`false` to set, `undefined` to clear the cell setting.
+	 * @returns The cells whose metadata was changed.
+	 */
+	setInferenceEnabledForNotebook(notebook: vscode.NotebookDocument, inferenceEnabled: boolean | undefined): Promise<vscode.NotebookCell[]>;
+
+	/**
 	 * Notifies listeners that the connection or inference settings for a document have changed.
 	 * Use this after bulk updates to cell metadata.
 	 * @param documentUri The URI of the document that changed.

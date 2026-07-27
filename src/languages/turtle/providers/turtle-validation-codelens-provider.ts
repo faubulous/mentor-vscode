@@ -5,6 +5,8 @@ import { ShaclValidationService } from '@src/services/validation/shacl-validatio
 import { isGlobPattern } from '@src/utilities/glob';
 import { getProfileDisplayName } from '@src/services/validation/shacl-validation-configuration';
 import { getConfig } from '@src/utilities/vscode/config';
+import { isDocumentVisible } from '@src/utilities/vscode/editors';
+import { Debouncer } from '@src/utilities/debounce';
 
 /**
  * Provides SHACL validation CodeLens actions at the top of RDF documents.
@@ -15,6 +17,13 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 	private _initializing: boolean = false;
 
 	private _enabled: boolean = false;
+
+	/**
+	 * Coalesces refresh fires: a validation typically follows a context change
+	 * within milliseconds, and each fire re-requests the lenses of all visible
+	 * documents.
+	 */
+	private readonly _refreshDebouncer = new Debouncer(250);
 
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
@@ -44,15 +53,17 @@ export class TurtleValidationCodeLensProvider implements vscode.CodeLensProvider
 			}
 		});
 
-		this._contextService.onDidChangeDocumentContext(() => {
-			if (this._enabled) {
-				this._onDidChangeCodeLenses.fire();
+		this._contextService.onDidChangeDocumentContext((context) => {
+			// Refresh only for visible documents: the lens is only rendered there,
+			// and bulk indexing fires a context change per file.
+			if (this._enabled && (!context || isDocumentVisible(context.uri))) {
+				this._refreshDebouncer.schedule(() => this._onDidChangeCodeLenses.fire());
 			}
 		});
 
-		this._validationService.onDidValidate(() => {
-			if (this._enabled) {
-				this._onDidChangeCodeLenses.fire();
+		this._validationService.onDidValidate((uri) => {
+			if (this._enabled && (!uri || isDocumentVisible(uri))) {
+				this._refreshDebouncer.schedule(() => this._onDidChangeCodeLenses.fire());
 			}
 		});
 

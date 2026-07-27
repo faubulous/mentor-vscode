@@ -66,7 +66,9 @@ export class SparqlTokenProvider {
 		context.subscriptions.push(
 			autoDefinePrefixProvider,
 			graphDiagnosticProvider,
-			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider),
+			vscode.languages.registerCodeActionsProvider({ language: 'sparql' }, codeActionsProvider, {
+				providedCodeActionKinds: TurtleCodeActionsProvider.providedCodeActionKinds
+			}),
 			vscode.languages.registerCodeLensProvider({ language: 'sparql' }, codeLensProvider),
 			vscode.languages.registerCompletionItemProvider({ language: 'sparql' }, completionProvider, ...completionProvider.triggerCharacters),
 			vscode.languages.registerDefinitionProvider({ language: 'sparql' }, definitionProvider),

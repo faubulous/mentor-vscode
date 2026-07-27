@@ -6,6 +6,7 @@ import { IDocumentTokenSource, TokenDelivery } from '@src/services/document/docu
 import { getMaxCellSlugNumber } from '@src/services/notebook/notebook-cell-slugs';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
+import { createYieldBudget } from '@src/utilities/scheduling';
 import { isTemplate } from 'triplate';
 import { getLog } from '@src/utilities/vscode/log';
 import { getErrorMessage } from '@src/utilities/error';
@@ -58,6 +59,7 @@ export class DocumentContextService {
 			vscode.window.onDidChangeTextEditorSelection((e) => this._setCursorOnResourceContext(e.textEditor)),
 			this.onDidChangeDocumentContext(() => this._setCursorOnResourceContext(vscode.window.activeTextEditor)),
 			vscode.window.onDidChangeActiveNotebookEditor((e) => this.handleActiveNotebookEditorChanged(e)),
+			vscode.workspace.onDidOpenNotebookDocument((notebook) => this.handleNotebookDocumentOpened(notebook)),
 			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
 			vscode.workspace.onDidChangeNotebookDocument((e) => this.handleNotebookDocumentChanged(e)),
 			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e)),
@@ -414,7 +416,10 @@ export class DocumentContextService {
 	async activateDocument(): Promise<vscode.TextEditor | undefined> {
 		const documentUri = vscode.window.activeTextEditor?.document.uri;
 
-		if (this.activeContext && this.activeContext.uri != documentUri) {
+		// Compare by string value: Uri instances are never reference-equal across
+		// contexts, so an object comparison would re-open (and steal focus to)
+		// the document even when it is already active.
+		if (this.activeContext && this.activeContext.uri.toString() !== documentUri?.toString()) {
 			await vscode.commands.executeCommand("vscode.open", this.activeContext.uri);
 		}
 
@@ -447,7 +452,7 @@ export class DocumentContextService {
 		await this._setConvertFileFormatContexts(editor.document.languageId, uri.toString());
 		await this._setTriplateTemplateContext(editor.document);
 
-		if (uri === this.activeContext?.uri) return;
+		if (uri.toString() === this.activeContext?.uri.toString()) return;
 
 		// For notebook cells, find the slug from the cell metadata so that the
 		// graph IRI uses the human-readable slug from the very first load.
@@ -550,12 +555,57 @@ export class DocumentContextService {
 			return;
 		}
 
+		// Load the selected cell first so the features of the cell the user is
+		// looking at come up before the rest of the notebook loads.
+		const cells = [...editor.notebook.getCells()];
+		const selectedIndex = editor.selection?.start;
+
+		if (selectedIndex !== undefined && selectedIndex >= 0 && selectedIndex < cells.length) {
+			cells.unshift(...cells.splice(selectedIndex, 1));
+		}
+
+		// Each cell load pays a full parse, triple load and inference pass;
+		// yield between cells so a large notebook does not block the extension host.
+		const yieldBudget = createYieldBudget();
+
 		// Load all RDF cells in the notebook to ensure their graphs are created.
-		for (const cell of editor.notebook.getCells()) {
+		for (const cell of cells) {
 			if (this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
+				await yieldBudget.maybeYield();
+
 				const slug = cell.metadata?.slug as string | undefined;
 
 				await this.loadDocument(cell.document, false, slug);
+			}
+		}
+	}
+
+	/**
+	 * Handle notebook document opened event. Loads the contexts of all supported
+	 * cells so diagnostics and quick fixes work in notebooks that are open but
+	 * never focused — cells only otherwise acquire a context when they become
+	 * the active editor or the workspace indexer walks the notebook file.
+	 * @param notebook The opened notebook document.
+	 */
+	async handleNotebookDocumentOpened(notebook: vscode.NotebookDocument): Promise<void> {
+		const yieldBudget = createYieldBudget();
+
+		for (const cell of notebook.getCells()) {
+			if (!this._documentFactory.supportedLanguages.has(cell.document.languageId)) {
+				continue;
+			}
+
+			await yieldBudget.maybeYield();
+
+			const slug = cell.metadata?.slug as string | undefined;
+
+			try {
+				// Already-loaded cells return immediately; concurrent loads (e.g.
+				// the indexer opening the same notebook) are guarded by the token
+				// source's load generations.
+				await this.loadDocument(cell.document, false, slug);
+			} catch (e) {
+				getLog().warn(`Failed to load notebook cell ${cell.document.uri.toString()}:`, getErrorMessage(e));
 			}
 		}
 	}
@@ -644,6 +694,12 @@ export class DocumentContextService {
 			context = this._documentFactory.create(e.document.uri, e.document.languageId);
 
 			this.contexts[uri] = context;
+
+			// The token source's own change handler is subscribed before this one
+			// and bails out for documents without a context, so the edit that just
+			// created the context scheduled no re-parse — without this kick, no
+			// diagnostics or quick fixes would appear until a second edit.
+			this._tokenSource.refreshTokens(uri);
 		}
 
 		// Notify the context for immediate lightweight reactions (e.g. auto-prefix).
@@ -658,7 +714,12 @@ export class DocumentContextService {
 		const uri = document.uri.toString();
 		const context = this.contexts[uri];
 
-		if (context && context.isTemporary) {
+		// Notebook cell documents close when their cell is deleted or the
+		// notebook is closed; without cleanup their contexts and graphs would
+		// leak for the rest of the session and keep stale data in the store.
+		const isNotebookCell = document.uri.scheme === 'vscode-notebook-cell';
+
+		if (context && (context.isTemporary || isNotebookCell)) {
 			// Cleanup temporary / non-persisted document context generated by views.
 			delete this.contexts[uri];
 

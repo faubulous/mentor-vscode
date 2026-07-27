@@ -43,7 +43,7 @@ describe('shacl-validation-configuration', () => {
 		it('classifies shape URIs by scheme', () => {
 			expect(isWorkspaceShapeUri('workspace:///shapes/a.ttl')).toBe(true);
 			expect(isWorkspaceShapeUri('user:///shapes/a.ttl')).toBe(false);
-			expect(isWorkspaceShapeUri('https://w3id.org/mentor/shacl/profiles/ontology')).toBe(false);
+			expect(isWorkspaceShapeUri('https://w3id.org/mentor/shapes/ontology')).toBe(false);
 
 			expect(isUserShapeUri('user:///shapes/a.ttl')).toBe(true);
 			expect(isUserShapeUri('workspace:///shapes/a.ttl')).toBe(false);
@@ -54,7 +54,7 @@ describe('shacl-validation-configuration', () => {
 			expect(requiresWorkspaceScope(undefined)).toBe(false);
 			expect(requiresWorkspaceScope([])).toBe(false);
 			expect(requiresWorkspaceScope(['user:///shapes/a.ttl'])).toBe(false);
-			expect(requiresWorkspaceScope(['https://w3id.org/mentor/shacl/profiles/ontology'])).toBe(false);
+			expect(requiresWorkspaceScope(['https://w3id.org/mentor/shapes/ontology'])).toBe(false);
 			expect(requiresWorkspaceScope(['workspace:///a.ttl'])).toBe(true);
 			expect(requiresWorkspaceScope(['user:///shapes/a.ttl', 'workspace:///a.ttl'])).toBe(true);
 		});
@@ -553,7 +553,7 @@ describe('shacl-validation-configuration', () => {
 			const settings: ShaclValidationSettings = {
 				profiles: {
 					'copy': { shapes: ['workspace:///.mentor/shapes/ontology.shape.ttl'] },
-					'external': { shapes: ['https://w3id.org/mentor/shacl/profiles/ontology'] },
+					'external': { shapes: ['https://w3id.org/mentor/shapes/ontology'] },
 				},
 			};
 
@@ -562,7 +562,7 @@ describe('shacl-validation-configuration', () => {
 			// The written copy's workspace URI follows the folder move.
 			expect(result.profiles?.['copy'].shapes).toEqual(['workspace:///.mentor/validation/ontology.shape.ttl']);
 			// A non-workspace shape URI is untouched.
-			expect(result.profiles?.['external'].shapes).toEqual(['https://w3id.org/mentor/shacl/profiles/ontology']);
+			expect(result.profiles?.['external'].shapes).toEqual(['https://w3id.org/mentor/shapes/ontology']);
 		});
 	});
 });

@@ -6,6 +6,7 @@ import { ParserFactory } from '@src/languages/parser-factory';
 import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { getConfig } from '@src/utilities/vscode/config';
+import { createYieldBudget } from '@src/utilities/scheduling';
 import { getNamespaceDefinition, PrefixMap } from '@src/utilities';
 import { createPositionMapper, PositionMapper } from '@src/utilities/position';
 import { LintingContext, LintingProvider } from '@src/providers/linting';
@@ -127,8 +128,14 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		let validated = 0;
 		let filesWithErrors = 0;
 
+		// Validation is CPU-bound; yield between files so a workspace-wide pass
+		// does not block the extension host.
+		const yieldBudget = createYieldBudget();
+
 		for (let i = 0; i < uris.length; i++) {
 			const uri = uris[i];
+
+			await yieldBudget.maybeYield();
 
 			onProgress?.(i + 1, uris.length);
 
@@ -286,24 +293,43 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	}
 
 	private _computeDiagnostics(uri: vscode.Uri, context: ITokenizedDocumentContext, content: string, positionAt: PositionMapper): vscode.Diagnostic[] {
-		const lexer = ParserFactory.getLexer(context.syntax);
+		// Reuse the token streams and errors captured by the context's parse()
+		// when they were produced from exactly this content — the normal case,
+		// because validation follows a token delivery or a document load. Only
+		// the linters then run per validation.
+		const cached = context.getParseResult(content);
 
-		// The lexer instance is shared — set the generator on every call so a
-		// file-scoped generator does not leak between documents.
-		lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(uri.toString());
+		let tokens: IToken[];
+		let lexErrors: ILexingError[];
+		let errors: IRecognitionException[];
 
-		// Triplate-aware tokenization: the parser consumes placeholder `parseTokens`
-		// (so its CST/error recovery stay correct) while `tokens` is the faithful
-		// stream that the lint diagnostics consume. `lexErrors` are the characters
-		// the lexer could not match — it skips them (no token is emitted), so they
-		// are only surfaced here.
-		const { tokens, parseTokens, errors: lexErrors } = tokenizeWithTriplate(lexer, content);
+		if (cached) {
+			tokens = cached.tokens;
+			lexErrors = cached.lexErrors;
+			errors = [...cached.parserErrors, ...cached.semanticErrors];
+		} else {
+			const lexer = ParserFactory.getLexer(context.syntax);
 
-		const parser = ParserFactory.getParser(context.syntax);
+			// The lexer instance is shared — set the generator on every call so a
+			// file-scoped generator does not leak between documents.
+			lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(uri.toString());
 
-		parser.parse(parseTokens, false);
+			// Triplate-aware tokenization: the parser consumes placeholder `parseTokens`
+			// (so its CST/error recovery stay correct) while `tokens` is the faithful
+			// stream that the lint diagnostics consume. `lexErrors` are the characters
+			// the lexer could not match — it skips them (no token is emitted), so they
+			// are only surfaced here.
+			const lexingResult = tokenizeWithTriplate(lexer, content);
 
-		const errors = [...parser.errors, ...parser.semanticErrors];
+			tokens = lexingResult.tokens;
+			lexErrors = lexingResult.errors;
+
+			const parser = ParserFactory.getParser(context.syntax);
+
+			parser.parse(lexingResult.parseTokens, false);
+
+			errors = [...parser.errors, ...parser.semanticErrors];
+		}
 
 		const linters = context.syntax === RdfSyntax.Sparql
 			? [...this._linters, ...this._sparqlLinters]

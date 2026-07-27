@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { AsyncIterator } from 'asynciterator';
 import { Uri } from '@faubulous/mentor-rdf';
 import { rdfDataFactory } from '@src/utilities/rdf';
-import { SparqlLexer, SparqlParser, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax, SparqlVariableParser } from '@faubulous/mentor-rdf-parsers';
+import { ParserFactory } from '@src/languages/parser-factory';
 import { SerializationOptions, termToString, TurtleSerializer } from '@faubulous/mentor-rdf-serializers';
 import { Bindings, Quad, Term } from "@rdfjs/types";
 import { IPrefixLookupService } from '@src/services/document';
@@ -70,8 +71,13 @@ export class SparqlResultSerializer {
 		const parsedColumns: string[] = [];
 
 		if (context.query) {
-			const lexResult = new SparqlLexer().tokenize(context.query);
-			const cst = new SparqlParser().parse(lexResult.tokens);
+			// Shared instances: lexer/parser construction is expensive, and the
+			// shared lexer may carry another caller's blank node ID generator.
+			const lexer = ParserFactory.getLexer(RdfSyntax.Sparql);
+			lexer.blankNodeIdGenerator = undefined;
+
+			const lexResult = lexer.tokenize(context.query);
+			const cst = ParserFactory.getParser(RdfSyntax.Sparql).parse(lexResult.tokens);
 
 			// Parse the variables from select queries in the order they were defined.
 			const variables = new SparqlVariableParser().getSelectedVariables(cst);
@@ -150,8 +156,11 @@ export class SparqlResultSerializer {
 		let column = 'graph';
 
 		try {
-			const lexResult = new SparqlLexer().tokenize(query);
-			const cst = new SparqlParser().parse(lexResult.tokens);
+			const lexer = ParserFactory.getLexer(RdfSyntax.Sparql);
+			lexer.blankNodeIdGenerator = undefined;
+
+			const lexResult = lexer.tokenize(query);
+			const cst = ParserFactory.getParser(RdfSyntax.Sparql).parse(lexResult.tokens);
 			const variables = new SparqlVariableParser().getSelectedVariables(cst);
 
 			if (variables.length > 0) {

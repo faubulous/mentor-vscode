@@ -7,6 +7,7 @@ import { IDocumentContextService } from '@src/services/document';
 import { any } from '@src/utilities';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { DefinitionTreeLayout } from '@src/services/core/settings-service';
+import { Debouncer } from '@src/utilities/debounce';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { ClassesNode } from './nodes/classes/classes-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
@@ -34,6 +35,25 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 	private _issueColorProvider: DefinitionNodeIssueColorProvider | undefined;
 
+	/**
+	 * Reports whether the owning tree view is visible; set by the view via
+	 * {@link setViewVisibilityProvider}. Without one, refreshes always run.
+	 */
+	private _isViewVisible: (() => boolean) | undefined;
+
+	/**
+	 * Whether a refresh was requested while the view was hidden. Flushed by
+	 * {@link flushPendingRefresh} when the view becomes visible again.
+	 */
+	private _refreshPending = false;
+
+	/**
+	 * Coalesces refreshes: document context changes arrive once per file during
+	 * bulk indexing and once per cell during notebook loads, and every refresh
+	 * clears the node cache and rebuilds the full tree from store queries.
+	 */
+	private readonly _refreshDebouncer = new Debouncer(250);
+
 	private _onDidChangeTreeData: vscode.EventEmitter<DefinitionTreeNode | undefined> = new vscode.EventEmitter<DefinitionTreeNode | undefined>();
 
 	readonly onDidChangeTreeData: vscode.Event<DefinitionTreeNode | undefined> = this._onDidChangeTreeData.event;
@@ -58,8 +78,9 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		this._issueColorProvider = issueColorProvider;
 
 		this.contextService.onDidChangeDocumentContext((context) => {
-			// Update the tree when the active document changed.
-			this.refresh(context);
+			// Update the tree when the active document changed. Debounced: while
+			// typing, a fresh context is delivered on every reload tick.
+			this._refreshDebouncer.schedule(() => this.refresh(context));
 		});
 
 		this.workspaceIndexerService.onDidFinishIndexing(() => {
@@ -80,6 +101,25 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 	}
 
 	/**
+	 * Lets the owning view report its visibility so refreshes of a hidden tree
+	 * can be deferred until it is shown again (see {@link flushPendingRefresh}).
+	 */
+	setViewVisibilityProvider(isVisible: () => boolean): void {
+		this._isViewVisible = isVisible;
+	}
+
+	/**
+	 * Runs a refresh that was deferred while the view was hidden. Called by the
+	 * owning view when it becomes visible.
+	 */
+	flushPendingRefresh(): void {
+		if (this._refreshPending) {
+			this._refreshPending = false;
+			this.refresh();
+		}
+	}
+
+	/**
 	 * Refresh the tree view.
 	 */
 	refresh(document?: IDocumentContext): void {
@@ -87,10 +127,19 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			this.document = document;
 		}
 
-		if (this.document) {
-			this._nodeCache.clear();
-			this._onDidChangeTreeData.fire(undefined);
+		if (!this.document) {
+			return;
 		}
+
+		// Rebuilding a hidden tree is wasted work — VS Code does not render it.
+		// Remember the request and flush it when the view becomes visible.
+		if (this._isViewVisible && !this._isViewVisible()) {
+			this._refreshPending = true;
+			return;
+		}
+
+		this._nodeCache.clear();
+		this._onDidChangeTreeData.fire(undefined);
 	}
 
 	getParent(node: DefinitionTreeNode): DefinitionTreeNode | undefined {

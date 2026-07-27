@@ -60,7 +60,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 	provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
 		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
-		if (!context) {
+		if (!context || t.isCancellationRequested) {
 			return null;
 		}
 
@@ -69,6 +69,12 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 		// for token delivery from the language server and also makes completions
 		// work for documents that are not eagerly indexed (e.g. untitled documents).
 		const tokens = context.tokenize(document.getText());
+
+		// Fast typing cancels the previous request per keystroke; skip the store
+		// queries when the result would be discarded anyway.
+		if (t.isCancellationRequested) {
+			return null;
+		}
 
 		const n = getTokenIndexAtPosition(tokens, position);
 

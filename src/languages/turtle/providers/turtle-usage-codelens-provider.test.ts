@@ -205,13 +205,6 @@ describe('TurtleUsageCodeLensProvider', () => {
         });
     });
 
-    describe('resolveCodeLens', () => {
-        it('throws a not-implemented error', () => {
-            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
-            expect(() => provider.resolveCodeLens!({} as any, null as any)).toThrow('Method not implemented.');
-        });
-    });
-
     describe('constructor configuration change handler', () => {
         it('updates _enabled and fires codeLens change when mentor.editor.codeLensEnabled changes', () => {
             let capturedHandler: ((e: any) => void) | undefined;
@@ -255,7 +248,7 @@ describe('TurtleUsageCodeLensProvider', () => {
             expect(fired.length).toBe(1);
         });
 
-        it('fires onDidChangeCodeLenses when context change event fires and enabled', async () => {
+        it('fires onDidChangeCodeLenses (debounced) when context change event fires and enabled', async () => {
             let capturedCtxHandler: (() => void) | undefined;
             mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
                 capturedCtxHandler = handler;
@@ -272,6 +265,10 @@ describe('TurtleUsageCodeLensProvider', () => {
 
             expect(capturedCtxHandler).toBeDefined();
             capturedCtxHandler!();
+
+            // The refresh is coalesced through a 250 ms trailing debouncer.
+            expect(fired.length).toBe(0);
+            await new Promise(r => setTimeout(r, 300));
             expect(fired.length).toBe(1);
         });
     });

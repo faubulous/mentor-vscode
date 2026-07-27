@@ -22,7 +22,7 @@ describe('writePresetShapes', () => {
 
 		const result = await writePresetShapes('ontology');
 
-		expect(result).toEqual({ uri: 'workspace:///.mentor/shapes/ontology-1.0.shape.ttl', reused: false });
+		expect(result).toEqual({ uri: 'workspace:///.mentor/shapes/ontology-1.0.0.ttl', reused: false });
 		expect(writes).toHaveLength(1);
 		expect(new TextDecoder().decode(writes[0].content)).toBe(getPresetShapeSource('ontology'));
 	});
@@ -34,20 +34,20 @@ describe('writePresetShapes', () => {
 
 		const result = await writePresetShapes('ontology');
 
-		expect(result).toEqual({ uri: 'workspace:///.mentor/shapes/ontology-1.0.shape.ttl', reused: true });
+		expect(result).toEqual({ uri: 'workspace:///.mentor/shapes/ontology-1.0.0.ttl', reused: true });
 		expect(writeSpy).not.toHaveBeenCalled();
 	});
 
 	test('picks a numbered name when a different file already occupies the path', async () => {
 		// The first path holds different content; the -2 path is free.
 		(vscode.workspace.fs as any).readFile = async (uri: vscode.Uri) =>
-			uri.path.endsWith('ontology-1.0.shape.ttl')
+			uri.path.endsWith('ontology-1.0.0.ttl')
 				? new TextEncoder().encode('# a different, user-edited shape file')
 				: (() => { throw new Error('not found'); })();
 
 		const result = await writePresetShapes('ontology');
 
-		expect(result).toEqual({ uri: 'workspace:///.mentor/shapes/ontology-1.0-2.shape.ttl', reused: false });
+		expect(result).toEqual({ uri: 'workspace:///.mentor/shapes/ontology-1.0.0-2.ttl', reused: false });
 	});
 
 	test('throws for an unknown preset', async () => {

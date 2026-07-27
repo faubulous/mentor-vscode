@@ -11,6 +11,16 @@ export interface IGraphManagementService extends vscode.Disposable {
     readonly onDidChangeGraphs: vscode.Event<string>;
 
     /**
+     * Notifies the service that the in-memory workspace store may have gained or
+     * lost graphs (indexing finished, a document was loaded, shape graphs changed).
+     * Debounced; fires `onDidChangeGraphs` with the workspace connection ID only
+     * when the graph set actually changed. This is the single signal all consumers
+     * of workspace graph counts converge on — the workspace connection never goes
+     * through the remote load path that fires the event otherwise.
+     */
+    notifyWorkspaceGraphsChanged(): void;
+
+    /**
      * Fired immediately before graph loading starts for a connection.
      */
     readonly onDidGraphLoadStart: vscode.Event<SparqlConnection>;
@@ -78,6 +88,9 @@ export interface IGraphManagementService extends vscode.Disposable {
      * is only contacted when no load has been attempted yet or the connection's reload
      * interval has been exceeded.
      * @param connection The SPARQL connection to ensure graphs are loaded for.
+     * @param options Set `retryOnError` to retry a load whose fresh cache entry holds
+     * an error — used by explicit user actions such as switching a document's
+     * connection, so a previously failed endpoint is contacted again.
      */
-    ensureGraphsLoadedForConnection(connection: SparqlConnection): Promise<void>;
+    ensureGraphsLoadedForConnection(connection: SparqlConnection, options?: { retryOnError?: boolean }): Promise<void>;
 }
