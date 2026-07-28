@@ -2,11 +2,17 @@ import { describe, it, expect } from 'vitest';
 import {
 	RdfSyntax,
 	TurtleLexer,
+	TurtleReader,
 	TrigLexer,
+	TrigReader,
 	N3Lexer,
+	N3Reader,
 	NTriplesLexer,
+	NTriplesReader,
 	NQuadsLexer,
-	SparqlLexer
+	NQuadsReader,
+	SparqlLexer,
+	SparqlReader
 } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 
@@ -64,6 +70,27 @@ describe('ParserFactory', () => {
 	describe('createParser', () => {
 		it('throws for an unsupported syntax', () => {
 			expect(() => ParserFactory.createParser(RdfSyntax.RdfXml)).toThrow();
+		});
+	});
+
+	describe('createReader', () => {
+		it.each([
+			[RdfSyntax.Turtle, TurtleReader],
+			[RdfSyntax.TriG, TrigReader],
+			[RdfSyntax.N3, N3Reader],
+			[RdfSyntax.NTriples, NTriplesReader],
+			[RdfSyntax.NQuads, NQuadsReader],
+			[RdfSyntax.Sparql, SparqlReader],
+		])('returns the matching reader for %s', (syntax, readerType) => {
+			expect(ParserFactory.createReader(syntax)).toBeInstanceOf(readerType);
+		});
+
+		it('creates a new instance on every call', () => {
+			expect(ParserFactory.createReader(RdfSyntax.Turtle)).not.toBe(ParserFactory.createReader(RdfSyntax.Turtle));
+		});
+
+		it('throws for an unsupported syntax', () => {
+			expect(() => ParserFactory.createReader(RdfSyntax.RdfXml)).toThrow();
 		});
 	});
 });

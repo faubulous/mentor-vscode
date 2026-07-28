@@ -102,12 +102,26 @@
     "vscode-uri": "^3.1.0"
   },
   "overrides": {
-    "morgan": "^1.11.0"
+    "morgan": "^1.11.0",
+    "got": "^11.8.6",
+    "tmp": "^0.2.7",
+    "gry": "^6.1.1",
+    "git-url-parse": "^16.1.0",
+    "git-up": "^8.1.1",
+    "parse-url": "^11.1.0",
+    "glob@^10.0.0": {
+      "minimatch": "^10.2.6"
+    },
+    "mocha": {
+      "minimatch": "^10.2.6",
+      "diff": "^8.0.3",
+      "serialize-javascript": "^7.0.7"
+    }
   },
   "dependencies": {
     "@comunica/query-sparql": "^5.3.0",
-    "@faubulous/mentor-rdf": "^2.0.0",
-    "@faubulous/mentor-rdf-parsers": "^1.11.0",
+    "@faubulous/mentor-rdf": "^2.1.0",
+    "@faubulous/mentor-rdf-parsers": "^2.0.0",
     "@faubulous/mentor-rdf-serializers": "^1.8.0",
     "asynciterator": "^3.10.0",
     "n3": "^2.1.1",
@@ -1821,6 +1835,13 @@
             "title": "Diagnose Files",
             "description": "Compute syntax and lint diagnostics for all indexed workspace files so the problems panel gives an overview of all issues after an index run. When disabled, only files that are open in an editor are diagnosed, which speeds up workspace indexing. Unrelated to SHACL validation.",
             "default": true
+          },
+          "mentor.index.parseSparqlQueries": {
+            "type": "boolean",
+            "title": "Parse SPARQL Queries",
+            "description": "Parse SPARQL queries into RDF triples using the SPARQL Syntax Vocabulary (sparql:) and load them into the workspace index. Changing this setting triggers a re-index of the workspace.",
+            "default": false,
+            "experimental": true
           },
           "mentor.editor.codeLensEnabled": {
             "type": "boolean",

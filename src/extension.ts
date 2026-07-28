@@ -56,6 +56,7 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	registerNotebookSerializers(context);
 	registerRenameHandlers(context);
 	registerNotebookInferenceContext(context);
+	registerConfigurationListeners(context);
 
 	vscode.commands.executeCommand('setContext', 'mentor.isInitializing', false);
 
@@ -221,6 +222,23 @@ function registerNotebookInferenceContext(context: vscode.ExtensionContext) {
 	);
 
 	update();
+}
+
+/**
+ * Registers listeners for settings that determine which triples the indexed
+ * documents contribute to the workspace store. Changing them triggers a
+ * re-index so the store reflects the new configuration without requiring a
+ * manual re-index: toggling `mentor.index.parseSparqlQueries` on parses the
+ * existing SPARQL files, toggling it off drops their graphs.
+ */
+function registerConfigurationListeners(context: vscode.ExtensionContext) {
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeConfiguration(e => {
+			if (e.affectsConfiguration('mentor.index.parseSparqlQueries')) {
+				vscode.commands.executeCommand('mentor.command.reindexWorkspace');
+			}
+		})
+	);
 }
 
 /**

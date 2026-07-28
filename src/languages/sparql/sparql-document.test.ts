@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -20,9 +20,11 @@ vi.mock('tsyringe', () => ({
     singleton: () => (_target: any) => _target,
 }));
 
+import * as vscode from 'vscode';
+import { Store } from '@faubulous/mentor-rdf';
 import { SparqlDocument } from '@src/languages/sparql/sparql-document';
 import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { createSparqlDocument } from '@src/utilities/mocks/factories';
+import { createSparqlDocument, createTestStore } from '@src/utilities/mocks/factories';
 
 /**
  * Build a minimal IToken with position information.
@@ -70,15 +72,88 @@ describe('SparqlDocument', () => {
         });
     });
 
-    describe('no-ops', () => {
-        it('infer resolves without doing anything', async () => {
+    describe('triple loading', () => {
+        // Drives SparqlDocument.parseQueriesEnabled: mentor.index.parseSparqlQueries.
+        const enableParseSparqlQueries = () => {
+            (vscode.workspace as any).getConfiguration = vi.fn(() => ({
+                get: (key: string, defaultValue?: any) => key === 'index.parseSparqlQueries' ? true : defaultValue,
+                has: () => false,
+                inspect: () => undefined,
+                update: async () => {},
+            }));
+        };
+
+        afterEach(() => {
+            (vscode.workspace as any).getConfiguration = vi.fn(() => ({
+                get: (_key: string, defaultValue?: any) => defaultValue,
+                has: () => false,
+                inspect: () => undefined,
+                update: async () => {},
+            }));
+        });
+
+        it('infer is a no-op when index.parseSparqlQueries is disabled', async () => {
             const doc = makeDoc();
             await expect(doc.infer()).resolves.toBeUndefined();
         });
 
-        it('loadTriples resolves without doing anything', async () => {
-            const doc = makeDoc();
-            await expect(doc.loadTriples('SELECT * WHERE { ?s ?p ?o }')).resolves.toBeUndefined();
+        it('loadTriples loads nothing when index.parseSparqlQueries is disabled', async () => {
+            const store = createTestStore();
+            const doc = createSparqlDocument('file:///test.sparql', { store });
+            const query = 'SELECT * WHERE { ?s ?p ?o }';
+
+            doc.parse(query);
+
+            await expect(doc.loadTriples(query)).resolves.toBeUndefined();
+
+            expect(doc.graphs).toHaveLength(0);
+            expect(store.size).toEqual(0);
+        });
+
+        it('loadTriples loads the query as sparql: triples when index.parseSparqlQueries is enabled', async () => {
+            enableParseSparqlQueries();
+
+            const store = createTestStore();
+            const doc = createSparqlDocument('file:///test.sparql', { store });
+            const query = 'SELECT * WHERE { ?s ?p ?o }';
+
+            doc.parse(query);
+
+            await doc.loadTriples(query);
+
+            expect(doc.graphs).toHaveLength(1);
+
+            const quads = Array.from(store.matchAll(doc.graphs[0], null, null, null)) as any[];
+
+            expect(quads.length).toBeGreaterThan(0);
+
+            // The root query node is the workspace URI of the document, not a blank node.
+            const rootQuad = quads.find(q =>
+                q.predicate.value === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+                && q.object.value === 'https://w3id.org/sparql-syntax#SelectQuery');
+
+            expect(rootQuad).toBeDefined();
+            expect(rootQuad.subject.termType).toEqual('NamedNode');
+            expect(rootQuad.subject.value).toEqual(doc.graphs[0]);
+        });
+
+        it('infer executes inference when index.parseSparqlQueries is enabled', async () => {
+            enableParseSparqlQueries();
+
+            const executeInference = vi.fn();
+            // Partial stub: only the members required by infer are provided.
+            const store = {
+                reasoner: { infer: vi.fn() },
+                executeInference,
+                deleteGraphs: vi.fn(),
+                dataFactory: { namedNode: (v: string) => ({ termType: 'NamedNode', value: v }), quad: vi.fn() },
+                add: vi.fn(),
+            } as unknown as Store;
+            const doc = createSparqlDocument('file:///test.sparql', { store });
+
+            await doc.infer();
+
+            expect(executeInference).toHaveBeenCalledTimes(1);
         });
     });
 

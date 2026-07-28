@@ -18,7 +18,8 @@ import {
 	NQuadsParser,
 	NQuadsReader,
 	SparqlLexer,
-	SparqlParser
+	SparqlParser,
+	SparqlReader
 } from '@faubulous/mentor-rdf-parsers';
 
 /**
@@ -133,7 +134,7 @@ export class ParserFactory {
 	 * @param syntax The RDF syntax to create a reader for.
 	 * @returns A reader whose `visit` returns the quads of a parsed document.
 	 */
-	static createReader(syntax: RdfSyntax): TurtleReader | TrigReader | N3Reader | NTriplesReader | NQuadsReader {
+	static createReader(syntax: RdfSyntax): TurtleReader | TrigReader | N3Reader | NTriplesReader | NQuadsReader | SparqlReader {
 		switch (syntax) {
 			case RdfSyntax.Turtle:
 				return new TurtleReader();
@@ -145,6 +146,8 @@ export class ParserFactory {
 				return new NTriplesReader();
 			case RdfSyntax.NQuads:
 				return new NQuadsReader();
+			case RdfSyntax.Sparql:
+				return new SparqlReader();
 			default:
 				throw new Error(`No reader available for syntax: ${syntax}`);
 		}

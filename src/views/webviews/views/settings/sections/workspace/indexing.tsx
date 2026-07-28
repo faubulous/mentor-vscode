@@ -26,8 +26,11 @@ export const workspaceIndexingSection = {
 	],
 	// Mentor-managed workspace identity; not rendered, but claimed so the
 	// descriptor validator sees every mentor.* key owned by a section.
+	// index.parseSparqlQueries is experimental and stays configurable via
+	// settings.json / the native settings UI only.
 	hiddenKeys: [
 		'workspaceId',
+		'index.parseSparqlQueries',
 	],
 } as const satisfies SettingsSectionDescriptor;
 

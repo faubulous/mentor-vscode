@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
+import type { CstNode } from 'chevrotain';
+import { Quad, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, RdfSyntax, RdfToken, tokenizeWithTriplate } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
@@ -170,6 +171,16 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	/**
+	 * Reads the quads of a parsed document from its CST. Subclasses can
+	 * override this to configure a syntax-specific reader before reading.
+	 * @param cst The CST produced by the parser matching the document syntax.
+	 * @returns The quads of the document.
+	 */
+	protected readQuads(cst: CstNode): Quad[] {
+		return ParserFactory.createReader(this.syntax).visit(cst) as Quad[];
+	}
+
+	/**
 	 * Loads triples into the triple store using existing tokens.
 	 * This method assumes tokens have already been set via setTokens().
 	 * @param data The file content (not used, parsing uses existing tokens).
@@ -219,7 +230,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				? cached.cst
 				: ParserFactory.getParser(this.syntax).parse(this._tokens);
 
-			for (const q of ParserFactory.createReader(this.syntax).visit(cst)) {
+			for (const q of this.readQuads(cst)) {
 				const s = q.subject as Quad_Subject;
 				const p = q.predicate as Quad_Predicate;
 				const o = q.object as Quad_Object;
