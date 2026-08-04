@@ -5,10 +5,11 @@ PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX sh: <http://www.w3.org/ns/shacl#>
+PREFIX shapes: <https://w3id.org/mentor/shapes/>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
-<https://w3id.org/mentor/shapes/ontology> a owl:Ontology ;
+shapes:ontology a owl:Ontology ;
     owl:versionIRI <https://w3id.org/mentor/shapes/ontology/1.0.0> ;
     owl:versionInfo "1.0.0" ;
     dct:title "Mentor Ontology"@en ;
@@ -17,6 +18,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :TermLabelShape a sh:NodeShape;
     rdfs:label "Ontology Term Label Shape"@en;
+    rdfs:isDefinedBy shapes:ontology;
     sh:targetClass rdfs:Class, owl:Class, rdf:Property, owl:ObjectProperty, owl:DatatypeProperty, owl:AnnotationProperty, owl:NamedIndividual;
     sh:message "The term must have at least one rdfs:label or skos:prefLabel."@en;
     sh:or (
@@ -26,6 +28,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :TermCommentShape a sh:NodeShape;
     rdfs:label "Ontology Term Comment Shape"@en;
+    rdfs:isDefinedBy shapes:ontology;
     sh:targetClass rdfs:Class, owl:Class, rdf:Property, owl:ObjectProperty, owl:DatatypeProperty, owl:AnnotationProperty, owl:NamedIndividual;
     sh:message "The term must have at least one rdfs:comment or skos:definition."@en;
     sh:or (
@@ -35,6 +38,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :TermIsDefinedByShape a sh:NodeShape;
     rdfs:label "Ontology Term Definition Reference Shape"@en;
+    rdfs:isDefinedBy shapes:ontology;
     sh:targetClass rdfs:Class, owl:Class, rdf:Property, owl:ObjectProperty, owl:DatatypeProperty, owl:AnnotationProperty, owl:NamedIndividual;
     sh:message "The term must reference its defining ontology via rdfs:isDefinedBy, and the reference must be an IRI."@en;
     sh:or (
@@ -48,6 +52,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :OntologyTitleShape a sh:NodeShape;
     rdfs:label "Ontology Title Shape"@en;
+    rdfs:isDefinedBy shapes:ontology;
     sh:targetClass owl:Ontology;
     sh:message "The ontology must have at least one dct:title or dc:title."@en;
     sh:or (
@@ -57,6 +62,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :OntologyDescriptionShape a sh:NodeShape;
     rdfs:label "Ontology Description Shape"@en;
+    rdfs:isDefinedBy shapes:ontology;
     sh:targetClass owl:Ontology;
     sh:message "The ontology must have at least one dct:description or dc:description."@en;
     sh:or (

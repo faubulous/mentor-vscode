@@ -1,12 +1,13 @@
 PREFIX : <https://w3id.org/mentor/shapes/taxonomy#>
 PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX shapes: <https://w3id.org/mentor/shapes/>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 PREFIX sh: <http://www.w3.org/ns/shacl#>
 PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
-<https://w3id.org/mentor/shapes/taxonomy> a owl:Ontology ;
+shapes:taxonomy a owl:Ontology ;
     owl:versionIRI <https://w3id.org/mentor/shapes/taxonomy/1.0.0> ;
     owl:versionInfo "1.0.0" ;
     dct:title "Mentor Taxonomy"@en ;
@@ -15,6 +16,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :ConceptPrefLabelShape a sh:NodeShape ;
     rdfs:label "Concept Preferred Label Shape"@en ;
+    rdfs:isDefinedBy shapes:taxonomy ;
     sh:targetClass skos:Concept ;
     sh:message "The concept must have at least one skos:prefLabel, at most one per language."@en ;
     sh:or (
@@ -24,6 +26,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :ConceptDefinitionShape a sh:NodeShape ;
     rdfs:label "Concept Definition Shape"@en ;
+    rdfs:isDefinedBy shapes:taxonomy ;
     sh:targetClass skos:Concept ;
     sh:message "The concept must have at least one skos:definition."@en ;
     sh:or (
@@ -33,6 +36,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :ConceptInSchemeShape a sh:NodeShape ;
     rdfs:label "Concept Scheme Membership Shape"@en ;
+    rdfs:isDefinedBy shapes:taxonomy ;
     sh:targetClass skos:Concept ;
     sh:message "The concept must be part of a concept scheme via skos:inScheme or skos:topConceptOf."@en ;
     sh:or (
@@ -42,6 +46,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :ConceptSchemePrefLabelShape a sh:NodeShape ;
     rdfs:label "Concept Scheme Preferred Label Shape"@en ;
+    rdfs:isDefinedBy shapes:taxonomy ;
     sh:targetClass skos:ConceptScheme ;
     sh:message "The concept scheme must have at least one skos:prefLabel, at most one per language."@en ;
     sh:or (
@@ -51,6 +56,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
 :ConceptSchemeDefinitionShape a sh:NodeShape ;
     rdfs:label "Concept Scheme Definition Shape"@en ;
+    rdfs:isDefinedBy shapes:taxonomy ;
     sh:targetClass skos:ConceptScheme ;
     sh:message "The concept scheme must have at least one skos:definition."@en ;
     sh:or (
