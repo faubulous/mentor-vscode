@@ -51,6 +51,7 @@ beforeEach(() => {
 		getSubjectsOfType: vi.fn(function*() {}),
 		getNarrowerConcepts: vi.fn(function*() {}),
 		getConcepts: vi.fn(function*() {}),
+		getAllConceptsInScheme: vi.fn(function*() {}),
 		getConceptSchemePath: vi.fn(() => []),
 	};
 });
@@ -77,6 +78,19 @@ describe('ConceptClassNode', () => {
 			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() { yield 'urn:ex#Narrower'; });
 			const iris = [...makeNode(ConceptClassNode).getSubClassIris()];
 			expect(iris).toEqual(['urn:ex#Narrower']);
+		});
+
+		it('should pass the inScheme option on, so narrower concepts stay within the scheme', () => {
+			const scheme = 'urn:ex#scheme';
+			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() {});
+			const node = new ConceptClassNode(makeContext(), 'root/<urn:ex#c>', 'urn:ex#c', { inScheme: scheme } as any);
+
+			expect([...node.getSubClassIris()]).toEqual([]);
+			expect(mockVocabularyStub.getNarrowerConcepts).toHaveBeenCalledWith(
+				['urn:g1'],
+				'urn:ex#c',
+				expect.objectContaining({ inScheme: scheme })
+			);
 		});
 	});
 
@@ -121,9 +135,33 @@ describe('ConceptsNode', () => {
 	});
 
 	describe('getDescription', () => {
-		it('should return count of concepts as string', () => {
-			mockVocabularyStub.getConcepts = vi.fn(function*() { yield 'urn:ex#c1'; yield 'urn:ex#c2'; });
+		it('should return the count of concepts of the scheme as string', () => {
+			mockVocabularyStub.getAllConceptsInScheme = vi.fn(function*() { yield 'urn:ex#c1'; yield 'urn:ex#c2'; });
 			expect(makeNode(ConceptsNode).getDescription()).toBe('2');
+		});
+
+		it('should not count the concepts of other schemes', () => {
+			// The document has more concepts than the scheme, which is what getConcepts would return.
+			mockVocabularyStub.getConcepts = vi.fn(function*() { yield 'urn:ex#c1'; yield 'urn:ex#c2'; yield 'urn:ex#other'; });
+			mockVocabularyStub.getAllConceptsInScheme = vi.fn(function*() { yield 'urn:ex#c1'; yield 'urn:ex#c2'; });
+			expect(makeNode(ConceptsNode).getDescription()).toBe('2');
+		});
+
+		it('should count the concepts of the scheme given by the inScheme option', () => {
+			const scheme = 'urn:ex#scheme';
+			mockVocabularyStub.getAllConceptsInScheme = vi.fn(function*(_g: any, s: string) {
+				if (s === scheme) { yield 'urn:ex#c1'; }
+			});
+			const node = new ConceptsNode(makeContext(), 'root/<mentor:concepts>', 'mentor:concepts', { inScheme: scheme } as any);
+			expect(node.getDescription()).toBe('1');
+		});
+
+		it('should compute the count only once per node', () => {
+			mockVocabularyStub.getAllConceptsInScheme = vi.fn(function*() { yield 'urn:ex#c1'; });
+			const node = makeNode(ConceptsNode);
+			node.getDescription();
+			node.getDescription();
+			expect(mockVocabularyStub.getAllConceptsInScheme).toHaveBeenCalledTimes(1);
 		});
 	});
 
@@ -132,6 +170,19 @@ describe('ConceptsNode', () => {
 			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() { yield 'urn:ex#Narrower'; });
 			const iris = [...makeNode(ConceptsNode).getSubClassIris()];
 			expect(iris).toEqual(['urn:ex#Narrower']);
+		});
+
+		it('should query the scheme given by the inScheme option and pass it on', () => {
+			const scheme = 'urn:ex#scheme';
+			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() { yield 'urn:ex#Top'; });
+			const node = new ConceptsNode(makeContext(), 'root/<mentor:concepts>', 'mentor:concepts', { inScheme: scheme } as any);
+
+			expect([...node.getSubClassIris()]).toEqual(['urn:ex#Top']);
+			expect(mockVocabularyStub.getNarrowerConcepts).toHaveBeenCalledWith(
+				['urn:g1'],
+				scheme,
+				expect.objectContaining({ inScheme: scheme })
+			);
 		});
 	});
 

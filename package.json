@@ -103,6 +103,7 @@
   },
   "overrides": {
     "morgan": "^1.11.0",
+    "brace-expansion": "^5.0.9",
     "got": "^11.8.6",
     "tmp": "^0.2.7",
     "gry": "^6.1.1",
@@ -120,7 +121,7 @@
   },
   "dependencies": {
     "@comunica/query-sparql": "^5.3.0",
-    "@faubulous/mentor-rdf": "^2.1.0",
+    "@faubulous/mentor-rdf": "^2.1.1",
     "@faubulous/mentor-rdf-parsers": "^2.0.0",
     "@faubulous/mentor-rdf-serializers": "^1.8.0",
     "asynciterator": "^3.10.0",

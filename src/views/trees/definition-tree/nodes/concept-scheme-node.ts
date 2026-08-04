@@ -16,7 +16,7 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 	}
 
 	override hasChildren(): boolean {
-		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: this.uri });
+		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: undefined, inScheme: this.uri });
 
 		if (concepts.hasChildren()) {
 			return true;
@@ -36,7 +36,9 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
 
-		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: this.uri });
+		// Note: Concepts are associated with a concept scheme via skos:inScheme, so the definedBy
+		// option that is inherited from this node must not be applied to them.
+		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: undefined, inScheme: this.uri });
 
 		if (concepts.hasChildren()) {
 			result.push(concepts);
