@@ -55,7 +55,10 @@ beforeEach(() => {
 		getConceptSchemePath: vi.fn(() => []),
 		// CollectionsNode
 		getCollections: vi.fn(function*() {}),
+		getRootCollections: vi.fn(function*() {}),
 		getCollectionMembers: vi.fn(function*() {}),
+		getRootCollectionPath: vi.fn(() => []),
+		isCollection: vi.fn(() => false),
 		isOrderedCollection: vi.fn(() => false),
 	};
 });
@@ -91,7 +94,7 @@ describe('ConceptSchemeNode', () => {
 
 		it('should return true when there are collections', () => {
 			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() {});
-			mockVocabularyStub.getCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
 			expect(makeNode(ConceptSchemeNode).hasChildren()).toBe(true);
 		});
 	});
@@ -108,9 +111,17 @@ describe('ConceptSchemeNode', () => {
 		});
 
 		it('should include CollectionsNode when collections exist', () => {
-			mockVocabularyStub.getCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
 			const children = makeNode(ConceptSchemeNode).getChildren();
 			expect(children.some(c => c instanceof CollectionsNode)).toBe(true);
+		});
+
+		it('should scope the CollectionsNode to the concept scheme', () => {
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+			const node = makeNode(ConceptSchemeNode);
+			const collections = node.getChildren().find(c => c instanceof CollectionsNode);
+			expect((collections as any).getQueryOptions().inScheme).toBe((node as any).uri);
+			expect((collections as any).getQueryOptions().definedBy).toBeUndefined();
 		});
 	});
 

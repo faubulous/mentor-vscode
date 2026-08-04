@@ -136,39 +136,44 @@ describe('ConceptsNode', () => {
 	});
 
 	describe('resolveNodeForUri', () => {
-		it('should return undefined when concept scheme path is empty', () => {
+		it('should return undefined when the concept is not a child of the scheme', () => {
 			mockVocabularyStub.getConceptSchemePath = vi.fn(() => []);
+			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() {});
 			expect(makeNode(ConceptsNode).resolveNodeForUri('urn:ex#x')).toBeUndefined();
 		});
 
 		it('should return undefined when concept scheme path is null', () => {
 			mockVocabularyStub.getConceptSchemePath = vi.fn(() => null);
+			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() {});
 			expect(makeNode(ConceptsNode).resolveNodeForUri('urn:ex#x')).toBeUndefined();
 		});
 
-		it('should return undefined when walkPath is empty after removing scheme', () => {
-			const schemeUri = 'urn:ex#x';
-			// path has only the scheme itself
-			mockVocabularyStub.getConceptSchemePath = vi.fn(() => [schemeUri]);
-			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() {});
-			const ctx = { ...makeContext() };
-			// Make the node have the same URI as the scheme
-			const node = new ConceptsNode(ctx, `root/<${schemeUri}>`, schemeUri);
-			expect(node.resolveNodeForUri(schemeUri)).toBeUndefined();
-		});
-
-		it('should call walkHierarchyPath when walkPath is non-empty', () => {
+		it('should resolve a top concept whose path contains only the scheme', () => {
 			const schemeUri = 'urn:ex#scheme';
 			const conceptIri = 'urn:ex#concept1';
-			// Path has the concept IRI (not the scheme), so walkPath = [conceptIri]
-			mockVocabularyStub.getConceptSchemePath = vi.fn(() => [conceptIri]);
-			// Make narrower concepts yield the concept so the child exists
+			// The path of a top concept contains the scheme, but not the concept itself.
+			mockVocabularyStub.getConceptSchemePath = vi.fn(() => [schemeUri]);
 			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*() { yield conceptIri; });
-			const ctx = makeContext();
-			const node = new ConceptsNode(ctx, `root/<${schemeUri}>`, schemeUri);
-			// walkPath is [conceptIri], walkHierarchyPath traverses children
+			const node = new ConceptsNode(makeContext(), `root/<${schemeUri}>`, schemeUri);
 			const result = node.resolveNodeForUri(conceptIri);
 			expect(result).not.toBeUndefined();
+			expect((result as any).uri).toBe(conceptIri);
+		});
+
+		it('should resolve a narrower concept by walking its broader concepts', () => {
+			const schemeUri = 'urn:ex#scheme';
+			const broaderIri = 'urn:ex#concept1';
+			const conceptIri = 'urn:ex#concept2';
+			// The path is ordered from the closest broader concept to the scheme.
+			mockVocabularyStub.getConceptSchemePath = vi.fn(() => [broaderIri, schemeUri]);
+			mockVocabularyStub.getNarrowerConcepts = vi.fn(function*(_g: any, subject: string) {
+				if (subject === schemeUri) { yield broaderIri; }
+				if (subject === broaderIri) { yield conceptIri; }
+			});
+			const node = new ConceptsNode(makeContext(), `root/<${schemeUri}>`, schemeUri);
+			const result = node.resolveNodeForUri(conceptIri);
+			expect(result).not.toBeUndefined();
+			expect((result as any).uri).toBe(conceptIri);
 		});
 	});
 });

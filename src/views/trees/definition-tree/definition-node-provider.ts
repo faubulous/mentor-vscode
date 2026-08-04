@@ -10,6 +10,7 @@ import { DefinitionTreeLayout } from '@src/services/core/settings-service';
 import { Debouncer } from '@src/utilities/debounce';
 import { DefinitionTreeNode } from './definition-tree-node';
 import { ClassesNode } from './nodes/classes/classes-node';
+import { CollectionsNode } from './nodes/collections/collections-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
 import { IndividualsNode } from './nodes/individuals/individuals-node';
 import { OntologyNode } from './nodes/ontology-node';
@@ -243,6 +244,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 
 		if (any(this.vocabulary.getIndividuals(this.document.graphs, undefined))) {
 			result.push(this.createRootNode(IndividualsNode, this.document, 'mentor:individuals'));
+		}
+
+		// Note: Collections that are associated with a concept scheme are listed under that scheme,
+		// so only the remaining collections are listed here.
+		if (any(this.vocabulary.getCollections(this.document.graphs, { inScheme: null }))) {
+			result.push(this.createRootNode(CollectionsNode, this.document, 'mentor:collections', { inScheme: null }));
 		}
 
 		if (any(this.vocabulary.getShapes(this.document.graphs, undefined))) {

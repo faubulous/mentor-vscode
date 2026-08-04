@@ -6,6 +6,7 @@ import { DefinitionTreeNode } from "../definition-tree-node";
 import { ClassesNode } from "./classes/classes-node";
 import { PropertiesNode } from "./properties/properties-node";
 import { IndividualsNode } from "./individuals/individuals-node";
+import { CollectionsNode } from "./collections/collections-node";
 import { ShapesNode } from "./shapes/shapes-node";
 import { RulesNode } from "./rules/rules-node";
 import { ValidatorsNode } from "./validators/validators-node";
@@ -77,6 +78,14 @@ export class OntologyNode extends DefinitionTreeNode {
 
 		if (individuals.hasChildren()) {
 			result.push(individuals);
+		}
+
+		// Note: Collections that are associated with a concept scheme are listed under that scheme,
+		// which is a root node of the tree, so only the remaining collections are listed here.
+		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { inScheme: null });
+
+		if (collections.hasChildren()) {
+			result.push(collections);
 		}
 
 		const shapes = this.createChildNode(ShapesNode, 'mentor:shapes', this.getQueryOptions({ includeBlankNodes: true }));

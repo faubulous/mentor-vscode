@@ -22,7 +22,9 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 			return true;
 		}
 
-		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: this.uri });
+		// Note: Collections are associated with a concept scheme via skos:inScheme, so the definedBy
+		// option that is inherited from this node must not be applied to them.
+		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: undefined, inScheme: this.uri });
 
 		if (collections.hasChildren()) {
 			return true;
@@ -40,7 +42,9 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 			result.push(concepts);
 		}
 
-		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: this.uri });
+		// Note: Collections are associated with a concept scheme via skos:inScheme, so the definedBy
+		// option that is inherited from this node must not be applied to them.
+		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: undefined, inScheme: this.uri });
 
 		if (collections.hasChildren()) {
 			result.push(collections);

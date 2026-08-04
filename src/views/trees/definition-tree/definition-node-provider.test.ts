@@ -62,6 +62,11 @@ beforeEach(() => {
 		getRules: vi.fn(function*() {}),
 		getValidators: vi.fn(function*() {}),
 		getDefinitionSources: vi.fn(function*() {}),
+		getCollections: vi.fn(function*() {}),
+		getRootCollections: vi.fn(function*() {}),
+		getCollectionMembers: vi.fn(function*() {}),
+		isCollection: vi.fn(() => false),
+		isOrderedCollection: vi.fn(() => false),
 	};
 });
 
@@ -354,6 +359,19 @@ describe('DefinitionNodeProvider', () => {
 			mockVocabularyStub.getShapes = vi.fn(function*() { yield 'urn:ex#s1'; });
 			const children = makeByTypeProvider().getChildren(undefined);
 			expect(children!.some(c => c.constructor.name === 'ShapesNode')).toBe(true);
+		});
+
+		it('should include CollectionsNode when collections without a concept scheme exist', () => {
+			mockVocabularyStub.getCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'CollectionsNode')).toBe(true);
+		});
+
+		it('should not include CollectionsNode when all collections are in a concept scheme', () => {
+			mockVocabularyStub.getCollections = vi.fn(function*() {});
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'CollectionsNode')).toBe(false);
 		});
 
 		it('should include RulesNode when rules exist', () => {

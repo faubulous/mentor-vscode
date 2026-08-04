@@ -35,15 +35,12 @@ export class ConceptsNode extends ConceptClassNode {
 
 	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
 		const graphs = this.getDocumentGraphs();
-		const path = this.vocabulary.getConceptSchemePath(graphs, iri);
+		const path = this.vocabulary.getConceptSchemePath(graphs, iri) ?? [];
 
-		if (!path || path.length === 0) {
-			return undefined;
-		}
-
-		// The path goes from concept to scheme root — reverse it and drop the
-		// scheme itself (which is the ConceptSchemeNode parent, not a child here).
-		const rootToTarget = path.reverse();
+		// The path contains the broader concepts of the concept, ordered from the closest broader
+		// concept to the scheme root, so it needs to be reversed. The scheme itself is dropped
+		// because it is the ConceptSchemeNode parent, not a child here.
+		const rootToTarget = [...path].reverse();
 		const schemeUri = this.getQueryOptions().definedBy ?? this.uri;
 		const schemeIndex = rootToTarget.indexOf(schemeUri);
 
@@ -51,9 +48,8 @@ export class ConceptsNode extends ConceptClassNode {
 			? rootToTarget.slice(schemeIndex + 1)
 			: rootToTarget;
 
-		if (walkPath.length === 0) {
-			return undefined;
-		}
+		// The path does not contain the concept itself, which is the node we are looking for.
+		walkPath.push(iri);
 
 		return this.walkHierarchyPath(walkPath);
 	}

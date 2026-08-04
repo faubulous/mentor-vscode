@@ -49,7 +49,10 @@ beforeEach(() => {
 	mockVocabularyStub = {
 		hasIndividuals: vi.fn(() => false),
 		getCollections: vi.fn(function*() {}),
+		getRootCollections: vi.fn(function*() {}),
 		getCollectionMembers: vi.fn(function*() {}),
+		getRootCollectionPath: vi.fn(() => []),
+		isCollection: vi.fn(() => false),
 		isOrderedCollection: vi.fn(() => false),
 		getNarrowerConcepts: vi.fn(function*() {}),
 		getSubjectsOfType: vi.fn(function*() {}),
@@ -124,11 +127,68 @@ describe('CollectionClassNode', () => {
 			expect(children).toHaveLength(2);
 			expect((children[0] as any).uri).toBe('urn:ex#m2');
 		});
+
+		it('should return a CollectionClassNode for members that are collections', () => {
+			mockVocabularyStub.getCollectionMembers = vi.fn(function*() {
+				yield 'urn:ex#nested';
+				yield 'urn:ex#concept';
+			});
+			mockVocabularyStub.isCollection = vi.fn((_g: any, iri: string) => iri === 'urn:ex#nested');
+			const children = makeNode(CollectionClassNode).getChildren();
+			expect(children).toHaveLength(2);
+			expect(children.find(c => (c as any).uri === 'urn:ex#nested')).toBeInstanceOf(CollectionClassNode);
+			expect(children.find(c => (c as any).uri === 'urn:ex#concept')).toBeInstanceOf(ConceptClassNode);
+		});
+
+		it('should list nested collections before concepts for unordered collections', () => {
+			mockVocabularyStub.getCollectionMembers = vi.fn(function*() {
+				yield 'urn:ex#concept';
+				yield 'urn:ex#nested';
+			});
+			mockVocabularyStub.isCollection = vi.fn((_g: any, iri: string) => iri === 'urn:ex#nested');
+			mockVocabularyStub.isOrderedCollection = vi.fn(() => false);
+			const children = makeNode(CollectionClassNode).getChildren();
+			expect((children[0] as any).uri).toBe('urn:ex#nested');
+			expect((children[1] as any).uri).toBe('urn:ex#concept');
+		});
+
+		it('should preserve member list order across mixed member types', () => {
+			mockVocabularyStub.getCollectionMembers = vi.fn(function*() {
+				yield 'urn:ex#concept';
+				yield 'urn:ex#nested';
+			});
+			mockVocabularyStub.isCollection = vi.fn((_g: any, iri: string) => iri === 'urn:ex#nested');
+			mockVocabularyStub.isOrderedCollection = vi.fn(() => true);
+			const children = makeNode(CollectionClassNode).getChildren();
+			expect((children[0] as any).uri).toBe('urn:ex#concept');
+			expect((children[1] as any).uri).toBe('urn:ex#nested');
+		});
+
+		it('should skip members that are already on the path to the node', () => {
+			mockVocabularyStub.getCollectionMembers = vi.fn(function*() {
+				yield 'urn:ex#parent';
+				yield 'urn:ex#self';
+				yield 'urn:ex#concept';
+			});
+			mockVocabularyStub.isCollection = vi.fn(() => true);
+			const parent = makeNode(CollectionClassNode, 'urn:ex#parent');
+			const node = (parent as any).createChildNode(CollectionClassNode, 'urn:ex#self');
+			const children = node.getChildren();
+			expect(children).toHaveLength(1);
+			expect((children[0] as any).uri).toBe('urn:ex#concept');
+		});
+	});
+
+	describe('hasChildren with cyclic members', () => {
+		it('should return false when the only member is the node itself', () => {
+			mockVocabularyStub.getCollectionMembers = vi.fn(function*() { yield 'urn:ex#x'; });
+			expect(makeNode(CollectionClassNode, 'urn:ex#x').hasChildren()).toBe(false);
+		});
 	});
 
 	describe('getClassNode', () => {
-		it('should return a ConceptClassNode', () => {
-			expect(makeNode(CollectionClassNode).getClassNode('urn:ex#c')).toBeInstanceOf(ConceptClassNode);
+		it('should return a CollectionClassNode', () => {
+			expect(makeNode(CollectionClassNode).getClassNode('urn:ex#c')).toBeInstanceOf(CollectionClassNode);
 		});
 	});
 
@@ -174,41 +234,73 @@ describe('CollectionsNode', () => {
 	});
 
 	describe('hasChildren', () => {
-		it('should return false when no collections', () => {
-			mockVocabularyStub.getCollections = vi.fn(function*() {});
+		it('should return false when no root collections', () => {
+			mockVocabularyStub.getRootCollections = vi.fn(function*() {});
 			expect(makeNode(CollectionsNode).hasChildren()).toBe(false);
 		});
 
-		it('should return true when collections exist', () => {
-			mockVocabularyStub.getCollections = vi.fn(function*() { yield 'urn:ex#c1'; });
+		it('should return true when root collections exist', () => {
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#c1'; });
 			expect(makeNode(CollectionsNode).hasChildren()).toBe(true);
 		});
 	});
 
 	describe('getChildren', () => {
 		it('should return CollectionClassNode children sorted by label', () => {
-			mockVocabularyStub.getCollections = vi.fn(function*() { yield 'urn:ex#c1'; yield 'urn:ex#c2'; });
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#c1'; yield 'urn:ex#c2'; });
 			const children = makeNode(CollectionsNode).getChildren();
 			expect(children).toHaveLength(2);
 			expect(children[0]).toBeInstanceOf(CollectionClassNode);
 		});
 
-		it('should return empty array when no collections', () => {
-			mockVocabularyStub.getCollections = vi.fn(function*() {});
+		it('should return empty array when no root collections', () => {
+			mockVocabularyStub.getRootCollections = vi.fn(function*() {});
 			expect(makeNode(CollectionsNode).getChildren()).toEqual([]);
+		});
+
+		it('should list only the root collections, not the nested ones', () => {
+			mockVocabularyStub.getCollections = vi.fn(function*() { yield 'urn:ex#root'; yield 'urn:ex#nested'; });
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#root'; });
+			const children = makeNode(CollectionsNode).getChildren();
+			expect(children).toHaveLength(1);
+			expect((children[0] as any).uri).toBe('urn:ex#root');
 		});
 	});
 
 	describe('resolveNodeForUri', () => {
-		it('should return undefined when URI does not match any child', () => {
-			mockVocabularyStub.getCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+		it('should return undefined when the URI is not a collection', () => {
+			mockVocabularyStub.isCollection = vi.fn(() => false);
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
 			expect(makeNode(CollectionsNode).resolveNodeForUri('urn:ex#not-found')).toBeUndefined();
 		});
 
-		it('should return the matching child node', () => {
-			mockVocabularyStub.getCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+		it('should return the matching root collection node', () => {
+			mockVocabularyStub.isCollection = vi.fn(() => true);
+			mockVocabularyStub.getRootCollectionPath = vi.fn(() => []);
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
 			const found = makeNode(CollectionsNode).resolveNodeForUri('urn:ex#col1');
 			expect(found).toBeInstanceOf(CollectionClassNode);
+			expect((found as any).uri).toBe('urn:ex#col1');
+		});
+
+		it('should walk the path to a nested collection', () => {
+			mockVocabularyStub.isCollection = vi.fn(() => true);
+			mockVocabularyStub.getRootCollectionPath = vi.fn(() => ['urn:ex#mid', 'urn:ex#root']);
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#root'; });
+			mockVocabularyStub.getCollectionMembers = vi.fn(function*(_g: any, iri: string) {
+				if (iri === 'urn:ex#root') { yield 'urn:ex#mid'; }
+				if (iri === 'urn:ex#mid') { yield 'urn:ex#leaf'; }
+			});
+			const found = makeNode(CollectionsNode).resolveNodeForUri('urn:ex#leaf');
+			expect(found).toBeInstanceOf(CollectionClassNode);
+			expect((found as any).uri).toBe('urn:ex#leaf');
+		});
+
+		it('should return undefined when the path cannot be walked', () => {
+			mockVocabularyStub.isCollection = vi.fn(() => true);
+			mockVocabularyStub.getRootCollectionPath = vi.fn(() => ['urn:ex#missing']);
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#root'; });
+			expect(makeNode(CollectionsNode).resolveNodeForUri('urn:ex#leaf')).toBeUndefined();
 		});
 	});
 });

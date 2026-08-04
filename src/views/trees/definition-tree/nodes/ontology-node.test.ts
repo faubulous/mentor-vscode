@@ -28,6 +28,7 @@ import { ClassesNode } from '@src/views/trees/definition-tree/nodes/classes/clas
 import { PropertiesNode } from '@src/views/trees/definition-tree/nodes/properties/properties-node';
 import { IndividualsNode } from '@src/views/trees/definition-tree/nodes/individuals/individuals-node';
 import { ShapesNode } from '@src/views/trees/definition-tree/nodes/shapes/shapes-node';
+import { CollectionsNode } from '@src/views/trees/definition-tree/nodes/collections/collections-node';
 import { RulesNode } from '@src/views/trees/definition-tree/nodes/rules/rules-node';
 import { ValidatorsNode } from '@src/views/trees/definition-tree/nodes/validators/validators-node';
 import { OntologyNode } from '@src/views/trees/definition-tree/nodes/ontology-node';
@@ -81,6 +82,12 @@ beforeEach(() => {
 		// RulesNode / ValidatorsNode
 		getRules: vi.fn(function*() {}),
 		getValidators: vi.fn(function*() {}),
+		// CollectionsNode
+		getCollections: vi.fn(function*() {}),
+		getRootCollections: vi.fn(function*() {}),
+		getCollectionMembers: vi.fn(function*() {}),
+		isCollection: vi.fn(() => false),
+		isOrderedCollection: vi.fn(() => false),
 		// OntologyNode
 		getOntologyVersionInfo: vi.fn(() => undefined),
 		// Common
@@ -189,6 +196,20 @@ describe('OntologyNode', () => {
 			mockVocabularyStub.hasSubjectsOfType = vi.fn((_g: any, uri: any) => uri === 'urn:ex#S');
 			const children = makeOntologyNode().getChildren();
 			expect(children.some(c => c instanceof ShapesNode)).toBe(true);
+		});
+
+		it('should include CollectionsNode when collections without a concept scheme exist', () => {
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+			const children = makeOntologyNode().getChildren();
+			const collections = children.find(c => c instanceof CollectionsNode);
+			expect(collections).toBeDefined();
+			expect((collections as any).getQueryOptions().inScheme).toBeNull();
+		});
+
+		it('should not include CollectionsNode when there are no collections', () => {
+			mockVocabularyStub.getRootCollections = vi.fn(function*() {});
+			const children = makeOntologyNode().getChildren();
+			expect(children.some(c => c instanceof CollectionsNode)).toBe(false);
 		});
 
 		it('should include RulesNode when rules exist', () => {

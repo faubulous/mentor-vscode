@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { ConceptClassNode } from "../concepts/concept-class-node";
 import { ClassNodeBase } from "../classes/class-node-base";
+import { DefinitionTreeNode } from "../../definition-tree-node";
 
 /**
  * Node of a SKOS collection in the definition tree.
@@ -19,32 +20,73 @@ export class CollectionClassNode extends ClassNodeBase {
 
 	override hasChildren(): boolean {
 		const graphs = this.getDocumentGraphs();
+		const path = this.getPathUris();
 
-		for (const _ of this.vocabulary.getCollectionMembers(graphs, this.uri)) {
-			return true;
+		for (const m of this.vocabulary.getCollectionMembers(graphs, this.uri)) {
+			if (!path.has(m)) {
+				return true;
+			}
 		}
 
 		return false;
 	}
 
 	override getChildren(): TreeNode[] {
-		const result = [];
 		const graphs = this.getDocumentGraphs();
+		const path = this.getPathUris();
+		const collectionNodes: TreeNode[] = [];
+		const conceptNodes: TreeNode[] = [];
+		const members: TreeNode[] = [];
 
 		for (const m of this.vocabulary.getCollectionMembers(graphs, this.uri)) {
-			result.push(this.createChildNode(ConceptClassNode, m));
+			// Note: Members that are already on the path to this node are skipped so that cyclic
+			// collection definitions cannot be expanded indefinitely.
+			if (path.has(m)) {
+				continue;
+			}
+
+			if (this.vocabulary.isCollection(graphs, m)) {
+				const node = this.createChildNode(CollectionClassNode, m);
+
+				collectionNodes.push(node);
+				members.push(node);
+			} else {
+				const node = this.createChildNode(ConceptClassNode, m);
+
+				conceptNodes.push(node);
+				members.push(node);
+			}
 		}
 
 		if (this.vocabulary.isOrderedCollection(graphs, this.uri)) {
-			// Preserve order for ordered collections.
-			return result;
-		} else {
-			return sortByLabel(result);
+			// Preserve the order of the member list for ordered collections.
+			return members;
 		}
+
+		// Nested collections are listed before the concepts of the collection.
+		return [...sortByLabel(collectionNodes), ...sortByLabel(conceptNodes)];
+	}
+
+	/**
+	 * Get the IRIs of this node and of all its ancestor nodes in the tree.
+	 * @returns A set of resource IRIs.
+	 */
+	protected getPathUris(): Set<string> {
+		const result = new Set<string>([this.uri]);
+
+		let parent: DefinitionTreeNode | undefined = this.parent;
+
+		while (parent) {
+			result.add(parent.uri);
+
+			parent = parent.parent;
+		}
+
+		return result;
 	}
 
 	override getClassNode(iri: string) {
-		return this.createChildNode(ConceptClassNode, iri);
+		return this.createChildNode(CollectionClassNode, iri);
 	}
 
 	override getIndividualNode(iri: string) {
