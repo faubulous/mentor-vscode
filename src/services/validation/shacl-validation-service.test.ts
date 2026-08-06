@@ -170,7 +170,7 @@ describe('ShaclValidationService.getEffectiveShapeGraphs', () => {
 	it('resolves no shape graphs for a profile without paths', () => {
 		const { service } = createService({
 			profiles: {
-				'ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor/shapes/ontology'] },
+				'ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor-vscode/shapes/ontology'] },
 			},
 		});
 
@@ -182,7 +182,7 @@ describe('ShaclValidationService.getEffectiveShapeGraphs', () => {
 describe('ShaclValidationService.checkShaclProfiles', () => {
 	const settings: ShaclValidationSettings = {
 		profiles: {
-			'ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor/shapes/ontology'] },
+			'ontology': { name: 'Basic Ontology', shapes: ['https://w3id.org/mentor-vscode/shapes/ontology'] },
 		},
 	};
 
@@ -196,7 +196,7 @@ describe('ShaclValidationService.checkShaclProfiles', () => {
 		const { service } = createService(settings, undefined, () => false);
 
 		expect(await service.checkShaclProfiles()).toEqual({
-			profiles: { 'ontology': ['https://w3id.org/mentor/shapes/ontology'] },
+			profiles: { 'ontology': ['https://w3id.org/mentor-vscode/shapes/ontology'] },
 		});
 	});
 

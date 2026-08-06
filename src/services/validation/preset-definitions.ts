@@ -49,13 +49,13 @@ export interface ValidationPreset {
  * Graph URI of the bundled "Basic Ontology" SHACL shape graph. A w3id.org
  * permanent identifier that redirects to the bundled file's source on GitHub.
  */
-export const ONTOLOGY_SHAPES_URI = 'https://w3id.org/mentor/shapes/ontology';
+export const ONTOLOGY_SHAPES_URI = 'https://w3id.org/mentor-vscode/shapes/ontology';
 
 /**
  * Graph URI of the bundled "Basic Taxonomy" SHACL shape graph. A w3id.org
  * permanent identifier that redirects to the bundled file's source on GitHub.
  */
-export const TAXONOMY_SHAPES_URI = 'https://w3id.org/mentor/shapes/taxonomy';
+export const TAXONOMY_SHAPES_URI = 'https://w3id.org/mentor-vscode/shapes/taxonomy';
 
 
 /**
@@ -86,8 +86,8 @@ export const VALIDATION_PRESETS: ValidationPreset[] = [
 
 /**
  * Derives the version-pinned identity of a shape graph URI, e.g.
- * `https://w3id.org/mentor/shapes/ontology` + `1.0.0`
- * → `https://w3id.org/mentor/shapes/ontology/1.0.0`.
+ * `https://w3id.org/mentor-vscode/shapes/ontology` + `1.0.0`
+ * → `https://w3id.org/mentor-vscode/shapes/ontology/1.0.0`.
  *
  * This mirrors the `owl:versionIRI` declared in the bundled shape file and the
  * versioned w3id redirect.
