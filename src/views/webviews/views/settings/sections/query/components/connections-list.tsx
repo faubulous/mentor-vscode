@@ -25,7 +25,7 @@ export interface ConnectionsListProps {
 
 /**
  * Lists the configured SPARQL connections via the shared {@link SettingsList},
- * grouped by where they are stored: built-in presets (the workspace store),
+ * grouped by where they come from: built-in connections (the workspace store),
  * workspace settings and user settings. The workspace group is omitted when no
  * workspace folder is open. The page header offers Reload/Test-all actions.
  */
@@ -46,7 +46,7 @@ export function ConnectionsList({
 }: ConnectionsListProps) {
 	const testableCount = connections.length;
 
-	const presetConnections = connections.filter(c => c.isProtected === true);
+	const builtInConnections = connections.filter(c => c.isProtected === true);
 	const workspaceConnections = connections.filter(c => c.isProtected !== true && c.configScope === ConfigurationScope.Workspace);
 	const userConnections = connections.filter(c => c.isProtected !== true && c.configScope !== ConfigurationScope.Workspace);
 
@@ -85,9 +85,9 @@ export function ConnectionsList({
 
 	const sections: SettingsListSection<SparqlConnection>[] = [
 		{
-			title: 'Presets',
-			description: 'Built-in connections that ship with Mentor. They cannot be edited or removed.',
-			items: presetConnections,
+			title: 'Built-In',
+			description: 'Connections that ship with Mentor. They cannot be edited or removed.',
+			items: builtInConnections,
 			emptyMessage: '',
 			hideWhenEmpty: true,
 		},

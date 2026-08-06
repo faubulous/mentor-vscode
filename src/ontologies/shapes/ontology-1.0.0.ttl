@@ -12,12 +12,13 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 shapes:ontology a owl:Ontology ;
 	owl:versionIRI <https://w3id.org/mentor-vscode/shapes/ontology/1.0.0> ;
 	owl:versionInfo "1.0.0" ;
-	dct:title "Mentor Ontology"@en ;
+	dct:title "Basic Ontology"@en ;
 	dct:description "Classes, properties and named individuals must have a label, a comment and a reference to the defining ontology."@en ;
 	dct:license <https://creativecommons.org/publicdomain/zero/1.0/> ;
 	dct:creator <https://orcid.org/0000-0003-1876-1628> ;
 	dct:publisher <https://orcid.org/0000-0003-1876-1628> ;
-	dct:modified "2026-07-16"^^xsd:date .
+	dct:created "2026-07-16"^^xsd:date ;
+	dct:modified "2026-08-06"^^xsd:date .
 
 :TermLabelShape a sh:NodeShape ;
 	rdfs:label "Term Label Shape"@en ;
