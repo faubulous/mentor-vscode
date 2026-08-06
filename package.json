@@ -1577,7 +1577,7 @@
           "mentor.sparql.stores": {
             "type": "array",
             "title": "SPARQL Stores",
-            "description": "User- and workspace-defined SPARQL store profiles. Each profile describes a store type: how it controls reasoning (a URL parameter or an inline query pragma) and its default queries. Manage these from the Query > Stores settings section. The built-in store presets (SPARQL Endpoint, Apache Jena Fuseki, RDF4J, QLever) and the in-memory Workspace store are not configurable here.",
+            "description": "User- and workspace-defined SPARQL store profiles. Each profile describes a store type: how it controls reasoning (a URL parameter or an inline query pragma) and its default queries. Manage these from the Query > Stores settings section. The built-in stores (SPARQL Endpoint, in-memory Workspace) and the community stores (Apache Jena Fuseki, QLever, RDF4J) are not configurable here.",
             "default": [],
             "items": {
               "type": "object",

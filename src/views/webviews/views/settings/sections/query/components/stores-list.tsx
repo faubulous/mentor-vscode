@@ -5,7 +5,8 @@ import { StoresListItem } from './stores-list-item';
 import { SettingsList, SettingsListSection } from '../../../components/settings-list';
 
 export interface StoresListProps {
-	presetStores: TripleStoreConfig[];
+	builtInStores: TripleStoreConfig[];
+	communityStores: TripleStoreConfig[];
 	workspaceStores: TripleStoreConfig[];
 	userStores: TripleStoreConfig[];
 	hasWorkspace: boolean;
@@ -17,11 +18,11 @@ export interface StoresListProps {
 
 /**
  * Lists the defined SPARQL store types via the shared {@link SettingsList},
- * grouped by where they are stored: built-in presets, workspace settings and
- * user settings. The workspace group is omitted when no workspace folder is
- * open. All edits happen in the modal opened from a row.
+ * grouped by where they come from: built-in stores, community stores, workspace
+ * settings and user settings. The workspace group is omitted when no workspace
+ * folder is open. All edits happen in the modal opened from a row.
  */
-export function StoresList({ presetStores, workspaceStores, userStores, hasWorkspace, onCreate, onEdit, onDelete, onOpenInBrowser }: StoresListProps) {
+export function StoresList({ builtInStores, communityStores, workspaceStores, userStores, hasWorkspace, onCreate, onEdit, onDelete, onOpenInBrowser }: StoresListProps) {
 	const addAction = (scope: ConfigurationScope) => (
 		<vscode-toolbar-button className="primary" title="Add a new store" onClick={() => onCreate(scope)}>
 			<span className="codicon codicon-add" />
@@ -31,9 +32,16 @@ export function StoresList({ presetStores, workspaceStores, userStores, hasWorks
 
 	const sections: SettingsListSection<TripleStoreConfig>[] = [
 		{
-			title: 'Presets',
-			description: 'Built-in triple store configurations that ship with Mentor. They cannot be edited or removed.',
-			items: presetStores,
+			title: 'Built-In',
+			description: 'Triple store configurations that ship with Mentor. They cannot be edited or removed.',
+			items: builtInStores,
+			emptyMessage: '',
+			hideWhenEmpty: true,
+		},
+		{
+			title: 'Community',
+			description: 'Open Source triple stores provided by independent developer communities. Mentor ships these configurations for convenience and is not affiliated with the projects.',
+			items: communityStores,
 			emptyMessage: '',
 			hideWhenEmpty: true,
 		},

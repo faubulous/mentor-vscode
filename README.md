@@ -9,34 +9,59 @@ The developer friendly IDE for RDF knowledge graphs.
 
 - **Workspace Management**
   - Fast indexing, cross-file references, code lenses and quick navigation to definitions.
+  - Settings panel to browse and manage all important Mentor settings.
+  - Status bar items for index, validation and query status.
 - **Content Navigation**
   - Browsable definition trees for RDFS / OWL / SHACL / SKOS
   - Structural reasoning and multilingual labels.
+  - Describe IRIs and prefixed names against the connection of the current document.
 - **Syntax Highlighting & Validation**
-  - N3 / Turtle / TriG / RDF-XML and SPARQL.
+  - N-Triples / N-Quads / N3 / Turtle / TriG / RDF-XML, SPARQL and Datalog.
   - SHACL validation profiles with built-in presets for basic ontology and taxonomy hygiene.
+  - Validate a single document, a profile or the entire workspace, on startup or on change.
+  - SHACL reports and validation logs, extensible with custom user shapes.
 - **Editing**
   - Repository wide auto-complete
   - Built in prefix.cc support for namespace lookups
+  - Configurable formatting for Turtle and SPARQL documents
 - **Refactoring**
   - Refactor prefixed names and IRIs
   - Auto-implement / sort / remove prefixes
+  - Sort documents alphabetically, by type or semantically, clean up and inline blank nodes
+  - Convert documents between N-Triples / N-Quads / Turtle / RDF-XML
 - **Notebooks && SPARQL**
   - Built-in triple store for all files in the workspace.
   - Run queries against remote endpoints or workspace files.
+  - Editable triple store profiles to adjust SPARQL queries and inferencing features.
   - Interactive notebooks with support for Markdown, RDF data and SPARQL queries.
+- **Templating**
+  - Support for the [Triplate](https://triplate.dev) templating language.
+  - Create, execute and preview templates for SPARQL queries and RDF data.
 - **Collaboration**
   - Runs in the browser (e.g. [`vscode.dev`](https://vscode.dev)), supports editing GitHub repositories and live collaboration.
 
 ## News
 
-### Version 0.5.9: Service Release
-- Switched API compatibility to VS Code 1.105 to support Amazon Kiro
-- Enabled resource tooltip for all languages
-- Added option to copy Cell URI in notebook code lens
-- Added reference update service to update references to URIs accross documents
-- Fixed missing usage code lens on first line after prefix
-- Fixed slugs not updated after renumbering command execution
+### Version 0.6.0: New Settings, SHACL and SPARQL Features
+- **New Settings Panel**
+  - Browse and manage all important Mentor settings
+- **SHACL: Added fast and stable validation**
+  - Profiles allow you to define patterns for files that should be validated
+  - Automatically validate on startup or document change
+- **SPARQL: Added editable custom triple store profiles**
+  - Adjust the SPARQL queries and inferencing features
+- **Templating: Added support for the [Triplate](https://triplate.dev) templating language**
+  - Create templates for SPARQL queries and RDF data
+  - Execute and preview templates interactively
+- **'Describe Resource' context menu command in editor and trees**
+  - Describe IRIs and prefixed names against the document connection
+  - Change document connection to any other SPARQL connection
+- **New status bar items for index, validation and query status**
+  - Quick access to important index, validation and query settings
+  - Query status bar is shortcut to SPARQL panel
+- **2x faster workspace indexing**
+- **Many bug fixes and performance improvements**
+  - 50% smaller package size
 
 ## Installation
 
