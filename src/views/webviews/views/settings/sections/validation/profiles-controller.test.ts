@@ -419,7 +419,7 @@ describe('ValidationProfilesSectionController', () => {
 		try {
 			const { controller, shapeGraphService } = setup();
 			shapeGraphService.getOrphanedUserShapeFiles.mockReturnValue(['shapes/test.ttl']);
-			const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+			const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 			const pending = controller.handleMessage({ section: 'validation.profiles', id: 'CheckOrphanedShapes' } as any);
 			// No mentor.shacl.validation change fires (a pure create/abandon), so the
@@ -438,7 +438,7 @@ describe('ValidationProfilesSectionController', () => {
 		try {
 			const { controller, shapeGraphService } = setup();
 			shapeGraphService.getOrphanedUserShapeFiles.mockReturnValue([]);
-			const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined as any);
+			const warn = vi.spyOn(vscode.window, 'showWarningMessage').mockResolvedValue(undefined);
 
 			const pending = controller.handleMessage({ section: 'validation.profiles', id: 'CheckOrphanedShapes' } as any);
 			await vi.advanceTimersByTimeAsync(1500);
