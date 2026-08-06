@@ -9,22 +9,34 @@ The developer friendly IDE for RDF knowledge graphs.
 
 - **Workspace Management**
   - Fast indexing, cross-file references, code lenses and quick navigation to definitions.
+  - Settings panel to browse and manage all important Mentor settings.
+  - Status bar items for index, validation and query status.
 - **Content Navigation**
   - Browsable definition trees for RDFS / OWL / SHACL / SKOS
   - Structural reasoning and multilingual labels.
+  - Describe IRIs and prefixed names against the connection of the current document.
 - **Syntax Highlighting & Validation**
-  - N3 / Turtle / TriG / RDF-XML and SPARQL.
+  - N-Triples / N-Quads / N3 / Turtle / TriG / RDF-XML, SPARQL and Datalog.
   - SHACL validation profiles with built-in presets for basic ontology and taxonomy hygiene.
+  - Validate a single document, a profile or the entire workspace, on startup or on change.
+  - SHACL reports and validation logs, extensible with custom user shapes.
 - **Editing**
   - Repository wide auto-complete
   - Built in prefix.cc support for namespace lookups
+  - Configurable formatting for Turtle and SPARQL documents
 - **Refactoring**
   - Refactor prefixed names and IRIs
   - Auto-implement / sort / remove prefixes
+  - Sort documents alphabetically, by type or semantically, clean up and inline blank nodes
+  - Convert documents between N-Triples / N-Quads / Turtle / RDF-XML
 - **Notebooks && SPARQL**
   - Built-in triple store for all files in the workspace.
   - Run queries against remote endpoints or workspace files.
+  - Editable triple store profiles to adjust SPARQL queries and inferencing features.
   - Interactive notebooks with support for Markdown, RDF data and SPARQL queries.
+- **Templating**
+  - Support for the [Triplate](https://triplate.dev) templating language.
+  - Create, execute and preview templates for SPARQL queries and RDF data.
 - **Collaboration**
   - Runs in the browser (e.g. [`vscode.dev`](https://vscode.dev)), supports editing GitHub repositories and live collaboration.
 
