@@ -12,6 +12,9 @@ shapes:taxonomy a owl:Ontology ;
     owl:versionInfo "1.0.0" ;
     dct:title "Mentor Taxonomy"@en ;
     dct:description "Concepts and concept schemes must have a preferred label, a definition and every concept must belong to a concept scheme."@en ;
+    dct:license <https://creativecommons.org/publicdomain/zero/1.0/> ;
+    dct:creator <https://orcid.org/0000-0003-1876-1628> ;
+    dct:publisher <https://orcid.org/0000-0003-1876-1628> ;
     dct:modified "2026-07-16"^^xsd:date .
 
 :ConceptPrefLabelShape a sh:NodeShape ;
