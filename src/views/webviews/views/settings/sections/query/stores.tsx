@@ -10,7 +10,7 @@ import type { SettingsSectionDescriptor } from '../../settings-section-descripto
 import { StoresList } from './components/stores-list';
 import { StoresSectionMessages } from './stores-messages';
 import { StoreEditor } from './components/store-editor';
-import { PRESET_STORES } from '@src/languages/sparql/services/default-stores';
+import { BUILT_IN_STORES, COMMUNITY_STORES, PRESET_STORES } from '@src/languages/sparql/services/default-stores';
 import { WORKSPACE_STORE } from '@src/languages/sparql/services/workspace-store';
 import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
 
@@ -81,9 +81,10 @@ function QueryStoresSection({ settings, setScope }: SettingsSectionProps) {
 
 	const sortByLabel = (stores: TripleStoreConfig[]) => [...stores].sort((a, b) => a.label.localeCompare(b.label));
 
-	// Presets follow their canonical definition order (workspace, sparql, jena, qlever, rdf4j)
-	// rather than being sorted alphabetically.
-	const presetStores = [WORKSPACE_STORE, ...PRESET_STORES];
+	// Built-in and community stores follow their canonical definition order
+	// (workspace, sparql — then jena, qlever, rdf4j) rather than being sorted alphabetically.
+	const builtInStores = [WORKSPACE_STORE, ...BUILT_IN_STORES];
+	const communityStores = COMMUNITY_STORES;
 	const editableUserStores = sortByLabel(userStores.filter(isEditable));
 	const editableWorkspaceStores = sortByLabel(workspaceStores.filter(isEditable));
 
@@ -142,7 +143,8 @@ function QueryStoresSection({ settings, setScope }: SettingsSectionProps) {
 	return (
 		<>
 			<StoresList
-				presetStores={presetStores}
+				builtInStores={builtInStores}
+				communityStores={communityStores}
 				workspaceStores={editableWorkspaceStores}
 				userStores={editableUserStores}
 				hasWorkspace={hasWorkspace}

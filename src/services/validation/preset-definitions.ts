@@ -70,14 +70,14 @@ export const PRESET_DEFAULT_PATHS = ['**/*'];
 export const VALIDATION_PRESETS: ValidationPreset[] = [
 	{
 		id: 'ontology',
-		name: 'Ontology',
+		name: 'Basic Ontology',
 		description: 'Classes, properties and named individuals must have a label, a comment and a reference to the defining ontology.',
 		version: '1.0.0',
 		shapes: [ONTOLOGY_SHAPES_URI],
 	},
 	{
 		id: 'taxonomy',
-		name: 'Taxonomy',
+		name: 'Basic Taxonomy',
 		description: 'Concepts and schemes must have a preferred label and a definition. Every concept must belong to a scheme.',
 		version: '1.0.0',
 		shapes: [TAXONOMY_SHAPES_URI],
