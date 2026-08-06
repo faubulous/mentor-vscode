@@ -61,7 +61,9 @@ describe('Basic Ontology preset shapes', () => {
 			ex:hasPart a owl:ObjectProperty ;
 				rdfs:label "has part"@en ;
 				rdfs:comment "Relates a thing to one of its parts."@en ;
-				rdfs:isDefinedBy ex: .
+				rdfs:isDefinedBy ex: ;
+				rdfs:domain ex:Thing ;
+				rdfs:range ex:Thing .
 
 			ex:theThing a owl:NamedIndividual ;
 				rdfs:label "The thing"@en ;
@@ -137,11 +139,47 @@ describe('Basic Ontology preset shapes', () => {
 
 			ex:hasPart a owl:ObjectProperty ;
 				rdfs:label "has part"@en ;
-				rdfs:isDefinedBy ex: .
+				rdfs:isDefinedBy ex: ;
+				rdfs:domain ex:Thing ;
+				rdfs:range ex:Thing .
 		`);
 
 		expect(report.conforms).toBe(false);
 		expect(report.results).toHaveLength(1);
+	});
+
+	it('reports a property without a range', async () => {
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
+			${ONTOLOGY_PREFIXES}
+			${CONFORMING_HEADER}
+
+			ex:hasPart a owl:ObjectProperty ;
+				rdfs:label "has part"@en ;
+				rdfs:comment "Relates a thing to one of its parts."@en ;
+				rdfs:isDefinedBy ex: ;
+				rdfs:domain ex:Thing .
+		`);
+
+		expect(report.conforms).toBe(false);
+		expect(report.results).toHaveLength(1);
+		expect(messageOf(report.results[0])).toContain('rdfs:range');
+	});
+
+	it('reports a property without a domain', async () => {
+		const report = await validate(ONTOLOGY_SHAPES_URI, `
+			${ONTOLOGY_PREFIXES}
+			${CONFORMING_HEADER}
+
+			ex:hasPart a owl:ObjectProperty ;
+				rdfs:label "has part"@en ;
+				rdfs:comment "Relates a thing to one of its parts."@en ;
+				rdfs:isDefinedBy ex: ;
+				rdfs:range ex:Thing .
+		`);
+
+		expect(report.conforms).toBe(false);
+		expect(report.results).toHaveLength(1);
+		expect(messageOf(report.results[0])).toContain('rdfs:domain');
 	});
 
 	it('reports a term without an rdfs:isDefinedBy reference', async () => {
