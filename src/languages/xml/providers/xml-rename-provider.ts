@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 import { Uri } from '@faubulous/mentor-rdf';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';
@@ -25,12 +23,12 @@ interface TextReplacement {
  * Provides renaming for URIs, resources labels and prefixes.
  */
 export class XmlRenameProvider extends XmlFeatureProvider implements vscode.RenameProvider {
-	private get contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+	constructor(private readonly _contextService: IDocumentContextService) {
+		super();
 	}
 
 	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
-		const context = this.contextService.getDocumentContext(document, XmlDocument);
+		const context = this._contextService.getDocumentContext(document, XmlDocument);
 
 		if (!context) {
 			return undefined;
@@ -108,7 +106,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 	 * @returns The range of the prefix to be edited, or `undefined` if not found.
 	 */
 	private _getPrefixEditRange(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
-		const context = this.contextService.getDocumentContext(document, XmlDocument);
+		const context = this._contextService.getDocumentContext(document, XmlDocument);
 
 		if (!context) {
 			return undefined;
@@ -197,7 +195,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 	 * @returns The range of the local name to be edited, or `undefined` if not found.
 	 */
 	private _getLocalNameEditRange(document: vscode.TextDocument, position: vscode.Position): vscode.Range | undefined {
-		const context = this.contextService.getDocumentContext(document, XmlDocument);
+		const context = this._contextService.getDocumentContext(document, XmlDocument);
 
 		if (!context) {
 			return undefined;

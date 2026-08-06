@@ -1,9 +1,15 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
+import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { ISettingsService } from '@src/services/core/settings-service.interface';
 import { TurtleDocument, SparqlDocument, XmlDocument } from '@src/languages';
 import { IDocumentContext } from './document-context.interface';
 import { ILanguageInfo } from './document-factory.interface';
+import { RDF_LANGUAGE_IDS } from './document-languages';
+import { getLog } from '@src/utilities/vscode/log';
+
+export { RDF_LANGUAGE_IDS };
 
 /**
  * Metadata about a supported file extension.
@@ -46,11 +52,19 @@ export class DocumentFactory {
 		'.mnb': { language: 'json', isTripleSource: false }
 	}
 
-	constructor() {
+	constructor(
+		private readonly _store: Store,
+		private readonly _vocabulary: VocabularyRepository,
+		private readonly _settings: ISettingsService
+	) {
 		const extensions = Object.keys(this.supportedExtensions);
 		const languages = extensions.map(e => this.supportedExtensions[e].language);
 
-		this.supportedLanguages = new Set(languages);
+		// Notebook container files (.mnb → 'json') are opened by the notebook
+		// serializer, not as document contexts: create() has no 'json' case, and
+		// admitting the language here would try (and fail) to create a context
+		// on every edit of any JSON file.
+		this.supportedLanguages = new Set(languages.filter(language => language !== 'json'));
 	}
 
 	/**
@@ -68,6 +82,18 @@ export class DocumentFactory {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Indicates whether a language is one of Mentor's first-class RDF authoring languages
+	 * (see {@link RDF_LANGUAGE_IDS}) — i.e. one in which resources can be authored,
+	 * referenced and described. Used to gate resource-oriented editor features such as
+	 * "Describe Resource".
+	 * @param languageId The language ID to check (e.g. 'turtle', 'sparql').
+	 * @returns `true` if the language is an RDF language, otherwise `false`.
+	 */
+	isRdfLanguage(languageId: string): boolean {
+		return (RDF_LANGUAGE_IDS as readonly string[]).includes(languageId);
 	}
 
 	/**
@@ -149,19 +175,19 @@ export class DocumentFactory {
 
 		switch (language) {
 			case 'turtle':
-				return new TurtleDocument(documentUri, RdfSyntax.Turtle);
+				return new TurtleDocument(documentUri, RdfSyntax.Turtle, this._store, this._vocabulary, this._settings);
 			case 'ntriples':
-				return new TurtleDocument(documentUri, RdfSyntax.NTriples);
+				return new TurtleDocument(documentUri, RdfSyntax.NTriples, this._store, this._vocabulary, this._settings);
 			case 'nquads':
-				return new TurtleDocument(documentUri, RdfSyntax.NQuads);
+				return new TurtleDocument(documentUri, RdfSyntax.NQuads, this._store, this._vocabulary, this._settings);
 			case 'n3':
-				return new TurtleDocument(documentUri, RdfSyntax.N3);
+				return new TurtleDocument(documentUri, RdfSyntax.N3, this._store, this._vocabulary, this._settings);
 			case 'trig':
-				return new TurtleDocument(documentUri, RdfSyntax.TriG);
+				return new TurtleDocument(documentUri, RdfSyntax.TriG, this._store, this._vocabulary, this._settings);
 			case 'sparql':
-				return new SparqlDocument(documentUri);
+				return new SparqlDocument(documentUri, this._store, this._vocabulary, this._settings);
 			case 'xml':
-				return new XmlDocument(documentUri);
+				return new XmlDocument(documentUri, this._store, this._vocabulary, this._settings);
 			default:
 				throw new Error('Unsupported language:' + language);
 		}
@@ -247,7 +273,7 @@ export class DocumentFactory {
 	 * @param languageId The language identifier.
 	 * @returns A `LanguageInfo` object if the language is supported by this factory, `undefined` otherwise.
 	 */
-	async getLanguageInfo(languageId: string): Promise<ILanguageInfo | undefined> {
+	async getSupportedLanguageInfoFromId(languageId: string): Promise<ILanguageInfo | undefined> {
 		return (await this.getSupportedLanguagesInfo()).find(l => l.id === languageId);
 	}
 
@@ -256,8 +282,27 @@ export class DocumentFactory {
 	 * @param mimetype The MIME type to look up.
 	 * @returns The corresponding `LanguageInfo` object, or `undefined` if not found.
 	 */
-	async getLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined> {
+	async getSupportedLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined> {
 		return (await this.getSupportedLanguagesInfo()).find(l => l.mimetypes.includes(mimetype));
+	}
+
+	/**
+	 * Retrieves the language ID from a MIME type, defaulting to 'plaintext' if not found.
+	 * @param mimetype The MIME type to look up.
+	 * @returns The corresponding language ID, or 'plaintext' if not found.
+	 */
+	async getLanguageIdFromMimeType(mimetype: string): Promise<string> {
+		const languageInfo = await this.getSupportedLanguageInfoFromMimeType(mimetype);
+
+		if (languageInfo) {
+			return languageInfo.id;
+		} else if (mimetype.includes('html')) {
+			return 'html';
+		} else if (mimetype.includes('csv')) {
+			return 'csv';
+		} else {
+			return 'plaintext';
+		}
 	}
 
 	/**
@@ -278,7 +323,7 @@ export class DocumentFactory {
 
 			return JSON.parse(content);
 		} catch (error) {
-			console.warn('Could not read package.json:', error);
+			getLog().warn('Could not read package.json:', error);
 			return null;
 		}
 	}

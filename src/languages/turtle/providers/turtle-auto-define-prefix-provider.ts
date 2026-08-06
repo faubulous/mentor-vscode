@@ -1,40 +1,26 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { TurtlePrefixDefinitionService } from '@src/languages/turtle/services/turtle-prefix-definition-service';
-import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { getConfig } from '@src/utilities/vscode/config';
-import { IDocumentContext } from '@src/services/document/document-context.interface';
-
-/**
- * Describes a pending prefix that should be auto-defined once fresh tokens arrive.
- */
-interface PendingPrefix {
-	/**
-	 * The document URI where the prefix was typed.
-	 */
-	documentUri: string;
-
-	/**
-	 * The position where the colon was typed.
-	 */
-	position: vscode.Position;
-}
+import { getContentStartOffset, getTokenIndexAtPosition } from '@src/utilities';
+import { isTemplate } from 'triplate';
+import { isTokenizedDocumentContext } from '@src/services/document/document-context.interface';
 
 /**
  * A provider that automatically defines namespace prefixes when a colon is typed
- * in a prefixed name. This listens to document changes to capture the intent of
- * writing a prefix, then waits for fresh tokens from the language server before
- * processing the auto-define logic.
+ * in a prefixed name. Detection runs synchronously on the keystroke: the document
+ * is tokenized locally (no language-server round-trip) and the prefix declaration
+ * is inserted immediately.
  */
 export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
-	private _pendingPrefix: PendingPrefix | undefined;
-
 	private readonly _disposables: vscode.Disposable[] = [];
 
-	constructor(languages: string[]) {
+	constructor(
+		languages: string[],
+		private readonly _prefixService: TurtlePrefixDefinitionService,
+		private readonly _contextService: IDocumentContextService
+	) {
 		const filter = languages.map(language => ({ language }));
 
 		this._disposables.push(
@@ -42,16 +28,6 @@ export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
 				if (!filter.some(f => f.language === e.document.languageId)) return;
 
 				this._onDidChangeTextDocument(e);
-			})
-		);
-
-		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-
-		this._disposables.push(
-			contextService.onDidChangeDocumentContext(context => {
-				if (context) {
-					this._onDidChangeDocumentContext(context.uri.toString());
-				}
 			})
 		);
 	}
@@ -65,8 +41,8 @@ export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
 	}
 
 	/**
-	 * Captures the intent to auto-define a prefix when a colon is typed.
-	 * The actual processing is deferred until fresh tokens arrive.
+	 * Auto-defines a prefix when a colon is typed in a prefixed name. Runs synchronously
+	 * by tokenizing the document locally.
 	 */
 	private _onDidChangeTextDocument(e: vscode.TextDocumentChangeEvent): void {
 		const change = e.contentChanges[0];
@@ -75,54 +51,100 @@ export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
 
 		if (!getConfig().get('prefixes.autoDefinePrefixes')) return;
 
-		this._pendingPrefix = {
-			documentUri: e.document.uri.toString(),
-			position: change.range.start
-		};
+		// Prefixed names typed in triplate frontmatter (example values) are not tokenized
+		// by the RDF lexer, so handle them directly rather than via the token-based path.
+		if (this._tryAutoDefineFrontmatterPrefix(e.document, change.range.start)) {
+			return;
+		}
+
+		void this._tryAutoDefineBodyPrefix(e.document, change.range.start);
 	}
 
 	/**
-	 * Processes the pending prefix when fresh tokens arrive from the language server.
+	 * Attempts to auto-define a prefix for a prefixed name typed as an example value in
+	 * the triplate frontmatter, e.g. `type: schema:Person`. Returns `true` when the colon
+	 * was typed inside the frontmatter (so the token-based path should be skipped).
+	 * @param document The text document.
+	 * @param position The position at which the colon was typed.
 	 */
-	private async _onDidChangeDocumentContext(uri: string): Promise<void> {
-		const pending = this._pendingPrefix;
+	private _tryAutoDefineFrontmatterPrefix(document: vscode.TextDocument, position: vscode.Position): boolean {
+		const text = document.getText();
 
-		if (!pending || pending.documentUri !== uri) return;
+		if (!isTemplate(text) || document.offsetAt(position) >= getContentStartOffset(text)) {
+			return false;
+		}
 
-		// Clear the pending prefix immediately to avoid processing it twice.
-		this._pendingPrefix = undefined;
+		// A pname colon appears in a value position, i.e. after a `name:` binding on the
+		// same line. The captured group is the prefix immediately before the typed colon.
+		const beforeColon = document.lineAt(position.line).text.substring(0, position.character);
+		const match = /^\s*[A-Za-z_][\w-]*\s*:\s*([A-Za-z_][\w.-]*)$/.exec(beforeColon);
 
-		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-		const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+		if (match) {
+			void this._defineFrontmatterPrefix(document, match[1]);
+		}
 
-		if (!document) return;
+		// The colon was typed in the frontmatter; the token-based path does not apply.
+		return true;
+	}
 
-		const context = contextService.getContext(document, TurtleDocument);
+	/**
+	 * Declares the given prefix in the document body (below the frontmatter) unless it is
+	 * already defined.
+	 * @param document The text document.
+	 * @param prefix The prefix to declare.
+	 */
+	private async _defineFrontmatterPrefix(document: vscode.TextDocument, prefix: string): Promise<void> {
+		const context = this._contextService.getContextFromUri(document.uri.toString());
 
-		if (!context) return;
+		if (!context || context.namespaces[prefix]) return;
 
-		const n = context.getTokenIndexAtPosition(pending.position);
+		const edit = await this._prefixService.implementPrefixes(document, [{ prefix, namespaceIri: undefined }]);
 
-		if (n < 1) return;
+		if (edit.size > 0) {
+			vscode.workspace.applyEdit(edit);
+		}
+	}
 
-		const previousToken = context.tokens[n - 1]?.image.toLowerCase();
+	/**
+	 * Auto-defines a prefix for a prefixed name typed in the document body by tokenizing
+	 * the current text locally and inspecting the token at the typed colon.
+	 * @param document The text document.
+	 * @param position The position at which the colon was typed.
+	 */
+	private async _tryAutoDefineBodyPrefix(document: vscode.TextDocument, position: vscode.Position): Promise<void> {
+		const context = this._contextService.getContextFromUri(document.uri.toString());
 
-		// Do not auto-implement prefixes when manually typing a prefix definition.
-		if (previousToken === 'prefix' || previousToken === '@prefix') return;
+		if (!context || !isTokenizedDocumentContext(context)) {
+			return;
+		}
 
-		// Do not implement prefixes for URI schemes.
-		if (previousToken === '<') return;
+		const tokens = context.tokenize(document.getText());
+		const n = getTokenIndexAtPosition(tokens, position);
 
-		const currentToken = context.tokens[n];
+		if (n > 0) {
+			const previousToken = tokens[n - 1];
+
+			switch (previousToken.tokenType.name) {
+				// Do not auto-implement prefixes when manually typing a prefix definition.
+				case RdfToken.PREFIX.name:
+				case RdfToken.TTL_PREFIX.name:
+				// Do not implement prefixes for URI schemes, starting with <.
+				case RdfToken.IRIREF.name:
+					return;
+			}
+		}
+
+		const currentToken = tokens[n];
 
 		if (currentToken && currentToken.image && currentToken.tokenType.name === RdfToken.PNAME_NS.name) {
 			const prefix = currentToken.image.substring(0, currentToken.image.length - 1);
 
 			// Do not implement prefixes that are already defined.
-			if (context.namespaces[prefix]) return;
+			if (context.namespaces[prefix]) {
+				return;
+			}
 
-			const service = container.resolve<TurtlePrefixDefinitionService>(ServiceToken.TurtlePrefixDefinitionService);
-			const edit = await service.implementPrefixes(document, [{ prefix: prefix, namespaceIri: undefined }]);
+			const edit = await this._prefixService.implementPrefixes(document, [{ prefix, namespaceIri: undefined }]);
 
 			if (edit.size > 0) {
 				vscode.workspace.applyEdit(edit);

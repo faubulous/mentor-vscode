@@ -1,0 +1,175 @@
+import * as React from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
+import { ModalDialog } from '../../../../components/modal-dialog';
+import { SettingRow } from '../../components/setting-row';
+import { useSettingRowProps } from '../../hooks/use-setting-row-props';
+import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
+import { ConnectionEditor } from './components/connection-editor';
+import { ConnectionEditorMessages } from './connection-editor-messages';
+import { ConnectionsList } from './components/connections-list';
+import { ConnectionsListMessages, GraphStatus } from './connections-list-messages';
+import { MENTOR_SETTINGS_SOURCE, TestResult } from '../../settings-types';
+import { SettingsSectionProps } from '../../settings-section-props';
+import { SettingsWorkspaceContext } from '../../components/setting-context';
+import { ConfigurationScope, scopeToKey } from '@src/utilities/config-scope';
+import { useScopedWebviewMessaging } from '../../../../hooks';
+import { patchRecord } from '@src/views/webviews/webview-utils';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
+
+export const queryConnectionsSection = {
+	id: 'query.connections',
+	label: 'Connections',
+	component: QueryConnectionsSection,
+	keys: ['sparql.connections', 'sparql.queryTimeout'],
+} as const satisfies SettingsSectionDescriptor;
+
+type QueryConnectionsSectionMessage = ConnectionsListMessages | ConnectionEditorMessages;
+
+function QueryConnectionsSection({ settings, onUpdate, setScope }: SettingsSectionProps) {
+	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
+	const hasWorkspace = useContext(SettingsWorkspaceContext);
+
+	const [connections, setConnections] = useState<SparqlConnectionView[]>([]);
+	const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+	const [graphStatuses, setGraphStatuses] = useState<Record<string, GraphStatus>>({});
+	const [editingConnection, setEditingConnection] = useState<SparqlConnectionView | undefined>(undefined);
+	const [editorDirty, setEditorDirty] = useState(false);
+	const [testingConnections, setTestingConnections] = useState<Set<string>>(new Set());
+	const [loadingGraphs, setLoadingGraphs] = useState<Set<string>>(new Set());
+
+	const handleMessage = useCallback((message: QueryConnectionsSectionMessage) => {
+		switch (message.id) {
+			case 'GetConnectionsResult':
+			case 'ConnectionsChanged':
+				setConnections(message.connections);
+				return;
+			case 'TestConnectionResult':
+				setTestResults(prev => patchRecord(prev, message.connectionId, () =>
+					message.success
+						? { success: true }
+						: { success: false, error: message.error },
+				));
+				return;
+			case 'GetGraphStatusesResult':
+				setGraphStatuses(message.statuses);
+				return;
+			case 'GraphStatusChanged':
+				setGraphStatuses(prev => ({ ...prev, [message.connectionId]: message.status }));
+				return;
+			case 'GraphLoadingChanged':
+				setLoadingGraphs(prev => {
+					if (prev.has(message.connectionId) === message.loading) {
+						return prev;
+					}
+
+					const updated = new Set(prev);
+
+					if (message.loading) {
+						updated.add(message.connectionId);
+					} else {
+						updated.delete(message.connectionId);
+					}
+
+					return updated;
+				});
+				return;
+			case 'EditSparqlConnection':
+				setEditingConnection(message.connection);
+				return;
+		}
+	}, []);
+
+	const messaging = useScopedWebviewMessaging<QueryConnectionsSectionMessage>('query.connections', handleMessage);
+
+	useEffect(() => {
+		messaging?.postMessage({ id: 'GetConnections' });
+		messaging?.postMessage({ id: 'GetGraphStatuses' });
+	}, [messaging]);
+
+	useEffect(() => {
+		setTestingConnections(prev => {
+			const updated = new Set(prev);
+
+			for (const id of prev) {
+				if (testResults[id] !== null && testResults[id] !== undefined) {
+					updated.delete(id);
+				}
+			}
+
+			return updated.size === prev.size ? prev : updated;
+		});
+	}, [testResults]);
+
+	const handleTestConnection = (connection: SparqlConnection, e: React.MouseEvent) => {
+		e.stopPropagation();
+		setTestingConnections(prev => new Set(prev).add(connection.id));
+		messaging?.postMessage({ id: 'TestConnection', connection });
+	};
+
+	const handleListGraphs = (connection: SparqlConnection, e: React.MouseEvent) => {
+		e.stopPropagation();
+		setTestingConnections(prev => new Set(prev).add(connection.id));
+		messaging?.postMessage({ id: 'ListGraphs', connection });
+	};
+
+	const handleReloadGraphs = () => {
+		messaging?.postMessage({ id: 'ReloadGraphs' });
+	};
+
+	const closeEditor = (wasSaved: boolean = false) => {
+		if (!wasSaved && editingConnection?.isNew) {
+			messaging?.postMessage({ id: 'DiscardSparqlConnection', connectionId: editingConnection.id });
+		}
+		setEditorDirty(false);
+		setEditingConnection(undefined);
+	};
+
+	return (
+		<>
+			<ConnectionsList
+				connections={connections}
+				testResults={testResults}
+				graphStatuses={graphStatuses}
+				testingConnections={testingConnections}
+				loadingGraphs={loadingGraphs}
+				hasWorkspace={hasWorkspace}
+				onCreateConnection={(scope: ConfigurationScope) => messaging?.postMessage({ id: 'CreateConnection', scope: scopeToKey(scope) })}
+				onEditConnection={(connection) => setEditingConnection(connection)}
+				onDeleteConnection={(connection) => messaging?.postMessage({ id: 'DeleteConnection', connection })}
+				onTestConnection={handleTestConnection}
+				onListGraphs={handleListGraphs}
+				onReloadGraphs={handleReloadGraphs}
+				onOpenInBrowser={(url) => messaging?.postMessage({ id: 'OpenInBrowser', url })}
+			/>
+			<div className="settings-subsection">
+				<SettingRow {...rowProps('sparql.queryTimeout')}>
+					<vscode-textfield
+						className="setting-input-md"
+						value={String(settings['sparql.queryTimeout']?.value ?? 30000)}
+						type="number"
+						onInput={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'sparql.queryTimeout', Number((e.target as HTMLInputElement).value))}
+					>
+						<span slot="content-after" className="setting-input-suffix">ms</span>
+					</vscode-textfield>
+				</SettingRow>
+			</div>
+			<ModalDialog
+				open={!!editingConnection}
+				title="Edit Connection"
+				onClose={() => closeEditor(false)}
+				requireCloseConfirmation={editorDirty}
+				closeConfirmationMessage="You have unsaved changes. Discard them?"
+				closeConfirmLabel="Discard"
+				hideCloseButton
+			>
+				{editingConnection && (
+					<ConnectionEditor
+						connection={editingConnection}
+						onDirtyChange={setEditorDirty}
+						onSaved={() => closeEditor(true)}
+					/>
+				)}
+			</ModalDialog>
+		</>
+	);
+}

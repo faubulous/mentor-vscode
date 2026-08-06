@@ -1,0 +1,252 @@
+/* Profile description shown first in a list row's subline; takes the remaining
+   width and is truncated with an ellipsis when long. */
+.settings-item-subline .validation-profile-description {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Shape/target/excluded counts, right-aligned after the description. Warnings
+   are rendered by the shared settings-item status message (settings-panel.css). */
+.settings-item-subline .validation-profile-stats {
+	display: inline-flex;
+	flex-direction: row;
+	align-items: baseline;
+	gap: var(--mentor-space-6);
+	flex-shrink: 0;
+	margin-left: auto;
+}
+
+.modal-form.validation-profile-editor .validation-default-toggle {
+	margin-top: var(--mentor-space-3);
+}
+
+.modal-form.validation-profile-editor .validation-description-input {
+	width: 100%;
+	resize: vertical;
+}
+
+/* The two auto-validation checkboxes in the profile editor's General tab. */
+.modal-form.validation-profile-editor .validation-auto-options {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-2);
+	margin-top: var(--mentor-space-2);
+}
+
+/* Searchable checklist of shape files. */
+.validation-shape-list-editor {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-4);
+}
+
+/* Search field and the Add file / Done toggle share one row. */
+.validation-shape-toolbar {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-3);
+}
+
+.validation-shape-toolbar .search-field-wrapper {
+	flex: 1;
+	min-width: 0;
+}
+
+/* Chromeless, blue-text toggle button ("Add file" / "Done"). */
+.validation-mode-toggle {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	gap: var(--mentor-space-1);
+	background: none;
+	border: none;
+	padding: 0;
+	color: var(--vscode-textLink-foreground);
+	cursor: pointer;
+	font: inherit;
+	white-space: nowrap;
+}
+
+.validation-mode-toggle:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+	text-decoration: underline;
+}
+
+.validation-shape-list-editor .search-field-wrapper .validation-shape-search {
+	width: 100%;
+}
+
+.validation-shape-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-1);
+	max-height: 260px;
+	overflow-y: auto;
+}
+
+.validation-shape-row {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+	padding: 0 var(--mentor-space-2);
+	border: 1px solid transparent;
+	border-radius: var(--mentor-radius-md);
+}
+
+.validation-shape-row:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.validation-shape-checkbox {
+	flex: 1;
+	min-width: 0;
+}
+
+.validation-shape-label {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+}
+
+.validation-shape-path {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Row highlight + trailing warning dot for shape files that do not exist. */
+.validation-shape-row.validation-shape-missing {
+	background: var(--vscode-inputValidation-warningBackground);
+}
+
+.validation-shape-error {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+	flex: 0 0 auto;
+}
+
+.validation-shape-error-label {
+	color: var(--vscode-editorWarning-foreground);
+	font-size: 0.85em;
+	white-space: nowrap;
+}
+
+.validation-shape-dot {
+	flex: 0 0 auto;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.validation-shape-warning {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+/* Blocking validation errors (they prevent saving), as opposed to the
+   non-blocking warnings above. */
+.validation-error {
+	color: var(--vscode-errorForeground) !important;
+}
+
+.validation-empty-message {
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+	margin: var(--mentor-space-2) 0;
+}
+
+/* The editable path lists in the profile editor's Paths tab. */
+.validation-paths-editor {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-5);
+}
+
+.validation-paths-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-2);
+}
+
+/* Section label with a trailing info-tooltip icon. */
+.validation-paths-header {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+}
+
+/* Right-aligns the Edit/Done toggle on the "Included Shapes" title line. */
+.validation-shape-actions {
+	margin-left: auto;
+	display: flex;
+	flex-direction: row;
+	gap: var(--mentor-space-4);
+}
+
+.validation-paths-header .validation-info-icon {
+	color: var(--vscode-descriptionForeground);
+	cursor: help;
+}
+
+/* One entry row: monospace textfield plus remove button (or its spacer). */
+.validation-paths-row {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+}
+
+.validation-paths-row .validation-paths-field {
+	flex: 1;
+	min-width: 0;
+}
+
+/* Keeps the add row's textfield aligned with the removable rows above it. */
+.validation-paths-row .list-remove-button-spacer {
+	width: 22px;
+	flex: 0 0 auto;
+}
+
+/* Warning icon shown as after-content of an invalid entry. */
+.validation-paths-field .validation-entry-warning {
+	color: var(--vscode-editorWarning-foreground);
+	cursor: help;
+}
+
+/* Live match count shown as after-content of an entry: a single right-aligned
+   line that takes only the space it needs and opens the pattern editor.
+   The shared suffix class disables pointer events; re-enable them so the
+   count is clickable. */
+.validation-paths-field .validation-entry-count {
+	flex: 0 0 auto;
+	white-space: nowrap;
+	text-align: right;
+	color: var(--vscode-textLink-foreground);
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.validation-paths-field .validation-entry-count:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+	text-decoration: underline;
+}
+
+/* Aggregate effect of the draft's path lists, below the two lists. */
+.validation-paths-summary {
+	margin-top: var(--mentor-space-3, 8px);
+}
+
+.validation-paths-summary-matched {
+	color: var(--vscode-foreground);
+}
+
+/* One-click pattern suggestions under the included paths list. */
+.validation-pattern-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--mentor-space-2);
+	margin-top: var(--mentor-space-2);
+}

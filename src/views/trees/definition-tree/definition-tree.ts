@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { Debouncer } from '@src/utilities/debounce';
 import { ISettingsService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { TreeView } from '@src/views/trees/tree-view';
@@ -51,16 +52,27 @@ export class DefinitionTree implements TreeView {
 			showCollapseAll: true
 		});
 
+		// Defer tree rebuilds while the view is hidden and run them when it is
+		// shown again.
+		this.treeDataProvider.setViewVisibilityProvider(() => this.treeView.visible);
+
 		this._onDidChangeDocumentContext();
 
 		const disposables: vscode.Disposable[] = [
 			this.treeView,
+			this._decorationProvider,
 			this._registerDocumentContextHandler(),
 			this._registerDecorationProvider(),
 			this._registerValidationHandler(),
 			this._registerActiveLanguageHandler(),
+			this._registerPredicateSettingsHandler(),
 			this._registerRefreshCommand(),
-			this._registerEditorSelectionHandler()
+			this._registerEditorSelectionHandler(),
+			this.treeView.onDidChangeVisibility(e => {
+				if (e.visible) {
+					this.treeDataProvider.flushPendingRefresh();
+				}
+			})
 		];
 
 		const showReferences = this._settings.get('view.showReferences', true);
@@ -85,6 +97,17 @@ export class DefinitionTree implements TreeView {
 		});
 	}
 
+	private _registerPredicateSettingsHandler(): vscode.Disposable {
+		// Node labels and tooltips are derived from the mentor.predicates.* settings;
+		// re-render the tree as soon as they change so the new predicates apply
+		// immediately instead of on the next document switch.
+		return vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('mentor.predicates.label') || e.affectsConfiguration('mentor.predicates.description')) {
+				this.treeDataProvider.refresh(this._contextService.activeContext);
+			}
+		});
+	}
+
 	private _registerRefreshCommand(): vscode.Disposable {
 		return vscode.commands.registerCommand('mentor.command.refreshDefinitionsTree', async () => {
 			this._updateView();
@@ -98,20 +121,22 @@ export class DefinitionTree implements TreeView {
 	}
 
 	private _registerValidationHandler(): vscode.Disposable {
+		// Validations fire per document (and on every edit that drops a stale
+		// result); coalesce the full tree rebuilds they trigger.
+		const debouncer = new Debouncer(250);
+
 		return this._validationService.onDidValidate(() => {
-			this.treeDataProvider.refresh(this._contextService.activeContext);
+			debouncer.schedule(() => {
+				this.treeDataProvider.refresh(this._contextService.activeContext);
+			});
 		});
 	}
 
 	private _registerEditorSelectionHandler(): vscode.Disposable {
-		let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+		const debouncer = new Debouncer(300);
 
 		return vscode.window.onDidChangeTextEditorSelection((e) => {
-			if (debounceTimer) {
-				clearTimeout(debounceTimer);
-			}
-
-			debounceTimer = setTimeout(() => {
+			debouncer.schedule(() => {
 				if (this.treeView.visible === false) {
 					return;
 				}
@@ -134,7 +159,7 @@ export class DefinitionTree implements TreeView {
 				if (iri) {
 					this._revealForUri(iri);
 				}
-			}, 300);
+			});
 		});
 	}
 

@@ -18,26 +18,7 @@ let mockDiagnosticCollectionClear: ReturnType<typeof vi.fn>;
 let mockDiagnosticCollectionDelete: ReturnType<typeof vi.fn>;
 
 vi.mock('tsyringe', () => ({
-	container: {
-		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') {
-				return { subscriptions: mockSubscriptions };
-			}
-			if (token === 'WorkspaceIndexerService') {
-				return { waitForIndexed: (...args: any[]) => mockWaitForIndexed(...args) };
-			}
-			if (token === 'DocumentFactory') {
-				return { supportedLanguages: mockSupportedLanguages };
-			}
-			if (token === 'DocumentContextService') {
-				return { contexts: {}, loadDocument: vi.fn() };
-			}
-			if (token === 'VocabularyRepository') {
-				return { store: {} };
-			}
-			return {};
-		}),
-	},
+	container: { resolve: vi.fn(() => ({})) },
 	injectable: () => (t: any) => t,
 	inject: () => () => {},
 	singleton: () => (t: any) => t,
@@ -45,6 +26,17 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { DocumentLintingService } from '@src/services/document/document-linting-service';
+
+/** Constructs the service with the mocked dependencies. */
+function makeService(): DocumentLintingService {
+	return new DocumentLintingService(
+		{ subscriptions: mockSubscriptions } as any,
+		{ store: {} } as any,
+		{ supportedLanguages: mockSupportedLanguages } as any,
+		{ waitForIndexed: (...args: any[]) => mockWaitForIndexed(...args) } as any,
+		{ contexts: {}, loadDocument: vi.fn() } as any,
+	);
+}
 
 beforeEach(() => {
 	mockSubscriptions = [];
@@ -66,30 +58,30 @@ beforeEach(() => {
 describe('DocumentLintingService', () => {
 	describe('constructor', () => {
 		it('should create diagnostic collection', () => {
-			new DocumentLintingService();
+			makeService();
 			expect(vscode.languages.createDiagnosticCollection).toHaveBeenCalledWith('mentor-linting');
 		});
 
 		it('should register itself with extension context subscriptions', () => {
-			const service = new DocumentLintingService();
+			const service = makeService();
 			expect(mockSubscriptions).toContain(service);
 		});
 
 		it('should call waitForIndexed on workspace indexer service', () => {
-			new DocumentLintingService();
+			makeService();
 			expect(mockWaitForIndexed).toHaveBeenCalled();
 		});
 	});
 
 	describe('dispose', () => {
 		it('should dispose the diagnostic collection', () => {
-			const service = new DocumentLintingService();
+			const service = makeService();
 			service.dispose();
 			expect(mockDiagnosticCollectionDispose).toHaveBeenCalled();
 		});
 
 		it('should dispose all registered disposables', () => {
-			const service = new DocumentLintingService();
+			const service = makeService();
 
 			// After waitForIndexed resolves and subscribeChangeEvents is called,
 			// disposables are added. For now test that dispose doesn't throw.

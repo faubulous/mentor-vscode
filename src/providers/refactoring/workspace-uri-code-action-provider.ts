@@ -1,9 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
-import { DEPRECATED_WORKSPACE_URI_CODE } from '@src/languages/linters/deprecated-workspace-uri-linter';
+import { DEPRECATED_WORKSPACE_URI_CODE } from '@src/providers/linting/linters/deprecated-workspace-uri-linter';
 
-export { DEPRECATED_WORKSPACE_URI_CODE };
 
 /**
  * Regex to extract the canonical URI from the diagnostic message produced by `DeprecatedWorkspaceUriLinter`.
@@ -32,8 +29,7 @@ export class WorkspaceUriCodeActionProvider implements vscode.CodeActionProvider
 		'datalog'
 	];
 
-	constructor() {
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+	constructor(context: vscode.ExtensionContext) {
 
 		const selector = WorkspaceUriCodeActionProvider.languages.map(language => ({ language }));
 

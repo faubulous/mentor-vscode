@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"target": "es2022",
+		"lib": ["es2022"],
+		"outDir": "../out/e2e",
+		"rootDir": ".",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"types": ["node", "mocha", "vscode"]
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["fixtures"]
+}

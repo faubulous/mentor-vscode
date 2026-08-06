@@ -23,7 +23,19 @@ export class WorkspaceNodeProvider implements vscode.TreeDataProvider<string> {
 	constructor() {
 		// Monitor for changes in the workspace folders.
 		this.workspaceFileService.onDidChangeFiles((e) => {
-			this._onDidChangeTreeData.fire(e.uri.toString());
+			const uri = e.uri.toString();
+
+			// In a single-folder workspace the root folder is not itself a tree
+			// node; its contents are the top-level nodes. Firing a change for that
+			// folder URI is a no-op because VS Code has no matching element, so a
+			// change affecting the root must trigger a full refresh instead.
+			const isWorkspaceRoot = vscode.workspace.workspaceFolders?.some(f => f.uri.toString() === uri);
+
+			if (isWorkspaceRoot && !vscode.workspace.workspaceFile) {
+				this._onDidChangeTreeData.fire(undefined);
+			} else {
+				this._onDidChangeTreeData.fire(uri);
+			}
 		});
 	}
 

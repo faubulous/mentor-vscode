@@ -30,7 +30,7 @@ describe('WorkspaceGraphDefinitionProvider', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockContextService.contexts = {};
-		provider = new WorkspaceGraphDefinitionProvider();
+		provider = new WorkspaceGraphDefinitionProvider(mockContextService as any);
 	});
 
 	it('returns null when no context exists for the document', () => {

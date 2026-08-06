@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
+import picomatch from 'picomatch';
 import { Utils } from 'vscode-uri';
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { IWorkspaceFileService, WorkspaceFileChangeEvent } from './workspace-file-service.interface';
+import { normalizeGlobPattern } from '@src/utilities/glob';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
 
 /**
@@ -25,9 +28,25 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 	private readonly _watcher: vscode.FileSystemWatcher;
 
 	/**
+	 * Subscription to workspace rename events.
+	 */
+	private readonly _renameSubscription: vscode.Disposable;
+
+	/**
 	 * Indicates if file discovery has completed.
 	 */
 	private _initialized = false;
+
+	/**
+	 * The discovery pass currently in flight, or `undefined` when idle.
+	 * Used to serialize concurrent {@link discoverFiles} calls.
+	 */
+	private _discovering?: Promise<void>;
+
+	/**
+	 * Indicates that another discovery pass was requested while one was in flight.
+	 */
+	private _rediscoverRequested = false;
 
 	/**
 	 * Event emitter for discovery completion.
@@ -81,6 +100,61 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 				uri: Utils.dirname(uri)
 			});
 		});
+
+		// Programmatic renames (e.g. via `applyEdit`) and folder renames are not
+		// reliably surfaced as individual create/delete watcher events, so the
+		// rename event is handled explicitly to keep the file list and tree in sync.
+		this._renameSubscription = vscode.workspace.onDidRenameFiles((e) => {
+			this.handleRenames(e.files);
+		});
+	}
+
+	/**
+	 * Updates the discovered file list in response to file or folder renames and
+	 * notifies listeners so the workspace tree reflects the new names.
+	 * @param renames The rename events from `vscode.workspace.onDidRenameFiles`.
+	 */
+	handleRenames(renames: ReadonlyArray<{ readonly oldUri: vscode.Uri; readonly newUri: vscode.Uri }>): void {
+		const changedFolders = new Set<string>();
+
+		for (const { oldUri, newUri } of renames) {
+			const oldPrefix = oldUri.path + '/';
+
+			this._files = this._files.flatMap((file) => {
+				if (file.path === oldUri.path) {
+					// The renamed item is a tracked file.
+					if (this.documentFactory.isSupportedFile(newUri)) {
+						return [newUri];
+					}
+
+					// Renamed to an unsupported extension; drop it from the list.
+					return [];
+				}
+
+				if (file.path.startsWith(oldPrefix)) {
+					// The file lives inside a renamed folder; rewrite its path prefix.
+					return [file.with({ path: newUri.path + file.path.substring(oldUri.path.length) })];
+				}
+
+				return [file];
+			});
+
+			// A file renamed from an unsupported extension is not yet tracked, so add it.
+			if (this.documentFactory.isSupportedFile(newUri) && !this._files.some(f => f.path === newUri.path)) {
+				this._files.push(newUri);
+			}
+
+			// Refresh the folders that gained or lost the renamed item.
+			changedFolders.add(Utils.dirname(oldUri).toString());
+			changedFolders.add(Utils.dirname(newUri).toString());
+		}
+
+		for (const folder of changedFolders) {
+			this._onDidChangeFiles.fire({
+				type: vscode.FileChangeType.Changed,
+				uri: vscode.Uri.parse(folder)
+			});
+		}
 	}
 
 	/**
@@ -106,8 +180,38 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 
 	/**
 	 * Discovers all supported files in the workspace.
+	 *
+	 * Concurrent calls are serialized: while a discovery pass is in flight,
+	 * additional requests are coalesced into a single trailing pass. Running
+	 * overlapping passes would reset and re-populate the shared file list at the
+	 * same time, producing duplicate entries.
 	 */
 	async discoverFiles(): Promise<void> {
+		this._rediscoverRequested = true;
+
+		if (this._discovering) {
+			return this._discovering;
+		}
+
+		this._discovering = (async () => {
+			try {
+				while (this._rediscoverRequested) {
+					this._rediscoverRequested = false;
+
+					await this._discoverFilesOnce();
+				}
+			} finally {
+				this._discovering = undefined;
+			}
+		})();
+
+		return this._discovering;
+	}
+
+	/**
+	 * Performs a single discovery pass, replacing the discovered file list.
+	 */
+	private async _discoverFilesOnce(): Promise<void> {
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isInitializing', true);
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', true);
 
@@ -133,11 +237,47 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 			this._files.push(...filteredFiles);
 		}
 
+		// Apply the configured exclude globs as a monorepo-root-relative filter.
+		// The per-folder `findFiles` exclude above only matches folder-relative
+		// patterns (e.g. the `**/node_modules/**` defaults); subproject-scoped
+		// patterns like `mentor-rdf-parsers/src/n3/**` are resolved here, in the
+		// same path space the indexer uses for include matching.
+		this._files = this._applyExcludeGlobs(this._files);
+
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isEmpty', this._files.length === 0);
 		vscode.commands.executeCommand('setContext', 'mentor.workspace.isInitializing', false);
 
 		this._initialized = true;
 		this._onDidFinishDiscovery.fire();
+	}
+
+	/**
+	 * Removes files whose monorepo-root-relative path matches any of the
+	 * configured `index.excludeFiles` glob patterns.
+	 * @param files The discovered files to filter.
+	 * @returns The files that are not excluded.
+	 */
+	private _applyExcludeGlobs(files: vscode.Uri[]): vscode.Uri[] {
+		const patterns = getConfig().get<string[]>('index.excludeFiles', [])
+			.map(normalizeGlobPattern)
+			.filter(Boolean);
+
+		if (patterns.length === 0) {
+			return files;
+		}
+
+		const isExcluded = picomatch(patterns, { dot: true });
+
+		return files.filter(uri => {
+			const workspaceUri = WorkspaceUri.toWorkspaceUri(uri);
+
+			// Keep files we cannot resolve to a workspace-relative path.
+			if (!workspaceUri) {
+				return true;
+			}
+
+			return !isExcluded(workspaceUri.relativePath);
+		});
 	}
 
 	/**
@@ -248,6 +388,7 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 	 */
 	dispose(): void {
 		this._watcher.dispose();
+		this._renameSubscription.dispose();
 		this._onDidFinishDiscovery.dispose();
 		this._onDidChangeFiles.dispose();
 	}
@@ -261,7 +402,7 @@ export class WorkspaceFileService implements IWorkspaceFileService {
 		const result = new Set<string>();
 
 		// Add the patterns from the configuration.
-		for (const pattern of getConfig().get<string[]>('index.ignoreFolders', [])) {
+		for (const pattern of getConfig().get<string[]>('index.excludeFiles', ['**/.vscode/**', '**/.git/**', '**/node_modules/**'])) {
 			result.add(pattern);
 		}
 

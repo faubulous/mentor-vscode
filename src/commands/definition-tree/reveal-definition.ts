@@ -1,0 +1,38 @@
+import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { IDocumentContextService } from '@src/services/document';
+import { ResourceDefinitionProvider } from '@src/providers';
+import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
+
+const contextService = () => container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+
+export const revealDefinition = {
+	id: 'mentor.command.revealDefinition',
+	handler: async (arg: DefinitionTreeNode | string, restoreFocus: boolean = false) => {
+		const uri = getIriFromArgument(arg);
+
+		if (!uri) {
+			// If no id is provided, we fail gracefully.
+			return;
+		}
+
+		const context = contextService();
+		const editor = await context.activateDocument();
+
+		if (context.activeContext && editor && uri) {
+			const location = new ResourceDefinitionProvider(contextService()).provideDefinitionForResource(context.activeContext, uri, true);
+
+			if (location instanceof vscode.Location) {
+				editor.selection = new vscode.Selection(location.range.start, location.range.end);
+				
+				editor.revealRange(location.range, vscode.TextEditorRevealType.InCenter);
+
+				if (restoreFocus) {
+					// Reset the focus to the definition tree.
+					vscode.commands.executeCommand('mentor.view.definitionTree.focus');
+				}
+			}
+		}
+	}
+};

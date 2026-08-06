@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { NOTEBOOK_TYPE } from './notebook-controller';
 
 interface NotebookData {
@@ -26,9 +24,8 @@ export class NotebookSerializer implements vscode.NotebookSerializer {
 
 	public readonly label: string = 'Mentor Notebook Serializer';
 
-	constructor() {
+	constructor(context: vscode.ExtensionContext) {
 		// Self-register with the extension context for automatic disposal
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(
 			vscode.workspace.registerNotebookSerializer(NOTEBOOK_TYPE, this, { transientOutputs: true })
 		);

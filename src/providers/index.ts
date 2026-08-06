@@ -1,4 +1,4 @@
-export * from './inference-uri-handler';
+export * from './mentor-uri-handler';
 export * from './inference-uri-link-provider';
 export * from './inference-uri';
 export * from './notebook-cell-slug-codelens-provider';
@@ -9,5 +9,8 @@ export * from './resource-reference-provider';
 export * from './workspace-graph-definition-provider';
 export * from './resource-tooltip-provider';
 export * from './workspace-file-system-provider';
+export * from './template-file-system-provider';
+export * from './user-file-system-provider';
+export * from './user-uri';
 export * from './workspace-uri-link-provider';
 export * from './workspace-uri';

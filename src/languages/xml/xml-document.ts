@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
-import { Store } from '@faubulous/mentor-rdf';
-import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
+import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
+import { XmlParser } from '@src/languages/xml/xml-parser';
 import { getIriFromPrefixedName } from '@src/utilities';
+import { getLog } from '@src/utilities/vscode/log';
 
 /**
  * A document context for RDF/XML documents.
@@ -15,10 +16,6 @@ export class XmlDocument extends DocumentContext {
 	readonly syntax: RdfSyntax;
 
 	private _inferenceExecuted = false;
-
-	private get store() {
-		return container.resolve<Store>(ServiceToken.Store);
-	}
 
 	/**
 	 * Indicates whether parsed data has been received from the language server.
@@ -30,25 +27,33 @@ export class XmlDocument extends DocumentContext {
 	 */
 	private _textLiterals: vscode.Range[] = [];
 
-	constructor(uri: vscode.Uri) {
-		super(uri);
-
-		this.syntax = RdfSyntax.RdfXml;
-	}
-
 	get isLoaded(): boolean {
 		return this._hasContent && this.graphs.length > 0;
 	}
 
-	/**
-	 * Indicates whether parsed content has been received from the language server.
-	 */
-	get hasTokens(): boolean {
+	get isParsed(): boolean {
 		return this._hasContent;
 	}
 
+	get providesTokens(): boolean {
+		return false;
+	}
+
+	constructor(uri: vscode.Uri, store: Store, vocabulary: VocabularyRepository, settings: ISettingsService) {
+		super(uri, store, vocabulary, settings);
+
+		this.syntax = RdfSyntax.RdfXml;
+	}
+
+	parse(text: string): IToken[] {
+		this.setParsedData(new XmlParser().parse(text));
+
+		// RDF/XML documents are parsed structurally, not tokenized.
+		return [];
+	}
+
 	/**
-	 * Set the parsed data from the language server.
+	 * Set the parsed data of the document and update the derived indexes.
 	 * @param data The parsed document data.
 	 */
 	setParsedData(data: XmlParseResult): void {
@@ -251,12 +256,12 @@ export class XmlDocument extends DocumentContext {
 	}
 
 	override async infer(): Promise<void> {
-		const reasoner = this.store.reasoner;
+		const reasoner = this._store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
 			this._inferenceExecuted = true;
 
-			this.store.executeInference(WorkspaceUri.toCanonicalString(this.graphIri));
+			this._store.executeInference(WorkspaceUri.toCanonicalString(this.graphIri));
 		}
 	}
 
@@ -272,7 +277,7 @@ export class XmlDocument extends DocumentContext {
 			// Delete old graphs to handle slug changes. loadFromXmlStream handles
 			// clearing the target graph itself via its clearGraph option.
 			if (this.graphs.length > 0) {
-				this.store.deleteGraphs([...this.graphs]);
+				this._store.deleteGraphs([...this.graphs]);
 			}
 
 			// Initialize the graphs *before* trying to load the document so 
@@ -285,10 +290,10 @@ export class XmlDocument extends DocumentContext {
 			this._inferenceExecuted = false;
 
 			// Load triples from the RDF/XML content into the store.
-			await this.store.loadFromXmlStream(data, graphUri, false);
+			await this._store.loadFromXmlStream(data, graphUri, false);
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
-			console.error('Failed to load triples from RDF/XML:', e);
+			getLog().error('Failed to load triples from RDF/XML:', e);
 		}
 	}
 }

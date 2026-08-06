@@ -1,15 +1,11 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
 /**
  * A provider that retrieves the locations of resource references in a document.
  */
 export class ResourceReferenceProvider implements vscode.ReferenceProvider {
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
+	constructor(private readonly _contextService: IDocumentContextService) { }
 
 	provideReferences(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Location[]> {
 		const context = this._contextService.contexts[document.uri.toString()];
@@ -25,6 +21,28 @@ export class ResourceReferenceProvider implements vscode.ReferenceProvider {
 		} else {
 			return null;
 		}
+	}
+
+	/**
+	 * Counts the references to a given resource across all indexed documents
+	 * without allocating `Location` objects — use this when only the number is
+	 * needed (e.g. the usage CodeLens), not the locations.
+	 * @param iri The IRI of the resource.
+	 * @returns The number of references.
+	 */
+	countReferencesForIri(iri: string): number {
+		let count = 0;
+
+		for (const context of Object.values(this._contextService.contexts)) {
+			// Do not count references in temporary, non-persisted git diff views or other in-memory documents.
+			if (context.isTemporary || !context.references[iri]) {
+				continue;
+			}
+
+			count += context.references[iri].length;
+		}
+
+		return count;
 	}
 
 	/**

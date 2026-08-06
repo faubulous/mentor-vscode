@@ -1,209 +1,186 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
+vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-const {
-mockContextService,
-mockIndexerService,
-mockValidationService,
-mockConfigGet
-} = vi.hoisted(() => ({
-mockContextService: {
-contexts: {} as Record<string, any>,
-onDidChangeDocumentContext: vi.fn(() => ({ dispose: vi.fn() }))
-},
-mockIndexerService: {
-waitForIndexed: vi.fn(() => Promise.resolve())
-},
-mockValidationService: {
-onDidValidate: vi.fn(() => ({ dispose: vi.fn() })),
-getEffectiveShapeGraphs: vi.fn(() => [] as string[]),
-getLastResult: vi.fn(() => undefined)
-},
-mockConfigGet: vi.fn(() => true)
-}));
-
-vi.mock('tsyringe', () => ({
-container: {
-resolve: vi.fn((token: string) => {
-if (token === 'DocumentContextService') return mockContextService;
-if (token === 'WorkspaceIndexerService') return mockIndexerService;
-if (token === 'ShaclValidationService') return mockValidationService;
-return {};
-})
-},
-injectable: () => (_target: any) => _target,
-inject: () => () => {
-},
-singleton: () => (_target: any) => _target
+const { mockConfigGet } = vi.hoisted(() => ({
+	mockConfigGet: vi.fn(),
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
-getConfig: () => ({
-get: (key: string, defaultValue?: any) => {
-const value = mockConfigGet(key);
-return value === undefined ? defaultValue : value;
-}
-})
+	getConfig: vi.fn(() => ({ get: (...args: any[]) => mockConfigGet(...args) })),
 }));
 
 import { TurtleValidationCodeLensProvider } from '@src/languages/turtle/providers/turtle-validation-codelens-provider';
+import { ShaclDocumentValidationState } from '@src/services/validation/shacl-validation-configuration';
 
-const doc = (uri: string = 'file:///doc.ttl') => ({ uri: { toString: () => uri } }) as any;
+const DOCUMENT_URI = vscode.Uri.parse('file:///w/models/example.ttl');
 
-beforeEach(() => {
-vi.clearAllMocks();
-mockContextService.contexts = {};
-mockContextService.onDidChangeDocumentContext.mockReturnValue({ dispose: vi.fn() });
-mockIndexerService.waitForIndexed.mockResolvedValue(undefined);
-mockValidationService.onDidValidate.mockReturnValue({ dispose: vi.fn() });
-mockValidationService.getEffectiveShapeGraphs.mockReturnValue([]);
-mockValidationService.getLastResult.mockReturnValue(undefined);
-mockConfigGet.mockReturnValue(true);
-});
+/**
+ * Constructs the provider with a validation-service double returning the given
+ * document state, settings and optional last-skip record.
+ */
+function createProvider(state: ShaclDocumentValidationState, settings: any = {}, lastSkip?: { triples: number; maxGraphSize: number }, docUri: { toString(): string } = DOCUMENT_URI) {
+	const contextService = {
+		contexts: { [docUri.toString()]: { graphs: [] } },
+		onDidChangeDocumentContext: vi.fn(() => ({ dispose: () => {} })),
+	} as any;
+
+	const workspaceIndexerService = {
+		waitForIndexed: vi.fn(async () => undefined),
+	} as any;
+
+	const validationService = {
+		getDocumentValidationState: vi.fn(() => state),
+		getValidationSettings: vi.fn(() => settings),
+		getLastResult: vi.fn(() => undefined),
+		getLastSkip: vi.fn(() => lastSkip),
+		onDidValidate: vi.fn(() => ({ dispose: () => {} })),
+	} as any;
+
+	return new TurtleValidationCodeLensProvider(contextService, workspaceIndexerService, validationService);
+}
+
+/**
+ * Resolves the CodeLens carrying the manage-shapes command (the status lens).
+ */
+async function getStatusLens(provider: TurtleValidationCodeLensProvider) {
+	const document = { uri: DOCUMENT_URI } as any;
+	const token = {} as any;
+
+	const lenses = await provider.provideCodeLenses(document, token) as vscode.CodeLens[];
+	const lens = lenses.find(l => l.command?.command === 'mentor.command.manageShaclShapes');
+
+	expect(lens).toBeDefined();
+
+	return lens!;
+}
+
+function state(partial: Partial<ShaclDocumentValidationState>): ShaclDocumentValidationState {
+	return {
+		mode: 'none',
+		profileNames: [],
+		effectiveShapes: [],
+		matchedPaths: [],
+		...partial,
+	};
+}
 
 describe('TurtleValidationCodeLensProvider', () => {
-it('can be created', () => {
-expect(() => new TurtleValidationCodeLensProvider()).not.toThrow();
-});
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockConfigGet.mockImplementation((key: string, defaultValue?: any) =>
+			key === 'shacl.enabled' ? true : defaultValue);
+	});
 
-it('returns empty result when currently initializing', async () => {
-const provider = new TurtleValidationCodeLensProvider();
-(provider as any)._initializing = true;
+	it('keeps the title unqualified and lists matched globs in the tooltip', async () => {
+		const provider = createProvider(
+			state({
+				mode: 'matched',
+				profileNames: ['core'],
+				effectiveShapes: ['workspace:///shapes/core.ttl'],
+				matchedPaths: ['**/*.ttl'],
+			}),
+			{ profiles: { 'core': { name: 'Core' } } }
+		);
 
-const result = await provider.provideCodeLenses(doc(), null as any);
+		const lens = await getStatusLens(provider);
 
-expect(result).toEqual([]);
-});
+		expect(lens.command?.title).toContain('Core');
+		expect(lens.command?.title).not.toContain('(via');
+		expect(lens.command?.tooltip).toContain('Matched path patterns');
+		expect(lens.command?.tooltip).toContain('**/*.ttl');
+	});
 
-it('returns empty result when disabled', async () => {
-const provider = new TurtleValidationCodeLensProvider();
-(provider as any)._initialized = true;
-(provider as any)._enabled = false;
+	it('omits literal path entries from the tooltip pattern list', async () => {
+		const provider = createProvider(
+			state({
+				mode: 'matched',
+				profileNames: ['core'],
+				effectiveShapes: ['workspace:///shapes/core.ttl'],
+				matchedPaths: ['models/example.ttl'],
+			}),
+			{ profiles: { 'core': { name: 'Core' } } }
+		);
 
-const result = await provider.provideCodeLenses(doc(), null as any);
+		const lens = await getStatusLens(provider);
 
-expect(result).toEqual([]);
-});
+		expect(lens.command?.title).not.toContain('(via');
+		expect(lens.command?.tooltip).not.toContain('Matched path patterns');
+	});
 
-it('returns empty result when document context is missing', async () => {
-const provider = new TurtleValidationCodeLensProvider();
-(provider as any)._initialized = true;
-(provider as any)._enabled = true;
+	it('resolves profile ids to display names, falling back to the id', async () => {
+		const provider = createProvider(
+			state({
+				mode: 'matched',
+				profileNames: ['core', 'unnamed'],
+				effectiveShapes: ['workspace:///shapes/core.ttl'],
+				matchedPaths: ['models/example.ttl'],
+			}),
+			{ profiles: { 'core': { name: 'Core Shapes' }, 'unnamed': {} } }
+		);
 
-const result = await provider.provideCodeLenses(doc('file:///missing.ttl'), null as any);
+		const lens = await getStatusLens(provider);
 
-expect(result).toEqual([]);
-});
+		expect(lens.command?.title).toContain('Core Shapes, unnamed');
+		expect(lens.command?.tooltip).toContain('Core Shapes, unnamed');
+	});
 
-it('creates not-configured lens when no shape files are configured', async () => {
-const uri = 'file:///no-shapes.ttl';
-mockContextService.contexts[uri] = { any: true };
-mockValidationService.getEffectiveShapeGraphs.mockReturnValue([]);
+	it('shows not configured when nothing applies', async () => {
+		const provider = createProvider(state({}));
 
-const provider = new TurtleValidationCodeLensProvider();
-(provider as any)._initialized = true;
-(provider as any)._enabled = true;
+		const lens = await getStatusLens(provider);
 
-const result = await provider.provideCodeLenses(doc(uri), null as any);
+		expect(lens.command?.title).toContain('not configured');
+	});
 
-expect(result).toHaveLength(1);
-expect(result[0].command?.command).toBe('mentor.command.manageShaclShapes');
-expect(result[0].command?.title).toContain('Validation: not configured');
-expect(result[0].command?.tooltip).toContain('Configure SHACL shape files');
-});
+	it('surfaces a skipped automatic validation with a validate action', async () => {
+		const provider = createProvider(
+			state({
+				mode: 'matched',
+				profileNames: ['core'],
+				effectiveShapes: ['workspace:///shapes/core.ttl'],
+				matchedPaths: ['**/*.ttl'],
+			}),
+			{ profiles: { 'core': { name: 'Core' } } },
+			{ triples: 82_000, maxGraphSize: 50_000 }
+		);
 
-it('creates lenses for configured shapes and conforming result', async () => {
-const uri = 'file:///one-shape.ttl';
-mockContextService.contexts[uri] = { any: true };
-mockValidationService.getEffectiveShapeGraphs.mockReturnValue(['file:///shape.ttl']);
-mockValidationService.getLastResult.mockReturnValue({ conforms: true, results: [], reportDataset: {} as any });
+		const document = { uri: DOCUMENT_URI } as any;
+		const lenses = await provider.provideCodeLenses(document, {} as any) as vscode.CodeLens[];
+		const skipLens = lenses.find(l => l.command?.title.includes('Validation skipped'));
 
-const provider = new TurtleValidationCodeLensProvider();
-(provider as any)._initialized = true;
-(provider as any)._enabled = true;
+		expect(skipLens).toBeDefined();
+		expect(skipLens!.command?.title).toContain('Validation skipped (size limit)');
+		expect(skipLens!.command?.command).toBe('mentor.command.validateDocument');
+		expect(skipLens!.command?.tooltip).toContain('82000 triples');
+		expect(skipLens!.command?.tooltip).toContain('mentor.shacl.maxGraphSize (50000)');
+	});
 
-const result = await provider.provideCodeLenses(doc(uri), null as any);
+	it('shows no skip lens without a recorded skip', async () => {
+		const provider = createProvider(state({ mode: 'matched', profileNames: ['core'], effectiveShapes: ['s:1'], matchedPaths: [] }));
 
-expect(result).toHaveLength(3);
-expect(result[0].command?.title).toContain('Validation: 1 file enabled');
-expect(result[1].command?.command).toBe('mentor.command.validateDocument');
-expect(result[2].command?.title).toContain('Conforms');
-});
+		const document = { uri: DOCUMENT_URI } as any;
+		const lenses = await provider.provideCodeLenses(document, {} as any) as vscode.CodeLens[];
 
-it('creates multi-shape tooltip and failing status lens', async () => {
-const uri = 'file:///two-shapes.ttl';
-mockContextService.contexts[uri] = { any: true };
-mockValidationService.getEffectiveShapeGraphs.mockReturnValue(['file:///shape-a.ttl', 'file:///shape-b.ttl']);
-mockValidationService.getLastResult.mockReturnValue({
-conforms: false,
-results: [{}, {}],
-reportDataset: {} as any
-});
+		expect(lenses.some(l => l.command?.title.includes('Validation skipped'))).toBe(false);
+	});
 
-const provider = new TurtleValidationCodeLensProvider();
-(provider as any)._initialized = true;
-(provider as any)._enabled = true;
+	it('shows the Validate button in notebook cells (consistent with the editor)', async () => {
+		const cellUri = { scheme: 'vscode-notebook-cell', toString: () => 'vscode-notebook-cell:///w/models/example.ttl#c1' };
+		const provider = createProvider(
+			state({ mode: 'matched', profileNames: ['core'], effectiveShapes: ['workspace:///shapes/core.ttl'], matchedPaths: [] }),
+			{ profiles: { 'core': { name: 'Core' } } },
+			undefined,
+			cellUri
+		);
 
-const result = await provider.provideCodeLenses(doc(uri), null as any);
+		const lenses = await provider.provideCodeLenses({ uri: cellUri } as any, {} as any) as vscode.CodeLens[];
+		const validateLens = lenses.find(l => l.command?.command === 'mentor.command.validateDocument');
 
-expect(result).toHaveLength(3);
-expect(result[0].command?.title).toContain('Validation: 2 files enabled');
-expect(result[0].command?.tooltip).toContain('- file:///shape-a.ttl');
-expect(result[2].command?.title).toContain('2 issue(s)');
-});
-
-it('fires code lens change from initialize callbacks when enabled', async () => {
-let resolveIndexed!: () => void;
-let contextChanged!: () => void;
-let validated!: () => void;
-
-mockIndexerService.waitForIndexed.mockReturnValue(new Promise<void>((resolve) => {
-resolveIndexed = resolve;
-}));
-mockContextService.onDidChangeDocumentContext.mockImplementation((handler: () => void) => {
-contextChanged = handler;
-return { dispose: vi.fn() };
-});
-mockValidationService.onDidValidate.mockImplementation((handler: () => void) => {
-validated = handler;
-return { dispose: vi.fn() };
-});
-
-const uri = 'file:///callbacks.ttl';
-mockContextService.contexts[uri] = { any: true };
-
-const provider = new TurtleValidationCodeLensProvider();
-const fired: number[] = [];
-provider.onDidChangeCodeLenses(() => fired.push(1));
-
-await provider.provideCodeLenses(doc(uri), null as any);
-resolveIndexed();
-await Promise.resolve();
-contextChanged();
-validated();
-
-expect(fired).toHaveLength(3);
-});
-
-it('updates enabled state and fires on relevant configuration change', () => {
-let configChanged!: (e: { affectsConfiguration: (key: string) => boolean }) => void;
-vi.spyOn(vscode.workspace, 'onDidChangeConfiguration').mockImplementation((handler: any) => {
-configChanged = handler;
-return { dispose: vi.fn() } as any;
-});
-
-const provider = new TurtleValidationCodeLensProvider();
-const fired: number[] = [];
-provider.onDidChangeCodeLenses(() => fired.push(1));
-
-mockConfigGet.mockReturnValue(false);
-configChanged({ affectsConfiguration: (key: string) => key === 'mentor.shacl.enabled' });
-expect((provider as any)._enabled).toBe(false);
-expect(fired).toHaveLength(1);
-
-configChanged({ affectsConfiguration: () => false });
-expect(fired).toHaveLength(1);
-});
+		// The Validate button is no longer suppressed in cells.
+		expect(validateLens).toBeDefined();
+		expect(validateLens!.command?.title).toContain('Validate');
+	});
 });

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
+import { getTokenIndexAtPosition } from '@src/utilities';
 import { IDocumentContextService } from '@src/services/document';
 import { IPrefixLookupService } from '@src/services/document';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -10,36 +9,49 @@ import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-prov
 export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implements vscode.InlineCompletionItemProvider {
 	protected readonly prefixTokenTypes = new Set([RdfToken.PREFIX.name, RdfToken.TTL_PREFIX.name]);
 
-	private get contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
-
-	constructor(readonly onComplete: (uri: string) => string) {
+	constructor(
+		readonly onComplete: (uri: string) => string,
+		private readonly _contextService: IDocumentContextService,
+		private readonly _prefixLookup: IPrefixLookupService
+	) {
 		super();
 	}
 
-	provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, completion: vscode.InlineCompletionContext): vscode.ProviderResult<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
-		const context = this.contextService.getDocumentContext(document, TurtleDocument);
+	provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, completion: vscode.InlineCompletionContext, token?: vscode.CancellationToken): vscode.ProviderResult<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
+		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
-		if (!context) {
+		// Inline completions are requested (and the previous request cancelled)
+		// on essentially every keystroke; skip the full tokenization when the
+		// result would be discarded anyway.
+		if (!context || token?.isCancellationRequested) {
 			return null;
 		}
 
-		const n = context.getTokenIndexAtPosition(position);
+		// Tokenize the current document text synchronously so that completions
+		// are always based on the up-to-date buffer content. This avoids waiting
+		// for token delivery from the language server and also makes completions
+		// work for documents that are not eagerly indexed (e.g. untitled documents).
+		const tokens = context.tokenize(document.getText());
+
+		if (token?.isCancellationRequested) {
+			return null;
+		}
+
+		const n = getTokenIndexAtPosition(tokens, position);
 
 		// We also need the previous token to determine if this is a prefix definition.
 		if (n < 1) {
 			return null;
 		}
 
-		const currentToken = context.tokens[n];
+		const currentToken = tokens[n];
 		const currentType = currentToken.tokenType.name;
 
 		if (!currentType || currentType !== RdfToken.PNAME_NS.name) {
 			return;
 		}
 
-		const previousToken = context.tokens[n - 1];
+		const previousToken = tokens[n - 1];
 
 		if (!previousToken) {
 			return null;
@@ -53,8 +65,7 @@ export class TurtlePrefixCompletionProvider extends TurtleFeatureProvider implem
 		}
 
 		const prefix = currentToken.image.split(":")[0];
-		const prefixLookup = container.resolve<IPrefixLookupService>(ServiceToken.PrefixLookupService);
-		const uri = prefixLookup.getUriForPrefix(document.uri.toString(), prefix);
+		const uri = this._prefixLookup.getUriForPrefix(document.uri.toString(), prefix);
 
 		if (uri) {
 			return [{

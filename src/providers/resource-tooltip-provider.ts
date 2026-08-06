@@ -1,19 +1,16 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
 import { Store, NamedNode } from '@faubulous/mentor-rdf';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 
 /**
  * Provides hover information for tokens in RDF documents and for HTTP/HTTPS URIs in any file type.
  */
 export class ResourceTooltipProvider implements vscode.HoverProvider {	
-	private readonly _contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-
-	private readonly _store = container.resolve<Store>(ServiceToken.Store);
-
-	constructor() {
-		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
+	constructor(
+		context: vscode.ExtensionContext,
+		private readonly _contextService: IDocumentContextService,
+		private readonly _store: Store
+	) {
 		context.subscriptions.push(vscode.languages.registerHoverProvider('*', this));
 	}
 
@@ -36,7 +33,18 @@ export class ResourceTooltipProvider implements vscode.HoverProvider {
 			return null;
 		}
 
-		// Generic fallback: detect HTTP/HTTPS URIs in any file type.
+		return this._getGenericUriHover(document, position);
+	}
+
+	/**
+	 * Resolves a full HTTP/HTTPS URI at the given position and returns a tooltip for it
+	 * if it is a known resource in the workspace store. Used both as a generic fallback
+	 * and for URIs inside triplate frontmatter (which the document context does not tokenize).
+	 * @param document The document to check for a URI at the given position.
+	 * @param position The position to check for a URI.
+	 * @returns A hover with resource information if the URI is known, or null otherwise.
+	 */
+	private _getGenericUriHover(document: vscode.TextDocument, position: vscode.Position): vscode.Hover | null {
 		const iri = this._getUriAtTextPosition(document, position);
 
 		if (!iri) {

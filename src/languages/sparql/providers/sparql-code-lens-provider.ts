@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService, ISparqlQueryService } from '@src/languages/sparql/services';
-import { getConfig } from '@src/utilities/vscode/config';
-import { MENTOR_WORKSPACE_STORE } from '../services/sparql-connection-service';
+import { ISparqlConnectionRegistry, ISparqlQueryService, IDocumentConnectionService } from '@src/languages/sparql/services';
+import { ITripleStoreConfigService } from '@src/languages/sparql/services';
+import { WORKSPACE_CONNECTION } from '../services/sparql-connection-registry';
 import { SparqlConnection } from '../services/sparql-connection';
+import { isTemplate } from 'triplate';
 
 /**
  * Provides a CodeLens to display and change the current SPARQL endpoint.
@@ -12,20 +11,20 @@ import { SparqlConnection } from '../services/sparql-connection';
 export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
-	private _connectionService: ISparqlConnectionService;
-	private _queryService: ISparqlQueryService;
-
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
-	constructor() {
-		this._connectionService = container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
-		this._queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+	constructor(
+		private readonly _connectionRegistry: ISparqlConnectionRegistry,
+		private readonly _documentConnectionService: IDocumentConnectionService,
+		private readonly _storeConfigService: ITripleStoreConfigService,
+		private readonly _queryService: ISparqlQueryService
+	) {
 
-		this._connectionService.onDidChangeConnectionForDocument(() => {
+		this._documentConnectionService.onDidChangeConnectionForDocument(() => {
 			this.refresh();
 		});
 
-		this._connectionService.onDidChangeConnections(() => {
+		this._connectionRegistry.onDidChangeConnections(() => {
 			this.refresh();
 		});
 	}
@@ -36,7 +35,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	 * @returns A promise that resolves to an array of CodeLenses.
 	 */
 	public async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
-		const connection = this._connectionService.getConnectionForDocument(document.uri);
+		const connection = this._documentConnectionService.getConnectionForDocument(document.uri);
 
 		if (!connection) {
 			return [];
@@ -45,23 +44,33 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 		const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
 		const codeLenses: vscode.CodeLens[] = [];
 
-		// Connection CodeLens
-		const connectionUrl = this._getConnectionLabel(connection);
-		const connectionCodeLens = new vscode.CodeLens(range, {
-			title: `$(database)\u00A0Connection: ${connectionUrl}`,
-			tooltip: 'Click to change the SPARQL endpoint for this file',
-			command: 'mentor.command.selectSparqlConnection',
-			arguments: [document],
-		});
-
-		codeLenses.push(connectionCodeLens);
-
-		const config = getConfig();
+		// Run CodeLens, pushed first so it always leads the document-wide lens group. VS Code
+		// does not merge same-range CodeLenses from multiple providers in provider-registration
+		// order, so for `.sparql`-language Triplate templates this provider supplies the Run
+		// lens itself (delegating to the template command) instead of relying on
+		// TriplateCodeLensProvider's lens landing first, which empirically it doesn't.
+		// The Run lens is shown in notebook cells too, so the lens group is consistent with
+		// how it appears in a standalone editor.
+		if (isTemplate(document.getText())) {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: '$(play)\u00A0Run',
+				tooltip: 'Render this template with parameter values',
+				command: 'mentor.command.executeTriplateTemplate',
+				arguments: [document.uri.toString()],
+			}));
+		} else {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: '$(play)\u00A0Run',
+				command: 'mentor.command.executeSparqlQuery',
+				tooltip: 'Execute this SPARQL query',
+				arguments: [this._queryService.createQueryFromDocument(document)],
+			}));
+		}
 
 		// Inference status CodeLens (only for connections that support inference)
-		if (config.get('inference.enabled') && this._connectionService.supportsInference(connection)) {
-			const inferenceEnabled = this._connectionService.getInferenceEnabledForDocument(document.uri);
-			const inferenceIcon = inferenceEnabled ? '$(lightbulb-sparkle)' : '$(lightbulb-sparkle)';
+		if (this._storeConfigService.supportsInference(connection)) {
+			const inferenceEnabled = this._documentConnectionService.getInferenceEnabledForDocument(document.uri);
+			const inferenceIcon = '$(lightbulb)';
 			const inferenceText = inferenceEnabled ? 'on' : 'off';
 			const inferenceTooltip = inferenceEnabled
 				? 'Inferred triples are included. Click to exclude them.'
@@ -77,16 +86,36 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 			codeLenses.push(inferenceCodeLens);
 		}
 
-		// Only show the Execute code lens for regular SPARQL documents.
-		// Notebook cells have a native run button that outputs results inline;
-		// triggering executeSparqlQuery from a cell document would route to the
-		// SPARQL results panel instead.
-		if (document.uri.scheme !== 'vscode-notebook-cell') {
+		// List Graphs CodeLens (only when a listGraphs query is configured for the connection)
+		if (this._storeConfigService.getQueryTemplate(connection, 'listGraphs')) {
 			codeLenses.push(new vscode.CodeLens(range, {
-				title: '$(play)\u00A0Execute',
-				command: 'mentor.command.executeSparqlQuery',
-				tooltip: 'Execute this SPARQL query',
-				arguments: [this._queryService.createQueryFromDocument(document)],
+				title: '$(list-flat) List Graphs',
+				tooltip: 'List the named graphs available on this connection',
+				command: 'mentor.command.listGraphs',
+				arguments: [connection],
+			}));
+		}
+
+		// Connection CodeLens, always last in the group. A stored binding that no
+		// longer resolves (deleted connection, or one defined in the user settings
+		// of another machine) silently falls back to the workspace store \u2014 make
+		// that visible instead of presenting the fallback as the configured state.
+		const unresolvedConnectionId = this._documentConnectionService.getUnresolvedConnectionId(document.uri);
+
+		if (unresolvedConnectionId) {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: `$(warning)\u00A0Connection unavailable: ${unresolvedConnectionId}`,
+				tooltip: `The connection "${unresolvedConnectionId}" configured for this file is not available on this machine. `
+					+ 'Queries run against the in-memory workspace store instead. Click to pick a connection.',
+				command: 'mentor.command.selectSparqlConnection',
+				arguments: [document],
+			}));
+		} else {
+			codeLenses.push(new vscode.CodeLens(range, {
+				title: `$(arrow-swap)\u00A0Connection: ${this._getConnectionLabel(connection)}`,
+				tooltip: 'Click to change the SPARQL endpoint for this file',
+				command: 'mentor.command.selectSparqlConnection',
+				arguments: [document],
 			}));
 		}
 
@@ -94,7 +123,7 @@ export class SparqlCodeLensProvider implements vscode.CodeLensProvider {
 	}
 
 	private _getConnectionLabel(connection: SparqlConnection): string {
-		if (connection.id === MENTOR_WORKSPACE_STORE.id) {
+		if (connection.id === WORKSPACE_CONNECTION.id) {
 			return connection.id;
 		} else {
 			return connection.endpointUrl;

@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { DocumentIndex } from '@src/services/document/document-context-service';
 
@@ -41,30 +40,6 @@ export interface IDocumentContextService {
 	 * @returns A document context of the specified type if the document is loaded and matches the type, null otherwise.
 	 */
 	getDocumentContext<T extends IDocumentContext>(document: vscode.TextDocument, contextType: new (...args: any[]) => T): T | null;
-
-	/**
-	 * Wait for tokens to be delivered from the language server for a document.
-	 * @param uri The document URI to wait for tokens.
-	 * @param timeout Optional timeout in milliseconds.
-	 * @returns A promise that resolves with the tokens or rejects on timeout.
-	 */
-	waitForTokens(uri: string, timeout?: number): Promise<IToken[]>;
-
-	/**
-	 * Resolve pending token requests for a document. Called by language clients when tokens arrive.
-	 * @param uri The document URI.
-	 * @param tokens The tokens from the language server.
-	 */
-	resolveTokens(uri: string, tokens: IToken[]): void;
-
-	/**
-	 * Returns a promise that resolves with the next token delivery from the language server for the given URI.
-	 * Unlike waitForTokens, this does not interfere with document loading — it is a one-shot listener.
-	 * @param uri The document URI.
-	 * @param timeout Timeout in milliseconds.
-	 * @returns A promise that resolves with the tokens or rejects on timeout.
-	 */
-	onNextTokenDelivery(uri: string, timeout: number): Promise<IToken[]>;
 
 	/**
 	 * Get the document context from a file or workspace URI.

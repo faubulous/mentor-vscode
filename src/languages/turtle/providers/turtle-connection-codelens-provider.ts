@@ -1,0 +1,89 @@
+import * as vscode from 'vscode';
+import { ISparqlConnectionRegistry, IDocumentConnectionService } from '@src/languages/sparql/services';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+
+/**
+ * Provides a CodeLens at the top of RDF documents to display and change the SPARQL connection
+ * used to describe resources. Mirrors the connection lens of the SPARQL editor so that Turtle
+ * documents have a visible, switchable, per-document connection.
+ */
+export class TurtleConnectionCodeLensProvider implements vscode.CodeLensProvider {
+	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
+
+	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
+
+	private _subscribed = false;
+
+	constructor(
+		private readonly _connectionRegistry: ISparqlConnectionRegistry,
+		private readonly _documentConnectionService: IDocumentConnectionService
+	) { }
+
+	/**
+	 * Subscribe to connection changes lazily on first use, so that constructing this provider has no
+	 * side effects (it is instantiated at module load, before the DI container may be configured).
+	 */
+	private _ensureSubscribed(): void {
+		if (this._subscribed) {
+			return;
+		}
+
+		this._subscribed = true;
+
+		// Refresh the lens whenever the document's connection or the list of connections changes.
+		this._documentConnectionService.onDidChangeConnectionForDocument(() => this.refresh());
+		this._connectionRegistry.onDidChangeConnections(() => this.refresh());
+	}
+
+	public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
+		this._ensureSubscribed();
+
+		// The lens is shown for standalone documents and for notebook data cells alike: data cells
+		// can also describe resources against an endpoint, so they need a per-cell connection
+		// selector just like SPARQL cells do (it shares the top row with the slug lens).
+		const connection = this._documentConnectionService.getConnectionForDocument(document.uri);
+
+		if (!connection) {
+			return [];
+		}
+
+		const range = new vscode.Range(0, 0, 0, 0);
+
+		// Surface a stored binding that no longer resolves instead of silently
+		// presenting the workspace-store fallback as the configured connection.
+		const unresolvedConnectionId = this._documentConnectionService.getUnresolvedConnectionId(document.uri);
+
+		if (unresolvedConnectionId) {
+			return [
+				new vscode.CodeLens(range, {
+					title: `$(warning) Connection unavailable — using ${WORKSPACE_CONNECTION.id}`,
+					tooltip: `The connection "${unresolvedConnectionId}" configured for this file is not available on this machine. `
+						+ 'Resources are described against the in-memory workspace store instead. Click to pick a connection.',
+					command: 'mentor.command.selectSparqlConnection',
+					arguments: [document],
+				}),
+			];
+		}
+
+		return [
+			new vscode.CodeLens(range, {
+				title: `$(arrow-swap) Connection: ${this._getConnectionLabel(connection)}`,
+				tooltip: 'Click to change the SPARQL endpoint used to describe resources in this file',
+				command: 'mentor.command.selectSparqlConnection',
+				arguments: [document],
+			}),
+		];
+	}
+
+	private _getConnectionLabel(connection: SparqlConnection): string {
+		return connection.id === WORKSPACE_CONNECTION.id ? connection.id : connection.endpointUrl;
+	}
+
+	/**
+	 * Manually trigger a refresh of the CodeLenses.
+	 */
+	public refresh(): void {
+		this._onDidChangeCodeLenses.fire();
+	}
+}

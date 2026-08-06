@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { SH, RDFS } from '@faubulous/mentor-rdf';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -27,6 +28,7 @@ import { ClassesNode } from '@src/views/trees/definition-tree/nodes/classes/clas
 import { PropertiesNode } from '@src/views/trees/definition-tree/nodes/properties/properties-node';
 import { IndividualsNode } from '@src/views/trees/definition-tree/nodes/individuals/individuals-node';
 import { ShapesNode } from '@src/views/trees/definition-tree/nodes/shapes/shapes-node';
+import { CollectionsNode } from '@src/views/trees/definition-tree/nodes/collections/collections-node';
 import { RulesNode } from '@src/views/trees/definition-tree/nodes/rules/rules-node';
 import { ValidatorsNode } from '@src/views/trees/definition-tree/nodes/validators/validators-node';
 import { OntologyNode } from '@src/views/trees/definition-tree/nodes/ontology-node';
@@ -80,6 +82,12 @@ beforeEach(() => {
 		// RulesNode / ValidatorsNode
 		getRules: vi.fn(function*() {}),
 		getValidators: vi.fn(function*() {}),
+		// CollectionsNode
+		getCollections: vi.fn(function*() {}),
+		getRootCollections: vi.fn(function*() {}),
+		getCollectionMembers: vi.fn(function*() {}),
+		isCollection: vi.fn(() => false),
+		isOrderedCollection: vi.fn(() => false),
 		// OntologyNode
 		getOntologyVersionInfo: vi.fn(() => undefined),
 		// Common
@@ -182,7 +190,6 @@ describe('OntologyNode', () => {
 		});
 
 		it('should include ShapesNode when shapes exist', () => {
-			const { SH } = require('@faubulous/mentor-rdf');
 			mockVocabularyStub.getSubClasses = vi.fn(function*(g: any, uri: any) {
 				if (uri === SH.Shape) yield 'urn:ex#S';
 			});
@@ -191,8 +198,21 @@ describe('OntologyNode', () => {
 			expect(children.some(c => c instanceof ShapesNode)).toBe(true);
 		});
 
+		it('should include CollectionsNode when collections without a concept scheme exist', () => {
+			mockVocabularyStub.getRootCollections = vi.fn(function*() { yield 'urn:ex#col1'; });
+			const children = makeOntologyNode().getChildren();
+			const collections = children.find(c => c instanceof CollectionsNode);
+			expect(collections).toBeDefined();
+			expect((collections as any).getQueryOptions().inScheme).toBeNull();
+		});
+
+		it('should not include CollectionsNode when there are no collections', () => {
+			mockVocabularyStub.getRootCollections = vi.fn(function*() {});
+			const children = makeOntologyNode().getChildren();
+			expect(children.some(c => c instanceof CollectionsNode)).toBe(false);
+		});
+
 		it('should include RulesNode when rules exist', () => {
-			const { SH } = require('@faubulous/mentor-rdf');
 			mockVocabularyStub.getSubClasses = vi.fn(function*(g: any, uri: any) {
 				if (uri === SH.Rule) yield 'urn:ex#R';
 			});
@@ -202,7 +222,6 @@ describe('OntologyNode', () => {
 		});
 
 		it('should include ValidatorsNode when validators exist', () => {
-			const { SH } = require('@faubulous/mentor-rdf');
 			mockVocabularyStub.getSubClasses = vi.fn(function*(g: any, uri: any) {
 				if (uri === SH.Validator) yield 'urn:ex#V';
 			});
@@ -230,7 +249,6 @@ describe('OntologyNode', () => {
 		it('should return found node when a child resolves the URI', () => {
 			// Set up ClassesNode child to resolve a class IRI
 			const classIri = 'urn:ex#C1';
-			const { RDFS } = require('@faubulous/mentor-rdf');
 			mockVocabularyStub.getClasses = vi.fn(function*() { yield classIri; });
 			mockVocabularyStub.hasType = vi.fn((_g: any, _iri: any, type: any) => type === RDFS.Class);
 			mockVocabularyStub.getRootClassPath = vi.fn(function*() {}); // empty → rootToNode = [classIri]

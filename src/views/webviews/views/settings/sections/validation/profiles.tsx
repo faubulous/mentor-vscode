@@ -1,0 +1,617 @@
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { SectionHeader } from '@src/views/webviews/components/section-header';
+import { ModalDialog } from '@src/views/webviews/components/modal-dialog';
+import { useStylesheet, useScopedWebviewMessaging } from '@src/views/webviews/hooks';
+import { ConfigurationScope, scopeToKey } from '@src/utilities/config-scope';
+import {
+	generateProfileId,
+	type ShaclBrokenReferences,
+	type ShaclValidationProfile,
+	type ShaclValidationSettings,
+} from '@src/services/validation/shacl-validation-configuration';
+import { SettingsSectionProps } from '../../settings-section-props';
+import { SettingsWorkspaceContext } from '../../components/setting-context';
+import { MENTOR_SETTINGS_SOURCE } from '../../settings-types';
+import { useScopedSettingValue } from '../../hooks/use-scoped-setting-value';
+import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
+import { ValidationProfilesList } from './components/validation-profiles-list';
+import { ValidationProfileEditor } from './components/validation-profile-editor';
+import { ValidationProfilesMessages } from './profiles-messages';
+import { ValidationProfileView, VALIDATION_STYLESHEET_ID } from './shared';
+import { PRESET_DEFAULT_PATHS, VALIDATION_PRESETS, type ValidationPreset } from '@src/services/validation/preset-definitions';
+import stylesheet from './validation.css';
+
+export const validationProfilesSection = {
+	id: 'validation.profiles',
+	label: 'Profiles',
+	component: ValidationProfilesSection,
+	defaultScope: 'workspace',
+	keys: [
+		'shacl.validation',
+	],
+	// User shape files are stored under this key (as `shapes/…` paths in the
+	// generic user file map); the section manages them through the profile editor
+	// rather than rendering the raw value.
+	hiddenKeys: [
+		'files',
+	],
+} as const satisfies SettingsSectionDescriptor;
+
+const VALIDATION_KEY = 'shacl.validation';
+
+/**
+ * Reads a per-scope SHACL validation settings object from the section state.
+ */
+function readSettings(value: unknown): ShaclValidationSettings {
+	return (value && typeof value === 'object' ? value : {}) as ShaclValidationSettings;
+}
+
+/**
+ * Whether a settings object holds no profiles.
+ */
+function isEmptySettings(value: ShaclValidationSettings): boolean {
+	return !value.profiles || Object.keys(value.profiles).length === 0;
+}
+
+/**
+ * Projects a single scope's settings object into profile views tagged with that scope.
+ */
+function toProfileViews(
+	settings: ShaclValidationSettings,
+	scope: ConfigurationScope
+): ValidationProfileView[] {
+	return Object.entries(settings.profiles ?? {}).map(([id, profile]) => ({
+		id,
+		name: profile?.name ?? '',
+		shapes: [...(profile?.shapes ?? [])],
+		includeFiles: [...(profile?.includeFiles ?? [])],
+		excludeFiles: [...(profile?.excludeFiles ?? [])],
+		description: profile?.description ?? '',
+		validateOnStartup: profile?.validateOnStartup === true,
+		validateOnChange: profile?.validateOnChange === true,
+		scope,
+	}));
+}
+
+/**
+ * Seeds a new-profile draft from a built-in preset: the preset's description is
+ * copied, the name is left empty (the user names their profile), the default
+ * all-files include patterns make it active immediately and the `shapes` are
+ * the canonical `workspace:///` URIs of the frozen copies the host wrote into
+ * the workspace.
+ */
+export function presetToDraft(preset: ValidationPreset, scope: ConfigurationScope, shapes: string[]): ValidationProfileView {
+	return {
+		id: '',
+		name: '',
+		shapes: [...shapes],
+		includeFiles: [...PRESET_DEFAULT_PATHS],
+		excludeFiles: [],
+		description: preset.description,
+		validateOnStartup: false,
+		validateOnChange: false,
+		scope,
+	};
+}
+
+/**
+ * How the profile editor was opened: creating a new profile or editing an existing one.
+ */
+export type ProfileEditorMode = 'create' | 'edit';
+
+/**
+ * Serializes a profile view into the stored profile value (omitting empty fields).
+ */
+export function toProfileValue(profile: ValidationProfileView): ShaclValidationProfile {
+	const name = profile.name.trim();
+	const description = profile.description.trim();
+
+	return {
+		...(name ? { name } : {}),
+		...(profile.shapes.length > 0 ? { shapes: profile.shapes } : {}),
+		...(profile.includeFiles.length > 0 ? { includeFiles: profile.includeFiles } : {}),
+		...(profile.excludeFiles.length > 0 ? { excludeFiles: profile.excludeFiles } : {}),
+		...(description ? { description } : {}),
+		...(profile.validateOnStartup ? { validateOnStartup: true } : {}),
+		...(profile.validateOnChange ? { validateOnChange: true } : {}),
+	};
+}
+
+/**
+ * Applies a profile save to the per-scope profile records and returns the new records.
+ *
+ * On `create` (including instantiating a preset) a fresh id is minted,
+ * disambiguated against the existing user and workspace ids. On `edit` the id
+ * is kept and the profile is removed from its original scope first, which may
+ * differ from the target scope on a move.
+ */
+export function applyProfileSave(options: {
+	mode: ProfileEditorMode;
+	originalId: string;
+	originalScope: ConfigurationScope;
+	next: ValidationProfileView;
+	userProfiles: Record<string, ShaclValidationProfile>;
+	workspaceProfiles: Record<string, ShaclValidationProfile>;
+}): { user: Record<string, ShaclValidationProfile>; workspace: Record<string, ShaclValidationProfile> } {
+	const { mode, originalId, originalScope, next } = options;
+
+	const user = { ...options.userProfiles };
+	const workspace = { ...options.workspaceProfiles };
+
+	const id = mode === 'edit'
+		? originalId
+		: generateProfileId(next.name, [...Object.keys(user), ...Object.keys(workspace)]);
+
+	if (mode === 'edit') {
+		if (scopeToKey(originalScope) === 'user') {
+			delete user[originalId];
+		} else {
+			delete workspace[originalId];
+		}
+	}
+
+	const value = toProfileValue(next);
+
+	if (scopeToKey(next.scope) === 'user') {
+		user[id] = value;
+	} else {
+		workspace[id] = value;
+	}
+
+	return { user, workspace };
+}
+
+/**
+ * The preview-map key used for a single path entry's live match count.
+ */
+const entryPreviewKey = (pattern: string) => `entry:${pattern}`;
+
+/**
+ * The preview-map key used for a profile's include-only match count (before
+ * exclusions), from which the excluded-file count is derived.
+ */
+const positivePreviewKey = (profileId: string) => `positive:${profileId}`;
+
+/**
+ * The preview-map keys used for the open draft's aggregate counts. The draft is
+ * not persisted, so its counts cannot be keyed by profile id — the editor shows
+ * one draft at a time, so a fixed pair of keys is enough.
+ */
+const DRAFT_TARGET_KEY = 'draft:target';
+const DRAFT_POSITIVE_KEY = 'draft:positive';
+
+function ValidationProfilesSection({ settings, setScope }: SettingsSectionProps) {
+	useStylesheet(VALIDATION_STYLESHEET_ID, stylesheet);
+
+	const hasWorkspace = useContext(SettingsWorkspaceContext);
+
+	// Profiles live in the workspace scope (shared via version control) or the
+	// user scope (portable profiles referencing only built-in graphs and user
+	// shapes, synced via Settings Sync). The shared hook owns the
+	// read/diff/write mechanics (clearing a scope that ends up empty).
+	const { userValue, workspaceValue, userRef, workspaceRef, commit } = useScopedSettingValue<ShaclValidationSettings>({
+		source: MENTOR_SETTINGS_SOURCE,
+		key: VALIDATION_KEY,
+		settings,
+		setScope,
+		read: readSettings,
+		isEmpty: isEmptySettings,
+	});
+
+	const profiles = useMemo(() => {
+		// Profiles live in the user and workspace scopes; a same-id workspace
+		// entry shadows the user one, matching the runtime merge in
+		// getValidationSettings (workspace > user).
+		const user = toProfileViews(userValue, ConfigurationScope.User);
+		const workspace = toProfileViews(workspaceValue, ConfigurationScope.Workspace);
+
+		const workspaceIds = new Set(workspace.map(p => p.id));
+
+		return [
+			...user.filter(p => !workspaceIds.has(p.id)),
+			...workspace,
+		];
+	}, [userValue, workspaceValue]);
+
+	const [candidates, setCandidates] = useState<string[]>([]);
+	const [broken, setBroken] = useState<ShaclBrokenReferences>({ profiles: {} });
+	const [matchPreviews, setMatchPreviews] = useState<Record<string, { count: number; sample: string[] }>>({});
+	const [editing, setEditing] = useState<ValidationProfileView | undefined>(undefined);
+	const [editorMode, setEditorMode] = useState<ProfileEditorMode>('edit');
+	const [editorDirty, setEditorDirty] = useState(false);
+
+	// The pending apply-callback of the interactive pattern editor; only one
+	// host quick pick can be open at a time.
+	const patternEditRef = useRef<((pattern: string) => void) | undefined>(undefined);
+
+	// The pending apply-callback of the create-shape flow: adds the created user
+	// shape URI to the open profile draft once the host reports it.
+	const createShapeRef = useRef<((uri: string) => void) | undefined>(undefined);
+
+	// Lets the once-bound message handler post follow-up messages (the messaging
+	// object is created after the handler).
+	const messagingRef = useRef<{ postMessage: (message: ValidationProfilesMessages) => void } | undefined>(undefined);
+
+	// The preset awaiting a shapes-copy result from the host, keyed by preset
+	// id, so the editor can be opened once the workspace copies are written.
+	const pendingPresetRef = useRef<Record<string, { preset: ValidationPreset; scope: ConfigurationScope }>>({});
+
+	const handleMessage = useCallback((message: ValidationProfilesMessages) => {
+		switch (message.id) {
+			case 'GetShapeCandidatesResult':
+				setCandidates(message.candidates);
+				return;
+			case 'GetValidationHealthResult':
+				setBroken(message.broken);
+				return;
+			case 'GetProfileMatchPreviewResult':
+				setMatchPreviews(prev => ({
+					...prev,
+					[message.key]: { count: message.count, sample: message.sample },
+				}));
+				return;
+			case 'EditPathPatternResult': {
+				const apply = patternEditRef.current;
+
+				patternEditRef.current = undefined;
+
+				if (message.pattern !== undefined) {
+					apply?.(message.pattern);
+				}
+
+				return;
+			}
+			case 'WritePresetShapesResult': {
+				const pending = pendingPresetRef.current[message.presetId];
+
+				delete pendingPresetRef.current[message.presetId];
+
+				// On failure the host has already surfaced an error; leave the editor closed.
+				if (pending && message.uri) {
+					setEditorMode('create');
+					setEditing(presetToDraft(pending.preset, pending.scope, [message.uri]));
+				}
+
+				return;
+			}
+			case 'ValidationProfileDeleted': {
+				// The host confirmed the deletion — remove the profile from its scope.
+				// Nothing references profiles, so no other entry needs rewriting.
+				const { profileId, scope } = message;
+
+				const userProfiles = { ...(userRef.current.profiles ?? {}) };
+				const workspaceProfiles = { ...(workspaceRef.current.profiles ?? {}) };
+
+				if (scope === 'user') {
+					delete userProfiles[profileId];
+				} else {
+					delete workspaceProfiles[profileId];
+				}
+
+				commit(
+					Object.keys(userProfiles).length > 0 ? { ...userRef.current, profiles: userProfiles } : {},
+					Object.keys(workspaceProfiles).length > 0 ? { ...workspaceRef.current, profiles: workspaceProfiles } : {}
+				);
+
+				setEditing(prev => (prev?.id === profileId && scopeToKey(prev.scope) === scope) ? undefined : prev);
+				setEditorDirty(false);
+
+				// The deletion may have left user shape files unreferenced; the host
+				// re-reads the committed settings and offers to delete the orphans.
+				messagingRef.current?.postMessage({ id: 'CheckOrphanedShapes' });
+				return;
+			}
+			case 'CreateUserShapeResult': {
+				const apply = createShapeRef.current;
+
+				createShapeRef.current = undefined;
+
+				if (message.uri) {
+					apply?.(message.uri);
+				}
+
+				return;
+			}
+		}
+	}, [commit, userRef, workspaceRef]);
+
+	const messaging = useScopedWebviewMessaging<ValidationProfilesMessages>('validation.profiles', handleMessage);
+	messagingRef.current = messaging;
+
+	useEffect(() => {
+		messaging?.postMessage({ id: 'GetShapeCandidates' });
+		messaging?.postMessage({ id: 'GetValidationHealth' });
+	}, [messaging]);
+
+	// Refresh the health report whenever the settings value changes.
+	const validationUserValue = settings[VALIDATION_KEY]?.userValue;
+	const validationWorkspaceValue = settings[VALIDATION_KEY]?.workspaceValue;
+
+	useEffect(() => {
+		messaging?.postMessage({ id: 'GetValidationHealth' });
+	}, [messaging, validationUserValue, validationWorkspaceValue]);
+
+	// Keep the per-row matching-file counts current. Profiles with exclusions
+	// additionally get a positives-only count, whose difference to the target
+	// count is the number of excluded files.
+	useEffect(() => {
+		for (const profile of profiles) {
+			if (profile.includeFiles.length > 0) {
+				messaging?.postMessage({
+					id: 'GetProfileMatchPreview',
+					key: profile.id,
+					includeFiles: profile.includeFiles,
+					excludeFiles: profile.excludeFiles,
+				});
+
+				if (profile.excludeFiles.length > 0) {
+					messaging?.postMessage({
+						id: 'GetProfileMatchPreview',
+						key: positivePreviewKey(profile.id),
+						includeFiles: profile.includeFiles,
+						excludeFiles: [],
+					});
+				}
+			}
+		}
+	}, [messaging, profiles]);
+
+	const matchCounts = useMemo(() => {
+		const counts: Record<string, number | undefined> = {};
+
+		for (const profile of profiles) {
+			counts[profile.id] = profile.includeFiles.length > 0 ? matchPreviews[profile.id]?.count : 0;
+		}
+
+		return counts;
+	}, [profiles, matchPreviews]);
+
+	const excludedCounts = useMemo(() => {
+		const counts: Record<string, number | undefined> = {};
+
+		for (const profile of profiles) {
+			if (profile.excludeFiles.length === 0) {
+				continue;
+			}
+
+			const target = matchPreviews[profile.id]?.count;
+			const positive = matchPreviews[positivePreviewKey(profile.id)]?.count;
+
+			if (target !== undefined && positive !== undefined) {
+				counts[profile.id] = Math.max(0, positive - target);
+			}
+		}
+
+		return counts;
+	}, [profiles, matchPreviews]);
+
+	// Per-entry counts shown inside the editor's path rows.
+	const entryCounts = useMemo(() => {
+		const counts: Record<string, number | undefined> = {};
+
+		for (const [key, preview] of Object.entries(matchPreviews)) {
+			if (key.startsWith('entry:')) {
+				counts[key.slice('entry:'.length)] = preview.count;
+			}
+		}
+
+		return counts;
+	}, [matchPreviews]);
+
+	// The open draft's aggregate counts, shown as the editor's summary line. The
+	// excluded count is the difference between the include-only and the
+	// exclusion-applied match, so it reflects the draft's exclusions before save.
+	const draftCounts = useMemo(() => {
+		const matched = matchPreviews[DRAFT_TARGET_KEY]?.count;
+		const positive = matchPreviews[DRAFT_POSITIVE_KEY]?.count;
+
+		return {
+			matched,
+			excluded: matched !== undefined && positive !== undefined
+				? Math.max(0, positive - matched)
+				: undefined,
+		};
+	}, [matchPreviews]);
+
+	// The draft counts are keyed per editor session, not per profile, so drop them
+	// whenever a different profile is opened — otherwise the summary would show
+	// the previously edited profile's numbers until the new ones arrive.
+	const editingKey = editing ? `${scopeToKey(editing.scope)}:${editing.id}` : undefined;
+
+	useEffect(() => {
+		setMatchPreviews(prev => {
+			const { [DRAFT_TARGET_KEY]: _target, [DRAFT_POSITIVE_KEY]: _positive, ...rest } = prev;
+
+			return rest;
+		});
+	}, [editingKey]);
+
+	const handleRequestDraftCounts = useCallback((includeFiles: string[], excludeFiles: string[]) => {
+		messagingRef.current?.postMessage({
+			id: 'GetProfileMatchPreview',
+			key: DRAFT_TARGET_KEY,
+			includeFiles,
+			excludeFiles,
+		});
+
+		messagingRef.current?.postMessage({
+			id: 'GetProfileMatchPreview',
+			key: DRAFT_POSITIVE_KEY,
+			includeFiles,
+			excludeFiles: [],
+		});
+	}, []);
+
+	const closeEditor = () => {
+		setEditorDirty(false);
+		setEditing(undefined);
+
+		// Closing the editor may have left a user shape file unreferenced (created
+		// but not added to a saved profile, or removed from one) — ask the host to
+		// check for orphans and offer to clean them up.
+		messagingRef.current?.postMessage({ id: 'CheckOrphanedShapes' });
+	};
+
+	const handleCreate = (scope: ConfigurationScope) => {
+		setEditorMode('create');
+		setEditing({
+			id: '',
+			name: '',
+			shapes: [],
+			includeFiles: [],
+			excludeFiles: [],
+			description: '',
+			validateOnStartup: false,
+			validateOnChange: false,
+			scope,
+		});
+	};
+
+	const handleEdit = (profile: ValidationProfileView) => {
+		setEditorMode('edit');
+		// Seed the editable name with the id fallback so profiles stored without a
+		// name field show their effective name; saving persists it explicitly.
+		setEditing({ ...profile, name: profile.name.trim() || profile.id });
+	};
+
+	// Creates a profile from a built-in preset. With a workspace open, the
+	// preset's shapes are copied into the workspace (frozen, version-controlled)
+	// and the New Profile dialog opens once the host has written them. Without a
+	// workspace, the profile is created in the user scope referencing the
+	// bundled preset graphs directly — no copy is needed since the graphs are
+	// loaded at activation.
+	const handleUsePreset = (preset: ValidationPreset) => {
+		if (!hasWorkspace) {
+			setEditorMode('create');
+			setEditing(presetToDraft(preset, ConfigurationScope.User, [...preset.shapes]));
+			return;
+		}
+
+		pendingPresetRef.current[preset.id] = { preset, scope: ConfigurationScope.Workspace };
+		messaging?.postMessage({ id: 'WritePresetShapes', presetId: preset.id });
+	};
+
+	// Opens the template's bundled shape graph in an editor so the user can adapt
+	// it and save their own copy into the workspace.
+	const handleEditPreset = (preset: ValidationPreset) => {
+		messaging?.postMessage({ id: 'OpenPresetShapeGraph', presetId: preset.id });
+	};
+
+	const handleSave = (originalId: string, originalScope: ConfigurationScope, next: ValidationProfileView) => {
+		const result = applyProfileSave({
+			mode: editorMode,
+			originalId,
+			originalScope,
+			next,
+			userProfiles: userRef.current.profiles ?? {},
+			workspaceProfiles: workspaceRef.current.profiles ?? {},
+		});
+
+		commit(
+			Object.keys(result.user).length > 0 ? { ...userRef.current, profiles: result.user } : {},
+			Object.keys(result.workspace).length > 0 ? { ...workspaceRef.current, profiles: result.workspace } : {}
+		);
+
+		closeEditor();
+	};
+
+	const handleValidate = (profile: ValidationProfileView) => {
+		messaging?.postMessage({ id: 'ValidateProfile', profileId: profile.id });
+	};
+
+	const handleDelete = (profile: ValidationProfileView) => {
+		messaging?.postMessage({
+			id: 'DeleteValidationProfile',
+			profileId: profile.id,
+			name: profile.name.trim() || profile.id,
+			scope: scopeToKey(profile.scope),
+		});
+	};
+
+	const handleEditEntry = (pattern: string, apply: (newPattern: string) => void) => {
+		patternEditRef.current = apply;
+		messaging?.postMessage({ id: 'EditPathPattern', pattern });
+	};
+
+	const handleRequestEntryCount = useCallback((pattern: string) => {
+		messagingRef.current?.postMessage({
+			id: 'GetProfileMatchPreview',
+			key: entryPreviewKey(pattern),
+			includeFiles: [pattern],
+			excludeFiles: [],
+		});
+	}, []);
+
+	// Prompts the host for a file name, creates the user shape file and adds the
+	// resulting user:/// URI to the open profile draft once reported back.
+	const handleCreateShape = (apply: (uri: string) => void) => {
+		createShapeRef.current = apply;
+		messaging?.postMessage({ id: 'CreateUserShape' });
+	};
+
+	// The names shown in the duplicate-name hint: everything except the profile
+	// being edited. A create draft is not persisted yet, so every existing name counts.
+	const otherNames = editing
+		? profiles
+			.filter(p => editorMode === 'create' || p.id !== editing.id || p.scope !== editing.scope)
+			.map(p => p.name.trim() || p.id)
+		: [];
+
+	return (
+		<div>
+			<SectionHeader
+				title={validationProfilesSection.label}
+				variant="title"
+				description={'Named sets of SHACL shape files, each applied to the workspace paths it defines. '
+					+ 'The shapes of all profiles matching a document are combined. '
+					+ 'Without a profile, no documents are validated.'}
+			/>
+
+			<ValidationProfilesList
+				profiles={profiles}
+				presets={VALIDATION_PRESETS}
+				brokenProfiles={broken.profiles}
+				matchCounts={matchCounts}
+				excludedCounts={excludedCounts}
+				hasWorkspace={hasWorkspace}
+				onCreate={handleCreate}
+				onEdit={handleEdit}
+				onUsePreset={handleUsePreset}
+				onEditPreset={handleEditPreset}
+				onValidate={settings['shacl.enabled']?.value === true ? handleValidate : undefined}
+				onDelete={handleDelete}
+			/>
+
+			<ModalDialog
+				open={!!editing}
+				title={editorMode === 'create' ? 'New Profile' : 'Edit Profile'}
+				onClose={closeEditor}
+				requireCloseConfirmation={editorDirty}
+				closeConfirmationMessage="You have unsaved changes. Discard them?"
+				closeConfirmLabel="Discard"
+				hideCloseButton
+			>
+				{editing && (
+					<ValidationProfileEditor
+						profile={editing}
+						isNew={editorMode === 'create'}
+						existingNames={otherNames}
+						candidates={candidates}
+						missingShapes={broken.profiles[editing.id] ?? []}
+						entryCounts={entryCounts}
+						onRequestEntryCount={handleRequestEntryCount}
+						draftCounts={draftCounts}
+						onRequestDraftCounts={handleRequestDraftCounts}
+						onEditEntry={handleEditEntry}
+						onOpenShape={(uri) => messaging?.postMessage({ id: 'OpenShapeGraph', uri })}
+						onCreateShape={handleCreateShape}
+						hasWorkspace={hasWorkspace}
+						onSave={handleSave}
+						onDelete={handleDelete}
+						onDirtyChange={setEditorDirty}
+					/>
+				)}
+			</ModalDialog>
+		</div>
+	);
+}

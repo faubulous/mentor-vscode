@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as vscode from 'vscode';
-import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContextService } from '@src/services/document/document-context-service';
+import { DocumentTokenSource } from '@src/services/document/document-token-source';
+import { getLog } from '@src/utilities/vscode/log';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 
 vi.mock('@faubulous/mentor-rdf', () => ({
@@ -31,7 +32,7 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		activeLanguage: undefined,
 		predicates: { label: [], description: [] },
 		isLoaded: true,
-		hasTokens: false,
+		isParsed: false,
 		isTemporary: false,
 		loadTriples: vi.fn(),
 		infer: vi.fn(),
@@ -52,17 +53,21 @@ function createService() {
 		getConvertibleTargetLanguageIds: vi.fn(() => []),
 		isConvertibleLanguage: vi.fn(() => false),
 		isTripleSourceLanguage: vi.fn(() => false),
+		isRdfLanguage: vi.fn(() => false),
 		create: vi.fn(() => createMockContext()),
 	};
+
+	const tokenSource = new DocumentTokenSource(() => undefined);
 
 	const service = new DocumentContextService(
 		mockExtensionContext as any,
 		mockStore as any,
 		mockVocabulary as any,
 		mockDocumentFactory as any,
+		tokenSource,
 	);
 
-	return { service, mockStore, mockDocumentFactory };
+	return { service, tokenSource, mockStore, mockDocumentFactory };
 }
 
 describe('DocumentContextService', () => {
@@ -70,131 +75,7 @@ describe('DocumentContextService', () => {
 		vi.useRealTimers();
 	});
 
-	describe('resolveTokens', () => {
-		it('notifies one-shot listeners registered via onNextTokenDelivery', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-			const tokens: IToken[] = [];
-
-			const deliveryPromise = service.onNextTokenDelivery(uri, 5000);
-			service.resolveTokens(uri, tokens);
-
-			await expect(deliveryPromise).resolves.toBe(tokens);
-		});
-
-		it('clears one-shot listeners after notification so a second resolveTokens does not throw', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-			const tokens: IToken[] = [];
-
-			const p1 = service.onNextTokenDelivery(uri, 5000);
-			service.resolveTokens(uri, tokens);
-			await p1;
-
-			expect(() => service.resolveTokens(uri, tokens)).not.toThrow();
-		});
-
-		it('resolves a pending waitForTokens request', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-			const tokens: IToken[] = [];
-
-			const waitPromise = service.waitForTokens(uri, 5000);
-			service.resolveTokens(uri, tokens);
-
-			await expect(waitPromise).resolves.toBe(tokens);
-		});
-
-		it('notifies multiple one-shot listeners for the same URI', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-			const tokens: IToken[] = [];
-
-			const p1 = service.onNextTokenDelivery(uri, 5000);
-			const p2 = service.onNextTokenDelivery(uri, 5000);
-			service.resolveTokens(uri, tokens);
-
-			const results = await Promise.all([p1, p2]);
-			expect(results[0]).toBe(tokens);
-			expect(results[1]).toBe(tokens);
-		});
-	});
-
-	describe('onNextTokenDelivery', () => {
-		it('resolves with tokens when resolveTokens is called', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-			const tokens: IToken[] = [{ image: 'SELECT' } as any];
-
-			const promise = service.onNextTokenDelivery(uri, 5000);
-			service.resolveTokens(uri, tokens);
-
-			await expect(promise).resolves.toBe(tokens);
-		});
-
-		it('rejects on timeout', async () => {
-			vi.useFakeTimers();
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-
-			const promise = service.onNextTokenDelivery(uri, 200);
-			vi.advanceTimersByTime(200);
-
-			await expect(promise).rejects.toThrow(/Timeout/);
-		});
-
-		it('does not cancel a concurrent waitForTokens request', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-			const tokens: IToken[] = [];
-
-			const waitPromise = service.waitForTokens(uri, 5000);
-			const listenPromise = service.onNextTokenDelivery(uri, 5000);
-
-			service.resolveTokens(uri, tokens);
-
-			await expect(Promise.all([waitPromise, listenPromise])).resolves.toBeDefined();
-		});
-	});
-
-	describe('waitForTokens', () => {
-		it('resolves with the delivered tokens', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-			const tokens: IToken[] = [{ image: 'PREFIX' } as any];
-
-			const promise = service.waitForTokens(uri, 5000);
-			service.resolveTokens(uri, tokens);
-
-			await expect(promise).resolves.toBe(tokens);
-		});
-
-		it('cancels the first call when a second call is made for the same URI', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-
-			const first = service.waitForTokens(uri, 5000);
-			const second = service.waitForTokens(uri, 5000);
-
-			service.resolveTokens(uri, []);
-
-			await expect(first).rejects.toThrow();
-			await expect(second).resolves.toBeDefined();
-		});
-
-		it('rejects on timeout', async () => {
-			vi.useFakeTimers();
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-
-			const promise = service.waitForTokens(uri, 200);
-			vi.advanceTimersByTime(200);
-
-			await expect(promise).rejects.toThrow(/Timeout/);
-		});
-	});
-
-	describe('getDocumentContext', () => {
+				describe('getDocumentContext', () => {
 		it('returns null when no context exists for the document', () => {
 			const { service } = createService();
 			const doc = { uri: vscode.Uri.parse('file:///missing.ttl') } as any;
@@ -287,19 +168,7 @@ describe('DocumentContextService', () => {
 		});
 	});
 
-	describe('dispose', () => {
-		it('rejects all pending waitForTokens requests', async () => {
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-
-			const promise = service.waitForTokens(uri, 10000);
-			service.dispose();
-
-			await expect(promise).rejects.toThrow();
-		});
-	});
-
-	describe('loadDocument', () => {
+		describe('loadDocument', () => {
 		it('returns undefined for unsupported language', async () => {
 			const { service } = createService();
 			const doc = {
@@ -322,7 +191,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('loads a document and delivers its context when tokens arrive', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service, tokenSource, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -334,7 +203,7 @@ describe('DocumentContextService', () => {
 			const loadPromise = service.loadDocument(doc);
 
 			// Simulate language server delivering tokens
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 
 			const context = await loadPromise;
 
@@ -378,7 +247,7 @@ describe('DocumentContextService', () => {
 			// Pre-populate context as already loaded
 			const existingCtx = createMockContext({ uri: doc.uri, isLoaded: true });
 			service.contexts[uri] = existingCtx;
-			existingCtx.hasTokens = true;
+			(existingCtx as { isParsed: boolean }).isParsed = true;
 
 			const result = await service.loadDocument(doc, true);
 
@@ -398,10 +267,10 @@ describe('DocumentContextService', () => {
 			} as any;
 
 			// Context created with tokens already available
-			const ctxWithTokens = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			const ctxWithTokens = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: true });
 			(mockDocumentFactory.create as any).mockReturnValue(ctxWithTokens);
 
-			// Should resolve without needing resolveTokens to be called
+			// Should resolve without needing a token delivery
 			const result = await service.loadDocument(doc);
 
 			expect(result).toBe(ctxWithTokens);
@@ -419,7 +288,7 @@ describe('DocumentContextService', () => {
 			} as any;
 
 			let slugAtLoadTime: string | undefined;
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: true });
 			(ctx.loadTriples as any).mockImplementation(async () => {
 				slugAtLoadTime = (ctx as any).slug;
 			});
@@ -441,7 +310,7 @@ describe('DocumentContextService', () => {
 				getText: () => '',
 			} as any;
 
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: true });
 			(mockDocumentFactory.create as any).mockReturnValue(ctx);
 
 			await service.loadDocument(doc);
@@ -450,7 +319,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('updates ctx.slug and triggers reload when context is already loaded with a different slug', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service } = createService();
 			const uri = 'file:///nb.mnb#cell1';
 			const doc = {
 				languageId: 'turtle',
@@ -461,7 +330,7 @@ describe('DocumentContextService', () => {
 
 			// Pre-populate a context that is already loaded but has NO slug (race condition:
 			// handleActiveEditorChanged loaded it first without slug).
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: true, hasTokens: true });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: true, isParsed: true });
 			service.contexts[uri] = ctx;
 
 			// Provide the document in textDocuments so _reloadContextTriples can find it.
@@ -478,7 +347,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does not reload when already-loaded context has the same slug', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service } = createService();
 			const uri = 'file:///nb.mnb#cell1';
 			const doc = {
 				languageId: 'turtle',
@@ -487,7 +356,7 @@ describe('DocumentContextService', () => {
 				getText: () => '',
 			} as any;
 
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: true, hasTokens: true });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: true, isParsed: true });
 			(ctx as any).slug = 'my-data';
 			service.contexts[uri] = ctx;
 
@@ -508,7 +377,7 @@ describe('DocumentContextService', () => {
 				getText: () => '',
 			} as any;
 
-			const partialCtx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			const partialCtx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: false });
 			(mockDocumentFactory.create as any).mockReturnValue(partialCtx);
 
 			const loadPromise = service.loadDocument(doc);
@@ -585,22 +454,22 @@ describe('DocumentContextService', () => {
 		});
 	});
 
-	describe('_reloadContextTriples (via resolveTokens)', () => {
+	describe('_reloadContextTriples (via token delivery)', () => {
 		it('reloads an already-loaded context when tokens arrive with no pending request', async () => {
-			const { service } = createService();
+			const { service, tokenSource } = createService();
 			const uri = 'file:///test.ttl';
 			const mockDoc = { getText: vi.fn(() => '@prefix ex: <http://example.org/> .') } as any;
 
 			// Put a loaded context + the document into workspace.textDocuments
 			const ctx = createMockContext({
 				uri: vscode.Uri.parse(uri),
-				hasTokens: true,
+				isParsed: true,
 			});
 			service.contexts[uri] = ctx;
 			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
 
-			// resolveTokens with no pending request → triggers _reloadContextTriples
-			service.resolveTokens(uri, []);
+			// A token delivery with no pending request → triggers _reloadContextTriples
+			tokenSource.deliverTokens(uri, []);
 
 			// Allow microtask queue to flush
 			await new Promise(resolve => setTimeout(resolve, 0));
@@ -612,25 +481,25 @@ describe('DocumentContextService', () => {
 			(vscode.workspace.textDocuments as any[]).pop();
 		});
 
-		it('does not reload when context.hasTokens is false', async () => {
-			const { service } = createService();
+		it('does not reload when context.isParsed is false', async () => {
+			const { service, tokenSource } = createService();
 			const uri = 'file:///test.ttl';
-			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: false });
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: false });
 			service.contexts[uri] = ctx;
 
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(ctx.loadTriples).not.toHaveBeenCalled();
 		});
 
 		it('does not reload when there is no text document open for the URI', async () => {
-			const { service } = createService();
+			const { service, tokenSource } = createService();
 			const uri = 'file:///notopen.ttl';
-			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: true });
 			service.contexts[uri] = ctx;
 
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(ctx.loadTriples).not.toHaveBeenCalled();
@@ -650,6 +519,39 @@ describe('DocumentContextService', () => {
 
 			// When no editor is active, isConvertibleLanguage is not called (languageId undefined → fast path)
 			expect(mockDocumentFactory.isConvertibleLanguage).not.toHaveBeenCalled();
+		});
+
+		it('publishes mentor.editor.isMentorLanguage=true for a Mentor-language editor', async () => {
+			const { service, mockDocumentFactory } = createService();
+			(mockDocumentFactory.isRdfLanguage as any).mockReturnValue(true);
+
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const ctx = createMockContext({ uri, isLoaded: true });
+			service.contexts[uri.toString()] = ctx;
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+			(vscode.window as any).activeTextEditor = { document: { languageId: 'turtle', uri, getText: () => '' } };
+
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand');
+
+			await service.handleActiveEditorChanged();
+
+			expect(mockDocumentFactory.isRdfLanguage).toHaveBeenCalledWith('turtle');
+			expect(executeCommandSpy).toHaveBeenCalledWith('setContext', 'mentor.editor.isMentorLanguage', true);
+
+			executeCommandSpy.mockRestore();
+		});
+
+		it('publishes mentor.editor.isMentorLanguage=false when no editor is active', async () => {
+			const { service } = createService();
+			(vscode.window as any).activeTextEditor = undefined;
+
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand');
+
+			await service.handleActiveEditorChanged();
+
+			expect(executeCommandSpy).toHaveBeenCalledWith('setContext', 'mentor.editor.isMentorLanguage', false);
+
+			executeCommandSpy.mockRestore();
 		});
 
 		it('loads the document and fires context-changed when a new editor becomes active', async () => {
@@ -678,7 +580,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does nothing when the active editor URI is unchanged from activeContext', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service } = createService();
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			const ctx = createMockContext({ uri });
 			service.contexts[uri.toString()] = ctx;
@@ -710,7 +612,7 @@ describe('DocumentContextService', () => {
 				getCells: () => [cell],
 			}];
 
-			const ctx = createMockContext({ uri: cellUri, isLoaded: false, hasTokens: true });
+			const ctx = createMockContext({ uri: cellUri, isLoaded: false, isParsed: true });
 			(mockDocumentFactory.create as any).mockReturnValue(ctx);
 
 			await service.handleActiveEditorChanged();
@@ -736,7 +638,7 @@ describe('DocumentContextService', () => {
 			(mockDocumentFactory.isTripleSourceLanguage as any).mockReturnValue(true);
 
 			const cellDoc = { languageId: 'turtle', uri: vscode.Uri.parse('file:///nb.mnb#cell0'), scheme: 'vscode-notebook-cell', getText: () => '' };
-			const ctx = createMockContext({ uri: cellDoc.uri, isLoaded: false, hasTokens: true });
+			const ctx = createMockContext({ uri: cellDoc.uri, isLoaded: false, isParsed: true });
 			(mockDocumentFactory.create as any).mockReturnValue(ctx);
 
 			const editor = {
@@ -774,7 +676,7 @@ describe('DocumentContextService', () => {
 				createMockContext({
 					uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell2'),
 					isLoaded: false,
-					hasTokens: true,
+					isParsed: true,
 				})
 			);
 
@@ -826,7 +728,7 @@ describe('DocumentContextService', () => {
 				createMockContext({
 					uri: vscode.Uri.parse('vscode-notebook-cell:///nb.mnb#cell7'),
 					isLoaded: false,
-					hasTokens: true,
+					isParsed: true,
 				})
 			);
 
@@ -917,7 +819,7 @@ describe('DocumentContextService', () => {
 
 	describe('loadDocument supersession guards', () => {
 		it('returns undefined when generation is bumped before tokens arrive (line 403)', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service, tokenSource, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -926,18 +828,17 @@ describe('DocumentContextService', () => {
 				getText: () => '',
 			} as any;
 
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: false });
 			(mockDocumentFactory.create as any).mockReturnValue(ctx);
 
 			const loadPromise = service.loadDocument(doc);
 
 			// Bump the generation to simulate a newer load superseding this one
 			// while waitForTokens is still pending.
-			const gen = (service as any)._tokenLoadGeneration.get(uri);
-			(service as any)._tokenLoadGeneration.set(uri, gen + 1);
+			tokenSource.beginLoad(uri);
 
-			// Resolve tokens — waitForTokens succeeds, but generation check on line 402 fails
-			service.resolveTokens(uri, []);
+			// Deliver tokens — waitForTokens succeeds, but the supersession check fails
+			tokenSource.deliverTokens(uri, []);
 
 			const result = await loadPromise;
 
@@ -945,7 +846,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns undefined when generation is bumped during loadTriples (line 411)', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service, tokenSource, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -954,16 +855,15 @@ describe('DocumentContextService', () => {
 				getText: () => '',
 			} as any;
 
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: false });
 			// loadTriples bumps the generation to simulate concurrent supersession
 			ctx.loadTriples = vi.fn(async () => {
-				const gen = (service as any)._tokenLoadGeneration.get(uri);
-				(service as any)._tokenLoadGeneration.set(uri, gen + 1);
+				tokenSource.beginLoad(uri);
 			});
 			(mockDocumentFactory.create as any).mockReturnValue(ctx);
 
 			const loadPromise = service.loadDocument(doc);
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 
 			const result = await loadPromise;
 
@@ -971,7 +871,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns undefined when generation is bumped during infer (line 419)', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service, tokenSource, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -980,16 +880,15 @@ describe('DocumentContextService', () => {
 				getText: () => '',
 			} as any;
 
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: false });
 			// infer bumps the generation to simulate concurrent supersession
 			ctx.infer = vi.fn(async () => {
-				const gen = (service as any)._tokenLoadGeneration.get(uri);
-				(service as any)._tokenLoadGeneration.set(uri, gen + 1);
+				tokenSource.beginLoad(uri);
 			});
 			(mockDocumentFactory.create as any).mockReturnValue(ctx);
 
 			const loadPromise = service.loadDocument(doc);
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 
 			const result = await loadPromise;
 
@@ -997,7 +896,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns undefined in catch when generation is bumped before rejection (line 387)', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service, tokenSource, mockDocumentFactory } = createService();
 			const uri = 'file:///test.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -1006,17 +905,16 @@ describe('DocumentContextService', () => {
 				getText: () => '',
 			} as any;
 
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: false });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: false });
 			(mockDocumentFactory.create as any).mockReturnValue(ctx);
 
 			const loadPromise = service.loadDocument(doc);
 
 			// Bump generation so the catch-block supersession guard fires
-			const gen = (service as any)._tokenLoadGeneration.get(uri);
-			(service as any)._tokenLoadGeneration.set(uri, gen + 1);
+			tokenSource.beginLoad(uri);
 
-			// Dispose rejects all pending waitForTokens — triggers the catch block
-			service.dispose();
+			// Disposing the token source rejects all pending waitForTokens — triggers the catch block
+			tokenSource.dispose();
 
 			const result = await loadPromise;
 
@@ -1030,7 +928,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('does not set activeContext — activation is handleActiveEditorChanged\'s responsibility', async () => {
-			const { service, mockDocumentFactory } = createService();
+			const { service, tokenSource } = createService();
 			const uri = 'file:///active.ttl';
 			const doc = {
 				languageId: 'turtle',
@@ -1042,7 +940,7 @@ describe('DocumentContextService', () => {
 			(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse(uri) } };
 
 			const loadPromise = service.loadDocument(doc);
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 			const context = await loadPromise;
 
 			expect(context).toBeDefined();
@@ -1103,54 +1001,21 @@ describe('DocumentContextService', () => {
 		});
 	});
 
-	describe('onNextTokenDelivery timeout cleanup', () => {
-		it('cleans up the listener entry when the timeout fires', async () => {
-			vi.useFakeTimers();
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-
-			// Register two listeners — the timeout of the first fires while the second persists
-			const p1 = service.onNextTokenDelivery(uri, 100);
-			const p2 = service.onNextTokenDelivery(uri, 5000);
-
-			// Advance past the first timeout only
-			vi.advanceTimersByTime(100);
-
-			await expect(p1).rejects.toThrow(/Timeout/);
-
-			// The second listener is still present; resolve it to clean up
-			service.resolveTokens(uri, []);
-			await expect(p2).resolves.toBeDefined();
-		});
-
-		it('rejects with a timeout error when the timeout fires before delivery', async () => {
-			vi.useFakeTimers();
-			const { service } = createService();
-			const uri = 'file:///test.sparql';
-
-			const p1 = service.onNextTokenDelivery(uri, 100);
-
-			vi.advanceTimersByTime(100);
-
-			await expect(p1).rejects.toThrow(/Timeout/);
-		});
-	});
-
-	describe('_reloadContextTriples edge cases', () => {
+		describe('_reloadContextTriples edge cases', () => {
 		it('catches and logs errors thrown during reload', async () => {
-			const { service } = createService();
+			const { service, tokenSource } = createService();
 			const uri = 'file:///test.ttl';
 			const mockDoc = { getText: vi.fn(() => 'x') } as any;
 
-			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: true });
 			// Make loadTriples throw to trigger the .catch handler
 			(ctx.loadTriples as any).mockRejectedValue(new Error('load failed'));
 			service.contexts[uri] = ctx;
 			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
 
-			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const warnSpy = vi.spyOn(getLog(), 'warn').mockImplementation(() => {});
 
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 			await new Promise(resolve => setTimeout(resolve, 10));
 
 			expect(warnSpy).toHaveBeenCalledWith(
@@ -1163,14 +1028,14 @@ describe('DocumentContextService', () => {
 		});
 
 		it('returns early after the supersession guard fires (line 285) without updating activeContext', async () => {
-			const { service } = createService();
+			const { service, tokenSource } = createService();
 			const uri = 'file:///test.ttl';
 			const mockDoc = { getText: vi.fn(() => '') } as any;
 
-			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: true });
 			// Replace the context during loadTriples so the supersession guard fires at line 285.
 			// Note: infer() (line 282) is called BEFORE the guard, so it executes once.
-			const newCtx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			const newCtx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: true });
 			(ctx.loadTriples as any).mockImplementation(async () => {
 				service.contexts[uri] = newCtx;
 			});
@@ -1182,7 +1047,7 @@ describe('DocumentContextService', () => {
 				document: { uri: { toString: () => uri } },
 			};
 
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 			await new Promise(resolve => setTimeout(resolve, 10));
 
 			// The supersession guard fires at line 285 (after infer) so activeContext
@@ -1194,18 +1059,18 @@ describe('DocumentContextService', () => {
 		});
 
 		it('sets activeContext when active context URI matches during _reloadContextTriples', async () => {
-			const { service } = createService();
+			const { service, tokenSource } = createService();
 			const uri = 'file:///test.ttl';
 			const mockDoc = { getText: vi.fn(() => '') } as any;
 
-			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: true });
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: true });
 			service.contexts[uri] = ctx;
 			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), ...mockDoc });
 
 			// Set the active context to match the URI being reloaded (new guard uses activeContext, not activeTextEditor)
 			service.activeContext = ctx;
 
-			service.resolveTokens(uri, []);
+			tokenSource.deliverTokens(uri, []);
 			await new Promise(resolve => setTimeout(resolve, 10));
 
 			expect(service.activeContext).toBe(ctx);
@@ -1226,7 +1091,7 @@ describe('DocumentContextService', () => {
 			} as any;
 
 			const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, hasTokens: true });
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: true });
 			(mockDocumentFactory.create as any).mockReturnValue(ctx);
 
 			await service.loadDocument(doc);
@@ -1238,7 +1103,7 @@ describe('DocumentContextService', () => {
 
 	describe('constructor event callback lambdas (lines 78-81)', () => {
 		it('invokes handleActiveEditorChanged via the registered onDidChangeActiveTextEditor callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.window, 'onDidChangeActiveTextEditor').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1248,7 +1113,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('invokes handleActiveNotebookEditorChanged via the registered onDidChangeActiveNotebookEditor callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.window, 'onDidChangeActiveNotebookEditor').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1258,7 +1123,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('invokes handleTextDocumentChanged via the registered onDidChangeTextDocument callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.workspace, 'onDidChangeTextDocument').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1269,7 +1134,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('invokes handleTextDocumentClosed via the registered onDidCloseTextDocument callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.workspace, 'onDidCloseTextDocument').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1279,7 +1144,7 @@ describe('DocumentContextService', () => {
 		});
 
 		it('invokes handleNotebookDocumentChanged via the registered onDidChangeNotebookDocument callback', async () => {
-			let capturedHandler: Function | undefined;
+			let capturedHandler: ((...args: unknown[]) => unknown) | undefined;
 			vi.spyOn(vscode.workspace, 'onDidChangeNotebookDocument').mockImplementationOnce((handler: any) => {
 				capturedHandler = handler;
 				return { dispose: () => {} };
@@ -1289,11 +1154,11 @@ describe('DocumentContextService', () => {
 		});
 	});
 
-	describe('_reloadContextTriples – hasTokens=false early return (line 275)', () => {
-		it('returns early without loading triples when context.hasTokens is false', async () => {
+	describe('_reloadContextTriples – isParsed=false early return (line 275)', () => {
+		it('returns early without loading triples when context.isParsed is false', async () => {
 			const { service } = createService();
 			const uri = 'file:///test.ttl';
-			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), hasTokens: false });
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: false });
 			service.contexts[uri] = ctx;
 
 			await (service as any)._reloadContextTriples(uri);

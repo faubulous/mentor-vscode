@@ -1,8 +1,7 @@
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
 import * as vscode from 'vscode';
-import { URI } from 'vscode-uri';
 import { WorkspaceFileService } from '@src/services/core/workspace-file-service';
-import { DocumentFactory } from '@src/workspace/document-factory';
+import { DocumentFactory } from '@src/services/document/document-factory';
 
 vi.mock('@src/utilities/vscode/config', () => ({
 	getConfig: vi.fn(() => ({ get: vi.fn((_key: string, defaultValue?: any) => defaultValue) })),
@@ -19,6 +18,7 @@ const createMockDocumentFactory = () => ({
 		const path = uri.path || uri.toString();
 		return path.endsWith('.ttl') || path.endsWith('.rdf') || path.endsWith('.sparql');
 	}
+	// Partial stub: only supportedExtensions/isSupportedFile are exercised by this service.
 }) as unknown as DocumentFactory;
 
 describe('WorkspaceFileService', () => {
@@ -58,11 +58,11 @@ describe('WorkspaceFileService', () => {
 	describe('discoverFiles', () => {
 		test('should discover files in workspace', async () => {
 			const mockFiles = [
-				URI.parse('file:///w/test.ttl'),
-				URI.parse('file:///w/data.rdf'),
+				vscode.Uri.parse('file:///w/test.ttl'),
+				vscode.Uri.parse('file:///w/data.rdf'),
 			];
 
-			findFilesSpy.mockResolvedValue(mockFiles as any);
+			findFilesSpy.mockResolvedValue(mockFiles);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
@@ -73,9 +73,9 @@ describe('WorkspaceFileService', () => {
 
 		test('should filter out unsupported files', async () => {
 			const mockFiles = [
-				URI.parse('file:///w/test.ttl'),
-				URI.parse('file:///w/readme.md'), // Not supported
-				URI.parse('file:///w/data.rdf'),
+				vscode.Uri.parse('file:///w/test.ttl'),
+				vscode.Uri.parse('file:///w/readme.md'), // Not supported
+				vscode.Uri.parse('file:///w/data.rdf'),
 			];
 
 			// Mock isSupportedFile to reject .md files
@@ -84,7 +84,7 @@ describe('WorkspaceFileService', () => {
 				return !path.endsWith('.md');
 			};
 
-			findFilesSpy.mockResolvedValue(mockFiles as any);
+			findFilesSpy.mockResolvedValue(mockFiles);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
@@ -137,8 +137,8 @@ describe('WorkspaceFileService', () => {
 
 	describe('files immutability', () => {
 		test('files property should return readonly array', async () => {
-			const mockFiles = [URI.parse('file:///w/test.ttl')];
-			findFilesSpy.mockResolvedValue(mockFiles as any);
+			const mockFiles = [vscode.Uri.parse('file:///w/test.ttl')];
+			findFilesSpy.mockResolvedValue(mockFiles);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
@@ -148,7 +148,7 @@ describe('WorkspaceFileService', () => {
 
 			// TypeScript should prevent this, but verify at runtime
 			expect(() => {
-				(files as any[]).push(URI.parse('file:///w/hack.ttl'));
+				(files as any[]).push(vscode.Uri.parse('file:///w/hack.ttl'));
 			}).not.toThrow(); // Array.push works, but doesn't affect internal state
 
 			// The internal state should remain unchanged on next access
@@ -175,8 +175,8 @@ describe('WorkspaceFileService', () => {
 		test('adds a supported file to the list when it is created', () => {
 			service = new WorkspaceFileService(mockDocumentFactory);
 
-			const newFile = URI.parse('file:///w/new.ttl');
-			createCallback!(newFile as any);
+			const newFile = vscode.Uri.parse('file:///w/new.ttl');
+			createCallback!(newFile);
 
 			expect(service.files.some(f => f.toString() === newFile.toString())).toBe(true);
 		});
@@ -184,8 +184,8 @@ describe('WorkspaceFileService', () => {
 		test('ignores creation of unsupported files', () => {
 			service = new WorkspaceFileService(mockDocumentFactory);
 
-			const unsupported = URI.parse('file:///w/readme.md');
-			createCallback!(unsupported as any);
+			const unsupported = vscode.Uri.parse('file:///w/readme.md');
+			createCallback!(unsupported);
 
 			expect(service.files.length).toBe(0);
 		});
@@ -195,8 +195,8 @@ describe('WorkspaceFileService', () => {
 			const eventSpy = vi.fn();
 			service.onDidChangeFiles(eventSpy);
 
-			const newFile = URI.parse('file:///w/new.ttl');
-			createCallback!(newFile as any);
+			const newFile = vscode.Uri.parse('file:///w/new.ttl');
+			createCallback!(newFile);
 
 			expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({
 				type: vscode.FileChangeType.Created,
@@ -204,37 +204,37 @@ describe('WorkspaceFileService', () => {
 		});
 
 		test('removes a file from the list when it is deleted', async () => {
-			findFilesSpy.mockResolvedValue([URI.parse('file:///w/test.ttl') as any]);
+			findFilesSpy.mockResolvedValue([vscode.Uri.parse('file:///w/test.ttl')]);
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
-			const deletedFile = URI.parse('file:///w/test.ttl');
-			deleteCallback!(deletedFile as any);
+			const deletedFile = vscode.Uri.parse('file:///w/test.ttl');
+			deleteCallback!(deletedFile);
 
 			expect(service.files.length).toBe(0);
 		});
 
 		test('ignores deletion of unsupported files', async () => {
-			findFilesSpy.mockResolvedValue([URI.parse('file:///w/test.ttl') as any]);
+			findFilesSpy.mockResolvedValue([vscode.Uri.parse('file:///w/test.ttl')]);
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
-			const unsupported = URI.parse('file:///w/readme.md');
-			deleteCallback!(unsupported as any);
+			const unsupported = vscode.Uri.parse('file:///w/readme.md');
+			deleteCallback!(unsupported);
 
 			// Supported file remains
 			expect(service.files.length).toBe(1);
 		});
 
 		test('fires onDidChangeFiles with Deleted when a supported file is deleted', async () => {
-			findFilesSpy.mockResolvedValue([URI.parse('file:///w/test.ttl') as any]);
+			findFilesSpy.mockResolvedValue([vscode.Uri.parse('file:///w/test.ttl')]);
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
 			const eventSpy = vi.fn();
 			service.onDidChangeFiles(eventSpy);
 
-			deleteCallback!(URI.parse('file:///w/test.ttl') as any);
+			deleteCallback!(vscode.Uri.parse('file:///w/test.ttl'));
 
 			expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({
 				type: vscode.FileChangeType.Deleted,
@@ -242,10 +242,86 @@ describe('WorkspaceFileService', () => {
 		});
 	});
 
+	describe('handleRenames', () => {
+		test('updates a renamed file in the list', async () => {
+			findFilesSpy.mockResolvedValue([vscode.Uri.parse('file:///w/data/old.ttl')]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			service.handleRenames([{
+				oldUri: vscode.Uri.parse('file:///w/data/old.ttl'),
+				newUri: vscode.Uri.parse('file:///w/data/new.ttl'),
+			}]);
+
+			expect(service.files.map(f => f.toString())).toEqual(['file:///w/data/new.ttl']);
+		});
+
+		test('rewrites paths of files inside a renamed folder', async () => {
+			findFilesSpy.mockResolvedValue([
+				vscode.Uri.parse('file:///w/data/a.ttl'),
+				vscode.Uri.parse('file:///w/data/sub/b.ttl'),
+			]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			service.handleRenames([{
+				oldUri: vscode.Uri.parse('file:///w/data'),
+				newUri: vscode.Uri.parse('file:///w/sources'),
+			}]);
+
+			const paths = service.files.map(f => f.toString()).sort();
+			expect(paths).toEqual(['file:///w/sources/a.ttl', 'file:///w/sources/sub/b.ttl']);
+		});
+
+		test('drops a file renamed to an unsupported extension', async () => {
+			findFilesSpy.mockResolvedValue([vscode.Uri.parse('file:///w/data.ttl')]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			service.handleRenames([{
+				oldUri: vscode.Uri.parse('file:///w/data.ttl'),
+				newUri: vscode.Uri.parse('file:///w/data.md'),
+			}]);
+
+			expect(service.files.length).toBe(0);
+		});
+
+		test('adds a file renamed from an unsupported extension', async () => {
+			findFilesSpy.mockResolvedValue([]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			service.handleRenames([{
+				oldUri: vscode.Uri.parse('file:///w/notes.md'),
+				newUri: vscode.Uri.parse('file:///w/notes.ttl'),
+			}]);
+
+			expect(service.files.map(f => f.toString())).toEqual(['file:///w/notes.ttl']);
+		});
+
+		test('fires onDidChangeFiles for the affected parent folders', async () => {
+			findFilesSpy.mockResolvedValue([vscode.Uri.parse('file:///w/data/old.ttl')]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const eventSpy = vi.fn();
+			service.onDidChangeFiles(eventSpy);
+
+			service.handleRenames([{
+				oldUri: vscode.Uri.parse('file:///w/data/old.ttl'),
+				newUri: vscode.Uri.parse('file:///w/other/new.ttl'),
+			}]);
+
+			const firedUris = eventSpy.mock.calls.map(c => c[0].uri.toString());
+			expect(firedUris).toContain('file:///w/data');
+			expect(firedUris).toContain('file:///w/other');
+		});
+	});
+
 	describe('getFilesByLanguageId', () => {
 		test('yields files matching the given language extensions', async () => {
 			// Set up extensions mock with turtle language supporting .ttl and .rdf
-			vscode.extensions.all = [{
+			(vscode.extensions as unknown as { all: unknown[] }).all = [{
 				packageJSON: {
 					contributes: {
 						languages: [{ id: 'turtle', extensions: ['.ttl', '.rdf'] }]
@@ -254,10 +330,10 @@ describe('WorkspaceFileService', () => {
 			}] as any[];
 
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/model.ttl'),
-				URI.parse('file:///w/data.rdf'),
-				URI.parse('file:///w/query.sparql'),
-			] as any);
+				vscode.Uri.parse('file:///w/model.ttl'),
+				vscode.Uri.parse('file:///w/data.rdf'),
+				vscode.Uri.parse('file:///w/query.sparql'),
+			]);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
@@ -273,7 +349,7 @@ describe('WorkspaceFileService', () => {
 		});
 
 		test('yields nothing when no extensions are configured for the language', async () => {
-			vscode.extensions.all = [];
+			(vscode.extensions as unknown as { all: unknown[] }).all = [];
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 
@@ -289,16 +365,16 @@ describe('WorkspaceFileService', () => {
 	describe('getFolderContents', () => {
 		test('groups files by sub-folder and returns them sorted', async () => {
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/models/thing.ttl'),
-				URI.parse('file:///w/models/other.ttl'),
-				URI.parse('file:///w/queries/q.sparql'),
-				URI.parse('file:///w/root.ttl'),
-			] as any);
+				vscode.Uri.parse('file:///w/models/thing.ttl'),
+				vscode.Uri.parse('file:///w/models/other.ttl'),
+				vscode.Uri.parse('file:///w/queries/q.sparql'),
+				vscode.Uri.parse('file:///w/root.ttl'),
+			]);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
-			const contents = await service.getFolderContents(URI.parse('file:///w') as any);
+			const contents = await service.getFolderContents(vscode.Uri.parse('file:///w'));
 
 			const names = contents.map(u => u.toString().replace('file:///w/', ''));
 
@@ -311,14 +387,14 @@ describe('WorkspaceFileService', () => {
 
 		test('returns only files that are inside the given folder', async () => {
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/a/x.ttl'),
-				URI.parse('file:///w/b/y.ttl'),
-			] as any);
+				vscode.Uri.parse('file:///w/a/x.ttl'),
+				vscode.Uri.parse('file:///w/b/y.ttl'),
+			]);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
-			const contents = await service.getFolderContents(URI.parse('file:///w/a') as any);
+			const contents = await service.getFolderContents(vscode.Uri.parse('file:///w/a'));
 
 			expect(contents.length).toBe(1);
 			expect(contents[0].toString()).toContain('x.ttl');
@@ -326,32 +402,32 @@ describe('WorkspaceFileService', () => {
 
 		test('returns children of a folder whose name contains spaces', async () => {
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/my%20folder/data.ttl'),
-			] as any);
+				vscode.Uri.parse('file:///w/my%20folder/data.ttl'),
+			]);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
 			// Discover: root shows the folder
-			const rootContents = await service.getFolderContents(URI.parse('file:///w') as any);
+			const rootContents = await service.getFolderContents(vscode.Uri.parse('file:///w'));
 			expect(rootContents.length).toBe(1);
 
 			// Expanding the folder must yield the file, not an empty array
-			const folderContents = await service.getFolderContents(rootContents[0] as any);
+			const folderContents = await service.getFolderContents(rootContents[0]);
 			expect(folderContents.length).toBe(1);
 			expect(folderContents[0].toString()).toContain('data.ttl');
 		});
 
 		test('sorts multiple flat files alphabetically (covers files.sort comparator)', async () => {
 			findFilesSpy.mockResolvedValue([
-				URI.parse('file:///w/zebra.ttl'),
-				URI.parse('file:///w/alpha.ttl'),
-			] as any);
+				vscode.Uri.parse('file:///w/zebra.ttl'),
+				vscode.Uri.parse('file:///w/alpha.ttl'),
+			]);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
 			await service.discoverFiles();
 
-			const contents = await service.getFolderContents(URI.parse('file:///w') as any);
+			const contents = await service.getFolderContents(vscode.Uri.parse('file:///w'));
 
 			expect(contents.length).toBe(2);
 			expect(contents[0].toString()).toContain('alpha.ttl');
@@ -360,17 +436,17 @@ describe('WorkspaceFileService', () => {
 	});
 
 	describe('getExcludePatterns', () => {
-		test('includes patterns from ignoreFolders config', async () => {
+		test('includes patterns from excludeFiles config', async () => {
 			const { getConfig } = await import('@src/utilities/vscode/config');
 			(getConfig as any).mockReturnValue({
 				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
-					if (key === 'index.ignoreFolders') return ['node_modules', 'dist'];
+					if (key === 'index.excludeFiles') return ['node_modules', 'dist'];
 					return defaultValue;
 				})
 			});
 
 			service = new WorkspaceFileService(mockDocumentFactory);
-			const result = await (service as any).getExcludePatterns(URI.parse('file:///w'));
+			const result = await (service as any).getExcludePatterns(vscode.Uri.parse('file:///w'));
 
 			expect(result).toContain('node_modules');
 			expect(result).toContain('dist');
@@ -380,7 +456,7 @@ describe('WorkspaceFileService', () => {
 			const { getConfig } = await import('@src/utilities/vscode/config');
 			(getConfig as any).mockReturnValue({
 				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
-					if (key === 'index.ignoreFolders') return [];
+					if (key === 'index.excludeFiles') return [];
 					if (key === 'index.useGitIgnore') return true;
 					return defaultValue;
 				})
@@ -393,7 +469,7 @@ describe('WorkspaceFileService', () => {
 			);
 
 			service = new WorkspaceFileService(mockDocumentFactory);
-			const result = await (service as any).getExcludePatterns(URI.parse('file:///w'));
+			const result = await (service as any).getExcludePatterns(vscode.Uri.parse('file:///w'));
 
 			expect(result).toContain('node_modules');
 			expect(result).toContain('build');
@@ -404,7 +480,7 @@ describe('WorkspaceFileService', () => {
 			const { getConfig } = await import('@src/utilities/vscode/config');
 			(getConfig as any).mockReturnValue({
 				get: vi.fn().mockImplementation((key: string, defaultValue?: any) => {
-					if (key === 'index.ignoreFolders') return ['vendor'];
+					if (key === 'index.excludeFiles') return ['vendor'];
 					if (key === 'index.useGitIgnore') return true;
 					return defaultValue;
 				})
@@ -414,9 +490,9 @@ describe('WorkspaceFileService', () => {
 			vi.spyOn(vscode.workspace.fs, 'readFile').mockRejectedValue(new Error('not found'));
 
 			service = new WorkspaceFileService(mockDocumentFactory);
-			const result = await (service as any).getExcludePatterns(URI.parse('file:///w'));
+			const result = await (service as any).getExcludePatterns(vscode.Uri.parse('file:///w'));
 
-			// Still gets ignoreFolders but no gitignore content
+			// Still gets excludeFiles but no gitignore content
 			expect(result).toContain('vendor');
 		});
 	});

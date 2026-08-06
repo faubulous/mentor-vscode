@@ -258,7 +258,7 @@
                 },
                 {
                     "name": "entity.name.function.turtle",
-                    "match": "@[a-zA-Z-]+"
+                    "match": "@[a-zA-Z0-9-]+"
                 },
                 {
                     "begin": "(\\^\\^)(\\s*)(<[^>]*>|(([a-zA-Z0-9_]*)?(:))([a-zA-Z0-9_\\.-]*)?)",

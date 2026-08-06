@@ -1,9 +1,61 @@
 import * as vscode from 'vscode';
+import type { CstNode, ILexingError } from 'chevrotain';
 import { Range } from 'vscode-languageserver-types';
 import { Quad_Subject } from '@rdfjs/types';
 import { PredicateUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
-import { IToken } from '@faubulous/mentor-rdf-parsers';
+import { BlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
+
+/**
+ * The output of one parse pass over a document text: the token streams, the
+ * concrete syntax tree and the collected errors. Captured by
+ * {@link ITokenizedDocumentContext.parse} so that the diagnostics service and
+ * the triple loader can share a single tokenization and grammar parse per edit
+ * instead of re-deriving them from the same text.
+ */
+export interface DocumentParseResult {
+	/**
+	 * The exact text the result was produced from; used as the freshness check.
+	 */
+	readonly text: string;
+
+	/**
+	 * The faithful token stream that IDE features and linters consume.
+	 */
+	readonly tokens: IToken[];
+
+	/**
+	 * The tokens consumed by the grammar parser — placeholder tokens for
+	 * Triplate templates, identical to {@link tokens} otherwise.
+	 */
+	readonly parseTokens: IToken[];
+
+	/**
+	 * Whether the text is a Triplate template.
+	 */
+	readonly template: boolean;
+
+	/**
+	 * The concrete syntax tree produced by the shared parser with error
+	 * recovery enabled.
+	 */
+	readonly cst: CstNode;
+
+	/**
+	 * The characters the lexer could not match.
+	 */
+	readonly lexErrors: ILexingError[];
+
+	/**
+	 * A copy of the shared parser's recognition errors, which reset on every parse.
+	 */
+	readonly parserErrors: IRecognitionException[];
+
+	/**
+	 * A copy of the shared parser's semantic errors, which reset on every parse.
+	 */
+	readonly semanticErrors: IRecognitionException[];
+}
 
 /**
  * Interface for document context that provides access to RDF document specific data.
@@ -57,6 +109,12 @@ export interface IDocumentContext {
 	slug: string | undefined;
 
 	/**
+	 * Indicates if the document type is parsed using a tokenizing parser.
+	 * @note XML documents are not tokenized.
+	 */
+	providesTokens: boolean;
+
+	/**
 	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion.
 	 */
 	typeAssertions: { [key: string]: Range[] };
@@ -83,6 +141,7 @@ export interface IDocumentContext {
 
 	/**
 	 * The language portion of the active ISO 639-3 language tag without the regional part.
+	 * e.g. 'en' for the language tags 'en' or 'en-gb'.
 	 */
 	readonly activeLanguage: string | undefined;
 
@@ -95,19 +154,30 @@ export interface IDocumentContext {
 	};
 
 	/**
+	 * Indicates whether parser output has been delivered by the language server,
+	 * so that triples can be (re)loaded. See {@link isLoaded} for store state.
+	 */
+	readonly isParsed: boolean;
+
+	/**
 	 * Indicates whether the document is fully loaded.
 	 */
 	readonly isLoaded: boolean;
 
 	/**
-	 * Indicates whether tokens have been set for this document.
-	 */
-	readonly hasTokens: boolean;
-
-	/**
 	 * Indicates whether the document is temporary and not persisted.
 	 */
 	readonly isTemporary: boolean;
+
+	/**
+	 * Parses the given document text and updates the context's derived state
+	 * (tokens or parse data, namespaces, references, type assertions). This is
+	 * the authoritative update path: token-based contexts use a file-scoped
+	 * blank node ID generator so blank node identities are stable across reloads.
+	 * @param text The current document text.
+	 * @returns The tokens of the document, or an empty array for contexts that are not token-based.
+	 */
+	parse(text: string): IToken[];
 
 	/**
 	 * Loads triples into the triple store using existing tokens.
@@ -199,9 +269,51 @@ export interface IDocumentContext {
 /**
  * Interface for document contexts that have been tokenized and thus provide access to the tokens of the document.
  */
-export interface ITokenDocumentContext extends IDocumentContext {
+export interface ITokenizedDocumentContext extends IDocumentContext {
+	/**
+	 * The RDF syntax of the document, which determines its lexer and parser.
+	 */
+	readonly syntax: RdfSyntax;
+
 	/**
 	 * The tokens of the document, if the document has been tokenized.
 	 */
 	tokens: IToken[];
+
+	/**
+	 * Tokenizes the given text synchronously using the document's own syntax,
+	 * without requiring the language server.
+	 * @param text The text to tokenize.
+	 * @param blankNodeIdGenerator Optional blank node ID generator. Use a file-scoped
+	 * generator when the tokens are meant for triple loading so that blank node
+	 * identities are stable across reloads; without one, the default generator is
+	 * used, which is only suitable for positional lookups.
+	 * @returns The tokens of the text.
+	 */
+	tokenize(text: string, blankNodeIdGenerator?: BlankNodeIdGenerator): IToken[];
+
+	/**
+	 * Sets the tokens of the document and updates the derived indexes
+	 * (namespaces, references, type assertions and definitions).
+	 * @param tokens An array of tokens.
+	 */
+	setTokens(tokens: IToken[]): void;
+
+	/**
+	 * Returns the result of the last {@link IDocumentContext.parse} pass when
+	 * it was produced from exactly the given text, or `undefined` when it is
+	 * stale or no parse has run yet. Callers fall back to deriving the data
+	 * themselves in that case.
+	 * @param text The current document text.
+	 */
+	getParseResult(text: string): DocumentParseResult | undefined;
+}
+
+/**
+ * Indicates whether a document context is tokenized and thus provides access to its tokens.
+ * @param context A document context.
+ * @returns `true` if the context exposes a token stream, narrowing it to {@link ITokenizedDocumentContext}.
+ */
+export function isTokenizedDocumentContext(context: IDocumentContext): context is ITokenizedDocumentContext {
+	return context.providesTokens;
 }

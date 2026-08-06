@@ -2,10 +2,62 @@ import { URI as _URI, Utils } from 'vscode-uri';
 
 const workspaceRoot = _URI.parse('file:///w');
 
+/**
+ * Emitters behind the workspace/window event registrations, created lazily so
+ * the {@link EventEmitter} class can be declared later in this module. Tests
+ * drive ordered event sequences through {@link __events} instead of each
+ * re-implementing a handler-capture slot; registrations made by services under
+ * test receive the fired events like they would in the real API.
+ */
+const _eventEmitters = new Map<string, EventEmitter<any>>();
+
+function _getEventEmitter(name: string): EventEmitter<any> {
+  let emitter = _eventEmitters.get(name);
+
+  if (!emitter) {
+    emitter = new EventEmitter<any>();
+    _eventEmitters.set(name, emitter);
+  }
+
+  return emitter;
+}
+
+/**
+ * Test-only helpers to fire the mock workspace/window events. Call
+ * {@link __events.reset} in `beforeEach` when a test file fires events, so
+ * listeners registered by services from previous tests do not react.
+ */
+export const __events = {
+  fireDidOpenTextDocument: (e: any) => _getEventEmitter('onDidOpenTextDocument').fire(e),
+  fireDidChangeTextDocument: (e: any) => _getEventEmitter('onDidChangeTextDocument').fire(e),
+  fireDidCloseTextDocument: (e: any) => _getEventEmitter('onDidCloseTextDocument').fire(e),
+  fireDidSaveTextDocument: (e: any) => _getEventEmitter('onDidSaveTextDocument').fire(e),
+  fireDidChangeConfiguration: (e: any) => _getEventEmitter('onDidChangeConfiguration').fire(e),
+  fireDidRenameFiles: (e: any) => _getEventEmitter('onDidRenameFiles').fire(e),
+  fireDidDeleteFiles: (e: any) => _getEventEmitter('onDidDeleteFiles').fire(e),
+  fireDidOpenNotebookDocument: (e: any) => _getEventEmitter('onDidOpenNotebookDocument').fire(e),
+  fireDidChangeNotebookDocument: (e: any) => _getEventEmitter('onDidChangeNotebookDocument').fire(e),
+  fireDidCloseNotebookDocument: (e: any) => _getEventEmitter('onDidCloseNotebookDocument').fire(e),
+  fireDidChangeActiveTextEditor: (e: any) => _getEventEmitter('onDidChangeActiveTextEditor').fire(e),
+  fireDidChangeVisibleTextEditors: (e: any) => _getEventEmitter('onDidChangeVisibleTextEditors').fire(e),
+  fireDidChangeActiveNotebookEditor: (e: any) => _getEventEmitter('onDidChangeActiveNotebookEditor').fire(e),
+
+  /**
+   * Drops all listeners of all mock events.
+   */
+  reset: () => {
+    for (const emitter of _eventEmitters.values()) {
+      emitter.dispose();
+    }
+  },
+};
+
 export const workspace = {
   workspaceFolders: [
     { name: 'root', index: 0, uri: workspaceRoot },
   ],
+  isTrusted: true,
+  onDidGrantWorkspaceTrust: (_handler: any) => ({ dispose: () => {} }),
   findFiles: async () => [] as any[],
   createFileSystemWatcher: () => ({
     onDidCreate: () => ({ dispose: () => {} }),
@@ -24,14 +76,60 @@ export const workspace = {
     inspect: (key: string) => undefined,
     update: async (key: string, value: any) => {},
   }),
-  onDidOpenTextDocument: (_handler: any) => ({ dispose: () => {} }),
-  onDidChangeTextDocument: (_handler: any) => ({ dispose: () => {} }),
-  onDidCloseTextDocument: (_handler: any) => ({ dispose: () => {} }),
-  onDidChangeConfiguration: (_handler: any) => ({ dispose: () => {} }),
-  onDidOpenNotebookDocument: (_handler: any) => ({ dispose: () => {} }),
-  onDidChangeNotebookDocument: (_handler: any) => ({ dispose: () => {} }),
-  onDidCloseNotebookDocument: (_handler: any) => ({ dispose: () => {} }),
-  applyEdit: async (_edit: any) => true,
+  asRelativePath: (pathOrUri: any, _includeWorkspaceFolder?: boolean) => {
+    const path = typeof pathOrUri === 'string' ? pathOrUri : pathOrUri?.path ?? '';
+    return path.replace(/^\/+/, '');
+  },
+  onDidOpenTextDocument: (handler: any) => _getEventEmitter('onDidOpenTextDocument').event(handler),
+  onDidChangeTextDocument: (handler: any) => _getEventEmitter('onDidChangeTextDocument').event(handler),
+  onDidCloseTextDocument: (handler: any) => _getEventEmitter('onDidCloseTextDocument').event(handler),
+  onWillSaveTextDocument: (_handler: any) => ({ dispose: () => {} }),
+  onDidSaveTextDocument: (handler: any) => _getEventEmitter('onDidSaveTextDocument').event(handler),
+  onDidChangeConfiguration: (handler: any) => _getEventEmitter('onDidChangeConfiguration').event(handler),
+  onDidRenameFiles: (handler: any) => _getEventEmitter('onDidRenameFiles').event(handler),
+  onDidDeleteFiles: (handler: any) => _getEventEmitter('onDidDeleteFiles').event(handler),
+  onDidOpenNotebookDocument: (handler: any) => _getEventEmitter('onDidOpenNotebookDocument').event(handler),
+  onDidChangeNotebookDocument: (handler: any) => _getEventEmitter('onDidChangeNotebookDocument').event(handler),
+  onDidCloseNotebookDocument: (handler: any) => _getEventEmitter('onDidCloseNotebookDocument').event(handler),
+  /**
+   * Applies notebook cell-metadata edits to mock notebooks registered in
+   * `workspace.notebookDocuments` (matching cells by their `index` property,
+   * as created by `createMockNotebook`) and fires the notebook change event,
+   * so metadata round-trips can be asserted. Text edits and unknown targets
+   * keep the previous behavior of succeeding without applying anything.
+   */
+  applyEdit: async (edit: any) => {
+    const entries = typeof edit?.entries === 'function' ? edit.entries() : [];
+
+    for (const [uri, edits] of entries) {
+      const notebook = workspace.notebookDocuments.find((nb: any) => nb?.uri?.toString?.() === uri.toString());
+
+      if (!notebook) {
+        continue;
+      }
+
+      const cellChanges: any[] = [];
+
+      for (const cellEdit of edits as any[]) {
+        if (cellEdit?.type !== 'updateCellMetadata' || cellEdit.index === undefined) {
+          continue;
+        }
+
+        const cell = (notebook.getCells?.() ?? []).find((c: any) => c.index === cellEdit.index);
+
+        if (cell) {
+          cell.metadata = cellEdit.metadata;
+          cellChanges.push({ cell, metadata: cellEdit.metadata });
+        }
+      }
+
+      if (cellChanges.length > 0) {
+        _getEventEmitter('onDidChangeNotebookDocument').fire({ notebook, contentChanges: [], cellChanges });
+      }
+    }
+
+    return true;
+  },
   textDocuments: [] as any[],
   workspaceFile: undefined as any,
   openTextDocument: async (_uri: any) => undefined as any,
@@ -53,10 +151,30 @@ export const window = {
   activeColorTheme: { kind: 1 },
   activeTextEditor: undefined as any,
   activeNotebookEditor: undefined as any,
-  onDidChangeActiveTextEditor: (_handler: any) => ({ dispose: () => {} }),
-  onDidChangeActiveNotebookEditor: (_handler: any) => ({ dispose: () => {} }),
+  visibleTextEditors: [] as any[],
+  visibleNotebookEditors: [] as any[],
+  onDidChangeActiveTextEditor: (handler: any) => _getEventEmitter('onDidChangeActiveTextEditor').event(handler),
+  onDidChangeVisibleTextEditors: (handler: any) => _getEventEmitter('onDidChangeVisibleTextEditors').event(handler),
+  onDidChangeTextEditorSelection: (_handler: any) => ({ dispose: () => {} }),
+  onDidChangeActiveNotebookEditor: (handler: any) => _getEventEmitter('onDidChangeActiveNotebookEditor').event(handler),
   setStatusBarMessage: (_text: string, _timeout?: number) => ({ dispose: () => {} }),
-  createTreeView: (_id: string, _options: any) => ({ title: '', onDidChangeVisibility: () => ({ dispose: () => {} }), onDidExpandElement: () => ({ dispose: () => {} }), onDidCollapseElement: () => ({ dispose: () => {} }), reveal: async () => {}, dispose: () => {} }),
+  createTreeView: (_id: string, _options: any) => {
+    const visibilityEmitter = new EventEmitter<any>();
+
+    return {
+      title: '',
+      visible: true,
+      onDidChangeVisibility: visibilityEmitter.event,
+      /**
+       * Test-only: fires the visibility event; set `visible` first to match.
+       */
+      __fireVisibilityChanged: (e: any) => visibilityEmitter.fire(e),
+      onDidExpandElement: () => ({ dispose: () => {} }),
+      onDidCollapseElement: () => ({ dispose: () => {} }),
+      reveal: async () => {},
+      dispose: () => {},
+    };
+  },
   showNotebookDocument: async (_notebook: any, _options?: any) => undefined as any,
   showTextDocument: async (_document: any, _options?: any) => undefined as any,
   createQuickPick: () => ({
@@ -126,8 +244,19 @@ export const env = {
 };
 
 export const languages = {
-  createDiagnosticCollection: (_name?: string) => new DiagnosticCollection(),
-  getDiagnostics: (_uri?: any) => [] as any[],
+  createDiagnosticCollection: (name?: string) => new DiagnosticCollection(name),
+  /**
+   * Returns the union of the entries of all created mock diagnostic
+   * collections for the URI — mirroring what the real Problems panel would
+   * show, so tests can read published diagnostics back.
+   */
+  getDiagnostics: (uri?: any) => {
+    if (!uri) {
+      return [] as any[];
+    }
+
+    return _diagnosticCollections.flatMap(collection => collection.get(uri) ?? []);
+  },
   registerCodeActionsProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
   registerCodeLensProvider: (_selector: any, _provider: any) => ({ dispose: () => {} }),
   registerCompletionItemProvider: (_selector: any, _provider: any, ..._triggers: string[]) => ({ dispose: () => {} }),
@@ -166,6 +295,34 @@ export const FileChangeType = {
   Created: 1,
   Changed: 2,
   Deleted: 3,
+};
+
+export class FileSystemError extends Error {
+  code = 'Unknown';
+
+  constructor(messageOrUri?: string | any) {
+    super(typeof messageOrUri === 'string' ? messageOrUri : messageOrUri?.toString?.() ?? '');
+  }
+
+  private static _create(code: string, messageOrUri?: string | any): FileSystemError {
+    const error = new FileSystemError(messageOrUri);
+    error.code = code;
+    return error;
+  }
+
+  static FileNotFound(messageOrUri?: string | any) { return FileSystemError._create('FileNotFound', messageOrUri); }
+  static FileExists(messageOrUri?: string | any) { return FileSystemError._create('FileExists', messageOrUri); }
+  static FileNotADirectory(messageOrUri?: string | any) { return FileSystemError._create('FileNotADirectory', messageOrUri); }
+  static FileIsADirectory(messageOrUri?: string | any) { return FileSystemError._create('FileIsADirectory', messageOrUri); }
+  static NoPermissions(messageOrUri?: string | any) { return FileSystemError._create('NoPermissions', messageOrUri); }
+  static Unavailable(messageOrUri?: string | any) { return FileSystemError._create('Unavailable', messageOrUri); }
+}
+
+export const FileType = {
+  Unknown: 0,
+  File: 1,
+  Directory: 2,
+  SymbolicLink: 64,
 };
 
 export const ProgressLocation = {
@@ -327,8 +484,15 @@ export class Location {
   constructor(public readonly uri: any, public readonly range: Range) {}
 }
 
+/**
+ * Matches the real API: a single content value is normalized to a one-element array.
+ */
 export class Hover {
-  constructor(public readonly contents: any, public readonly range?: Range) {}
+  public readonly contents: any[];
+
+  constructor(contents: any, public readonly range?: Range) {
+    this.contents = Array.isArray(contents) ? contents : [contents];
+  }
 }
 
 export class DocumentLink {
@@ -355,6 +519,11 @@ export class Selection extends Range {
   active: Position;
 }
 
+export const EndOfLine = {
+  LF: 1,
+  CRLF: 2,
+};
+
 export const TextEditorRevealType = {
   Default: 0,
   InCenter: 1,
@@ -362,35 +531,64 @@ export const TextEditorRevealType = {
   AtTop: 3,
 };
 
+/**
+ * API-faithful WorkspaceEdit mock: text edits are grouped per resource and
+ * exposed via the `entries()` method returning `[Uri, TextEdit[]]` tuples,
+ * and `size` is the number of affected resources — both matching the real
+ * vscode API semantics.
+ */
 export class WorkspaceEdit {
-  private readonly _edits: Array<{ uri: any; type: string; range?: Range; newText?: string; position?: Position; text?: string }> = [];
+  private readonly _entries = new Map<string, [any, TextEdit[]]>();
+  private readonly _fileOperations: Array<{ type: string; oldUri?: any; newUri?: any; options?: any }> = [];
 
-  replace(uri: any, range: Range, newText: string): void {
-    this._edits.push({ uri, type: 'replace', range, newText });
+  private _push(uri: any, edit: TextEdit): void {
+    const key = uri.toString();
+
+    if (!this._entries.has(key)) {
+      this._entries.set(key, [uri, []]);
+    }
+
+    this._entries.get(key)![1].push(edit);
   }
 
-  insert(uri: any, position: Position, text: string): void {
-    this._edits.push({ uri, type: 'insert', position, text });
+  replace(uri: any, range: Range, newText: string): void {
+    this._push(uri, new TextEdit(range, newText));
+  }
+
+  insert(uri: any, position: Position, newText: string): void {
+    this._push(uri, TextEdit.insert(position, newText));
   }
 
   delete(uri: any, range: Range): void {
-    this._edits.push({ uri, type: 'delete', range });
+    this._push(uri, TextEdit.delete(range));
   }
 
-  get size(): number {
-    return this._edits.length;
+  has(uri: any): boolean {
+    return this._entries.has(uri.toString());
   }
 
-  set(uri: any, edits: any[]): void {
-    for (const edit of edits) {
-      if (edit.range && edit.newText !== undefined) {
-        this.replace(uri, edit.range, edit.newText);
-      }
+  get(uri: any): TextEdit[] {
+    return this._entries.get(uri.toString())?.[1] ?? [];
+  }
+
+  set(uri: any, edits: readonly TextEdit[] | null | undefined): void {
+    if (!edits || edits.length === 0) {
+      this._entries.delete(uri.toString());
+    } else {
+      this._entries.set(uri.toString(), [uri, [...edits]]);
     }
   }
 
-  get entries(): Array<{ uri: any; type: string; range?: Range; newText?: string; position?: Position; text?: string }> {
-    return this._edits;
+  renameFile(oldUri: any, newUri: any, options?: any): void {
+    this._fileOperations.push({ type: 'renameFile', oldUri, newUri, options });
+  }
+
+  get size(): number {
+    return this._entries.size;
+  }
+
+  entries(): Array<[any, TextEdit[]]> {
+    return [...this._entries.values()].map(([uri, edits]) => [uri, [...edits]]);
   }
 }
 
@@ -413,13 +611,29 @@ export class TextEdit {
   }
 }
 
+/**
+ * All mock diagnostic collections created in the current module instance, so
+ * `languages.getDiagnostics` can read published diagnostics back.
+ */
+const _diagnosticCollections: DiagnosticCollection[] = [];
+
 export class DiagnosticCollection {
   private _entries = new Map<string, any[]>();
+  constructor(public readonly name: string = 'mock') { _diagnosticCollections.push(this); }
   set(uri: any, diagnostics: any[]) { this._entries.set(uri?.toString?.() ?? '', diagnostics); }
   get(uri: any) { return this._entries.get(uri?.toString?.() ?? ''); }
+  has(uri: any) { return this._entries.has(uri?.toString?.() ?? ''); }
   delete(uri: any) { this._entries.delete(uri?.toString?.() ?? ''); }
   clear() { this._entries.clear(); }
-  dispose() {}
+  dispose() {
+    this._entries.clear();
+
+    const index = _diagnosticCollections.indexOf(this);
+
+    if (index >= 0) {
+      _diagnosticCollections.splice(index, 1);
+    }
+  }
 }
 
 export class SnippetString {
@@ -432,6 +646,10 @@ export const CompletionItemKind = {
   Unit: 10, Value: 11, Enum: 12, Keyword: 13, Snippet: 14,
   Color: 15, Reference: 16, File: 17, Folder: 18, EnumMember: 19,
   Constant: 20, Struct: 21, Event: 22, Operator: 23, TypeParameter: 24,
+};
+
+export const CompletionTriggerKind = {
+  Invoke: 0, TriggerCharacter: 1, TriggerForIncompleteCompletions: 2,
 };
 
 export class CompletionItem {
@@ -525,6 +743,10 @@ export class ThemeIcon {
   constructor(public readonly id: string, public readonly color?: ThemeColor) {}
 }
 
+export const QuickInputButtons = {
+  Back: { iconPath: new ThemeIcon('arrow-left'), tooltip: 'Back' },
+};
+
 export class TreeItem {
   label?: string;
   id?: string;
@@ -545,8 +767,9 @@ export class CancellationTokenSource {
   private _isCancellationRequested = false;
 
   readonly token = {
-    get isCancellationRequested() { return false; },
+    get isCancellationRequested() { return (this as any)._source._isCancellationRequested; },
     onCancellationRequested: (_handler: any) => ({ dispose: () => {} }),
+    _source: this,
   };
 
   cancel() {

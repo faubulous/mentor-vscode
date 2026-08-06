@@ -35,7 +35,7 @@
     "vocabulary"
   ],
   "icon": "media/icons/mentor.png",
-  "version": "0.5.10",
+  "version": "0.5.101",
   "publisher": "faubulous",
   "private": false,
   "license": "GPL-3.0",
@@ -62,59 +62,101 @@
     "package:install": "npm run package && code --install-extension dist/mentor.vsix --force",
     "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
     "test": "vitest run",
+    "test:e2e": "npm run build && tsc -p e2e/tsconfig.json && vscode-test",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json --noEmit && npm run lint"
   },
   "devDependencies": {
-    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@rdfjs/types": "^2.0.1",
+    "@types/mocha": "^10.0.10",
     "@types/n3": "^1.26.1",
-    "@types/node": "^25.6.0",
+    "@types/node": "^26.1.1",
     "@types/picomatch": "^4.0.3",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.105.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
-    "@typescript-eslint/eslint-plugin": "^8.59.1",
-    "@typescript-eslint/parser": "^8.59.1",
-    "@vitest/coverage-v8": "^4.1.5",
-    "@vscode-elements/react-elements": "^2.4.0",
-    "@vscode/test-web": "^0.0.80",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vscode-elements/elements": "^2.5.1",
+    "@vscode/codicons": "^0.0.45",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/test-web": "^0.0.81",
+    "@vscode/vsce": "^3.9.2",
     "chevrotain": "^12.0.0",
-    "esbuild": "^0.28.0",
-    "esbuild-plugin-copy": "^2.1.1",
-    "eslint": "^10.3.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.7.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "fonteditor-core": "^2.6.3",
     "glob": "^13.0.6",
     "rimraf": "^6.1.3",
-    "svgicons2svgfont": "=15.0.1",
+    "svgicons2svgfont": "=16.0.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.5",
+    "vitest": "^4.1.10",
+    "vscode-languageserver-textdocument": "^1.0.12",
     "vscode-uri": "^3.1.0"
   },
+  "overrides": {
+    "morgan": "^1.11.0",
+    "brace-expansion": "^5.0.9",
+    "got": "^11.8.6",
+    "tmp": "^0.2.7",
+    "gry": "^6.1.1",
+    "git-url-parse": "^16.1.0",
+    "git-up": "^8.1.1",
+    "parse-url": "^11.1.0",
+    "glob@^10.0.0": {
+      "minimatch": "^10.2.6"
+    },
+    "mocha": {
+      "minimatch": "^10.2.6",
+      "diff": "^8.0.3",
+      "serialize-javascript": "^7.0.7"
+    }
+  },
   "dependencies": {
-    "@comunica/query-sparql": "^5.2.2",
-    "@faubulous/mentor-rdf": "^1.4.1",
-    "@faubulous/mentor-rdf-parsers": "^1.9.0",
-    "@faubulous/mentor-rdf-serializers": "^1.6.2",
-    "@vscode/codicons": "^0.0.45",
-    "picomatch": "^4.0.4",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "@comunica/query-sparql": "^5.3.0",
+    "@faubulous/mentor-rdf": "^2.1.1",
+    "@faubulous/mentor-rdf-parsers": "^2.0.0",
+    "@faubulous/mentor-rdf-serializers": "^1.8.0",
+    "asynciterator": "^3.10.0",
+    "n3": "^2.1.1",
+    "picomatch": "^4.0.5",
+    "rdf-stores": "^2.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "reflect-metadata": "^0.2.2",
-    "shacl-engine": "^1.1.0",
+    "shacl-engine": "^1.1.2",
+    "triplate": "^0.6.0",
     "tsyringe": "^4.10.0",
-    "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.12"
+    "uuid": "^14.0.1",
+    "vscode-languageserver-types": "^3.18.0"
   },
   "activationEvents": [
     "onStartupFinished",
     "onLanguage:xml",
-    "onNotebook:mentor-notebook"
+    "onNotebook:mentor-notebook",
+    "onUri"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "SPARQL endpoint connections and query templates from workspace settings are only applied in trusted workspaces. This prevents an untrusted workspace from directing the extension to make network requests to arbitrary hosts.",
+      "restrictedConfigurations": [
+        "mentor.sparql.connections",
+        "mentor.sparql.listGraphsQuery",
+        "mentor.sparql.dropGraphQuery",
+        "mentor.sparql.describeQueryTemplate",
+        "mentor.sparql.exportGraphQuery",
+        "mentor.sparql.countGraphQuery"
+      ]
+    }
+  },
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -166,6 +208,16 @@
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "key": "meta+enter",
         "when": "editorLangId == 'sparql' && !notebookCellType"
+      },
+      {
+        "command": "mentor.command.renameWorkspaceItem",
+        "key": "f2",
+        "when": "focusedView == mentor.view.workspaceTree"
+      },
+      {
+        "command": "mentor.command.describeResourceFromPosition",
+        "key": "alt+f12",
+        "when": "editorTextFocus && mentor.editor.cursorOnResource && mentor.editor.isMentorLanguage"
       }
     ],
     "notebooks": [
@@ -228,6 +280,18 @@
         "language": "datalog",
         "scopeName": "source.datalog",
         "path": "./dist/datalog.tmLanguage.json"
+      },
+      {
+        "scopeName": "triplate.injection",
+        "path": "./dist/triplate.injection.tmLanguage.json",
+        "injectTo": [
+          "source.sparql",
+          "source.ntriples",
+          "source.nquads",
+          "source.turtle",
+          "source.trig",
+          "source.n3"
+        ]
       }
     ],
     "languages": [
@@ -547,6 +611,36 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.createUserShape",
+        "title": "New User Shape File...",
+        "icon": "$(new-file)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.importUserShape",
+        "title": "Import Workspace Shape File into User Shapes...",
+        "icon": "$(cloud-upload)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.cleanUpUserShapes",
+        "title": "Clean Up User Shapes...",
+        "icon": "$(trash)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.renameWorkspaceItem",
+        "title": "Rename...",
+        "icon": "$(edit)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.excludeFromIndex",
+        "title": "Exclude From Index",
+        "icon": "$(exclude)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.createSparqlConnection",
         "title": "Add Connection...",
         "icon": "$(add)",
@@ -568,12 +662,6 @@
         "command": "mentor.command.listGraphs",
         "title": "List Graphs",
         "icon": "$(list-tree)",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.webview.show",
-        "title": "Show Webview",
-        "icon": "$(layout-panel)",
         "category": "Mentor"
       },
       {
@@ -604,6 +692,18 @@
         "command": "mentor.command.executeSparqlQueryFromActiveEditor",
         "title": "Execute SPARQL Query",
         "icon": "$(run-query)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.executeTriplateTemplate",
+        "title": "Execute Template",
+        "icon": "$(run-query)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.executeTriplateExample",
+        "title": "Execute Template Example",
+        "icon": "$(play)",
         "category": "Mentor"
       },
       {
@@ -640,6 +740,18 @@
         "command": "mentor.command.revealDefinition",
         "title": "Go to Definition",
         "icon": "$(go-to-file)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.describeResource",
+        "title": "Describe Resource",
+        "icon": "$(search)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.describeResourceFromPosition",
+        "title": "Describe Resource",
+        "icon": "$(search)",
         "category": "Mentor"
       },
       {
@@ -732,7 +844,8 @@
         "command": "mentor.command.setNotebookInference",
         "title": "Inference",
         "icon": "$(lightbulb-sparkle)",
-        "category": "Mentor"
+        "category": "Mentor",
+        "enablement": "mentor.activeNotebookSupportsInference"
       },
       {
         "command": "mentor.command.deletePrefixes",
@@ -753,26 +866,6 @@
         "command": "mentor.command.selectActiveLanguage",
         "title": "Select Active Language",
         "icon": "$(select-language)",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.highlightNamespaceDefinitions",
-        "title": "Highlight Namespace Definitions",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.highlightTypeDefinitions",
-        "title": "Highlight Type Definitions",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.highlightTypeAssertions",
-        "title": "Highlight Type Assertions",
-        "category": "Mentor"
-      },
-      {
-        "command": "mentor.command.highlightReferencedIris",
-        "title": "Highlight Referenced IRIs",
         "category": "Mentor"
       },
       {
@@ -853,6 +946,18 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.validateProfile",
+        "title": "Validate Profile using SHACL",
+        "icon": "$(run)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.validateAllProfiles",
+        "title": "Validate Workspace (Syntax + SHACL)",
+        "icon": "$(run-all-coverage)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.manageShaclShapes",
         "title": "Configure SHACL Shapes",
         "icon": "$(settings-gear)",
@@ -887,6 +992,24 @@
         "title": "Show Index Status",
         "icon": "$(list-ordered)",
         "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.showValidationLog",
+        "title": "Show Validation Log",
+        "icon": "$(output)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.createQueryForConnection",
+        "title": "New Query on Connection",
+        "icon": "$(new-file)",
+        "category": "Mentor"
+      },
+      {
+        "command": "mentor.command.showSparqlPanel",
+        "title": "Show SPARQL Panel",
+        "icon": "$(mentor-database-connection)",
+        "category": "Mentor"
       }
     ],
     "submenus": [
@@ -908,7 +1031,12 @@
         },
         {
           "command": "mentor.command.executeSparqlQueryFromActiveEditor",
-          "when": "editorLangId == 'sparql'",
+          "when": "editorLangId == 'sparql' && !mentor.editor.isTriplateTemplate",
+          "group": "navigation@-2"
+        },
+        {
+          "command": "mentor.command.executeTriplateTemplate",
+          "when": "mentor.editor.isTriplateTemplate",
           "group": "navigation@-2"
         },
         {
@@ -929,12 +1057,17 @@
           "group": "2_workspace"
         },
         {
+          "command": "mentor.command.validateAllProfiles",
+          "when": "view == mentor.view.workspaceTree && !mentor.isInitializing",
+          "group": "navigation@1"
+        },
+        {
           "command": "mentor.command.createDocument",
           "when": "view == mentor.view.workspaceTree",
           "group": "navigation@2"
         },
         {
-          "command": "mentor.command.manageSparqlConnections",
+          "command": "mentor.command.openSettings",
           "when": "view == mentor.view.workspaceTree",
           "group": "navigation@3"
         },
@@ -1001,6 +1134,21 @@
       ],
       "view/item/context": [
         {
+          "command": "mentor.command.renameWorkspaceItem",
+          "when": "view == mentor.view.workspaceTree",
+          "group": "7_modification"
+        },
+        {
+          "command": "mentor.command.excludeFromIndex",
+          "when": "view == mentor.view.workspaceTree",
+          "group": "z_commands"
+        },
+        {
+          "command": "mentor.command.describeResource",
+          "when": "viewItem =~ /resource/",
+          "group": "navigation@0"
+        },
+        {
           "command": "mentor.command.findReferences",
           "when": "viewItem =~ /resource/",
           "group": "4_search"
@@ -1032,6 +1180,11 @@
         }
       ],
       "editor/context": [
+        {
+          "command": "mentor.command.describeResourceFromPosition",
+          "group": "navigation@0",
+          "when": "editorTextFocus && mentor.editor.isMentorLanguage"
+        },
         {
           "submenu": "mentor.submenu.convertDocument",
           "group": "1_modification@98",
@@ -1089,6 +1242,30 @@
       ],
       "commandPalette": [
         {
+          "command": "mentor.command.validateProfile",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.executeTriplateExample",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.describeResource",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.describeResourceFromPosition",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.renameWorkspaceItem",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.excludeFromIndex",
+          "when": "false"
+        },
+        {
           "command": "mentor.command.editNotebookCellSlug",
           "when": "false"
         },
@@ -1129,7 +1306,7 @@
         },
         {
           "command": "mentor.command.setNotebookInference",
-          "when": "notebookType == 'mentor-notebook' && config.mentor.inference.enabled",
+          "when": "notebookType == 'mentor-notebook'",
           "group": "navigation"
         },
         {
@@ -1314,6 +1491,34 @@
           "fontPath": "./media/mentor-icons.woff",
           "fontCharacter": "\\e018"
         }
+      },
+      "sparql-connection": {
+        "description": "SPARQL Connection",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e019"
+        }
+      },
+      "sparql-connection-inference": {
+        "description": "SPARQL Connection with Inference",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e01a"
+        }
+      },
+      "sparql-store": {
+        "description": "SPARQL Store",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e01b"
+        }
+      },
+      "sparql-store-inference": {
+        "description": "SPARQL Store with Inference",
+        "default": {
+          "fontPath": "./media/mentor-icons.woff",
+          "fontCharacter": "\\e01c"
+        }
       }
     },
     "configuration": [
@@ -1325,35 +1530,141 @@
         "properties": {
           "mentor.sparql.connections": {
             "type": "array",
+            "title": "SPARQL Connections",
             "description": "List of SPARQL endpoint connections.",
             "default": []
-          },
-          "mentor.sparql.defaultInferenceEnabled": {
-            "type": "boolean",
-            "title": "Default Inference Enabled",
-            "description": "Default value for whether inferred triples should be included in SPARQL query results. This applies to connections that support inference toggling (e.g., the workspace store).",
-            "default": false
           },
           "mentor.sparql.listGraphsQuery": {
             "type": "string",
             "title": "List Graphs Query",
-            "description": "SPARQL query used to retrieve all named graphs and the default graph from a SPARQL endpoint.",
+            "storeQueryKind": "listGraphs",
+            "description": "SPARQL query used to retrieve all named graphs and the default graph from a store.",
             "default": "SELECT DISTINCT ?graph\nWHERE \n{\n    GRAPH ?graph { ?s ?p ?o }\n}\nORDER BY ?graph",
             "editPresentation": "multilineText"
           },
           "mentor.sparql.dropGraphQuery": {
             "type": "string",
             "title": "Drop Graph Query",
-            "description": "SPARQL query used to drop a named graph from a SPARQL endpoint.",
-            "default": "DROP GRAPH <@graphIri>",
+            "storeQueryKind": "dropGraph",
+            "description": "SPARQL query template used to remove a named graph from a store.",
+            "default": "---\nparams {\n  graphIri: iri\n}\n---\nDROP GRAPH ${graphIri}",
             "editPresentation": "multilineText"
           },
           "mentor.sparql.describeQueryTemplate": {
             "type": "string",
-            "title": "Describe Query Template",
-            "description": "SPARQL query template used by the describe command. Use {{resourceIri}} for the selected resource and {{fromClauses}} for optional FROM clauses generated from graph URIs.",
-            "default": "CONSTRUCT { <{{resourceIri}}> ?p ?o }{{fromClauses}}\nWHERE { <{{resourceIri}}> ?p ?o }",
+            "title": "Describe Resource Query",
+            "storeQueryKind": "describe",
+            "description": "SPARQL query template used to describe resources command.",
+            "default": "---\nparams {\n  resourceIri: iri\n  graphIris:   iri[] optional\n}\n---\nCONSTRUCT { ${resourceIri} ?p ?o }\n{% for g in graphIris %}\nFROM ${g}\n{% endfor %}\nWHERE { ${resourceIri} ?p ?o }",
             "editPresentation": "multilineText"
+          },
+          "mentor.sparql.exportGraphQuery": {
+            "type": "string",
+            "title": "Export Graph Query",
+            "storeQueryKind": "exportGraph",
+            "description": "SPARQL query template used to export a named graph as Turtle.",
+            "default": "---\nparams {\n  graphIri: iri\n}\n---\nCONSTRUCT {\n    ?s ?p ?o .\n} WHERE {\n    GRAPH ${graphIri} {\n        ?s ?p ?o .\n    }\n}",
+            "editPresentation": "multilineText"
+          },
+          "mentor.sparql.countGraphQuery": {
+            "type": "string",
+            "title": "Count Graphs Query",
+            "storeQueryKind": "countGraph",
+            "description": "SPARQL query template used to check graph size before export.",
+            "default": "---\nparams {\n  graphIri: iri\n  limit:    int optional\n}\n---\nSELECT (COUNT(?s) as ?count)\nWHERE {\n    SELECT ?s\n    WHERE {\n        GRAPH ${graphIri} {\n            ?s ?p ?o .\n        }\n    }\n    {% if limit %}LIMIT ${limit}{% endif %}\n}",
+            "editPresentation": "multilineText"
+          },
+          "mentor.sparql.stores": {
+            "type": "array",
+            "title": "SPARQL Stores",
+            "description": "User- and workspace-defined SPARQL store profiles. Each profile describes a store type: how it controls reasoning (a URL parameter or an inline query pragma) and its default queries. Manage these from the Query > Stores settings section. The built-in store presets (SPARQL Endpoint, Apache Jena Fuseki, RDF4J, QLever) and the in-memory Workspace store are not configurable here.",
+            "default": [],
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "label"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Stable identifier referenced by connections."
+                },
+                "label": {
+                  "type": "string",
+                  "description": "Human-readable name shown in pickers."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Optional free-text description of the store type."
+                },
+                "documentationUrl": {
+                  "type": "string",
+                  "description": "Optional documentation URL shown as an 'open documentation' link in the store list."
+                },
+                "isProtected": {
+                  "type": "boolean",
+                  "description": "When true, the store cannot be edited or deleted from the settings UI."
+                },
+                "inference": {
+                  "type": "object",
+                  "description": "Reasoning control. Present sub-structures determine how reasoning is toggled; both may be set.",
+                  "properties": {
+                    "supported": {
+                      "type": "boolean",
+                      "description": "Whether the store supports toggling reasoning."
+                    },
+                    "enabledByDefault": {
+                      "type": "boolean",
+                      "description": "Whether inferred triples are included by default for connections using this store."
+                    },
+                    "urlParameters": {
+                      "type": "object",
+                      "description": "Query-string fragment appended to the endpoint URL.",
+                      "properties": {
+                        "enabled": {
+                          "type": "string",
+                          "description": "Appended when reasoning is on (e.g. infer=true&reasoning=rdfs)."
+                        },
+                        "disabled": {
+                          "type": "string",
+                          "description": "Appended when reasoning is off (e.g. infer=false)."
+                        }
+                      }
+                    },
+                    "queryPragma": {
+                      "type": "object",
+                      "description": "Text prepended to the query.",
+                      "properties": {
+                        "enabled": {
+                          "type": "string",
+                          "description": "Prepended when reasoning is on (e.g. #pragma reasoning on)."
+                        },
+                        "disabled": {
+                          "type": "string",
+                          "description": "Prepended when reasoning is off (e.g. #pragma reasoning off)."
+                        }
+                      }
+                    }
+                  }
+                },
+                "queries": {
+                  "type": "object",
+                  "description": "Store-specific default query templates; a blank field falls back to the global template.",
+                  "properties": {
+                    "listGraphs": {
+                      "type": "string"
+                    },
+                    "dropGraph": {
+                      "type": "string"
+                    },
+                    "describe": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           },
           "mentor.sparql.queryTimeout": {
             "type": "integer",
@@ -1414,12 +1725,6 @@
             ],
             "default": "Document"
           },
-          "mentor.inference.enabled": {
-            "type": "boolean",
-            "title": "Enable Inferencing Toggle",
-            "description": "If enabled, you will be able to toggle inferencing on and off for SPARQL connections that support this feature.",
-            "default": false
-          },
           "mentor.predicates.label": {
             "type": "array",
             "title": "Label Predicates",
@@ -1442,6 +1747,7 @@
             "default": [
               "http://www.w3.org/2004/02/skos/core#definition",
               "http://www.w3.org/2000/01/rdf-schema#comment",
+              "http://www.w3.org/ns/shacl#message",
               "http://purl.org/dc/terms/description",
               "http://purl.org/dc/terms/abstract",
               "https://schema.org/description",
@@ -1503,14 +1809,14 @@
             "description": "If enabled, the .gitignore file will be used to exclude files and folders from the workspace index.",
             "default": true
           },
-          "mentor.index.ignoreFolders": {
+          "mentor.index.excludeFiles": {
             "type": "array",
-            "title": "Ignored Folders",
-            "description": "Manage the folders that should be skipped when indexing the workspace.",
+            "title": "Excluded Files",
+            "description": "Manage a list of glob patterns for files and folders to exclude from the workspace index, e.g. `**/node_modules/**`.",
             "default": [
-              ".vscode",
-              ".git",
-              "node_modules"
+              "**/.vscode/**",
+              "**/.git/**",
+              "**/node_modules/**"
             ]
           },
           "mentor.index.includeFiles": {
@@ -1524,6 +1830,19 @@
             "title": "Max File Size",
             "description": "Files above the specified size (bytes) will not be automatically be indexed at application startup to improve performance. References and definitions in larger files will not be available in the text editors.",
             "default": 1500000
+          },
+          "mentor.index.diagnoseFiles": {
+            "type": "boolean",
+            "title": "Diagnose Files",
+            "description": "Compute syntax and lint diagnostics for all indexed workspace files so the problems panel gives an overview of all issues after an index run. When disabled, only files that are open in an editor are diagnosed, which speeds up workspace indexing. Unrelated to SHACL validation.",
+            "default": true
+          },
+          "mentor.index.parseSparqlQueries": {
+            "type": "boolean",
+            "title": "Parse SPARQL Queries",
+            "description": "Parse SPARQL queries into RDF triples using the SPARQL Syntax Vocabulary (sparql:) and load them into the workspace index. Changing this setting triggers a re-index of the workspace.",
+            "default": false,
+            "experimental": true
           },
           "mentor.editor.codeLensEnabled": {
             "type": "boolean",
@@ -1560,7 +1879,7 @@
           "mentor.sorting.typeSortingOptions": {
             "type": "object",
             "title": "Type Sorting Options",
-            "description": "Options for the priority-based sort strategy used when sorting documents by type. See https://github.com/faubulous/mentor-rdf-serializers/blob/main/docs/sorting.md#priority for reference.",
+            "description": "Options for the priority-based sort strategy used when sorting documents by type. See the Mentor serializer [documentation](https://github.com/faubulous/mentor-rdf-serializers/blob/main/docs/sorting.md#priority) for reference.",
             "properties": {
               "typeOrder": {
                 "type": "array",
@@ -1617,43 +1936,56 @@
           "mentor.shacl.validation": {
             "type": "object",
             "title": "SHACL Validation Configuration",
-            "description": "Explicit SHACL shape configuration. Configure workspace defaults and per-graph include/exclude rules.",
+            "description": "Named, self-contained SHACL validation profiles. Each profile bundles a set of shape graphs with the workspace paths it applies to; the shapes of all profiles matching a document are combined.",
             "properties": {
-              "defaults": {
-                "type": "array",
-                "description": "Default SHACL shape graph URIs applied when a graph does not override defaults.",
-                "items": {
-                  "type": "string"
-                },
-                "default": []
-              },
-              "graphs": {
+              "profiles": {
                 "type": "object",
-                "description": "Per-graph SHACL shape settings keyed by canonical workspace graph URI.",
+                "description": "Named SHACL validation profiles keyed by a stable identifier. The key is auto-generated from the name when a profile is created via the settings UI (slugified, disambiguated with a numeric suffix on collision) and never changes on rename.",
                 "additionalProperties": {
                   "type": "object",
                   "additionalProperties": false,
                   "properties": {
-                    "includeDefaults": {
+                    "name": {
+                      "type": "string",
+                      "description": "Display name. Falls back to the profile's key when omitted."
+                    },
+                    "shapes": {
+                      "type": "array",
+                      "description": "SHACL shape graphs, referenced by graph URI. Workspace files are addressed by their canonical 'workspace:///' URI, user shape files by their 'user:///' URI, built-in vocabulary graphs by their namespace URI (e.g. 'http://www.w3.org/ns/shacl#').",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    },
+                    "includeFiles": {
+                      "type": "array",
+                      "description": "Workspace-relative paths this profile applies to: glob patterns (e.g. 'ontologies/*' or '**/*.ttl') or exact file paths (e.g. 'models/data.ttl'). Entries whose last segment has no file extension automatically match only the currently-recognized RDF file extensions. A '#<cell-slug>' suffix (itself glob-capable) targets specific notebook cells.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    },
+                    "excludeFiles": {
+                      "type": "array",
+                      "description": "Workspace-relative paths excluded from the profile, in the same pattern form as 'includeFiles'.",
+                      "items": {
+                        "type": "string"
+                      },
+                      "default": []
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Optional human-readable description of the profile."
+                    },
+                    "validateOnStartup": {
                       "type": "boolean",
-                      "description": "If true, include default SHACL shape graphs for this graph before applying include/exclude rules.",
-                      "default": true
+                      "description": "Automatically validate this profile's matched files after the workspace finishes indexing.",
+                      "default": false
                     },
-                    "includeShapes": {
-                      "type": "array",
-                      "description": "Additional SHACL shape graph URIs included for this graph.",
-                      "items": {
-                        "type": "string"
-                      },
-                      "default": []
-                    },
-                    "excludeShapes": {
-                      "type": "array",
-                      "description": "SHACL shape graph URIs removed from the effective set for this graph. Exclusions win over includes.",
-                      "items": {
-                        "type": "string"
-                      },
-                      "default": []
+                    "validateOnChange": {
+                      "type": "boolean",
+                      "description": "Automatically re-validate a matched document against this profile as you edit, once it is free of syntax errors.",
+                      "default": false
                     }
                   }
                 },
@@ -1661,17 +1993,155 @@
               }
             },
             "additionalProperties": false,
-            "default": {
-              "defaults": [],
-              "graphs": {}
-            }
+            "default": {}
+          },
+          "mentor.files": {
+            "type": "object",
+            "scope": "application",
+            "title": "User Files",
+            "description": "User-scoped virtual files stored in the settings and addressed as 'user:///<path>'. Each key is a slash-delimited virtual path (e.g. 'shapes/my-shapes.ttl'); nested folders are derived from the path. Managed by Mentor (e.g. SHACL shapes created from the validation profile editor); the content is stored gzip-compressed and synced via Settings Sync.",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "encoding",
+                "content"
+              ],
+              "properties": {
+                "encoding": {
+                  "type": "string",
+                  "enum": [
+                    "gzip+base64",
+                    "plain"
+                  ],
+                  "description": "How the content is encoded. Mentor always writes 'gzip+base64'; 'plain' is tolerated for hand-edited entries."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "The file content, encoded as declared by 'encoding'."
+                },
+                "references": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "id",
+                      "name"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "description": "Stable id of the referencing workspace (its 'mentor.workspaceId')."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "Last-seen display name of the referencing workspace."
+                      }
+                    }
+                  },
+                  "description": "Managed by Mentor: workspaces whose validation profiles reference this file. Used to protect the file from being offered for deletion in other workspaces."
+                }
+              }
+            },
+            "default": {}
+          },
+          "mentor.workspaceId": {
+            "type": "string",
+            "scope": "window",
+            "title": "Workspace Id",
+            "description": "A stable, Mentor-generated identifier for this workspace, stored in the workspace settings. Used to record which workspaces reference user shape files so they are not deleted by accident. Generated automatically; you normally don't need to edit this."
           },
           "mentor.shacl.enabled": {
             "type": "boolean",
-            "title": "Enable Experimental SHACL Validation Features",
-            "description": "If enabled, Mentor will show experimental SHACL validation features including the titlebar validate button and SHACL validation code lenses.",
-            "default": false,
-            "experimental": true
+            "title": "Enable SHACL Validation",
+            "description": "If enabled, Mentor will show the titlebar validate button and editor code lenses.",
+            "default": true
+          },
+          "mentor.shacl.maxGraphSize": {
+            "type": "number",
+            "title": "Maximum Validation Graph Size",
+            "description": "Skip automatic SHACL validation for documents whose data graph exceeds this many triples. Very large graphs (e.g. imported vocabularies) can take a long time to validate and would otherwise block the editor. Explicit validation commands ignore this limit. Set to 0 to disable the limit.",
+            "default": 50000,
+            "minimum": 0
+          },
+          "mentor.shacl.shapesFolder": {
+            "type": "string",
+            "title": "Shapes Folder",
+            "description": "Workspace-relative folder where a copy of the built-in SHACL shapes is written when a validation profile is created from a template. Keeping the shapes in the workspace freezes them against future changes to Mentor's bundled shapes and lets you edit and version-control them.",
+            "default": ".mentor/shapes"
+          },
+          "mentor.formatting.common.maxLineWidth": {
+            "type": "number",
+            "title": "Max Line Width",
+            "description": "Maximum line width before the formatter wraps long lines in RDF and SPARQL documents. Set to 0 to disable wrapping.",
+            "default": 120
+          },
+          "mentor.formatting.common.spaceBeforePunctuation": {
+            "type": "boolean",
+            "title": "Space Before Punctuation",
+            "description": "Insert a space before statement-ending punctuation characters (. ; ,) in RDF and SPARQL documents.",
+            "default": true
+          },
+          "mentor.formatting.common.blankLinesBetweenSubjects": {
+            "type": "boolean",
+            "title": "Blank Lines Between Subjects",
+            "description": "Insert a blank line between each top-level subject block in RDF and SPARQL documents.",
+            "default": true
+          },
+          "mentor.formatting.turtle.maxLineWidth": {
+            "type": "number",
+            "title": "Turtle: Max Line Width",
+            "description": "Overrides Formatting: Max Line Width for Turtle, TriG and N3 documents. When unset, the common value is used."
+          },
+          "mentor.formatting.turtle.spaceBeforePunctuation": {
+            "type": "boolean",
+            "title": "Turtle: Space Before Punctuation",
+            "description": "Overrides Formatting: Space Before Punctuation for Turtle, TriG and N3 documents. When unset, the common value is used."
+          },
+          "mentor.formatting.turtle.blankLinesBetweenSubjects": {
+            "type": "boolean",
+            "title": "Turtle: Blank Lines Between Subjects",
+            "description": "Overrides Formatting: Blank Lines Between Subjects for Turtle, TriG and N3 documents. When unset, the common value is used."
+          },
+          "mentor.formatting.sparql.maxLineWidth": {
+            "type": "number",
+            "title": "SPARQL: Max Line Width",
+            "description": "Overrides Formatting: Max Line Width for SPARQL documents. When unset, the common value is used."
+          },
+          "mentor.formatting.sparql.spaceBeforePunctuation": {
+            "type": "boolean",
+            "title": "SPARQL: Space Before Punctuation",
+            "description": "Overrides Formatting: Space Before Punctuation for SPARQL documents. When unset, the common value is used."
+          },
+          "mentor.formatting.sparql.blankLinesBetweenSubjects": {
+            "type": "boolean",
+            "title": "SPARQL: Blank Lines Between Subjects",
+            "description": "Overrides Formatting: Blank Lines Between Subjects for SPARQL documents. When unset, the common value is used."
+          },
+          "mentor.formatting.sparql.uppercaseKeywords": {
+            "type": "boolean",
+            "title": "Uppercase Keywords",
+            "description": "Format SPARQL keywords (SELECT, WHERE, etc.) in uppercase. When disabled, the original casing is preserved.",
+            "default": false
+          },
+          "mentor.formatting.sparql.alignPatterns": {
+            "type": "boolean",
+            "title": "Align Patterns",
+            "description": "Align triple patterns in the WHERE clause.",
+            "default": true
+          },
+          "mentor.formatting.sparql.sameBraceLine": {
+            "type": "boolean",
+            "title": "Opening Brace on Same Line",
+            "description": "Place opening braces on the same line as SPARQL keywords.",
+            "default": true
+          },
+          "mentor.formatting.sparql.separateClauses": {
+            "type": "boolean",
+            "title": "Separate Clauses",
+            "description": "Insert blank lines between major SPARQL clauses (SELECT, WHERE, etc.).",
+            "default": true
           },
           "mentor.linting.enabled": {
             "type": "boolean",
@@ -1731,9 +2201,9 @@
           },
           "mentor.language.sparql.documentQueryTemplate": {
             "type": "string",
-            "title": "Document Query Template",
-            "description": "The SPARQL query template used when creating a query for an RDF document. Use {{documentUri}} as a placeholder for the document URI.",
-            "default": "SELECT ?s ?p ?o\nFROM <{{documentUri}}>\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
+            "title": "Default Query Template",
+            "description": "SPARQL query template used when creating a query for an RDF document.",
+            "default": "---\nparams {\n  documentIri: iri\n}\nexample rdf {\n  documentIri: \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }",
             "editPresentation": "multilineText"
           },
           "mentor.language.turtle.defaultDocumentTemplate": {
@@ -1771,12 +2241,6 @@
             "default": "",
             "editPresentation": "multilineText"
           }
-        },
-        "mentor.language.turtle.maxNumberOfProblems": {
-          "scope": "resource",
-          "type": "number",
-          "default": 100,
-          "description": "Controls the maximum number of problems produced by the server."
         }
       }
     ]

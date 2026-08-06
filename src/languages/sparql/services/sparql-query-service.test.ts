@@ -20,7 +20,7 @@ vi.mock('@comunica/query-sparql', () => ({
 
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
-import { Uri } from '@src/utilities/mocks/vscode';
+import * as vscode from 'vscode';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,22 +47,26 @@ function makeContext(initialHistory: SparqlQueryExecutionState[] = []) {
             update: vi.fn(async (key: string, value: any) => { store.set(key, value); }),
         },
         subscriptions: { push: vi.fn() },
-    } as unknown as import('vscode').ExtensionContext;
+    } as unknown as import('vscode').ExtensionContext; // partial stub: only workspaceState/subscriptions are read
 }
 
 function makeService(context = makeContext()) {
     return new SparqlQueryService(
         context,
         {} as any,    // credentialStorage (not used in history tests)
-        {} as any,    // connectionService (not used in history tests)
+        {} as any,    // connectionRegistry (not used in history tests)
         {} as any,    // resultSerializer (not used in history tests)
+        { getStoreConfig: () => undefined } as any,    // storeConfigService
+        {} as any,    // querySourceFactory (not used in history tests)
+        {} as any,    // documentConnectionService (not used in history tests)
     );
 }
 
 function makeFullService() {
-    const connectionService = {
+    const connectionRegistry = {
         getQuerySourceForDocument: vi.fn().mockResolvedValue({ type: 'sparql', connection: { id: 'test' } }),
         getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'file', file: 'test.nt' }),
+        getInferenceEnabled: vi.fn().mockReturnValue(false),
     };
     const credentialStorage = {
         getCredential: vi.fn().mockResolvedValue(null),
@@ -72,16 +76,22 @@ function makeFullService() {
         serializeQuads: vi.fn().mockResolvedValue(''),
         serializeQuadsToString: vi.fn().mockResolvedValue(''),
     };
+    const documentConnectionService = {
+        getConnectionForDocument: vi.fn().mockReturnValue({ id: 'test' }),
+    };
     return new SparqlQueryService(
         makeContext(),
         credentialStorage as any,
-        connectionService as any,
+        connectionRegistry as any,
         resultSerializer as any,
+        { getStoreConfig: () => undefined } as any,
+        connectionRegistry as any,    // query-source mocks live on the same object
+        documentConnectionService as any,
     );
 }
 
 function makeConnectionService() {
-    const connectionService = {
+    const connectionRegistry = {
         getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'file', file: 'test.nt' }),
     };
 
@@ -98,8 +108,11 @@ function makeConnectionService() {
     return new SparqlQueryService(
         makeContext(),
         credentialStorage as any,
-        connectionService as any,
+        connectionRegistry as any,
         resultSerializer as any,
+        { getStoreConfig: () => undefined } as any,
+        connectionRegistry as any,    // query-source mocks live on the same object
+        { getConnectionForDocument: vi.fn().mockReturnValue({ id: 'test' }) } as any,
     );
 }
 
@@ -167,7 +180,7 @@ describe('SparqlQueryService – getQueryStateForDocument', () => {
         const state = makeState('file:///workspace/known.sparql');
         const service = makeService(makeContext([state]));
 
-        const result = service.getQueryStateForDocument(state.documentIri);
+        const result = service.getQueryStateForDocument(state.documentIri!);
         expect(result).toBeDefined();
         expect(result!.documentIri).toBe(state.documentIri);
     });
@@ -325,11 +338,11 @@ describe('SparqlQueryService – _getFetchHandler', () => {
         service = makeService();
     });
 
-    it('returns undefined when no credential is provided', () => {
+    it('returns undefined when no credential is provided (nothing to add over the default fetch)', () => {
         expect((service as any)._getFetchHandler(undefined)).toBeUndefined();
     });
 
-    it('returns undefined when credential type is unknown', () => {
+    it('returns undefined when the credential type is unknown', () => {
         expect((service as any)._getFetchHandler({ type: 'unknown' })).toBeUndefined();
     });
 
@@ -399,7 +412,7 @@ describe('SparqlQueryService – _getFetchHandler', () => {
         vi.unstubAllGlobals();
     });
 
-    it('returns undefined for microsoft credential without accessToken', () => {
+    it('returns undefined for a microsoft credential without an accessToken', () => {
         const handler = (service as any)._getFetchHandler({
             type: 'microsoft',
             accessToken: undefined
@@ -436,6 +449,38 @@ describe('SparqlQueryService – _getFetchHandler', () => {
         vi.unstubAllGlobals();
         acquireTokenMock.mockRestore();
     });
+
+    it('returns a function when only a raw-response sink is provided (no credential)', () => {
+        const handler = (service as any)._getFetchHandler(undefined, () => { });
+        expect(typeof handler).toBe('function');
+    });
+
+    it('captures the raw response body and metadata via the sink', async () => {
+        const body = '{"head":{"vars":[]},"results":{"bindings":[]}}';
+        const mockResponse = {
+            clone() { return this; },
+            text: vi.fn().mockResolvedValue(body),
+            url: 'https://example.org/sparql',
+            status: 200,
+            statusText: 'OK',
+            headers: new Headers({ 'content-type': 'application/sparql-results+json' }),
+        };
+        const mockFetch = vi.fn().mockResolvedValue(mockResponse);
+        vi.stubGlobal('fetch', mockFetch);
+
+        let captured: Promise<any> | undefined;
+        const handler = (service as any)._getFetchHandler(undefined, (raw: Promise<any>) => { captured = raw; });
+        await handler('https://example.org/sparql', {});
+
+        expect(await captured).toEqual({
+            url: 'https://example.org/sparql',
+            status: 200,
+            statusText: 'OK',
+            contentType: 'application/sparql-results+json',
+            body,
+        });
+        vi.unstubAllGlobals();
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -444,7 +489,7 @@ describe('SparqlQueryService – _getFetchHandler', () => {
 describe('SparqlQueryService – createQuery', () => {
     it('creates a query state from a TextDocument', () => {
         const service = makeService();
-        const uri = Uri.parse('file:///workspace/query.sparql');
+        const uri = vscode.Uri.parse('file:///workspace/query.sparql');
         const mockDoc = {
             uri,
             getText: () => 'SELECT * WHERE { ?s ?p ?o }',
@@ -457,8 +502,8 @@ describe('SparqlQueryService – createQuery', () => {
 
     it('creates a query state from a NotebookCell', () => {
         const service = makeService();
-        const notebookUri = Uri.parse('file:///workspace/notebook.sparql-book');
-        const cellUri = Uri.parse('vscode-notebook-cell:///workspace/notebook.sparql-book#cell2');
+        const notebookUri = vscode.Uri.parse('file:///workspace/notebook.sparql-book');
+        const cellUri = vscode.Uri.parse('vscode-notebook-cell:///workspace/notebook.sparql-book#cell2');
         const mockCell = {
             notebook: { uri: notebookUri },
             index: 2,
@@ -480,7 +525,7 @@ describe('SparqlQueryService – createQuery', () => {
 describe('SparqlQueryService – createQueryFromDocument', () => {
     it('creates a query state from a TextDocument with its text content', () => {
         const service = makeService();
-        const uri = Uri.parse('file:///workspace/query.sparql');
+        const uri = vscode.Uri.parse('file:///workspace/query.sparql');
         const mockDoc = {
             uri,
             getText: () => 'CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }',
@@ -513,7 +558,6 @@ describe('SparqlQueryService – cancelQuery (active token)', () => {
 // ---------------------------------------------------------------------------
 describe('SparqlQueryService – _onTextDocumentClosed', () => {
     it('removes untitled document from history when closed', async () => {
-        const { workspace } = await import('vscode');
         const untitledUri = {
             toString: () => 'untitled:query-1',
             scheme: 'untitled'
@@ -545,9 +589,8 @@ describe('SparqlQueryService – _onTextDocumentClosed', () => {
     });
 
     it('removes untitled document via the registered onDidCloseTextDocument event handler', async () => {
-        const { workspace } = await import('vscode');
         let capturedHandler: ((doc: any) => void) | undefined;
-        const spy = vi.spyOn(workspace, 'onDidCloseTextDocument').mockImplementation((handler: any) => {
+        const spy = vi.spyOn(vscode.workspace, 'onDidCloseTextDocument').mockImplementation((handler: any) => {
             capturedHandler = handler;
             return { dispose: () => {} };
         });
@@ -569,8 +612,7 @@ describe('SparqlQueryService – _getQueryText', () => {
     });
 
     it('returns document getText when documentIri matches workspace textDocuments', async () => {
-        const vscode = await import('vscode');
-        const uri = Uri.parse('file:///workspace/q.sparql');
+        const uri = vscode.Uri.parse('file:///workspace/q.sparql');
         (vscode.workspace as any).textDocuments = [{ uri, getText: () => 'SELECT 1' }];
         const service = makeService();
         const ctx: any = { documentIri: uri.toString() };
@@ -585,8 +627,7 @@ describe('SparqlQueryService – _getQueryText', () => {
     });
 
     it('returns notebook cell text when notebookIri matches', async () => {
-        const vscode = await import('vscode');
-        const nbUri = Uri.parse('file:///workspace/nb.sparql-book');
+        const nbUri = vscode.Uri.parse('file:///workspace/nb.sparql-book');
         const mockNotebook = {
             uri: nbUri,
             cellAt: (_i: number) => ({ document: { getText: () => 'ASK {}' } })
@@ -720,6 +761,23 @@ describe('SparqlQueryService – executeQuery', () => {
         expect(result.error?.message).toBe('Query failed');
         expect(result.error?.statusCode).toBe(400);
     });
+
+    it('captures error.cause for "fetch failed" network errors', async () => {
+        const cause = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:7200'), { code: 'ECONNREFUSED' });
+        queryMock.mockRejectedValue(Object.assign(new TypeError('fetch failed'), { cause }));
+        const service = makeFullService();
+        const ctx: any = {
+            id: 'test-id',
+            documentIri: 'file:///test.sparql',
+            query: 'SELECT * WHERE { ?s ?p ?o }',
+            startTime: Date.now(),
+            queryType: 'bindings',
+            status: 'pending',
+        };
+        const result = await service.executeQuery(ctx);
+        expect(result.error?.message).toBe('fetch failed');
+        expect(result.error?.cause).toEqual({ code: 'ECONNREFUSED', message: 'connect ECONNREFUSED 127.0.0.1:7200' });
+    });
 });
 
 // ---------------------------------------------------------------------------
@@ -792,10 +850,14 @@ describe('SparqlQueryService – executeQueryOnConnection', () => {
 
     it('rethrows errors from query execution', async () => {
         queryMock.mockRejectedValue(new Error('Engine error'));
+        const sourceMock = { getQuerySourceForConnection: vi.fn().mockResolvedValue({}) };
         const service = new SparqlQueryService(
             makeContext(),
             { getCredential: vi.fn().mockResolvedValue(null) } as any,
-            { getQuerySourceForConnection: vi.fn().mockResolvedValue({}) } as any,
+            sourceMock as any,
+            {} as any,
+            {} as any,
+            sourceMock as any,
             {} as any,
         );
         await expect(service.executeQueryOnConnection('FAIL', mockConn)).rejects.toThrow('Query execution failed: Engine error');
@@ -893,7 +955,7 @@ describe('SparqlQueryService – createBackgroundQuery', () => {
 
         const state = service.createBackgroundQuery(connection, query, 'List Graphs');
 
-        expect(state.background).toBe(true);
+        expect(state.isBackground).toBe(true);
         expect(state.label).toBe('List Graphs');
         expect(state.connectionId).toBe('conn-1');
         expect(state.connectionName).toBe('http://localhost:7200/sparql');
@@ -928,10 +990,11 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
         });
 
         const connection = { id: 'conn-bg', endpointUrl: 'http://example.org/sparql' } as any;
-        const connectionService = {
+        const connectionRegistry = {
             getConnection: vi.fn().mockReturnValue(connection),
             getQuerySourceForConnection: vi.fn().mockResolvedValue({ type: 'sparql', connection }),
             getQuerySourceForDocument: vi.fn(),
+            getInferenceEnabled: vi.fn().mockReturnValue(false),
         };
         const credentialStorage = { getCredential: vi.fn().mockResolvedValue(null) };
         const resultSerializer = {
@@ -940,13 +1003,16 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
         const service = new SparqlQueryService(
             makeContext(),
             credentialStorage as any,
-            connectionService as any,
+            connectionRegistry as any,
             resultSerializer as any,
+            { getStoreConfig: () => undefined } as any,
+            connectionRegistry as any,    // query-source mocks live on the same object
+            {} as any,
         );
 
         const ctx: any = {
             id: 'bg-test-id',
-            background: true,
+            isBackground: true,
             label: 'List Graphs',
             connectionId: 'conn-bg',
             connectionName: 'http://example.org/sparql',
@@ -957,14 +1023,14 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
 
         const result = await service.executeQuery(ctx);
 
-        expect(connectionService.getConnection).toHaveBeenCalledWith('conn-bg');
-        expect(connectionService.getQuerySourceForConnection).toHaveBeenCalledWith(connection);
-        expect(connectionService.getQuerySourceForDocument).not.toHaveBeenCalled();
+        expect(connectionRegistry.getConnection).toHaveBeenCalledWith('conn-bg');
+        expect(connectionRegistry.getQuerySourceForConnection).toHaveBeenCalledWith(connection);
+        expect(connectionRegistry.getQuerySourceForDocument).not.toHaveBeenCalled();
         expect(result.error).toBeUndefined();
     });
 
     it('sets an error when connectionId refers to an unknown connection', async () => {
-        const connectionService = {
+        const connectionRegistry = {
             getConnection: vi.fn().mockReturnValue(undefined),
             getQuerySourceForConnection: vi.fn(),
             getQuerySourceForDocument: vi.fn(),
@@ -972,13 +1038,16 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
         const service = new SparqlQueryService(
             makeContext(),
             {} as any,
-            connectionService as any,
+            connectionRegistry as any,
+            {} as any,
+            { getStoreConfig: () => undefined } as any,
+            {} as any,
             {} as any,
         );
 
         const ctx: any = {
             id: 'bg-missing',
-            background: true,
+            isBackground: true,
             connectionId: 'unknown-conn',
             query: 'SELECT * {}',
             queryType: 'bindings',

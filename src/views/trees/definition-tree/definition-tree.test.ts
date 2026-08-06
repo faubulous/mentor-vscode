@@ -14,6 +14,8 @@ const { mockDefinitionNodeProvider } = vi.hoisted(() => ({
 		refresh: vi.fn(),
 		getNodeForUri: vi.fn(() => undefined),
 		setIssueColorProvider: vi.fn(),
+		setViewVisibilityProvider: vi.fn(),
+		flushPendingRefresh: vi.fn(),
 	},
 }));
 
@@ -22,6 +24,8 @@ vi.mock('./definition-node-provider', () => ({
 		refresh = mockDefinitionNodeProvider.refresh;
 		getNodeForUri = mockDefinitionNodeProvider.getNodeForUri;
 		setIssueColorProvider = mockDefinitionNodeProvider.setIssueColorProvider;
+		setViewVisibilityProvider = mockDefinitionNodeProvider.setViewVisibilityProvider;
+		flushPendingRefresh = mockDefinitionNodeProvider.flushPendingRefresh;
 	},
 }));
 
@@ -31,7 +35,7 @@ vi.mock('./definition-node-decoration-provider', () => ({
 
 const mockContextChangeHandlers: Array<() => void> = [];
 const mockContextService = {
-	activeContext: undefined as any,
+	activeContext: undefined as Record<string, any> | undefined,
 	contexts: {} as Record<string, any>,
 	onDidChangeDocumentContext: vi.fn((handler: () => void) => {
 		mockContextChangeHandlers.push(handler);

@@ -3,6 +3,7 @@ import { SH } from '@faubulous/mentor-rdf';
 import { QuadContext, IToken } from '@faubulous/mentor-rdf-parsers';
 import { countLeadingWhitespace, countTrailingWhitespace } from '@src/utilities';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { getLocalPartAndQuery } from '@src/utilities/uri';
 import { ShaclValidationResult, ShaclValidationResultEntry } from './shacl-validation-service';
 
 /**
@@ -18,14 +19,18 @@ export class ShaclDiagnosticsMapper {
 	mapToDiagnostics(result: ShaclValidationResult, context: IDocumentContext, quadContexts?: QuadContext[]): vscode.Diagnostic[] {
 		const diagnostics: vscode.Diagnostic[] = [];
 
+		// Precompute the sorted subject start lines once so that resolving the
+		// next-subject boundary per result is a binary search instead of a scan.
+		const subjectStartLines = this._getSortedSubjectStartLines(context);
+
 		for (const entry of result.results) {
-			const range = this._resolveRange(entry, context, quadContexts);
+			const range = this._resolveRange(entry, context, subjectStartLines, quadContexts);
 			const severity = this._mapSeverity(entry.severity);
 			const message = this._buildMessage(entry);
 
 			const diagnostic = new vscode.Diagnostic(range, message, severity);
 			diagnostic.source = 'SHACL';
-			diagnostic.code = this._extractLocalName(entry.constraintComponent);
+			diagnostic.code = getLocalPartAndQuery(entry.constraintComponent);
 			(diagnostic as vscode.Diagnostic & { data?: { focusNode: string } }).data = {
 				focusNode: entry.focusNode,
 			};
@@ -40,7 +45,7 @@ export class ShaclDiagnosticsMapper {
 	 * Resolve the document range for a validation result entry.
 	 * Prefers highlighting the offending predicate or value over the focus node.
 	 */
-	private _resolveRange(entry: ShaclValidationResultEntry, context: IDocumentContext, quadContexts?: QuadContext[]): vscode.Range {
+	private _resolveRange(entry: ShaclValidationResultEntry, context: IDocumentContext, subjectStartLines: number[], quadContexts?: QuadContext[]): vscode.Range {
 		// 0. Try to resolve the exact object token position from quad contexts.
 		//    This handles cases where the same subject appears on multiple non-contiguous
 		//    lines (e.g. repeated predicates), which defeats the heuristic anchor window.
@@ -56,7 +61,7 @@ export class ShaclDiagnosticsMapper {
 		// Determine where the next subject starts so we can scope lookups
 		// to only the focus node's block (avoids picking up predicates that
 		// belong to a different subject further down in the document).
-		const nextSubjectStartLine = this._getNextSubjectStartLine(focusNodeStartLine, context);
+		const nextSubjectStartLine = this._getNextSubjectStartLine(focusNodeStartLine, subjectStartLines);
 
 		// 1. Try the value IRI (most specific).
 		if (entry.value) {
@@ -137,29 +142,43 @@ export class ShaclDiagnosticsMapper {
 	}
 
 	/**
-	 * Returns the smallest subject start line that is strictly greater than
-	 * the given focus node start line, or undefined if no such subject exists.
+	 * Returns the start lines of all subjects in the document, sorted ascending.
 	 */
-	private _getNextSubjectStartLine(focusNodeStartLine: number | undefined, context: IDocumentContext): number | undefined {
-		if (focusNodeStartLine === undefined) {
-			return undefined;
-		}
-
-		let nearest: number | undefined;
+	private _getSortedSubjectStartLines(context: IDocumentContext): number[] {
+		const lines: number[] = [];
 
 		for (const ranges of Object.values(context.subjects)) {
-			if (!ranges?.length) {
-				continue;
-			}
-
-			const line = ranges[0].start.line;
-
-			if (line > focusNodeStartLine && (nearest === undefined || line < nearest)) {
-				nearest = line;
+			if (ranges?.length) {
+				lines.push(ranges[0].start.line);
 			}
 		}
 
-		return nearest;
+		return lines.sort((a, b) => a - b);
+	}
+
+	/**
+	 * Returns the smallest subject start line that is strictly greater than
+	 * the given focus node start line, or undefined if no such subject exists.
+	 * @param subjectStartLines The subject start lines, sorted ascending.
+	 */
+	private _getNextSubjectStartLine(focusNodeStartLine: number | undefined, subjectStartLines: number[]): number | undefined {
+		if (focusNodeStartLine === undefined) return undefined;
+
+		// Binary search for the first start line strictly greater than the focus node's.
+		let low = 0;
+		let high = subjectStartLines.length;
+
+		while (low < high) {
+			const mid = (low + high) >>> 1;
+
+			if (subjectStartLines[mid] > focusNodeStartLine) {
+				high = mid;
+			} else {
+				low = mid + 1;
+			}
+		}
+
+		return low < subjectStartLines.length ? subjectStartLines[low] : undefined;
 	}
 
 	/**
@@ -212,12 +231,11 @@ export class ShaclDiagnosticsMapper {
 		}
 
 		const parts: string[] = [];
-		const component = this._extractLocalName(entry.constraintComponent);
-		
+		const component = getLocalPartAndQuery(entry.constraintComponent);
 		parts.push(`Constraint violation: ${component}`);
 
 		if (entry.path) {
-			parts.push(`Path: ${this._extractLocalName(entry.path)}`);
+			parts.push(`Path: ${getLocalPartAndQuery(entry.path)}`);
 		}
 
 		if (entry.value) {
@@ -225,24 +243,5 @@ export class ShaclDiagnosticsMapper {
 		}
 
 		return parts.join(' | ');
-	}
-
-	/**
-	 * Extract the local name from an IRI.
-	 */
-	private _extractLocalName(iri: string): string {
-		const hashIndex = iri.lastIndexOf('#');
-
-		if (hashIndex >= 0) {
-			return iri.substring(hashIndex + 1);
-		}
-
-		const slashIndex = iri.lastIndexOf('/');
-
-		if (slashIndex >= 0) {
-			return iri.substring(slashIndex + 1);
-		}
-
-		return iri;
 	}
 }

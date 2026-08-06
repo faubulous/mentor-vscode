@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { InferenceUri } from '@src/providers/inference-uri';
 
 /**
@@ -8,9 +6,8 @@ import { InferenceUri } from '@src/providers/inference-uri';
  */
 export class InferenceUriLinkProvider implements vscode.DocumentLinkProvider {
 
-  constructor() {
+  constructor(context: vscode.ExtensionContext) {
     // Self-register with the extension context for automatic disposal
-    const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
     context.subscriptions.push(
       vscode.languages.registerDocumentLinkProvider({ scheme: 'file' }, this)
     );

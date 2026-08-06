@@ -21,8 +21,8 @@ vi.mock('tsyringe', () => ({
 }));
 
 import * as vscode from 'vscode';
-import { Uri } from '@src/utilities/mocks/vscode';
 import { XmlDocument } from '@src/languages/xml/xml-document';
+import { createXmlDocument } from '@src/utilities/mocks/factories';
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -48,20 +48,20 @@ function makeParseResult(overrides: Partial<Parameters<XmlDocument['setParsedDat
 }
 
 function makeDoc(uri = 'file:///test.xml'): XmlDocument {
-    return new XmlDocument(Uri.parse(uri) as any);
+    return createXmlDocument(uri, { store: mockStore as any });
 }
 
 describe('XmlDocument', () => {
-    describe('hasTokens', () => {
+    describe('isParsed', () => {
         it('is false before setParsedData is called', () => {
             const doc = makeDoc();
-            expect(doc.hasTokens).toBe(false);
+            expect(doc.isParsed).toBe(false);
         });
 
         it('is true after setParsedData is called', () => {
             const doc = makeDoc();
             doc.setParsedData(makeParseResult());
-            expect(doc.hasTokens).toBe(true);
+            expect(doc.isParsed).toBe(true);
         });
     });
 

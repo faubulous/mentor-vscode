@@ -1,0 +1,104 @@
+:root {
+	/* Spacing scale */
+	--mentor-space-1: 2px;
+	--mentor-space-2: 4px;
+	--mentor-space-3: 6px;
+	--mentor-space-4: 8px;
+	--mentor-space-5: 12px;
+	--mentor-space-6: 16px;
+	--mentor-space-7: 24px;
+
+	/* Radius scale */
+	--mentor-radius-sm: 2px;
+	--mentor-radius-md: 3px;
+	--mentor-radius-lg: 4px;
+
+	/* Semantic status colors */
+	--mentor-status-success-foreground: var(--vscode-notebookStatusSuccessIcon-foreground);
+	--mentor-status-success-background: rgba(from var(--mentor-status-success-foreground) r g b / 0.1);
+	--mentor-status-warning-foreground: var(--vscode-editorWarning-foreground);
+	--mentor-status-warning-background: rgba(from var(--mentor-status-warning-foreground) r g b / 0.1);
+	--mentor-status-error-foreground: var(--vscode-notebookStatusErrorIcon-foreground);
+	--mentor-status-error-background: rgba(from var(--mentor-status-error-foreground) r g b / 0.1);
+
+	/* Common border */
+	--mentor-border-panel: 1px solid var(--vscode-panel-border);
+}
+
+.mentor-row {
+	display: flex;
+	align-items: center;
+}
+
+.mentor-row-gap-2 {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+}
+
+.mentor-row-gap-3 {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-3);
+}
+
+.mentor-row-gap-4 {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-4);
+}
+
+.mentor-border-bottom {
+	border-bottom: var(--mentor-border-panel);
+}
+
+.mentor-border-top {
+	border-top: var(--mentor-border-panel);
+}
+
+vscode-textfield vscode-icon[slot="content-before"] {
+	display: flex;
+    min-width: 24px;
+    justify-content: center;
+}
+
+vscode-textfield .root input[type="text"] {
+	flex: 1;
+	width: auto;
+}
+
+/* Fix cut-off rounded corners of input boxes. */
+vscode-textfield .root {
+	overflow: hidden !important;
+}
+
+/* The component's own invalid rule colors the :host border, but the visible
+   border is drawn by the inner .root element, which reads this variable —
+   overriding it shows the error border while the field is unfocused (the
+   focus border still takes over on focus). */
+vscode-textfield[invalid] {
+	--vscode-settings-textInputBorder: var(--vscode-errorForeground, #be1100);
+}
+
+vscode-toolbar-button {
+	justify-content: center;
+	display: flex;
+	flex-direction: row;
+	gap: 0.5em;
+}
+
+vscode-toolbar-button .codicon {
+	margin-right: 0.5em;
+}
+
+vscode-toolbar-button.primary .mentor-icon,
+vscode-toolbar-button.primary .codicon,
+vscode-toolbar-button.primary .label {
+	color: var(--vscode-textLink-foreground);
+}
+
+/* Muted (non-blue) counter badges in the editor's tab headers. */
+vscode-badge[variant="tab-header-counter"] {
+	--vscode-activityBarBadge-background: var(--vscode-checkbox-disabled\.background);
+	--vscode-activityBarBadge-foreground: var(--vscode-badge-foreground);
+}

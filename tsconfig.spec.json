@@ -1,18 +1,15 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "composite": true,
-    "noEmit": false,
-    "outDir": "./dist",
+    "noEmit": true,
     "rootDir": "./",
-    "baseUrl": "./",
     "paths": {
-      "@media/*": ["media/*"],
-      "@src/*": ["src/*"],
-      "$/*": ["dist/*"]
+      "@media/*": ["./media/*"],
+      "@src/*": ["./src/*"],
+      "$/*": ["./dist/*"]
     },
-    "module": "commonjs",
-    "sourceMap": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "types": [
       "vitest/globals",
       "node"

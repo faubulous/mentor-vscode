@@ -23,20 +23,12 @@ vi.mock('@faubulous/mentor-rdf-parsers', async () => {
 	};
 });
 
-// Mock @src/languages/turtle to avoid circular dependency:
-// turtle-language-client imports @src/languages (root index) which re-exports
-// trig-language-client which extends TurtleLanguageClient — causing a circular ref.
+// Mock @src/languages/turtle to avoid pulling the full turtle barrel into the test.
 vi.mock('@src/languages/turtle', async () => {
-	const { LanguageClientBase } = await import('@src/languages/language-client');
 	return {
 		TurtleDocument: class TurtleDocument {
 			setTokens = vi.fn();
 			constructor(public uri: any, _syntax: any) {}
-		},
-		TurtleLanguageClient: class TurtleLanguageClient extends LanguageClientBase {
-			constructor(public languageId = 'turtle', public languageName = 'Turtle') {
-				super(languageId, languageName);
-			}
 		},
 		TurtleTokenProvider: class TurtleTokenProvider {},
 		TurtleFeatureProvider: class TurtleFeatureProvider {},
@@ -50,9 +42,13 @@ vi.mock('tsyringe', () => ({
 		resolve: vi.fn((token: string) => {
 			if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
 			if (token === 'DocumentContextService') return { onDidChangeDocumentContext: vi.fn() };
-			if (token === 'SparqlConnectionService') return {
+			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') return {
 				onDidChangeConnectionForDocument: vi.fn(),
 				onDidChangeConnections: vi.fn(),
+			};
+			if (token === 'GraphManagementService') return {
+				onDidChangeGraphs: vi.fn(() => ({ dispose: vi.fn() })),
+				isGraphsLoaded: vi.fn(() => false),
 			};
 			return {};
 		}),

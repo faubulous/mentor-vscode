@@ -42,7 +42,14 @@ export interface SparqlQueryExecutionState {
 	 * When `true`, the query was executed as a background query without an open editor document.
 	 * Background queries are excluded from the Recent Queries history list.
 	 */
-	background?: boolean;
+	isBackground?: boolean;
+
+	/**
+	 * When `true`, the `query` text was generated (e.g. rendered from a triplate template) and
+	 * differs from the content of the `documentIri` document. In that case the panel's
+	 * "Edit query" action reveals the generated query text rather than the source document.
+	 */
+	isGenerated?: boolean;
 
 	/**
 	 * The workspace relative URI of the `documentIri`.
@@ -88,6 +95,46 @@ export interface SparqlQueryExecutionState {
 	 * The results of the query execution, if any.
 	 */
 	result?: BindingsResult | BooleanResult | QuadsResult;
+
+	/**
+	 * The raw, unparsed HTTP response captured from the SPARQL endpoint, if the request
+	 * reached the server. Available for remote (HTTP) connections only; the in-memory
+	 * workspace store makes no HTTP request and therefore has no raw response. Present for
+	 * both successful queries and HTTP error responses (e.g. a `400` with an error body),
+	 * but `undefined` when the request never completed (e.g. `TypeError: fetch failed`).
+	 */
+	rawResponse?: SparqlRawResponse;
+}
+
+/**
+ * The raw, unparsed HTTP response captured from a SPARQL endpoint, for inspection.
+ */
+export interface SparqlRawResponse {
+	/**
+	 * The URL the response was received from.
+	 */
+	url: string;
+
+	/**
+	 * The HTTP status code of the response.
+	 */
+	status: number;
+
+	/**
+	 * The HTTP status text of the response.
+	 */
+	statusText: string;
+
+	/**
+	 * The value of the `Content-Type` response header, if any. Used to pick a syntax
+	 * highlighting language when the raw response is opened in an editor.
+	 */
+	contentType?: string;
+
+	/**
+	 * The raw, unparsed response body. May be truncated if it exceeds the capture limit.
+	 */
+	body: string;
 }
 
 /**
@@ -100,8 +147,9 @@ const MAX_CONNECTION_NAME_LENGTH = 20;
  * For background queries, returns the truncated connection name.
  */
 export function getDisplayName(queryState: SparqlQueryExecutionState): string {
-	if (queryState.background && queryState.connectionName) {
+	if (queryState.isBackground && queryState.connectionName) {
 		const name = queryState.connectionName;
+		
 		return name.length > MAX_CONNECTION_NAME_LENGTH
 			? name.slice(0, MAX_CONNECTION_NAME_LENGTH - 1) + '…'
 			: name;

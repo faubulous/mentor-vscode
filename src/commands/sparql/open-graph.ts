@@ -1,0 +1,72 @@
+import * as vscode from 'vscode';
+import { render } from 'triplate';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { ISparqlQueryService, ITripleStoreConfigService } from '@src/languages/sparql/services';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
+
+const LARGE_GRAPH_THRESHOLD = 10000;
+
+export const openGraph = {
+	id: 'mentor.command.openGraph',
+	handler: async (graphIri: vscode.Uri | string, connection?: SparqlConnection) => {
+		const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
+
+		const targetConnection = connection ?? WORKSPACE_CONNECTION;
+		const workspaceUri = WorkspaceUri.toCanonicalString(graphIri);
+
+		const exportTemplate = storeConfigService.getQueryTemplate(targetConnection, 'exportGraph')!;
+		const constructQuery = render(exportTemplate, { graphIri: workspaceUri });
+
+		try {
+			const countTemplate = storeConfigService.getQueryTemplate(targetConnection, 'countGraph')!;
+			const countQuery = render(countTemplate, { graphIri: workspaceUri, limit: LARGE_GRAPH_THRESHOLD });
+			const countResult = await queryService.executeQueryOnConnection(countQuery, targetConnection);
+
+			if (countResult?.type === 'bindings' && countResult.bindings.length > 0) {
+				const countValue = countResult.bindings[0].get('count');
+				const count = countValue ? parseInt(countValue.value, 10) : 0;
+
+				if (count === LARGE_GRAPH_THRESHOLD) {
+					const message = `The graph contains more than ${LARGE_GRAPH_THRESHOLD.toLocaleString()} triples. Exporting it may take some time. Do you want to continue?`;
+					const answer = await vscode.window.showWarningMessage(message, { modal: true }, 'Continue');
+
+					if (answer !== 'Continue') {
+						return;
+					}
+				}
+			}
+
+			await vscode.window.withProgress({
+				location: vscode.ProgressLocation.Notification,
+				title: 'Exporting graph...',
+				cancellable: false
+			}, async () => {
+				const result = await queryService.executeQueryOnConnection(constructQuery, targetConnection);
+
+				if (result?.type === 'quads' && result.data) {
+					const document = await vscode.workspace.openTextDocument({
+						content: result.data,
+						language: 'turtle'
+					});
+
+					vscode.window.showTextDocument(document);
+				} else {
+					vscode.window.showInformationMessage('The graph is empty or could not be exported.');
+				}
+			});
+		} catch (error: any) {
+			const action = await vscode.window.showErrorMessage(
+				`Failed to serialize graph: ${error.message}`,
+				'Edit Query'
+			);
+
+			if (action === 'Edit Query') {
+				await vscode.commands.executeCommand('mentor.command.openDocument', '', constructQuery);
+			}
+		}
+	}
+};

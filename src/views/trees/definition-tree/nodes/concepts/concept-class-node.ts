@@ -14,7 +14,13 @@ export class ConceptClassNode extends ClassNodeBase {
 	}
 
 	override *getSubClassIris(): IterableIterator<string> {
-		yield* this.vocabulary.getNarrowerConcepts(this.getDocumentGraphs(), this.uri);
+		const graphs = this.getDocumentGraphs();
+
+		// Note: The query options carry the `inScheme` option of the concept scheme this node belongs
+		// to, so that narrower concepts of *other* schemes are not displayed below this one.
+		const options = this.getQueryOptions();
+
+		yield* this.vocabulary.getNarrowerConcepts(graphs, this.uri, options);
 	}
 
 	override getClassNode(iri: string) {

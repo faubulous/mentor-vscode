@@ -1,27 +1,20 @@
 import * as vscode from 'vscode';
-import { SparqlLexer, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { ParserFactory } from '@src/languages/parser-factory';
 import { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
-import { AuthCredential, EntraClientAuthCredential } from '@src/services/core/credential';
+import { AuthCredential } from '@src/services/core/credential';
 import { ICredentialStorageService } from '@src/services/core';
-import { EntraClientCredentialService } from '@src/services/core/entra-client-credential-service';
-import { ISparqlConnectionService, ISparqlResultSerializer } from '@src/languages/sparql/services';
+import { getAuthorizationHeaderProvider } from './sparql-auth';
+import { IDocumentConnectionService, ISparqlConnectionRegistry, ISparqlQuerySourceFactory } from '@src/languages/sparql/services';
+import { ISparqlResultSerializer } from '@src/languages/sparql/services';
+import { ITripleStoreConfigService } from './triple-store-config-service.interface';
 import { WorkspaceUri } from "@src/providers/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
 import { getConfig } from '@src/utilities/vscode/config';
-import { SparqlQueryExecutionState, SparqlQueryType } from "./sparql-query-state";
+import { SparqlQueryExecutionState, SparqlQueryType, SparqlRawResponse } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';
-
-/**
- * The key for storing query history in local storage.
- */
-const HISTORY_STORAGE_KEY = 'mentor.sparql.queryHistory';
-
-/**
- * The maximum number of entries to keep in the query history.
- */
-const HISTORY_MAX_ENTRIES = 10;
 
 /**
  * A service for executing SPARQL queries against an RDF endpoint. The service
@@ -31,9 +24,40 @@ const HISTORY_MAX_ENTRIES = 10;
  * service is instantiated.
  */
 export class SparqlQueryService {
+	/**
+	 * The in-memory history of executed SPARQL queries, ordered from most recent to least recent.
+	 */
 	private readonly _history: SparqlQueryExecutionState[] = [];
 
+	/**
+	 * The key for storing query history in local storage.
+	 */
+	private readonly _historyStorageKey = 'mentor.sparql.queryHistory';
+
+	/**
+	 * The maximum number of entries to keep in the query history.
+	 */
+	private readonly _historyMaxEntries = 10;
+
+	/**
+	 * The maximum number of characters of a raw response body to retain. Larger bodies are
+	 * truncated to keep them out of memory and the webview message channel.
+	 */
+	private readonly _maxRawResponseLength = 5_000_000;
+
+	/**
+	 * A map of cancellation tokens for currently running queries, keyed by query state ID.
+	 */
 	private readonly _cancellationTokens = new Map<string, vscode.CancellationTokenSource>();
+
+	/**
+	 * The shared Comunica query engine, created lazily on the first query.
+	 * Constructing an engine builds its entire actor/mediator pipeline —
+	 * expensive, synchronous CPU on the shared extension host — while the engine
+	 * itself holds no per-query state (sources and options are passed per call),
+	 * so a single instance serves all queries.
+	 */
+	private _queryEngine: QueryEngine | undefined;
 
 	private readonly _onDidHistoryChange = new vscode.EventEmitter<void>();
 
@@ -59,8 +83,11 @@ export class SparqlQueryService {
 	constructor(
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _credentialStorage: ICredentialStorageService,
-		private readonly _connectionService: ISparqlConnectionService,
-		private readonly _resultSerializer: ISparqlResultSerializer
+		private readonly _connectionRegistry: ISparqlConnectionRegistry,
+		private readonly _resultSerializer: ISparqlResultSerializer,
+		private readonly _storeConfigService: ITripleStoreConfigService,
+		private readonly _querySourceFactory: ISparqlQuerySourceFactory,
+		private readonly _documentConnectionService: IDocumentConnectionService
 	) {
 		for (const entry of this._loadQueryHistory()) {
 			this._history.push(entry);
@@ -123,7 +150,7 @@ export class SparqlQueryService {
 			label,
 			connectionId: connection.id,
 			connectionName: connection.endpointUrl,
-			background: true,
+			isBackground: true,
 			query,
 			queryType,
 			startTime: Date.now()
@@ -163,12 +190,14 @@ export class SparqlQueryService {
 				cellIndex: cell.index
 			};
 		} else {
-			return { document: querySource as vscode.TextDocument };
+			return { 
+				document: querySource as vscode.TextDocument
+			};
 		}
 	}
 
 	private _loadQueryHistory(limit: number = 10): SparqlQueryExecutionState[] {
-		const history = this._extensionContext.workspaceState.get<SparqlQueryExecutionState[]>(HISTORY_STORAGE_KEY, []);
+		const history = this._extensionContext.workspaceState.get<SparqlQueryExecutionState[]>(this._historyStorageKey, []);
 
 		return history
 			.filter(q => q)
@@ -179,10 +208,10 @@ export class SparqlQueryService {
 	private async _persistQueryHistory(): Promise<void> {
 		// Filter the query history to exclude execution states that would not be valid after a restart.
 		const filteredHistory = this._history
-			.filter(q => q && !q.background && q.documentIri && !q.documentIri.startsWith('untitled'))
-			.slice(0, HISTORY_MAX_ENTRIES);
+			.filter(q => q && !q.isBackground && q.documentIri && !q.documentIri.startsWith('untitled'))
+			.slice(0, this._historyMaxEntries);
 
-		await this._extensionContext.workspaceState.update(HISTORY_STORAGE_KEY, filteredHistory);
+		await this._extensionContext.workspaceState.update(this._historyStorageKey, filteredHistory);
 	}
 
 	/**
@@ -249,6 +278,10 @@ export class SparqlQueryService {
 	 * @returns A promise that resolves to the results of the query.
 	 */
 	async executeQuery(context: SparqlQueryExecutionState, tokenSource: vscode.CancellationTokenSource = new vscode.CancellationTokenSource()): Promise<SparqlQueryExecutionState> {
+		// Resolves to the last raw HTTP response received from the endpoint (if any), so it
+		// can be inspected via the results panel regardless of whether the query succeeded.
+		let rawResponsePromise: Promise<SparqlRawResponse | undefined> = Promise.resolve(undefined);
+
 		try {
 			const query = this._getQueryText(context);
 
@@ -263,24 +296,35 @@ export class SparqlQueryService {
 			let source: any;
 
 			if (context.connectionId && !context.documentIri) {
-				const connection = this._connectionService.getConnection(context.connectionId);
+				const connection = this._connectionRegistry.getConnection(context.connectionId);
 
 				if (!connection) {
 					throw new Error('Could not find connection with ID: ' + context.connectionId);
 				}
 
-				source = await this._connectionService.getQuerySourceForConnection(connection);
+				source = await this._querySourceFactory.getQuerySourceForConnection(connection);
 			} else {
 				const documentIri = vscode.Uri.parse(context.documentIri!);
-				source = await this._connectionService.getQuerySourceForDocument(documentIri);
+				source = await this._querySourceFactory.getQuerySourceForDocument(documentIri);
+
+				// Record the exact connection this query ran against so downstream actions
+				// triggered from the results view (e.g. Describe Resource on a binding) reuse
+				// it, rather than re-resolving from the source document — which may have since
+				// changed or fall back to the workspace store.
+				context.connectionId = this._documentConnectionService.getConnectionForDocument(documentIri).id;
 			}
 
-			const result = await this._executeQueryOnSource(query, source, tokenSource.token);
+			const result = await this._executeQueryOnSource(query, source, tokenSource.token, (raw) => {
+				rawResponsePromise = raw;
+			});
 
 			if (result.type === 'bindings') {
 				context.result = await this._resultSerializer.serializeBindings(context, result.bindings, tokenSource.token);
 			} else if (result.type === 'boolean') {
-				context.result = { type: 'boolean', value: result.value };
+				context.result = {
+					type: 'boolean',
+					value: result.value
+				};
 			} else if (result.type === 'quads') {
 				context.result = {
 					type: 'quads',
@@ -291,15 +335,22 @@ export class SparqlQueryService {
 				context.result = undefined;
 			}
 		} catch (error: any) {
+			// `fetch` (undici) reports low-level network failures as the opaque message
+			// 'fetch failed' and nests the real reason (ECONNREFUSED, ENOTFOUND, TLS errors,
+			// CORS, …) in `error.cause`. Surface it so the panel can show why it failed.
+			const cause = error?.cause;
+
 			context.error = {
 				type: error.name || 'QueryError',
 				message: error.message || 'Unknown error occurred while executing the query.',
+				cause: cause ? { code: cause.code, message: cause.message ?? String(cause) } : undefined,
 				stack: error.stack || '',
 				statusCode: error.statusCode || 500,
 				cancelled: error instanceof CancellationError
 			}
 		}
 
+		context.rawResponse = await rawResponsePromise;
 		context.endTime = Date.now();
 
 		this._logQueryExecutionEnd(context);
@@ -309,15 +360,29 @@ export class SparqlQueryService {
 	}
 
 	/**
+	 * Registers an already-completed query state in the history and notifies listeners,
+	 * without executing anything. Used to surface pre-computed results (e.g. named graphs
+	 * already cached by the graph service) in the results panel.
+	 * @param state The completed query execution state, including its `result`.
+	 */
+	registerCompletedQuery(state: SparqlQueryExecutionState): void {
+		state.endTime = state.endTime ?? Date.now();
+
+		this._logQueryExecution(state);
+
+		this._onDidQueryExecutionEnd.fire(state);
+	}
+
+	/**
 	 * Executes a SPARQL query directly against a connection without requiring a document.
 	 * This method does not log the query in history and is intended for internal/programmatic use.
 	 * @param query The SPARQL query string to execute.
 	 * @param connection The SPARQL connection to execute against.
 	 * @returns The query result based on the query type.
 	 */
-	async executeQueryOnConnection(query: string, connection: SparqlConnection): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null> {
+	async executeQueryOnConnection(query: string, connection: SparqlConnection, inferenceEnabled?: boolean): Promise<{ type: 'boolean'; value: boolean } | { type: 'quads'; data: string } | { type: 'bindings'; bindings: any[] } | null> {
 		try {
-			const source = await this._connectionService.getQuerySourceForConnection(connection);
+			const source = await this._querySourceFactory.getQuerySourceForConnection(connection, inferenceEnabled);
 			const result = await this._executeQueryOnSource(query, source);
 
 			if (result.type === 'boolean') {
@@ -358,7 +423,8 @@ export class SparqlQueryService {
 	private async _executeQueryOnSource(
 		query: string,
 		source: any,
-		token?: vscode.CancellationToken
+		token?: vscode.CancellationToken,
+		onRawResponse?: (raw: Promise<SparqlRawResponse | undefined>) => void
 	): Promise<
 		| { type: 'boolean'; value: boolean }
 		| { type: 'quads'; quads: AsyncIterator<Quad> }
@@ -373,17 +439,33 @@ export class SparqlQueryService {
 		if (source.type === 'sparql') {
 			const connection = source.connection;
 			const credential = await this._credentialStorage.getCredential(connection.id);
-			options.fetch = this._getFetchHandler(credential);
+			options.fetch = this._getFetchHandler(credential, onRawResponse);
+
+			// Apply store-specific query-text rewriting for inference (e.g. reasoning pragmas).
+			const inferenceEnabled = source.inferenceEnabled
+				?? this._connectionRegistry.getInferenceEnabled(connection.id);
+
+			const queryPragma = this._storeConfigService.getStoreConfig(connection.storeType)?.inference?.queryPragma;
+
+			if (queryPragma) {
+				const pragma = (inferenceEnabled ? queryPragma.enabled : queryPragma.disabled)?.trim();
+
+				if (pragma) {
+					query = `${pragma}\n${query}`;
+				}
+			}
 		}
 
 		// Apply query timeout from configuration (0 means no timeout)
 		const timeout = getConfig('sparql').get<number>('queryTimeout', 30000);
-		
+
 		if (timeout > 0) {
 			options.timeout = timeout;
 		}
 
-		const preparedQuery = await new QueryEngine().query(query, options);
+		this._queryEngine ??= new QueryEngine();
+
+		const preparedQuery = await this._queryEngine.query(query, options);
 
 		if (preparedQuery.resultType === 'boolean') {
 			const value = token
@@ -404,65 +486,75 @@ export class SparqlQueryService {
 		return { type: 'none' };
 	}
 
-	_getFetchHandler(credential?: AuthCredential) {
-		if (credential?.type === 'basic') {
-			const username = credential.username;
-			const password = credential.password;
-			const encoded = btoa(`${username}:${password}`);
+	_getFetchHandler(
+		credential?: AuthCredential,
+		onRawResponse?: (raw: Promise<SparqlRawResponse | undefined>) => void
+	) {
+		const getAuthHeader = getAuthorizationHeaderProvider(credential);
 
-			return (input: RequestInfo | URL, init?: RequestInit) => {
-				const headers = new Headers(init?.headers || {});
-				headers.set("Authorization", `Basic ${encoded}`);
-
-				return fetch(input, { ...init, headers });
-			};
+		// Without an authorization header to inject and without a need to capture the raw
+		// response, there is nothing to add over Comunica's default fetch.
+		if (!getAuthHeader && !onRawResponse) {
+			return undefined;
 		}
 
-		if (credential?.type === 'bearer') {
-			const prefix = credential.prefix || 'Bearer';
-			const token = credential.token;
+		return async (input: RequestInfo | URL, init?: RequestInit) => {
+			const headers = new Headers(init?.headers || {});
 
-			return (input: RequestInfo | URL, init?: RequestInit) => {
-				const headers = new Headers(init?.headers || {});
-				headers.set("Authorization", `${prefix} ${token}`);
+			if (getAuthHeader) {
+				const authHeader = await getAuthHeader();
 
-				return fetch(input, { ...init, headers });
-			};
-		}
-
-		if (credential?.type === 'microsoft') {
-			const accessToken = credential.accessToken;
-
-			if (!accessToken) {
-				return undefined;
+				if (authHeader) {
+					headers.set("Authorization", authHeader);
+				}
 			}
 
-			return (input: RequestInfo | URL, init?: RequestInit) => {
-				const headers = new Headers(init?.headers || {});
-				headers.set("Authorization", `Bearer ${accessToken}`);
+			const response = await fetch(input, { ...init, headers });
 
-				return fetch(input, { ...init, headers });
+			if (onRawResponse) {
+				// Tee the body via `clone()` so the raw, unparsed response can be inspected
+				// without disturbing the stream Comunica consumes. Best-effort capture.
+				onRawResponse(this._readRawResponse(response.clone()));
+			}
+
+			return response;
+		};
+	}
+
+	/**
+	 * Reads a (cloned) HTTP response into a serializable raw-response record, truncating the
+	 * body to {@link MAX_RAW_RESPONSE_LENGTH}. Best-effort: resolves to `undefined` on failure.
+	 * @param response A cloned response whose body has not yet been consumed.
+	 * @returns The captured raw response, or `undefined` if it could not be read.
+	 */
+	private async _readRawResponse(response: Response): Promise<SparqlRawResponse | undefined> {
+		try {
+			const text = await response.text();
+			const truncated = text.length > this._maxRawResponseLength;
+			const body = truncated
+				? text.slice(0, this._maxRawResponseLength) + '\n\n… response truncated …'
+				: text;
+
+			return {
+				url: response.url,
+				status: response.status,
+				statusText: response.statusText,
+				contentType: response.headers.get('content-type') ?? undefined,
+				body
 			};
+		} catch {
+			return undefined;
 		}
-
-		if (credential?.type === 'entra-client-credentials') {
-			const entraCredential = credential as EntraClientAuthCredential;
-			const tokenService = new EntraClientCredentialService();
-
-			return async (input: RequestInfo | URL, init?: RequestInit) => {
-				const accessToken = await tokenService.acquireToken(entraCredential);
-				const headers = new Headers(init?.headers || {});
-				headers.set("Authorization", `Bearer ${accessToken}`);
-
-				return fetch(input, { ...init, headers });
-			};
-		}
-
-		return undefined;
 	}
 
 	_getQueryType(query: string): SparqlQueryType | undefined {
-		const lexingResult = new SparqlLexer().tokenize(query);
+		// Lexer construction is expensive (~3-7 ms) and this runs per code-lens
+		// refresh; use the shared instance. It may carry another caller's blank
+		// node ID generator — restore the default before tokenizing.
+		const lexer = ParserFactory.getLexer(RdfSyntax.Sparql);
+		lexer.blankNodeIdGenerator = undefined;
+
+		const lexingResult = lexer.tokenize(query);
 
 		for (const token of lexingResult.tokens) {
 			switch (token.tokenType.name) {

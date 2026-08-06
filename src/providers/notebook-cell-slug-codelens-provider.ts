@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
+import { Debouncer } from '@src/utilities/debounce';
 
 /**
  * Provides a CodeLens on line 0 of every data cell (Turtle, TriG, N-Triples, etc.)
@@ -15,13 +14,17 @@ import { IDocumentContextService } from '@src/services/document';
 export class NotebookCellSlugCodeLensProvider implements vscode.CodeLensProvider {
 	private _initialized = false;
 
+	/**
+	 * Coalesces refresh fires: context changes arrive once per cell during
+	 * notebook loads, and each fire re-requests the lenses of every visible cell.
+	 */
+	private readonly _refreshDebouncer = new Debouncer(250);
+
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
 	public readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
+	constructor(private readonly _contextService: IDocumentContextService) { }
 
 	private _initialize(): void {
 		if (this._initialized) {
@@ -31,11 +34,13 @@ export class NotebookCellSlugCodeLensProvider implements vscode.CodeLensProvider
 		this._initialized = true;
 
 		// Refresh CodeLenses whenever any document context changes (slug may have been updated).
-		this._contextService.onDidChangeDocumentContext(() => this._onDidChangeCodeLenses.fire());
+		this._contextService.onDidChangeDocumentContext(() =>
+			this._refreshDebouncer.schedule(() => this._onDidChangeCodeLenses.fire()));
 
 		// Refresh CodeLenses when a notebook is opened so cells indexed in the background
 		// are reflected once the workspace indexer finishes.
-		vscode.workspace.onDidOpenNotebookDocument(() => this._onDidChangeCodeLenses.fire());
+		vscode.workspace.onDidOpenNotebookDocument(() =>
+			this._refreshDebouncer.schedule(() => this._onDidChangeCodeLenses.fire()));
 	}
 
 	public provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {

@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { XSD, RDF, RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { getPropertyTypeFromRange } from '@src/utilities';
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../../definition-tree-node";
 
@@ -43,36 +44,7 @@ export class PropertyNode extends DefinitionTreeNode {
 	}
 
 	getPropertyType(rangeUri?: string) {
-		switch (rangeUri) {
-			case RDF.langString:
-			case RDFS.Literal:
-			case XSD.base64Binary:
-			case XSD.boolean:
-			case XSD.byte:
-			case XSD.date:
-			case XSD.dateTime:
-			case XSD.decimal:
-			case XSD.double:
-			case XSD.float:
-			case XSD.int:
-			case XSD.integer:
-			case XSD.long:
-			case XSD.negativeInteger:
-			case XSD.nonNegativeInteger:
-			case XSD.nonPositiveInteger:
-			case XSD.positiveInteger:
-			case XSD.short:
-			case XSD.string:
-			case XSD.unsignedInt:
-			case XSD.unsignedShort:
-			case XSD.unsingedLong:
-			case XSD.usignedByte: {
-				return 'dataProperty';
-			}
-			default: {
-				return 'objectProperty';
-			}
-		}
+		return getPropertyTypeFromRange(rangeUri);
 	}
 
 	getIconColorFromRange(rangeIri?: string) {

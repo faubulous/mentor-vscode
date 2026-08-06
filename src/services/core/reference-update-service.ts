@@ -3,14 +3,6 @@ import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 
 /**
- * A pair of old and new workspace IRIs for a single rename operation.
- */
-export interface IriChange {
-	readonly oldIri: string;
-	readonly newIri: string;
-}
-
-/**
  * Service for updating `workspace:` URI references across all indexed documents when
  * a file, notebook, or notebook cell is renamed or moved.
  *

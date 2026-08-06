@@ -1,4 +1,4 @@
-import { AuthCredential } from '@src/services/core/credential';
+import { AuthCredential, MicrosoftAuthCredential } from '@src/services/core/credential';
 
 /**
  * Interface for the CredentialStorageService.
@@ -30,4 +30,11 @@ export interface ICredentialStorageService {
 	 * @param credential The new credential to store.
 	 */
 	updateCredential(uri: string, credential: AuthCredential): Promise<void>;
+
+	/**
+	 * Acquires a Microsoft access token via the Mentor Microsoft auth provider command.
+	 * Returns `null` if the user cancels or the login fails.
+	 * @param scopes The requested OAuth scopes.
+	 */
+	fetchMicrosoftCredential(scopes: string[]): Promise<MicrosoftAuthCredential | null>;
 }

@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { SH, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IWorkspaceIndexerService } from '@src/services/core';
 import { IDocumentContextService } from '@src/services/document';
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
 import { getConfig } from '@src/utilities/vscode/config';
+import { isDocumentVisible } from '@src/utilities/vscode/editors';
+import { Debouncer } from '@src/utilities/debounce';
 
 /**
  * Provides usage information for resource definitions in Turtle documents.
@@ -26,25 +26,25 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 	 */
 	private _enabled: boolean = true;
 
-	private readonly _referenceProvider: ResourceReferenceProvider = new ResourceReferenceProvider();
+	private readonly _referenceProvider: ResourceReferenceProvider;
+
+	/**
+	 * Coalesces refresh fires: every fire makes VS Code re-request the lenses of
+	 * all visible documents, and computing usage counts scans every indexed context.
+	 */
+	private readonly _refreshDebouncer = new Debouncer(250);
 
 	private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
 
 	onDidChangeCodeLenses: vscode.Event<void> = this._onDidChangeCodeLenses.event;
 
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
+	constructor(
+		private readonly _contextService: IDocumentContextService,
+		private readonly _workspaceIndexerService: IWorkspaceIndexerService,
+		private readonly _vocabulary: VocabularyRepository
+	) {
+		this._referenceProvider = new ResourceReferenceProvider(this._contextService);
 
-	private get _workspaceIndexerService() {
-		return container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
-	}
-
-	private get _vocabulary() {
-		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
-	}
-
-	constructor() {
 		vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.editor.codeLensEnabled')) {
 				this._enabled = getConfig().get('editor.codeLensEnabled', true);
@@ -67,77 +67,95 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 			}
 		});
 
-		this._contextService.onDidChangeDocumentContext(() => {
-			if (this._enabled) {
-				this._onDidChangeCodeLenses.fire();
+		this._contextService.onDidChangeDocumentContext((context) => {
+			if (!this._enabled) {
+				return;
 			}
+
+			// Usage counts change with any indexed document, but refreshing on every
+			// context change turns bulk indexing into a lens-refresh storm. Refresh
+			// only when the changed document itself is visible; counts in other
+			// visible editors catch up once indexing finishes (see waitForIndexed).
+			if (context && !isDocumentVisible(context.uri)) {
+				return;
+			}
+
+			this._refreshDebouncer.schedule(() => this._onDidChangeCodeLenses.fire());
 		});
 
 		this._initialized = true;
 		this._initializing = false;
 	}
 
-	provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeLens[]> {
-		return new Promise(async (resolve, reject) => {
-			if (this._initializing) {
+	async provideCodeLenses(document: vscode.TextDocument, token: vscode.CancellationToken): Promise<vscode.CodeLens[]> {
+		if (this._initializing) {
+			return [];
+		}
+
+		if (!this._initialized) {
+			await this._initialize();
+		}
+
+		if (!this._enabled) {
+			return [];
+		}
+
+		// Suppress usage lenses inside notebook cells: a subject on line 0 would place
+		// a usage lens on the same line as the cell-id slug, and VS Code clips
+		// overflowing CodeLenses, hiding the slug. Usage counts are not meaningful for a
+		// transient cell anyway.
+		if (document.uri.scheme === 'vscode-notebook-cell') {
+			return [];
+		}
+
+		const context = this._contextService.contexts[document.uri.toString()];
+
+		if (!context) {
+			return [];
+		}
+
+		const result: vscode.CodeLens[] = [];
+
+		for (const iri of Object.keys(context.subjects)) {
+			if (token?.isCancellationRequested) {
 				return [];
 			}
 
-			if (!this._initialized) {
-				await this._initialize();
-			}
+			const isShapeResource = this._vocabulary.hasType(context.graphs, iri, SH.Shape);
+			const shapeUris = isShapeResource
+				? []
+				: [...new Set(this._vocabulary.getShapes(context.graphs, iri, { includeBlankNodes: true }))];
+			const shapeCount = shapeUris.length;
+			const shapeTitle = `${shapeCount} shape${shapeCount === 1 ? '' : 's'}`;
 
-			if (!this._enabled) {
-				return [];
-			}
+			// The count depends only on the IRI, and counting scans every indexed
+			// document — compute it once per subject, not once per occurrence, and
+			// count without materializing the reference locations.
+			const n = Math.max(this._referenceProvider.countReferencesForIri(iri) - 1, 0);
+			const usageTitle = `${n} usage${n === 1 ? '' : 's'}`;
 
-			const context = this._contextService.contexts[document.uri.toString()];
+			for (const range of context.subjects[iri]) {
+				const codeLensRange = new vscode.Range(
+					new vscode.Position(range.start.line, range.start.character),
+					new vscode.Position(range.end.line, range.end.character)
+				);
 
-			if (!context) {
-				return [];
-			}
+				result.push(new vscode.CodeLens(codeLensRange, {
+					command: 'mentor.command.findReferences',
+					title: usageTitle,
+					arguments: [iri]
+				}));
 
-			const result = [];
-
-			for (const iri of Object.keys(context.subjects)) {
-				const isShapeResource = this._vocabulary.hasType(context.graphs, iri, SH.Shape);
-				const shapeUris = isShapeResource
-					? []
-					: [...new Set(this._vocabulary.getShapes(context.graphs, iri, { includeBlankNodes: true }))];
-				const shapeCount = shapeUris.length;
-				const shapeTitle = `${shapeCount} shape${shapeCount === 1 ? '' : 's'}`;
-
-				for (const range of context.subjects[iri]) {
-					let n = Math.max(this._referenceProvider.provideReferencesForIri(iri).length - 1, 0);
-					
-					const codeLensRange = new vscode.Range(
-						new vscode.Position(range.start.line, range.start.character),
-						new vscode.Position(range.end.line, range.end.character)
-					);
-
-					const usageTitle = `${n} usage${n === 1 ? '' : 's'}`;
-
+				if (shapeCount > 0) {
 					result.push(new vscode.CodeLens(codeLensRange, {
-						command: 'mentor.command.findReferences',
-						title: usageTitle,
+						command: 'mentor.command.showShapeReferences',
+						title: shapeTitle,
 						arguments: [iri]
 					}));
-
-					if (shapeCount > 0) {
-						result.push(new vscode.CodeLens(codeLensRange, {
-							command: 'mentor.command.showShapeReferences',
-							title: shapeTitle,
-							arguments: [iri]
-						}));
-					}
 				}
 			}
+		}
 
-			resolve(result);
-		});
-	}
-
-	resolveCodeLens?(codeLens: vscode.CodeLens, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CodeLens> {
-		throw new Error('Method not implemented.');
+		return result;
 	}
 }

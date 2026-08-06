@@ -1,0 +1,38 @@
+import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { ICredentialStorageService } from '@src/services/core';
+import { ISparqlConnectionRegistry } from '@src/languages/sparql/services';
+import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
+import { getErrorMessage } from '@src/utilities/error';
+
+export const deleteSparqlConnection = {
+	id: 'mentor.command.deleteSparqlConnection',
+	handler: async (connection: SparqlConnection) => {
+		const confirm = await vscode.window.showWarningMessage(
+			'Are you sure you want to delete this SPARQL connection?',
+			{ modal: true },
+			'Delete'
+		);
+
+		if (confirm !== 'Delete') {
+			return;
+		}
+
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
+
+		try {
+			await connectionRegistry.deleteConnection(connection.id);
+		} catch (e) {
+			vscode.window.showErrorMessage(getErrorMessage(e));
+			return;
+		}
+
+		await connectionRegistry.saveConfiguration();
+
+		await credentialService.deleteCredential(connection.id);
+
+		vscode.window.showInformationMessage('SPARQL connection deleted.');
+	}
+};

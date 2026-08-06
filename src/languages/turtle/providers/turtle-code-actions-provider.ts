@@ -1,21 +1,19 @@
 import * as vscode from 'vscode';
 import { Uri } from "@faubulous/mentor-rdf";
 import { RdfToken, IToken } from '@faubulous/mentor-rdf-parsers';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
-import { getIriFromIriReference, getIriFromPrefixedName, getNamespaceDefinition, getTokenPosition } from '@src/utilities';
+import { getIriFromIriReference, getIriFromPrefixedName, getNamespaceDefinition, getTokenAtPosition, getTokenPosition } from '@src/utilities';
 import { getPrefixesWithErrorCode } from '@src/utilities/vscode/diagnostic';
-import { INLINE_SINGLE_USE_BLANK_NODE_CODE } from '@src/languages/linters';
+import { INLINE_SINGLE_USE_BLANK_NODE_CODE } from '@src/providers/linting/linters';
 
 /**
  * A provider for RDF document code actions.
  */
 export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements vscode.CodeActionProvider {
-	private get contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
+	constructor(private readonly _contextService: IDocumentContextService) {
+		super();
 	}
 
 	/**
@@ -73,7 +71,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 	 * @returns An array of code actions.
 	 */
 	private _provideRefactoringActions(document: vscode.TextDocument, range: vscode.Range, actionContext: vscode.CodeActionContext): vscode.CodeAction[] {
-		const context = this.contextService.getDocumentContext(document, TurtleDocument);
+		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return [];
@@ -89,7 +87,7 @@ export class TurtleCodeActionsProvider extends TurtleFeatureProvider implements 
 		}
 
 		// Token-based refactorings for the current position.
-		const token = context.getTokenAtPosition(range.start);
+		const token = getTokenAtPosition(context.tokens, range.start);
 
 		if (!token) {
 			return result;

@@ -24,6 +24,15 @@ export interface IDocumentFactory {
 	isTripleSourceLanguage(languageId: string): boolean;
 
 	/**
+	 * Indicates whether a language is one of Mentor's first-class RDF authoring languages
+	 * (see `RDF_LANGUAGE_IDS`) — i.e. one in which resources can be authored, referenced
+	 * and described. Used to gate resource-oriented editor features such as "Describe Resource".
+	 * @param languageId The language ID to check (e.g. 'turtle', 'sparql').
+	 * @returns `true` if the language is an RDF language, otherwise `false`.
+	 */
+	isRdfLanguage(languageId: string): boolean;
+
+	/**
 	 * Checks if a document can be converted to another format.
 	 * @param languageId The language ID of the document.
 	 * @returns `true` if the document can be converted, otherwise `false`.
@@ -84,14 +93,21 @@ export interface IDocumentFactory {
 	 * @param languageId The language identifier.
 	 * @returns A `ILanguageInfo` object if the language is supported by this factory, `undefined` otherwise.
 	 */
-	getLanguageInfo(languageId: string): Promise<ILanguageInfo | undefined>;
+	getSupportedLanguageInfoFromId(languageId: string): Promise<ILanguageInfo | undefined>;
 
 	/**
-	 * Retrieves language information from a MIME type.
+	 * Retrieves language information from a MIME type defined in package.json.
 	 * @param mimetype The MIME type to look up.
 	 * @returns The corresponding `ILanguageInfo` object, or `undefined` if not found.
 	 */
-	getLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined>;
+	getSupportedLanguageInfoFromMimeType(mimetype: string): Promise<ILanguageInfo | undefined>;
+
+	/**
+	 * Retrieves the language ID from a MIME type, defaulting to 'plaintext' if not found.
+	 * @param mimetype The MIME type to look up.
+	 * @returns The corresponding language ID, or 'plaintext' if not found.
+	 */
+	getLanguageIdFromMimeType(mimetype: string): Promise<string>;
 }
 
 /**

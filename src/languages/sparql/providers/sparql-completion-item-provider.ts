@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
-import { container } from 'tsyringe';
-import { RdfToken } from "@faubulous/mentor-rdf-parsers";
-import { ServiceToken } from '@src/services/tokens';
-import { ISparqlConnectionService } from '@src/languages/sparql/services';
+import { IToken, RdfToken } from "@faubulous/mentor-rdf-parsers";
+import { getTokenIndexAtPosition } from '@src/utilities';
+import { VocabularyRepository } from '@faubulous/mentor-rdf';
+import { IDocumentContextService } from '@src/services/document';
+import { ISparqlConnectionRegistry, IGraphManagementService, IDocumentConnectionService } from '@src/languages/sparql/services';
 import { TurtleCompletionItemProvider } from "@src/languages/turtle/providers";
 import { TurtleDocument } from "@src/languages/turtle";
 
@@ -20,49 +21,43 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 */
 	public readonly triggerCharacters = new Set([':', '<', '/']);
 
-	/**
-	 * Timeout in milliseconds to wait for fresh tokens from the language server
-	 * when the stored tokens are stale at the moment a trigger-character completion fires.
-	 */
-	private readonly _tokenSyncTimeout = 2000;
-
-	private get connectionService() {
-		return container.resolve<ISparqlConnectionService>(ServiceToken.SparqlConnectionService);
+	constructor(
+		contextService: IDocumentContextService,
+		vocabulary: VocabularyRepository,
+		private readonly _connectionRegistry: ISparqlConnectionRegistry,
+		private readonly _documentConnectionService: IDocumentConnectionService,
+		private readonly _graphService: IGraphManagementService
+	) {
+		super(contextService, vocabulary);
 	}
 
-	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | null> {
-		const context = this.contextService.getDocumentContext(document, TurtleDocument);
+	override async provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, t: vscode.CancellationToken, completion: vscode.CompletionContext): Promise<vscode.CompletionItem[] | vscode.CompletionList | null> {
+		const context = this._contextService.getDocumentContext(document, TurtleDocument);
 
 		if (!context) {
 			return null;
 		}
 
-		let n = context.getTokenIndexAtPosition(position);
+		// Tokenize the current document text synchronously so that completions
+		// are always based on the up-to-date buffer content. This avoids waiting
+		// for token delivery from the language server and also makes completions
+		// work for documents that are not eagerly indexed (e.g. untitled documents).
+		const tokens = context.tokenize(document.getText());
+
+		const n = getTokenIndexAtPosition(tokens, position);
 
 		if (n < 1) {
-			// Tokens are stale — the language server hasn't delivered an update yet.
-			// Wait for the next token delivery before retrying.
-			try {
-				await this.contextService.onNextTokenDelivery(document.uri.toString(), this._tokenSyncTimeout);
-			} catch {
-				return null;
-			}
-
-			n = context.getTokenIndexAtPosition(position);
-
-			if (n < 1) {
-				return null;
-			}
+			return null;
 		}
 
-		return this.getCompletionItems(document, context, n) as Promise<vscode.CompletionItem[] | null>;
+		return this.getCompletionItems(document, context, tokens, n) as Promise<vscode.CompletionItem[] | vscode.CompletionList | null>;
 	}
 
-	override getCompletionItems(document: vscode.TextDocument, context: any, tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[]> {
-		if (this.isGraphDefinitionContext(context, tokenIndex)) {
-			return this.getGraphIriCompletionItems(document, context, tokenIndex);
+	override getCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokens: IToken[], tokenIndex: number): vscode.ProviderResult<vscode.CompletionItem[] | vscode.CompletionList> {
+		if (this.isGraphDefinitionContext(tokens, tokenIndex)) {
+			return this.getGraphIriCompletionItems(document, tokens, tokenIndex);
 		} else {
-			return super.getCompletionItems(document, context, tokenIndex);
+			return super.getCompletionItems(document, context, tokens, tokenIndex);
 		}
 	}
 
@@ -72,8 +67,8 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	 * when the current token already starts with `<` (single-token IRI or
 	 * auto-closed IRI such as `<htt>`). Returns -1 when no opening `<` is found.
 	 */
-	private findIriOpenIndex(context: TurtleDocument, tokenIndex: number): number {
-		if (context.tokens[tokenIndex].image.startsWith('<')) {
+	private findIriOpenIndex(tokens: IToken[], tokenIndex: number): number {
+		if (tokens[tokenIndex].image.startsWith('<')) {
 			return tokenIndex;
 		}
 
@@ -84,7 +79,7 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		const stopImages = new Set([';', '{', '}', '(', ')', '>']);
 
 		for (let i = tokenIndex - 1; i >= 0; i--) {
-			const image = context.tokens[i].image;
+			const image = tokens[i].image;
 
 			if (image === '<') {
 				return i;
@@ -97,14 +92,14 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		return -1;
 	}
 
-	isGraphDefinitionContext(context: TurtleDocument, tokenIndex: number) {
-		const n = this.findIriOpenIndex(context, tokenIndex);
+	isGraphDefinitionContext(tokens: IToken[], tokenIndex: number) {
+		const n = this.findIriOpenIndex(tokens, tokenIndex);
 
 		if (n < 0) {
 			return false;
 		}
 
-		const previousToken = context.tokens[n - 1];
+		const previousToken = tokens[n - 1];
 
 		switch (previousToken?.tokenType.name) {
 			case RdfToken.GRAPH.name:
@@ -117,36 +112,16 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	}
 
 	/**
-	 * Collects graph IRIs from all indexed workspace documents and notebook cells.
-	 * Each context's `graphIri` is a portable `workspace:` URI (or the raw URI for
-	 * documents outside the workspace root). The current document is excluded.
-	 */
-	private getWorkspaceGraphUris(currentDocumentUri: vscode.Uri): string[] {
-		const selfUri = currentDocumentUri.toString();
-		const result: string[] = [];
-
-		for (const ctx of Object.values(this.contextService.contexts ?? {})) {
-			if (ctx.uri.toString() === selfUri) {
-				continue;
-			}
-
-			result.push(ctx.graphIri.toString());
-		}
-
-		return result;
-	}
-
-	/**
 	 * Reads the IRI text the user is currently typing from the raw document content.
 	 * Handles multi-token IRIs (incomplete, no closing `>`) by reading from the `<`
 	 * opening token through the current token.
 	 * @returns The typed IRI value (without `<`/`>`), the closing state, the opening
 	 *   token, and the end position — all needed to build replacement ranges.
 	 */
-	private _readTypedIri(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number) {
-		const iriOpenIndex = this.findIriOpenIndex(context, tokenIndex);
-		const iriOpenToken = context.tokens[iriOpenIndex];
-		const currentToken = context.tokens[tokenIndex];
+	private _readTypedIri(document: vscode.TextDocument, tokens: IToken[], tokenIndex: number) {
+		const iriOpenIndex = this.findIriOpenIndex(tokens, tokenIndex);
+		const iriOpenToken = tokens[iriOpenIndex];
+		const currentToken = tokens[tokenIndex];
 
 		// Chevrotain positions are 1-based; VS Code positions are 0-based.
 		// endColumn is the last char (1-based), so endColumn (without -1) is the exclusive end in 0-based terms.
@@ -171,22 +146,32 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 	/**
 	 * Merges remote endpoint graph IRIs and workspace document/cell IRIs into a
 	 * single deduplicated list. Endpoint graphs come first.
+	 *
+	 * When the document's connection has `autoLoadGraphs` enabled and the graph
+	 * service has a cached result, the cache is used (no network round-trip).
+	 * Otherwise the existing on-demand query path is used.
 	 */
 	private async _mergeGraphUris(documentUri: vscode.Uri): Promise<string[]> {
-		const endpointGraphs = await this.connectionService.getGraphsForDocument(documentUri);
-		const workspaceGraphs = this.getWorkspaceGraphUris(documentUri);
+		const connection = this._documentConnectionService.getConnectionForDocument(documentUri);
 
-		const seen = new Set<string>();
-		const result: string[] = [];
+		if (this._graphService.hasGraphsForConnection(connection.id)) {
+			const inferenceEnabled = this._connectionRegistry.getInferenceEnabled(connection.id);
+			const graphs = this._graphService.getGraphsForConnection(connection.id, inferenceEnabled);
+			
+			const seen = new Set<string>();
+			const result: string[] = [];
 
-		for (const iri of [...endpointGraphs, ...workspaceGraphs]) {
-			if (!seen.has(iri)) {
-				seen.add(iri);
-				result.push(iri);
+			for (const iri of graphs) {
+				if (!seen.has(iri)) {
+					seen.add(iri);
+					result.push(iri);
+				}
 			}
-		}
 
-		return result;
+			return result;
+		} else {
+			return [];
+		}
 	}
 
 	/**
@@ -225,13 +210,12 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		let insertText: string;
 
 		if (isPrefixMatch) {
+			// Show the full IRI as the label — the suffix alone (e.g. 'orkspace:///…' when 'w'
+			// was typed) is confusing — but only insert the part the user has not typed yet so
+			// the typed prefix is not duplicated.
 			const suffix = iri.substring(value.length);
 
-			// Strip a leading ':' from the display label to avoid visual duplication
-			// when the user typed a namespace prefix (e.g. typed 'ex' → label ':Thing').
-			// Only ':' is stripped, never '/' — stripping '/' would corrupt URI paths.
-			// insertText always uses the full suffix so the inserted value is correct.
-			label = (suffix[0] === ':') ? suffix.slice(1) : suffix;
+			label = iri;
 			insertText = alreadyClosed ? suffix : suffix + '>';
 		} else {
 			// Substring match: replace everything the user typed with the full IRI.
@@ -242,13 +226,15 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		const item = new vscode.CompletionItem(label, vscode.CompletionItemKind.Reference);
 		item.insertText = new vscode.SnippetString(insertText);
 
-		// For workspace IRIs, set filterText to the path+fragment with '#' replaced by
-		// a space. VS Code treats spaces as word boundaries in its fuzzy scorer, so slug
-		// names after '#' (e.g. 'cell-1' in 'notebook.mnb#cell-1') become word starts
-		// and the user can type 'cell' to filter to that cell even though the label
-		// starts with the notebook filename.
+		// For workspace IRIs, set filterText to the full IRI with '#' replaced by a space.
+		// Keeping the 'workspace:///' scheme means typing it (e.g. 'w', 'wo', 'workspace')
+		// matches these graphs at position 0, so VS Code's scorer — which rewards matches
+		// nearer the start — ranks them above graphs where the typed text only appears later
+		// (e.g. the 'w' in 'www'). Replacing '#' with a space makes VS Code treat slug names
+		// after the fragment (e.g. 'cell-1' in 'notebook.mnb#cell-1') as word starts, so the
+		// user can still type 'cell' to filter to that cell.
 		if (iri.startsWith(workspaceScheme)) {
-			item.filterText = iri.slice(workspaceScheme.length).replace('#', ' ');
+			item.filterText = iri.replace('#', ' ');
 		}
 
 		if (isSubstringMatch) {
@@ -261,8 +247,8 @@ export class SparqlCompletionItemProvider extends TurtleCompletionItemProvider {
 		return item;
 	}
 
-	async getGraphIriCompletionItems(document: vscode.TextDocument, context: TurtleDocument, tokenIndex: number): Promise<vscode.CompletionItem[]> {
-		const { value, alreadyClosed, iriOpenToken, iriEnd } = this._readTypedIri(document, context, tokenIndex);
+	async getGraphIriCompletionItems(document: vscode.TextDocument, tokens: IToken[], tokenIndex: number): Promise<vscode.CompletionItem[]> {
+		const { value, alreadyClosed, iriOpenToken, iriEnd } = this._readTypedIri(document, tokens, tokenIndex);
 		const graphs = await this._mergeGraphUris(document.uri);
 		const result: vscode.CompletionItem[] = [];
 

@@ -1,0 +1,100 @@
+{
+  "name": "Triplate (injection)",
+  "scopeName": "triplate.injection",
+  "injectionSelector": "L:source.sparql -comment -string",
+  "patterns": [
+    { "include": "#frontmatter" },
+    { "include": "#directive" },
+    { "include": "#interp-string" },
+    { "include": "#iri-template" },
+    { "include": "#value" }
+  ],
+  "repository": {
+    "frontmatter": {
+      "name": "meta.frontmatter.triplate",
+      "begin": "\\A---[ \\t]*$",
+      "end": "^---[ \\t]*$",
+      "patterns": [
+        { "match": "#.*$", "name": "comment.line.number-sign.triplate" },
+        { "match": "(?i)\\b(params|example)\\b", "name": "keyword.control.triplate" },
+        { "match": "(?i)\\b(iri|pname|string|int|decimal|double|bool|date|dateTime|time|literal|term|raw)\\b", "name": "support.type.triplate" },
+        { "match": "(?i)\\b(optional|min|max)\\b", "name": "keyword.other.triplate" },
+        { "match": "\"(\\\\.|[^\"\\\\])*\"", "name": "string.quoted.double.triplate" },
+        { "match": "<[^<>\"{}|^`\\s]*>", "name": "markup.underline.link.triplate" },
+        { "match": "\\b[0-9]+\\b", "name": "constant.numeric.triplate" },
+        { "match": "[A-Za-z_][A-Za-z0-9_-]*:[A-Za-z0-9_][A-Za-z0-9_.-]*", "name": "entity.name.type.pname.triplate" },
+        { "match": "[{}:,\\[\\]]", "name": "punctuation.section.triplate" },
+        { "match": "[A-Za-z_][A-Za-z0-9_-]*", "name": "variable.other.triplate" }
+      ]
+    },
+
+    "value": {
+      "name": "meta.interpolation.triplate",
+      "begin": "(\\$)(\\{)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.template.triplate" },
+        "2": { "name": "punctuation.section.embedded.begin.triplate" }
+      },
+      "end": "(\\})",
+      "endCaptures": { "1": { "name": "punctuation.section.embedded.end.triplate" } },
+      "patterns": [
+        { "match": "\\.\\.\\.", "name": "keyword.operator.spread.triplate" },
+        { "match": "(?i)\\b(join|explicit)\\b", "name": "keyword.other.triplate" },
+        { "match": "\"(\\\\.|[^\"\\\\])*\"", "name": "string.quoted.double.triplate" },
+        { "include": "#path" }
+      ]
+    },
+
+    "path": {
+      "match": "[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*",
+      "name": "variable.other.triplate"
+    },
+
+    "interp-string": {
+      "name": "string.quoted.double.interpolated.triplate",
+      "begin": "(\\$)(\")",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.template.triplate" },
+        "2": { "name": "punctuation.definition.string.begin.triplate" }
+      },
+      "end": "(\")(?:(@)([A-Za-z][A-Za-z0-9-]*))?",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.string.end.triplate" },
+        "2": { "name": "punctuation.definition.language.triplate" },
+        "3": { "name": "constant.language.tag.triplate" }
+      },
+      "patterns": [
+        { "match": "\\\\.", "name": "constant.character.escape.triplate" },
+        { "include": "#value" }
+      ]
+    },
+
+    "iri-template": {
+      "name": "string.other.iri.triplate",
+      "begin": "(\\$)(<)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.template.triplate" },
+        "2": { "name": "punctuation.definition.iri.begin.triplate" }
+      },
+      "end": "(>)",
+      "endCaptures": { "1": { "name": "punctuation.definition.iri.end.triplate" } },
+      "patterns": [{ "include": "#value" }]
+    },
+
+    "directive": {
+      "name": "meta.directive.triplate",
+      "begin": "(\\{%)",
+      "beginCaptures": { "1": { "name": "punctuation.definition.directive.begin.triplate" } },
+      "end": "(%\\})",
+      "endCaptures": { "1": { "name": "punctuation.definition.directive.end.triplate" } },
+      "patterns": [
+        { "match": "(?i)\\b(for|endfor|if|elif|else|endif)\\b", "name": "keyword.control.triplate" },
+        { "match": "(?i)\\b(in|join|explicit|not)\\b", "name": "keyword.other.triplate" },
+        { "include": "#value" },
+        { "include": "#iri-template" },
+        { "match": "\"(\\\\.|[^\"\\\\])*\"", "name": "string.quoted.double.triplate" },
+        { "match": "[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*", "name": "variable.other.triplate" }
+      ]
+    }
+  }
+}

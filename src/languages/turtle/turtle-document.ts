@@ -1,34 +1,41 @@
 import * as vscode from 'vscode';
-import { Position } from 'vscode-languageserver-types';
-import { Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
-import { Store, Uri, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { IToken, RdfSyntax, TurtleReader, TurtleParser, RdfToken, QuadContext } from '@faubulous/mentor-rdf-parsers';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
+import type { CstNode } from 'chevrotain';
+import { Quad, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
+import { Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
+import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, RdfSyntax, RdfToken, tokenizeWithTriplate, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import { ParserFactory } from '@src/languages/parser-factory';
+import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
+import { DocumentParseResult, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
-	countLeadingWhitespace,
-	countTrailingWhitespace,
 	getIriFromIriReference,
 	getIriFromPrefixedName,
 	getIriFromToken,
 	getNamespaceDefinition,
-	getTokenPosition
+	getTokenAtPosition,
+	isPrefixTokenAtPosition
 } from '@src/utilities';
+import { getRangeFromToken } from '@src/utilities/vscode/tokens';
 
 /**
  * A document context for Turtle and TriG documents.
  */
-export class TurtleDocument extends DocumentContext {
+export class TurtleDocument extends DocumentContext implements ITokenizedDocumentContext {
 	readonly syntax: RdfSyntax;
 
 	private _inferenceExecuted = false;
 
 	private _tokens: IToken[] = [];
 
-	constructor(uri: vscode.Uri, syntax: RdfSyntax) {
-		super(uri);
+	/**
+	 * The output of the last {@link parse} pass, reused by the diagnostics
+	 * service and {@link loadTriples} when it is still fresh for their text.
+	 */
+	private _lastParse: DocumentParseResult | undefined;
+
+	constructor(uri: vscode.Uri, syntax: RdfSyntax, store: Store, vocabulary: VocabularyRepository, settings: ISettingsService) {
+		super(uri, store, vocabulary, settings);
 
 		this.syntax = syntax;
 	}
@@ -37,11 +44,12 @@ export class TurtleDocument extends DocumentContext {
 		return this._tokens.length > 0 && this.graphs.length > 0;
 	}
 
-	/**
-	 * Indicates whether tokens have been set for this document.
-	 */
-	get hasTokens(): boolean {
+	get isParsed(): boolean {
 		return this._tokens.length > 0;
+	}
+
+	get providesTokens(): boolean {
+		return true;
 	}
 
 	/**
@@ -51,13 +59,72 @@ export class TurtleDocument extends DocumentContext {
 		return this._tokens;
 	}
 
+	tokenize(text: string, blankNodeIdGenerator?: BlankNodeIdGenerator): IToken[] {
+		const lexer = ParserFactory.getLexer(this.syntax);
+
+		// The lexer instance is shared, so the generator must be set on every call —
+		// `undefined` restores the default generator — to prevent a file-scoped
+		// generator from leaking between documents.
+		lexer.blankNodeIdGenerator = blankNodeIdGenerator;
+
+		return tokenizeWithTriplate(lexer, text).tokens;
+	}
+
+	parse(text: string): IToken[] {
+		// Use a file-scoped blank node ID generator so that blank node identities
+		// are stable across reloads of the same document. The lexer instance is
+		// shared, so the generator must be set on every call.
+		const lexer = ParserFactory.getLexer(this.syntax);
+		lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(this.uri.toString());
+
+		const { tokens, parseTokens, errors: lexErrors, template } = tokenizeWithTriplate(lexer, text);
+
+		// Run the grammar parse here, once, with error recovery, so that the
+		// diagnostics service and loadTriples can reuse the result instead of
+		// re-tokenizing and re-parsing the same text.
+		//
+		// The parse can fail outright rather than just collecting errors — a
+		// recursive-descent parser exhausts the stack on a pathologically large
+		// document (e.g. a 24k-line SPARQL query). That must not fail the whole
+		// parse: the tokens drive most language features and are already
+		// available. Leaving the result unset makes every consumer fall back to
+		// its own parse, where such a failure is reported as a diagnostic
+		// (diagnostics service) or leaves the graph unloaded (loadTriples).
+		try {
+			const parser = ParserFactory.getParser(this.syntax);
+			const cst = parser.parse(parseTokens, false);
+
+			this._lastParse = {
+				text,
+				tokens,
+				parseTokens,
+				template,
+				cst,
+				lexErrors,
+				// The shared parser resets its error state on the next parse; copy it.
+				parserErrors: [...parser.errors],
+				semanticErrors: [...parser.semanticErrors]
+			};
+		} catch {
+			this._lastParse = undefined;
+		}
+
+		this.setTokens(tokens);
+
+		return tokens;
+	}
+
+	getParseResult(text: string): DocumentParseResult | undefined {
+		return this._lastParse?.text === text ? this._lastParse : undefined;
+	}
+
 	public override getIriAtPosition(position: vscode.Position): string | undefined {
-		const token = this.getTokenAtPosition(position);
+		const token = getTokenAtPosition(this.tokens, position);
 
 		if (token) {
 			let iri;
 
-			if (this.isPrefixTokenAtPosition(token, position)) {
+			if (isPrefixTokenAtPosition(token, position)) {
 				const prefix = token.image.split(":")[0];
 
 				iri = this.namespaces[prefix];
@@ -70,7 +137,7 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	public override getLiteralAtPosition(position: vscode.Position): string | undefined {
-		const token = this.getTokenAtPosition(position);
+		const token = getTokenAtPosition(this.tokens, position);
 
 		if (!token || !token.tokenType) {
 			return undefined;
@@ -92,31 +159,8 @@ export class TurtleDocument extends DocumentContext {
 		}
 	}
 
-	/**
-	 * Indicates whether the token at the given position is a namespace prefix.
-	 * @param token A token.
-	 * @param position The position in the document.
-	 * @returns `true` if the cursor is on the prefix of the token, `false` otherwise.
-	 */
-	isPrefixTokenAtPosition(token: IToken, position: vscode.Position) {
-		const { start } = getTokenPosition(token);
-
-		switch (token.tokenType.name) {
-			case RdfToken.PNAME_NS.name:
-			case RdfToken.PNAME_LN.name: {
-				const i = token.image.indexOf(":");
-				const n = position.character - start.character;
-
-				return n <= i;
-			}
-			default: {
-				return false;
-			}
-		}
-	}
-
 	public override async infer(): Promise<void> {
-		const store = container.resolve<Store>(ServiceToken.Store);
+		const store = this._store;
 		const reasoner = store.reasoner;
 
 		if (reasoner && !this._inferenceExecuted) {
@@ -127,13 +171,23 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	/**
+	 * Reads the quads of a parsed document from its CST. Subclasses can
+	 * override this to configure a syntax-specific reader before reading.
+	 * @param cst The CST produced by the parser matching the document syntax.
+	 * @returns The quads of the document.
+	 */
+	protected readQuads(cst: CstNode): Quad[] {
+		return ParserFactory.createReader(this.syntax).visit(cst) as Quad[];
+	}
+
+	/**
 	 * Loads triples into the triple store using existing tokens.
 	 * This method assumes tokens have already been set via setTokens().
 	 * @param data The file content (not used, parsing uses existing tokens).
 	 */
 	public override async loadTriples(data: string): Promise<void> {
 		try {
-			const store = container.resolve<Store>(ServiceToken.Store);
+			const store = this._store;
 			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 			const g = store.dataFactory.namedNode(graphUri);
 
@@ -155,11 +209,28 @@ export class TurtleDocument extends DocumentContext {
 			// a fresh inference pass is needed to populate the slug-based graph.
 			this._inferenceExecuted = false;
 
-			// Only updates the existing graphs if the document was parsed successfully.
-			// Uses existing tokens that were set by the language server.
-			const cst = new TurtleParser().parse(this._tokens);
+			// Reuse the CST captured by parse() when it was produced from exactly
+			// this content and parsed cleanly. An errored or stale result falls
+			// back to the throwing parse below, so invalid documents keep loading
+			// no triples. Templates are excluded: their CST is built from
+			// placeholder tokens.
+			const cached = this.getParseResult(data);
+			const canReuseCst = cached !== undefined
+				&& !cached.template
+				&& cached.lexErrors.length === 0
+				&& cached.parserErrors.length === 0
+				&& cached.semanticErrors.length === 0;
 
-			for (const q of new TurtleReader().visit(cst)) {
+			// Only updates the existing graphs if the document was parsed successfully.
+			// Uses the existing tokens that were set on the context. The parser is a
+			// shared instance because chevrotain parser construction is expensive.
+			// The parser and reader must match the document syntax: TriG graph
+			// blocks or N-Quads graph terms are invisible to the Turtle grammar.
+			const cst = canReuseCst
+				? cached.cst
+				: ParserFactory.getParser(this.syntax).parse(this._tokens);
+
+			for (const q of this.readQuads(cst)) {
 				const s = q.subject as Quad_Subject;
 				const p = q.predicate as Quad_Predicate;
 				const o = q.object as Quad_Object;
@@ -198,114 +269,6 @@ export class TurtleDocument extends DocumentContext {
 	}
 
 	/**
-	 * Get the location of a token in a document.
-	 * @param documentUri The URI of the document.
-	 * @param token A token.
-	 */
-	getRangeFromToken(token: IToken): vscode.Range {
-		// The token positions are 1-based, whereas the editor positions / locations are 0-based.
-		const startLine = token.startLine ? token.startLine - 1 : 0;
-		const startCharacter = token.startColumn ? token.startColumn - 1 : 0;
-		const startWhitespace = countLeadingWhitespace(token.image);
-
-		const endLine = token.endLine ? token.endLine - 1 : 0;
-		const endCharacter = token.endColumn ? token.endColumn - 1 : 0;
-		const endWhitespace = countTrailingWhitespace(token.image);
-
-		// Note: The millan parser incorrectly parses some tokens with leading and trailing whitespace.
-		// We account for this by adjusting the start and end positions.
-		const start = new vscode.Position(startLine, startCharacter + startWhitespace);
-		const end = new vscode.Position(endLine, endCharacter - endWhitespace).translate(0, 1);
-
-		return new vscode.Range(start, end);
-	}
-
-	/**
-	 * Gets the index of the token at a given position.
-	 * @param position A position in the document.
-	 * @returns The index of the token at the given position, or -1 if no token is found.
-	 */
-	getTokenIndexAtPosition(position: Position): number {
-		// The tokens are 1-based, but the position is 0-based.
-		const l = position.line + 1;
-		const n = position.character;
-
-		for (let i = 0; i < this.tokens.length; i++) {
-			const token = this.tokens[i];
-
-			if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
-				continue;
-			}
-
-			if (token.startLine > l) {
-				break;
-			}
-
-			// If the token starts and ends on the same line and column, then the position must be inside the token.
-			if (token.startLine == l && token.endLine == l && token.startColumn <= n && n <= token.endColumn) {
-				return i;
-			}
-
-			// If we have a multi-line token and the position is between start and end, then we have a match.
-			if (token.startLine < l && token.endLine > l) {
-				return i;
-			}
-
-			// If the token ends on the same line and the position is before the end column, then we have a match.
-			if (token.endLine == l && token.endColumn >= n) {
-				return i;
-			}
-		}
-
-		return -1;
-	}
-
-	/**
-	 * Gets the first token at a given position.
-	 * @param position A position in the document.
-	 * @returns The token at the given position, if it exists, undefined otherwise.
-	 */
-	getTokenAtPosition(position: Position): IToken | undefined {
-		const index = this.getTokenIndexAtPosition(position);
-
-		return index >= 0 ? this.tokens[index] : undefined;
-	}
-
-	/**
-	 * Gets the token that precedes the given position.
-	 * @param position A position in the document.
-	 * @returns The token before the given position, if it exists, undefined otherwise.
-	 */
-	getTokenBeforePosition(position: Position): IToken | undefined {
-		const index = this.getTokenIndexAtPosition(position);
-
-		if (index > 0) {
-			// Found token at position, return previous one
-			return this.tokens[index - 1];
-		} else if (index === 0) {
-			// At first token, no previous token
-			return undefined;
-		} else {
-			// No token at position (index === -1), find last token before this position
-			const l = position.line + 1;
-			const n = position.character;
-
-			for (let i = this.tokens.length - 1; i >= 0; i--) {
-				const token = this.tokens[i];
-
-				if (!token.endLine || !token.endColumn) continue;
-
-				// If token ends before the cursor position, it's the one we want
-				if (token.endLine < l || (token.endLine === l && token.endColumn <= n)) {
-					return token;
-				}
-			}
-		}
-
-		return undefined;
-	}
-
-	/**
 	 * Set the tokens of the document and update the namespaces, references, type assertions and type definitions.
 	 * @param tokens An array of tokens.
 	 * @note The registration is executed on a token level so that document types are supported that do not produce triples.
@@ -330,7 +293,7 @@ export class TurtleDocument extends DocumentContext {
 
 					// Only set the namespace if it is preceeded by a prefix keyword.
 					if (ns) {
-						const r = this.getRangeFromToken(t);
+						const r = getRangeFromToken(t);
 
 						this.namespaces[ns.prefix] = ns.uri;
 						this.namespaceDefinitions[ns.uri] = [r];
@@ -429,7 +392,7 @@ export class TurtleDocument extends DocumentContext {
 		}
 
 		if (isSubject) {
-			const range = this.getRangeFromToken(token);
+			const range = getRangeFromToken(token);
 
 			if (!this.subjects[iriOrBlankId]) {
 				this.subjects[iriOrBlankId] = [];
@@ -444,7 +407,7 @@ export class TurtleDocument extends DocumentContext {
 			this.references[iriOrBlankId] = [];
 		}
 
-		const range = this.getRangeFromToken(token);
+		const range = getRangeFromToken(token);
 
 		this.references[iriOrBlankId].push(range);
 	}
@@ -459,7 +422,7 @@ export class TurtleDocument extends DocumentContext {
 
 			if (!subjectUri) return;
 
-			const range = this.getRangeFromToken(subjectToken);
+			const range = getRangeFromToken(subjectToken);
 
 			this.typeAssertions[subjectUri] = [range];
 		}
@@ -493,7 +456,7 @@ export class TurtleDocument extends DocumentContext {
 				case _SKOS:
 				case _SKOS_XL:
 				case _SH: {
-					const range = this.getRangeFromToken(subjectToken);
+					const range = getRangeFromToken(subjectToken);
 
 					this.typeDefinitions[subjectUri] = [range];
 				}

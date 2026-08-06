@@ -83,7 +83,7 @@ describe('getDisplayName – background queries', () => {
 	it('returns the connection name for a background query', () => {
 		const state: any = {
 			id: 'test-id',
-			background: true,
+			isBackground: true,
 			connectionName: 'My Endpoint',
 			startTime: Date.now(),
 		};
@@ -94,7 +94,7 @@ describe('getDisplayName – background queries', () => {
 	it('truncates a long connection name to 20 characters with an ellipsis', () => {
 		const state: any = {
 			id: 'test-id',
-			background: true,
+			isBackground: true,
 			connectionName: 'https://very-long-endpoint.example.org/sparql',
 			startTime: Date.now(),
 		};
@@ -108,7 +108,7 @@ describe('getDisplayName – background queries', () => {
 		const name = 'A'.repeat(20);
 		const state: any = {
 			id: 'test-id',
-			background: true,
+			isBackground: true,
 			connectionName: name,
 			startTime: Date.now(),
 		};
@@ -119,7 +119,7 @@ describe('getDisplayName – background queries', () => {
 	it('falls back to filename logic when background is false', () => {
 		const state: any = {
 			id: 'test-id',
-			background: false,
+			isBackground: false,
 			connectionName: 'should-not-appear',
 			documentIri: 'file:///workspace/query.sparql',
 			startTime: Date.now(),

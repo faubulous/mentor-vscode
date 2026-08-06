@@ -4,7 +4,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 const mockContextService = {
 	contexts: {} as Record<string, any>,
-	onDidChangeDocumentContext: vi.fn(() => ({ dispose: vi.fn() })),
+	onDidChangeDocumentContext: vi.fn((_handler?: (...args: unknown[]) => void) => ({ dispose: vi.fn() })),
 };
 
 vi.mock('tsyringe', () => ({
@@ -36,23 +36,23 @@ beforeEach(() => {
 
 describe('NotebookCellSlugCodeLensProvider', () => {
 	it('can be instantiated without throwing', () => {
-		expect(() => new NotebookCellSlugCodeLensProvider()).not.toThrow();
+		expect(() => new NotebookCellSlugCodeLensProvider(mockContextService as any)).not.toThrow();
 	});
 
 	it('_initialized is false before first provideCodeLenses call', () => {
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		expect((provider as any)._initialized).toBe(false);
 	});
 
 	it('returns empty array for non-notebook-cell URI scheme', () => {
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('file', 'file:///doc.ttl'));
 		expect(lenses).toEqual([]);
 	});
 
 	it('returns empty array when no slug in context or metadata', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses).toEqual([]);
 	});
@@ -60,7 +60,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 	it('returns codelens when slug is in document context', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses).toHaveLength(1);
 	});
@@ -70,7 +70,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 		const mockCell = { document: { uri: { toString: () => uriStr } }, metadata: { slug: 'meta-slug' } };
 		const mockNotebook = { getCells: () => [mockCell] };
 		(vscode.workspace as any).notebookDocuments = [mockNotebook];
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses).toHaveLength(1);
 	});
@@ -78,7 +78,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 	it('codelens title is #slug', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses[0].command?.title).toBe('#my-cell');
 	});
@@ -86,7 +86,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 	it('codelens command is mentor.command.triggerNotebookCellSlugAction', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses[0].command?.command).toBe('mentor.command.triggerNotebookCellSlugAction');
 	});
@@ -94,20 +94,20 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 	it('codelens tooltip reflects new action', () => {
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const lenses = provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 		expect(lenses[0].command?.tooltip).toBe('Click to edit slug or copy cell URI');
 	});
 
 	it('refresh() fires onDidChangeCodeLenses', () => {
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		const fired: number[] = [];
 		provider.onDidChangeCodeLenses(() => fired.push(1));
 		provider.refresh();
 		expect(fired).toHaveLength(1);
 	});
 
-	it('fires onDidChangeCodeLenses when context changes', () => {
+	it('fires onDidChangeCodeLenses (debounced) when context changes', async () => {
 		let capturedHandler: (() => void) | undefined;
 		mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
 			capturedHandler = handler;
@@ -116,7 +116,7 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 
 		const uriStr = 'vscode-notebook-cell:///test#W0';
 		mockContextService.contexts[uriStr] = { slug: 'my-cell' };
-		const provider = new NotebookCellSlugCodeLensProvider();
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
 		provider.provideCodeLenses(makeDocument('vscode-notebook-cell', uriStr));
 
 		const fired: number[] = [];
@@ -124,6 +124,10 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 
 		expect(capturedHandler).toBeDefined();
 		capturedHandler!();
+
+		// The refresh is coalesced through a 250 ms trailing debouncer.
+		expect(fired).toHaveLength(0);
+		await new Promise(r => setTimeout(r, 300));
 		expect(fired).toHaveLength(1);
 	});
 });

@@ -1,0 +1,88 @@
+PREFIX : <https://w3id.org/mentor/shapes/ontology#>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sh: <http://www.w3.org/ns/shacl#>
+PREFIX shapes: <https://w3id.org/mentor/shapes/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+shapes:ontology a owl:Ontology ;
+	owl:versionIRI <https://w3id.org/mentor/shapes/ontology/1.0.0> ;
+	owl:versionInfo "1.0.0" ;
+	dct:title "Mentor Ontology"@en ;
+	dct:description "Classes, properties and named individuals must have a label, a comment and a reference to the defining ontology."@en ;
+	dct:license <https://creativecommons.org/publicdomain/zero/1.0/> ;
+	dct:creator <https://orcid.org/0000-0003-1876-1628> ;
+	dct:publisher <https://orcid.org/0000-0003-1876-1628> ;
+	dct:modified "2026-07-16"^^xsd:date .
+
+:TermLabelShape a sh:NodeShape ;
+	rdfs:label "Term Label Shape"@en ;
+	rdfs:isDefinedBy shapes:ontology ;
+	sh:targetClass rdfs:Class, owl:Class, rdf:Property, owl:ObjectProperty, owl:DatatypeProperty, owl:AnnotationProperty, owl:NamedIndividual ;
+	sh:message "The term must have at least one rdfs:label or skos:prefLabel."@en ;
+	sh:or (
+		[ sh:nodeKind sh:BlankNode ]
+		[ sh:property [ sh:path [ sh:alternativePath ( rdfs:label skos:prefLabel ) ] ; sh:minCount 1 ] ]
+	) .
+
+:TermCommentShape a sh:NodeShape ;
+	rdfs:label "Term Comment Shape"@en ;
+	rdfs:isDefinedBy shapes:ontology ;
+	sh:targetClass rdfs:Class, owl:Class, rdf:Property, owl:ObjectProperty, owl:DatatypeProperty, owl:AnnotationProperty, owl:NamedIndividual ;
+	sh:message "The term must have at least one rdfs:comment or skos:definition."@en ;
+	sh:or (
+		[ sh:nodeKind sh:BlankNode ]
+		[ sh:property [ sh:path [ sh:alternativePath ( rdfs:comment skos:definition ) ] ; sh:minCount 1 ] ]
+	) .
+
+:TermIsDefinedByShape a sh:NodeShape ;
+	rdfs:label "Term Definition Reference Shape"@en ;
+	rdfs:isDefinedBy shapes:ontology ;
+	sh:targetClass rdfs:Class, owl:Class, rdf:Property, owl:ObjectProperty, owl:DatatypeProperty, owl:AnnotationProperty, owl:NamedIndividual ;
+	sh:message "The term must reference its defining ontology via rdfs:isDefinedBy, and the reference must be an IRI."@en ;
+	sh:or (
+		[ sh:nodeKind sh:BlankNode ]
+		[ sh:property [
+				sh:path rdfs:isDefinedBy ;
+				sh:minCount 1 ;
+				sh:nodeKind sh:IRI
+			] ]
+	) .
+
+:OntologyTitleShape a sh:NodeShape ;
+	rdfs:label "Ontology Title Shape"@en ;
+	rdfs:isDefinedBy shapes:ontology ;
+	sh:targetClass owl:Ontology ;
+	sh:message "The ontology must have at least one dct:title or dc:title."@en ;
+	sh:or (
+		[ sh:nodeKind sh:BlankNode ]
+		[ sh:property [ sh:path [ sh:alternativePath ( dct:title dc:title ) ] ; sh:minCount 1 ] ]
+	) .
+
+:OntologyDescriptionShape a sh:NodeShape ;
+	rdfs:label "Ontology Description Shape"@en ;
+	rdfs:isDefinedBy shapes:ontology ;
+	sh:targetClass owl:Ontology ;
+	sh:message "The ontology must have at least one dct:description or dc:description."@en ;
+	sh:or (
+		[ sh:nodeKind sh:BlankNode ]
+		[ sh:property [ sh:path [ sh:alternativePath ( dct:description dc:description ) ] ; sh:minCount 1 ] ]
+	) .
+
+:PropertyRangeShape a sh:NodeShape ;
+	rdfs:label "Property Range Shape"@en ;
+	rdfs:isDefinedBy shapes:ontology ;
+	sh:targetClass rdf:Property, owl:ObjectProperty, owl:DatatypeProperty ;
+	sh:message "The property must have at least one rdfs:range."@en ;
+	sh:property [ sh:path rdfs:range ; sh:minCount 1 ] .
+
+:PropertyDomainShape a sh:NodeShape ;
+	rdfs:label "Property Domain Shape"@en ;
+	rdfs:isDefinedBy shapes:ontology ;
+	sh:targetClass rdf:Property, owl:ObjectProperty, owl:DatatypeProperty ;
+	sh:message "The property must have at least one rdfs:domain."@en ;
+	sh:property [ sh:path rdfs:domain ; sh:minCount 1 ] .

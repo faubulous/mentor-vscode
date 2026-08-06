@@ -9,12 +9,13 @@ vi.mock('@src/languages', () => ({
 }));
 
 import { DocumentFactory } from '@src/services/document/document-factory';
+import { createTestStore, createTestVocabulary, createTestSettings } from '@src/utilities/mocks/factories';
 
 describe('DocumentFactory', () => {
 	let factory: DocumentFactory;
 
 	beforeEach(() => {
-		factory = new DocumentFactory();
+		factory = new DocumentFactory(createTestStore(), createTestVocabulary(), createTestSettings());
 	});
 
 	describe('supportedLanguages', () => {
@@ -82,6 +83,24 @@ describe('DocumentFactory', () => {
 
 		it('returns false for unknown language', () => {
 			expect(factory.isTripleSourceLanguage('unknown')).toBe(false);
+		});
+	});
+
+	describe('isRdfLanguage', () => {
+		it.each(['turtle', 'sparql', 'trig', 'n3', 'ntriples', 'nquads'])('returns true for %s', (languageId) => {
+			expect(factory.isRdfLanguage(languageId)).toBe(true);
+		});
+
+		it('returns false for xml (RDF/XML is not a first-class authoring language here)', () => {
+			expect(factory.isRdfLanguage('xml')).toBe(false);
+		});
+
+		it('returns false for json (notebook)', () => {
+			expect(factory.isRdfLanguage('json')).toBe(false);
+		});
+
+		it('returns false for unknown language', () => {
+			expect(factory.isRdfLanguage('unknown')).toBe(false);
 		});
 	});
 
@@ -291,25 +310,25 @@ describe('DocumentFactory', () => {
 		});
 	});
 
-	describe('getLanguageInfo', () => {
+	describe('getSupportedLanguageInfoFromId', () => {
 		it('returns info for turtle', async () => {
-			const result = await factory.getLanguageInfo('turtle');
+			const result = await factory.getSupportedLanguageInfoFromId('turtle');
 
 			expect(result).toBeDefined();
 			expect(result?.id).toBe('turtle');
 		});
 
 		it('returns undefined for unknown language', async () => {
-			const result = await factory.getLanguageInfo('unknown');
+			const result = await factory.getSupportedLanguageInfoFromId('unknown');
 
 			expect(result).toBeUndefined();
 		});
 	});
 
-	describe('getLanguageInfoFromMimeType', () => {
+	describe('getSupportedLanguageInfoFromMimeType', () => {
 		it('returns undefined when mimetypes are not populated from package.json', async () => {
 			// Without package.json (mocked FS throws), mimetypes are empty
-			const result = await factory.getLanguageInfoFromMimeType('text/turtle');
+			const result = await factory.getSupportedLanguageInfoFromMimeType('text/turtle');
 
 			expect(result).toBeUndefined();
 		});
@@ -327,7 +346,7 @@ describe('DocumentFactory', () => {
 				})) as any
 			);
 
-			const result = await factory.getLanguageInfoFromMimeType('text/turtle');
+			const result = await factory.getSupportedLanguageInfoFromMimeType('text/turtle');
 
 			expect(result).toBeDefined();
 			expect(result?.id).toBe('turtle');
@@ -419,7 +438,7 @@ describe('DocumentFactory', () => {
 			expect(sparql?.icon).toBe('sparql-file');
 		});
 
-		it('returns file icon for an unknown language id', async () => {
+		it('does not list the notebook container language (json)', async () => {
 			vi.spyOn(vscode.workspace.fs, 'readFile').mockResolvedValueOnce(
 				new TextEncoder().encode(JSON.stringify({
 					contributes: {
@@ -430,14 +449,15 @@ describe('DocumentFactory', () => {
 				})) as any
 			);
 
+			// The .mnb notebook container maps to 'json', but json is not a
+			// document context language: create() has no case for it.
 			const result = await factory.getSupportedLanguagesInfo();
-			const json = result.find(l => l.id === 'json');
 
-			expect(json?.icon).toBe('rdf-file');
+			expect(result.find(l => l.id === 'json')).toBeUndefined();
 		});
 	});
 
-	describe('getLanguageInfo (with package.json)', () => {
+	describe('getSupportedLanguageInfoFromId (with package.json)', () => {
 		beforeEach(() => {
 			(vscode.extensions as any).getExtension = vi.fn(() => ({ extensionPath: '/fake/ext' }));
 		});
@@ -458,7 +478,7 @@ describe('DocumentFactory', () => {
 				})) as any
 			);
 
-			const result = await factory.getLanguageInfo('turtle');
+			const result = await factory.getSupportedLanguageInfoFromId('turtle');
 
 			expect(result?.name).toBe('Turtle');
 			expect(result?.mimetypes).toContain('text/turtle');

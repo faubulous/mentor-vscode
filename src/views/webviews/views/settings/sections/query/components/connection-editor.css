@@ -1,0 +1,155 @@
+/*
+ * Connection-specific styling. Generic modal-form layout (container, sections, labels, tabs,
+ * form-actions, section-label, label-optional, …) lives in the shared `modal-form.css`; the
+ * connection editor's root carries both the `modal-form` and `connection-editor-container`
+ * classes so these rules layer on top of the shared ones.
+ */
+
+.connection-editor-container vscode-single-select {
+	width: 100px;
+}
+
+.connection-editor-container vscode-single-select.wide {
+	width: 175px;
+}
+
+.connection-editor-container vscode-progress-bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	border-radius: 4px 4px 0 0;
+	overflow: hidden;
+}
+
+/*
+ * Reflect the connection test result on the surrounding modal window border
+ * rather than a separate status bar. The modal already draws a 1px solid border
+ * (see modal-dialog.css), so we only recolor it based on the editor's status class.
+ */
+.modal-dialog:has(.connection-editor-container.status-success) {
+	border-color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.modal-dialog:has(.connection-editor-container.status-error) {
+	border-color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.form-actions .form-status-text {
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.form-actions .form-status-icon.icon-success {
+	color: var(--vscode-notebookStatusSuccessIcon-foreground);
+}
+
+.form-actions .form-status-icon.icon-error {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.connection-editor-container .section-endpoint-url {
+	align-items: center;
+	gap: 0.5em;
+}
+
+.connection-editor-container .section-endpoint-url vscode-textfield {
+	flex: 1;
+}
+
+.connection-editor-container .section-endpoint-description vscode-textfield {
+	width: 100%;
+}
+
+.connection-editor-container .section-endpoint-status {
+	margin-top: 0.5em;
+	border-radius: 3px;
+}
+
+.connection-editor-container .section-endpoint-status.status-error {
+	padding: 0.5em 0.7em;
+	color: var(--mentor-status-error-foreground);
+	background-color: var(--mentor-status-error-background);
+}
+
+.connection-editor-container .section-endpoint-status.status-error h4 {
+	margin-top: 0;
+	margin-bottom: 0.5em;
+}
+
+.connection-editor-container .section-endpoint-status.status-error p {
+	margin: 0;
+}
+
+.connection-editor-container .section-store-type-row {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	gap: 1.5em;
+}
+
+.connection-editor-container .section-graph-loading {
+	display: flex;
+	flex-direction: row;
+	gap: 0.5em;
+}
+
+.connection-editor-container .section-graph-loading-interval {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.connection-editor-container .section-graph-loading-interval vscode-textfield {
+	width: 60px;
+}
+
+.connection-editor-container .section-graph-loading-interval vscode-textfield.reload-time {
+	width: auto;
+}
+
+.connection-editor-container section.auth {
+	display: flex;
+	flex-direction: row;
+	gap: 1.5em;
+}
+
+.connection-editor-container section.auth div:first-child {
+	max-width: 200px;
+}
+
+.connection-editor-container section.auth .vertical-separator {
+	border-left: 1px solid var(--vscode-editorWidget-border);
+	padding-left: 1.5em;
+}
+
+.connection-editor-container section.auth div>vscode-form-group {
+	margin: 0;
+}
+
+.connection-editor-container section.auth div vscode-label {
+	margin-top: 1em;
+}
+
+.connection-editor-container section.auth div vscode-label:first-child {
+	margin-top: -5px;
+}
+
+/* Scope-compatibility warning shown right next to the store dropdown. Shares
+   the row with the select (the row is a flex container) and uses the warning
+   color for both the text and a translucent background tint. */
+.connection-editor-container .store-scope-warning {
+	display: flex;
+    align-items: center;
+    gap: 0.5em;
+	flex: 1;
+	min-width: 0;
+	color: var(--vscode-editorWarning-foreground);
+	background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 12%, transparent);
+	border-radius: var(--vscode-cornerRadius-small, 2px);
+	padding: var(--mentor-space-2, 4px) var(--mentor-space-3, 8px);
+	font-size: 0.9em;
+	line-height: 1.4;
+}

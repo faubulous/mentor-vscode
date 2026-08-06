@@ -1,0 +1,1228 @@
+body {
+	padding: 0;
+}
+
+vscode-textfield .root {
+	overflow: hidden !important;
+	border-radius: var(--mentor-radius-md);
+}
+
+.settings-panel {
+	display: flex;
+	height: 100vh;
+	overflow: hidden;
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	color: var(--vscode-foreground);
+	background: var(--vscode-editor-background);
+}
+
+/* Navigation */
+
+.settings-nav {
+	width: 220px;
+	min-width: 180px;
+	border-right: var(--mentor-border-panel);
+	overflow-y: auto;
+	padding: var(--mentor-space-4) 0;
+	flex-shrink: 0;
+}
+
+.settings-nav-group {
+	margin-bottom: var(--mentor-space-2);
+}
+
+.settings-nav-group-header {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+	padding: var(--mentor-space-2) var(--mentor-space-5) var(--mentor-space-2) var(--mentor-space-4);
+	cursor: pointer;
+	user-select: none;
+	color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+	border-radius: var(--mentor-radius-md);
+	margin: 0 var(--mentor-space-2);
+}
+
+.settings-nav-group-header:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+/* Selection colors follow the focus state, matching native VS Code lists:
+   the active-selection colors while the navigation has focus, the
+   inactive-selection colors otherwise. */
+.settings-nav-group-header.active {
+	background: var(--vscode-list-inactiveSelectionBackground);
+	color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-foreground));
+	font-weight: 600;
+}
+
+.settings-nav:focus-within .settings-nav-group-header.active {
+	background: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+}
+
+/* The keyboard focus indicator, drawn inside the row like in native lists. */
+.settings-nav-group-header:focus-visible,
+.settings-nav-item:focus-visible {
+	outline: 1px solid var(--vscode-list-focusOutline, var(--vscode-focusBorder));
+	outline-offset: -1px;
+}
+
+.settings-nav-group-header .codicon {
+	font-size: 12px;
+	opacity: 0.7;
+	transition: transform 0.15s ease;
+}
+
+.settings-nav-group-header.collapsed .codicon {
+	transform: rotate(-90deg);
+}
+
+.settings-nav-items {
+	display: flex;
+	flex-direction: column;
+}
+
+.settings-nav-item {
+	padding: var(--mentor-space-2) var(--mentor-space-5) var(--mentor-space-2) 28px;
+	cursor: pointer;
+	border-radius: var(--mentor-radius-md);
+	margin: 1px var(--mentor-space-2);
+	color: var(--vscode-foreground);
+	transition: background 0.1s;
+}
+
+.settings-nav-item:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.settings-nav-item.active {
+	background: var(--vscode-list-inactiveSelectionBackground);
+	color: var(--vscode-list-inactiveSelectionForeground, var(--vscode-foreground));
+	font-weight: 600;
+}
+
+.settings-nav:focus-within .settings-nav-item.active {
+	background: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+}
+
+/* Content area */
+
+.settings-content {
+	flex: 1;
+	overflow-y: auto;
+}
+
+.settings-content-inner {
+	max-width: 660px;
+	padding: var(--mentor-space-7) 32px;
+}
+
+/* Panel header */
+
+.settings-panel {
+	flex-direction: column;
+}
+
+.panel-header {
+	border-bottom: var(--mentor-border-panel);
+}
+
+.panel-header-inner {
+	display: flex;
+	gap: var(--mentor-space-5);
+	max-width: 900px;
+	align-items: center;
+	justify-content: flex-start;
+	padding: var(--mentor-space-3) var(--mentor-space-6);
+	flex-shrink: 0;
+}
+
+.panel-header-brand {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	align-content: center;
+	gap: var(--mentor-space-4);
+	width: 198px;
+}
+
+.panel-header-title-wrapper {
+	display: flex;
+	flex-direction: row;
+	align-items: baseline;
+	gap: var(--mentor-space-4);
+}
+
+.panel-header-title {
+	font-weight: 600;
+	font-size: 1.05em;
+}
+
+.panel-header-version {
+	font-size: 0.8em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.panel-header-search {
+	flex: 1;
+	max-width: 300px;
+	margin-right: auto;
+}
+
+.panel-header-help {
+	flex-shrink: 0;
+}
+
+.panel-status-banner {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var(--mentor-space-3);
+	padding: var(--mentor-space-3) var(--mentor-space-6);
+	background-color: var(--vscode-statusBarItem-warningBackground);
+	color: var(--vscode-statusBarItem-warningForeground);
+	border-bottom: var(--mentor-border-panel);
+	font-size: 0.9em;
+}
+
+.panel-status-banner vscode-icon {
+	flex-shrink: 0;
+}
+
+/* ── Modified tag ───────────────────────────────────────────── */
+
+.setting-modified-tag {
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	padding: 1px 5px;
+	border-radius: var(--mentor-radius-md);
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	opacity: 0.75;
+	flex-shrink: 0;
+	margin: 0 var(--mentor-space-2);
+	align-self: center;
+	white-space: nowrap;
+}
+
+.setting-reset-button {
+	background: none;
+	border: none;
+	padding: 0;
+	margin: 0 var(--mentor-space-2);
+	font: inherit;
+	color: var(--vscode-textLink-foreground);
+	cursor: pointer;
+	align-self: center;
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+.setting-reset-button:hover {
+	color: var(--vscode-textLink-activeForeground);
+	text-decoration: underline;
+}
+
+.setting-reset-button:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 2px;
+	border-radius: var(--mentor-radius-sm);
+}
+
+.search-field-wrapper {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.search-field-wrapper vscode-textfield {
+	width: 100%;
+}
+
+.search-field-icon {
+	position: absolute;
+	left: 8px;
+	z-index: 1;
+	font-size: 13px;
+	opacity: 0.5;
+	pointer-events: none;
+	color: var(--vscode-foreground);
+}
+
+.search-field-wrapper vscode-textfield input {
+	padding-left: 28px !important;
+}
+
+.settings-body {
+	display: flex;
+	flex: 1;
+	overflow: hidden;
+}
+
+.setting-row.layout-row {
+	display: flex;
+	flex-direction: row;
+	gap: 1em;
+	align-items: baseline;
+}
+
+/* Editor font for all code-like inputs */
+
+.settings-content vscode-textfield,
+.string-list-item vscode-textfield,
+.object-list-item vscode-textfield {
+	/* --vscode-font-family: var(--vscode-editor-font-family); */
+	min-height: 30px;
+}
+
+vscode-textarea.monospace {
+	font-family: var(--vscode-editor-font-family, monospace) !important;
+	font-size: var(--vscode-editor-font-size, 14px);
+	font-weight: var(--vscode-editor-font-weight, normal);
+	background-color: var(--vscode-settings-textInputBackground, #313131);
+}
+
+/* Text buttons */
+
+.text-button {
+	background: transparent;
+	border: none;
+	color: var(--vscode-textLink-foreground, #4fc1ff);
+	cursor: pointer;
+	padding: var(--mentor-space-2) 0;
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	text-align: left;
+}
+
+.text-button:hover {
+	color: var(--vscode-textLink-activeForeground);
+	text-decoration: underline;
+}
+
+/* Section header */
+
+.settings-subsection {
+	margin-top: var(--mentor-space-7);
+}
+
+.settings-group-title {
+	font-size: 1.1em;
+	font-weight: 600;
+	margin: 0 0 10px;
+}
+
+/* Setting rows */
+
+.settings-list-section,
+.setting-row {
+	margin-bottom: 1em;
+}
+
+.settings-list-section,
+.setting-row {
+	padding: 0.5em 0 0.5em 12px;
+	border-left: 2px solid transparent;
+	margin-left: -1em;
+}
+
+.setting-row-modified {
+	border-left-color: rgba(204, 167, 0, 0.55);
+}
+
+.setting-row-header {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	margin-bottom: var(--mentor-space-2);
+}
+
+.setting-label {
+	font-weight: 500;
+	font-size: 1.1em;
+	line-height: 1.4em;
+	flex: 0 0 auto;
+}
+
+.setting-leader {
+	flex: 1;
+	min-width: 16px;
+	height: 0;
+	border-bottom: 1px dotted currentColor;
+	opacity: 0.2;
+	margin: 0 var(--mentor-space-4);
+	align-self: center;
+}
+
+.setting-description {
+	font-size: 1em;
+	color: var(--vscode-descriptionForeground);
+	margin: 0 1.5em 1em 0;
+	line-height: 1.4em;
+}
+
+.setting-control {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--mentor-space-4);
+}
+
+/* Template rows stack a right-aligned "Edit" action above a clickable editor-styled preview. */
+.template-control {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	gap: 4px;
+}
+
+.template-editor-actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+/* A read-only preview that mimics the code editor and opens the real editor on click. */
+.template-preview {
+	position: relative;
+	box-sizing: border-box;
+	width: 100%;
+	max-height: 280px;
+	overflow: hidden;
+	padding: 8px 10px;
+	border: 1px solid var(--vscode-settings-textInputBorder, var(--vscode-input-border, transparent));
+	border-radius: var(--mentor-radius-md);
+	background-color: var(--vscode-settings-textInputBackground, #313131);
+	color: var(--vscode-foreground);
+	cursor: pointer;
+	font-family: var(--vscode-editor-font-family, monospace);
+	font-size: var(--vscode-editor-font-size, 14px);
+	font-weight: var(--vscode-editor-font-weight, normal);
+	line-height: 1.5;
+}
+
+.template-preview:hover {
+	border-color: var(--vscode-focusBorder);
+}
+
+.template-preview[aria-disabled="true"] {
+	cursor: default;
+}
+
+.template-preview[aria-disabled="true"]:hover {
+	border-color: var(--vscode-settings-textInputBorder, var(--vscode-input-border, transparent));
+}
+
+.template-preview:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 1px;
+}
+
+.template-preview-code {
+	margin: 0;
+	white-space: pre;
+	font: inherit;
+	min-height: 12em;
+}
+
+/* Documentation link pinned to the top-right corner of the preview; revealed
+   on hover or keyboard focus, mirroring the click-to-edit hint. */
+.template-preview-docs {
+	position: absolute;
+	top: 6px;
+	right: 8px;
+	z-index: 1;
+	padding: 1px 6px;
+	border-radius: var(--mentor-radius-sm, 4px);
+	background-color: var(--vscode-editorWidget-background, var(--vscode-editorHoverWidget-background, #252526));
+	color: var(--vscode-descriptionForeground);
+	font-family: var(--vscode-font-family);
+	font-size: 11px;
+	line-height: 1.4;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 80ms ease-in-out;
+}
+
+.template-preview:hover .template-preview-docs,
+.template-preview:focus-within .template-preview-docs {
+	pointer-events: auto;
+	opacity: 1;
+}
+
+.template-preview-docs a {
+	color: var(--vscode-textLink-foreground);
+	text-decoration: none;
+}
+
+.template-preview-docs a:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+	text-decoration: underline;
+}
+
+/* Hint chip revealed on hover/focus to clarify the click-to-edit behaviour. */
+.template-preview-hint {
+	position: absolute;
+	bottom: 6px;
+	right: 8px;
+	max-width: calc(100% - 16px);
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 2px 8px;
+	border-radius: var(--mentor-radius-sm, 4px);
+	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, transparent));
+	background-color: var(--vscode-editorWidget-background, var(--vscode-editorHoverWidget-background, #252526));
+	color: var(--vscode-editorWidget-foreground, var(--vscode-descriptionForeground));
+	font-family: var(--vscode-font-family);
+	font-size: 11px;
+	line-height: 1.4;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 80ms ease-in-out;
+}
+
+.template-preview:hover .template-preview-hint,
+.template-preview:focus-within .template-preview-hint {
+	opacity: 1;
+}
+
+.template-preview-hint-text {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Link-style reset action inside the hint chip; clickable even though the chip itself is not. */
+.template-preview-hint-reset {
+	flex: none;
+	pointer-events: auto;
+	cursor: pointer;
+	padding: 0;
+	border: none;
+	background: none;
+	font: inherit;
+	white-space: nowrap;
+	color: var(--vscode-textLink-foreground);
+}
+
+.template-preview-hint-reset:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+	text-decoration: underline;
+}
+
+.template-preview-hint-reset:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: 1px;
+}
+
+.template-preview-placeholder {
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+}
+
+/* Muted: the shown text is an inherited fallback (e.g. the global default), not an explicit value. */
+.template-preview-muted .template-preview-code {
+	color: var(--vscode-descriptionForeground);
+}
+
+/* The language selector doubles as the row heading, so it sits inline with the label text. */
+.template-language-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.75em;
+}
+
+.template-language-label vscode-single-select {
+	font-weight: normal;
+	font-size: 0.95rem;
+}
+
+.setting-control vscode-textfield,
+.setting-control vscode-textarea {
+	flex: 1;
+}
+
+.setting-control .full-width {
+	width: 100%;
+}
+
+/* Width presets for short / numeric inputs, overriding the full-width default. */
+
+.setting-control vscode-textfield.setting-input-sm {
+	flex: 0 0 auto;
+	width: 90px;
+}
+
+.setting-control vscode-textfield.setting-input-md {
+	flex: 0 0 auto;
+	width: 160px;
+}
+
+/* Unit suffix rendered inside the input box via the `content-after` slot. */
+
+.setting-input-suffix {
+	color: var(--vscode-descriptionForeground);
+	padding-right: 6px;
+	font-size: 12px;
+	pointer-events: none;
+}
+
+/* Scope selector */
+
+.scope-selector {
+	appearance: none;
+	-webkit-appearance: none;
+	background: var(--vscode-dropdown-background);
+	color: var(--vscode-dropdown-foreground);
+	border: 1px solid var(--vscode-dropdown-border);
+	border-radius: var(--mentor-radius-sm);
+	padding: 2px 20px 2px 6px;
+	font-size: 11px;
+	font-family: var(--vscode-font-family);
+	cursor: pointer;
+	outline: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 4px center;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.scope-selector:focus {
+	border-color: var(--vscode-focusBorder);
+}
+
+.scope-selector.source-default {
+	opacity: 0.45;
+}
+
+.scope-selector.source-user {
+	border-color: var(--vscode-settings-modifiedItemIndicator, var(--vscode-focusBorder));
+}
+
+.scope-selector.source-workspace {
+	border-color: var(--vscode-settings-modifiedItemIndicator, var(--vscode-focusBorder));
+}
+
+/* ── List editors ────────────────────────────────────────────── */
+
+.string-list-editor {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+}
+
+.string-list-item {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+	border-radius: var(--mentor-radius-md);
+}
+
+.string-list-item.dragging {
+	opacity: 0.35;
+}
+
+/* Live match count shown as after-content of a list entry: a single
+   right-aligned line taking only the space it needs, sitting left of the
+   remove icon. */
+.string-list-item .string-list-count {
+	flex: 0 0 auto;
+	white-space: nowrap;
+	text-align: right;
+}
+
+/* The count opens the pattern editor when one is wired up. The shared suffix
+   class disables pointer events; re-enable them so the count is clickable. */
+.string-list-item .string-list-count-action {
+	color: var(--vscode-textLink-foreground);
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.string-list-item .string-list-count-action:hover {
+	color: var(--vscode-textLink-activeForeground, var(--vscode-textLink-foreground));
+	text-decoration: underline;
+}
+
+/* Warning icon shown as after-content of an invalid list entry. */
+.string-list-item .string-list-warning {
+	color: var(--vscode-editorWarning-foreground);
+	cursor: help;
+}
+
+/* Drop indicators on items — shift items apart and show a prominent line */
+.string-list-item.drop-before {
+	margin-top: 20px;
+}
+
+.string-list-item.drop-after {
+	margin-bottom: 20px;
+}
+
+.string-list-item.drop-before::before,
+.string-list-item.drop-after::after {
+	content: '';
+	position: absolute;
+	left: 10px;
+	right: 0;
+	height: 3px;
+	background: var(--vscode-focusBorder);
+	border-radius: 1.5px;
+	pointer-events: none;
+}
+
+.string-list-item.drop-before::before {
+	top: -12px;
+}
+
+.string-list-item.drop-after::after {
+	bottom: -12px;
+}
+
+.string-list-item:not([draggable="true"]) {
+	padding-left: 2px;
+}
+
+.drag-handle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: grab;
+	opacity: 0.3;
+	flex-shrink: 0;
+	font-size: 14px;
+	padding: 2px;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.string-list-item:hover .drag-handle {
+	opacity: 0.65;
+}
+
+.string-list-item vscode-textfield {
+	flex: 1;
+}
+
+.string-list-add {
+	margin-top: var(--mentor-space-2);
+}
+
+.drag-handle-spacer {
+	flex-shrink: 0;
+	width: 18px;
+}
+
+.list-remove-spacer {
+	flex-shrink: 0;
+	width: 22px;
+}
+
+.list-remove-button {
+	flex-shrink: 0;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	color: var(--vscode-foreground);
+	padding: 0;
+	border-radius: var(--mentor-radius-md);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+}
+
+.list-remove-button:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.list-remove-button .codicon {
+	font-size: 14px;
+}
+
+/* Object list editor */
+
+.object-list-editor {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-2);
+	width: 100%;
+}
+
+.object-list-header {
+	display: flex;
+	gap: var(--mentor-space-3);
+	align-items: center;
+	padding-bottom: var(--mentor-space-2);
+	border-bottom: var(--mentor-border-panel);
+	margin-bottom: var(--mentor-space-1);
+}
+
+.object-list-col-header {
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+	font-weight: 500;
+	flex: 1;
+}
+
+.object-list-col-header.col-prefix {
+	flex: 0 0 110px;
+}
+
+.object-list-remove-spacer {
+	flex: 0 0 22px;
+}
+
+.object-list-item {
+	display: flex;
+	align-items: center;
+	gap: var(--mentor-space-3);
+}
+
+.object-list-item vscode-textfield {
+	flex: 1;
+	min-width: 0;
+}
+
+.object-list-item .col-prefix {
+	flex: 0 0 110px;
+}
+
+/* ── Settings list (stores / connections / validation profiles) ── */
+
+.settings-list-container {
+	display: flex;
+	flex-direction: column;
+	gap: 6.5px;
+}
+
+.settings-list-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-4);
+	margin-bottom: 1em;
+}
+
+.settings-list-empty {
+	margin: 0;
+	padding: var(--mentor-space-2) 0;
+	font-size: 0.9em;
+	color: var(--vscode-descriptionForeground);
+	font-style: italic;
+}
+
+.settings-list-empty strong {
+	font-style: normal;
+	font-weight: 600;
+}
+
+.settings-list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--mentor-space-2);
+	margin-bottom: var(--mentor-space-2);
+}
+
+.settings-item {
+	display: flex;
+	align-items: flex-start;
+	padding: var(--mentor-space-2) var(--mentor-space-5) var(--mentor-space-2) var(--mentor-space-3);
+	background: var(--vscode-list-hoverBackground);
+	border-radius: var(--vscode-cornerRadius-small);
+	cursor: pointer;
+	transition: background-color 0.1s ease;
+}
+
+.settings-item:hover,
+.settings-item.selected {
+	background: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-inactiveSelectionForeground);
+}
+
+.settings-item:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
+}
+
+/* Shared success/warning/error row status (see SettingsListItem's `status`
+   prop and the connection-test classes): tints the row background and colors
+   the leading icon and the right-aligned status message in the status color.
+   The colors are the shared --mentor-status-* tokens, so the rows stay in
+   sync with the stats dashboards. Hover/selection keeps a visible tint by
+   mixing the status color into the selection background. */
+.settings-item.testing {
+	background: color-mix(in srgb, var(--vscode-textLink-activeForeground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.settings-item.testing:hover,
+.settings-item.testing.selected {
+	background: color-mix(in srgb, var(--vscode-textLink-activeForeground) 12%, var(--vscode-list-activeSelectionBackground));
+}
+
+.settings-item.status-success,
+.settings-item.test-success {
+	background: color-mix(in srgb, var(--mentor-status-success-foreground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.settings-item.status-success:hover,
+.settings-item.status-success.selected,
+.settings-item.test-success:hover,
+.settings-item.test-success.selected {
+	background: color-mix(in srgb, var(--mentor-status-success-foreground) 12%, var(--vscode-list-activeSelectionBackground));
+}
+
+.settings-item.status-success .settings-item-icon,
+.settings-item.test-success .settings-item-icon {
+	color: var(--mentor-status-success-foreground);
+}
+
+.settings-item.status-warning {
+	background: color-mix(in srgb, var(--mentor-status-warning-foreground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.settings-item.status-warning:hover,
+.settings-item.status-warning.selected {
+	background: color-mix(in srgb, var(--mentor-status-warning-foreground) 12%, var(--vscode-list-activeSelectionBackground));
+}
+
+.settings-item.status-warning .settings-item-icon {
+	color: var(--mentor-status-warning-foreground);
+}
+
+.settings-item.status-error,
+.settings-item.test-error {
+	background: color-mix(in srgb, var(--mentor-status-error-foreground) 12%, var(--vscode-list-hoverBackground));
+}
+
+.settings-item.status-error:hover,
+.settings-item.status-error.selected,
+.settings-item.test-error:hover,
+.settings-item.test-error.selected {
+	background: color-mix(in srgb, var(--mentor-status-error-foreground) 12%, var(--vscode-list-activeSelectionBackground));
+}
+
+.settings-item.status-error .settings-item-icon,
+.settings-item.test-error .settings-item-icon {
+	color: var(--mentor-status-error-foreground);
+}
+
+.settings-item-status {
+	margin-left: auto;
+	flex-shrink: 0;
+	white-space: nowrap;
+	font-size: 0.85em;
+	line-height: 1.5em;
+}
+
+.settings-item.status-success .settings-item-status {
+	color: var(--mentor-status-success-foreground);
+}
+
+.settings-item.status-warning .settings-item-status {
+	color: var(--mentor-status-warning-foreground);
+}
+
+.settings-item.status-error .settings-item-status {
+	color: var(--mentor-status-error-foreground);
+}
+
+.settings-item-icon {
+	margin-right: var(--mentor-space-4);
+	margin-top: 6px;
+	flex-shrink: 0;
+	color: var(--vscode-symbolIcon-enumeratorMemberForeground);
+}
+
+.settings-item-icon.icon-testing {
+	color: var(--vscode-textLink-activeForeground);
+	animation: pulse 1s ease-in-out infinite;
+}
+
+.settings-item-icon.icon-success {
+	color: var(--mentor-status-success-foreground);
+}
+
+.settings-item-icon.icon-error {
+	color: var(--mentor-status-error-foreground);
+}
+
+.settings-item-body {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 0.25em;
+	padding: 3px 0;
+}
+
+.settings-item-titlerow {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var(--mentor-space-3);
+	min-width: 0;
+}
+
+.settings-item-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	line-height: 1.4;
+}
+
+/* Muted version number rendered next to an item's name (e.g. preset shape versions). */
+.settings-item-name .settings-item-version {
+	margin-left: var(--mentor-space-3);
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.settings-item-subline {
+	display: flex;
+	flex-direction: row;
+	align-items: baseline;
+	gap: var(--mentor-space-3);
+	min-width: 0;
+}
+
+.settings-item-description {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+	line-height: 1.5em;
+	min-width: 0;
+}
+
+/* Placeholder shown by SettingsItemDescription for items without a description. */
+.settings-item-description-empty {
+	font-style: italic;
+	opacity: 0.7;
+}
+
+.settings-item-meta {
+	display: flex;
+	flex-direction: row;
+	gap: var(--mentor-space-6);
+	min-width: 0;
+	flex: 1;
+	font-size: 0.85em;
+	color: var(--vscode-descriptionForeground);
+	line-height: 1.5em;
+}
+
+.settings-item-meta-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3em;
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+.settings-item-meta-description {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: block;
+}
+
+.settings-item-meta-item.graph-status-error {
+	color: var(--vscode-notebookStatusErrorIcon-foreground);
+}
+
+.settings-item-meta-dot {
+	flex-shrink: 0;
+	opacity: 0.6;
+}
+
+.settings-item-meta-icon {
+	font-size: 1em;
+}
+
+.settings-item-lock {
+	font-size: 14px;
+	color: var(--vscode-descriptionForeground);
+	flex-shrink: 0;
+}
+
+
+.settings-item-actions {
+	display: flex;
+	gap: var(--mentor-space-2);
+	opacity: 0;
+	/* Hidden actions stay out of the tab order so Tab lands on the row itself,
+	   not on a button inside a non-active (roving tabindex -1) row. */
+	visibility: hidden;
+	transition: opacity 0.1s ease, visibility 0.1s ease;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.settings-item:hover .settings-item-actions,
+.settings-item:focus-within .settings-item-actions,
+.settings-item.selected .settings-item-actions {
+	opacity: 1;
+	visibility: visible;
+}
+
+/* Template rows keep their edit action permanently visible: the row click uses a
+   template (creates a profile), so the edit affordance must always be reachable. */
+.settings-item.actions-persistent .settings-item-actions {
+	opacity: 1;
+	visibility: visible;
+}
+
+/* Reserves a button's worth of space without ever becoming visible or interactive,
+   so action-less rows match the height of rows that have buttons. */
+.settings-item-action-placeholder {
+	visibility: hidden;
+	pointer-events: none;
+}
+
+@keyframes pulse {
+
+	0%,
+	100% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.4;
+	}
+}
+
+.connection-add-link {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--mentor-space-2);
+	color: var(--vscode-textLink-foreground);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: var(--mentor-space-2) 0;
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	text-decoration: none;
+}
+
+.connection-add-link:hover {
+	color: var(--vscode-textLink-activeForeground);
+	text-decoration: underline;
+}
+
+/* Language tab bar */
+
+.lang-tab-bar-row {
+	display: flex;
+	align-items: flex-end;
+	border-bottom: var(--mentor-border-panel);
+	margin-bottom: var(--mentor-space-6);
+}
+
+.lang-tab-bar {
+	display: flex;
+	gap: 0;
+	flex: 1;
+}
+
+.lang-tab {
+	padding: var(--mentor-space-3) 14px;
+	cursor: pointer;
+	border: none;
+	background: transparent;
+	color: var(--vscode-foreground);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+}
+
+.lang-tab:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.lang-tab.active {
+	border-bottom-color: var(--vscode-focusBorder);
+	color: var(--vscode-textLink-activeForeground, var(--vscode-foreground));
+}
+
+/* Experimental badge */
+
+.badge-experimental {
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	padding: 1px 5px;
+	border-radius: var(--mentor-radius-md);
+	background: var(--vscode-settings-modifiedItemIndicator, var(--vscode-activityBarBadge-background, #cc6633));
+	color: var(--vscode-activityBarBadge-foreground, #fff);
+	vertical-align: middle;
+	margin-left: var(--mentor-space-3);
+}
+
+/* Search results */
+
+.search-result-item {
+	padding: 10px var(--mentor-space-4);
+	cursor: pointer;
+	border-bottom: var(--mentor-border-panel);
+	border-radius: var(--vscode-cornerRadius-small);
+	transition: background-color 0.1s ease;
+}
+
+.search-result-item:last-child {
+	border-bottom: none;
+}
+
+.search-result-item:hover {
+	background: var(--vscode-list-hoverBackground);
+}
+
+.search-result-item.selected {
+	background: var(--vscode-list-activeSelectionBackground);
+	color: var(--vscode-list-activeSelectionForeground);
+}
+
+.search-result-item:focus-visible {
+	outline: 1px solid var(--vscode-focusBorder);
+	outline-offset: -1px;
+}
+
+.search-result-breadcrumb {
+	font-size: 0.8em;
+	color: var(--vscode-descriptionForeground);
+	margin-bottom: var(--mentor-space-1);
+}
+
+.search-result-label {
+	font-weight: 500;
+	font-size: 1.05em;
+	margin-bottom: var(--mentor-space-1);
+}
+
+.search-result-description {
+	font-size: 0.9em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.search-empty {
+	color: var(--vscode-descriptionForeground);
+	padding: var(--mentor-space-7) 0;
+	text-align: center;
+}

@@ -34,7 +34,7 @@ let serializer: NotebookSerializer;
 
 beforeEach(() => {
 	vi.spyOn(vscode.workspace, 'registerNotebookSerializer').mockReturnValue({ dispose: vi.fn() });
-	serializer = new NotebookSerializer();
+	serializer = new NotebookSerializer({ subscriptions: [] } as any);
 });
 
 describe('NotebookSerializer', () => {

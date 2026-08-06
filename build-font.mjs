@@ -53,21 +53,12 @@ function buildSvgFont() {
   });
 }
 
-function generateCss() {
-  const lines = [
-    `@font-face {`,
-    `  font-family: "${fontName}";`,
-    `  src: url('${fontName}.woff') format('woff');`,
-    `}`,
-    ``,
-    `.mentor-icon {`,
-    `  font-family: '${fontName}' !important;`,
-    `  font-style:normal;`,
-    `  -webkit-font-smoothing: antialiased;`,
-    `  -moz-osx-font-smoothing: grayscale;`,
-    `}`,
-    ``,
-  ];
+// Builds a { name: codepoint } map of every glyph in the font. This is the
+// single source of truth for the glyph → codepoint assignment; build.js folds
+// it into codicon.css (as .codicon-mentor-* rules) so the custom icons are
+// usable via <vscode-icon name="mentor-..."> without a second stylesheet.
+function generateGlyphMap() {
+  const map = {};
 
   for (const [index, file] of glyphFiles.entries()) {
     const match = file.match(/^u([0-9a-fA-F]+)-(.+)\.svg$/);
@@ -76,11 +67,10 @@ function generateCss() {
     const codepoint = (0xE000 + index).toString(16);
     const name = match[2];
 
-    lines.push(`.mentor-icon.${name}::before { content: "\\${codepoint}"; }`);
+    map[name] = codepoint;
   }
 
-  lines.push('');
-  return lines.join('\n');
+  return map;
 }
 
 async function generateFont() {
@@ -112,12 +102,12 @@ async function generateFont() {
 
     console.log(`WOFF written to: ${woffPath}`);
 
-    // Step 3: Generate CSS
-    const css = generateCss();
-    const cssPath = path.join(targetDir, `${fontName}.css`);
-    fs.writeFileSync(cssPath, css, 'utf-8');
+    // Step 3: Write the glyph map consumed by build.js
+    const glyphMap = generateGlyphMap();
+    const mapPath = path.join(targetDir, `${fontName}.json`);
+    fs.writeFileSync(mapPath, JSON.stringify(glyphMap, null, 2) + '\n', 'utf-8');
 
-    console.log(`CSS written to: ${cssPath}`);
+    console.log(`Glyph map written to: ${mapPath}`);
 
     console.log('\nFont creation successful.');
   } catch (e) {

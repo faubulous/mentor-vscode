@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 
@@ -8,9 +6,7 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
  * A provider that retrieves the locations of resource definitions in a document.
  */
 export class ResourceDefinitionProvider {
-	private get _contextService() {
-		return container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
-	}
+	constructor(private readonly _contextService: IDocumentContextService) { }
 
 	/**
 	 * Get the definition of a resource at a specific position in a document.

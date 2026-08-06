@@ -1,0 +1,377 @@
+import * as vscode from 'vscode';
+import { container } from 'tsyringe';
+import { ServiceToken } from '@src/services/tokens';
+import { ISparqlConnectionRegistry, ISparqlEndpointTester } from '@src/languages/sparql/services';
+import { IGraphManagementService } from '@src/languages/sparql/services';
+import { ITripleStoreConfigService } from '@src/languages/sparql/services';
+import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
+import { ICredentialStorageService } from '@src/services/core';
+import { SparqlConnection, SparqlConnectionView } from '@src/languages/sparql/services/sparql-connection';
+import { ConfigurationScope, keyToScope } from '@src/utilities/config-scope';
+import { SettingsSectionId } from '..';
+import { SettingsSectionController } from '../../settings-section-controller';
+import { SettingsSectionMessages } from '../../settings-panel-messages';
+import { getErrorMessage } from '@src/utilities/error';
+
+const SECTION_ID = 'query.connections' satisfies SettingsSectionId;
+
+/**
+ * Section controller for the Connections settings section. Owns the full message
+ * surface of the SPARQL connection editor and list — create/edit/delete, credential
+ * fetching, testing, listing graphs, inference toggle and Microsoft auth — plus the
+ * `onDidChangeConnections` event subscription that broadcasts updates to the webview.
+ */
+export class ConnectionsSectionController implements SettingsSectionController {
+	readonly id: SettingsSectionId = SECTION_ID;
+
+	private _post: (message: SettingsSectionMessages) => void = () => { };
+
+	private _disposables: vscode.Disposable[] = [];
+
+	/**
+	 * Projects a connection for the webview, attaching its resolved per-connection inference
+	 * default and flagging a store type that does not resolve on this machine or is defined
+	 * in the other configuration scope. All are runtime-only state, so they are resolved
+	 * here at send time.
+	 */
+	private _toConnectionView(connection: SparqlConnection): SparqlConnectionView {
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
+
+		const isWorkspaceConnection = storeConfigService.isWorkspaceConnectionId(connection.id);
+
+		const storeTypeUnresolved = connection.storeType !== undefined
+			&& !isWorkspaceConnection
+			&& storeConfigService.getStoreConfig(connection.storeType) === undefined;
+
+		// A connection may only use preset stores or stores defined in its own
+		// scope; a cross-scope reference breaks when the settings roam. Presets
+		// report 'preset' and unresolved ids report undefined, so neither flags.
+		const storeScope = !isWorkspaceConnection
+			? storeConfigService.getStoreConfigScope(connection.storeType)
+			: undefined;
+		const connectionScope = connection.configScope === ConfigurationScope.Workspace ? 'workspace' : 'user';
+		const incompatibleStoreScope = (storeScope === 'user' || storeScope === 'workspace') && storeScope !== connectionScope
+			? storeScope
+			: undefined;
+
+		// The flags are always assigned (not conditionally spread) so that a stale
+		// value on a round-tripped view — e.g. a connection the editor sent back on
+		// save — is overwritten once the underlying issue has been corrected.
+		return {
+			...connection,
+			inferenceEnabled: connectionRegistry.getInferenceEnabled(connection.id),
+			unresolvedStoreType: storeTypeUnresolved ? connection.storeType : undefined,
+			incompatibleStoreScope,
+		};
+	}
+
+	initialize(post: (message: SettingsSectionMessages) => void): void {
+		this._post = post;
+
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+
+		this._disposables.push(
+			connectionRegistry.onDidChangeConnections(() => {
+				this._post({
+					section: SECTION_ID,
+					id: 'ConnectionsChanged',
+					connections: connectionRegistry.getConnections().map(c => this._toConnectionView(c)),
+				});
+			}),
+			// The store-related flags on the connection views (unresolved type, scope
+			// mismatch) depend on the store configs, so a stores settings change (e.g.
+			// moving a store into the matching scope) re-projects the list as well.
+			vscode.workspace.onDidChangeConfiguration(e => {
+				if (e.affectsConfiguration('mentor.sparql.stores')) {
+					this._post({
+						section: SECTION_ID,
+						id: 'ConnectionsChanged',
+						connections: connectionRegistry.getConnections().map(c => this._toConnectionView(c)),
+					});
+				}
+			}),
+			// Mirror graph loading activity (bulk reloads, auto-loads) as a busy
+			// indicator on the affected list items, like connection testing.
+			graphService.onDidGraphLoadStart(connection => {
+				this._post({
+					section: SECTION_ID,
+					id: 'GraphLoadingChanged',
+					connectionId: connection.id,
+					loading: true,
+				});
+			}),
+			graphService.onDidGraphLoadEnd(connection => {
+				this._post({
+					section: SECTION_ID,
+					id: 'GraphLoadingChanged',
+					connectionId: connection.id,
+					loading: false,
+				});
+			}),
+			// Covers the workspace connection too: the graph service derives a
+			// debounced onDidChangeGraphs('workspace') from store changes
+			// (indexing, document loads, shape graphs) — see container.ts.
+			graphService.onDidChangeGraphs(connectionId => {
+				this._post({
+					section: SECTION_ID,
+					id: 'GraphStatusChanged',
+					connectionId,
+					status: {
+						count: graphService.getGraphsForConnection(connectionId, false).length,
+						...(graphService.getGraphLoadError(connectionId) !== undefined
+							? { error: graphService.getGraphLoadError(connectionId) }
+							: {}),
+					},
+				});
+			})
+		);
+	}
+
+	onActivate(params: Record<string, unknown> | undefined): void {
+		const connection = params?.connection as SparqlConnection | undefined;
+
+		if (connection) {
+			this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection: this._toConnectionView(connection) });
+		}
+	}
+
+	async handleMessage(message: SettingsSectionMessages): Promise<boolean> {
+		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
+		const endpointTester = container.resolve<ISparqlEndpointTester>(ServiceToken.SparqlEndpointTester);
+		const credentialService = container.resolve<ICredentialStorageService>(ServiceToken.CredentialStorageService);
+		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
+
+		switch (message.id) {
+			case 'GetConnections': {
+				this._post({
+					section: SECTION_ID,
+					id: 'GetConnectionsResult',
+					connections: connectionRegistry.getConnections().map(c => this._toConnectionView(c)),
+				});
+
+				return true;
+			}
+			case 'GetGraphStatuses': {
+				const statuses: Record<string, { count: number; error?: string }> = {};
+
+				for (const connection of connectionRegistry.getConnections()) {
+					const hasGraphs = graphService.hasGraphsForConnection(connection.id);
+					const error = graphService.getGraphLoadError(connection.id);
+
+					if (hasGraphs || error !== undefined) {
+						statuses[connection.id] = {
+							count: graphService.getGraphsForConnection(connection.id, false).length,
+							...(error !== undefined ? { error } : {}),
+						};
+					}
+				}
+
+				// The workspace store enumerates its graphs in-process rather than via the graph service.
+				statuses[WORKSPACE_CONNECTION.id] = { 
+					count: graphService.getWorkspaceGraphs(false).length
+				};
+
+				this._post({ section: SECTION_ID, id: 'GetGraphStatusesResult', statuses });
+
+				return true;
+			}
+			case 'CreateConnection': {
+				const connection = await connectionRegistry.createConnection(keyToScope(message.scope));
+				this._post({ section: SECTION_ID, id: 'EditSparqlConnection', connection: this._toConnectionView(connection) });
+
+				return true;
+			}
+			case 'DeleteConnection': {
+				const connection = message.connection;
+				const answer = await vscode.window.showWarningMessage(
+					`Are you sure you want to delete the connection "${connection.endpointUrl}"?`,
+					{ modal: true },
+					'Delete'
+				);
+
+				if (answer === 'Delete') {
+					try {
+						await connectionRegistry.deleteConnection(connection.id);
+					} catch (e) {
+						vscode.window.showErrorMessage(getErrorMessage(e));
+						return true;
+					}
+
+					await connectionRegistry.saveConfiguration();
+				}
+
+				return true;
+			}
+			case 'TestConnection': {
+				const connection = message.connection;
+				const result = await endpointTester.testConnection(connection);
+
+				this._post({
+					section: SECTION_ID,
+					id: 'TestConnectionResult',
+					connectionId: connection.id,
+					success: result === null,
+					error: result?.message,
+				});
+
+				return true;
+			}
+			case 'ListGraphs': {
+				const connection = message.connection;
+				const testResult = await endpointTester.testConnection(connection);
+
+				if (testResult !== null) {
+					this._post({
+						section: SECTION_ID,
+						id: 'TestConnectionResult',
+						connectionId: connection.id,
+						success: false,
+						error: testResult.message,
+					});
+
+					return true;
+				}
+
+				// Post the result only after the graphs have been listed so the item's
+				// busy indicator covers the whole operation, not just the test.
+				try {
+					await vscode.commands.executeCommand('mentor.command.listGraphs', connection);
+
+					this._post({
+						section: SECTION_ID,
+						id: 'TestConnectionResult',
+						connectionId: connection.id,
+						success: true,
+					});
+				} catch (e) {
+					this._post({
+						section: SECTION_ID,
+						id: 'TestConnectionResult',
+						connectionId: connection.id,
+						success: false,
+						error: getErrorMessage(e),
+					});
+				}
+
+				return true;
+			}
+			case 'ReloadGraphs': {
+				// Refresh the cached graph list for every configurable connection. The workspace store
+				// (protected) enumerates its graphs in-process and is excluded. Each completion fires
+				// onDidChangeGraphs, which posts a GraphStatusChanged update to the webview.
+				const connections = connectionRegistry.getConnections().filter(c => !c.isProtected);
+
+				await Promise.all(connections.map(c => graphService.loadGraphsForConnection(c, { force: true })));
+
+				return true;
+			}
+			case 'OpenInBrowser': {
+				await vscode.env.openExternal(vscode.Uri.parse(message.url));
+
+				return true;
+			}
+			case 'GetSparqlConnectionCredential': {
+				const connectionId = message.connectionId;
+				const credential = await credentialService.getCredential(connectionId);
+
+				this._post({
+					section: SECTION_ID,
+					id: 'GetSparqlConnectionCredentialResult',
+					connectionId,
+					credential,
+				});
+
+				return true;
+			}
+			case 'SaveSparqlConnection': {
+				// The editor sends the full view object back; the view-only flags are
+				// stripped so runtime display state never enters the registry.
+				const { inferenceEnabled, unresolvedStoreType, incompatibleStoreScope, ...connection } = message.connection;
+
+				try {
+					await connectionRegistry.saveConnectionWithCredential(connection, message.credential);
+				} catch (e) {
+					vscode.window.showErrorMessage(getErrorMessage(e));
+					return true;
+				}
+
+				vscode.window.showInformationMessage('SPARQL connection saved.');
+
+				// If the connection now has auto-loading enabled, kick off a load immediately
+				// so the user sees the result without restarting VS Code. Forced, because the
+				// saved settings (e.g. the endpoint URL) may invalidate the cached list.
+				if (connection.autoLoadGraphs) {
+					graphService.loadGraphsForConnection(connection, { force: true });
+				}
+
+				return true;
+			}
+			case 'DiscardSparqlConnection': {
+				const connectionId = message.connectionId;
+				const connection = connectionRegistry.getConnection(connectionId);
+
+				if (connection?.isNew) {
+					await connectionRegistry.deleteConnection(connectionId);
+				}
+
+				return true;
+			}
+			case 'TestSparqlConnection': {
+				const result = await endpointTester.testConnection(message.connection, message.credential);
+
+				this._post({ section: SECTION_ID, id: 'TestSparqlConnectionResult', error: result });
+
+				return true;
+			}
+			case 'GetStoreTypes': {
+				const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
+				this._post({
+					section: SECTION_ID,
+					id: 'GetStoreTypesResult',
+					storeConfigs: storeConfigService.getStoreConfigs(),
+				});
+
+				return true;
+			}
+			case 'ToggleSparqlConnectionInference': {
+				const connectionId = message.connectionId;
+				const inferenceEnabled = await connectionRegistry.toggleInferenceEnabled(connectionId);
+
+				this._post({
+					section: SECTION_ID,
+					id: 'ToggleSparqlConnectionInferenceResult',
+					connectionId,
+					inferenceEnabled,
+				});
+
+				return true;
+			}
+			case 'FetchMicrosoftAuthCredential': {
+				const connectionId = message.connectionId;
+				const credential = await credentialService.fetchMicrosoftCredential(message.scopes);
+
+				this._post({
+					section: SECTION_ID,
+					id: 'FetchMicrosoftAuthCredentialResult',
+					connectionId,
+					credential,
+				});
+
+				return true;
+			}
+			default: {
+				return false;
+			}
+		}
+	}
+
+	dispose(): void {
+		for (const d of this._disposables) {
+			d.dispose();
+		}
+
+		this._disposables = [];
+	}
+}

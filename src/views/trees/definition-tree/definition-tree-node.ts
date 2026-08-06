@@ -4,6 +4,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISettingsService } from '@src/services/core';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { Label } from '@src/services/document/document-context';
 import { TreeNodeBase } from '@src/views/trees/tree-node';
 import { getIriFromNodeId } from '@src/utilities';
 
@@ -79,14 +80,27 @@ export class DefinitionTreeNode extends TreeNodeBase {
 		return this.document.graphs;
 	}
 
+	/**
+	 * The resolved resource label, computed once per node. Resolving runs store
+	 * queries per annotation predicate, and both {@link getLabel} and
+	 * {@link getDescription} need the result — without the cache every tree node
+	 * would run those queries twice per refresh. Safe to memoize because the
+	 * provider recreates all nodes on refresh.
+	 */
+	private _resourceLabel: Label | undefined;
+
+	private _getResourceLabel(): Label {
+		return this._resourceLabel ??= this.document.getResourceLabel(this.uri);
+	}
+
 	getLabel(): vscode.TreeItemLabel {
-		const label = this.document.getResourceLabel(this.uri).value;
+		const label = this._getResourceLabel().value;
 
 		return { label }
 	}
 
 	getDescription(): string {
-		const label = this.document.getResourceLabel(this.uri);
+		const label = this._getResourceLabel();
 		const activeLanguageTag = this.document.activeLanguageTag;
 		const activeLanguage = this.document.activeLanguage;
 

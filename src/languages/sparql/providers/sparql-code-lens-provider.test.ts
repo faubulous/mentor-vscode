@@ -18,9 +18,11 @@ const mockConnectionService = {
         return { dispose: () => { } };
     },
     getConnectionForDocument: () => getConnectionForDocumentResult,
+    getUnresolvedConnectionId: () => undefined,
     supportsInference: () => supportsInferenceResult,
     getInferenceEnabledForDocument: () => getInferenceEnabledResult,
     getGraphsForDocument: async () => [],
+    getQueryTemplate: () => undefined,
 };
 
 const mockQueryService = {
@@ -50,7 +52,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 const { mockGetConfig } = vi.hoisted(() => ({
-    mockGetConfig: vi.fn(() => ({ get: (_key: string, defaultValue?: any) => defaultValue })),
+    mockGetConfig: vi.fn((..._args: any[]) => ({ get: (_key: string, defaultValue?: any) => defaultValue })),
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
@@ -72,30 +74,30 @@ beforeEach(() => {
 describe('SparqlCodeLensProvider', () => {
     describe('constructor', () => {
         it('can be instantiated without throwing', () => {
-            expect(() => new SparqlCodeLensProvider()).not.toThrow();
+            expect(() => new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any)).not.toThrow();
         });
 
         it('registers onDidChangeConnectionForDocument handler', () => {
-            new SparqlCodeLensProvider();
+            new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
             expect(onChangeConnectionForDocHandler).not.toBeNull();
         });
 
         it('registers onDidChangeConnections handler', () => {
-            new SparqlCodeLensProvider();
+            new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
             expect(onChangeConnectionsHandler).not.toBeNull();
         });
     });
 
     describe('onDidChangeCodeLenses', () => {
         it('is exposed as an event function', () => {
-            const provider = new SparqlCodeLensProvider();
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
             expect(typeof provider.onDidChangeCodeLenses).toBe('function');
         });
     });
 
     describe('refresh', () => {
         it('fires the onDidChangeCodeLenses event', () => {
-            const provider = new SparqlCodeLensProvider();
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
             let fired = false;
             provider.onDidChangeCodeLenses(() => { fired = true; });
             provider.refresh();
@@ -103,7 +105,7 @@ describe('SparqlCodeLensProvider', () => {
         });
 
         it('fires event when onDidChangeConnectionForDocument triggers refresh', () => {
-            const provider = new SparqlCodeLensProvider();
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
             let fired = false;
             provider.onDidChangeCodeLenses(() => { fired = true; });
             onChangeConnectionForDocHandler?.();
@@ -111,7 +113,7 @@ describe('SparqlCodeLensProvider', () => {
         });
 
         it('fires event when onDidChangeConnections triggers refresh', () => {
-            const provider = new SparqlCodeLensProvider();
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
             let fired = false;
             provider.onDidChangeCodeLenses(() => { fired = true; });
             onChangeConnectionsHandler?.();
@@ -121,61 +123,94 @@ describe('SparqlCodeLensProvider', () => {
 
     describe('provideCodeLenses', () => {
         it('returns empty array when no connection is configured for the document', async () => {
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses).toEqual([]);
         });
 
         it('returns connection CodeLens when connection is configured', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses.length).toBeGreaterThanOrEqual(1);
-            expect(lenses[0].command?.command).toBe('mentor.command.selectSparqlConnection');
+            expect(lenses[1].command?.command).toBe('mentor.command.selectSparqlConnection');
         });
 
-        it('only has connection and execute lenses when inference is not enabled in config', async () => {
+        it('only has run and connection lenses when the store does not support inference', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            // inference.enabled returns false, so only connection and execute lenses
+            // supportsInference returns false, so only run and connection lenses
             expect(lenses.length).toBe(2);
+        });
+
+        it('uses the template run command (not executeSparqlQuery) for triplate templates', async () => {
+            getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => '---\nparams { type: iri }\n---\nSELECT * WHERE { ?s a ${type} }' };
+            const lenses = await provider.provideCodeLenses(doc as any);
+            // Run lens (template command) first, then the connection lens.
+            expect(lenses.length).toBe(2);
+            expect(lenses[0].command?.command).toBe('mentor.command.executeTriplateTemplate');
+            expect(lenses.some(l => l.command?.command === 'mentor.command.executeSparqlQuery')).toBe(false);
         });
 
         it('connection lens title contains the endpoint URL', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://my.endpoint/sparql' };
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            expect(lenses[0].command?.title).toContain('http://my.endpoint/sparql');
+            expect(lenses[1].command?.title).toContain('http://my.endpoint/sparql');
+        });
+
+        it('run lens is the first lens', async () => {
+            getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
+            const lenses = await provider.provideCodeLenses(doc as any);
+            expect(lenses[0].command?.command).toBe('mentor.command.executeSparqlQuery');
+            expect(lenses[0].command?.title).toContain('Run');
+        });
+
+        it('shows the Run lens in notebook cells (consistent with the editor)', async () => {
+            getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = {
+                uri: { scheme: 'vscode-notebook-cell', toString: () => 'vscode-notebook-cell:///nb.sparql#c1' },
+                getText: () => 'SELECT * WHERE { ?s ?p ?o }',
+            };
+            const lenses = await provider.provideCodeLenses(doc as any);
+            // Run lens is no longer suppressed for cells; it still leads the group.
+            expect(lenses[0].command?.command).toBe('mentor.command.executeSparqlQuery');
+            expect(lenses[0].command?.title).toContain('Run');
         });
     });
 
     describe('provideCodeLenses with inference', () => {
-        it('returns three lenses when inference is enabled and connection supports it', async () => {
+        it('returns three lenses when the connection supports inference', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = true;
             getInferenceEnabledResult = false;
-            mockGetConfig.mockReturnValue({ get: (key: string, def?: any) => key === 'inference.enabled' ? true : def });
 
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses.length).toBe(3);
+            // Lens order: Run, Inference, Connection (last).
             expect(lenses[1].command?.command).toBe('mentor.command.toggleDocumentInference');
+            expect(lenses[2].command?.command).toBe('mentor.command.selectSparqlConnection');
         });
 
         it('inference lens shows "off" text when inference is disabled', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = true;
             getInferenceEnabledResult = false;
-            mockGetConfig.mockReturnValue({ get: (key: string, def?: any) => key === 'inference.enabled' ? true : def });
 
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses[1].command?.title).toContain('off');
         });
@@ -184,32 +219,19 @@ describe('SparqlCodeLensProvider', () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = true;
             getInferenceEnabledResult = true;
-            mockGetConfig.mockReturnValue({ get: (key: string, def?: any) => key === 'inference.enabled' ? true : def });
 
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
-            expect(lenses[1].command?.title).toContain('on');
-        });
-
-        it('does not add inference lens when inference.enabled config is false', async () => {
-            getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
-            supportsInferenceResult = true;
-            // mockGetConfig returns default (falsy) value
-
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
-            const lenses = await provider.provideCodeLenses(doc as any);
-            expect(lenses.length).toBe(2);
+            expect(lenses[1].command?.title).toContain('Inference: on');
         });
 
         it('does not add inference lens when connection does not support inference', async () => {
             getConnectionForDocumentResult = { endpointUrl: 'http://sparql.example.org/endpoint' };
             supportsInferenceResult = false;
-            mockGetConfig.mockReturnValue({ get: (key: string, def?: any) => key === 'inference.enabled' ? true : def });
 
-            const provider = new SparqlCodeLensProvider();
-            const doc = { uri: 'file:///test.sparql' };
+            const provider = new SparqlCodeLensProvider(mockConnectionService as any, mockConnectionService as any, mockConnectionService as any, mockQueryService as any);
+            const doc = { uri: 'file:///test.sparql', getText: () => 'SELECT * WHERE { ?s ?p ?o }' };
             const lenses = await provider.provideCodeLenses(doc as any);
             expect(lenses.length).toBe(2);
         });

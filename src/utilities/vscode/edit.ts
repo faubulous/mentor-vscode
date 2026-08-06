@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 export function calculateLineOffset(edit: vscode.WorkspaceEdit): number {
 	let lineOffset = 0;
 
-	for (const [uri, edits] of edit.entries()) {
+	for (const [, edits] of edit.entries()) {
 		for (const e of edits) {
 			const startLine = e.range.start.line;
 			const endLine = e.range.end.line;

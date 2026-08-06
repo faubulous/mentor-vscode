@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { container } from 'tsyringe';
-import { ServiceToken } from '@src/services/tokens';
 import { WorkspaceUri } from './workspace-uri';
 
 /**
@@ -8,9 +6,8 @@ import { WorkspaceUri } from './workspace-uri';
  */
 export class WorkspaceUriLinkProvider implements vscode.DocumentLinkProvider {
 
-  constructor() {
+  constructor(context: vscode.ExtensionContext) {
     // Self-register with the extension context for automatic disposal
-    const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
     context.subscriptions.push(
       vscode.languages.registerDocumentLinkProvider({ scheme: 'file' }, this)
     );
@@ -28,7 +25,10 @@ export class WorkspaceUriLinkProvider implements vscode.DocumentLinkProvider {
       const range = new vscode.Range(start, end);
       const uri = vscode.Uri.parse(match[0]);
 
-      if (uri) {
+      // Only offer the link if it resolves to a file inside the workspace root. This stops a
+      // crafted document from turning `workspace:///../../etc/passwd` into a clickable link that
+      // would read (or, on save, write) a file outside the workspace.
+      if (uri && WorkspaceUri.tryToFileUri(uri)) {
         links.push(new vscode.DocumentLink(range, uri));
       }
     }

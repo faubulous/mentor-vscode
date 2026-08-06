@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
+import { getTextEdits } from '@src/utilities/mocks/factories';
 
 const mockSubscriptions: any[] = [];
 
@@ -53,7 +54,6 @@ function makeDiagnostic(startChar: number, endChar: number, iriValue: string): v
 
 describe('XsdAnyUriCodeActionProvider', () => {
 	let XsdAnyUriCodeActionProvider: any;
-	let XSD_ANY_URI_LITERAL_CODE: string;
 
 	beforeEach(async () => {
 		mockSubscriptions.length = 0;
@@ -61,16 +61,15 @@ describe('XsdAnyUriCodeActionProvider', () => {
 
 		const module = await import('@src/providers/refactoring/xsd-any-uri-code-action-provider');
 		XsdAnyUriCodeActionProvider = module.XsdAnyUriCodeActionProvider;
-		XSD_ANY_URI_LITERAL_CODE = module.XSD_ANY_URI_LITERAL_CODE;
 	});
 
 	describe('constructor', () => {
 		it('creates without error', () => {
-			expect(() => new XsdAnyUriCodeActionProvider()).not.toThrow();
+			expect(() => new XsdAnyUriCodeActionProvider({ subscriptions: mockSubscriptions } as any)).not.toThrow();
 		});
 
 		it('registers a code action provider', () => {
-			new XsdAnyUriCodeActionProvider();
+			new XsdAnyUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 			expect(mockSubscriptions.length).toBeGreaterThan(0);
 		});
 	});
@@ -78,7 +77,7 @@ describe('XsdAnyUriCodeActionProvider', () => {
 	describe('provideCodeActions', () => {
 		it('returns empty array when no matching diagnostics in context', () => {
 			const document = makeDocument('<http://example.com/> a owl:Class .');
-			const provider = new XsdAnyUriCodeActionProvider();
+			const provider = new XsdAnyUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 
 			const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 5));
 			const actions = provider.provideCodeActions(document, range, { diagnostics: [] } as any);
@@ -88,7 +87,7 @@ describe('XsdAnyUriCodeActionProvider', () => {
 
 		it('returns a Quick Fix when context contains an XsdAnyUriLiteral diagnostic', () => {
 			const document = makeDocument('"http://example.com/"^^xsd:anyURI');
-			const provider = new XsdAnyUriCodeActionProvider();
+			const provider = new XsdAnyUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 
 			const diagnostic = makeDiagnostic(0, 32, 'http://example.com/');
 			const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 32));
@@ -102,7 +101,7 @@ describe('XsdAnyUriCodeActionProvider', () => {
 
 		it('Quick Fix edit replaces the diagnostic range with IRI reference', () => {
 			const document = makeDocument('"http://example.com/"^^xsd:anyURI');
-			const provider = new XsdAnyUriCodeActionProvider();
+			const provider = new XsdAnyUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 
 			const diagnostic = makeDiagnostic(0, 32, 'http://example.com/');
 			const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 32));
@@ -110,16 +109,15 @@ describe('XsdAnyUriCodeActionProvider', () => {
 
 			expect(actions.length).toBeGreaterThanOrEqual(1);
 
-			const edit: any = actions[0].edit;
-			const entries: any[] = edit.entries;
+			const edits = getTextEdits(actions[0].edit);
 
-			expect(entries.length).toBe(1);
-			expect(entries[0].newText).toBe('<http://example.com/>');
+			expect(edits.length).toBe(1);
+			expect(edits[0].newText).toBe('<http://example.com/>');
 		});
 
 		it('ignores diagnostics with a different code', () => {
 			const document = makeDocument('test');
-			const provider = new XsdAnyUriCodeActionProvider();
+			const provider = new XsdAnyUriCodeActionProvider({ subscriptions: mockSubscriptions } as any);
 
 			const unrelatedDiag = new vscode.Diagnostic(
 				new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 4)),

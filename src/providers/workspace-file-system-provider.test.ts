@@ -35,13 +35,13 @@ describe('WorkspaceFileSystemProvider', () => {
     const workspaceUri = vscode.Uri.parse('workspace:/dir/file.ttl');
 
     it('registers a file system provider on construction', () => {
-        const provider = new WorkspaceFileSystemProvider();
+        const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
         expect(mockSubscriptions.length).toBe(1);
         expect(provider).toBeDefined();
     });
 
     it('exposes onDidChangeFile event', () => {
-        const provider = new WorkspaceFileSystemProvider();
+        const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
         expect(typeof provider.onDidChangeFile).toBe('function');
     });
 
@@ -49,7 +49,7 @@ describe('WorkspaceFileSystemProvider', () => {
         it('delegates to vscode.workspace.fs.stat with the converted file URI', async () => {
             const statResult = { type: 1, ctime: 0, mtime: 0, size: 100 };
             vi.spyOn(vscode.workspace.fs as any, 'stat').mockResolvedValue(statResult);
-            const provider = new WorkspaceFileSystemProvider();
+            const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const result = await provider.stat(workspaceUri);
             expect(result).toEqual(statResult);
         });
@@ -59,7 +59,7 @@ describe('WorkspaceFileSystemProvider', () => {
         it('delegates to vscode.workspace.fs.readFile with the converted file URI', async () => {
             const content = new Uint8Array([1, 2, 3]);
             vi.spyOn(vscode.workspace.fs as any, 'readFile').mockResolvedValue(content);
-            const provider = new WorkspaceFileSystemProvider();
+            const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const result = await provider.readFile(workspaceUri);
             expect(result).toBe(content);
         });
@@ -68,7 +68,7 @@ describe('WorkspaceFileSystemProvider', () => {
     describe('writeFile', () => {
         it('delegates to vscode.workspace.fs.writeFile with the converted file URI', async () => {
             const writeFile = vi.spyOn(vscode.workspace.fs as any, 'writeFile').mockResolvedValue(undefined);
-            const provider = new WorkspaceFileSystemProvider();
+            const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const content = new Uint8Array([4, 5, 6]);
             await provider.writeFile(workspaceUri, content);
             expect(writeFile).toHaveBeenCalledOnce();
@@ -77,35 +77,35 @@ describe('WorkspaceFileSystemProvider', () => {
 
     describe('readDirectory', () => {
         it('returns an empty array', () => {
-            const provider = new WorkspaceFileSystemProvider();
+            const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             expect(provider.readDirectory()).toEqual([]);
         });
     });
 
     describe('createDirectory', () => {
         it('throws NotSupportedError', () => {
-            const provider = new WorkspaceFileSystemProvider();
+            const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             expect(() => provider.createDirectory()).toThrow('This feature is not supported.');
         });
     });
 
     describe('delete', () => {
         it('throws NotSupportedError', () => {
-            const provider = new WorkspaceFileSystemProvider();
+            const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             expect(() => provider.delete()).toThrow('This feature is not supported.');
         });
     });
 
     describe('rename', () => {
         it('throws NotSupportedError', () => {
-            const provider = new WorkspaceFileSystemProvider();
+            const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             expect(() => provider.rename()).toThrow('This feature is not supported.');
         });
     });
 
     describe('watch', () => {
         it('returns a Disposable', () => {
-            const provider = new WorkspaceFileSystemProvider();
+            const provider = new WorkspaceFileSystemProvider({ subscriptions: mockSubscriptions } as any);
             const disposable = provider.watch(workspaceUri, { recursive: false, excludes: [] });
             expect(disposable).toBeDefined();
             expect(typeof disposable.dispose).toBe('function');

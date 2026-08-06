@@ -18,15 +18,19 @@ export class CollectionsNode extends CollectionClassNode {
 
 	override getDescription(): string {
 		const graphs = this.getDocumentGraphs();
-		const collections = [...this.vocabulary.getCollections(graphs)];
+		const options = this.getQueryOptions();
+
+		// Note: The description shows the total number of collections, not only the root collections.
+		const collections = [...this.vocabulary.getCollections(graphs, options)];
 
 		return collections.length.toString();
 	}
 
 	override hasChildren(): boolean {
 		const graphs = this.getDocumentGraphs();
+		const options = this.getQueryOptions();
 
-		for(const _ of this.vocabulary.getCollections(graphs)) {
+		for (const _ of this.vocabulary.getRootCollections(graphs, options)) {
 			return true;
 		}
 
@@ -36,9 +40,11 @@ export class CollectionsNode extends CollectionClassNode {
 	override getChildren(): TreeNode[] {
 		const result = [];
 		const graphs = this.getDocumentGraphs();
-		const collections = [...this.vocabulary.getCollections(graphs)];
+		const options = this.getQueryOptions();
 
-		for (const c of collections) {
+		// Note: Only the collections that are not nested in another collection are listed here.
+		// The nested collections are provided by their parent collection nodes.
+		for (const c of this.vocabulary.getRootCollections(graphs, options)) {
 			result.push(this.createChildNode(CollectionClassNode, c));
 		}
 
@@ -50,7 +56,16 @@ export class CollectionsNode extends CollectionClassNode {
 	}
 
 	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
-		const children = this.getChildren() as DefinitionTreeNode[];
-		return children.find(n => n.uri === iri);
+		const graphs = this.getDocumentGraphs();
+
+		if (!this.vocabulary.isCollection(graphs, iri)) {
+			return undefined;
+		}
+
+		// The path goes from the collection to its root collection, so it needs to be reversed.
+		const rootToNode = this.vocabulary.getRootCollectionPath(graphs, iri).reverse();
+		rootToNode.push(iri);
+
+		return this.walkHierarchyPath(rootToNode);
 	}
 }

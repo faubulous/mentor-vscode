@@ -8,33 +8,48 @@ const storeControl = vi.hoisted(() => ({
 }));
 
 vi.mock('tsyringe', () => ({
-    container: {
-        resolve: vi.fn(() => {
-            if (storeControl.shouldThrowLoad) {
-                throw new Error('store unavailable');
-            }
-            return {
-                reasoner: storeControl.reasoner,
-                executeInference: vi.fn(),
-                deleteGraphs: vi.fn(),
-                dataFactory: {
-                    namedNode: (iri: string) => ({ termType: 'NamedNode', value: iri }),
-                    quad: (s: any, p: any, o: any, g: any) => ({ subject: s, predicate: p, object: o, graph: g }),
-                },
-                add: vi.fn(),
-                graphs: [],
-            };
-        }),
-    },
+    container: { resolve: vi.fn(() => ({})) },
     injectable: () => (_target: any) => _target,
     inject: () => () => {},
     singleton: () => (_target: any) => _target,
 }));
 
-import { Uri, Position } from '@src/utilities/mocks/vscode';
-import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+/**
+ * Store mock injected into the document context. Property access throws when
+ * `storeControl.shouldThrowLoad` is set, simulating an unavailable store.
+ */
+function makeStore(): Store {
+    const store = {
+        executeInference: vi.fn(),
+        deleteGraphs: vi.fn(),
+        dataFactory: {
+            namedNode: (iri: string) => ({ termType: 'NamedNode', value: iri }),
+            quad: (s: any, p: any, o: any, g: any) => ({ subject: s, predicate: p, object: o, graph: g }),
+        },
+        add: vi.fn(),
+        graphs: [],
+    };
+
+    // Partial stub: only the members above (plus the proxied `reasoner`) are exercised by TurtleDocument.
+    return new Proxy(store, {
+        get(target, property) {
+            if (storeControl.shouldThrowLoad) {
+                throw new Error('store unavailable');
+            }
+            if (property === 'reasoner') {
+                return storeControl.reasoner;
+            }
+            return (target as any)[property];
+        },
+    }) as unknown as Store;
+}
+
+import * as vscode from 'vscode';
+import type { Store } from '@faubulous/mentor-rdf';
 import { RdfSyntax, RdfToken, TurtleLexer, TurtleParser, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
-import { RDF } from '@faubulous/mentor-rdf';
+import { ParserFactory } from '@src/languages/parser-factory';
+import { TurtleDocument } from '@src/languages/turtle/turtle-document';
+import { createTurtleDocument, createMockTextDocument } from '@src/utilities/mocks/factories';
 
 /**
  * Build a minimal IToken with position information.
@@ -55,14 +70,14 @@ function makeToken(name: string, image: string, opts: {
 }
 
 function makeDoc(uri = 'file:///test.ttl'): TurtleDocument {
-    return new TurtleDocument(Uri.parse(uri) as any, RdfSyntax.Turtle);
+    return createTurtleDocument(uri, RdfSyntax.Turtle, { store: makeStore() });
 }
 
 describe('TurtleDocument', () => {
     describe('initial state', () => {
-        it('hasTokens is false before setTokens is called', () => {
+        it('isParsed is false before setTokens is called', () => {
             const doc = makeDoc();
-            expect(doc.hasTokens).toBe(false);
+            expect(doc.isParsed).toBe(false);
         });
 
         it('isLoaded is false before setTokens is called', () => {
@@ -82,10 +97,10 @@ describe('TurtleDocument', () => {
     });
 
     describe('setTokens', () => {
-        it('sets hasTokens to true', () => {
+        it('sets isParsed to true', () => {
             const doc = makeDoc();
             doc.setTokens([makeToken(RdfToken.PNAME_LN.name, 'ex:Thing') as any]);
-            expect(doc.hasTokens).toBe(true);
+            expect(doc.isParsed).toBe(true);
         });
 
         it('stores the provided tokens', () => {
@@ -122,102 +137,11 @@ describe('TurtleDocument', () => {
         });
     });
 
-    describe('getTokenIndexAtPosition', () => {
-        it('returns -1 when no tokens are set', () => {
-            const doc = makeDoc();
-            const idx = doc.getTokenIndexAtPosition({ line: 0, character: 5 } as any);
-            expect(idx).toBe(-1);
-        });
-
-        it('returns the index of the token at a given position', () => {
-            const doc = makeDoc();
-            // Token on line 1 (1-based), column 1–4 (1-based) → line 0 (0-based), char 0–3
-            const token = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 });
-            doc.setTokens([token as any]);
-            // Position: line=0 (0-based), character=2 (0-based) → inside "ex:A"
-            const idx = doc.getTokenIndexAtPosition({ line: 0, character: 2 } as any);
-            expect(idx).toBe(0);
-        });
-
-        it('returns -1 when position is past the end of all tokens', () => {
-            const doc = makeDoc();
-            const token = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 });
-            doc.setTokens([token as any]);
-            // Line 10 is well past any token
-            const idx = doc.getTokenIndexAtPosition({ line: 9, character: 0 } as any);
-            expect(idx).toBe(-1);
-        });
-    });
-
-    describe('getTokenAtPosition', () => {
-        it('returns undefined when no token covers the position', () => {
-            const doc = makeDoc();
-            doc.setTokens([makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 1, startColumn: 1, endColumn: 4 }) as any]);
-            expect(doc.getTokenAtPosition({ line: 9, character: 0 } as any)).toBeUndefined();
-        });
-
-        it('returns the correct token at a given position', () => {
-            const doc = makeDoc();
-            const t1 = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 });
-            const t2 = makeToken(RdfToken.PERIOD.name, '.', { startLine: 1, startColumn: 6, endLine: 1, endColumn: 6 });
-            doc.setTokens([t1 as any, t2 as any]);
-            const result = doc.getTokenAtPosition({ line: 0, character: 2 } as any);
-            expect(result?.image).toBe('ex:A');
-        });
-    });
-
-    describe('isPrefixTokenAtPosition', () => {
-        it('returns true when cursor is on the prefix part of a prefixed name', () => {
-            const doc = makeDoc();
-            const token = makeToken(RdfToken.PNAME_LN.name, 'ex:Thing', { startColumn: 1, endColumn: 8 });
-            // Column 1 = start; "ex:" ends at position 2 (index 2 = before colon+1)
-            // The colon is at index 2 (0-based). Character 1 is within "ex".
-            const result = doc.isPrefixTokenAtPosition(token as any, new Position(0, 1) as any);
-            expect(result).toBe(true);
-        });
-
-        it('returns false when cursor is on the local-name part', () => {
-            const doc = makeDoc();
-            const token = makeToken(RdfToken.PNAME_LN.name, 'ex:Thing', { startColumn: 1, endColumn: 8 });
-            // "ex:" is 3 chars; position 4 (0-based character 4) is after the colon → local-name part
-            const result = doc.isPrefixTokenAtPosition(token as any, new Position(0, 5) as any);
-            expect(result).toBe(false);
-        });
-
-        it('returns false for a non-prefixed token type', () => {
-            const doc = makeDoc();
-            const token = makeToken(RdfToken.IRIREF.name, '<http://example.org/>', { startColumn: 1, endColumn: 21 });
-            const result = doc.isPrefixTokenAtPosition(token as any, new Position(0, 5) as any);
-            expect(result).toBe(false);
-        });
-    });
-
-    describe('getRangeFromToken', () => {
-        it('converts 1-based token positions to 0-based Range', () => {
-            const doc = makeDoc();
-            const token = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 2, startColumn: 5, endLine: 2, endColumn: 8 });
-            const range = doc.getRangeFromToken(token as any);
-            // Lines are 0-based: startLine 2 → 1
-            expect(range.start.line).toBe(1);
-            // Columns: startColumn 5 → 4 (0-based)
-            expect(range.start.character).toBe(4);
-        });
-
-        it('end position has +1 applied', () => {
-            const doc = makeDoc();
-            // Simple single-char token '.' at column 10
-            const token = makeToken(RdfToken.PERIOD.name, '.', { startLine: 1, startColumn: 10, endLine: 1, endColumn: 10 });
-            const range = doc.getRangeFromToken(token as any);
-            // endColumn 10 → 9 (0-based), then +1 = 10
-            expect(range.end.character).toBe(10);
-        });
-    });
-
     describe('getLiteralAtPosition', () => {
         it('returns undefined when no token is at position (null-token guard)', () => {
             const doc = makeDoc();
             // No tokens set → getTokenAtPosition returns undefined → early return
-            const result = doc.getLiteralAtPosition(new Position(0, 0) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 0));
             expect(result).toBeUndefined();
         });
 
@@ -225,7 +149,7 @@ describe('TurtleDocument', () => {
             const doc = makeDoc();
             const token = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 2) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 2));
             expect(result).toBeUndefined();
         });
 
@@ -233,7 +157,7 @@ describe('TurtleDocument', () => {
             const doc = makeDoc();
             const token = makeToken(RdfToken.STRING_LITERAL_QUOTE.name, '"hello"', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 7 });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 3) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 3));
             expect(result).toBe('hello');
         });
 
@@ -241,7 +165,7 @@ describe('TurtleDocument', () => {
             const doc = makeDoc();
             const token = makeToken(RdfToken.STRING_LITERAL_SINGLE_QUOTE.name, "'world'", { startLine: 1, startColumn: 1, endLine: 1, endColumn: 7 });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 3) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 3));
             expect(result).toBe('world');
         });
 
@@ -251,7 +175,7 @@ describe('TurtleDocument', () => {
                 startLine: 1, startColumn: 1, endLine: 1, endColumn: 15,
             });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 5) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 5));
             expect(result).toBe('long text');
         });
 
@@ -261,7 +185,7 @@ describe('TurtleDocument', () => {
                 startLine: 1, startColumn: 1, endLine: 1, endColumn: 15,
             });
             doc.setTokens([token as any]);
-            const result = doc.getLiteralAtPosition(new Position(0, 5) as any);
+            const result = doc.getLiteralAtPosition(new vscode.Position(0, 5));
             expect(result).toBe('long text');
         });
     });
@@ -280,7 +204,7 @@ describe('TurtleDocument', () => {
             ];
             doc.setTokens(tokens as any);
             // Position line 1 (0-based), character 1 → inside "ex" prefix part
-            const result = doc.getIriAtPosition(new Position(1, 1) as any);
+            const result = doc.getIriAtPosition(new vscode.Position(1, 1));
             expect(result).toBe('http://example.org/');
         });
 
@@ -295,94 +219,13 @@ describe('TurtleDocument', () => {
             ];
             doc.setTokens(tokens as any);
             // Position line 1, character 5 → inside "Thing" local name part
-            const result = doc.getIriAtPosition(new Position(1, 5) as any);
+            const result = doc.getIriAtPosition(new vscode.Position(1, 5));
             expect(result).toBeDefined();
         });
 
         it('returns undefined when no token is at the given position', () => {
             const doc = makeDoc();
-            const result = doc.getIriAtPosition(new Position(99, 0) as any);
-            expect(result).toBeUndefined();
-        });
-    });
-
-    describe('getTokenIndexAtPosition — edge cases', () => {
-        it('skips tokens missing position info (continue path)', () => {
-            const doc = makeDoc();
-            // Token with missing startLine/endLine — should be skipped
-            const noPos = { tokenType: { name: RdfToken.PNAME_LN.name }, image: 'ex:A' };
-            const good = makeToken(RdfToken.PERIOD.name, '.', { startLine: 2, startColumn: 1, endLine: 2, endColumn: 1 });
-            doc.setTokens([noPos as any, good as any]);
-            // Ask at position line 1 (0-based), char 0 → inside good token's line
-            const idx = doc.getTokenIndexAtPosition({ line: 1, character: 0 } as any);
-            expect(idx).toBe(1);
-        });
-
-        it('breaks early when token startLine exceeds position line (break path)', () => {
-            const doc = makeDoc();
-            // Token on line 5, position asks for line 1
-            const farToken = makeToken(RdfToken.PERIOD.name, '.', { startLine: 5, startColumn: 1, endLine: 5, endColumn: 1 });
-            doc.setTokens([farToken as any]);
-            const idx = doc.getTokenIndexAtPosition({ line: 0, character: 0 } as any);
-            expect(idx).toBe(-1);
-        });
-
-        it('matches a multi-line token when position is between start and end lines', () => {
-            const doc = makeDoc();
-            // Multi-line token: starts line 1, ends line 3
-            const multiLine = makeToken(RdfToken.STRING_LITERAL_LONG_QUOTE.name, '"""line1\nline2\nline3"""', {
-                startLine: 1, startColumn: 1, endLine: 3, endColumn: 8,
-            });
-            doc.setTokens([multiLine as any]);
-            // Position on line 1 (0-based) = line 2 (1-based) → between startLine=1 and endLine=3
-            const idx = doc.getTokenIndexAtPosition({ line: 1, character: 0 } as any);
-            expect(idx).toBe(0);
-        });
-    });
-
-    describe('getTokenBeforePosition', () => {
-        it('returns previous token when a token is found at position (index > 0)', () => {
-            const doc = makeDoc();
-            const t1 = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 7 });
-            const t2 = makeToken(RdfToken.PNAME_NS.name, 'ex:', { startLine: 1, startColumn: 9, endLine: 1, endColumn: 11 });
-            doc.setTokens([t1 as any, t2 as any]);
-            // Position inside t2 (line 0, char 9) → index=1 → return t1
-            const result = doc.getTokenBeforePosition({ line: 0, character: 9 } as any);
-            expect(result?.image).toBe('@prefix');
-        });
-
-        it('returns undefined when position is at the first token (index === 0)', () => {
-            const doc = makeDoc();
-            const t1 = makeToken(RdfToken.TTL_PREFIX.name, '@prefix', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 7 });
-            doc.setTokens([t1 as any]);
-            // Position inside t1 → index=0 → no previous token
-            const result = doc.getTokenBeforePosition({ line: 0, character: 3 } as any);
-            expect(result).toBeUndefined();
-        });
-
-        it('returns last token before position when no token is at position (index === -1)', () => {
-            const doc = makeDoc();
-            const t1 = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 });
-            doc.setTokens([t1 as any]);
-            // Position on line 2 (0-based), char 0 → index=-1 → backward scan finds t1 (endLine=1 < l=2)
-            const result = doc.getTokenBeforePosition({ line: 1, character: 0 } as any);
-            expect(result?.image).toBe('ex:A');
-        });
-        it('returns last token before position on same line when endColumn <= character (index === -1)', () => {
-            const doc = makeDoc();
-            // Token ends at column 4 on line 1
-            const t1 = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 1, endLine: 1, startColumn: 1, endColumn: 4 });
-            doc.setTokens([t1 as any]);
-            // Position on same line (line 0 = line 1 in 1-based), char 6 > endColumn=4 → backward scan: endLine=1==l=1 && endColumn=4<=n=6 → match
-            const result = doc.getTokenBeforePosition({ line: 0, character: 6 } as any);
-            expect(result?.image).toBe('ex:A');
-        });
-        it('returns undefined when no token precedes position in backward scan', () => {
-            const doc = makeDoc();
-            const t1 = makeToken(RdfToken.PNAME_LN.name, 'ex:A', { startLine: 3, startColumn: 1, endLine: 3, endColumn: 4 });
-            doc.setTokens([t1 as any]);
-            // Position on line 0 (0-based), char 0 → index=-1 → backward scan: t1 endLine=3 > l=1 → no match
-            const result = doc.getTokenBeforePosition({ line: 0, character: 0 } as any);
+            const result = doc.getIriAtPosition(new vscode.Position(99, 0));
             expect(result).toBeUndefined();
         });
     });
@@ -548,7 +391,12 @@ describe('TurtleDocument', () => {
 
         it('onDidChangeDocument resolves without error', async () => {
             const doc = makeDoc();
-            await expect(doc.onDidChangeDocument({} as any)).resolves.toBeUndefined();
+            const event: vscode.TextDocumentChangeEvent = {
+                document: createMockTextDocument(),
+                contentChanges: [],
+                reason: undefined,
+            };
+            await expect(doc.onDidChangeDocument(event)).resolves.toBeUndefined();
         });
 
         it('does nothing when store has no reasoner', async () => {
@@ -559,69 +407,50 @@ describe('TurtleDocument', () => {
 
         it('executes inference when reasoner is present', async () => {
             const executeInference = vi.fn();
-            storeControl.reasoner = { infer: vi.fn() };
-            // Override the resolve mock temporarily
-            const { container } = await import('tsyringe');
-            (container.resolve as any).mockImplementationOnce(() => ({
+            // Partial stub: only the members required by TurtleDocument.infer are provided.
+            const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
                 dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            }));
-            const doc = makeDoc();
+            } as unknown as Store;
+            const doc = createTurtleDocument('file:///test.ttl', RdfSyntax.Turtle, { store });
             await doc.infer();
             expect(executeInference).toHaveBeenCalled();
         });
 
         it('does not re-execute inference if already executed', async () => {
             const executeInference = vi.fn();
-            const { container } = await import('tsyringe');
-            (container.resolve as any).mockImplementation(() => ({
+            // Partial stub: only the members required by TurtleDocument.infer are provided.
+            const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
                 dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            }));
-            const doc = makeDoc();
+            } as unknown as Store;
+            const doc = createTurtleDocument('file:///test.ttl', RdfSyntax.Turtle, { store });
             await doc.infer();
             await doc.infer();
             expect(executeInference).toHaveBeenCalledTimes(1);
-            // Restore to default mock
-            (container.resolve as any).mockImplementation(() => ({
-                reasoner: storeControl.reasoner,
-                executeInference: vi.fn(),
-                deleteGraphs: vi.fn(),
-                dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
-                add: vi.fn(),
-            }));
         });
 
         it('re-executes inference after loadTriples resets the flag', async () => {
             const executeInference = vi.fn();
-            const deleteGraphs = vi.fn();
-            const { container } = await import('tsyringe');
-            (container.resolve as any).mockImplementation(() => ({
+            // Partial stub: only the members required by infer and loadTriples are provided.
+            const store = {
                 reasoner: { infer: vi.fn() },
                 executeInference,
-                deleteGraphs,
+                deleteGraphs: vi.fn(),
                 dataFactory: { namedNode: (v: string) => ({ termType: 'NamedNode', value: v }), quad: vi.fn() },
                 add: vi.fn(),
-            }));
-            const doc = makeDoc();
+            } as unknown as Store;
+            const doc = createTurtleDocument('file:///test.ttl', RdfSyntax.Turtle, { store });
             await doc.infer();
             expect(executeInference).toHaveBeenCalledTimes(1);
             // Simulate a slug update reload: loadTriples must reset the flag
             await doc.loadTriples('');
             await doc.infer();
             expect(executeInference).toHaveBeenCalledTimes(2);
-            // Restore to default mock
-            (container.resolve as any).mockImplementation(() => ({
-                reasoner: storeControl.reasoner,
-                executeInference: vi.fn(),
-                deleteGraphs: vi.fn(),
-                dataFactory: { namedNode: (v: string) => ({ value: v }), quad: vi.fn() },
-                add: vi.fn(),
-            }));
         });
     });
 
@@ -670,5 +499,67 @@ describe('blank node collision prevention', () => {
         expect(idsA.length).toBeGreaterThan(0);
         expect(idsB.length).toBeGreaterThan(0);
         expect(idsA.some(id => idsB.includes(id))).toBe(false);
+    });
+});
+
+describe('TurtleDocument.parse — grammar parse failures', () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('does not fail the parse when the grammar parse throws', () => {
+        const doc = makeDoc();
+
+        // A recursive-descent parser exhausts the stack on a pathologically
+        // large document; the tokens are still valid and must survive.
+        vi.spyOn(ParserFactory, 'getParser').mockReturnValue({
+            parse: () => { throw new RangeError('Maximum call stack size exceeded'); },
+            errors: [],
+            semanticErrors: [],
+            input: [],
+        } as any);
+
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+        expect(() => doc.parse(text)).not.toThrow();
+
+        // The token-derived state is populated as usual.
+        expect(doc.tokens.length).toBeGreaterThan(0);
+        expect(doc.namespaces['ex']).toBe('http://example.org/');
+        expect(doc.isParsed).toBe(true);
+
+        // Without a usable parse result every consumer falls back to its own
+        // parse, where the failure is handled (reported or swallowed) already.
+        expect(doc.getParseResult(text)).toBeUndefined();
+    });
+
+    it('still loads no triples when the grammar parse throws', async () => {
+        const doc = makeDoc();
+
+        vi.spyOn(ParserFactory, 'getParser').mockReturnValue({
+            parse: () => { throw new RangeError('Maximum call stack size exceeded'); },
+            errors: [],
+            semanticErrors: [],
+            input: [],
+        } as any);
+
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+        doc.parse(text);
+
+        await expect(doc.loadTriples(text)).resolves.toBeUndefined();
+    });
+
+    it('captures a reusable parse result when the grammar parse succeeds', () => {
+        const doc = makeDoc();
+        const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+        doc.parse(text);
+
+        const result = doc.getParseResult(text);
+
+        expect(result).toBeDefined();
+        expect(result!.cst).toBeDefined();
+        expect(result!.tokens.length).toBeGreaterThan(0);
     });
 });

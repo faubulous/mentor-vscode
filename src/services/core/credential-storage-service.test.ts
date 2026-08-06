@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
+vi.mock('@src/commands/login-microsoft-auth-provider', () => ({
+	loginMicrosoftAuthProvider: { id: 'mentor.command.loginMicrosoftAuthProvider' },
+}));
 
 let mockSecretsStore: Mock;
 let mockSecretsGet: Mock;
@@ -31,7 +34,13 @@ beforeEach(() => {
 	mockSecretsStore = vi.fn(async () => {});
 	mockSecretsGet = vi.fn(async () => undefined);
 	mockSecretsDelete = vi.fn(async () => {});
-	service = new CredentialStorageService();
+	service = new CredentialStorageService({
+		secrets: {
+			store: (...args: any[]) => mockSecretsStore(...args),
+			get: (...args: any[]) => mockSecretsGet(...args),
+			delete: (...args: any[]) => mockSecretsDelete(...args),
+		},
+	} as any);
 });
 
 describe('CredentialStorageService', () => {
@@ -82,6 +91,28 @@ describe('CredentialStorageService', () => {
 				'mentor.credentials:http://example.org/sparql',
 				JSON.stringify(cred)
 			);
+		});
+	});
+
+	describe('fetchMicrosoftCredential', () => {
+		it('returns the credential returned by the Microsoft auth provider command', async () => {
+			const vscode = await import('vscode');
+			const credential = { type: 'microsoft', accessToken: 'abc', expiresOn: 0 } as any;
+			const spy = vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(credential);
+
+			const result = await service.fetchMicrosoftCredential(['scope-a', 'scope-b']);
+
+			expect(spy).toHaveBeenCalledWith('mentor.command.loginMicrosoftAuthProvider', ['scope-a', 'scope-b']);
+			expect(result).toBe(credential);
+		});
+
+		it('returns null when the command resolves to a nullish value', async () => {
+			const vscode = await import('vscode');
+			vi.spyOn(vscode.commands, 'executeCommand').mockResolvedValue(undefined);
+
+			const result = await service.fetchMicrosoftCredential([]);
+
+			expect(result).toBeNull();
 		});
 	});
 });

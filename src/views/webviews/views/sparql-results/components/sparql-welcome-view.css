@@ -1,0 +1,148 @@
+:root {
+	--button-hoverBackground: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+.mentor-panel vscode-tab-panel vscode-scrollable {
+	position: absolute;
+	top: 35px;
+	right: 0;
+	bottom: 0;
+	left: 0;
+}
+
+.sparql-welcome-view-container {
+	display: flex;
+	flex-direction: row;
+	gap: 60px;
+	padding: 20px;
+	min-width: 1000px;
+}
+
+.sparql-welcome-view-container .muted {
+	color: var(--vscode-descriptionForeground);
+}
+
+.sparql-welcome-view-container .muted a {
+	color: var(--vscode-descriptionForeground);
+	text-decoration: underline;
+}
+
+.sparql-welcome-view-container .column-wide {
+	min-width: 360px;
+	max-width: 460px;
+}
+
+.sparql-welcome-view-container .column .header {
+	display: flex;
+	flex-direction: row;
+	margin-bottom: 1em;
+	gap: 10px;
+}
+
+.sparql-welcome-view-container .column .header h3 {
+	margin: 0;
+	margin-right: var(--mentor-space-6);
+	font-weight: 500;
+}
+
+.sparql-welcome-view-container .column .body {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+}
+
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button {
+	min-width: 8em;
+}
+
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .label {
+	margin-left: 0;
+}
+
+.sparql-welcome-view-container .column .body.button-list vscode-toolbar-button .codicon {
+	padding: 2em .5em;
+	font-size: large;
+}
+
+.sparql-welcome-view-container .column .body.button-list .codicon-arrow-swap {
+	color: var(--vscode-symbolIcon-enumeratorMemberForeground);
+}
+
+.sparql-welcome-view-container .column .body.button-list-xl vscode-toolbar-button {
+	min-height: 2.2em;
+}
+
+.sparql-welcome-view-container .history-item {
+    display: flex;
+    align-items: center;
+	gap: 4px;
+    padding: 2px;
+	border-radius: 3px;
+	width: 100%;
+    margin-bottom: 2px;
+}
+
+.sparql-welcome-view-container .history-item:hover,
+.sparql-welcome-view-container .history-item:focus-within,
+.sparql-welcome-view-container .history-item [role="button"]:hover {
+    background-color: var(--button-hoverBackground);
+}
+
+.sparql-welcome-view-container .history-item [role="button"] {
+	color: var(--vscode-inactive);
+    visibility: hidden;
+	background-color: transparent;
+	border-radius: 2px;
+	padding: 2px;
+	cursor: pointer;
+}
+
+.sparql-welcome-view-container .history-item:hover [role="button"] {
+    visibility: visible;
+}
+
+.sparql-welcome-view-container .folder {
+	margin-left: 7px;
+}
+
+.sparql-welcome-view-container .file-link {
+	color: var(--vscode-textLink-foreground) !important;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.sparql-welcome-view-container .execute-button {
+	min-width: 16px;
+	min-height: 16px;
+	text-align: center;
+}
+
+.sparql-welcome-view-container .actions {
+	margin-left: auto;
+	display: flex;
+	flex-direction: row;
+	gap: var(--mentor-space-3);
+}
+
+.sparql-welcome-view-container .file-icon {
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+}
+
+/* VS Code stamps the theme kind on the webview body; show the matching icon variant. */
+body.vscode-light .sparql-welcome-view-container .file-icon-dark,
+body.vscode-dark .sparql-welcome-view-container .file-icon-light,
+body.vscode-high-contrast:not(.vscode-high-contrast-light) .sparql-welcome-view-container .file-icon-light,
+body.vscode-high-contrast-light .sparql-welcome-view-container .file-icon-dark {
+	display: none;
+}
+
+.sparql-welcome-view-container .connection-status-pass {
+	color: var(--vscode-testing-iconPassed, var(--vscode-charts-green));
+}
+
+.sparql-welcome-view-container .connection-status-error {
+	color: var(--vscode-errorForeground);
+}

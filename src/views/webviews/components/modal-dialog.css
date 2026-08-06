@@ -1,0 +1,108 @@
+.modal-dialog-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: color-mix(in srgb, var(--vscode-editor-background) 80%, transparent);
+}
+
+.modal-dialog {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	width: min(90vw, 660px);
+	max-height: 90vh;
+	background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, var(--vscode-panel-border)));
+	border-radius: 4px;
+	box-shadow: 0 8px 24px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.4));
+	outline: none;
+}
+
+.modal-dialog-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 2em;
+	padding: 10px 16px;
+	border-bottom: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+}
+
+.modal-dialog-title {
+	margin: 0;
+	font-size: 1.1em;
+	font-weight: 500;
+	color: var(--vscode-foreground);
+}
+
+.modal-dialog-title-accessories {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+	flex: 1;
+}
+
+.modal-dialog-header-actions {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.modal-dialog-header-actions:empty {
+	display: none;
+}
+
+.modal-dialog-close {
+	flex: 0 0 auto;
+}
+
+.modal-dialog-body {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	padding: 16px;
+}
+
+.modal-dialog-body-350 {
+	max-height: 350px;
+	min-height: 350px;
+}
+
+.modal-dialog-confirm-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: rgba(0, 0, 0, 0.35);
+	border-radius: 4px;
+}
+
+.modal-dialog-confirm-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 1em;
+	max-width: 80%;
+	padding: 16px;
+	background-color: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+	color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+	border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+	border-radius: 4px;
+	box-shadow: 0 4px 12px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.4));
+}
+
+.modal-dialog-confirm-message {
+	margin: 0;
+}
+
+.modal-dialog-confirm-actions {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+	gap: 0.5em;
+}

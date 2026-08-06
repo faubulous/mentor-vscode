@@ -6,7 +6,7 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 const { mockGetDocumentContext, mockGetPrefixesWithErrorCode } = vi.hoisted(() => ({
     mockGetDocumentContext: vi.fn(),
-    mockGetPrefixesWithErrorCode: vi.fn(() => [] as string[]),
+    mockGetPrefixesWithErrorCode: vi.fn((_document: unknown, _diagnostics: unknown, _code: string) => [] as string[]),
 }));
 
 vi.mock('tsyringe', () => ({
@@ -22,7 +22,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 vi.mock('@src/utilities/vscode/diagnostic', () => ({
-    getPrefixesWithErrorCode: (...args: any[]) => mockGetPrefixesWithErrorCode(...args),
+    getPrefixesWithErrorCode: (...args: Parameters<typeof mockGetPrefixesWithErrorCode>) => mockGetPrefixesWithErrorCode(...args),
 }));
 
 vi.mock('@src/services/tokens', () => ({
@@ -30,7 +30,6 @@ vi.mock('@src/services/tokens', () => ({
 }));
 
 import { TurtleCodeActionsProvider } from '@src/languages/turtle/providers/turtle-code-actions-provider';
-import { CodeActionKind, Range, Position } from '@src/utilities/mocks/vscode';
 
 // A mock document with lineAt/lineCount support
 const mockDoc = {
@@ -38,12 +37,12 @@ const mockDoc = {
     getText: () => '',
     lineCount: 20,
     lineAt: (line: number) => ({
-        range: new Range(new Position(line, 0), new Position(line, 80)),
-        rangeIncludingLineBreak: new Range(new Position(line, 0), new Position(line + 1, 0)),
+        range: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line, 80)),
+        rangeIncludingLineBreak: new vscode.Range(new vscode.Position(line, 0), new vscode.Position(line + 1, 0)),
     }),
 } as any;
 
-const emptyRange = new Range(new Position(0, 0), new Position(0, 0));
+const emptyRange = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0));
 
 // Token factory helpers
 function makeToken(name: string, image: string, line = 1, col = 1): any {
@@ -70,11 +69,11 @@ describe('TurtleCodeActionsProvider', () => {
         });
 
         it('contains a QuickFix kind', () => {
-            expect(TurtleCodeActionsProvider.providedCodeActionKinds).toContainEqual(CodeActionKind.QuickFix);
+            expect(TurtleCodeActionsProvider.providedCodeActionKinds).toContainEqual(vscode.CodeActionKind.QuickFix);
         });
 
         it('contains a Refactor kind', () => {
-            expect(TurtleCodeActionsProvider.providedCodeActionKinds).toContainEqual(CodeActionKind.Refactor);
+            expect(TurtleCodeActionsProvider.providedCodeActionKinds).toContainEqual(vscode.CodeActionKind.Refactor);
         });
 
         it('contains exactly two kinds', () => {
@@ -84,14 +83,14 @@ describe('TurtleCodeActionsProvider', () => {
 
     describe('constructor', () => {
         it('can be instantiated without throwing', () => {
-            expect(() => new TurtleCodeActionsProvider()).not.toThrow();
+            expect(() => new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any)).not.toThrow();
         });
     });
 
     describe('provideCodeActions', () => {
         it('returns empty array when no document context', async () => {
             mockGetDocumentContext.mockReturnValue(null);
-            const provider = new TurtleCodeActionsProvider();
+            const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
             const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
             expect(Array.isArray(result)).toBe(true);
         });
@@ -102,7 +101,7 @@ describe('TurtleCodeActionsProvider', () => {
                 getTokenAtPosition: vi.fn(() => null),
                 getTokenIndexAtPosition: vi.fn(() => -1),
             });
-            const provider = new TurtleCodeActionsProvider();
+            const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
             const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
             expect(Array.isArray(result)).toBe(true);
         });
@@ -110,7 +109,7 @@ describe('TurtleCodeActionsProvider', () => {
         it('calls _provideFixMissingPrefixesActions with diagnostics', async () => {
             mockGetDocumentContext.mockReturnValue(null);
             mockGetPrefixesWithErrorCode.mockReturnValue([]);
-            const provider = new TurtleCodeActionsProvider();
+            const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
             const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [{ code: 'missingPrefix', message: '' }], triggerKind: 1 } as any);
             expect(Array.isArray(result)).toBe(true);
         });
@@ -124,13 +123,13 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenIndexAtPosition: vi.fn(() => 0),
                 });
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
 
                 const action = result.find(a => a.command?.command === 'mentor.command.implementPrefixForIri');
                 expect(action).toBeDefined();
                 expect(action!.title).toBe('Define prefix for IRI');
-                expect(action!.kind).toEqual(CodeActionKind.Refactor);
+                expect(action!.kind).toEqual(vscode.CodeActionKind.Refactor);
             });
         });
 
@@ -143,7 +142,7 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenIndexAtPosition: vi.fn(() => 0),
                 });
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
 
                 const sortAction = result.find(a => a.command?.command === 'mentor.command.sortPrefixes');
@@ -159,7 +158,7 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenIndexAtPosition: vi.fn(() => 0),
                 });
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
 
                 const convertAction = result.find(a => a.title?.startsWith('Convert all'));
@@ -180,7 +179,7 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenIndexAtPosition: vi.fn(() => 0),
                 });
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
 
                 const sortAction = result.find(a => a.command?.command === 'mentor.command.sortPrefixes');
@@ -188,7 +187,7 @@ describe('TurtleCodeActionsProvider', () => {
 
                 const convertAction = result.find(a => a.title === 'Convert all to @prefix');
                 expect(convertAction).toBeDefined();
-                expect(convertAction!.kind).toEqual(CodeActionKind.Refactor);
+                expect(convertAction!.kind).toEqual(vscode.CodeActionKind.Refactor);
             });
         });
 
@@ -205,7 +204,7 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenIndexAtPosition: vi.fn(() => 0),
                 });
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
 
                 const sortAction = result.find(a => a.command?.command === 'mentor.command.sortPrefixes');
@@ -234,9 +233,9 @@ describe('TurtleCodeActionsProvider', () => {
                 });
 
                 // Selection spans line 0 (where @prefix is)
-                const selection = new Range(new Position(0, 0), new Position(0, 40));
+                const selection = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 40));
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
 
                 const inlineAction = result.find(a => a.title?.startsWith('Inline prefix'));
@@ -251,9 +250,9 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenIndexAtPosition: vi.fn(() => -1),
                 });
 
-                const selection = new Range(new Position(1, 0), new Position(1, 10));
+                const selection = new vscode.Range(new vscode.Position(1, 0), new vscode.Position(1, 10));
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
 
                 const inlineAction = result.find(a => a.title?.startsWith('Inline prefix'));
@@ -268,8 +267,8 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenAtPosition: vi.fn(() => null),
                 });
 
-                const selection = new Range(new Position(0, 0), new Position(0, 50));
-                const provider = new TurtleCodeActionsProvider();
+                const selection = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 50));
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
                 const inlineAction = result.find(a => a.title?.startsWith('Inline'));
                 expect(inlineAction).toBeUndefined();
@@ -289,8 +288,8 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenAtPosition: vi.fn(() => null),
                 });
 
-                const selection = new Range(new Position(0, 0), new Position(0, 40));
-                const provider = new TurtleCodeActionsProvider();
+                const selection = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 40));
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
                 // PNAME on same declaration line is skipped (no replacement), but prefix line is deleted
                 // → edit.size > 0 (delete edit present), action IS returned
@@ -313,8 +312,8 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenAtPosition: vi.fn(() => null),
                 });
 
-                const selection = new Range(new Position(0, 0), new Position(0, 40));
-                const provider = new TurtleCodeActionsProvider();
+                const selection = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 40));
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
                 // 'other' prefix is not in prefixToIri map → skipped (no replacement added)
                 // declaration delete is still added → edit.size > 0, action IS returned
@@ -336,8 +335,8 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenAtPosition: vi.fn(() => null),
                 });
 
-                const selection = new Range(new Position(24, 0), new Position(24, 40));
-                const provider = new TurtleCodeActionsProvider();
+                const selection = new vscode.Range(new vscode.Position(24, 0), new vscode.Position(24, 40));
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
                 // No edit was added (declaration line is out of bounds, no PNAME replacements)
                 // → edit.size === 0 → action not returned
@@ -361,8 +360,8 @@ describe('TurtleCodeActionsProvider', () => {
                     getTokenAtPosition: vi.fn(() => null),
                 });
 
-                const selection = new Range(new Position(0, 0), new Position(0, 40));
-                const provider = new TurtleCodeActionsProvider();
+                const selection = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 40));
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, selection, { diagnostics: [], triggerKind: 1 } as any);
                 // Declaration line is deleted (edit.size > 0), action IS returned (just no replacement for 'ex')
                 const inlineAction = result.find(a => a.title?.startsWith('Inline'));
@@ -377,13 +376,13 @@ describe('TurtleCodeActionsProvider', () => {
                     code === 'UndefinedNamespacePrefixError' ? ['owl'] : []
                 );
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
 
                 const action = result.find(a => a.title === 'Implement missing prefixes');
                 expect(action).toBeDefined();
                 expect(action!.command?.command).toBe('mentor.command.implementPrefixes');
-                expect(action!.kind).toEqual(CodeActionKind.QuickFix);
+                expect(action!.kind).toEqual(vscode.CodeActionKind.QuickFix);
             });
 
             it('returns "Remove unused prefixes" when document has unused prefixes', async () => {
@@ -392,7 +391,7 @@ describe('TurtleCodeActionsProvider', () => {
                     code === 'UnusedNamespacePrefixHint' ? ['rdfs'] : []
                 );
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: [], triggerKind: 1 } as any);
 
                 const action = result.find(a => a.title === 'Remove unused prefixes');
@@ -408,7 +407,7 @@ describe('TurtleCodeActionsProvider', () => {
                     return [];
                 });
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const diag = [{ code: 'UndefinedNamespacePrefixError', message: 'foaf: not defined' }];
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: diag, triggerKind: 1 } as any);
 
@@ -424,7 +423,7 @@ describe('TurtleCodeActionsProvider', () => {
                     return [];
                 });
 
-                const provider = new TurtleCodeActionsProvider();
+                const provider = new TurtleCodeActionsProvider({ getDocumentContext: mockGetDocumentContext } as any);
                 const diag = [{ code: 'UnusedNamespacePrefixHint', message: 'skos: unused' }];
                 const result = await provider.provideCodeActions(mockDoc, emptyRange, { diagnostics: diag, triggerKind: 1 } as any);
 

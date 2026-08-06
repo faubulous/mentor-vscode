@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { Utils } from 'vscode-uri';
+import { UserUri } from './user-uri';
 
 /**
  * A helper class which provides methods to convert between absolute file system 
@@ -50,12 +51,20 @@ export class WorkspaceUri {
 	 * serializing `workspace:///path` as `workspace:/path`. This method ensures the
 	 * canonical triple-slash form `workspace:///path` is always produced.
 	 * 
-	 * For non-workspace URIs, delegates to `toString(true)` (skip encoding).
+	 * For `user:` URIs, delegates to {@link UserUri.toCanonicalString}, which applies
+	 * the same authority fix — this matters because graph IRIs derived from open
+	 * documents flow through this method, and a `user:///` document must produce
+	 * the same graph IRI here as the settings-backed shape loader uses.
+	 * For other non-workspace URIs, delegates to `toString(true)` (skip encoding).
 	 * For string inputs, returns the string unchanged.
 	 */
 	static toCanonicalString(uri: vscode.Uri | string): string {
 		if (typeof uri === 'string') {
 			return uri;
+		}
+
+		if (uri.scheme === UserUri.uriScheme) {
+			return UserUri.toCanonicalString(uri);
 		}
 
 		if (uri.scheme !== this.uriScheme) {
@@ -119,6 +128,14 @@ export class WorkspaceUri {
 			return result;
 		}
 
+		// Only translate schemes that actually address workspace files. Virtual schemes
+		// (user:, untitled:, mentor-template:, …) must keep their own identity — matching
+		// them by path prefix would mis-map e.g. `user:///shapes/x.ttl` to a workspace URI
+		// whenever the effective root path happens to be a prefix of the virtual path.
+		if (!this.supportedSchemes.has(documentIri.scheme)) {
+			return undefined;
+		}
+
 		const root = this.getEffectiveRootUri();
 
 		if (!root) {
@@ -180,8 +197,49 @@ export class WorkspaceUri {
 		const path = workspaceUri.path.startsWith('/') ? workspaceUri.path.substring(1) : workspaceUri.path;
 		const fileUri = vscode.Uri.joinPath(root, path);
 
+		// `joinPath` normalizes `../` segments, so a workspace URI such as
+		// `workspace:///../../etc/passwd` would otherwise resolve to a path outside the
+		// workspace root. Verifying the *resolved* path stays under the root rejects path
+		// traversal regardless of how it was encoded (`../`, `%2e%2e`, absolute paths).
+		if (!this.isContainedIn(fileUri, root)) {
+			throw new Error('Refusing to resolve workspace URI outside the workspace root: ' + workspaceUri.toString());
+		}
+
 		// Preserve the fragment (e.g., notebook cell index)
 		return fileUri.with({ fragment: workspaceUri.fragment });
+	}
+
+	/**
+	 * Resolves a workspace-relative URI into an absolute file system URI, returning `undefined`
+	 * instead of throwing when the URI cannot be resolved or would escape the workspace root.
+	 * Use this where an invalid or malicious URI should be silently skipped rather than surfaced
+	 * as an error (e.g. when deciding whether to offer a document link).
+	 * @param workspaceUri The workspace-relative URI.
+	 * @returns The absolute file URI, or `undefined` if it cannot be safely resolved.
+	 */
+	static tryToFileUri(workspaceUri: vscode.Uri): vscode.Uri | undefined {
+		try {
+			return this.toFileUri(workspaceUri);
+		} catch {
+			return undefined;
+		}
+	}
+
+	/**
+	 * Determines whether a resolved URI is contained within a root URI (the root itself, or a
+	 * descendant path). Used to prevent path traversal out of the workspace root.
+	 * @param child The resolved URI to check.
+	 * @param root The root URI that must contain the child.
+	 * @returns `true` if `child` is `root` or a path beneath it.
+	 */
+	private static isContainedIn(child: vscode.Uri, root: vscode.Uri): boolean {
+		if (child.scheme !== root.scheme || child.authority !== root.authority) {
+			return false;
+		}
+
+		const rootPath = root.path.endsWith('/') ? root.path.slice(0, -1) : root.path;
+
+		return child.path === rootPath || child.path.startsWith(rootPath + '/');
 	}
 
 	static toNotebookCellUri(workspaceUri: vscode.Uri): vscode.Uri {
@@ -216,6 +274,12 @@ export class CanonicalWorkspaceUri {
 	get query(): string { return this._inner.query; }
 	get fragment(): string { return this._inner.fragment; }
 	get fsPath(): string { return this._inner.fsPath; }
+
+	/**
+	 * The workspace-relative path without a leading slash (e.g. `models/data.ttl`),
+	 * the form used by settings keys such as validation profile include/exclude entries.
+	 */
+	get relativePath(): string { return this._inner.path.replace(/^\/+/, ''); }
 
 	with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): vscode.Uri {
 		return this._inner.with(change);

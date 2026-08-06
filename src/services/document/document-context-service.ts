@@ -1,10 +1,15 @@
 import * as vscode from 'vscode';
 import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
-import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
+import { IDocumentTokenSource, TokenDelivery } from '@src/services/document/document-token-source.interface';
+import { getMaxCellSlugNumber } from '@src/services/notebook/notebook-cell-slugs';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
+import { createYieldBudget } from '@src/utilities/scheduling';
+import { isTemplate } from 'triplate';
+import { getLog } from '@src/utilities/vscode/log';
+import { getErrorMessage } from '@src/utilities/error';
 
 /**
  * Maps document URIs to loaded document contexts.
@@ -34,37 +39,6 @@ export class DocumentContextService {
 	 */
 	activeContext: IDocumentContext | undefined;
 
-	/**
-	 * A map of pending token requests keyed by document URI.
-	 * Used to coordinate between loadDocument and language server token delivery.
-	 */
-	private readonly _pendingTokenRequests = new Map<string, {
-		resolve: (tokens: IToken[]) => void;
-		reject: (error: Error) => void;
-	}>();
-
-	/**
-	 * One-shot listeners waiting for the next token delivery for a given URI.
-	 * Used by feature providers to sync with the language server without blocking 
-	 * document loading.
-	 */
-	private readonly _nextTokenListeners = new Map<string, Array<{
-		resolve: (tokens: IToken[]) => void;
-		reject: (error: Error) => void;
-	}>>();
-
-	/**
-	 * Tracks the current load generation per URI. Incremented each time 
-	 * a new load starts for a URI, allowing older loads to detect
-	 * they have been superseded and should abandon their work.
-	 */
-	private readonly _tokenLoadGeneration = new Map<string, number>();
-
-	/**
-	 * Default timeout in milliseconds for waiting for tokens from the language server.
-	 */
-	private readonly _tokenWaitTimeout = 10000;
-
 	private readonly _onDidChangeDocumentContext = new vscode.EventEmitter<IDocumentContext | undefined>();
 
 	/**
@@ -76,15 +50,20 @@ export class DocumentContextService {
 		private readonly _extensionContext: vscode.ExtensionContext,
 		private readonly _store: Store,
 		private readonly _vocabulary: VocabularyRepository,
-		private readonly _documentFactory: IDocumentFactory
+		private readonly _documentFactory: IDocumentFactory,
+		private readonly _tokenSource: IDocumentTokenSource
 	) {
 		// Register event handlers for editor and document changes.
 		this._extensionContext.subscriptions.push(...[
 			vscode.window.onDidChangeActiveTextEditor(() => this.handleActiveEditorChanged()),
+			vscode.window.onDidChangeTextEditorSelection((e) => this._setCursorOnResourceContext(e.textEditor)),
+			this.onDidChangeDocumentContext(() => this._setCursorOnResourceContext(vscode.window.activeTextEditor)),
 			vscode.window.onDidChangeActiveNotebookEditor((e) => this.handleActiveNotebookEditorChanged(e)),
+			vscode.workspace.onDidOpenNotebookDocument((notebook) => this.handleNotebookDocumentOpened(notebook)),
 			vscode.workspace.onDidChangeTextDocument((e) => this.handleTextDocumentChanged(e)),
 			vscode.workspace.onDidChangeNotebookDocument((e) => this.handleNotebookDocumentChanged(e)),
 			vscode.workspace.onDidCloseTextDocument((e) => this.handleDocumentClosed(e)),
+			this._tokenSource.onDidDeliverTokens((delivery) => this._handleTokenDelivery(delivery)),
 			this._onDidChangeDocumentContext,
 			this
 		]);
@@ -99,13 +78,29 @@ export class DocumentContextService {
 	 * Dispose the manager and clean up resources.
 	 */
 	dispose(): void {
-		// Reject any pending token requests
-		for (const [, pending] of this._pendingTokenRequests) {
-			pending.reject(new Error('DocumentContextService disposed'));
+		// The event emitter and subscriptions are disposed via the extension
+		// context subscriptions registered in the constructor.
+	}
+
+	/**
+	 * Handles a token delivery from the token source. When the delivery was not
+	 * consumed by a waiting document load, this is the normal path for document
+	 * edits: reload the triples of an already-loaded context to bring it up to
+	 * date with the latest tokens.
+	 * @param delivery The token delivery.
+	 */
+	private _handleTokenDelivery(delivery: TokenDelivery): void {
+		if (delivery.consumed) {
+			return;
 		}
 
-		this._pendingTokenRequests.clear();
-		this._tokenLoadGeneration.clear();
+		const context = this.contexts[delivery.uri];
+
+		if (context?.isParsed) {
+			this._reloadContextTriples(delivery.uri).catch(e => {
+				getLog().warn('Failed to reload context after token delivery:', e);
+			});
+		}
 	}
 
 	/**
@@ -152,132 +147,6 @@ export class DocumentContextService {
 	}
 
 	/**
-	 * Wait for tokens to be delivered from the language server for a document.
-	 * If a previous wait exists for the same URI, it is cancelled (rejected) first
-	 * so that only one load at a time can be waiting for tokens per URI.
-	 * @param uri The document URI to wait for tokens.
-	 * @param timeout Optional timeout in milliseconds (defaults to _tokenWaitTimeout).
-	 * @returns A promise that resolves with the tokens or rejects on timeout/cancellation.
-	 */
-	waitForTokens(uri: string, timeout?: number): Promise<IToken[]> {
-		// Cancel any existing pending request for this URI to prevent multiple
-		// concurrent loads from racing against each other.
-		this._cancelPendingTokenRequest(uri);
-
-		return new Promise((resolve, reject) => {
-			const timeoutMs = timeout ?? this._tokenWaitTimeout;
-
-			const timeoutId = setTimeout(() => {
-				this._pendingTokenRequests.delete(uri);
-				reject(new Error(`Timeout waiting for tokens from language server for: ${uri}`));
-			}, timeoutMs);
-
-			this._pendingTokenRequests.set(uri, {
-				resolve: (tokens) => {
-					clearTimeout(timeoutId);
-					this._pendingTokenRequests.delete(uri);
-					resolve(tokens);
-				},
-				reject: (error) => {
-					clearTimeout(timeoutId);
-					this._pendingTokenRequests.delete(uri);
-					reject(error);
-				}
-			});
-		});
-	}
-
-	/**
-	 * Returns a promise that resolves with the next token delivery from the language server for the given URI.
-	 * This is a one-shot listener; it does not cancel or interfere with any pending loadDocument request.
-	 * @param uri The document URI.
-	 * @param timeout Timeout in milliseconds.
-	 * @returns A promise that resolves with the tokens or rejects on timeout.
-	 */
-	onNextTokenDelivery(uri: string, timeout: number): Promise<IToken[]> {
-		return new Promise((resolve, reject) => {
-			const timeoutId = setTimeout(() => {
-				const listeners = this._nextTokenListeners.get(uri);
-
-				if (listeners) {
-					const idx = listeners.findIndex(l => l.resolve === resolve);
-
-					if (idx >= 0) listeners.splice(idx, 1);
-					if (listeners.length === 0) this._nextTokenListeners.delete(uri);
-				}
-
-				reject(new Error(`Timeout waiting for next token delivery for: ${uri}`));
-			}, timeout);
-
-			const entry = {
-				resolve: (tokens: IToken[]) => { clearTimeout(timeoutId); resolve(tokens); },
-				reject: (error: Error) => { clearTimeout(timeoutId); reject(error); }
-			};
-
-			const existing = this._nextTokenListeners.get(uri);
-
-			if (existing) {
-				existing.push(entry);
-			} else {
-				this._nextTokenListeners.set(uri, [entry]);
-			}
-		});
-	}
-
-	/**
-	 * Cancel any pending token request for the given URI.
-	 * This rejects the existing promise, which causes any `loadDocument` awaiting it
-	 * to enter its catch block and detect that it has been superseded.
-	 * @param uri The document URI.
-	 */
-	private _cancelPendingTokenRequest(uri: string): void {
-		const pending = this._pendingTokenRequests.get(uri);
-
-		if (pending) {
-			pending.reject(new Error('Load superseded by a newer request'));
-		}
-	}
-
-	/**
-	 * Resolve pending token requests for a document. Called by language clients when tokens arrive.
-	 * If no pending request exists but the context is already loaded, reloads the triples
-	 * to ensure the context stays in sync with the latest tokens.
-	 * @param uri The document URI.
-	 * @param tokens The tokens from the language server.
-	 */
-	resolveTokens(uri: string, tokens: IToken[]): void {
-		// Notify one-shot listeners (e.g. completion providers waiting for fresh tokens).
-		const listeners = this._nextTokenListeners.get(uri);
-
-		if (listeners?.length) {
-			for (const listener of listeners) {
-				listener.resolve(tokens);
-			}
-
-			this._nextTokenListeners.delete(uri);
-		}
-
-		const pending = this._pendingTokenRequests.get(uri);
-
-		if (pending) {
-			pending.resolve(tokens);
-			return;
-		}
-
-		// Tokens arrived but no load was waiting for them. This is the normal path
-		// for document edits: handleTextDocumentChanged does not trigger a loadDocument,
-		// so when the language server sends updated tokens there is no pending waiter.
-		// Reload the triples to bring the context up to date.
-		const context = this.contexts[uri];
-
-		if (context?.hasTokens) {
-			this._reloadContextTriples(uri).catch(e => {
-				console.warn('Mentor: Failed to reload context after token delivery:', e);
-			});
-		}
-	}
-
-	/**
 	 * Reload triples on an existing context using its current tokens and the latest document content.
 	 * Called when the language server delivers updated tokens for an already-loaded document.
 	 * @param uri The document URI.
@@ -285,7 +154,7 @@ export class DocumentContextService {
 	private async _reloadContextTriples(uri: string): Promise<void> {
 		const context = this.contexts[uri];
 
-		if (!context?.hasTokens) return;
+		if (!context?.isParsed) return;
 
 		const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
 
@@ -368,20 +237,19 @@ export class DocumentContextService {
 				context.slug = slug;
 
 				this._reloadContextTriples(uri).catch(e => {
-					console.warn('Mentor: Failed to reload context after slug update:', e);
+					getLog().warn('Failed to reload context after slug update:', e);
 				});
 			}
 
 			// Compute the inference graph on the document, if it does not exist.
 			context.infer();
+			
 			return context;
 		}
 
-		// Increment the load generation for this URI. This invalidates any concurrent
+		// Start a new load generation for this URI. This invalidates any concurrent
 		// load that may be in progress (awaiting tokens or loading triples).
-		const generation = (this._tokenLoadGeneration.get(uri) ?? 0) + 1;
-
-		this._tokenLoadGeneration.set(uri, generation);
+		const generation = this._tokenSource.beginLoad(uri);
 
 		// Create a new context only when one doesn't exist.
 		// On force reload we intentionally reuse the existing context so that
@@ -403,31 +271,36 @@ export class DocumentContextService {
 
 		const content = document.getText();
 
-		// Check if the context already has tokens (from language server notification that arrived early).
-		// If not, wait for tokens from the language server.
-		if (!context.hasTokens) {
+		// Check if the context already has parser output (from a language server notification
+		// that arrived early). If not, wait for tokens from the language server.
+		if (!context.isParsed) {
 			try {
-				// Wait for tokens from the language server.
-				await this.waitForTokens(uri);
+				// Parse the already-open document in-process. Passing the document
+				// keeps this reliable and O(1): looking it up by URI in
+				// `workspace.textDocuments` can miss a just-opened document that VS
+				// Code has already dropped from the list (e.g. during bulk
+				// indexing), which would otherwise stall for the full token-wait
+				// timeout waiting for a delivery that never comes.
+				await this._tokenSource.waitForTokens(uri, undefined, document);
 			} catch (e) {
 				// If this load was superseded by a newer one, abandon silently.
-				if (this._tokenLoadGeneration.get(uri) !== generation) {
+				if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 					return;
 				}
 
 				// Timeout waiting for tokens - this can happen if the language server is slow
 				// or not responding or if the document simply does not contain any tokens (e.g. empty document). 
 				// In this case, we proceed with loading the document without tokens, and log a warning.
-				const message = e instanceof Error ? e.message : String(e);
+				const message = getErrorMessage(e);
 
-				console.debug(`Mentor: Timeout waiting for tokens: ${uri}`, message);
+				getLog().warn(`Timeout waiting for tokens: ${uri}`, message);
 
 				return context;
 			}
 		}
 
 		// Check if this load was superseded after awaiting tokens.
-		if (this._tokenLoadGeneration.get(uri) !== generation) {
+		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 			return;
 		}
 
@@ -435,7 +308,7 @@ export class DocumentContextService {
 		await context.loadTriples(content);
 
 		// Check if this load was superseded after loading triples.
-		if (this._tokenLoadGeneration.get(uri) !== generation) {
+		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 			return;
 		}
 
@@ -443,7 +316,7 @@ export class DocumentContextService {
 		await context.infer();
 
 		// Final supersession check after all async work is done.
-		if (this._tokenLoadGeneration.get(uri) !== generation) {
+		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 			return;
 		}
 
@@ -459,6 +332,83 @@ export class DocumentContextService {
 	}
 
 	/**
+	 * Loads a document into a context directly from its raw content, without
+	 * opening a VS Code text document. Workspace indexing uses this to avoid the
+	 * dominant per-file cost of `openTextDocument` — building the text-document
+	 * model and firing `onDidOpenTextDocument` to every registered provider — which
+	 * profiling showed accounts for the bulk of indexing time.
+	 *
+	 * Parsing happens in-process and does not go through the token source, so this
+	 * path deliberately does not emit token deliveries and therefore does not
+	 * trigger the diagnostics that ride on them. Use an explicit workspace
+	 * diagnostics run to validate indexed files.
+	 * @param uri The document URI.
+	 * @param content The document text (e.g. read via `workspace.fs.readFile`).
+	 * @param forceReload Whether to rebuild an already-loaded context.
+	 * @returns The loaded context, or `undefined` when the language is unsupported
+	 * or the load was superseded by a newer one.
+	 */
+	async loadDocumentContent(uri: vscode.Uri, content: string, forceReload: boolean = false): Promise<IDocumentContext | undefined> {
+		const languageId = this._documentFactory.getDocumentLanguageId(uri);
+
+		if (!languageId || !this._documentFactory.supportedLanguages.has(languageId)) {
+			return;
+		}
+
+		const key = uri.toString();
+
+		let context = this._contexts[key];
+
+		if (context?.isLoaded && !forceReload) {
+			// Compute the inference graph on the document, if it does not exist.
+			context.infer();
+
+			return context;
+		}
+
+		// Start a new load generation so a concurrent editor-driven load can detect
+		// that it superseded this one (and vice versa), mirroring loadDocument.
+		const generation = this._tokenSource.beginLoad(key);
+
+		if (!context) {
+			context = this._documentFactory.create(uri, languageId);
+
+			this._contexts[key] = context;
+		}
+
+		// Parse the content in-process. This sets the context's tokens/parsed data
+		// exactly as a token-source delivery would, but without a text document.
+		context.parse(content);
+
+		if (!this._tokenSource.isCurrentLoad(key, generation)) {
+			return;
+		}
+
+		await context.loadTriples(content);
+
+		if (!this._tokenSource.isCurrentLoad(key, generation)) {
+			return;
+		}
+
+		// Compute the inference graph on the document to simplify querying.
+		await context.infer();
+
+		if (!this._tokenSource.isCurrentLoad(key, generation)) {
+			return;
+		}
+
+		// Set the language tag statistics for the document, needed for rendering multi-language labels.
+		context.predicateStats = this._vocabulary.getPredicateUsageStats(context.graphs);
+
+		// We default to the user choice of the primary language tag as there might be multiple languages in the document.
+		context.activeLanguageTag = getConfig().get('definitionTree.defaultLanguageTag', context.primaryLanguage);
+
+		this._contexts[key] = context;
+
+		return context;
+	}
+
+	/**
 	 * Activate the document associated with the active context in the editor.
 	 * If the active context's document is not currently open in the editor, it will be opened.
 	 * @returns A promise that resolves to the active text editor or `undefined`.
@@ -466,7 +416,10 @@ export class DocumentContextService {
 	async activateDocument(): Promise<vscode.TextEditor | undefined> {
 		const documentUri = vscode.window.activeTextEditor?.document.uri;
 
-		if (this.activeContext && this.activeContext.uri != documentUri) {
+		// Compare by string value: Uri instances are never reference-equal across
+		// contexts, so an object comparison would re-open (and steal focus to)
+		// the document even when it is already active.
+		if (this.activeContext && this.activeContext.uri.toString() !== documentUri?.toString()) {
 			await vscode.commands.executeCommand("vscode.open", this.activeContext.uri);
 		}
 
@@ -480,8 +433,11 @@ export class DocumentContextService {
 	async handleActiveEditorChanged(): Promise<void> {
 		const editor = vscode.window.activeTextEditor;
 
+		await this._setCursorOnResourceContext(editor);
+
 		if (!editor) {
 			await this._setConvertFileFormatContexts();
+			await this._setTriplateTemplateContext();
 			return;
 		}
 
@@ -489,12 +445,14 @@ export class DocumentContextService {
 
 		if (!uri) {
 			await this._setConvertFileFormatContexts();
+			await this._setTriplateTemplateContext();
 			return;
 		}
 
 		await this._setConvertFileFormatContexts(editor.document.languageId, uri.toString());
+		await this._setTriplateTemplateContext(editor.document);
 
-		if (uri === this.activeContext?.uri) return;
+		if (uri.toString() === this.activeContext?.uri.toString()) return;
 
 		// For notebook cells, find the slug from the cell metadata so that the
 		// graph IRI uses the human-readable slug from the very first load.
@@ -528,9 +486,36 @@ export class DocumentContextService {
 	}
 
 	/**
-	 * Set the context for convert file format commands based on the current language ID to 
-	 * support menu visibility and enablement of conversion related commands.
-	 * @param languageId The language ID of the current document. If `undefined`, all convert file format contexts will be set to `false`.
+	 * Sets the `mentor.editor.cursorOnResource` context key used to toggle visibility of the
+	 * "Describe Resource" editor context-menu item. Updated synchronously on every selection
+	 * change so the key is current when a right-click opens the menu.
+	 * @param editor The editor whose caret position should be evaluated, or `undefined`.
+	 */
+	private async _setCursorOnResourceContext(editor?: vscode.TextEditor): Promise<void> {
+		const uri = editor?.document?.uri?.toString();
+		const position = editor?.selection?.active;
+		const iri = uri && position ? this.contexts[uri]?.getIriAtPosition(position) : undefined;
+
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.cursorOnResource', !!iri);
+	}
+
+	/**
+	 * Sets the `mentor.editor.isTriplateTemplate` context key used to toggle the
+	 * template execute button in the editor title bar.
+	 * @param document The active document, or `undefined` when there is no active editor.
+	 */
+	private async _setTriplateTemplateContext(document?: vscode.TextDocument): Promise<void> {
+		const isTriplateTemplate = document ? isTemplate(document.getText()) : false;
+
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.isTriplateTemplate', isTriplateTemplate);
+	}
+
+	/**
+	 * Sets the language-derived editor context keys for the active document: convert-file-format
+	 * command visibility/enablement, `mentor.editor.isRdfDocument`, and `mentor.editor.isMentorLanguage`
+	 * (used to gate resource-oriented features such as the "Describe Resource" menu item). Keying off
+	 * the active document — rather than the caret — keeps these stable when a right-click opens a menu.
+	 * @param languageId The language ID of the current document. If `undefined`, all contexts are set to `false`.
 	 * @returns A promise that resolves when the contexts have been set.
 	 */
 	private async _setConvertFileFormatContexts(languageId?: string, uri?: string): Promise<void> {
@@ -543,8 +528,13 @@ export class DocumentContextService {
 		const isTripleSource = languageId ? this._documentFactory.isTripleSourceLanguage(languageId) : false;
 		const isRdfDocument = isTripleSource && (languageId !== 'xml' || (uri !== undefined && this.contexts[uri]?.isLoaded === true));
 
+		// Whether the document is one of Mentor's first-class RDF authoring languages, sourced from
+		// the canonical RDF_LANGUAGE_IDS list so menu `when` clauses need not duplicate it.
+		const isRdfLanguage = languageId ? this._documentFactory.isRdfLanguage(languageId) : false;
+
 		await vscode.commands.executeCommand('setContext', 'mentor.command.convertFileFormat.executable', convertible);
 		await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', isRdfDocument);
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.isMentorLanguage', isRdfLanguage);
 
 		for (const targetLanguageId of this._convertTargetLanguageIds) {
 			await vscode.commands.executeCommand(
@@ -561,13 +551,61 @@ export class DocumentContextService {
 	 * @param editor The notebook editor.
 	 */
 	async handleActiveNotebookEditorChanged(editor: vscode.NotebookEditor | undefined): Promise<void> {
-		if (!editor) return;
+		if (!editor) {
+			return;
+		}
+
+		// Load the selected cell first so the features of the cell the user is
+		// looking at come up before the rest of the notebook loads.
+		const cells = [...editor.notebook.getCells()];
+		const selectedIndex = editor.selection?.start;
+
+		if (selectedIndex !== undefined && selectedIndex >= 0 && selectedIndex < cells.length) {
+			cells.unshift(...cells.splice(selectedIndex, 1));
+		}
+
+		// Each cell load pays a full parse, triple load and inference pass;
+		// yield between cells so a large notebook does not block the extension host.
+		const yieldBudget = createYieldBudget();
 
 		// Load all RDF cells in the notebook to ensure their graphs are created.
-		for (const cell of editor.notebook.getCells()) {
+		for (const cell of cells) {
 			if (this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
+				await yieldBudget.maybeYield();
+
 				const slug = cell.metadata?.slug as string | undefined;
+
 				await this.loadDocument(cell.document, false, slug);
+			}
+		}
+	}
+
+	/**
+	 * Handle notebook document opened event. Loads the contexts of all supported
+	 * cells so diagnostics and quick fixes work in notebooks that are open but
+	 * never focused — cells only otherwise acquire a context when they become
+	 * the active editor or the workspace indexer walks the notebook file.
+	 * @param notebook The opened notebook document.
+	 */
+	async handleNotebookDocumentOpened(notebook: vscode.NotebookDocument): Promise<void> {
+		const yieldBudget = createYieldBudget();
+
+		for (const cell of notebook.getCells()) {
+			if (!this._documentFactory.supportedLanguages.has(cell.document.languageId)) {
+				continue;
+			}
+
+			await yieldBudget.maybeYield();
+
+			const slug = cell.metadata?.slug as string | undefined;
+
+			try {
+				// Already-loaded cells return immediately; concurrent loads (e.g.
+				// the indexer opening the same notebook) are guarded by the token
+				// source's load generations.
+				await this.loadDocument(cell.document, false, slug);
+			} catch (e) {
+				getLog().warn(`Failed to load notebook cell ${cell.document.uri.toString()}:`, getErrorMessage(e));
 			}
 		}
 	}
@@ -601,7 +639,7 @@ export class DocumentContextService {
 			edit: vscode.NotebookEdit;
 		}[] = [];
 
-		let n = this._getMaxCellSlugNumber(e.notebook) + 1;
+		let n = getMaxCellSlugNumber(e.notebook) + 1;
 
 		for (const cell of addedCells) {
 			const metadata = {
@@ -637,35 +675,9 @@ export class DocumentContextService {
 	}
 
 	/**
-	 * Returns the highest auto-generated slug number in the notebook.
-	 * @param notebook The notebook document.
-	 * @returns The highest auto-generated slug number.
-	 */
-	private _getMaxCellSlugNumber(notebook: vscode.NotebookDocument): number {
-		const slugPattern = /^cell-(\d+)$/;
-
-		let maxNumber = 0;
-
-		for (const c of notebook.getCells()) {
-			const slug: string | undefined = c.metadata?.slug;
-			const match = typeof slug === 'string' ? slug.match(slugPattern) : null;
-
-			if (match) {
-				const n = parseInt(match[1], 10);
-
-				if (n > maxNumber) {
-					maxNumber = n;
-				}
-			}
-		}
-
-		return maxNumber;
-	}
-
-	/**
 	 * Handle text document changed event. Does not trigger a full document reload. 
 	 * Instead, the existing contextis kept visible and the reload happens when the 
-	 * language server delivers updated tokens via resolveTokens → _reloadContextTriples.
+	 * language server delivers updated tokens via the token source → _reloadContextTriples.
 	 * @param e The text document change event.
 	 */
 	async handleTextDocumentChanged(e: vscode.TextDocumentChangeEvent): Promise<void> {
@@ -682,6 +694,12 @@ export class DocumentContextService {
 			context = this._documentFactory.create(e.document.uri, e.document.languageId);
 
 			this.contexts[uri] = context;
+
+			// The token source's own change handler is subscribed before this one
+			// and bails out for documents without a context, so the edit that just
+			// created the context scheduled no re-parse — without this kick, no
+			// diagnostics or quick fixes would appear until a second edit.
+			this._tokenSource.refreshTokens(uri);
 		}
 
 		// Notify the context for immediate lightweight reactions (e.g. auto-prefix).
@@ -696,7 +714,12 @@ export class DocumentContextService {
 		const uri = document.uri.toString();
 		const context = this.contexts[uri];
 
-		if (context && context.isTemporary) {
+		// Notebook cell documents close when their cell is deleted or the
+		// notebook is closed; without cleanup their contexts and graphs would
+		// leak for the rest of the session and keep stale data in the store.
+		const isNotebookCell = document.uri.scheme === 'vscode-notebook-cell';
+
+		if (context && (context.isTemporary || isNotebookCell)) {
 			// Cleanup temporary / non-persisted document context generated by views.
 			delete this.contexts[uri];
 

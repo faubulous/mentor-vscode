@@ -15,7 +15,6 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 	},
 }));
 
-import { Position, Range } from '@src/utilities/mocks/vscode';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 

@@ -1,15 +1,14 @@
 import * as vscode from 'vscode';
 import { Range } from 'vscode-languageserver-types';
-import { container } from 'tsyringe';
 import { Quad_Subject } from "@rdfjs/types";
 import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
 import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
-import { ServiceToken } from '@src/services/tokens';
+import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
-import { getConfig } from '@src/utilities/vscode/config';
+import { getPredicatesConfig } from '@src/utilities/vscode/config';
 import { IDocumentContext } from './document-context.interface';
 
 /**
@@ -31,81 +30,36 @@ export interface Label {
  * A class that provides access to RDF document specific data such as namespaces, graphs and token maps.
  */
 export abstract class DocumentContext implements IDocumentContext {
-	/**
-	 * The URI of the document.
-	 */
+
 	readonly uri: vscode.Uri;
 
-	/**
-	 * The graphs in the triple store associated with the document.
-	 */
 	readonly graphs: string[] = [];
 
-	/**
-	 * A human-readable slug used as the URI fragment for the document's graph IRI.
-	 * For notebook cells this overrides the opaque VS Code-assigned fragment so that
-	 * the graph IRI is stable and readable (e.g. `workspace:///notebook.mnb#my-data`).
-	 * When undefined the raw URI fragment is used as-is.
-	 */
 	slug: string | undefined;
 
-	/**
-	 * Get the URI of the document graph in the triple store.
-	 * @note This is a workspace-relative URI so that queries which are persisted in a repository are portable.
-	 */
 	get graphIri(): vscode.Uri {
 		return WorkspaceUri.toWorkspaceUri(this.uri, this.slug) || this.uri;
 	}
 
-	/**
-	 * Get the base IRI of the document that can be used for resolving local names into IRIs.
-	 */
 	baseIri: string | undefined;
 
-	/**
-	 * Maps prefixes to namespace IRIs.
-	 */
 	namespaces: { [key: string]: string } = {};
 
-	/**
-	 * Maps prefixes to the location of their definition in the document.
-	 */
 	namespaceDefinitions: { [key: string]: Range[] } = {};
 
-	/**
-	 * Maps IRIs that appear as subjects to the locations where they appear in the document.
-	 */
 	subjects: { [key: string]: Range[] } = {};
 
-	/**
-	 * Maps IRIs of all resources to the locations where they appear in the document.
-	 */
 	references: { [key: string]: Range[] } = {};
 
 	// TODO: Remove all type definitions from this map and query the combination of typeAssertion and typeDefinitions instead.
-	// TODO: Remove all type definitions from this map and query the combination of typeAssertion and typeDefinitions instead.
-	/**
-	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion. This includes
-	 * named individuals, classes and properties.
-	 */
 	typeAssertions: { [key: string]: Range[] } = {};
 
-	/**
-	 * Maps IRIs of subjects that are class or property definitions to the location of the definition. This includes
-	 * only class defintions.
-	 */
 	typeDefinitions: { [key: string]: Range[] } = {};
 
-	/**
-	 * Information about the language tags used in the document.
-	 */
 	predicateStats: PredicateUsageStats = {};
 
 	private _primaryLanguage: string | undefined | null = null;
 
-	/**
-	 * The most often used language tag in the document.
-	 */
 	get primaryLanguage(): string | undefined {
 		if (this._primaryLanguage === null && this.predicateStats) {
 			let languageStats: LanguageTagUsageStats = {};
@@ -138,10 +92,6 @@ export abstract class DocumentContext implements IDocumentContext {
 
 	private _activeLanguageTag: string | undefined;
 
-	/**
-	 * The ISO 639-3 language tag of the user-selected display document language. This value
-	 * can be used to restore the user's selection when switching between documents.
-	 */
 	get activeLanguageTag(): string | undefined {
 		return this._activeLanguageTag;
 	}
@@ -158,94 +108,56 @@ export abstract class DocumentContext implements IDocumentContext {
 
 	private _activeLanguage: string | undefined;
 
-	/**
-	 * The language portion of the active ISO 639-3 language tag without the regional part.
-	 * e.g. 'en' for the language tags 'en' or 'en-gb'.
-	 */
+
 	get activeLanguage(): string | undefined {
 		return this._activeLanguage;
 	}
 
 	/**
-	 * The predicates to be used for retrieving labels and descriptions for resources.
+	 * The label and description predicates from the `mentor.predicates.*` settings.
+	 * Backed by a cache that invalidates on configuration changes, so setting
+	 * changes apply immediately (e.g. to hover tooltips) without a configuration
+	 * read per access — this getter runs per tree node during a tree refresh.
 	 */
-	readonly predicates = {
-		label: [] as string[],
-		description: [] as string[]
-	};
-
-	constructor(documentUri: vscode.Uri) {
-		const config = getConfig();
-
-		this.uri = documentUri;
-		this.predicates.label = config.get('predicates.label') ?? [];
-		this.predicates.description = config.get('predicates.description') ?? [];
+	get predicates(): { label: string[]; description: string[] } {
+		return getPredicatesConfig();
 	}
 
-	/**
-	 * Indicates whether the document is fully loaded.
-	 */
+	constructor(
+		documentUri: vscode.Uri,
+		protected readonly _store: Store,
+		protected readonly _vocabulary: VocabularyRepository,
+		protected readonly _settings: ISettingsService
+	) {
+		this.uri = documentUri;
+	}
+
 	abstract get isLoaded(): boolean;
 
-	/**
-	 * Indicates whether tokens have been set for this document.
-	 * Used to determine if we need to wait for tokens from the language server.
-	 */
-	abstract get hasTokens(): boolean;
+	abstract get isParsed(): boolean;
 
-	/**
-	 * Indicates whether the document is temporary and not persisted.
-	 */
+	abstract get providesTokens(): boolean;
+
 	get isTemporary(): boolean {
 		return this.uri.scheme == 'git' || this.uri.scheme == 'untitled';
 	}
 
-	/**
-	 * Loads triples into the triple store using existing tokens.
-	 * This method assumes tokens have already been set via setTokens().
-	 * @param data The file content.
-	 */
+	abstract parse(text: string): IToken[];
+
 	abstract loadTriples(data: string): Promise<void>;
 
-	/**
-	 * Infers new triples from the document, if not already done.
-	 */
 	abstract infer(): Promise<void>;
 
-	/**
-	 * Get the full IRI of a resource at the given position in the document.
-	 * @param position The position in the document.
-	 * @returns The full IRI of the resource or `undefined` if not found.
-	 */
 	abstract getIriAtPosition(position: vscode.Position): string | undefined;
 
-	/**
-	 * Get a literal value at the given position in the document.
-	 * @param position The position in the document.
-	 * @returns The literal value at the position or `undefined` if there is no literal value at that position.
-	 */
 	abstract getLiteralAtPosition(position: vscode.Position): string | undefined;
 
-	/**
-	 * Event handler for when the document is changed.
-	 * @param e The document change event.
-	 **/
 	async onDidChangeDocument(e: vscode.TextDocumentChangeEvent): Promise<void> { };
 
-	/**
-	 * Get the text document with the given URI.
-	 * @param uri The URI of the text document.
-	 * @returns The text document if it is loaded, null otherwise.
-	 */
 	getTextDocument(): vscode.TextDocument | undefined {
 		return vscode.workspace.textDocuments.find(d => d.uri.toString() === this.uri.toString());
 	}
 
-	/**
-	 * Get the prefix for a namespace IRI.
-	 * @param namespaceIri The namespace IRI.
-	 * @returns The prefix for the namespace IRI or `undefined`.
-	 */
 	getPrefixForNamespaceIri(namespaceIri: string): string | undefined {
 		for (let [prefix, iri] of Object.entries(this.namespaces)) {
 			if (iri === namespaceIri) {
@@ -254,11 +166,6 @@ export abstract class DocumentContext implements IDocumentContext {
 		}
 	}
 
-	/**
-	 * Updates a namespace prefix definition in the document.
-	 * @param oldPrefix The prefix to be replaced.
-	 * @param newPrefix The prefix to replace the old prefix.
-	 */
 	updateNamespacePrefix(oldPrefix: string, newPrefix: string) {
 		const uri = this.namespaces[oldPrefix];
 
@@ -269,16 +176,10 @@ export abstract class DocumentContext implements IDocumentContext {
 		this.namespaces[newPrefix] = uri;
 	}
 
-	/**
-	 * Get the label of a resource according to the current user preferences for the display of labels.
-	 * @param subjectUri URI of the resource.
-	 * @returns A label for the resource as a string literal.
-	 */
 	getResourceLabel(subjectUri: string): Label {
 		// TODO: Fix #10 in mentor-rdf; Refactor node identifiers to be node instances instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
-		const settings = container.resolve<ISettingsService>(ServiceToken.SettingsService);
-		const treeLabelStyle = settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
+		const treeLabelStyle = this._settings.get<TreeLabelStyle>('view.definitionTree.labelStyle', TreeLabelStyle.AnnotatedLabels);
 
 		switch (treeLabelStyle) {
 			case TreeLabelStyle.AnnotatedLabels: {
@@ -335,10 +236,8 @@ export abstract class DocumentContext implements IDocumentContext {
 		let primaryLabel: Literal | undefined = undefined;
 		let fallbackLabel: Literal | undefined = undefined;
 
-		const store = container.resolve<Store>(ServiceToken.Store);
-
 		for (let p of predicates) {
-			for (let q of store.matchAll(graphUris, subject, p, null, false)) {
+			for (let q of this._store.matchAll(graphUris, subject, p, null, false)) {
 				if (q.object.termType === 'Literal') {
 					const literal = q.object as Literal;
 
@@ -392,16 +291,9 @@ export abstract class DocumentContext implements IDocumentContext {
 		return fallbackLabel;
 	}
 
-	/**
-	 * Get a rendered version of a SHACL path as a string according to the current user preferences for label display.
-	 * @param node The object of a SHACL path triple.
-	 * @returns A rendered version of the SHACL path as a string.
-	 */
 	getPropertyPathLabel(node: Quad_Subject): string {
 		let result = [];
-		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
-
-		for (let c of vocabulary.getPropertyPathTokens(this.graphs, node)) {
+		for (let c of this._vocabulary.getPropertyPathTokens(this.graphs, node)) {
 			if (typeof (c) === 'string') {
 				if (c === '|' || c === '/') {
 					result.push(` ${c} `);
@@ -416,11 +308,6 @@ export abstract class DocumentContext implements IDocumentContext {
 		return result.join('');
 	}
 
-	/**
-	 * Get the description of a resource.
-	 * @param subjectUri URI of the resource.
-	 * @returns A description for the resource as a string literal.
-	 */
 	getResourceDescription(subjectUri: string): Label | undefined {
 		// TODO: Fix #10 in mentor-rdf; This is a hack: we need to return nodes from the Mentor RDF API instead of strings.
 		const subject = subjectUri.includes(':') ? new NamedNode(subjectUri) : new BlankNode(subjectUri);
@@ -436,11 +323,6 @@ export abstract class DocumentContext implements IDocumentContext {
 		return this._getResourceAnnotationFromPredicates(undefined, subject, predicates);
 	}
 
-	/**
-	 * Get the IRI of a resource. Resolves relative file IRIs with regards to the directory of the current document.
-	 * @param subjectIri IRI of the resource.
-	 * @returns A IRI for the resource as a string literal.
-	 */
 	getResourceIri(subjectIri: string): string {
 		// TODO: Add support for virtual file systems provided by vscode such as vscode-vfs.
 		if (subjectIri.startsWith('file')) {
@@ -461,11 +343,6 @@ export abstract class DocumentContext implements IDocumentContext {
 		return subjectIri;
 	}
 
-	/**
-	 * Get the tooltip for a resource.
-	 * @param subjectUri URI of the resource.
-	 * @returns A markdown string containing the label, description and URI of the resource.
-	 */
 	getResourceTooltip(subjectUri: string): vscode.MarkdownString {
 		const iri = this.getResourceIri(subjectUri);
 		const label = this.getResourceLabel(subjectUri);

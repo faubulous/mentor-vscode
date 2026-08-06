@@ -6,14 +6,14 @@ vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 const { mockContextService, mockIndexerService, mockVocabulary } = vi.hoisted(() => ({
     mockContextService: {
         contexts: {} as Record<string, any>,
-        onDidChangeDocumentContext: vi.fn(() => ({ dispose: vi.fn() })),
+        onDidChangeDocumentContext: vi.fn((_handler?: unknown) => ({ dispose: vi.fn() })),
     },
     mockIndexerService: {
         waitForIndexed: vi.fn(() => new Promise(() => { })), // never resolves
     },
     mockVocabulary: {
         hasType: vi.fn(() => false),
-        getShapes: vi.fn(function*() {}),
+        getShapes: vi.fn(function*(): Generator<string, void, unknown> {}),
     },
 }));
 
@@ -52,28 +52,28 @@ beforeEach(() => {
 describe('TurtleUsageCodeLensProvider', () => {
     describe('constructor', () => {
         it('can be instantiated without throwing', () => {
-            expect(() => new TurtleUsageCodeLensProvider()).not.toThrow();
+            expect(() => new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any)).not.toThrow();
         });
     });
 
     describe('initial state', () => {
         it('_enabled is true by default', () => {
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             expect((provider as any)._enabled).toBe(true);
         });
 
         it('_initialized is false before provideCodeLenses is called', () => {
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             expect((provider as any)._initialized).toBe(false);
         });
 
         it('_initializing is false before provideCodeLenses is called', () => {
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             expect((provider as any)._initializing).toBe(false);
         });
 
         it('exposes onDidChangeCodeLenses as an event', () => {
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             expect(typeof provider.onDidChangeCodeLenses).toBe('function');
         });
     });
@@ -89,7 +89,7 @@ describe('TurtleUsageCodeLensProvider', () => {
                 isTemporary: false,
             };
 
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             const fakeDoc = { uri: { toString: () => uriStr } };
             const codeLenses = await provider.provideCodeLenses(fakeDoc as any, null as any) as any[];
             expect(Array.isArray(codeLenses)).toBe(true);
@@ -112,7 +112,7 @@ describe('TurtleUsageCodeLensProvider', () => {
                 yield 'urn:shape#B';
             });
 
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
 
             expect(codeLenses).toHaveLength(2);
@@ -134,7 +134,7 @@ describe('TurtleUsageCodeLensProvider', () => {
 
             mockVocabulary.getShapes.mockImplementation(function*() {});
 
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
 
             expect(codeLenses).toHaveLength(1);
@@ -157,7 +157,7 @@ describe('TurtleUsageCodeLensProvider', () => {
                 yield 'urn:shape#A';
             });
 
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
 
             expect(codeLenses).toHaveLength(1);
@@ -169,7 +169,7 @@ describe('TurtleUsageCodeLensProvider', () => {
             const uriStr = 'file:///doc2.ttl';
             mockContextService.contexts[uriStr] = { subjects: {}, references: {}, isTemporary: false };
 
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             expect((provider as any)._initialized).toBe(false);
 
             await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any);
@@ -178,7 +178,7 @@ describe('TurtleUsageCodeLensProvider', () => {
         });
 
         it('returns a Promise that stays pending when _initializing is true', () => {
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             (provider as any)._initializing = true;
             // The executor runs synchronously and hits `return []` (line 78) before any await
             provider.provideCodeLenses({ uri: { toString: () => 'file:///x.ttl' } } as any, null as any);
@@ -187,7 +187,7 @@ describe('TurtleUsageCodeLensProvider', () => {
         });
 
         it('returns a Promise that stays pending when _enabled is false', () => {
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             (provider as any)._enabled = false;
             (provider as any)._initialized = true;
             // Synchronously hits `return []` at line 86 (no await before it when _initialized=true)
@@ -197,18 +197,11 @@ describe('TurtleUsageCodeLensProvider', () => {
 
         it('returns a Promise that stays pending when context is not found', () => {
             const uriStr = 'file:///unknown.ttl';
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             (provider as any)._initialized = true;
             // contexts has no entry for uriStr → hits `return []` at line 92
             provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any);
             expect(mockContextService.contexts[uriStr]).toBeUndefined();
-        });
-    });
-
-    describe('resolveCodeLens', () => {
-        it('throws a not-implemented error', () => {
-            const provider = new TurtleUsageCodeLensProvider();
-            expect(() => provider.resolveCodeLens!({} as any, null as any)).toThrow('Method not implemented.');
         });
     });
 
@@ -220,7 +213,7 @@ describe('TurtleUsageCodeLensProvider', () => {
                 return { dispose: vi.fn() } as any;
             });
 
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             expect(capturedHandler).toBeDefined();
 
             const fired: number[] = [];
@@ -239,7 +232,7 @@ describe('TurtleUsageCodeLensProvider', () => {
             let resolveWait!: () => void;
             mockIndexerService.waitForIndexed.mockReturnValue(new Promise<void>(res => { resolveWait = res; }));
 
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             // Trigger _initialize by calling provideCodeLenses
             mockContextService.contexts['file:///idx.ttl'] = { subjects: {} };
             provider.provideCodeLenses({ uri: { toString: () => 'file:///idx.ttl' } } as any, null as any);
@@ -255,14 +248,14 @@ describe('TurtleUsageCodeLensProvider', () => {
             expect(fired.length).toBe(1);
         });
 
-        it('fires onDidChangeCodeLenses when context change event fires and enabled', async () => {
+        it('fires onDidChangeCodeLenses (debounced) when context change event fires and enabled', async () => {
             let capturedCtxHandler: (() => void) | undefined;
             mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
                 capturedCtxHandler = handler;
                 return { dispose: vi.fn() };
             });
 
-            const provider = new TurtleUsageCodeLensProvider();
+            const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             mockContextService.contexts['file:///ctx.ttl'] = { subjects: {} };
             provider.provideCodeLenses({ uri: { toString: () => 'file:///ctx.ttl' } } as any, null as any);
             await new Promise(r => setTimeout(r, 0));
@@ -272,6 +265,10 @@ describe('TurtleUsageCodeLensProvider', () => {
 
             expect(capturedCtxHandler).toBeDefined();
             capturedCtxHandler!();
+
+            // The refresh is coalesced through a 250 ms trailing debouncer.
+            expect(fired.length).toBe(0);
+            await new Promise(r => setTimeout(r, 300));
             expect(fired.length).toBe(1);
         });
     });

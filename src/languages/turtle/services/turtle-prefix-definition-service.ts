@@ -4,10 +4,11 @@ import { IToken, RdfToken, TokenType } from '@faubulous/mentor-rdf-parsers';
 import { isUpperCaseToken, getFirstTokenOfType, getLastTokenOfType } from '@faubulous/mentor-rdf-parsers';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { PrefixLookupService } from '@src/services/document/prefix-lookup-service';
-import { getIriFromIriReference } from '@src/utilities';
+import { getIriFromIriReference, getContentStartOffset } from '@src/utilities';
 import { TurtleDocument } from '@src/languages';
 import { TurtleFeatureProvider } from '@src/languages/turtle/turtle-feature-provider';
 import { getConfig } from '@src/utilities/vscode/config';
+import { getRangeFromToken } from '@src/utilities/vscode/tokens';
 
 /**
  * Specifies a how a namespace prefix should be defined in a document.
@@ -206,6 +207,19 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	}
 
 	/**
+	 * Returns the first line index at which the document body begins, i.e. the line
+	 * after a triplate `---` frontmatter header, or `0` when there is none. Prefix
+	 * declarations must be inserted at or below this line so the header is preserved.
+	 * @param document The text document.
+	 * @returns The line index at which the document body begins.
+	 */
+	private _getContentStartLine(document: vscode.TextDocument): number {
+		const offset = getContentStartOffset(document.getText());
+
+		return offset > 0 ? document.positionAt(offset).line : 0;
+	}
+
+	/**
 	 * Delete empty lines after a token in a document.
 	 * @param edit The workspace edit.
 	 * @param document The text document.
@@ -233,18 +247,14 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param context The RDF document context.
 	 * @returns The token type for prefix definitions in the document.
 	 */
-	private _getPrefixTokenType(document: vscode.TextDocument, context: TurtleDocument): TokenType {
-		if (document.languageId === 'xml') {
-			return { name: 'XML_PREFIX' };
-		} else {
-			const hasDefaultPrefix = getFirstTokenOfType(context.tokens, this._defaultPrefixTokenType.name) !== undefined;
-			const hasTurtlePrefixes = getFirstTokenOfType(context.tokens, RdfToken.TTL_PREFIX.name) !== undefined;
+	protected getPrefixTokenType(document: vscode.TextDocument, context: TurtleDocument): TokenType {
+		const hasDefaultPrefix = getFirstTokenOfType(context.tokens, this._defaultPrefixTokenType.name) !== undefined;
+		const hasTurtlePrefixes = getFirstTokenOfType(context.tokens, RdfToken.TTL_PREFIX.name) !== undefined;
 
-			if (hasTurtlePrefixes && !hasDefaultPrefix) {
-				return RdfToken.TTL_PREFIX;
-			} else {
-				return this._defaultPrefixTokenType;
-			}
+		if (hasTurtlePrefixes && !hasDefaultPrefix) {
+			return RdfToken.TTL_PREFIX;
+		} else {
+			return this._defaultPrefixTokenType;
 		}
 	}
 
@@ -256,13 +266,11 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param namespaceIri The namespace IRI for which to implement a prefix.
 	 * @returns The prefix definition string.
 	 */
-	private _getPrefixDefinition(tokenType: TokenType, upperCase: boolean, prefix: string, namespaceIri: string): string {
+	protected getPrefixDefinition(tokenType: TokenType, upperCase: boolean, prefix: string, namespaceIri: string): string {
 		if (tokenType.name === RdfToken.PREFIX.name) {
 			return `${upperCase ? 'PREFIX' : 'prefix'} ${prefix}: <${namespaceIri}>`;
 		} else if (tokenType.name === RdfToken.TTL_PREFIX.name) {
 			return `@prefix ${prefix}: <${namespaceIri}> .`;
-		} else if (tokenType.name === 'XML_PREFIX') {
-			return `xmlns:${prefix}="${namespaceIri}"`;
 		} else {
 			throw new Error(`Unsupported token type for prefix definition: ${tokenType}`);
 		}
@@ -280,17 +288,20 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		const lastPrefix = getLastTokenOfType(context.tokens, this._prefixTokenTypes);
 
 		// Determine the token type for prefix definitions in the document and if they should be uppercase.
-		const tokenType = this._getPrefixTokenType(document, context);
+		const tokenType = this.getPrefixTokenType(document, context);
 		const upperCase = isUpperCaseToken(lastPrefix ?? context.tokens[0]);
 
-		let insertPosition = new vscode.Position(lastPrefix ? (lastPrefix.endLine ?? 0) : 0, 0);
+		// When there is no existing prefix, anchor below the triplate frontmatter (if any)
+		// so the header is not pushed down or overwritten.
+		const insertLine = lastPrefix ? (lastPrefix.endLine ?? 0) : this._getContentStartLine(document);
+		let insertPosition = new vscode.Position(insertLine, 0);
 
 		// 1. Append the new prefixes to the end of the prefix definition list.
 		prefixes.sort()
 			.filter(x => !context.namespaces[x.prefix] && !x.namespaceIri)
 			.forEach(x => {
 				const iri = x.namespaceIri ?? this.prefixLookupService.getUriForPrefix(context.uri.toString(), x.prefix);
-				const definition = this._getPrefixDefinition(tokenType, upperCase, x.prefix, iri);
+				const definition = this.getPrefixDefinition(tokenType, upperCase, x.prefix, iri);
 
 				edit.insert(context.uri, insertPosition, definition + '\n');
 
@@ -316,11 +327,20 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 	 * @param tokenType The token type of the prefix token.
 	 */
 	private async _implementPrefixesSorted(edit: vscode.WorkspaceEdit, document: vscode.TextDocument, context: TurtleDocument, prefixes: PrefixDefinition[]) {
+		// Anchor below the triplate frontmatter (if any) so the header is preserved.
+		const contentStartLine = this._getContentStartLine(document);
+
 		// 1. Delete the existing prefix definitions.
-		let currentLine = 0;
+		let currentLine = contentStartLine;
 
 		// Iterate over all tokens in the document...
 		for (let token of context.tokens) {
+			// Skip anything above the body start (e.g. a triplate frontmatter block token),
+			// which is not part of the prologue and must not end the scan prematurely.
+			if (((token.startLine ?? 1) - 1) < contentStartLine) {
+				continue;
+			}
+
 			if (this._prefixTokenTypes.has(token.tokenType.name)) {
 				// If we see a prefix token, delete the line and all preceding empty lines.
 				const line = (token.startLine ?? 1) - 1;
@@ -354,17 +374,17 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 		}
 
 		// Determine the token type for prefix definitions in the document and if they should be uppercase.
-		const tokenType = this._getPrefixTokenType(document, context);
+		const tokenType = this.getPrefixTokenType(document, context);
 		const upperCase = isUpperCaseToken(lastPrefix ?? context.tokens[0]);
 
 		for (const prefix of Object.keys(namespaceMap).sort()) {
 			const namespaceIri = namespaceMap[prefix];
-			const definition = this._getPrefixDefinition(tokenType, upperCase, prefix, namespaceIri);
+			const definition = this.getPrefixDefinition(tokenType, upperCase, prefix, namespaceIri);
 
-			edit.insert(context.uri, new vscode.Position(0, 0), definition + '\n');
+			edit.insert(context.uri, new vscode.Position(contentStartLine, 0), definition + '\n');
 		}
 
-		edit.insert(context.uri, new vscode.Position(0, 0), '\n');
+		edit.insert(context.uri, new vscode.Position(contentStartLine, 0), '\n');
 	}
 
 	/**
@@ -487,7 +507,7 @@ export class TurtlePrefixDefinitionService extends TurtleFeatureProvider {
 				continue;
 			}
 
-			const range = context.getRangeFromToken(token);
+			const range = getRangeFromToken(token);
 
 			// Delete the entire IRI token.
 			edit.replace(document.uri, range, `${prefix}:${localName}`);

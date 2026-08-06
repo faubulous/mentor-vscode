@@ -8,7 +8,6 @@ import { CollectionsNode } from "./collections/collections-node";
  */
 export class ConceptSchemeNode extends DefinitionTreeNode {
 	override getIcon() {
-		// return undefined;
 		return new vscode.ThemeIcon('rdf-concept-scheme', this.getIconColor());
 	}
 
@@ -17,13 +16,15 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 	}
 
 	override hasChildren(): boolean {
-		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: this.uri });
+		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: undefined, inScheme: this.uri });
 
 		if (concepts.hasChildren()) {
 			return true;
 		}
 
-		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: this.uri });
+		// Note: Collections are associated with a concept scheme via skos:inScheme, so the definedBy
+		// option that is inherited from this node must not be applied to them.
+		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: undefined, inScheme: this.uri });
 
 		if (collections.hasChildren()) {
 			return true;
@@ -35,13 +36,17 @@ export class ConceptSchemeNode extends DefinitionTreeNode {
 	override getChildren(): DefinitionTreeNode[] {
 		const result = [];
 
-		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: this.uri });
+		// Note: Concepts are associated with a concept scheme via skos:inScheme, so the definedBy
+		// option that is inherited from this node must not be applied to them.
+		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { definedBy: undefined, inScheme: this.uri });
 
 		if (concepts.hasChildren()) {
 			result.push(concepts);
 		}
 
-		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: this.uri });
+		// Note: Collections are associated with a concept scheme via skos:inScheme, so the definedBy
+		// option that is inherited from this node must not be applied to them.
+		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { definedBy: undefined, inScheme: this.uri });
 
 		if (collections.hasChildren()) {
 			result.push(collections);
