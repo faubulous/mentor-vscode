@@ -136,46 +136,87 @@ export class WorkspaceUri {
 			return undefined;
 		}
 
+		const absolutePath = documentIri.path;
 		const root = this.getEffectiveRootUri();
 
-		if (!root) {
-			return undefined;
+		if (root && this.isPathPrefix(root.path, absolutePath)) {
+			return this.toRelativeWorkspaceUri(documentIri, root.path.length, fragmentOverride);
 		}
 
-		const absolutePath = documentIri.path;
-		const rootPath = root.path;
-
-		if (absolutePath.startsWith(rootPath)) {
-			const relativePath = absolutePath.substring(rootPath.length);
-
-			return new CanonicalWorkspaceUri(vscode.Uri.from({
-				scheme: this.uriScheme,
-				path: relativePath,
-				fragment: fragmentOverride ?? (documentIri.fragment || undefined)
-			}));
-		}
-
-		// Fallback: try workspace folders if the monorepo root didn't match
-		// (e.g. file is outside the monorepo root but inside a workspace folder).
-		if (this.rootUri) {
-			const folders = vscode.workspace.workspaceFolders;
-
-			if (folders) {
-				for (const folder of folders) {
-					if (absolutePath.startsWith(folder.uri.path)) {
-						const relativePath = absolutePath.substring(folder.uri.path.length);
-
-						return new CanonicalWorkspaceUri(vscode.Uri.from({
-							scheme: this.uriScheme,
-							path: relativePath,
-							fragment: fragmentOverride ?? (documentIri.fragment || undefined)
-						}));
-					}
-				}
+		// Fallback: try the workspace folders when the effective root did not match.
+		//
+		// This is not limited to the monorepo-root case. With a `.code-workspace` file open,
+		// `getEffectiveRootUri()` derives the root from `vscode.workspace.workspaceFile`, while
+		// the files being mapped come from `findFiles()` over `workspaceFolders` -- two different
+		// VS Code APIs whose URIs need not agree. Gating this fallback on `rootUri` skipped it in
+		// exactly the configuration where it was needed, leaving every workspace file unmappable.
+		for (const folder of vscode.workspace.workspaceFolders ?? []) {
+			if (this.isPathPrefix(folder.uri.path, absolutePath)) {
+				return this.toRelativeWorkspaceUri(documentIri, folder.uri.path.length, fragmentOverride);
 			}
 		}
 
 		return undefined;
+	}
+
+	/**
+	 * Builds the workspace-relative URI for a document whose path is known to start with a
+	 * root path of the given length.
+	 * @param documentIri The absolute document URI being mapped.
+	 * @param rootPathLength The length of the matched root path.
+	 * @param fragmentOverride When provided, overrides the URI fragment.
+	 * @returns The workspace-relative URI.
+	 */
+	private static toRelativeWorkspaceUri(documentIri: vscode.Uri, rootPathLength: number, fragmentOverride?: string): CanonicalWorkspaceUri {
+		return new CanonicalWorkspaceUri(vscode.Uri.from({
+			scheme: this.uriScheme,
+			// Sliced from the original path, so the relative path keeps the casing the file
+			// system actually reports even when the prefix matched case-insensitively.
+			path: documentIri.path.substring(rootPathLength),
+			fragment: fragmentOverride ?? (documentIri.fragment || undefined)
+		}));
+	}
+
+	/**
+	 * Determines whether `path` starts with `prefix`, tolerating the case differences that occur
+	 * on case-insensitive (Windows) file systems.
+	 *
+	 * The drive letter in particular is normalised inconsistently across the VS Code API surface:
+	 * `vscode.workspace.workspaceFile` can carry `/C:/...` while `workspaceFolders` -- and every
+	 * `findFiles()` result derived from them -- carries `/c:/...`. Because `Uri.toString()`
+	 * lowercases the drive letter while `Uri.path` preserves it, such a mismatch is invisible in
+	 * logs even though an exact prefix test fails on every single file.
+	 *
+	 * Case-insensitive matching is applied only to paths rooted at a Windows drive letter. POSIX
+	 * paths stay case-sensitive, where `/w/File.ttl` and `/w/file.ttl` are distinct files.
+	 * @param prefix The candidate prefix (a root path).
+	 * @param path The path to test.
+	 * @returns `true` if `path` starts with `prefix`.
+	 */
+	private static isPathPrefix(prefix: string, path: string): boolean {
+		if (path.length < prefix.length) {
+			return false;
+		}
+
+		// Comparing an equal-length slice rather than using `startsWith` keeps both operands the
+		// same length, so case folding cannot shift the boundary between prefix and remainder.
+		const head = path.substring(0, prefix.length);
+
+		if (head === prefix) {
+			return true;
+		}
+
+		return this.isWindowsDrivePath(prefix) && head.toLowerCase() === prefix.toLowerCase();
+	}
+
+	/**
+	 * Determines whether a URI path is rooted at a Windows drive letter (e.g. `/c:/Users`), which
+	 * implies a case-insensitive file system.
+	 * @param path The URI path to test.
+	 * @returns `true` for drive-letter paths.
+	 */
+	private static isWindowsDrivePath(path: string): boolean {
+		return /^\/[a-zA-Z]:(\/|$)/.test(path);
 	}
 
 	/**
@@ -239,7 +280,16 @@ export class WorkspaceUri {
 
 		const rootPath = root.path.endsWith('/') ? root.path.slice(0, -1) : root.path;
 
-		return child.path === rootPath || child.path.startsWith(rootPath + '/');
+		// The same case rules as the workspace-relative mapping apply here: a root and a child
+		// that differ only in drive-letter case denote the same directory, and rejecting them
+		// would make the traversal guard fire on legitimate URIs.
+		if (!this.isPathPrefix(rootPath, child.path)) {
+			return false;
+		}
+
+		// The child is either the root itself or a path below it -- a mere string prefix would
+		// also accept a sibling such as `/workspace` for the root `/w`.
+		return child.path.length === rootPath.length || child.path[rootPath.length] === '/';
 	}
 
 	static toNotebookCellUri(workspaceUri: vscode.Uri): vscode.Uri {

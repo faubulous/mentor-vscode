@@ -511,5 +511,158 @@ describe('WorkspaceUri', () => {
 			expect(wsUri.toString()).toBe('workspace:///notebook.mnb#cell-5');
 		});
 	});
+
+	describe('with mixed-case Windows drive letters', () => {
+		const savedWorkspaceFile = (vscode.workspace as any).workspaceFile;
+		const savedFolders = (vscode.workspace as any).workspaceFolders;
+
+		afterEach(() => {
+			(vscode.workspace as any).workspaceFile = savedWorkspaceFile;
+			(vscode.workspace as any).workspaceFolders = savedFolders;
+		});
+
+		it('maps files when the workspace file and the workspace folders disagree on drive-letter case', () => {
+			// `vscode.workspace.workspaceFile` and `workspaceFolders` are populated by different
+			// parts of the VS Code API and may report the same directory with a different drive
+			// letter case. `getEffectiveRootUri()` prefers the workspace file, while the files
+			// being mapped are discovered through the folders -- so the two must still match.
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///C:/projects/vocabularies/project.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'vocabularies', index: 0, uri: vscode.Uri.parse('file:///c:/projects/vocabularies') },
+			];
+
+			const fileUri = vscode.Uri.parse('file:///c:/projects/vocabularies/models/skos.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+			expect(wsUri?.scheme).toBe('workspace');
+			expect(wsUri?.path).toBe('/models/skos.ttl');
+			expect(wsUri?.toString()).toBe('workspace:///models/skos.ttl');
+		});
+
+		it('maps files when the root is lowercase and the file is uppercase', () => {
+			(vscode.workspace as any).workspaceFile = undefined;
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'vocabularies', index: 0, uri: vscode.Uri.parse('file:///c:/projects/vocabularies') },
+			];
+
+			const fileUri = vscode.Uri.parse('file:///C:/projects/vocabularies/models/skos.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+			expect(wsUri?.path).toBe('/models/skos.ttl');
+		});
+
+		it('makes the drive-letter mismatch invisible in logs, which is why it must be tolerated', () => {
+			// `Uri.toString()` lowercases the drive letter while `Uri.path` preserves it. A root
+			// and a file that fail an exact prefix test therefore serialise to strings where one
+			// is a literal prefix of the other, so the failure cannot be diagnosed from a log.
+			const root = vscode.Uri.parse('file:///C:/projects/vocabularies');
+			const fileUri = vscode.Uri.parse('file:///c:/projects/vocabularies/models/skos.ttl');
+
+			expect(fileUri.toString().startsWith(root.toString())).toBe(true);
+			expect(fileUri.path.startsWith(root.path)).toBe(false);
+		});
+
+		it('preserves the original casing of the relative path segments', () => {
+			(vscode.workspace as any).workspaceFile = undefined;
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'vocabularies', index: 0, uri: vscode.Uri.parse('file:///C:/projects/vocabularies') },
+			];
+
+			const fileUri = vscode.Uri.parse('file:///c:/projects/vocabularies/Models/SKOS.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+			// Only the prefix is matched case-insensitively; the remainder is sliced from the
+			// original path so the workspace URI keeps the casing on disk.
+			expect(wsUri?.path).toBe('/Models/SKOS.ttl');
+		});
+
+		it('does not match a different drive', () => {
+			(vscode.workspace as any).workspaceFile = undefined;
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'vocabularies', index: 0, uri: vscode.Uri.parse('file:///c:/projects/vocabularies') },
+			];
+
+			const fileUri = vscode.Uri.parse('file:///d:/projects/vocabularies/models/skos.ttl');
+
+			expect(WorkspaceUri.toWorkspaceUri(fileUri)).toBeUndefined();
+		});
+
+		it('keeps POSIX paths case-sensitive', () => {
+			(vscode.workspace as any).workspaceFile = undefined;
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'root', index: 0, uri: vscode.Uri.parse('file:///projects/vocabularies') },
+			];
+
+			// On a case-sensitive file system these are two different directories.
+			const fileUri = vscode.Uri.parse('file:///Projects/vocabularies/models/skos.ttl');
+
+			expect(WorkspaceUri.toWorkspaceUri(fileUri)).toBeUndefined();
+		});
+
+		it('round-trips through toFileUri when the drive-letter case differs', () => {
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///C:/projects/vocabularies/project.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'vocabularies', index: 0, uri: vscode.Uri.parse('file:///c:/projects/vocabularies') },
+			];
+
+			const original = vscode.Uri.parse('file:///c:/projects/vocabularies/models/skos.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(original)!;
+			const restored = WorkspaceUri.toFileUri(wsUri);
+
+			// The traversal guard must not reject the URI it just produced.
+			expect(restored.toString()).toBe(original.toString());
+		});
+	});
+
+	describe('workspace folder fallback', () => {
+		const savedWorkspaceFile = (vscode.workspace as any).workspaceFile;
+		const savedFolders = (vscode.workspace as any).workspaceFolders;
+
+		afterEach(() => {
+			(vscode.workspace as any).workspaceFile = savedWorkspaceFile;
+			(vscode.workspace as any).workspaceFolders = savedFolders;
+		});
+
+		it('falls back to the workspace folders when the workspace-file root does not match', () => {
+			// No monorepo root is configured, so the root comes from the workspace file's
+			// directory. A folder listed in the workspace file may still live outside it.
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///project/project.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'external', index: 0, uri: vscode.Uri.parse('file:///elsewhere/external') },
+			];
+
+			const fileUri = vscode.Uri.parse('file:///elsewhere/external/models/skos.ttl');
+			const wsUri = WorkspaceUri.toWorkspaceUri(fileUri);
+
+			expect(WorkspaceUri.rootUri).toBeUndefined();
+			expect(wsUri?.path).toBe('/models/skos.ttl');
+		});
+
+		it('still returns undefined when the file is outside the root and every workspace folder', () => {
+			(vscode.workspace as any).workspaceFile = vscode.Uri.parse('file:///project/project.code-workspace');
+			(vscode.workspace as any).workspaceFolders = [
+				{ name: 'external', index: 0, uri: vscode.Uri.parse('file:///elsewhere/external') },
+			];
+
+			const fileUri = vscode.Uri.parse('file:///completely/unrelated/skos.ttl');
+
+			expect(WorkspaceUri.toWorkspaceUri(fileUri)).toBeUndefined();
+		});
+	});
+
+	describe('workspace root containment', () => {
+		const savedFolders = (vscode.workspace as any).workspaceFolders;
+
+		afterEach(() => {
+			(vscode.workspace as any).workspaceFolders = savedFolders;
+		});
+
+		it('rejects a sibling directory whose name merely starts with the root name', () => {
+			// The default mock root is /w; /workspace is a sibling, not a child of it.
+			const wsUri = vscode.Uri.parse('workspace:///../workspace/file.ttl');
+
+			expect(() => WorkspaceUri.toFileUri(wsUri)).toThrow(/outside the workspace root/);
+		});
+	});
 });
 
