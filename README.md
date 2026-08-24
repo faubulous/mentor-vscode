@@ -42,26 +42,10 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.6.0: New Settings, SHACL and SPARQL Features
-- **New Settings Panel**
-  - Browse and manage all important Mentor settings
-- **SHACL: Added fast and stable validation**
-  - Profiles allow you to define patterns for files that should be validated
-  - Automatically validate on startup or document change
-- **SPARQL: Added editable custom triple store profiles**
-  - Adjust the SPARQL queries and inferencing features
-- **Templating: Added support for the [Triplate](https://triplate.dev) templating language**
-  - Create templates for SPARQL queries and RDF data
-  - Execute and preview templates interactively
-- **'Describe Resource' context menu command in editor and trees**
-  - Describe IRIs and prefixed names against the document connection
-  - Change document connection to any other SPARQL connection
-- **New status bar items for index, validation and query status**
-  - Quick access to important index, validation and query settings
-  - Query status bar is shortcut to SPARQL panel
-- **2x faster workspace indexing**
-- **Many bug fixes and performance improvements**
-  - 50% smaller package size
+### Version 0.6.1: Service Release
+- Updated mentor-rdf, mentor-rdf-parsers, and mentor-rdf-serializers to their latest releases
+- Resolved a dependency conflict between chevrotain and the RDF parsing libraries
+- Updated other dependencies to their latest compatible versions
 
 ## Installation
 
