@@ -9,6 +9,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 
 import * as vscode from 'vscode';
 import { WorkspaceIndexerService } from '@src/services/core/workspace-indexer-service';
+import { WorkspaceUri } from '@src/providers/workspace-uri';
 
 let mockIsSupportedNotebookFile: Mock;
 let mockIsTripleSourceLanguage: Mock;
@@ -168,6 +169,95 @@ describe('WorkspaceIndexerService', () => {
 			await service.indexWorkspace();
 			await service.waitForIndexed();
 			expect(mockLoadDocument).toHaveBeenCalledTimes(2);
+		});
+
+		describe('when a file URI cannot be mapped to a workspace URI', () => {
+			// Reported from the field: a single unmappable file URI ended the run with
+			// "Indexed 0 of 154 files". Every file that can be mapped must still be
+			// indexed, and the run must always reach its summary.
+			it('keeps indexing the remaining files when the mapping returns undefined', async () => {
+				// `file:///outside/...` is outside the mocked workspace root (`file:///w`),
+				// so WorkspaceUri.toWorkspaceUri() cannot map it.
+				const unmappable = vscode.Uri.parse('file:///outside/loze-foundation.rdf');
+				const indexable1 = vscode.Uri.parse('file:///w/test1.ttl');
+				const indexable2 = vscode.Uri.parse('file:///w/test2.ttl');
+
+				// The unmappable file comes first so a run that aborts on it indexes nothing.
+				mockWorkspaceFileService.files = [unmappable, indexable1, indexable2];
+
+				const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+				await service.indexWorkspace();
+
+				expect(mockLoadDocument).toHaveBeenCalledTimes(2);
+				expect(service.indexingFinished).toBe(true);
+				expect(service.statistics).toMatchObject({ indexedFiles: 2, skippedFiles: 1, errorCount: 0 });
+			});
+
+			it('keeps indexing the remaining files when the mapping throws', async () => {
+				const throwing = vscode.Uri.parse('file:///w/loze-foundation.rdf');
+				const indexable1 = vscode.Uri.parse('file:///w/test1.ttl');
+				const indexable2 = vscode.Uri.parse('file:///w/test2.ttl');
+
+				mockWorkspaceFileService.files = [throwing, indexable1, indexable2];
+
+				const toWorkspaceUri = WorkspaceUri.toWorkspaceUri.bind(WorkspaceUri);
+				const spy = vi.spyOn(WorkspaceUri, 'toWorkspaceUri').mockImplementation((uri, fragment) => {
+					if (uri.toString() === throwing.toString()) {
+						throw new Error('Invalid workspace URI');
+					}
+
+					return toWorkspaceUri(uri, fragment);
+				});
+
+				try {
+					const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+					await service.indexWorkspace();
+
+					expect(mockLoadDocument).toHaveBeenCalledTimes(2);
+					expect(service.indexingFinished).toBe(true);
+					expect(service.statistics).toMatchObject({ indexedFiles: 2, skippedFiles: 1, errorCount: 0 });
+				} finally {
+					spy.mockRestore();
+				}
+			});
+
+			it('reports every file as skipped when no file can be mapped, and still finishes the run', async () => {
+				mockWorkspaceFileService.files = [
+					vscode.Uri.parse('file:///outside/a.ttl'),
+					vscode.Uri.parse('file:///outside/b.ttl'),
+				];
+
+				const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+				await service.indexWorkspace();
+
+				expect(mockLoadDocument).not.toHaveBeenCalled();
+				expect(service.indexingFinished).toBe(true);
+				expect(service.statistics).toMatchObject({ indexedFiles: 0, skippedFiles: 2 });
+			});
+		});
+
+		it('keeps indexing the remaining files when a file cannot be stat-ed', async () => {
+			// Files are stat-ed in one concurrent batch; a single rejection must not
+			// take the whole batch -- and with it the run -- down.
+			const missing = vscode.Uri.parse('file:///w/deleted.ttl');
+			const indexable = vscode.Uri.parse('file:///w/test1.ttl');
+
+			mockWorkspaceFileService.files = [missing, indexable];
+
+			(vscode.workspace as any).fs.stat = vi.fn(async (uri: vscode.Uri) => {
+				if (uri.toString() === missing.toString()) {
+					throw new Error('file not found');
+				}
+
+				return { size: 100 };
+			});
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+			await service.indexWorkspace();
+
+			expect(mockLoadDocument).toHaveBeenCalledTimes(1);
+			expect(service.indexingFinished).toBe(true);
+			expect(service.statistics).toMatchObject({ indexedFiles: 1, skippedFiles: 1 });
 		});
 
 		it('computes syntax diagnostics for each text file when index.diagnoseFiles is enabled', async () => {
