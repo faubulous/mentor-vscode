@@ -77,7 +77,7 @@
     "@types/picomatch": "^4.0.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
-    "@types/vscode": "^1.134.0",
+    "@types/vscode": "^1.105.0",
     "@types/vscode-notebook-renderer": "^1.72.4",
     "@typescript-eslint/eslint-plugin": "^8.67.0",
     "@typescript-eslint/parser": "^8.67.0",
