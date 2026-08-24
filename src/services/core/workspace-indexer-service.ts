@@ -7,6 +7,7 @@ import { IDocumentTokenSource } from '../document/document-token-source.interfac
 import { DocumentContextService } from '../document/document-context-service';
 import { DocumentDiagnosticsService } from '../document/document-diagnostics-service';
 import { getConfig } from '@src/utilities/vscode/config';
+import { describeUriPath } from '@src/utilities/vscode/log';
 import { normalizeGlobPattern } from '@src/utilities/glob';
 import { createYieldBudget } from '@src/utilities/scheduling';
 import { getErrorMessage } from '@src/utilities/error';
@@ -233,7 +234,13 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		// Every workspace URI is derived from this root. Logging it once per run makes
 		// a run that maps no files at all ("Indexed 0 of N files") diagnosable from
 		// the log alone, instead of only reporting the files that failed to map.
-		this._statusLog.info(`Using workspace root ${WorkspaceUri.getEffectiveRootUri()?.toString() ?? '<none>'}`);
+		//
+		// The raw `path` is logged rather than `toString()`: mapping a file into the workspace
+		// compares `Uri.path` values, but `toString()` (and `toString(true)`, and `fsPath`)
+		// lowercases a Windows drive letter. A root and a file that differ only in that letter
+		// therefore serialise to strings where one is a literal prefix of the other, making a
+		// total mapping failure look impossible in the log.
+		this._statusLog.info(`Using workspace root ${describeUriPath(WorkspaceUri.getEffectiveRootUri())}`);
 
 		return {
 			// Snapshot the discovered files so file-watcher mutations during the
@@ -270,14 +277,16 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 			try {
 				workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri);
 			} catch (error) {
-				this._statusLog.error(`Could not parse workspace URI from ${fileUri.toString()}: ${getErrorMessage(error)}`, error);
+				this._statusLog.error(`Could not parse workspace URI from ${describeUriPath(fileUri)}: ${getErrorMessage(error)}`, error);
 
 				skippedFiles.push(fileUri.toString());
 				continue;
 			}
 
 			if (!workspaceUri) {
-				const message = `Could not parse workspace URI from ${fileUri.toString()}`;
+				// Reported against the raw path so it can be compared with the workspace root
+				// logged at the start of the run -- see the note there.
+				const message = `Could not parse workspace URI from ${describeUriPath(fileUri)}`;
 				this._statusLog.error(message);
 
 				skippedFiles.push(fileUri.toString());
