@@ -10,7 +10,7 @@ import { getConfig } from '@src/utilities/vscode/config';
 import { normalizeGlobPattern } from '@src/utilities/glob';
 import { createYieldBudget } from '@src/utilities/scheduling';
 import { getErrorMessage } from '@src/utilities/error';
-import { WorkspaceUri } from '@src/providers/workspace-uri';
+import { CanonicalWorkspaceUri, WorkspaceUri } from '@src/providers/workspace-uri';
 
 /**
  * Per-file indexing duration (ms) above which a file is logged as slow. A single
@@ -230,6 +230,11 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 
 		this._statusLog.info(`Using max file size of ${maxSize} bytes`);
 
+		// Every workspace URI is derived from this root. Logging it once per run makes
+		// a run that maps no files at all ("Indexed 0 of N files") diagnosable from
+		// the log alone, instead of only reporting the files that failed to map.
+		this._statusLog.info(`Using workspace root ${WorkspaceUri.getEffectiveRootUri()?.toString() ?? '<none>'}`);
+
 		return {
 			// Snapshot the discovered files so file-watcher mutations during the
 			// run cannot change the pass total mid-flight.
@@ -256,7 +261,20 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 				continue;
 			}
 
-			const workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri);
+			// A file that cannot be mapped into the workspace disqualifies only that
+			// file. Both outcomes -- an unmappable URI and a URI the conversion
+			// rejects outright -- are skipped so the pass keeps indexing the rest;
+			// letting the throw escape here aborted the whole run.
+			let workspaceUri: CanonicalWorkspaceUri | undefined;
+
+			try {
+				workspaceUri = WorkspaceUri.toWorkspaceUri(fileUri);
+			} catch (error) {
+				this._statusLog.error(`Could not parse workspace URI from ${fileUri.toString()}: ${getErrorMessage(error)}`, error);
+
+				skippedFiles.push(fileUri.toString());
+				continue;
+			}
 
 			if (!workspaceUri) {
 				const message = `Could not parse workspace URI from ${fileUri.toString()}`;
@@ -274,11 +292,25 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 		// latency across the whole corpus.
 		for (let i = 0; i < candidates.length; i += SCAN_CONCURRENCY) {
 			const chunk = candidates.slice(i, i + SCAN_CONCURRENCY);
-			const sizes = await Promise.all(chunk.map(({ fileUri }) => vscode.workspace.fs.stat(fileUri).then(stat => stat.size)));
+
+			// Settle each stat individually: a single unreadable file (deleted between
+			// discovery and the stat, or denied by the file system) would otherwise
+			// reject the whole chunk and abort the pass.
+			const stats = await Promise.all(chunk.map(({ fileUri }) => vscode.workspace.fs.stat(fileUri).then(
+				stat => ({ size: stat.size, error: undefined }),
+				(error: unknown) => ({ size: undefined, error: error ?? new Error('Unknown error') })
+			)));
 
 			for (let j = 0; j < chunk.length; j++) {
 				const { fileUri, path } = chunk[j];
-				const size = sizes[j];
+				const { size, error } = stats[j];
+
+				if (size === undefined) {
+					this._statusLog.warn(`Could not stat ${fileUri.toString()}: ${getErrorMessage(error)}`);
+
+					skippedFiles.push(fileUri.toString());
+					continue;
+				}
 
 				if (size > run.maxSize && !run.includeMatchers.some(match => match(path))) {
 					const message = `Skipped large file ${fileUri.toString()} (${size} bytes)`;
