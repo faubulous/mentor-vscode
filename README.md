@@ -42,10 +42,10 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.6.1: Service Release
-- Updated mentor-rdf, mentor-rdf-parsers, and mentor-rdf-serializers to their latest releases
-- Resolved a dependency conflict between chevrotain and the RDF parsing libraries
-- Updated other dependencies to their latest compatible versions
+### Version 0.6.2: Windows Workspace Indexing Fix
+- Fixed workspace indexing on Windows skipping every file when the workspace root and the indexed files reported the drive letter in a different case (`C:` vs `c:`)
+- Files in a workspace folder outside the `.code-workspace` directory are now indexed instead of being skipped
+- Indexing errors now report the raw file path, so the workspace root and a file that failed against it can be compared in the log
 
 ## Installation
 
