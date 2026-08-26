@@ -13,6 +13,38 @@ interface TestResult {
 }
 
 /**
+ * Get the status modifier class for a connection's leading icon, tinting it green or red to
+ * report the outcome of the last endpoint test.
+ * @param testResult The outcome of the last endpoint test, if the connection was tested.
+ * @returns A space-prefixed class name to append, or an empty string for an untested connection.
+ */
+function getConnectionStatusClass(testResult: TestResult | undefined): string {
+	if (testResult === undefined) {
+		return '';
+	}
+
+	return testResult.success ? ' connection-status-pass' : ' connection-status-error';
+}
+
+/**
+ * Get the tooltip of a connection's leading icon. A failed test reports its error here, so
+ * the message stays reachable from the tinted icon itself.
+ * @param testResult The outcome of the last endpoint test, if the connection was tested.
+ * @returns The outcome of the test, or `undefined` for an untested connection.
+ */
+function getConnectionStatusTooltip(testResult: TestResult | undefined): string | undefined {
+	if (testResult === undefined) {
+		return undefined;
+	}
+
+	if (testResult.success) {
+		return 'Connection test succeeded';
+	}
+
+	return testResult.error ? `Connection test failed: ${testResult.error}` : 'Connection test failed';
+}
+
+/**
  * The Connections column of the SPARQL results welcome view: lists all
  * connections in the query-history look, with a leading new-query button,
  * the cached graph count as details text and test / list-graphs context
@@ -134,8 +166,8 @@ export function SparqlConnectionsList() {
 							{testing[connection.id] ?
 								<span className="codicon codicon-sync codicon-modifier-spin" title="Testing connection..."></span> :
 								<span
-									className={`codicon codicon-arrow-swap${testResult?.success ? ' connection-status-pass' : ''}`}
-									title={testResult?.success ? 'Connection test succeeded' : undefined}
+									className={`codicon codicon-arrow-swap${getConnectionStatusClass(testResult)}`}
+									title={getConnectionStatusTooltip(testResult)}
 								></span>
 							}
 							<a className="file-link" title={`${connection.endpointUrl} — Edit connection settings`} onClick={() => handleEditConnection(connection)}>
@@ -145,9 +177,6 @@ export function SparqlConnectionsList() {
 								<span className={`folder muted${details.error ? ' connection-status-error' : ''}`} title={details.title}>
 									{details.text}
 								</span>
-							)}
-							{testResult?.success === false && (
-								<span className="codicon codicon-error connection-status-error" title={testResult.error}></span>
 							)}
 							<span className="actions">
 								<a className="execute-button codicon codicon-play" role="button" title="New query on this connection"

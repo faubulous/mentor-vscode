@@ -82,7 +82,10 @@
 	font-size: large;
 }
 
-.sparql-welcome-view-container .column .body.button-list .codicon-arrow-swap {
+/* The resting colour of a connection icon. Excluding the status classes keeps this
+   four-class selector from outweighing the two-class status tints below, which would
+   otherwise leave a tested connection's icon stuck at its resting colour. */
+.sparql-welcome-view-container .column .body.button-list .codicon-arrow-swap:not(.connection-status-pass):not(.connection-status-error) {
 	color: var(--vscode-symbolIcon-enumeratorMemberForeground);
 }
 
