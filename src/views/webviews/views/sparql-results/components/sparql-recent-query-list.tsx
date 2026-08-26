@@ -110,7 +110,7 @@ export function SparqlRecentQueryList() {
 	};
 
 	return (
-		<div className="column column-wide">
+		<div className="column column-grow">
 			<div className="header">
 				<h3>Recent Queries</h3>
 				<vscode-toolbar-button onClick={handleSelectSparqlQueryFile}>

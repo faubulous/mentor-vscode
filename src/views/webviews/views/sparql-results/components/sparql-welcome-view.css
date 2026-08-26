@@ -10,13 +10,14 @@
 	left: 0;
 }
 
-/* auto-fit tracks let the columns sit side by side while both fit the panel width and
-   stack once they no longer do, so a narrow panel never scrolls horizontally. */
+/* The columns wrap onto their own row once they no longer fit side by side, so a narrow
+   panel never scrolls horizontally. They pack to the left rather than dividing the panel
+   between them, which would strand each column's actions at its far edge. */
 .sparql-welcome-view-container {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-	align-items: start;
-	gap: var(--mentor-space-7) 60px;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--mentor-space-7) 40px;
 	padding: 20px;
 	box-sizing: border-box;
 }
@@ -30,8 +31,22 @@
 	text-decoration: underline;
 }
 
-.sparql-welcome-view-container .column-wide {
+/* Sized to its own content rather than to an equal share of the panel, so it does not
+   stretch far past the endpoint URLs it holds. Shrinks below that when space is tight and
+   truncates once it reaches the upper bound. */
+.sparql-welcome-view-container .column-auto {
+	flex: 0 1 auto;
 	min-width: 0;
+	max-width: 480px;
+}
+
+/* Absorbs the width the content-sized columns leave over, since its rows carry the most
+   text (a file name and a path). The upper bound stops a row's actions from drifting to
+   the far edge of a wide panel. */
+.sparql-welcome-view-container .column-grow {
+	flex: 1 1 360px;
+	min-width: 0;
+	max-width: 560px;
 }
 
 .sparql-welcome-view-container .column .header {

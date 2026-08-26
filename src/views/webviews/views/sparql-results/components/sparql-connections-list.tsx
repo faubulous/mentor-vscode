@@ -113,7 +113,7 @@ export function SparqlConnectionsList() {
 	};
 
 	return (
-		<div className="column column-wide">
+		<div className="column column-auto">
 			<div className="header">
 				<h3>Connections</h3>
 				<vscode-toolbar-button onClick={handleManageConnections}>
