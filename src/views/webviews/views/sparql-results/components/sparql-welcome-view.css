@@ -10,12 +10,16 @@
 	left: 0;
 }
 
+/* The columns wrap onto their own row once they no longer fit side by side, so a narrow
+   panel never scrolls horizontally. They pack to the left rather than dividing the panel
+   between them, which would strand each column's actions at its far edge. */
 .sparql-welcome-view-container {
 	display: flex;
-	flex-direction: row;
-	gap: 60px;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--mentor-space-7) 40px;
 	padding: 20px;
-	min-width: 1000px;
+	box-sizing: border-box;
 }
 
 .sparql-welcome-view-container .muted {
@@ -27,9 +31,22 @@
 	text-decoration: underline;
 }
 
-.sparql-welcome-view-container .column-wide {
-	min-width: 360px;
-	max-width: 460px;
+/* Sized to its own content rather than to an equal share of the panel, so it does not
+   stretch far past the endpoint URLs it holds. Shrinks below that when space is tight and
+   truncates once it reaches the upper bound. */
+.sparql-welcome-view-container .column-auto {
+	flex: 0 1 auto;
+	min-width: 0;
+	max-width: 520px;
+}
+
+/* Absorbs the width the content-sized columns leave over, since its rows carry the most
+   text (a file name and a path). The upper bound stops a row's actions from drifting to
+   the far edge of a wide panel. */
+.sparql-welcome-view-container .column-grow {
+	flex: 1 1 360px;
+	min-width: 0;
+	max-width: 560px;
 }
 
 .sparql-welcome-view-container .column .header {
@@ -65,7 +82,11 @@
 	font-size: large;
 }
 
-.sparql-welcome-view-container .column .body.button-list .codicon-arrow-swap {
+/* The resting colour of a connection icon. Excluding the status classes keeps this
+   four-class selector from outweighing the two-class status tints below, which would
+   otherwise leave a tested connection's icon stuck at its resting colour. */
+.sparql-welcome-view-container .column .body.button-list .codicon-sync,
+.sparql-welcome-view-container .column .body.button-list .codicon-arrow-swap:not(.connection-status-pass):not(.connection-status-error) {
 	color: var(--vscode-symbolIcon-enumeratorMemberForeground);
 }
 
@@ -74,13 +95,20 @@
 }
 
 .sparql-welcome-view-container .history-item {
-    display: flex;
-    align-items: center;
-	gap: 4px;
-    padding: 2px;
-	border-radius: 3px;
+	display: flex;
+	align-items: center;
+	flex-wrap: nowrap;
+	gap: var(--mentor-space-2);
+	padding: 2px;
+	border-radius: var(--mentor-radius-md);
 	width: 100%;
-    margin-bottom: 2px;
+	min-width: 0;
+	margin-bottom: 2px;
+}
+
+/* Leading status icons keep their size; only the text of a row gives way. */
+.sparql-welcome-view-container .history-item > .codicon {
+	flex-shrink: 0;
 }
 
 .sparql-welcome-view-container .history-item:hover,
@@ -103,13 +131,30 @@
 }
 
 .sparql-welcome-view-container .folder {
-	margin-left: 7px;
+	flex: 0 0 auto;
+	min-width: 0;
+	margin-left: var(--mentor-space-3);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* A query's workspace path absorbs the row's slack and is the first text to give way,
+   since it is already shortened from the start and carries its full value in a tooltip. */
+.sparql-welcome-view-container .folder-path {
+	flex: 1 1 auto;
+	flex-shrink: 3;
 }
 
 .sparql-welcome-view-container .file-link {
 	color: var(--vscode-textLink-foreground) !important;
-    text-decoration: none;
-    cursor: pointer;
+	text-decoration: none;
+	cursor: pointer;
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .sparql-welcome-view-container .execute-button {
@@ -120,9 +165,11 @@
 
 .sparql-welcome-view-container .actions {
 	margin-left: auto;
+	flex-shrink: 0;
 	display: flex;
 	flex-direction: row;
 	gap: var(--mentor-space-3);
+	padding-left: var(--mentor-space-3);
 }
 
 .sparql-welcome-view-container .file-icon {
@@ -137,6 +184,12 @@ body.vscode-dark .sparql-welcome-view-container .file-icon-light,
 body.vscode-high-contrast:not(.vscode-high-contrast-light) .sparql-welcome-view-container .file-icon-light,
 body.vscode-high-contrast-light .sparql-welcome-view-container .file-icon-dark {
 	display: none;
+}
+
+/* Separates the segments of a row's details text. Dimmed so it reads as punctuation
+   rather than as a value of its own. */
+.sparql-welcome-view-container .detail-separator {
+	opacity: 0.5;
 }
 
 .sparql-welcome-view-container .connection-status-pass {
