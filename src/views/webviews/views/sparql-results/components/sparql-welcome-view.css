@@ -37,7 +37,7 @@
 .sparql-welcome-view-container .column-auto {
 	flex: 0 1 auto;
 	min-width: 0;
-	max-width: 480px;
+	max-width: 520px;
 }
 
 /* Absorbs the width the content-sized columns leave over, since its rows carry the most
@@ -85,6 +85,7 @@
 /* The resting colour of a connection icon. Excluding the status classes keeps this
    four-class selector from outweighing the two-class status tints below, which would
    otherwise leave a tested connection's icon stuck at its resting colour. */
+.sparql-welcome-view-container .column .body.button-list .codicon-sync,
 .sparql-welcome-view-container .column .body.button-list .codicon-arrow-swap:not(.connection-status-pass):not(.connection-status-error) {
 	color: var(--vscode-symbolIcon-enumeratorMemberForeground);
 }
@@ -183,6 +184,12 @@ body.vscode-dark .sparql-welcome-view-container .file-icon-light,
 body.vscode-high-contrast:not(.vscode-high-contrast-light) .sparql-welcome-view-container .file-icon-light,
 body.vscode-high-contrast-light .sparql-welcome-view-container .file-icon-dark {
 	display: none;
+}
+
+/* Separates the segments of a row's details text. Dimmed so it reads as punctuation
+   rather than as a value of its own. */
+.sparql-welcome-view-container .detail-separator {
+	opacity: 0.5;
 }
 
 .sparql-welcome-view-container .connection-status-pass {
