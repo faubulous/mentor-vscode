@@ -10,12 +10,15 @@
 	left: 0;
 }
 
+/* auto-fit tracks let the columns sit side by side while both fit the panel width and
+   stack once they no longer do, so a narrow panel never scrolls horizontally. */
 .sparql-welcome-view-container {
-	display: flex;
-	flex-direction: row;
-	gap: 60px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	align-items: start;
+	gap: var(--mentor-space-7) 60px;
 	padding: 20px;
-	min-width: 1000px;
+	box-sizing: border-box;
 }
 
 .sparql-welcome-view-container .muted {
@@ -28,8 +31,7 @@
 }
 
 .sparql-welcome-view-container .column-wide {
-	min-width: 360px;
-	max-width: 460px;
+	min-width: 0;
 }
 
 .sparql-welcome-view-container .column .header {
@@ -74,13 +76,20 @@
 }
 
 .sparql-welcome-view-container .history-item {
-    display: flex;
-    align-items: center;
-	gap: 4px;
-    padding: 2px;
-	border-radius: 3px;
+	display: flex;
+	align-items: center;
+	flex-wrap: nowrap;
+	gap: var(--mentor-space-2);
+	padding: 2px;
+	border-radius: var(--mentor-radius-md);
 	width: 100%;
-    margin-bottom: 2px;
+	min-width: 0;
+	margin-bottom: 2px;
+}
+
+/* Leading status icons keep their size; only the text of a row gives way. */
+.sparql-welcome-view-container .history-item > .codicon {
+	flex-shrink: 0;
 }
 
 .sparql-welcome-view-container .history-item:hover,
@@ -103,13 +112,30 @@
 }
 
 .sparql-welcome-view-container .folder {
-	margin-left: 7px;
+	flex: 0 0 auto;
+	min-width: 0;
+	margin-left: var(--mentor-space-3);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* A query's workspace path absorbs the row's slack and is the first text to give way,
+   since it is already shortened from the start and carries its full value in a tooltip. */
+.sparql-welcome-view-container .folder-path {
+	flex: 1 1 auto;
+	flex-shrink: 3;
 }
 
 .sparql-welcome-view-container .file-link {
 	color: var(--vscode-textLink-foreground) !important;
-    text-decoration: none;
-    cursor: pointer;
+	text-decoration: none;
+	cursor: pointer;
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .sparql-welcome-view-container .execute-button {
@@ -120,9 +146,11 @@
 
 .sparql-welcome-view-container .actions {
 	margin-left: auto;
+	flex-shrink: 0;
 	display: flex;
 	flex-direction: row;
 	gap: var(--mentor-space-3);
+	padding-left: var(--mentor-space-3);
 }
 
 .sparql-welcome-view-container .file-icon {

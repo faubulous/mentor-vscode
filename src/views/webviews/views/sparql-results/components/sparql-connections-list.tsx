@@ -138,7 +138,7 @@ export function SparqlConnectionsList() {
 									title={testResult?.success ? 'Connection test succeeded' : undefined}
 								></span>
 							}
-							<a className="file-link" title="Edit connection settings" onClick={() => handleEditConnection(connection)}>
+							<a className="file-link" title={`${connection.endpointUrl} — Edit connection settings`} onClick={() => handleEditConnection(connection)}>
 								<span>{connection.endpointUrl}</span>
 							</a>
 							{details && (
