@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
+import type { IDocumentContext } from '@src/services/document/document-context.interface';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
@@ -15,7 +16,7 @@ const {
 	mockIsWorkspaceConnectionId: vi.fn((id: string) => id === 'workspace'),
 	mockGetConnectionForDocument: vi.fn(() => ({ id: 'workspace', storeType: 'workspace' })),
 	mockSetQuerySourceForDocument: vi.fn(async () => {}),
-	mockGetContextFromUri: vi.fn((_uri: string) => undefined as any),
+	mockGetContextFromUri: vi.fn((_uri: string) => undefined as IDocumentContext | undefined),
 }));
 
 vi.mock('tsyringe', () => ({
@@ -40,6 +41,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { createSparqlQueryFromDocument } from '@src/commands/sparql/create-sparql-query-from-document';
+import { createMockDocumentContext } from '@src/utilities/mocks/factories';
 
 /**
  * The template the extension ships, so the command is exercised against the real default rather
@@ -126,7 +128,7 @@ describe('createSparqlQueryFromDocument command', () => {
 	});
 
 	it('should use the document context graph IRI so notebook cell slugs are preserved', async () => {
-		mockGetContextFromUri.mockReturnValue({ graphIri: vscode.Uri.parse('workspace:///notes.ttl#cell-2') });
+		mockGetContextFromUri.mockReturnValue(createMockDocumentContext({ graphIri: vscode.Uri.parse('workspace:///notes.ttl#cell-2') }));
 		activateDocument('vscode-notebook-cell:/w/notes.ttl#W3sZmlsZQ');
 
 		await createSparqlQueryFromDocument.handler();

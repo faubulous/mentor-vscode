@@ -40,7 +40,7 @@ function createConfig(inspectByKey: Record<string, any>) {
 	return { config, updates };
 }
 
-async function useConfig(config: any) {
+async function applyConfig(config: any) {
 	const { getConfig } = await import('@src/utilities/vscode/config');
 	(getConfig as any).mockReturnValue(config);
 }
@@ -51,7 +51,7 @@ async function useConfig(config: any) {
 async function migrateWith(inspectByKey: Record<string, any>) {
 	const { config, updates } = createConfig(inspectByKey);
 
-	await useConfig(config);
+	await applyConfig(config);
 	await new DocumentQueryTemplateMigration().migrate();
 
 	return updates;
