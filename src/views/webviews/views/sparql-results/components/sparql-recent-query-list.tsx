@@ -1,10 +1,54 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWebviewMessaging } from '@src/views/webviews/hooks';
 import { SparqlQueryExecutionState, getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
-import { toDisplayPath, getPath } from '@src/utilities/uri';
+import { getFolderPath, shortenPathStart } from '@src/utilities/uri';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import sparqlFileIconDark from '../../../../../../media/icons/dark/sparql-file.svg';
 import sparqlFileIconLight from '../../../../../../media/icons/light/sparql-file.svg';
+
+/**
+ * Maximum number of characters of the shortened workspace path shown beside a query's file
+ * name. Deeper paths are shortened from the start; the column's CSS ellipsis then absorbs
+ * whatever still does not fit the rendered width.
+ */
+const MAX_DISPLAY_PATH_LENGTH = 40;
+
+/**
+ * Get the workspace-relative folder holding a query document.
+ * @param queryState The query execution state of a history entry.
+ * @returns The folder path, an empty string for the workspace root, or `undefined` when the
+ * query is not backed by a workspace file (e.g. an untitled editor).
+ */
+function getWorkspaceFolder(queryState: SparqlQueryExecutionState): string | undefined {
+	return queryState.workspaceIri ? getFolderPath(queryState.workspaceIri) : undefined;
+}
+
+/**
+ * Get the folder label shown beside a query's file name.
+ * @param folder A workspace-relative folder path, empty for the workspace root.
+ * @returns `~` for the workspace root, otherwise the folder shortened from the start so its
+ * most specific segments stay readable in the narrow column.
+ */
+function getFolderLabel(folder: string): string {
+	return folder.length > 0 ? `~/${shortenPathStart(folder, MAX_DISPLAY_PATH_LENGTH)}` : '~';
+}
+
+/**
+ * Get the tooltip of a query row, showing the untruncated workspace-relative location of the
+ * document so the full path stays reachable once the label or the folder has been shortened.
+ * @param folder The workspace-relative folder, empty for the workspace root, or `undefined`
+ * when the query is not backed by a workspace file.
+ * @param displayName The row's visible label.
+ * @returns The `~`-prefixed workspace path of the document, falling back to the display name
+ * for queries without a workspace file.
+ */
+function getRowTooltip(folder: string | undefined, displayName: string): string {
+	if (folder === undefined) {
+		return displayName;
+	}
+
+	return folder.length > 0 ? `~/${folder}/${displayName}` : `~/${displayName}`;
+}
 
 /**
  * The Recent Queries column of the SPARQL results welcome view: lists the
@@ -32,14 +76,6 @@ export function SparqlRecentQueryList() {
 
 	const loadHistory = () => {
 		messaging?.postMessage({ id: 'GetSparqlQueryHistory' });
-	};
-
-	const getWorkspacePath = (queryState: SparqlQueryExecutionState): string | undefined => {
-		if (queryState.workspaceIri) {
-			const folderPath = getPath(toDisplayPath(queryState.workspaceIri));
-
-			return folderPath.length > 0 ? `~${folderPath}` : '~';
-		}
 	};
 
 	const handleClearHistory = () => {
@@ -74,7 +110,7 @@ export function SparqlRecentQueryList() {
 	};
 
 	return (
-		<div className="column column-wide">
+		<div className="column column-grow">
 			<div className="header">
 				<h3>Recent Queries</h3>
 				<vscode-toolbar-button onClick={handleSelectSparqlQueryFile}>
@@ -86,24 +122,34 @@ export function SparqlRecentQueryList() {
 			</div>
 			<div className="body button-list">
 				{history.length === 0 && <span className="muted">No recent queries in this workspace.</span>}
-				{history.length > 0 && history.map((queryState, index) => (
-					<div key={`${queryState.documentIri}-${index}`} className="history-item">
-						<img className="file-icon file-icon-dark" src={sparqlFileIconDark} alt="" />
-						<img className="file-icon file-icon-light" src={sparqlFileIconLight} alt="" />
-						<a className="file-link" onClick={() => handleOpenDocument(queryState)}>
-							<span>{getDisplayName(queryState)}</span>
-						</a>
-						<span className="folder muted">{getWorkspacePath(queryState)}</span>
-						<span className="actions">
-							<a className='execute-button codicon codicon-play' role="button" title="Run"
-								onClick={() => handleExecuteQuery(queryState)}>
+				{history.length > 0 && history.map((queryState, index) => {
+					const displayName = getDisplayName(queryState);
+					const workspaceFolder = getWorkspaceFolder(queryState);
+					const tooltip = getRowTooltip(workspaceFolder, displayName);
+
+					return (
+						<div key={`${queryState.documentIri}-${index}`} className="history-item">
+							<img className="file-icon file-icon-dark" src={sparqlFileIconDark} alt="" />
+							<img className="file-icon file-icon-light" src={sparqlFileIconLight} alt="" />
+							<a className="file-link" title={tooltip} onClick={() => handleOpenDocument(queryState)}>
+								<span>{displayName}</span>
 							</a>
-							<a className="remove-button codicon codicon-close" role="button" title="Remove"
-								onClick={() => handleRemoveFromHistory(queryState)}>
-							</a>
-						</span>
-					</div>
-				))}
+							{workspaceFolder !== undefined && (
+								<span className="folder folder-path muted" title={tooltip}>
+									{getFolderLabel(workspaceFolder)}
+								</span>
+							)}
+							<span className="actions">
+								<a className='execute-button codicon codicon-play' role="button" title="Run"
+									onClick={() => handleExecuteQuery(queryState)}>
+								</a>
+								<a className="remove-button codicon codicon-close" role="button" title="Remove"
+									onClick={() => handleRemoveFromHistory(queryState)}>
+								</a>
+							</span>
+						</div>
+					);
+				})}
 			</div>
 		</div>
 	);

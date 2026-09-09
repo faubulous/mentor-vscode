@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, toDisplayPath, getFileName, getPath } from '@src/utilities/uri';
+import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, toDisplayPath, getFileName, getPath, getFolderPath, shortenPathStart } from '@src/utilities/uri';
 
 describe('toJsonId', () => {
 	it('converts http URI to dot-separated identifier', () => {
@@ -148,5 +148,61 @@ describe('getPath', () => {
 
 	it('leaves an already-decoded native path unchanged', () => {
 		expect(getPath('/home/user/my project/models/thing.ttl')).toBe('/home/user/my project/models');
+	});
+});
+
+describe('getFolderPath', () => {
+	it('returns the folder part of a workspace URI', () => {
+		expect(getFolderPath('workspace:///queries/dbpedia/cities.rq')).toBe('queries/dbpedia');
+	});
+
+	it('returns an empty string when the URI has no folder part', () => {
+		expect(getFolderPath('census.rq')).toBe('');
+	});
+
+	it('returns an empty string for a file at the workspace root', () => {
+		expect(getFolderPath('workspace:///census.rq')).toBe('');
+	});
+
+	it('decodes percent-encoded folder segments', () => {
+		expect(getFolderPath('workspace:///my%20shapes/sub%20dir/file.ttl')).toBe('my shapes/sub dir');
+	});
+
+	it('does not decode twice, so a literal percent escape survives', () => {
+		expect(getFolderPath('workspace:///100%25%20done/file.ttl')).toBe('100% done');
+	});
+});
+
+describe('shortenPathStart', () => {
+	it('returns the path unchanged when it fits the budget', () => {
+		expect(shortenPathStart('queries/dbpedia', 40)).toBe('queries/dbpedia');
+	});
+
+	it('drops leading segments and marks them with an ellipsis', () => {
+		expect(shortenPathStart('mentor-rdf/src/rdf/tests/cases/sparql', 20)).toBe('…/tests/cases/sparql');
+	});
+
+	it('drops only as many leading segments as necessary', () => {
+		expect(shortenPathStart('mentor-rdf/src/rdf/tests/cases/sparql', 30)).toBe('…/src/rdf/tests/cases/sparql');
+	});
+
+	it('truncates mid-segment when the last segment alone exceeds the budget', () => {
+		expect(shortenPathStart('a/very-long-single-folder-name', 10)).toBe('…lder-name');
+	});
+
+	it('never exceeds the budget', () => {
+		const path = 'mentor-rdf/src/rdf/tests/cases/sparql/deeply/nested';
+
+		for (let maxLength = 1; maxLength <= path.length; maxLength++) {
+			expect(shortenPathStart(path, maxLength).length).toBeLessThanOrEqual(maxLength);
+		}
+	});
+
+	it('returns an empty string for a non-positive budget', () => {
+		expect(shortenPathStart('queries/dbpedia', 0)).toBe('');
+	});
+
+	it('returns an empty string unchanged', () => {
+		expect(shortenPathStart('', 40)).toBe('');
 	});
 });
