@@ -36,7 +36,7 @@ import { ShapeReferenceRegistryService } from '@src/services/validation/shape-re
 import { SettingsFileStore } from './core/settings-file-store';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
-import { IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
+import { DocumentQueryTemplateMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
 
 /**
  * Graph URI generator that creates inference URIs for RDF graphs.
@@ -238,6 +238,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	const settingsMigrationService = new SettingsMigrationService([
 		new IndexExcludeFilesMigration(),
 		new LegacyTemplateFormatMigration(),
+		new DocumentQueryTemplateMigration(),
 		new ShaclValidationProfilesMigration(),
 		new ShaclValidationScopeMigration(),
 	]);

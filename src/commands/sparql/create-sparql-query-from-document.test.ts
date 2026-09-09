@@ -1,18 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'fs';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 
-const { mockGetConfig } = vi.hoisted(() => ({
-	mockGetConfig: vi.fn(() => ({ get: (_k: string, d?: any) => d })),
-}));
-
-vi.mock('@src/utilities/vscode/config', () => ({
-	getConfig: mockGetConfig,
+const {
+	mockGetQueryTemplate,
+	mockIsWorkspaceConnectionId,
+	mockGetConnectionForDocument,
+	mockSetQuerySourceForDocument,
+	mockGetContextFromUri,
+} = vi.hoisted(() => ({
+	mockGetQueryTemplate: vi.fn((_connection: any, _kind: string) => undefined as string | undefined),
+	mockIsWorkspaceConnectionId: vi.fn((id: string) => id === 'workspace'),
+	mockGetConnectionForDocument: vi.fn(() => ({ id: 'workspace', storeType: 'workspace' })),
+	mockSetQuerySourceForDocument: vi.fn(async () => {}),
+	mockGetContextFromUri: vi.fn((_uri: string) => undefined as any),
 }));
 
 vi.mock('tsyringe', () => ({
-	container: { resolve: vi.fn(() => ({})) },
+	container: {
+		resolve: vi.fn((token: string) => {
+			if (token === 'StoreConfigService') {
+				return { getQueryTemplate: mockGetQueryTemplate, isWorkspaceConnectionId: mockIsWorkspaceConnectionId };
+			}
+			if (token === 'DocumentConnectionService') {
+				return { getConnectionForDocument: mockGetConnectionForDocument, setQuerySourceForDocument: mockSetQuerySourceForDocument };
+			}
+			if (token === 'DocumentContextService') {
+				return { getContextFromUri: mockGetContextFromUri };
+			}
+			return {};
+		}),
+	},
 	injectable: () => (t: any) => t,
 	inject: () => () => {},
 	singleton: () => (t: any) => t,
@@ -21,9 +41,39 @@ vi.mock('tsyringe', () => ({
 import * as vscode from 'vscode';
 import { createSparqlQueryFromDocument } from '@src/commands/sparql/create-sparql-query-from-document';
 
+/**
+ * The template the extension ships, so the command is exercised against the real default rather
+ * than a copy that could drift away from it.
+ */
+const SHIPPED_TEMPLATE: string = (() => {
+	const pkg = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8'));
+	return pkg.contributes.configuration[0].properties['mentor.sparql.documentQueryTemplate'].default;
+})();
+
+/**
+ * The content of the SPARQL document the command opened.
+ */
+function openedContent(): string {
+	return (vscode.workspace.openTextDocument as any).mock.calls[0][0].content;
+}
+
+/**
+ * Sets the active editor to a document with the given URI.
+ */
+function activateDocument(uri: string): void {
+	(vscode.window as any).activeTextEditor = {
+		document: { uri: vscode.Uri.parse(uri), languageId: 'turtle' },
+	};
+}
+
 beforeEach(() => {
 	vi.clearAllMocks();
-	mockGetConfig.mockImplementation(() => ({ get: (_k: string, d?: any) => d }));
+
+	mockGetQueryTemplate.mockReturnValue(SHIPPED_TEMPLATE);
+	mockIsWorkspaceConnectionId.mockImplementation((id: string) => id === 'workspace');
+	mockGetConnectionForDocument.mockReturnValue({ id: 'workspace', storeType: 'workspace' });
+	mockGetContextFromUri.mockReturnValue(undefined);
+
 	(vscode.window as any).activeTextEditor = undefined;
 	(vscode.window as any).showErrorMessage = vi.fn(async () => undefined);
 	(vscode.workspace as any).openTextDocument = vi.fn(async () => ({
@@ -38,36 +88,91 @@ describe('createSparqlQueryFromDocument command', () => {
 	});
 
 	it('should show error when no active editor', async () => {
-		(vscode.window as any).activeTextEditor = undefined;
 		await createSparqlQueryFromDocument.handler();
+
 		expect(vscode.window.showErrorMessage).toHaveBeenCalled();
+		expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
 	});
 
-	it('should show error when no template configured', async () => {
-		(vscode.window as any).activeTextEditor = {
-			document: {
-				uri: vscode.Uri.parse('file:///test.ttl'),
-				languageId: 'turtle',
-			},
-		};
+	it('should show error when no template is configured', async () => {
+		mockGetQueryTemplate.mockReturnValue(undefined);
+		activateDocument('file:///w/test.ttl');
+
 		await createSparqlQueryFromDocument.handler();
+
 		expect(vscode.window.showErrorMessage).toHaveBeenCalled();
+		expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
 	});
 
-	it('should open SPARQL document when template and workspace URI are available', async () => {
-		mockGetConfig.mockImplementation(() => ({
-			get: (k: string, d?: any) => k === 'language.sparql.documentQueryTemplate'
-				? '---\nparams {\n  documentIri: iri\n}\nexample rdf {  documentIri: \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }'
-				: d,
-		}));
-		(vscode.window as any).activeTextEditor = {
-			document: {
-				uri: vscode.Uri.parse('file:///w/test.ttl'),
-				languageId: 'turtle',
-			},
-		};
+	it('should resolve the template for the documentQuery kind', async () => {
+		activateDocument('file:///w/test.ttl');
+
 		await createSparqlQueryFromDocument.handler();
-		expect(vscode.workspace.openTextDocument).toHaveBeenCalled();
+
+		expect(mockGetQueryTemplate).toHaveBeenCalledWith(
+			expect.objectContaining({ id: 'workspace' }),
+			'documentQuery'
+		);
+	});
+
+	// The regression guard for mentor-vscode#83: the document is a named graph, not a subject.
+	it('should scope the query to the document graph on the workspace store', async () => {
+		activateDocument('file:///w/test.ttl');
+
+		await createSparqlQueryFromDocument.handler();
+
+		expect(openedContent()).toContain('GRAPH <workspace:///test.ttl>');
 		expect(vscode.window.showTextDocument).toHaveBeenCalled();
+	});
+
+	it('should use the document context graph IRI so notebook cell slugs are preserved', async () => {
+		mockGetContextFromUri.mockReturnValue({ graphIri: vscode.Uri.parse('workspace:///notes.ttl#cell-2') });
+		activateDocument('vscode-notebook-cell:/w/notes.ttl#W3sZmlsZQ');
+
+		await createSparqlQueryFromDocument.handler();
+
+		expect(openedContent()).toContain('GRAPH <workspace:///notes.ttl#cell-2>');
+		expect(openedContent()).not.toContain('W3sZmlsZQ');
+	});
+
+	it('should omit the graph clause for a non-workspace connection', async () => {
+		mockGetConnectionForDocument.mockReturnValue({ id: 'fuseki', storeType: 'jena' });
+		activateDocument('file:///w/test.ttl');
+
+		await createSparqlQueryFromDocument.handler();
+
+		// The workspace graph IRI means nothing to a remote store, so the query stays unscoped.
+		expect(openedContent()).not.toContain('GRAPH');
+		expect(openedContent()).toContain('?s ?p ?o');
+	});
+
+	it('should bind the generated query to a non-workspace connection', async () => {
+		mockGetConnectionForDocument.mockReturnValue({ id: 'fuseki', storeType: 'jena' });
+		activateDocument('file:///w/test.ttl');
+
+		await createSparqlQueryFromDocument.handler();
+
+		expect(mockSetQuerySourceForDocument).toHaveBeenCalledWith(vscode.Uri.parse('untitled:result'), 'fuseki');
+	});
+
+	it('should not rebind the generated query on the workspace store', async () => {
+		activateDocument('file:///w/test.ttl');
+
+		await createSparqlQueryFromDocument.handler();
+
+		expect(mockSetQuerySourceForDocument).not.toHaveBeenCalled();
+	});
+
+	it('should report a template that cannot be rendered instead of throwing', async () => {
+		// A customized template that still declares `documentIri` as required cannot bind when the
+		// connection is not the workspace store and no graph is passed.
+		mockGetQueryTemplate.mockReturnValue('---\nparams {\n  documentIri: iri\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }');
+		mockGetConnectionForDocument.mockReturnValue({ id: 'fuseki', storeType: 'jena' });
+		activateDocument('file:///w/test.ttl');
+
+		await expect(createSparqlQueryFromDocument.handler()).resolves.toBeUndefined();
+
+		expect(vscode.window.showErrorMessage).toHaveBeenCalled();
+		expect(vscode.workspace.openTextDocument).not.toHaveBeenCalled();
 	});
 });
