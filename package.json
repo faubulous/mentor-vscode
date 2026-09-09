@@ -153,7 +153,8 @@
         "mentor.sparql.dropGraphQuery",
         "mentor.sparql.describeQueryTemplate",
         "mentor.sparql.exportGraphQuery",
-        "mentor.sparql.countGraphQuery"
+        "mentor.sparql.countGraphQuery",
+        "mentor.sparql.documentQueryTemplate"
       ]
     }
   },
@@ -1574,6 +1575,14 @@
             "default": "---\nparams {\n  graphIri: iri\n  limit:    int optional\n}\n---\nSELECT (COUNT(?s) as ?count)\nWHERE {\n    SELECT ?s\n    WHERE {\n        GRAPH ${graphIri} {\n            ?s ?p ?o .\n        }\n    }\n    {% if limit %}LIMIT ${limit}{% endif %}\n}",
             "editPresentation": "multilineText"
           },
+          "mentor.sparql.documentQueryTemplate": {
+            "type": "string",
+            "title": "Document Query",
+            "storeQueryKind": "documentQuery",
+            "description": "SPARQL query template used to query the named graph an RDF document is loaded into.",
+            "default": "---\nparams {\n  documentIri: iri optional\n}\nexample rdf {\n  documentIri: \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n}\n---\nSELECT * WHERE {\n{% if documentIri %}\n    GRAPH ${documentIri} {\n        ?s ?p ?o .\n    }\n{% else %}\n    ?s ?p ?o .\n{% endif %}\n}",
+            "editPresentation": "multilineText"
+          },
           "mentor.sparql.stores": {
             "type": "array",
             "title": "SPARQL Stores",
@@ -1659,6 +1668,15 @@
                       "type": "string"
                     },
                     "describe": {
+                      "type": "string"
+                    },
+                    "exportGraph": {
+                      "type": "string"
+                    },
+                    "countGraph": {
+                      "type": "string"
+                    },
+                    "documentQuery": {
                       "type": "string"
                     }
                   }
@@ -2197,13 +2215,6 @@
             "title": "Default SPARQL Document Template",
             "description": "The default SPARQL document template to be used when creating a new SPARQL document.",
             "default": "SELECT ?s ?p ?o\nWHERE {\n\t?s ?p ?o\n}\nLIMIT 1000",
-            "editPresentation": "multilineText"
-          },
-          "mentor.language.sparql.documentQueryTemplate": {
-            "type": "string",
-            "title": "Default Query Template",
-            "description": "SPARQL query template used when creating a query for an RDF document.",
-            "default": "---\nparams {\n  documentIri: iri\n}\nexample rdf {\n  documentIri: \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n}\n---\nSELECT * WHERE { ${documentIri} ?p ?o }",
             "editPresentation": "multilineText"
           },
           "mentor.language.turtle.defaultDocumentTemplate": {

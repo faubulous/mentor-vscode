@@ -26,6 +26,7 @@ const TEMPLATE_KEYS: readonly string[] = [
 	'sparql.describeQueryTemplate',
 	'sparql.exportGraphQuery',
 	'sparql.countGraphQuery',
+	'sparql.documentQueryTemplate',
 ];
 
 /**

@@ -318,3 +318,107 @@ describe('TripleStoreConfigService – isWorkspaceConnection', () => {
         expect(makeService().isWorkspaceConnectionId('conn-2')).toBe(false);
     });
 });
+
+// ---------------------------------------------------------------------------
+// getQueryTemplate
+// ---------------------------------------------------------------------------
+
+/**
+ * Runs `run` against a service whose store configs and global query settings are stubbed, and whose
+ * extension packageJSON advertises the given `storeQueryKind` markers (kind -> full setting key).
+ * Both globals are restored afterwards.
+ */
+function withQueryTemplates(
+    options: {
+        stores?: TripleStoreConfig[];
+        settings?: Record<string, string>;
+        markers?: Record<string, string>;
+    },
+    run: (svc: TripleStoreConfigService) => void,
+) {
+    return (async () => {
+        const vscode = await import('vscode');
+        const originalGetConfiguration = vscode.workspace.getConfiguration;
+        const originalGetExtension = vscode.extensions.getExtension;
+
+        const settings = options.settings ?? {};
+        const markers = options.markers ?? { documentQuery: 'mentor.sparql.documentQueryTemplate' };
+
+        const properties: Record<string, unknown> = {};
+
+        for (const [kind, fullKey] of Object.entries(markers)) {
+            properties[fullKey] = { storeQueryKind: kind };
+        }
+
+        (vscode.workspace as any).getConfiguration = () => ({
+            get: (key: string, def: any) => key === 'sparql.stores' ? (options.stores ?? []) : (settings[key] ?? def),
+            has: () => false,
+            inspect: () => undefined,
+            update: async () => { },
+        });
+
+        (vscode.extensions as any).getExtension = () => ({
+            packageJSON: { contributes: { configuration: [{ properties }] } },
+        });
+
+        try {
+            run(new TripleStoreConfigService());
+        } finally {
+            (vscode.workspace as any).getConfiguration = originalGetConfiguration;
+            (vscode.extensions as any).getExtension = originalGetExtension;
+        }
+    })();
+}
+
+describe('TripleStoreConfigService – getQueryTemplate', () => {
+    it('prefers the store profile query over the global setting', async () => {
+        const stores: TripleStoreConfig[] = [
+            { id: 'custom', label: 'Custom', queries: { documentQuery: 'STORE OVERRIDE' } },
+        ];
+
+        await withQueryTemplates(
+            { stores, settings: { 'sparql.documentQueryTemplate': 'GLOBAL DEFAULT' } },
+            svc => {
+                const connection = makeConnection({ storeType: 'custom' });
+
+                expect(svc.getQueryTemplate(connection, 'documentQuery')).toBe('STORE OVERRIDE');
+            });
+    });
+
+    it('falls back to the global setting when the profile defines no query', async () => {
+        const stores: TripleStoreConfig[] = [{ id: 'custom', label: 'Custom' }];
+
+        await withQueryTemplates(
+            { stores, settings: { 'sparql.documentQueryTemplate': 'GLOBAL DEFAULT' } },
+            svc => {
+                const connection = makeConnection({ storeType: 'custom' });
+
+                expect(svc.getQueryTemplate(connection, 'documentQuery')).toBe('GLOBAL DEFAULT');
+            });
+    });
+
+    it('falls back to the global setting for the workspace store, which defines no queries', async () => {
+        await withQueryTemplates(
+            { settings: { 'sparql.documentQueryTemplate': 'GLOBAL DEFAULT' } },
+            svc => {
+                const connection = makeConnection({ id: 'workspace', storeType: 'workspace' });
+
+                expect(svc.getQueryTemplate(connection, 'documentQuery')).toBe('GLOBAL DEFAULT');
+            });
+    });
+
+    it('returns undefined when neither a profile query nor a global setting exists', async () => {
+        await withQueryTemplates({}, svc => {
+            expect(svc.getQueryTemplate(makeConnection(), 'documentQuery')).toBeUndefined();
+        });
+    });
+
+    it('maps the kind to its setting via the storeQueryKind marker, not the key name', async () => {
+        // An unmarked property is not discoverable, so no global fallback is found for the kind.
+        await withQueryTemplates(
+            { settings: { 'sparql.documentQueryTemplate': 'GLOBAL DEFAULT' }, markers: {} },
+            svc => {
+                expect(svc.getQueryTemplate(makeConnection(), 'documentQuery')).toBeUndefined();
+            });
+    });
+});
