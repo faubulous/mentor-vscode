@@ -42,12 +42,9 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.6.3: SPARQL Document Query Fix
-- Fixed *Query Document with SPARQL* generating a query that never returned any results ([#83](https://github.com/faubulous/mentor-vscode/issues/83)); a document is loaded into a named graph, so the generated query now scopes to `GRAPH <document>` instead of using the document IRI as a subject
-- The document query template moved to `mentor.sparql.documentQueryTemplate` and can now be overridden per store; a customized template is carried over from the retired setting
-- Connection rows report the outcome of their last endpoint test, both as a tint on the connection icon and as *Connected* or *Connection failed* in the details text, with the failure message available in the tooltip
-- SPARQL welcome view columns now size to their content and sit side by side, and rows stay on a single line and truncate with an ellipsis instead of wrapping
-- Resolved five transitive dependency advisories (3 high, 2 moderate)
+### Version 0.6.4: Smaller Package
+- Removed the source maps and compiled tests that 0.6.3 shipped by mistake, reducing the download from 15 MB to 3.6 MB
+- Contains the 0.6.3 fixes as well: the corrected *Query Document with SPARQL* graph scope ([#83](https://github.com/faubulous/mentor-vscode/issues/83)), the connection test outcome shown on SPARQL connection rows, and the SPARQL welcome view layout
 
 ## Installation
 
