@@ -6,8 +6,14 @@ tsconfig.json
 tsconfig.spec.json
 vitest.config.ts
 
-# Tests and coverage
+# Source maps: never loaded from a published extension, and they dominate its
+# size -- the dist/ maps alone are ~48 MB against ~28 MB of bundles.
+**/*.map
+
+# Tests and coverage (out/ holds the compiled e2e suite)
 coverage/**
+e2e/**
+out/**
 **/*.test.ts
 **/*.spec.ts
 
@@ -25,3 +31,7 @@ renovate.json
 
 # Screenshots and other non-shipping media
 **/media/screenshot*.png
+
+# Packaged artifacts -- vsce writes the VSIX into dist/, so a stale one would
+# otherwise be packed into the next build.
+dist/*.vsix
