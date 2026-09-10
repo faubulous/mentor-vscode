@@ -42,10 +42,12 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.6.2: Windows Workspace Indexing Fix
-- Fixed workspace indexing on Windows skipping every file when the workspace root and the indexed files reported the drive letter in a different case (`C:` vs `c:`)
-- Files in a workspace folder outside the `.code-workspace` directory are now indexed instead of being skipped
-- Indexing errors now report the raw file path, so the workspace root and a file that failed against it can be compared in the log
+### Version 0.6.3: SPARQL Document Query Fix
+- Fixed *Query Document with SPARQL* generating a query that never returned any results ([#83](https://github.com/faubulous/mentor-vscode/issues/83)); a document is loaded into a named graph, so the generated query now scopes to `GRAPH <document>` instead of using the document IRI as a subject
+- The document query template moved to `mentor.sparql.documentQueryTemplate` and can now be overridden per store; a customized template is carried over from the retired setting
+- Connection rows report the outcome of their last endpoint test, both as a tint on the connection icon and as *Connected* or *Connection failed* in the details text, with the failure message available in the tooltip
+- SPARQL welcome view columns now size to their content and sit side by side, and rows stay on a single line and truncate with an ellipsis instead of wrapping
+- Resolved five transitive dependency advisories (3 high, 2 moderate)
 
 ## Installation
 
