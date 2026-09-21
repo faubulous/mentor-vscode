@@ -81,8 +81,25 @@ export class DefinitionTree implements TreeView {
 		vscode.commands.executeCommand("setContext", "view.showPropertyTypes", true);
 		vscode.commands.executeCommand("setContext", "view.showIndividualTypes", true);
 
+		if (typeof process !== 'undefined' && process.env.MENTOR_E2E === '1') {
+			disposables.push(this._registerTestHooks());
+		}
+
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);
 		context.subscriptions.push(...disposables);
+	}
+
+	/**
+	 * Test-only hook for the e2e suite: reports the state of the tree view, which the VS Code API
+	 * does not expose to other extensions. Never registered in normal runs.
+	 * @returns A disposable that unregisters the command.
+	 */
+	private _registerTestHooks(): vscode.Disposable {
+		return vscode.commands.registerCommand('mentor.e2e.getDefinitionTreeState', () => ({
+			visible: this.treeView.visible,
+			selection: this.treeView.selection.map(node => node.id),
+			activeContext: this._contextService.activeContext?.uri.toString()
+		}));
 	}
 
 	private _registerDocumentContextHandler(): vscode.Disposable {
