@@ -115,7 +115,7 @@ export const TRIPLE_STORE_QUERY_KIND_PROPERTY = 'storeQueryKind';
  * package.json; the union exists purely so the internal call sites that request a specific query
  * (e.g. `getQueryTemplate(connection, 'describe')`) stay type-checked.
  */
-export type SparqlQueryKind = 'listGraphs' | 'dropGraph' | 'describe' | 'exportGraph' | 'countGraph';
+export type SparqlQueryKind = 'listGraphs' | 'dropGraph' | 'describe' | 'exportGraph' | 'countGraph' | 'documentQuery';
 
 /**
  * Per-store query template overrides, keyed by {@link SparqlQueryKind}.
