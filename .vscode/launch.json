@@ -1,44 +1,61 @@
-// A launch configuration that compiles the extension and then opens it inside a new window
+// A launch configuration that compiles the extension and then opens it inside a new window.
+//
+// The extension host is started with its inspector on a fixed port and the debugger attaches to it
+// over an IP literal, instead of letting VS Code do both at once. VS Code starts the host with
+// --inspect-brk-extensions and connects to `localhost`, which resolves to ::1 on machines whose
+// /etc/hosts maps localhost to both families, while the host only listens on 127.0.0.1. The
+// connection is refused, nothing attaches, and the host stays paused at its first line:
+//   ERR [LocalProcessExtensionHost]: Extension host did not start in 10 seconds (debugBrk: true)
+// Pick the "Debug Extension (Node)" compound to run both steps at once.
 {
   "version": "0.2.0",
   "configurations": [
-        {
+    {
+      // Note: Breakpoints only bind once the debugger has attached. To stop in code that runs
+      // during activation, use --inspect-brk-extensions=9229 here; the host then waits for the
+      // attach below instead of for the one VS Code cannot make.
+      "name": "Run Extension (Node)",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "noDebug": true,
+      "args": [
+        "--inspect-extensions=9229",
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "preLaunchTask": "npm: build"
+    },
+    {
+      // Note: The address is an IP literal on purpose, `localhost` would be resolved to ::1.
+      "name": "Attach to Extension Host",
+      "type": "node",
+      "request": "attach",
+      "address": "127.0.0.1",
+      "port": 9229,
+      "restart": true,
+      "timeout": 30000,
+      "sourceMaps": true,
+      "skipFiles": [
+        "**/node_modules/**"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ]
+    },
+    {
       "name": "Run Extension (Web)",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
       "debugWebWorkerHost": true,
       "debugWebviews": true,
-      "trace": true,
       "args": [
-        "--inspect",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionDevelopmentKind=web"
       ],
       "sourceMaps": true,
       "skipFiles": [
-        "**/node_modules/**",
-      ],
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ],
-      "preLaunchTask": "npm: build"
-    },
-    {
-      "name": "Run Extension (Node)",
-      "type": "extensionHost",
-      "request": "launch",
-      "runtimeExecutable": "${execPath}",
-      "debugWebWorkerHost": true,
-      "debugWebviews": true,
-      "trace": true,
-      "args": [
-        "--inspect",
-        "--extensionDevelopmentPath=${workspaceFolder}"
-      ],
-      "sourceMaps": true,
-      "skipFiles": [
-        "**/node_modules/**",
+        "**/node_modules/**"
       ],
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
@@ -53,6 +70,16 @@
         "<node_internals>/**"
       ],
       "type": "node"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Extension (Node)",
+      "configurations": [
+        "Run Extension (Node)",
+        "Attach to Extension Host"
+      ],
+      "stopAll": true
     }
   ]
 }
