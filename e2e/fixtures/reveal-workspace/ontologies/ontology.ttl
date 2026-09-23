@@ -1,0 +1,35 @@
+@prefix :     <http://example.org/org#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+: a owl:Ontology ;
+    rdfs:label "Organization"@en .
+
+:Person a owl:Class ;
+    rdfs:label "Person"@en .
+
+:Team a owl:Class ;
+    rdfs:label "Team"@en .
+
+:fullName a owl:DatatypeProperty ;
+    rdfs:label "full name"@en ;
+    rdfs:domain :Person ;
+    rdfs:range xsd:string .
+
+:email a owl:DatatypeProperty ;
+    rdfs:domain :Person ;
+    rdfs:range xsd:string .
+
+:jobTitle a owl:DatatypeProperty ;
+    rdfs:domain :Person ;
+    rdfs:range xsd:string .
+
+:memberOf a owl:ObjectProperty ;
+    rdfs:domain :Person ;
+    rdfs:range :Team .
+
+:leads a owl:ObjectProperty ;
+    rdfs:subPropertyOf :memberOf ;
+    rdfs:domain :Person ;
+    rdfs:range :Team .
