@@ -1,53 +1,23 @@
 import * as vscode from 'vscode';
-import { SparqlQueryExecutionState, BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
+import { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
+import { BindingsFormat, formatQueryResult, getLanguageIdForFormat } from '@src/languages/sparql/services/bindings-formatter';
+import { getResultsIriFormat } from '@src/languages/sparql/services/query-results-format';
 
 export const saveSparqlQueryResults = {
     id: 'mentor.command.saveSparqlQueryResults',
-    handler: async (context: SparqlQueryExecutionState): Promise<void> => {
-        let content = '';
+    handler: async (context: SparqlQueryExecutionState | undefined, format: BindingsFormat = 'csv'): Promise<void> => {
+        const result = context?.result;
 
-        // TODO: Read the query results from the service instead of serializing them.
-        if (context.result?.type === 'bindings') {
-            const result = context.result as BindingsResult;
-
-            // Use array join instead of string concatenation
-            const lines: string[] = [];
-
-            // Add header row
-            lines.push(result.columns.join(', '));
-
-            // Process all data rows at once
-            const dataRows = result.rows.map(row =>
-                result.columns.map(column => {
-                    const term = row[column];
-
-                    if (!term) {
-                        return '';
-                    }
-
-                    if (term.termType === 'Literal') {
-                        const value = term.value || '';
-
-                        // Escape single quotes in the value and wrap in quotes.
-                        // Note: This is to have valid CSV and not break lines in the output.
-                        const escapedValue = value
-                            .replace(/'/g, "''")
-                            .replace(/\n/g, '');
-
-                        return `"${escapedValue}"`;
-                    } else {
-                        return term.value;
-                    }
-                }).join(', ')
-            );
-
-            lines.push(...dataRows);
-
-            // Single join operation at the end
-            content = lines.join('\n');
+        if (result?.type !== 'bindings' && result?.type !== 'boolean') {
+            return;
         }
 
-        const document = await vscode.workspace.openTextDocument({ content, language: 'csv' });
+        const content = formatQueryResult(result, { format, iriForm: getResultsIriFormat() });
+
+        const document = await vscode.workspace.openTextDocument({
+            content,
+            language: getLanguageIdForFormat(format)
+        });
 
         await vscode.window.showTextDocument(document, { preview: false });
     }

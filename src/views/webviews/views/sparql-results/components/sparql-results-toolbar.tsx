@@ -73,12 +73,21 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 		}
 	};
 
-	const saveResults = () => {
-		// Export the filtered rows so CSV reflects the active search filter.
+	// Export the filtered rows so the output reflects the active search filter.
+	const saveResults = (format: 'csv' | 'markdown') => {
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
 			command: 'mentor.command.saveSparqlQueryResults',
-			args: [{ ...queryContext, result: filteredResult ?? queryContext.result }, 'csv']
+			args: [{ ...queryContext, result: filteredResult ?? queryContext.result }, format]
+		});
+	};
+
+	// The format is resolved by the command from the settings, which the webview cannot read.
+	const copyResults = () => {
+		messaging?.postMessage({
+			id: 'ExecuteCommand',
+			command: 'mentor.command.copySparqlQueryResults',
+			args: [{ ...queryContext, result: filteredResult ?? queryContext.result }]
 		});
 	};
 
@@ -212,8 +221,14 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 				<Fragment>
 					<span className="divider divider-vertical"></span>
 
-					<vscode-toolbar-button title="Save" onClick={() => saveResults()}>
+					<vscode-toolbar-button title="Copy results to the clipboard" onClick={() => copyResults()}>
+						<vscode-icon name="copy"></vscode-icon>
+					</vscode-toolbar-button>
+					<vscode-toolbar-button title="Save as CSV" onClick={() => saveResults('csv')}>
 						CSV
+					</vscode-toolbar-button>
+					<vscode-toolbar-button title="Save as Markdown table" onClick={() => saveResults('markdown')}>
+						MD
 					</vscode-toolbar-button>
 					<vscode-toolbar-button disabled={!queryContext.rawResponse} title="View raw response" onClick={() => viewRawResponse()}>
 						JSON

@@ -190,6 +190,51 @@ describe('NotebookController', () => {
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
 
+		it('should add a plain text item so the built-in copy command can serialize the bindings', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell();
+
+			mockCreateQuery.mockReturnValue({ queryType: 'bindings' });
+			mockExecuteQuery.mockResolvedValue({
+				queryType: 'bindings',
+				result: {
+					type: 'bindings',
+					columns: ['label'],
+					rows: [{ label: { termType: 'Literal', value: 'Alice' } }],
+					namespaceMap: {},
+				},
+			});
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
+
+			expect(outputs[0].items[1].mime).toBe('text/plain');
+			expect(new TextDecoder().decode(outputs[0].items[1].data)).toBe('"label"\n"Alice"');
+		});
+
+		it('should add a plain text item for a quads result', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell();
+
+			mockCreateQuery.mockReturnValue({ queryType: 'quads' });
+			mockExecuteQuery.mockResolvedValue({
+				queryType: 'quads',
+				result: { type: 'quads', document: '@prefix ex: <http://example.org/> .', mimeType: 'text/turtle' },
+			});
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
+
+			expect(outputs[0].items[1].mime).toBe('text/plain');
+			expect(new TextDecoder().decode(outputs[0].items[1].data)).toBe('@prefix ex: <http://example.org/> .');
+		});
+
 		it('should output error and call end(false) when executeQuery throws', async () => {
 			const mockExecution = makeExecution();
 			const { executeHandler } = createControllerWithExecution(mockExecution);

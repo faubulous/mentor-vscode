@@ -16,7 +16,8 @@ interface PackageJsonProperty {
 	description?: string;
 	experimental?: boolean;
 	enum?: (string | number | boolean)[];
-	properties?: Record<string, { enum?: (string | number | boolean)[] }>;
+	enumItemLabels?: string[];
+	properties?: Record<string, { enum?: (string | number | boolean)[]; enumItemLabels?: string[] }>;
 	storeQueryKind?: string;
 }
 
@@ -199,7 +200,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 					title: setting?.title ?? key,
 					description: setting?.description ?? '',
 					experimental: setting?.experimental === true,
-					enumOptions: this._toEnumOptions(setting?.enum),
+					enumOptions: this._toEnumOptions(setting?.enum, setting?.enumItemLabels),
 					nestedEnumOptions: this._readNestedEnumOptions(setting),
 					storeQueryKind: setting?.storeQueryKind,
 				};
@@ -344,14 +345,18 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 
 	/**
 	 * Converts an array of values into an array of `EnumOption` objects, suitable for use in a dropdown or similar UI component.
+	 * Labels are taken from the `enumItemLabels` of the package.json property where it provides one, which lets a setting use
+	 * lower-case values while presenting them as written, e.g. 'csv' as 'CSV'. Values without a label fall back to a label
+	 * derived from the value itself.
 	 * @param values The array of values to convert.
+	 * @param labels The display labels declared alongside the values, if any.
 	 * @returns An array of `EnumOption` objects, or `undefined` if the input array is empty or `undefined`.
 	 */
-	private _toEnumOptions(values: (string | number | boolean)[] | undefined): EnumOption[] | undefined {
+	private _toEnumOptions(values: (string | number | boolean)[] | undefined, labels?: string[]): EnumOption[] | undefined {
 		if (!values?.length) {
 			return undefined;
 		} else {
-			return values.map(v => ({ value: String(v), label: this._splitLabel(String(v)) }));
+			return values.map((v, i) => ({ value: String(v), label: labels?.[i] ?? this._splitLabel(String(v)) }));
 		}
 	}
 
@@ -368,7 +373,7 @@ export class SettingsPanelController extends WebviewController<SettingsPanelMess
 		const result: Record<string, EnumOption[]> = {};
 
 		for (const [name, nested] of Object.entries(prop.properties)) {
-			const opts = this._toEnumOptions(nested.enum);
+			const opts = this._toEnumOptions(nested.enum, nested.enumItemLabels);
 
 			if (opts) {
 				result[name] = opts;

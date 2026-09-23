@@ -1,50 +1,19 @@
 import { Term } from '@rdfjs/types';
-import { Uri } from '@faubulous/mentor-rdf';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
-
-/**
- * Returns the plain-text representation of a term as it is displayed in the bindings
- * table. Mirrors the rendering in `bindings-table.tsx` so the filter matches what the
- * user actually sees: prefixed IRIs (`foaf:Person`), literal values, `_:blank` ids and
- * quads serialized as `s p o .`.
- * @param term The term to render, or `undefined` for an empty cell.
- * @param namespaceMap Maps namespace IRIs to prefixes for named-node prefixing.
- * @returns The displayed text of the term.
- */
-function getTermText(term: Term | undefined, namespaceMap?: Record<string, string>): string {
-	if (!term) {
-		return '';
-	}
-
-	switch (term.termType) {
-		case 'NamedNode': {
-			const namespaceIri = Uri.getNamespaceIri(term.value);
-			const prefix = namespaceMap ? namespaceMap[namespaceIri] : undefined;
-
-			return prefix !== undefined ? `${prefix}:${term.value.replace(namespaceIri, '')}` : term.value;
-		}
-		case 'BlankNode':
-			return `_:${term.value}`;
-		case 'Literal':
-			return term.value;
-		case 'Quad':
-			return `${getTermText(term.subject, namespaceMap)} ${getTermText(term.predicate, namespaceMap)} ${getTermText(term.object, namespaceMap)} .`;
-		default:
-			return term.value ?? '';
-	}
-}
+import { getTermText } from '@src/languages/sparql/services/bindings-formatter';
 
 /**
  * Returns `true` if the term matches the (already lower-cased) search query. Matches the
  * displayed text and, for named nodes, also the full IRI so both prefixed and full forms
- * are searchable.
+ * are searchable. The table renders prefixed IRIs, so the displayed text is read in the
+ * prefixed form to keep the filter matching what the user actually sees.
  */
 function termMatches(term: Term | undefined, namespaceMap: Record<string, string> | undefined, query: string): boolean {
 	if (!term) {
 		return false;
 	}
 
-	if (getTermText(term, namespaceMap).toLowerCase().includes(query)) {
+	if (getTermText(term, namespaceMap, 'prefixed').toLowerCase().includes(query)) {
 		return true;
 	}
 

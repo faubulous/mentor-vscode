@@ -715,6 +715,12 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.copySparqlQueryResults",
+        "title": "Copy SPARQL Query Results",
+        "icon": "$(copy)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.reindexWorkspace",
         "title": "Reindex Workspace...",
         "icon": "$(app-mentor)",
@@ -1244,6 +1250,14 @@
       ],
       "commandPalette": [
         {
+          "command": "mentor.command.saveSparqlQueryResults",
+          "when": "false"
+        },
+        {
+          "command": "mentor.command.copySparqlQueryResults",
+          "when": "false"
+        },
+        {
           "command": "mentor.command.validateProfile",
           "when": "false"
         },
@@ -1691,6 +1705,45 @@
             "description": "Timeout in milliseconds for SPARQL query execution. Set to 0 for no timeout.",
             "default": 30000,
             "minimum": 0
+          },
+          "mentor.sparql.resultsCopyFormat": {
+            "type": "string",
+            "title": "Results Copy Format",
+            "description": "Format used when copying the whole query results table to the clipboard.",
+            "enum": [
+              "csv",
+              "markdown",
+              "json"
+            ],
+            "enumItemLabels": [
+              "CSV",
+              "Markdown",
+              "JSON"
+            ],
+            "enumDescriptions": [
+              "Copy the results as comma-separated values.",
+              "Copy the results as a Markdown table.",
+              "Copy the results in the SPARQL Query Results JSON format."
+            ],
+            "default": "csv"
+          },
+          "mentor.sparql.resultsIriFormat": {
+            "type": "string",
+            "title": "Results IRI Format",
+            "description": "Rendering of IRIs when query results are copied or exported.",
+            "enum": [
+              "full",
+              "prefixed"
+            ],
+            "enumItemLabels": [
+              "Full",
+              "Prefixed"
+            ],
+            "enumDescriptions": [
+              "Write the full IRI, for example http://xmlns.com/foaf/0.1/Person.",
+              "Abbreviate the IRI with its namespace prefix, for example foaf:Person."
+            ],
+            "default": "full"
           },
           "mentor.definitionTree.labelStyle": {
             "type": "string",
