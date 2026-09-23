@@ -77,11 +77,16 @@ function escapeCsvField(value: string): string {
 /**
  * Escapes a value for a Markdown table cell. Pipes would end the cell and line breaks would
  * end the row, so both are replaced by representations that survive the table layout.
+ *
+ * Backslashes are escaped first, because they are the escape character themselves: a value
+ * containing a backslash before a pipe would otherwise produce an escaped backslash followed
+ * by a bare pipe, which ends the cell.
  * @param value The raw cell text.
  * @returns The escaped cell text.
  */
 function escapeMarkdownCell(value: string): string {
 	return value
+		.replace(/\\/g, '\\\\')
 		.replace(/\|/g, '\\|')
 		.replace(/\r\n|\r|\n/g, '<br>');
 }

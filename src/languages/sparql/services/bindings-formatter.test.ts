@@ -92,6 +92,20 @@ describe('formatQueryResult - markdown', () => {
 		expect(formatQueryResult(result, { format: 'markdown' })).toContain('| a \\| b |');
 	});
 
+	it('should escape a backslash so it cannot escape the escape character', () => {
+		const result = givenBindings(['label'], [{ label: literal('C:\\temp') }]);
+
+		expect(formatQueryResult(result, { format: 'markdown' })).toContain('| C:\\\\temp |');
+	});
+
+	it('should keep a pipe escaped when the value already ends with a backslash', () => {
+		// Without escaping the backslash first this yields '\\|', which renders as a literal
+		// backslash followed by a bare pipe and so ends the cell.
+		const result = givenBindings(['label'], [{ label: literal('a\\|b') }]);
+
+		expect(formatQueryResult(result, { format: 'markdown' })).toContain('| a\\\\\\|b |');
+	});
+
 	it('should replace newlines so they do not end the row', () => {
 		const result = givenBindings(['label'], [{ label: literal('first\nsecond') }]);
 
