@@ -1,7 +1,7 @@
 import { useStylesheet } from '@src/views/webviews/hooks';
 import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
-import { SparqlRecentQueryList } from './sparql-recent-query-list';
 import { SparqlConnectionsList } from './sparql-connections-list';
+import { SparqlRecentQueryList } from './sparql-recent-query-list';
 import stylesheet from './sparql-welcome-view.css';
 
 /**
@@ -14,8 +14,8 @@ export function SparqlWelcomeView() {
 	return (
 		<vscode-scrollable>
 			<div className="sparql-welcome-view-container">
-				<SparqlRecentQueryList />
 				<SparqlConnectionsList />
+				<SparqlRecentQueryList />
 			</div>
 		</vscode-scrollable>
 	);

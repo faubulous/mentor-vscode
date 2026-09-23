@@ -11,18 +11,12 @@ import { useSettingRowProps } from '../../hooks/use-setting-row-props';
 import { useVscodeElementRef } from '@src/views/webviews/hooks';
 import type { SettingsSectionDescriptor } from '../../settings-section-descriptor';
 
-/**
- * The SPARQL document-query template is pinned at the top, separate from the per-language defaults.
- */
-const QUERY_TEMPLATE_KEY = 'language.sparql.documentQueryTemplate';
-
 export const editorTemplatesSection = {
 	id: 'editor.templates',
 	label: 'Templates',
 	component: TemplatesSection,
 	keys: [
 		'language.sparql.defaultDocumentTemplate',
-		'language.sparql.documentQueryTemplate',
 		'language.turtle.defaultDocumentTemplate',
 		'language.trig.defaultDocumentTemplate',
 		'language.n3.defaultDocumentTemplate',
@@ -79,12 +73,6 @@ function TemplatesSection({ keys, settings, setScope, onBulkScope, languageLabel
 	return (
 		<div>
 			<SectionHeader title={editorTemplatesSection.label} menuItems={menuItems} variant="title" />
-
-			<SettingRow {...rowProps(QUERY_TEMPLATE_KEY)}>
-				{renderTemplate(QUERY_TEMPLATE_KEY, 'sparql')}
-			</SettingRow>
-
-			<h3>Default Document Templates</h3>
 
 			<SettingRow {...rowProps(defaultKey)} label={defaultTemplateLabel}>
 				{renderTemplate(defaultKey, language)}

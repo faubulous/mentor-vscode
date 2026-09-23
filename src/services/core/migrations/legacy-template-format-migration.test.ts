@@ -156,15 +156,38 @@ function readShippedDefault(fullKey: string): string {
 
 describe('documentQueryTemplate default — create-query-from-document contract', () => {
 	// Guards the exact contract of `createSparqlQueryFromDocument`:
-	// `render(getConfig().get('language.sparql.documentQueryTemplate'), { documentIri })`.
+	// `render(storeConfigService.getQueryTemplate(connection, 'documentQuery'), { documentIri? })`.
 	test('the shipped default renders and substitutes the document IRI via triplate', () => {
-		const template = readShippedDefault('mentor.language.sparql.documentQueryTemplate');
+		const template = readShippedDefault('mentor.sparql.documentQueryTemplate');
 
 		const rendered = render(template, { documentIri: 'http://example.org/doc' });
 
 		expect(rendered).toContain('http://example.org/doc');
 		expect(rendered).not.toContain('${');
 		expect(rendered).not.toContain('{{');
+	});
+
+	// The regression guard for mentor-vscode#83: a workspace document is a named graph, so the
+	// query must be graph-scoped. Binding the IRI as a subject matches nothing.
+	test('the shipped default scopes the query to the document graph', () => {
+		const template = readShippedDefault('mentor.sparql.documentQueryTemplate');
+
+		const rendered = render(template, { documentIri: 'http://example.org/doc' });
+
+		expect(rendered).toContain('GRAPH <http://example.org/doc>');
+		expect(rendered).not.toMatch(/<http:\/\/example\.org\/doc>\s+\?p\s+\?o/);
+	});
+
+	// The graph IRI is meaningful only to the workspace store, so the command omits it for any
+	// other connection and the template must still yield a valid, unscoped query.
+	test('the shipped default renders an unscoped query when no document graph is known', () => {
+		const template = readShippedDefault('mentor.sparql.documentQueryTemplate');
+
+		const rendered = render(template, {});
+
+		expect(rendered).not.toContain('GRAPH');
+		expect(rendered).toContain('?s ?p ?o');
+		expect(rendered).not.toContain('${');
 	});
 
 	test('the legacy value cannot produce a usable query (why the migration exists)', () => {
