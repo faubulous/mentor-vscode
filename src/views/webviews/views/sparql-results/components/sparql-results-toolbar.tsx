@@ -1,6 +1,7 @@
 import { Fragment } from 'react/jsx-runtime';
-import { useEffect, useState } from 'react';
-import { useStylesheet } from '@src/views/webviews/hooks';
+import { useEffect, useRef, useState } from 'react';
+import { VscodeContextMenu } from '@vscode-elements/elements';
+import { useStylesheet, useVscodeElementRef } from '@src/views/webviews/hooks';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 import type { BindingsFormat, ResultsExportTarget } from '@src/languages/sparql/services/bindings-formatter';
 import { BindingsTablePagingState } from './bindings-table-paging-state';
@@ -19,12 +20,21 @@ const EXPORT_FORMATS: { format: BindingsFormat; label: string; description: stri
 ];
 
 /**
- * Returns the wording used for an export target in the button tooltips.
- * @param target The target the results are sent to.
- * @returns The label of the target.
+ * The targets the results can be sent to, in the order their menu entries appear. The label is
+ * shown both in the text-only menu and as the tooltip of the icon indicating the active target.
  */
-function getExportTargetLabel(target: ResultsExportTarget): string {
-	return target === 'clipboard' ? 'the clipboard' : 'a new document';
+const EXPORT_TARGETS: { target: ResultsExportTarget; label: string; icon: string }[] = [
+	{ target: 'clipboard', label: 'Copy results to clipboard', icon: 'codicon-clippy' },
+	{ target: 'document', label: 'Edit results in new document', icon: 'codicon-new-file' },
+];
+
+/**
+ * Returns the menu entry of an export target.
+ * @param target The target the results are sent to.
+ * @returns The entry describing the target.
+ */
+function getExportTarget(target: ResultsExportTarget) {
+	return EXPORT_TARGETS.find(entry => entry.target === target) ?? EXPORT_TARGETS[1];
 }
 
 /**
@@ -125,9 +135,27 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 		});
 	};
 
-	// The selected target is highlighted so it is clear where the format buttons send the results.
-	const getExportTargetClass = (target: ResultsExportTarget): string => {
-		return target === exportTarget ? 'export-target export-target-active' : 'export-target';
+	// The menu sets the target the format buttons export to. Its items are text only, so the
+	// icon next to it is what shows which target is currently selected.
+	const exportTargetMenuElement = useRef<VscodeContextMenu | null>(null);
+
+	const exportTargetMenuEventRef = useVscodeElementRef<VscodeContextMenu, { value: string }>(
+		'vsc-context-menu-select',
+		(_element, event) => setExportTarget(event.detail.value as ResultsExportTarget)
+	);
+
+	const setExportTargetMenuRef = (element: VscodeContextMenu | null) => {
+		exportTargetMenuElement.current = element;
+
+		exportTargetMenuEventRef(element);
+	};
+
+	// The menu hides itself when an item is picked or the user clicks away, so its visibility is
+	// left to the element. Tracking it in state here would desynchronize on a click outside.
+	const openExportTargetMenu = () => {
+		if (exportTargetMenuElement.current) {
+			exportTargetMenuElement.current.show = true;
+		}
 	};
 
 	const editQuery = () => {
@@ -253,22 +281,22 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 				<Fragment>
 					<span className="divider divider-vertical"></span>
 
-					<vscode-toolbar-button
-						className={getExportTargetClass('document')}
-						title="Send the results to a new document"
-						onClick={() => setExportTarget('document')}>
-						<span className="codicon codicon-new-file"></span>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button
-						className={getExportTargetClass('clipboard')}
-						title="Send the results to the clipboard"
-						onClick={() => setExportTarget('clipboard')}>
-						<span className="codicon codicon-clippy"></span>
-					</vscode-toolbar-button>
+					<span className="export-target-picker">
+						<vscode-toolbar-button title="Change where the results are sent" onClick={() => openExportTargetMenu()}>
+							<span className="codicon codicon-kebab-vertical"></span>
+						</vscode-toolbar-button>
+						<vscode-context-menu
+							ref={setExportTargetMenuRef}
+							data={EXPORT_TARGETS.map(({ target, label }) => ({ label, value: target }))}>
+						</vscode-context-menu>
+					</span>
+					<span className={`codicon ${getExportTarget(exportTarget).icon} export-target-indicator`}
+						title={getExportTarget(exportTarget).label}>
+					</span>
 					{EXPORT_FORMATS.map(({ format, label, description }) => (
 						<vscode-toolbar-button
 							key={format}
-							title={`Export as ${description} to ${getExportTargetLabel(exportTarget)}`}
+							title={`Export as ${description}. ${getExportTarget(exportTarget).label}.`}
 							onClick={() => exportResults(format)}>
 							{label}
 						</vscode-toolbar-button>

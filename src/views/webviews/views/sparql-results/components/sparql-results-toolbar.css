@@ -84,14 +84,24 @@
 	width: 200px;
 	min-width: 120px;
 }
-/* The export target buttons act as a toggle group: the active one is highlighted so it is
-   clear where the format buttons next to them send the results. */
-.sparql-results-toolbar .export-target {
-	opacity: 0.6;
+/* Anchors the target menu below the button that opens it. */
+.sparql-results-toolbar .export-target-picker {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
 }
 
-.sparql-results-toolbar .export-target-active {
-	opacity: 1;
-	background-color: var(--vscode-toolbar-activeBackground);
-	border-radius: 4px;
+.sparql-results-toolbar .export-target-picker vscode-context-menu {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 10;
+}
+
+/* The menu entries are text only, so this icon is what shows the selected target. It is muted
+   because it reports the state of the format buttons rather than being clickable itself. */
+.sparql-results-toolbar .export-target-indicator {
+	margin-right: 4px;
+	opacity: 0.6;
+	cursor: default;
 }
