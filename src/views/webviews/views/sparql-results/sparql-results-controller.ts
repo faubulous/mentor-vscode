@@ -7,7 +7,6 @@ import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/se
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlConnectionGraphStatus, SparqlResultsWebviewMessages } from './sparql-results-messages';
-import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { getErrorMessage } from '@src/utilities/error';
 import { getResultsExportTarget } from '@src/languages/sparql/services/query-results-format';
 
