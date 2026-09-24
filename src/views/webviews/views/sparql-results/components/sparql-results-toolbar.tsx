@@ -38,6 +38,20 @@ function getExportTarget(target: ResultsExportTarget) {
 }
 
 /**
+ * Returns the menu label of an export target, marking the selected one with a check.
+ *
+ * The menu items render their label as plain text and cannot be styled from here, because they
+ * live in the shadow root of the menu. The unselected entries are therefore indented by an em
+ * space, which is about as wide as the check, so that all labels line up.
+ * @param label The name of the target.
+ * @param selected Whether the target is the selected one.
+ * @returns The label as it appears in the menu.
+ */
+function getExportTargetMenuLabel(label: string, selected: boolean): string {
+	return selected ? `\u2713 ${label}` : `\u2003${label}`;
+}
+
+/**
  * Component to display SPARQL results toolbar with pagination and actions.
  */
 function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) {
@@ -283,13 +297,17 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 
 					<span className="export-target-picker">
 						<vscode-toolbar-button
-							title={`${getExportTarget(exportTarget).label}. Click to change.`}
+							title="Click to change output location."
 							onClick={() => openExportTargetMenu()}>
 							<span className={`codicon ${getExportTarget(exportTarget).icon}`}></span>
+							<span className="codicon codicon-chevron-down export-target-chevron"></span>
 						</vscode-toolbar-button>
 						<vscode-context-menu
 							ref={setExportTargetMenuRef}
-							data={EXPORT_TARGETS.map(({ target, label }) => ({ label, value: target }))}>
+							data={EXPORT_TARGETS.map(({ target, label }) => ({
+								label: getExportTargetMenuLabel(label, target === exportTarget),
+								value: target
+							}))}>
 						</vscode-context-menu>
 					</span>
 					{EXPORT_FORMATS.map(({ format, label, description }) => (

@@ -22,6 +22,19 @@
 	margin: 0 -2px;
 }
 
+/* Two icons in one button would pull against each other on their facing edges. */
+.sparql-results-toolbar vscode-toolbar-button > .codicon + .codicon {
+	margin-left: 0;
+}
+
+/* Marks the output location button as opening a menu, without competing with the icon
+   that shows the location itself. */
+.sparql-results-toolbar vscode-toolbar-button > .export-target-chevron {
+	font-size: 10px;
+	align-self: center;
+	opacity: 0.8;
+}
+
 .sparql-results-toolbar .codicon-debug-stop {
 	color: var(--vscode-debugIcon-stopForeground);
 }
