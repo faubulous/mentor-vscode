@@ -721,6 +721,12 @@
         "category": "Mentor"
       },
       {
+        "command": "mentor.command.viewRawSparqlResponse",
+        "title": "View Raw SPARQL Response",
+        "icon": "$(inspect)",
+        "category": "Mentor"
+      },
+      {
         "command": "mentor.command.reindexWorkspace",
         "title": "Reindex Workspace...",
         "icon": "$(app-mentor)",

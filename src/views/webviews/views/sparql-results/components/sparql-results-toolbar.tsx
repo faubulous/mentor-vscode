@@ -10,6 +10,15 @@ import { withSparqlResults } from '../helpers/sparql-results-hoc';
 import toolbarStyle from "./sparql-results-toolbar.css";
 
 /**
+ * The formats the results can be exported in, in the order their buttons appear.
+ */
+const EXPORT_FORMATS: { format: BindingsFormat; label: string; description: string }[] = [
+	{ format: 'csv', label: 'CSV', description: 'comma-separated values' },
+	{ format: 'markdown', label: 'MD', description: 'a Markdown table' },
+	{ format: 'json', label: 'JSON', description: 'SPARQL Query Results JSON' },
+];
+
+/**
  * Returns the wording used for an export target in the button tooltips.
  * @param target The target the results are sent to.
  * @returns The label of the target.
@@ -116,15 +125,9 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 		});
 	};
 
-	const handleExportTargetChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-		setExportTarget(event.target.value as ResultsExportTarget);
-	};
-
-	const viewRawResponse = () => {
-		messaging?.postMessage({
-			id: 'OpenRawResponse',
-			queryId: queryContext.id
-		});
+	// The selected target is highlighted so it is clear where the format buttons send the results.
+	const getExportTargetClass = (target: ResultsExportTarget): string => {
+		return target === exportTarget ? 'export-target export-target-active' : 'export-target';
 	};
 
 	const editQuery = () => {
@@ -250,23 +253,26 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 				<Fragment>
 					<span className="divider divider-vertical"></span>
 
-					<vscode-toolbar-button title={`Export as CSV to ${getExportTargetLabel(exportTarget)}`} onClick={() => exportResults('csv')}>
-						CSV
+					<vscode-toolbar-button
+						className={getExportTargetClass('document')}
+						title="Send the results to a new document"
+						onClick={() => setExportTarget('document')}>
+						<span className="codicon codicon-new-file"></span>
 					</vscode-toolbar-button>
-					<vscode-toolbar-button title={`Export as a Markdown table to ${getExportTargetLabel(exportTarget)}`} onClick={() => exportResults('markdown')}>
-						MD
+					<vscode-toolbar-button
+						className={getExportTargetClass('clipboard')}
+						title="Send the results to the clipboard"
+						onClick={() => setExportTarget('clipboard')}>
+						<span className="codicon codicon-clippy"></span>
 					</vscode-toolbar-button>
-					<select className="sparql-results-export-target-select"
-						title="Where the exported results are sent"
-						value={exportTarget}
-						onChange={handleExportTargetChange}>
-						<option value="document">New Document</option>
-						<option value="clipboard">Clipboard</option>
-					</select>
-					<span className="divider divider-vertical"></span>
-					<vscode-toolbar-button disabled={!queryContext.rawResponse} title="View raw response" onClick={() => viewRawResponse()}>
-						JSON
-					</vscode-toolbar-button>
+					{EXPORT_FORMATS.map(({ format, label, description }) => (
+						<vscode-toolbar-button
+							key={format}
+							title={`Export as ${description} to ${getExportTargetLabel(exportTarget)}`}
+							onClick={() => exportResults(format)}>
+							{label}
+						</vscode-toolbar-button>
+					))}
 				</Fragment>
 			)}
 		</vscode-toolbar-container>

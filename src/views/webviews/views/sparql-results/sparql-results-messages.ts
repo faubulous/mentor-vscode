@@ -21,7 +21,6 @@ export type SparqlResultsWebviewMessages =
     { readonly id: 'CancelSparqlQueryExecution', queryState: SparqlQueryExecutionState } |
     { readonly id: 'SparqlQueryExecutionCancelled', queryState: SparqlQueryExecutionState } |
     { readonly id: 'EditBackgroundQuery', queryId: string } |
-    { readonly id: 'OpenRawResponse', queryId: string } |
     { readonly id: 'GetResultsExportTarget' } |
     { readonly id: 'PostResultsExportTarget', target: ResultsExportTarget } |
     { readonly id: 'UpdateQueryDocumentIri', queryId: string, documentIri: string } |
