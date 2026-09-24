@@ -417,8 +417,10 @@ describe('NotebookController', () => {
 	describe('_onDidReceiveMessage', () => {
 		function createControllerWithMessaging() {
 			let capturedHandler: ((e: { message: unknown }) => void) | undefined;
+			const postMessage = vi.fn();
 
 			vi.spyOn(vscode.notebooks, 'createRendererMessaging').mockReturnValue({
+				postMessage,
 				onDidReceiveMessage: vi.fn((handler: any, thisArg: any) => {
 					capturedHandler = handler.bind(thisArg);
 					return { dispose: () => { } };
@@ -427,7 +429,7 @@ describe('NotebookController', () => {
 
 			createControllerWithExecution(makeExecution());
 
-			return { messageHandler: capturedHandler! };
+			return { messageHandler: capturedHandler!, postMessage };
 		}
 
 		it('executes the command without throwing when args is missing', () => {
@@ -445,6 +447,14 @@ describe('NotebookController', () => {
 			messageHandler({ message: { id: 'ExecuteCommand', command: 'mentor.test', args: ['a', 1] } });
 
 			expect(executeCommand).toHaveBeenCalledWith('mentor.test', 'a', 1);
+		});
+
+		it('answers the export target request of the renderer toolbar', () => {
+			const { messageHandler, postMessage } = createControllerWithMessaging();
+
+			messageHandler({ message: { id: 'GetResultsExportTarget' } });
+
+			expect(postMessage).toHaveBeenCalledWith({ id: 'PostResultsExportTarget', target: 'document' });
 		});
 
 		it('ignores messages with other ids', () => {

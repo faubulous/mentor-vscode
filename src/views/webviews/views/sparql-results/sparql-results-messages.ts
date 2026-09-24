@@ -1,5 +1,6 @@
 import { SparqlQueryExecutionState } from "@src/languages/sparql/services/sparql-query-state";
 import { SparqlConnection } from "@src/languages/sparql/services/sparql-connection";
+import type { ResultsExportTarget } from "@src/languages/sparql/services/bindings-formatter";
 import { ExecuteCommandMessage } from '../../webview-messaging';
 
 /**
@@ -21,6 +22,8 @@ export type SparqlResultsWebviewMessages =
     { readonly id: 'SparqlQueryExecutionCancelled', queryState: SparqlQueryExecutionState } |
     { readonly id: 'EditBackgroundQuery', queryId: string } |
     { readonly id: 'OpenRawResponse', queryId: string } |
+    { readonly id: 'GetResultsExportTarget' } |
+    { readonly id: 'PostResultsExportTarget', target: ResultsExportTarget } |
     { readonly id: 'UpdateQueryDocumentIri', queryId: string, documentIri: string } |
     { readonly id: 'ShowSparqlWelcome' } |
     { readonly id: 'GetSparqlConnections' } |

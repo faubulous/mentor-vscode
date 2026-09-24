@@ -1709,7 +1709,7 @@
           "mentor.sparql.resultsCopyFormat": {
             "type": "string",
             "title": "Results Copy Format",
-            "description": "Format used when copying the whole query results table to the clipboard.",
+            "description": "Format of the text a notebook cell offers to the built-in 'Copy Cell Output' command. The text is written when the cell runs, so re-run the cell to apply a change.",
             "enum": [
               "csv",
               "markdown",
@@ -1726,6 +1726,24 @@
               "Copy the results in the SPARQL Query Results JSON format."
             ],
             "default": "csv"
+          },
+          "mentor.sparql.resultsExportTarget": {
+            "type": "string",
+            "title": "Results Export Target",
+            "description": "Where the results toolbar sends the query results when a format is chosen.",
+            "enum": [
+              "document",
+              "clipboard"
+            ],
+            "enumItemLabels": [
+              "New Document",
+              "Clipboard"
+            ],
+            "enumDescriptions": [
+              "Open the results in a new untitled document.",
+              "Copy the results to the clipboard."
+            ],
+            "default": "document"
           },
           "mentor.sparql.resultsIriFormat": {
             "type": "string",

@@ -13,6 +13,12 @@ export type BindingsFormat = 'csv' | 'markdown' | 'json';
 export type IriForm = 'full' | 'prefixed';
 
 /**
+ * Where the results toolbar sends the serialized query results. Declared here, next to the
+ * formats, so the webview can use it without reaching into a module that reads settings.
+ */
+export type ResultsExportTarget = 'document' | 'clipboard';
+
+/**
  * Options controlling how a result is rendered as text.
  */
 export interface BindingsFormatOptions {

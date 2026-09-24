@@ -1,11 +1,22 @@
 import { Fragment } from 'react/jsx-runtime';
+import { useEffect, useState } from 'react';
 import { useStylesheet } from '@src/views/webviews/hooks';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
+import type { BindingsFormat, ResultsExportTarget } from '@src/languages/sparql/services/bindings-formatter';
 import { BindingsTablePagingState } from './bindings-table-paging-state';
 import { Stopwatch } from './stopwatch';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
 import toolbarStyle from "./sparql-results-toolbar.css";
+
+/**
+ * Returns the wording used for an export target in the button tooltips.
+ * @param target The target the results are sent to.
+ * @returns The label of the target.
+ */
+function getExportTargetLabel(target: ResultsExportTarget): string {
+	return target === 'clipboard' ? 'the clipboard' : 'a new document';
+}
 
 /**
  * Component to display SPARQL results toolbar with pagination and actions.
@@ -15,6 +26,26 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 
 	const { queryContext, paging, messaging, previousPage, nextPage, updatePageSize, filteredResult, searchTerm, setSearchTerm } = sparqlResults;
 	const bindings = filteredResult ?? null;
+
+	// The webview cannot read settings, so the configured default is requested from the host.
+	// Until it answers, the dropdown shows the same default as the setting.
+	const [exportTarget, setExportTarget] = useState<ResultsExportTarget>('document');
+
+	useEffect(() => {
+		if (!messaging) {
+			return;
+		}
+
+		const unsubscribe = messaging.onMessage(message => {
+			if (message.id === 'PostResultsExportTarget') {
+				setExportTarget(message.target);
+			}
+		});
+
+		messaging.postMessage({ id: 'GetResultsExportTarget' });
+
+		return unsubscribe;
+	}, [messaging]);
 
 	const getResultsRangeText = (bindings: BindingsResult, paging: BindingsTablePagingState): string => {
 		const totalRows = bindings.rows.length;
@@ -73,22 +104,20 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 		}
 	};
 
-	// Export the filtered rows so the output reflects the active search filter.
-	const saveResults = (format: 'csv' | 'markdown') => {
+	// Sends the results in the chosen format to the selected target. The filtered rows are
+	// exported so the output reflects the active search filter.
+	const exportResults = (format: BindingsFormat) => {
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
-			command: 'mentor.command.saveSparqlQueryResults',
+			command: exportTarget === 'clipboard'
+				? 'mentor.command.copySparqlQueryResults'
+				: 'mentor.command.saveSparqlQueryResults',
 			args: [{ ...queryContext, result: filteredResult ?? queryContext.result }, format]
 		});
 	};
 
-	// The format is resolved by the command from the settings, which the webview cannot read.
-	const copyResults = () => {
-		messaging?.postMessage({
-			id: 'ExecuteCommand',
-			command: 'mentor.command.copySparqlQueryResults',
-			args: [{ ...queryContext, result: filteredResult ?? queryContext.result }]
-		});
+	const handleExportTargetChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+		setExportTarget(event.target.value as ResultsExportTarget);
 	};
 
 	const viewRawResponse = () => {
@@ -221,15 +250,20 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 				<Fragment>
 					<span className="divider divider-vertical"></span>
 
-					<vscode-toolbar-button title="Copy results to the clipboard" onClick={() => copyResults()}>
-						<vscode-icon name="copy"></vscode-icon>
-					</vscode-toolbar-button>
-					<vscode-toolbar-button title="Save as CSV" onClick={() => saveResults('csv')}>
+					<vscode-toolbar-button title={`Export as CSV to ${getExportTargetLabel(exportTarget)}`} onClick={() => exportResults('csv')}>
 						CSV
 					</vscode-toolbar-button>
-					<vscode-toolbar-button title="Save as Markdown table" onClick={() => saveResults('markdown')}>
+					<vscode-toolbar-button title={`Export as a Markdown table to ${getExportTargetLabel(exportTarget)}`} onClick={() => exportResults('markdown')}>
 						MD
 					</vscode-toolbar-button>
+					<select className="sparql-results-export-target-select"
+						title="Where the exported results are sent"
+						value={exportTarget}
+						onChange={handleExportTargetChange}>
+						<option value="document">New Document</option>
+						<option value="clipboard">Clipboard</option>
+					</select>
+					<span className="divider divider-vertical"></span>
 					<vscode-toolbar-button disabled={!queryContext.rawResponse} title="View raw response" onClick={() => viewRawResponse()}>
 						JSON
 					</vscode-toolbar-button>

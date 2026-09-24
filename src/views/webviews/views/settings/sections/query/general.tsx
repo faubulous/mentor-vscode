@@ -13,14 +13,20 @@ export const queryGeneralSection = {
 	label: 'General',
 	component: QueryGeneralSection,
 	keys: [
-		'sparql.resultsCopyFormat',
+		'sparql.resultsExportTarget',
 		'sparql.resultsIriFormat',
+		'sparql.resultsCopyFormat',
 	],
 } as const satisfies SettingsSectionDescriptor;
 
 function QueryGeneralSection({ keys, settings, onUpdate, setScope, onBulkScope }: SettingsSectionProps) {
 	const rowProps = useSettingRowProps(MENTOR_SETTINGS_SOURCE, settings, setScope);
 	const menuItems = useBulkScopeMenuItems(MENTOR_SETTINGS_SOURCE, [...keys], settings, onBulkScope);
+
+	const resultsExportTargetRef = useVscodeElementRef<VscodeSingleSelect>(
+		'change',
+		(element) => onUpdate(MENTOR_SETTINGS_SOURCE, 'sparql.resultsExportTarget', element.value)
+	);
 
 	const resultsCopyFormatRef = useVscodeElementRef<VscodeSingleSelect>(
 		'change',
@@ -35,6 +41,16 @@ function QueryGeneralSection({ keys, settings, onUpdate, setScope, onBulkScope }
 	return (
 		<div>
 			<SectionHeader title={queryGeneralSection.label} menuItems={menuItems} variant="title" />
+			<SettingRow {...rowProps('sparql.resultsExportTarget')}>
+				<vscode-single-select
+					ref={resultsExportTargetRef}
+					value={String(settings['sparql.resultsExportTarget']?.value ?? 'document')}
+				>
+					{(settings['sparql.resultsExportTarget']?.enumOptions ?? []).map(o => (
+						<vscode-option key={o.value} value={o.value}>{o.label}</vscode-option>
+					))}
+				</vscode-single-select>
+			</SettingRow>
 			<SettingRow {...rowProps('sparql.resultsCopyFormat')}>
 				<vscode-single-select
 					ref={resultsCopyFormatRef}

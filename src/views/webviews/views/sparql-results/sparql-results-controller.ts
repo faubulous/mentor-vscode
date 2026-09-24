@@ -9,6 +9,7 @@ import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlConnectionGraphStatus, SparqlResultsWebviewMessages } from './sparql-results-messages';
 import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { getErrorMessage } from '@src/utilities/error';
+import { getResultsExportTarget } from '@src/languages/sparql/services/query-results-format';
 
 /**
  * A controller for the SPARQL results webview. It handles the registration of the webview, 
@@ -164,6 +165,10 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
             }
             case 'OpenRawResponse': {
                 await this._handleOpenRawResponse(message.queryId);
+                return true;
+            }
+            case 'GetResultsExportTarget': {
+                this.postMessage({ id: 'PostResultsExportTarget', target: getResultsExportTarget() });
                 return true;
             }
             default:

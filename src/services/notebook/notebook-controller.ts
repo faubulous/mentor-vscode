@@ -3,7 +3,7 @@ import { compile, isTemplate } from 'triplate';
 import { ISparqlQueryService } from '@src/languages/sparql/services';
 import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { formatQueryResult } from '@src/languages/sparql/services/bindings-formatter';
-import { getResultsCopyFormat, getResultsIriFormat } from '@src/languages/sparql/services/query-results-format';
+import { getResultsCopyFormat, getResultsExportTarget, getResultsIriFormat } from '@src/languages/sparql/services/query-results-format';
 import { IDocumentContextService } from '@src/services/document';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { renderTemplateInteractively } from '@src/languages/triplate/triplate-prompt';
@@ -59,6 +59,10 @@ export class NotebookController implements vscode.Disposable {
 			const { command, args } = message as ExecuteCommandMessage;
 
 			vscode.commands.executeCommand(command, ...(args ?? []));
+		} else if (message.id === 'GetResultsExportTarget') {
+			// The renderer runs in an iframe and cannot read settings, so it asks for the
+			// default export target of its toolbar.
+			this._messaging.postMessage({ id: 'PostResultsExportTarget', target: getResultsExportTarget() });
 		}
 	}
 
