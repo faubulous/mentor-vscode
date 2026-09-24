@@ -24,8 +24,8 @@ const EXPORT_FORMATS: { format: BindingsFormat; label: string; description: stri
  * shown both in the text-only menu and as the tooltip of the icon indicating the active target.
  */
 const EXPORT_TARGETS: { target: ResultsExportTarget; label: string; icon: string }[] = [
-	{ target: 'clipboard', label: 'Copy results to clipboard', icon: 'codicon-clippy' },
-	{ target: 'document', label: 'Edit results in new document', icon: 'codicon-new-file' },
+	{ target: 'clipboard', label: 'Copy to clipboard', icon: 'codicon-clippy' },
+	{ target: 'document', label: 'Create new document', icon: 'codicon-new-file' },
 ];
 
 /**
@@ -282,16 +282,15 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 					<span className="divider divider-vertical"></span>
 
 					<span className="export-target-picker">
-						<vscode-toolbar-button title="Change where the results are sent" onClick={() => openExportTargetMenu()}>
-							<span className="codicon codicon-kebab-vertical"></span>
+						<vscode-toolbar-button
+							title={`${getExportTarget(exportTarget).label}. Click to change.`}
+							onClick={() => openExportTargetMenu()}>
+							<span className={`codicon ${getExportTarget(exportTarget).icon}`}></span>
 						</vscode-toolbar-button>
 						<vscode-context-menu
 							ref={setExportTargetMenuRef}
 							data={EXPORT_TARGETS.map(({ target, label }) => ({ label, value: target }))}>
 						</vscode-context-menu>
-					</span>
-					<span className={`codicon ${getExportTarget(exportTarget).icon} export-target-indicator`}
-						title={getExportTarget(exportTarget).label}>
 					</span>
 					{EXPORT_FORMATS.map(({ format, label, description }) => (
 						<vscode-toolbar-button
