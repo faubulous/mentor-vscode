@@ -38,17 +38,17 @@ function getExportTarget(target: ResultsExportTarget) {
 }
 
 /**
- * Returns the menu label of an export target, marking the selected one with a check.
+ * Returns the check marking the selected entry of the target menu.
  *
- * The menu items render their label as plain text and cannot be styled from here, because they
- * live in the shadow root of the menu. The unselected entries are therefore indented by an em
- * space, which is about as wide as the check, so that all labels line up.
- * @param label The name of the target.
+ * A menu item renders a label and a keybinding and nothing else: it has no icon and no slot, and
+ * it is built inside the shadow root of the menu, so it cannot be styled from here. The check
+ * therefore goes in the keybinding, which is the trailing column of the entry. Putting it in the
+ * label would indent that label past the others.
  * @param selected Whether the target is the selected one.
- * @returns The label as it appears in the menu.
+ * @returns The check, or an empty string for an unselected target.
  */
-function getExportTargetMenuLabel(label: string, selected: boolean): string {
-	return selected ? `\u2713 ${label}` : `\u2003${label}`;
+function getExportTargetMenuMark(selected: boolean): string {
+	return selected ? '\u2713' : '';
 }
 
 /**
@@ -297,7 +297,7 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 
 					<span className="export-target-picker">
 						<vscode-toolbar-button
-							title="Click to change output location."
+							title="Click to change export action."
 							onClick={() => openExportTargetMenu()}>
 							<span className={`codicon ${getExportTarget(exportTarget).icon}`}></span>
 							<span className="codicon codicon-chevron-down export-target-chevron"></span>
@@ -305,7 +305,8 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 						<vscode-context-menu
 							ref={setExportTargetMenuRef}
 							data={EXPORT_TARGETS.map(({ target, label }) => ({
-								label: getExportTargetMenuLabel(label, target === exportTarget),
+								label,
+								keybinding: getExportTargetMenuMark(target === exportTarget),
 								value: target
 							}))}>
 						</vscode-context-menu>
@@ -313,7 +314,7 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 					{EXPORT_FORMATS.map(({ format, label, description }) => (
 						<vscode-toolbar-button
 							key={format}
-							title={`Export as ${description}. ${getExportTarget(exportTarget).label}.`}
+							title={`Export as ${description}.`}
 							onClick={() => exportResults(format)}>
 							{label}
 						</vscode-toolbar-button>

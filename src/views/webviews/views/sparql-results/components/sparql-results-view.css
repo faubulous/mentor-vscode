@@ -1,3 +1,18 @@
+/* An icon passed as slotted content is laid out by the shadow slot of the toolbar button, whose
+   padding is meant for a text label and leaves a 16px icon in a far wider button. The padding
+   cannot be reached from here, so the icon pulls it back in to the 22px VS Code uses for its own
+   icon buttons. Slotted content stays in the light DOM, unlike the slot itself. This is scoped to
+   the whole view because the results grid builds its cell actions the same way as the toolbar. */
+.sparql-results-container vscode-toolbar-button > .codicon {
+	margin: 0 -2px;
+}
+
+/* Two icons in one button face each other across the margin above, so the gap between them is
+   this margin less those 2px. */
+.sparql-results-container vscode-toolbar-button > .codicon + .codicon {
+	margin-left: 6px;
+}
+
 .sparql-results-container pre {
 	margin: 0;
 }
