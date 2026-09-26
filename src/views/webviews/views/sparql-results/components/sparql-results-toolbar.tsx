@@ -1,11 +1,55 @@
 import { Fragment } from 'react/jsx-runtime';
-import { useStylesheet } from '@src/views/webviews/hooks';
+import { useEffect, useRef, useState } from 'react';
+import { VscodeContextMenu } from '@vscode-elements/elements';
+import { useStylesheet, useVscodeElementRef } from '@src/views/webviews/hooks';
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
+import type { BindingsFormat, ResultsExportTarget } from '@src/languages/sparql/services/bindings-formatter';
 import { BindingsTablePagingState } from './bindings-table-paging-state';
 import { Stopwatch } from './stopwatch';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
 import toolbarStyle from "./sparql-results-toolbar.css";
+
+/**
+ * The formats the results can be exported in, in the order their buttons appear.
+ */
+const EXPORT_FORMATS: { format: BindingsFormat; label: string; description: string }[] = [
+	{ format: 'csv', label: 'CSV', description: 'comma-separated values' },
+	{ format: 'markdown', label: 'MD', description: 'a Markdown table' },
+	{ format: 'json', label: 'JSON', description: 'SPARQL Query Results JSON' },
+];
+
+/**
+ * The targets the results can be sent to, in the order their menu entries appear. The label is
+ * shown both in the text-only menu and as the tooltip of the icon indicating the active target.
+ */
+const EXPORT_TARGETS: { target: ResultsExportTarget; label: string; icon: string }[] = [
+	{ target: 'clipboard', label: 'Copy to clipboard', icon: 'codicon-clippy' },
+	{ target: 'document', label: 'Create new document', icon: 'codicon-new-file' },
+];
+
+/**
+ * Returns the menu entry of an export target.
+ * @param target The target the results are sent to.
+ * @returns The entry describing the target.
+ */
+function getExportTarget(target: ResultsExportTarget) {
+	return EXPORT_TARGETS.find(entry => entry.target === target) ?? EXPORT_TARGETS[1];
+}
+
+/**
+ * Returns the check marking the selected entry of the target menu.
+ *
+ * A menu item renders a label and a keybinding and nothing else: it has no icon and no slot, and
+ * it is built inside the shadow root of the menu, so it cannot be styled from here. The check
+ * therefore goes in the keybinding, which is the trailing column of the entry. Putting it in the
+ * label would indent that label past the others.
+ * @param selected Whether the target is the selected one.
+ * @returns The check, or an empty string for an unselected target.
+ */
+function getExportTargetMenuMark(selected: boolean): string {
+	return selected ? '\u2713' : '';
+}
 
 /**
  * Component to display SPARQL results toolbar with pagination and actions.
@@ -15,6 +59,26 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 
 	const { queryContext, paging, messaging, previousPage, nextPage, updatePageSize, filteredResult, searchTerm, setSearchTerm } = sparqlResults;
 	const bindings = filteredResult ?? null;
+
+	// The webview cannot read settings, so the configured default is requested from the host.
+	// Until it answers, the dropdown shows the same default as the setting.
+	const [exportTarget, setExportTarget] = useState<ResultsExportTarget>('document');
+
+	useEffect(() => {
+		if (!messaging) {
+			return;
+		}
+
+		const unsubscribe = messaging.onMessage(message => {
+			if (message.id === 'PostResultsExportTarget') {
+				setExportTarget(message.target);
+			}
+		});
+
+		messaging.postMessage({ id: 'GetResultsExportTarget' });
+
+		return unsubscribe;
+	}, [messaging]);
 
 	const getResultsRangeText = (bindings: BindingsResult, paging: BindingsTablePagingState): string => {
 		const totalRows = bindings.rows.length;
@@ -73,20 +137,39 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 		}
 	};
 
-	const saveResults = () => {
-		// Export the filtered rows so CSV reflects the active search filter.
+	// Sends the results in the chosen format to the selected target. The filtered rows are
+	// exported so the output reflects the active search filter.
+	const exportResults = (format: BindingsFormat) => {
 		messaging?.postMessage({
 			id: 'ExecuteCommand',
-			command: 'mentor.command.saveSparqlQueryResults',
-			args: [{ ...queryContext, result: filteredResult ?? queryContext.result }, 'csv']
+			command: exportTarget === 'clipboard'
+				? 'mentor.command.copySparqlQueryResults'
+				: 'mentor.command.saveSparqlQueryResults',
+			args: [{ ...queryContext, result: filteredResult ?? queryContext.result }, format]
 		});
 	};
 
-	const viewRawResponse = () => {
-		messaging?.postMessage({
-			id: 'OpenRawResponse',
-			queryId: queryContext.id
-		});
+	// The menu sets the target the format buttons export to. Its items are text only, so the
+	// icon next to it is what shows which target is currently selected.
+	const exportTargetMenuElement = useRef<VscodeContextMenu | null>(null);
+
+	const exportTargetMenuEventRef = useVscodeElementRef<VscodeContextMenu, { value: string }>(
+		'vsc-context-menu-select',
+		(_element, event) => setExportTarget(event.detail.value as ResultsExportTarget)
+	);
+
+	const setExportTargetMenuRef = (element: VscodeContextMenu | null) => {
+		exportTargetMenuElement.current = element;
+
+		exportTargetMenuEventRef(element);
+	};
+
+	// The menu hides itself when an item is picked or the user clicks away, so its visibility is
+	// left to the element. Tracking it in state here would desynchronize on a click outside.
+	const openExportTargetMenu = () => {
+		if (exportTargetMenuElement.current) {
+			exportTargetMenuElement.current.show = true;
+		}
 	};
 
 	const editQuery = () => {
@@ -212,12 +295,30 @@ function SparqlResultsToolbarBase({ sparqlResults }: SparqlResultsContextProps) 
 				<Fragment>
 					<span className="divider divider-vertical"></span>
 
-					<vscode-toolbar-button title="Save" onClick={() => saveResults()}>
-						CSV
-					</vscode-toolbar-button>
-					<vscode-toolbar-button disabled={!queryContext.rawResponse} title="View raw response" onClick={() => viewRawResponse()}>
-						JSON
-					</vscode-toolbar-button>
+					<span className="export-target-picker">
+						<vscode-toolbar-button
+							title="Click to change export action."
+							onClick={() => openExportTargetMenu()}>
+							<span className={`codicon ${getExportTarget(exportTarget).icon}`}></span>
+							<span className="codicon codicon-chevron-down export-target-chevron"></span>
+						</vscode-toolbar-button>
+						<vscode-context-menu
+							ref={setExportTargetMenuRef}
+							data={EXPORT_TARGETS.map(({ target, label }) => ({
+								label,
+								keybinding: getExportTargetMenuMark(target === exportTarget),
+								value: target
+							}))}>
+						</vscode-context-menu>
+					</span>
+					{EXPORT_FORMATS.map(({ format, label, description }) => (
+						<vscode-toolbar-button
+							key={format}
+							title={`Export as ${description}.`}
+							onClick={() => exportResults(format)}>
+							{label}
+						</vscode-toolbar-button>
+					))}
 				</Fragment>
 			)}
 		</vscode-toolbar-container>

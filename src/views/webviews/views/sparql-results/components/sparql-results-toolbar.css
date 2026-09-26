@@ -14,8 +14,12 @@
 	display: none !important;
 }
 
-.sparql-results-toolbar slot.textOnly:not(.empty) {
-    padding: 0;
+/* Marks the output location button as opening a menu, without competing with the icon
+   that shows the location itself. */
+.sparql-results-toolbar vscode-toolbar-button > .export-target-chevron {
+	font-size: 10px;
+	align-self: center;
+	opacity: 0.8;
 }
 
 .sparql-results-toolbar .codicon-debug-stop {
@@ -83,4 +87,17 @@
 .sparql-results-toolbar .sparql-results-search {
 	width: 200px;
 	min-width: 120px;
+}
+/* Anchors the target menu below the button that opens it. */
+.sparql-results-toolbar .export-target-picker {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.sparql-results-toolbar .export-target-picker vscode-context-menu {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 10;
 }

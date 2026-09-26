@@ -7,8 +7,8 @@ import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/se
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlConnectionGraphStatus, SparqlResultsWebviewMessages } from './sparql-results-messages';
-import { IDocumentFactory } from '@src/services/document/document-factory.interface';
 import { getErrorMessage } from '@src/utilities/error';
+import { getResultsExportTarget } from '@src/languages/sparql/services/query-results-format';
 
 /**
  * A controller for the SPARQL results webview. It handles the registration of the webview, 
@@ -162,8 +162,8 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
                 await this._handleEditBackgroundQuery(message.queryId);
                 return true;
             }
-            case 'OpenRawResponse': {
-                await this._handleOpenRawResponse(message.queryId);
+            case 'GetResultsExportTarget': {
+                this.postMessage({ id: 'PostResultsExportTarget', target: getResultsExportTarget() });
                 return true;
             }
             default:
@@ -247,37 +247,6 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
             id: 'UpdateQueryDocumentIri',
             queryId,
             documentIri: document.uri.toString()
-        });
-
-        await vscode.window.showTextDocument(document);
-    }
-
-    /**
-     * Opens the raw, unparsed HTTP response captured for a query in a new editor tab,
-     * picking a syntax highlighting language from the response's content type.
-     * @param queryId The ID of the query execution whose raw response should be shown.
-     */
-    private async _handleOpenRawResponse(queryId: string) {
-        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
-        const queryState = queryService.getQueryHistory().find(q => q.id === queryId);
-        const rawResponse = queryState?.rawResponse;
-
-        if (!rawResponse) {
-            vscode.window.showInformationMessage('No raw response is available for this query.');
-            return;
-        }
-
-        let language: string = "plaintext";
-
-        if (rawResponse.contentType) {
-            const documentFactory = container.resolve<IDocumentFactory>(ServiceToken.DocumentFactory);
-            
-            language = await documentFactory.getLanguageIdFromMimeType(rawResponse.contentType);
-        }
-
-        const document = await vscode.workspace.openTextDocument({
-            content: rawResponse.body,
-            language: language
         });
 
         await vscode.window.showTextDocument(document);

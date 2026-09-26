@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { compile, isTemplate } from 'triplate';
 import { ISparqlQueryService } from '@src/languages/sparql/services';
-import { QuadsResult } from '@src/languages/sparql/services/sparql-query-state';
+import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
+import { formatQueryResult } from '@src/languages/sparql/services/bindings-formatter';
+import { getResultsCopyFormat, getResultsExportTarget, getResultsIriFormat } from '@src/languages/sparql/services/query-results-format';
 import { IDocumentContextService } from '@src/services/document';
 import { ShaclValidationService } from '@src/services/validation/shacl-validation-service';
 import { renderTemplateInteractively } from '@src/languages/triplate/triplate-prompt';
@@ -57,6 +59,10 @@ export class NotebookController implements vscode.Disposable {
 			const { command, args } = message as ExecuteCommandMessage;
 
 			vscode.commands.executeCommand(command, ...(args ?? []));
+		} else if (message.id === 'GetResultsExportTarget') {
+			// The renderer runs in an iframe and cannot read settings, so it asks for the
+			// default export target of its toolbar.
+			this._messaging.postMessage({ id: 'PostResultsExportTarget', target: getResultsExportTarget() });
 		}
 	}
 
@@ -256,6 +262,25 @@ export class NotebookController implements vscode.Disposable {
 		}
 	}
 
+	/**
+	 * Serializes a query result to the configured copy format, for the plain text output item that
+	 * backs the built-in 'Copy Cell Output' command. Serializing is best effort: a failure here must
+	 * not turn an otherwise successful query into a failed cell execution, so it yields empty text.
+	 * @param result The result of the executed query.
+	 * @returns The serialized result, or an empty string if it cannot be serialized.
+	 */
+	private _getCopyText(result: SparqlQueryExecutionState['result']): string {
+		if (result?.type !== 'bindings' && result?.type !== 'boolean') {
+			return '';
+		}
+
+		try {
+			return formatQueryResult(result, { format: getResultsCopyFormat(), iriForm: getResultsIriFormat() });
+		} catch {
+			return '';
+		}
+	}
+
 	private _getValidationSummary(validationService: ShaclValidationService, documentUri: vscode.Uri, result: { conforms: boolean; results: unknown[] }): string {
 		return result.conforms
 			? 'SHACL validation: Conforms — no issues found.'
@@ -290,14 +315,19 @@ export class NotebookController implements vscode.Disposable {
 			queryState = await queryService.executeQuery(queryState, tokenSource);
 
 			if (queryState.queryType === 'bindings' || queryState.queryType === 'boolean') {
+				// The renderer mime type comes first so it stays the preferred representation. The
+				// plain text item is not rendered; it gives the built-in 'Copy Cell Output' command
+				// something to serialize, which it cannot do for a custom mime type on its own.
 				await execution.replaceOutput([new vscode.NotebookCellOutput([
-					vscode.NotebookCellOutputItem.json(queryState, 'application/sparql-results+json')
+					vscode.NotebookCellOutputItem.json(queryState, 'application/sparql-results+json'),
+					vscode.NotebookCellOutputItem.text(this._getCopyText(queryState.result), 'text/plain')
 				])]);
 			} else if (queryState.queryType === 'quads') {
 				const result = queryState.result as QuadsResult;
 
 				await execution.replaceOutput([new vscode.NotebookCellOutput([
-					vscode.NotebookCellOutputItem.text(result?.document, 'text/turtle')
+					vscode.NotebookCellOutputItem.text(result?.document, 'text/turtle'),
+					vscode.NotebookCellOutputItem.text(result?.document, 'text/plain')
 				])]);
 			}
 

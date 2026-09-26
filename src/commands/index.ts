@@ -4,6 +4,8 @@ export { cancelSparqlQueryExecution } from './sparql/cancel-sparql-query-executi
 export { cancelValidation } from './validation/cancel-validation';
 export { clearQueryHistory } from './sparql/clear-query-history';
 export { cleanDocument } from './document/clean-document';
+export { copySparqlQueryResults } from './sparql/copy-sparql-query-results';
+export { viewRawSparqlResponse } from './sparql/view-raw-sparql-response';
 export {
 	convertFileFormat,
 	convertFileFormatToNTriplesSubmenu,

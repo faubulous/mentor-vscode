@@ -190,6 +190,51 @@ describe('NotebookController', () => {
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
 
+		it('should add a plain text item so the built-in copy command can serialize the bindings', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell();
+
+			mockCreateQuery.mockReturnValue({ queryType: 'bindings' });
+			mockExecuteQuery.mockResolvedValue({
+				queryType: 'bindings',
+				result: {
+					type: 'bindings',
+					columns: ['label'],
+					rows: [{ label: { termType: 'Literal', value: 'Alice' } }],
+					namespaceMap: {},
+				},
+			});
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
+
+			expect(outputs[0].items[1].mime).toBe('text/plain');
+			expect(new TextDecoder().decode(outputs[0].items[1].data)).toBe('"label"\n"Alice"');
+		});
+
+		it('should add a plain text item for a quads result', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell();
+
+			mockCreateQuery.mockReturnValue({ queryType: 'quads' });
+			mockExecuteQuery.mockResolvedValue({
+				queryType: 'quads',
+				result: { type: 'quads', document: '@prefix ex: <http://example.org/> .', mimeType: 'text/turtle' },
+			});
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
+
+			expect(outputs[0].items[1].mime).toBe('text/plain');
+			expect(new TextDecoder().decode(outputs[0].items[1].data)).toBe('@prefix ex: <http://example.org/> .');
+		});
+
 		it('should output error and call end(false) when executeQuery throws', async () => {
 			const mockExecution = makeExecution();
 			const { executeHandler } = createControllerWithExecution(mockExecution);
@@ -372,8 +417,10 @@ describe('NotebookController', () => {
 	describe('_onDidReceiveMessage', () => {
 		function createControllerWithMessaging() {
 			let capturedHandler: ((e: { message: unknown }) => void) | undefined;
+			const postMessage = vi.fn();
 
 			vi.spyOn(vscode.notebooks, 'createRendererMessaging').mockReturnValue({
+				postMessage,
 				onDidReceiveMessage: vi.fn((handler: any, thisArg: any) => {
 					capturedHandler = handler.bind(thisArg);
 					return { dispose: () => { } };
@@ -382,7 +429,7 @@ describe('NotebookController', () => {
 
 			createControllerWithExecution(makeExecution());
 
-			return { messageHandler: capturedHandler! };
+			return { messageHandler: capturedHandler!, postMessage };
 		}
 
 		it('executes the command without throwing when args is missing', () => {
@@ -400,6 +447,14 @@ describe('NotebookController', () => {
 			messageHandler({ message: { id: 'ExecuteCommand', command: 'mentor.test', args: ['a', 1] } });
 
 			expect(executeCommand).toHaveBeenCalledWith('mentor.test', 'a', 1);
+		});
+
+		it('answers the export target request of the renderer toolbar', () => {
+			const { messageHandler, postMessage } = createControllerWithMessaging();
+
+			messageHandler({ message: { id: 'GetResultsExportTarget' } });
+
+			expect(postMessage).toHaveBeenCalledWith({ id: 'PostResultsExportTarget', target: 'document' });
 		});
 
 		it('ignores messages with other ids', () => {
