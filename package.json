@@ -124,7 +124,7 @@
     "@comunica/query-sparql": "^5.3.0",
     "@faubulous/mentor-rdf": "^2.1.5",
     "@faubulous/mentor-rdf-parsers": "^2.1.0",
-    "@faubulous/mentor-rdf-serializers": "^1.9.0",
+    "@faubulous/mentor-rdf-serializers": "^1.9.1",
     "asynciterator": "^3.10.0",
     "n3": "^2.3.0",
     "picomatch": "^4.0.5",

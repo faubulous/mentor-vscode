@@ -7,6 +7,7 @@ import { BindingsResult } from '@src/languages/sparql/services/sparql-query-stat
 import { useStylesheet } from '@src/views/webviews/hooks';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
+import { getGraphVariables } from '../helpers/graph-variables';
 import stylesheet from './bindings-table.css';
 
 const ntriplesSerializer = new NTriplesSerializer();
@@ -41,17 +42,9 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 	const result = filteredResult ?? null;
 
 	// Determine which binding variables are named graphs
-	const graphHeaders = new Set<string>();
+	const graphHeaders = result ? getGraphVariables(queryContext.query) : new Set<string>();
 
-	if (result) {
-		const graphExpression = /GRAPH\s+\?([a-zA-Z_][a-zA-Z0-9_]*)/ig;
-
-		for (const column of graphExpression.exec(queryContext.query || '') || []) {
-			graphHeaders.add(column);
-		}
-	}
-
-	const handleRightClick = (event: React.MouseEvent) => {
+	const handleContextMenu = (event: React.MouseEvent) => {
 		// Do not show default context menu on right click.
 		event.preventDefault();
 	};
@@ -273,7 +266,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 			<vscode-table className="bindings-table" zebra bordered-rows resizable
 				columns={["50px"]} key={renderKeyRef.current}
 				style={{ minWidth: `${minWidth}px` }}
-				onClick={handleRightClick}>
+				onContextMenu={handleContextMenu}>
 				{result.rows.length > 0 &&
 					<vscode-table-header>
 						<vscode-table-header-cell key="row-number">
