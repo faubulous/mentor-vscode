@@ -42,9 +42,13 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.6.4: Smaller Package
-- Removed the source maps and compiled tests that 0.6.3 shipped by mistake, reducing the download from 15 MB to 3.6 MB
-- Contains the 0.6.3 fixes as well: the corrected *Query Document with SPARQL* graph scope ([#83](https://github.com/faubulous/mentor-vscode/issues/83)), the connection test outcome shown on SPARQL connection rows, and the SPARQL welcome view layout
+### Version 0.6.5: Exporting Query Results
+- Query results can be exported as a Markdown table or as SPARQL Query Results JSON, next to the existing CSV export, and sent either to a new document or to the clipboard
+- Copying the output of a notebook cell now yields the results table; it previously did nothing, because the cell offered its results only in a format the built-in command could not read ([#89](https://github.com/faubulous/mentor-vscode/issues/89))
+- A new *Query → General* settings section sets where exports are sent, whether IRIs are written in full or prefixed, and the format a notebook cell offers to the copy command
+- The definition tree now lists predicates that a data document only uses, whose definitions live in another document ([#90](https://github.com/faubulous/mentor-vscode/issues/90))
+- Fixed the CSV export producing invalid output for values containing a double quote, and the Markdown export breaking a table on values containing a backslash
+- Fixed the results table only offering its graph actions on the first `GRAPH` variable of a query
 
 ## Installation
 
