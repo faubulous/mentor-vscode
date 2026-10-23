@@ -1,7 +1,7 @@
 import { container } from 'tsyringe';
 import { Store } from "@faubulous/mentor-rdf";
 import { ServiceToken } from '@src/services/tokens';
-import { IWorkspaceIndexerService } from '@src/services/core';
+import { IWorkspaceFileService, IWorkspaceIndexerService } from '@src/services/core';
 import { ShapeGraphService } from '@src/services/validation/shape-graph-service';
 
 export const reindexWorkspace = {
@@ -16,6 +16,10 @@ export const reindexWorkspace = {
 
 		// Restore the preset and user shape graphs that the wipe removed.
 		await container.resolve<ShapeGraphService>(ServiceToken.ShapeGraphService).loadAll();
+
+		// Rediscover the workspace files, so the index also recovers from file system
+		// changes the file watcher did not report.
+		await container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService).discoverFiles();
 
 		// Reindex the workspace files..
 		const workspaceIndexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);

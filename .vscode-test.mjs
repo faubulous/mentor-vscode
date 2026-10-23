@@ -36,4 +36,13 @@ export default defineConfig([
 		mocha,
 		env,
 	},
+	{
+		// The tests create, move and delete folders in this workspace from outside
+		// of VS Code, which is how #95 was reported.
+		label: 'file-watcher',
+		files: 'out/e2e/file-watcher/*.test.js',
+		workspaceFolder: 'e2e/fixtures/file-watcher-workspace',
+		mocha,
+		env,
+	},
 ]);

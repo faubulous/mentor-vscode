@@ -16,6 +16,26 @@ export interface WorkspaceFileChangeEvent {
 }
 
 /**
+ * Event arguments for changes to the list of discovered workspace files.
+ */
+export interface WorkspaceFileListChangeEvent {
+	/**
+	 * The files that were added to the list.
+	 */
+	added: ReadonlyArray<vscode.Uri>;
+
+	/**
+	 * The files that were removed from the list.
+	 */
+	removed: ReadonlyArray<vscode.Uri>;
+
+	/**
+	 * Tracked files whose content was changed on disk outside of an editor.
+	 */
+	changed: ReadonlyArray<vscode.Uri>;
+}
+
+/**
  * Interface for the WorkspaceFileService which provides file discovery,
  * watching, and navigation functionality for the workspace.
  */
@@ -39,6 +59,13 @@ export interface IWorkspaceFileService {
 	 * An event that is fired when workspace file contents change (create/delete).
 	 */
 	readonly onDidChangeFiles: vscode.Event<WorkspaceFileChangeEvent>;
+
+	/**
+	 * An event that is fired when files are added to, removed from or changed in
+	 * the discovered file list after the initial discovery. Used to keep the
+	 * workspace index in sync with the file system.
+	 */
+	readonly onDidChangeFileList: vscode.Event<WorkspaceFileListChangeEvent>;
 
 	/**
 	 * Discovers all supported files in the workspace.

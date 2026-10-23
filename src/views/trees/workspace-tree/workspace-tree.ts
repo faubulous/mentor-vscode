@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
+import { IWorkspaceFileService } from '@src/services/core';
 import { TreeView } from '@src/views/trees/tree-view';
 import { renameWorkspaceItem } from '@src/commands/workspace/rename-workspace-item';
 import { WorkspaceNodeProvider } from './workspace-node-provider';
@@ -32,6 +33,9 @@ export class WorkspaceTree implements TreeView {
 		const disposables = [
 			this.treeView,
 			vscode.commands.registerCommand('mentor.command.refreshWorkspaceTree', async () => {
+				// Rediscover the files to recover from file system changes the watcher did not report.
+				await container.resolve<IWorkspaceFileService>(ServiceToken.WorkspaceFileService).discoverFiles();
+
 				this.treeDataProvider.refresh();
 			}),
 			vscode.commands.registerCommand(renameWorkspaceItem.id, async (clicked?: string) => {

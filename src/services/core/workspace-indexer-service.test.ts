@@ -47,6 +47,11 @@ beforeEach(() => {
 		// assertions cover either path.
 		loadDocument: (...args: any[]) => mockLoadDocument(...args),
 		loadDocumentContent: (...args: any[]) => mockLoadDocument(...args),
+		removeDocuments: vi.fn((uris: vscode.Uri[]) => {
+			for (const uri of uris) {
+				delete mockContexts[uri.toString()];
+			}
+		}),
 	};
 
 	mockWorkspaceFileService = {
@@ -59,6 +64,7 @@ beforeEach(() => {
 
 	mockDiagnosticsService = {
 		diagnoseContent: vi.fn(),
+		deleteDiagnostics: vi.fn(),
 	};
 
 	mockConfigValues = {};
@@ -461,6 +467,134 @@ describe('WorkspaceIndexerService', () => {
 			await service.waitForIndexed();
 
 			expect(mockLoadDocument).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe('handleFileListChanged', () => {
+		const a = vscode.Uri.parse('file:///w/a.ttl');
+		const b = vscode.Uri.parse('file:///w/b.ttl');
+		const c = vscode.Uri.parse('file:///w/c.ttl');
+
+		/**
+		 * Creates a file list change event.
+		 * @param change The added, removed and changed files.
+		 */
+		const listChange = (change: { added?: vscode.Uri[]; removed?: vscode.Uri[]; changed?: vscode.Uri[] }) => ({
+			added: [], removed: [], changed: [], ...change
+		});
+
+		/**
+		 * Creates an indexer whose `indexWorkspace` calls are recorded, so a test can
+		 * await the pass that a scheduled update started.
+		 */
+		const createIndexer = () => {
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+			const indexSpy = vi.spyOn(service, 'indexWorkspace');
+
+			return { service, indexSpy };
+		};
+
+		beforeEach(() => {
+			vi.useFakeTimers();
+
+			// Loading a document creates its context, like the real context service.
+			mockLoadDocument.mockImplementation(async (uri: vscode.Uri) => {
+				mockContexts[uri.toString()] = {};
+			});
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		it('collects changes into a single incremental indexing pass', async () => {
+			const { service, indexSpy } = createIndexer();
+
+			service.handleFileListChanged(listChange({ added: [a] }));
+			service.handleFileListChanged(listChange({ added: [b] }));
+
+			await vi.advanceTimersByTimeAsync(499);
+			expect(indexSpy).not.toHaveBeenCalled();
+
+			await vi.advanceTimersByTimeAsync(1);
+			expect(indexSpy).toHaveBeenCalledExactlyOnceWith();
+		});
+
+		it('removes the documents of removed and changed files and indexes the files without a document', async () => {
+			mockContexts[a.toString()] = {};
+			mockContexts[b.toString()] = {};
+			mockWorkspaceFileService.files = [b, c];
+
+			const { service, indexSpy } = createIndexer();
+
+			service.handleFileListChanged(listChange({ removed: [a], changed: [b], added: [c] }));
+
+			await vi.advanceTimersByTimeAsync(500);
+			await indexSpy.mock.results[0].value;
+
+			expect(mockContextService.removeDocuments).toHaveBeenCalledExactlyOnceWith([a, b]);
+			expect(mockDiagnosticsService.deleteDiagnostics).toHaveBeenCalledWith(a);
+			expect(mockDiagnosticsService.deleteDiagnostics).toHaveBeenCalledWith(b);
+
+			// The changed file is indexed again and the added file for the first time.
+			expect(mockLoadDocument.mock.calls.map(call => call[0].toString())).toEqual([b.toString(), c.toString()]);
+			expect(mockContextService.removeDocuments.mock.invocationCallOrder[0]).toBeLessThan(mockLoadDocument.mock.invocationCallOrder[0]);
+		});
+
+		it('keeps the documents of open files', async () => {
+			mockContexts[a.toString()] = {};
+			(vscode.workspace as any).textDocuments = [{ uri: a }];
+
+			const { service, indexSpy } = createIndexer();
+
+			service.handleFileListChanged(listChange({ changed: [a] }));
+
+			await vi.advanceTimersByTimeAsync(500);
+			await indexSpy.mock.results[0].value;
+
+			expect(mockContextService.removeDocuments).not.toHaveBeenCalled();
+			expect(mockContexts[a.toString()]).toBeDefined();
+		});
+
+		it('removes documents only after a running indexing pass has finished', async () => {
+			let finishLoad!: () => void;
+
+			mockWorkspaceFileService.files = [a];
+			mockLoadDocument.mockImplementationOnce(() => new Promise<void>(resolve => {
+				finishLoad = () => {
+					mockContexts[a.toString()] = {};
+					resolve();
+				};
+			}));
+
+			const { service } = createIndexer();
+			const runningPass = service.indexWorkspace();
+
+			await vi.advanceTimersByTimeAsync(0);
+
+			// The file is deleted while the running pass is still loading it.
+			mockWorkspaceFileService.files = [];
+			service.handleFileListChanged(listChange({ removed: [a] }));
+
+			await vi.advanceTimersByTimeAsync(500);
+			expect(mockContextService.removeDocuments).not.toHaveBeenCalled();
+
+			finishLoad();
+			await runningPass;
+
+			expect(mockContextService.removeDocuments).toHaveBeenCalledExactlyOnceWith([a]);
+			expect(mockContexts[a.toString()]).toBeUndefined();
+		});
+
+		it('cancels a scheduled update when disposed', async () => {
+			const { service, indexSpy } = createIndexer();
+
+			service.handleFileListChanged(listChange({ added: [a] }));
+			service.dispose();
+
+			await vi.advanceTimersByTimeAsync(500);
+
+			expect(indexSpy).not.toHaveBeenCalled();
 		});
 	});
 

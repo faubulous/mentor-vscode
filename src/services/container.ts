@@ -35,6 +35,7 @@ import { ShapeGraphService } from '@src/services/validation/shape-graph-service'
 import { ShapeReferenceRegistryService } from '@src/services/validation/shape-reference-registry-service';
 import { SettingsFileStore } from './core/settings-file-store';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
+import { WorkspaceFileOperationService } from '@src/services/core/workspace-file-operation-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
 import { DocumentQueryTemplateMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
 
@@ -111,6 +112,13 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 		documentDiagnosticsService
 	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
+
+	// Keep the index in sync with files that are added, removed or changed on disk,
+	// including folder moves and deletes made outside of VS Code.
+	context.subscriptions.push(
+		workspaceFileService.onDidChangeFileList(e => workspaceIndexerService.handleFileListChanged(e)),
+		workspaceIndexerService
+	);
 
 	// The linting service self-registers with the extension context for disposal.
 	new DocumentLintingService(context, vocabularyRepository, documentFactory, workspaceIndexerService, documentContextService);
@@ -217,6 +225,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 				workspaceGraphCount: graphService.getWorkspaceGraphs(false).length,
 				statusBarText: sparqlStatusBarService.statusBarText,
 				indexingFinished: workspaceIndexerService.indexingFinished,
+				workspaceFiles: workspaceFileService.files.map(file => file.toString()),
+				documentContexts: Object.keys(documentContextService.contexts),
 			})),
 			vscode.commands.registerCommand('mentor.e2e.setNotebookConnection', async (notebookUri: string, connectionId: string) => {
 				const notebook = vscode.workspace.notebookDocuments.find(nb => nb.uri.toString() === notebookUri);
@@ -233,6 +243,9 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	// Register the reference update service for cross-workspace URI rename support.
 	const referenceUpdateService = new ReferenceUpdateService(documentContextService);
 	container.registerInstance(ServiceToken.ReferenceUpdateService, referenceUpdateService);
+
+	// Keep per-document settings and workspace: URI references in sync with renamed and deleted files.
+	context.subscriptions.push(new WorkspaceFileOperationService(referenceUpdateService, documentConnectionService, shaclValidationService));
 
 	// Register the settings migration service. New migrations are added to this list only.
 	const settingsMigrationService = new SettingsMigrationService([

@@ -9,9 +9,12 @@ vi.mock('@src/utilities/vscode/config', () => ({
 	getConfig: () => ({ get: (_k: string, d?: any) => d }),
 }));
 
-const { mockWorkspaceNodeProvider } = vi.hoisted(() => ({
+const { mockWorkspaceNodeProvider, mockWorkspaceFileService } = vi.hoisted(() => ({
 	mockWorkspaceNodeProvider: {
 		refresh: vi.fn(),
+	},
+	mockWorkspaceFileService: {
+		discoverFiles: vi.fn(async () => undefined),
 	},
 }));
 
@@ -23,8 +26,9 @@ vi.mock('./workspace-node-provider', () => ({
 
 vi.mock('tsyringe', () => ({
 	container: {
-		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
+		resolve: vi.fn((token: ServiceToken) => {
+			if (token === ServiceToken.ExtensionContext) return { subscriptions: mockSubscriptions };
+			if (token === ServiceToken.WorkspaceFileService) return mockWorkspaceFileService;
 			return {};
 		}),
 	},
@@ -33,6 +37,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
+import { ServiceToken } from '@src/services/tokens';
 import { WorkspaceTree } from '@src/views/trees/workspace-tree/workspace-tree';
 
 const mockSubscriptions: any[] = [];
@@ -66,6 +71,14 @@ describe('WorkspaceTree', () => {
 		const [, handler] = mockRegisterCommand.mock.calls.find((c: any[]) => c[0] === 'mentor.command.refreshWorkspaceTree');
 		await handler();
 		expect(mockWorkspaceNodeProvider.refresh).toHaveBeenCalled();
+	});
+
+	it('refresh command rediscovers the workspace files before refreshing the tree', async () => {
+		const [, handler] = mockRegisterCommand.mock.calls.find((c: any[]) => c[0] === 'mentor.command.refreshWorkspaceTree');
+		await handler();
+		expect(mockWorkspaceFileService.discoverFiles).toHaveBeenCalledOnce();
+		expect(mockWorkspaceFileService.discoverFiles.mock.invocationCallOrder[0])
+			.toBeLessThan(mockWorkspaceNodeProvider.refresh.mock.invocationCallOrder[0]);
 	});
 
 	it('pushes disposables to extension context subscriptions', () => {

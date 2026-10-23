@@ -168,6 +168,55 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('removeDocuments', () => {
+		/**
+		 * Adds a context with a graph named after its URI to the service.
+		 * @param service The context service.
+		 * @param uri The document URI of the context.
+		 * @returns The added context.
+		 */
+		const addContext = (service: DocumentContextService, uri: string) => {
+			const context = createMockContext({ uri: vscode.Uri.parse(uri), graphs: [uri] });
+
+			service.contexts[uri] = context;
+
+			return context;
+		};
+
+		it('removes the contexts of the removed files and deletes their graphs', () => {
+			const { service, mockStore } = createService();
+
+			addContext(service, 'file:///w/old/a.ttl');
+			addContext(service, 'file:///w/keep.ttl');
+
+			service.removeDocuments([vscode.Uri.parse('file:///w/old/a.ttl')]);
+
+			expect(Object.keys(service.contexts)).toEqual(['file:///w/keep.ttl']);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledExactlyOnceWith(['file:///w/old/a.ttl']);
+		});
+
+		it('removes the contexts of all cells of a removed notebook', () => {
+			const { service, mockStore } = createService();
+
+			addContext(service, 'vscode-notebook-cell:/w/queries.mnb#W0sZmlsZQ%3D%3D');
+			addContext(service, 'vscode-notebook-cell:/w/queries.mnb#W1sZmlsZQ%3D%3D');
+			addContext(service, 'vscode-notebook-cell:/w/other.mnb#W0sZmlsZQ%3D%3D');
+
+			service.removeDocuments([vscode.Uri.parse('file:///w/queries.mnb')]);
+
+			expect(Object.keys(service.contexts)).toEqual(['vscode-notebook-cell:/w/other.mnb#W0sZmlsZQ%3D%3D']);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledTimes(2);
+		});
+
+		it('ignores files without a context', () => {
+			const { service, mockStore } = createService();
+
+			service.removeDocuments([vscode.Uri.parse('file:///w/unknown.ttl')]);
+
+			expect(mockStore.deleteGraphs).not.toHaveBeenCalled();
+		});
+	});
+
 		describe('loadDocument', () => {
 		it('returns undefined for unsupported language', async () => {
 			const { service } = createService();

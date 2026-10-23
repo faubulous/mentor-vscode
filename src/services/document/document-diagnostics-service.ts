@@ -252,6 +252,15 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	}
 
 	/**
+	 * Removes the published diagnostics of a file that no longer exists, so that its
+	 * problems disappear from the Problems panel.
+	 * @param uri The URI of the removed file.
+	 */
+	deleteDiagnostics(uri: vscode.Uri): void {
+		this._collection.delete(uri);
+	}
+
+	/**
 	 * Computes and publishes diagnostics for a locally tokenized document,
 	 * mirroring the language server's validation: lexer errors, parser and
 	 * semantic errors, and lint rule results.

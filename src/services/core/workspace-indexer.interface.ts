@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { WorkspaceFileListChangeEvent } from './workspace-file-service.interface';
 
 /**
  * Summary statistics of the most recent workspace indexing run.
@@ -51,6 +52,13 @@ export interface IWorkspaceIndexerService {
 	 * @param force Whether to force re-indexing of all files.
 	 */
 	indexWorkspace(force?: boolean): Promise<void>;
+
+	/**
+	 * Updates the index after files were added to, removed from or changed in the
+	 * workspace file list.
+	 * @param e The changes to the workspace file list.
+	 */
+	handleFileListChanged(e: WorkspaceFileListChangeEvent): void;
 
 	/**
 	 * Wait for all workspace files to be indexed.

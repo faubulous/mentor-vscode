@@ -21,6 +21,34 @@ const createMockDocumentFactory = () => ({
 	// Partial stub: only supportedExtensions/isSupportedFile are exercised by this service.
 }) as unknown as DocumentFactory;
 
+/**
+ * The callbacks a {@link WorkspaceFileService} registers on its file system watcher.
+ */
+type WatcherCallbacks = {
+	create?: (uri: vscode.Uri) => void;
+	change?: (uri: vscode.Uri) => void;
+	delete?: (uri: vscode.Uri) => void;
+};
+
+/**
+ * Replaces the file system watcher with a stub that captures the registered callbacks,
+ * so tests can simulate watcher events.
+ * @returns The callbacks registered by the service, populated when it is created.
+ */
+function mockFileSystemWatcher(): WatcherCallbacks {
+	const callbacks: WatcherCallbacks = {};
+	const disposable = { dispose: () => {} };
+
+	vi.spyOn(vscode.workspace, 'createFileSystemWatcher').mockReturnValue({
+		onDidCreate: (cb: (uri: vscode.Uri) => void) => { callbacks.create = cb; return disposable; },
+		onDidChange: (cb: (uri: vscode.Uri) => void) => { callbacks.change = cb; return disposable; },
+		onDidDelete: (cb: (uri: vscode.Uri) => void) => { callbacks.delete = cb; return disposable; },
+		dispose: () => {},
+	} as any);
+
+	return callbacks;
+}
+
 describe('WorkspaceFileService', () => {
 	let service: WorkspaceFileService;
 	let mockDocumentFactory: DocumentFactory;
@@ -157,26 +185,17 @@ describe('WorkspaceFileService', () => {
 	});
 
 	describe('file system watcher events', () => {
-		let createCallback: ((uri: vscode.Uri) => void) | null;
-		let deleteCallback: ((uri: vscode.Uri) => void) | null;
+		let watcher: WatcherCallbacks;
 
 		beforeEach(() => {
-			createCallback = null;
-			deleteCallback = null;
-
-			vi.spyOn(vscode.workspace, 'createFileSystemWatcher').mockReturnValue({
-				onDidCreate: (cb: any) => { createCallback = cb; return { dispose: () => {} }; },
-				onDidChange: () => ({ dispose: () => {} }),
-				onDidDelete: (cb: any) => { deleteCallback = cb; return { dispose: () => {} }; },
-				dispose: () => {},
-			} as any);
+			watcher = mockFileSystemWatcher();
 		});
 
 		test('adds a supported file to the list when it is created', () => {
 			service = new WorkspaceFileService(mockDocumentFactory);
 
 			const newFile = vscode.Uri.parse('file:///w/new.ttl');
-			createCallback!(newFile);
+			watcher.create!(newFile);
 
 			expect(service.files.some(f => f.toString() === newFile.toString())).toBe(true);
 		});
@@ -185,7 +204,7 @@ describe('WorkspaceFileService', () => {
 			service = new WorkspaceFileService(mockDocumentFactory);
 
 			const unsupported = vscode.Uri.parse('file:///w/readme.md');
-			createCallback!(unsupported);
+			watcher.create!(unsupported);
 
 			expect(service.files.length).toBe(0);
 		});
@@ -196,7 +215,7 @@ describe('WorkspaceFileService', () => {
 			service.onDidChangeFiles(eventSpy);
 
 			const newFile = vscode.Uri.parse('file:///w/new.ttl');
-			createCallback!(newFile);
+			watcher.create!(newFile);
 
 			expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({
 				type: vscode.FileChangeType.Created,
@@ -209,7 +228,7 @@ describe('WorkspaceFileService', () => {
 			await service.discoverFiles();
 
 			const deletedFile = vscode.Uri.parse('file:///w/test.ttl');
-			deleteCallback!(deletedFile);
+			watcher.delete!(deletedFile);
 
 			expect(service.files.length).toBe(0);
 		});
@@ -220,7 +239,7 @@ describe('WorkspaceFileService', () => {
 			await service.discoverFiles();
 
 			const unsupported = vscode.Uri.parse('file:///w/readme.md');
-			deleteCallback!(unsupported);
+			watcher.delete!(unsupported);
 
 			// Supported file remains
 			expect(service.files.length).toBe(1);
@@ -234,7 +253,7 @@ describe('WorkspaceFileService', () => {
 			const eventSpy = vi.fn();
 			service.onDidChangeFiles(eventSpy);
 
-			deleteCallback!(vscode.Uri.parse('file:///w/test.ttl'));
+			watcher.delete!(vscode.Uri.parse('file:///w/test.ttl'));
 
 			expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({
 				type: vscode.FileChangeType.Deleted,
@@ -315,6 +334,298 @@ describe('WorkspaceFileService', () => {
 			const firedUris = eventSpy.mock.calls.map(c => c[0].uri.toString());
 			expect(firedUris).toContain('file:///w/data');
 			expect(firedUris).toContain('file:///w/other');
+		});
+
+		test('fires onDidChangeFileList with the old and new files of a renamed folder', async () => {
+			findFilesSpy.mockResolvedValue([vscode.Uri.parse('file:///w/data/a.ttl')]);
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const listSpy = vi.fn();
+			service.onDidChangeFileList(listSpy);
+
+			service.handleRenames([{
+				oldUri: vscode.Uri.parse('file:///w/data'),
+				newUri: vscode.Uri.parse('file:///w/sources'),
+			}]);
+
+			expect(listSpy).toHaveBeenCalledOnce();
+			expect(listSpy.mock.calls[0][0].removed.map((u: vscode.Uri) => u.path)).toEqual(['/w/data/a.ttl']);
+			expect(listSpy.mock.calls[0][0].added.map((u: vscode.Uri) => u.path)).toEqual(['/w/sources/a.ttl']);
+		});
+	});
+
+	describe('folder operations outside of VS Code (issue #95)', () => {
+		/**
+		 * Paths of the files on the simulated disk, relative to the workspace folder `/w`.
+		 */
+		let disk: string[];
+		let watcher: WatcherCallbacks;
+		let statSpy: ReturnType<typeof vi.spyOn>;
+
+		const toUri = (path: string) => vscode.Uri.parse(`file:///w/${path}`);
+		const trackedPaths = () => service.files.map(f => f.path).sort();
+
+		/**
+		 * Creates the service and discovers the files that are on the simulated disk.
+		 * @param files The paths of the files on disk, relative to the workspace folder.
+		 */
+		const createService = async (files: string[]) => {
+			disk = [...files];
+			service = new WorkspaceFileService(mockDocumentFactory);
+
+			await service.discoverFiles();
+		};
+
+		beforeEach(() => {
+			vi.useFakeTimers();
+
+			disk = [];
+			watcher = mockFileSystemWatcher();
+
+			// Answer `findFiles` and `stat` from the simulated disk.
+			findFilesSpy.mockImplementation(async (include: any) => disk
+				.map(toUri)
+				.filter(uri => uri.path.startsWith(include.base.path + '/')));
+
+			statSpy = vi.spyOn(vscode.workspace.fs, 'stat').mockImplementation(async (uri: vscode.Uri) => {
+				if (disk.some(path => toUri(path).path.startsWith(uri.path + '/'))) {
+					return { type: vscode.FileType.Directory } as vscode.FileStat;
+				}
+
+				throw new Error('file not found');
+			});
+		});
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		test('removes all files inside a deleted folder but keeps a sibling folder with the same prefix', async () => {
+			await createService(['old/queries/query.sparql', 'old/data/data.ttl', 'old2/x.ttl']);
+
+			watcher.delete!(toUri('old'));
+
+			expect(trackedPaths()).toEqual(['/w/old2/x.ttl']);
+		});
+
+		test('reports the files of a deleted folder as removed', async () => {
+			await createService(['old/queries/query.sparql', 'old/data/data.ttl']);
+
+			const listSpy = vi.fn();
+			service.onDidChangeFileList(listSpy);
+
+			watcher.delete!(toUri('old'));
+
+			expect(listSpy).toHaveBeenCalledOnce();
+			expect(listSpy.mock.calls[0][0].removed.map((u: vscode.Uri) => u.path).sort())
+				.toEqual(['/w/old/data/data.ttl', '/w/old/queries/query.sparql']);
+		});
+
+		test('refreshes the closest folder that is still shown in the tree', async () => {
+			await createService(['src/old/a.ttl', 'src/keep.ttl', 'lib/only/b.ttl']);
+
+			const treeSpy = vi.fn();
+			service.onDidChangeFiles(treeSpy);
+
+			// `src` still contains a file, so its node is refreshed to drop `old`.
+			watcher.delete!(toUri('src/old'));
+
+			// `lib` becomes empty and disappears, so the workspace root is refreshed.
+			watcher.delete!(toUri('lib/only'));
+
+			expect(treeSpy.mock.calls.map(c => c[0].uri.path)).toEqual(['/w/src', '/w']);
+		});
+
+		test('ignores the deletion of a path without tracked files', async () => {
+			await createService(['a.ttl']);
+
+			const treeSpy = vi.fn();
+			const listSpy = vi.fn();
+			service.onDidChangeFiles(treeSpy);
+			service.onDidChangeFileList(listSpy);
+
+			watcher.delete!(toUri('build'));
+
+			expect(trackedPaths()).toEqual(['/w/a.ttl']);
+			expect(treeSpy).not.toHaveBeenCalled();
+			expect(listSpy).not.toHaveBeenCalled();
+		});
+
+		test('scans a folder that was moved into the workspace', async () => {
+			await createService(['other.ttl']);
+
+			const listSpy = vi.fn();
+			service.onDidChangeFileList(listSpy);
+
+			disk.push('src/new/queries/query.sparql', 'src/new/data/data.ttl');
+			watcher.create!(toUri('src'));
+
+			await vi.advanceTimersByTimeAsync(250);
+
+			expect(trackedPaths()).toEqual(['/w/other.ttl', '/w/src/new/data/data.ttl', '/w/src/new/queries/query.sparql']);
+			expect(listSpy.mock.calls[0][0].added).toHaveLength(2);
+			expect(findFilesSpy.mock.calls.at(-1)![0].base.path).toBe('/w/src');
+		});
+
+		test('scans a copied folder tree that is reported as many events once', async () => {
+			await createService([]);
+
+			const discoveryCalls = findFilesSpy.mock.calls.length;
+
+			disk.push('new/a/a.ttl', 'new/b/b.ttl');
+			watcher.create!(toUri('new/a'));
+			watcher.create!(toUri('new'));
+			watcher.create!(toUri('new/b'));
+
+			await vi.advanceTimersByTimeAsync(250);
+
+			expect(findFilesSpy.mock.calls.length - discoveryCalls).toBe(1);
+			expect(trackedPaths()).toEqual(['/w/new/a/a.ttl', '/w/new/b/b.ttl']);
+		});
+
+		test('does not add a file twice', async () => {
+			await createService(['data/a.ttl']);
+
+			const listSpy = vi.fn();
+			service.onDidChangeFileList(listSpy);
+
+			watcher.create!(toUri('data/a.ttl'));
+			watcher.create!(toUri('data'));
+
+			await vi.advanceTimersByTimeAsync(250);
+
+			expect(trackedPaths()).toEqual(['/w/data/a.ttl']);
+			expect(listSpy).not.toHaveBeenCalled();
+		});
+
+		test('skips created paths that are excluded without checking them', async () => {
+			const { getConfig } = await import('@src/utilities/vscode/config');
+			const defaultConfig = vi.mocked(getConfig).getMockImplementation();
+
+			vi.mocked(getConfig).mockReturnValue({
+				get: vi.fn((key: string, defaultValue?: any) => key === 'index.excludeFiles' ? ['**/.git/**'] : defaultValue),
+			} as any);
+
+			try {
+				await createService([]);
+
+				watcher.create!(toUri('.git/index.lock'));
+
+				await vi.advanceTimersByTimeAsync(250);
+
+				expect(statSpy).not.toHaveBeenCalled();
+			} finally {
+				vi.mocked(getConfig).mockImplementation(defaultConfig!);
+			}
+		});
+
+		test('ignores created paths that no longer exist', async () => {
+			await createService([]);
+
+			const discoveryCalls = findFilesSpy.mock.calls.length;
+
+			watcher.create!(toUri('tmp'));
+
+			await vi.advanceTimersByTimeAsync(250);
+
+			expect(statSpy).toHaveBeenCalledOnce();
+			expect(findFilesSpy.mock.calls.length).toBe(discoveryCalls);
+		});
+
+		test('reports a tracked file that was changed on disk', async () => {
+			await createService(['a.ttl']);
+
+			const listSpy = vi.fn();
+			service.onDidChangeFileList(listSpy);
+
+			watcher.change!(toUri('a.ttl'));
+			watcher.change!(toUri('untracked.ttl'));
+
+			expect(listSpy).toHaveBeenCalledOnce();
+			expect(listSpy.mock.calls[0][0].changed.map((u: vscode.Uri) => u.path)).toEqual(['/w/a.ttl']);
+		});
+
+		test('does not report a change of an open document', async () => {
+			await createService(['a.ttl']);
+
+			const listSpy = vi.fn();
+			service.onDidChangeFileList(listSpy);
+
+			const textDocuments = vscode.workspace.textDocuments;
+			(vscode.workspace as any).textDocuments = [{ uri: toUri('a.ttl') }];
+
+			try {
+				watcher.change!(toUri('a.ttl'));
+			} finally {
+				(vscode.workspace as any).textDocuments = textDocuments;
+			}
+
+			expect(listSpy).not.toHaveBeenCalled();
+		});
+
+		test.each([
+			['the rename event arrives first', ['rename', 'delete', 'create']],
+			['the watcher events arrive first', ['delete', 'create', 'rename']],
+			['the delete event arrives first', ['delete', 'rename', 'create']],
+		])('tracks a folder renamed in VS Code once when %s', async (_, order) => {
+			await createService(['data/a.ttl', 'data/sub/b.ttl']);
+
+			disk = ['sources/a.ttl', 'sources/sub/b.ttl'];
+
+			for (const event of order) {
+				if (event === 'rename') {
+					service.handleRenames([{ oldUri: toUri('data'), newUri: toUri('sources') }]);
+				} else if (event === 'delete') {
+					watcher.delete!(toUri('data'));
+				} else {
+					watcher.create!(toUri('sources'));
+					await vi.advanceTimersByTimeAsync(250);
+				}
+			}
+
+			expect(trackedPaths()).toEqual(['/w/sources/a.ttl', '/w/sources/sub/b.ttl']);
+		});
+
+		test('reports the differences found by a rediscovery', async () => {
+			await createService(['a.ttl', 'b.ttl']);
+
+			const treeSpy = vi.fn();
+			const listSpy = vi.fn();
+			service.onDidChangeFiles(treeSpy);
+			service.onDidChangeFileList(listSpy);
+
+			disk = ['b.ttl', 'c.ttl'];
+
+			await service.discoverFiles();
+
+			expect(listSpy).toHaveBeenCalledOnce();
+			expect(listSpy.mock.calls[0][0].added.map((u: vscode.Uri) => u.path)).toEqual(['/w/c.ttl']);
+			expect(listSpy.mock.calls[0][0].removed.map((u: vscode.Uri) => u.path)).toEqual(['/w/a.ttl']);
+			expect(treeSpy).toHaveBeenCalledWith({ type: vscode.FileChangeType.Changed, uri: expect.objectContaining({ path: '/w' }) });
+		});
+
+		test('does not report the initial discovery', async () => {
+			const listSpy = vi.fn();
+
+			disk = ['a.ttl'];
+			service = new WorkspaceFileService(mockDocumentFactory);
+			service.onDidChangeFileList(listSpy);
+
+			await service.discoverFiles();
+
+			expect(listSpy).not.toHaveBeenCalled();
+		});
+
+		test('cancels a pending folder scan when disposed', async () => {
+			await createService([]);
+
+			watcher.create!(toUri('new'));
+			service.dispose();
+
+			await vi.advanceTimersByTimeAsync(250);
+
+			expect(statSpy).not.toHaveBeenCalled();
 		});
 	});
 
@@ -398,6 +709,20 @@ describe('WorkspaceFileService', () => {
 
 			expect(contents.length).toBe(1);
 			expect(contents[0].toString()).toContain('x.ttl');
+		});
+
+		test('does not return files of a sibling folder whose name starts with the folder name', async () => {
+			findFilesSpy.mockResolvedValue([
+				vscode.Uri.parse('file:///w/old/x.ttl'),
+				vscode.Uri.parse('file:///w/old2/y.ttl'),
+			]);
+
+			service = new WorkspaceFileService(mockDocumentFactory);
+			await service.discoverFiles();
+
+			const contents = await service.getFolderContents(vscode.Uri.parse('file:///w/old'));
+
+			expect(contents.map(u => u.path)).toEqual(['/w/old/x.ttl']);
 		});
 
 		test('returns children of a folder whose name contains spaces', async () => {
