@@ -1,4 +1,20 @@
 import * as vscode from 'vscode';
+import { findOpenNotebookByUri } from './notebook';
+
+/**
+ * Whether a text or notebook document is currently open, i.e. VS Code holds its
+ * content in memory and keeps it in sync with the file on disk.
+ * @param uri The document URI.
+ */
+export function isDocumentOpen(uri: vscode.Uri): boolean {
+	const key = uri.toString();
+
+	if (vscode.workspace.textDocuments.some(document => document.uri.toString() === key)) {
+		return true;
+	}
+
+	return findOpenNotebookByUri(uri) !== undefined;
+}
 
 /**
  * Whether a document is currently visible in an editor. Includes notebook cell

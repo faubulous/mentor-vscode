@@ -17,7 +17,7 @@ import { ShaclValidationService } from './services/validation/shacl-validation-s
 import { ShapeGraphService } from './services/validation/shape-graph-service';
 import { getConfig } from './utilities/vscode/config';
 import { getLog } from './utilities/vscode/log';
-import { ReferenceUpdateService } from './services/core/reference-update-service';
+import { handleWorkspaceRenames } from './services/core/workspace-rename-handler';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import * as languages from './languages';
 import * as commands from './commands';
@@ -165,20 +165,7 @@ function registerCommands(context: vscode.ExtensionContext) {
  */
 function registerRenameHandlers(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
-		vscode.workspace.onDidRenameFiles(async (e) => {
-			// Migrate SPARQL workspaceState keys (document connection + inference settings).
-			const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
-			await documentConnectionService.handleFileRenames(e.files);
-
-			// Migrate SHACL workspace settings (profile shapes and document assignments).
-			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
-			await shaclService.settingsSync.migrateShaclSettings(e.files);
-
-			// Update all workspace: URI references across indexed documents.
-			const referenceUpdateService = container.resolve<ReferenceUpdateService>(ServiceToken.ReferenceUpdateService);
-			const changes = referenceUpdateService.buildChangesForRenames(e.files);
-			await referenceUpdateService.batchUpdate(changes);
-		}),
+		vscode.workspace.onDidRenameFiles(e => handleWorkspaceRenames(e.files)),
 		vscode.workspace.onDidDeleteFiles(async (e) => {
 			// Prune SHACL assignments for deleted documents and warn about profiles
 			// that still reference deleted shape files.

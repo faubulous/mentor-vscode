@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import picomatch from 'picomatch';
-import { IWorkspaceFileService } from './workspace-file-service.interface';
+import { IWorkspaceFileService, WorkspaceFileListChangeEvent } from './workspace-file-service.interface';
 import { IWorkspaceIndexerService, IndexingStatistics } from './workspace-indexer.interface';
 import { IDocumentFactory } from '../document/document-factory.interface';
 import { IDocumentTokenSource } from '../document/document-token-source.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { DocumentDiagnosticsService } from '../document/document-diagnostics-service';
 import { getConfig } from '@src/utilities/vscode/config';
+import { isDocumentOpen } from '@src/utilities/vscode/editors';
 import { describeUriPath } from '@src/utilities/vscode/log';
 import { normalizeGlobPattern } from '@src/utilities/glob';
 import { createYieldBudget } from '@src/utilities/scheduling';
@@ -39,10 +40,17 @@ const SCAN_CONCURRENCY = 16;
 const READ_PREFETCH = 4;
 
 /**
+ * How long changes to the workspace file list are collected before the index is
+ * updated, so that a folder operation reported as several events is handled in
+ * one indexing pass.
+ */
+const FILE_LIST_SYNC_DELAY_MS = 500;
+
+/**
  * Service for indexing RDF documents in the current workspace.
  * Uses WorkspaceFileService for file discovery to avoid duplicate workspace scans.
  */
-export class WorkspaceIndexerService implements IWorkspaceIndexerService {
+export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode.Disposable {
 	/**
 	 * Indicates if all workspace files have been indexed.
 	 */
@@ -68,6 +76,17 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	 * Whether the coalesced trailing pass should force re-indexing.
 	 */
 	private _rerunReindex = false;
+
+	/**
+	 * Files whose documents are removed from the index at the start of the next indexing
+	 * pass, because they were deleted or changed on disk. Keyed by URI string.
+	 */
+	private readonly _pendingRemovals = new Map<string, vscode.Uri>();
+
+	/**
+	 * The timer that starts an indexing pass for pending file list changes, or `undefined`.
+	 */
+	private _fileListSyncTimer?: ReturnType<typeof setTimeout>;
 
 	/**
 	 * A promise that resolves when all background indexing tasks have 
@@ -186,10 +205,68 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService {
 	}
 
 	/**
+	 * Updates the index after files were added to, removed from or changed in the
+	 * workspace file list. The documents of removed and changed files are removed from
+	 * the index and the files that are not indexed are indexed by an incremental pass.
+	 * @param e The changes to the workspace file list.
+	 */
+	handleFileListChanged(e: WorkspaceFileListChangeEvent): void {
+		for (const uri of [...e.removed, ...e.changed]) {
+			this._pendingRemovals.set(uri.toString(), uri);
+		}
+
+		// The delay also lets handlers of a rename read the contexts of the old
+		// files before they are removed.
+		if (!this._fileListSyncTimer) {
+			this._fileListSyncTimer = setTimeout(() => {
+				this._fileListSyncTimer = undefined;
+
+				void this.indexWorkspace();
+			}, FILE_LIST_SYNC_DELAY_MS);
+		}
+	}
+
+	/**
+	 * Removes the documents of deleted and changed files from the index and clears
+	 * their diagnostics. Open documents are kept, since their content is still
+	 * available in the editor and kept up to date by it.
+	 */
+	private _removePendingDocuments(): void {
+		const uris = [...this._pendingRemovals.values()].filter(uri => !isDocumentOpen(uri));
+
+		this._pendingRemovals.clear();
+
+		if (uris.length === 0) {
+			return;
+		}
+
+		this._contextService.removeDocuments(uris);
+
+		for (const uri of uris) {
+			this._diagnosticsService.deleteDiagnostics(uri);
+		}
+
+		this._statusLog.info(`Removed ${uris.length} deleted or changed files from the index`);
+	}
+
+	/**
+	 * Cancels a scheduled update for pending file list changes.
+	 */
+	dispose(): void {
+		clearTimeout(this._fileListSyncTimer);
+
+		this._fileListSyncTimer = undefined;
+	}
+
+	/**
 	 * Executes a single indexing pass over the discovered workspace files.
 	 * @param reindex Whether to force re-indexing of already indexed files.
 	 */
 	private async _runIndexingPass(reindex: boolean): Promise<void> {
+		// Removing documents only between passes ensures that no pass is loading a
+		// document while its context and graphs are deleted.
+		this._removePendingDocuments();
+
 		const run = this._startIndexingRun(reindex);
 		const startTime = performance.now();
 

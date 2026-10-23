@@ -112,6 +112,13 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	);
 	container.registerInstance(ServiceToken.WorkspaceIndexerService, workspaceIndexerService);
 
+	// Keep the index in sync with files that are added, removed or changed on disk,
+	// including folder moves and deletes made outside of VS Code.
+	context.subscriptions.push(
+		workspaceFileService.onDidChangeFileList(e => workspaceIndexerService.handleFileListChanged(e)),
+		workspaceIndexerService
+	);
+
 	// The linting service self-registers with the extension context for disposal.
 	new DocumentLintingService(context, vocabularyRepository, documentFactory, workspaceIndexerService, documentContextService);
 
@@ -217,6 +224,8 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 				workspaceGraphCount: graphService.getWorkspaceGraphs(false).length,
 				statusBarText: sparqlStatusBarService.statusBarText,
 				indexingFinished: workspaceIndexerService.indexingFinished,
+				workspaceFiles: workspaceFileService.files.map(file => file.toString()),
+				documentContexts: Object.keys(documentContextService.contexts),
 			})),
 			vscode.commands.registerCommand('mentor.e2e.setNotebookConnection', async (notebookUri: string, connectionId: string) => {
 				const notebook = vscode.workspace.notebookDocuments.find(nb => nb.uri.toString() === notebookUri);

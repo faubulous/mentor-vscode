@@ -92,4 +92,11 @@ export interface IDocumentContextService {
 	 * @param document The closed text document.
 	 */
 	handleDocumentClosed(document: vscode.TextDocument): void;
+
+	/**
+	 * Removes the contexts of documents that no longer exist and deletes their graphs
+	 * from the store. For a notebook file, the contexts of all of its cells are removed.
+	 * @param uris The URIs of the removed files.
+	 */
+	removeDocuments(uris: ReadonlyArray<vscode.Uri>): void;
 }

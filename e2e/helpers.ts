@@ -7,6 +7,10 @@ export interface MentorE2eState {
 	workspaceGraphCount: number;
 	statusBarText: string;
 	indexingFinished: boolean;
+	/** The URIs of the discovered workspace files. */
+	workspaceFiles: string[];
+	/** The URIs of the documents that have a loaded context in the index. */
+	documentContexts: string[];
 }
 
 /**

@@ -342,6 +342,16 @@ describe('DocumentDiagnosticsService', () => {
         expect(collection.delete).toHaveBeenCalledWith(document.uri);
     });
 
+    it('removes the diagnostics of a file that was removed from the workspace index', () => {
+        const uri = vscode.Uri.parse('file:///old/removed.ttl');
+
+        const { service, collection } = makeSetup({});
+
+        service.deleteDiagnostics(uri);
+
+        expect(collection.delete).toHaveBeenCalledWith(uri);
+    });
+
     it('removes diagnostics for the old URI when a file is renamed', () => {
         const oldDocument = makeDocument('file:///old.ttl', VALID_TURTLE);
         const newDocument = makeDocument('file:///new.ttl', VALID_TURTLE);
