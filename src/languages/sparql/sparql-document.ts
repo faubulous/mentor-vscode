@@ -55,7 +55,7 @@ export class SparqlDocument extends TurtleDocument {
 			await super.loadTriples(data);
 		} else {
 			// The query is not loaded into the store, so nothing reads its syntax tree.
-			this._releaseSyntaxTree();
+			this._releaseParsedContent();
 		}
 	}
 }

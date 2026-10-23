@@ -37,6 +37,8 @@ vi.mock('tsyringe', () => {
 });
 
 import * as vscode from 'vscode';
+import { Store } from '@faubulous/mentor-rdf';
+import { TurtleLexer, TurtleParser, TurtleQuadReader, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
 import { isTokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { SparqlResultsController } from '@src/views/webviews/views/sparql-results/sparql-results-controller';
 import { CorpusGenerator } from './corpus-generator';
@@ -128,6 +130,34 @@ describe('MemoryUsage', () => {
 			}
 
 			await largeContext.loadTriples(largeFile.text);
+		});
+	});
+
+	it('measures the load of the large file step by step', async () => {
+		const largeQuads = tester.countQuads([largeFile]);
+		const lexer = new TurtleLexer(createFileBlankNodeIdGenerator(largeFile.uri.toString()));
+		const store = new Store();
+		const graph = store.dataFactory.namedNode(largeFile.uri.toString());
+
+		let tokens = lexer.tokenize(largeFile.text).tokens;
+		let quads = new TurtleQuadReader().read(tokens);
+
+		await observer.measure('large: tokenize', 1, largeQuads, () => {
+			tokens = lexer.tokenize(largeFile.text).tokens;
+		});
+
+		await observer.measure('large: read quads (TurtleQuadReader)', 1, largeQuads, () => {
+			quads = new TurtleQuadReader().read(tokens);
+		});
+
+		await observer.measure('large: read quads (TurtleParser + TurtleReader)', 1, largeQuads, () => {
+			new TurtleReader().visit(new TurtleParser().parse(tokens, false));
+		});
+
+		await observer.measure('large: add to store', 1, largeQuads, () => {
+			for (const quad of quads) {
+				store.add(store.dataFactory.quad(quad.subject, quad.predicate, quad.object, graph));
+			}
 		});
 	});
 

@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
 import type { CstNode, ILexingError } from 'chevrotain';
 import { RangeIndex } from './range-index';
-import { Quad_Subject } from '@rdfjs/types';
+import { Quad, Quad_Subject } from '@rdfjs/types';
 import { PredicateUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
 import { BlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 
 /**
  * The output of one parse pass over a document text: the token streams, the
- * concrete syntax tree and the collected errors. Captured by
+ * quads or the concrete syntax tree, and the collected errors. Captured by
  * {@link ITokenizedDocumentContext.parse} so that the diagnostics service and
- * the triple loader can share a single tokenization and grammar parse per edit
+ * the triple loader can share a single tokenization and analysis per edit
  * instead of re-deriving them from the same text.
  */
 export interface DocumentParseResult {
@@ -37,10 +37,19 @@ export interface DocumentParseResult {
 	readonly template: boolean;
 
 	/**
+	 * The quads of a valid Turtle document, read straight from the tokens
+	 * without a syntax tree. Released once {@link IDocumentContext.loadTriples}
+	 * has consumed them. A document that holds quads has no errors and no
+	 * {@link cst}.
+	 */
+	readonly quads?: Quad[];
+
+	/**
 	 * The concrete syntax tree produced by the shared parser with error
-	 * recovery enabled. It is by far the largest part of the result and is
-	 * released once {@link IDocumentContext.loadTriples} has consumed it;
-	 * the tokens and errors stay for the diagnostics pass that follows.
+	 * recovery enabled, for a document that was not read into {@link quads}.
+	 * It is by far the largest part of the result and is released once
+	 * {@link IDocumentContext.loadTriples} has consumed it; the tokens and
+	 * errors stay for the diagnostics pass that follows.
 	 */
 	readonly cst?: CstNode;
 
