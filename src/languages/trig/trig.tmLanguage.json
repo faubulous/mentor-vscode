@@ -128,7 +128,7 @@
                 },
                 {
                     "name": "storage.modifier storage.modifier.prefix.trig",
-                    "match": "([a-zA-Z0-9_]*)?:"
+                    "match": "([a-zA-Z](?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?)?:"
                 }
             ]
         },
@@ -217,7 +217,7 @@
             "match": "<[^>]*>"
         },
         "prefixed_name": {
-            "match": "(([a-zA-Z0-9_]*)?(:))([a-zA-Z0-9_\\.-]*)?",
+            "match": "(([a-zA-Z](?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?)?(:))([a-zA-Z0-9_%](?:[a-zA-Z0-9_.%-]*[a-zA-Z0-9_%-])?)?",
             "captures": {
                 "1": {
                     "name": "storage.modifier storage.modifier.prefix.trig"
@@ -268,7 +268,7 @@
                     "match": "@[a-zA-Z0-9-]+"
                 },
                 {
-                    "begin": "(\\^\\^)(\\s*)(<[^>]*>|(([a-zA-Z0-9_]*)?(:))([a-zA-Z0-9_\\.-]*)?)",
+                    "begin": "(\\^\\^)(\\s*)(<[^>]*>|(([a-zA-Z](?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?)?(:))([a-zA-Z0-9_%](?:[a-zA-Z0-9_.%-]*[a-zA-Z0-9_%-])?)?)",
                     "beginCaptures": {
                         "1": { "name": "entity.name.function.trig" },
                         "3": { "name": "entity.name.function.trig" }
