@@ -217,3 +217,42 @@ export interface QuadsResult {
 	 */
 	mimeType: string;
 }
+
+/**
+ * Returns a copy of a query execution state without its raw response. The raw
+ * response can hold megabytes and is read by the host-side "View Raw Response"
+ * command only, so it never travels to a webview or into a notebook output.
+ * @param state The query execution state.
+ * @returns A shallow copy of the state without the raw response.
+ */
+export function omitRawResponse(state: SparqlQueryExecutionState): SparqlQueryExecutionState {
+	const copy: SparqlQueryExecutionState = { ...state };
+
+	delete copy.rawResponse;
+
+	return copy;
+}
+
+/**
+ * Returns the metadata of a query execution state: a copy without the result,
+ * the raw response and the error stack, which are the fields that can hold
+ * megabytes. Metadata is what the history persists and what the results
+ * webview receives for every query except the ones it renders.
+ * @param state The query execution state.
+ * @returns A shallow copy of the state reduced to its metadata.
+ */
+export function toQueryHistoryMetadata(state: SparqlQueryExecutionState): SparqlQueryExecutionState {
+	const metadata = omitRawResponse(state);
+
+	delete metadata.result;
+
+	if (metadata.error) {
+		const error = { ...metadata.error };
+
+		delete error.stack;
+
+		metadata.error = error;
+	}
+
+	return metadata;
+}

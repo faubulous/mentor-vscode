@@ -1,5 +1,63 @@
 import { describe, it, expect } from 'vitest';
-import { getDisplayName } from '@src/languages/sparql/services/sparql-query-state';
+import { getDisplayName, omitRawResponse, toQueryHistoryMetadata } from '@src/languages/sparql/services/sparql-query-state';
+
+/**
+ * A finished query with every field that can hold megabytes populated.
+ */
+function makeHeavyState(): any {
+	return {
+		id: 'heavy',
+		documentIri: 'file:///workspace/queries/heavy.sparql',
+		query: 'SELECT * WHERE { ?s ?p ?o }',
+		queryType: 'bindings',
+		startTime: 1000,
+		endTime: 1250,
+		result: { type: 'bindings', columns: ['s'], rows: [{ s: { termType: 'NamedNode', value: 'http://example.org/a' } }], namespaceMap: {} },
+		rawResponse: { url: 'http://example.org/sparql', status: 200, statusText: 'OK', body: '{}' },
+		error: { type: 'QueryError', message: 'boom', cause: { code: 'ECONNREFUSED', message: 'refused' }, stack: 'Error: boom', statusCode: 500, cancelled: false },
+	};
+}
+
+describe('omitRawResponse', () => {
+	it('returns a copy without the raw response and leaves the original untouched', () => {
+		const state = makeHeavyState();
+		const copy = omitRawResponse(state);
+
+		expect(copy).not.toBe(state);
+		expect(copy.rawResponse).toBeUndefined();
+		expect(copy.result).toBe(state.result);
+		expect(copy.error).toBe(state.error);
+		expect(state.rawResponse).toBeDefined();
+	});
+});
+
+describe('toQueryHistoryMetadata', () => {
+	it('drops the result, the raw response and the error stack but keeps the rest', () => {
+		const state = makeHeavyState();
+		const metadata = toQueryHistoryMetadata(state);
+
+		expect(metadata.result).toBeUndefined();
+		expect(metadata.rawResponse).toBeUndefined();
+		expect(metadata.error).toEqual({ type: 'QueryError', message: 'boom', cause: { code: 'ECONNREFUSED', message: 'refused' }, statusCode: 500, cancelled: false });
+		expect(metadata).toMatchObject({ id: 'heavy', documentIri: state.documentIri, query: state.query, queryType: 'bindings', startTime: 1000, endTime: 1250 });
+	});
+
+	it('leaves the original state and its error untouched', () => {
+		const state = makeHeavyState();
+
+		toQueryHistoryMetadata(state);
+
+		expect(state.result).toBeDefined();
+		expect(state.rawResponse).toBeDefined();
+		expect(state.error.stack).toBe('Error: boom');
+	});
+
+	it('keeps an entry without an error free of an error field', () => {
+		const state = { ...makeHeavyState(), error: undefined };
+
+		expect(toQueryHistoryMetadata(state).error).toBeUndefined();
+	});
+});
 
 function makeState(documentIri: string, notebookIri?: string, cellIndex?: number): any {
 	return {

@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryService, ISparqlResultSerializer, IDocumentConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
-import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
+import { QuadsResult, SparqlQueryExecutionState, omitRawResponse, toQueryHistoryMetadata } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlConnectionGraphStatus, SparqlResultsWebviewMessages } from './sparql-results-messages';
@@ -80,12 +80,25 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
      */
     private _postQueryHistory() {
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const selectQueryId = this._pendingSelectQueryId;
 
         this.postMessage({
             id: 'PostSparqlQueryHistory',
-            history: queryService.getQueryHistory(),
-            selectQueryId: this._pendingSelectQueryId
+            history: queryService.getQueryHistory().map((state, index) => this._toHistoryMessageEntry(state, index === 0 || state.id === selectQueryId)),
+            selectQueryId
         });
+    }
+
+    /**
+     * Shapes one history entry for the webview. The panel renders the result of the most
+     * recent query and of the query it is asked to select; every other entry only feeds the
+     * recent-query list, so it is posted as metadata. The raw response is never posted: it
+     * can hold megabytes and only the host-side "View Raw Response" command reads it.
+     * @param state The history entry.
+     * @param includeResult Whether the entry's result is rendered by the panel.
+     */
+    private _toHistoryMessageEntry(state: SparqlQueryExecutionState, includeResult: boolean): SparqlQueryExecutionState {
+        return includeResult ? omitRawResponse(state) : toQueryHistoryMetadata(state);
     }
 
     /**
