@@ -26,11 +26,11 @@ export class SparqlDocument extends TurtleDocument {
 	}
 
 	/**
-	 * SPARQL documents are considered loaded when tokens are available.
+	 * SPARQL documents are considered loaded once they have been parsed, also after their tokens were released.
 	 * Unlike RDF documents, SPARQL queries don't necessarily produce graphs.
 	 */
 	override get isLoaded(): boolean {
-		return this.isParsed;
+		return this.isIndexed;
 	}
 
 	protected override readQuads(cst: CstNode): Quad[] {

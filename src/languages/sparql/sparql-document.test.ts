@@ -252,3 +252,18 @@ describe('SparqlDocument', () => {
         });
     });
 });
+
+describe('SparqlDocument.releaseTokens', () => {
+    it('stays loaded after the tokens are released', () => {
+        const doc = makeDoc();
+
+        doc.parse('SELECT * WHERE { ?s ?p ?o }');
+
+        expect(doc.isLoaded).toBe(true);
+
+        doc.releaseTokens();
+
+        expect(doc.isLoaded).toBe(true);
+        expect(doc.isParsed).toBe(false);
+    });
+});

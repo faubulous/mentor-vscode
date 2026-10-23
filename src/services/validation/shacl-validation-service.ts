@@ -649,7 +649,7 @@ export class ShaclValidationService implements vscode.Disposable {
 		this._lastResults.set(documentUri.toString(), result);
 		this._lastSkips.delete(documentUri.toString());
 
-		const quadContexts = context instanceof TurtleDocument ? context.getQuadContexts() : undefined;
+		const quadContexts = await this._getQuadContexts(documentUri, context);
 
 		this._publishDiagnostics(documentUri, context, result, quadContexts);
 
@@ -708,6 +708,33 @@ export class ShaclValidationService implements vscode.Disposable {
 		}
 
 		return serializeReportAsTurtle(result);
+	}
+
+	/**
+	 * The quad contexts that map validation results to source positions. Indexed
+	 * files that are not open in an editor have released their tokens; their text
+	 * is read again for the mapping.
+	 * @param documentUri The URI of the validated document.
+	 * @param context The document context.
+	 */
+	private async _getQuadContexts(documentUri: vscode.Uri, context: IDocumentContext): Promise<QuadContext[] | undefined> {
+		if (!(context instanceof TurtleDocument)) {
+			return undefined;
+		}
+
+		if (context.isParsed) {
+			return context.getQuadContexts();
+		}
+
+		try {
+			const bytes = await vscode.workspace.fs.readFile(documentUri);
+
+			return context.getQuadContextsForText(new TextDecoder().decode(bytes));
+		} catch (error) {
+			this._log.warn(`Cannot read ${documentUri.toString()} to map the validation results: ${error}`);
+
+			return undefined;
+		}
 	}
 
 	private _publishDiagnostics(documentUri: vscode.Uri, context: IDocumentContext, result: ShaclValidationResult, quadContexts?: QuadContext[]): void {

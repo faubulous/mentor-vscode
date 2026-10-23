@@ -307,6 +307,13 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	 * @param text The current document text.
 	 */
 	getParseResult(text: string): DocumentParseResult | undefined;
+
+	/**
+	 * Drops the token stream and the cached parse result of a document that is
+	 * not open in an editor. The index maps and graphs stay, so the document
+	 * remains loaded; opening it in an editor parses it again.
+	 */
+	releaseTokens(): void;
 }
 
 /**

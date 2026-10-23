@@ -1336,3 +1336,53 @@ describe('DocumentContextService', () => {
 		});
 	});
 });
+
+describe('released tokens', () => {
+	function createDocument(uri: vscode.Uri) {
+		return { uri, languageId: 'turtle', getText: () => 'ex:a ex:b ex:c .', version: 1 } as any;
+	}
+
+	it('parses an opened document again when its tokens were released after indexing', async () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/indexed.ttl');
+		const context = createMockContext({ uri, isLoaded: true, isParsed: false, providesTokens: true, loadTriples: vi.fn(), infer: vi.fn() });
+		const waitForTokens = vi.spyOn((service as any)._tokenSource, 'waitForTokens').mockResolvedValue([]);
+		const document = createDocument(uri);
+
+		service.contexts[uri.toString()] = context;
+
+		const result = await service.loadDocument(document);
+
+		expect(result).toBe(context);
+		expect(waitForTokens).toHaveBeenCalledWith(uri.toString(), undefined, document);
+		expect(context.loadTriples).not.toHaveBeenCalled();
+		expect(context.infer).toHaveBeenCalled();
+	});
+
+	it('does not parse an opened document that still has its tokens', async () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/open.ttl');
+		const context = createMockContext({ uri, isLoaded: true, isParsed: true, providesTokens: true, loadTriples: vi.fn(), infer: vi.fn() });
+		const waitForTokens = vi.spyOn((service as any)._tokenSource, 'waitForTokens').mockResolvedValue([]);
+
+		service.contexts[uri.toString()] = context;
+
+		await service.loadDocument(createDocument(uri));
+
+		expect(waitForTokens).not.toHaveBeenCalled();
+		expect(context.loadTriples).not.toHaveBeenCalled();
+	});
+
+	it('releases the tokens of a closed non-temporary document', () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/closed.ttl');
+		const releaseTokens = vi.fn();
+		const context = createMockContext({ uri, isTemporary: false, providesTokens: true, releaseTokens } as Partial<IDocumentContext>);
+
+		service.contexts[uri.toString()] = context;
+		service.handleDocumentClosed({ uri } as any);
+
+		expect(service.contexts[uri.toString()]).toBe(context);
+		expect(releaseTokens).toHaveBeenCalledTimes(1);
+	});
+});
