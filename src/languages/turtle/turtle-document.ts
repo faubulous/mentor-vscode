@@ -199,14 +199,15 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
 
-			// Delete old graphs (handles slug changes and stale triples removed from the
-			// document). Done after resetting this.graphs so the invariant holds on error.
-			store.deleteGraphs([...oldGraphs, graphUri]);
+			// Delete old graphs and their inference graphs (handles slug changes and
+			// stale triples removed from the document). Done after resetting
+			// this.graphs so the invariant holds on error.
+			store.deleteGraphs([...oldGraphs, graphUri], true);
 
-			// Reset inference flag so that infer() re-runs after each reload.
-			// This is essential when a slug update triggers a reload: the old inference
-			// graph (based on the opaque cell ID) has already been deleted above, and
-			// a fresh inference pass is needed to populate the slug-based graph.
+			// Reset inference flag so that infer() re-runs after each reload. This is
+			// essential when a slug update triggers a reload: the old inference graph
+			// (based on the opaque cell ID) was deleted above, and a fresh inference
+			// pass is needed to populate the slug-based graph.
 			this._inferenceExecuted = false;
 
 			// Reuse the CST captured by parse() when it was produced from exactly

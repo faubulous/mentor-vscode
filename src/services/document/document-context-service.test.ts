@@ -153,7 +153,7 @@ describe('DocumentContextService', () => {
 			service.handleDocumentClosed({ uri } as any);
 
 			expect(service.contexts[uri.toString()]).toBeUndefined();
-			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs, true);
 		});
 
 		it('keeps a non-temporary context open', () => {
@@ -193,7 +193,7 @@ describe('DocumentContextService', () => {
 			service.removeDocuments([vscode.Uri.parse('file:///w/old/a.ttl')]);
 
 			expect(Object.keys(service.contexts)).toEqual(['file:///w/keep.ttl']);
-			expect(mockStore.deleteGraphs).toHaveBeenCalledExactlyOnceWith(['file:///w/old/a.ttl']);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledExactlyOnceWith(['file:///w/old/a.ttl'], true);
 		});
 
 		it('removes the contexts of all cells of a removed notebook', () => {
@@ -610,7 +610,7 @@ describe('DocumentContextService', () => {
 
 			expect(service.contexts[document.uri.toString()]).toBeUndefined();
 			expect(service.activeContext).toBeUndefined();
-			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs, true);
 		});
 
 		it('keeps the context when the language changes to an unsupported language', async () => {
