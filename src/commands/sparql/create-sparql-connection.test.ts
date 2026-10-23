@@ -15,8 +15,8 @@ const { mockConnService, mockRouter } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionRegistry') return mockConnService;
-			if (token === 'WebviewRouter') return mockRouter;
+			if (token === ServiceToken.SparqlConnectionRegistry) return mockConnService;
+			if (token === ServiceToken.WebviewRouter) return mockRouter;
 			return {};
 		}),
 	},
@@ -27,6 +27,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { createSparqlConnection } from '@src/commands/sparql/create-sparql-connection';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

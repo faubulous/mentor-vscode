@@ -31,7 +31,7 @@ const mockPrefixService = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'TurtlePrefixDefinitionService') return mockPrefixService;
+			if (token === ServiceToken.TurtlePrefixDefinitionService) return mockPrefixService;
 			return {};
 		}),
 	},
@@ -41,6 +41,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { implementPrefixForIri } from '@src/commands/document/implement-prefix-for-iri';
+import { ServiceToken } from '@src/services/tokens';
 
 const makeToken = () => ({
 	type: 'IRI_REF',

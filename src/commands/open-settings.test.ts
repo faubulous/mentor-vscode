@@ -11,7 +11,7 @@ const { mockRouter } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'WebviewRouter') return mockRouter;
+			if (token === ServiceToken.WebviewRouter) return mockRouter;
 			return {};
 		}),
 	},
@@ -21,6 +21,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { openSettings } from '@src/commands/open-settings';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

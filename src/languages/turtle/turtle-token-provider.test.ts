@@ -25,8 +25,8 @@ const mockSubscriptions: any[] = [];
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
-			if (token === 'DocumentContextService') return { onDidChangeDocumentContext: vi.fn() };
+			if (token === ServiceToken.ExtensionContext) return { subscriptions: mockSubscriptions };
+			if (token === ServiceToken.DocumentContextService) return { onDidChangeDocumentContext: vi.fn() };
 			return {};
 		}),
 	},
@@ -37,6 +37,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { TurtleTokenProvider } from '@src/languages/turtle/turtle-token-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockSubscriptions.length = 0;

@@ -40,13 +40,13 @@ const mockSubscriptions: any[] = [];
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
-			if (token === 'DocumentContextService') return { onDidChangeDocumentContext: vi.fn() };
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') return {
+			if (token === ServiceToken.ExtensionContext) return { subscriptions: mockSubscriptions };
+			if (token === ServiceToken.DocumentContextService) return { onDidChangeDocumentContext: vi.fn() };
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService) return {
 				onDidChangeConnectionForDocument: vi.fn(),
 				onDidChangeConnections: vi.fn(),
 			};
-			if (token === 'GraphManagementService') return {
+			if (token === ServiceToken.GraphManagementService) return {
 				onDidChangeGraphs: vi.fn(() => ({ dispose: vi.fn() })),
 				isGraphsLoaded: vi.fn(() => false),
 			};
@@ -60,6 +60,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { SparqlTokenProvider } from '@src/languages/sparql/sparql-token-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockSubscriptions.length = 0;

@@ -8,7 +8,7 @@ let mockDeletePrefixes: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'TurtlePrefixDefinitionService') {
+			if (token === ServiceToken.TurtlePrefixDefinitionService) {
 				return {
 					deletePrefixes: (...args: any[]) => mockDeletePrefixes(...args),
 				};
@@ -23,6 +23,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { deletePrefixes } from '@src/commands/document/delete-prefixes';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockDeletePrefixes = vi.fn(async () => ({ size: 0 }));

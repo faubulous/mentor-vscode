@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as vscode from 'vscode';
+import { ServiceToken } from '@src/services/tokens';
 
 vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
 
@@ -18,17 +19,13 @@ const mockSubscriptions: any[] = [];
 vi.mock('tsyringe', () => ({
   container: {
     resolve: vi.fn((token: string) => {
-      if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
+      if (token === ServiceToken.ExtensionContext) return { subscriptions: mockSubscriptions };
       return {};
     }),
   },
   injectable: () => (t: any) => t,
   inject: () => () => {},
   singleton: () => (t: any) => t,
-}));
-
-vi.mock('@src/services/tokens', () => ({
-  ServiceToken: { ExtensionContext: 'ExtensionContext' },
 }));
 
 describe('WorkspaceUriLinkProvider', () => {

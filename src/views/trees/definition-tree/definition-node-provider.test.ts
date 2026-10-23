@@ -10,10 +10,10 @@ let mockWorkspaceIndexerStub: any;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SettingsService') return mockSettingsStub;
-			if (token === 'VocabularyRepository') return mockVocabularyStub;
-			if (token === 'DocumentContextService') return mockContextServiceStub;
-			if (token === 'WorkspaceIndexerService') return mockWorkspaceIndexerStub;
+			if (token === ServiceToken.SettingsService) return mockSettingsStub;
+			if (token === ServiceToken.VocabularyRepository) return mockVocabularyStub;
+			if (token === ServiceToken.DocumentContextService) return mockContextServiceStub;
+			if (token === ServiceToken.WorkspaceIndexerService) return mockWorkspaceIndexerStub;
 			return {};
 		}),
 	},
@@ -28,6 +28,7 @@ import { DefinitionTreeNode } from '@src/views/trees/definition-tree/definition-
 import { OntologyNode } from '@src/views/trees/definition-tree/nodes/ontology-node';
 import { ClassesNode } from '@src/views/trees/definition-tree/nodes/classes/classes-node';
 import { DefinitionTreeLayout } from '@src/services/core/settings-service';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeContext(): any {
 	return {

@@ -41,23 +41,23 @@ vi.mock('triplate', () => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') {
+			if (token === ServiceToken.ExtensionContext) {
 				return { subscriptions: [] };
 			}
-			if (token === 'SparqlQueryService') {
+			if (token === ServiceToken.SparqlQueryService) {
 				return {
 					createQuery: mockCreateQuery,
 					executeQuery: mockExecuteQuery,
 				};
 			}
-			if (token === 'DocumentContextService') {
+			if (token === ServiceToken.DocumentContextService) {
 				return {
 					contexts: {},
 					loadDocument: mockLoadDocument,
 					handleDocumentClosed: mockHandleDocumentClosed,
 				};
 			}
-			if (token === 'ShaclValidationService') {
+			if (token === ServiceToken.ShaclValidationService) {
 				return {
 					getEffectiveShapeGraphs: mockGetEffectiveShapeGraphs,
 					validateDocument: mockValidateDocument,
@@ -75,6 +75,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { NotebookController } from '@src/services/notebook/notebook-controller';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeExecution() {
 	return {

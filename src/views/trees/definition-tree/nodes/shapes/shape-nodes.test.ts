@@ -9,10 +9,10 @@ let mockSettingsGet: (key: string, defaultValue?: any) => any;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SettingsService') {
+			if (token === ServiceToken.SettingsService) {
 				return { get: (k: string, d?: any) => mockSettingsGet(k, d) };
 			}
-			if (token === 'VocabularyRepository') {
+			if (token === ServiceToken.VocabularyRepository) {
 				return mockVocabularyStub;
 			}
 			return {};
@@ -28,6 +28,7 @@ import { DefinitionTreeNode } from '@src/views/trees/definition-tree/definition-
 import { NodeShapeNode, PropertyShapeNode, ParameterNode } from '@src/views/trees/definition-tree/nodes/shapes/shape-node';
 import { ShapeClassNode } from '@src/views/trees/definition-tree/nodes/shapes/shape-class-node';
 import { ShapesNode } from '@src/views/trees/definition-tree/nodes/shapes/shapes-node';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeContext(): any {
 	return {

@@ -8,7 +8,7 @@ let mockSetInferenceEnabledForNotebook: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') {
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService) {
 				return {
 					setInferenceEnabledForNotebook: (...args: any[]) => mockSetInferenceEnabledForNotebook(...args),
 				};
@@ -23,6 +23,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { setNotebookInference } from '@src/commands/notebook/set-notebook-inference';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockSetInferenceEnabledForNotebook = vi.fn(async () => []);

@@ -22,13 +22,13 @@ const {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'StoreConfigService') {
+			if (token === ServiceToken.StoreConfigService) {
 				return { getQueryTemplate: mockGetQueryTemplate, isWorkspaceConnectionId: mockIsWorkspaceConnectionId };
 			}
-			if (token === 'DocumentConnectionService') {
+			if (token === ServiceToken.DocumentConnectionService) {
 				return { getConnectionForDocument: mockGetConnectionForDocument, setQuerySourceForDocument: mockSetQuerySourceForDocument };
 			}
-			if (token === 'DocumentContextService') {
+			if (token === ServiceToken.DocumentContextService) {
 				return { getContextFromUri: mockGetContextFromUri };
 			}
 			return {};
@@ -42,6 +42,7 @@ vi.mock('tsyringe', () => ({
 import * as vscode from 'vscode';
 import { createSparqlQueryFromDocument } from '@src/commands/sparql/create-sparql-query-from-document';
 import { createMockDocumentContext } from '@src/utilities/mocks/factories';
+import { ServiceToken } from '@src/services/tokens';
 
 /**
  * The template the extension ships, so the command is exercised against the real default rather

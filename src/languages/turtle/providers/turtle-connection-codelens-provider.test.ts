@@ -14,7 +14,7 @@ const { mockConnectionService } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') return mockConnectionService;
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService) return mockConnectionService;
 			return {};
 		}),
 	},
@@ -28,6 +28,7 @@ vi.mock('@src/languages/sparql/services/sparql-connection-registry', () => ({
 }));
 
 import { TurtleConnectionCodeLensProvider } from '@src/languages/turtle/providers/turtle-connection-codelens-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeDoc(uri: string) {
 	return { uri: { scheme: uri.split(':')[0], toString: () => uri } } as any;

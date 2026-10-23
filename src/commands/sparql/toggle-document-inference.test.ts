@@ -17,8 +17,8 @@ const { mockConnectionService, mockStoreConfigService } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') return mockConnectionService;
-			if (token === 'StoreConfigService') return mockStoreConfigService;
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService) return mockConnectionService;
+			if (token === ServiceToken.StoreConfigService) return mockStoreConfigService;
 			return {};
 		}),
 	},
@@ -29,6 +29,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { toggleDocumentInference } from '@src/commands/sparql/toggle-document-inference';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

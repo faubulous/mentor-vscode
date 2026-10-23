@@ -15,8 +15,8 @@ const { mockConnService, mockCredService } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionRegistry') return mockConnService;
-			if (token === 'CredentialStorageService') return mockCredService;
+			if (token === ServiceToken.SparqlConnectionRegistry) return mockConnService;
+			if (token === ServiceToken.CredentialStorageService) return mockCredService;
 			return {};
 		}),
 	},
@@ -27,6 +27,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { deleteSparqlConnection } from '@src/commands/sparql/delete-sparql-connection';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

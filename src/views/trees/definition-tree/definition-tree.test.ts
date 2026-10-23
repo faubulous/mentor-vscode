@@ -68,10 +68,10 @@ const mockExtensionContext = { subscriptions: mockSubscriptions };
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return mockContextService;
-			if (token === 'SettingsService') return mockSettings;
-			if (token === 'ShaclValidationService') return mockValidationService;
-			if (token === 'ExtensionContext') return mockExtensionContext;
+			if (token === ServiceToken.DocumentContextService) return mockContextService;
+			if (token === ServiceToken.SettingsService) return mockSettings;
+			if (token === ServiceToken.ShaclValidationService) return mockValidationService;
+			if (token === ServiceToken.ExtensionContext) return mockExtensionContext;
 			return {};
 		}),
 	},
@@ -81,6 +81,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { DefinitionTree } from '@src/views/trees/definition-tree/definition-tree';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('DefinitionTree', () => {
 	let tree: DefinitionTree;

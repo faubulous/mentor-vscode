@@ -7,10 +7,10 @@ let vocabulary: any;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SettingsService') {
+			if (token === ServiceToken.SettingsService) {
 				return { get: (_k: string, d?: any) => d };
 			}
-			if (token === 'VocabularyRepository') {
+			if (token === ServiceToken.VocabularyRepository) {
 				return vocabulary;
 			}
 			return {};
@@ -24,6 +24,7 @@ vi.mock('tsyringe', () => ({
 import { Store, VocabularyRepository, RdfsReasoner } from '@faubulous/mentor-rdf';
 import { ConceptSchemeNode } from '@src/views/trees/definition-tree/nodes/concept-scheme-node';
 import { ConceptsNode } from '@src/views/trees/definition-tree/nodes/concepts/concepts-node';
+import { ServiceToken } from '@src/services/tokens';
 
 /**
  * Four concept schemes with one top concept each. The tasks are associated with `:TaskScheme` but

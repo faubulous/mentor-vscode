@@ -8,7 +8,7 @@ let mockCancelQuery: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlQueryService') {
+			if (token === ServiceToken.SparqlQueryService) {
 				return { cancelQuery: (...args: any[]) => mockCancelQuery(...args) };
 			}
 			return {};
@@ -20,6 +20,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { cancelSparqlQueryExecution } from '@src/commands/sparql/cancel-sparql-query-execution';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockCancelQuery = vi.fn();

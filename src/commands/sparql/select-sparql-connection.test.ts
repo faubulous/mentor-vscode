@@ -9,7 +9,7 @@ let mockSetQuerySourceForDocument: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') {
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService) {
 				return {
 					getConnections: (...args: any[]) => mockGetConnections(...args),
 					setQuerySourceForDocument: (...args: any[]) => mockSetQuerySourceForDocument(...args),
@@ -25,6 +25,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { selectSparqlConnection } from '@src/commands/sparql/select-sparql-connection';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockGetConnections = vi.fn(async () => []);

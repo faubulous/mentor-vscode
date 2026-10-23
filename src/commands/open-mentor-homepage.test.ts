@@ -9,7 +9,7 @@ const { mockActivateDocument } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return {
+			if (token === ServiceToken.DocumentContextService) return {
 				activateDocument: mockActivateDocument,
 				activeContext: { graphs: ['urn:g1'] },
 			};
@@ -27,6 +27,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 
 import * as vscode from 'vscode';
 import { openMentorHomepage } from '@src/commands/open-mentor-homepage';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

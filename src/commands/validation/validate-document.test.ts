@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateDocument } from '@src/commands/validation/validate-document';
+import { ServiceToken } from '@src/services/tokens';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ShaclValidationService') return mockValidationService;
-			if (token === 'WorkspaceIndexerService') return mockWorkspaceIndexerService;
+			if (token === ServiceToken.ShaclValidationService) return mockValidationService;
+			if (token === ServiceToken.WorkspaceIndexerService) return mockWorkspaceIndexerService;
 			return {};
 		}),
 	},

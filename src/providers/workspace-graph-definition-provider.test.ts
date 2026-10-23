@@ -12,7 +12,7 @@ const mockContextService = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return mockContextService;
+			if (token === ServiceToken.DocumentContextService) return mockContextService;
 			return {};
 		}),
 	},
@@ -22,6 +22,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { WorkspaceGraphDefinitionProvider } from './workspace-graph-definition-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('WorkspaceGraphDefinitionProvider', () => {
 	const pos = new vscode.Position(0, 5);

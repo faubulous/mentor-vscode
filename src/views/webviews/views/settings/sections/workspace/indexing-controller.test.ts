@@ -19,6 +19,7 @@ vi.mock('tsyringe', () => ({
 import * as vscode from 'vscode';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { IndexingSectionController } from './indexing-controller';
+import { ServiceToken } from '@src/services/tokens';
 
 const SUPPORTED_EXTENSIONS = {
 	'.ttl': { language: 'turtle', isTripleSource: true },
@@ -40,7 +41,7 @@ const WORKSPACE_FILES = [
 function setup(files: string[] = WORKSPACE_FILES) {
 	const posted: any[] = [];
 
-	services['WorkspaceIndexerService'] = {
+	services[ServiceToken.WorkspaceIndexerService] = {
 		onDidFinishIndexing: () => ({ dispose: () => { } }),
 		statistics: { indexedFiles: 0, errorCount: 0, skippedFiles: 0, durationMs: 0 },
 		indexingFinished: true,
@@ -48,19 +49,19 @@ function setup(files: string[] = WORKSPACE_FILES) {
 
 	const fileChangeListeners: Array<() => void> = [];
 
-	services['WorkspaceFileService'] = {
+	services[ServiceToken.WorkspaceFileService] = {
 		onDidChangeFiles: (listener: () => void) => {
 			fileChangeListeners.push(listener);
 			return { dispose: () => { } };
 		},
 	};
 
-	services['DocumentFactory'] = {
+	services[ServiceToken.DocumentFactory] = {
 		supportedExtensions: SUPPORTED_EXTENSIONS,
 		isSupportedFile: (uri: vscode.Uri) => Object.keys(SUPPORTED_EXTENSIONS).some(ext => uri.path.endsWith(ext)),
 	};
 
-	services['Store'] = { size: 0 };
+	services[ServiceToken.Store] = { size: 0 };
 
 	const findFiles = vi.fn(async () => files.map(f => vscode.Uri.parse(f)));
 	(vscode.workspace as any).findFiles = findFiles;

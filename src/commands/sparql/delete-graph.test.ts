@@ -15,7 +15,7 @@ const { mockSetQuerySourceForDocument, mockExecuteQueryFromTextDocument, mockGet
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService' || token === 'StoreConfigService') {
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService || token === ServiceToken.StoreConfigService) {
 				return {
 					getConnectionForDocument: (...args: any[]) => mockGetConnectionForDocument(...args),
 					setQuerySourceForDocument: mockSetQuerySourceForDocument,
@@ -23,10 +23,10 @@ vi.mock('tsyringe', () => ({
 					getConnections: vi.fn(() => []),
 				};
 			}
-			if (token === 'Store') {
+			if (token === ServiceToken.Store) {
 				return { deleteGraphs: (...args: any[]) => mockDeleteGraphs(...args) };
 			}
-			if (token === 'SparqlResultsController') {
+			if (token === ServiceToken.SparqlResultsController) {
 				return { executeQueryFromTextDocument: mockExecuteQueryFromTextDocument };
 			}
 			return {};
@@ -39,6 +39,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { deleteGraph } from '@src/commands/sparql/delete-graph';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockGetConnectionForDocument = vi.fn(() => undefined);

@@ -25,12 +25,12 @@ vi.mock('@src/languages/sparql/services/sparql-connection-registry', () => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlQueryService') {
+			if (token === ServiceToken.SparqlQueryService) {
 				return {
 					executeQueryOnConnection: (...args: any[]) => mockExecuteQueryOnConnection(...args),
 				};
 			}
-			if (token === 'SparqlConnectionRegistry' || token === 'StoreConfigService') {
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.StoreConfigService) {
 				return { getQueryTemplate: mockGetQueryTemplate };
 			}
 			return {};
@@ -43,6 +43,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { openGraph } from '@src/commands/sparql/open-graph';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockExecuteQueryOnConnection = vi.fn(async () => ({

@@ -8,7 +8,7 @@ let mockClearQueryHistory: ReturnType<typeof vi.fn<(...args: unknown[]) => unkno
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlQueryService') {
+			if (token === ServiceToken.SparqlQueryService) {
 				return { clearQueryHistory: (...args: any[]) => mockClearQueryHistory(...args) };
 			}
 			return {};
@@ -20,6 +20,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { clearQueryHistory } from '@src/commands/sparql/clear-query-history';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockClearQueryHistory = vi.fn();

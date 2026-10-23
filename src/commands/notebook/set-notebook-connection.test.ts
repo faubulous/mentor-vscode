@@ -9,7 +9,7 @@ let mockSetConnectionForNotebook: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') {
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService) {
 				return {
 					getConnections: (...args: any[]) => mockGetConnections(...args),
 					setConnectionForNotebook: (...args: any[]) => mockSetConnectionForNotebook(...args),
@@ -25,6 +25,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { setNotebookConnection } from '@src/commands/notebook/set-notebook-connection';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockGetConnections = vi.fn(() => []);

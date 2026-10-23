@@ -20,16 +20,16 @@ let historyChangeHandler: (() => void) | undefined;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') {
+			if (token === ServiceToken.ExtensionContext) {
 				return { subscriptions: [] };
 			}
-			if (token === 'SparqlQueryService') {
+			if (token === ServiceToken.SparqlQueryService) {
 				return {
 					onDidHistoryChange: vi.fn((cb: () => void) => { historyChangeHandler = cb; return { dispose: () => {} }; }),
 					getQueryHistory: () => history,
 				};
 			}
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService') {
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService) {
 				return {
 					onDidChangeConnections: vi.fn(() => ({ dispose: () => {} })),
 					getConnections: () => connections,
@@ -38,7 +38,7 @@ vi.mock('tsyringe', () => ({
 					setQuerySourceForDocument: (...args: any[]) => mockSetQuerySource(...args),
 				};
 			}
-			if (token === 'GraphManagementService') {
+			if (token === ServiceToken.GraphManagementService) {
 				return {
 					onDidGraphLoadStart: vi.fn(() => ({ dispose: () => {} })),
 					onDidGraphLoadEnd: vi.fn(() => ({ dispose: () => {} })),
@@ -49,7 +49,7 @@ vi.mock('tsyringe', () => ({
 					getWorkspaceGraphs: () => workspaceGraphs,
 				};
 			}
-			if (token === 'SparqlEndpointTester') {
+			if (token === ServiceToken.SparqlEndpointTester) {
 				return {
 					testConnection: (...args: any[]) => mockTestConnection(...args),
 				};
@@ -64,6 +64,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { SparqlResultsController } from '@src/views/webviews/views/sparql-results/sparql-results-controller';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeController() {
 	const controller = new SparqlResultsController();

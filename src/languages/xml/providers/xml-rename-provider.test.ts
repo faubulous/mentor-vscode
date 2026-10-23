@@ -11,7 +11,7 @@ const { mockGetDocumentContext } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
     container: {
         resolve: vi.fn((token: string) => {
-            if (token === 'DocumentContextService') return { getDocumentContext: mockGetDocumentContext };
+            if (token === ServiceToken.DocumentContextService) return { getDocumentContext: mockGetDocumentContext };
             return {};
         }),
     },
@@ -20,11 +20,8 @@ vi.mock('tsyringe', () => ({
     singleton: () => (_target: any) => _target,
 }));
 
-vi.mock('@src/services/tokens', () => ({
-    ServiceToken: { DocumentContextService: 'DocumentContextService' },
-}));
-
 import { XmlRenameProvider } from '@src/languages/xml/providers/xml-rename-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
     mockGetDocumentContext.mockReset();

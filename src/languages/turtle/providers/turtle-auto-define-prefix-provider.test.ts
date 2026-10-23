@@ -21,7 +21,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 vi.mock('tsyringe', () => ({
     container: {
         resolve: vi.fn((token: string) => {
-            if (token === 'DocumentContextService') return mockContextService;
+            if (token === ServiceToken.DocumentContextService) return mockContextService;
             return {};
         }),
     },
@@ -31,6 +31,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { TurtleAutoDefinePrefixProvider } from '@src/languages/turtle/providers/turtle-auto-define-prefix-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 const PNAME_NS = 'PNAME_NS';
 

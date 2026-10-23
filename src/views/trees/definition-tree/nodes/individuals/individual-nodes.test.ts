@@ -8,10 +8,10 @@ let mockSettingsGet: (key: string, defaultValue?: any) => any;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SettingsService') {
+			if (token === ServiceToken.SettingsService) {
 				return { get: (k: string, d?: any) => mockSettingsGet(k, d) };
 			}
-			if (token === 'VocabularyRepository') {
+			if (token === ServiceToken.VocabularyRepository) {
 				return mockVocabularyStub;
 			}
 			return {};
@@ -26,6 +26,7 @@ import * as vscode from 'vscode';
 import { IndividualNode } from '@src/views/trees/definition-tree/nodes/individuals/individual-node';
 import { IndividualClassNode } from '@src/views/trees/definition-tree/nodes/individuals/individual-class-node';
 import { IndividualsNode } from '@src/views/trees/definition-tree/nodes/individuals/individuals-node';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeContext(): any {
 	return {

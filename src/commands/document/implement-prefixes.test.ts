@@ -8,7 +8,7 @@ let mockImplementPrefixes: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'TurtlePrefixDefinitionService') {
+			if (token === ServiceToken.TurtlePrefixDefinitionService) {
 				return {
 					implementPrefixes: (...args: any[]) => mockImplementPrefixes(...args),
 				};
@@ -23,6 +23,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { implementPrefixes } from '@src/commands/document/implement-prefixes';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockImplementPrefixes = vi.fn(async () => ({ size: 0 }));

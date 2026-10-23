@@ -15,13 +15,13 @@ const {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') {
+			if (token === ServiceToken.DocumentContextService) {
 				return {
 					activateDocument: mockActivateDocument,
 					activeContext: mockActiveContext,
 				};
 			}
-			if (token === 'VocabularyRepository') {
+			if (token === ServiceToken.VocabularyRepository) {
 				return {
 					getShapes: mockGetShapes,
 				};
@@ -40,6 +40,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 
 import * as vscode from 'vscode';
 import { showShapeReferences } from '@src/commands/definition-tree/show-shape-references';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeRange(sl: number, sc: number, el: number, ec: number) {
 	return new (vscode as any).Range(sl, sc, el, ec);
