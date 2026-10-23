@@ -6,15 +6,15 @@ let vocabulary: any;
 
 vi.mock('tsyringe', () => ({
 	container: {
-		resolve: vi.fn((token: string) => {
-			if (token === 'SettingsService') {
+		resolve: vi.fn((token: ServiceToken) => {
+			if (token === ServiceToken.SettingsService) {
 				// Use the default layout, which groups the definitions by their source.
 				return { get: (_k: string, d?: any) => d, onDidChange: () => ({ dispose: () => {} }) };
 			}
-			if (token === 'VocabularyRepository') {
+			if (token === ServiceToken.VocabularyRepository) {
 				return vocabulary;
 			}
-			if (token === 'DocumentContextService' || token === 'WorkspaceIndexerService') {
+			if (token === ServiceToken.DocumentContextService || token === ServiceToken.WorkspaceIndexerService) {
 				return {
 					onDidChangeDocumentContext: () => ({ dispose: () => {} }),
 					onDidFinishIndexing: () => ({ dispose: () => {} }),
@@ -29,6 +29,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { Store, VocabularyRepository, OwlReasoner } from '@faubulous/mentor-rdf';
+import { ServiceToken } from '@src/services/tokens';
 import { DefinitionNodeProvider } from '@src/views/trees/definition-tree/definition-node-provider';
 import { TreeNode } from '@src/views/trees/tree-node';
 
