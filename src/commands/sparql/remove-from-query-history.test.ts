@@ -9,7 +9,7 @@ let mockRemoveQueryState: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlQueryService') {
+			if (token === ServiceToken.SparqlQueryService) {
 				return {
 					getQueryStateForDocument: (...args: any[]) => mockGetQueryStateForDocument(...args),
 					removeQueryState: (...args: any[]) => mockRemoveQueryState(...args),
@@ -24,6 +24,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { removeFromQueryHistory } from '@src/commands/sparql/remove-from-query-history';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockGetQueryStateForDocument = vi.fn(() => undefined);

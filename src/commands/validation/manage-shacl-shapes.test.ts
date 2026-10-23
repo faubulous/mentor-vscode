@@ -22,11 +22,11 @@ const { mockStore, mockValidationService, mockConfigUpdate } = vi.hoisted(() => 
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'Store') return mockStore;
-			if (token === 'ShaclValidationService') return mockValidationService;
+			if (token === ServiceToken.Store) return mockStore;
+			if (token === ServiceToken.ShaclValidationService) return mockValidationService;
 			// The real settings service only reads through the mocked
 			// vscode.workspace.getConfiguration, so it can be used as-is.
-			if (token === 'ShaclProfileSettingsService') return new ShaclProfileSettingsService();
+			if (token === ServiceToken.ShaclProfileSettingsService) return new ShaclProfileSettingsService();
 			return {};
 		}),
 	},
@@ -37,6 +37,7 @@ vi.mock('tsyringe', () => ({
 
 import { manageShaclShapes } from '@src/commands/validation/manage-shacl-shapes';
 import { ShaclProfileSettingsService } from '@src/services/validation/shacl-profile-settings-service';
+import { ServiceToken } from '@src/services/tokens';
 
 const DOCUMENT_KEY = 'models/example.ttl';
 const RDF_EXTENSIONS = ['.ttl', '.n3', '.nt', '.nq', '.trig', '.rdf'];

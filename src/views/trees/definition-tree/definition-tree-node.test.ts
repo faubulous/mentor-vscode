@@ -7,7 +7,7 @@ let mockSettingsGet: (key: string, defaultValue?: any) => any;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SettingsService') {
+			if (token === ServiceToken.SettingsService) {
 				return { get: (k: string, d?: any) => mockSettingsGet(k, d) };
 			}
 			return {};
@@ -20,6 +20,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { DefinitionTreeNode, getIriFromArgument } from '@src/views/trees/definition-tree/definition-tree-node';
+import { ServiceToken } from '@src/services/tokens';
 
 // Minimal IDocumentContext stub
 function makeContext(overrides: Partial<{

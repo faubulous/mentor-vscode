@@ -39,8 +39,8 @@ const mockDocumentFactory = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'WorkspaceFileService') return mockWorkspaceFileService;
-			if (token === 'DocumentFactory') return mockDocumentFactory;
+			if (token === ServiceToken.WorkspaceFileService) return mockWorkspaceFileService;
+			if (token === ServiceToken.DocumentFactory) return mockDocumentFactory;
 			return {};
 		}),
 	},
@@ -50,6 +50,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { openFileFromLanguage } from '@src/commands/document/open-file-from-language';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('openFileFromLanguage', () => {
 	let mockQuickPick: any;

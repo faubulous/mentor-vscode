@@ -20,9 +20,9 @@ const { mockContextService, mockIndexerService, mockVocabulary } = vi.hoisted(()
 vi.mock('tsyringe', () => ({
     container: {
         resolve: vi.fn((token: string) => {
-            if (token === 'DocumentContextService') return mockContextService;
-            if (token === 'WorkspaceIndexerService') return mockIndexerService;
-            if (token === 'VocabularyRepository') return mockVocabulary;
+            if (token === ServiceToken.DocumentContextService) return mockContextService;
+            if (token === ServiceToken.WorkspaceIndexerService) return mockIndexerService;
+            if (token === ServiceToken.VocabularyRepository) return mockVocabulary;
             return {};
         }),
     },
@@ -39,6 +39,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 }));
 
 import { TurtleUsageCodeLensProvider } from '@src/languages/turtle/providers/turtle-usage-codelens-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
     vi.clearAllMocks();

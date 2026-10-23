@@ -11,7 +11,7 @@ const { mockSparqlResultsController } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlResultsController') return mockSparqlResultsController;
+			if (token === ServiceToken.SparqlResultsController) return mockSparqlResultsController;
 			return {};
 		}),
 	},
@@ -22,6 +22,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { executeSparqlQueryFromActiveEditor } from '@src/commands/sparql/execute-sparql-query-from-active-editor';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

@@ -23,6 +23,7 @@ import { SparqlStatusBarService } from '@src/languages/sparql/services/sparql-st
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/workspace-store';
 import { ConnectionsSectionController } from '@src/views/webviews/views/settings/sections/query/connections-controller';
 import { createStatusBarRecorder } from '@src/utilities/mocks/factories';
+import { ServiceToken } from '@src/services/tokens';
 
 /**
  * Cross-surface consistency: the SPARQL status bar and the connections list
@@ -78,10 +79,10 @@ function setup() {
 		onDidConnectionTestEnd: new vscode.EventEmitter<any>().event,
 	};
 
-	services['GraphManagementService'] = graphService;
-	services['SparqlConnectionRegistry'] = registry;
-	services['SparqlEndpointTester'] = endpointTester;
-	services['CredentialStorageService'] = {};
+	services[ServiceToken.GraphManagementService] = graphService;
+	services[ServiceToken.SparqlConnectionRegistry] = registry;
+	services[ServiceToken.SparqlEndpointTester] = endpointTester;
+	services[ServiceToken.CredentialStorageService] = {};
 
 	const recorder = createStatusBarRecorder();
 

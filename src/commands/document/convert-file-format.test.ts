@@ -50,9 +50,9 @@ const mockVocabularyRepository = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentFactory') return mockDocumentFactory;
-			if (token === 'DocumentContextService') return mockContextService;
-			if (token === 'VocabularyRepository') return mockVocabularyRepository;
+			if (token === ServiceToken.DocumentFactory) return mockDocumentFactory;
+			if (token === ServiceToken.DocumentContextService) return mockContextService;
+			if (token === ServiceToken.VocabularyRepository) return mockVocabularyRepository;
 			return {};
 		}),
 	},
@@ -68,6 +68,7 @@ import {
 	convertFileFormatToTurtleSubmenu,
 	convertFileFormatToXmlSubmenu,
 } from '@src/commands/document/convert-file-format';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('convertFileFormat', () => {
 	beforeEach(() => {

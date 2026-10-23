@@ -8,10 +8,10 @@ let mockCellExecuteQuery: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlResultsController') {
+			if (token === ServiceToken.SparqlResultsController) {
 				return { executeQuery: (...args: any[]) => mockPanelExecuteQuery(...args) };
 			}
-			if (token === 'NotebookController') {
+			if (token === ServiceToken.NotebookController) {
 				return { executeQueryInCell: (...args: any[]) => mockCellExecuteQuery(...args) };
 			}
 			return {};
@@ -24,6 +24,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { executeSparqlQueryFromString } from '@src/commands/sparql/execute-sparql-query-from-string';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockPanelExecuteQuery = vi.fn(async () => undefined);

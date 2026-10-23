@@ -11,13 +11,13 @@ const { mockExecuteBackgroundQuery, mockGetQueryTemplate } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlResultsController') {
+			if (token === ServiceToken.SparqlResultsController) {
 				return { executeBackgroundQuery: mockExecuteBackgroundQuery };
 			}
-			if (token === 'SparqlConnectionRegistry' || token === 'StoreConfigService') {
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.StoreConfigService) {
 				return { getQueryTemplate: mockGetQueryTemplate };
 			}
-			if (token === 'GraphManagementService') {
+			if (token === ServiceToken.GraphManagementService) {
 				return { hasGraphsForConnection: () => false, getGraphsForConnection: () => [] };
 			}
 			return {};
@@ -30,6 +30,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { listGraphs } from '@src/commands/sparql/list-graphs';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

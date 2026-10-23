@@ -9,7 +9,7 @@ let mockEditHandler: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') {
+			if (token === ServiceToken.DocumentContextService) {
 				return { contexts: mockContexts };
 			}
 			return {};
@@ -41,6 +41,7 @@ vi.mock('./edit-notebook-cell-slug', () => ({
 import * as vscode from 'vscode';
 import { findNotebookContainingCell } from '@src/utilities/vscode/notebook';
 import { triggerNotebookCellSlugAction } from '@src/commands/notebook/trigger-notebook-cell-slug-action';
+import { ServiceToken } from '@src/services/tokens';
 
 const cellUri = vscode.Uri.parse('vscode-notebook-cell:///test.mentor-notebook#W0');
 

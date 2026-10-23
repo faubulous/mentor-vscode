@@ -20,8 +20,8 @@ const mockSettings = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return mockContextService;
-			if (token === 'SettingsService') return mockSettings;
+			if (token === ServiceToken.DocumentContextService) return mockContextService;
+			if (token === ServiceToken.SettingsService) return mockSettings;
 			return {};
 		}),
 	},
@@ -31,6 +31,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { selectActiveLanguage } from '@src/commands/document/select-active-language';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('selectActiveLanguage', () => {
 	let mockQuickPick: any;

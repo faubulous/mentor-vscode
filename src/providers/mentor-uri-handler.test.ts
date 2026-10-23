@@ -41,10 +41,10 @@ const mockExtensionContext = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') return mockExtensionContext;
-			if (token === 'Store') return mockStore;
-			if (token === 'PrefixLookupService') return mockPrefixLookupService;
-			if (token === 'WebviewRouter') return mockRouter;
+			if (token === ServiceToken.ExtensionContext) return mockExtensionContext;
+			if (token === ServiceToken.Store) return mockStore;
+			if (token === ServiceToken.PrefixLookupService) return mockPrefixLookupService;
+			if (token === ServiceToken.WebviewRouter) return mockRouter;
 			return {};
 		}),
 	},
@@ -54,6 +54,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { MentorUriHandler } from '@src/providers/mentor-uri-handler';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('MentorUriHandler', () => {
 	let handler: MentorUriHandler;

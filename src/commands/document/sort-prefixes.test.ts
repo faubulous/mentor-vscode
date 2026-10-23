@@ -8,7 +8,7 @@ let mockPrefixService: any;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'TurtlePrefixDefinitionService') return mockPrefixService;
+			if (token === ServiceToken.TurtlePrefixDefinitionService) return mockPrefixService;
 			return {};
 		}),
 	},
@@ -29,6 +29,7 @@ afterEach(() => {
 });
 
 import { sortPrefixes } from '@src/commands/document/sort-prefixes';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('sortPrefixes command', () => {
 	it('should have the correct id', () => {

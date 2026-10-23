@@ -9,7 +9,7 @@ let mockService: { isValidating: boolean; cancelActiveValidation: ReturnType<typ
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ShaclValidationService') return mockService;
+			if (token === ServiceToken.ShaclValidationService) return mockService;
 			return {};
 		}),
 	},
@@ -19,6 +19,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { cancelValidation } from '@src/commands/validation/cancel-validation';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockService = { isValidating: true, cancelActiveValidation: vi.fn() };

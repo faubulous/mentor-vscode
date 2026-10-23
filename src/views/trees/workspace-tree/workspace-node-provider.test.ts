@@ -11,7 +11,7 @@ const { mockOnDidChangeFiles, mockWaitForDiscovery, mockGetFolderContents } = vi
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'WorkspaceFileService') return {
+			if (token === ServiceToken.WorkspaceFileService) return {
 				onDidChangeFiles: mockOnDidChangeFiles,
 				waitForDiscovery: mockWaitForDiscovery,
 				getFolderContents: mockGetFolderContents,
@@ -26,6 +26,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { WorkspaceNodeProvider } from '@src/views/trees/workspace-tree/workspace-node-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

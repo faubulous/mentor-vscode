@@ -16,7 +16,7 @@ const mockContextService = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return mockContextService;
+			if (token === ServiceToken.DocumentContextService) return mockContextService;
 			return {};
 		}),
 	},
@@ -26,6 +26,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { ResourceReferenceProvider } from '@src/providers/resource-reference-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('ResourceReferenceProvider', () => {
 	let provider: ResourceReferenceProvider;

@@ -10,7 +10,7 @@ const { mockActivateDocument, mockActiveContext } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return {
+			if (token === ServiceToken.DocumentContextService) return {
 				activateDocument: mockActivateDocument,
 				activeContext: mockActiveContext,
 			};
@@ -28,6 +28,7 @@ vi.mock('@faubulous/mentor-rdf', () => ({
 
 import * as vscode from 'vscode';
 import { revealDefinition } from '@src/commands/definition-tree/reveal-definition';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeEditor(uriStr = 'file:///doc.ttl') {
 	return {

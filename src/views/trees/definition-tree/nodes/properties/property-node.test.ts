@@ -8,10 +8,10 @@ let mockSettingsGet: (key: string, defaultValue?: any) => any;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SettingsService') {
+			if (token === ServiceToken.SettingsService) {
 				return { get: (k: string, d?: any) => mockSettingsGet(k, d) };
 			}
-			if (token === 'VocabularyRepository') {
+			if (token === ServiceToken.VocabularyRepository) {
 				return mockVocabularyStub;
 			}
 			return {};
@@ -25,6 +25,7 @@ vi.mock('tsyringe', () => ({
 import { XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
 import * as vscode from 'vscode';
 import { PropertyNode } from '@src/views/trees/definition-tree/nodes/properties/property-node';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeContext(overrides: Partial<{ graphs: string[] }> = {}): any {
 	return {

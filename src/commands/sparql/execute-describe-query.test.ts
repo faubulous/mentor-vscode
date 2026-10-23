@@ -18,8 +18,8 @@ const { mockQueryService, mockConnectionService } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlQueryService') return mockQueryService;
-			if (token === 'SparqlConnectionRegistry' || token === 'DocumentConnectionService' || token === 'StoreConfigService') return mockConnectionService;
+			if (token === ServiceToken.SparqlQueryService) return mockQueryService;
+			if (token === ServiceToken.SparqlConnectionRegistry || token === ServiceToken.DocumentConnectionService || token === ServiceToken.StoreConfigService) return mockConnectionService;
 			return {};
 		}),
 	},
@@ -31,6 +31,7 @@ vi.mock('tsyringe', () => ({
 import * as vscode from 'vscode';
 import { executeDescribeQuery } from '@src/commands/sparql/execute-describe-query';
 import { getLog } from '@src/utilities/vscode/log';
+import { ServiceToken } from '@src/services/tokens';
 
 const DESCRIBE_TEMPLATE = `---
 params {

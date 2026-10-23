@@ -21,9 +21,9 @@ const mockStore = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return mockContextService;
-			if (token === 'ExtensionContext') return { subscriptions: [] };
-			if (token === 'Store') return mockStore;
+			if (token === ServiceToken.DocumentContextService) return mockContextService;
+			if (token === ServiceToken.ExtensionContext) return { subscriptions: [] };
+			if (token === ServiceToken.Store) return mockStore;
 			return {};
 		}),
 	},
@@ -33,6 +33,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { ResourceTooltipProvider } from '@src/providers/resource-tooltip-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('ResourceTooltipProvider', () => {
 	let provider: ResourceTooltipProvider;

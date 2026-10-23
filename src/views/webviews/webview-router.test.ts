@@ -11,7 +11,7 @@ const { mockSettingsController } = vi.hoisted(() => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SettingsPanelController') return mockSettingsController;
+			if (token === ServiceToken.SettingsPanelController) return mockSettingsController;
 			return {};
 		}),
 	},
@@ -19,6 +19,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { WebviewRouter } from './webview-router';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	vi.clearAllMocks();

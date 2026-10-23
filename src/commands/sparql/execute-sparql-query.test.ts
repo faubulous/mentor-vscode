@@ -27,7 +27,7 @@ const mockSparqlResultsController = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'SparqlResultsController') return mockSparqlResultsController;
+			if (token === ServiceToken.SparqlResultsController) return mockSparqlResultsController;
 			return {};
 		}),
 	},
@@ -37,6 +37,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { executeSparqlQuery } from '@src/commands/sparql/execute-sparql-query';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('executeSparqlQuery', () => {
 	beforeEach(() => {

@@ -6,7 +6,7 @@ vi.mock('@faubulous/mentor-rdf-serializers', () => ({}));
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') {
+			if (token === ServiceToken.ExtensionContext) {
 				return { subscriptions: [] };
 			}
 			return {};
@@ -19,6 +19,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { NotebookSerializer } from '@src/services/notebook/notebook-serializer';
+import { ServiceToken } from '@src/services/tokens';
 
 const cancelToken = {} as vscode.CancellationToken;
 

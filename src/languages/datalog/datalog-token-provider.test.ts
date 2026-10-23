@@ -8,7 +8,7 @@ const mockSubscriptions: any[] = [];
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
+			if (token === ServiceToken.ExtensionContext) return { subscriptions: mockSubscriptions };
 			return {};
 		}),
 	},
@@ -19,6 +19,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { DatalogTokenProvider } from '@src/languages/datalog/datalog-token-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockSubscriptions.length = 0;

@@ -73,10 +73,10 @@ const mockValidationService = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return mockContextService;
-			if (token === 'SettingsService') return mockSettings;
-			if (token === 'VocabularyRepository') return mockVocabularyRepository;
-			if (token === 'ShaclValidationService') return mockValidationService;
+			if (token === ServiceToken.DocumentContextService) return mockContextService;
+			if (token === ServiceToken.SettingsService) return mockSettings;
+			if (token === ServiceToken.VocabularyRepository) return mockVocabularyRepository;
+			if (token === ServiceToken.ShaclValidationService) return mockValidationService;
 			return {};
 		}),
 	},
@@ -86,6 +86,7 @@ vi.mock('tsyringe', () => ({
 }));
 
 import { DefinitionNodeDecorationProvider } from '@src/views/trees/definition-tree/definition-node-decoration-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 describe('DefinitionNodeDecorationProvider', () => {
 	let provider: DefinitionNodeDecorationProvider;

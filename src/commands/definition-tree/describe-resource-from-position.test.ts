@@ -9,7 +9,7 @@ const { mockContextService, mockExecuteHandler } = vi.hoisted(() => ({
 
 vi.mock('tsyringe', () => ({
 	container: {
-		resolve: vi.fn((token: string) => (token === 'DocumentContextService' ? mockContextService : {})),
+		resolve: vi.fn((token: string) => (token === ServiceToken.DocumentContextService ? mockContextService : {})),
 	},
 	injectable: () => (t: any) => t,
 	inject: () => () => { },
@@ -22,6 +22,7 @@ vi.mock('@src/commands/sparql/execute-describe-query', () => ({
 
 import * as vscode from 'vscode';
 import { describeResourceFromPosition } from '@src/commands/definition-tree/describe-resource-from-position';
+import { ServiceToken } from '@src/services/tokens';
 
 const uriStr = 'file:///doc.ttl';
 

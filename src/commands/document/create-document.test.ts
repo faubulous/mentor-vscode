@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDocument } from '@src/commands/document/create-document';
+import { ServiceToken } from '@src/services/tokens';
 
 // Assigned directly onto the real vscode.window/commands properties below, whose
 // signatures are overloaded/generic; a concrete return type wouldn't structurally match.
@@ -27,7 +28,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentFactory') {
+			if (token === ServiceToken.DocumentFactory) {
 				return mockDocumentFactory;
 			} else {
 				return {};

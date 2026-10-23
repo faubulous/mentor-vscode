@@ -9,13 +9,13 @@ let mockGlobalStateUpdate: Mock;
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'PrefixDownloaderService') {
+			if (token === ServiceToken.PrefixDownloaderService) {
 				return {
 					endpointUrl: 'https://prefix.cc',
 					fetchPrefixes: (...args: any[]) => mockFetchPrefixes(...args),
 				};
 			}
-			if (token === 'ExtensionContext') {
+			if (token === ServiceToken.ExtensionContext) {
 				return {
 					globalState: {
 						update: (...args: any[]) => mockGlobalStateUpdate(...args),
@@ -36,6 +36,7 @@ vi.mock('@src/utilities/vscode/config', () => ({
 
 import * as vscode from 'vscode';
 import { updatePrefixes } from '@src/commands/document/update-prefixes';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
 	mockFetchPrefixes = vi.fn(async () => ({}));

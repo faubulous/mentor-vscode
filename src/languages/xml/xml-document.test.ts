@@ -12,7 +12,7 @@ const { mockStore } = vi.hoisted(() => ({
 
 vi.mock('tsyringe', () => ({
     container: { resolve: vi.fn((token: string) => {
-        if (token === 'Store') return mockStore;
+        if (token === ServiceToken.Store) return mockStore;
         return {};
     }) },
     injectable: () => (_target: any) => _target,
@@ -23,6 +23,7 @@ vi.mock('tsyringe', () => ({
 import * as vscode from 'vscode';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { createXmlDocument } from '@src/utilities/mocks/factories';
+import { ServiceToken } from '@src/services/tokens';
 
 beforeEach(() => {
     vi.clearAllMocks();

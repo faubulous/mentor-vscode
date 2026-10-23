@@ -12,7 +12,7 @@ const { mockGetDocumentContext, mockGetPrefixesWithErrorCode } = vi.hoisted(() =
 vi.mock('tsyringe', () => ({
     container: {
         resolve: vi.fn((token: string) => {
-            if (token === 'DocumentContextService') return { getDocumentContext: mockGetDocumentContext };
+            if (token === ServiceToken.DocumentContextService) return { getDocumentContext: mockGetDocumentContext };
             return {};
         }),
     },
@@ -25,11 +25,8 @@ vi.mock('@src/utilities/vscode/diagnostic', () => ({
     getPrefixesWithErrorCode: (...args: Parameters<typeof mockGetPrefixesWithErrorCode>) => mockGetPrefixesWithErrorCode(...args),
 }));
 
-vi.mock('@src/services/tokens', () => ({
-    ServiceToken: { DocumentContextService: 'DocumentContextService' },
-}));
-
 import { TurtleCodeActionsProvider } from '@src/languages/turtle/providers/turtle-code-actions-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 // A mock document with lineAt/lineCount support
 const mockDoc = {

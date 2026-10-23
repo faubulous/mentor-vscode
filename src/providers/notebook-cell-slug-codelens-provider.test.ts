@@ -10,7 +10,7 @@ const mockContextService = {
 vi.mock('tsyringe', () => ({
 	container: {
 		resolve: vi.fn((token: string) => {
-			if (token === 'DocumentContextService') return mockContextService;
+			if (token === ServiceToken.DocumentContextService) return mockContextService;
 			return {};
 		}),
 	},
@@ -21,6 +21,7 @@ vi.mock('tsyringe', () => ({
 
 import * as vscode from 'vscode';
 import { NotebookCellSlugCodeLensProvider } from '@src/providers/notebook-cell-slug-codelens-provider';
+import { ServiceToken } from '@src/services/tokens';
 
 function makeDocument(scheme: string, uriStr: string): vscode.TextDocument {
 	return { uri: { scheme, toString: () => uriStr } } as any;

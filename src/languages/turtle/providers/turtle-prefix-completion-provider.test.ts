@@ -17,8 +17,8 @@ vi.mock('@src/utilities', async (importOriginal) => ({
 vi.mock('tsyringe', () => ({
     container: {
         resolve: vi.fn((token: string) => {
-            if (token === 'DocumentContextService') return { getDocumentContext: mockGetDocumentContext };
-            if (token === 'PrefixLookupService') return { getUriForPrefix: mockGetUriForPrefix };
+            if (token === ServiceToken.DocumentContextService) return { getDocumentContext: mockGetDocumentContext };
+            if (token === ServiceToken.PrefixLookupService) return { getUriForPrefix: mockGetUriForPrefix };
             return {};
         }),
     },
@@ -27,15 +27,9 @@ vi.mock('tsyringe', () => ({
     singleton: () => (_target: any) => _target,
 }));
 
-vi.mock('@src/services/tokens', () => ({
-    ServiceToken: {
-        DocumentContextService: 'DocumentContextService',
-        PrefixLookupService: 'PrefixLookupService',
-    },
-}));
-
 import { TurtlePrefixCompletionProvider } from '@src/languages/turtle/providers/turtle-prefix-completion-provider';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
+import { ServiceToken } from '@src/services/tokens';
 
 const mockDocument = {
     getText: () => '',
