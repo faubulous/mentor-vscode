@@ -324,6 +324,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			any(this.vocabulary.getClasses(this.document.graphs, options)) ||
 			any(this.vocabulary.getProperties(this.document.graphs, options)) ||
 			any(this.vocabulary.getIndividuals(this.document.graphs, undefined, options)) ||
+			// Collections in a concept scheme are shown below the scheme, all others below 'Unknown'.
+			any(this.vocabulary.getCollections(this.document.graphs, { ...options, inScheme: null })) ||
 			any(this.vocabulary.getShapes(this.document.graphs, undefined, options)) ||
 			any(this.vocabulary.getRules(this.document.graphs, options)) ||
 			any(this.vocabulary.getValidators(this.document.graphs, options));

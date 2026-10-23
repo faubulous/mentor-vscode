@@ -438,6 +438,43 @@ describe('DefinitionNodeProvider', () => {
 			expect(unknownNode).toBeDefined();
 		});
 
+		it('should add unknown node when there are collections that are not in a concept scheme', () => {
+			mockVocabularyStub.getOntologies = vi.fn(function*() {});
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() { yield 'urn:ex#scheme'; });
+			mockVocabularyStub.getDefinitionSources = vi.fn(function*() {});
+			mockVocabularyStub.getCollections = vi.fn(function*(_graphs: string[], options?: any) {
+				// Only the collection without a concept scheme has no definition source.
+				if (options?.inScheme === null) {
+					yield 'urn:ex#Audience';
+				}
+			});
+
+			const children = makeBySourceProvider().getChildren(undefined);
+			const unknownNode = children!.find(c => c instanceof OntologyNode && c.uri === 'mentor:unknown');
+
+			expect(unknownNode).toBeDefined();
+			expect(mockVocabularyStub.getCollections).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+				inScheme: null,
+				notDefinedBy: expect.any(Set),
+				includeReferenced: false,
+			}));
+		});
+
+		it('should not add unknown node when all collections are in a concept scheme', () => {
+			mockVocabularyStub.getOntologies = vi.fn(function*() {});
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() { yield 'urn:ex#scheme'; });
+			mockVocabularyStub.getDefinitionSources = vi.fn(function*() {});
+			mockVocabularyStub.getCollections = vi.fn(function*(_graphs: string[], options?: any) {
+				if (options?.inScheme !== null) {
+					yield 'urn:ex#Audience';
+				}
+			});
+
+			const children = makeBySourceProvider().getChildren(undefined);
+
+			expect(children!.some(c => c instanceof OntologyNode && c.uri === 'mentor:unknown')).toBe(false);
+		});
+
 		it('should expand the single result when only one source exists', () => {
 			mockVocabularyStub.getOntologies = vi.fn(function*() { yield 'urn:ex#solo'; });
 			mockVocabularyStub.getConceptSchemes = vi.fn(function*() {});
