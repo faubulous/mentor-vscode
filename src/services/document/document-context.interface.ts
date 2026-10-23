@@ -26,9 +26,10 @@ export interface DocumentParseResult {
 
 	/**
 	 * The tokens consumed by the grammar parser — placeholder tokens for
-	 * Triplate templates, identical to {@link tokens} otherwise.
+	 * Triplate templates, identical to {@link tokens} otherwise. Released
+	 * together with {@link cst}.
 	 */
-	readonly parseTokens: IToken[];
+	readonly parseTokens?: IToken[];
 
 	/**
 	 * Whether the text is a Triplate template.
@@ -37,9 +38,11 @@ export interface DocumentParseResult {
 
 	/**
 	 * The concrete syntax tree produced by the shared parser with error
-	 * recovery enabled.
+	 * recovery enabled. It is by far the largest part of the result and is
+	 * released once {@link IDocumentContext.loadTriples} has consumed it;
+	 * the tokens and errors stay for the diagnostics pass that follows.
 	 */
-	readonly cst: CstNode;
+	readonly cst?: CstNode;
 
 	/**
 	 * The characters the lexer could not match.
@@ -307,6 +310,14 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	 * @param text The current document text.
 	 */
 	getParseResult(text: string): DocumentParseResult | undefined;
+
+	/**
+	 * Drops the cached parse result. Called once no consumer will read it
+	 * again — after a file has been indexed and diagnosed, or when its editor
+	 * closes — so that only the tokens and the derived indexes stay in memory.
+	 * A later consumer re-derives the data from the text.
+	 */
+	releaseParseResult(): void;
 }
 
 /**

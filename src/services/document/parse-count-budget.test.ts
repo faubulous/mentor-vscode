@@ -70,6 +70,21 @@ describe('parse-count budget', () => {
 		expect(parseSpy).toHaveBeenCalledTimes(1);
 	});
 
+	it('the indexer order — parse, load triples, then diagnose — also costs one tokenization and one parse', async () => {
+		const { document, context, deliverTokens, tokenizeSpy, parseSpy } = setup(VALID_TURTLE);
+
+		context.parse(document.getText());
+
+		// Loading the triples releases the syntax tree; the diagnostics pass that
+		// follows needs only the tokens and errors, which must still be served.
+		await context.loadTriples(document.getText());
+
+		deliverTokens();
+
+		expect(tokenizeSpy).toHaveBeenCalledTimes(1);
+		expect(parseSpy).toHaveBeenCalledTimes(1);
+	});
+
 	it('falls back to a fresh tokenization when the content is stale', () => {
 		const { context, tokenizeSpy, parseSpy } = setup(VALID_TURTLE);
 
