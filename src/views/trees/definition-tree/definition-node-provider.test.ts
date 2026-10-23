@@ -63,6 +63,8 @@ beforeEach(() => {
 		getRules: vi.fn(function*() {}),
 		getValidators: vi.fn(function*() {}),
 		getDefinitionSources: vi.fn(function*() {}),
+		getUnscopedConcepts: vi.fn(function*() {}),
+		getUnscopedRootConcepts: vi.fn(function*() {}),
 		getCollections: vi.fn(function*() {}),
 		getRootCollections: vi.fn(function*() {}),
 		getCollectionMembers: vi.fn(function*() {}),
@@ -369,6 +371,20 @@ describe('DefinitionNodeProvider', () => {
 			expect(children!.some(c => c.constructor.name === 'CollectionsNode')).toBe(true);
 		});
 
+		it('should include a ConceptsNode for concepts that are not displayed below a concept scheme', () => {
+			mockVocabularyStub.getUnscopedConcepts = vi.fn(function*() { yield 'urn:ex#Orphan'; });
+			const children = makeByTypeProvider().getChildren(undefined);
+			const concepts = children!.find(c => c.constructor.name === 'ConceptsNode');
+			expect(concepts).toBeDefined();
+			expect((concepts as any).getQueryOptions().inScheme).toBeNull();
+		});
+
+		it('should not include a ConceptsNode when all concepts are displayed below a concept scheme', () => {
+			mockVocabularyStub.getUnscopedConcepts = vi.fn(function*() {});
+			const children = makeByTypeProvider().getChildren(undefined);
+			expect(children!.some(c => c.constructor.name === 'ConceptsNode')).toBe(false);
+		});
+
 		it('should not include CollectionsNode when all collections are in a concept scheme', () => {
 			mockVocabularyStub.getCollections = vi.fn(function*() {});
 			const children = makeByTypeProvider().getChildren(undefined);
@@ -456,6 +472,21 @@ describe('DefinitionNodeProvider', () => {
 			expect(unknownNode).toBeDefined();
 			expect(mockVocabularyStub.getCollections).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
 				inScheme: null,
+				notDefinedBy: expect.any(Set),
+				includeReferenced: false,
+			}));
+		});
+
+		it('should add unknown node when there are concepts that are not displayed below a concept scheme', () => {
+			mockVocabularyStub.getOntologies = vi.fn(function*() {});
+			mockVocabularyStub.getConceptSchemes = vi.fn(function*() { yield 'urn:ex#scheme'; });
+			mockVocabularyStub.getDefinitionSources = vi.fn(function*() {});
+			mockVocabularyStub.getUnscopedConcepts = vi.fn(function*() { yield 'urn:ex#Orphan'; });
+
+			const children = makeBySourceProvider().getChildren(undefined);
+
+			expect(children!.some(c => c instanceof OntologyNode && c.uri === 'mentor:unknown')).toBe(true);
+			expect(mockVocabularyStub.getUnscopedConcepts).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
 				notDefinedBy: expect.any(Set),
 				includeReferenced: false,
 			}));

@@ -12,6 +12,7 @@ import { DefinitionTreeNode } from './definition-tree-node';
 import { ClassesNode } from './nodes/classes/classes-node';
 import { CollectionsNode } from './nodes/collections/collections-node';
 import { ConceptSchemeNode } from './nodes/concept-scheme-node';
+import { ConceptsNode } from './nodes/concepts/concepts-node';
 import { IndividualsNode } from './nodes/individuals/individuals-node';
 import { OntologyNode } from './nodes/ontology-node';
 import { PropertiesNode } from './nodes/properties/properties-node';
@@ -246,6 +247,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			result.push(this.createRootNode(IndividualsNode, this.document, 'mentor:individuals'));
 		}
 
+		// Note: Concepts that are displayed below a concept scheme are listed under that scheme,
+		// so only the remaining concepts are listed here.
+		if (any(this.vocabulary.getUnscopedConcepts(this.document.graphs))) {
+			result.push(this.createRootNode(ConceptsNode, this.document, 'mentor:concepts', { inScheme: null }));
+		}
+
 		// Note: Collections that are associated with a concept scheme are listed under that scheme,
 		// so only the remaining collections are listed here.
 		if (any(this.vocabulary.getCollections(this.document.graphs, { inScheme: null }))) {
@@ -324,7 +331,8 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			any(this.vocabulary.getClasses(this.document.graphs, options)) ||
 			any(this.vocabulary.getProperties(this.document.graphs, options)) ||
 			any(this.vocabulary.getIndividuals(this.document.graphs, undefined, options)) ||
-			// Collections in a concept scheme are shown below the scheme, all others below 'Unknown'.
+			// Concepts and collections of a concept scheme are shown below the scheme, all others below 'Unknown'.
+			any(this.vocabulary.getUnscopedConcepts(this.document.graphs, options)) ||
 			any(this.vocabulary.getCollections(this.document.graphs, { ...options, inScheme: null })) ||
 			any(this.vocabulary.getShapes(this.document.graphs, undefined, options)) ||
 			any(this.vocabulary.getRules(this.document.graphs, options)) ||

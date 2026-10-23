@@ -2,6 +2,10 @@ import * as vscode from "vscode";
 import { DefinitionTreeNode } from "../../definition-tree-node";
 import { ConceptClassNode } from "./concept-class-node";
 
+/**
+ * Node that lists the concepts of a concept scheme, or the concepts that are not displayed below
+ * any concept scheme if the `inScheme` query option is `null`.
+ */
 export class ConceptsNode extends ConceptClassNode {
 	override getContextValue(): string {
 		return 'concepts';
@@ -30,21 +34,42 @@ export class ConceptsNode extends ConceptClassNode {
 		return this.getQueryOptions().inScheme ?? this.uri;
 	}
 
-	override getDescription(): string {
+	/**
+	 * Indicates whether this node lists the concepts that are not displayed below any concept scheme.
+	 */
+	private _isUnscoped(): boolean {
+		return this.getQueryOptions().inScheme === null;
+	}
+
+	/**
+	 * Get the concepts that can be reached by expanding this node.
+	 * @returns An iterator of concept URIs.
+	 */
+	private _getConcepts(): IterableIterator<string> {
 		const graphs = this.getDocumentGraphs();
 
-		// Note: This counts the concepts of *this* concept scheme, which is exactly the set of
-		// concepts that can be reached by expanding this node.
-		this._conceptCount ??= [...this.vocabulary.getAllConceptsInScheme(graphs, this._getSchemeUri())].length;
+		if (this._isUnscoped()) {
+			return this.vocabulary.getUnscopedConcepts(graphs, this.getQueryOptions());
+		}
+
+		return this.vocabulary.getAllConceptsInScheme(graphs, this._getSchemeUri());
+	}
+
+	override getDescription(): string {
+		// Note: This counts exactly the set of concepts that can be reached by expanding this node.
+		this._conceptCount ??= [...this._getConcepts()].length;
 
 		return this._conceptCount.toString();
 	}
 
 	override *getSubClassIris(): IterableIterator<string> {
 		const graphs = this.getDocumentGraphs();
-		const scheme = this._getSchemeUri();
 
-		yield* this.vocabulary.getNarrowerConcepts(graphs, scheme, this.getQueryOptions());
+		if (this._isUnscoped()) {
+			yield* this.vocabulary.getUnscopedRootConcepts(graphs, this.getQueryOptions());
+		} else {
+			yield* this.vocabulary.getNarrowerConcepts(graphs, this._getSchemeUri(), this.getQueryOptions());
+		}
 	}
 
 	override getTooltip(): vscode.MarkdownString | undefined {
@@ -52,6 +77,11 @@ export class ConceptsNode extends ConceptClassNode {
 	}
 
 	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
+		// Note: Concepts below a concept scheme are not part of the unscoped concepts and vice versa.
+		if (this._isUnscoped() && !new Set(this._getConcepts()).has(iri)) {
+			return undefined;
+		}
+
 		const graphs = this.getDocumentGraphs();
 		const path = this.vocabulary.getConceptSchemePath(graphs, iri) ?? [];
 
