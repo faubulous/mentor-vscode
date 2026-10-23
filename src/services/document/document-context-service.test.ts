@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { DocumentTokenSource } from '@src/services/document/document-token-source';
 import { getLog } from '@src/utilities/vscode/log';
+import { __events } from '@src/utilities/mocks/vscode';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 
 vi.mock('@faubulous/mentor-rdf', () => ({
@@ -552,6 +553,124 @@ describe('DocumentContextService', () => {
 			await new Promise(resolve => setTimeout(resolve, 0));
 
 			expect(ctx.loadTriples).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('language changes (faubulous/mentor-vscode#104)', () => {
+		/**
+		 * Creates a text document stub. VS Code reports a language change by closing and reopening
+		 * the *same* document object, whose language ID is changed in between.
+		 * @param uri The document URI.
+		 * @param languageId The initial language ID.
+		 */
+		const createDocument = (uri: string, languageId: string) => ({
+			uri: vscode.Uri.parse(uri),
+			languageId,
+			getText: () => '',
+		});
+
+		/**
+		 * Simulates a change of the language of a document.
+		 * @param service The context service.
+		 * @param document The document whose language changes.
+		 * @param languageId The new language ID.
+		 */
+		const changeLanguage = async (service: DocumentContextService, document: any, languageId: string) => {
+			service.handleDocumentClosed(document);
+			document.languageId = languageId;
+
+			await service.handleTextDocumentOpened(document);
+		};
+
+		afterEach(() => {
+			(vscode.window as any).activeTextEditor = undefined;
+		});
+
+		it('loads the document of the active editor as the active context after its language changed', async () => {
+			const { service } = createService();
+			const document = createDocument('untitled:Untitled-1', 'plaintext');
+			const handleActiveEditorChanged = vi.spyOn(service, 'handleActiveEditorChanged').mockResolvedValue();
+
+			(vscode.window as any).activeTextEditor = { document };
+
+			await changeLanguage(service, document, 'turtle');
+
+			expect(handleActiveEditorChanged).toHaveBeenCalledOnce();
+		});
+
+		it('replaces the context that was created for the previous language', async () => {
+			const { service, mockStore } = createService();
+			const document = createDocument('untitled:Untitled-1', 'turtle');
+			const context = createMockContext({ uri: document.uri, graphs: ['untitled:Untitled-1'] });
+
+			service.contexts[document.uri.toString()] = context;
+			service.activeContext = context;
+
+			await changeLanguage(service, document, 'sparql');
+
+			expect(service.contexts[document.uri.toString()]).toBeUndefined();
+			expect(service.activeContext).toBeUndefined();
+			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs);
+		});
+
+		it('keeps the context when the language changes to an unsupported language', async () => {
+			const { service, mockStore } = createService();
+			const document = createDocument('file:///w/data.ttl', 'turtle');
+			const context = createMockContext({ uri: document.uri });
+
+			service.contexts[document.uri.toString()] = context;
+
+			await changeLanguage(service, document, 'plaintext');
+
+			expect(service.contexts[document.uri.toString()]).toBe(context);
+			expect(mockStore.deleteGraphs).not.toHaveBeenCalled();
+		});
+
+		it('keeps the context of a document that is opened, e.g. an indexed workspace file', async () => {
+			const { service } = createService();
+			const document = createDocument('file:///w/data.ttl', 'turtle');
+			const context = createMockContext({ uri: document.uri });
+			const handleActiveEditorChanged = vi.spyOn(service, 'handleActiveEditorChanged').mockResolvedValue();
+
+			service.contexts[document.uri.toString()] = context;
+
+			await service.handleTextDocumentOpened(document as any);
+
+			expect(service.contexts[document.uri.toString()]).toBe(context);
+			expect(handleActiveEditorChanged).not.toHaveBeenCalled();
+		});
+
+		it('does not treat reopening a document after it was closed as a language change', async () => {
+			const { service } = createService();
+			const document: any = createDocument('file:///w/data.ttl', 'turtle');
+			const context = createMockContext({ uri: document.uri });
+
+			service.contexts[document.uri.toString()] = context;
+			service.handleDocumentClosed(document);
+
+			// The document is reopened later, not within the same event delivery.
+			await Promise.resolve();
+
+			document.languageId = 'sparql';
+			await service.handleTextDocumentOpened(document);
+
+			expect(service.contexts[document.uri.toString()]).toBe(context);
+		});
+
+		it('handles the close and open events that VS Code fires for a language change', async () => {
+			__events.reset();
+
+			const { service } = createService();
+			const document: any = createDocument('untitled:Untitled-1', 'plaintext');
+			const handleActiveEditorChanged = vi.spyOn(service, 'handleActiveEditorChanged').mockResolvedValue();
+
+			(vscode.window as any).activeTextEditor = { document };
+
+			__events.fireDidCloseTextDocument(document);
+			document.languageId = 'turtle';
+			__events.fireDidOpenTextDocument(document);
+
+			await vi.waitFor(() => expect(handleActiveEditorChanged).toHaveBeenCalledOnce());
 		});
 	});
 

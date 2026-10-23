@@ -94,6 +94,12 @@ export interface IDocumentContextService {
 	handleDocumentClosed(document: vscode.TextDocument): void;
 
 	/**
+	 * Handle text document opened event, which is also fired when the language of a document changed.
+	 * @param document The opened text document.
+	 */
+	handleTextDocumentOpened(document: vscode.TextDocument): Promise<void>;
+
+	/**
 	 * Removes the contexts of documents that no longer exist and deletes their graphs
 	 * from the store. For a notebook file, the contexts of all of its cells are removed.
 	 * @param uris The URIs of the removed files.
