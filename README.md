@@ -42,13 +42,13 @@ The developer friendly IDE for RDF knowledge graphs.
 
 ## News
 
-### Version 0.6.5: Exporting Query Results
-- Query results can be exported as a Markdown table or as SPARQL Query Results JSON, next to the existing CSV export, and sent either to a new document or to the clipboard
-- Copying the output of a notebook cell now yields the results table; it previously did nothing, because the cell offered its results only in a format the built-in command could not read ([#89](https://github.com/faubulous/mentor-vscode/issues/89))
-- A new *Query → General* settings section sets where exports are sent, whether IRIs are written in full or prefixed, and the format a notebook cell offers to the copy command
-- The definition tree now lists predicates that a data document only uses, whose definitions live in another document ([#90](https://github.com/faubulous/mentor-vscode/issues/90))
-- Fixed the CSV export producing invalid output for values containing a double quote, and the Markdown export breaking a table on values containing a backslash
-- Fixed the results table only offering its graph actions on the first `GRAPH` variable of a query
+### Version 0.6.6: Workspace and SKOS Fixes
+- Files and folders that are moved, renamed or deleted outside of VS Code, e.g. by a `git checkout`, are now reflected by the workspace tree and the index ([#95](https://github.com/faubulous/mentor-vscode/issues/95))
+- The definitions tree now shows SKOS concepts and collections that are not in a concept scheme ([#96](https://github.com/faubulous/mentor-vscode/issues/96), [#101](https://github.com/faubulous/mentor-vscode/issues/101)), and no longer lists collections as concepts of their scheme
+- Fixed the definitions tree not showing a document after its language was changed, e.g. an unsaved file switched to Turtle ([#104](https://github.com/faubulous/mentor-vscode/issues/104))
+- Fixed the highlighting of prefixed names with hyphens, colons, escaped or non-ASCII characters ([#97](https://github.com/faubulous/mentor-vscode/issues/97), [#106](https://github.com/faubulous/mentor-vscode/issues/106), [#107](https://github.com/faubulous/mentor-vscode/issues/107), [#108](https://github.com/faubulous/mentor-vscode/issues/108))
+- Fixed prefix names that start with a keyword, such as `prefix:` or `true:`, failing to parse
+- Updated mentor-rdf to 2.1.8, mentor-rdf-parsers to 2.1.1 and mentor-rdf-serializers to 1.9.2
 
 ## Installation
 
