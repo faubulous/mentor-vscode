@@ -168,7 +168,7 @@ function makeProvider(queryContext: SparqlDocument, ontologyContext: TurtleDocum
         getProperties: () => ONTOLOGY_PROPERTIES,
         // Everything in the generated ontology except the properties and
         // individuals is declared as a class.
-        getClasses: () => Object.keys(ontologyContext.subjects)
+        getClasses: () => [...ontologyContext.subjects.keys()]
             .filter(iri => !ONTOLOGY_PROPERTIES.includes(iri) && !ONTOLOGY_INDIVIDUALS.includes(iri)),
         // 'name' has a literal range → data property; 'hasPart' has none → object property.
         getRange: (_graphs: any, iri: string) => iri === `${NEXUS}name` ? 'http://www.w3.org/2001/XMLSchema#string' : undefined,
@@ -186,8 +186,8 @@ describe('SparqlCompletionItemProvider (integration, real lexer)', () => {
     it('indexes the ontology subjects via the real tokenizer', () => {
         const ontology = makeOntologyContext();
 
-        expect(Object.keys(ontology.subjects)).toContain(`${NEXUS}SparePartStorageFacility`);
-        expect(Object.keys(ontology.subjects).length).toBeGreaterThan(15);
+        expect([...ontology.subjects.keys()]).toContain(`${NEXUS}SparePartStorageFacility`);
+        expect([...ontology.subjects.keys()].length).toBeGreaterThan(15);
     });
 
     it('suggests a class whose local part is partially typed in a type assertion', async () => {

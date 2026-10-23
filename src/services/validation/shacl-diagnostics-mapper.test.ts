@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { describe, it, expect, vi } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
 import { ShaclDiagnosticsMapper } from '@src/services/validation/shacl-diagnostics-mapper';
 import type { ShaclValidationResult, ShaclValidationResultEntry } from '@src/services/validation/shacl-validation-service';
 import type { QuadContext } from '@faubulous/mentor-rdf-parsers';
@@ -23,10 +24,10 @@ function makeContext(overrides: Partial<{
 	references: Record<string, any[]>;
 }> = {}): any {
 	return {
-		subjects: {},
-		references: {},
 		predicates: { label: [] },
 		...overrides,
+		subjects: createRangeIndex(overrides.subjects ?? {}),
+		references: createRangeIndex(overrides.references ?? {}),
 	};
 }
 

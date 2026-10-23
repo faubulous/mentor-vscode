@@ -7,6 +7,7 @@ import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
 import { DocumentParseResult, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
+import { RangeIndex } from '@src/services/document/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import {
 	getIriFromIriReference,
@@ -275,11 +276,11 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 */
 	setTokens(tokens: IToken[]): void {
 		this.namespaces = {};
-		this.namespaceDefinitions = {};
-		this.subjects = {};
-		this.references = {};
-		this.typeAssertions = {};
-		this.typeDefinitions = {};
+		this.namespaceDefinitions = new RangeIndex();
+		this.subjects = new RangeIndex();
+		this.references = new RangeIndex();
+		this.typeAssertions = new RangeIndex();
+		this.typeDefinitions = new RangeIndex();
 
 		this._tokens = tokens;
 
@@ -293,10 +294,8 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 					// Only set the namespace if it is preceeded by a prefix keyword.
 					if (ns) {
-						const r = getRangeFromToken(t);
-
 						this.namespaces[ns.prefix] = ns.uri;
-						this.namespaceDefinitions[ns.uri] = [r];
+						this.namespaceDefinitions.set(ns.uri, getRangeFromToken(t));
 					}
 					break;
 				}
@@ -392,24 +391,12 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		}
 
 		if (isSubject) {
-			const range = getRangeFromToken(token);
-
-			if (!this.subjects[iriOrBlankId]) {
-				this.subjects[iriOrBlankId] = [];
-			}
-
-			this.subjects[iriOrBlankId].push(range);
+			this.subjects.add(iriOrBlankId, getRangeFromToken(token));
 		}
 	}
 
 	private _handleResourceReference(tokens: IToken[], token: IToken, iriOrBlankId: string) {
-		if (!this.references[iriOrBlankId]) {
-			this.references[iriOrBlankId] = [];
-		}
-
-		const range = getRangeFromToken(token);
-
-		this.references[iriOrBlankId].push(range);
+		this.references.add(iriOrBlankId, getRangeFromToken(token));
 	}
 
 	private _handleTypeAssertion(tokens: IToken[], token: IToken, uri: string, index: number) {
@@ -422,9 +409,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 
 			if (!subjectUri) return;
 
-			const range = getRangeFromToken(subjectToken);
-
-			this.typeAssertions[subjectUri] = [range];
+			this.typeAssertions.set(subjectUri, getRangeFromToken(subjectToken));
 		}
 	}
 
@@ -456,9 +441,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				case _SKOS:
 				case _SKOS_XL:
 				case _SH: {
-					const range = getRangeFromToken(subjectToken);
-
-					this.typeDefinitions[subjectUri] = [range];
+					this.typeDefinitions.set(subjectUri, getRangeFromToken(subjectToken));
 				}
 			}
 		}
