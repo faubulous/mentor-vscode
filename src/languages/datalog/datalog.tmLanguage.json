@@ -49,7 +49,7 @@
                     "patterns": [
                         {
                             "name": "storage.modifier storage.modifier.prefix.datalog",
-                            "match": "([a-zA-Z0-9_]*)?:"
+                            "match": "([a-zA-Z](?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?)?:"
                         },
                         {
                             "include": "#iri"
@@ -132,6 +132,10 @@
                     "include": "#iri"
                 },
                 {
+                    "name": "keyword.operator.implication.datalog",
+                    "match": ":-|<-"
+                },
+                {
                     "include": "#prefixed_name"
                 },
                 {
@@ -148,10 +152,6 @@
                 },
                 {
                     "include": "#builtin_types"
-                },
-                {
-                    "name": "keyword.operator.implication.datalog",
-                    "match": ":-|<-"
                 },
                 {
                     "name": "punctuation.terminator.rule.datalog",
@@ -196,7 +196,7 @@
             "match": "<[^>]*>"
         },
         "prefixed_name": {
-            "match": "(([a-zA-Z0-9_]*)?(:))([a-zA-Z0-9_\\.-]*)?",
+            "match": "(([a-zA-Z](?:[a-zA-Z0-9_.-]*[a-zA-Z0-9_-])?)?(:))([a-zA-Z0-9_%](?:[a-zA-Z0-9_.%-]*[a-zA-Z0-9_%-])?)?",
             "captures": {
                 "1": {
                     "name": "storage.modifier storage.modifier.prefix.datalog"
