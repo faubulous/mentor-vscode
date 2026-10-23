@@ -11,6 +11,8 @@ export interface MentorE2eState {
 	workspaceFiles: string[];
 	/** The URIs of the documents that have a loaded context in the index. */
 	documentContexts: string[];
+	/** The heap used by the extension host in megabytes, if the process API is available. */
+	heapUsedMb?: number;
 }
 
 /**
