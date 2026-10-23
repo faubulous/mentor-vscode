@@ -153,6 +153,7 @@ export function createMockDocumentContextService(overrides?: Partial<IDocumentCo
 		handleActiveNotebookEditorChanged: async () => { },
 		handleTextDocumentChanged: async () => { },
 		handleDocumentClosed: () => { },
+		handleTextDocumentOpened: async () => { },
 		removeDocuments: () => { },
 		...overrides,
 	};
