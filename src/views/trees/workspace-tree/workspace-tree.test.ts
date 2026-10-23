@@ -26,9 +26,9 @@ vi.mock('./workspace-node-provider', () => ({
 
 vi.mock('tsyringe', () => ({
 	container: {
-		resolve: vi.fn((token: string) => {
-			if (token === 'ExtensionContext') return { subscriptions: mockSubscriptions };
-			if (token === 'WorkspaceFileService') return mockWorkspaceFileService;
+		resolve: vi.fn((token: ServiceToken) => {
+			if (token === ServiceToken.ExtensionContext) return { subscriptions: mockSubscriptions };
+			if (token === ServiceToken.WorkspaceFileService) return mockWorkspaceFileService;
 			return {};
 		}),
 	},
@@ -37,6 +37,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
+import { ServiceToken } from '@src/services/tokens';
 import { WorkspaceTree } from '@src/views/trees/workspace-tree/workspace-tree';
 
 const mockSubscriptions: any[] = [];

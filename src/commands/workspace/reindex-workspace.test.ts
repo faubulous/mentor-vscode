@@ -12,8 +12,8 @@ let mockLoadShapeGraphs: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown
 
 vi.mock('tsyringe', () => ({
 	container: {
-		resolve: vi.fn((token: string) => {
-			if (token === 'Store') {
+		resolve: vi.fn((token: ServiceToken) => {
+			if (token === ServiceToken.Store) {
 				return {
 					getGraphs: (...args: any[]) => mockStoreGetGraphs(...args),
 					deleteGraphs: (...args: any[]) => mockStoreDeleteGraphs(...args),
@@ -21,15 +21,15 @@ vi.mock('tsyringe', () => ({
 				};
 			}
 
-			if (token === 'WorkspaceIndexerService') {
+			if (token === ServiceToken.WorkspaceIndexerService) {
 				return { indexWorkspace: (...args: any[]) => mockIndexWorkspace(...args) };
 			}
 
-			if (token === 'WorkspaceFileService') {
+			if (token === ServiceToken.WorkspaceFileService) {
 				return { discoverFiles: (...args: any[]) => mockDiscoverFiles(...args) };
 			}
 
-			if (token === 'ShapeGraphService') {
+			if (token === ServiceToken.ShapeGraphService) {
 				return { loadAll: (...args: any[]) => mockLoadShapeGraphs(...args) };
 			}
 
@@ -41,6 +41,7 @@ vi.mock('tsyringe', () => ({
 	singleton: () => (t: any) => t,
 }));
 
+import { ServiceToken } from '@src/services/tokens';
 import { reindexWorkspace } from '@src/commands/workspace/reindex-workspace';
 
 beforeEach(() => {
