@@ -35,6 +35,7 @@ import { ShapeGraphService } from '@src/services/validation/shape-graph-service'
 import { ShapeReferenceRegistryService } from '@src/services/validation/shape-reference-registry-service';
 import { SettingsFileStore } from './core/settings-file-store';
 import { ReferenceUpdateService } from '@src/services/core/reference-update-service';
+import { WorkspaceFileOperationService } from '@src/services/core/workspace-file-operation-service';
 import { SettingsMigrationService } from './core/settings-migration-service';
 import { DocumentQueryTemplateMigration, IndexExcludeFilesMigration, LegacyTemplateFormatMigration } from './core/migrations/';
 
@@ -242,6 +243,9 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 	// Register the reference update service for cross-workspace URI rename support.
 	const referenceUpdateService = new ReferenceUpdateService(documentContextService);
 	container.registerInstance(ServiceToken.ReferenceUpdateService, referenceUpdateService);
+
+	// Keep per-document settings and workspace: URI references in sync with renamed and deleted files.
+	context.subscriptions.push(new WorkspaceFileOperationService(referenceUpdateService, documentConnectionService, shaclValidationService));
 
 	// Register the settings migration service. New migrations are added to this list only.
 	const settingsMigrationService = new SettingsMigrationService([

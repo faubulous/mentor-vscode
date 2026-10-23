@@ -17,7 +17,6 @@ import { ShaclValidationService } from './services/validation/shacl-validation-s
 import { ShapeGraphService } from './services/validation/shape-graph-service';
 import { getConfig } from './utilities/vscode/config';
 import { getLog } from './utilities/vscode/log';
-import { handleWorkspaceRenames } from './services/core/workspace-rename-handler';
 import { NotebookSerializer } from './services/notebook/notebook-serializer';
 import * as languages from './languages';
 import * as commands from './commands';
@@ -54,7 +53,6 @@ export async function activateExtension(context: vscode.ExtensionContext) {
 	registerProviders(context);
 	registerCommands(context);
 	registerNotebookSerializers(context);
-	registerRenameHandlers(context);
 	registerNotebookInferenceContext(context);
 	registerConfigurationListeners(context);
 
@@ -156,23 +154,6 @@ function registerCommands(context: vscode.ExtensionContext) {
 	for (const command of Object.values(commands)) {
 		context.subscriptions.push(vscode.commands.registerCommand(command.id, command.handler));
 	}
-}
-
-/**
- * Registers rename and delete handlers that migrate per-document settings when files or
- * folders are renamed in the workspace, and detect deletions that affect SHACL validation
- * profiles.
- */
-function registerRenameHandlers(context: vscode.ExtensionContext) {
-	context.subscriptions.push(
-		vscode.workspace.onDidRenameFiles(e => handleWorkspaceRenames(e.files)),
-		vscode.workspace.onDidDeleteFiles(async (e) => {
-			// Prune SHACL assignments for deleted documents and warn about profiles
-			// that still reference deleted shape files.
-			const shaclService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
-			await shaclService.settingsSync.handleFileDeletes(e.files);
-		})
-	);
 }
 
 
