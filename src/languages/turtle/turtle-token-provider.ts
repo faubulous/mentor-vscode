@@ -61,7 +61,7 @@ export class TurtleTokenProvider {
 		this._codeActionsProvider = new TurtleCodeActionsProvider(contextService);
 		this._codelensProvider = new TurtleUsageCodeLensProvider(contextService, workspaceIndexer, vocabulary);
 		this._completionProvider = new TurtleCompletionItemProvider(contextService, vocabulary);
-		this._definitionProvider = new ResourceDefinitionProvider(contextService);
+		this._definitionProvider = new ResourceDefinitionProvider(contextService, workspaceIndexer);
 		this._notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider(contextService);
 		this._workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider(contextService);
 		this._prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`, contextService, prefixLookup);
