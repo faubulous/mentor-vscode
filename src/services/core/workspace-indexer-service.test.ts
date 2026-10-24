@@ -888,7 +888,7 @@ describe('token release after indexing', () => {
 	 * real context service does, and returns the context with its release spy.
 	 */
 	async function indexTokenizedFile(uri: vscode.Uri) {
-		const context = { providesTokens: true, releaseTokens: vi.fn() };
+		const context = { isTokenized: () => true, releaseTokens: vi.fn() };
 
 		mockWorkspaceFileService.files = [uri];
 		mockLoadDocument = vi.fn(async (loadedUri: vscode.Uri) => {

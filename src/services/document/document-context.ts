@@ -8,7 +8,7 @@ import { ISettingsService } from '@src/services/core';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
 import { getPredicatesConfig } from '@src/utilities/vscode/config';
-import { IDocumentContext } from './document-context.interface';
+import { IDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
 import { RangeIndex } from './range-index';
 
 /**
@@ -136,7 +136,7 @@ export abstract class DocumentContext implements IDocumentContext {
 
 	abstract get isParsed(): boolean;
 
-	abstract get providesTokens(): boolean;
+	abstract isTokenized(): this is ITokenizedDocumentContext;
 
 	get isTemporary(): boolean {
 		return this.uri.scheme == 'git' || this.uri.scheme == 'untitled';
