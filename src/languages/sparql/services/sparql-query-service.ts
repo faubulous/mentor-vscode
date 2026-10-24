@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { RdfSyntax, RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
-import { QueryEngine } from "@comunica/query-sparql";
+import type { QueryEngine } from "@comunica/query-sparql";
 import { AsyncIterator } from 'asynciterator';
 import { Bindings, Quad } from "@rdfjs/types";
 import { AuthCredential } from '@src/services/core/credential';
@@ -51,13 +51,14 @@ export class SparqlQueryService {
 	private readonly _cancellationTokens = new Map<string, vscode.CancellationTokenSource>();
 
 	/**
-	 * The shared Comunica query engine, created lazily on the first query.
-	 * Constructing an engine builds its entire actor/mediator pipeline —
-	 * expensive, synchronous CPU on the shared extension host — while the engine
-	 * itself holds no per-query state (sources and options are passed per call),
-	 * so a single instance serves all queries.
+	 * The shared Comunica query engine, created lazily on the first query (see
+	 * {@link _getQueryEngine}). Constructing an engine builds its entire
+	 * actor/mediator pipeline — expensive, synchronous CPU on the shared extension
+	 * host — while the engine itself holds no per-query state (sources and options
+	 * are passed per call), so a single instance serves all queries. The promise is
+	 * cached so concurrent first queries share one module load and one engine.
 	 */
-	private _queryEngine: QueryEngine | undefined;
+	private _queryEngine: Promise<QueryEngine> | undefined;
 
 	private readonly _onDidHistoryChange = new vscode.EventEmitter<void>();
 
@@ -463,9 +464,9 @@ export class SparqlQueryService {
 			options.timeout = timeout;
 		}
 
-		this._queryEngine ??= new QueryEngine();
+		const queryEngine = await this._getQueryEngine();
 
-		const preparedQuery = await this._queryEngine.query(query, options);
+		const preparedQuery = await queryEngine.query(query, options);
 
 		if (preparedQuery.resultType === 'boolean') {
 			const value = token
@@ -484,6 +485,27 @@ export class SparqlQueryService {
 		}
 
 		return { type: 'none' };
+	}
+
+	/**
+	 * Returns the shared Comunica query engine, loading the Comunica module on first
+	 * use. The module is imported dynamically so that it is not evaluated when the
+	 * extension activates: it makes up about half of the extension bundle, and
+	 * evaluating it costs noticeable time and heap even in sessions that never run a
+	 * query. The bundler inlines the module but defers its initialization until this
+	 * import runs. A failed load is not cached, so the next query retries.
+	 * @returns A promise that resolves to the shared query engine.
+	 */
+	private _getQueryEngine(): Promise<QueryEngine> {
+		this._queryEngine ??= import('@comunica/query-sparql')
+			.then(({ QueryEngine }) => new QueryEngine())
+			.catch(error => {
+				this._queryEngine = undefined;
+
+				throw error;
+			});
+
+		return this._queryEngine;
 	}
 
 	_getFetchHandler(
