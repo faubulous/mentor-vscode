@@ -29,6 +29,13 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 	private readonly _referenceProvider: ResourceReferenceProvider;
 
 	/**
+	 * The IRIs of the usage lenses that are not resolved yet. Counting the usages of an IRI
+	 * scans every indexed document, so it is deferred to {@link resolveCodeLens}, which VS Code
+	 * only calls for the lenses in the visible part of an editor.
+	 */
+	private readonly _usageLensIris = new WeakMap<vscode.CodeLens, string>();
+
+	/**
 	 * Coalesces refresh fires: every fire makes VS Code re-request the lenses of
 	 * all visible documents, and computing usage counts scans every indexed context.
 	 */
@@ -128,23 +135,18 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 			const shapeCount = shapeUris.length;
 			const shapeTitle = `${shapeCount} shape${shapeCount === 1 ? '' : 's'}`;
 
-			// The count depends only on the IRI, and counting scans every indexed
-			// document — compute it once per subject, not once per occurrence, and
-			// count without materializing the reference locations.
-			const n = Math.max(this._referenceProvider.countReferencesForIri(iri) - 1, 0);
-			const usageTitle = `${n} usage${n === 1 ? '' : 's'}`;
-
 			for (const range of context.subjects.getRanges(iri)) {
 				const codeLensRange = new vscode.Range(
 					new vscode.Position(range.start.line, range.start.character),
 					new vscode.Position(range.end.line, range.end.character)
 				);
 
-				result.push(new vscode.CodeLens(codeLensRange, {
-					command: 'mentor.command.findReferences',
-					title: usageTitle,
-					arguments: [iri]
-				}));
+				// The usage count is filled in by resolveCodeLens.
+				const usageLens = new vscode.CodeLens(codeLensRange);
+
+				this._usageLensIris.set(usageLens, iri);
+
+				result.push(usageLens);
 
 				if (shapeCount > 0) {
 					result.push(new vscode.CodeLens(codeLensRange, {
@@ -157,5 +159,29 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 		}
 
 		return result;
+	}
+
+	/**
+	 * Fills in the usage count of a usage lens. Counting scans every indexed document, so it
+	 * runs only for the lenses VS Code shows, not for every subject of the document.
+	 * @param codeLens A lens returned by {@link provideCodeLenses}.
+	 * @returns The lens with its command.
+	 */
+	resolveCodeLens(codeLens: vscode.CodeLens): vscode.CodeLens {
+		const iri = this._usageLensIris.get(codeLens);
+
+		if (iri === undefined) {
+			return codeLens;
+		}
+
+		const usageCount = Math.max(this._referenceProvider.countReferencesForIri(iri) - 1, 0);
+
+		codeLens.command = {
+			command: 'mentor.command.findReferences',
+			title: `${usageCount} usage${usageCount === 1 ? '' : 's'}`,
+			arguments: [iri]
+		};
+
+		return codeLens;
 	}
 }

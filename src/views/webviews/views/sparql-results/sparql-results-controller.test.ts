@@ -309,3 +309,45 @@ describe('SparqlResultsController connection handlers', () => {
 		);
 	});
 });
+
+describe('SparqlResultsController GetSparqlQueryResult handler', () => {
+	/**
+	 * Sends a result request for the given query id and returns the posted reply.
+	 */
+	async function requestQueryResult(queryId: string) {
+		const controller = makeController();
+
+		await (controller as any).onDidReceiveMessage({ id: 'GetSparqlQueryResult', queryId });
+
+		expect((controller as any).postMessage).toHaveBeenCalledTimes(1);
+
+		return (controller as any).postMessage.mock.calls[0][0];
+	}
+
+	it('replies with the cached execution state of a known query, without the raw response', async () => {
+		const result = { type: 'bindings', columns: ['s'], rows: [] };
+
+		history = [
+			{ id: 'q2', documentIri: 'file:///b.sparql', startTime: 2, endTime: 3 },
+			{ id: 'q1', documentIri: 'file:///a.sparql', startTime: 0, endTime: 1, result, rawResponse: { body: '{}' } },
+		];
+
+		const reply = await requestQueryResult('q1');
+
+		expect(reply.id).toBe('PostSparqlQueryResult');
+		expect(reply.queryId).toBe('q1');
+		expect(reply.queryState).toEqual(expect.objectContaining({ id: 'q1', documentIri: 'file:///a.sparql', result }));
+		expect(reply.queryState.rawResponse).toBeUndefined();
+
+		// The history entry itself keeps its raw response for the "view raw response" command.
+		expect(history[1].rawResponse).toEqual({ body: '{}' });
+	});
+
+	it('replies without a state when the query is no longer in the history', async () => {
+		history = [{ id: 'q1', documentIri: 'file:///a.sparql', startTime: 0 }];
+
+		const reply = await requestQueryResult('unknown');
+
+		expect(reply).toEqual({ id: 'PostSparqlQueryResult', queryId: 'unknown', queryState: undefined });
+	});
+});

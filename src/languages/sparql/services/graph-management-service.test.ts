@@ -627,3 +627,37 @@ describe('GraphManagementService.ensureGraphsLoadedForConnection — error retry
         expect(contacted).toEqual([]);
     });
 });
+
+describe('GraphManagementService workspace graph notifications', () => {
+    it('does not list the workspace graphs again while the store is unchanged', async () => {
+        vi.useFakeTimers();
+
+        try {
+            const workspaceStore = { version: 1, getGraphs: vi.fn(() => ['urn:a']) };
+            const service = new GraphManagementService(makeContext({}) as any, { getConnections: () => [] } as any, {} as any, {} as any, workspaceStore as any);
+            const fired: string[] = [];
+
+            service.onDidChangeGraphs(connectionId => fired.push(connectionId));
+
+            service.notifyWorkspaceGraphsChanged();
+            await vi.advanceTimersByTimeAsync(400);
+
+            service.notifyWorkspaceGraphsChanged();
+            await vi.advanceTimersByTimeAsync(400);
+
+            expect(workspaceStore.getGraphs).toHaveBeenCalledTimes(1);
+            expect(fired).toEqual(['workspace']);
+
+            workspaceStore.version = 2;
+            workspaceStore.getGraphs.mockReturnValue(['urn:a', 'urn:b']);
+
+            service.notifyWorkspaceGraphsChanged();
+            await vi.advanceTimersByTimeAsync(400);
+
+            expect(workspaceStore.getGraphs).toHaveBeenCalledTimes(2);
+            expect(fired).toEqual(['workspace', 'workspace']);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+});

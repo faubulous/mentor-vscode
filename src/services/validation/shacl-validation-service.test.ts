@@ -1071,3 +1071,82 @@ describe('ShaclValidationService – quad contexts of indexed files', () => {
 		expect(await (service as any)._getQuadContexts(uri, document)).toBeUndefined();
 	});
 });
+
+describe('ShaclValidationService – fresh results', () => {
+	const shapes = ['workspace:///shapes/core.ttl'];
+	const dataGraph = 'file:///w/data.ttl';
+
+	/**
+	 * Creates a validation service whose data and shape graphs have versions in the store,
+	 * and returns it with the document context and a probe of its freshness check.
+	 */
+	function setup() {
+		const harness = createValidationService({ [shapes[0]]: 1, [dataGraph]: 1 });
+		const context = (harness.service as any)._contextService.contexts[harness.documentUri.toString()];
+
+		context.uri = harness.documentUri;
+		const isFresh = (shapeGraphUris = shapes) => (harness.service as any)._isLastResultFresh(context, shapeGraphUris) as boolean;
+
+		return { ...harness, context, isFresh };
+	}
+
+	it('treats the last result as fresh until the data or the shapes change', async () => {
+		const { service, documentUri, graphVersions, isFresh } = setup();
+
+		expect(isFresh()).toBe(false);
+
+		await service.validateDocument(documentUri, shapes);
+
+		expect(isFresh()).toBe(true);
+		expect(isFresh([...shapes, 'workspace:///shapes/other.ttl'])).toBe(false);
+
+		graphVersions[dataGraph] = 2;
+
+		expect(isFresh()).toBe(false);
+	});
+
+	it('treats the last result as stale when a shape graph changes', async () => {
+		const { service, documentUri, graphVersions, isFresh } = setup();
+
+		await service.validateDocument(documentUri, shapes);
+
+		graphVersions[shapes[0]] = 2;
+
+		expect(isFresh()).toBe(false);
+	});
+
+	it('skips the automatic validation of a document whose result is fresh', async () => {
+		const { service, documentUri, graphVersions, context } = setup();
+
+		(vscode.workspace as any).getConfiguration = vi.fn(() => ({
+			get: (key: string, defaultValue?: any) => key === 'enabled' ? true : defaultValue,
+			inspect: () => ({}),
+			update: async () => { },
+		}));
+		vi.spyOn(service, 'getOnChangeShapeGraphs').mockReturnValue(shapes);
+		vi.spyOn(service as any, '_hasSyntaxErrors').mockReturnValue(false);
+
+		await service.validateDocument(documentUri, shapes);
+
+		const validateAndPublish = vi.spyOn(service as any, '_validateAndPublish');
+
+		await (service as any)._autoValidateOnChange(context);
+
+		expect(validateAndPublish).not.toHaveBeenCalled();
+
+		graphVersions[dataGraph] = 2;
+
+		await (service as any)._autoValidateOnChange(context);
+
+		expect(validateAndPublish).toHaveBeenCalledTimes(1);
+	});
+
+	it('does not compute the quad contexts of a result without issues', async () => {
+		const { service, documentUri } = setup();
+		const getQuadContexts = vi.spyOn(service as any, '_getQuadContexts');
+
+		await service.validateDocument(documentUri, shapes);
+
+		expect(getQuadContexts).not.toHaveBeenCalled();
+	});
+});

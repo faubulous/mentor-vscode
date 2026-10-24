@@ -826,3 +826,30 @@ describe('TurtleDocument language tag statistics', () => {
         expect(doc.primaryLanguage).toBeUndefined();
     });
 });
+
+describe('TurtleDocument.getQuadContexts', () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        storeControl.shouldThrowLoad = false;
+    });
+
+    it('reads the quad contexts of a TriG document with its own grammar', () => {
+        const doc = createTurtleDocument('file:///test.trig', RdfSyntax.TriG, { store: makeStore() });
+
+        doc.parse('@prefix ex: <http://example.org/> .\nex:g { ex:a ex:b ex:c . }');
+
+        const quadContexts = doc.getQuadContexts();
+
+        expect(quadContexts).toHaveLength(1);
+        expect(quadContexts[0].subject.value).toBe('http://example.org/a');
+        expect(quadContexts[0].objectToken.image).toBe('ex:c');
+    });
+
+    it('reads the quad contexts of a Turtle document', () => {
+        const doc = makeDoc();
+
+        doc.parse('@prefix ex: <http://example.org/> .\nex:a ex:b ex:c ; ex:d ex:e .');
+
+        expect(doc.getQuadContexts().map(q => q.predicate.value)).toEqual(['http://example.org/b', 'http://example.org/d']);
+    });
+});
