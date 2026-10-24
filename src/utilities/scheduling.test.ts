@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { createYieldBudget } from '@src/utilities/scheduling';
+import { createEventLoopYielder } from '@src/utilities/scheduling';
 
 /**
- * The yield budget is the cooperative-scheduling primitive behind the indexer,
+ * The event loop yielder is the cooperative-scheduling primitive behind the indexer,
  * notebook and validation loops: it must never yield while the wall-clock
  * budget lasts (yields cost a macrotask each) and must always yield once it is
  * exhausted (otherwise a CPU-bound loop blocks the extension host).
  */
-describe('createYieldBudget', () => {
+describe('createEventLoopYielder', () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
 	});
@@ -21,10 +21,10 @@ describe('createYieldBudget', () => {
 		vi.spyOn(Date, 'now').mockImplementation(() => now);
 		const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
 
-		const budget = createYieldBudget(50);
+		const eventLoop = createEventLoopYielder(50);
 
 		now += 10;
-		await budget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		expect(countYields(timeoutSpy)).toBe(0);
 	});
@@ -34,16 +34,16 @@ describe('createYieldBudget', () => {
 		vi.spyOn(Date, 'now').mockImplementation(() => now);
 		const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
 
-		const budget = createYieldBudget(50);
+		const eventLoop = createEventLoopYielder(50);
 
 		now += 51;
-		await budget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		expect(countYields(timeoutSpy)).toBe(1);
 
 		// The yield reset the budget: the next call within it must not yield again.
 		now += 10;
-		await budget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		expect(countYields(timeoutSpy)).toBe(1);
 	});
@@ -53,11 +53,11 @@ describe('createYieldBudget', () => {
 		vi.spyOn(Date, 'now').mockImplementation(() => now);
 		const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
 
-		const budget = createYieldBudget(50);
+		const eventLoop = createEventLoopYielder(50);
 
 		for (let i = 0; i < 10; i++) {
 			now += 60;
-			await budget.maybeYield();
+			await eventLoop.yieldIfBusy();
 		}
 
 		expect(countYields(timeoutSpy)).toBe(10);
@@ -68,16 +68,16 @@ describe('createYieldBudget', () => {
 		vi.spyOn(Date, 'now').mockImplementation(() => now);
 		const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
 
-		const budget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		// Exactly at the budget boundary: not yet exceeded.
 		now += 50;
-		await budget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		expect(countYields(timeoutSpy)).toBe(0);
 
 		now += 1;
-		await budget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		expect(countYields(timeoutSpy)).toBe(1);
 	});

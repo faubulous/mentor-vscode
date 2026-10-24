@@ -7,7 +7,7 @@ import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { getConfig } from '@src/utilities/vscode/config';
-import { createYieldBudget } from '@src/utilities/scheduling';
+import { createEventLoopYielder } from '@src/utilities/scheduling';
 import { getNamespaceDefinition, PrefixMap } from '@src/utilities';
 import { createPositionMapper, PositionMapper } from '@src/utilities/position';
 import { LintingContext, LintingProvider } from '@src/providers/linting';
@@ -131,12 +131,12 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 
 		// Validation is CPU-bound; yield between files so a workspace-wide pass
 		// does not block the extension host.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		for (let i = 0; i < uris.length; i++) {
 			const uri = uris[i];
 
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
 
 			onProgress?.(i + 1, uris.length);
 

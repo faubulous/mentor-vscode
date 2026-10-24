@@ -555,7 +555,7 @@ describe('ShaclValidationService batch cooperative behaviour', () => {
 	it('yields a macrotask to the event loop once the time budget is exceeded', async () => {
 		const { service } = createBatchService({ 'file:///w/a.ttl': 10, 'file:///w/b.ttl': 10, 'file:///w/c.ttl': 10 });
 
-		// The shared yield budget schedules a zero-delay macrotask when the
+		// The shared event loop yielder schedules a zero-delay macrotask when the
 		// wall-clock budget is exceeded; observe it through setTimeout.
 		const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
 

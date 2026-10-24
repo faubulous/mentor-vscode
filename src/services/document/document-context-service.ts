@@ -6,7 +6,7 @@ import { IDocumentTokenSource, TokenDelivery } from '@src/services/document/docu
 import { getMaxCellSlugNumber } from '@src/services/notebook/notebook-cell-slugs';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { getConfig } from '@src/utilities/vscode/config';
-import { createYieldBudget } from '@src/utilities/scheduling';
+import { createEventLoopYielder } from '@src/utilities/scheduling';
 import { isTemplate } from 'triplate';
 import { getLog } from '@src/utilities/vscode/log';
 import { getErrorMessage } from '@src/utilities/error';
@@ -176,10 +176,10 @@ export class DocumentContextService {
 
 		// Loading and inference each take seconds for very large documents; give the
 		// event loop a turn in between when a phase used up the budget.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		await context.loadTriples(doc.getText());
-		await yieldBudget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		// Verify the context wasn't replaced while yielding.
 		if (this.contexts[uri] !== context) return;
@@ -335,11 +335,11 @@ export class DocumentContextService {
 
 		// Loading and inference each take seconds for very large documents; give the
 		// event loop a turn in between when a phase used up the budget.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		// Tokens available, load triples into store.
 		await context.loadTriples(content);
-		await yieldBudget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		// Check if this load was superseded after loading triples.
 		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
@@ -424,19 +424,19 @@ export class DocumentContextService {
 
 		// Lexing, parsing, loading and inference each take up to seconds for very large
 		// files; give the event loop a turn between them when a phase used up the budget.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		// Parse the content in-process. This sets the context's tokens/parsed data
 		// exactly as a token-source delivery would, but without a text document.
 		context.parse(content);
-		await yieldBudget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		if (!this._tokenSource.isCurrentLoad(key, generation)) {
 			return;
 		}
 
 		await context.loadTriples(content);
-		await yieldBudget.maybeYield();
+		await eventLoop.yieldIfBusy();
 
 		if (!this._tokenSource.isCurrentLoad(key, generation)) {
 			return;
@@ -625,12 +625,12 @@ export class DocumentContextService {
 
 		// Each cell load pays a full parse, triple load and inference pass;
 		// yield between cells so a large notebook does not block the extension host.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		// Load all RDF cells in the notebook to ensure their graphs are created.
 		for (const cell of cells) {
 			if (this._documentFactory.isTripleSourceLanguage(cell.document.languageId)) {
-				await yieldBudget.maybeYield();
+				await eventLoop.yieldIfBusy();
 
 				const slug = cell.metadata?.slug as string | undefined;
 
@@ -647,14 +647,14 @@ export class DocumentContextService {
 	 * @param notebook The opened notebook document.
 	 */
 	async handleNotebookDocumentOpened(notebook: vscode.NotebookDocument): Promise<void> {
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		for (const cell of notebook.getCells()) {
 			if (!this._documentFactory.supportedLanguages.has(cell.document.languageId)) {
 				continue;
 			}
 
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
 
 			const slug = cell.metadata?.slug as string | undefined;
 
