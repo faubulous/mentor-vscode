@@ -45,7 +45,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 * The tokens of the last {@link tokenizeDocument} call and the document version they
 	 * were produced from, shared by the providers that run on the same keystroke.
 	 */
-	private _versionTokens: { version: number; tokens: IToken[] } | undefined;
+	private _tokenizeResult: { version: number; tokens: IToken[] } | undefined;
 
 	constructor(uri: vscode.Uri, syntax: RdfSyntax, store: Store, vocabulary: VocabularyRepository, settings: ISettingsService) {
 		super(uri, store, vocabulary, settings);
@@ -95,11 +95,11 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	tokenizeDocument(document: vscode.TextDocument): IToken[] {
-		if (this._versionTokens?.version !== document.version) {
-			this._versionTokens = { version: document.version, tokens: this.tokenize(document.getText()) };
+		if (this._tokenizeResult?.version !== document.version) {
+			this._tokenizeResult = { version: document.version, tokens: this.tokenize(document.getText()) };
 		}
 
-		return this._versionTokens.tokens;
+		return this._tokenizeResult.tokens;
 	}
 
 	parse(text: string): IToken[] {
@@ -202,7 +202,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	releaseTokens(): void {
 		this._tokens = [];
 		this._lastParse = undefined;
-		this._versionTokens = undefined;
+		this._tokenizeResult = undefined;
 	}
 
 	/**
