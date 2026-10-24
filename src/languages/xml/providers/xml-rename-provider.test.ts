@@ -572,8 +572,8 @@ describe('XmlRenameProvider across files', () => {
      * local name `Example` is under the cursor.
      */
     function setup() {
-        const workspaceRenameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
-        const provider = new XmlRenameProvider({ getDocumentContext: mockGetDocumentContext } as any, workspaceRenameService);
+        const renameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
+        const provider = new XmlRenameProvider({ getDocumentContext: mockGetDocumentContext } as any, renameService);
 
         mockGetDocumentContext.mockReturnValue({
             getIriAtPosition: vi.fn(() => iri),
@@ -584,26 +584,26 @@ describe('XmlRenameProvider across files', () => {
 
         (provider as any)._getLocalNameEditRange = vi.fn(() => new vscode.Range(new vscode.Position(0, 4), new vscode.Position(0, 11)));
 
-        return { provider, workspaceRenameService, doc: makeDocument('<ex:Example rdf:about="ex:Example"/>') as any };
+        return { provider, renameService, doc: makeDocument('<ex:Example rdf:about="ex:Example"/>') as any };
     }
 
     it('extends the rename of a local name to the other files', async () => {
-        const { provider, workspaceRenameService, doc } = setup();
+        const { provider, renameService, doc } = setup();
 
         const edits = await provider.provideRenameEdits(doc, new vscode.Position(0, 7), 'NewExample');
 
         expect(edits).toBeDefined();
-        expect(workspaceRenameService.addEditsInOtherFiles).toHaveBeenCalledExactlyOnceWith(edits, iri, 'NewExample', doc.uri);
+        expect(renameService.addEditsInOtherFiles).toHaveBeenCalledExactlyOnceWith(edits, iri, 'NewExample', doc.uri);
     });
 
     it('keeps the rename of a prefix within the document', async () => {
-        const { provider, workspaceRenameService, doc } = setup();
+        const { provider, renameService, doc } = setup();
 
         (provider as any)._getLocalNameEditRange = vi.fn(() => null);
         (provider as any)._getPrefixEditRange = vi.fn(() => new vscode.Range(new vscode.Position(0, 1), new vscode.Position(0, 3)));
 
         await provider.provideRenameEdits(doc, new vscode.Position(0, 2), 'ns');
 
-        expect(workspaceRenameService.addEditsInOtherFiles).not.toHaveBeenCalled();
+        expect(renameService.addEditsInOtherFiles).not.toHaveBeenCalled();
     });
 });

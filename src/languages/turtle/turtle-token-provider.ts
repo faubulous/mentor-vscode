@@ -56,7 +56,7 @@ export class TurtleTokenProvider {
 		const validationService = container.resolve<ShaclValidationService>(ServiceToken.ShaclValidationService);
 		const connectionRegistry = container.resolve<ISparqlConnectionRegistry>(ServiceToken.SparqlConnectionRegistry);
 		const documentConnectionService = container.resolve<IDocumentConnectionService>(ServiceToken.DocumentConnectionService);
-		const workspaceRenameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
+		const renameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
 
 		this._codeActionsProvider = new TurtleCodeActionsProvider(contextService);
 		this._codelensProvider = new TurtleUsageCodeLensProvider(contextService, workspaceIndexer, vocabulary);
@@ -66,7 +66,7 @@ export class TurtleTokenProvider {
 		this._workspaceGraphDefinitionProvider = new WorkspaceGraphDefinitionProvider(contextService);
 		this._prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`, contextService, prefixLookup);
 		this._referenceProvider = new ResourceReferenceProvider(contextService);
-		this._renameProvider = new TurtleRenameProvider(contextService, workspaceRenameService);
+		this._renameProvider = new TurtleRenameProvider(contextService, renameService);
 		this._formattingProvider = new TurtleCodeFormattingProvider();
 		this._validationCodelensProvider = new TurtleValidationCodeLensProvider(contextService, workspaceIndexer, validationService);
 		this._connectionCodelensProvider = new TurtleConnectionCodeLensProvider(connectionRegistry, documentConnectionService);

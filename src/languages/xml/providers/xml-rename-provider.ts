@@ -26,10 +26,10 @@ interface TextReplacement {
 export class XmlRenameProvider extends XmlFeatureProvider implements vscode.RenameProvider {
 	/**
 	 * @param _contextService The document context service.
-	 * @param _workspaceRenameService Extends IRI renames to the other indexed documents;
+	 * @param _renameService Extends IRI renames to the other indexed documents;
 	 * renames stay within the document when it is not provided.
 	 */
-	constructor(private readonly _contextService: IDocumentContextService, private readonly _workspaceRenameService?: IWorkspaceRenameService) {
+	constructor(private readonly _contextService: IDocumentContextService, private readonly _renameService?: IWorkspaceRenameService) {
 		super();
 	}
 
@@ -58,7 +58,7 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			// Only an IRI is renamed in the other documents that reference it; prefixes
 			// are declared per document.
 			if (replacements.length > 0) {
-				await this._workspaceRenameService?.addEditsInOtherFiles(localEdits, iri, newName, document.uri);
+				await this._renameService?.addEditsInOtherFiles(localEdits, iri, newName, document.uri);
 			}
 
 			return localEdits;

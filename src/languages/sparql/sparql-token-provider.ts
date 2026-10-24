@@ -47,7 +47,7 @@ export class SparqlTokenProvider {
 		const storeConfigService = container.resolve<ITripleStoreConfigService>(ServiceToken.StoreConfigService);
 		const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
 		const graphService = container.resolve<IGraphManagementService>(ServiceToken.GraphManagementService);
-		const workspaceRenameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
+		const renameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
 
 		const codeActionsProvider = new TurtleCodeActionsProvider(contextService);
 		const codeLensProvider = new SparqlCodeLensProvider(connectionRegistry, documentConnectionService, storeConfigService, queryService);
@@ -58,7 +58,7 @@ export class SparqlTokenProvider {
 		const formattingProvider = new SparqlCodeFormattingProvider();
 		const prefixCompletionProvider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}>`, contextService, prefixLookup);
 		const referenceProvider = new ResourceReferenceProvider(contextService);
-		const renameProvider = new SparqlRenameProvider(contextService, workspaceRenameService);
+		const renameProvider = new SparqlRenameProvider(contextService, renameService);
 		const prefixDefinitionService = container.resolve<SparqlPrefixDefinitionService>(ServiceToken.SparqlPrefixDefinitionService);
 		const autoDefinePrefixProvider = new TurtleAutoDefinePrefixProvider(['sparql'], prefixDefinitionService, contextService);
 		const graphDiagnosticProvider = new SparqlGraphDiagnosticProvider(documentConnectionService, graphService);

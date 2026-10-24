@@ -24,10 +24,10 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 
 	/**
 	 * @param contextService The document context service.
-	 * @param workspaceRenameService Extends IRI renames to the other indexed documents;
+	 * @param _renameService Extends IRI renames to the other indexed documents;
 	 * renames stay within the document when it is not provided.
 	 */
-	constructor(private readonly contextService: IDocumentContextService, private readonly _workspaceRenameService?: IWorkspaceRenameService) {
+	constructor(private readonly contextService: IDocumentContextService, private readonly _renameService?: IWorkspaceRenameService) {
 		super();
 	}
 
@@ -150,7 +150,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 			// Prefixes, variables and blank nodes are local to the document; only an IRI
 			// is renamed in the other documents that reference it.
 			if (this._isIriToken(token)) {
-				await this._workspaceRenameService?.addEditsInOtherFiles(edits, u, newName, document.uri);
+				await this._renameService?.addEditsInOtherFiles(edits, u, newName, document.uri);
 			}
 		}
 

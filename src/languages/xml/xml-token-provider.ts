@@ -24,12 +24,12 @@ export class XmlTokenProvider {
 		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 		const workspaceIndexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
-		const workspaceRenameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
+		const renameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
 
 		this._codelensProvider = new TurtleUsageCodeLensProvider(contextService, workspaceIndexer, vocabulary);
 		this._notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider(contextService);
 		this._referenceProvider = new ResourceReferenceProvider(contextService);
-		this._renameProvider = new XmlRenameProvider(contextService, workspaceRenameService);
+		this._renameProvider = new XmlRenameProvider(contextService, renameService);
 
 		// Self-register with the extension context for automatic disposal
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);

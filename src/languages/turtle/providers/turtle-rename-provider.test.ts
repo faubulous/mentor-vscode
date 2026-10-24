@@ -412,26 +412,26 @@ describe('TurtleRenameProvider across files', () => {
 
         context.parse(source);
 
-        const workspaceRenameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
-        const provider = new TurtleRenameProvider(makeContextService(context) as any, workspaceRenameService);
+        const renameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
+        const provider = new TurtleRenameProvider(makeContextService(context) as any, renameService);
 
-        return { provider, workspaceRenameService };
+        return { provider, renameService };
     }
 
     it('extends the rename of a prefixed name to the other files', async () => {
-        const { provider, workspaceRenameService } = setup();
+        const { provider, renameService } = setup();
 
         const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(1, 4) as any, 'Entity');
 
-        expect(workspaceRenameService.addEditsInOtherFiles).toHaveBeenCalledExactlyOnceWith(edits, 'http://example.org/Thing', 'Entity', docUri);
+        expect(renameService.addEditsInOtherFiles).toHaveBeenCalledExactlyOnceWith(edits, 'http://example.org/Thing', 'Entity', docUri);
     });
 
     it('extends the rename of an IRI reference to the other files', async () => {
-        const { provider, workspaceRenameService } = setup();
+        const { provider, renameService } = setup();
 
         await provider.provideRenameEdits({ uri: docUri } as any, new Position(2, 22) as any, 'Entity');
 
-        expect(workspaceRenameService.addEditsInOtherFiles).toHaveBeenCalledWith(expect.anything(), 'http://example.org/Other', 'Entity', docUri);
+        expect(renameService.addEditsInOtherFiles).toHaveBeenCalledWith(expect.anything(), 'http://example.org/Other', 'Entity', docUri);
     });
 
     it('keeps the edits in the document without confirmation', async () => {
@@ -445,23 +445,23 @@ describe('TurtleRenameProvider across files', () => {
     });
 
     it('keeps the rename of a prefix within the document', async () => {
-        const { provider, workspaceRenameService } = setup();
+        const { provider, renameService } = setup();
 
         await provider.provideRenameEdits({ uri: docUri } as any, new Position(1, 0) as any, 'ns');
 
-        expect(workspaceRenameService.addEditsInOtherFiles).not.toHaveBeenCalled();
+        expect(renameService.addEditsInOtherFiles).not.toHaveBeenCalled();
     });
 
     it('keeps the rename of a variable within the document', async () => {
         const context = makeDoc();
-        const workspaceRenameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
+        const renameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
 
         context.setTokens([makeToken(RdfToken.VAR1.name, '?x', { startLine: 1, startColumn: 1, endColumn: 2 })] as any);
 
-        const provider = new TurtleRenameProvider(makeContextService(context) as any, workspaceRenameService);
+        const provider = new TurtleRenameProvider(makeContextService(context) as any, renameService);
 
         await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 1) as any, 'y');
 
-        expect(workspaceRenameService.addEditsInOtherFiles).not.toHaveBeenCalled();
+        expect(renameService.addEditsInOtherFiles).not.toHaveBeenCalled();
     });
 });
