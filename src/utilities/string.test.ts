@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { countLeadingWhitespace, countTrailingWhitespace, findPosition, generateUniqueSlug } from '@src/utilities/string';
+import { countLeadingWhitespace, countTrailingWhitespace, findPosition, generateUniqueSlug, getTextFingerprint } from '@src/utilities/string';
 
 describe('generateUniqueSlug', () => {
 	it('slugifies the display name', () => {
@@ -87,5 +87,20 @@ describe('findPosition', () => {
 	it('returns position {line:0, character:0} for text at the very start', () => {
 		const pos = findPosition('PREFIX', 'PREFIX');
 		expect(pos).toEqual({ line: 0, character: 0 });
+	});
+});
+
+describe('getTextFingerprint', () => {
+	it('is equal for equal texts', () => {
+		expect(getTextFingerprint('<rdf:RDF />')).toBe(getTextFingerprint('<rdf:RDF />'));
+	});
+
+	it('differs for texts of the same length', () => {
+		expect(getTextFingerprint('<ex:a />')).not.toBe(getTextFingerprint('<ex:b />'));
+	});
+
+	it('starts with the length of the text', () => {
+		expect(getTextFingerprint('abc')).toMatch(/^3:/);
+		expect(getTextFingerprint('')).toMatch(/^0:/);
 	});
 });

@@ -202,7 +202,7 @@ export function createMockDocumentContext(overrides?: Partial<IDocumentContext>)
 		},
 		typeAssertions: new RangeIndex(),
 		typeDefinitions: new RangeIndex(),
-		predicateStats: {},
+		languageTagStats: {},
 		primaryLanguage: undefined,
 		activeLanguageTag: undefined,
 		activeLanguage: undefined,

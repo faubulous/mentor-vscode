@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { CstNode, ILexingError } from 'chevrotain';
 import { RangeIndex } from './range-index';
 import { Quad, Quad_Subject } from '@rdfjs/types';
-import { PredicateUsageStats } from '@faubulous/mentor-rdf';
+import { LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
 import { BlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 
@@ -139,9 +139,11 @@ export interface IDocumentContext {
 	typeDefinitions: RangeIndex;
 
 	/**
-	 * Information about the language tags used in the document.
+	 * The number of literals per language tag in the asserted triples of the document;
+	 * literals without a language tag are counted under the empty tag. Determines the
+	 * primary language and the languages offered for selection.
 	 */
-	predicateStats: PredicateUsageStats;
+	languageTagStats: LanguageTagUsageStats;
 
 	/**
 	 * The most often used language tag in the document.

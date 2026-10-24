@@ -3,7 +3,7 @@ import { SH, Store } from '@faubulous/mentor-rdf';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
-import { createYieldBudget } from '@src/utilities/scheduling';
+import { createEventLoopYielder } from '@src/utilities/scheduling';
 import { ShaclValidationResult } from './shacl-validator-engine';
 import { ShaclValidationPresenter } from './shacl-validation-presenter';
 
@@ -390,7 +390,7 @@ export class ShaclBatchRunner {
 		// tight batch would starve the extension-host event loop (frozen status bar, webviews
 		// and trees). The budget yields a macrotask between files whenever enough wall-clock
 		// time has elapsed, letting VS Code paint and process queued work.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 		let completed = 0;
 
 		for (const { uri, shapes } of workItems) {
@@ -420,7 +420,7 @@ export class ShaclBatchRunner {
 				continue;
 			}
 
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
 
 			try {
 				const result = await this._deps.validateAndPublish(uri, context, shapes);

@@ -9,7 +9,7 @@ import { IDocumentContext } from '@src/services/document/document-context.interf
 
 vi.mock('@faubulous/mentor-rdf', () => ({
 	Store: class { deleteGraphs = vi.fn(); },
-	VocabularyRepository: class { getPredicateUsageStats = vi.fn(() => ({})); },
+	VocabularyRepository: class {},
 }));
 
 vi.mock('@src/utilities/vscode/config', () => ({
@@ -33,7 +33,7 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		references: new RangeIndex(),
 		typeAssertions: new RangeIndex(),
 		typeDefinitions: new RangeIndex(),
-		predicateStats: {} as any,
+		languageTagStats: {},
 		primaryLanguage: undefined,
 		activeLanguageTag: undefined,
 		activeLanguage: undefined,
@@ -55,7 +55,7 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 function createService() {
 	const mockExtensionContext = { subscriptions: { push: vi.fn() } };
 	const mockStore = { deleteGraphs: vi.fn() };
-	const mockVocabulary = { getPredicateUsageStats: vi.fn(() => ({})) };
+	const mockVocabulary = {};
 	const mockDocumentFactory = {
 		supportedLanguages: new Set(['turtle', 'sparql']),
 		getConvertibleTargetLanguageIds: vi.fn(() => []),
@@ -1390,6 +1390,54 @@ describe('released tokens', () => {
 
 		expect(service.contexts[uri.toString()]).toBe(context);
 		expect(releaseTokens).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe('loadDocumentContent with large documents', () => {
+	/**
+	 * Blocks the event loop for the given time, like parsing a very large document.
+	 */
+	function busyWait(milliseconds: number): void {
+		const end = Date.now() + milliseconds;
+
+		while (Date.now() < end) {
+			// Simulates synchronous work.
+		}
+	}
+
+	/**
+	 * Loads a document whose phases are recorded, with the given cost of its parse, and
+	 * returns the order in which the phases and a timer scheduled before the load ran.
+	 */
+	async function load(parseMilliseconds: number): Promise<string[]> {
+		const { service, mockDocumentFactory } = createService();
+		const order: string[] = [];
+		const context = createMockContext({
+			uri: vscode.Uri.parse('file:///w/large.ttl'),
+			isLoaded: false,
+			parse: vi.fn(() => { busyWait(parseMilliseconds); order.push('parse'); return []; }),
+			loadTriples: vi.fn(async () => { order.push('loadTriples'); }),
+			infer: vi.fn(async () => { order.push('infer'); }),
+		} as Partial<IDocumentContext>);
+
+		(mockDocumentFactory as any).getDocumentLanguageId = vi.fn(() => 'turtle');
+		mockDocumentFactory.create.mockReturnValue(context);
+
+		setTimeout(() => order.push('timer'), 0);
+
+		await service.loadDocumentContent(vscode.Uri.parse('file:///w/large.ttl'), '');
+
+		return order;
+	}
+
+	it('lets pending work run after a phase that used up the time budget', async () => {
+		expect(await load(80)).toEqual(['parse', 'timer', 'loadTriples', 'infer']);
+	});
+
+	it('does not yield after fast phases', async () => {
+		const order = await load(0);
+
+		expect(order.slice(0, 3)).toEqual(['parse', 'loadTriples', 'infer']);
 	});
 });
 

@@ -67,3 +67,30 @@ export function findPosition(str: string, text: string): { line: number, charact
 
 	return { line, character };
 }
+/**
+ * Computes a fingerprint of a text: its length and a 53-bit hash of its characters (cyrb53).
+ * Used to recognize a text again without keeping it in memory; two different texts of the
+ * same length share a fingerprint with negligible probability.
+ * @param text The text.
+ * @returns The fingerprint.
+ */
+export function getTextFingerprint(text: string): string {
+	let hash1 = 0xdeadbeef;
+	let hash2 = 0x41c6ce57;
+
+	for (let i = 0; i < text.length; i++) {
+		const code = text.charCodeAt(i);
+
+		hash1 = Math.imul(hash1 ^ code, 2654435761);
+		hash2 = Math.imul(hash2 ^ code, 1597334677);
+	}
+
+	hash1 = Math.imul(hash1 ^ (hash1 >>> 16), 2246822507);
+	hash1 ^= Math.imul(hash2 ^ (hash2 >>> 13), 3266489909);
+	hash2 = Math.imul(hash2 ^ (hash2 >>> 16), 2246822507);
+	hash2 ^= Math.imul(hash1 ^ (hash1 >>> 13), 3266489909);
+
+	const hash = 4294967296 * (2097151 & hash2) + (hash1 >>> 0);
+
+	return `${text.length}:${hash.toString(36)}`;
+}

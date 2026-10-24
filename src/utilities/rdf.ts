@@ -1,7 +1,7 @@
 import { DataFactory as N3DataFactory } from 'n3';
-import { DatasetCore } from '@rdfjs/types';
+import { DatasetCore, Literal, Term } from '@rdfjs/types';
 import { RdfStore } from 'rdf-stores';
-import { Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
+import { LanguageTagUsageStats, Store, XSD, RDF, RDFS } from '@faubulous/mentor-rdf';
 
 /**
  * An RDF/JS DataFactory extended with a `dataset()` method (DatasetCoreFactory),
@@ -90,4 +90,20 @@ export function loadRdfContent(store: Store, content: string, graphUri: string, 
 	} else {
 		store.loadTurtle(content, graphUri, false, true);
 	}
+}
+
+/**
+ * Counts the language tag of a literal object in language tag usage statistics. Literals
+ * without a language tag are counted under the empty tag, other terms are ignored.
+ * @param stats The statistics to update.
+ * @param object The object of a triple.
+ */
+export function addLanguageTagUsage(stats: LanguageTagUsageStats, object: Term): void {
+	if (object.termType !== 'Literal') {
+		return;
+	}
+
+	const language = (object as Literal).language;
+
+	stats[language] = (stats[language] ?? 0) + 1;
 }

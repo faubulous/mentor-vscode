@@ -10,7 +10,7 @@ import { getConfig } from '@src/utilities/vscode/config';
 import { isDocumentOpen } from '@src/utilities/vscode/editors';
 import { describeUriPath } from '@src/utilities/vscode/log';
 import { normalizeGlobPattern } from '@src/utilities/glob';
-import { createYieldBudget } from '@src/utilities/scheduling';
+import { createEventLoopYielder } from '@src/utilities/scheduling';
 import { getErrorMessage } from '@src/utilities/error';
 import { getHeapUsedMb } from '@src/utilities/runtime';
 import { CanonicalWorkspaceUri, WorkspaceUri } from '@src/providers/workspace-uri';
@@ -449,12 +449,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 		// Parsing and inference are CPU-bound; with the reads prefetched, the
 		// per-file awaits resolve as microtasks and the loop would never return
 		// to the event loop, freezing the extension host for the whole pass.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		for (let index = 0; index < indexedUris.length; index++) {
 			const fileUri = indexedUris[index];
 
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
 
 			prefetch(index);
 
@@ -779,10 +779,10 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 
 		// Each cell pays a full parse, triple load and inference pass; yield
 		// between cells so a large notebook does not block the extension host.
-		const yieldBudget = createYieldBudget();
+		const eventLoop = createEventLoopYielder();
 
 		for (const cell of notebook.getCells()) {
-			await yieldBudget.maybeYield();
+			await eventLoop.yieldIfBusy();
 
 			const lang = cell.document.languageId;
 

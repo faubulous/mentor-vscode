@@ -76,7 +76,7 @@ describe('selectActiveLanguage', () => {
 		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
 		mockContextService.contexts = {
 			'file:///test.ttl': {
-				predicateStats: {},
+				languageTagStats: {},
 				activeLanguageTag: undefined,
 			}
 		};
@@ -85,13 +85,11 @@ describe('selectActiveLanguage', () => {
 		expect(mockQuickPick.items[0].label).toBe('No language tagged literals found.');
 	});
 
-	it('shows language items when predicateStats has language-tagged literals', async () => {
+	it('shows language items when the document has language-tagged literals', async () => {
 		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
 		mockContextService.contexts = {
 			'file:///test.ttl': {
-				predicateStats: {
-					'http://example.org/label': { languageTags: { 'en': 5, 'de': 3 } }
-				},
+				languageTagStats: { 'en': 5, 'de': 3 },
 				activeLanguageTag: undefined,
 			}
 		};
@@ -105,9 +103,7 @@ describe('selectActiveLanguage', () => {
 
 	it('sets activeLanguageTag and saves settings on selection', async () => {
 		const context = {
-			predicateStats: {
-				'http://example.org/label': { languageTags: { 'en': 5 } }
-			},
+			languageTagStats: { 'en': 5 },
 			activeLanguageTag: undefined as string | undefined,
 		};
 		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
@@ -130,9 +126,7 @@ describe('selectActiveLanguage', () => {
 		(vscode.window as any).activeTextEditor = { document: { uri: vscode.Uri.parse('file:///test.ttl') } };
 		mockContextService.contexts = {
 			'file:///test.ttl': {
-				predicateStats: {
-					'http://example.org/label': { languageTags: { 'undefined': 2 } }
-				},
+				languageTagStats: { 'undefined': 2 },
 				activeLanguageTag: undefined,
 			}
 		};
