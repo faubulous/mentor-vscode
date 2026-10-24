@@ -121,14 +121,14 @@ describe('XmlRenameProvider', () => {
     });
 
     describe('provideRenameEdits', () => {
-        it('returns undefined when no document context', () => {
+        it('returns undefined when no document context', async () => {
             mockGetDocumentContext.mockReturnValue(null);
             const doc = makeDocument('<rdf:RDF />') as any;
-            const result = provider.provideRenameEdits(doc, new vscode.Position(0, 0), 'newName');
+            const result = await provider.provideRenameEdits(doc, new vscode.Position(0, 0), 'newName');
             expect(result).toBeUndefined();
         });
 
-        it('returns empty edits when position is not in any name range or prefix range', () => {
+        it('returns empty edits when position is not in any name range or prefix range', async () => {
             mockGetDocumentContext.mockReturnValue({
                 getIriAtPosition: vi.fn(() => null),
                 getPrefixedNameRangeAtPosition: vi.fn(() => null),
@@ -137,11 +137,11 @@ describe('XmlRenameProvider', () => {
                 namespaces: {},
             });
             const doc = makeDocument('<rdf:RDF />') as any;
-            const result = provider.provideRenameEdits(doc, new vscode.Position(0, 0), 'newName');
+            const result = await provider.provideRenameEdits(doc, new vscode.Position(0, 0), 'newName');
             expect(result).toBeDefined();
         });
 
-        it('returns undefined when nameRange contains position but getIriAtPosition returns null', () => {
+        it('returns undefined when nameRange contains position but getIriAtPosition returns null', async () => {
             const nameRange = new vscode.Range(new vscode.Position(0, 4), new vscode.Position(0, 10));
             const position = new vscode.Position(0, 6);
 
@@ -162,11 +162,11 @@ describe('XmlRenameProvider', () => {
             const partialProvider = provider as any;
             partialProvider._getLocalNameEditRange = vi.fn(() => nameRange);
 
-            const result = provider.provideRenameEdits(doc, position, 'newName');
+            const result = await provider.provideRenameEdits(doc, position, 'newName');
             expect(result).toBeUndefined();
         });
 
-        it('returns workspace edits when nameRange contains position and IRI is found', () => {
+        it('returns workspace edits when nameRange contains position and IRI is found', async () => {
             const nameRange = new vscode.Range(new vscode.Position(0, 4), new vscode.Position(0, 11));
             const position = new vscode.Position(0, 7);
             const iri = 'http://example.org/Example';
@@ -187,11 +187,11 @@ describe('XmlRenameProvider', () => {
             const partialProvider = provider as any;
             partialProvider._getLocalNameEditRange = vi.fn(() => nameRange);
 
-            const result = provider.provideRenameEdits(doc, position, 'NewExample');
+            const result = await provider.provideRenameEdits(doc, position, 'NewExample');
             expect(result).toBeDefined();
         });
 
-        it('returns undefined when prefixRange contains position but namespace is not defined', () => {
+        it('returns undefined when prefixRange contains position but namespace is not defined', async () => {
             const prefixRange = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 3));
             const position = new vscode.Position(0, 2);
 
@@ -209,11 +209,11 @@ describe('XmlRenameProvider', () => {
             partialProvider._getPrefixEditRange = vi.fn(() => prefixRange);
             doc.getText = vi.fn((r?: any) => r ? 'rdf' : 'rdf:type');
 
-            const result = provider.provideRenameEdits(doc, position, 'owl');
+            const result = await provider.provideRenameEdits(doc, position, 'owl');
             expect(result).toBeUndefined();
         });
 
-        it('returns workspace edits when prefixRange contains position and namespace is defined', () => {
+        it('returns workspace edits when prefixRange contains position and namespace is defined', async () => {
             const prefixRange = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 3));
             const position = new vscode.Position(0, 2);
 
@@ -232,7 +232,7 @@ describe('XmlRenameProvider', () => {
             partialProvider._getPrefixEditRange = vi.fn(() => prefixRange);
             doc.getText = vi.fn((r?: any) => r ? 'rdf' : content);
 
-            const result = provider.provideRenameEdits(doc, position, 'owl');
+            const result = await provider.provideRenameEdits(doc, position, 'owl');
             expect(result).toBeDefined();
         });
     });
@@ -561,5 +561,49 @@ describe('XmlRenameProvider', () => {
             const hasBaseIriReplace = result.some((r: any) => r.toValue === `="NewExample"`);
             expect(hasBaseIriReplace).toBe(true);
         });
+    });
+});
+
+describe('XmlRenameProvider across files', () => {
+    const iri = 'http://example.org/Example';
+
+    /**
+     * Creates a provider with a workspace rename service spy over a document whose
+     * local name `Example` is under the cursor.
+     */
+    function setup() {
+        const workspaceRenameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
+        const provider = new XmlRenameProvider({ getDocumentContext: mockGetDocumentContext } as any, workspaceRenameService);
+
+        mockGetDocumentContext.mockReturnValue({
+            getIriAtPosition: vi.fn(() => iri),
+            namespaces: { ex: 'http://example.org/' },
+            getPrefixForNamespaceIri: vi.fn(() => 'ex'),
+            baseIri: null,
+        });
+
+        (provider as any)._getLocalNameEditRange = vi.fn(() => new vscode.Range(new vscode.Position(0, 4), new vscode.Position(0, 11)));
+
+        return { provider, workspaceRenameService, doc: makeDocument('<ex:Example rdf:about="ex:Example"/>') as any };
+    }
+
+    it('extends the rename of a local name to the other files', async () => {
+        const { provider, workspaceRenameService, doc } = setup();
+
+        const edits = await provider.provideRenameEdits(doc, new vscode.Position(0, 7), 'NewExample');
+
+        expect(edits).toBeDefined();
+        expect(workspaceRenameService.addEditsInOtherFiles).toHaveBeenCalledExactlyOnceWith(edits, iri, 'NewExample', doc.uri);
+    });
+
+    it('keeps the rename of a prefix within the document', async () => {
+        const { provider, workspaceRenameService, doc } = setup();
+
+        (provider as any)._getLocalNameEditRange = vi.fn(() => null);
+        (provider as any)._getPrefixEditRange = vi.fn(() => new vscode.Range(new vscode.Position(0, 1), new vscode.Position(0, 3)));
+
+        await provider.provideRenameEdits(doc, new vscode.Position(0, 2), 'ns');
+
+        expect(workspaceRenameService.addEditsInOtherFiles).not.toHaveBeenCalled();
     });
 });
