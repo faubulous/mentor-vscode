@@ -90,6 +90,15 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 	readonly onDidChangeFileDecorations? = this._onDidChangeFileDecorations.event;
 
+	private readonly _onDidChangeSeverities = new vscode.EventEmitter<void>();
+
+	/**
+	 * Fired when a validation changed the SHACL severities of the active document's nodes.
+	 * The tree colors its node icons by severity, so it rebuilds on this event; validations
+	 * that leave the severities unchanged, which are most of them, do not fire it.
+	 */
+	readonly onDidChangeSeverities = this._onDidChangeSeverities.event;
+
 	private _decorationScope: MissingLanguageTagDecorationScope;
 
 	private get _vocabulary() {
@@ -167,6 +176,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 		this._subscriptions.length = 0;
 		this._onDidChangeFileDecorations.dispose();
+		this._onDidChangeSeverities.dispose();
 	}
 
 	/**
@@ -206,9 +216,11 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			}
 		}
 
+		const severitiesChanged = !DefinitionNodeDecorationProvider._severitiesEqual(this._shaclViolations, next);
+
 		// Unchanged severities mean unchanged decorations: keep the lazily-built
 		// ancestor aggregation and skip the workbench-wide repaint.
-		if (!forceFire && DefinitionNodeDecorationProvider._severitiesEqual(this._shaclViolations, next)) {
+		if (!forceFire && !severitiesChanged) {
 			return;
 		}
 
@@ -217,6 +229,12 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 		this._ancestorSeverityDirty = true;
 
 		this._onDidChangeFileDecorations.fire(undefined);
+
+		// A change of the active context rebuilds the tree anyway; only a validation needs to
+		// ask for the rebuild that recolors the node icons.
+		if (severitiesChanged && !forceFire) {
+			this._onDidChangeSeverities.fire();
+		}
 	}
 
 	private static _severitiesEqual(a: Map<string, string>, b: Map<string, string>): boolean {

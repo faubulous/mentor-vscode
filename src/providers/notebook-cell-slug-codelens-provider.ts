@@ -33,9 +33,14 @@ export class NotebookCellSlugCodeLensProvider implements vscode.CodeLensProvider
 
 		this._initialized = true;
 
-		// Refresh CodeLenses whenever any document context changes (slug may have been updated).
-		this._contextService.onDidChangeDocumentContext(() =>
-			this._refreshDebouncer.schedule(() => this._onDidChangeCodeLenses.fire()));
+		// Refresh CodeLenses when the context of a notebook cell changes (its slug may have been
+		// updated). Lenses are only shown for cells, and every refresh makes VS Code re-request
+		// the lenses of all visible editors, so other documents' changes are ignored.
+		this._contextService.onDidChangeDocumentContext((context) => {
+			if (context?.uri.scheme === 'vscode-notebook-cell') {
+				this._refreshDebouncer.schedule(() => this._onDidChangeCodeLenses.fire());
+			}
+		});
 
 		// Refresh CodeLenses when a notebook is opened so cells indexed in the background
 		// are reflected once the workspace indexer finishes.

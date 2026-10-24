@@ -125,6 +125,12 @@ export class GraphManagementService implements IGraphManagementService {
      */
     private readonly _workspaceGraphsDebouncer = new Debouncer(300);
 
+    /**
+     * The store version the workspace graphs snapshot was taken at. Listing the graphs
+     * reads the whole store, so the snapshot is only refreshed when the store changed.
+     */
+    private _workspaceGraphsStoreVersion: number | undefined;
+
     constructor(
         private readonly _context: vscode.ExtensionContext,
         private readonly _connectionRegistry: ISparqlConnectionRegistry,
@@ -137,6 +143,16 @@ export class GraphManagementService implements IGraphManagementService {
 
     notifyWorkspaceGraphsChanged(): void {
         this._workspaceGraphsDebouncer.schedule(() => {
+            // Most notifications come from switching between documents, which changes
+            // nothing in the store; skip listing the graphs then.
+            const storeVersion = this._workspaceStore.version;
+
+            if (storeVersion !== undefined && storeVersion === this._workspaceGraphsStoreVersion) {
+                return;
+            }
+
+            this._workspaceGraphsStoreVersion = storeVersion;
+
             const graphs = this._workspaceStore.getGraphs();
 
             const unchanged = graphs.length === this._workspaceGraphsSnapshot.size

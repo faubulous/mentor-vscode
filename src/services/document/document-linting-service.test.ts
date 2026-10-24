@@ -89,3 +89,79 @@ describe('DocumentLintingService', () => {
 		});
 	});
 });
+
+describe('DocumentLintingService lint state', () => {
+	/**
+	 * Creates a service whose initial lint of one open document has run, and returns a function
+	 * that reports a document context change for it, with a spy on the document lint.
+	 */
+	async function setup() {
+		const store = { version: 1 };
+		const document = { uri: vscode.Uri.parse('file:///w/a.ttl'), languageId: 'turtle', version: 1 };
+		let contextHandler: ((context: any) => void) | undefined;
+
+		(vscode.workspace as any).textDocuments = [document];
+		(vscode.workspace as any).notebookDocuments = [];
+
+		const contextService = {
+			contexts: {},
+			loadDocument: vi.fn(),
+			getDocumentContextFromUri: vi.fn(() => ({})),
+			onDidChangeDocumentContext: vi.fn((handler: (context: any) => void) => {
+				contextHandler = handler;
+				return { dispose: () => {} };
+			}),
+		};
+
+		const service = new DocumentLintingService(
+			{ subscriptions: mockSubscriptions } as any,
+			{ store } as any,
+			{ supportedLanguages: mockSupportedLanguages } as any,
+			{ waitForIndexed: async () => {} } as any,
+			contextService as any,
+		);
+
+		// Let the initial lint after indexing run.
+		await new Promise(resolve => setTimeout(resolve, 0));
+
+		const lint = vi.spyOn(service as any, '_validateDocument');
+		const changeContext = () => contextHandler!({ uri: document.uri });
+
+		return { service, store, document, lint, changeContext };
+	}
+
+	it('does not lint a document again when neither it nor the store changed', async () => {
+		const { lint, changeContext } = await setup();
+
+		changeContext();
+
+		expect(lint).not.toHaveBeenCalled();
+	});
+
+	it('lints a document again when the store changed', async () => {
+		const { store, lint, changeContext } = await setup();
+
+		store.version = 2;
+		changeContext();
+
+		expect(lint).toHaveBeenCalledTimes(1);
+	});
+
+	it('lints a document again when it changed', async () => {
+		const { document, lint, changeContext } = await setup();
+
+		document.version = 2;
+		changeContext();
+
+		expect(lint).toHaveBeenCalledTimes(1);
+	});
+
+	it('lints a reopened document again, whose diagnostics were deleted on close', async () => {
+		const { service, document, lint, changeContext } = await setup();
+
+		(service as any)._onDocumentClosed(document);
+		changeContext();
+
+		expect(lint).toHaveBeenCalledTimes(1);
+	});
+});
