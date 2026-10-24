@@ -796,17 +796,17 @@ describe('WorkspaceIndexerService progress rendering and yielding', () => {
 		// takes its yield branch deterministically (parsing is instantaneous here).
 		let now = 100_000;
 		const dateSpy = vi.spyOn(Date, 'now').mockImplementation(() => (now += 100));
-		const timeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+		const immediateSpy = vi.spyOn(globalThis, 'setImmediate');
 
 		try {
 			await service.indexWorkspace();
 
-			// A zero-delay macrotask was scheduled at least once during the pass —
-			// the mechanism that lets the renderer paint while indexing runs.
-			expect(timeoutSpy.mock.calls.some(call => call[1] === 0)).toBe(true);
+			// A macrotask was scheduled at least once during the pass — the
+			// mechanism that lets the renderer paint while indexing runs.
+			expect(immediateSpy).toHaveBeenCalled();
 		} finally {
 			dateSpy.mockRestore();
-			timeoutSpy.mockRestore();
+			immediateSpy.mockRestore();
 		}
 	});
 });

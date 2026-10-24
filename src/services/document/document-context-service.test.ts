@@ -992,6 +992,69 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('loadDocument event loop yields', () => {
+		/**
+		 * Starts loading a document whose parse takes the given time, and returns
+		 * the context and the pending load.
+		 */
+		function startLoad(parseMs: number) {
+			const { service, tokenSource, mockDocumentFactory } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const doc = { languageId: 'turtle', uri, getText: () => '' } as any;
+			const ctx = createMockContext({ uri, isLoaded: false, isParsed: false });
+
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			vi.spyOn(tokenSource, 'waitForTokens').mockImplementation(async () => {
+				vi.setSystemTime(Date.now() + parseMs);
+
+				return [];
+			});
+
+			return { ctx, load: service.loadDocument(doc) };
+		}
+
+		/**
+		 * Lets all pending promise callbacks run, but no timers.
+		 */
+		async function flushMicrotasks(): Promise<void> {
+			for (let index = 0; index < 10; index++) {
+				await Promise.resolve();
+			}
+		}
+
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		it('yields before loading the triples when the parse used up the budget', async () => {
+			vi.useFakeTimers();
+
+			const { ctx, load } = startLoad(100);
+
+			await flushMicrotasks();
+
+			expect(ctx.loadTriples).not.toHaveBeenCalled();
+
+			await vi.runAllTimersAsync();
+			await load;
+
+			expect(ctx.loadTriples).toHaveBeenCalledOnce();
+		});
+
+		it('loads the triples of a quickly parsed document without yielding', async () => {
+			vi.useFakeTimers();
+
+			const { ctx, load } = startLoad(0);
+
+			await flushMicrotasks();
+
+			expect(ctx.loadTriples).toHaveBeenCalledOnce();
+
+			await load;
+		});
+	});
+
 	describe('loadDocument supersession guards', () => {
 		it('returns undefined when generation is bumped before tokens arrive (line 403)', async () => {
 			const { service, tokenSource, mockDocumentFactory } = createService();

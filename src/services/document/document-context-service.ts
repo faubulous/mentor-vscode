@@ -300,6 +300,12 @@ export class DocumentContextService {
 
 		const content = document.getText();
 
+		// Parsing, loading and inference each take long for large documents; give the
+		// event loop a turn in between when a phase used up the budget. The parse is
+		// counted, so that requests which only need the tokens (go to definition,
+		// hovers, document links) are answered before the triples are loaded.
+		const eventLoop = createEventLoopYielder();
+
 		// Check if the context already has parser output (from a language server notification
 		// that arrived early). If not, wait for tokens from the language server.
 		if (!context.isParsed) {
@@ -328,14 +334,12 @@ export class DocumentContextService {
 			}
 		}
 
+		await eventLoop.yieldIfBusy();
+
 		// Check if this load was superseded after awaiting tokens.
 		if (!this._tokenSource.isCurrentLoad(uri, generation)) {
 			return;
 		}
-
-		// Loading and inference each take seconds for very large documents; give the
-		// event loop a turn in between when a phase used up the budget.
-		const eventLoop = createEventLoopYielder();
 
 		// Tokens available, load triples into store.
 		await context.loadTriples(content);

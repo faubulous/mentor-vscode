@@ -7,7 +7,7 @@ import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-
 import { XmlParser } from '@src/languages/xml/xml-parser';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { getConfig } from '@src/utilities/vscode/config';
-import { createEventLoopYielder } from '@src/utilities/scheduling';
+import { createEventLoopYielder, yieldToEventLoop } from '@src/utilities/scheduling';
 import { getNamespaceDefinition, PrefixMap } from '@src/utilities';
 import { createPositionMapper, PositionMapper } from '@src/utilities/position';
 import { LintingContext, LintingProvider } from '@src/providers/linting';
@@ -19,7 +19,7 @@ import {
 	XsdDatatypeValidationLinter,
 } from '@src/providers/linting/linters';
 import { IDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
-import { IDocumentTokenSource } from './document-token-source.interface';
+import { IDocumentTokenSource, TokenDelivery } from './document-token-source.interface';
 
 /**
  * Computes document diagnostics in the extension host: syntax (lexer/parser)
@@ -62,6 +62,11 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	private readonly _subscriptions: vscode.Disposable[] = [];
 
 	/**
+	 * The URIs of loaded documents whose validation waits for the event loop.
+	 */
+	private readonly _pendingLoadValidations = new Set<string>();
+
+	/**
 	 * @param tokenSource The token source whose deliveries trigger validation.
 	 * @param _getContext Returns the document context for a URI, or `undefined` when
 	 * none is loaded. Injected as a function to avoid a construction-order cycle with
@@ -72,7 +77,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		private readonly _getContext: (uri: string) => IDocumentContext | undefined
 	) {
 		this._subscriptions.push(
-			tokenSource.onDidDeliverTokens(delivery => this._validateIfInScope(delivery.uri)),
+			tokenSource.onDidDeliverTokens(delivery => this._handleTokenDelivery(delivery)),
 			vscode.window.onDidChangeVisibleTextEditors(editors => {
 				for (const editor of editors) {
 					this._validate(editor.document);
@@ -198,6 +203,41 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		}
 
 		this._collection.delete(document.uri);
+	}
+
+	/**
+	 * Validates a document whose tokens were delivered. An edit is validated right
+	 * away, so that errors show as soon as possible. A document load is validated
+	 * after the event loop has polled for I/O: requests that only need the tokens,
+	 * such as go to definition, are answered before the diagnostics are computed.
+	 * @param delivery The token delivery.
+	 */
+	private _handleTokenDelivery(delivery: TokenDelivery): void {
+		if (delivery.consumed) {
+			this._validateAfterYield(delivery.uri);
+		} else {
+			this._pendingLoadValidations.delete(delivery.uri);
+			this._validateIfInScope(delivery.uri);
+		}
+	}
+
+	/**
+	 * Validates the document for a URI once the event loop has polled for I/O,
+	 * unless an edit validated it in the meantime.
+	 * @param uri The document URI.
+	 */
+	private async _validateAfterYield(uri: string): Promise<void> {
+		if (this._pendingLoadValidations.has(uri)) {
+			return;
+		}
+
+		this._pendingLoadValidations.add(uri);
+
+		await yieldToEventLoop();
+
+		if (this._pendingLoadValidations.delete(uri)) {
+			this._validateIfInScope(uri);
+		}
 	}
 
 	/**
@@ -494,6 +534,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 	}
 
 	dispose(): void {
+		this._pendingLoadValidations.clear();
 		this._collection.dispose();
 
 		for (const subscription of this._subscriptions) {

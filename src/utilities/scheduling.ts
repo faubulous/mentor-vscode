@@ -11,9 +11,10 @@
  */
 export interface EventLoopYielder {
 	/**
-	 * Yields control to the event loop for one macrotask when the work has been
-	 * busy for longer than the wall-clock budget since the last yield; otherwise
-	 * resolves immediately.
+	 * Yields control to the event loop when the work has been busy for longer
+	 * than the wall-clock budget since the last yield; otherwise resolves
+	 * immediately. Yields a second time when other work kept the event loop
+	 * busy for longer than the budget during the first yield.
 	 */
 	yieldIfBusy(): Promise<void>;
 }
@@ -29,11 +30,42 @@ export function createEventLoopYielder(budgetMs: number = 50): EventLoopYielder 
 
 	return {
 		async yieldIfBusy(): Promise<void> {
-			if (Date.now() - lastYield > budgetMs) {
-				await new Promise<void>(resolve => setTimeout(resolve, 0));
-
-				lastYield = Date.now();
+			if (Date.now() - lastYield <= budgetMs) {
+				return;
 			}
+
+			const yieldStart = Date.now();
+
+			await yieldToEventLoop();
+
+			// Other work that was waiting for the same turn (e.g. the diagnostics of a
+			// document that was just parsed) may have run for longer than the budget
+			// after the event loop polled for I/O. Yield once more, so that requests
+			// which arrived meanwhile are not stuck behind the next phase as well.
+			if (Date.now() - yieldStart > budgetMs) {
+				await yieldToEventLoop();
+			}
+
+			lastYield = Date.now();
 		}
 	};
+}
+
+/**
+ * Resolves once the event loop has polled for I/O, so that requests which
+ * arrived while the caller was busy (e.g. a go to definition request from the
+ * workbench) are handled before the caller continues.
+ *
+ * A `setTimeout(0)` callback that is already due runs in the timers phase,
+ * which Node.js processes before polling for I/O, and a single `setImmediate`
+ * scheduled from an I/O callback runs in the check phase right after it. Two
+ * `setImmediate` hops always span a poll phase. Where `setImmediate` does not
+ * exist (the web extension host), a zero-delay timeout is used.
+ */
+export function yieldToEventLoop(): Promise<void> {
+	if (typeof setImmediate !== 'function') {
+		return new Promise(resolve => setTimeout(resolve, 0));
+	}
+
+	return new Promise(resolve => setImmediate(() => setImmediate(resolve)));
 }
