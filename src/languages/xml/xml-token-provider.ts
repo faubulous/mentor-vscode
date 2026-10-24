@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { VocabularyRepository } from '@faubulous/mentor-rdf';
 import { ServiceToken } from '@src/services/tokens';
 import { IDocumentContextService } from '@src/services/document';
-import { IWorkspaceIndexerService } from '@src/services/core';
+import { IWorkspaceIndexerService, IWorkspaceRenameService } from '@src/services/core';
 import { ResourceReferenceProvider, NotebookCellSlugCodeLensProvider } from '@src/providers';
 import { TurtleUsageCodeLensProvider } from '@src/languages/turtle/providers';
 import { XmlRenameProvider } from '@src/languages/xml/providers';
@@ -24,11 +24,12 @@ export class XmlTokenProvider {
 		const contextService = container.resolve<IDocumentContextService>(ServiceToken.DocumentContextService);
 		const vocabulary = container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 		const workspaceIndexer = container.resolve<IWorkspaceIndexerService>(ServiceToken.WorkspaceIndexerService);
+		const renameService = container.resolve<IWorkspaceRenameService>(ServiceToken.WorkspaceRenameService);
 
 		this._codelensProvider = new TurtleUsageCodeLensProvider(contextService, workspaceIndexer, vocabulary);
 		this._notebookSlugCodelensProvider = new NotebookCellSlugCodeLensProvider(contextService);
 		this._referenceProvider = new ResourceReferenceProvider(contextService);
-		this._renameProvider = new XmlRenameProvider(contextService);
+		this._renameProvider = new XmlRenameProvider(contextService, renameService);
 
 		// Self-register with the extension context for automatic disposal
 		const context = container.resolve<vscode.ExtensionContext>(ServiceToken.ExtensionContext);

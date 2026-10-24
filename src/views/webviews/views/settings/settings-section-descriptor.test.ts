@@ -37,6 +37,7 @@ describe('defaultScopeForKey', () => {
 	it.each([
 		'definitionTree.labelStyle',
 		'editor.codeLensEnabled',
+		'editor.renameAcrossFiles',
 		'prefixes.prefixDefinitionMode',
 		'namespaces',
 		'language.turtle.defaultDocumentTemplate',

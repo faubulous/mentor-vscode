@@ -846,6 +846,8 @@ export class DocumentContextService {
 
 		delete this._contexts[key];
 
-		this._store.deleteGraphs(context.graphs);
+		// The inference graphs go with the data graphs; leaving them behind kept
+		// the inferred triples of deleted and renamed files in the store for good.
+		this._store.deleteGraphs(context.graphs, true);
 	}
 }

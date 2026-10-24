@@ -53,6 +53,48 @@ export function getLocalPartAndQuery(iri: string): string {
 		return iri.split('/').pop() || iri;
 	}
 }
+
+/**
+ * The characters that may precede the local part of an IRI in its written form: the
+ * colon of a prefixed name or of an XML entity-free qualified name, the namespace
+ * separators `/` and `#`, the semicolon of an XML entity reference (`&ns;local`) and
+ * the opening bracket of a relative IRI reference (`<local>`).
+ */
+const LOCAL_PART_SEPARATORS = new Set([':', '/', '#', ';', '<']);
+
+/**
+ * Get the offset of the local part of an IRI within the text of one of its written
+ * occurrences, e.g. `ex:Thing`, `<http://example.org/ns#Thing>`, `http://example.org/ns#Thing`
+ * or `&ex;Thing`. Only the local part is rewritten when an IRI is renamed, so this works for
+ * every syntax and prefix an occurrence uses.
+ * @param referenceText The text of the occurrence, e.g. the text of an indexed reference range.
+ * @param localPart The local part of the IRI.
+ * @returns The offset of the local part in the text, or `undefined` if the text does not end
+ * with the local part as a whole, e.g. because the text is stale or uses escape sequences.
+ */
+export function getLocalPartOffset(referenceText: string, localPart: string): number | undefined {
+	if (!localPart) {
+		return undefined;
+	}
+
+	// The local part of an IRI reference ends before its closing bracket.
+	const text = referenceText.startsWith('<') && referenceText.endsWith('>')
+		? referenceText.slice(0, -1)
+		: referenceText;
+
+	if (!text.endsWith(localPart)) {
+		return undefined;
+	}
+
+	const offset = text.length - localPart.length;
+
+	// A relative IRI in an RDF/XML attribute value consists of the local part only.
+	if (offset === 0) {
+		return 0;
+	}
+
+	return LOCAL_PART_SEPARATORS.has(text[offset - 1]) ? offset : undefined;
+}
 /**
  * Strip the URI scheme and authority from a URI string and decode percent-encoded characters,
  * returning a human-readable path suitable for display.
