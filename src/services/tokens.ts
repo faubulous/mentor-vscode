@@ -59,6 +59,8 @@ export enum ServiceToken {
 	UserFileStore = "UserFileStore",
 	/** Service for updating workspace: URI references across all indexed documents on rename. */
 	ReferenceUpdateService = "ReferenceUpdateService",
+	/** Service that extends the rename of an IRI to all other indexed documents. */
+	WorkspaceRenameService = "WorkspaceRenameService",
 	/** Controller for the custom Mentor settings panel. */
 	SettingsPanelController = "SettingsPanelController",
 	/** Generic navigation router between webview panels. */

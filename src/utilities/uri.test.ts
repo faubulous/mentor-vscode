@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, toDisplayPath, getFileName, getPath, getFolderPath, shortenPathStart } from '@src/utilities/uri';
+import { toJsonId, getIriFromNodeId, getLocalPartAndQuery, getLocalPartOffset, toDisplayPath, getFileName, getPath, getFolderPath, shortenPathStart } from '@src/utilities/uri';
 
 describe('toJsonId', () => {
 	it('converts http URI to dot-separated identifier', () => {
@@ -204,5 +204,36 @@ describe('shortenPathStart', () => {
 
 	it('returns an empty string unchanged', () => {
 		expect(shortenPathStart('', 40)).toBe('');
+	});
+});
+
+describe('getLocalPartOffset', () => {
+	it.each([
+		['a prefixed name', 'ex:Thing', 3],
+		['an IRI reference with a hash namespace', '<http://example.org/ns#Thing>', 23],
+		['an IRI reference with a slash namespace', '<http://example.org/ns/Thing>', 23],
+		['an absolute IRI in an RDF/XML attribute', 'http://example.org/ns#Thing', 22],
+		['an XML entity reference', '&ex;Thing', 4],
+		['a fragment reference', '#Thing', 1],
+		['a relative IRI reference', '<Thing>', 1],
+		['a relative RDF/XML attribute value', 'Thing', 0],
+	])('finds the local part in %s', (_description, text, expected) => {
+		expect(getLocalPartOffset(text, 'Thing')).toBe(expected);
+	});
+
+	it('returns undefined for text that does not end with the local part', () => {
+		expect(getLocalPartOffset('ex:Other', 'Thing')).toBeUndefined();
+	});
+
+	it('returns undefined when the local part is only a suffix of a longer name', () => {
+		expect(getLocalPartOffset('ex:MyThing', 'Thing')).toBeUndefined();
+	});
+
+	it('returns undefined for an escaped local part', () => {
+		expect(getLocalPartOffset('ex:a\\-b', 'a-b')).toBeUndefined();
+	});
+
+	it('returns undefined for an empty local part', () => {
+		expect(getLocalPartOffset('<http://example.org/ns#>', '')).toBeUndefined();
 	});
 });

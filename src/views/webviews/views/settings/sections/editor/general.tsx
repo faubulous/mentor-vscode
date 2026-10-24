@@ -15,6 +15,7 @@ export const editorGeneralSection = {
 	component: EditorGeneralSection,
 	keys: [
 		'editor.codeLensEnabled',
+		'editor.renameAcrossFiles',
 		'prefixes.autoDefinePrefixes',
 		'prefixes.prefixDefinitionMode',
 		'namespaces',
@@ -42,6 +43,14 @@ function EditorGeneralSection({ keys, settings, onUpdate, setScope, onBulkScope 
 				<vscode-checkbox
 					checked={settings['editor.codeLensEnabled']?.value === true}
 					onChange={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'editor.codeLensEnabled', (e.target as HTMLInputElement).checked)}
+				>
+					Enabled
+				</vscode-checkbox>
+			</SettingRow>
+			<SettingRow {...rowProps('editor.renameAcrossFiles')}>
+				<vscode-checkbox
+					checked={settings['editor.renameAcrossFiles']?.value === true}
+					onChange={(e: any) => onUpdate(MENTOR_SETTINGS_SOURCE, 'editor.renameAcrossFiles', (e.target as HTMLInputElement).checked)}
 				>
 					Enabled
 				</vscode-checkbox>

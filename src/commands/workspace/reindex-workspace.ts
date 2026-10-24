@@ -9,8 +9,10 @@ export const reindexWorkspace = {
 	handler: async () => {
 		const store = container.resolve<Store>(ServiceToken.Store);
 
-		// Clear all graphs..
-		store.deleteGraphs(store.getGraphs());
+		// Replace the store's contents wholesale: deleting the graphs one quad at a
+		// time took seconds on a large workspace and released no memory, because
+		// the store's term dictionary never shrinks.
+		store.clear();
 
 		await store.loadFrameworkOntologies();
 
