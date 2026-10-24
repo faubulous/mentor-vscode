@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
@@ -353,7 +354,7 @@ function createBatchService(sizes: Record<string, number>, maxGraphSize?: number
 
 	// Register a loaded context (with its own single graph) for every file.
 	for (const uri of files) {
-		contexts[uri.toString()] = { graphs: [uri.toString()], subjects: {}, references: {} };
+		contexts[uri.toString()] = { graphs: [uri.toString()], subjects: new RangeIndex(), references: new RangeIndex() };
 	}
 
 	return { service, store, files };
@@ -725,7 +726,7 @@ function createValidationService(graphVersions: Record<string, number> = {}) {
 	} as any;
 
 	const documentUri = vscode.Uri.parse('file:///w/data.ttl');
-	const documentContext = { graphs: [documentUri.toString()], subjects: {}, references: {} } as any;
+	const documentContext = { graphs: [documentUri.toString()], subjects: new RangeIndex(), references: new RangeIndex() } as any;
 	const contextService = {
 		contexts: { [documentUri.toString()]: documentContext },
 		onDidChangeDocumentContext: () => ({ dispose: () => { } }),
@@ -984,7 +985,7 @@ describe('ShaclValidationService missing shape graph reporting', () => {
 		} as any;
 
 		const contexts: Record<string, any> = {
-			[A]: { graphs: [A], subjects: {}, references: {} },
+			[A]: { graphs: [A], subjects: new RangeIndex(), references: new RangeIndex() },
 		};
 
 		const contextService = { contexts, onDidChangeDocumentContext: () => ({ dispose: () => { } }) } as any;

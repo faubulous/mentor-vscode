@@ -116,7 +116,7 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 
 		const result: vscode.CodeLens[] = [];
 
-		for (const iri of Object.keys(context.subjects)) {
+		for (const iri of context.subjects.keys()) {
 			if (token?.isCancellationRequested) {
 				return [];
 			}
@@ -134,7 +134,7 @@ export class TurtleUsageCodeLensProvider implements vscode.CodeLensProvider {
 			const n = Math.max(this._referenceProvider.countReferencesForIri(iri) - 1, 0);
 			const usageTitle = `${n} usage${n === 1 ? '' : 's'}`;
 
-			for (const range of context.subjects[iri]) {
+			for (const range of context.subjects.getRanges(iri)) {
 				const codeLensRange = new vscode.Range(
 					new vscode.Position(range.start.line, range.start.character),
 					new vscode.Position(range.end.line, range.end.character)

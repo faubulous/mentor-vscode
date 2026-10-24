@@ -3,6 +3,7 @@ import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
+import { RangeIndex } from '@src/services/document/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { XmlParser } from '@src/languages/xml/xml-parser';
@@ -59,11 +60,12 @@ export class XmlDocument extends DocumentContext {
 	setParsedData(data: XmlParseResult): void {
 		this.baseIri = data.baseIri;
 		this.namespaces = data.namespaces;
-		this.namespaceDefinitions = data.namespaceDefinitions;
-		this.subjects = data.subjects;
-		this.references = data.references;
-		this.typeAssertions = data.typeAssertions;
-		this.typeDefinitions = data.typeDefinitions;
+		// The parser result is transient; the context keeps the ranges packed.
+		this.namespaceDefinitions = RangeIndex.fromRecord(data.namespaceDefinitions);
+		this.subjects = RangeIndex.fromRecord(data.subjects);
+		this.references = RangeIndex.fromRecord(data.references);
+		this.typeAssertions = RangeIndex.fromRecord(data.typeAssertions);
+		this.typeDefinitions = RangeIndex.fromRecord(data.typeDefinitions);
 		this._textLiterals = data.textLiteralRanges.map(r => new vscode.Range(
 			new vscode.Position(r.start.line, r.start.character),
 			new vscode.Position(r.end.line, r.end.character)

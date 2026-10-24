@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { CstNode, ILexingError } from 'chevrotain';
-import { Range } from 'vscode-languageserver-types';
+import { RangeIndex } from './range-index';
 import { Quad_Subject } from '@rdfjs/types';
 import { PredicateUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
@@ -90,19 +90,19 @@ export interface IDocumentContext {
 	namespaces: { [key: string]: string };
 
 	/**
-	 * Maps prefixes to the location of their definition in the document.
+	 * Maps namespace IRIs to the location of their prefix definition in the document.
 	 */
-	namespaceDefinitions: { [key: string]: Range[] };
+	namespaceDefinitions: RangeIndex;
 
 	/**
 	 * Maps IRIs that appear as subjects to the locations where they appear in the document.
 	 */
-	subjects: { [key: string]: Range[] };
+	subjects: RangeIndex;
 
 	/**
 	 * Maps IRIs of all resources to the locations where they appear in the document.
 	 */
-	references: { [key: string]: Range[] };
+	references: RangeIndex;
 
 	/**
 	 * A human-readable slug used as the URI fragment for the document's graph IRI.
@@ -120,12 +120,12 @@ export interface IDocumentContext {
 	/**
 	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion.
 	 */
-	typeAssertions: { [key: string]: Range[] };
+	typeAssertions: RangeIndex;
 
 	/**
 	 * Maps IRIs of subjects that are class or property definitions to the location of the definition.
 	 */
-	typeDefinitions: { [key: string]: Range[] };
+	typeDefinitions: RangeIndex;
 
 	/**
 	 * Information about the language tags used in the document.

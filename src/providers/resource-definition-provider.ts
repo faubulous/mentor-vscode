@@ -45,9 +45,9 @@ export class ResourceDefinitionProvider {
 			// Find all contexts that define the IRI or blank node ID.
 			const contexts = this._getContextsDefiningResource(id, primaryContext);
 
-			for (let c of contexts.filter(c => c.typeDefinitions[id])) {
+			for (let c of contexts.filter(c => c.typeDefinitions.has(id))) {
 				// Look for type assertions first, because sometimes namespaces are defined as rdf:type owl:Ontology.
-				range = c.typeDefinitions[id][0];
+				range = c.typeDefinitions.first(id);
 				context = c;
 
 				break;
@@ -56,15 +56,10 @@ export class ResourceDefinitionProvider {
 
 		// If no class or property definition was found, look for namespace definitions or references in the primary document.
 		if (!range) {
-			if (primaryContext.typeDefinitions[id]) {
-				range = primaryContext.typeDefinitions[id][0];
-			} else if (primaryContext.typeAssertions[id]) {
-				range = primaryContext.typeAssertions[id][0];
-			} else if (primaryContext.namespaceDefinitions[id]) {
-				range = primaryContext.namespaceDefinitions[id][0];
-			} else if (primaryContext.references[id]) {
-				range = primaryContext.references[id][0];
-			}
+			range = primaryContext.typeDefinitions.first(id)
+				?? primaryContext.typeAssertions.first(id)
+				?? primaryContext.namespaceDefinitions.first(id)
+				?? primaryContext.references.first(id);
 		}
 
 		if (range) {
@@ -78,7 +73,7 @@ export class ResourceDefinitionProvider {
 		const result: IDocumentContext[] = [];
 		const contexts = Object.values(this._contextService.contexts);
 
-		for (const c of contexts.filter(c => c.typeDefinitions[iriOrBlankId])) {
+		for (const c of contexts.filter(c => c.typeDefinitions.has(iriOrBlankId))) {
 			if (primaryContext && c == primaryContext) {
 				result.unshift(c);
 			} else {

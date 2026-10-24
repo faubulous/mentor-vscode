@@ -65,7 +65,7 @@ export class ShaclDiagnosticsMapper {
 
 		// 1. Try the value IRI (most specific).
 		if (entry.value) {
-			const r = this._firstRangeAfterLine(context.references[entry.value], focusNodeStartLine, nextSubjectStartLine);
+			const r = this._firstRangeAfterLine(context.references.getRanges(entry.value), focusNodeStartLine, nextSubjectStartLine);
 
 			if (r) {
 				return r;
@@ -74,7 +74,7 @@ export class ShaclDiagnosticsMapper {
 
 		// 2. Try the predicate path.
 		if (entry.path) {
-			const r = this._firstRangeAfterLine(context.references[entry.path], focusNodeStartLine, nextSubjectStartLine);
+			const r = this._firstRangeAfterLine(context.references.getRanges(entry.path), focusNodeStartLine, nextSubjectStartLine);
 
 			if (r) {
 				return r;
@@ -83,11 +83,9 @@ export class ShaclDiagnosticsMapper {
 
 		// 3. Fall back to the focus node subject position.
 		if (focusNodeStartLine !== undefined) {
-			const allRanges = context.subjects[entry.focusNode] ?? context.references[entry.focusNode];
+			const r = context.subjects.first(entry.focusNode) ?? context.references.first(entry.focusNode);
 
-			if (allRanges?.length) {
-				const r = allRanges[0];
-
+			if (r) {
 				return new vscode.Range(r.start.line, r.start.character, r.end.line, r.end.character);
 			}
 		}
@@ -136,9 +134,9 @@ export class ShaclDiagnosticsMapper {
 	 * Returns the start line of the focus node in the document, or undefined if not found.
 	 */
 	private _getFocusNodeStartLine(focusNode: string, context: IDocumentContext): number | undefined {
-		const ranges = context.subjects[focusNode] ?? context.references[focusNode];
+		const range = context.subjects.first(focusNode) ?? context.references.first(focusNode);
 
-		return ranges?.length ? ranges[0].start.line : undefined;
+		return range?.start.line;
 	}
 
 	/**
@@ -147,9 +145,11 @@ export class ShaclDiagnosticsMapper {
 	private _getSortedSubjectStartLines(context: IDocumentContext): number[] {
 		const lines: number[] = [];
 
-		for (const ranges of Object.values(context.subjects)) {
-			if (ranges?.length) {
-				lines.push(ranges[0].start.line);
+		for (const subject of context.subjects.keys()) {
+			const first = context.subjects.first(subject);
+
+			if (first) {
+				lines.push(first.start.line);
 			}
 		}
 

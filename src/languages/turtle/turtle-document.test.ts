@@ -242,7 +242,7 @@ describe('TurtleDocument', () => {
                 makeToken(RdfToken.IRIREF.name, '<http://example.org/Thing>', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 26 }),
             ];
             doc.setTokens(tokens as any);
-            expect(doc.references['http://example.org/Thing']).toBeDefined();
+            expect(doc.references.has('http://example.org/Thing')).toBe(true);
         });
 
         it('registers A token type assertions with subject', () => {
@@ -264,7 +264,7 @@ describe('TurtleDocument', () => {
                 makeToken(RdfToken.BLANK_NODE_LABEL.name, '_:b0', { startLine: 1, startColumn: 1, endLine: 1, endColumn: 4 }),
             ];
             doc.setTokens(tokens as any);
-            expect(doc.references['_:b0']).toBeDefined();
+            expect(doc.references.has('_:b0')).toBe(true);
         });
 
         it('registers LBRACKET reference when blankNodeId payload is present', () => {
@@ -276,7 +276,7 @@ describe('TurtleDocument', () => {
                 payload: { blankNodeId: '_:b1' },
             };
             doc.setTokens([bracket as any]);
-            expect(doc.references['_:b1']).toBeDefined();
+            expect(doc.references.has('_:b1')).toBe(true);
         });
 
         it('skips LBRACKET token when blankNodeId payload is absent', () => {
@@ -288,7 +288,7 @@ describe('TurtleDocument', () => {
                 payload: {},
             };
             doc.setTokens([bracket as any]);
-            expect(Object.keys(doc.references)).toHaveLength(0);
+            expect([...doc.references.keys()]).toHaveLength(0);
         });
 
         it('registers type assertion (PNAME_LN a OWL:Class pattern)', () => {
@@ -311,7 +311,7 @@ describe('TurtleDocument', () => {
             ];
             doc.setTokens(tokens as any);
             // owl:Class → OWL namespace → type definition registered
-            expect(doc.typeDefinitions['http://example.org/MyClass']).toBeDefined();
+            expect(doc.typeDefinitions.has('http://example.org/MyClass')).toBe(true);
         });
 
         it('registers IRIREF subject after PERIOD', () => {
@@ -321,7 +321,7 @@ describe('TurtleDocument', () => {
                 makeToken(RdfToken.IRIREF.name, '<http://example.org/Sub>', { startLine: 2, startColumn: 1, endLine: 2, endColumn: 24 }),
             ];
             doc.setTokens(tokens as any);
-            expect(doc.subjects['http://example.org/Sub']).toBeDefined();
+            expect(doc.subjects.has('http://example.org/Sub')).toBe(true);
         });
 
         it('handles A token at index 0 (no subject token — _handleTypeAssertion guard)', () => {

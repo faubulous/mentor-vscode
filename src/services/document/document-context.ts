@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { Range } from 'vscode-languageserver-types';
 import { Quad_Subject } from "@rdfjs/types";
 import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
@@ -10,6 +9,7 @@ import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { TreeLabelStyle } from '@src/services/core/settings-service';
 import { getPredicatesConfig } from '@src/utilities/vscode/config';
 import { IDocumentContext } from './document-context.interface';
+import { RangeIndex } from './range-index';
 
 /**
  * A literal value with optional language tag.
@@ -45,16 +45,16 @@ export abstract class DocumentContext implements IDocumentContext {
 
 	namespaces: { [key: string]: string } = {};
 
-	namespaceDefinitions: { [key: string]: Range[] } = {};
+	namespaceDefinitions = new RangeIndex();
 
-	subjects: { [key: string]: Range[] } = {};
+	subjects = new RangeIndex();
 
-	references: { [key: string]: Range[] } = {};
+	references = new RangeIndex();
 
 	// TODO: Remove all type definitions from this map and query the combination of typeAssertion and typeDefinitions instead.
-	typeAssertions: { [key: string]: Range[] } = {};
+	typeAssertions = new RangeIndex();
 
-	typeDefinitions: { [key: string]: Range[] } = {};
+	typeDefinitions = new RangeIndex();
 
 	predicateStats: PredicateUsageStats = {};
 

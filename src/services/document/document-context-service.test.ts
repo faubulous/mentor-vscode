@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { DocumentTokenSource } from '@src/services/document/document-token-source';
@@ -22,11 +23,11 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		graphIri: vscode.Uri.parse('file:///test.ttl'),
 		baseIri: undefined,
 		namespaces: {},
-		namespaceDefinitions: {},
-		subjects: {},
-		references: {},
-		typeAssertions: {},
-		typeDefinitions: {},
+		namespaceDefinitions: new RangeIndex(),
+		subjects: new RangeIndex(),
+		references: new RangeIndex(),
+		typeAssertions: new RangeIndex(),
+		typeDefinitions: new RangeIndex(),
 		predicateStats: {} as any,
 		primaryLanguage: undefined,
 		activeLanguageTag: undefined,
