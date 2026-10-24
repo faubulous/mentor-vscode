@@ -354,6 +354,12 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 		return result;
 	}
 
+	/**
+	 * Get the tree item of a node. The tooltip is left undefined so that VS Code resolves it
+	 * on hover through {@link resolveTreeItem} instead of querying it for every node.
+	 * @param node A definition tree node.
+	 * @returns The tree item of the node without a tooltip.
+	 */
 	getTreeItem(node: DefinitionTreeNode): vscode.TreeItem {
 		const icon = this._getIconWithIssueColor(node);
 
@@ -365,9 +371,22 @@ export class DefinitionNodeProvider implements vscode.TreeDataProvider<Definitio
 			iconPath: icon,
 			label: node.getLabel(),
 			description: node.getDescription(),
-			command: node.getCommand(),
-			tooltip: node.getTooltip()
+			command: node.getCommand()
 		};
+	}
+
+	/**
+	 * Resolve the tooltip of a tree item. VS Code calls this only when an item without a
+	 * tooltip is hovered, so the label and description queries of the tooltip run for the
+	 * hovered node only and not for every node when the tree is built.
+	 * @param item The tree item returned by {@link getTreeItem}.
+	 * @param node The node of the tree item.
+	 * @returns The tree item with its tooltip set.
+	 */
+	resolveTreeItem(item: vscode.TreeItem, node: DefinitionTreeNode): vscode.TreeItem {
+		item.tooltip = node.getTooltip();
+
+		return item;
 	}
 
 	private _getIconWithIssueColor(node: DefinitionTreeNode): vscode.ThemeIcon | undefined {

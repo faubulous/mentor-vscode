@@ -3,6 +3,7 @@ import { container } from 'tsyringe';
 import { VocabularyRepository } from "@faubulous/mentor-rdf";
 import { ServiceToken } from '@src/services/tokens';
 import { DefinitionTreeNode } from "../definition-tree-node";
+import { GroupContainerNode } from "./group-container-node";
 import { ClassesNode } from "./classes/classes-node";
 import { PropertiesNode } from "./properties/properties-node";
 import { IndividualsNode } from "./individuals/individuals-node";
@@ -15,7 +16,7 @@ import { ValidatorsNode } from "./validators/validators-node";
 /**
  * Node of a ontology header in the definition tree.
  */
-export class OntologyNode extends DefinitionTreeNode {
+export class OntologyNode extends GroupContainerNode {
 	private get vocabulary() {
 		return container.resolve<VocabularyRepository>(ServiceToken.VocabularyRepository);
 	}
@@ -60,73 +61,24 @@ export class OntologyNode extends DefinitionTreeNode {
 		}
 	}
 
-	override getChildren(): DefinitionTreeNode[] {
-		const result = [];
-
-		const classes = this.createChildNode(ClassesNode, 'mentor:classes');
-
-		if (classes.hasChildren()) {
-			result.push(classes);
-		}
-
-		const properties = this.createChildNode(PropertiesNode, 'mentor:properties');
-
-		if (properties.hasChildren()) {
-			result.push(properties);
-		}
-
-		const individuals = this.createChildNode(IndividualsNode, 'mentor:individuals');
-
-		if (individuals.hasChildren()) {
-			result.push(individuals);
-		}
-
-		// Note: Concepts that are displayed below a concept scheme are listed under that scheme,
-		// which is a root node of the tree, so only the remaining concepts are listed here.
-		const concepts = this.createChildNode(ConceptsNode, 'mentor:concepts', { inScheme: null });
-
-		if (concepts.hasChildren()) {
-			result.push(concepts);
-		}
-
-		// Note: Collections that are associated with a concept scheme are listed under that scheme,
-		// which is a root node of the tree, so only the remaining collections are listed here.
-		const collections = this.createChildNode(CollectionsNode, 'mentor:collections', { inScheme: null });
-
-		if (collections.hasChildren()) {
-			result.push(collections);
-		}
-
-		const shapes = this.createChildNode(ShapesNode, 'mentor:shapes', this.getQueryOptions({ includeBlankNodes: true }));
-
-		if (shapes.hasChildren()) {
-			result.push(shapes);
-		}
-
-		const rules = this.createChildNode(RulesNode, 'mentor:rules', this.getQueryOptions({ includeBlankNodes: true }));
-
-		if (rules.hasChildren()) {
-			result.push(rules);
-		}
-
-		const validators = this.createChildNode(ValidatorsNode, 'mentor:validators', this.getQueryOptions({ includeBlankNodes: true }));
-
-		if (validators.hasChildren()) {
-			result.push(validators);
-		}
-
-		return result;
-	}
-
-	override resolveNodeForUri(iri: string): DefinitionTreeNode | undefined {
-		for (const child of this.getChildren()) {
-			const found = child.resolveNodeForUri(iri);
-
-			if (found) {
-				return found;
-			}
-		}
-
-		return undefined;
+	/**
+	 * Create the group nodes that may be listed below this node, whether they have children or not.
+	 * @returns The group nodes in the order they are displayed.
+	 */
+	protected override createGroupNodes(): DefinitionTreeNode[] {
+		return [
+			this.createChildNode(ClassesNode, 'mentor:classes'),
+			this.createChildNode(PropertiesNode, 'mentor:properties'),
+			this.createChildNode(IndividualsNode, 'mentor:individuals'),
+			// Note: Concepts that are displayed below a concept scheme are listed under that scheme,
+			// which is a root node of the tree, so only the remaining concepts are listed here.
+			this.createChildNode(ConceptsNode, 'mentor:concepts', { inScheme: null }),
+			// Note: Collections that are associated with a concept scheme are listed under that scheme,
+			// which is a root node of the tree, so only the remaining collections are listed here.
+			this.createChildNode(CollectionsNode, 'mentor:collections', { inScheme: null }),
+			this.createChildNode(ShapesNode, 'mentor:shapes', this.getQueryOptions({ includeBlankNodes: true })),
+			this.createChildNode(RulesNode, 'mentor:rules', this.getQueryOptions({ includeBlankNodes: true })),
+			this.createChildNode(ValidatorsNode, 'mentor:validators', this.getQueryOptions({ includeBlankNodes: true }))
+		];
 	}
 }

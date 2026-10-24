@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { XSD, RDF, RDFS, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
-import { getPropertyTypeFromRange } from '@src/utilities';
+import { any, getPropertyTypeFromRange } from '@src/utilities';
 import { TreeNode, sortByLabel } from "@src/views/trees/tree-node";
 import { DefinitionTreeNode } from "../../definition-tree-node";
 
@@ -107,11 +107,26 @@ export class PropertyNode extends DefinitionTreeNode {
 		return new vscode.ThemeIcon(iconName, iconColor);
 	}
 
+	/**
+	 * Get the IRIs of the sub properties that are listed below this node.
+	 * @returns An iterator of property IRIs.
+	 */
+	private _getSubPropertyIris(): IterableIterator<string> {
+		return this.vocabulary.getSubProperties(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
+	}
+
+	/**
+	 * Indicates whether the property has sub properties, stopping at the first one.
+	 * @returns `true` if the node has children, `false` otherwise.
+	 */
+	override hasChildren(): boolean {
+		return any(this._getSubPropertyIris());
+	}
+
 	override getChildren(): TreeNode[] {
 		const result = [];
-		const properties = this.vocabulary.getSubProperties(this.getDocumentGraphs(), this.uri, this.getQueryOptions());
 
-		for (let p of properties) {
+		for (const p of this._getSubPropertyIris()) {
 			result.push(this.createChildNode(PropertyNode, p));
 		}
 
