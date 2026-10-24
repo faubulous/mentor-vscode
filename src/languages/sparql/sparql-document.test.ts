@@ -92,6 +92,22 @@ describe('SparqlDocument', () => {
             }));
         });
 
+        it('releases the syntax tree of a query that is not loaded into the store', async () => {
+            const doc = makeDoc();
+            const text = 'SELECT * WHERE { ?s ?p ?o }';
+
+            doc.parse(text);
+
+            expect(doc.getParseResult(text)?.cst).toBeDefined();
+
+            await doc.loadTriples(text);
+
+            const result = doc.getParseResult(text);
+
+            expect(result).toBeDefined();
+            expect(result?.cst).toBeUndefined();
+        });
+
         it('infer is a no-op when index.parseSparqlQueries is disabled', async () => {
             const doc = makeDoc();
             await expect(doc.infer()).resolves.toBeUndefined();
@@ -165,8 +181,8 @@ describe('SparqlDocument', () => {
                 makeToken(RdfToken.FROM.name, 'FROM'),
                 makeToken(RdfToken.IRIREF.name, `<${iri}>`, { startColumn: 6 }),
             ] as any);
-            expect(doc.references[iri]).toBeDefined();
-            expect(doc.references[iri]).toHaveLength(1);
+            expect(doc.references.has(iri)).toBe(true);
+            expect(doc.references.count(iri)).toBe(1);
         });
 
         it('indexes an IRIREF in a FROM NAMED clause', () => {
@@ -177,8 +193,8 @@ describe('SparqlDocument', () => {
                 makeToken(RdfToken.NAMED.name, 'NAMED', { startColumn: 6 }),
                 makeToken(RdfToken.IRIREF.name, `<${iri}>`, { startColumn: 12 }),
             ] as any);
-            expect(doc.references[iri]).toBeDefined();
-            expect(doc.references[iri]).toHaveLength(1);
+            expect(doc.references.has(iri)).toBe(true);
+            expect(doc.references.count(iri)).toBe(1);
         });
 
         it('indexes an IRIREF in a GRAPH clause', () => {
@@ -187,7 +203,7 @@ describe('SparqlDocument', () => {
             doc.setTokens([
                 makeToken(RdfToken.IRIREF.name, `<${iri}>`, { startColumn: 7 }),
             ] as any);
-            expect(doc.references[iri]).toBeDefined();
+            expect(doc.references.has(iri)).toBe(true);
         });
 
         it('indexes multiple occurrences of the same IRI', () => {
@@ -199,7 +215,7 @@ describe('SparqlDocument', () => {
                 makeToken(RdfToken.FROM.name, 'FROM', { startLine: 2, startColumn: 1 }),
                 makeToken(RdfToken.IRIREF.name, `<${iri}>`, { startLine: 2, startColumn: 6 }),
             ] as any);
-            expect(doc.references[iri]).toHaveLength(2);
+            expect(doc.references.count(iri)).toBe(2);
         });
 
         it('indexes a PNAME_LN token as a reference', () => {
@@ -213,8 +229,8 @@ describe('SparqlDocument', () => {
                 makeToken(RdfToken.PNAME_LN.name, 'ex:MyClass', { startLine: 2, startColumn: 1 }),
                 makeToken(RdfToken.PERIOD.name, '.', { startLine: 2, startColumn: 11 }),
             ] as any);
-            expect(doc.references['http://example.org/MyClass']).toBeDefined();
-            expect(doc.references['http://example.org/MyClass']).toHaveLength(1);
+            expect(doc.references.has('http://example.org/MyClass')).toBe(true);
+            expect(doc.references.count('http://example.org/MyClass')).toBe(1);
         });
 
         it('does not index PNAME_NS that immediately follows a PREFIX keyword as a reference', () => {
@@ -225,7 +241,7 @@ describe('SparqlDocument', () => {
                 makeToken(RdfToken.IRIREF.name, '<http://example.org/>', { startLine: 1, startColumn: 12 }),
             ] as any);
             // The PNAME_NS 'ex:' after PREFIX is a declaration, not a reference
-            expect(doc.references['ex:']).toBeUndefined();
+            expect(doc.references.has('ex:')).toBe(false);
         });
 
         it('records the correct range for an indexed IRI', () => {
@@ -235,7 +251,7 @@ describe('SparqlDocument', () => {
             doc.setTokens([
                 makeToken(RdfToken.IRIREF.name, image, { startLine: 3, startColumn: 6, endLine: 3, endColumn: 6 + image.length - 1 }),
             ] as any);
-            const ranges = doc.references[iri];
+            const ranges = doc.references.getRanges(iri);
             expect(ranges).toBeDefined();
             expect(ranges[0].start.line).toBe(2); // 0-based (chevrotain is 1-based)
         });
@@ -245,10 +261,25 @@ describe('SparqlDocument', () => {
             const iri1 = 'workspace:///notebook.mnb#cell-1';
             const iri2 = 'workspace:///notebook.mnb#cell-2';
             doc.setTokens([makeToken(RdfToken.IRIREF.name, `<${iri1}>`) as any]);
-            expect(doc.references[iri1]).toBeDefined();
+            expect(doc.references.has(iri1)).toBe(true);
             doc.setTokens([makeToken(RdfToken.IRIREF.name, `<${iri2}>`) as any]);
-            expect(doc.references[iri1]).toBeUndefined();
-            expect(doc.references[iri2]).toBeDefined();
+            expect(doc.references.has(iri1)).toBe(false);
+            expect(doc.references.has(iri2)).toBe(true);
         });
+    });
+});
+
+describe('SparqlDocument.releaseTokens', () => {
+    it('stays loaded after the tokens are released', () => {
+        const doc = makeDoc();
+
+        doc.parse('SELECT * WHERE { ?s ?p ?o }');
+
+        expect(doc.isLoaded).toBe(true);
+
+        doc.releaseTokens();
+
+        expect(doc.isLoaded).toBe(true);
+        expect(doc.isParsed).toBe(false);
     });
 });

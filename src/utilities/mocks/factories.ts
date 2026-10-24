@@ -3,7 +3,9 @@ import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core/settings-service.interface';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
-import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { IDocumentContext, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
+import { RangeIndex } from '@src/services/document/range-index';
+import { Range } from 'vscode-languageserver-types';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
 import { SparqlDocument } from '@src/languages/sparql/sparql-document';
 import { XmlDocument } from '@src/languages/xml/xml-document';
@@ -160,6 +162,25 @@ export function createMockDocumentContextService(overrides?: Partial<IDocumentCo
 }
 
 /**
+ * Create a {@link RangeIndex} for a document index map. Pass the keys when a
+ * test only needs membership (each key gets a zero-length range at the origin),
+ * or a record of ranges when the positions matter.
+ */
+export function createRangeIndex(entries: string[] | Record<string, Range[]>): RangeIndex {
+	if (!Array.isArray(entries)) {
+		return RangeIndex.fromRecord(entries);
+	}
+
+	const index = new RangeIndex();
+
+	for (const key of entries) {
+		index.add(key, Range.create(0, 0, 0, 0));
+	}
+
+	return index;
+}
+
+/**
  * Create a typed no-op {@link IDocumentContext} stub. Pass overrides for the
  * members a test needs to control.
  */
@@ -172,13 +193,15 @@ export function createMockDocumentContext(overrides?: Partial<IDocumentContext>)
 		graphIri: uri,
 		baseIri: undefined,
 		namespaces: {},
-		namespaceDefinitions: {},
-		subjects: {},
-		references: {},
+		namespaceDefinitions: new RangeIndex(),
+		subjects: new RangeIndex(),
+		references: new RangeIndex(),
 		slug: undefined,
-		providesTokens: true,
-		typeAssertions: {},
-		typeDefinitions: {},
+		isTokenized(): this is ITokenizedDocumentContext {
+			return true;
+		},
+		typeAssertions: new RangeIndex(),
+		typeDefinitions: new RangeIndex(),
 		predicateStats: {},
 		primaryLanguage: undefined,
 		activeLanguageTag: undefined,

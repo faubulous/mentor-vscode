@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createTurtleDocument } from '@src/utilities/mocks/factories';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
@@ -353,7 +355,7 @@ function createBatchService(sizes: Record<string, number>, maxGraphSize?: number
 
 	// Register a loaded context (with its own single graph) for every file.
 	for (const uri of files) {
-		contexts[uri.toString()] = { graphs: [uri.toString()], subjects: {}, references: {} };
+		contexts[uri.toString()] = { graphs: [uri.toString()], subjects: new RangeIndex(), references: new RangeIndex() };
 	}
 
 	return { service, store, files };
@@ -725,7 +727,7 @@ function createValidationService(graphVersions: Record<string, number> = {}) {
 	} as any;
 
 	const documentUri = vscode.Uri.parse('file:///w/data.ttl');
-	const documentContext = { graphs: [documentUri.toString()], subjects: {}, references: {} } as any;
+	const documentContext = { graphs: [documentUri.toString()], subjects: new RangeIndex(), references: new RangeIndex() } as any;
 	const contextService = {
 		contexts: { [documentUri.toString()]: documentContext },
 		onDidChangeDocumentContext: () => ({ dispose: () => { } }),
@@ -984,7 +986,7 @@ describe('ShaclValidationService missing shape graph reporting', () => {
 		} as any;
 
 		const contexts: Record<string, any> = {
-			[A]: { graphs: [A], subjects: {}, references: {} },
+			[A]: { graphs: [A], subjects: new RangeIndex(), references: new RangeIndex() },
 		};
 
 		const contextService = { contexts, onDidChangeDocumentContext: () => ({ dispose: () => { } }) } as any;
@@ -1010,5 +1012,62 @@ describe('ShaclValidationService missing shape graph reporting', () => {
 		await service.validateAllProfiles([vscode.Uri.parse(A)]);
 
 		expect(service.getLastResult(vscode.Uri.parse(A))?.missingShapeGraphs).toEqual(['user:///shapes/empty.ttl']);
+	});
+});
+
+describe('ShaclValidationService – quad contexts of indexed files', () => {
+	const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+	let originalReadFile: typeof vscode.workspace.fs.readFile;
+
+	beforeEach(() => {
+		originalReadFile = vscode.workspace.fs.readFile;
+	});
+
+	afterEach(() => {
+		(vscode.workspace.fs as any).readFile = originalReadFile;
+	});
+
+	it('reads the file again for a document whose tokens were released', async () => {
+		const { service } = createService({} as any);
+		const uri = vscode.Uri.parse('file:///w/indexed.ttl');
+		const document = createTurtleDocument(uri);
+		const readFile = vi.fn(async () => new TextEncoder().encode(text));
+
+		(vscode.workspace.fs as any).readFile = readFile;
+		document.parse(text);
+		document.releaseTokens();
+
+		const quadContexts = await (service as any)._getQuadContexts(uri, document);
+
+		expect(readFile).toHaveBeenCalledWith(uri);
+		expect(quadContexts).toHaveLength(1);
+		expect(quadContexts[0].subject.value).toBe('http://example.org/a');
+	});
+
+	it('uses the tokens of a parsed document without reading the file', async () => {
+		const { service } = createService({} as any);
+		const uri = vscode.Uri.parse('file:///w/open.ttl');
+		const document = createTurtleDocument(uri);
+		const readFile = vi.fn();
+
+		(vscode.workspace.fs as any).readFile = readFile;
+		document.parse(text);
+
+		const quadContexts = await (service as any)._getQuadContexts(uri, document);
+
+		expect(readFile).not.toHaveBeenCalled();
+		expect(quadContexts).toHaveLength(1);
+	});
+
+	it('maps without quad contexts when the file cannot be read', async () => {
+		const { service } = createService({} as any);
+		const uri = vscode.Uri.parse('file:///w/missing.ttl');
+		const document = createTurtleDocument(uri);
+
+		(vscode.workspace.fs as any).readFile = vi.fn(async () => { throw new Error('file not found'); });
+		document.parse(text);
+		document.releaseTokens();
+
+		expect(await (service as any)._getQuadContexts(uri, document)).toBeUndefined();
 	});
 });

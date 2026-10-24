@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
@@ -65,7 +66,7 @@ function makeMockContext(tokens: any[], namespaces: Record<string, string> = {},
     return {
         tokens,
         namespaces,
-        subjects,
+        subjects: createRangeIndex(Object.keys(subjects)),
         graphIri,
         tokenize: vi.fn(() => tokens),
         getResourceDescription: vi.fn(() => undefined),
@@ -260,7 +261,7 @@ describe('TurtleCompletionItemProvider', () => {
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
             // A sub-context that has a subject matching the prefix
             const subContext = {
-                subjects: { 'http://example.org/Foo': true, 'http://example.org/Bar': true },
+                subjects: createRangeIndex(['http://example.org/Foo', 'http://example.org/Bar']),
             };
 
             (provider as any)._contextService = ({
@@ -290,7 +291,7 @@ describe('TurtleCompletionItemProvider', () => {
             // context's graphIri falls back to the document URI itself.
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' }, {}, 'untitled:Untitled-1');
             const subContext = {
-                subjects: { 'http://example.org/Foo': true },
+                subjects: createRangeIndex(['http://example.org/Foo']),
             };
 
             const getDocumentContextFromUri = vi.fn((uri: string) =>
@@ -319,7 +320,7 @@ describe('TurtleCompletionItemProvider', () => {
             ];
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
             const globalContext = {
-                subjects: { 'http://example.org/Fizz': true },
+                subjects: createRangeIndex(['http://example.org/Fizz']),
             };
 
             (provider as any)._contextService = ({
@@ -344,8 +345,8 @@ describe('TurtleCompletionItemProvider', () => {
                 makeToken(RdfToken.PNAME_LN.name, 'ex:F'),
             ];
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
-            const ctx1 = { subjects: { 'http://example.org/Foo': true } };
-            const ctx2 = { subjects: { 'http://example.org/Foo': true, 'http://example.org/Far': true } };
+            const ctx1 = { subjects: createRangeIndex(['http://example.org/Foo']) };
+            const ctx2 = { subjects: createRangeIndex(['http://example.org/Foo', 'http://example.org/Far']) };
 
             let callCount = 0;
             (provider as any)._contextService = ({
@@ -378,7 +379,7 @@ describe('TurtleCompletionItemProvider', () => {
             }
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
 
@@ -400,7 +401,7 @@ describe('TurtleCompletionItemProvider', () => {
             const mockCtx = makeMockContext(tokens, { ex: 'http://example.org/' });
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects: { 'http://example.org/Foo': true } })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(['http://example.org/Foo']) })),
                 contexts: {},
             });
 
@@ -428,7 +429,7 @@ describe('TurtleCompletionItemProvider', () => {
 
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -466,7 +467,7 @@ describe('TurtleCompletionItemProvider', () => {
 
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -507,7 +508,7 @@ describe('TurtleCompletionItemProvider', () => {
 
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -540,7 +541,7 @@ describe('TurtleCompletionItemProvider', () => {
 
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -582,7 +583,7 @@ describe('TurtleCompletionItemProvider', () => {
 
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
             (provider as any)._vocabulary = ({
@@ -614,7 +615,7 @@ describe('TurtleCompletionItemProvider', () => {
 
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
-                getDocumentContextFromUri: vi.fn(() => ({ subjects })),
+                getDocumentContextFromUri: vi.fn(() => ({ subjects: createRangeIndex(Object.keys(subjects)) })),
                 contexts: {},
             });
 

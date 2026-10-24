@@ -192,7 +192,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			for (const entry of last.results) {
 				const iri = entry.focusNode;
 
-				if (subjects && !subjects[iri]) {
+				if (subjects && !subjects.has(iri)) {
 					continue;
 				}
 
@@ -334,7 +334,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 
 		const node = new NamedNode(uri.toString());
 
-		if (!context.subjects[node.value]) {
+		if (!context.subjects.has(node.value)) {
 			const result = new vscode.FileDecoration(undefined, undefined, this._disabledColor);
 			result.propagate = false;
 			result.tooltip = `This subject is not defined in the active document.`;
@@ -352,7 +352,7 @@ export class DefinitionNodeDecorationProvider implements vscode.FileDecorationPr
 			return undefined;
 		}
 
-		if (!context.references[node.value]) {
+		if (!context.references.has(node.value)) {
 			return undefined;
 		}
 

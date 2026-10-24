@@ -154,6 +154,28 @@ describe('NotebookController', () => {
 			expect(mockExecution.end).toHaveBeenCalledWith(true, expect.any(Number));
 		});
 
+		it('omits the raw response from the bindings output', async () => {
+			const mockExecution = makeExecution();
+			const { executeHandler } = createControllerWithExecution(mockExecution);
+			const cell = makeCell();
+
+			mockCreateQuery.mockReturnValue({ queryType: 'bindings' });
+			mockExecuteQuery.mockResolvedValue({
+				queryType: 'bindings',
+				result: { type: 'bindings', columns: [], rows: [], namespaceMap: {} },
+				rawResponse: { url: 'http://example.org/sparql', status: 200, statusText: 'OK', body: 'x'.repeat(100) },
+			});
+
+			await executeHandler()!([cell], {}, {});
+			await new Promise(resolve => setTimeout(resolve, 0));
+
+			const [outputs] = mockExecution.replaceOutput.mock.calls[0];
+			const output = JSON.parse(new TextDecoder().decode(outputs[0].items[0].data));
+
+			expect(output.result).toBeDefined();
+			expect(output.rawResponse).toBeUndefined();
+		});
+
 		it('should output application/sparql-results+json for boolean result', async () => {
 			const mockExecution = makeExecution();
 			const { executeHandler } = createControllerWithExecution(mockExecution);
