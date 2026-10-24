@@ -639,7 +639,7 @@ describe('TurtleDocument.parse — quad reader', () => {
     });
 
     it('takes the grammar parser for a TriG document', async () => {
-        const doc = createTurtleDocument('file:///test.trig', RdfSyntax.Trig, { store: makeStore() });
+        const doc = createTurtleDocument('file:///test.trig', RdfSyntax.TriG, { store: makeStore() });
         const trigText = '@prefix ex: <http://example.org/> .\nex:g { ex:a ex:b ex:c . }';
 
         doc.parse(trigText);
