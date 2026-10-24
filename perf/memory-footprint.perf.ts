@@ -48,21 +48,7 @@ import { IDocumentContext, isTokenizedDocumentContext } from '@src/services/docu
 import { SparqlResultsController } from '@src/views/webviews/views/sparql-results/sparql-results-controller';
 import { createTestSettings } from '@src/utilities/mocks/factories';
 import { CorpusGenerator } from './corpus-generator';
-
-/**
- * One measured phase of the harness.
- */
-interface PhaseResult {
-	phase: string;
-	files: number;
-	quads: number;
-	ms: number;
-	/** Heap growth still present after a forced garbage collection. */
-	retainedMb: number;
-	/** Heap growth right after the phase, before the collection: allocation churn. */
-	unCollectedMb: number;
-	perFileKb: number;
-}
+import { MemoryUsageObserver } from './memory-usage-observer';
 
 /**
  * A file of the corpus: its URI and Turtle text.
@@ -72,7 +58,6 @@ interface CorpusFile {
 	text: string;
 }
 
-const BYTES_PER_MEGABYTE = 1024 * 1024;
 const SMALL_FILE_COUNT = readIntegerSetting('PERF_FILES', 100);
 const SMALL_FILE_CLASSES = readIntegerSetting('PERF_CLASSES', 500);
 const LARGE_FILE_CLASSES = readIntegerSetting('PERF_LARGE_CLASSES', 50000);
@@ -81,48 +66,15 @@ const HISTORY_ROWS = readIntegerSetting('PERF_HISTORY_ROWS', 100000);
 const HISTORY_RAW_CHARS = readIntegerSetting('PERF_HISTORY_RAW_CHARS', 5000000);
 const QUADS_PER_CLASS = 4;
 
-const results: PhaseResult[] = [];
+const observer = new MemoryUsageObserver();
 
+/**
+ * Reads an integer from an environment variable, or returns the fallback.
+ */
 function readIntegerSetting(name: string, fallback: number): number {
 	const value = Number.parseInt(process.env[name] ?? '', 10);
 
 	return Number.isFinite(value) ? value : fallback;
-}
-
-function forceGarbageCollection(): void {
-	if (typeof global.gc !== 'function') {
-		throw new Error('The harness needs --expose-gc; run it with `npm run perf`.');
-	}
-
-	global.gc();
-}
-
-function heapUsedMb(): number {
-	return process.memoryUsage().heapUsed / BYTES_PER_MEGABYTE;
-}
-
-/**
- * Runs one phase between two forced collections and records its cost.
- */
-async function measure(phase: string, files: number, quads: number, run: () => Promise<void> | void): Promise<PhaseResult> {
-	forceGarbageCollection();
-
-	const heapBefore = heapUsedMb();
-	const start = performance.now();
-
-	await run();
-
-	const ms = performance.now() - start;
-	const unCollectedMb = heapUsedMb() - heapBefore;
-
-	forceGarbageCollection();
-
-	const retainedMb = heapUsedMb() - heapBefore;
-	const result = { phase, files, quads, ms, retainedMb, unCollectedMb, perFileKb: files > 0 ? retainedMb * 1024 / files : 0 };
-
-	results.push(result);
-
-	return result;
 }
 
 /**
@@ -157,6 +109,9 @@ function loadCorpus(): CorpusFile[] {
 	return files;
 }
 
+/**
+ * Counts the quads of generated corpus files from their class declarations.
+ */
 function countQuads(files: CorpusFile[]): number {
 	return files.reduce((sum, file) => sum + (file.text.match(/ a owl:Class ;/g)?.length ?? 0) * QUADS_PER_CLASS, 0);
 }
@@ -194,31 +149,6 @@ function releaseParseResult(context: IDocumentContext): void {
 	}
 }
 
-function printResults(): void {
-	const header = ['phase', 'files', 'quads', 'ms', 'retainedMb', 'unCollectedMb', 'perFileKb'];
-	const rows = results.map(result => [
-		result.phase,
-		String(result.files),
-		String(result.quads),
-		result.ms.toFixed(0),
-		result.retainedMb.toFixed(1),
-		result.unCollectedMb.toFixed(1),
-		result.perFileKb.toFixed(0)
-	]);
-	const widths = header.map((title, column) => Math.max(title.length, ...rows.map(row => row[column].length)));
-	const formatRow = (row: string[]) => row.map((cell, column) => cell.padEnd(widths[column])).join('  ');
-
-	process.stdout.write('\n' + formatRow(header) + '\n');
-
-	for (const row of rows) {
-		process.stdout.write(formatRow(row) + '\n');
-	}
-
-	for (const result of results) {
-		process.stdout.write('PERF ' + JSON.stringify(result) + '\n');
-	}
-}
-
 describe('memory footprint', () => {
 	const corpus = loadCorpus();
 	const quads = countQuads(corpus);
@@ -227,7 +157,7 @@ describe('memory footprint', () => {
 	it('indexes the corpus end to end through the document context service', async () => {
 		const { contextService, diagnostics } = createPipeline();
 
-		await measure('index: load + diagnose', corpus.length, quads, async () => {
+		await observer.measure('index: load + diagnose', corpus.length, quads, async () => {
 			for (const file of corpus) {
 				await contextService.loadDocumentContent(file.uri, file.text);
 
@@ -235,7 +165,7 @@ describe('memory footprint', () => {
 			}
 		});
 
-		await measure('index: release parse results', corpus.length, quads, () => {
+		await observer.measure('index: release parse results', corpus.length, quads, () => {
 			for (const context of Object.values(contextService.contexts)) {
 				releaseParseResult(context);
 			}
@@ -252,25 +182,25 @@ describe('memory footprint', () => {
 			return context;
 		});
 
-		await measure('phase: parse', corpus.length, quads, () => {
+		await observer.measure('phase: parse', corpus.length, quads, () => {
 			contexts.forEach((context, index) => context.parse(corpus[index].text));
 		});
 
-		await measure('phase: loadTriples', corpus.length, quads, async () => {
+		await observer.measure('phase: loadTriples', corpus.length, quads, async () => {
 			for (const [index, context] of contexts.entries()) {
 				await context.loadTriples(corpus[index].text);
 			}
 		});
 
-		await measure('phase: diagnoseContent', corpus.length, quads, () => {
+		await observer.measure('phase: diagnoseContent', corpus.length, quads, () => {
 			corpus.forEach(file => diagnostics.diagnoseContent(file.uri, file.text));
 		});
 
-		await measure('phase: releaseParseResult', corpus.length, quads, () => {
+		await observer.measure('phase: releaseParseResult', corpus.length, quads, () => {
 			contexts.forEach(context => releaseParseResult(context));
 		});
 
-		await measure('phase: infer', corpus.length, quads, async () => {
+		await observer.measure('phase: infer', corpus.length, quads, async () => {
 			for (const context of contexts) {
 				await context.infer();
 			}
@@ -280,23 +210,23 @@ describe('memory footprint', () => {
 		const largeGraph = largeContext.graphs[0];
 		const largeQuads = (largeFile.text.match(/ a owl:Class ;/g)?.length ?? 0) * QUADS_PER_CLASS;
 
-		await measure('store: hasGraph x100 (large graph)', 1, largeQuads, () => {
+		await observer.measure('store: hasGraph x100 (large graph)', 1, largeQuads, () => {
 			for (let index = 0; index < 100; index++) {
 				store.hasGraph(largeGraph);
 			}
 		});
 
-		await measure('store: getGraphs x10', corpus.length, quads, () => {
+		await observer.measure('store: getGraphs x10', corpus.length, quads, () => {
 			for (let index = 0; index < 10; index++) {
 				store.getGraphs();
 			}
 		});
 
-		await measure('store: executeInference (large graph)', 1, largeQuads, () => {
+		await observer.measure('store: executeInference (large graph)', 1, largeQuads, () => {
 			store.executeInference(largeGraph);
 		});
 
-		await measure('store: reload large file (loadTriples again)', 1, largeQuads, async () => {
+		await observer.measure('store: reload large file (loadTriples again)', 1, largeQuads, async () => {
 			if (isTokenizedDocumentContext(largeContext)) {
 				largeContext.parse(largeFile.text);
 			}
@@ -308,7 +238,7 @@ describe('memory footprint', () => {
 	it('measures the SPARQL history post to the results webview', async () => {
 		const generator = new CorpusGenerator(7);
 
-		await measure('history: build entries', HISTORY_ENTRIES, HISTORY_ENTRIES * HISTORY_ROWS, () => {
+		await observer.measure('history: build entries', HISTORY_ENTRIES, HISTORY_ENTRIES * HISTORY_ROWS, () => {
 			harnessState.history = Array.from({ length: HISTORY_ENTRIES }, (_, index) => generator.generateQueryHistoryEntry(HISTORY_ROWS, HISTORY_RAW_CHARS, index));
 		});
 
@@ -322,13 +252,13 @@ describe('memory footprint', () => {
 			payloadBytes = JSON.stringify(message).length;
 		};
 
-		const post = await measure('history: post to webview (serialize)', HISTORY_ENTRIES, HISTORY_ENTRIES * HISTORY_ROWS, () => {
+		const post = await observer.measure('history: post to webview (serialize)', HISTORY_ENTRIES, HISTORY_ENTRIES * HISTORY_ROWS, () => {
 			(controller as any)._postQueryHistory();
 		});
 
 		process.stdout.write(`PERF ${JSON.stringify({ phase: 'history: payload bytes', bytes: payloadBytes, ms: post.ms })}\n`);
 
 		harnessState.history = [];
-		printResults();
+		observer.printResults();
 	});
 });
