@@ -754,6 +754,48 @@ describe('DocumentContextService', () => {
 			expect(fired).toContain(ctx);
 		});
 
+		it('loads the document without waiting for the context keys', async () => {
+			const { service } = createService();
+			const uri = vscode.Uri.parse('file:///test.ttl');
+			const document = { languageId: 'turtle', uri, getText: () => '' };
+			(vscode.window as any).activeTextEditor = { document };
+
+			// The workbench answers no context key while it is busy with the new document.
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand').mockReturnValue(new Promise(() => {}));
+			const loadDocument = vi.spyOn(service, 'loadDocument').mockResolvedValue(undefined);
+
+			try {
+				void service.handleActiveEditorChanged();
+
+				await vi.waitFor(() => expect(loadDocument).toHaveBeenCalledWith(document, false, undefined));
+			} finally {
+				executeCommandSpy.mockRestore();
+			}
+		});
+
+		it('sends all context keys before the first one is answered', async () => {
+			const { service } = createService();
+			(vscode.window as any).activeTextEditor = undefined;
+
+			const executeCommandSpy = vi.spyOn(vscode.commands, 'executeCommand').mockReturnValue(new Promise(() => {}));
+
+			try {
+				void service.handleActiveEditorChanged();
+
+				const keys = executeCommandSpy.mock.calls.filter(call => call[0] === 'setContext').map(call => call[1]);
+
+				expect(keys).toEqual(expect.arrayContaining([
+					'mentor.command.convertFileFormat.executable',
+					'mentor.editor.isRdfDocument',
+					'mentor.editor.isMentorLanguage',
+					'mentor.command.convertFileFormat.target.turtle',
+					'mentor.editor.isTriplateTemplate'
+				]));
+			} finally {
+				executeCommandSpy.mockRestore();
+			}
+		});
+
 		it('does nothing when the active editor URI is unchanged from activeContext', async () => {
 			const { service } = createService();
 			const uri = vscode.Uri.parse('file:///test.ttl');

@@ -483,45 +483,45 @@ export class DocumentContextService {
 	async handleActiveEditorChanged(): Promise<void> {
 		const editor = vscode.window.activeTextEditor;
 
-		await this._setCursorOnResourceContext(editor);
+		// Every context key is an IPC round trip to the workbench, which is busy laying out
+		// a newly opened document. The keys only drive menus and buttons, so they are sent
+		// without holding up the load that all language features of the document wait for.
+		const contextKeysSet = this._setEditorContextKeys(editor);
 
-		if (!editor) {
-			await this._setConvertFileFormatContexts();
-			await this._setTriplateTemplateContext();
+		try {
+			await this._loadActiveEditorDocument(editor);
+		} finally {
+			await contextKeysSet;
+		}
+	}
+
+	/**
+	 * Sets the editor context keys that depend on the active editor, all at once.
+	 * @param editor The active editor, or `undefined` when there is none.
+	 */
+	private async _setEditorContextKeys(editor?: vscode.TextEditor): Promise<void> {
+		const document = editor?.document.uri ? editor.document : undefined;
+
+		await Promise.all([
+			this._setCursorOnResourceContext(editor),
+			this._setConvertFileFormatContexts(document?.languageId, document?.uri.toString()),
+			this._setTriplateTemplateContext(document)
+		]);
+	}
+
+	/**
+	 * Loads the document of the active editor, makes it the active context and fires
+	 * the context changed event.
+	 * @param editor The active editor, or `undefined` when there is none.
+	 */
+	private async _loadActiveEditorDocument(editor?: vscode.TextEditor): Promise<void> {
+		const uri = editor?.document.uri;
+
+		if (!editor || !uri || uri.toString() === this.activeContext?.uri.toString()) {
 			return;
 		}
 
-		const uri = editor.document.uri;
-
-		if (!uri) {
-			await this._setConvertFileFormatContexts();
-			await this._setTriplateTemplateContext();
-			return;
-		}
-
-		await this._setConvertFileFormatContexts(editor.document.languageId, uri.toString());
-		await this._setTriplateTemplateContext(editor.document);
-
-		if (uri.toString() === this.activeContext?.uri.toString()) return;
-
-		// For notebook cells, find the slug from the cell metadata so that the
-		// graph IRI uses the human-readable slug from the very first load.
-		let slug: string | undefined;
-
-		if (editor.document.uri.scheme === 'vscode-notebook-cell') {
-			const uriStr = editor.document.uri.toString();
-
-			for (const nb of vscode.workspace.notebookDocuments) {
-				const cell = nb.getCells().find(c => c.document.uri.toString() === uriStr);
-
-				if (cell) {
-					slug = cell.metadata?.slug as string | undefined;
-					break;
-				}
-			}
-		}
-
-		const context = await this.loadDocument(editor.document, false, slug);
+		const context = await this.loadDocument(editor.document, false, this._getNotebookCellSlug(editor.document));
 
 		if (context) {
 			this.activeContext = context;
@@ -533,6 +533,30 @@ export class DocumentContextService {
 		if (editor.document.languageId === 'xml') {
 			await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', context?.isLoaded === true);
 		}
+	}
+
+	/**
+	 * Finds the slug of a notebook cell in the cell metadata, so that the graph IRI uses
+	 * the human-readable slug from the very first load.
+	 * @param document A text document.
+	 * @returns The slug, or `undefined` if the document is not a notebook cell or has no slug.
+	 */
+	private _getNotebookCellSlug(document: vscode.TextDocument): string | undefined {
+		if (document.uri.scheme !== 'vscode-notebook-cell') {
+			return undefined;
+		}
+
+		const uri = document.uri.toString();
+
+		for (const notebook of vscode.workspace.notebookDocuments) {
+			const cell = notebook.getCells().find(c => c.document.uri.toString() === uri);
+
+			if (cell) {
+				return cell.metadata?.slug as string | undefined;
+			}
+		}
+
+		return undefined;
 	}
 
 	/**
@@ -591,17 +615,17 @@ export class DocumentContextService {
 		// the canonical RDF_LANGUAGE_IDS list so menu `when` clauses need not duplicate it.
 		const isRdfLanguage = languageId ? this._documentFactory.isRdfLanguage(languageId) : false;
 
-		await vscode.commands.executeCommand('setContext', 'mentor.command.convertFileFormat.executable', convertible);
-		await vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', isRdfDocument);
-		await vscode.commands.executeCommand('setContext', 'mentor.editor.isMentorLanguage', isRdfLanguage);
-
-		for (const targetLanguageId of this._convertTargetLanguageIds) {
-			await vscode.commands.executeCommand(
+		// The keys are independent, so they are sent at once rather than one round trip after another.
+		await Promise.all([
+			vscode.commands.executeCommand('setContext', 'mentor.command.convertFileFormat.executable', convertible),
+			vscode.commands.executeCommand('setContext', 'mentor.editor.isRdfDocument', isRdfDocument),
+			vscode.commands.executeCommand('setContext', 'mentor.editor.isMentorLanguage', isRdfLanguage),
+			...this._convertTargetLanguageIds.map(targetLanguageId => vscode.commands.executeCommand(
 				'setContext',
 				`mentor.command.convertFileFormat.target.${targetLanguageId}`,
 				targets.has(targetLanguageId)
-			);
-		}
+			))
+		]);
 	}
 
 	/**
