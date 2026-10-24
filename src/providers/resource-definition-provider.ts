@@ -1,12 +1,21 @@
 import * as vscode from 'vscode';
 import { IDocumentContextService } from '@src/services/document';
 import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { IWorkspaceIndexerService } from '@src/services/core/workspace-indexer.interface';
 
 /**
  * A provider that retrieves the locations of resource definitions in a document.
  */
 export class ResourceDefinitionProvider {
-	constructor(private readonly _contextService: IDocumentContextService) { }
+	/**
+	 * @param _contextService The service that holds the loaded document contexts.
+	 * @param _indexer The workspace indexer. When given, a definition that is not loaded
+	 * yet is looked up once the workspace is indexed.
+	 */
+	constructor(
+		private readonly _contextService: IDocumentContextService,
+		private readonly _indexer?: Pick<IWorkspaceIndexerService, 'indexingFinished' | 'waitForIndexed'>
+	) { }
 
 	/**
 	 * Get the definition of a resource at a specific position in a document.
@@ -23,11 +32,30 @@ export class ResourceDefinitionProvider {
 
 		const iri = context.getIriAtPosition(position);
 
-		if (iri) {
-			return this.provideDefinitionForResource(context, iri);
-		} else {
+		if (!iri) {
 			return null;
 		}
+
+		// While the workspace is being indexed, the file that defines the resource may
+		// not be loaded yet. Answer from the complete index instead of falling back to
+		// a reference in this document.
+		if (this._indexer && !this._indexer.indexingFinished && !this._isDefinedInLoadedContext(iri)) {
+			const uri = document.uri.toString();
+
+			return this._indexer.waitForIndexed().then(() => {
+				return this.provideDefinitionForResource(this._contextService.contexts[uri] ?? context, iri);
+			});
+		}
+
+		return this.provideDefinitionForResource(context, iri);
+	}
+
+	/**
+	 * Indicates whether a loaded document context defines a resource.
+	 * @param id The IRI or blank node ID of the resource.
+	 */
+	private _isDefinedInLoadedContext(id: string): boolean {
+		return Object.values(this._contextService.contexts).some(c => c.typeDefinitions.has(id));
 	}
 
 	/**
