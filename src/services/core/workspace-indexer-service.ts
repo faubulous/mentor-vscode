@@ -12,6 +12,7 @@ import { describeUriPath } from '@src/utilities/vscode/log';
 import { normalizeGlobPattern } from '@src/utilities/glob';
 import { createYieldBudget } from '@src/utilities/scheduling';
 import { getErrorMessage } from '@src/utilities/error';
+import { getHeapUsedMb } from '@src/utilities/runtime';
 import { CanonicalWorkspaceUri, WorkspaceUri } from '@src/providers/workspace-uri';
 
 /**
@@ -563,7 +564,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 			durationMs: duration,
 		};
 
-		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
+		// The heap figure makes the memory cost of an index visible in the output
+		// channel, so a workspace can be checked without a profiler attached.
+		const heapUsedMb = getHeapUsedMb();
+		const heapSuffix = heapUsedMb === undefined ? '' : ` (heap ${heapUsedMb} MB)`;
+
+		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms${heapSuffix}`);
 
 		const parts = [`$(list-tree) Indexed ${successfulFiles} files`];
 

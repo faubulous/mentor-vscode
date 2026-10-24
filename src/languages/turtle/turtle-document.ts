@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { CstNode } from 'chevrotain';
 import { Quad, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, RdfSyntax, RdfToken, tokenizeWithTriplate, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, QuadReaderError, RdfSyntax, RdfToken, tokenizeWithTriplate, TriplateLexingResult, TurtleParser, TurtleQuadReader, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
@@ -95,24 +95,73 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		const lexer = ParserFactory.getLexer(this.syntax);
 		lexer.blankNodeIdGenerator = createFileBlankNodeIdGenerator(this.uri.toString());
 
-		const { tokens, parseTokens, errors: lexErrors, template } = tokenizeWithTriplate(lexer, text);
+		const lexingResult = tokenizeWithTriplate(lexer, text);
 
-		// Run the grammar parse here, once, with error recovery, so that the
-		// diagnostics service and loadTriples can reuse the result instead of
-		// re-tokenizing and re-parsing the same text.
-		//
-		// The parse can fail outright rather than just collecting errors — a
-		// recursive-descent parser exhausts the stack on a pathologically large
-		// document (e.g. a 24k-line SPARQL query). That must not fail the whole
-		// parse: the tokens drive most language features and are already
-		// available. Leaving the result unset makes every consumer fall back to
-		// its own parse, where such a failure is reported as a diagnostic
-		// (diagnostics service) or leaves the graph unloaded (loadTriples).
+		// Analyze the tokens here, once, so that the diagnostics service and
+		// loadTriples can reuse the result instead of re-tokenizing and
+		// re-reading the same text.
+		this._lastParse = this._analyze(text, lexingResult);
+
+		this.setTokens(lexingResult.tokens);
+
+		return lexingResult.tokens;
+	}
+
+	/**
+	 * Derives the quads, or the syntax tree and the errors, of a text from its
+	 * tokens.
+	 *
+	 * A Turtle document is read by the quad reader first: it needs no syntax
+	 * tree, which is what makes indexing and editing large files cheap, and it
+	 * stops at the first error. Only a document it rejects goes through the
+	 * grammar parser with error recovery, so that the diagnostics can list
+	 * every error. A Triplate template, whose tree is built from placeholder
+	 * tokens, and a TriG document take the grammar parser directly.
+	 * @param text The text the tokens were produced from.
+	 * @param lexingResult The tokens of the text.
+	 * @returns The parse result, or `undefined` when the analysis failed outright.
+	 */
+	private _analyze(text: string, lexingResult: TriplateLexingResult): DocumentParseResult | undefined {
+		if (this.syntax === RdfSyntax.Turtle && !lexingResult.template) {
+			try {
+				const quads = new TurtleQuadReader().read(lexingResult.tokens);
+
+				return { text, tokens: lexingResult.tokens, template: false, lexErrors: lexingResult.errors, parserErrors: [], semanticErrors: [], quads };
+			} catch (error) {
+				// Anything but a syntax error is the reader giving up, such as
+				// the stack being exhausted by a pathologically nested document.
+				if (!(error instanceof QuadReaderError)) {
+					return undefined;
+				}
+			}
+		}
+
+		return this._parseSyntaxTree(text, lexingResult);
+	}
+
+	/**
+	 * Runs the grammar parser with error recovery over the tokens and captures
+	 * the syntax tree together with the errors.
+	 *
+	 * The parse can fail outright rather than just collecting errors — a
+	 * recursive-descent parser exhausts the stack on a pathologically large
+	 * document (e.g. a 24k-line SPARQL query). That must not fail the whole
+	 * parse: the tokens drive most language features and are already
+	 * available. Returning no result makes every consumer fall back to its own
+	 * parse, where such a failure is reported as a diagnostic (diagnostics
+	 * service) or leaves the graph unloaded (loadTriples).
+	 * @param text The text the tokens were produced from.
+	 * @param lexingResult The tokens of the text.
+	 * @returns The parse result, or `undefined` when the parse failed outright.
+	 */
+	private _parseSyntaxTree(text: string, lexingResult: TriplateLexingResult): DocumentParseResult | undefined {
+		const { tokens, parseTokens, errors: lexErrors, template } = lexingResult;
+
 		try {
 			const parser = ParserFactory.getParser(this.syntax);
 			const cst = parser.parse(parseTokens, false);
 
-			this._lastParse = {
+			return {
 				text,
 				tokens,
 				parseTokens,
@@ -124,21 +173,60 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				semanticErrors: [...parser.semanticErrors]
 			};
 		} catch {
-			this._lastParse = undefined;
+			return undefined;
 		}
-
-		this.setTokens(tokens);
-
-		return tokens;
 	}
 
 	getParseResult(text: string): DocumentParseResult | undefined {
 		return this._lastParse?.text === text ? this._lastParse : undefined;
 	}
 
+	releaseParseResult(): void {
+		this._lastParse = undefined;
+	}
+
 	releaseTokens(): void {
 		this._tokens = [];
 		this._lastParse = undefined;
+	}
+
+	/**
+	 * Drops the quads, the syntax tree and the parser token stream from the
+	 * cached parse result once the triples have been read from it. The tokens
+	 * and errors stay, so the diagnostics pass that follows still reuses the
+	 * parse.
+	 */
+	protected _releaseParsedContent(): void {
+		const cached = this._lastParse;
+
+		if (!cached || (cached.quads === undefined && cached.cst === undefined && cached.parseTokens === undefined)) {
+			return;
+		}
+
+		this._lastParse = {
+			text: cached.text,
+			tokens: cached.tokens,
+			template: cached.template,
+			lexErrors: cached.lexErrors,
+			parserErrors: cached.parserErrors,
+			semanticErrors: cached.semanticErrors
+		};
+	}
+
+	/**
+	 * Returns the syntax tree captured by {@link parse} when it was produced
+	 * from exactly the given text, parsed cleanly and is still held. Templates
+	 * are excluded: their tree is built from placeholder tokens.
+	 * @param text The text about to be loaded.
+	 */
+	private _getReusableSyntaxTree(text: string): CstNode | undefined {
+		const cached = this.getParseResult(text);
+
+		if (!cached || cached.template || cached.lexErrors.length > 0 || cached.parserErrors.length > 0 || cached.semanticErrors.length > 0) {
+			return undefined;
+		}
+
+		return cached.cst;
 	}
 
 	public override getIriAtPosition(position: vscode.Position): string | undefined {
@@ -222,38 +310,24 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			this.graphs.length = 0;
 			this.graphs.push(graphUri);
 
-			// Delete old graphs (handles slug changes and stale triples removed from the
-			// document). Done after resetting this.graphs so the invariant holds on error.
-			store.deleteGraphs([...oldGraphs, graphUri]);
+			// Delete old graphs and their inference graphs (handles slug changes and
+			// stale triples removed from the document). Done after resetting
+			// this.graphs so the invariant holds on error.
+			store.deleteGraphs([...oldGraphs, graphUri], true);
 
-			// Reset inference flag so that infer() re-runs after each reload.
-			// This is essential when a slug update triggers a reload: the old inference
-			// graph (based on the opaque cell ID) has already been deleted above, and
-			// a fresh inference pass is needed to populate the slug-based graph.
+			// Reset inference flag so that infer() re-runs after each reload. This is
+			// essential when a slug update triggers a reload: the old inference graph
+			// (based on the opaque cell ID) was deleted above, and a fresh inference
+			// pass is needed to populate the slug-based graph.
 			this._inferenceExecuted = false;
 
-			// Reuse the CST captured by parse() when it was produced from exactly
-			// this content and parsed cleanly. An errored or stale result falls
-			// back to the throwing parse below, so invalid documents keep loading
-			// no triples. Templates are excluded: their CST is built from
-			// placeholder tokens.
-			const cached = this.getParseResult(data);
-			const canReuseCst = cached !== undefined
-				&& !cached.template
-				&& cached.lexErrors.length === 0
-				&& cached.parserErrors.length === 0
-				&& cached.semanticErrors.length === 0;
+			// Reuse the quads or the CST captured by parse() when they were
+			// produced from exactly this content. An errored, stale or already
+			// released result reads the tokens again, which throws on errors,
+			// so invalid documents keep loading no triples.
+			const quads = this.getParseResult(data)?.quads ?? this._readQuads(data);
 
-			// Only updates the existing graphs if the document was parsed successfully.
-			// Uses the existing tokens that were set on the context. The parser is a
-			// shared instance because chevrotain parser construction is expensive.
-			// The parser and reader must match the document syntax: TriG graph
-			// blocks or N-Quads graph terms are invisible to the Turtle grammar.
-			const cst = canReuseCst
-				? cached.cst
-				: ParserFactory.getParser(this.syntax).parse(this._tokens);
-
-			for (const q of this.readQuads(cst)) {
+			for (const q of quads) {
 				const s = q.subject as Quad_Subject;
 				const p = q.predicate as Quad_Predicate;
 				const o = q.object as Quad_Object;
@@ -264,7 +338,53 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
+		} finally {
+			// Nothing reads the quads or the syntax tree after the triples are
+			// loaded, and a tree dwarfs everything else the context holds:
+			// releasing them here is what keeps an indexed workspace from
+			// retaining a tree per file.
+			this._releaseParsedContent();
 		}
+	}
+
+	/**
+	 * Reads the quads of the current tokens when {@link parse} did not capture
+	 * them: from the syntax tree it captured when that is reusable, otherwise
+	 * by reading the tokens again. Throws when the document has errors, so
+	 * that no triples are loaded from it.
+	 *
+	 * The parser and reader must match the document syntax: TriG graph blocks
+	 * are invisible to the Turtle grammar. The grammar parser is a shared
+	 * instance because chevrotain parser construction is expensive.
+	 * @param text The text being loaded.
+	 * @returns The quads of the document.
+	 */
+	private _readQuads(text: string): Quad[] {
+		const cached = this.getParseResult(text);
+
+		// The grammar parser has already rejected this text: reading it again
+		// would only reproduce the errors it reported.
+		if (cached && (cached.parserErrors.length > 0 || cached.semanticErrors.length > 0)) {
+			throw new Error('The document has syntax errors.');
+		}
+
+		const cst = this._getReusableSyntaxTree(text);
+
+		if (cst) {
+			return this.readQuads(cst);
+		}
+
+		if (this.syntax === RdfSyntax.Turtle) {
+			try {
+				return new TurtleQuadReader().read(this._tokens);
+			} catch (error) {
+				if (!(error instanceof QuadReaderError)) {
+					throw error;
+				}
+			}
+		}
+
+		return this.readQuads(ParserFactory.getParser(this.syntax).parse(this._tokens));
 	}
 
 	/**

@@ -92,6 +92,22 @@ describe('SparqlDocument', () => {
             }));
         });
 
+        it('releases the syntax tree of a query that is not loaded into the store', async () => {
+            const doc = makeDoc();
+            const text = 'SELECT * WHERE { ?s ?p ?o }';
+
+            doc.parse(text);
+
+            expect(doc.getParseResult(text)?.cst).toBeDefined();
+
+            await doc.loadTriples(text);
+
+            const result = doc.getParseResult(text);
+
+            expect(result).toBeDefined();
+            expect(result?.cst).toBeUndefined();
+        });
+
         it('infer is a no-op when index.parseSparqlQueries is disabled', async () => {
             const doc = makeDoc();
             await expect(doc.infer()).resolves.toBeUndefined();
