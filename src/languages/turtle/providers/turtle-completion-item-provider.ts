@@ -257,7 +257,7 @@ export class TurtleCompletionItemProvider extends TurtleFeatureProvider implemen
 			}
 
 			for (const c of contexts) {
-				for (let subject of Object.keys(c.subjects)) {
+				for (const subject of c.subjects.keys()) {
 					this._addLocalPartCompletionItem(items, uri, subject);
 				}
 			}

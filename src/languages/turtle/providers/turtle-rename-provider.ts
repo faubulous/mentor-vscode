@@ -129,11 +129,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 
 			if (!u) return edits;
 
-			const references = context.references[u];
-
-			if (!references) return edits;
-
-			for (let range of references) {
+			for (const range of context.references.getRanges(u)) {
 				const token = getTokenAtPosition(context.tokens, range.start);
 
 				if (!token) continue;

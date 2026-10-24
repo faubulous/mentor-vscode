@@ -286,6 +286,52 @@ describe('WorkspaceIndexerService', () => {
 			expect(mockDiagnosticsService.diagnoseContent).not.toHaveBeenCalled();
 		});
 
+		/**
+		 * Indexes one tokenized file whose context appears when it is loaded, as
+		 * the real context service does, and returns the context's release spy.
+		 */
+		async function indexTokenizedFile(uri: vscode.Uri) {
+			const context = { providesTokens: true, releaseParseResult: vi.fn() };
+
+			mockWorkspaceFileService.files = [uri];
+			mockLoadDocument = vi.fn(async (loadedUri: vscode.Uri) => {
+				mockContexts[loadedUri.toString()] = context;
+			});
+
+			const service = new WorkspaceIndexerService(mockDocumentFactory, mockContextService, mockWorkspaceFileService, mockTokenSource, mockDiagnosticsService);
+
+			await service.indexWorkspace();
+			await service.waitForIndexed();
+
+			return context;
+		}
+
+		it('releases the parse result of an indexed file after it has been diagnosed', async () => {
+			const context = await indexTokenizedFile(vscode.Uri.parse('file:///w/test.ttl'));
+
+			expect(context.releaseParseResult).toHaveBeenCalledTimes(1);
+			expect(mockDiagnosticsService.diagnoseContent.mock.invocationCallOrder[0])
+				.toBeLessThan(context.releaseParseResult.mock.invocationCallOrder[0]);
+		});
+
+		it('releases the parse result of an indexed file also when diagnostics are disabled', async () => {
+			mockConfigValues['index.diagnoseFiles'] = false;
+
+			const context = await indexTokenizedFile(vscode.Uri.parse('file:///w/test.ttl'));
+
+			expect(context.releaseParseResult).toHaveBeenCalledTimes(1);
+		});
+
+		it('keeps the parse result of a file that is open in an editor', async () => {
+			const uri = vscode.Uri.parse('file:///w/open.ttl');
+
+			(vscode.workspace as any).textDocuments = [{ uri, getText: () => 'ex:a ex:b ex:c .' }];
+
+			const context = await indexTokenizedFile(uri);
+
+			expect(context.releaseParseResult).not.toHaveBeenCalled();
+		});
+
 		it('should skip already indexed files when force=false', async () => {
 			const uri = vscode.Uri.parse('file:///test.ttl');
 			mockWorkspaceFileService.files = [uri];

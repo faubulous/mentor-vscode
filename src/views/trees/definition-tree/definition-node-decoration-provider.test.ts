@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 
 vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
@@ -115,14 +117,14 @@ describe('DefinitionNodeDecorationProvider', () => {
 	});
 
 	it('returns undefined for file scheme uri', () => {
-		mockContextService.activeContext = { subjects: {}, predicates: { label: [] } };
+		mockContextService.activeContext = { subjects: new RangeIndex(), predicates: { label: [] } };
 		const uri = vscode.Uri.parse('file:///test.ttl');
 		const token = {} as vscode.CancellationToken;
 		expect(provider.provideFileDecoration(uri, token)).toBeUndefined();
 	});
 
 	it('returns undefined for mentor scheme uri', () => {
-		mockContextService.activeContext = { subjects: {}, predicates: { label: [] } };
+		mockContextService.activeContext = { subjects: new RangeIndex(), predicates: { label: [] } };
 		const uri = vscode.Uri.parse('mentor:///test');
 		const token = {} as vscode.CancellationToken;
 		expect(provider.provideFileDecoration(uri, token)).toBeUndefined();
@@ -137,8 +139,8 @@ describe('DefinitionNodeDecorationProvider', () => {
 
 	it('returns disabled color decoration for subjects not in active document', () => {
 		mockContextService.activeContext = {
-			subjects: {},
-			references: {},
+			subjects: new RangeIndex(),
+			references: new RangeIndex(),
 			predicates: { label: [] },
 			activeLanguage: 'en',
 			primaryLanguage: 'en',
@@ -154,8 +156,8 @@ describe('DefinitionNodeDecorationProvider', () => {
 	it('returns undefined when decoration scope is disabled and subject is in context', () => {
 		// getConfig returns undefined for 'decorateMissingLanguageTags' -> Disabled
 		mockContextService.activeContext = {
-			subjects: { 'http://example.org/Class': true },
-			references: { 'http://example.org/Class': true },
+			subjects: createRangeIndex(['http://example.org/Class']),
+			references: createRangeIndex(['http://example.org/Class']),
 			predicates: { label: [] },
 			activeLanguage: 'en',
 			primaryLanguage: 'en',
@@ -225,8 +227,8 @@ describe('DefinitionNodeDecorationProvider — provideFileDecoration (non-Disabl
 
 	function makeActiveContext(graphs = ['urn:g1']): any {
 		return {
-			subjects: { [IRI]: true },
-			references: { [IRI]: true },
+			subjects: createRangeIndex([IRI]),
+			references: createRangeIndex([IRI]),
 			predicates: { label: [LABEL_PREDICATE] },
 			activeLanguage: 'en',
 			primaryLanguage: 'en',
@@ -283,7 +285,7 @@ describe('DefinitionNodeDecorationProvider — provideFileDecoration (non-Disabl
 	it('returns undefined when subject has no references entry', () => {
 		mockContextService.activeContext = {
 			...makeActiveContext(),
-			references: {},
+			references: new RangeIndex(),
 		};
 		const uri = vscode.Uri.parse(IRI);
 		expect(dec.provideFileDecoration(uri, {} as any)).toBeUndefined();
@@ -459,7 +461,7 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 
 		mockContextService.activeContext = {
 			uri: vscode.Uri.parse('file:///test.ttl'),
-			subjects: subjectsOf(LEAF_IRI),
+			subjects: createRangeIndex(subjectsOf(LEAF_IRI)),
 			predicates: { label: [] },
 		};
 
@@ -505,7 +507,7 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 		// Both leaf IRIs must be subjects in the active document
 		mockContextService.activeContext = {
 			...mockContextService.activeContext,
-			subjects: subjectsOf(LEAF_IRI, LEAF_IRI_2),
+			subjects: createRangeIndex(subjectsOf(LEAF_IRI, LEAF_IRI_2)),
 		};
 
 		const containerNode = makeMockNode(CONTAINER_URI);
@@ -546,7 +548,7 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 		// Need to set up context — focus node must be a subject
 		mockContextService.activeContext = {
 			uri: vscode.Uri.parse('file:///test.ttl'),
-			subjects: subjectsOf(LEAF_IRI),
+			subjects: createRangeIndex(subjectsOf(LEAF_IRI)),
 			predicates: { label: [] },
 		};
 
@@ -571,7 +573,7 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 		// REFERENCED_IRI is NOT in subjects (only appears as e.g. sh:path object)
 		mockContextService.activeContext = {
 			uri: vscode.Uri.parse('file:///test.ttl'),
-			subjects: subjectsOf(LEAF_IRI),
+			subjects: createRangeIndex(subjectsOf(LEAF_IRI)),
 			predicates: { label: [] },
 		};
 
@@ -676,7 +678,7 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 		// the validation result is still cached (stale).
 		mockContextService.activeContext = {
 			uri: vscode.Uri.parse('file:///test.ttl'),
-			subjects: subjectsOf('http://example.org/OtherSubject'),
+			subjects: createRangeIndex(subjectsOf('http://example.org/OtherSubject')),
 			predicates: { label: [] },
 		};
 
@@ -704,8 +706,8 @@ describe('DefinitionNodeDecorationProvider — SHACL ancestor decoration propaga
 
 		mockContextService.activeContext = {
 			uri: vscode.Uri.parse('file:///test.ttl'),
-			subjects: subjectsOf(SHAPE_IRI), // Only PartShape is a subject
-			references: { [PROPERTY_IRI]: [{ start: { line: 10, character: 4 }, end: { line: 10, character: 60 } }] },
+			subjects: createRangeIndex(subjectsOf(SHAPE_IRI)), // Only PartShape is a subject
+			references: createRangeIndex({ [PROPERTY_IRI]: [{ start: { line: 10, character: 4 }, end: { line: 10, character: 60 } }] }),
 			predicates: { label: [] },
 		};
 
@@ -747,7 +749,7 @@ describe('DefinitionNodeDecorationProvider — violation cap', () => {
 
 		mockContextService.activeContext = {
 			uri: vscode.Uri.parse('file:///test.ttl'),
-			subjects: {},
+			subjects: new RangeIndex(),
 			predicates: { label: [] },
 		};
 
@@ -771,7 +773,7 @@ describe('DefinitionNodeDecorationProvider — violation cap', () => {
 
 		mockContextService.activeContext = {
 			...mockContextService.activeContext,
-			subjects,
+			subjects: createRangeIndex(subjects),
 		};
 
 		mockNodeProvider.getNodeForUri.mockImplementation((iri: string) => nodeMap.get(iri));
@@ -797,7 +799,7 @@ describe('DefinitionNodeDecorationProvider — violation cap', () => {
 
 		mockContextService.activeContext = {
 			...mockContextService.activeContext,
-			subjects: { [iri]: [{ start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }] },
+			subjects: createRangeIndex({ [iri]: [{ start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }] }),
 		};
 
 		mockNodeProvider.getNodeForUri.mockImplementation((i: string) =>

@@ -53,6 +53,9 @@ export class SparqlDocument extends TurtleDocument {
 	public override async loadTriples(data: string): Promise<void> {
 		if (this.parseQueriesEnabled) {
 			await super.loadTriples(data);
+		} else {
+			// The query is not loaded into the store, so nothing reads its syntax tree.
+			this._releaseParsedContent();
 		}
 	}
 }

@@ -67,8 +67,9 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src",
-    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json --noEmit && npm run lint"
+    "perf": "NODE_OPTIONS=\"--expose-gc --max-old-space-size=8192\" vitest run --config vitest.perf.config.ts",
+    "lint": "eslint src perf",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json --noEmit && tsc -p perf/tsconfig.json --noEmit && npm run lint"
   },
   "devDependencies": {
     "@rdfjs/types": "^2.0.1",
@@ -126,7 +127,7 @@
   "dependencies": {
     "@comunica/query-sparql": "^5.4.1",
     "@faubulous/mentor-rdf": "^2.2.0",
-    "@faubulous/mentor-rdf-parsers": "^2.1.1",
+    "@faubulous/mentor-rdf-parsers": "^2.2.0",
     "@faubulous/mentor-rdf-serializers": "^1.9.2",
     "asynciterator": "^3.10.0",
     "n3": "^2.13.12",

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
+import { RangeIndex } from '@src/services/document/range-index';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -196,7 +198,7 @@ describe('TurtleRenameProvider', () => {
             });
             context.setTokens([token] as any);
             // Clear references so the IRI has no entries
-            (context as any).references = {};
+            (context as any).references = new RangeIndex();
 
             const provider = makeProvider(context);
             const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName') as vscode.WorkspaceEdit;
@@ -237,7 +239,7 @@ describe('TurtleRenameProvider', () => {
             });
             context.setTokens([iriToken] as any);
             // Point the reference at a line with no token so getTokenAtPosition returns undefined.
-            (context as any).references = { 'http://example.org/Thing': [new Range(99, 0, 99, 5)] };
+            (context as any).references = createRangeIndex({ 'http://example.org/Thing': [new Range(99, 0, 99, 5)] });
 
             const provider = makeProvider(context);
             const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName') as vscode.WorkspaceEdit;

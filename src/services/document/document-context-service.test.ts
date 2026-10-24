@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { DocumentTokenSource } from '@src/services/document/document-token-source';
@@ -22,11 +23,11 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		graphIri: vscode.Uri.parse('file:///test.ttl'),
 		baseIri: undefined,
 		namespaces: {},
-		namespaceDefinitions: {},
-		subjects: {},
-		references: {},
-		typeAssertions: {},
-		typeDefinitions: {},
+		namespaceDefinitions: new RangeIndex(),
+		subjects: new RangeIndex(),
+		references: new RangeIndex(),
+		typeAssertions: new RangeIndex(),
+		typeDefinitions: new RangeIndex(),
 		predicateStats: {} as any,
 		primaryLanguage: undefined,
 		activeLanguageTag: undefined,
@@ -166,6 +167,19 @@ describe('DocumentContextService', () => {
 
 			expect(service.contexts[uri.toString()]).toBe(context);
 			expect(mockStore.deleteGraphs).not.toHaveBeenCalled();
+		});
+
+		it('releases the parse result of a closed non-temporary document', () => {
+			const { service } = createService();
+			const uri = vscode.Uri.parse('file:///permanent.ttl');
+			const releaseParseResult = vi.fn();
+			const context = createMockContext({ uri, isTemporary: false, providesTokens: true, releaseParseResult } as Partial<IDocumentContext>);
+
+			service.contexts[uri.toString()] = context;
+			service.handleDocumentClosed({ uri } as any);
+
+			expect(service.contexts[uri.toString()]).toBe(context);
+			expect(releaseParseResult).toHaveBeenCalledTimes(1);
 		});
 	});
 

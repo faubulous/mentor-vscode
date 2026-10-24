@@ -35,11 +35,9 @@ export class ResourceReferenceProvider implements vscode.ReferenceProvider {
 
 		for (const context of Object.values(this._contextService.contexts)) {
 			// Do not count references in temporary, non-persisted git diff views or other in-memory documents.
-			if (context.isTemporary || !context.references[iri]) {
-				continue;
+			if (!context.isTemporary) {
+				count += context.references.count(iri);
 			}
-
-			count += context.references[iri].length;
 		}
 
 		return count;
@@ -55,11 +53,11 @@ export class ResourceReferenceProvider implements vscode.ReferenceProvider {
 
 		for (const context of Object.values(this._contextService.contexts)) {
 			// Do not provide references for temporary, non-persisted git diff views or other in-memory documents.
-			if (context.isTemporary || !context.references[iri]) {
+			if (context.isTemporary) {
 				continue;
 			}
 
-			for (const range of context.references[iri]) {
+			for (const range of context.references.getRanges(iri)) {
 				const r = new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
 
 				result.push(new vscode.Location(context.uri, r));

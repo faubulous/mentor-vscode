@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 
 vi.mock('vscode', async () => await import('@src/utilities/mocks/vscode'));
@@ -46,10 +48,10 @@ describe('ResourceDefinitionProvider', () => {
             mockContextService.contexts[docUriStr] = {
                 uri: docUri,
                 getIriAtPosition: vi.fn(() => null),
-                typeDefinitions: {},
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: new RangeIndex(),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             const doc = { uri: docUri } as any;
             expect(provider.provideDefinition(doc, pos)).toBeNull();
@@ -60,10 +62,10 @@ describe('ResourceDefinitionProvider', () => {
             mockContextService.contexts[docUriStr] = {
                 uri: docUri,
                 getIriAtPosition: vi.fn(() => 'http://example.org/Thing'),
-                typeDefinitions: { 'http://example.org/Thing': [range] },
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: createRangeIndex({ 'http://example.org/Thing': [range] }),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             const doc = { uri: docUri } as any;
             const result = provider.provideDefinition(doc, pos);
@@ -75,10 +77,10 @@ describe('ResourceDefinitionProvider', () => {
         it('returns null when IRI has no definition, assertion, namespace, or reference', () => {
             const ctx = {
                 uri: docUri,
-                typeDefinitions: {},
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: new RangeIndex(),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             expect(provider.provideDefinitionForResource(ctx as any, 'http://example.org/Unknown')).toBeNull();
         });
@@ -87,10 +89,10 @@ describe('ResourceDefinitionProvider', () => {
             const range = { start: { line: 3, character: 0 }, end: { line: 3, character: 30 } };
             const ctx = {
                 uri: docUri,
-                typeDefinitions: { 'http://example.org/Thing': [range] },
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: createRangeIndex({ 'http://example.org/Thing': [range] }),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             const result = provider.provideDefinitionForResource(ctx as any, 'http://example.org/Thing');
             expect(result).toBeInstanceOf(vscode.Location);
@@ -100,10 +102,10 @@ describe('ResourceDefinitionProvider', () => {
             const range = { start: { line: 5, character: 0 }, end: { line: 5, character: 20 } };
             const ctx = {
                 uri: docUri,
-                typeDefinitions: {},
-                typeAssertions: { 'http://example.org/Thing': [range] },
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: new RangeIndex(),
+                typeAssertions: createRangeIndex({ 'http://example.org/Thing': [range] }),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             const result = provider.provideDefinitionForResource(ctx as any, 'http://example.org/Thing');
             expect(result).toBeInstanceOf(vscode.Location);
@@ -113,10 +115,10 @@ describe('ResourceDefinitionProvider', () => {
             const range = { start: { line: 1, character: 0 }, end: { line: 1, character: 30 } };
             const ctx = {
                 uri: docUri,
-                typeDefinitions: {},
-                typeAssertions: {},
-                namespaceDefinitions: { 'http://example.org/': [range] },
-                references: {},
+                typeDefinitions: new RangeIndex(),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: createRangeIndex({ 'http://example.org/': [range] }),
+                references: new RangeIndex(),
             };
             const result = provider.provideDefinitionForResource(ctx as any, 'http://example.org/');
             expect(result).toBeInstanceOf(vscode.Location);
@@ -126,10 +128,10 @@ describe('ResourceDefinitionProvider', () => {
             const range = { start: { line: 2, character: 0 }, end: { line: 2, character: 25 } };
             const ctx = {
                 uri: docUri,
-                typeDefinitions: {},
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: { 'http://example.org/Thing': [range] },
+                typeDefinitions: new RangeIndex(),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: createRangeIndex({ 'http://example.org/Thing': [range] }),
             };
             const result = provider.provideDefinitionForResource(ctx as any, 'http://example.org/Thing');
             expect(result).toBeInstanceOf(vscode.Location);
@@ -141,17 +143,17 @@ describe('ResourceDefinitionProvider', () => {
             // primary context has no definition; secondary context does
             const primaryCtx = {
                 uri: docUri,
-                typeDefinitions: {},
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: new RangeIndex(),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             mockContextService.contexts[docUri2.toString()] = {
                 uri: docUri2,
-                typeDefinitions: { 'http://example.org/Widget': [range] },
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: createRangeIndex({ 'http://example.org/Widget': [range] }),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             const result = provider.provideDefinitionForResource(primaryCtx as any, 'http://example.org/Widget', false);
             expect(result).toBeInstanceOf(vscode.Location);
@@ -162,14 +164,14 @@ describe('ResourceDefinitionProvider', () => {
             const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 20 } };
             const primaryCtx = {
                 uri: docUri,
-                typeDefinitions: {},
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: new RangeIndex(),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             mockContextService.contexts[docUri2.toString()] = {
                 uri: docUri2,
-                typeDefinitions: { 'http://example.org/Widget': [range] },
+                typeDefinitions: createRangeIndex({ 'http://example.org/Widget': [range] }),
             };
             const result = provider.provideDefinitionForResource(primaryCtx as any, 'http://example.org/Widget', true);
             expect(result).toBeNull();
@@ -179,10 +181,10 @@ describe('ResourceDefinitionProvider', () => {
             const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 20 } };
             const primaryCtx = {
                 uri: docUri,
-                typeDefinitions: { 'http://example.org/Thing': [range] },
-                typeAssertions: {},
-                namespaceDefinitions: {},
-                references: {},
+                typeDefinitions: createRangeIndex({ 'http://example.org/Thing': [range] }),
+                typeAssertions: new RangeIndex(),
+                namespaceDefinitions: new RangeIndex(),
+                references: new RangeIndex(),
             };
             // Also register the primary context in the context service
             mockContextService.contexts[docUriStr] = primaryCtx;
