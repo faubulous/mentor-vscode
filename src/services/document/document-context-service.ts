@@ -55,6 +55,11 @@ export class DocumentContextService {
 	private _cursorOnResource: boolean | undefined;
 
 	/**
+	 * The loads and triple reloads in progress, keyed by document URI.
+	 */
+	private readonly _pendingLoads = new Map<string, Promise<void>>();
+
+	/**
 	 * An event that is fired after the active document context has changed.
 	 */
 	readonly onDidChangeDocumentContext = this._onDidChangeDocumentContext.event;
@@ -165,7 +170,16 @@ export class DocumentContextService {
 	 * Called when the language server delivers updated tokens for an already-loaded document.
 	 * @param uri The document URI.
 	 */
-	private async _reloadContextTriples(uri: string): Promise<void> {
+	private _reloadContextTriples(uri: string): Promise<void> {
+		return this._trackLoad(uri, this._reloadTriples(uri));
+	}
+
+	/**
+	 * Loads the triples of an existing context again and runs the inference; see
+	 * {@link _reloadContextTriples}.
+	 * @param uri The document URI.
+	 */
+	private async _reloadTriples(uri: string): Promise<void> {
 		const context = this.contexts[uri];
 
 		if (!context?.isParsed) return;
@@ -241,11 +255,44 @@ export class DocumentContextService {
 	 * the graph IRI uses the human-readable slug from the start (important for notebook cells).
 	 * @returns A promise that resolves to the document context or undefined if superseded/unsupported.
 	 */
-	async loadDocument(document: vscode.TextDocument, forceReload: boolean = false, slug?: string): Promise<IDocumentContext | undefined> {
+	loadDocument(document: vscode.TextDocument, forceReload: boolean = false, slug?: string): Promise<IDocumentContext | undefined> {
 		if (!document || !this._documentFactory.supportedLanguages.has(document.languageId)) {
-			return;
+			return Promise.resolve(undefined);
 		}
 
+		return this._trackLoad(document.uri.toString(), this._loadDocument(document, forceReload, slug));
+	}
+
+	getPendingLoad(uri: string): Promise<void> | undefined {
+		const pending = this._pendingLoads.get(uri);
+
+		return pending?.then(() => undefined, () => undefined);
+	}
+
+	/**
+	 * Registers a load as the one in progress for a document until it settles.
+	 * @param uri The document URI.
+	 * @param load The load.
+	 * @returns The load.
+	 */
+	private _trackLoad<T>(uri: string, load: Promise<T>): Promise<T> {
+		const pending = load.then(() => undefined, () => undefined);
+
+		this._pendingLoads.set(uri, pending);
+
+		pending.then(() => {
+			if (this._pendingLoads.get(uri) === pending) {
+				this._pendingLoads.delete(uri);
+			}
+		});
+
+		return load;
+	}
+
+	/**
+	 * Loads a supported document into a context; see {@link loadDocument}.
+	 */
+	private async _loadDocument(document: vscode.TextDocument, forceReload: boolean, slug?: string): Promise<IDocumentContext | undefined> {
 		const uri = document.uri.toString();
 
 		let context = this.contexts[uri];

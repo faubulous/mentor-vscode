@@ -992,6 +992,66 @@ describe('DocumentContextService', () => {
 		});
 	});
 
+	describe('getPendingLoad', () => {
+		it('reports a load until it has finished, including the inference', async () => {
+			const { service, tokenSource, mockDocumentFactory } = createService();
+			const uri = 'file:///test.ttl';
+			const doc = { languageId: 'turtle', uri: vscode.Uri.parse(uri), getText: () => '' } as any;
+			const ctx = createMockContext({ uri: doc.uri, isLoaded: false, isParsed: false });
+
+			let finishInference!: () => void;
+
+			ctx.infer = vi.fn(() => new Promise<void>(resolve => finishInference = resolve));
+			(mockDocumentFactory.create as any).mockReturnValue(ctx);
+
+			const load = service.loadDocument(doc);
+
+			expect(service.getPendingLoad(uri)).toBeDefined();
+
+			tokenSource.deliverTokens(uri, []);
+
+			await vi.waitFor(() => expect(ctx.infer).toHaveBeenCalled());
+
+			expect(service.getPendingLoad(uri)).toBeDefined();
+
+			finishInference();
+			await load;
+			await Promise.resolve();
+
+			expect(service.getPendingLoad(uri)).toBeUndefined();
+		});
+
+		it('reports the triple reload after an edit', async () => {
+			const { service, tokenSource } = createService();
+			const uri = 'file:///test.ttl';
+			const ctx = createMockContext({ uri: vscode.Uri.parse(uri), isParsed: true });
+
+			let finishInference!: () => void;
+
+			ctx.infer = vi.fn(() => new Promise<void>(resolve => finishInference = resolve));
+			service.contexts[uri] = ctx;
+			(vscode.workspace.textDocuments as any[]).push({ uri: vscode.Uri.parse(uri), getText: () => '' });
+
+			try {
+				tokenSource.deliverTokens(uri, []);
+
+				await vi.waitFor(() => expect(ctx.infer).toHaveBeenCalled());
+
+				const pending = service.getPendingLoad(uri);
+
+				expect(pending).toBeDefined();
+
+				finishInference();
+				await pending;
+				await Promise.resolve();
+
+				expect(service.getPendingLoad(uri)).toBeUndefined();
+			} finally {
+				(vscode.workspace.textDocuments as any[]).pop();
+			}
+		});
+	});
+
 	describe('loadDocument event loop yields', () => {
 		/**
 		 * Starts loading a document whose parse takes the given time, and returns

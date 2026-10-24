@@ -150,6 +150,7 @@ export function createMockDocumentContextService(overrides?: Partial<IDocumentCo
 		getContextFromUri: () => undefined,
 		getContext: () => null,
 		loadDocument: async () => undefined,
+		getPendingLoad: () => undefined,
 		activateDocument: async () => undefined,
 		handleActiveEditorChanged: async () => { },
 		handleActiveNotebookEditorChanged: async () => { },

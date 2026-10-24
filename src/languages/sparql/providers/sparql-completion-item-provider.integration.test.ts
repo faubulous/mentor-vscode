@@ -160,6 +160,7 @@ function makeProvider(queryContext: SparqlDocument, ontologyContext: TurtleDocum
     );
 
     (provider as any)._contextService = ({
+        getPendingLoad: () => undefined,
         getDocumentContext: () => queryContext,
         getDocumentContextFromUri: (uri: string) => uri === NEXUS ? ontologyContext : null,
         contexts: { 'file:///w/nexus.ttl': ontologyContext },
