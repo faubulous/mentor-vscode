@@ -67,8 +67,9 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src",
-    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json --noEmit && npm run lint"
+    "perf": "NODE_OPTIONS=\"--expose-gc --max-old-space-size=8192\" vitest run --config vitest.perf.config.ts",
+    "lint": "eslint src perf",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json --noEmit && tsc -p perf/tsconfig.json --noEmit && npm run lint"
   },
   "devDependencies": {
     "@rdfjs/types": "^2.0.1",
@@ -125,8 +126,8 @@
   },
   "dependencies": {
     "@comunica/query-sparql": "^5.4.1",
-    "@faubulous/mentor-rdf": "^2.1.8",
-    "@faubulous/mentor-rdf-parsers": "^2.1.1",
+    "@faubulous/mentor-rdf": "^2.2.0",
+    "@faubulous/mentor-rdf-parsers": "^2.2.0",
     "@faubulous/mentor-rdf-serializers": "^1.9.2",
     "asynciterator": "^3.10.0",
     "n3": "^2.13.12",
@@ -1947,6 +1948,12 @@
             "type": "boolean",
             "title": "Enable Code Lenses",
             "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
+            "default": true
+          },
+          "mentor.editor.renameAcrossFiles": {
+            "type": "boolean",
+            "title": "Rename Across Files",
+            "description": "If enabled, renaming an IRI also renames it in all other indexed files that reference it. Changes in other files are shown in the Refactor Preview before they are applied.",
             "default": true
           },
           "mentor.prefixes.queryParameterName": {

@@ -54,8 +54,10 @@ export class SparqlDocument extends TurtleDocument {
 		if (this.parseQueriesEnabled) {
 			await super.loadTriples(data);
 		} else {
-			// The query is not loaded into the store, so it contributes no literals.
+			// The query is not loaded into the store, so it contributes no literals and
+			// nothing reads its syntax tree.
 			this.languageTagStats = {};
+			this._releaseParsedContent();
 		}
 	}
 }

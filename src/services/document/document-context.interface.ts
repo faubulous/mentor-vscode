@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
 import type { CstNode, ILexingError } from 'chevrotain';
 import { RangeIndex } from './range-index';
-import { Quad_Subject } from '@rdfjs/types';
+import { Quad, Quad_Subject } from '@rdfjs/types';
 import { LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { Label } from './document-context';
 import { BlankNodeIdGenerator, IRecognitionException, IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 
 /**
  * The output of one parse pass over a document text: the token streams, the
- * concrete syntax tree and the collected errors. Captured by
+ * quads or the concrete syntax tree, and the collected errors. Captured by
  * {@link ITokenizedDocumentContext.parse} so that the diagnostics service and
- * the triple loader can share a single tokenization and grammar parse per edit
+ * the triple loader can share a single tokenization and analysis per edit
  * instead of re-deriving them from the same text.
  */
 export interface DocumentParseResult {
@@ -26,9 +26,10 @@ export interface DocumentParseResult {
 
 	/**
 	 * The tokens consumed by the grammar parser — placeholder tokens for
-	 * Triplate templates, identical to {@link tokens} otherwise.
+	 * Triplate templates, identical to {@link tokens} otherwise. Released
+	 * together with {@link cst}.
 	 */
-	readonly parseTokens: IToken[];
+	readonly parseTokens?: IToken[];
 
 	/**
 	 * Whether the text is a Triplate template.
@@ -36,10 +37,21 @@ export interface DocumentParseResult {
 	readonly template: boolean;
 
 	/**
-	 * The concrete syntax tree produced by the shared parser with error
-	 * recovery enabled.
+	 * The quads of a valid Turtle document, read straight from the tokens
+	 * without a syntax tree. Released once {@link IDocumentContext.loadTriples}
+	 * has consumed them. A document that holds quads has no errors and no
+	 * {@link cst}.
 	 */
-	readonly cst: CstNode;
+	readonly quads?: Quad[];
+
+	/**
+	 * The concrete syntax tree produced by the shared parser with error
+	 * recovery enabled, for a document that was not read into {@link quads}.
+	 * It is by far the largest part of the result and is released once
+	 * {@link IDocumentContext.loadTriples} has consumed it; the tokens and
+	 * errors stay for the diagnostics pass that follows.
+	 */
+	readonly cst?: CstNode;
 
 	/**
 	 * The characters the lexer could not match.
@@ -311,6 +323,14 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	 * @param text The current document text.
 	 */
 	getParseResult(text: string): DocumentParseResult | undefined;
+
+	/**
+	 * Drops the cached parse result. Called once no consumer will read it
+	 * again — after a file has been indexed and diagnosed, or when its editor
+	 * closes — so that only the tokens and the derived indexes stay in memory.
+	 * A later consumer re-derives the data from the text.
+	 */
+	releaseParseResult(): void;
 
 	/**
 	 * Drops the token stream and the cached parse result of a document that is

@@ -11,7 +11,6 @@ vi.mock('tsyringe', () => ({
     singleton: () => (_target: any) => _target,
 }));
 
-import type * as vscode from 'vscode';
 import { Uri, Position, Range } from '@src/utilities/mocks/vscode';
 import { getTextEdits, createTurtleDocument } from '@src/utilities/mocks/factories';
 import { TurtleRenameProvider } from '@src/languages/turtle/providers/turtle-rename-provider';
@@ -126,21 +125,21 @@ describe('TurtleRenameProvider', () => {
     describe('provideRenameEdits', () => {
         const docUri = Uri.parse('file:///test.ttl') as any;
 
-        it('returns an empty WorkspaceEdit when context is null', () => {
+        it('returns an empty WorkspaceEdit when context is null', async () => {
             const provider = makeProvider(null);
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'newName') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'newName');
             expect(edits.size).toBe(0);
         });
 
-        it('returns an empty WorkspaceEdit when no token covers the position', () => {
+        it('returns an empty WorkspaceEdit when no token covers the position', async () => {
             const context = makeDoc();
             // No tokens set — getTokenAtPosition returns undefined
             const provider = makeProvider(context);
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
             expect(edits.size).toBe(0);
         });
 
-        it('produces replace edits for all occurrences of a renamed prefix', () => {
+        it('produces replace edits for all occurrences of a renamed prefix', async () => {
             const context = makeDoc();
             // Two tokens that share the prefix "ex"
             const t1 = makeToken(RdfToken.PNAME_NS.name, 'ex:', { startLine: 1, startColumn: 1, endColumn: 3 });
@@ -149,12 +148,12 @@ describe('TurtleRenameProvider', () => {
 
             const provider = makeProvider(context);
             // Position on the prefix of t1: character 0 is 'e' of 'ex:'
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'ns') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'ns');
             // Two tokens with prefix "ex" → two replace edits
             expect(getTextEdits(edits)).toHaveLength(2);
         });
 
-        it('produces replace edits for all occurrences of a renamed variable', () => {
+        it('produces replace edits for all occurrences of a renamed variable', async () => {
             const context = makeDoc();
             const varToken = makeToken(RdfToken.VAR1.name, '?x', { startLine: 1, startColumn: 1, endColumn: 2 });
             const varToken2 = makeToken(RdfToken.VAR1.name, '?x', { startLine: 1, startColumn: 10, endColumn: 11 });
@@ -162,11 +161,11 @@ describe('TurtleRenameProvider', () => {
 
             const provider = makeProvider(context);
             // Cursor on the first ?x
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 1) as any, '?y') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 1) as any, '?y');
             expect(getTextEdits(edits)).toHaveLength(2);
         });
 
-        it('produces one edit for an IRI token that appears once in references', () => {
+        it('produces one edit for an IRI token that appears once in references', async () => {
             const context = makeDoc();
             // An IRIREF token at column 1 — setTokens registers it as a subject/reference
             const token = makeToken(RdfToken.IRIREF.name, '<http://example.org/Thing>', {
@@ -176,22 +175,22 @@ describe('TurtleRenameProvider', () => {
 
             const provider = makeProvider(context);
             // The reference is registered, so we expect exactly one rename edit
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
             expect(getTextEdits(edits)).toHaveLength(1);
         });
 
-        it('returns empty edits when token is not prefix/variable and getIriFromToken returns null', () => {
+        it('returns empty edits when token is not prefix/variable and getIriFromToken returns null', async () => {
             const context = makeDoc();
             // A period token: not a prefix token, not a variable → else branch; getIriFromToken → null
             const token = makeToken(RdfToken.PERIOD.name, '.', { startLine: 1, startColumn: 1, endColumn: 1 });
             context.setTokens([token] as any);
 
             const provider = makeProvider(context);
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'newName') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'newName');
             expect(edits.size).toBe(0);
         });
 
-        it('returns empty edits when IRI has no registered references', () => {
+        it('returns empty edits when IRI has no registered references', async () => {
             const context = makeDoc();
             const token = makeToken(RdfToken.IRIREF.name, '<http://example.org/NoRef>', {
                 startLine: 1, startColumn: 1, endColumn: 24
@@ -201,11 +200,11 @@ describe('TurtleRenameProvider', () => {
             (context as any).references = new RangeIndex();
 
             const provider = makeProvider(context);
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
             expect(edits.size).toBe(0);
         });
 
-        it('skips prefix token when getPrefixEditRange returns null', () => {
+        it('skips prefix token when getPrefixEditRange returns null', async () => {
             // Cover line 67: `if (!r) continue` in the PNAME_NS/PNAME_LN case
             const context = makeDoc();
             const prefixToken = makeToken(RdfToken.PNAME_NS.name, 'ex:', { startLine: 1, startColumn: 1, endColumn: 3 });
@@ -213,11 +212,11 @@ describe('TurtleRenameProvider', () => {
 
             const provider = makeProvider(context);
             vi.spyOn(provider as any, 'getPrefixEditRange').mockReturnValue(null);
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'ns') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 0) as any, 'ns');
             expect(edits.size).toBe(0);
         });
 
-        it('skips variable token when getLabelEditRange returns null', () => {
+        it('skips variable token when getLabelEditRange returns null', async () => {
             // Cover line 84: `if (!r) continue` in the variable branch
             const context = makeDoc();
             const varToken = makeToken(RdfToken.VAR1.name, '?x', { startLine: 1, startColumn: 1, endColumn: 2 });
@@ -225,11 +224,11 @@ describe('TurtleRenameProvider', () => {
 
             const provider = makeProvider(context);
             vi.spyOn(provider as any, 'getLabelEditRange').mockReturnValue(null);
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 1) as any, '?y') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 1) as any, '?y');
             expect(edits.size).toBe(0);
         });
 
-        it('skips reference when no token is found at the reference position', () => {
+        it('skips reference when no token is found at the reference position', async () => {
             // Cover the `if (!token) continue` path in the IRI reference branch:
             // the cursor resolves to the IRI token, but the registered reference points
             // at a position with no token.
@@ -242,11 +241,11 @@ describe('TurtleRenameProvider', () => {
             (context as any).references = createRangeIndex({ 'http://example.org/Thing': [new Range(99, 0, 99, 5)] });
 
             const provider = makeProvider(context);
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
             expect(edits.size).toBe(0);
         });
 
-        it('skips reference when getLabelEditRange returns null for reference token', () => {
+        it('skips reference when getLabelEditRange returns null for reference token', async () => {
             // Cover the `if (!editRange) continue` path: a reference token is found,
             // but getLabelEditRange returns null.
             const context = makeDoc();
@@ -257,7 +256,7 @@ describe('TurtleRenameProvider', () => {
 
             const provider = makeProvider(context);
             vi.spyOn(provider as any, 'getLabelEditRange').mockReturnValue(null);
-            const edits = provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 5) as any, 'newName');
             expect(edits.size).toBe(0);
         });
     });
@@ -300,11 +299,11 @@ describe('TurtleRenameProvider', () => {
             expect(range).not.toBeNull();
         });
 
-        it('renames a parameter across its declaration, example binding key and ${ref}', () => {
+        it('renames a parameter across its declaration, example binding key and ${ref}', async () => {
             const provider = makeProvider(makeDoc());
             const doc = makeTemplateDoc(template);
             const offset = template.indexOf('${...numbers}') + '${...'.length;
-            const edits = provider.provideRenameEdits(doc, doc.positionAt(offset), 'values') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits(doc, doc.positionAt(offset), 'values');
 
             // paramDecl + bindingKey + paramRef = three sites.
             expect(getTextEdits(edits)).toHaveLength(3);
@@ -361,17 +360,17 @@ describe('TurtleRenameProvider', () => {
             expect(range).not.toBeNull();
         });
 
-        it('renames a loop variable across its declaration and in-scope reference', () => {
+        it('renames a loop variable across its declaration and in-scope reference', async () => {
             const provider = makeProvider(makeDoc());
             const doc = makeTemplateDoc(template);
             const offset = template.indexOf('FROM ${g}') + 'FROM ${'.length; // the `g` reference
-            const edits = provider.provideRenameEdits(doc, doc.positionAt(offset), 'graph') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits(doc, doc.positionAt(offset), 'graph');
 
             // loopDecl + loopRef = two sites (the `graphIris` source stays a paramRef, untouched).
             expect(getTextEdits(edits)).toHaveLength(2);
         });
 
-        it('keeps same-named loops independent (scope, not name)', () => {
+        it('keeps same-named loops independent (scope, not name)', async () => {
             const shadowed = [
                 '---',
                 'params { a: iri[], b: iri[] }',
@@ -383,20 +382,86 @@ describe('TurtleRenameProvider', () => {
             const provider = makeProvider(makeDoc());
             const doc = makeTemplateDoc(shadowed);
             const offset = shadowed.indexOf('{% for g in b %}') + '{% for '.length; // second loop's `g`
-            const edits = provider.provideRenameEdits(doc, doc.positionAt(offset), 'h') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits(doc, doc.positionAt(offset), 'h');
 
             // Only the second loop: its loopDecl + two loopRefs = three sites (first loop untouched).
             expect(getTextEdits(edits)).toHaveLength(3);
         });
 
-        it('renames the loop source via the parameter path, not the loop path', () => {
+        it('renames the loop source via the parameter path, not the loop path', async () => {
             const provider = makeProvider(makeDoc());
             const doc = makeTemplateDoc(template);
             const offset = template.indexOf('in graphIris') + 'in '.length; // the `graphIris` source
-            const edits = provider.provideRenameEdits(doc, doc.positionAt(offset), 'graphs') as vscode.WorkspaceEdit;
+            const edits = await provider.provideRenameEdits(doc, doc.positionAt(offset), 'graphs');
 
             // paramDecl + the `for` source paramRef = two sites; the loop variable is untouched.
             expect(getTextEdits(edits)).toHaveLength(2);
         });
+    });
+});
+
+describe('TurtleRenameProvider across files', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:Thing a ex:Class .\n<http://example.org/Other> a ex:Class .\n';
+    const docUri = Uri.parse('file:///test.ttl') as any;
+
+    /**
+     * Creates a provider over a parsed document and a workspace rename service spy.
+     */
+    function setup(source = text) {
+        const context = makeDoc();
+
+        context.parse(source);
+
+        const renameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
+        const provider = new TurtleRenameProvider(makeContextService(context) as any, renameService);
+
+        return { provider, renameService };
+    }
+
+    it('extends the rename of a prefixed name to the other files', async () => {
+        const { provider, renameService } = setup();
+
+        const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(1, 4) as any, 'Entity');
+
+        expect(renameService.addEditsInOtherFiles).toHaveBeenCalledExactlyOnceWith(edits, 'http://example.org/Thing', 'Entity', docUri);
+    });
+
+    it('extends the rename of an IRI reference to the other files', async () => {
+        const { provider, renameService } = setup();
+
+        await provider.provideRenameEdits({ uri: docUri } as any, new Position(2, 22) as any, 'Entity');
+
+        expect(renameService.addEditsInOtherFiles).toHaveBeenCalledWith(expect.anything(), 'http://example.org/Other', 'Entity', docUri);
+    });
+
+    it('keeps the edits in the document without confirmation', async () => {
+        const { provider } = setup();
+
+        const edits = await provider.provideRenameEdits({ uri: docUri } as any, new Position(1, 4) as any, 'Entity');
+        const [[, textEdits]] = edits.entries();
+
+        expect(textEdits).toHaveLength(1);
+        expect((textEdits[0] as any).metadata).toBeUndefined();
+    });
+
+    it('keeps the rename of a prefix within the document', async () => {
+        const { provider, renameService } = setup();
+
+        await provider.provideRenameEdits({ uri: docUri } as any, new Position(1, 0) as any, 'ns');
+
+        expect(renameService.addEditsInOtherFiles).not.toHaveBeenCalled();
+    });
+
+    it('keeps the rename of a variable within the document', async () => {
+        const context = makeDoc();
+        const renameService = { addEditsInOtherFiles: vi.fn(async () => 0) };
+
+        context.setTokens([makeToken(RdfToken.VAR1.name, '?x', { startLine: 1, startColumn: 1, endColumn: 2 })] as any);
+
+        const provider = new TurtleRenameProvider(makeContextService(context) as any, renameService);
+
+        await provider.provideRenameEdits({ uri: docUri } as any, new Position(0, 1) as any, 'y');
+
+        expect(renameService.addEditsInOtherFiles).not.toHaveBeenCalled();
     });
 });
