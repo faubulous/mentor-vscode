@@ -108,8 +108,8 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 		expect(fired).toHaveLength(1);
 	});
 
-	it('fires onDidChangeCodeLenses (debounced) when context changes', async () => {
-		let capturedHandler: (() => void) | undefined;
+	it('fires onDidChangeCodeLenses (debounced) when a notebook cell context changes', async () => {
+		let capturedHandler: ((context?: any) => void) | undefined;
 		mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
 			capturedHandler = handler;
 			return { dispose: vi.fn() };
@@ -124,11 +124,31 @@ describe('NotebookCellSlugCodeLensProvider', () => {
 		provider.onDidChangeCodeLenses(() => fired.push(1));
 
 		expect(capturedHandler).toBeDefined();
-		capturedHandler!();
+		capturedHandler!({ uri: vscode.Uri.parse(uriStr) });
 
 		// The refresh is coalesced through a 250 ms trailing debouncer.
 		expect(fired).toHaveLength(0);
 		await new Promise(r => setTimeout(r, 300));
 		expect(fired).toHaveLength(1);
+	});
+
+	it('does not refresh the lenses when the context of another document changes', async () => {
+		let capturedHandler: ((context?: any) => void) | undefined;
+		mockContextService.onDidChangeDocumentContext.mockImplementation((handler: any) => {
+			capturedHandler = handler;
+			return { dispose: vi.fn() };
+		});
+
+		const provider = new NotebookCellSlugCodeLensProvider(mockContextService as any);
+		provider.provideCodeLenses(makeDocument('file', 'file:///test.ttl'));
+
+		const fired: number[] = [];
+		provider.onDidChangeCodeLenses(() => fired.push(1));
+
+		capturedHandler!({ uri: vscode.Uri.parse('file:///test.ttl') });
+		capturedHandler!(undefined);
+
+		await new Promise(r => setTimeout(r, 300));
+		expect(fired).toHaveLength(0);
 	});
 });

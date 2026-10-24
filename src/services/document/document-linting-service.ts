@@ -34,6 +34,13 @@ export class DocumentLintingService implements vscode.Disposable {
 	 */
 	private _lintingEnabled: boolean = false;
 
+	/**
+	 * The state each open document was last linted in: its version and the version of the
+	 * store, which changes with every graph of the workspace. Unresolved references depend
+	 * on the other documents, so the whole store is part of the state.
+	 */
+	private readonly _lintedStates = new Map<string, string>();
+
 	constructor(
 		context: vscode.ExtensionContext,
 		private readonly _vocabulary: VocabularyRepository,
@@ -97,6 +104,12 @@ export class DocumentLintingService implements vscode.Disposable {
 			const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === context.uri.toString());
 
 			if (document && this._isSupportedLanguage(document.languageId)) {
+				// The event also fires when an unchanged document becomes active again, e.g. on
+				// a switch between tabs; its diagnostics are still valid then.
+				if (this._lintedStates.get(document.uri.toString()) === this._getLintState(document)) {
+					return;
+				}
+
 				this._validateDocument(document);
 			}
 		}));
@@ -114,6 +127,7 @@ export class DocumentLintingService implements vscode.Disposable {
 		this._disposables.push(vscode.workspace.onDidChangeConfiguration((e) => {
 			if (e.affectsConfiguration('mentor.linting.unresolvedReferenceSeverity') ||
 				e.affectsConfiguration('mentor.linting.unresolvedWorkspaceGraphSeverity')) {
+				this._lintedStates.clear();
 				this._diagnosticCollection.clear();
 
 				this._validateAllOpenDocuments();
@@ -122,6 +136,7 @@ export class DocumentLintingService implements vscode.Disposable {
 
 			if (e.affectsConfiguration('mentor.linting.enabled')) {
 				this._loadLintingEnabledState();
+				this._lintedStates.clear();
 
 				this._diagnosticCollection.clear();
 
@@ -147,6 +162,9 @@ export class DocumentLintingService implements vscode.Disposable {
 		if (this._isSupportedLanguage(document.languageId)) {
 			this._diagnosticCollection.delete(document.uri);
 		}
+
+		// The diagnostics are gone, so a reopened document must be linted again.
+		this._lintedStates.delete(document.uri.toString());
 	}
 
 	/**
@@ -226,12 +244,22 @@ export class DocumentLintingService implements vscode.Disposable {
 			return;
 		}
 
+		this._lintedStates.set(document.uri.toString(), this._getLintState(document));
+
 		const diagnostics: vscode.Diagnostic[] = [
 			...await this._getInvalidWorkspaceGraphDiagnostics(document, context),
 			...(this._lintingEnabled ? await this._getUndefinedIriDiagnostics(document, context) : []),
 		];
 
 		this._diagnosticCollection.set(document.uri, diagnostics);
+	}
+
+	/**
+	 * Describes the state a document is linted in, see {@link _lintedStates}.
+	 * @param document The document.
+	 */
+	private _getLintState(document: vscode.TextDocument): string {
+		return `${document.version}:${this._vocabulary.store.version}`;
 	}
 
 	/**

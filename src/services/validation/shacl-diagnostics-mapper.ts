@@ -23,8 +23,12 @@ export class ShaclDiagnosticsMapper {
 		// next-subject boundary per result is a binary search instead of a scan.
 		const subjectStartLines = this._getSortedSubjectStartLines(context);
 
+		// Index the quad contexts once so that each result is matched with a lookup
+		// instead of a scan over all quads of the document.
+		const quadContextIndex = this._indexQuadContexts(quadContexts);
+
 		for (const entry of result.results) {
-			const range = this._resolveRange(entry, context, subjectStartLines, quadContexts);
+			const range = this._resolveRange(entry, context, subjectStartLines, quadContextIndex);
 			const severity = this._mapSeverity(entry.severity);
 			const message = this._buildMessage(entry);
 
@@ -45,11 +49,11 @@ export class ShaclDiagnosticsMapper {
 	 * Resolve the document range for a validation result entry.
 	 * Prefers highlighting the offending predicate or value over the focus node.
 	 */
-	private _resolveRange(entry: ShaclValidationResultEntry, context: IDocumentContext, subjectStartLines: number[], quadContexts?: QuadContext[]): vscode.Range {
+	private _resolveRange(entry: ShaclValidationResultEntry, context: IDocumentContext, subjectStartLines: number[], quadContextIndex: Map<string, QuadContext>): vscode.Range {
 		// 0. Try to resolve the exact object token position from quad contexts.
 		//    This handles cases where the same subject appears on multiple non-contiguous
 		//    lines (e.g. repeated predicates), which defeats the heuristic anchor window.
-		const fromQuad = this._resolveRangeFromQuadContext(entry, quadContexts);
+		const fromQuad = this._resolveRangeFromQuadContext(entry, quadContextIndex);
 
 		if (fromQuad) {
 			return fromQuad;
@@ -99,16 +103,38 @@ export class ShaclDiagnosticsMapper {
 	 * quad in the quad context list and returning the range of its object token.
 	 * Returns undefined if no quad context is available or no match is found.
 	 */
-	private _resolveRangeFromQuadContext(entry: ShaclValidationResultEntry, quadContexts?: QuadContext[]): vscode.Range | undefined {
-		if (!entry.value || !entry.path || !quadContexts?.length) return undefined;
+	private _resolveRangeFromQuadContext(entry: ShaclValidationResultEntry, quadContextIndex: Map<string, QuadContext>): vscode.Range | undefined {
+		if (!entry.value || !entry.path) return undefined;
 
-		const match = quadContexts.find(qc =>
-			qc.subject.value === entry.focusNode &&
-			qc.predicate.value === entry.path &&
-			qc.object.value === entry.value
-		);
+		const match = quadContextIndex.get(this._getQuadKey(entry.focusNode, entry.path, entry.value));
 
 		return match ? this._rangeFromToken(match.objectToken) : undefined;
+	}
+
+	/**
+	 * Indexes quad contexts by their subject, predicate and object values. The first quad
+	 * context of a statement wins, as with a search from the start of the document.
+	 * @param quadContexts The quad contexts of the document, if available.
+	 */
+	private _indexQuadContexts(quadContexts?: QuadContext[]): Map<string, QuadContext> {
+		const index = new Map<string, QuadContext>();
+
+		for (const quadContext of quadContexts ?? []) {
+			const key = this._getQuadKey(quadContext.subject.value, quadContext.predicate.value, quadContext.object.value);
+
+			if (!index.has(key)) {
+				index.set(key, quadContext);
+			}
+		}
+
+		return index;
+	}
+
+	/**
+	 * Returns the index key of a statement.
+	 */
+	private _getQuadKey(subject: string, predicate: string, object: string): string {
+		return `${subject}\u0000${predicate}\u0000${object}`;
 	}
 
 	/**

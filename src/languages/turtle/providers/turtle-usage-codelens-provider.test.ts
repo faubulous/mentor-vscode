@@ -119,7 +119,7 @@ describe('TurtleUsageCodeLensProvider', () => {
             const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
 
             expect(codeLenses).toHaveLength(2);
-            expect(codeLenses[0].command?.command).toBe('mentor.command.findReferences');
+            expect(provider.resolveCodeLens(codeLenses[0]).command?.command).toBe('mentor.command.findReferences');
             expect(codeLenses[1].command?.command).toBe('mentor.command.showShapeReferences');
             expect(codeLenses[1].command?.title).toBe('2 shapes');
         });
@@ -141,7 +141,7 @@ describe('TurtleUsageCodeLensProvider', () => {
             const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
 
             expect(codeLenses).toHaveLength(1);
-            expect(codeLenses[0].command?.command).toBe('mentor.command.findReferences');
+            expect(provider.resolveCodeLens(codeLenses[0]).command?.command).toBe('mentor.command.findReferences');
         });
 
         it('does not add shape lenses for shape resources', async () => {
@@ -164,7 +164,7 @@ describe('TurtleUsageCodeLensProvider', () => {
             const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => uriStr } } as any, null as any) as any[];
 
             expect(codeLenses).toHaveLength(1);
-            expect(codeLenses[0].command?.command).toBe('mentor.command.findReferences');
+            expect(provider.resolveCodeLens(codeLenses[0]).command?.command).toBe('mentor.command.findReferences');
             expect(mockVocabulary.getShapes).not.toHaveBeenCalled();
         });
 
@@ -274,5 +274,59 @@ describe('TurtleUsageCodeLensProvider', () => {
             await new Promise(r => setTimeout(r, 300));
             expect(fired.length).toBe(1);
         });
+    });
+});
+
+describe('TurtleUsageCodeLensProvider usage counts', () => {
+    const range = { start: { line: 1, character: 0 }, end: { line: 1, character: 10 } };
+
+    /**
+     * Creates a provider over a document with one subject that is referenced in two
+     * documents, and returns the lenses it provides.
+     */
+    async function provide() {
+        mockContextService.contexts['file:///doc.ttl'] = {
+            graphs: ['urn:g1'],
+            subjects: createRangeIndex({ 'urn:ex#Sub': [range] }),
+            references: createRangeIndex({ 'urn:ex#Sub': [range] }),
+            isTemporary: false,
+        };
+        mockContextService.contexts['file:///other.ttl'] = {
+            graphs: ['urn:g2'],
+            subjects: new RangeIndex(),
+            references: createRangeIndex({ 'urn:ex#Sub': [range, range] }),
+            isTemporary: false,
+        };
+
+        const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
+        const countReferences = vi.spyOn((provider as any)._referenceProvider, 'countReferencesForIri');
+        const codeLenses = await provider.provideCodeLenses({ uri: { toString: () => 'file:///doc.ttl', scheme: 'file' } } as any, null as any);
+
+        return { provider, codeLenses, countReferences };
+    }
+
+    it('does not count the usages when the lenses are provided', async () => {
+        const { codeLenses, countReferences } = await provide();
+
+        expect(codeLenses).toHaveLength(1);
+        expect(codeLenses[0].command).toBeUndefined();
+        expect(countReferences).not.toHaveBeenCalled();
+    });
+
+    it('counts the usages when a lens is resolved', async () => {
+        const { provider, codeLenses, countReferences } = await provide();
+
+        const resolved = provider.resolveCodeLens(codeLenses[0]);
+
+        expect(countReferences).toHaveBeenCalledExactlyOnceWith('urn:ex#Sub');
+        expect(resolved.command).toEqual({ command: 'mentor.command.findReferences', title: '2 usages', arguments: ['urn:ex#Sub'] });
+    });
+
+    it('leaves lenses that are already resolved unchanged', async () => {
+        const { provider, countReferences } = await provide();
+        const shapeLens = new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), { command: 'mentor.command.showShapeReferences', title: '1 shape' });
+
+        expect(provider.resolveCodeLens(shapeLens)).toBe(shapeLens);
+        expect(countReferences).not.toHaveBeenCalled();
     });
 });

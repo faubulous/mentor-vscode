@@ -30,7 +30,9 @@ vi.mock('./definition-node-provider', () => ({
 }));
 
 vi.mock('./definition-node-decoration-provider', () => ({
-	DefinitionNodeDecorationProvider: class {},
+	DefinitionNodeDecorationProvider: class {
+		onDidChangeSeverities = vi.fn(() => ({ dispose() {} }));
+	},
 }));
 
 const mockContextChangeHandlers: Array<() => void> = [];
