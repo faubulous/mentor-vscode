@@ -68,7 +68,7 @@ function makeMockContext(tokens: any[], namespaces: Record<string, string> = {},
         namespaces,
         subjects: createRangeIndex(Object.keys(subjects)),
         graphIri,
-        tokenize: vi.fn(() => tokens),
+        tokenizeDocument: vi.fn(() => tokens),
         getResourceDescription: vi.fn(() => undefined),
     };
 }
@@ -141,9 +141,9 @@ describe('TurtleCompletionItemProvider', () => {
                 makeToken(RdfToken.PERIOD.name, '.', { startColumn: 1, endColumn: 1 }),
                 makeToken(RdfToken.PNAME_LN.name, 'ex:F', { startColumn: 2, endColumn: 5 }),
             ];
-            // The stored tokens are stale/empty — only tokenize() returns the fresh tokens.
+            // The stored tokens are stale/empty — only tokenizeDocument() returns the fresh tokens.
             const mockCtx = makeMockContext([], {});
-            mockCtx.tokenize = vi.fn(() => tokens);
+            mockCtx.tokenizeDocument = vi.fn(() => tokens);
 
             (provider as any)._contextService = ({
                 getDocumentContext: () => mockCtx,
@@ -154,7 +154,7 @@ describe('TurtleCompletionItemProvider', () => {
             const doc = createMockTextDocument('. ex:F', { uri: 'file:///w/test.ttl' });
             const result = provider.provideCompletionItems(doc, new vscode.Position(0, 3), cancellationToken, completionContext) as vscode.CompletionList;
 
-            expect(mockCtx.tokenize).toHaveBeenCalledWith('. ex:F');
+            expect(mockCtx.tokenizeDocument).toHaveBeenCalledWith(doc);
             expect(Array.isArray(result.items)).toBe(true);
         });
     });

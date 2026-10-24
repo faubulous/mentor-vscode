@@ -1392,3 +1392,38 @@ describe('released tokens', () => {
 		expect(releaseTokens).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe('cursor on resource context key', () => {
+	/**
+	 * Sets the context key for an editor whose cursor is or is not on a resource and
+	 * returns the `setContext` calls made for the key.
+	 */
+	async function setCursor(service: DocumentContextService, onResource: boolean) {
+		const uri = vscode.Uri.parse('file:///w/data.ttl');
+
+		service.contexts[uri.toString()] = createMockContext({ uri, getIriAtPosition: vi.fn(() => onResource ? 'http://example.org/a' : undefined) });
+
+		await (service as any)._setCursorOnResourceContext({ document: { uri }, selection: { active: new vscode.Position(0, 0) } });
+	}
+
+	function contextKeyCalls(spy: { mock: { calls: unknown[][] } }) {
+		return spy.mock.calls.filter(call => call[0] === 'setContext' && call[1] === 'mentor.editor.cursorOnResource').map(call => call[2]);
+	}
+
+	it('sets the key only when its value changes', async () => {
+		const { service } = createService();
+		const executeCommand = vi.spyOn(vscode.commands, 'executeCommand');
+
+		executeCommand.mockClear();
+
+		await setCursor(service, true);
+		await setCursor(service, true);
+		await setCursor(service, false);
+		await setCursor(service, false);
+		await setCursor(service, true);
+
+		expect(contextKeyCalls(executeCommand)).toEqual([true, false, true]);
+
+		executeCommand.mockRestore();
+	});
+});
