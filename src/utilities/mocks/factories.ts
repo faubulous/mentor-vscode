@@ -3,7 +3,7 @@ import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core/settings-service.interface';
 import { IDocumentContextService } from '@src/services/document/document-context-service.interface';
-import { IDocumentContext } from '@src/services/document/document-context.interface';
+import { IDocumentContext, ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { RangeIndex } from '@src/services/document/range-index';
 import { Range } from 'vscode-languageserver-types';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -197,7 +197,9 @@ export function createMockDocumentContext(overrides?: Partial<IDocumentContext>)
 		subjects: new RangeIndex(),
 		references: new RangeIndex(),
 		slug: undefined,
-		providesTokens: true,
+		isTokenized(): this is ITokenizedDocumentContext {
+			return true;
+		},
 		typeAssertions: new RangeIndex(),
 		typeDefinitions: new RangeIndex(),
 		languageTagStats: {},

@@ -18,7 +18,7 @@ import {
 	XsdAnyUriLiteralLinter,
 	XsdDatatypeValidationLinter,
 } from '@src/providers/linting/linters';
-import { IDocumentContext, isTokenizedDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
+import { IDocumentContext, ITokenizedDocumentContext } from './document-context.interface';
 import { IDocumentTokenSource } from './document-token-source.interface';
 
 /**
@@ -282,7 +282,7 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 		}
 
 		try {
-			if (isTokenizedDocumentContext(context)) {
+			if (context.isTokenized()) {
 				this._collection.set(uri, this._computeDiagnostics(uri, context, content, positionAt));
 			} else {
 				// Structurally parsed documents (RDF/XML): the parse either succeeds

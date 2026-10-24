@@ -3,6 +3,7 @@ import { LanguageTagUsageStats, Store, VocabularyRepository } from '@faubulous/m
 import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
+import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { RangeIndex } from '@src/services/document/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
@@ -43,7 +44,7 @@ export class XmlDocument extends DocumentContext {
 		return this._hasContent;
 	}
 
-	get providesTokens(): boolean {
+	isTokenized(): this is ITokenizedDocumentContext {
 		return false;
 	}
 
