@@ -126,7 +126,7 @@
   },
   "dependencies": {
     "@comunica/query-sparql": "^5.4.1",
-    "@faubulous/mentor-rdf": "^2.2.0",
+    "@faubulous/mentor-rdf": "^2.2.1",
     "@faubulous/mentor-rdf-parsers": "^2.2.0",
     "@faubulous/mentor-rdf-serializers": "^1.9.2",
     "asynciterator": "^3.10.0",
