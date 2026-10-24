@@ -72,7 +72,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		return this._indexed;
 	}
 
-	get providesTokens(): boolean {
+	isTokenized(): this is ITokenizedDocumentContext {
 		return true;
 	}
 

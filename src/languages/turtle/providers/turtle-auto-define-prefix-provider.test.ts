@@ -53,9 +53,9 @@ function tok(name: string, image: string, startColumn: number) {
 /**
  * Creates a tokenized context whose `tokenizeDocument` returns the given tokens.
  */
-function makeContext(tokens: any[], namespaces: Record<string, string> = {}, providesTokens = true): any {
+function makeContext(tokens: any[], namespaces: Record<string, string> = {}, isTokenized = true): any {
     return {
-        providesTokens,
+        isTokenized: () => isTokenized,
         namespaces,
         tokenizeDocument: vi.fn(() => tokens),
     };
