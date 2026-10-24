@@ -563,3 +563,76 @@ describe('TurtleDocument.parse — grammar parse failures', () => {
         expect(result!.tokens.length).toBeGreaterThan(0);
     });
 });
+
+describe('TurtleDocument parse result lifecycle', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+
+        // Earlier suites leave the store stub in a throwing state; these tests need a working store.
+        storeControl.shouldThrowLoad = false;
+        storeControl.reasoner = null;
+    });
+
+    it('releases the syntax tree once the triples are loaded and keeps the tokens and errors', async () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+
+        await doc.loadTriples(text);
+
+        const result = doc.getParseResult(text);
+
+        expect(result).toBeDefined();
+        expect(result!.cst).toBeUndefined();
+        expect(result!.parseTokens).toBeUndefined();
+        expect(result!.tokens).toBe(doc.tokens);
+        expect(result!.lexErrors).toEqual([]);
+        expect(result!.parserErrors).toEqual([]);
+        expect(result!.semanticErrors).toEqual([]);
+    });
+
+    it('parses the tokens again when the triples are loaded a second time from the same text', async () => {
+        const doc = makeDoc();
+        const parseSpy = vi.spyOn(ParserFactory.getParser(RdfSyntax.Turtle), 'parse');
+
+        doc.parse(text);
+
+        // The first load reuses the captured syntax tree; the tree is released
+        // afterwards, so the second load has to parse the tokens again.
+        await doc.loadTriples(text);
+        await doc.loadTriples(text);
+
+        expect(parseSpy).toHaveBeenCalledTimes(2);
+        expect(doc.graphs).toHaveLength(1);
+    });
+
+    it('releases the syntax tree of a document with syntax errors as well', async () => {
+        const doc = makeDoc();
+        const invalidText = '@prefix ex: <http://example.org/> .\nex:a ex:b .';
+
+        doc.parse(invalidText);
+
+        expect(doc.getParseResult(invalidText)!.parserErrors.length).toBeGreaterThan(0);
+
+        await doc.loadTriples(invalidText);
+
+        const result = doc.getParseResult(invalidText);
+
+        expect(result).toBeDefined();
+        expect(result!.cst).toBeUndefined();
+        expect(result!.parserErrors.length).toBeGreaterThan(0);
+    });
+
+    it('drops the whole parse result on releaseParseResult but keeps the tokens', () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+        doc.releaseParseResult();
+
+        expect(doc.getParseResult(text)).toBeUndefined();
+        expect(doc.tokens.length).toBeGreaterThan(0);
+        expect(doc.isParsed).toBe(true);
+    });
+});

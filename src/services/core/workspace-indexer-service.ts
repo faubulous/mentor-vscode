@@ -6,12 +6,14 @@ import { IDocumentFactory } from '../document/document-factory.interface';
 import { IDocumentTokenSource } from '../document/document-token-source.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { DocumentDiagnosticsService } from '../document/document-diagnostics-service';
+import { isTokenizedDocumentContext } from '../document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
 import { isDocumentOpen } from '@src/utilities/vscode/editors';
 import { describeUriPath } from '@src/utilities/vscode/log';
 import { normalizeGlobPattern } from '@src/utilities/glob';
 import { createYieldBudget } from '@src/utilities/scheduling';
 import { getErrorMessage } from '@src/utilities/error';
+import { getHeapUsedMb } from '@src/utilities/runtime';
 import { CanonicalWorkspaceUri, WorkspaceUri } from '@src/providers/workspace-uri';
 
 /**
@@ -563,7 +565,12 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 			durationMs: duration,
 		};
 
-		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms`);
+		// The heap figure makes the memory cost of an index visible in the output
+		// channel, so a workspace can be checked without a profiler attached.
+		const heapUsedMb = getHeapUsedMb();
+		const heapSuffix = heapUsedMb === undefined ? '' : ` (heap ${heapUsedMb} MB)`;
+
+		this._statusLog.info(`Indexed ${successfulFiles} of ${totalFiles} files in ${duration} ms${heapSuffix}`);
 
 		const parts = [`$(list-tree) Indexed ${successfulFiles} files`];
 
@@ -735,7 +742,27 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 			this._diagnosticsService.diagnoseContent(uri, content);
 		}
 
+		// The diagnostics were the last reader of the parse result. A file that is
+		// not open in an editor is not parsed again until it changes, so from here
+		// on only its tokens and index maps need to stay in memory.
+		if (!openDocument) {
+			this._releaseParseResult(uri);
+		}
+
 		return { readMs, loadMs };
+	}
+
+	/**
+	 * Releases the cached parse result of an indexed file's context, if the
+	 * context keeps one.
+	 * @param uri The URI of the indexed file.
+	 */
+	private _releaseParseResult(uri: vscode.Uri): void {
+		const context = this._contextService.contexts[uri.toString()];
+
+		if (context && isTokenizedDocumentContext(context)) {
+			context.releaseParseResult();
+		}
 	}
 
 	/**

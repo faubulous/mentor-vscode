@@ -167,6 +167,19 @@ describe('DocumentContextService', () => {
 			expect(service.contexts[uri.toString()]).toBe(context);
 			expect(mockStore.deleteGraphs).not.toHaveBeenCalled();
 		});
+
+		it('releases the parse result of a closed non-temporary document', () => {
+			const { service } = createService();
+			const uri = vscode.Uri.parse('file:///permanent.ttl');
+			const releaseParseResult = vi.fn();
+			const context = createMockContext({ uri, isTemporary: false, providesTokens: true, releaseParseResult } as Partial<IDocumentContext>);
+
+			service.contexts[uri.toString()] = context;
+			service.handleDocumentClosed({ uri } as any);
+
+			expect(service.contexts[uri.toString()]).toBe(context);
+			expect(releaseParseResult).toHaveBeenCalledTimes(1);
+		});
 	});
 
 	describe('removeDocuments', () => {

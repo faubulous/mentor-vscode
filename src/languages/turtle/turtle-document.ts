@@ -118,6 +118,48 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		return this._lastParse?.text === text ? this._lastParse : undefined;
 	}
 
+	releaseParseResult(): void {
+		this._lastParse = undefined;
+	}
+
+	/**
+	 * Drops the syntax tree and the parser token stream from the cached parse
+	 * result once the triples have been read from it. The tokens and errors
+	 * stay, so the diagnostics pass that follows still reuses the parse.
+	 */
+	protected _releaseSyntaxTree(): void {
+		const cached = this._lastParse;
+
+		if (!cached || (cached.cst === undefined && cached.parseTokens === undefined)) {
+			return;
+		}
+
+		this._lastParse = {
+			text: cached.text,
+			tokens: cached.tokens,
+			template: cached.template,
+			lexErrors: cached.lexErrors,
+			parserErrors: cached.parserErrors,
+			semanticErrors: cached.semanticErrors
+		};
+	}
+
+	/**
+	 * Returns the syntax tree captured by {@link parse} when it was produced
+	 * from exactly the given text, parsed cleanly and is still held. Templates
+	 * are excluded: their tree is built from placeholder tokens.
+	 * @param text The text about to be loaded.
+	 */
+	private _getReusableSyntaxTree(text: string): CstNode | undefined {
+		const cached = this.getParseResult(text);
+
+		if (!cached || cached.template || cached.lexErrors.length > 0 || cached.parserErrors.length > 0 || cached.semanticErrors.length > 0) {
+			return undefined;
+		}
+
+		return cached.cst;
+	}
+
 	public override getIriAtPosition(position: vscode.Position): string | undefined {
 		const token = getTokenAtPosition(this.tokens, position);
 
@@ -210,25 +252,17 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			this._inferenceExecuted = false;
 
 			// Reuse the CST captured by parse() when it was produced from exactly
-			// this content and parsed cleanly. An errored or stale result falls
-			// back to the throwing parse below, so invalid documents keep loading
-			// no triples. Templates are excluded: their CST is built from
-			// placeholder tokens.
-			const cached = this.getParseResult(data);
-			const canReuseCst = cached !== undefined
-				&& !cached.template
-				&& cached.lexErrors.length === 0
-				&& cached.parserErrors.length === 0
-				&& cached.semanticErrors.length === 0;
-
+			// this content and parsed cleanly. An errored, stale or already
+			// released result falls back to the throwing parse, so invalid
+			// documents keep loading no triples.
+			//
 			// Only updates the existing graphs if the document was parsed successfully.
 			// Uses the existing tokens that were set on the context. The parser is a
 			// shared instance because chevrotain parser construction is expensive.
 			// The parser and reader must match the document syntax: TriG graph
 			// blocks or N-Quads graph terms are invisible to the Turtle grammar.
-			const cst = canReuseCst
-				? cached.cst
-				: ParserFactory.getParser(this.syntax).parse(this._tokens);
+			const cst = this._getReusableSyntaxTree(data)
+				?? ParserFactory.getParser(this.syntax).parse(this._tokens);
 
 			for (const q of this.readQuads(cst)) {
 				const s = q.subject as Quad_Subject;
@@ -241,6 +275,11 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
+		} finally {
+			// Nothing reads the syntax tree after the triples are loaded, and it
+			// dwarfs everything else the context holds: releasing it here is what
+			// keeps an indexed workspace from retaining a tree per file.
+			this._releaseSyntaxTree();
 		}
 	}
 

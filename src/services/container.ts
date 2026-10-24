@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { container } from 'tsyringe';
 import { Store, OwlReasoner, GraphUriGenerator, VocabularyRepository } from '@faubulous/mentor-rdf';
+import { getHeapUsedMb } from '@src/utilities/runtime';
 import { Quad_Graph } from '@rdfjs/types';
 import { ServiceToken } from './tokens';
 import { InferenceUri } from '../providers/inference-uri';
@@ -227,6 +228,7 @@ export function configureServiceContainer(context: vscode.ExtensionContext): voi
 				indexingFinished: workspaceIndexerService.indexingFinished,
 				workspaceFiles: workspaceFileService.files.map(file => file.toString()),
 				documentContexts: Object.keys(documentContextService.contexts),
+				heapUsedMb: getHeapUsedMb(),
 			})),
 			vscode.commands.registerCommand('mentor.e2e.setNotebookConnection', async (notebookUri: string, connectionId: string) => {
 				const notebook = vscode.workspace.notebookDocuments.find(nb => nb.uri.toString() === notebookUri);
