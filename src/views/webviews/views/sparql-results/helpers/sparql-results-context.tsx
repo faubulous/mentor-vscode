@@ -31,7 +31,7 @@ export interface SparqlResultsContextType {
 	/**
 	 * The bindings result after the active search filter has been applied, or `undefined`
 	 * when the result is not a bindings result. Equals the unfiltered result when the
-	 * search term is empty.
+	 * search term is empty. Follows the search term once typing pauses (debounced).
 	 */
 	filteredResult?: BindingsResult;
 

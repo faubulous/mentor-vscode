@@ -142,3 +142,57 @@ export function reduceOnHistory(
 export function reduceOnShowWelcome(state: SparqlResultsPanelState): SparqlResultsPanelState {
 	return { ...state, activeTabIndex: 0, pendingSelectQueryId: undefined };
 }
+
+/**
+ * Whether the execution state the host cached for a query can restore that query's tab
+ * without re-running it. The cached entry must be the same execution (same id and document)
+ * and must either hold an outcome (a result or an error) or still be executing, in which case
+ * the history post at its end fills in the result.
+ * @param query The tab's query, whose result was stripped from the saved panel state.
+ * @param cachedState The state the host returned for the query's id, if any.
+ * @returns `true` if the cached state can be shown instead of re-executing the query.
+ */
+export function isRestorableQueryState(
+	query: SparqlQueryExecutionState,
+	cachedState?: SparqlQueryExecutionState
+): cachedState is SparqlQueryExecutionState {
+	if (!cachedState || cachedState.id !== query.id || cachedState.documentIri !== query.documentIri) {
+		return false;
+	}
+
+	const isExecuting = cachedState.endTime === undefined;
+
+	return cachedState.result !== undefined || cachedState.error !== undefined || isExecuting;
+}
+
+/**
+ * Applies the execution state the host cached for a query to that query's tab. Only the
+ * execution outcome is taken over; the tab keeps its routing metadata (label, connection,
+ * document IRI) because the panel may have updated it since the query ran.
+ * @param state The current panel state.
+ * @param cachedState The cached execution state of one of the panel's queries.
+ * @returns The next panel state, or the current state when the query's tab was closed.
+ */
+export function reduceOnQueryResult(
+	state: SparqlResultsPanelState,
+	cachedState: SparqlQueryExecutionState
+): SparqlResultsPanelState {
+	const index = state.activeQueries.findIndex(q => q.id === cachedState.id);
+
+	if (index < 0) {
+		return state;
+	}
+
+	const activeQueries = [...state.activeQueries];
+
+	activeQueries[index] = {
+		...activeQueries[index],
+		queryType: cachedState.queryType,
+		startTime: cachedState.startTime,
+		endTime: cachedState.endTime,
+		result: cachedState.result,
+		error: cachedState.error
+	};
+
+	return { ...state, activeQueries };
+}

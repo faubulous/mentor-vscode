@@ -1,13 +1,16 @@
-import { useRef } from 'react';
+import { memo } from 'react';
 import { Quad, Term } from '@rdfjs/types';
 import { Uri } from '@faubulous/mentor-rdf';
 import { NTriplesSerializer } from '@faubulous/mentor-rdf-serializers';
 import { extractFromClauseGraphUris } from '@faubulous/mentor-rdf-parsers';
-import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
+import { BindingsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import { useStylesheet } from '@src/views/webviews/hooks';
+import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
+import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import { SparqlResultsContextProps } from '../helpers/sparql-results-context';
 import { withSparqlResults } from '../helpers/sparql-results-hoc';
 import { getGraphVariables } from '../helpers/graph-variables';
+import { BindingsTablePagingState } from './bindings-table-paging-state';
 import stylesheet from './bindings-table.css';
 
 const ntriplesSerializer = new NTriplesSerializer();
@@ -23,24 +26,78 @@ const ROW_NUMBER_COLUMN_WIDTH = 50;
 const MIN_COLUMN_WIDTH = 150;
 
 /**
+ * Properties of the bindings table content.
+ */
+interface BindingsTableContentProps {
+	/**
+	 * The execution state of the query whose results are shown.
+	 */
+	queryContext: SparqlQueryExecutionState;
+
+	/**
+	 * Messaging used to run commands for the clicked cells.
+	 */
+	messaging?: WebviewMessaging<SparqlResultsWebviewMessages>;
+
+	/**
+	 * The filtered bindings result, or `null` when the query returned no bindings.
+	 */
+	result: BindingsResult | null;
+
+	/**
+	 * The page of the result that is shown.
+	 */
+	paging: BindingsTablePagingState;
+
+	/**
+	 * Whether a search term is entered, which changes the message shown when no row is left.
+	 */
+	hasSearchTerm: boolean;
+}
+
+/**
+ * Returns the key that decides when the `vscode-table` element is re-created. The table sizes
+ * its columns only when its header or body element is slotted, and it caches the cells of the
+ * first body row it sized. It is therefore re-created when another result is shown (other
+ * columns) and when rows appear after none were shown (a new first row). Page and filter changes
+ * keep the table: rows are keyed by their position on the page, so the sized first-row cells
+ * are reused and only their content changes.
+ * @param queryContext The execution state of the query whose results are shown.
+ * @param hasVisibleRows Whether the current page shows any row.
+ * @returns The key of the table element.
+ */
+function getTableLayoutKey(queryContext: SparqlQueryExecutionState, hasVisibleRows: boolean): string {
+	return `${queryContext.id}:${queryContext.endTime}:${hasVisibleRows}`;
+}
+
+/**
  * Component to display SPARQL bindings results in a table with pagination.
  */
 function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
-	const renderKeyRef = useRef(0);
-
 	useStylesheet('bindings-table-styles', stylesheet);
 
 	const { queryContext, paging, messaging, filteredResult, searchTerm } = sparqlResults;
-
-	// Increment render key on each render
-	renderKeyRef.current++;
 
 	if (!paging) {
 		return <div>Loading...</div>;
 	}
 
-	const result = filteredResult ?? null;
+	return (
+		<BindingsTableContent
+			queryContext={queryContext}
+			messaging={messaging}
+			result={filteredResult ?? null}
+			paging={paging}
+			hasSearchTerm={!!searchTerm} />
+	);
+}
 
+/**
+ * Renders the rows of the current page. Kept apart from the context consumer and memoized so
+ * that typing in the filter field, which updates the context on every keystroke, does not
+ * re-render the rows until the debounced filter result changes.
+ */
+function BindingsTableContentBase({ queryContext, messaging, result, paging, hasSearchTerm }: BindingsTableContentProps) {
 	// Determine which binding variables are named graphs
 	const graphHeaders = result ? getGraphVariables(queryContext.query) : new Set<string>();
 
@@ -261,10 +318,11 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 
 	if (result) {
 		const minWidth = ROW_NUMBER_COLUMN_WIDTH + result.columns.length * MIN_COLUMN_WIDTH;
+		const visibleRows = result.rows.slice(paging.startIndex, paging.endIndex);
 
 		return (
 			<vscode-table className="bindings-table" zebra bordered-rows resizable
-				columns={["50px"]} key={renderKeyRef.current}
+				columns={["50px"]} key={getTableLayoutKey(queryContext, visibleRows.length > 0)}
 				style={{ minWidth: `${minWidth}px` }}
 				onContextMenu={handleContextMenu}>
 				{result.rows.length > 0 &&
@@ -279,13 +337,13 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 					</vscode-table-header>
 				}
 				<vscode-table-body>
-					{result.rows.length > 0 && result.rows.slice(paging.startIndex, paging.endIndex).map((row, rowIndex) => (
-						<vscode-table-row key={paging.startIndex + rowIndex}>
-							<vscode-table-cell key={`row-number-${paging.startIndex + rowIndex}`}>
+					{visibleRows.map((row, rowIndex) => (
+						<vscode-table-row key={rowIndex}>
+							<vscode-table-cell key="row-number">
 								{paging.startIndex + rowIndex + 1}
 							</vscode-table-cell>
 							{result.columns.map(header => (
-								<vscode-table-cell key={`${paging.startIndex + rowIndex}-${header}`}>
+								<vscode-table-cell key={'var-' + header}>
 									{renderCell(row[header], header, result.namespaceMap)}
 								</vscode-table-cell>
 							))}
@@ -294,7 +352,7 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 					{result.rows.length === 0 && (
 						<vscode-table-row>
 							<vscode-table-cell>
-								{searchTerm ? 'No results match the search.' : 'No results'}
+								{hasSearchTerm ? 'No results match the search.' : 'No results'}
 							</vscode-table-cell>
 						</vscode-table-row>
 					)}
@@ -307,6 +365,11 @@ function BindingsTableBase({ sparqlResults }: SparqlResultsContextProps) {
 
 	return null;
 }
+
+/**
+ * Memoized bindings table content; see {@link BindingsTableContentBase}.
+ */
+const BindingsTableContent = memo(BindingsTableContentBase);
 
 /**
  * BindingsTable component wrapped with a SPARQL results context.

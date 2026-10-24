@@ -89,6 +89,25 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
     }
 
     /**
+     * Posts the cached execution state of a single query, so a webview that was torn down while
+     * hidden can restore a tab's results without running the query against the endpoint again.
+     * The raw response is not posted because only the "view raw response" command reads it. When
+     * the query is no longer in the history, the reply carries no state and the webview decides
+     * whether to re-execute.
+     * @param queryId The id of the query execution to post.
+     */
+    private _postQueryResult(queryId: string) {
+        const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const queryState = queryService.getQueryHistory().find(q => q.id === queryId);
+
+        this.postMessage({
+            id: 'PostSparqlQueryResult',
+            queryId,
+            queryState: queryState ? { ...queryState, rawResponse: undefined } : undefined
+        });
+    }
+
+    /**
      * The graph-list status of a single connection, read from the graph service's cache.
      */
     private _getGraphStatus(connectionId: string): SparqlConnectionGraphStatus {
@@ -134,6 +153,10 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
                 // The webview's history request doubles as its "I'm listening" signal.
                 this._resolveWebviewReady?.();
                 this._postQueryHistory();
+                return true;
+            }
+            case 'GetSparqlQueryResult': {
+                this._postQueryResult(message.queryId);
                 return true;
             }
             case 'GetSparqlConnections': {

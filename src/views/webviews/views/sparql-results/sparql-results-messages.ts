@@ -16,6 +16,8 @@ export type SparqlResultsWebviewMessages =
     ExecuteCommandMessage |
     { readonly id: 'GetSparqlQueryHistory' } |
     { readonly id: 'PostSparqlQueryHistory', history: SparqlQueryExecutionState[], selectQueryId?: string } |
+    { readonly id: 'GetSparqlQueryResult', queryId: string } |
+    { readonly id: 'PostSparqlQueryResult', queryId: string, queryState?: SparqlQueryExecutionState } |
     { readonly id: 'SparqlQueryExecutionStarted', queryState: SparqlQueryExecutionState } |
     { readonly id: 'SparqlQueryExecutionEnded', queryState: SparqlQueryExecutionState } |
     { readonly id: 'CancelSparqlQueryExecution', queryState: SparqlQueryExecutionState } |
