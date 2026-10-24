@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useStylesheet } from '@src/views/webviews/hooks';
 import { useWebviewMessaging } from '@src/views/webviews/hooks';
 import { useSharedStylesheets } from '@src/views/webviews/hooks/use-shared-stylesheets';
@@ -33,7 +34,7 @@ interface SparqlResultsViewProps {
 /**
  * Component to display the results of a SPARQL query, either as a boolean or bindings table.
  */
-export function SparqlResultsView({ queryContext, defaultPageSize, messaging: propMessaging }: SparqlResultsViewProps) {
+function SparqlResultsViewBase({ queryContext, defaultPageSize, messaging: propMessaging }: SparqlResultsViewProps) {
   // Use provided messaging or create our own
   const hookMessaging = useWebviewMessaging<SparqlResultsWebviewMessages>();
   const messaging = propMessaging ?? hookMessaging;
@@ -147,3 +148,9 @@ export function SparqlResultsView({ queryContext, defaultPageSize, messaging: pr
     </SparqlResultsProvider>
   );
 }
+
+/**
+ * Memoized SPARQL results view: it re-renders only when its query, messaging or page size
+ * change, not on every update of the panel that hosts it (e.g. history posts for other queries).
+ */
+export const SparqlResultsView = memo(SparqlResultsViewBase);
