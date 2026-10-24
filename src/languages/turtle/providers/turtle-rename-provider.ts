@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { isTemplate, symbols as templateSymbols, type TemplateSymbol } from 'triplate';
 import { IDocumentContextService } from '@src/services/document';
+import { IWorkspaceRenameService } from '@src/services/core';
 import { RdfToken, isVariableToken, type IToken } from '@faubulous/mentor-rdf-parsers';
 import { getIriFromToken, getTokenAtPosition, isPrefixTokenAtPosition } from '@src/utilities';
 import { TurtleDocument } from '@src/languages/turtle/turtle-document';
@@ -21,7 +22,12 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 	 */
 	readonly _parameterSymbols = new Set(['paramDecl', 'paramRef', 'bindingKey']);
 
-	constructor(private readonly contextService: IDocumentContextService) {
+	/**
+	 * @param contextService The document context service.
+	 * @param _renameService Extends IRI renames to the other indexed documents;
+	 * renames stay within the document when it is not provided.
+	 */
+	constructor(private readonly contextService: IDocumentContextService, private readonly _renameService?: IWorkspaceRenameService) {
 		super();
 	}
 
@@ -60,7 +66,7 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 		}
 	}
 
-	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
+	public async provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): Promise<vscode.WorkspaceEdit> {
 		const edits = new vscode.WorkspaceEdit();
 		const context = this.contextService.getDocumentContext(document, TurtleDocument);
 
@@ -140,9 +146,25 @@ export class TurtleRenameProvider extends TurtleFeatureProvider implements vscod
 
 				edits.replace(document.uri, editRange, newName);
 			}
+
+			// Prefixes, variables and blank nodes are local to the document; only an IRI
+			// is renamed in the other documents that reference it.
+			if (this._isIriToken(token)) {
+				await this._renameService?.addEditsInOtherFiles(edits, u, newName, document.uri);
+			}
 		}
 
 		return edits;
+	}
+
+	/**
+	 * Indicates whether a token denotes an IRI, as a prefixed name or an IRI reference.
+	 * @param token A token.
+	 */
+	private _isIriToken(token: IToken): boolean {
+		const tokenType = token.tokenType.name;
+
+		return tokenType === RdfToken.PNAME_LN.name || tokenType === RdfToken.IRIREF.name;
 	}
 
 	/**
