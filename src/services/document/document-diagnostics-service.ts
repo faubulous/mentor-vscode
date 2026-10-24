@@ -5,6 +5,7 @@ import { Diagnostic as LspDiagnostic, DiagnosticSeverity as LspDiagnosticSeverit
 import { ParserFactory } from '@src/languages/parser-factory';
 import { SparqlUnusedVariableLinter } from '@src/languages/sparql/sparql-unused-variable-linter';
 import { XmlParser } from '@src/languages/xml/xml-parser';
+import { XmlDocument } from '@src/languages/xml/xml-document';
 import { getConfig } from '@src/utilities/vscode/config';
 import { createYieldBudget } from '@src/utilities/scheduling';
 import { getNamespaceDefinition, PrefixMap } from '@src/utilities';
@@ -286,8 +287,12 @@ export class DocumentDiagnosticsService implements vscode.Disposable {
 			} else {
 				// Structurally parsed documents (RDF/XML): the parse either succeeds
 				// or the catch below reports the failure, matching the previous
-				// language server behavior.
-				new XmlParser().parse(content);
+				// language server behavior. A text the document context has just
+				// parsed without error is not parsed a second time.
+				if (!(context instanceof XmlDocument && context.isParsedFrom(content))) {
+					new XmlParser().parse(content);
+				}
+
 				this._collection.set(uri, []);
 			}
 		} catch (e) {

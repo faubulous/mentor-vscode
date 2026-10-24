@@ -33,12 +33,10 @@ export const selectActiveLanguage = {
 		const noLanguageKey = '__unspecified__';
 		const languageStats = new Map<string, number>();
 
-		for (const predicateStats of Object.values(context.predicateStats)) {
-			for (const [languageTag, count] of Object.entries(predicateStats.languageTags)) {
-				const key = languageTag && languageTag !== 'undefined' ? languageTag : noLanguageKey;
+		for (const [languageTag, count] of Object.entries(context.languageTagStats)) {
+			const key = languageTag && languageTag !== 'undefined' ? languageTag : noLanguageKey;
 
-				languageStats.set(key, (languageStats.get(key) ?? 0) + count);
-			}
+			languageStats.set(key, (languageStats.get(key) ?? 0) + count);
 		}
 
 		const languageEntries = Array.from(languageStats.entries());

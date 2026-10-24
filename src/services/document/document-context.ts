@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { Quad_Subject } from "@rdfjs/types";
 import { Store, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, SH } from '@faubulous/mentor-rdf';
 import { Uri, NamedNode, BlankNode, Literal } from '@faubulous/mentor-rdf';
-import { PredicateUsageStats, LanguageTagUsageStats } from '@faubulous/mentor-rdf';
+import { LanguageTagUsageStats } from '@faubulous/mentor-rdf';
 import { IToken } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
@@ -56,29 +56,28 @@ export abstract class DocumentContext implements IDocumentContext {
 
 	typeDefinitions = new RangeIndex();
 
-	predicateStats: PredicateUsageStats = {};
+	private _languageTagStats: LanguageTagUsageStats = {};
+
+	get languageTagStats(): LanguageTagUsageStats {
+		return this._languageTagStats;
+	}
+
+	set languageTagStats(stats: LanguageTagUsageStats) {
+		this._languageTagStats = stats;
+
+		// The primary language is derived from the statistics; derive it again on the next read.
+		this._primaryLanguage = null;
+	}
 
 	private _primaryLanguage: string | undefined | null = null;
 
 	get primaryLanguage(): string | undefined {
-		if (this._primaryLanguage === null && this.predicateStats) {
-			let languageStats: LanguageTagUsageStats = {};
-
-			for (let [_, value] of Object.entries(this.predicateStats)) {
-				for (let [lang, count] of Object.entries(value.languageTags)) {
-					if (!languageStats[lang]) {
-						languageStats[lang] = count;
-					} else {
-						languageStats[lang] += count;
-					}
-				}
-			}
-
+		if (this._primaryLanguage === null) {
 			let maxFrequency = -1;
 
 			this._primaryLanguage = undefined;
 
-			for (let [lang, frequency] of Object.entries(languageStats)) {
+			for (let [lang, frequency] of Object.entries(this._languageTagStats)) {
 				if (lang && frequency > maxFrequency) {
 					maxFrequency = frequency;
 

@@ -625,3 +625,41 @@ describe('TurtleDocument.releaseTokens', () => {
         expect(doc.tokens.length).toBeGreaterThan(0);
     });
 });
+
+describe('TurtleDocument language tag statistics', () => {
+    /**
+     * Creates a document with a real store and loads the given Turtle text.
+     */
+    async function load(text: string, doc = createTurtleDocument('file:///stats.ttl')) {
+        doc.parse(text);
+
+        await doc.loadTriples(text);
+
+        return doc;
+    }
+
+    it('counts the language tags of the loaded literals', async () => {
+        const doc = await load('@prefix ex: <http://example.org/> .\nex:a ex:p "A"@en , "B"@en , "C"@de , "D" ; ex:q ex:b .');
+
+        expect(doc.languageTagStats).toEqual({ en: 2, de: 1, '': 1 });
+        expect(doc.primaryLanguage).toBe('en');
+    });
+
+    it('replaces the statistics when the document is loaded again', async () => {
+        const doc = await load('@prefix ex: <http://example.org/> .\nex:a ex:p "A"@en .');
+
+        await load('@prefix ex: <http://example.org/> .\nex:a ex:p "A"@fr , "B"@fr .', doc);
+
+        expect(doc.languageTagStats).toEqual({ fr: 2 });
+        expect(doc.primaryLanguage).toBe('fr');
+    });
+
+    it('has no statistics when the document does not load', async () => {
+        const doc = await load('@prefix ex: <http://example.org/> .\nex:a ex:p "A"@en .');
+
+        await load('@prefix ex: <http://example.org/> .\nex:a ex:p .', doc);
+
+        expect(doc.languageTagStats).toEqual({});
+        expect(doc.primaryLanguage).toBeUndefined();
+    });
+});

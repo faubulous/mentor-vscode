@@ -75,6 +75,8 @@ vi.mock('vscode', async () => {
 import * as vscode from 'vscode';
 import { DocumentDiagnosticsService } from '@src/services/document/document-diagnostics-service';
 import { TokenDelivery } from '@src/services/document/document-token-source.interface';
+import { XmlParser } from '@src/languages/xml/xml-parser';
+import { createXmlDocument } from '@src/utilities/mocks/factories';
 
 /**
  * Creates a document stub with a real offset → position conversion so the
@@ -469,5 +471,41 @@ describe('DocumentDiagnosticsService', () => {
 
             expect(collection.set).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('DocumentDiagnosticsService RDF/XML parsing', () => {
+    const uri = 'file:///indexed.rdf';
+    const content = '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:ex="http://example.org/">\n  <ex:Thing rdf:about="http://example.org/a"/>\n</rdf:RDF>';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('does not parse a text again that the document context has parsed', () => {
+        const context = createXmlDocument(uri);
+
+        context.parse(content);
+
+        const { service, collection } = makeSetup({ [uri]: context });
+        const parse = vi.spyOn(XmlParser.prototype, 'parse');
+
+        service.diagnoseContent(vscode.Uri.parse(uri), content);
+
+        expect(parse).not.toHaveBeenCalled();
+        expect(collection.set).toHaveBeenLastCalledWith(expect.anything(), []);
+    });
+
+    it('parses a text that differs from the one the document context has parsed', () => {
+        const context = createXmlDocument(uri);
+
+        context.parse(content);
+
+        const { service } = makeSetup({ [uri]: context });
+        const parse = vi.spyOn(XmlParser.prototype, 'parse');
+
+        service.diagnoseContent(vscode.Uri.parse(uri), content.replace('/a"', '/b"'));
+
+        expect(parse).toHaveBeenCalledTimes(1);
     });
 });

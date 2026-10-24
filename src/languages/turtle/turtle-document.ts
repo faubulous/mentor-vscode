@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { CstNode } from 'chevrotain';
 import { Quad, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
-import { Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
+import { LanguageTagUsageStats, Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
 import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, RdfSyntax, RdfToken, tokenizeWithTriplate, TurtleParser, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
@@ -17,6 +17,7 @@ import {
 	getTokenAtPosition,
 	isPrefixTokenAtPosition
 } from '@src/utilities';
+import { addLanguageTagUsage } from '@src/utilities/rdf';
 import { getRangeFromToken } from '@src/utilities/vscode/tokens';
 
 /**
@@ -209,6 +210,9 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 * @param data The file content (not used, parsing uses existing tokens).
 	 */
 	public override async loadTriples(data: string): Promise<void> {
+		// Counted while the quads are added, instead of in a separate scan of the graph.
+		const languageTagStats: LanguageTagUsageStats = {};
+
 		try {
 			const store = this._store;
 			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
@@ -261,10 +265,13 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 				const quad = store.dataFactory.quad(s, p, o, g);
 
 				store.add(quad);
+				addLanguageTagUsage(languageTagStats, o);
 			}
 		} catch (e) {
 			// This is not a critical error because the graph might be invalid.
 		}
+
+		this.languageTagStats = languageTagStats;
 	}
 
 	/**
