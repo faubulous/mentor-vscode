@@ -13,7 +13,7 @@ import { ITripleStoreConfigService } from './triple-store-config-service.interfa
 import { WorkspaceUri } from "@src/providers/workspace-uri";
 import { CancellationError, withCancellation } from '@src/utilities/vscode/cancellation';
 import { getConfig } from '@src/utilities/vscode/config';
-import { SparqlQueryExecutionState, SparqlQueryType, SparqlRawResponse, toQueryHistoryMetadata } from "./sparql-query-state";
+import { SparqlQueryExecutionState, SparqlQueryType, SparqlRawResponse, getQueryStateWithoutResult } from "./sparql-query-state";
 import { SparqlConnection } from './sparql-connection';
 
 /**
@@ -219,7 +219,7 @@ export class SparqlQueryService {
 		const filteredHistory = this._history
 			.filter(q => q && !q.isBackground && this._isPersistentDocumentIri(q.documentIri))
 			.slice(0, this._historyMaxEntries)
-			.map(toQueryHistoryMetadata);
+			.map(getQueryStateWithoutResult);
 
 		await this._extensionContext.workspaceState.update(this._historyStorageKey, filteredHistory);
 	}

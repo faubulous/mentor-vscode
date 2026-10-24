@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDisplayName, omitRawResponse, toQueryHistoryMetadata } from '@src/languages/sparql/services/sparql-query-state';
+import { getDisplayName, getQueryStateWithoutRawResponse, getQueryStateWithoutResult } from '@src/languages/sparql/services/sparql-query-state';
 
 /**
  * A finished query with every field that can hold megabytes populated.
@@ -18,10 +18,10 @@ function makeHeavyState(): any {
 	};
 }
 
-describe('omitRawResponse', () => {
+describe('getQueryStateWithoutRawResponse', () => {
 	it('returns a copy without the raw response and leaves the original untouched', () => {
 		const state = makeHeavyState();
-		const copy = omitRawResponse(state);
+		const copy = getQueryStateWithoutRawResponse(state);
 
 		expect(copy).not.toBe(state);
 		expect(copy.rawResponse).toBeUndefined();
@@ -31,21 +31,21 @@ describe('omitRawResponse', () => {
 	});
 });
 
-describe('toQueryHistoryMetadata', () => {
+describe('getQueryStateWithoutResult', () => {
 	it('drops the result, the raw response and the error stack but keeps the rest', () => {
 		const state = makeHeavyState();
-		const metadata = toQueryHistoryMetadata(state);
+		const copy = getQueryStateWithoutResult(state);
 
-		expect(metadata.result).toBeUndefined();
-		expect(metadata.rawResponse).toBeUndefined();
-		expect(metadata.error).toEqual({ type: 'QueryError', message: 'boom', cause: { code: 'ECONNREFUSED', message: 'refused' }, statusCode: 500, cancelled: false });
-		expect(metadata).toMatchObject({ id: 'heavy', documentIri: state.documentIri, query: state.query, queryType: 'bindings', startTime: 1000, endTime: 1250 });
+		expect(copy.result).toBeUndefined();
+		expect(copy.rawResponse).toBeUndefined();
+		expect(copy.error).toEqual({ type: 'QueryError', message: 'boom', cause: { code: 'ECONNREFUSED', message: 'refused' }, statusCode: 500, cancelled: false });
+		expect(copy).toMatchObject({ id: 'heavy', documentIri: state.documentIri, query: state.query, queryType: 'bindings', startTime: 1000, endTime: 1250 });
 	});
 
 	it('leaves the original state and its error untouched', () => {
 		const state = makeHeavyState();
 
-		toQueryHistoryMetadata(state);
+		getQueryStateWithoutResult(state);
 
 		expect(state.result).toBeDefined();
 		expect(state.rawResponse).toBeDefined();
@@ -55,7 +55,7 @@ describe('toQueryHistoryMetadata', () => {
 	it('keeps an entry without an error free of an error field', () => {
 		const state = { ...makeHeavyState(), error: undefined };
 
-		expect(toQueryHistoryMetadata(state).error).toBeUndefined();
+		expect(getQueryStateWithoutResult(state).error).toBeUndefined();
 	});
 });
 

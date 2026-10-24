@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { compile, isTemplate } from 'triplate';
 import { ISparqlQueryService } from '@src/languages/sparql/services';
-import { QuadsResult, SparqlQueryExecutionState, omitRawResponse } from '@src/languages/sparql/services/sparql-query-state';
+import { QuadsResult, SparqlQueryExecutionState, getQueryStateWithoutRawResponse } from '@src/languages/sparql/services/sparql-query-state';
 import { formatQueryResult } from '@src/languages/sparql/services/bindings-formatter';
 import { getResultsCopyFormat, getResultsExportTarget, getResultsIriFormat } from '@src/languages/sparql/services/query-results-format';
 import { IDocumentContextService } from '@src/services/document';
@@ -320,7 +320,7 @@ export class NotebookController implements vscode.Disposable {
 				// something to serialize, which it cannot do for a custom mime type on its own.
 				// The renderer never reads the raw response, so it stays out of the output.
 				await execution.replaceOutput([new vscode.NotebookCellOutput([
-					vscode.NotebookCellOutputItem.json(omitRawResponse(queryState), 'application/sparql-results+json'),
+					vscode.NotebookCellOutputItem.json(getQueryStateWithoutRawResponse(queryState), 'application/sparql-results+json'),
 					vscode.NotebookCellOutputItem.text(this._getCopyText(queryState.result), 'text/plain')
 				])]);
 			} else if (queryState.queryType === 'quads') {

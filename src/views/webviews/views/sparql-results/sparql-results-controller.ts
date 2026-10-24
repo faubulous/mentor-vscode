@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryService, ISparqlResultSerializer, IDocumentConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
-import { QuadsResult, SparqlQueryExecutionState, omitRawResponse, toQueryHistoryMetadata } from '@src/languages/sparql/services/sparql-query-state';
+import { QuadsResult, SparqlQueryExecutionState, getQueryStateWithoutRawResponse, getQueryStateWithoutResult } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlConnectionGraphStatus, SparqlResultsWebviewMessages } from './sparql-results-messages';
@@ -98,7 +98,7 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
      * @param includeResult Whether the entry's result is rendered by the panel.
      */
     private _toHistoryMessageEntry(state: SparqlQueryExecutionState, includeResult: boolean): SparqlQueryExecutionState {
-        return includeResult ? omitRawResponse(state) : toQueryHistoryMetadata(state);
+        return includeResult ? getQueryStateWithoutRawResponse(state) : getQueryStateWithoutResult(state);
     }
 
     /**

@@ -225,7 +225,7 @@ export interface QuadsResult {
  * @param state The query execution state.
  * @returns A shallow copy of the state without the raw response.
  */
-export function omitRawResponse(state: SparqlQueryExecutionState): SparqlQueryExecutionState {
+export function getQueryStateWithoutRawResponse(state: SparqlQueryExecutionState): SparqlQueryExecutionState {
 	const copy: SparqlQueryExecutionState = { ...state };
 
 	delete copy.rawResponse;
@@ -234,25 +234,25 @@ export function omitRawResponse(state: SparqlQueryExecutionState): SparqlQueryEx
 }
 
 /**
- * Returns the metadata of a query execution state: a copy without the result,
- * the raw response and the error stack, which are the fields that can hold
- * megabytes. Metadata is what the history persists and what the results
- * webview receives for every query except the ones it renders.
+ * Returns a copy of a query execution state without its result, its raw
+ * response and the stack of its error, which are the fields that can hold
+ * megabytes. The history persists this compact state, and the results webview
+ * receives it for every query except the ones it renders.
  * @param state The query execution state.
- * @returns A shallow copy of the state reduced to its metadata.
+ * @returns A shallow copy of the state without the result, the raw response and the error stack.
  */
-export function toQueryHistoryMetadata(state: SparqlQueryExecutionState): SparqlQueryExecutionState {
-	const metadata = omitRawResponse(state);
+export function getQueryStateWithoutResult(state: SparqlQueryExecutionState): SparqlQueryExecutionState {
+	const copy = getQueryStateWithoutRawResponse(state);
 
-	delete metadata.result;
+	delete copy.result;
 
-	if (metadata.error) {
-		const error = { ...metadata.error };
+	if (copy.error) {
+		const error = { ...copy.error };
 
 		delete error.stack;
 
-		metadata.error = error;
+		copy.error = error;
 	}
 
-	return metadata;
+	return copy;
 }
