@@ -31,7 +31,7 @@ describe('XmlParser', () => {
 		it('indexes references for element tags using known prefixes', async () => {
 			const result = new XmlParser().parse((SIMPLE_RDF));
 			// owl:Class should be indexed as a reference
-			expect(result.references['http://www.w3.org/2002/07/owl#class']).toBeDefined();
+			expect(result.references['http://www.w3.org/2002/07/owl#Class']).toBeDefined();
 		});
 
 		it('identifies type definitions for ontology classes', async () => {
@@ -65,5 +65,58 @@ describe('XmlParser', () => {
 </rdf:RDF>`;
 			const result = new XmlParser().parse((rdfWithBase));
 			expect(result.baseIri).toBe('http://example.org/');
+		});
+
+		describe('case-sensitive names', () => {
+			const MIXED_CASE_RDF = `<?xml version="1.0"?>
+<!DOCTYPE rdf:RDF [<!ENTITY exOnt "http://example.org/">]>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:dcTerms="http://purl.org/dc/terms/"
+         xmlns:ex="http://example.org/">
+  <ex:MyClass rdf:about="http://example.org/a"/>
+  <dcTerms:Agent rdf:about="&exOnt;Person"/>
+  <rdf:Description rdf:about="http://example.org/b"/>
+</rdf:RDF>`;
+
+			it('indexes an element name under its IRI as written', () => {
+				const result = new XmlParser().parse(MIXED_CASE_RDF);
+
+				expect(result.references['http://example.org/MyClass']).toHaveLength(1);
+				expect(result.references['http://example.org/myclass']).toBeUndefined();
+			});
+
+			it('keeps the case of declared prefixes', () => {
+				const result = new XmlParser().parse(MIXED_CASE_RDF);
+
+				expect(result.namespaces['dcTerms']).toBe('http://purl.org/dc/terms/');
+				expect(result.namespaces['dcterms']).toBeUndefined();
+				expect(result.namespaceDefinitions['dcTerms']).toHaveLength(1);
+			});
+
+			it('resolves element names with a mixed-case prefix', () => {
+				const result = new XmlParser().parse(MIXED_CASE_RDF);
+
+				expect(result.references['http://purl.org/dc/terms/Agent']).toHaveLength(1);
+			});
+
+			it('resolves entity references with a mixed-case entity name', () => {
+				const result = new XmlParser().parse(MIXED_CASE_RDF);
+
+				expect(result.subjects['http://example.org/Person']).toHaveLength(1);
+			});
+
+			it('treats a subject typed by an element name as type assertion', () => {
+				const result = new XmlParser().parse(MIXED_CASE_RDF);
+
+				expect(result.typeAssertions['http://example.org/a']).toBeDefined();
+				expect(result.typeAssertions['http://example.org/b']).toBeUndefined();
+			});
+
+			it('does not index the rdf:RDF and rdf:Description elements as resources', () => {
+				const result = new XmlParser().parse(MIXED_CASE_RDF);
+
+				expect(result.references['http://www.w3.org/1999/02/22-rdf-syntax-ns#RDF']).toBeUndefined();
+				expect(result.references['http://www.w3.org/1999/02/22-rdf-syntax-ns#Description']).toBeUndefined();
+			});
 		});
 	});
