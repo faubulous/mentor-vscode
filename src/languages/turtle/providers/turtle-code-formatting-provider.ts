@@ -7,9 +7,19 @@ import { resolveFormattingConfig, resolveFormattingIndent } from '@src/utilities
  */
 export class TurtleCodeFormattingProvider implements vscode.DocumentFormattingEditProvider {
     /**
-     * The TurtleFormatter instance used to format Turtle documents.
+     * The formatter, created on first use: it builds a Turtle lexer, which would
+     * otherwise run when the extension is activated.
      */
-    private _formatter = new TurtleFormatter();
+    private _formatter: TurtleFormatter | undefined;
+
+    /**
+     * Returns the formatter, creating it on first use.
+     */
+    private _getFormatter(): TurtleFormatter {
+        this._formatter ??= new TurtleFormatter();
+
+        return this._formatter;
+    }
 
     provideDocumentFormattingEdits(
         document: vscode.TextDocument,
@@ -17,7 +27,7 @@ export class TurtleCodeFormattingProvider implements vscode.DocumentFormattingEd
         token: vscode.CancellationToken
     ): vscode.TextEdit[] {
         const text = document.getText();
-        const result = this._formatter.formatFromText(text, {
+        const result = this._getFormatter().formatFromText(text, {
             indent: resolveFormattingIndent(document, options),
             prettyPrint: true,
             maxLineWidth: resolveFormattingConfig('turtle', 'maxLineWidth', 120),

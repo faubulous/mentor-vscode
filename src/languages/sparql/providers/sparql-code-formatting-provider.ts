@@ -7,15 +7,25 @@ import { getConfig, resolveFormattingConfig, resolveFormattingIndent } from '@sr
  */
 export class SparqlCodeFormattingProvider implements vscode.DocumentFormattingEditProvider {
     /**
-     * The SPARQL formatter instance used to format the document text.
+     * The formatter, created on first use: it builds a SPARQL lexer, which would
+     * otherwise run when the extension is activated.
      */
-    private _formatter = new SparqlFormatter();
+    private _formatter: SparqlFormatter | undefined;
+
+    /**
+     * Returns the formatter, creating it on first use.
+     */
+    private _getFormatter(): SparqlFormatter {
+        this._formatter ??= new SparqlFormatter();
+
+        return this._formatter;
+    }
 
     provideDocumentFormattingEdits(document: vscode.TextDocument, options: vscode.FormattingOptions, token: vscode.CancellationToken): vscode.TextEdit[] {
         const text = document.getText();
         const config = getConfig('formatting.sparql');
 
-        const result = this._formatter.formatFromText(text, {
+        const result = this._getFormatter().formatFromText(text, {
             indent: resolveFormattingIndent(document, options),
             prettyPrint: true,
             uppercaseKeywords: config.get('uppercaseKeywords', false),

@@ -3,14 +3,24 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
 // Mock the serializers package which uses unsupported directory imports in ESM
+const formatterInstances = vi.hoisted(() => ({ turtle: 0, sparql: 0 }));
+
 vi.mock('@faubulous/mentor-rdf-serializers', () => ({
     TurtleFormatter: class {
+        constructor() {
+            formatterInstances.turtle++;
+        }
+
         formatFromText(text: string, _options: any) {
             // Return a simple normalized version for testing
             return { output: text.trim() + '\n' };
         }
     },
     SparqlFormatter: class {
+        constructor() {
+            formatterInstances.sparql++;
+        }
+
         formatFromText(text: string, _options: any) {
             return { output: text.trim() + '\n' };
         }
@@ -30,6 +40,24 @@ function makeDocument(content: string) {
         },
     };
 }
+
+describe('formatting providers', () => {
+    it('create their formatter on the first formatting request, not when they are constructed', () => {
+        const before = { ...formatterInstances };
+        const turtleProvider = new TurtleCodeFormattingProvider();
+        const sparqlProvider = new SparqlCodeFormattingProvider();
+        const options = { insertSpaces: true, tabSize: 4 } as any;
+        const token = { isCancellationRequested: false } as any;
+
+        expect(formatterInstances).toEqual(before);
+
+        turtleProvider.provideDocumentFormattingEdits(makeDocument('') as any, options, token);
+        sparqlProvider.provideDocumentFormattingEdits(makeDocument('') as any, options, token);
+        sparqlProvider.provideDocumentFormattingEdits(makeDocument('') as any, options, token);
+
+        expect(formatterInstances).toEqual({ turtle: before.turtle + 1, sparql: before.sparql + 1 });
+    });
+});
 
 describe('TurtleCodeFormattingProvider', () => {
     const provider = new TurtleCodeFormattingProvider();
@@ -115,7 +143,7 @@ describe('SparqlCodeFormattingProvider', () => {
     });
 
     it('passes the common blankLinesBetweenSubjects option to the formatter', () => {
-        const spy = vi.spyOn((provider as any)._formatter, 'formatFromText');
+        const spy = vi.spyOn((provider as any)._getFormatter(), 'formatFromText');
         const doc = makeDocument('SELECT * WHERE { ?s ?p ?o }') as any;
         provider.provideDocumentFormattingEdits(doc, defaultOptions as any, token as any);
 
