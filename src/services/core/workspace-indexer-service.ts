@@ -6,7 +6,6 @@ import { IDocumentFactory } from '../document/document-factory.interface';
 import { IDocumentTokenSource } from '../document/document-token-source.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { DocumentDiagnosticsService } from '../document/document-diagnostics-service';
-import { isTokenizedDocumentContext } from '../document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
 import { isDocumentOpen } from '@src/utilities/vscode/editors';
 import { describeUriPath } from '@src/utilities/vscode/log';
@@ -754,7 +753,7 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 	private _releaseTokens(uri: vscode.Uri): void {
 		const context = this._contextService.contexts[uri.toString()];
 
-		if (context && isTokenizedDocumentContext(context)) {
+		if (context && context.isTokenized()) {
 			context.releaseTokens();
 		}
 	}

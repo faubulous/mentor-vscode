@@ -95,11 +95,11 @@ function makeDocument(uri: string, text: string) {
 }
 
 function makeTurtleContext() {
-    return { providesTokens: true, syntax: RdfSyntax.Turtle, getParseResult: () => undefined } as any;
+    return { isTokenized: () => true, syntax: RdfSyntax.Turtle, getParseResult: () => undefined } as any;
 }
 
 function makeSparqlContext() {
-    return { providesTokens: true, syntax: RdfSyntax.Sparql, getParseResult: () => undefined } as any;
+    return { isTokenized: () => true, syntax: RdfSyntax.Sparql, getParseResult: () => undefined } as any;
 }
 
 function makeSetup(contextsByUri: Record<string, any>) {
@@ -248,7 +248,7 @@ describe('DocumentDiagnosticsService', () => {
         env.textDocuments.push(document);
         env.visibleTextEditors.push({ document });
 
-        const { collection, deliverTokens } = makeSetup({ [uri]: { providesTokens: false } });
+        const { collection, deliverTokens } = makeSetup({ [uri]: { isTokenized: () => false } });
 
         deliverTokens(uri);
 
