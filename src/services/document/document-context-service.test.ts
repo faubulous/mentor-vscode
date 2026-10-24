@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 import { DocumentContextService } from '@src/services/document/document-context-service';
 import { DocumentTokenSource } from '@src/services/document/document-token-source';
@@ -15,6 +16,11 @@ vi.mock('@src/utilities/vscode/config', () => ({
 	getConfig: () => ({ get: (_key: string, defaultValue?: any) => defaultValue }),
 }));
 
+/**
+ * An `isTokenized` implementation for mock contexts that provide tokens.
+ */
+const alwaysTokenized = (() => true) as IDocumentContext['isTokenized'];
+
 function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocumentContext {
 	return {
 		uri: vscode.Uri.parse('file:///test.ttl'),
@@ -22,11 +28,11 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		graphIri: vscode.Uri.parse('file:///test.ttl'),
 		baseIri: undefined,
 		namespaces: {},
-		namespaceDefinitions: {},
-		subjects: {},
-		references: {},
-		typeAssertions: {},
-		typeDefinitions: {},
+		namespaceDefinitions: new RangeIndex(),
+		subjects: new RangeIndex(),
+		references: new RangeIndex(),
+		typeAssertions: new RangeIndex(),
+		typeDefinitions: new RangeIndex(),
 		predicateStats: {} as any,
 		primaryLanguage: undefined,
 		activeLanguageTag: undefined,
@@ -35,6 +41,7 @@ function createMockContext(overrides: Partial<IDocumentContext> = {}): IDocument
 		isLoaded: true,
 		isParsed: false,
 		isTemporary: false,
+		isTokenized: () => false,
 		loadTriples: vi.fn(),
 		infer: vi.fn(),
 		getIriAtPosition: vi.fn(),
@@ -153,7 +160,7 @@ describe('DocumentContextService', () => {
 			service.handleDocumentClosed({ uri } as any);
 
 			expect(service.contexts[uri.toString()]).toBeUndefined();
-			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs, true);
 		});
 
 		it('keeps a non-temporary context open', () => {
@@ -193,7 +200,7 @@ describe('DocumentContextService', () => {
 			service.removeDocuments([vscode.Uri.parse('file:///w/old/a.ttl')]);
 
 			expect(Object.keys(service.contexts)).toEqual(['file:///w/keep.ttl']);
-			expect(mockStore.deleteGraphs).toHaveBeenCalledExactlyOnceWith(['file:///w/old/a.ttl']);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledExactlyOnceWith(['file:///w/old/a.ttl'], true);
 		});
 
 		it('removes the contexts of all cells of a removed notebook', () => {
@@ -610,7 +617,7 @@ describe('DocumentContextService', () => {
 
 			expect(service.contexts[document.uri.toString()]).toBeUndefined();
 			expect(service.activeContext).toBeUndefined();
-			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs);
+			expect(mockStore.deleteGraphs).toHaveBeenCalledWith(context.graphs, true);
 		});
 
 		it('keeps the context when the language changes to an unsupported language', async () => {
@@ -1333,5 +1340,55 @@ describe('DocumentContextService', () => {
 
 			expect(ctx.loadTriples).not.toHaveBeenCalled();
 		});
+	});
+});
+
+describe('released tokens', () => {
+	function createDocument(uri: vscode.Uri) {
+		return { uri, languageId: 'turtle', getText: () => 'ex:a ex:b ex:c .', version: 1 } as any;
+	}
+
+	it('parses an opened document again when its tokens were released after indexing', async () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/indexed.ttl');
+		const context = createMockContext({ uri, isLoaded: true, isParsed: false, isTokenized: alwaysTokenized, loadTriples: vi.fn(), infer: vi.fn() });
+		const waitForTokens = vi.spyOn((service as any)._tokenSource, 'waitForTokens').mockResolvedValue([]);
+		const document = createDocument(uri);
+
+		service.contexts[uri.toString()] = context;
+
+		const result = await service.loadDocument(document);
+
+		expect(result).toBe(context);
+		expect(waitForTokens).toHaveBeenCalledWith(uri.toString(), undefined, document);
+		expect(context.loadTriples).not.toHaveBeenCalled();
+		expect(context.infer).toHaveBeenCalled();
+	});
+
+	it('does not parse an opened document that still has its tokens', async () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/open.ttl');
+		const context = createMockContext({ uri, isLoaded: true, isParsed: true, isTokenized: alwaysTokenized, loadTriples: vi.fn(), infer: vi.fn() });
+		const waitForTokens = vi.spyOn((service as any)._tokenSource, 'waitForTokens').mockResolvedValue([]);
+
+		service.contexts[uri.toString()] = context;
+
+		await service.loadDocument(createDocument(uri));
+
+		expect(waitForTokens).not.toHaveBeenCalled();
+		expect(context.loadTriples).not.toHaveBeenCalled();
+	});
+
+	it('releases the tokens of a closed non-temporary document', () => {
+		const { service } = createService();
+		const uri = vscode.Uri.parse('file:///w/closed.ttl');
+		const releaseTokens = vi.fn();
+		const context = createMockContext({ uri, isTemporary: false, isTokenized: alwaysTokenized, releaseTokens } as Partial<IDocumentContext>);
+
+		service.contexts[uri.toString()] = context;
+		service.handleDocumentClosed({ uri } as any);
+
+		expect(service.contexts[uri.toString()]).toBe(context);
+		expect(releaseTokens).toHaveBeenCalledTimes(1);
 	});
 });

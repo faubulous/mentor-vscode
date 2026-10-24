@@ -3,7 +3,7 @@ import { container } from 'tsyringe';
 import { ServiceToken } from '@src/services/tokens';
 import { ISparqlConnectionRegistry, ISparqlEndpointTester, ISparqlQueryService, ISparqlResultSerializer, IDocumentConnectionService, IGraphManagementService } from '@src/languages/sparql/services';
 import { WORKSPACE_CONNECTION } from '@src/languages/sparql/services/sparql-connection-registry';
-import { QuadsResult, SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
+import { QuadsResult, SparqlQueryExecutionState, getQueryStateWithoutRawResponse, getQueryStateWithoutResult } from '@src/languages/sparql/services/sparql-query-state';
 import { SparqlConnection } from '@src/languages/sparql/services/sparql-connection';
 import { WebviewController } from '@src/views/webviews/webview-controller';
 import { SparqlConnectionGraphStatus, SparqlResultsWebviewMessages } from './sparql-results-messages';
@@ -80,11 +80,12 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
      */
     private _postQueryHistory() {
         const queryService = container.resolve<ISparqlQueryService>(ServiceToken.SparqlQueryService);
+        const selectQueryId = this._pendingSelectQueryId;
 
         this.postMessage({
             id: 'PostSparqlQueryHistory',
-            history: queryService.getQueryHistory(),
-            selectQueryId: this._pendingSelectQueryId
+            history: queryService.getQueryHistory().map((state, index) => this._toHistoryMessageEntry(state, index === 0 || state.id === selectQueryId)),
+            selectQueryId
         });
     }
 
@@ -92,8 +93,8 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
      * Posts the cached execution state of a single query, so a webview that was torn down while
      * hidden can restore a tab's results without running the query against the endpoint again.
      * The raw response is not posted because only the "view raw response" command reads it. When
-     * the query is no longer in the history, the reply carries no state and the webview decides
-     * whether to re-execute.
+     * the query is no longer in the history, or the history no longer keeps its result, the
+     * webview re-executes it.
      * @param queryId The id of the query execution to post.
      */
     private _postQueryResult(queryId: string) {
@@ -103,8 +104,20 @@ export class SparqlResultsController extends WebviewController<SparqlResultsWebv
         this.postMessage({
             id: 'PostSparqlQueryResult',
             queryId,
-            queryState: queryState ? { ...queryState, rawResponse: undefined } : undefined
+            queryState: queryState ? getQueryStateWithoutRawResponse(queryState) : undefined
         });
+    }
+
+    /**
+     * Shapes one history entry for the webview. The panel renders the result of the most
+     * recent query and of the query it is asked to select; every other entry only feeds the
+     * recent-query list, so it is posted as metadata. The raw response is never posted: it
+     * can hold megabytes and only the host-side "View Raw Response" command reads it.
+     * @param state The history entry.
+     * @param includeResult Whether the entry's result is rendered by the panel.
+     */
+    private _toHistoryMessageEntry(state: SparqlQueryExecutionState, includeResult: boolean): SparqlQueryExecutionState {
+        return includeResult ? getQueryStateWithoutRawResponse(state) : getQueryStateWithoutResult(state);
     }
 
     /**

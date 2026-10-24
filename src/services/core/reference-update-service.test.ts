@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -22,7 +23,7 @@ function makeContext(
 	return {
 		uri: vscode.Uri.parse(uri),
 		slug,
-		references: refs,
+		references: createRangeIndex(refs),
 	};
 }
 

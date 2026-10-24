@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
+import { RangeIndex } from '@src/services/document/range-index';
 import * as vscode from 'vscode';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
@@ -83,10 +85,10 @@ describe('TurtleUsageCodeLensProvider', () => {
         it('should return code lenses for subjects in the document context', async () => {
             const uriStr = 'file:///doc.ttl';
             mockContextService.contexts[uriStr] = {
-                subjects: {
+                subjects: createRangeIndex({
                     'urn:ex#Sub': [{ start: { line: 1, character: 0 }, end: { line: 1, character: 10 } }]
-                },
-                references: {},
+                }),
+                references: new RangeIndex(),
                 isTemporary: false,
             };
 
@@ -101,10 +103,10 @@ describe('TurtleUsageCodeLensProvider', () => {
             const uriStr = 'file:///doc-shapes.ttl';
             mockContextService.contexts[uriStr] = {
                 graphs: ['urn:g1'],
-                subjects: {
+                subjects: createRangeIndex({
                     'urn:ex#Subject': [{ start: { line: 1, character: 0 }, end: { line: 1, character: 10 } }]
-                },
-                references: {},
+                }),
+                references: new RangeIndex(),
                 isTemporary: false,
             };
 
@@ -126,10 +128,10 @@ describe('TurtleUsageCodeLensProvider', () => {
             const uriStr = 'file:///doc-no-shapes.ttl';
             mockContextService.contexts[uriStr] = {
                 graphs: ['urn:g1'],
-                subjects: {
+                subjects: createRangeIndex({
                     'urn:ex#Subject': [{ start: { line: 2, character: 0 }, end: { line: 2, character: 10 } }]
-                },
-                references: {},
+                }),
+                references: new RangeIndex(),
                 isTemporary: false,
             };
 
@@ -146,10 +148,10 @@ describe('TurtleUsageCodeLensProvider', () => {
             const uriStr = 'file:///doc-shape-resource.ttl';
             mockContextService.contexts[uriStr] = {
                 graphs: ['urn:g1'],
-                subjects: {
+                subjects: createRangeIndex({
                     'urn:ex#ShapeResource': [{ start: { line: 3, character: 0 }, end: { line: 3, character: 10 } }]
-                },
-                references: {},
+                }),
+                references: new RangeIndex(),
                 isTemporary: false,
             };
 
@@ -168,7 +170,7 @@ describe('TurtleUsageCodeLensProvider', () => {
 
         it('should initialize on first call and set _initialized to true', async () => {
             const uriStr = 'file:///doc2.ttl';
-            mockContextService.contexts[uriStr] = { subjects: {}, references: {}, isTemporary: false };
+            mockContextService.contexts[uriStr] = { subjects: new RangeIndex(), references: new RangeIndex(), isTemporary: false };
 
             const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             expect((provider as any)._initialized).toBe(false);
@@ -235,7 +237,7 @@ describe('TurtleUsageCodeLensProvider', () => {
 
             const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
             // Trigger _initialize by calling provideCodeLenses
-            mockContextService.contexts['file:///idx.ttl'] = { subjects: {} };
+            mockContextService.contexts['file:///idx.ttl'] = { subjects: new RangeIndex() };
             provider.provideCodeLenses({ uri: { toString: () => 'file:///idx.ttl' } } as any, null as any);
             // Wait for _initialize to complete
             await new Promise(r => setTimeout(r, 0));
@@ -257,7 +259,7 @@ describe('TurtleUsageCodeLensProvider', () => {
             });
 
             const provider = new TurtleUsageCodeLensProvider(mockContextService as any, mockIndexerService as any, mockVocabulary as any);
-            mockContextService.contexts['file:///ctx.ttl'] = { subjects: {} };
+            mockContextService.contexts['file:///ctx.ttl'] = { subjects: new RangeIndex() };
             provider.provideCodeLenses({ uri: { toString: () => 'file:///ctx.ttl' } } as any, null as any);
             await new Promise(r => setTimeout(r, 0));
 

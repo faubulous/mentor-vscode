@@ -36,9 +36,9 @@ export class ReferenceUpdateService {
 			let contextHasEdit = false;
 
 			for (const [oldIri, newIri] of changes) {
-				const ranges = context.references[oldIri];
+				const ranges = context.references.getRanges(oldIri);
 
-				if (!ranges || ranges.length === 0) {
+				if (ranges.length === 0) {
 					continue;
 				}
 

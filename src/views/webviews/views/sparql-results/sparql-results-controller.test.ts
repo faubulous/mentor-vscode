@@ -176,6 +176,49 @@ describe('SparqlResultsController query history', () => {
 		expect(posts.every((m: any) => m.selectQueryId === 'q1')).toBe(true);
 	});
 
+	const bindingsResult = { type: 'bindings', columns: [], rows: [], namespaceMap: {} };
+	const rawResponse = { url: 'http://example.org/sparql', status: 200, statusText: 'OK', body: 'x' };
+
+	function lastHistoryPost(controller: SparqlResultsController): any {
+		return (controller as any).postMessage.mock.calls.at(-1)[0];
+	}
+
+	it('posts the result of the most recent query only, and never a raw response', () => {
+		history = [
+			{ id: 'q1', documentIri: 'file:///a.sparql', result: bindingsResult, rawResponse },
+			{ id: 'q2', documentIri: 'file:///b.sparql', result: bindingsResult, rawResponse },
+		];
+
+		const controller = makeController();
+
+		historyChangeHandler?.();
+
+		const message = lastHistoryPost(controller);
+
+		expect(message.id).toBe('PostSparqlQueryHistory');
+		expect(message.history[0].result).toBe(bindingsResult);
+		expect(message.history[1].result).toBeUndefined();
+		expect(message.history[1].documentIri).toBe('file:///b.sparql');
+		expect(message.history.every((entry: any) => entry.rawResponse === undefined)).toBe(true);
+	});
+
+	it('posts the result of the query being executed even when it is not the most recent', () => {
+		history = [
+			{ id: 'q1', documentIri: 'file:///a.sparql', result: bindingsResult, rawResponse },
+			{ id: 'q2', documentIri: 'file:///b.sparql', result: bindingsResult, rawResponse },
+		];
+
+		const controller = makeController();
+
+		(controller as any)._pendingSelectQueryId = 'q2';
+		historyChangeHandler?.();
+
+		const message = lastHistoryPost(controller);
+
+		expect(message.history[1].result).toBe(bindingsResult);
+		expect(message.history[1].rawResponse).toBeUndefined();
+	});
+
 	it('defers execution until a just-opened webview reports it is listening', async () => {
 		const controller = makeController();
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRangeIndex } from '@src/utilities/mocks/factories';
 
 vi.mock('vscode', () => import('@src/utilities/mocks/vscode'));
 
@@ -31,14 +32,14 @@ function makeCtx(overrides: any = {}) {
 	return {
 		uri: { toString: () => 'file:///test.ttl', scheme: 'file', path: '/test.ttl' } as any,
 		isTemporary: false,
-		typeDefinitions: {} as Record<string, any[]>,
-		typeAssertions: {} as Record<string, any[]>,
-		namespaceDefinitions: {} as Record<string, any[]>,
-		references: {} as Record<string, any[]>,
 		getIriAtPosition: vi.fn(() => undefined),
 		getLiteralAtPosition: vi.fn(() => undefined),
 		getResourceTooltip: vi.fn(() => new (vscode.MarkdownString as any)('tooltip')),
 		...overrides,
+		typeDefinitions: createRangeIndex(overrides.typeDefinitions ?? {}),
+		typeAssertions: createRangeIndex(overrides.typeAssertions ?? {}),
+		namespaceDefinitions: createRangeIndex(overrides.namespaceDefinitions ?? {}),
+		references: createRangeIndex(overrides.references ?? {}),
 	};
 }
 

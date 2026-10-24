@@ -3,6 +3,8 @@ import { Store, VocabularyRepository } from '@faubulous/mentor-rdf';
 import { IToken, RdfSyntax } from '@faubulous/mentor-rdf-parsers';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
+import { ITokenizedDocumentContext } from '@src/services/document/document-context.interface';
+import { RangeIndex } from '@src/services/document/range-index';
 import { WorkspaceUri } from '@src/providers/workspace-uri';
 import { XmlParseResult } from '@src/languages/xml/xml-types';
 import { XmlParser } from '@src/languages/xml/xml-parser';
@@ -35,7 +37,7 @@ export class XmlDocument extends DocumentContext {
 		return this._hasContent;
 	}
 
-	get providesTokens(): boolean {
+	isTokenized(): this is ITokenizedDocumentContext {
 		return false;
 	}
 
@@ -59,11 +61,12 @@ export class XmlDocument extends DocumentContext {
 	setParsedData(data: XmlParseResult): void {
 		this.baseIri = data.baseIri;
 		this.namespaces = data.namespaces;
-		this.namespaceDefinitions = data.namespaceDefinitions;
-		this.subjects = data.subjects;
-		this.references = data.references;
-		this.typeAssertions = data.typeAssertions;
-		this.typeDefinitions = data.typeDefinitions;
+		// The parser result is transient; the context keeps the ranges packed.
+		this.namespaceDefinitions = RangeIndex.fromRecord(data.namespaceDefinitions);
+		this.subjects = RangeIndex.fromRecord(data.subjects);
+		this.references = RangeIndex.fromRecord(data.references);
+		this.typeAssertions = RangeIndex.fromRecord(data.typeAssertions);
+		this.typeDefinitions = RangeIndex.fromRecord(data.typeDefinitions);
 		this._textLiterals = data.textLiteralRanges.map(r => new vscode.Range(
 			new vscode.Position(r.start.line, r.start.character),
 			new vscode.Position(r.end.line, r.end.character)
@@ -274,10 +277,10 @@ export class XmlDocument extends DocumentContext {
 		try {
 			const graphUri = WorkspaceUri.toCanonicalString(this.graphIri);
 
-			// Delete old graphs to handle slug changes. loadFromXmlStream handles
-			// clearing the target graph itself via its clearGraph option.
+			// Delete old graphs and their inference graphs to handle slug changes.
+			// loadFromXmlStream clears the target graph itself via its clearGraph option.
 			if (this.graphs.length > 0) {
-				this._store.deleteGraphs([...this.graphs]);
+				this._store.deleteGraphs([...this.graphs], true);
 			}
 
 			// Initialize the graphs *before* trying to load the document so 
