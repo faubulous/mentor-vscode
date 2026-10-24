@@ -3,6 +3,7 @@ import { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql
 import { BindingsResult } from '@src/languages/sparql/services/sparql-query-state';
 import { useBindingsTablePaging } from '../components/bindings-table-paging-hook';
 import { WebviewMessaging } from '@src/views/webviews/webview-messaging';
+import { useDebouncedValue } from '@src/views/webviews/hooks';
 import { SparqlResultsWebviewMessages } from '../sparql-results-messages';
 import { SparqlResultsContext, SparqlResultsContextType } from './sparql-results-context';
 import { filterBindings } from './bindings-filter';
@@ -50,10 +51,15 @@ export function SparqlResultsProvider({ children, queryContext, messaging, defau
 		setSearchTerm('');
 	}, [result]);
 
+	// Filtering walks every row, so it follows the typed term only once typing pauses.
+	// Clearing the term restores the full result at once.
+	const debouncedSearchTerm = useDebouncedValue(searchTerm);
+	const filterTerm = searchTerm ? debouncedSearchTerm : '';
+
 	// Equals `result` (same identity) when the search is empty, so paging is not reset needlessly.
 	const filteredResult = useMemo(
-		() => (result ? filterBindings(result, searchTerm) : undefined),
-		[result, searchTerm]
+		() => (result ? filterBindings(result, filterTerm) : undefined),
+		[result, filterTerm]
 	);
 
 	const {
@@ -64,7 +70,9 @@ export function SparqlResultsProvider({ children, queryContext, messaging, defau
 		previousPage
 	} = useBindingsTablePaging(filteredResult, defaultPageSize);
 
-	const contextValue: SparqlResultsContextType = {
+	// A stable context value keeps the consumers from re-rendering when the provider re-renders
+	// without any of its values changing.
+	const contextValue = useMemo<SparqlResultsContextType>(() => ({
 		queryContext,
 		messaging,
 		filteredResult,
@@ -75,7 +83,7 @@ export function SparqlResultsProvider({ children, queryContext, messaging, defau
 		updatePageSize,
 		nextPage,
 		previousPage
-	};
+	}), [queryContext, messaging, filteredResult, searchTerm, paging, updatePage, updatePageSize, nextPage, previousPage]);
 
 	return (
 		<SparqlResultsContext.Provider value={contextValue}>

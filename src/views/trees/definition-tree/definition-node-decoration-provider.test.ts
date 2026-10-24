@@ -815,3 +815,61 @@ describe('DefinitionNodeDecorationProvider — violation cap', () => {
 		expect(mockNodeProvider.getChildren).toHaveBeenCalledTimes(1);
 	});
 });
+
+describe('DefinitionNodeDecorationProvider severity changes', () => {
+	const VIOLATION = 'http://www.w3.org/ns/shacl#Violation';
+	const iri = 'http://example.org/a';
+
+	/**
+	 * Creates a provider for an active document with one subject and returns a function that
+	 * reports a validation with the given focus nodes, and the listener of the severity event.
+	 */
+	function setup() {
+		mockContextChangeHandlers.length = 0;
+		mockValidationHandlers.length = 0;
+		(vscode.workspace as any).onDidChangeConfiguration = vi.fn(() => ({ dispose: () => {} }));
+		mockContextService.activeContext = { uri: vscode.Uri.parse('file:///w/data.ttl'), subjects: createRangeIndex([iri]), predicates: { label: [] } };
+		mockValidationService.getLastResult.mockReturnValue(undefined);
+
+		const provider = new DefinitionNodeDecorationProvider(mockNodeProvider as any);
+		const onDidChangeSeverities = vi.fn();
+
+		provider.onDidChangeSeverities(onDidChangeSeverities);
+
+		const validate = (focusNodes: string[]) => {
+			mockValidationService.getLastResult.mockReturnValue({ results: focusNodes.map(focusNode => ({ focusNode, severity: VIOLATION })) });
+			mockValidationHandlers[mockValidationHandlers.length - 1]();
+		};
+
+		return { validate, onDidChangeSeverities };
+	}
+
+	it('fires when a validation changes the severities of the active document', () => {
+		const { validate, onDidChangeSeverities } = setup();
+
+		validate([iri]);
+		validate([]);
+
+		expect(onDidChangeSeverities).toHaveBeenCalledTimes(2);
+	});
+
+	it('does not fire when a validation leaves the severities unchanged', () => {
+		const { validate, onDidChangeSeverities } = setup();
+
+		validate([iri]);
+		onDidChangeSeverities.mockClear();
+		validate([iri]);
+		validate([iri]);
+
+		expect(onDidChangeSeverities).not.toHaveBeenCalled();
+	});
+
+	it('does not fire when the active document changes, which rebuilds the tree anyway', () => {
+		const { onDidChangeSeverities } = setup();
+
+		mockValidationService.getLastResult.mockReturnValue({ results: [{ focusNode: iri, severity: VIOLATION }] });
+		mockContextChangeHandlers[mockContextChangeHandlers.length - 1](mockContextService.activeContext);
+
+		expect(onDidChangeSeverities).not.toHaveBeenCalled();
+	});
+});

@@ -7,7 +7,8 @@ import { SparqlQueryExecutionState, getDisplayName } from '@src/languages/sparql
 import { SparqlResultsView } from './components/sparql-results-view';
 import { SparqlWelcomeView } from './components/sparql-welcome-view';
 import { SparqlResultsWebviewMessages } from './sparql-results-messages';
-import { SparqlResultsPanelState, reduceOnHistory, reduceOnShowWelcome } from './sparql-results-panel-state';
+import { SparqlResultsPanelState, reduceOnHistory, reduceOnQueryResult, reduceOnShowWelcome } from './sparql-results-panel-state';
+import { useSparqlResultsRestore } from './sparql-results-restore-hook';
 import stylesheet from './sparql-results-panel.css';
 
 /**
@@ -63,6 +64,12 @@ function SparqlResultsPanel() {
 
 	const messaging = useWebviewMessaging<SparqlResultsWebviewMessages>(handleMessage);
 
+	const applyCachedQueryState = useCallback((queryState: SparqlQueryExecutionState) => {
+		setState(prev => reduceOnQueryResult(prev, queryState));
+	}, []);
+
+	const restoreSparqlQueryResults = useSparqlResultsRestore(messaging, state.activeQueries, applyCachedQueryState);
+
 	// Add stylesheets
 	useSharedStylesheets();
 	useStylesheet('sparql-webview-styles', stylesheet);
@@ -103,22 +110,6 @@ function SparqlResultsPanel() {
 
 		WebviewHost.setState(savedState);
 	}, [state.activeTabIndex, state.activeQueries]);
-
-	const restoreSparqlQueryResults = (query: SparqlQueryExecutionState) => {
-		if (query && query.documentIri && !query.error && !query.result) {
-			messaging?.postMessage({
-				id: 'ExecuteCommand',
-				command: 'mentor.command.executeSparqlQuery',
-				args: [{
-					documentIri: query.documentIri,
-					workspaceIri: query.workspaceIri,
-					notebookIri: query.notebookIri,
-					cellIndex: query.cellIndex,
-					query: query.query,
-				}]
-			});
-		}
-	};
 
 	const closeQuery = (query: SparqlQueryExecutionState) => {
 		setState(prevState => {

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { CstNode } from 'chevrotain';
 import { Quad, Quad_Subject, Quad_Object, Quad_Predicate } from '@rdfjs/types';
 import { Store, Uri, VocabularyRepository, _OWL, _RDF, _RDFS, _SH, _SKOS, _SKOS_XL, RDF } from '@faubulous/mentor-rdf';
-import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, QuadReaderError, RdfSyntax, RdfToken, tokenizeWithTriplate, TriplateLexingResult, TurtleParser, TurtleQuadReader, TurtleReader } from '@faubulous/mentor-rdf-parsers';
+import { BlankNodeIdGenerator, createFileBlankNodeIdGenerator, IToken, QuadContext, QuadReaderError, RdfSyntax, RdfToken, tokenizeWithTriplate, TriplateLexingResult, TurtleQuadReader, TurtleReader } from '@faubulous/mentor-rdf-parsers';
 import { ParserFactory } from '@src/languages/parser-factory';
 import { ISettingsService } from '@src/services/core';
 import { DocumentContext } from '@src/services/document/document-context';
@@ -426,10 +426,19 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 			return [];
 		}
 
-		try {
-			const cst = new TurtleParser().parse(tokens);
+		// The parser and reader must match the document syntax: TriG graph blocks are
+		// invisible to the Turtle grammar. The parser is the shared instance, because
+		// constructing a chevrotain parser is expensive.
+		const reader = ParserFactory.createReader(this.syntax);
 
-			return new TurtleReader().readQuadContexts(cst, tokens);
+		if (!('readQuadContexts' in reader)) {
+			return [];
+		}
+
+		try {
+			const cst = ParserFactory.getParser(this.syntax).parse(tokens);
+
+			return reader instanceof TurtleReader ? reader.readQuadContexts(cst, tokens) : reader.readQuadContexts(cst);
 		} catch {
 			return [];
 		}
