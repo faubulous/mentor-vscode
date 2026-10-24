@@ -16,6 +16,7 @@ vi.mock('tsyringe', () => ({
 const mockServices: any = {
 	subscriptions: [],
 	get contexts() { return mockContexts; },
+	getPendingLoad: () => undefined,
 	matchAll: () => [],
 };
 
