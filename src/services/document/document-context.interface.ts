@@ -121,10 +121,12 @@ export interface IDocumentContext {
 	slug: string | undefined;
 
 	/**
-	 * Indicates if the document type is parsed using a tokenizing parser.
+	 * Indicates whether the document is parsed using a tokenizing parser and
+	 * thus provides access to its tokens.
 	 * @note XML documents are not tokenized.
+	 * @returns `true` if the context provides a token stream, narrowing it to {@link ITokenizedDocumentContext}.
 	 */
-	providesTokens: boolean;
+	isTokenized(): this is ITokenizedDocumentContext;
 
 	/**
 	 * Maps IRIs of subjects that have an asserted rdf:type to the location of the type assertion.
@@ -327,13 +329,11 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	 * A later consumer re-derives the data from the text.
 	 */
 	releaseParseResult(): void;
-}
 
-/**
- * Indicates whether a document context is tokenized and thus provides access to its tokens.
- * @param context A document context.
- * @returns `true` if the context exposes a token stream, narrowing it to {@link ITokenizedDocumentContext}.
- */
-export function isTokenizedDocumentContext(context: IDocumentContext): context is ITokenizedDocumentContext {
-	return context.providesTokens;
+	/**
+	 * Drops the token stream and the cached parse result of a document that is
+	 * not open in an editor. The index maps and graphs stay, so the document
+	 * remains loaded; opening it in an editor parses it again.
+	 */
+	releaseTokens(): void;
 }

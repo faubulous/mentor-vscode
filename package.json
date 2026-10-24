@@ -1950,6 +1950,12 @@
             "description": "If enabled, the editor will show the number of total references and other metrics for each subject in a document.",
             "default": true
           },
+          "mentor.editor.renameAcrossFiles": {
+            "type": "boolean",
+            "title": "Rename Across Files",
+            "description": "If enabled, renaming an IRI also renames it in all other indexed files that reference it. Changes in other files are shown in the Refactor Preview before they are applied.",
+            "default": true
+          },
           "mentor.prefixes.queryParameterName": {
             "type": "string",
             "title": "Query Parameter Name",

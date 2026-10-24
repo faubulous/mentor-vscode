@@ -30,6 +30,12 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	private _tokens: IToken[] = [];
 
 	/**
+	 * Whether {@link setTokens} has built the index maps. Stays `true` when the
+	 * tokens are released, so the document still counts as loaded.
+	 */
+	private _indexed = false;
+
+	/**
 	 * The output of the last {@link parse} pass, reused by the diagnostics
 	 * service and {@link loadTriples} when it is still fresh for their text.
 	 */
@@ -42,14 +48,25 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	get isLoaded(): boolean {
-		return this._tokens.length > 0 && this.graphs.length > 0;
+		return this._indexed && this.graphs.length > 0;
 	}
 
+	/**
+	 * Whether the tokens of the document are available. `false` for an indexed
+	 * document whose tokens were released; see {@link releaseTokens}.
+	 */
 	get isParsed(): boolean {
 		return this._tokens.length > 0;
 	}
 
-	get providesTokens(): boolean {
+	/**
+	 * Whether the document has been parsed at least once and its index maps exist.
+	 */
+	protected get isIndexed(): boolean {
+		return this._indexed;
+	}
+
+	isTokenized(): this is ITokenizedDocumentContext {
 		return true;
 	}
 
@@ -165,6 +182,11 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	}
 
 	releaseParseResult(): void {
+		this._lastParse = undefined;
+	}
+
+	releaseTokens(): void {
+		this._tokens = [];
 		this._lastParse = undefined;
 	}
 
@@ -371,16 +393,30 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 * @return An array of quad contexts, which include the RDF quads and their associated token positions for subjects, predicates, objects and graph names.
 	 */
 	getQuadContexts(): QuadContext[] {
-		if (!this._tokens.length) {
-			return [];
-		} else {
-			try {
-				const cst = new TurtleParser().parse(this._tokens);
+		return this._readQuadContexts(this._tokens);
+	}
 
-				return new TurtleReader().readQuadContexts(cst, this._tokens);
-			} catch {
-				return [];
-			}
+	/**
+	 * Parses the given text and returns its quad contexts without touching the
+	 * document's tokens. Used for indexed files whose tokens were released; the
+	 * file-scoped blank node identifiers match those of the indexed graph.
+	 * @param text The document text.
+	 */
+	getQuadContextsForText(text: string): QuadContext[] {
+		return this._readQuadContexts(this.tokenize(text, createFileBlankNodeIdGenerator(this.uri.toString())));
+	}
+
+	private _readQuadContexts(tokens: IToken[]): QuadContext[] {
+		if (!tokens.length) {
+			return [];
+		}
+
+		try {
+			const cst = new TurtleParser().parse(tokens);
+
+			return new TurtleReader().readQuadContexts(cst, tokens);
+		} catch {
+			return [];
 		}
 	}
 
@@ -403,6 +439,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		this.typeDefinitions = new RangeIndex();
 
 		this._tokens = tokens;
+		this._indexed = tokens.length > 0;
 
 		let previousToken: IToken | undefined;
 

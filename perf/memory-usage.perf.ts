@@ -39,7 +39,6 @@ vi.mock('tsyringe', () => {
 import * as vscode from 'vscode';
 import { Store } from '@faubulous/mentor-rdf';
 import { TurtleLexer, TurtleParser, TurtleQuadReader, TurtleReader, createFileBlankNodeIdGenerator } from '@faubulous/mentor-rdf-parsers';
-import { isTokenizedDocumentContext } from '@src/services/document/document-context.interface';
 import { SparqlResultsController } from '@src/views/webviews/views/sparql-results/sparql-results-controller';
 import { CorpusGenerator } from './corpus-generator';
 import { MemoryUsageObserver } from './memory-usage-observer';
@@ -125,7 +124,7 @@ describe('MemoryUsage', () => {
 		});
 
 		await observer.measure('store: reload large file (loadTriples again)', 1, largeQuads, async () => {
-			if (isTokenizedDocumentContext(largeContext)) {
+			if (largeContext.isTokenized()) {
 				largeContext.parse(largeFile.text);
 			}
 

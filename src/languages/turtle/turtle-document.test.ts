@@ -726,3 +726,65 @@ describe('TurtleDocument parse result lifecycle', () => {
         expect(doc.isParsed).toBe(true);
     });
 });
+
+describe('TurtleDocument.releaseTokens', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .\nex:a a ex:Thing .';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+
+        // Earlier suites leave the store stub in a throwing state; these tests need a working store.
+        storeControl.shouldThrowLoad = false;
+        storeControl.reasoner = null;
+    });
+
+    it('keeps the document loaded and its index maps after the tokens are released', async () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+
+        await doc.loadTriples(text);
+
+        expect(doc.isLoaded).toBe(true);
+        expect(doc.isParsed).toBe(true);
+
+        doc.releaseTokens();
+
+        expect(doc.isParsed).toBe(false);
+        expect(doc.tokens).toHaveLength(0);
+        expect(doc.getParseResult(text)).toBeUndefined();
+        expect(doc.isLoaded).toBe(true);
+        expect(doc.graphs).toHaveLength(1);
+        expect(doc.references.has('http://example.org/a')).toBe(true);
+        expect(doc.subjects.has('http://example.org/a')).toBe(true);
+        expect(doc.typeAssertions.has('http://example.org/a')).toBe(true);
+        expect(doc.namespaces['ex']).toBe('http://example.org/');
+    });
+
+    it('maps quad contexts from the text once the tokens are released', () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+
+        const fromTokens = doc.getQuadContexts();
+
+        doc.releaseTokens();
+
+        const fromText = doc.getQuadContextsForText(text);
+
+        expect(fromTokens.length).toBeGreaterThan(0);
+        expect(doc.getQuadContexts()).toEqual([]);
+        expect(fromText).toHaveLength(fromTokens.length);
+    });
+
+    it('is parsed again when new tokens are set', () => {
+        const doc = makeDoc();
+
+        doc.parse(text);
+        doc.releaseTokens();
+        doc.parse(text);
+
+        expect(doc.isParsed).toBe(true);
+        expect(doc.tokens.length).toBeGreaterThan(0);
+    });
+});

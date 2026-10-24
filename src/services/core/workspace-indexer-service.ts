@@ -6,7 +6,6 @@ import { IDocumentFactory } from '../document/document-factory.interface';
 import { IDocumentTokenSource } from '../document/document-token-source.interface';
 import { DocumentContextService } from '../document/document-context-service';
 import { DocumentDiagnosticsService } from '../document/document-diagnostics-service';
-import { isTokenizedDocumentContext } from '../document/document-context.interface';
 import { getConfig } from '@src/utilities/vscode/config';
 import { isDocumentOpen } from '@src/utilities/vscode/editors';
 import { describeUriPath } from '@src/utilities/vscode/log';
@@ -742,26 +741,26 @@ export class WorkspaceIndexerService implements IWorkspaceIndexerService, vscode
 			this._diagnosticsService.diagnoseContent(uri, content);
 		}
 
-		// The diagnostics were the last reader of the parse result. A file that is
-		// not open in an editor is not parsed again until it changes, so from here
-		// on only its tokens and index maps need to stay in memory.
+		// The diagnostics were the last reader of the tokens. A file that is not open
+		// in an editor is parsed again only when it is opened or changes, so from here
+		// on only its index maps and graphs need to stay in memory.
 		if (!openDocument) {
-			this._releaseParseResult(uri);
+			this._releaseTokens(uri);
 		}
 
 		return { readMs, loadMs };
 	}
 
 	/**
-	 * Releases the cached parse result of an indexed file's context, if the
-	 * context keeps one.
+	 * Releases the tokens and the parse result of an indexed file that is not open
+	 * in an editor, if its context keeps them.
 	 * @param uri The URI of the indexed file.
 	 */
-	private _releaseParseResult(uri: vscode.Uri): void {
+	private _releaseTokens(uri: vscode.Uri): void {
 		const context = this._contextService.contexts[uri.toString()];
 
-		if (context && isTokenizedDocumentContext(context)) {
-			context.releaseParseResult();
+		if (context && context.isTokenized()) {
+			context.releaseTokens();
 		}
 	}
 
