@@ -18,6 +18,7 @@ vi.mock('@comunica/query-sparql', () => ({
     }),
 }));
 
+import { QueryEngine } from '@comunica/query-sparql';
 import { SparqlQueryService } from '@src/languages/sparql/services/sparql-query-service';
 import type { SparqlQueryExecutionState } from '@src/languages/sparql/services/sparql-query-state';
 import * as vscode from 'vscode';
@@ -1146,3 +1147,33 @@ describe('SparqlQueryService – executeQuery (background query)', () => {
     });
 });
 
+// ---------------------------------------------------------------------------
+// _getQueryEngine – lazy Comunica loading
+// ---------------------------------------------------------------------------
+describe('SparqlQueryService – _getQueryEngine', () => {
+    const queryEngineMock = vi.mocked(QueryEngine);
+
+    it('creates a single engine for concurrent first queries', async () => {
+        const service = makeService();
+        const callsBefore = queryEngineMock.mock.calls.length;
+
+        const [first, second] = await Promise.all([
+            (service as any)._getQueryEngine(),
+            (service as any)._getQueryEngine(),
+        ]);
+
+        expect(first).toBe(second);
+        expect(queryEngineMock.mock.calls.length - callsBefore).toBe(1);
+    });
+
+    it('retries creating the engine after a failed attempt', async () => {
+        const service = makeService();
+
+        queryEngineMock.mockImplementationOnce(function () {
+            throw new Error('Engine construction failed');
+        });
+
+        await expect((service as any)._getQueryEngine()).rejects.toThrow('Engine construction failed');
+        await expect((service as any)._getQueryEngine()).resolves.toBeDefined();
+    });
+});
