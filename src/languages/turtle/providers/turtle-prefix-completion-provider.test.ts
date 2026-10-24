@@ -31,16 +31,20 @@ import { TurtlePrefixCompletionProvider } from '@src/languages/turtle/providers/
 import { RdfToken } from '@faubulous/mentor-rdf-parsers';
 import { ServiceToken } from '@src/services/tokens';
 
+const PREFIX_LINE = '@prefix ex: ';
+
 const mockDocument = {
-    getText: () => '',
+    getText: () => PREFIX_LINE,
+    lineAt: () => ({ text: PREFIX_LINE }),
     uri: vscode.Uri.parse('file:///test.ttl'),
+    version: 1,
 } as any;
 
 const mockPosition = new vscode.Position(0, 0);
 
-// The provider tokenizes the document text on demand via context.tokenize().
+// The provider tokenizes the document text on demand via context.tokenizeDocument().
 function makeContext(tokens: any[]) {
-    return { tokens, tokenize: () => tokens };
+    return { tokens, tokenize: () => tokens, tokenizeDocument: vi.fn(() => tokens) };
 }
 
 beforeEach(() => {
@@ -160,5 +164,31 @@ describe('TurtlePrefixCompletionProvider', () => {
             const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, {} as any);
             expect(result).toEqual([]);
         });
+    });
+});
+
+describe('TurtlePrefixCompletionProvider line check', () => {
+    function provide(lineText: string) {
+        const context = makeContext([]);
+        // No token at the cursor: the provider stops after the tokenization under test.
+        mockGetTokenIndexAtPosition.mockReturnValue(-1);
+
+        const document = { ...mockDocument, getText: () => lineText, lineAt: () => ({ text: lineText }) };
+        const provider = new TurtlePrefixCompletionProvider((uri) => ` <${uri}> .`, { getDocumentContext: () => context } as any, { getUriForPrefix: mockGetUriForPrefix } as any);
+
+        return { result: provider.provideInlineCompletionItems(document, mockPosition, {} as any), context };
+    }
+
+    it('does not tokenize the document on a line without a prefix declaration', () => {
+        const { result, context } = provide('ex:a ex:b ex:c .');
+
+        expect(result).toBeNull();
+        expect(context.tokenizeDocument).not.toHaveBeenCalled();
+    });
+
+    it.each(['@prefix ex:', 'PREFIX ex:', 'prefix ex:', '  @prefix ex:'])('tokenizes the document on the prefix declaration line "%s"', (lineText) => {
+        const { context } = provide(lineText);
+
+        expect(context.tokenizeDocument).toHaveBeenCalledTimes(1);
     });
 });

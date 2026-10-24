@@ -76,6 +76,26 @@ export class DefinitionTreeNode extends TreeNodeBase {
 		return 'resource';
 	}
 
+	/**
+	 * Whether the node has children, computed once per node by {@link hasChildrenCached}.
+	 */
+	private _hasChildren: boolean | undefined;
+
+	/**
+	 * Indicates whether the node has children, running {@link hasChildren} at most once per node.
+	 * Container nodes test their child nodes before listing them, and the tree tests the same
+	 * nodes again to get their collapsible state; the cache lets both share one set of store
+	 * queries. Safe to memoize because the provider recreates all nodes on refresh.
+	 * @returns `true` if the node has children, `false` otherwise.
+	 */
+	hasChildrenCached(): boolean {
+		return this._hasChildren ??= this.hasChildren();
+	}
+
+	override getCollapsibleState(): vscode.TreeItemCollapsibleState {
+		return this.hasChildrenCached() ? this.initialCollapsibleState : vscode.TreeItemCollapsibleState.None;
+	}
+
 	getDocumentGraphs(): string[] {
 		return this.document.graphs;
 	}

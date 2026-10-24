@@ -180,6 +180,35 @@ describe('DefinitionNodeProvider', () => {
 			expect(item.iconPath).toBeInstanceOf(vscode.ThemeIcon);
 			expect((item.iconPath as vscode.ThemeIcon).color?.id).toBe('mentor.color.class');
 		});
+
+		it('should not compute the tooltip', () => {
+			const provider = new DefinitionNodeProvider();
+			const ctx = { ...makeContext(), getResourceTooltip: vi.fn(() => new vscode.MarkdownString('Tooltip')) };
+			const node = new DefinitionTreeNode(ctx, 'root', 'urn:ex#x');
+			const getTooltip = vi.spyOn(node, 'getTooltip');
+
+			const item = provider.getTreeItem(node);
+
+			expect(item.tooltip).toBeUndefined();
+			expect(getTooltip).not.toHaveBeenCalled();
+			expect(ctx.getResourceTooltip).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('resolveTreeItem', () => {
+		it('should set the tooltip of the node on the tree item', () => {
+			const provider = new DefinitionNodeProvider();
+			const tooltip = new vscode.MarkdownString('Tooltip');
+			const ctx = { ...makeContext(), getResourceTooltip: vi.fn(() => tooltip) };
+			const node = new DefinitionTreeNode(ctx, 'root', 'urn:ex#x');
+			const item = provider.getTreeItem(node);
+
+			const resolved = provider.resolveTreeItem(item, node);
+
+			expect(resolved).toBe(item);
+			expect(resolved.tooltip).toBe(tooltip);
+			expect(ctx.getResourceTooltip).toHaveBeenCalledWith('urn:ex#x');
+		});
 	});
 
 	describe('getChildren — no document set', () => {

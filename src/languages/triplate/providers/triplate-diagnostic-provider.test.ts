@@ -85,3 +85,42 @@ describe('TriplateDiagnosticProvider', () => {
 		expect(compileSpy).not.toHaveBeenCalled();
 	});
 });
+
+describe('TriplateDiagnosticProvider change handling', () => {
+	/**
+	 * Creates the provider and returns the listener it registered for document changes.
+	 */
+	function captureChangeListener() {
+		let listener: ((e: { document: vscode.TextDocument }) => void) | undefined;
+
+		(vscode.workspace as any).onDidChangeTextDocument = vi.fn((handler: any) => {
+			listener = handler;
+			return { dispose() {} };
+		});
+
+		const provider = new TriplateDiagnosticProvider();
+
+		return { provider, listener: listener! };
+	}
+
+	it('does not schedule a validation for documents in other languages', () => {
+		const { provider, listener } = captureChangeListener();
+		const schedule = vi.spyOn((provider as any)._changeDebouncer, 'schedule');
+		const document = makeDoc('---\nSELECT 1', 'Log');
+		const getText = vi.spyOn(document, 'getText');
+
+		listener({ document });
+
+		expect(schedule).not.toHaveBeenCalled();
+		expect(getText).not.toHaveBeenCalled();
+	});
+
+	it('schedules a validation for documents in template languages', () => {
+		const { provider, listener } = captureChangeListener();
+		const schedule = vi.spyOn((provider as any)._changeDebouncer, 'schedule');
+
+		listener({ document: makeDoc('---\nSELECT 1', 'sparql') });
+
+		expect(schedule).toHaveBeenCalledTimes(1);
+	});
+});

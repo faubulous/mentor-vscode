@@ -148,6 +148,24 @@ describe('DefinitionTreeNode', () => {
 		});
 	});
 
+	describe('hasChildrenCached', () => {
+		it('should compute hasChildren only once for repeated collapsible state queries', () => {
+			const node = new DefinitionTreeNode(makeContext(), 'id', 'urn:x');
+			const hasChildren = vi.spyOn(node, 'hasChildren').mockReturnValue(true);
+
+			expect(node.hasChildrenCached()).toBe(true);
+			expect(node.getCollapsibleState()).toBe(vscode.TreeItemCollapsibleState.Collapsed);
+			expect(node.getCollapsibleState()).toBe(vscode.TreeItemCollapsibleState.Collapsed);
+			expect(hasChildren).toHaveBeenCalledTimes(1);
+		});
+
+		it('should return the None collapsible state when the node has no children', () => {
+			const node = new DefinitionTreeNode(makeContext(), 'id', 'urn:x');
+
+			expect(node.getCollapsibleState()).toBe(vscode.TreeItemCollapsibleState.None);
+		});
+	});
+
 	describe('getTooltip', () => {
 		it('should return the tooltip from the document when uri is set', () => {
 			const ctx = makeContext({

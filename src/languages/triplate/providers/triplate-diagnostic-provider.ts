@@ -27,8 +27,13 @@ export class TriplateDiagnosticProvider implements vscode.Disposable {
 			this._collection,
 			this._changeDebouncer,
 			vscode.workspace.onDidOpenTextDocument(doc => this._validate(doc)),
-			vscode.workspace.onDidChangeTextDocument(e =>
-				this._changeDebouncer.schedule(e.document.uri.toString(), () => this._validate(e.document))),
+			vscode.workspace.onDidChangeTextDocument(e => {
+				// Every document change is reported here, including those of output channels
+				// and large files in other languages; only template languages are validated.
+				if (TRIPLATE_LANGUAGE_IDS.has(e.document.languageId)) {
+					this._changeDebouncer.schedule(e.document.uri.toString(), () => this._validate(e.document));
+				}
+			}),
 			vscode.workspace.onDidCloseTextDocument(doc => {
 				this._changeDebouncer.cancel(doc.uri.toString());
 				this._collection.delete(doc.uri);
@@ -41,9 +46,15 @@ export class TriplateDiagnosticProvider implements vscode.Disposable {
 	}
 
 	private _validate(document: vscode.TextDocument): void {
+		// Check the language before reading the text, which copies the whole document.
+		if (!TRIPLATE_LANGUAGE_IDS.has(document.languageId)) {
+			this._collection.delete(document.uri);
+			return;
+		}
+
 		const text = document.getText();
 
-		if (!TRIPLATE_LANGUAGE_IDS.has(document.languageId) || !isTemplate(text)) {
+		if (!isTemplate(text)) {
 			this._collection.delete(document.uri);
 		} else {
 			try {

@@ -530,3 +530,71 @@ describe('getTokenRange', () => {
 		expect(range.end.character).toBe(6);
 	});
 });
+
+describe('getTokenIndexAtPosition on a lexed document', () => {
+	/**
+	 * The linear search the binary-search start must stay equivalent to.
+	 */
+	function findTokenIndexLinearly(tokens: IToken[], position: { line: number; character: number }): number {
+		const l = position.line + 1;
+		const n = position.character;
+
+		for (let i = 0; i < tokens.length; i++) {
+			const token = tokens[i];
+
+			if (!token.startLine || !token.endLine || !token.startColumn || !token.endColumn) {
+				continue;
+			}
+
+			if (token.startLine > l) {
+				break;
+			}
+
+			if ((token.startLine == l && token.endLine == l && token.startColumn <= n && n <= token.endColumn)
+				|| (token.startLine < l && token.endLine > l)
+				|| (token.endLine == l && token.endColumn >= n)) {
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	it('finds the same token as a linear search at every position', async () => {
+		const parsers = await vi.importActual<typeof import('@faubulous/mentor-rdf-parsers')>('@faubulous/mentor-rdf-parsers');
+		const text = [
+			'@prefix ex: <http://example.org/> .',
+			'# A comment line',
+			'',
+			'ex:a a ex:Thing ;',
+			'    ex:note """A literal',
+			'that spans',
+			'three lines""" ;',
+			'    ex:value 42 .',
+			'',
+			'ex:b ex:p ex:a , ex:c .',
+		].join('\n');
+		const tokens = new parsers.TurtleLexer().tokenize(text).tokens;
+		const lines = text.split('\n');
+
+		expect(tokens.length).toBeGreaterThan(20);
+
+		for (let line = 0; line <= lines.length; line++) {
+			for (let character = 0; character <= (lines[line]?.length ?? 0) + 1; character++) {
+				const position = { line, character };
+
+				expect(getTokenIndexAtPosition(tokens, position), `at ${line}:${character}`).toBe(findTokenIndexLinearly(tokens, position));
+			}
+		}
+	});
+
+	it('continues linearly over tokens without positions', () => {
+		const tokens = [
+			{ image: 'a', startLine: 1, endLine: 1, startColumn: 1, endColumn: 1 },
+			{ image: 'placeholder' },
+			{ image: 'b', startLine: 2, endLine: 2, startColumn: 1, endColumn: 1 },
+		] as unknown as IToken[];
+
+		expect(getTokenIndexAtPosition(tokens, { line: 1, character: 0 })).toBe(2);
+	});
+});
