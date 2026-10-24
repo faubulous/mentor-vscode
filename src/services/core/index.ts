@@ -4,4 +4,5 @@ export { ISettingsMigrationService } from './settings-migration-service.interfac
 export { IWorkspaceIndexerService } from './workspace-indexer.interface';
 export { IWorkspaceFileService } from './workspace-file-service.interface';
 export { IWorkspaceService } from './workspace-service.interface';
+export { IWorkspaceRenameService } from './workspace-rename-service.interface';
 export { SettingsFileStore, SettingsFileChangeEvent, WorkspaceReference } from './settings-file-store';

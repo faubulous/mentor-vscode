@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Uri } from '@faubulous/mentor-rdf';
 import { IDocumentContextService } from '@src/services/document';
+import { IWorkspaceRenameService } from '@src/services/core';
 import { XmlDocument } from '@src/languages/xml/xml-document';
 import { XmlFeatureProvider } from '@src/languages/xml/xml-feature-provider';
 
@@ -23,11 +24,16 @@ interface TextReplacement {
  * Provides renaming for URIs, resources labels and prefixes.
  */
 export class XmlRenameProvider extends XmlFeatureProvider implements vscode.RenameProvider {
-	constructor(private readonly _contextService: IDocumentContextService) {
+	/**
+	 * @param _contextService The document context service.
+	 * @param _renameService Extends IRI renames to the other indexed documents;
+	 * renames stay within the document when it is not provided.
+	 */
+	constructor(private readonly _contextService: IDocumentContextService, private readonly _renameService?: IWorkspaceRenameService) {
 		super();
 	}
 
-	public provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): vscode.ProviderResult<vscode.WorkspaceEdit> {
+	public async provideRenameEdits(document: vscode.TextDocument, position: vscode.Position, newName: string): Promise<vscode.WorkspaceEdit | undefined> {
 		const context = this._contextService.getDocumentContext(document, XmlDocument);
 
 		if (!context) {
@@ -47,8 +53,15 @@ export class XmlRenameProvider extends XmlFeatureProvider implements vscode.Rena
 			}
 
 			const replacements = this._getLocalNameTextReplacements(context, iri, newName);
+			const localEdits = this.getWorkspaceEdits(document, replacements);
 
-			return this.getWorkspaceEdits(document, replacements);
+			// Only an IRI is renamed in the other documents that reference it; prefixes
+			// are declared per document.
+			if (replacements.length > 0) {
+				await this._renameService?.addEditsInOtherFiles(localEdits, iri, newName, document.uri);
+			}
+
+			return localEdits;
 		}
 
 		// Handle rename of prefixes and prefix definitions.

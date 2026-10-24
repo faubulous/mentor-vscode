@@ -106,7 +106,7 @@ export class XmlParser {
 			let nsMatch;
 
 			while ((nsMatch = xmlnsRegex.exec(line)) !== null) {
-				const prefix = nsMatch[1].toLowerCase();
+				const prefix = nsMatch[1];
 				const namespaceIri = nsMatch[2];
 				const column = nsMatch.index + 6; // "xmlns:" length
 
@@ -137,17 +137,15 @@ export class XmlParser {
 			let tag;
 
 			while ((tag = tagRegex.exec(line)) !== null) {
-				const prefix = tag[1].toLowerCase();
+				const prefix = tag[1];
 				const namespaceIri = result.namespaces[prefix];
 
-				const localName = tag[2].toLowerCase();
+				const localName = tag[2];
 				const fullName = `${prefix}:${localName}`;
 				const column = tag.index + 1; // After '<'
 
 				if (namespaceIri && !this._isXmlSpecificTagName(prefix, localName, namespaceIri)) {
 					const iri = namespaceIri + localName;
-
-
 
 					this._addRangeToIndex(result.references, iri, Range.create(
 						lineNumber, column,
@@ -231,13 +229,13 @@ export class XmlParser {
 					const tag = line.match(new RegExp(`<(${_NC_NAME}+):(${_NC_NAME}+)`));
 
 					if (tag) {
-						const tagPrefix = tag[1].toLowerCase();
-						const tagLocal = tag[2].toLowerCase();
+						const tagPrefix = tag[1];
+						const tagLocal = tag[2];
 						const tagNamespace = result.namespaces[tagPrefix];
 
 						// If the tag is not rdf:Description, we treat the subject as 
 						// having the type of the tag name.
-						if (tagNamespace !== _RDF && tagLocal !== 'description') {
+						if (tagNamespace !== _RDF && tagLocal !== 'Description') {
 							this._addRangeToIndex(result.typeAssertions, iri, range);
 
 							if (this._isDefinitionNamespace(tagNamespace)) {
@@ -281,6 +279,14 @@ export class XmlParser {
 		}
 	}
 
+	/**
+	 * Indicates whether an element name belongs to the XML or RDF/XML syntax itself, such as
+	 * `rdf:RDF` or `rdf:Description`, rather than denoting a resource. XML names are
+	 * case-sensitive, so the names are compared as written.
+	 * @param prefix The prefix of the element name.
+	 * @param localName The local name of the element name.
+	 * @param namespaceIri The namespace IRI the prefix is bound to.
+	 */
 	private _isXmlSpecificTagName(prefix: string, localName: string, namespaceIri: string): boolean {
 		const _XML = 'http://www.w3.org/XML/1998/namespace';
 
@@ -291,11 +297,11 @@ export class XmlParser {
 		if (namespaceIri === _RDF) {
 			switch (localName) {
 				case 'about':
-				case 'rdf':
+				case 'RDF':
 				case 'resource':
-				case 'description':
+				case 'Description':
 				case 'datatype':
-				case 'parsetype':
+				case 'parseType':
 					return true;
 			}
 		}
