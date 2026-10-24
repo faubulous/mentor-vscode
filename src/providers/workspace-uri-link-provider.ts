@@ -16,6 +16,13 @@ export class WorkspaceUriLinkProvider implements vscode.DocumentLinkProvider {
   provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const links: vscode.DocumentLink[] = [];
     const text = document.getText();
+
+    // The provider runs for every file in every language; skip the regex scan when the
+    // scheme does not occur at all, which is the case for almost every document.
+    if (!text.includes(`${WorkspaceUri.uriScheme}://`)) {
+      return links;
+    }
+
     const regex = new RegExp(WorkspaceUri.uriRegex, 'g');
 
     for (const match of text.matchAll(regex)) {

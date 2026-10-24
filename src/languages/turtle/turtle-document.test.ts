@@ -625,3 +625,47 @@ describe('TurtleDocument.releaseTokens', () => {
         expect(doc.tokens.length).toBeGreaterThan(0);
     });
 });
+
+describe('TurtleDocument.tokenizeDocument', () => {
+    const text = '@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .';
+
+    beforeEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('tokenizes a document version only once', () => {
+        const doc = makeDoc();
+        const document = createMockTextDocument(text, { version: 3 });
+        const tokenize = vi.spyOn(doc, 'tokenize');
+
+        const first = doc.tokenizeDocument(document);
+        const second = doc.tokenizeDocument(document);
+
+        expect(tokenize).toHaveBeenCalledTimes(1);
+        expect(second).toBe(first);
+        expect(first.length).toBeGreaterThan(0);
+    });
+
+    it('tokenizes again when the document version changes', () => {
+        const doc = makeDoc();
+        const tokenize = vi.spyOn(doc, 'tokenize');
+
+        doc.tokenizeDocument(createMockTextDocument(text, { version: 3 }));
+        const tokens = doc.tokenizeDocument(createMockTextDocument(text + '\nex:d ex:e ex:f .', { version: 4 }));
+
+        expect(tokenize).toHaveBeenCalledTimes(2);
+        expect(tokens.some(t => t.image === 'ex:f')).toBe(true);
+    });
+
+    it('drops the cached tokens when the tokens are released', () => {
+        const doc = makeDoc();
+        const document = createMockTextDocument(text, { version: 3 });
+        const tokenize = vi.spyOn(doc, 'tokenize');
+
+        doc.tokenizeDocument(document);
+        doc.releaseTokens();
+        doc.tokenizeDocument(document);
+
+        expect(tokenize).toHaveBeenCalledTimes(2);
+    });
+});

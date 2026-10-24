@@ -41,6 +41,12 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	 */
 	private _lastParse: DocumentParseResult | undefined;
 
+	/**
+	 * The tokens of the last {@link tokenizeDocument} call and the document version they
+	 * were produced from, shared by the providers that run on the same keystroke.
+	 */
+	private _versionTokens: { version: number; tokens: IToken[] } | undefined;
+
 	constructor(uri: vscode.Uri, syntax: RdfSyntax, store: Store, vocabulary: VocabularyRepository, settings: ISettingsService) {
 		super(uri, store, vocabulary, settings);
 
@@ -86,6 +92,14 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 		lexer.blankNodeIdGenerator = blankNodeIdGenerator;
 
 		return tokenizeWithTriplate(lexer, text).tokens;
+	}
+
+	tokenizeDocument(document: vscode.TextDocument): IToken[] {
+		if (this._versionTokens?.version !== document.version) {
+			this._versionTokens = { version: document.version, tokens: this.tokenize(document.getText()) };
+		}
+
+		return this._versionTokens.tokens;
 	}
 
 	parse(text: string): IToken[] {
@@ -139,6 +153,7 @@ export class TurtleDocument extends DocumentContext implements ITokenizedDocumen
 	releaseTokens(): void {
 		this._tokens = [];
 		this._lastParse = undefined;
+		this._versionTokens = undefined;
 	}
 
 	public override getIriAtPosition(position: vscode.Position): string | undefined {

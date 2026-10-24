@@ -16,6 +16,13 @@ export class InferenceUriLinkProvider implements vscode.DocumentLinkProvider {
   provideDocumentLinks(document: vscode.TextDocument): vscode.DocumentLink[] {
     const links: vscode.DocumentLink[] = [];
     const text = document.getText();
+
+    // The provider runs for every file in every language; skip the regex scan when no
+    // inference URI can occur, which is the case for almost every document.
+    if (!text.includes(InferenceUri.queryAppendix)) {
+      return links;
+    }
+
     const regex = new RegExp(InferenceUri.uriRegex, 'g');
 
     for (const match of text.matchAll(regex)) {

@@ -49,6 +49,12 @@ export class DocumentContextService {
 	private readonly _closedDocumentLanguages = new Map<string, string>();
 
 	/**
+	 * The last value sent for the `mentor.editor.cursorOnResource` context key, or
+	 * `undefined` before it was first set.
+	 */
+	private _cursorOnResource: boolean | undefined;
+
+	/**
 	 * An event that is fired after the active document context has changed.
 	 */
 	readonly onDidChangeDocumentContext = this._onDidChangeDocumentContext.event;
@@ -524,8 +530,17 @@ export class DocumentContextService {
 		const uri = editor?.document?.uri?.toString();
 		const position = editor?.selection?.active;
 		const iri = uri && position ? this.contexts[uri]?.getIriAtPosition(position) : undefined;
+		const cursorOnResource = !!iri;
 
-		await vscode.commands.executeCommand('setContext', 'mentor.editor.cursorOnResource', !!iri);
+		// The selection changes on every keystroke and cursor move, while the key rarely
+		// does; only send the IPC call to the workbench when the value changes.
+		if (cursorOnResource === this._cursorOnResource) {
+			return;
+		}
+
+		this._cursorOnResource = cursorOnResource;
+
+		await vscode.commands.executeCommand('setContext', 'mentor.editor.cursorOnResource', cursorOnResource);
 	}
 
 	/**

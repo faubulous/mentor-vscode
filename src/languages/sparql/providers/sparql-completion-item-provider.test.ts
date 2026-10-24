@@ -414,7 +414,7 @@ describe('SparqlCompletionItemProvider', () => {
             const p = new SparqlCompletionItemProvider({} as any, {} as any, {} as any, {} as any, {} as any);
             (p as any)._contextService = ({
                 getDocumentContext: vi.fn(() => ({
-                    tokenize: vi.fn(() => []),
+                    tokenizeDocument: vi.fn(() => []),
                 })),
             });
             const result = await p.provideCompletionItems(
@@ -429,9 +429,9 @@ describe('SparqlCompletionItemProvider', () => {
                 makeToken('DOT', '.', 1),
                 makeToken('PNAME_NS', 'ex:', 3),
             ];
-            const tokenize = vi.fn(() => tokens);
+            const tokenizeDocument = vi.fn(() => tokens);
             (p as any)._contextService = ({
-                getDocumentContext: vi.fn(() => ({ tokenize })),
+                getDocumentContext: vi.fn(() => ({ tokenizeDocument })),
             });
             const spy = vi.spyOn(p, 'getCompletionItems').mockReturnValue([]);
             const doc = makeDoc('file:///test.sparql', '. ex:') as any;
@@ -439,7 +439,7 @@ describe('SparqlCompletionItemProvider', () => {
             await p.provideCompletionItems(
                 doc, { line: 0, character: 3 } as any, {} as any, {} as any
             );
-            expect(tokenize).toHaveBeenCalledWith('. ex:');
+            expect(tokenizeDocument).toHaveBeenCalledWith(doc);
             expect(spy).toHaveBeenCalledWith(doc, expect.anything(), tokens, 1);
         });
 

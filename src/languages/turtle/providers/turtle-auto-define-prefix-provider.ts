@@ -118,7 +118,7 @@ export class TurtleAutoDefinePrefixProvider implements vscode.Disposable {
 			return;
 		}
 
-		const tokens = context.tokenize(document.getText());
+		const tokens = context.tokenizeDocument(document);
 		const n = getTokenIndexAtPosition(tokens, position);
 
 		if (n > 0) {

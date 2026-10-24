@@ -293,6 +293,15 @@ export interface ITokenizedDocumentContext extends IDocumentContext {
 	tokenize(text: string, blankNodeIdGenerator?: BlankNodeIdGenerator): IToken[];
 
 	/**
+	 * Tokenizes the current text of an open document for positional lookups, such as
+	 * completions. The result is cached per document version, so the providers that run
+	 * on the same keystroke share a single tokenization.
+	 * @param document The open text document of this context.
+	 * @returns The tokens of the document's current text.
+	 */
+	tokenizeDocument(document: vscode.TextDocument): IToken[];
+
+	/**
 	 * Sets the tokens of the document and updates the derived indexes
 	 * (namespaces, references, type assertions and definitions).
 	 * @param tokens An array of tokens.
